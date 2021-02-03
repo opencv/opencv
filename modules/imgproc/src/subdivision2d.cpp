@@ -284,6 +284,10 @@ static bool equal(Point2f a, Point2f b) {
     return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
 }
 
+static int deadEnd() {
+    CV_Error(CV_StsNotImplemented, "Impossible case");
+}
+
 static int voronoiCCW(
         Point2f a_const, Point2f a_ideal, Point2f b_const, Point2f b_ideal, Point2f c_const, Point2f c_ideal)
 {
@@ -293,8 +297,7 @@ static int voronoiCCW(
         return !parallel(a_ideal, b_ideal) ?
                 counterClockwise(a_ideal, b_ideal, o) : equal(a_ideal, b_ideal) ?
                         counterClockwise(o, a_ideal, b_const - a_const) : equal(a_const, b_const) ?
-                                counterClockwise(o, b_ideal, c_const - b_const) :
-                                CV_Error(CV_StsNotImplemented, "Impossible case");
+                                counterClockwise(o, b_ideal, c_const - b_const) : deadEnd();
     }
 
     if (a_ideal != o && b_ideal == o && c_ideal != o) {
@@ -322,7 +325,7 @@ static int voronoiCCW(
         return counterClockwise(a_const, b_const, c_const);
     }
 
-    CV_Error(CV_StsNotImplemented, "Impossible case");
+    return deadEnd();
 }
 
 static int delaunayRightOf(Point2f c, Point2f a, Point2f b, bool ideal_c, bool ideal_a, bool ideal_b) {
