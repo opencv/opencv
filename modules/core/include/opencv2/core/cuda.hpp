@@ -656,6 +656,18 @@ public:
     //! creates a new asynchronous stream with custom allocator
     CV_WRAP Stream(const Ptr<GpuMat::Allocator>& allocator);
 
+    /** @brief creates a new Stream using the cudaFlags argument to determine the behaviors of the stream
+
+    @note The cudaFlags parameter is passed to the underlying api cudaStreamCreateWithFlags() and
+    supports the same parameter values.
+    @code
+        // creates an OpenCV cuda::Stream that manages an asynchronous, non-blocking,
+        // non-default CUDA stream
+        cv::cuda::Stream cvStream(cudaStreamNonBlocking);
+    @endcode
+     */
+    CV_WRAP Stream(const size_t cudaFlags);
+
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
     CV_WRAP bool queryIfComplete() const;

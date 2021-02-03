@@ -33,6 +33,8 @@ class cuda_test(NewOpenCVTests):
         self.assertTrue(cuMat.cudaPtr() != 0)
         stream = cv.cuda_Stream()
         self.assertTrue(stream.cudaPtr() != 0)
+        asyncstream = cv.cuda_Stream(1)  # cudaStreamNonBlocking
+        self.assertTrue(asyncstream.cudaPtr() != 0)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
