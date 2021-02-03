@@ -46,6 +46,7 @@
 #include <opencv2/core/utils/trace.private.hpp>
 
 #include "opencv2/core/parallel/parallel_backend.hpp"
+#include "parallel/parallel.hpp"
 
 #if defined _WIN32 || defined WINCE
     #include <windows.h>
@@ -158,32 +159,6 @@ namespace cv {
 
 ParallelLoopBody::~ParallelLoopBody() {}
 
-namespace parallel {
-
-static int numThreads = -1;
-
-static
-std::shared_ptr<ParallelForAPI>& getCurrentParallelForAPI()
-{
-    static std::shared_ptr<ParallelForAPI> g_currentParallelForAPI;
-    return g_currentParallelForAPI;
-}
-
-ParallelForAPI::~ParallelForAPI()
-{
-    // nothing
-}
-
-void setParallelForBackend(const std::shared_ptr<ParallelForAPI>& api, bool propagateNumThreads)
-{
-    getCurrentParallelForAPI() = api;
-    if (propagateNumThreads && api)
-    {
-        setNumThreads(numThreads);
-    }
-}
-
-}  // namespace
 using namespace cv::parallel;
 
 namespace {
