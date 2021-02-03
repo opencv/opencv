@@ -468,8 +468,8 @@ struct CvCapture_FFMPEG
 
     void init();
 
-    bool    seek(int64_t frame_number);
-    bool    seek(double sec);
+    void    seek(int64_t frame_number);
+    void    seek(double sec);
     bool    slowSeek( int framenumber );
 
     int64_t get_total_frames() const;
@@ -1546,7 +1546,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
 #endif
 }
 
-bool CvCapture_FFMPEG::seek(int64_t _frame_number)
+void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
     _frame_number = std::min(_frame_number, get_total_frames());
     int delta = 16;
@@ -1563,10 +1563,7 @@ bool CvCapture_FFMPEG::seek(int64_t _frame_number)
         int64_t time_stamp = ic->streams[video_stream]->start_time;
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
         time_stamp += (int64_t)(sec / time_base + 0.5);
-        if (get_total_frames() > 1) {
-            if (av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD) < 0)
-                return false;
-        }
+        if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
         avcodec_flush_buffers(ic->streams[video_stream]->codec);
         if( _frame_number > 0 )
         {
@@ -1605,12 +1602,11 @@ bool CvCapture_FFMPEG::seek(int64_t _frame_number)
             break;
         }
     }
-    return true;
 }
 
-bool CvCapture_FFMPEG::seek(double sec)
+void CvCapture_FFMPEG::seek(double sec)
 {
-    return seek((int64_t)(sec * get_fps() + 0.5));
+    seek((int64_t)(sec * get_fps() + 0.5));
 }
 
 bool CvCapture_FFMPEG::setProperty( int property_id, double value )
@@ -1623,26 +1619,24 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CAP_PROP_POS_FRAMES:
     case CAP_PROP_POS_AVI_RATIO:
         {
-            bool ret = false;
             switch( property_id )
             {
             case CAP_PROP_POS_FRAMES:
-                ret = seek((int64_t)value);
+                seek((int64_t)value);
                 break;
 
             case CAP_PROP_POS_MSEC:
-                ret = seek(value/1000.0);
+                seek(value/1000.0);
                 break;
 
             case CAP_PROP_POS_AVI_RATIO:
-                ret = seek((int64_t)(value*ic->duration));
+                seek((int64_t)(value*ic->duration));
                 break;
             }
 
-            if (ret)
-                picture_pts=(int64_t)value;
-            return ret;
+            picture_pts=(int64_t)value;
         }
+        break;
     case CAP_PROP_FORMAT:
         if (value == -1)
             return setRaw();

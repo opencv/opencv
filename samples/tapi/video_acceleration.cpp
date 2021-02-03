@@ -13,7 +13,7 @@ using namespace std;
 const char* keys =
 "{ i input    |        | input video file }"
 "{ o output   |        | output video file, or specify 'null' to measure decoding without rendering to screen}"
-"{ backend    | ffmpeg | VideoCapture and VideoWriter backend, valid values: 'any', 'ffmpeg', 'msmf', 'gstreamer' }"
+"{ backend    | any    | VideoCapture and VideoWriter backend, valid values: 'any', 'ffmpeg', 'msmf', 'gstreamer' }"
 "{ accel      | any    | GPU Video Acceleration, valid values: 'none', 'any', 'd3d11', 'vaapi', 'mfx' }"
 "{ device     | -1     | Video Acceleration device (GPU) index (-1 means default device) }"
 "{ out_w      |        | output width (resize by calling cv::resize) }"
