@@ -33,9 +33,9 @@ The following cache variables will be set if cuDNN was found. They may also be s
 ``CUDNN_INCLUDE_DIR``
 ``CUDNN_VERSION``
 
-``CUDNN_VERSION_MAJOR`` INTERNAL
-``CUDNN_VERSION_MINOR`` INTERNAL
-``CUDNN_VERSION_PATCH`` INTERNAL
+``CUDNN_MAJOR_VERSION`` INTERNAL
+``CUDNN_MINOR_VERSION`` INTERNAL
+``CUDNN_PATCH_VERSION`` INTERNAL
 
 #]=======================================================================]
 
