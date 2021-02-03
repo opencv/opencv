@@ -47,6 +47,12 @@ class Bindings(NewOpenCVTests):
         boost.getMaxDepth()  # from ml::DTrees
         boost.isClassifier()  # from ml::StatModel
 
+    def test_raiseGeneralException(self):
+        with self.assertRaises((cv.error,),
+                            msg='C++ exception is not propagated to Python in the right way') as cm:
+            cv.utils.testRaiseGeneralException()
+        self.assertEqual(str(cm.exception), 'exception text')
+
     def test_redirectError(self):
         try:
             cv.imshow("", None)  # This causes an assert
