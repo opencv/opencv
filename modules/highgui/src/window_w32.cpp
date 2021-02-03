@@ -596,6 +596,89 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
     }
 }
 
+double cvGetPropVsync_W32(const char* name)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    // https://www.khronos.org/opengl/wiki/Swap_Interval
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_extensions_string.txt
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_swap_control.txt
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetExtensionsStringEXT
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        return -1; // Can't get WGL extensions string
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        return -1; // WGL extensions don't contain WGL_EXT_swap_control
+
+    typedef int (APIENTRY* PFNWGLGETSWAPINTERVALPROC)(void);
+    PFNWGLGETSWAPINTERVALPROC wglGetSwapInterval = 0;
+    wglGetSwapInterval = (PFNWGLGETSWAPINTERVALPROC)wglGetProcAddress("wglGetSwapIntervalEXT");
+    if (wglGetSwapInterval == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetSwapIntervalEXT
+
+    return wglGetSwapInterval();
+#endif
+}
+
+void cvSetPropVsync_W32(const char* name, const bool enable_vsync)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_UNUSED(enable_vsync);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglGetExtensionsStringEXT");
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        CV_Error(Error::OpenGlApiCallError, "Can't get WGL extensions string");
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        CV_Error(Error::OpenGlApiCallError, "WGL extensions don't contain WGL_EXT_swap_control");
+
+    typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALPROC)(int);
+    PFNWGLSWAPINTERVALPROC wglSwapInterval = 0;
+    wglSwapInterval = (PFNWGLSWAPINTERVALPROC)wglGetProcAddress("wglSwapIntervalEXT");
+    if (wglSwapInterval == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglSwapIntervalEXT");
+
+    wglSwapInterval(enable_vsync);
+#endif
+}
+
 void cv::setWindowTitle(const String& winname, const String& title)
 {
     CvWindow* window = icvFindWindowByName(winname.c_str());
