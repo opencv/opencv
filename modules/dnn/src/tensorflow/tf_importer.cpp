@@ -2419,7 +2419,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
             CV_CheckGT(num_inputs, 0, "");
             CV_Assert(hasLayerAttr(layer, "alpha"));
             layerParams.set("negative_slope", getLayerAttr(layer, "alpha").f());
-            
+
             int id = dstNet.addLayer(name, "ReLU", layerParams);
             layer_id[name] = id;
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
