@@ -257,10 +257,6 @@ static bool parallel(Point2f u, Point2f v)
     return abs(u.cross(v)) < FLT_EPSILON;
 }
 
-static bool equal(Point2f a, Point2f b) {
-    return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
-}
-
 static int delaunayCCW(Point2f a, Point2f b, Point2f c, bool ideal_a, bool ideal_b, bool ideal_c)
 {
     const static Point2f o(0.f, 0.f);
@@ -284,6 +280,10 @@ static int delaunayCCW(Point2f a, Point2f b, Point2f c, bool ideal_a, bool ideal
     return delaunayCCW(b, c, a, ideal_b, ideal_c, ideal_a);
 }
 
+static bool equal(Point2f a, Point2f b) {
+    return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
+}
+
 static int voronoiCCW(
         Point2f a_const, Point2f a_ideal, Point2f b_const, Point2f b_ideal, Point2f c_const, Point2f c_ideal)
 {
@@ -293,7 +293,8 @@ static int voronoiCCW(
         return !parallel(a_ideal, b_ideal) ?
                 counterClockwise(a_ideal, b_ideal, o) : equal(a_ideal, b_ideal) ?
                         counterClockwise(o, a_ideal, b_const - a_const) : equal(a_const, b_const) ?
-                                counterClockwise(o, b_ideal, c_const - b_const) : throw std::logic_error("unsupported");
+                                counterClockwise(o, b_ideal, c_const - b_const) :
+                                CV_Error(CV_StsNotImplemented, "Impossible case");
     }
 
     if (a_ideal != o && b_ideal == o && c_ideal != o) {
@@ -321,7 +322,7 @@ static int voronoiCCW(
         return counterClockwise(a_const, b_const, c_const);
     }
 
-    throw std::logic_error("unsupported");
+    CV_Error(CV_StsNotImplemented, "Impossible case");
 }
 
 static int delaunayRightOf(Point2f c, Point2f a, Point2f b, bool ideal_c, bool ideal_a, bool ideal_b) {
