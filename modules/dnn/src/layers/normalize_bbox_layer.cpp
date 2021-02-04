@@ -118,8 +118,8 @@ public:
 
         const UMat& inp0 = inputs[0];
         UMat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         size_t num = total(shape(inp0.size), 0, startAxis);
         size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
@@ -203,8 +203,8 @@ public:
 
         const Mat& inp0 = inputs[0];
         Mat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();

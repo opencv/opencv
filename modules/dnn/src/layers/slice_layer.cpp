@@ -146,7 +146,7 @@ public:
                 for (int j = 0; j < sliceRanges[i].size(); ++j)
                 {
                     if (shapesInitialized || inpShape[j] > 0)
-                        outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
+                        outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
                 }
             }
         }
@@ -209,7 +209,7 @@ public:
             // Clamp.
             for (int j = 0; j < finalSliceRanges[i].size(); ++j)
             {
-                finalSliceRanges[i][j] = clamp(finalSliceRanges[i][j], inpShape[j]);
+                finalSliceRanges[i][j] = normalize_axis_range(finalSliceRanges[i][j], inpShape[j]);
             }
         }
 
@@ -601,7 +601,7 @@ public:
         CV_Assert(inputs.size() == 2);
 
         MatShape dstShape = inputs[0];
-        int start = clamp(axis, dstShape);
+        int start = normalize_axis(axis, dstShape);
         for (int i = start; i < dstShape.size(); i++)
         {
             dstShape[i] = inputs[1][i];
@@ -620,7 +620,7 @@ public:
         const Mat &inpSzBlob = inputs[1];
 
         int dims = inpBlob.dims;
-        int start_axis = clamp(axis, dims);
+        int start_axis = normalize_axis(axis, dims);
 
         std::vector<int> offset_final(dims, 0);
         if (offset.size() == 1)
