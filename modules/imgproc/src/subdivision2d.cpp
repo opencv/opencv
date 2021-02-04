@@ -284,20 +284,22 @@ static bool equal(Point2f a, Point2f b) {
     return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
 }
 
-static int deadEnd() {
-    CV_Error(CV_StsNotImplemented, "Impossible case");
-}
-
 static int voronoiCCW(
         Point2f a_const, Point2f a_ideal, Point2f b_const, Point2f b_ideal, Point2f c_const, Point2f c_ideal)
 {
     const static Point2f o(0.f, 0.f);
 
     if (a_ideal != o && b_ideal != o && c_ideal == o) {
-        return !parallel(a_ideal, b_ideal) ?
-                counterClockwise(a_ideal, b_ideal, o) : equal(a_ideal, b_ideal) ?
-                        counterClockwise(o, a_ideal, b_const - a_const) : equal(a_const, b_const) ?
-                                counterClockwise(o, b_ideal, c_const - b_const) : deadEnd();
+        if (!parallel(a_ideal, b_ideal)) {
+            return counterClockwise(a_ideal, b_ideal, o);
+        } else {
+            if (equal(a_ideal, b_ideal)) {
+                return counterClockwise(o, a_ideal, b_const - a_const);
+            }
+            if (equal(a_const, b_const)) {
+                return counterClockwise(o, b_ideal, c_const - b_const);
+            }
+        }
     }
 
     if (a_ideal != o && b_ideal == o && c_ideal != o) {
@@ -325,7 +327,7 @@ static int voronoiCCW(
         return counterClockwise(a_const, b_const, c_const);
     }
 
-    return deadEnd();
+    CV_Error(CV_StsNotImplemented, "impossible");
 }
 
 static int delaunayRightOf(Point2f c, Point2f a, Point2f b, bool ideal_c, bool ideal_a, bool ideal_b) {
@@ -345,15 +347,16 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
     int edge_org = edgeOrg(edge);
     int edge_dst = edgeDst(edge);
 
-    bool ideal_org = vtx[edge_org].isideal();
-    bool ideal_dst = vtx[edge_dst].isideal();
-
     if (!vtx[edge_org].isvirtual()) {
         // Delaunay edge
+
         return delaunayRightOf(
                 pt, vtx[edge_org].pt, vtx[edge_dst].pt, false, vtx[edge_org].isideal(), vtx[edge_dst].isideal());
     } else {
         // Voronoi edge
+
+        bool ideal_org = vtx[edge_org].isideal();
+        bool ideal_dst = vtx[edge_dst].isideal();
 
         Point2f org_const, org_ideal, dst_const, dst_ideal;
         if (ideal_org) {
