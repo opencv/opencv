@@ -706,7 +706,7 @@ public:
             }
             if (params.warnUnusedParameters())
             {
-                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
+                CV_LOG_ERROR(NULL, "VIDEOIO: unsupported parameters in VideoWriter, see logger INFO channel for details");
                 return Ptr<PluginWriter>();
             }
             if (CV_ERROR_OK == plugin_api->v0.Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))

@@ -1299,7 +1299,7 @@ public:
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
     bool open(const std::string &filename, int fourcc,
-              cv_writer_open_with_params                       double fps, const Size &frameSize, const VideoWriterParameters& params );
+              double fps, const Size &frameSize, const VideoWriterParameters& params );
     void close();
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 
@@ -1453,8 +1453,17 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
     CV_Assert(!filename.empty());
     CV_Assert(fps > 0);
     CV_Assert(frameSize.width > 0 && frameSize.height > 0);
+
     const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
+    // TODO is it possible to disable HW encoders in encodebin?
+    params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
+    params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
+    if (params.warnUnusedParameters()) {
+        CV_LOG_ERROR(NULL,
+                     "VIDEOIO/GStreamer: unsupported parameters in VideoWriter, see logger INFO channel for details");
+        return false;
+    }
 
     // init gstreamer
     gst_initializer::init();

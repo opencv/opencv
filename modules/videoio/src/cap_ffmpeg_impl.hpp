@@ -2236,7 +2236,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, const VideoWriterParameters& params)
 {
     InternalFFMpegRegister::init();
-    const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     int err;
     AVPixelFormat codec_pix_fmt;
@@ -2244,8 +2243,14 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     close();
 
+    const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     hw_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
     hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
+    if (params.warnUnusedParameters()) {
+        CV_LOG_ERROR(NULL,
+                     "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
+        return false;
+    }
 
     // check arguments
     if( !filename )
