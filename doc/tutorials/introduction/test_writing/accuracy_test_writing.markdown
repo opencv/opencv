@@ -29,203 +29,35 @@ TEST(name1, name2)
     ASSERT_....;
 }
 ```
-
-### Tests example
-
-**Files:**
-
-- test_precomp.hpp
-- test_main.cpp
-- test_sum.cpp
-- test_sub.cpp
-
-
-
-```c++
-// test_precomp.hpp
-
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#include <...>
-#include "..."
-
-namespace opencv_test {
-  using namespace cv::(moduleName);
-}
-
-#endif
-```
-
-
-
-```c++
-// test_main.cpp
-#include "test_precomp.hpp"
-
-CV_TEST_MAIN("<FOLDER_NAME_IN_TESTDATA>")
-```
-
-
-
-```c++
-// test_sum.cpp
-
-#include "test_precomp.hpp"
-
-namespace opencv_test { namespace {
-
-TEST(SUM, int)
-{
-    int a=1;
-    int b=2;
-    int res=a+b;
-    ASSERT_EQ(res, 3)
-}
-
-TEST(SUM, float)
-{
-    float a=0.1f;
-    float b=0.2f;
-    float res=a+b;
-    ASSERT_EQ(res, 0.3f)
-}
-
-}} // namespace
-```
-
-
-
-
-```c++
-// test_sub.cpp
-
-#include "test_precomp.hpp"
-
-namespace opencv_test { namespace {
-
-TEST(SUB, int)
-{
-    int a=2;
-    int b=1;
-    int res=a-b;
-    ASSERT_EQ(res, 1)
-}
-
-TEST(SUB, float)
-{
-    float a=0.2f;
-    float b=0.1f;
-    float res=a-b;
-    ASSERT_EQ(res, 0.1f)
-}
-
-}} // namespace
-```
-
+More information abut the code for the tests can be found in the [GoogleTest Documentation](https://github.com/google/googletest/blob/master/docs/primer.md).
 
 ### Run
 
-Before the first run of new tests, you need to rebuild the project with CMake.
+Before the first run of new tests, you need to reconfigure the project with CMake.
 
-If you want to run **ALL TESTS**, you need to run the test sample or use your system:
+If you want to run **ALL TESTS**, you need to run the test sample:
 
-- (*Windows*) move to the folder `<BUILD_DIR>/bin/Debug(Release)/` and run the executive file `opencv_test_<MODULE_NAME>.exe`
-- (*Linux*)
+- (*Windows*) run the executable file `<BUILD_DIR>/bin/Debug(Release)/opencv_test_<MODULE_NAME>.exe`
+- (*Linux*) run in terminal `./<BUILD_DIR>/bin/opencv_test_<MODULE_NAME>`.
 
-If you want to run **CERTAIN TESTS** (SUM.int test, for example).
+If you want to run **CERTAIN TESTS**:.
 
-- If you work in IDE you need to find the project preference named `Command Arguments` or similar and write there the key like `--gtest_filter=<KEY>` (KEY = SUM.int in our example).  [gtest_filter.doc](--gtest_filter)
+- If you work in IDE you need to find the project preference named `Command Arguments` or similar and write there the key like `--gtest_filter=<KEY>`.  [gtest_filter documentation](https://github.com/google/googletest/blob/273f8cb059a4e7b089731036392422b5ef489791/docs/advanced.md#running-a-subset-of-the-tests)
 - If you want to use your system:
-  - (*Windows*) move to the folder `<BUILD_DIR>/bin/Debug(Release)/` and run the executive file in the console `opencv_test_<MODULE_NAME>.exe --gtest_filter=<KEY>` (KEY = SUM.int in our example).
-  - (*Linux*)
-
-
+  - (*Windows*) run the executable file `<BUILD_DIR>/bin/Debug(Release)/opencv_test_<MODULE_NAME>.exe --gtest_filter=<KEY>`.
+  - (*Linux*) run in terminal `./<BUILD_DIR>/bin/opencv_test_<MODULE_NAME> --gtest_filter=<KEY>`. 
 
 # TEST DATA
 
 Repository with the test data (opencv_extra): https://github.com/opencv/opencv_extra
 
-Before working with data you need to set environment variable `OPENCV_TEST_DATA_PATH`:
-
-- (Windows)
-  1. Win+R
-  2. Sysdm.cpl
-  3. Go to Advanced -> Environment Variables -> System variables (New..)
-  4. Set name as `OPENCV_TEST_DATA_PATH` and value as `<PATH_TO_opencv_extra>/testdata`
-- (Visual Studio)
-  1.  Go to Project -> Properties -> Debugging -> Environment
-  2. Set the Environment as `OPENCV_TEST_DATA_PATH=<PATH_TO_opencv_extra>/testdata`
-- (Linux)
-
-
+Before working with data you need to set environment variable `OPENCV_TEST_DATA_PATH=<opencv_extra>/testdata`
 
 # ASSERTION
 
 **Assertion documentation**:
 
 - Link: https://github.com/google/googletest/blob/master/googletest/docs/primer.md
-
-
-
-# --gtest_filter
-
-Usage: `--gtest_filter=<KEY>`
-
-This KEY is the logical expression, which help to find needful tests names.
-
-**\*** - logical operator, which includes all symbols before or after this expression.
-
-​	**Examples:** (*smth* - any variation of symbols.)
-
-​	`--gtest_filter=smth*<key_word>`
-
-​	`--gtest_filter=smth*<key_word>*smth`
-
-​	`--gtest_filter=<key_word>*smth`
-
-**:** - logical operator, which concatenate logical expressions.
-
-​	**Examples:** (log_exp - logical expresson.)
-
-​	`--gtest_filter=log_exp1:log_exp`
-
-**Example:**
-
-Tests names:
-
-- TEST_sum.int
-- TEST_sum.float
-- TEST_sub.int
-- TEST_sub.float
-
-Logical keys:
-
-1. \*sum.\*
-2. TEST_sum.i\*
-3. \*sum.float
-4. TEST_sum.i\*:TEST_sub.\*
-
-Results:
-
-1. TEST_sum.int, TEST_sum.float
-2. TEST_sum.int
-3. TEST_sum.float
-4. TEST_sum.int, TEST_sub.int, TEST_sub.float
-
-
-
-# --gtest_param_filter
-
-Usage: `--gtest_params_filter=(<PARAM1>, <PARAM1>, ...)`
-
-This sentence helps to pass extra parameters to functions.
-
-For a getting the parameters you need to use `get<i>(GetParam())` or `GET_PARAM(i)`, where **i**
-
-is the index of the parameter.
-
-
 
 # BuildBot
 
@@ -236,7 +68,7 @@ OpenCV's continuous integration system is available here:
 
 This system check code style, build all OpenCV and run tests. You can read more about this bot [here](https://pullrequest.opencv.org/buildbot/).
 
-The BuildBot page looks like a grid where rows are the `pull requests` and columns are `id, author, Title & description, Docs, Builds `.
+The BuildBot dashboard looks like a grid where rows are the `pull requests` and columns are `id, author, Title & description, Docs, Builds `.
 
 There are some conditions of samples:
 
