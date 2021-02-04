@@ -389,6 +389,13 @@ public:
     */
     GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
 
+    /** @brief Allocates GPU memory.
+    Suppose there is some GPU memory already allocated. In that case, this method may choose to reuse that
+    GPU memory under the specific condition: it must be of the same size and type, not externally allocated,
+    the GPU memory is continuous(i.e., isContinuous() is true), and is not a sub-matrix of another GpuMatND
+    (i.e., isSubmatrix() is false). In other words, this method guarantees that the GPU memory allocated by
+    this method is always continuous and is not a sub-region of another GpuMatND.
+    */
     void create(SizeArray size, int type);
 
     void release();

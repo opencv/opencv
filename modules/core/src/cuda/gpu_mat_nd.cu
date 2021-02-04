@@ -44,7 +44,7 @@ void GpuMatND::create(SizeArray _size, int _type)
 
     _type &= Mat::TYPE_MASK;
 
-    if (size == _size && type() == _type && !empty() && !external())
+    if (size == _size && type() == _type && !empty() && !external() && isContinuous() && !isSubmatrix())
         return;
 
     release();
@@ -110,7 +110,7 @@ GpuMatND GpuMatND::clone() const
 
     if (isContinuous())
     {
-        CV_CUDEV_SAFE_CALL(cudaMemcpy(ret.getDevicePtr(), getDevicePtr(), totalMemSize(), cudaMemcpyDeviceToDevice));
+        CV_CUDEV_SAFE_CALL(cudaMemcpy(ret.getDevicePtr(), getDevicePtr(), ret.totalMemSize(), cudaMemcpyDeviceToDevice));
     }
     else
     {
@@ -134,12 +134,14 @@ GpuMatND GpuMatND::clone() const
             do
             {
                 CV_CUDEV_SAFE_CALL(
-                    cudaMemcpy2D(
+                    cudaMemcpy2DAsync(
                         d, ret.step[dims-2], s, step[dims-2],
                         size[dims-1]*step[dims-1], size[dims-2], cudaMemcpyDeviceToDevice)
                 );
             }
             while (next(d, s, idx, dims, ret, *this));
+
+            CV_CUDEV_SAFE_CALL(cudaStreamSynchronize(0));
         }
     }
 
@@ -156,7 +158,7 @@ GpuMatND GpuMatND::clone(Stream& stream) const
 
     if (isContinuous())
     {
-        CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(ret.getDevicePtr(), getDevicePtr(), totalMemSize(), cudaMemcpyDeviceToDevice, _stream));
+        CV_CUDEV_SAFE_CALL(cudaMemcpyAsync(ret.getDevicePtr(), getDevicePtr(), ret.totalMemSize(), cudaMemcpyDeviceToDevice, _stream));
     }
     else
     {
