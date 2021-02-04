@@ -342,8 +342,8 @@ Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, 
                                                    double fps, const Size& frameSize,
                                                    const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename);
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index);
+Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename, const cv::VideoCaptureParameters& params);
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc,
                                           double fps, const Size& frameSize,
                                           const VideoWriterParameters& params);

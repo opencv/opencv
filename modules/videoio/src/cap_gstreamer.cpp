@@ -310,8 +310,8 @@ public:
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_GSTREAMER; }
-    bool open(int id);
-    bool open(const String &filename_);
+    bool open(int id, const cv::VideoCaptureParameters& params);
+    bool open(const String &filename_, const cv::VideoCaptureParameters& params);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
 
 protected:
@@ -693,7 +693,7 @@ void GStreamerCapture::newPad(GstElement *, GstPad *pad, gpointer data)
  *  is really slow if we need to restart the pipeline over and over again.
  *
  */
-bool GStreamerCapture::open(int id)
+bool GStreamerCapture::open(int id, const cv::VideoCaptureParameters& params)
 {
     gst_initializer::init();
 
@@ -703,10 +703,10 @@ bool GStreamerCapture::open(int id)
     desc << "v4l2src device=/dev/video" << id
              << " ! " << COLOR_ELEM
              << " ! appsink drop=true";
-    return open(desc.str());
+    return open(desc.str(), params);
 }
 
-bool GStreamerCapture::open(const String &filename_)
+bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParameters& params)
 {
     gst_initializer::init();
 
@@ -985,6 +985,14 @@ bool GStreamerCapture::open(const String &filename_)
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
     }
 
+    std::vector<int> unused_params = params.getUnused();
+    for (int key : unused_params) {
+        if (!setProperty(key, params.get<double>(key))) {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: can't set property " + key);
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1250,18 +1258,18 @@ bool GStreamerCapture::setProperty(int propId, double value)
 }
 
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename)
+Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename, const cv::VideoCaptureParameters& params)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->open(filename))
+    if (cap && cap->open(filename, params))
         return cap;
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index)
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureParameters& params)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->open(index))
+    if (cap && cap->open(index, params))
         return cap;
     return Ptr<IVideoCapture>();
 }
@@ -1884,7 +1892,7 @@ void handleMessage(GstElement * pipeline)
 #if defined(BUILD_PLUGIN)
 
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 0
+#define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -1893,7 +1901,11 @@ void handleMessage(GstElement * pipeline)
 namespace cv {
 
 static
-CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+CvResult CV_API_CALL cv_capture_open_with_params(
+        const char* filename, int camera_index,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
 {
     if (!handle)
         return CV_ERROR_FAIL;
@@ -1903,12 +1915,13 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     GStreamerCapture *cap = 0;
     try
     {
+        cv::VideoCaptureParameters parameters(params, n_params);
         cap = new GStreamerCapture();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename));
+            res = cap->open(std::string(filename), parameters);
         else
-            res = cap->open(camera_index);
+            res = cap->open(camera_index, parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;
@@ -1921,6 +1934,12 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     if (cap)
         delete cap;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+{
+    return cv_capture_open_with_params(filename, camera_index, NULL, 0, handle);
 }
 
 static
@@ -2096,6 +2115,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_api =
         /*  5*/cv_capture_set_prop,
         /*  6*/cv_capture_grab,
         /*  7*/cv_capture_retrieve,
+    },
+    {
+        /*  8*/cv_capture_open_with_params,
     }
 };
 
