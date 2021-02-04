@@ -497,6 +497,10 @@ flatten = tf.contrib.layers.flatten(inp)
 save(inp, flatten, 'unfused_flatten_unknown_batch', optimize=False)
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+leakyRelu = tf.nn.leaky_relu(inp, alpha=0.1)
+save(inp, leakyRelu, 'leaky_relu', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
 relu = tf.maximum(inp, 0.01 * inp, name='leaky_relu') * 2
 save(inp, relu, 'leaky_relu_order1', optimize=False)
 ################################################################################
