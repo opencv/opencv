@@ -237,7 +237,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
-#define WRITER_API_VERSION 0
+#define WRITER_API_VERSION 1
 #include "plugin_writer_api.hpp"
 #endif
 
@@ -407,14 +407,17 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 #endif
 
 static
-CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
-                                    CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* p_params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle)
 {
     Size sz(width, height);
     CvVideoWriter_FFMPEG_proxy* wrt = 0;
     try
     {
-        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
+        VideoWriterParameters params(p_params, n_params);
+        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, params);
         if(wrt && wrt->isOpened())
         {
             *handle = (CvPluginWriter)wrt;
@@ -427,6 +430,14 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
     if (wrt)
         delete wrt;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+    CV_OUT CvPluginWriter* handle)
+{
+    int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
+    return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
 }
 
 static
@@ -547,6 +558,9 @@ static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
         /*  4*/cv_writer_get_prop,
         /*  5*/cv_writer_set_prop,
         /*  6*/cv_writer_write
+    },
+    {
+        /*  7*/cv_writer_open_with_params
     }
 };
 

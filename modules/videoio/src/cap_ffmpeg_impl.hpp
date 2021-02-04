@@ -2244,7 +2244,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     close();
 
-    hw_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE);
+    hw_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
     hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
 
     // check arguments

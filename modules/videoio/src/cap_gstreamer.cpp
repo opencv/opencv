@@ -1299,7 +1299,7 @@ public:
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
     bool open(const std::string &filename, int fourcc,
-                       double fps, const Size &frameSize, bool isColor, int depth );
+              cv_writer_open_with_params                       double fps, const Size &frameSize, const VideoWriterParameters& params );
     void close();
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 
@@ -1433,8 +1433,7 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  * \param fourcc desired codec fourcc
  * \param fps desired framerate
  * \param frameSize the size of the expected frames
- * \param is_color color or grayscale
- * \param depth the depth of the expected frames
+ * \param params other parameters
  * \return success
  *
  * We support 2 modes of operation. Either the user enters a filename and a fourcc
@@ -1448,12 +1447,14 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  */
 bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                     double fps, const cv::Size &frameSize,
-                                    bool is_color, int depth )
+                                    const VideoWriterParameters& params )
 {
     // check arguments
     CV_Assert(!filename.empty());
     CV_Assert(fps > 0);
     CV_Assert(frameSize.width > 0 && frameSize.height > 0);
+    const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
 
     // init gstreamer
     gst_initializer::init();
@@ -1769,11 +1770,9 @@ Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourc
                                           const cv::Size& frameSize, const VideoWriterParameters& params)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
     try
     {
-        if (wrt->open(filename, fourcc, fps, frameSize, isColor, depth))
+        if (wrt->open(filename, fourcc, fps, frameSize, params))
             return makePtr<LegacyWriter>(wrt);
         delete wrt;
     }
@@ -2000,38 +1999,16 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 static
 CvResult CV_API_CALL cv_writer_open_with_params(
         const char* filename, int fourcc, double fps, int width, int height,
-        int* params, unsigned n_params,
+        int* p_params, unsigned n_params,
         CV_OUT CvPluginWriter* handle)
 {
     CvVideoWriter_GStreamer* wrt = 0;
     try
     {
         CvSize sz = { width, height };
-        bool isColor = true;
-        int depth = CV_8U;
-        if (params)
-        {
-            for (unsigned i = 0; i < n_params; ++i)
-            {
-                const int prop = params[i*2];
-                const int value = params[i*2 + 1];
-                switch (prop)
-                {
-                case VIDEOWRITER_PROP_IS_COLOR:
-                    isColor = value != 0;
-                    break;
-                case VIDEOWRITER_PROP_DEPTH:
-                    depth = value;
-                    break;
-                default:
-                    // TODO emit message about non-recognized propert
-                    // FUTURE: there should be mandatory and optional properties
-                    return CV_ERROR_FAIL;
-                }
-            }
-        }
+        VideoWriterParameters params(p_params, n_params);
         wrt = new CvVideoWriter_GStreamer();
-        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor, depth))
+        if (wrt && wrt->open(filename, fourcc, fps, sz, params))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
