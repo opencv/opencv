@@ -97,6 +97,130 @@ static inline DST divr(SRC1 x, SRC2 y, float scale=1)
 // Fluid kernels: addWeighted
 //
 //---------------------------
+#if CV_SSE2
+CV_ALWAYS_INLINE v_float32 v_load_f32(const ushort* in)
+{
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(in)));
+}
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const short* in)
+{
+    return v_cvt_f32(vx_load_expand(in));
+}
+
+CV_ALWAYS_INLINE v_float32 v_load_f32(const uchar* in)
+{
+    return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(in)));
+}
+
+CV_ALWAYS_INLINE void addw_short_store(short* out, const v_int32& c1, const v_int32& c2)
+{
+    vx_store(out, v_pack(c1, c2));
+}
+
+CV_ALWAYS_INLINE void addw_short_store(ushort* out, const v_int32& c1, const v_int32& c2)
+{
+    vx_store(out, v_pack_u(c1, c2));
+}
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
+                               const float _alpha, const float _beta,
+                               const float _gamma, int length)
+{
+    static_assert(((std::is_same<SRC, ushort>::value) && (std::is_same<DST, ushort>::value)) ||
+                  ((std::is_same<SRC, short>::value) && (std::is_same<DST, short>::value)),
+                  "This templated overload is only for short and ushort type combinations.");
+
+    constexpr int nlanes = (std::is_same<DST, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
+                                                                static_cast<int>(v_int16::nlanes);
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 alpha = vx_setall_f32(_alpha);
+    v_float32 beta = vx_setall_f32(_beta);
+    v_float32 gamma = vx_setall_f32(_gamma);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 2]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+            v_float32 b2 = v_load_f32(&in2[x + nlanes / 2]);
+
+            addw_short_store(&out[x], v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
+                                      v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], uchar out[],
+                               const float _alpha, const float _beta,
+                               const float _gamma, int length)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 alpha = vx_setall_f32(_alpha);
+    v_float32 beta = vx_setall_f32(_beta);
+    v_float32 gamma = vx_setall_f32(_gamma);
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 4]);
+            v_float32 a3 = v_load_f32(&in1[x + nlanes / 2]);
+            v_float32 a4 = v_load_f32(&in1[x + 3 * nlanes / 4]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+            v_float32 b2 = v_load_f32(&in2[x + nlanes / 4]);
+            v_float32 b3 = v_load_f32(&in2[x + nlanes / 2]);
+            v_float32 b4 = v_load_f32(&in2[x + 3 * nlanes / 4]);
+
+            v_int32 sum1 = v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
+                    sum2 = v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))),
+                    sum3 = v_round(v_fma(a3, alpha, v_fma(b3, beta, gamma))),
+                    sum4 = v_round(v_fma(a4, alpha, v_fma(b4, beta, gamma)));
+
+            vx_store(&out[x], v_pack_u(v_pack(sum1, sum2), v_pack(sum3, sum4)));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE int addw_simd(const SRC*, const SRC*, float*,
+                               const float, const float,
+                               const float, int)
+{
+    //Cases when dst type is float are successfully vectorized with compiler.
+    return 0;
+}
+#endif  // CV_SSE2
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
@@ -117,8 +241,13 @@ static void run_addweighted(Buffer &dst, const View &src1, const View &src2,
     auto _beta  = static_cast<float>( beta  );
     auto _gamma = static_cast<float>( gamma );
 
-    for (int l=0; l < length; l++)
-        out[l] = addWeighted<DST>(in1[l], in2[l], _alpha, _beta, _gamma);
+    int x = 0;
+#if CV_SSE2
+    x = addw_simd(in1, in2, out, _alpha, _beta, _gamma, length);
+#endif
+
+    for (; x < length; ++x)
+        out[x] = addWeighted<DST>(in1[x], in2[x], _alpha, _beta, _gamma);
 }
 
 GAPI_FLUID_KERNEL(GFluidAddW, cv::gapi::core::GAddW, false)
