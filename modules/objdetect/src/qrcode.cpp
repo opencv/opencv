@@ -3650,7 +3650,7 @@ bool QRCodeDetector::decodeMulti(
             straight_barcode[i].convertTo(tmp_straight_qrcodes[i],
                                           straight_qrcode_type);
         }
-        straight_qrcode.create(Size(tmp_straight_qrcodes.size(), 1),
+        straight_qrcode.create(Size(int(tmp_straight_qrcodes.size()), 1),
                                straight_qrcode_type);
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
