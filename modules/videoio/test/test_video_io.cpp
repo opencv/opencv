@@ -737,14 +737,14 @@ TEST_P(video_acceleration, write_read)
 }
 
 static Ext_Fourcc_PSNR hw_codecs[] = {
-        {"mp4", "MPEG", 32.f, CAP_FFMPEG},
-        {"mp4", "H264", 32.f, CAP_FFMPEG},
+        {"mp4", "MPEG", 30.f, CAP_FFMPEG},
+        {"mp4", "H264", 30.f, CAP_FFMPEG},
 
-        {"avi", "MPEG", 32.f, CAP_GSTREAMER},
-        {"avi", "H264", 32.f, CAP_GSTREAMER},
+        {"avi", "MPEG", 30.f, CAP_GSTREAMER},
+        {"avi", "H264", 30.f, CAP_GSTREAMER},
 
-        {"mp4", "MPEG", 32.f, CAP_MSMF},
-        {"mp4", "H264", 32.f, CAP_MSMF},
+        {"mp4", "MPEG", 30.f, CAP_MSMF},
+        {"mp4", "H264", 30.f, CAP_MSMF}
 };
 
 static VideoAccelerationType hw_types[] = {
