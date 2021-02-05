@@ -3642,15 +3642,16 @@ bool QRCodeDetector::decodeMulti(
     }
     else if(straight_qrcode.needed())
     {
+        int straight_qrcode_type = straight_qrcode.fixedType() ?
+                                   straight_qrcode.type() : CV_8UC1;
         vector<Mat> tmp_straight_qrcodes(straight_barcode.size());
         for (size_t i = 0; i < straight_barcode.size(); i++)
         {
             straight_barcode[i].convertTo(tmp_straight_qrcodes[i],
-                                          straight_qrcode.fixedType() ?
-                                          straight_qrcode.type() : CV_8UC1);
+                                          straight_qrcode_type);
         }
-        straight_qrcode.create(OutputArray(tmp_straight_qrcodes).size(),
-                               OutputArray(tmp_straight_qrcodes).type());
+        straight_qrcode.create(Size(tmp_straight_qrcodes.size(), 1),
+                               straight_qrcode_type);
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
     decoded_info.clear();
