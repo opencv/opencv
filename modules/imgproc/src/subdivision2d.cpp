@@ -470,6 +470,10 @@ static int inCircleEx(
 {
     const static Point2f o(0.f, 0.f);
 
+    if (ideal_a && ideal_b && ideal_c && ideal_d) {
+        CV_Error(CV_StsNotImplemented, "unsupported case");
+    }
+
     if (ideal_a && ideal_b && ideal_c && !ideal_d) {
         return counterClockwiseEx(o, a, o, b, o, c);
     }
