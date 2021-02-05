@@ -696,7 +696,7 @@
         97 81 113 100 113 101 99 113 37 104 114 101 51 63 74 88</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -723,7 +723,7 @@
         97 81 113 100 113 101 99 113 37 104 114 101 51 63 74 88</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -750,7 +750,7 @@
         97 81 113 100 113 101 99 113 37 104 114 101 51 63 74 88</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -777,7 +777,7 @@
         97 81 113 100 113 101 99 113 37 104 114 101 51 63 74 88</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -804,7 +804,7 @@
         97 81 113 100 113 101 99 113 37 104 114 101 51 63 74 88</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -839,7 +839,7 @@
       <val>94.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -874,7 +874,7 @@
       <val>56.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -909,7 +909,7 @@
       <val>51.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -944,7 +944,7 @@
       <val>85.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -979,7 +979,7 @@
       <val>67.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1014,7 +1014,7 @@
       <val>32.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1049,7 +1049,7 @@
       <val>134.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1084,7 +1084,7 @@
       <val>47.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1112,7 +1112,7 @@
         103 47</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1147,7 +1147,7 @@
       <val>112.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>65536</kind>
-    <type>5</type>
+    <type>0</type>
     <min>0.</min>
     <max>255.</max>
     <last>
@@ -1321,7 +1321,7 @@
       <val>105.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>2</len>
     <idx>1</idx>
     <min>0.</min>
@@ -1352,7 +1352,7 @@
         73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>2</len>
     <idx>0</idx>
     <min>0.</min>
@@ -1383,7 +1383,7 @@
         73 32 76 111 118 101 32 79 112 101 110 67 86</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>3</len>
     <idx>1</idx>
     <min>0.</min>
@@ -1422,7 +1422,7 @@
       <val>110.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>4</len>
     <idx>1</idx>
     <min>0.</min>
@@ -1461,7 +1461,7 @@
       <val>112.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>5</len>
     <idx>4</idx>
     <min>0.</min>
@@ -1492,7 +1492,7 @@
         69 88 84 82 65</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>6</len>
     <idx>4</idx>
     <min>0.</min>
@@ -1531,7 +1531,7 @@
       <val>103.</val></rng2></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>7</len>
     <idx>1</idx>
     <min>0.</min>
@@ -1562,7 +1562,7 @@
         80 111 108 105 110 97</data></val></decoded_info_uint8_t>
   <straight_barcode>
     <kind>327680</kind>
-    <type>5</type>
+    <type>0</type>
     <len>8</len>
     <idx>5</idx>
     <min>0.</min>
