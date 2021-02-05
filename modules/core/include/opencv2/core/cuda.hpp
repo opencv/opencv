@@ -452,8 +452,16 @@ public:
     GpuMatND(const GpuMatND&) = default;
     GpuMatND& operator=(const GpuMatND&) = default;
 
+#if defined(__GNUC__) && __GNUC__ < 5
+    // error: function '...' defaulted on its first declaration with an exception-specification
+    // that differs from the implicit declaration '...'
+
+    GpuMatND(GpuMatND&&) = default;
+    GpuMatND& operator=(GpuMatND&&) = default;
+#else
     GpuMatND(GpuMatND&&) noexcept = default;
     GpuMatND& operator=(GpuMatND&&) noexcept = default;
+#endif
 
     void upload(InputArray src);
     void upload(InputArray src, Stream& stream);
