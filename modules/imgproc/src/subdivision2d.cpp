@@ -257,37 +257,21 @@ static bool parallel(Point2f u, Point2f v)
     return abs(u.cross(v)) < FLT_EPSILON;
 }
 
-static int delaunayCCW(Point2f a, Point2f b, Point2f c, bool ideal_a, bool ideal_b, bool ideal_c)
-{
-    const static Point2f o(0.f, 0.f);
-
-    if (ideal_a && ideal_b && ideal_c) {
-        return counterClockwise(a, b, c);
-    }
-
-    if (ideal_a && ideal_b && !ideal_c) {
-        return counterClockwise(a, b, o);
-    }
-
-    if (!ideal_a && !ideal_b && ideal_c) {
-        return !parallel(b - a, c) ? counterClockwise(o, b - a, c) : counterClockwise(a, b, o);
-    }
-
-    if (!ideal_a && !ideal_b && !ideal_c) {
-        return counterClockwise(a, b, c);
-    }
-
-    return delaunayCCW(b, c, a, ideal_b, ideal_c, ideal_a);
-}
-
 static bool equal(Point2f a, Point2f b) {
     return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
 }
 
-static int voronoiCCW(
+static int counterClockwiseEx(
         Point2f a_const, Point2f a_ideal, Point2f b_const, Point2f b_ideal, Point2f c_const, Point2f c_ideal)
 {
     const static Point2f o(0.f, 0.f);
+
+    if (a_ideal != o && b_ideal != o && c_ideal != o) {
+        if (a_const == o && b_const == o && c_const == o) {
+            return counterClockwise(a_ideal, b_ideal, c_ideal);
+        }
+        CV_Error(CV_StsNotImplemented, "unsupported case");
+    }
 
     if (a_ideal != o && b_ideal != o && c_ideal == o) {
         if (!parallel(a_ideal, b_ideal)) {
@@ -297,47 +281,28 @@ static int voronoiCCW(
                 return counterClockwise(o, a_ideal, b_const - a_const);
             }
             if (equal(a_const, b_const)) {
-                return counterClockwise(o, b_ideal, c_const - b_const);
+                return counterClockwise(a_ideal, b_ideal, c_const - a_const);
             }
         }
-    }
-
-    if (a_ideal != o && b_ideal == o && c_ideal != o) {
-        return -voronoiCCW(a_const, a_ideal, c_const, c_ideal, b_const, b_ideal);
-    }
-
-    if (a_ideal == o && b_ideal != o && c_ideal != o) {
-        return -voronoiCCW(c_const, c_ideal, b_const, b_ideal, a_const, a_ideal);
+        CV_Error(CV_StsNotImplemented, "unsupported case");
     }
 
     if (a_ideal == o && b_ideal == o && c_ideal != o) {
         return !parallel(b_const - a_const, c_ideal) ?
-                counterClockwise(o, b_const - a_const, c_ideal) : counterClockwise(a_const, b_const, c_const);
-    }
-
-    if (a_ideal == o && b_ideal != o && c_ideal == o) {
-        return -voronoiCCW(a_const, a_ideal, c_const, c_ideal, b_const, b_ideal);
-    }
-
-    if (a_ideal != o && b_ideal == o && c_ideal == o) {
-        return -voronoiCCW(c_const, c_ideal, b_const, b_ideal, a_const, a_ideal);
+               counterClockwise(o, b_const - a_const, c_ideal) : counterClockwise(a_const, b_const, c_const);
     }
 
     if (a_ideal == o && b_ideal == o && c_ideal == o) {
         return counterClockwise(a_const, b_const, c_const);
     }
 
-    CV_Error(CV_StsNotImplemented, "impossible");
+    return counterClockwiseEx(b_const, b_ideal, c_const, c_ideal, a_const, a_ideal);
 }
 
-static int delaunayRightOf(Point2f c, Point2f a, Point2f b, bool ideal_c, bool ideal_a, bool ideal_b) {
-    return delaunayCCW(c, b, a, ideal_c, ideal_b, ideal_a);
-}
-
-static int voronoiRightOf(
+static int rightOfEx(
         Point2f c_const, Point2f c_ideal, Point2f a_const, Point2f a_ideal, Point2f b_const, Point2f b_ideal)
 {
-    return voronoiCCW(c_const, c_ideal, b_const, b_ideal, a_const, a_ideal);
+    return counterClockwiseEx(c_const, c_ideal, b_const, b_ideal, a_const, a_ideal);
 }
 
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
@@ -346,19 +311,21 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
 
     int edge_org = edgeOrg(edge);
     int edge_dst = edgeDst(edge);
+    bool ideal_org = vtx[edge_org].isideal();
+    bool ideal_dst = vtx[edge_dst].isideal();
+
+    Point2f org_const, org_ideal, dst_const, dst_ideal;
 
     if (!vtx[edge_org].isvirtual()) {
         // Delaunay edge
 
-        return delaunayRightOf(
-                pt, vtx[edge_org].pt, vtx[edge_dst].pt, false, vtx[edge_org].isideal(), vtx[edge_dst].isideal());
+        org_const = ideal_org ? o : vtx[edge_org].pt;
+        org_ideal = ideal_org ? vtx[edge_org].pt : o;
+        dst_const = ideal_dst ? o : vtx[edge_dst].pt;
+        dst_ideal = ideal_dst ? vtx[edge_dst].pt : o;
     } else {
         // Voronoi edge
 
-        bool ideal_org = vtx[edge_org].isideal();
-        bool ideal_dst = vtx[edge_dst].isideal();
-
-        Point2f org_const, org_ideal, dst_const, dst_ideal;
         if (ideal_org) {
             int first_edge_rot = rotateEdge(vtx[edge_org].firstEdge, 1);
             org_const = (vtx[edgeOrg(first_edge_rot)].pt + vtx[edgeDst(first_edge_rot)].pt) / 2.f;
@@ -375,9 +342,9 @@ int Subdiv2D::isRightOf(Point2f pt, int edge) const
             dst_const = vtx[edge_dst].pt;
             dst_ideal = o;
         }
-
-        return voronoiRightOf(pt, o, org_const, org_ideal, dst_const, dst_ideal);
     }
+
+    return rightOfEx(pt, o, org_const, org_ideal, dst_const, dst_ideal);
 }
 
 int Subdiv2D::newEdge()
@@ -498,13 +465,13 @@ static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d)
     return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
-static int delaunayInCircle(
+static int inCircleEx(
         Point2f a, Point2f b, Point2f c, Point2f d, bool ideal_a, bool ideal_b, bool ideal_c, bool ideal_d)
 {
     const static Point2f o(0.f, 0.f);
 
     if (ideal_a && ideal_b && ideal_c && !ideal_d) {
-        return delaunayCCW(a, b, c, true, true, true);
+        return counterClockwiseEx(o, a, o, b, o, c);
     }
 
     if (ideal_a && !ideal_b && ideal_c && !ideal_d) {
@@ -517,14 +484,14 @@ static int delaunayInCircle(
             if (abs(od - ob) < FLT_EPSILON) {
                 return 0;
             } else {
-                return (od < ob && delaunayCCW(a, b, c, true, false, true) > 0) ||
-                       (od > ob && delaunayCCW(a, b, c, true, false, true) < 0) ? 1 : -1;
+                return (od < ob && counterClockwiseEx(o, a, b, o, o, c) > 0) ||
+                       (od > ob && counterClockwiseEx(o, a, b, o, o, c) < 0) ? 1 : -1;
             }
         }
     }
 
     if (ideal_a && ideal_b && !ideal_c && !ideal_d) {
-        return -delaunayInCircle(a, c, b, d, true, false, true, false);
+        return -inCircleEx(a, c, b, d, true, false, true, false);
     }
 
     if (!ideal_a && !ideal_b && !ideal_c && ideal_d) {
@@ -539,7 +506,7 @@ static int delaunayInCircle(
         return inCircle(a, b, c, d);
     }
 
-    return -delaunayInCircle(b, c, d, a, ideal_b, ideal_c, ideal_d, ideal_a);
+    return -inCircleEx(b, c, d, a, ideal_b, ideal_c, ideal_d, ideal_a);
 }
 
 
@@ -590,7 +557,7 @@ int Subdiv2D::insert(Point2f pt)
         curr_dst = edgeDst( curr_edge );
 
         if( isRightOf( vtx[temp_dst].pt, curr_edge ) > 0 &&
-            delaunayInCircle(
+            inCircleEx(
                     vtx[curr_org].pt, vtx[temp_dst].pt, vtx[curr_dst].pt, vtx[curr_point].pt,
                     vtx[curr_org].isideal(), vtx[temp_dst].isideal(), vtx[curr_dst].isideal(), false) > 0 )
         {
@@ -903,11 +870,11 @@ static void cropVoronoiEdge(Point2f &org_const, Point2f &org_ideal,
 {
     static const Point2f o(0.f, 0.f);
 
-    int edge_org_right_of_boundary = voronoiRightOf(org_const, org_ideal, boundary_org, o, boundary_dst, o);
-    int edge_dst_right_of_boundary = voronoiRightOf(dst_const, dst_ideal, boundary_org, o, boundary_dst, o);
+    int edge_org_right_of_boundary = rightOfEx(org_const, org_ideal, boundary_org, o, boundary_dst, o);
+    int edge_dst_right_of_boundary = rightOfEx(dst_const, dst_ideal, boundary_org, o, boundary_dst, o);
 
-    int boundary_org_right_of_edge = voronoiRightOf(boundary_org, o, org_const, org_ideal, dst_const, dst_ideal);
-    int boundary_dst_right_of_edge = voronoiRightOf(boundary_dst, o, org_const, org_ideal, dst_const, dst_ideal);
+    int boundary_org_right_of_edge = rightOfEx(boundary_org, o, org_const, org_ideal, dst_const, dst_ideal);
+    int boundary_dst_right_of_edge = rightOfEx(boundary_dst, o, org_const, org_ideal, dst_const, dst_ideal);
 
     if (    edge_org_right_of_boundary != edge_dst_right_of_boundary &&
             boundary_org_right_of_edge != boundary_dst_right_of_edge) {
