@@ -7,6 +7,7 @@
 #ifndef OPENCV_GAPI_PYTHON_BRIDGE_HPP
 #define OPENCV_GAPI_PYTHON_BRIDGE_HPP
 
+#include <opencv2/gapi.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gopaque.hpp>
 

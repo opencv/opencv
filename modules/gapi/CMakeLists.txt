@@ -85,7 +85,6 @@ set(gapi_srcs
     src/api/ginfer.cpp
     src/api/media.cpp
     src/api/rmat.cpp
-    src/api/python_bridge.cpp
 
     # Compiler part
     src/compiler/gmodel.cpp
