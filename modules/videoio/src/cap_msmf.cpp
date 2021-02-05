@@ -789,12 +789,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
 bool CvCapture_MSMF::configureHW(const cv::VideoCaptureParameters& params) {
     hwDeviceIndex = params.get<int>(cv::VIDEOWRITER_PROP_HW_DEVICE, -1);
     cv::VideoAccelerationType hw_type = params.get<cv::VideoAccelerationType>(cv::VIDEOWRITER_PROP_HW_ACCELERATION, cv::VIDEO_ACCELERATION_ANY);
-    if (hw_type & cv::VIDEO_ACCELERATION_D3D11) {
-        return configureHW(true);
-    }
-    else {
-        return false;
-    }
+    return configureHW((hw_type & cv::VIDEO_ACCELERATION_D3D11) != 0);
 }
 
 bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
@@ -879,6 +874,15 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     {
         frameStep = captureFormat.getFrameStep();
     }
+    if (params) {
+        std::vector<int> unused_params = params->getUnused();
+        for (int key : unused_params) {
+            if (!setProperty(key, params->get<double>(key))) {
+                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " + key);
+                return false;
+            }
+        }
+    }
     return isOpen;
 }
 
@@ -914,6 +918,16 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
             }
             else
                 duration = 0;
+        }
+    }
+
+    if (params) {
+        std::vector<int> unused_params = params->getUnused();
+        for (int key : unused_params) {
+            if (!setProperty(key, params->get<double>(key))) {
+                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " + key);
+                return false;
+            }
         }
     }
 
