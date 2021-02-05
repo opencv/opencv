@@ -2027,16 +2027,16 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 static
 CvResult CV_API_CALL cv_writer_open_with_params(
         const char* filename, int fourcc, double fps, int width, int height,
-        int* p_params, unsigned n_params,
+        int* params, unsigned n_params,
         CV_OUT CvPluginWriter* handle)
 {
     CvVideoWriter_GStreamer* wrt = 0;
     try
     {
         CvSize sz = { width, height };
-        VideoWriterParameters params(p_params, n_params);
+        VideoWriterParameters parameters(params, n_params);
         wrt = new CvVideoWriter_GStreamer();
-        if (wrt && wrt->open(filename, fourcc, fps, sz, params))
+        if (wrt && wrt->open(filename, fourcc, fps, sz, parameters))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;

@@ -574,7 +574,7 @@ public:
         if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Capture_open_with_params)
         {
             std::vector<int> vint_params = params.getIntVector();
-            int* c_params = &vint_params[0];
+            int* c_params = vint_params.data();
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
             if (CV_ERROR_OK == plugin_api->v1.Capture_open_with_params(

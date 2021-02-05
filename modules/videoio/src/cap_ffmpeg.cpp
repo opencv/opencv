@@ -409,15 +409,15 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 static
 CvResult CV_API_CALL cv_writer_open_with_params(
         const char* filename, int fourcc, double fps, int width, int height,
-        int* p_params, unsigned n_params,
+        int* params, unsigned n_params,
         CV_OUT CvPluginWriter* handle)
 {
     Size sz(width, height);
     CvVideoWriter_FFMPEG_proxy* wrt = 0;
     try
     {
-        VideoWriterParameters params(p_params, n_params);
-        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, params);
+        VideoWriterParameters parameters(params, n_params);
+        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, parameters);
         if(wrt && wrt->isOpened())
         {
             *handle = (CvPluginWriter)wrt;

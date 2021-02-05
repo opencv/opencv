@@ -2472,6 +2472,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         if (!(va_type & hw_type))
             continue;
 
+        if (VIDEO_ACCELERATION_MFX == va_type && CV_FOURCC('M', 'J', 'P', 'G') == fourcc) // MediaSDK works badly on MJPG
+            continue;
+
         hw_device_ctx = hw_create_device(va_type, hw_device);
         if (!hw_device_ctx)
             continue;
