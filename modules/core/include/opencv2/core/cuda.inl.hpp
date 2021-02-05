@@ -384,6 +384,92 @@ void swap(GpuMat& a, GpuMat& b)
 }
 
 //===================================================================================
+// GpuMatND
+//===================================================================================
+
+inline
+GpuMatND::GpuMatND() :
+    flags(0), dims(0), data(nullptr), offset(0)
+{
+}
+
+inline
+GpuMatND::GpuMatND(SizeArray _size, int _type) :
+    flags(0), dims(0), data(nullptr), offset(0)
+{
+    create(std::move(_size), _type);
+}
+
+inline
+void GpuMatND::swap(GpuMatND& m) noexcept
+{
+    std::swap(*this, m);
+}
+
+inline
+bool GpuMatND::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
+
+inline
+bool GpuMatND::isSubmatrix() const
+{
+    return (flags & Mat::SUBMATRIX_FLAG) != 0;
+}
+
+inline
+size_t GpuMatND::elemSize() const
+{
+    return CV_ELEM_SIZE(flags);
+}
+
+inline
+size_t GpuMatND::elemSize1() const
+{
+    return CV_ELEM_SIZE1(flags);
+}
+
+inline
+bool GpuMatND::empty() const
+{
+    return data == nullptr;
+}
+
+inline
+bool GpuMatND::external() const
+{
+    return !empty() && data_.use_count() == 0;
+}
+
+inline
+uchar* GpuMatND::getDevicePtr() const
+{
+    return data + offset;
+}
+
+inline
+size_t GpuMatND::total() const
+{
+    size_t p = 1;
+    for(auto s : size)
+        p *= s;
+    return p;
+}
+
+inline
+size_t GpuMatND::totalMemSize() const
+{
+    return size[0] * step[0];
+}
+
+inline
+int GpuMatND::type() const
+{
+    return CV_MAT_TYPE(flags);
+}
+
+//===================================================================================
 // HostMem
 //===================================================================================
 
