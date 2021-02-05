@@ -108,8 +108,15 @@ AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_cat
         if (hw_type != AV_HWDEVICE_TYPE_NONE) {
             for (int i = 0;; i++) {
                 const AVCodecHWConfig *hw_config = avcodec_get_hw_config(c, i);
-                if (!hw_config)
+                if (!hw_config) {
+#if LIBAVUTIL_BUILD <= AV_VERSION_INT(56, 31, 100) // h264_vaapi started reporting HW configs after this version
+                    if (c->name == std::string("h264_vaapi")) {
+                        *hw_pix_fmt = AV_PIX_FMT_VAAPI;
+                        return c;
+                    }
+#endif
                     break;
+                }
                 if (hw_config->device_type == hw_type) {
                     int m = hw_config->methods;
                     if (!(m & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) && (m & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) && hw_pix_fmt) {

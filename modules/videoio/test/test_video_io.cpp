@@ -740,11 +740,13 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
         {"mp4", "MPEG", 30.f, CAP_FFMPEG},
         {"mp4", "H264", 30.f, CAP_FFMPEG},
 
-        {"avi", "MPEG", 30.f, CAP_GSTREAMER},
-        {"avi", "H264", 30.f, CAP_GSTREAMER},
+        {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
+        {"mkv", "H264", 30.f, CAP_GSTREAMER},
 
+#ifdef _WIN32
         {"mp4", "MPEG", 30.f, CAP_MSMF},
-        {"mp4", "H264", 30.f, CAP_MSMF}
+        {"mp4", "H264", 30.f, CAP_MSMF},
+#endif
 };
 
 static VideoAccelerationType hw_types[] = {
