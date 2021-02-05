@@ -297,6 +297,8 @@ int cv::waitKey(int delay)
     return (code != -1) ? (code & 0xff) : -1;
 }
 
+// NOTE: cv::pollKey has no C API equivalent. it is implemented in each backend source file.
+
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)

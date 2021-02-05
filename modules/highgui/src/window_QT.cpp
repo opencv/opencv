@@ -382,6 +382,13 @@ CV_IMPL int cvWaitKey(int delay)
 }
 
 
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+
 //Yannick Verdie
 //This function is experimental and some functions (such as cvSet/getWindowProperty will not work)
 //We recommend not using this function for now
