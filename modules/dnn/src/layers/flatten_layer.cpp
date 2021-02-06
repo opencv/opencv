@@ -89,8 +89,8 @@ public:
         }
 
         int numAxes = inputs[0].size();
-        int startAxis = clamp(_startAxis, numAxes);
-        int endAxis = clamp(_endAxis, numAxes);
+        int startAxis = normalize_axis(_startAxis, numAxes);
+        int endAxis = normalize_axis(_endAxis, numAxes);
 
         CV_Assert(startAxis >= 0);
         CV_Assert(endAxis >= startAxis && endAxis < (int)numAxes);
@@ -120,8 +120,8 @@ public:
         inputs_arr.getMatVector(inputs);
 
         int numAxes = inputs[0].dims;
-        _startAxis = clamp(_startAxis, numAxes);
-        _endAxis = clamp(_endAxis, numAxes);
+        _startAxis = normalize_axis(_startAxis, numAxes);
+        _endAxis = normalize_axis(_endAxis, numAxes);
     }
 
 #ifdef HAVE_OPENCL
@@ -195,8 +195,8 @@ virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inp
         std::vector<size_t> dims = ieInpNode->get_shape();
 
         int numAxes = dims.size();
-        int startAxis = clamp(_startAxis, numAxes);
-        int endAxis = clamp(_endAxis, numAxes);
+        int startAxis = normalize_axis(_startAxis, numAxes);
+        int endAxis = normalize_axis(_endAxis, numAxes);
 
         CV_Assert(startAxis >= 0);
         CV_Assert(endAxis >= startAxis && endAxis < numAxes);
