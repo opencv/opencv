@@ -988,15 +988,16 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             int enc_width = enc->width;
             int enc_height = enc->height;
 
+            AVCodec *codec = NULL;
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
             // try find HW decoder
-            AVCodec* codec = NULL;
             static std::vector<VideoAccelerationType> supported_va_types = {
-    #ifdef _WIN32
-                VIDEO_ACCELERATION_D3D11,
-    #else
-                VIDEO_ACCELERATION_VAAPI,
-    #endif
-                VIDEO_ACCELERATION_MFX,
+#ifdef _WIN32
+                    VIDEO_ACCELERATION_D3D11,
+#else
+                    VIDEO_ACCELERATION_VAAPI,
+#endif
+                    VIDEO_ACCELERATION_MFX,
             };
             for (VideoAccelerationType va_type : supported_va_types) {
                 if (!(va_type & hw_type))
@@ -1018,7 +1019,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     }
                 }
             }
-
+#endif
             // SW decoder
             if (!codec) {
                 if (av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
@@ -1027,8 +1028,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
                 }
                 hw_type = VIDEO_ACCELERATION_NONE;
-                if (enc->hw_device_ctx)
-                    av_buffer_unref(&enc->hw_device_ctx);
             }
             if (!codec || avcodec_open2(enc, codec, NULL) < 0)
                 goto exit_func;
@@ -1205,8 +1204,10 @@ bool CvCapture_FFMPEG::grabFrame()
     interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
 #endif
 
+#if USE_AV_SEND_FRAME_API
     // check if we can receive frame from previously decoded packet
     valid = avcodec_receive_frame(video_st->codec, picture) >= 0;
+#endif
 
     // get the next frame
     while (!valid)
@@ -1254,11 +1255,16 @@ bool CvCapture_FFMPEG::grabFrame()
         }
 
         // Decode video frame
+#if USE_AV_SEND_FRAME_API
         if (avcodec_send_packet(video_st->codec, &packet) < 0) {
             break;
         }
-
         ret = avcodec_receive_frame(video_st->codec, picture);
+#else
+        int got_picture = 0;
+        avcodec_decode_video2(video_st->codec, picture, &got_picture, &packet);
+        ret = got_picture ? 0 : -1;
+#endif
         if (ret >= 0) {
             //picture_pts = picture->best_effort_timestamp;
             if( picture_pts == AV_NOPTS_VALUE_ )
@@ -1307,8 +1313,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         return p.data != NULL;
     }
 
-    // if hardware frame, copy it to system memory
     AVFrame* sw_picture = picture;
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+    // if hardware frame, copy it to system memory
     if (picture && picture->hw_frames_ctx) {
         sw_picture = av_frame_alloc();
         //if (av_hwframe_map(sw_picture, picture, AV_HWFRAME_MAP_READ) < 0) {
@@ -1317,6 +1324,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
             return false;
         }
     }
+#endif
 
     if (!sw_picture || !sw_picture->data[0])
         return false;
@@ -2050,7 +2058,11 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         step = aligned_step;
     }
 
-    AVPixelFormat sw_pix_fmt = (c->hw_frames_ctx) ? ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format : c->pix_fmt;
+    AVPixelFormat sw_pix_fmt = c->pix_fmt;
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+    if (c->hw_frames_ctx)
+        sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
+#endif
     if ( sw_pix_fmt != input_pix_fmt ) {
         assert( input_picture );
         // let input_picture point to the raw data buffer of 'image'
@@ -2085,11 +2097,8 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     }
 
     bool ret;
-    if (!video_st->codec->hw_device_ctx) {
-        picture->pts = frame_idx;
-        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture);
-    }
-    else {
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+    if (video_st->codec->hw_device_ctx) {
         // copy data to HW frame
         AVFrame* hw_frame = av_frame_alloc();
         if (!hw_frame) {
@@ -2106,6 +2115,11 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         hw_frame->pts = frame_idx;
         ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame);
         av_frame_free(&hw_frame);
+    } else
+#endif
+    {
+        picture->pts = frame_idx;
+        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture);
     }
 
     frame_idx++;
@@ -2458,6 +2472,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     // Try find HW encoder
     AVCodec* codec = NULL;
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
     AVBufferRef* hw_device_ctx = NULL;
     AVBufferRef* hw_frames_ctx = NULL;
     static std::vector<VideoAccelerationType> supported_va_types = {
@@ -2498,6 +2513,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         if (hw_device < 0)
             hw_device = 0;
     }
+#endif
 
     // SW encoder
     if (!codec) {
@@ -2533,10 +2549,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     c->codec_tag = fourcc;
 
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
     if (hw_device_ctx) {
         c->hw_device_ctx = hw_device_ctx;
         c->hw_frames_ctx = hw_frames_ctx;
     }
+#endif
 
     int64_t lbit_rate = (int64_t)c->bit_rate;
     lbit_rate += (bitrate / 2);
@@ -2564,7 +2582,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     bool need_color_convert;
-    AVPixelFormat sw_pix_fmt = (c->hw_frames_ctx) ? ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format : c->pix_fmt;
+    AVPixelFormat sw_pix_fmt = c->pix_fmt;
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+    if (c->hw_frames_ctx)
+        sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
+#endif
+
     need_color_convert = (sw_pix_fmt != input_pix_fmt);
 
     /* allocate the encoded raw picture */
