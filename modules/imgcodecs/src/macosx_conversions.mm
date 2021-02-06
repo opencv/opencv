@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#import <AppKit/AppKit.h>
 #include "apple_conversions.h"
+#import <AppKit/AppKit.h>
 
 CV_EXPORTS NSImage* MatToNSImage(const cv::Mat& image);
 CV_EXPORTS void NSImageToMat(const NSImage* image, cv::Mat& m, bool alphaExist);
