@@ -66,14 +66,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
     int srcShapeSize = (int)srcShape.size();
     int maskShapeSize = (int)maskShape.size();
 
-    if (srcRange == Range::all())
-        srcRange = Range(0, srcShapeSize);
-    else
-    {
-        int sz = srcRange.size();
-        srcRange.start = clamp(srcRange.start, srcShapeSize);
-        srcRange.end = srcRange.end == INT_MAX ? srcShapeSize : srcRange.start + sz;
-    }
+    srcRange = normalize_axis_range(srcRange, srcShapeSize);
 
     bool explicitMask = !maskShape.empty();  // All mask values are positive.
     for (int i = 0, n = maskShape.size(); i < n && explicitMask; ++i)

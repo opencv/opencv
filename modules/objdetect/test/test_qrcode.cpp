@@ -252,6 +252,8 @@ TEST_P(Objdetect_QRCode, regression)
     decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
@@ -317,6 +319,8 @@ TEST_P(Objdetect_QRCode_Close, regression)
     decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
@@ -382,6 +386,8 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
@@ -442,6 +448,8 @@ TEST_P(Objdetect_QRCode_Curved, regression)
     decoded_info = qrcode.detectAndDecodeCurved(src, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
@@ -502,6 +510,9 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    for(size_t i = 0; i < straight_barcode.size(); i++)
+        EXPECT_EQ(expected_barcode_type, straight_barcode[i].type());
 #else
     ASSERT_TRUE(qrcode.detectMulti(src, corners));
 #endif
@@ -610,6 +621,32 @@ TEST(Objdetect_QRCode_detectMulti, detect_regression_16961)
     ASSERT_FALSE(corners.empty());
     size_t expect_corners_size = 36;
     EXPECT_EQ(corners.size(), expect_corners_size);
+}
+
+TEST(Objdetect_QRCode_decodeMulti, check_output_parameters_type_19363)
+{
+    const std::string name_current_image = "9_qrcodes.jpg";
+    const std::string root = "qrcode/multiple/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+#ifdef HAVE_QUIRC
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    std::vector<cv::String> decoded_info;
+#if 0  // FIXIT: OutputArray::create() type check
+    std::vector<Mat2b> straight_barcode_nchannels;
+    EXPECT_ANY_THROW(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode_nchannels));
+#endif
+
+    int expected_barcode_type = CV_8UC1;
+    std::vector<Mat1b> straight_barcode;
+    EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
+    ASSERT_FALSE(corners.empty());
+    for(size_t i = 0; i < straight_barcode.size(); i++)
+        EXPECT_EQ(expected_barcode_type, straight_barcode[i].type());
+#endif
 }
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)

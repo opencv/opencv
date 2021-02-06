@@ -126,8 +126,8 @@ public:
 
         const UMat& inp0 = inputs[0];
         UMat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         size_t num = total(shape(inp0.size), 0, startAxis);
         size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
@@ -211,8 +211,8 @@ public:
 
         const Mat& inp0 = inputs[0];
         Mat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();
@@ -378,8 +378,8 @@ public:
 
         NormalizeConfiguration<float> config;
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
-        config.axis_start = clamp(startAxis, input_shape.size());
-        config.axis_end = clamp(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
+        config.axis_start = normalize_axis(startAxis, input_shape.size());
+        config.axis_end = normalize_axis(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
         config.norm = pnorm;
         config.eps = epsilon;
 

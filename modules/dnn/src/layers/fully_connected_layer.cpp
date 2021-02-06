@@ -132,7 +132,7 @@ public:
             CV_CheckEQ(blobs[0].dims, 2, "");
             numOutput = blobs[0].size[0];
             CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
-            cAxis = clamp(axis, inputs[0]);
+            cAxis = normalize_axis(axis, inputs[0]);
         }
 
         MatShape outShape(cAxis + 1);
@@ -356,7 +356,7 @@ public:
             return true;
         }
 
-        int axisCan = clamp(axis, inputs[0].dims);
+        int axisCan = normalize_axis(axis, inputs[0].dims);
         int numOutput = blobs[0].size[0];
         int innerSize = blobs[0].size[1];
         int outerSize = total(shape(inputs[0]), 0, axisCan);
@@ -477,7 +477,7 @@ public:
 
         if (!blobs.empty())
         {
-            int axisCan = clamp(axis, input[0].dims);
+            int axisCan = normalize_axis(axis, input[0].dims);
             int outerSize = input[0].total(0, axisCan);
 
             for (size_t i = 0; i < input.size(); i++)
@@ -525,7 +525,7 @@ public:
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        auto flatten_start_axis = clamp(axis, input_wrapper->getRank());
+        auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
 
         auto biasMat_ = bias ? biasMat : Mat();
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);

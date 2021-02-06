@@ -2469,12 +2469,13 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
     bool ok = qrdec.straightDecodingProcess();
 
     std::string decoded_info = qrdec.getDecodeInformation();
-
-    if (ok && straight_qrcode.needed())
+    if (!ok && straight_qrcode.needed())
     {
-        qrdec.getStraightBarcode().convertTo(straight_qrcode,
-                                             straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -2498,11 +2499,13 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
 
     std::string decoded_info = qrdec.getDecodeInformation();
 
-    if (ok && straight_qrcode.needed())
+    if (!ok && straight_qrcode.needed())
     {
-        qrdec.getStraightBarcode().convertTo(straight_qrcode,
-                                             straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -3593,18 +3596,18 @@ bool QRCodeDetector::decodeMulti(
             for_copy.push_back(straight_barcode[i]);
     }
     straight_barcode = for_copy;
-    vector<Mat> tmp_straight_qrcodes;
-    if (straight_qrcode.needed())
+    if (straight_qrcode.needed() && straight_barcode.size() == 0)
     {
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        straight_qrcode.create(Size((int)straight_barcode.size(), 1), CV_8UC1);
+        vector<Mat> tmp_straight_qrcodes(straight_barcode.size());
         for (size_t i = 0; i < straight_barcode.size(); i++)
         {
-            Mat tmp_straight_qrcode;
-            tmp_straight_qrcodes.push_back(tmp_straight_qrcode);
-            straight_barcode[i].convertTo(((OutputArray)tmp_straight_qrcodes[i]),
-                                             ((OutputArray)tmp_straight_qrcodes[i]).fixedType() ?
-                                             ((OutputArray)tmp_straight_qrcodes[i]).type() : CV_32FC2);
+            straight_barcode[i].convertTo(tmp_straight_qrcodes[i], CV_8UC1);
         }
-        straight_qrcode.createSameSize(tmp_straight_qrcodes, CV_32FC2);
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
     decoded_info.clear();

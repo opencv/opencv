@@ -503,7 +503,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 MatShape targetShape;
                 std::vector<bool> shouldDelete(inpShape.size(), false);
                 for (int i = 0; i < axes.size(); i++) {
-                    int axis = clamp(axes.get<int>(i), inpShape.size());
+                    int axis = normalize_axis(axes.get<int>(i), inpShape.size());
                     shouldDelete[axis] = true;
                 }
                 for (int axis = 0; axis < inpShape.size(); ++axis){
@@ -515,7 +515,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
                 if (inpShape.size() == 3 && axes.size() <= 2)
                 {
-                    int axis = clamp(axes.get<int>(0), inpShape.size());
+                    int axis = normalize_axis(axes.get<int>(0), inpShape.size());
                     CV_CheckNE(axis, 0, "");
 
                     LayerParams reshapeLp;
@@ -539,8 +539,8 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     avgLp.set("pool", pool);
                     if (axes.size() == 2)
                     {
-                        CV_CheckEQ(clamp(axes.get<int>(0), inpShape.size()), 1, "Unsupported mode");
-                        CV_CheckEQ(clamp(axes.get<int>(1), inpShape.size()), 2, "Unsupported mode");
+                        CV_CheckEQ(normalize_axis(axes.get<int>(0), inpShape.size()), 1, "Unsupported mode");
+                        CV_CheckEQ(normalize_axis(axes.get<int>(1), inpShape.size()), 2, "Unsupported mode");
                         avgLp.set("global_pooling", true);
                     }
                     else
@@ -560,9 +560,9 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
                     CV_Assert(axes.size() <= inpShape.size() - 2);
                     std::vector<int> kernel_size(inpShape.size() - 2, 1);
-                    if (axes.size() == 1 && (clamp(axes.get<int>(0), inpShape.size()) <= 1))
+                    if (axes.size() == 1 && (normalize_axis(axes.get<int>(0), inpShape.size()) <= 1))
                     {
-                        int axis = clamp(axes.get<int>(0), inpShape.size());
+                        int axis = normalize_axis(axes.get<int>(0), inpShape.size());
                         MatShape newShape = inpShape;
                         newShape[axis + 1] = total(newShape, axis + 1);
                         newShape.resize(axis + 2);
@@ -584,7 +584,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     else
                     {
                         for (int i = 0; i < axes.size(); i++) {
-                            int axis = clamp(axes.get<int>(i), inpShape.size());
+                            int axis = normalize_axis(axes.get<int>(i), inpShape.size());
                             CV_Assert_N(axis >= 2 + i, axis < inpShape.size());
                             kernel_size[axis - 2] = inpShape[axis];
                         }
@@ -1376,7 +1376,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
             {
                 Mat input = getBlob(node_proto, 0);
-                int axis = clamp(layerParams.get<int>("axis", 1), input.dims);
+                int axis = normalize_axis(layerParams.get<int>("axis", 1), input.dims);
 
                 std::vector<int> out_size(&input.size[0], &input.size[0] + axis);
                 out_size.push_back(input.total(axis));

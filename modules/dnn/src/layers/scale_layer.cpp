@@ -305,7 +305,7 @@ public:
             numChannels = blobs[0].total();
 
         std::vector<size_t> shape(ieInpNode0->get_shape().size(), 1);
-        int cAxis = clamp(axis, shape.size());
+        int cAxis = normalize_axis(axis, shape.size());
         shape[cAxis] = numChannels;
 
         auto node = ieInpNode0;

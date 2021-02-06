@@ -8,6 +8,8 @@
 #include <opencv2/core/async.hpp>
 #include <opencv2/core/detail/async_promise.hpp>
 
+#include <stdexcept>
+
 namespace cv { namespace utils {
 //! @addtogroup core_utils
 //! @{
@@ -111,6 +113,12 @@ String dumpRange(const Range& argument)
     {
         return format("range: (s=%d, e=%d)", argument.start, argument.end);
     }
+}
+
+CV_WRAP static inline
+void testRaiseGeneralException()
+{
+    throw std::runtime_error("exception text");
 }
 
 CV_WRAP static inline
