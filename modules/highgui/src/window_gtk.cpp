@@ -1950,13 +1950,6 @@ CV_IMPL int cvWaitKey( int delay )
     return last_key;
 }
 
-int cv::pollKey()
-{
-    CV_TRACE_FUNCTION();
-    // fallback. please implement a proper polling function
-    return cvWaitKey(1);
-}
-
 
 #endif  // HAVE_GTK
 #endif  // _WIN32

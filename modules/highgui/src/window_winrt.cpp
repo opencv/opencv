@@ -205,14 +205,6 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
 
 /********************************** Not YET implemented API ****************************************************/
 
-int cv::pollKey()
-{
-    CV_TRACE_FUNCTION();
-    CV_WINRT_NO_GUI_ERROR("cvPollKey");
-
-    // TODO: implement appropriate logic here
-}
-
 CV_IMPL int cvWaitKey(int delay)
 {
     CV_WINRT_NO_GUI_ERROR("cvWaitKey");
