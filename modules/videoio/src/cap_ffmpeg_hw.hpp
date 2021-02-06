@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 #include <libavcodec/avcodec.h>
-#include <libavutil/hwcontext.h>
+#include <libavutil/avutil.h>
 #ifdef __cplusplus
 }
 #endif
@@ -26,6 +26,14 @@ AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_cat
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 
 #if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavutil/hwcontext.h>
+#ifdef __cplusplus
+}
+#endif
 
 static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_type) {
     struct HWTypeFFMPEG {
@@ -106,17 +114,18 @@ AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_cat
         if (c->id != id)
             continue;
         if (hw_type != AV_HWDEVICE_TYPE_NONE) {
+#if LIBAVUTIL_BUILD < AV_VERSION_INT(56, 51, 100) // ffmpeg 4.3
+            // Workaround for VAAPI encoders in ffmpeg 4.0-4.2 (ex, in Ubuntu 20.04)
+            // Workaround not needed for ffmpeg 4.3+ as VAAPI encoders started reporting HW configs via avcodec_get_hw_config
+            if (c->pix_fmts && AV_PIX_FMT_VAAPI == c->pix_fmts[0] && av_codec_is_encoder(c)) {
+                *hw_pix_fmt = c->pix_fmts[0];
+                return c;
+            }
+#endif
             for (int i = 0;; i++) {
                 const AVCodecHWConfig *hw_config = avcodec_get_hw_config(c, i);
-                if (!hw_config) {
-#if LIBAVUTIL_BUILD <= AV_VERSION_INT(56, 31, 100) // h264_vaapi started reporting HW configs after this version
-                    if (c->name == std::string("h264_vaapi")) {
-                        *hw_pix_fmt = AV_PIX_FMT_VAAPI;
-                        return c;
-                    }
-#endif
+                if (!hw_config)
                     break;
-                }
                 if (hw_config->device_type == hw_type) {
                     int m = hw_config->methods;
                     if (!(m & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) && (m & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) && hw_pix_fmt) {
