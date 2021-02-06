@@ -297,7 +297,17 @@ int cv::waitKey(int delay)
     return (code != -1) ? (code & 0xff) : -1;
 }
 
-// NOTE: cv::pollKey has no C API equivalent. it is implemented in each backend source file.
+#if defined(HAVE_WIN32UI)
+// pollKey() implemented in window_w32.cpp
+#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
+// pollKey() fallback implementation
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+#endif
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
@@ -789,6 +799,10 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
 }
 
+int cv::pollKey()
+{
+    CV_NO_GUI_ERROR("cv::pollKey()");
+}
 
 #endif
 
