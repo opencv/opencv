@@ -197,9 +197,6 @@ public:
             {
                 CV_Assert(0 && "Internal error");
             }
-
-            for (size_t j = 2; j < dims; j++)
-                CV_Assert(inputs[0][j] == inputs[i][j]);
         }
 
         channelsMode = variableChannels ? channelsModeInput : ELTWISE_CHANNNELS_SAME;
@@ -207,6 +204,38 @@ public:
 
         outputs.assign(1, inputs[0]);
         outputs[0][1] = numChannels;
+
+        if (dims > 2)
+        {
+            size_t vecIdx = 0;
+            bool isVecFound = false;
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                bool allOnes = isAllOnes(inputs[i], 2, dims);
+                if (!allOnes && !isVecFound)
+                {
+                    vecIdx = i;
+                    isVecFound = true;
+                }
+
+                if (!allOnes && i != vecIdx)
+                {
+                    for (size_t j = 2; j < dims; j++)
+                    {
+                         CV_Assert(inputs[vecIdx][j] == inputs[i][j]);
+                    }
+                }
+            }
+
+            if (channelsModeInput == ELTWISE_CHANNNELS_SAME && isVecFound)
+            {
+                for (size_t j = 2; j < dims; j++)
+                {
+                    outputs[0][j] = inputs[vecIdx][j];
+                }
+            }
+        }
+
         return false;
     }
 
@@ -602,6 +631,47 @@ public:
 
         CV_Assert(outputs.size() == 1);
         const int nstripes = getNumThreads();
+
+        if (channelsModeInput == ELTWISE_CHANNNELS_SAME && inputs[0].dims > 2)
+        {
+            for (size_t i = 0; i < inputs.size(); i++)
+            {
+                MatShape inpShape = shape(inputs[i].size);
+                bool allOnes = isAllOnes(inpShape, 2, inputs[i].dims);
+
+                if (allOnes)
+                {
+                    Mat tmpInput = inputs[i];
+                    MatShape outShape = shape(outputs[0].size);
+                    size_t xSize = outShape[2];
+                    for (size_t j = 3; j < outShape.size(); j++)
+                        xSize *= outShape[j];
+
+                    int dimVec[3] = {outShape[0], outShape[1], (int) xSize};
+                    std::vector<int> matSizesVec(&dimVec[0], &dimVec[0] + 3);
+                    inputs[i] = Mat(matSizesVec, tmpInput.type());
+
+                    std::vector<int> idx(outShape.size(), 0);
+                    std::vector<int> outIdx(inpShape.size(), 0);
+
+                    for (size_t j = 0; j < outShape[0]; j++)
+                    {
+                        outIdx[0] = idx[0] = j;
+                        for(size_t k = 0; k < outShape[1]; k++)
+                        {
+                            outIdx[1] = idx[1] = k;
+                            for (size_t x = 0; x < xSize; x++)
+                            {
+                                outIdx[2] = x;
+                                inputs[i].at<float>(outIdx.data()) = tmpInput.at<float>(idx.data());
+                            }
+                        }
+                    }
+                    inputs[i] = inputs[i].reshape(0, outShape);
+                }
+            }
+        }
+
         EltwiseInvoker::run(*this,
                             &inputs[0], (int)inputs.size(), outputs[0],
                             nstripes);
@@ -739,6 +809,17 @@ public:
     }
 
     Ptr<ActivationLayer> activ;
+
+private:
+    static bool isAllOnes(const MatShape &inputs, int startPos, int endPos) const
+    {
+        for (size_t i = startPos; i < endPos; i++)
+        {
+            if (inputs[i] != 1)
+                return false;
+        }
+        return true;
+    }
 };
 
 Ptr<EltwiseLayer> EltwiseLayer::create(const LayerParams& params)

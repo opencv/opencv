@@ -205,6 +205,16 @@ TEST_P(Test_TensorFlow_layers, eltwise)
     runTensorFlowNet("eltwise_sub");
 }
 
+TEST_P(Test_TensorFlow_layers, eltwise_add_vec)
+{
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    runTensorFlowNet("eltwise_add_vec");
+}
+
 TEST_P(Test_TensorFlow_layers, channel_broadcast)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
