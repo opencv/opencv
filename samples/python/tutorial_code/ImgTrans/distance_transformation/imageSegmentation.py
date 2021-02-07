@@ -102,7 +102,8 @@ for i in range(len(contours)):
 
 # Draw the background marker
 cv.circle(markers, (5,5), 3, (255,255,255), -1)
-cv.imshow('Markers', markers*10000)
+markers_8u = (markers * 10).astype('uint8')
+cv.imshow('Markers', markers_8u)
 ## [seeds]
 
 ## [watershed]
