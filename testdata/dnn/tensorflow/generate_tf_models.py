@@ -786,6 +786,12 @@ conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
 sub = conv - inp
 save(inp, sub, 'eltwise_sub')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 5, 5, 10], 'input')
+out1 = tf.keras.layers.MaxPool2D((2, 2), 5, "SAME", name="pooling")(inp)
+out2 = tf.keras.layers.ReLU(name="relu")(inp)
+final_out = tf.math.add(out1, out2, name='tf_sum')
+save(inp, final_out, 'eltwise_add_vec')
+################################################################################
 inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
 softmax = tf.contrib.slim.softmax(conv)
