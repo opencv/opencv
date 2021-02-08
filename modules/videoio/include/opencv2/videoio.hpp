@@ -212,7 +212,7 @@ enum VideoWriterProperties {
 // (in case of FFMPEG backend, it translated to enum https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h#L27)
 enum VideoAccelerationType  {
     VIDEO_ACCELERATION_NONE     = 0,
-    VIDEO_ACCELERATION_ANY      = 0xFFFFFFFF,
+    VIDEO_ACCELERATION_ANY      = 0x7FFFFFFF,
 
     VIDEO_ACCELERATION_D3D11    = 1 << 1, // DirectX 11
     VIDEO_ACCELERATION_VAAPI    = 1 << 2, // VAAPI

@@ -680,9 +680,10 @@ TEST_P(video_acceleration, write_read)
             VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
             fps,
             sz,
-            { VIDEOWRITER_PROP_HW_ACCELERATION, (int)va_type });
+            { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
         EXPECT_TRUE(writer.isOpened());
-        std::cout << "  VideoWriter acceleration = " << (VideoAccelerationType)writer.get(VIDEOWRITER_PROP_HW_ACCELERATION) << std::endl;
+        VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
+        std::cout << "  VideoWriter acceleration = " << actual_va << std::endl;
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
             generateFrame(i, frameNum, frame);
@@ -698,9 +699,10 @@ TEST_P(video_acceleration, write_read)
     }
     // Read video and check PSNR on every frame
     {
-        VideoCapture reader(filename, backend, { CAP_PROP_HW_ACCELERATION, (int)va_type });
+        VideoCapture reader(filename, backend, { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
         ASSERT_TRUE(reader.isOpened());
-        std::cout << "  VideoCapture acceleration = " << (VideoAccelerationType)reader.get(CAP_PROP_HW_ACCELERATION) << std::endl;
+        VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(reader.get(CAP_PROP_HW_ACCELERATION)));
+        std::cout << "  VideoCapture acceleration = " << actual_va << std::endl;
         double min_psnr = 1000;
         Mat reference(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
