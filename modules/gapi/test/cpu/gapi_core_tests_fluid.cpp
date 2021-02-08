@@ -105,7 +105,9 @@ INSTANTIATE_TEST_CASE_P(AbsDiffTestFluid, AbsDiffTest,
                                 Values(CORE_FLUID)));
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCTestFluid, AbsDiffCTest,
-                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_8UC2,
+                                       CV_16UC2, CV_16SC2, CV_8UC3, CV_16UC3,
+                                       CV_16SC3, CV_8UC4, CV_16UC4, CV_16SC4),
                                 Values(cv::Size(1280, 720),
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),

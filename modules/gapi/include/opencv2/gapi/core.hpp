@@ -298,8 +298,8 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat, GScalar)>, "org.opencv.core.matrixop.absdiffC") {
-        static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
+    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat,GScalar)>, "org.opencv.core.matrixop.absdiffC") {
+        static GMatDesc outMeta(const GMatDesc& a, const GScalarDesc&) {
             return a;
         }
     };
