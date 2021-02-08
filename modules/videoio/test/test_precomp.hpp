@@ -38,7 +38,7 @@ inline std::ostream &operator<<(std::ostream &out, const VideoAccelerationType &
             return out;
         }
     }
-    out << "UNKNOWN";
+    out << "UNKNOWN(0x" << std::hex << static_cast<int>(va_type) << ")";
     return out;
 }
 
