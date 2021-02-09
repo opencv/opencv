@@ -1926,7 +1926,7 @@ static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
 
 static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
                                       uint8_t *, uint32_t,
-                                      AVFrame * picture )
+                                      AVFrame * picture, int frame_idx)
 {
     AVCodecContext* c = video_st->codec;
     int ret = OPENCV_NO_FRAMES_WRITTEN_CODE;
@@ -1951,7 +1951,11 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
     {
         /* encode the image */
 #if USE_AV_SEND_FRAME_API
-        ret = avcodec_send_frame(c, picture);
+        if (picture == NULL && frame_idx == 0) {
+            ret = 0;
+        } else {
+            ret = avcodec_send_frame(c, picture);
+        }
         while (ret >= 0)
         {
             AVPacket* pkt = av_packet_alloc();
@@ -2113,13 +2117,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             return false;
         }
         hw_frame->pts = frame_idx;
-        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame);
+        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
-        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture);
+        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture, frame_idx);
     }
 
     frame_idx++;
@@ -2157,7 +2161,7 @@ void CvVideoWriter_FFMPEG::close()
         {
             for(;;)
             {
-                int ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, NULL);
+                int ret = icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, NULL, frame_idx);
                 if( ret == OPENCV_NO_FRAMES_WRITTEN_CODE || ret < 0 )
                     break;
             }
