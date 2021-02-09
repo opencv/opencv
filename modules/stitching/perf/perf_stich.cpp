@@ -16,7 +16,7 @@ typedef TestBaseWithParam<string> stitch;
 typedef TestBaseWithParam<int> stitchExposureCompensation;
 typedef TestBaseWithParam<tuple<string, string> > stitchDatasets;
 
-#ifdef HAVE_OPENCV_XFEATURES2D
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 #define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
 #else
 #define TEST_DETECTORS testing::Values("orb", "akaze")
