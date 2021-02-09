@@ -11,50 +11,43 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gopaque.hpp>
 
-#define ID(X)       X
-#define ID_(X)		ID(X),
-#define NOTHING(X)
-#define SPACE
-#define COMMA       ,
+#define ID(T, E)  T
+#define ID_(T, E) ID(T, E),
 
-#define TYPE_LIST_G(LIST, G, A1, L1, A2, L2) \
-    LIST(G, SPACE, A1, L1, A2, L2)
+#define WRAP_ARGS(T, E, G) \
+    G(T, E)
 
-#define TYPE_LIST2_G(LIST, G, A1, A2) \
-    LIST(G, COMMA, A1, A1, A2, A2)
+#define SWITCH(type, LIST_G, HC) \
+    switch(type) { \
+        LIST_G(HC, HC)  \
+        default: \
+            GAPI_Assert(false && "Unsupported type"); \
+    }
 
-#define SWITCH(VAR, LIST, HANDLE) \
-switch (VAR) \
-{ \
-    TYPE_LIST2_G(LIST, HANDLE, ID, ID) \
-    default: \
-        GAPI_Assert(false && "Unsupported type"); \
-}
+#define GARRAY_TYPE_LIST_G(G, G2) \
+WRAP_ARGS(bool        ,  cv::gapi::ArgType::CV_BOOL,    G) \
+WRAP_ARGS(int         ,  cv::gapi::ArgType::CV_INT,     G) \
+WRAP_ARGS(double      ,  cv::gapi::ArgType::CV_DOUBLE,  G) \
+WRAP_ARGS(float       ,  cv::gapi::ArgType::CV_FLOAT,   G) \
+WRAP_ARGS(std::string ,  cv::gapi::ArgType::CV_STRING,  G) \
+WRAP_ARGS(cv::Point   ,  cv::gapi::ArgType::CV_POINT,   G) \
+WRAP_ARGS(cv::Point2f ,  cv::gapi::ArgType::CV_POINT2F, G) \
+WRAP_ARGS(cv::Size    ,  cv::gapi::ArgType::CV_SIZE,    G) \
+WRAP_ARGS(cv::Rect    ,  cv::gapi::ArgType::CV_RECT,    G) \
+WRAP_ARGS(cv::Scalar  ,  cv::gapi::ArgType::CV_SCALAR,  G) \
+WRAP_ARGS(cv::Mat     ,  cv::gapi::ArgType::CV_MAT,     G) \
+WRAP_ARGS(cv::GMat    ,  cv::gapi::ArgType::CV_GMAT,    G2)
 
-#define GARRAY_TYPE_LIST_G(G, X, A1, L1, A2, L2) \
-G(A1(bool)        X  A2(cv::gapi::ArgType::CV_BOOL)) \
-G(A1(int)         X  A2(cv::gapi::ArgType::CV_INT)) \
-G(A1(double)      X  A2(cv::gapi::ArgType::CV_DOUBLE)) \
-G(A1(float)       X  A2(cv::gapi::ArgType::CV_FLOAT)) \
-G(A1(std::string) X  A2(cv::gapi::ArgType::CV_STRING)) \
-G(A1(cv::Point)   X  A2(cv::gapi::ArgType::CV_POINT)) \
-G(A1(cv::Point2f) X  A2(cv::gapi::ArgType::CV_POINT2F)) \
-G(A1(cv::Size)    X  A2(cv::gapi::ArgType::CV_SIZE)) \
-G(A1(cv::Rect)    X  A2(cv::gapi::ArgType::CV_RECT)) \
-G(A1(cv::Scalar)  X  A2(cv::gapi::ArgType::CV_SCALAR)) \
-G(A1(cv::Mat)     X  A2(cv::gapi::ArgType::CV_MAT)) \
-G(L1(cv::GMat)    X  L2(cv::gapi::ArgType::CV_GMAT))
-
-#define GOPAQUE_TYPE_LIST_G(G, X, A1, L1, A2, L2) \
-G(A1(bool)        X  A2(cv::gapi::ArgType::CV_BOOL)) \
-G(A1(int)         X  A2(cv::gapi::ArgType::CV_INT)) \
-G(A1(double)      X  A2(cv::gapi::ArgType::CV_DOUBLE)) \
-G(A1(float)       X  A2(cv::gapi::ArgType::CV_FLOAT)) \
-G(A1(std::string) X  A2(cv::gapi::ArgType::CV_STRING)) \
-G(A1(cv::Point)   X  A2(cv::gapi::ArgType::CV_POINT)) \
-G(A1(cv::Point2f) X  A2(cv::gapi::ArgType::CV_POINT2F)) \
-G(A1(cv::Size)    X  A2(cv::gapi::ArgType::CV_SIZE)) \
-G(L1(cv::Rect)    X  L2(cv::gapi::ArgType::CV_RECT)) \
+#define GOPAQUE_TYPE_LIST_G(G, G2) \
+WRAP_ARGS(bool        ,  cv::gapi::ArgType::CV_BOOL,    G)  \
+WRAP_ARGS(int         ,  cv::gapi::ArgType::CV_INT,     G)  \
+WRAP_ARGS(double      ,  cv::gapi::ArgType::CV_DOUBLE,  G)  \
+WRAP_ARGS(float       ,  cv::gapi::ArgType::CV_FLOAT,   G)  \
+WRAP_ARGS(std::string ,  cv::gapi::ArgType::CV_STRING,  G)  \
+WRAP_ARGS(cv::Point   ,  cv::gapi::ArgType::CV_POINT,   G)  \
+WRAP_ARGS(cv::Point2f ,  cv::gapi::ArgType::CV_POINT2F, G)  \
+WRAP_ARGS(cv::Size    ,  cv::gapi::ArgType::CV_SIZE,    G)  \
+WRAP_ARGS(cv::Rect    ,  cv::gapi::ArgType::CV_RECT,    G2) \
 
 namespace cv {
 namespace gapi {
@@ -93,15 +86,14 @@ struct ArgTypeTraits<T> { \
     static constexpr const cv::gapi::ArgType type = E; \
 }; \
 
-GARRAY_TYPE_LIST_G(ID(DEFINE_TYPE_TRAITS), COMMA, ID, ID, ID, ID)
+GARRAY_TYPE_LIST_G(DEFINE_TYPE_TRAITS, DEFINE_TYPE_TRAITS)
 
 } // namespace detail
 
 class GAPI_EXPORTS_W_SIMPLE GOpaqueT
 {
 public:
-    using Storage = cv::detail::MakeVariantType<cv::GOpaque,
-          TYPE_LIST_G(GOPAQUE_TYPE_LIST_G, ID, ID_, ID, NOTHING, NOTHING)>;
+    using Storage = cv::detail::MakeVariantType<cv::GOpaque, GOPAQUE_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
     GOpaqueT(cv::GOpaque<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
@@ -137,8 +129,7 @@ private:
 class GAPI_EXPORTS_W_SIMPLE GArrayT
 {
 public:
-    using Storage = cv::detail::MakeVariantType<cv::GArray,
-          TYPE_LIST_G(GARRAY_TYPE_LIST_G, ID, ID_, ID, NOTHING, NOTHING)>;
+    using Storage = cv::detail::MakeVariantType<cv::GArray, GARRAY_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
     GArrayT(cv::GArray<T> arg) : m_type(cv::detail::ArgTypeTraits<T>::type), m_arg(arg) { };
