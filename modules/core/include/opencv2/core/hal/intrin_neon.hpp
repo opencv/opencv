@@ -726,41 +726,61 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
 // 16 >> 32
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
 {
+#ifdef CV_SIMD128_64F
+    int32x4_t p = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
+    return v_int32x4(vmlal_high_s16(p, a.val, b.val));
+#else
     int16x4_t a0 = vget_low_s16(a.val);
     int16x4_t a1 = vget_high_s16(a.val);
     int16x4_t b0 = vget_low_s16(b.val);
     int16x4_t b1 = vget_high_s16(b.val);
     int32x4_t p = vmull_s16(a0, b0);
     return v_int32x4(vmlal_s16(p, a1, b1));
+#endif
 }
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
 {
+#ifdef CV_SIMD128_64F
+    int32x4_t p = vmlal_s16(c.val, vget_low_s16(a.val), vget_low_s16(b.val));
+    return v_int32x4(vmlal_high_s16(p, a.val, b.val));
+#else
     int16x4_t a0 = vget_low_s16(a.val);
     int16x4_t a1 = vget_high_s16(a.val);
     int16x4_t b0 = vget_low_s16(b.val);
     int16x4_t b1 = vget_high_s16(b.val);
     int32x4_t p = vmlal_s16(c.val, a0, b0);
     return v_int32x4(vmlal_s16(p, a1, b1));
+#endif
 }
 
 // 32 >> 64
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 {
+#ifdef CV_SIMD128_64F
+    int64x2_t p = vmull_s32(vget_low_s32(a.val), vget_low_s32(b.val));
+    return v_int64x2(vmlal_high_s32(p, a.val, b.val));
+#else
     int32x2_t a0 = vget_low_s32(a.val);
     int32x2_t a1 = vget_high_s32(a.val);
     int32x2_t b0 = vget_low_s32(b.val);
     int32x2_t b1 = vget_high_s32(b.val);
     int64x2_t p = vmull_s32(a0, b0);
     return v_int64x2(vmlal_s32(p, a1, b1));
+#endif
 }
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
 {
+#ifdef CV_SIMD128_64F
+  int64x2_t p = vmlal_s32(c.val, vget_low_s32(a.val), vget_low_s32(b.val));
+  return v_int64x2(vmlal_high_s32(p, a.val, b.val));
+#else
     int32x2_t a0 = vget_low_s32(a.val);
     int32x2_t a1 = vget_high_s32(a.val);
     int32x2_t b0 = vget_low_s32(b.val);
     int32x2_t b1 = vget_high_s32(b.val);
     int64x2_t p = vmlal_s32(c.val, a0, b0);
     return v_int64x2(vmlal_s32(p, a1, b1));
+#endif
 }
 
 // 8 >> 32
@@ -1292,7 +1312,11 @@ inline int64 v_reduce_sum(const v_int64x2& a)
 #if CV_SIMD128_64F
 inline double v_reduce_sum(const v_float64x2& a)
 {
+#ifdef __aarch64__
+  return vaddvq_f64(a.val);
+#else
     return vgetq_lane_f64(a.val, 0) + vgetq_lane_f64(a.val, 1);
+#endif
 }
 #endif
 
