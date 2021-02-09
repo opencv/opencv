@@ -1974,6 +1974,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             break;
         }
 #else
+        CV_UNUSED(frame_idx);
         AVPacket pkt;
         av_init_packet(&pkt);
         int got_output = 0;

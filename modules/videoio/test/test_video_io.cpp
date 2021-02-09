@@ -763,10 +763,15 @@ static VideoAccelerationType hw_types[] = {
 #endif
 };
 
+static bool hw_use_umat[] = {
+        false,
+        true
+};
+
 INSTANTIATE_TEST_CASE_P(videoio, video_acceleration, testing::Combine(
     testing::ValuesIn(hw_codecs),
     testing::ValuesIn(hw_types),
-    testing::ValuesIn({ false , true })
+    testing::ValuesIn(hw_use_umat)
 ));
 
 } // namespace
