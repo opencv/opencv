@@ -11,8 +11,10 @@ static inline Ptr<detail::FeaturesFinder> getFeatureFinder(const std::string& na
 {
     if (name == "orb")
         return makePtr<detail::OrbFeaturesFinder>();
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
     else if (name == "surf")
         return makePtr<detail::SurfFeaturesFinder>();
+#endif
     else if (name == "akaze")
         return makePtr<detail::AKAZEFeaturesFinder>();
     else
