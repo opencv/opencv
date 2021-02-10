@@ -210,14 +210,10 @@ class dnn_test(NewOpenCVTests):
 
         model = cv.dnn_TextDetectionModel_DB(weights)
         model.setInputParams(scale, size, mean)
-        out = model.predict(frame)
+        out, _ = model.detect(frame)
 
-        net = cv.dnn.readNet(weights)
-        blob = cv.dnn.blobFromImage(frame, scale, size, mean)
-        net.setInput(blob)
-        ref = net.forward()
-
-        normAssert(self, out, ref)
+        self.assertTrue(type(out) == list)
+        self.assertTrue(np.array(out).shape == (2, 4, 2))
 
 
     def test_face_detection(self):
