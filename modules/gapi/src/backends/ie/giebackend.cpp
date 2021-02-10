@@ -461,7 +461,7 @@ void cv::gimpl::ie::GIEExecutable::run(std::vector<InObj>  &&input_objs,
                              return arg.get<cv::gimpl::RcDesc>().shape;
                          });
     // - Output parameters.
-    for (const auto &out_it : ade::util::indexed(op.outs)) {
+    for (const auto out_it : ade::util::indexed(op.outs)) {
         // FIXME: Can the same GArg type resolution mechanism be reused here?
         const auto out_port  = ade::util::index(out_it);
         const auto out_desc  = ade::util::value(out_it);
