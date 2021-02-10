@@ -771,8 +771,8 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
 {
 #if CV_SIMD128_64F
-  int64x2_t p = vmlal_s32(c.val, vget_low_s32(a.val), vget_low_s32(b.val));
-  return v_int64x2(vmlal_high_s32(p, a.val, b.val));
+    int64x2_t p = vmlal_s32(c.val, vget_low_s32(a.val), vget_low_s32(b.val));
+    return v_int64x2(vmlal_high_s32(p, a.val, b.val));
 #else
     int32x2_t a0 = vget_low_s32(a.val);
     int32x2_t a1 = vget_high_s32(a.val);
@@ -1312,11 +1312,7 @@ inline int64 v_reduce_sum(const v_int64x2& a)
 #if CV_SIMD128_64F
 inline double v_reduce_sum(const v_float64x2& a)
 {
-#ifdef __aarch64__
-  return vaddvq_f64(a.val);
-#else
-    return vgetq_lane_f64(a.val, 0) + vgetq_lane_f64(a.val, 1);
-#endif
+    return vaddvq_f64(a.val);
 }
 #endif
 
