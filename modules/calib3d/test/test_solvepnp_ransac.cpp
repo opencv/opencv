@@ -2221,4 +2221,48 @@ TEST(Calib3d_SolvePnP, inputShape)
     }
 }
 
+TEST(Calib3d_SolvePnPRansac, badInputPoints)
+{
+    // https://github.com/opencv/opencv/issues/17799
+    vector<Point3f> pts3ds;
+    vector<Point2f> pts2ds;
+    Mat rvec_est_iterative, tvec_est_iterative;
+    Mat rvec_est_epnp, tvec_est_epnp;
+    Mat camera_mat = Mat::zeros(3, 3, CV_32FC1);
+    camera_mat.at<float>(0, 0) = 741.341;
+    camera_mat.at<float>(0, 2) = 484.054;
+    camera_mat.at<float>(1, 1) = 741.341;
+    camera_mat.at<float>(1, 2) = 353.712;
+    camera_mat.at<float>(2, 2) = 1.f;
+
+    pts3ds = {
+        {-2.38359, -1.8294, 5.84055},{0.269438, -3.55329, 6.38706},
+        {1.32004, -3.59713, 6.26518},{0.653517, -3.20692, 6.36725},
+        {1.14937, -3.42034, 5.69143},{1.33856, -3.34351, 5.82228},
+        {1.3699, -3.35232, 5.66638},{-0.128751, -2.37403, 5.87024},
+        {-0.192395, -2.26672, 5.77338},{0.248772, -2.42177, 5.80129},
+        {-0.0280549, -2.16775, 5.59574},{-0.186872, -2.00519, 5.98443},
+        {-0.0836972, -1.8935, 5.96695},{0.128314, -1.84086, 5.91907},
+        {1.80947, -4.24816, 6.70636}
+    };
+
+    pts2ds = {
+        {95, 130},{539, 134},
+        {650, 184},{555, 198},
+        {642, 208},{660, 223},
+        {668, 224},{409, 287},
+        {392, 304},{466, 305},
+        {57, 334},{39, 335},
+        {403, 360},{415, 366},
+        {913, 473}
+    };
+
+    vector<int> inliers;
+    solvePnPRansac(pts3ds, pts2ds, cv::InputArray(camera_mat), cv::Mat(), rvec_est_iterative, tvec_est_iterative, false, 1000, 2, 0.99, inliers);
+    solvePnPRansac(pts3ds, pts2ds, cv::InputArray(camera_mat), cv::Mat(), rvec_est_epnp, tvec_est_epnp, false, 1000, 2, 0.99, inliers, SOLVEPNP_EPNP);
+
+    EXPECT_LE(cvtest::norm(rvec_est_iterative, rvec_est_epnp, NORM_INF), 1e-3);
+    EXPECT_LE(cvtest::norm(tvec_est_iterative, tvec_est_epnp, NORM_INF), 1e-3);
+}
+
 }} // namespace
