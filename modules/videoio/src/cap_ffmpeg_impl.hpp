@@ -2492,8 +2492,10 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         if (!(va_type & hw_type))
             continue;
 
+#ifdef _WIN32
         if (VIDEO_ACCELERATION_MFX == va_type && CV_FOURCC('M', 'J', 'P', 'G') == fourcc) // MediaSDK works badly on MJPG
             continue;
+#endif
 
         hw_device_ctx = hw_create_device(va_type, hw_device);
         if (!hw_device_ctx)
@@ -2517,6 +2519,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         hw_type = va_type;
         if (hw_device < 0)
             hw_device = 0;
+        break;
     }
 #endif
 

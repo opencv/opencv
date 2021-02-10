@@ -1864,7 +1864,11 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         CaptureT* instance = (CaptureT*)handle;
         Mat img;
         if (instance->retrieveFrame(stream_idx, img))
+#ifndef NEW_PLUGIN
             return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
+#else
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.type(), userdata);
+#endif
         return CV_ERROR_FAIL;
     }
     catch (...)
@@ -1918,9 +1922,22 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        WriterT* instance = (WriterT*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
 
 static
@@ -1993,7 +2010,7 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         "Microsoft Media Foundation OpenCV Video I/O plugin"
     },
     {
-        /*  1*/cv::CAP_FFMPEG,
+        /*  1*/cv::CAP_MSMF,
         /*  2*/cv::cv_capture_open,
         /*  3*/cv::cv_capture_release,
         /*  4*/cv::cv_capture_get_prop,
@@ -2021,7 +2038,7 @@ static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
         "Microsoft Media Foundation OpenCV Video I/O plugin"
     },
     {
-        /*  1*/cv::CAP_FFMPEG,
+        /*  1*/cv::CAP_MSMF,
         /*  2*/cv::cv_writer_open,
         /*  3*/cv::cv_writer_release,
         /*  4*/cv::cv_writer_get_prop,
