@@ -956,8 +956,8 @@ class CV_EXPORTS_W Subdiv2D
 {
 public:
     /** Subdiv2D point location cases */
-    enum { PTLOC_ERROR        = -2, //!< @deprecated
-           PTLOC_OUTSIDE_RECT = -1, //!< @deprecated
+    enum { PTLOC_ERROR        = -2, //!< Point location error
+           PTLOC_OUTSIDE_RECT = -1, //!< Point outside the subdivision bounding rect
            PTLOC_INSIDE       = 0, //!< Point inside some facet
            PTLOC_VERTEX       = 1, //!< Point coincides with one of the subdivision vertices
            PTLOC_ON_EDGE      = 2  //!< Point on some edge
@@ -977,7 +977,7 @@ public:
     /** creates an empty Subdiv2D object.
     To create a new empty Delaunay subdivision you need to use the #initDelaunay function.
      */
-    CV_WRAP Subdiv2D();
+    CV_WRAP Subdiv2D(bool flag = true);
 
     /** @overload
 
@@ -987,7 +987,7 @@ public:
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
     error is raised.
      */
-    CV_WRAP Subdiv2D(Rect rect);
+    CV_WRAP Subdiv2D(Rect rect, bool flag = true);
 
     /** @brief Creates a new empty Delaunay subdivision
 
@@ -1032,6 +1032,10 @@ public:
     -  The point falls onto the edge. The function returns #PTLOC_ON_EDGE and edge will contain this edge.
     -  The point coincides with one of the subdivision vertices. The function returns #PTLOC_VERTEX and
        vertex will contain a pointer to the vertex.
+    -  The point is outside the subdivision reference rectangle. The function returns #PTLOC_OUTSIDE_RECT
+       and no pointers are filled.
+    -  One of input arguments is invalid. A runtime error is raised or, if silent or "parent" error
+       processing mode is selected, #PTLOC_ERROR is returned.
      */
     CV_WRAP int locate(Point2f pt, CV_OUT int& edge, CV_OUT int& vertex);
 
@@ -1085,7 +1089,13 @@ public:
     CV_WRAP void getVoronoiFacetList(const std::vector<int>& idx, CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                      CV_OUT std::vector<Point2f>& facetCenters);
 
-    /** @deprecated */
+    /** @brief Returns vertex location from vertex ID.
+
+    @param vertex vertex ID.
+    @param firstEdge Optional. The first edge ID which is connected to the vertex.
+    @returns vertex (x,y)
+
+     */
     CV_WRAP Point2f getVertex(int vertex, CV_OUT int* firstEdge = 0) const;
 
     /** @brief Returns one of the edges related to the given edge.
@@ -1132,41 +1142,23 @@ public:
     CV_WRAP int rotateEdge(int edge, int rotate) const;
     CV_WRAP int symEdge(int edge) const;
 
-    /** @deprecated */
-    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt = 0) const;
-
-    /** @deprecated */
-    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
-
-    /** @brief Returns vertex location from vertex ID.
-
-    @param vertex vertex ID.
-    @param firstEdge The first edge ID which is connected to the vertex.
-    @param isIdeal Check if the vertex is a point approaching infinity, if yes, (x,y) represents its direction.
-    @returns vertex (x,y)
-
-     */
-    Point2f getVertex(int vertex, bool* isIdeal /* = 0 */, int* firstEdge /* = 0 */) const;
-
     /** @brief Returns the edge origin.
 
     @param edge Subdivision edge ID.
     @param orgpt Output vertex location.
-    @param isideal Check if the vertex is a point approaching infinity, if yes, orgpt represents its direction.
 
     @returns vertex ID.
      */
-    int edgeOrg(int edge, Point2f* orgpt /* = 0 */, bool* isideal /* = 0 */) const;
+    CV_WRAP int edgeOrg(int edge, CV_OUT Point2f* orgpt = 0) const;
 
     /** @brief Returns the edge destination.
 
     @param edge Subdivision edge ID.
     @param dstpt Output vertex location.
-    @param isideal Check if the vertex is a point approaching infinity, if yes, dstpt represents its direction.
 
     @returns vertex ID.
      */
-    int edgeDst(int edge, Point2f* dstpt /* = 0 */, bool* isideal /* = 0 */) const;
+    CV_WRAP int edgeDst(int edge, CV_OUT Point2f* dstpt = 0) const;
 
 protected:
     int newEdge();
@@ -1189,8 +1181,8 @@ protected:
         PTTYPE_FREE = -1,
         PTTYPE_DELAUNAY = 0,
         PTTYPE_VORONOI = 1,
-        PTTYPE_DELAUNAY_IDEAL = 2,
-        PTTYPE_VORONOI_IDEAL = 3
+        PTTYPE_DELAUNAY_BOUNDING = 2,
+        PTTYPE_VORONOI_BOUNDING = 3
     };
 
     struct CV_EXPORTS Vertex
@@ -1200,7 +1192,7 @@ protected:
         bool isvirtual() const;
         bool isfree() const;
         Vertex(Point2f pt, int type, int firstEdge = 0);
-        bool isideal() const;
+        bool isbounding() const;
 
         int firstEdge;
         int type;
@@ -1230,6 +1222,8 @@ protected:
     Point2f topLeft;
     //! Bottom right corner of the bounding rect
     Point2f bottomRight;
+
+    bool flag = true;
 };
 
 //! @} imgproc_subdiv2d
