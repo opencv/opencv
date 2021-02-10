@@ -862,11 +862,12 @@ uint64_t currMemoryConsumption()
     }
     std::string stat_line;
     std::getline(proc_stat, stat_line);
-    uint64_t unused, rss;
+    uint64_t unused, data_and_stack;
     // using resident set size
-    std::istringstream(stat_line) >> unused >> rss;
-    CV_Assert(rss != 0);
-    return rss;
+    std::istringstream(stat_line) >> unused >> unused >> unused >> unused >> unused
+                                  >> data_and_stack;
+    CV_Assert(data_and_stack != 0);
+    return data_and_stack;
 }
 #else
 // FIXME: implement this part (at least for Windows?), right now it's enough to check Linux only
