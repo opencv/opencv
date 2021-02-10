@@ -25,6 +25,30 @@
 #include "compiler/gcompiled_priv.hpp"
 #include "compiler/gstreaming_priv.hpp"
 
+static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
+                                  const std::vector<ade::NodeHandle>& nhs) {
+    cv::GTypesInfo info;
+    info.reserve(nhs.size());
+
+    ade::util::transform(nhs, std::back_inserter(info), [&g](const ade::NodeHandle& nh) {
+        const auto& data = g.metadata(nh).get<cv::gimpl::Data>();
+        return cv::GTypeInfo{data.shape, data.kind, data.ctor};
+    });
+
+    return info;
+}
+
+// NB: This function is used to collect graph input/output info.
+// Needed for python bridge to unpack inputs and constructs outputs properly.
+static cv::GraphInfo::Ptr collectGraphInfo(const cv::GComputation::Priv& priv)
+{
+    auto g = cv::gimpl::GCompiler::makeGraph(priv);
+    cv::gimpl::GModel::ConstGraph cgr(*g);
+    auto in_info  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
+    auto out_info = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
+    return cv::GraphInfo::Ptr(new cv::GraphInfo{std::move(in_info), std::move(out_info)});
+}
+
 // cv::GComputation private implementation /////////////////////////////////////
 // <none>
 
@@ -106,22 +130,37 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCo
 
 cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
 {
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
+    {
+        m_priv->m_info = collectGraphInfo(*m_priv);
+    }
+
     cv::gimpl::GCompiler comp(*this, {}, std::move(args));
-    return comp.compileStreaming();
+    auto compiled = comp.compileStreaming();
+
+    compiled.priv().setInInfo(m_priv->m_info->inputs);
+    compiled.priv().setOutInfo(m_priv->m_info->outputs);
+
+    return compiled;
 }
 
 cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::ExtractMetaCallback &callback,
                                                                 GCompileArgs                   &&args)
 {
-    // NB: Meta is unknown yet, need to obtain input/output shapes
-    // to properly unpack runtime argmunets that came from python
-    auto copy = args;
-    auto compiled = cv::gimpl::GCompiler(*this, {}, std::move(args)).compileStreaming();
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
+    {
+        m_priv->m_info = collectGraphInfo(*m_priv);
+    }
 
-    auto metas = callback(compiled.priv().inInfo());
-    // NB: Now compile streaming with known meta
-    cv::gimpl::GCompiler comp(*this, std::move(metas), std::move(args));
-    return comp.compileStreaming();
+    auto ins = callback(m_priv->m_info->inputs);
+    cv::gimpl::GCompiler comp(*this, std::move(ins), std::move(args));
+    auto compiled = comp.compileStreaming();
+    compiled.priv().setInInfo(m_priv->m_info->inputs);
+    compiled.priv().setOutInfo(m_priv->m_info->outputs);
+
+    return compiled;
 }
 
 // FIXME: Introduce similar query/test method for GMetaArgs as a building block
@@ -190,28 +229,21 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
 cv::GRunArgs cv::GComputation::apply(const cv::detail::ExtractArgsCallback &callback,
                                            GCompileArgs                   &&args)
 {
-    // NB: Meta unknown yet, need to obtain input/output shapes
-    // to properly unpack runtime argmunets that came from python
-    if (m_priv->m_lastMetas.empty())
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
     {
-        auto copy = args;
-        m_priv->m_lastCompiled = compile({}, std::move(copy));
+        m_priv->m_info = collectGraphInfo(*m_priv);
     }
 
-    auto ins = callback(m_priv->m_lastCompiled.priv().inInfo());
-
-    // NB: After getting the arguments, recompile the graph with the correct meta
+    auto ins = callback(m_priv->m_info->inputs);
     recompile(descr_of(ins), std::move(args));
-
-    // NB: Using shapes init graph outputs
-    const auto& out_info = m_priv->m_lastCompiled.priv().outInfo();
 
     GRunArgs run_args;
     GRunArgsP outs;
-    run_args.reserve(out_info.size());
-    outs.reserve(out_info.size());
+    run_args.reserve(m_priv->m_info->outputs.size());
+    outs.reserve(m_priv->m_info->outputs.size());
 
-    cv::detail::constructGraphOutputs(out_info, run_args, outs);
+    cv::detail::constructGraphOutputs(m_priv->m_info->outputs, run_args, outs);
 
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
     return run_args;

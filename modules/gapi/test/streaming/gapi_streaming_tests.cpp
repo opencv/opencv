@@ -1282,7 +1282,7 @@ TEST(Streaming, Python_Pull_Overload)
     cv::Mat in_mat(sz, CV_8UC3);
     cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
 
-    auto ccomp = c.compileStreaming(cv::descr_of(in_mat));
+    auto ccomp = c.compileStreaming();
 
     EXPECT_TRUE(ccomp);
     EXPECT_FALSE(ccomp.running());

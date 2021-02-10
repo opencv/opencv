@@ -422,19 +422,6 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs 
     GIslandModel::compileIslands(gim, g, args);
 }
 
-static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
-                                  const std::vector<ade::NodeHandle>& nhs) {
-    cv::GTypesInfo info;
-    info.reserve(nhs.size());
-
-    ade::util::transform(nhs, std::back_inserter(info), [&g](const ade::NodeHandle& nh) {
-        const auto& data = g.metadata(nh).get<cv::gimpl::Data>();
-        return cv::GTypeInfo{data.shape, data.kind, data.ctor};
-    });
-
-    return info;
-}
-
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:
@@ -454,31 +441,14 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     // ...before call to produceCompiled();
 
     GModel::ConstGraph cgr(*pg);
-    std::unique_ptr<GExecutor> pE;
-    GMetaArgs outMetas;
-
-    // FIXME: the whole below construct is ugly, need to revise
-    // how G*Compiled learns about its meta.
-    if (!m_metas.empty())
-    {
-        // NB: In case input meta is empty, compileIsland isn't called
-        // therefore OutputMetas isn't infered
-        outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
-        // FIXME: select which executor will be actually used,
-        // make GExecutor abstract.
-        pE.reset(new GExecutor(std::move(pg)));
-    }
+    const auto &outMetas = GModel::ConstGraph(*pg).metadata()
+        .get<OutputMeta>().outMeta;
+    // FIXME: select which executor will be actually used,
+    // make GExecutor abstract.
+    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
-
-    // NB: Need to store input/output cv::GTypeInfo used by python bridge
-    // to properly obtain inputs and allocate outputs
-    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
-
-    compiled.priv().setOutInfo(std::move(out_meta));
-    compiled.priv().setInInfo(std::move(in_meta));
 
     return compiled;
 }
@@ -495,15 +465,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
-
     GModel::ConstGraph cgr(*pg);
-
-    // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
-    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
-
-    compiled.priv().setOutInfo(std::move(out_meta));
-    compiled.priv().setInInfo(std::move(in_meta));
 
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));
@@ -524,11 +486,7 @@ cv::GCompiled cv::gimpl::GCompiler::compile()
 {
     std::unique_ptr<ade::Graph> pG = generateGraph();
     runPasses(*pG);
-    if (!m_metas.empty())
-    {
-        // If the metadata has been passed, compile our islands!
-        compileIslands(*pG);
-    }
+    compileIslands(*pG);
     return produceCompiled(std::move(pG));
 }
 

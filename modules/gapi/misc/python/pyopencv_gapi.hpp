@@ -235,7 +235,7 @@ static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
     return extract_proto_args<GProtoOutputArgs>(py_args, kw);
 }
 
-static cv::detail::OpaqueRef extractOpaqueRef(PyObject* from, cv::detail::OpaqueKind kind)
+static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::OpaqueKind kind)
 {
 #define HANDLE_CASE(T, O) case cv::detail::OpaqueKind::CV_##T:  \
 {                                                               \
@@ -261,7 +261,7 @@ static cv::detail::OpaqueRef extractOpaqueRef(PyObject* from, cv::detail::Opaque
         GAPI_Assert(false && "Unreachable code");
 }
 
-static cv::detail::VectorRef extractVectorRef(PyObject* from, cv::detail::OpaqueKind kind)
+static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::OpaqueKind kind)
 {
 #define HANDLE_CASE(T, O) case cv::detail::OpaqueKind::CV_##T:                        \
 {                                                                                     \
@@ -318,11 +318,11 @@ static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
         }
         case cv::GShape::GOPAQUE:
         {
-            return extractOpaqueRef(item, info.kind);
+            return extract_opaque_ref(item, info.kind);
         }
         case cv::GShape::GARRAY:
         {
-            return extractVectorRef(item, info.kind);
+            return extract_vector_ref(item, info.kind);
         }
         default:
             util::throw_error(std::logic_error("Unsupported output shape"));

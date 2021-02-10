@@ -254,6 +254,7 @@ public:
     bool pull(cv::GRunArgsP &&outs);
 
     // NB: Used from python
+    /// @private -- Exclude this function from OpenCV documentation
     GAPI_WRAP std::tuple<bool, cv::GRunArgs> pull();
 
     /**

@@ -32,6 +32,8 @@ cv::GRunArg& cv::GRunArg::operator= (cv::GRunArg &&arg) {
     return *this;
 }
 
+// NB: Construct GRunArgsP based on passed info and store the memory in passed cv::GRunArgs.
+// Needed for python bridge, because in case python user doesn't pass output arguments to apply.
 void cv::detail::constructGraphOutputs(const cv::GTypesInfo &out_info,
                                        cv::GRunArgs         &args,
                                        cv::GRunArgsP        &outs)
