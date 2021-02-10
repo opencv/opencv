@@ -284,6 +284,22 @@ bool  PngDecoder::readData( Mat& img )
             png_read_image( png_ptr, buffer );
             png_read_end( png_ptr, end_info );
 
+#ifdef PNG_eXIf_SUPPORTED
+            png_uint_32 num_exif = 0;
+            png_bytep exif = 0;
+
+            // Exif info could be in info_ptr (intro_info) or end_info per specification
+            if( png_get_valid(png_ptr, info_ptr, PNG_INFO_eXIf) )
+                png_get_eXIf_1(png_ptr, info_ptr, &num_exif, &exif);
+            else if( png_get_valid(png_ptr, end_info, PNG_INFO_eXIf) )
+                png_get_eXIf_1(png_ptr, end_info, &num_exif, &exif);
+
+            if( exif && num_exif > 0 )
+            {
+                m_exif.parseExif(exif, num_exif);
+            }
+#endif
+
             result = true;
         }
     }
