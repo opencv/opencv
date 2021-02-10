@@ -692,6 +692,14 @@ GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::streaming::GSizeR)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUSizeMF, cv::gapi::streaming::GSizeMF)
+{
+    static void run(const cv::MediaFrame& in, cv::Size& out)
+    {
+        out = in.desc().size;
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -771,6 +779,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUParseYolo
          , GCPUSize
          , GCPUSizeR
-         >();
+         , GCPUSizeMF
+        >();
     return pkg;
 }

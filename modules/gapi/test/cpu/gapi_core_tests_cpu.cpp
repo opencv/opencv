@@ -617,4 +617,11 @@ INSTANTIATE_TEST_CASE_P(SizeRTestCPU, SizeRTest,
                                        cv::Size(640, 320)),
                                 Values(-1),
                                 Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(SizeMFTestCPU, SizeMFTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
 }

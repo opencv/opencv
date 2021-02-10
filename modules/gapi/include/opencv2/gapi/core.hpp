@@ -591,6 +591,12 @@ G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.streaming.siz
         return empty_gopaque_desc();
     }
 };
+
+G_TYPED_KERNEL(GSizeMF, <GOpaque<Size>(GFrame)>, "org.opencv.streaming.sizeMF") {
+    static GOpaqueDesc outMeta(const GFrameDesc&) {
+        return empty_gopaque_desc();
+    }
+};
 } // namespace streaming
 
 //! @addtogroup gapi_math
@@ -1940,6 +1946,15 @@ Gets dimensions from rectangle.
 @return Size (rectangle dimensions).
 */
 GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
+
+/** @brief Gets dimensions from MediaFrame.
+
+@note Function textual ID is "org.opencv.streaming.sizeMF"
+
+@param src Input frame
+@return Size (frame dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GFrame& src);
 } //namespace streaming
 } //namespace gapi
 } //namespace cv
