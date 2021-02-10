@@ -696,9 +696,7 @@ GAPI_OCV_KERNEL(GCPUSizeMF, cv::gapi::streaming::GSizeMF)
 {
     static void run(const cv::MediaFrame& in, cv::Size& out)
     {
-        cv::GFrameDesc desc = in.desc();
-        out.width = desc.size.width;
-        out.height = desc.size.height;
+        out = in.desc().size;
     }
 };
 

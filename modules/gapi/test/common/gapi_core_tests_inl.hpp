@@ -1909,12 +1909,10 @@ TEST_P(SizeRTest, ParseTest)
 namespace {
     class TestMediaBGR final : public cv::MediaFrame::IAdapter {
         cv::Mat m_mat;
-        using Cb = cv::MediaFrame::View::Callback;
-        Cb m_cb;
 
     public:
-        explicit TestMediaBGR(cv::Mat m, Cb cb = []() {})
-            : m_mat(m), m_cb(cb) {
+        explicit TestMediaBGR(cv::Mat m)
+            : m_mat(m) {
         }
         cv::GFrameDesc meta() const override {
             return cv::GFrameDesc{ cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows) };
@@ -1922,19 +1920,18 @@ namespace {
         cv::MediaFrame::View access(cv::MediaFrame::Access) override {
             cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
             cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
-            return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{ m_cb });
+            return cv::MediaFrame::View(std::move(pp), std::move(ss));
         }
     };
 };
 
 TEST_P(SizeMFTest, ParseTest)
 {
-    cv::GFrame in;
     cv::Size out_sz;
-    int counter = 0;
     cv::Mat bgr = cv::Mat::eye(sz.height, sz.width, CV_8UC3);
-    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr, [&counter]() {counter++; });
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
 
+    cv::GFrame in;
     auto out = cv::gapi::streaming::size(in);
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
     c.apply(cv::gin(frame), cv::gout(out_sz), getCompileArgs());
