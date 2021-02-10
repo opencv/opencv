@@ -21,6 +21,8 @@
 #include <opencv2/gapi/render/render_types.hpp>
 #include <opencv2/gapi/s11n/base.hpp>
 
+//#include <opencv2/gapi/garg.hpp>
+
 namespace cv {
 
 class GMat; // FIXME: forward declaration for GOpaqueTraits
@@ -80,6 +82,7 @@ namespace detail
     // GOpaque is not supporting cv::Mat and cv::Scalar since there are GScalar and GMat types
     using GOpaqueTraitsOpaqueTypes = std::tuple<int, double, float, uint64_t, bool, std::string, cv::Size, cv::Point, cv::Point2f, cv::Rect,
                                                 cv::gapi::wip::draw::Prim>;
+
 } // namespace detail
 
 // This definition is here because it is reused by both public(?) and internal

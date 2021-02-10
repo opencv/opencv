@@ -15,7 +15,6 @@
 
 #include <opencv2/gapi/gcomputation.hpp>
 #include <opencv2/gapi/gkernel.hpp>
-#include <opencv2/gapi/python_bridge.hpp> // allocateGraphOutputs
 
 #include "api/gcomputation_priv.hpp"
 #include "api/gcall_priv.hpp"
@@ -212,7 +211,7 @@ cv::GRunArgs cv::GComputation::apply(const cv::detail::ExtractArgsCallback &call
     run_args.reserve(out_info.size());
     outs.reserve(out_info.size());
 
-    cv::detail::allocateGraphOutputs(out_info, run_args, outs);
+    cv::detail::constructGraphOutputs(out_info, run_args, outs);
 
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
     return run_args;

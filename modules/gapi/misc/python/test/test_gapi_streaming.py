@@ -191,7 +191,9 @@ class test_gapi_streaming(NewOpenCVTests):
                 # NB: OpenCV & G-API have different output shapes:
                 # OpenCV - (num_points, 1, 2)
                 # G-API  - (num_points, 2)
-                self.assertEqual(0.0, cv.norm(e.flatten(), a.flatten(), cv.NORM_INF))
+                self.assertEqual(0.0, cv.norm(e.flatten(),
+                                              np.array(a, np.float32).flatten(),
+                                              cv.NORM_INF))
 
             proc_num_frames += 1
             if proc_num_frames == max_num_frames:

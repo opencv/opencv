@@ -453,11 +453,6 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     //     an execution plan for it (backend-specific execution)
     // ...before call to produceCompiled();
 
-    // Note: compile steps for python bridge :
-    // - First time python bridge calls compile with empty input meta (m_metas)
-    //   to collect input/output GTypesInfo to properly obtain python inputs
-    // - Once the python inputs are obtained, extract input meta and call compile once again
-
     GModel::ConstGraph cgr(*pg);
     std::unique_ptr<GExecutor> pE;
     GMetaArgs outMetas;

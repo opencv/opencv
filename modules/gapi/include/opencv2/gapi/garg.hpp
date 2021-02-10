@@ -267,6 +267,10 @@ struct ExtractMetaCallback
     using CallBackT = std::function<cv::GMetaArgs(const cv::GTypesInfo& info)>;
     CallBackT c;
 };
+
+void constructGraphOutputs(const cv::GTypesInfo &out_info,
+                           cv::GRunArgs         &args,
+                           cv::GRunArgsP        &outs);
 } // namespace detail
 
 } // namespace cv

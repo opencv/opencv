@@ -1903,14 +1903,14 @@ kmeans(const GMat& data, const int K, const GMat& bestLabels,
  - Function textual ID is "org.opencv.core.kmeansNDNoInit"
  - #KMEANS_USE_INITIAL_LABELS flag must not be set while using this overload.
  */
-GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GMat,GMat>
 kmeans(const GMat& data, const int K, const TermCriteria& criteria, const int attempts,
        const KmeansFlags flags);
 
 /** @overload
 @note Function textual ID is "org.opencv.core.kmeans2D"
  */
-GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
 kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
        const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
 
@@ -1929,7 +1929,7 @@ namespace streaming {
 @param src Input tensor
 @return Size (tensor dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+GAPI_EXPORTS_W GOpaque<Size> size(const GMat& src);
 
 /** @overload
 Gets dimensions from rectangle.

@@ -19,9 +19,6 @@ namespace cv
    using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
    using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
 
-   // FIXME: Deprecated. Will be removed in next PRs
-   class GAPI_EXPORTS_W_SIMPLE GArrayP2f { };
-
    namespace detail
    {
        struct GAPI_EXPORTS_W_SIMPLE ExtractArgsCallback { };
