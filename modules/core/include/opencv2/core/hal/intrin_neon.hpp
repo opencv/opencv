@@ -74,6 +74,8 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 // [2] https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
 #if defined(__ARM_64BIT_STATE) || defined(_M_ARM64)
 #define CV_NEON_AARCH64 1
+#else
+#define CV_NEON_AARCH64 0
 #endif
 
 // TODO
