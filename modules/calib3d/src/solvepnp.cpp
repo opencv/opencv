@@ -334,9 +334,33 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
-    result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+
+    try
+    {
+        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
                       distCoeffs, rvec, tvec, useExtrinsicGuess,
                       (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    }
+    catch(...){
+        _rvec.assign(_local_model.col(0));
+        _tvec.assign(_local_model.col(1));
+
+        if(_inliers.needed())
+        {
+            Mat _local_inliers;
+            for (int i = 0; i < npoints; ++i)
+            {
+                if((int)_mask_local_inliers.at<uchar>(i) != 0) // inliers mask
+                    _local_inliers.push_back(i);    // output inliers vector
+            }
+            _local_inliers.copyTo(_inliers);
+        }
+
+        CV_LOG_DEBUG(NULL, "SOLVEPNP_ITERATIVE failed for there is no coplanaer data and DLT algorithm needs at least 6 points. Return EPnP result.");
+
+        return true;
+    }
+
 
     if( result <= 0 )
     {
