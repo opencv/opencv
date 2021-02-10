@@ -62,6 +62,20 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD128_64F 0
 #endif
 
+// The following macro checks if the code is being compiled for the
+// AArch64 execution state of Armv8, to enable the 128-bit
+// intrinsics. The macro `__ARM_64BIT_STATE` is the one recommended by
+// the Arm C Language Extension (ACLE) specifications [1] to check the
+// availability of 128-bit intrinsics, and it is supporrted by clang
+// and gcc. The macro `_M_ARM64` is the equivalent one for Microsoft
+// Visual Studio [2] .
+//
+// [1] https://developer.arm.com/documentation/101028/0012/13--Advanced-SIMD--Neon--intrinsics
+// [2] https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
+#if defined(__ARM_64BIT_STATE) || defined(_M_ARM64)
+#define CV_NEON_AARCH64 1
+#endif
+
 // TODO
 #define CV_NEON_DOT 0
 
@@ -726,7 +740,7 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
 // 16 >> 32
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
 {
-#if CV_SIMD128_64F
+#if CV_NEON_AARCH64
     int32x4_t p = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
     return v_int32x4(vmlal_high_s16(p, a.val, b.val));
 #else
@@ -740,7 +754,7 @@ inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
 }
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
 {
-#if CV_SIMD128_64F
+#if CV_NEON_AARCH64
     int32x4_t p = vmlal_s16(c.val, vget_low_s16(a.val), vget_low_s16(b.val));
     return v_int32x4(vmlal_high_s16(p, a.val, b.val));
 #else
@@ -756,7 +770,7 @@ inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_
 // 32 >> 64
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 {
-#if CV_SIMD128_64F
+#if CV_NEON_AARCH64
     int64x2_t p = vmull_s32(vget_low_s32(a.val), vget_low_s32(b.val));
     return v_int64x2(vmlal_high_s32(p, a.val, b.val));
 #else
@@ -770,7 +784,7 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 }
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
 {
-#if CV_SIMD128_64F
+#if CV_NEON_AARCH64
     int64x2_t p = vmlal_s32(c.val, vget_low_s32(a.val), vget_low_s32(b.val));
     return v_int64x2(vmlal_high_s32(p, a.val, b.val));
 #else
