@@ -354,48 +354,15 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(const String& filename, Mat& img)
+static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
-    if (filename.size() > 0)
+    if (orientationTag.tag != INVALID_TAG)
     {
-        std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-        stream.close();
+        orientation = orientationTag.field_u16; //orientation is unsigned short, so check field_u16
+        ExifTransform(orientation, img);
     }
-
-    ExifTransform(orientation, img);
-}
-
-static void ApplyExifOrientation(const Mat& buf, Mat& img)
-{
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if( buf.isContinuous() )
-    {
-        ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
-        std::istream stream( &bsb );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-    }
-
-    ExifTransform(orientation, img);
 }
 
 /**
@@ -537,6 +504,12 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
         resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
+    /// optionally rotate the data if EXIF orientation flag says so
+    if( mat && !mat->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), *mat);
+    }
+
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
@@ -634,7 +607,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         // optionally rotate the data if EXIF' orientation flag says so
         if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
         {
-            ApplyExifOrientation(filename, mat);
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
         }
 
         mats.push_back(mat);
@@ -664,12 +637,6 @@ Mat imread( const String& filename, int flags )
 
     /// load the data
     imread_( filename, flags, LOAD_MAT, &img );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(filename, img);
-    }
 
     /// return a reference to the data
     return img;
@@ -932,6 +899,12 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
         resize( *mat, *mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
+    /// optionally rotate the data if EXIF' orientation flag says so
+    if (!mat->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+    {
+        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), *mat);
+    }
+
     decoder.release();
 
     return hdrtype == LOAD_CVMAT ? (void*)matrix :
@@ -946,12 +919,6 @@ Mat imdecode( InputArray _buf, int flags )
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, LOAD_MAT, &img );
 
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, img);
-    }
-
     return img;
 }
 
@@ -962,12 +929,6 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
     imdecode_( buf, flags, LOAD_MAT, dst );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !dst->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, *dst);
-    }
 
     return *dst;
 }
