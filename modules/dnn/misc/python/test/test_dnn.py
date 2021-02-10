@@ -197,6 +197,25 @@ class dnn_test(NewOpenCVTests):
         normAssert(self, out, ref)
 
 
+    def test_textdetection_model(self):
+        img_path = self.find_dnn_file("dnn/text_det_test1.png")
+        weights = self.find_dnn_file("dnn/onnx/models/DB_TD500_resnet50.onnx", required=False)
+        if weights is None:
+            raise unittest.SkipTest("Missing DNN test files (onnx/models/DB_TD500_resnet50.onnx). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+
+        frame = cv.imread(img_path)
+        scale = 1.0 / 255.0
+        size = (736, 736)
+        mean = (122.67891434, 116.66876762, 104.00698793)
+
+        model = cv.dnn_TextDetectionModel_DB(weights)
+        model.setInputParams(scale, size, mean)
+        out, _ = model.detect(frame)
+
+        self.assertTrue(type(out) == list)
+        self.assertTrue(np.array(out).shape == (2, 4, 2))
+
+
     def test_face_detection(self):
         proto = self.find_dnn_file('dnn/opencv_face_detector.prototxt')
         model = self.find_dnn_file('dnn/opencv_face_detector.caffemodel', required=False)
