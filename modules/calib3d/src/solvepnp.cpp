@@ -318,7 +318,11 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                       distCoeffs, rvec, tvec, useExtrinsicGuess,
                       (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
-    catch(...){
+    catch(const cv::Exception& e)
+    {
+        CV_LOG_DEBUG(e.what());
+        CV_LOG_DEBUG(NULL, "Broken implementation for DLT algorithm needs at least 6 points for pose estimation. Fallback to EPnP.");
+
         _rvec.assign(_local_model.col(0));
         _tvec.assign(_local_model.col(1));
 
@@ -332,8 +336,6 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
             }
             _local_inliers.copyTo(_inliers);
         }
-
-        CV_LOG_DEBUG(NULL, "SOLVEPNP_ITERATIVE failed for there is no coplanaer data and DLT algorithm needs at least 6 points. Return EPnP's result.");
 
         return true;
     }
