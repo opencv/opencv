@@ -249,7 +249,7 @@ CV_IMPL int cvInitSystem( int, char** )
     // check initialization status
     if( !wasInitialized )
     {
-        // Initialize the stogare
+        // Initialize the storage
         hg_windows = 0;
 
         // Register the class
@@ -1118,25 +1118,19 @@ static void icvScreenToClient( HWND hwnd, RECT* rect )
 /* Calculatess the window coordinates relative to the upper left corner of the mainhWnd window */
 static RECT icvCalcWindowRect( CvWindow* window )
 {
-    const int gutter = 1;
-    RECT crect = { 0 }, trect = { 0 } , rect = { 0 };
+    RECT crect = { 0 }, trect = { 0 }, rect = { 0 };
 
     assert(window);
 
     GetClientRect(window->frame, &crect);
-    if(window->toolbar.toolbar)
+    if (window->toolbar.toolbar)
     {
         GetWindowRect(window->toolbar.toolbar, &trect);
         icvScreenToClient(window->frame, &trect);
-        SubtractRect( &rect, &crect, &trect);
+        SubtractRect(&rect, &crect, &trect);
     }
     else
         rect = crect;
-
-    rect.top += gutter;
-    rect.left += gutter;
-    rect.bottom -= gutter;
-    rect.right -= gutter;
 
     return rect;
 }

@@ -434,6 +434,11 @@ TEST_P(Test_ONNX_layers, BatchNormalizationSubgraph)
     testONNXModels("batch_norm_subgraph");
 }
 
+TEST_P(Test_ONNX_layers, NormalizeFusionSubgraph)
+{
+    testONNXModels("normalize_fusion");
+}
+
 TEST_P(Test_ONNX_layers, Transpose)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -696,6 +701,16 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
 {
     testONNXModels("resize_opset11_torch1.6");
+}
+
+TEST_P(Test_ONNX_layers, Mish)
+{
+    testONNXModels("mish");
+}
+
+TEST_P(Test_ONNX_layers, CalculatePads)
+{
+    testONNXModels("calc_pads");
 }
 
 TEST_P(Test_ONNX_layers, Conv1d)

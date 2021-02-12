@@ -178,13 +178,12 @@ public:
 
         if (inputs[0].dims == 3)
         {
-            //Pool1D
-            kernel_size.erase(kernel_size.begin() + 1);
-            strides.erase(strides.begin() + 1);
-            pads_begin.erase(pads_begin.begin() + 1);
-            pads_end.erase(pads_end.begin() + 1);
+            // Pool1D
+            kernel_size.assign(1, kernel_size[0]);
+            strides.assign(1, strides[0]);
+            pads_begin.assign(1, pads_begin[0]);
+            pads_end.assign(1, pads_end[0]);
         }
-
 
 #ifdef HAVE_OPENCL
         poolOp.release();

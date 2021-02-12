@@ -8,7 +8,7 @@ using namespace perf;
 
 typedef TestBaseWithParam<tuple<string, string> > bundleAdjuster;
 
-#ifdef HAVE_OPENCV_XFEATURES2D
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 #define TEST_DETECTORS testing::Values("surf", "orb")
 #else
 #define TEST_DETECTORS testing::Values<string>("orb")

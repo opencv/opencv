@@ -361,48 +361,15 @@ static void ExifTransform(int orientation, Mat& img)
     }
 }
 
-static void ApplyExifOrientation(const String& filename, Mat& img)
+static void ApplyExifOrientation(ExifEntry_t orientationTag, Mat& img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
-    if (filename.size() > 0)
+    if (orientationTag.tag != INVALID_TAG)
     {
-        std::ifstream stream( filename.c_str(), std::ios_base::in | std::ios_base::binary );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-        stream.close();
+        orientation = orientationTag.field_u16; //orientation is unsigned short, so check field_u16
+        ExifTransform(orientation, img);
     }
-
-    ExifTransform(orientation, img);
-}
-
-static void ApplyExifOrientation(const Mat& buf, Mat& img)
-{
-    int orientation = IMAGE_ORIENTATION_TL;
-
-    if( buf.isContinuous() )
-    {
-        ByteStreamBuffer bsb( reinterpret_cast<char*>(buf.data), buf.total() * buf.elemSize() );
-        std::istream stream( &bsb );
-        ExifReader reader( stream );
-        if( reader.parse() )
-        {
-            ExifEntry_t entry = reader.getTag( ORIENTATION );
-            if (entry.tag != INVALID_TAG)
-            {
-                orientation = entry.field_u16; //orientation is unsigned short, so check field_u16
-            }
-        }
-    }
-
-    ExifTransform(orientation, img);
 }
 
 /**
@@ -518,7 +485,14 @@ imread_( const String& filename, int flags, Mat& mat )
         resize( mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
-    return true;
+    /// optionally rotate the data if EXIF orientation flag says so
+    if( mat && !mat->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), *mat);
+    }
+
+    return hdrtype == LOAD_CVMAT ? (void*)matrix :
+        hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
 
 
@@ -614,7 +588,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         // optionally rotate the data if EXIF' orientation flag says so
         if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
         {
-            ApplyExifOrientation(filename, mat);
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
         }
 
         mats.push_back(mat);
@@ -644,12 +618,6 @@ Mat imread( const String& filename, int flags )
 
     /// load the data
     imread_( filename, flags, img );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(filename, img);
-    }
 
     /// return a reference to the data
     return img;
@@ -889,7 +857,16 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         resize(mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
     }
 
-    return true;
+    /// optionally rotate the data if EXIF' orientation flag says so
+    if (!mat->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+    {
+        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), *mat);
+    }
+
+    decoder.release();
+
+    return hdrtype == LOAD_CVMAT ? (void*)matrix :
+        hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
 
 
@@ -899,12 +876,6 @@ Mat imdecode( InputArray _buf, int flags )
 
     Mat buf = _buf.getMat(), img;
     imdecode_( buf, flags, img );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !img.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, img);
-    }
 
     return img;
 }
@@ -916,12 +887,6 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
     imdecode_( buf, flags, *dst );
-
-    /// optionally rotate the data if EXIF' orientation flag says so
-    if( !dst->empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-    {
-        ApplyExifOrientation(buf, *dst);
-    }
 
     return *dst;
 }
@@ -991,6 +956,77 @@ bool haveImageWriter( const String& filename )
     return !encoder.empty();
 }
 
+CV_IMPL IplImage*
+cvLoadImage( const char* filename, int iscolor )
+{
+    return (IplImage*)cv::imread_(filename, iscolor, cv::LOAD_IMAGE );
+}
+
+CV_IMPL CvMat*
+cvLoadImageM( const char* filename, int iscolor )
+{
+    return (CvMat*)cv::imread_( filename, iscolor, cv::LOAD_CVMAT );
+}
+
+CV_IMPL int
+cvSaveImage( const char* filename, const CvArr* arr, const int* _params )
+{
+    int i = 0;
+    if( _params )
+    {
+        for( ; _params[i] > 0; i += 2 )
+            CV_Assert(static_cast<size_t>(i) < cv::CV_IO_MAX_IMAGE_PARAMS*2); // Limit number of params for security reasons
+    }
+    std::vector<cv::Mat> img_vec;
+    img_vec.push_back(cv::cvarrToMat(arr));
+    return cv::imwrite_(filename, img_vec,
+        i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>(),
+        CV_IS_IMAGE(arr) && ((const IplImage*)arr)->origin == IPL_ORIGIN_BL );
+}
+
+/* decode image stored in the buffer */
+CV_IMPL IplImage*
+cvDecodeImage( const CvMat* _buf, int iscolor )
+{
+    CV_Assert( _buf && CV_IS_MAT_CONT(_buf->type) );
+    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8U, _buf->data.ptr);
+    return (IplImage*)cv::imdecode_(buf, iscolor, cv::LOAD_IMAGE );
+}
+
+CV_IMPL CvMat*
+cvDecodeImageM( const CvMat* _buf, int iscolor )
+{
+    CV_Assert( _buf && CV_IS_MAT_CONT(_buf->type) );
+    cv::Mat buf(1, _buf->rows*_buf->cols*CV_ELEM_SIZE(_buf->type), CV_8U, _buf->data.ptr);
+    return (CvMat*)cv::imdecode_(buf, iscolor, cv::LOAD_CVMAT );
+}
+
+CV_IMPL CvMat*
+cvEncodeImage( const char* ext, const CvArr* arr, const int* _params )
+{
+    int i = 0;
+    if( _params )
+    {
+        for( ; _params[i] > 0; i += 2 )
+            CV_Assert(static_cast<size_t>(i) < cv::CV_IO_MAX_IMAGE_PARAMS*2); // Limit number of params for security reasons
+    }
+    cv::Mat img = cv::cvarrToMat(arr);
+    if( CV_IS_IMAGE(arr) && ((const IplImage*)arr)->origin == IPL_ORIGIN_BL )
+    {
+        cv::Mat temp;
+        cv::flip(img, temp, 0);
+        img = temp;
+    }
+    std::vector<uchar> buf;
+
+    bool code = cv::imencode(ext, img, buf,
+        i > 0 ? std::vector<int>(_params, _params+i) : std::vector<int>() );
+    if( !code )
+        return 0;
+    CvMat* _buf = cvCreateMat(1, (int)buf.size(), CV_8U);
+    memcpy( _buf->data.ptr, &buf[0], buf.size() );
+
+    return _buf;
 }
 
 /* End of file. */

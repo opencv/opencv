@@ -224,7 +224,7 @@ First you apply the transform:
         -   *theta*: The resolution of the parameter \f$\theta\f$ in radians. We use **1 degree**
             (CV_PI/180)
         -   *threshold*: The minimum number of intersections to "*detect*" a line
-        -   *minLinLength*: The minimum number of points that can form a line. Lines with less than
+        -   *minLineLength*: The minimum number of points that can form a line. Lines with less than
             this number of points are disregarded.
         -   *maxLineGap*: The maximum gap between two points to be considered in the same line.
 
