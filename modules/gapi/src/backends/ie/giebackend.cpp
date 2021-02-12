@@ -1007,6 +1007,15 @@ struct InferList: public cv::detail::KernelTag {
                     }
             );
         }
+
+        // NB: In case there is no input data need to post output anyway
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(uu.params.num_out)) {
+                auto o = ctx->out(i);
+                out.post(std::move(o));
+            }
+        }
+
     }
 };
 
@@ -1093,10 +1102,10 @@ struct InferList2: public cv::detail::KernelTag {
                              cv::GMetaArg{cv::empty_array_desc()});
     }
 
-        static void run(const IEUnit                          &uu,
-                        std::shared_ptr<IECallContext>         ctx,
-                        cv::gimpl::ie::RequestPool            &reqPool,
-                        cv::gimpl::GIslandExecutable::IOutput &out) {
+    static void run(const IEUnit                          &uu,
+                    std::shared_ptr<IECallContext>         ctx,
+                    cv::gimpl::ie::RequestPool            &reqPool,
+                    cv::gimpl::GIslandExecutable::IOutput &out) {
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
 
@@ -1148,6 +1157,12 @@ struct InferList2: public cv::detail::KernelTag {
                         std::bind(PostOutputsList, _1, std::cref(uu), ctx, list_idx, std::ref(out)),
                     }
             );
+        }
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(uu.params.num_out)) {
+                auto o = ctx->out(i);
+                out.post(std::move(o));
+            }
         }
     }
 };
