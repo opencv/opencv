@@ -97,13 +97,13 @@ void GAPI_EXPORTS render(cv::Mat& y_plane,
                          const Prims& prims,
                          cv::GCompileArgs&& args = {});
 
-/** @brief The function renders on two NV12 planes passed drawing primitivies
+/** @brief The function renders on the input media frame passed drawing primitivies
 
 @param NV12 input Media Frame :  @ref cv::MediaFrame.
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::MediaFrame& nv12,
+void GAPI_EXPORTS render(cv::MediaFrame& NV12,
                          const Prims& prims,
                          cv::GCompileArgs&& args = {});
 
