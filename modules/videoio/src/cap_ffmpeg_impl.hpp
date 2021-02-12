@@ -40,7 +40,6 @@
 //
 //M*/
 
-#include "cap_ffmpeg_hw.hpp"
 #include "cap_ffmpeg_legacy_api.hpp"
 
 using namespace cv;
@@ -89,6 +88,15 @@ extern "C" {
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef USE_AV_HW_CODECS
+#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#define USE_AV_HW_CODECS 1
+#include "cap_ffmpeg_hw.hpp"
+#else
+#define USE_AV_HW_CODECS 0
+#endif
 #endif
 
 #if defined _MSC_VER && _MSC_VER >= 1200
@@ -989,7 +997,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             int enc_height = enc->height;
 
             AVCodec *codec = NULL;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#if USE_AV_HW_CODECS
             // try find HW decoder
             static std::vector<VideoAccelerationType> supported_va_types = {
 #ifdef _WIN32
@@ -997,7 +1005,9 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 #else
                     VIDEO_ACCELERATION_VAAPI,
 #endif
-                    VIDEO_ACCELERATION_MFX,
+#if 1//def _WIN32
+                    VIDEO_ACCELERATION_MFX, // On Linux, MFX compatible with intel-media-va-driver-non-free, but not compatible with intel-media-va-driver
+#endif
             };
             for (VideoAccelerationType va_type : supported_va_types) {
                 if (!(va_type & hw_type))
@@ -1314,7 +1324,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     }
 
     AVFrame* sw_picture = picture;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#if USE_AV_HW_CODECS
     // if hardware frame, copy it to system memory
     if (picture && picture->hw_frames_ctx) {
         sw_picture = av_frame_alloc();
@@ -1797,24 +1807,15 @@ static AVFrame * icv_alloc_picture_FFMPEG(int pix_fmt, int width, int height, bo
     return picture;
 }
 
-/* add a video output stream to the container */
-static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
-                                             const AVCodec* codec,
-                                             int w, int h, int bitrate,
-                                             double fps, int pixel_format)
+/* configure video stream */
+static bool icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
+                                                   AVStream *st,
+                                                   const AVCodec* codec,
+                                                   int w, int h, int bitrate,
+                                                   double fps, AVPixelFormat pixel_format)
 {
-    AVCodecContext *c;
-    AVStream *st;
+    AVCodecContext *c = st->codec;
     int frame_rate, frame_rate_base;
-
-    st = avformat_new_stream(oc, 0);
-
-    if (!st) {
-        CV_WARN("Could not allocate stream");
-        return NULL;
-    }
-
-    c = st->codec;
 
     c->codec_id = codec->id;
     c->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -1866,13 +1867,13 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
             }
         }
         if (best == NULL)
-            return NULL;
+            return false;
         c->time_base.den= best->num;
         c->time_base.num= best->den;
     }
 
     c->gop_size = 12; /* emit one intra frame every twelve frames at most */
-    c->pix_fmt = (AVPixelFormat) pixel_format;
+    c->pix_fmt = pixel_format;
 
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG2VIDEO)) {
         c->max_b_frames = 2;
@@ -1919,7 +1920,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     st->time_base = c->time_base;
 #endif
 
-    return st;
+    return true;
 }
 
 static const int OPENCV_NO_FRAMES_WRITTEN_CODE = 1000;
@@ -1974,7 +1975,6 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             break;
         }
 #else
-        CV_UNUSED(frame_idx);
         AVPacket pkt;
         av_init_packet(&pkt);
         int got_output = 0;
@@ -2064,7 +2064,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     }
 
     AVPixelFormat sw_pix_fmt = c->pix_fmt;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#if USE_AV_HW_CODECS
     if (c->hw_frames_ctx)
         sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
 #endif
@@ -2102,7 +2102,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     }
 
     bool ret;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#if USE_AV_HW_CODECS
     if (video_st->codec->hw_device_ctx) {
         // copy data to HW frame
         AVFrame* hw_frame = av_frame_alloc();
@@ -2475,104 +2475,111 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         codec_id = av_guess_codec(oc->oformat, NULL, oc->filename, NULL, AVMEDIA_TYPE_VIDEO);
     }
 
-    // Try find HW encoder
-    AVCodec* codec = NULL;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
-    AVBufferRef* hw_device_ctx = NULL;
-    AVBufferRef* hw_frames_ctx = NULL;
+    // Add video stream to output file
+    video_st = avformat_new_stream(oc, 0);
+    if (!video_st) {
+        CV_WARN("Could not allocate stream");
+        return false;
+    }
+    AVCodecContext *c = video_st->codec;
+
+    // Find and open codec, first try HW codecs
     static std::vector<VideoAccelerationType> supported_va_types = {
             VIDEO_ACCELERATION_MFX,
 #ifdef _WIN32
-            VIDEO_ACCELERATION_D3D11
+            //VIDEO_ACCELERATION_MFX, // On Linux, MFX compatible with intel-media-va-driver-non-free, but not compatible with intel-media-va-driver
+            VIDEO_ACCELERATION_D3D11,
 #else
-            VIDEO_ACCELERATION_VAAPI
+            VIDEO_ACCELERATION_VAAPI,
 #endif
+            VIDEO_ACCELERATION_NONE
     };
+    AVBufferRef* hw_device_ctx = NULL;
     for (VideoAccelerationType va_type : supported_va_types) {
-        if (!(va_type & hw_type))
-            continue;
+        AVCodec* codec = NULL;
+        AVPixelFormat hw_format = AV_PIX_FMT_NONE;
+        if (hw_device_ctx)
+            av_buffer_unref(&hw_device_ctx);
+#if USE_AV_HW_CODECS
+        if (va_type != VIDEO_ACCELERATION_NONE) {
+            if (!(va_type & hw_type))
+                continue;
 
 #ifdef _WIN32
         if (VIDEO_ACCELERATION_MFX == va_type && CV_FOURCC('M', 'J', 'P', 'G') == fourcc) // MediaSDK works badly on MJPG
             continue;
 #endif
 
-        hw_device_ctx = hw_create_device(va_type, hw_device);
-        if (!hw_device_ctx)
-            continue;
-
-        AVPixelFormat hw_format = AV_PIX_FMT_NONE;
-        AVCodec *hw_codec = hw_find_codec(codec_id, hw_device_ctx, av_codec_is_encoder, &hw_format);
-        if (!hw_codec) {
-            av_buffer_unref(&hw_device_ctx);
-            continue;
-        }
-        if (hw_format != AV_PIX_FMT_NONE) {
-            hw_frames_ctx = hw_create_frames(hw_device_ctx, width, height, hw_format, AV_PIX_FMT_NV12);
-            if (!hw_frames_ctx) {
-                av_buffer_unref(&hw_device_ctx);
+            hw_device_ctx = hw_create_device(va_type, hw_device);
+            if (!hw_device_ctx)
                 continue;
-            }
-            codec_pix_fmt = hw_format;
+
+            codec = hw_find_codec(codec_id, hw_device_ctx, av_codec_is_encoder, &hw_format);
+            if (!codec)
+                continue;
         }
-        codec = hw_codec;
-        hw_type = va_type;
-        if (hw_device < 0)
-            hw_device = 0;
-        break;
-    }
 #endif
-
-    // SW encoder
-    if (!codec) {
-        codec = avcodec_find_encoder(codec_id);
-        if (!codec) {
-            fprintf(stderr, "Could not find encoder for codec id %d: %s\n", codec_id,
-                icvFFMPEGErrStr(AVERROR_ENCODER_NOT_FOUND));
-            return false;
+        if (va_type == VIDEO_ACCELERATION_NONE) {
+            codec = avcodec_find_encoder(codec_id);
+            if (!codec) {
+                CV_LOG_ERROR(NULL, "Could not find encoder for codec_id=" << (int)codec_id << ", error: "
+                        << icvFFMPEGErrStr(AVERROR_ENCODER_NOT_FOUND));
+            }
         }
-        hw_type = VIDEO_ACCELERATION_NONE;
-    }
+        if (!codec)
+            continue;
+        AVPixelFormat format = (hw_format != AV_PIX_FMT_NONE) ? hw_format : codec_pix_fmt;
 
-    // TODO -- safe to ignore output audio stream?
-    video_st = icv_add_video_stream_FFMPEG(oc, codec,
-                                           width, height, (int)(bitrate + 0.5),
-                                           fps, codec_pix_fmt);
+        if (!icv_configure_video_stream_FFMPEG(oc, video_st, codec,
+                                               width, height, (int) (bitrate + 0.5),
+                                               fps, format)) {
+            continue;
+        }
 
 #if 0
 #if FF_API_DUMP_FORMAT
-    dump_format(oc, 0, filename, 1);
+        dump_format(oc, 0, filename, 1);
 #else
-    av_dump_format(oc, 0, filename, 1);
+        av_dump_format(oc, 0, filename, 1);
 #endif
 #endif
 
-    /* now that all the parameters are set, we can open the audio and
-     video codecs and allocate the necessary encode buffers */
-    if (!video_st){
-        return false;
+        c->codec_tag = fourcc;
+
+#if USE_AV_HW_CODECS
+        if (hw_device_ctx) {
+            c->hw_device_ctx = av_buffer_ref(hw_device_ctx);
+            if (hw_format != AV_PIX_FMT_NONE) {
+                c->hw_frames_ctx = hw_create_frames(NULL, hw_device_ctx, width, height, hw_format);
+                if (!c->hw_frames_ctx)
+                    continue;
+            }
+        }
+#endif
+
+        int64_t lbit_rate = (int64_t) c->bit_rate;
+        lbit_rate += (bitrate / 2);
+        lbit_rate = std::min(lbit_rate, (int64_t) INT_MAX);
+        c->bit_rate_tolerance = (int) lbit_rate;
+        c->bit_rate = (int) lbit_rate;
+
+        /* open the codec */
+        err = avcodec_open2(c, codec, NULL);
+        if (err >= 0) {
+            hw_type = va_type;
+            if (hw_type && hw_device < 0)
+                hw_device = 0;
+            break;
+        } else {
+            CV_LOG_ERROR(NULL, "Could not open codec " << codec->name << ", error: " << icvFFMPEGErrStr(err));
+        }
     }
 
-    AVCodecContext* c  = video_st->codec;
+    if (hw_device_ctx)
+        av_buffer_unref(&hw_device_ctx);
 
-    c->codec_tag = fourcc;
-
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
-    if (hw_device_ctx) {
-        c->hw_device_ctx = hw_device_ctx;
-        c->hw_frames_ctx = hw_frames_ctx;
-    }
-#endif
-
-    int64_t lbit_rate = (int64_t)c->bit_rate;
-    lbit_rate += (bitrate / 2);
-    lbit_rate = std::min(lbit_rate, (int64_t)INT_MAX);
-    c->bit_rate_tolerance = (int)lbit_rate;
-    c->bit_rate = (int)lbit_rate;
-
-    /* open the codec */
-    if ((err= avcodec_open2(c, codec, NULL)) < 0) {
-        fprintf(stderr, "Could not open codec '%s': %s\n", codec->name, icvFFMPEGErrStr(err));
+    if (err < 0) {
+        CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Failed to initilize VideoWriter");
         return false;
     }
 
@@ -2591,7 +2598,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     bool need_color_convert;
     AVPixelFormat sw_pix_fmt = c->pix_fmt;
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
+#if USE_AV_HW_CODECS
     if (c->hw_frames_ctx)
         sw_pix_fmt = ((AVHWFramesContext*)c->hw_frames_ctx->data)->sw_format;
 #endif

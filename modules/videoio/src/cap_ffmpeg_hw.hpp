@@ -16,12 +16,13 @@ extern "C" {
 }
 #endif
 
-#define HW_FRAMES_POOL_SIZE     20
+#define HW_DEFAULT_POOL_SIZE    32
+#define HW_DEFAULT_SW_FORMAT    AV_PIX_FMT_NV12
 
 using namespace cv;
 
 AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device);
-AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format, AVPixelFormat sw_format, int pool_size = HW_FRAMES_POOL_SIZE);
+AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
 AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 
@@ -56,42 +57,59 @@ AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
     if (AV_HWDEVICE_TYPE_NONE == hw_type)
         return NULL;
 
+    AVHWDeviceType child_type = hw_type;
+    if (hw_type == AV_HWDEVICE_TYPE_QSV) {
+#ifdef _WIN32
+        child_type = AV_HWDEVICE_TYPE_DXVA2;
+#else
+        child_type = AV_HWDEVICE_TYPE_VAAPI;
+#endif
+    }
+
     AVBufferRef* hw_device_ctx = NULL;
     char device[128] = "";
     char* pdevice = NULL;
-    AVDictionary* options = NULL;
     if (hw_device >= 0 && hw_device < 100000) {
 #ifdef _WIN32
         snprintf(device, sizeof(device), "%d", hw_device);
 #else
         snprintf(device, sizeof(device), "/dev/dri/renderD%d", 128 + hw_device);
 #endif
-        if (hw_type == AV_HWDEVICE_TYPE_QSV) {
-            av_dict_set(&options, "child_device", device, 0);
-        }
-        else {
-            pdevice = device;
-        }
+        pdevice = device;
     }
-    av_hwdevice_ctx_create(&hw_device_ctx, hw_type, pdevice, options, 0);
-    if (options)
-        av_dict_free(&options);
-    return hw_device_ctx;
+    av_hwdevice_ctx_create(&hw_device_ctx, child_type, pdevice, NULL, 0);
+    if (hw_type != child_type) {
+        AVBufferRef *derived_ctx = NULL;
+        av_hwdevice_ctx_create_derived(&derived_ctx, hw_type, hw_device_ctx, 0);
+        av_buffer_unref(&hw_device_ctx);
+        return derived_ctx;
+    } else {
+        return hw_device_ctx;
+    }
 }
 
-AVBufferRef* hw_create_frames(AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format, AVPixelFormat sw_format, int pool_size)
+AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format)
 {
-    AVBufferRef *hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx);
+    AVBufferRef *hw_frames_ref = nullptr;
+    if (ctx) {
+        avcodec_get_hw_frames_parameters(ctx, hw_device_ctx, hw_format, &hw_frames_ref);
+    }
+    if (!hw_frames_ref) {
+        hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx);
+    }
     if (!hw_frames_ref) {
         CV_LOG_DEBUG(NULL, "Failed to create HW frame context");
         return NULL;
     }
     AVHWFramesContext *frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-    frames_ctx->format    = hw_format;
-    frames_ctx->sw_format = sw_format;
-    frames_ctx->width     = width;
-    frames_ctx->height    = height;
-    frames_ctx->initial_pool_size = pool_size;
+    frames_ctx->width = width;
+    frames_ctx->height = height;
+    if (frames_ctx->format == AV_PIX_FMT_NONE)
+        frames_ctx->format = hw_format;
+    if (frames_ctx->sw_format == AV_PIX_FMT_NONE)
+        frames_ctx->sw_format = HW_DEFAULT_SW_FORMAT;
+    if (frames_ctx->initial_pool_size == 0)
+        frames_ctx->initial_pool_size = HW_DEFAULT_POOL_SIZE;
     if (av_hwframe_ctx_init(hw_frames_ref) < 0) {
         CV_LOG_DEBUG(NULL, "Failed to initialize HW frame context");
         av_buffer_unref(&hw_frames_ref);
@@ -128,7 +146,7 @@ AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_cat
                     break;
                 if (hw_config->device_type == hw_type) {
                     int m = hw_config->methods;
-                    if (!(m & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) && (m & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) && hw_pix_fmt) {
+                    if ((m & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) && hw_pix_fmt) {
                         // codec requires frame pool (hw_frames_ctx) created by application
                         *hw_pix_fmt = hw_config->pix_fmt;
                     }
@@ -155,13 +173,12 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
         if (hw_config->device_type == hw_type) {
             for (int i = 0; fmt[i] != AV_PIX_FMT_NONE; i++) {
                 if (fmt[i] == hw_config->pix_fmt) {
-                    if (hw_config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) {
-                        return fmt[i];
-                    }
                     if (hw_config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) {
-                        ctx->hw_frames_ctx = hw_create_frames(ctx->hw_device_ctx, ctx->width, ctx->height, fmt[i], AV_PIX_FMT_NV12);
-                        if (ctx->hw_frames_ctx)
+                        ctx->hw_frames_ctx = hw_create_frames(ctx, ctx->hw_device_ctx, ctx->width, ctx->height, fmt[i]);
+                        if (ctx->hw_frames_ctx) {
+                            ctx->sw_pix_fmt = ((AVHWFramesContext *)(ctx->hw_frames_ctx->data))->sw_format;
                             return fmt[i];
+                        }
                     }
                 }
             }

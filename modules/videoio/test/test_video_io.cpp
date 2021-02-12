@@ -683,7 +683,7 @@ TEST_P(video_acceleration, write_read)
             { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
         EXPECT_TRUE(writer.isOpened());
         VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
-        std::cout << "  VideoWriter acceleration = " << actual_va << std::endl;
+        std::cout << writer.getBackendName() << ": VideoWriter acceleration = " << actual_va << std::endl;
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
             generateFrame(i, frameNum, frame);
@@ -702,7 +702,7 @@ TEST_P(video_acceleration, write_read)
         VideoCapture reader(filename, backend, { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
         ASSERT_TRUE(reader.isOpened());
         VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(reader.get(CAP_PROP_HW_ACCELERATION)));
-        std::cout << "  VideoCapture acceleration = " << actual_va << std::endl;
+        std::cout << reader.getBackendName() << ": VideoCapture acceleration = " << actual_va << std::endl;
         double min_psnr = 1000;
         Mat reference(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
@@ -740,11 +740,11 @@ TEST_P(video_acceleration, write_read)
 
 static Ext_Fourcc_PSNR hw_codecs[] = {
         {"mp4", "MPEG", 30.f, CAP_FFMPEG},
-        //{"mp4", "H264", 30.f, CAP_FFMPEG},
         {"avi", "XVID", 30.f, CAP_FFMPEG},
+        //{"mp4", "H264", 30.f, CAP_FFMPEG}, TODO
 
         {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
-        {"mkv", "H264", 30.f, CAP_GSTREAMER},
+        //{"mkv", "H264", 30.f, CAP_GSTREAMER}, TODO
 
 #ifdef _WIN32
         {"mp4", "MPEG", 30.f, CAP_MSMF},
