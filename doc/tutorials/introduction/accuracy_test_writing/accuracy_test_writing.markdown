@@ -45,7 +45,7 @@ If you want to run **CERTAIN TESTS**:.
 - If you work in IDE you need to find the project preference named `Command Arguments` or similar and write there the key like `--gtest_filter=<KEY>`.  [gtest_filter documentation](https://github.com/google/googletest/blob/273f8cb059a4e7b089731036392422b5ef489791/docs/advanced.md#running-a-subset-of-the-tests)
 - If you want to use your system:
   - (*Windows*) run the executable file `<BUILD_DIR>/bin/Debug(Release)/opencv_test_<MODULE_NAME>.exe --gtest_filter=<KEY>`.
-  - (*Linux*) run in terminal `./<BUILD_DIR>/bin/opencv_test_<MODULE_NAME> --gtest_filter=<KEY>`. 
+  - (*Linux*) run in terminal `./<BUILD_DIR>/bin/opencv_test_<MODULE_NAME> --gtest_filter=<KEY>`.
 
 # TEST DATA
 
