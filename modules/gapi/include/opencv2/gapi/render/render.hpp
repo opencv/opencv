@@ -158,7 +158,7 @@ GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
 
 Output NV12 frame cv::MediaFrame
 
-@param nv12 input image: cv::MediaFrame @ref
+@param nv12 input image: cv::MediaFrame @ref cv::MediaFrame
 @param prims draw primitives
 */
 GAPI_EXPORTS GFrame renderFrameNV12(const GFrame& nv12,
