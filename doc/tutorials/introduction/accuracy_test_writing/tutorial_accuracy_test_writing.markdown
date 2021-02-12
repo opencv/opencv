@@ -1,5 +1,4 @@
-# Writing Accuracy Tests
-{#tutorial_accuracy_test_writing}
+# Writing Accuracy Tests {#tutorial_accuracy_test_writing}
 ====================================================
 
 This testing framework is based on Google Tests
@@ -29,7 +28,7 @@ TEST(name1, name2)
     ASSERT_....;
 }
 ```
-More information abut the code for the tests can be found in the [GoogleTest Documentation](https://github.com/google/googletest/blob/master/docs/primer.md).
+More information abut the code for the tests can be found in the [GoogleTest Documentation](http://github.com/google/googletest/blob/master/docs/primer.md).
 
 ### Run
 
