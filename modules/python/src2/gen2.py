@@ -1020,8 +1020,14 @@ class PythonWrapperGenerator(object):
             decls = self.parser.parse(hdr)
             if len(decls) == 0:
                 continue
-            if hdr.find('opencv2/') >= 0: #Avoid including the shadow files
-                self.code_include.write( '#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]) )
+
+            if hdr.find('misc/python/shadow_') < 0:  # Avoid including the "shadow_" files
+                if hdr.find('opencv2/') >= 0:
+                    # put relative path
+                    self.code_include.write('#include "{0}"\n'.format(hdr[hdr.rindex('opencv2/'):]))
+                else:
+                    self.code_include.write('#include "{0}"\n'.format(hdr))
+
             for decl in decls:
                 name = decl[0]
                 if name.startswith("struct") or name.startswith("class"):

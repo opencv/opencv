@@ -32,13 +32,14 @@
 
 #include <numpy/ndarrayobject.h>
 
+#include "opencv2/opencv_modules.hpp"
+#include "opencv2/core.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/tls.hpp"
 
 #include "pyopencv_generated_include.h"
 #include "opencv2/core/types_c.h"
-#include "opencv2/opencv_modules.hpp"
 #include "pycompat.hpp"
 #include <map>
 
@@ -207,6 +208,11 @@ try \
 catch (const cv::Exception &e) \
 { \
     pyRaiseCVException(e); \
+    return 0; \
+} \
+catch (const std::exception &e) \
+{ \
+    PyErr_SetString(opencv_error, e.what()); \
     return 0; \
 }
 

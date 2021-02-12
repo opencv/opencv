@@ -564,20 +564,40 @@ class PluginCapture : public cv::IVideoCapture
 public:
     static
     Ptr<PluginCapture> create(const OpenCV_VideoIO_Capture_Plugin_API* plugin_api,
-            const std::string &filename, int camera)
+            const std::string &filename, int camera, const VideoCaptureParameters& params)
     {
         CV_Assert(plugin_api);
+        CV_Assert(plugin_api->v0.Capture_release);
+
         CvPluginCapture capture = NULL;
 
-        if (plugin_api->v0.Capture_open)
+        if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Capture_open_with_params)
         {
-            CV_Assert(plugin_api->v0.Capture_release);
-            if (CV_ERROR_OK == plugin_api->v0.Capture_open(filename.empty() ? 0 : filename.c_str(), camera, &capture))
+            std::vector<int> vint_params = params.getIntVector();
+            int* c_params = &vint_params[0];
+            unsigned n_params = (unsigned)(vint_params.size() / 2);
+
+            if (CV_ERROR_OK == plugin_api->v1.Capture_open_with_params(
+                    filename.empty() ? 0 : filename.c_str(), camera, c_params, n_params, &capture))
             {
                 CV_Assert(capture);
                 return makePtr<PluginCapture>(plugin_api, capture);
             }
         }
+        else if (plugin_api->v0.Capture_open)
+        {
+            if (CV_ERROR_OK == plugin_api->v0.Capture_open(filename.empty() ? 0 : filename.c_str(), camera, &capture))
+            {
+                CV_Assert(capture);
+                Ptr<PluginCapture> cap = makePtr<PluginCapture>(plugin_api, capture);
+                if (cap && !params.empty())
+                {
+                    applyParametersFallback(cap, params);
+                }
+                return cap;
+            }
+        }
+
         return Ptr<PluginCapture>();
     }
 
@@ -658,11 +678,13 @@ public:
             const VideoWriterParameters& params)
     {
         CV_Assert(plugin_api);
+        CV_Assert(plugin_api->v0.Writer_release);
+        CV_Assert(!filename.empty());
+
         CvPluginWriter writer = NULL;
+
         if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Writer_open_with_params)
         {
-            CV_Assert(plugin_api->v0.Writer_release);
-            CV_Assert(!filename.empty());
             std::vector<int> vint_params = params.getIntVector();
             int* c_params = &vint_params[0];
             unsigned n_params = (unsigned)(vint_params.size() / 2);
@@ -675,13 +697,16 @@ public:
         }
         else if (plugin_api->v0.Writer_open)
         {
-            CV_Assert(plugin_api->v0.Writer_release);
-            CV_Assert(!filename.empty());
             const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
             const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
             if (depth != CV_8U)
             {
                 CV_LOG_WARNING(NULL, "Video I/O plugin doesn't support (due to lower API level) creation of VideoWriter with depth != CV_8U");
+                return Ptr<PluginWriter>();
+            }
+            if (params.warnUnusedParameters())
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
                 return Ptr<PluginWriter>();
             }
             if (CV_ERROR_OK == plugin_api->v0.Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
@@ -690,6 +715,7 @@ public:
                 return makePtr<PluginWriter>(plugin_api, writer);
             }
         }
+
         return Ptr<PluginWriter>();
     }
 
@@ -743,14 +769,21 @@ public:
 };
 
 
-Ptr<IVideoCapture> PluginBackend::createCapture(int camera) const
+Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCaptureParameters& params) const
 {
     try
     {
         if (capture_api_)
-            return PluginCapture::create(capture_api_, std::string(), camera); //.staticCast<IVideoCapture>();
+            return PluginCapture::create(capture_api_, std::string(), camera, params); //.staticCast<IVideoCapture>();
         if (plugin_api_)
-            return legacy::PluginCapture::create(plugin_api_, std::string(), camera); //.staticCast<IVideoCapture>();
+        {
+            Ptr<IVideoCapture> cap = legacy::PluginCapture::create(plugin_api_, std::string(), camera); //.staticCast<IVideoCapture>();
+            if (cap && !params.empty())
+            {
+                applyParametersFallback(cap, params);
+            }
+            return cap;
+        }
     }
     catch (...)
     {
@@ -760,25 +793,21 @@ Ptr<IVideoCapture> PluginBackend::createCapture(int camera) const
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> PluginBackend::createCapture(int camera, const VideoCaptureParameters& params) const
-{
-    // TODO Update plugins API to support parameters
-    Ptr<IVideoCapture> cap = createCapture(camera);
-    if (cap && !params.empty())
-    {
-        applyParametersFallback(cap, params);
-    }
-    return cap;
-}
-
-Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) const
+Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, const VideoCaptureParameters& params) const
 {
     try
     {
         if (capture_api_)
-            return PluginCapture::create(capture_api_, filename, 0); //.staticCast<IVideoCapture>();
+            return PluginCapture::create(capture_api_, filename, 0, params); //.staticCast<IVideoCapture>();
         if (plugin_api_)
-            return legacy::PluginCapture::create(plugin_api_, filename, 0); //.staticCast<IVideoCapture>();
+        {
+            Ptr<IVideoCapture> cap = legacy::PluginCapture::create(plugin_api_, filename, 0); //.staticCast<IVideoCapture>();
+            if (cap && !params.empty())
+            {
+                applyParametersFallback(cap, params);
+            }
+            return cap;
+        }
     }
     catch (...)
     {
@@ -786,17 +815,6 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename) con
         throw;
     }
     return Ptr<IVideoCapture>();
-}
-
-Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, const VideoCaptureParameters& params) const
-{
-    // TODO Update plugins API to support parameters
-    Ptr<IVideoCapture> cap = createCapture(filename);
-    if (cap && !params.empty())
-    {
-        applyParametersFallback(cap, params);
-    }
-    return cap;
 }
 
 Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int fourcc, double fps,

@@ -115,6 +115,9 @@ double cvGetPropTopmost_COCOA(const char* name);
 void cvSetPropTopmost_W32(const char* name, const bool topmost);
 void cvSetPropTopmost_COCOA(const char* name, const bool topmost);
 
+double cvGetPropVsync_W32(const char* name);
+void cvSetPropVsync_W32(const char* name, const bool enabled);
+
 //for QT
 #if defined (HAVE_QT)
 CvRect cvGetWindowRect_QT(const char* name);

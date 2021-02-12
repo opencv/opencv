@@ -92,6 +92,14 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
         #endif
     break;
 
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            cvSetPropVsync_W32(name, (prop_value != 0));
+        #else
+            // not implemented yet for other toolkits
+        #endif
+    break;
+
     default:;
     }
 }
@@ -177,6 +185,14 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropTopmost_W32(name);
         #elif defined(HAVE_COCOA)
             return cvGetPropTopmost_COCOA(name);
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            return cvGetPropVsync_W32(name);
         #else
             return -1;
         #endif
@@ -280,6 +296,18 @@ int cv::waitKey(int delay)
 #endif
     return (code != -1) ? (code & 0xff) : -1;
 }
+
+#if defined(HAVE_WIN32UI)
+// pollKey() implemented in window_w32.cpp
+#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
+// pollKey() fallback implementation
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+#endif
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
@@ -771,6 +799,10 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
 }
 
+int cv::pollKey()
+{
+    CV_NO_GUI_ERROR("cv::pollKey()");
+}
 
 #endif
 
