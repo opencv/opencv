@@ -33,6 +33,20 @@ void cv::gapi::wip::draw::render(cv::Mat& y_plane,
                cv::gout(y_plane, uv_plane), std::move(args));
 }
 
+void cv::gapi::wip::draw::render(cv::MediaFrame& nv12,
+                                 const Prims& prims,
+                                 cv::GCompileArgs&& args)
+{
+    cv::GFrame in, out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    out = cv::gapi::wip::draw::renderFrameNV12(in, arr);
+
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
+    comp.apply(cv::gin(nv12, prims),
+               cv::gout(nv12), std::move(args));
+}
+
+
 void cv::gapi::wip::draw::cvtYUVToNV12(const cv::Mat& yuv,
                                        cv::Mat& y,
                                        cv::Mat& uv)
@@ -68,4 +82,10 @@ cv::gapi::wip::draw::renderNV12(const cv::GMat& y,
                                 const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {
     return cv::gapi::wip::draw::GRenderNV12::on(y, uv, prims);
+}
+
+cv::GFrame cv::gapi::wip::draw::renderFrameNV12(const cv::GFrame& nv12,
+    const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderFrameNV12::on(nv12, prims);
 }
