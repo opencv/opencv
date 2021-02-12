@@ -28,7 +28,7 @@ TEST(name1, name2)
     ASSERT_....;
 }
 ```
-More information abut the code for the tests can be found in the [GoogleTest Documentation](http://github.com/google/googletest/blob/master/docs/primer.md).
+More information abut the code for the tests can be found [here](http://github.com/google/googletest/blob/master/docs/primer.md)
 
 ### Run
 
