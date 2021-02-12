@@ -436,7 +436,7 @@ struct IECallable {
     // FIXME: Make IECallContext manage them all? (3->1)
     using Run = std::function<void(const IEUnit                          &,
                                    std::shared_ptr<IECallContext>         ,
-                                   cv::gimpl::ie::IRScheduler            &,
+                                   cv::gimpl::ie::RequestPool            &,
                                    cv::gimpl::GIslandExecutable::IOutput &
                                    )>;
     Run run;
@@ -491,7 +491,7 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i, Views& views
 }
 } // anonymous namespace
 
-class cv::gimpl::ie::IRScheduler {
+class cv::gimpl::ie::RequestPool {
 public:
     using CompiledPtr = std::shared_ptr<cv::gimpl::ie::IECompiled>;
     using Run      = std::function<void(cv::gimpl::ie::IECompiled&)>;
@@ -501,7 +501,7 @@ public:
         Callback callback;
     };
 
-    IRScheduler(const IEUnit& uu)
+    RequestPool(const IEUnit& uu)
       : m_ndone(0u), m_nireq(uu.params.nireq) {
           // FIXME: What's the capacity should be here (not bounded ??? )
           m_tasks.set_capacity(m_nireq);
@@ -525,7 +525,7 @@ public:
       m_worker.join();
     }
 
-    ~IRScheduler() {
+    ~RequestPool() {
       // FIXME: What nobody calls wait_and_shutdown
       //wait_and_shutdown();
     }
@@ -551,7 +551,7 @@ private:
 
         auto&& next_task = cv::util::get<Task>(cmd);
         compiled->this_request.SetCompletionCallback(
-                std::bind(&cv::gimpl::ie::IRScheduler::Handler, this, next_task, compiled));
+                std::bind(&cv::gimpl::ie::RequestPool::Handler, this, next_task, compiled));
 
         next_task.run(*compiled);
     }
@@ -569,7 +569,7 @@ private:
 
             auto&& task = cv::util::get<Task>(cmd);
             compiled->this_request.SetCompletionCallback(
-                    std::bind(&cv::gimpl::ie::IRScheduler::Handler, this, task, compiled));
+                    std::bind(&cv::gimpl::ie::RequestPool::Handler, this, task, compiled));
 
             task.run(*compiled);
         }
@@ -619,7 +619,7 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
         }
     }
     const auto& uu = iem.metadata(this_nh).get<IEUnit>();
-    m_scheduler.reset(new IRScheduler(uu));
+    m_reqPool.reset(new RequestPool(uu));
 }
 
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
@@ -630,8 +630,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     //     3. Create kernel context. (Every kernel has his own context).
     //     4. If the EndOfStream message is recieved, wait until all passed task are done.
     //     5. 
-    //        5.1 Run the kernel and pass the scheduler.
-    //        5.2 Kernel just push corresponding tasks to scheduler queue and finish.
+    //        5.1 Run the kernel and pass the reqPool.
+    //        5.2 Kernel just push corresponding tasks to reqPool queue and finish.
     //        5.3 After the kernels is finished continue processing next frame
     //
     //     6. If graph is compiled in non-streaming mode, wait until all task are done.
@@ -647,7 +647,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         // (4) Wait until all passed task are done.
-        m_scheduler->wait_and_shutdown();
+        m_reqPool->wait_and_shutdown();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
@@ -686,12 +686,12 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &uu = giem.metadata(this_nh).get<IEUnit>();
 
     // (5) Run the kernel.
-    kk.run(uu, ctx, *m_scheduler, out);
+    kk.run(uu, ctx, *m_reqPool, out);
 
     // (6) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
-        m_scheduler->wait_and_shutdown();
+        m_reqPool->wait_and_shutdown();
     }
 }
 
@@ -832,11 +832,11 @@ struct Infer: public cv::detail::KernelTag {
 
     static void run(const IEUnit                          &uu,
                     std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::IRScheduler            &scheduler,
+                    cv::gimpl::ie::RequestPool            &reqPool,
                     cv::gimpl::GIslandExecutable::IOutput &out) {
         using namespace std::placeholders;
-        scheduler.execute(
-                cv::gimpl::ie::IRScheduler::Task {
+        reqPool.execute(
+                cv::gimpl::ie::RequestPool::Task {
                     [ctx, &uu](cv::gimpl::ie::IECompiled &iec) {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
@@ -849,7 +849,7 @@ struct Infer: public cv::detail::KernelTag {
                             iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
                         }
                         // FIXME: Should it be done by kernel ?
-                        // What about to do that in IRScheduler ?
+                        // What about to do that in RequestPool ?
                         iec.this_request.StartAsync();
                     },
                     std::bind(PostOutputs, _1, std::cref(uu), ctx, std::ref(out))
@@ -901,11 +901,11 @@ struct InferROI: public cv::detail::KernelTag {
 
     static void run(const IEUnit                          &uu,
                     std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::IRScheduler            &scheduler,
+                    cv::gimpl::ie::RequestPool            &reqPool,
                     cv::gimpl::GIslandExecutable::IOutput &out) {
         using namespace std::placeholders;
-        scheduler.execute(
-                cv::gimpl::ie::IRScheduler::Task {
+        reqPool.execute(
+                cv::gimpl::ie::RequestPool::Task {
                     [ctx, &uu](cv::gimpl::ie::IECompiled &iec) {
                         GAPI_Assert(uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
@@ -917,7 +917,7 @@ struct InferROI: public cv::detail::KernelTag {
                                 IE::make_shared_blob(this_blob, toIE(this_roi)));
 
                         // FIXME: Should it be done by kernel ?
-                        // What about to do that in IRScheduler ?
+                        // What about to do that in RequestPool ?
                         iec.this_request.StartAsync();
                     },
                     std::bind(PostOutputs, _1, std::cref(uu), ctx, std::ref(out))
@@ -967,7 +967,7 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(const IEUnit                          &uu,
                     std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::IRScheduler            &scheduler,
+                    cv::gimpl::ie::RequestPool            &reqPool,
                     cv::gimpl::GIslandExecutable::IOutput &out) {
         // non-generic version for now:
         // - assumes zero input is always ROI list
@@ -996,8 +996,8 @@ struct InferList: public cv::detail::KernelTag {
         for (auto&& it : ade::util::indexed(in_roi_vec)) {
             auto&& idx = ade::util::index(it);
             auto&& rc  = ade::util::value(it);
-            scheduler.execute(
-                    cv::gimpl::ie::IRScheduler::Task {
+            reqPool.execute(
+                    cv::gimpl::ie::RequestPool::Task {
                         [ctx, &uu, this_blob, rc](cv::gimpl::ie::IECompiled &iec) {
                             IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
                             iec.this_request.SetBlob(uu.params.input_names[0u], roi_blob);
@@ -1095,7 +1095,7 @@ struct InferList2: public cv::detail::KernelTag {
 
         static void run(const IEUnit                          &uu,
                         std::shared_ptr<IECallContext>         ctx,
-                        cv::gimpl::ie::IRScheduler            &scheduler,
+                        cv::gimpl::ie::RequestPool            &reqPool,
                         cv::gimpl::GIslandExecutable::IOutput &out) {
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
@@ -1123,8 +1123,8 @@ struct InferList2: public cv::detail::KernelTag {
 
         using namespace std::placeholders;
         for (const auto &list_idx : ade::util::iota(list_size)) {
-            scheduler.execute(
-                    cv::gimpl::ie::IRScheduler::Task {
+            reqPool.execute(
+                    cv::gimpl::ie::RequestPool::Task {
                         [ctx, list_idx, list_size, blob_0, &uu](cv::gimpl::ie::IECompiled &iec) {
                             for (auto in_idx : ade::util::iota(uu.params.num_in)) {
                                 const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);

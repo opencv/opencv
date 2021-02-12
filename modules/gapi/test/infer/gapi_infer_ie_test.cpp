@@ -1019,7 +1019,7 @@ TEST(Infer, TestStreamingInfer)
     }
 }
 
-TEST(InferROI, TestStreamingInfer)
+TEST(InferROI, DISABLED_TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1097,7 +1097,7 @@ TEST(InferROI, TestStreamingInfer)
     pipeline.stop();
 }
 
-TEST(InferList, TestStreamingInfer)
+TEST(InferList, DISABLED_TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1192,7 +1192,7 @@ TEST(InferList, TestStreamingInfer)
     pipeline.stop();
 }
 
-TEST(Infer2, TestStreamingInfer)
+TEST(Infer2, DISABLED_TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();

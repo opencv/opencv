@@ -38,7 +38,7 @@ struct IECompiled {
     InferenceEngine::InferRequest      this_request;
 };
 
-struct IRScheduler;
+struct RequestPool;
 
 class GIEExecutable final: public GIslandExecutable
 {
@@ -48,13 +48,12 @@ class GIEExecutable final: public GIslandExecutable
     // The only executable stuff in this graph
     // (assuming it is always single-op)
     ade::NodeHandle this_nh;
-    IECompiled this_iec;
 
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
     // To manage multiple async requests
-    std::unique_ptr<IRScheduler> m_scheduler;
+    std::unique_ptr<RequestPool> m_reqPool;
 
 public:
     GIEExecutable(const ade::Graph                   &graph,
