@@ -126,7 +126,6 @@ void kmeansTestOpenCVCompare(const In& in, const Labels& bestLabels, const int K
 {
     const cv::TermCriteria criteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 30, 0);
     const int attempts = 1;
-    double compact_ocv = -1.;
     Labels labels_ocv;
     In centers_ocv;
     { // step to generalize cv::Mat & std::vector cases of bestLabels' types
@@ -134,13 +133,15 @@ void kmeansTestOpenCVCompare(const In& in, const Labels& bestLabels, const int K
         bestLabelsMat.copyTo(labels_ocv);
     }
     // OpenCV code /////////////////////////////////////////////////////////////
-    compact_ocv = cv::kmeans(in, K, labels_ocv, criteria, attempts, flags, centers_ocv);
+    double compact_ocv = cv::kmeans(in, K, labels_ocv, criteria, attempts, flags, centers_ocv);
     // Comparison //////////////////////////////////////////////////////////////
     EXPECT_TRUE(compact_gapi == compact_ocv);
     EXPECT_TRUE(compareKMeansOutputs(labels_gapi, labels_ocv, cmpF));
     EXPECT_TRUE(compareKMeansOutputs(centers_gapi, centers_ocv, cmpF));
 }
 
+// If an input type is cv::Mat, labels' type is also cv::Mat;
+// in other cases, their type has to be std::vector<int>
 template<typename In>
 using KMeansLabelType = typename std::conditional<std::is_same<In, cv::Mat>::value,
                                                   cv::Mat,

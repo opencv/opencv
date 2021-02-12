@@ -73,7 +73,7 @@ namespace opencv_test
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<MatType, MatType, cv::Size, cv::GCompileArgs>> {};
     class ConvertToPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
-    class KMeansNDPerfTest : public TestPerfParams<tuple<MatType2, cv::Size, CompareMats, int,
+    class KMeansNDPerfTest : public TestPerfParams<tuple<cv::Size, CompareMats, int,
                                                          cv::KmeansFlags, cv::GCompileArgs>> {};
     class KMeans2DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags,
                                                          cv::GCompileArgs>> {};

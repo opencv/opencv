@@ -282,50 +282,32 @@ INSTANTIATE_TEST_CASE_P(ConvertToPerfTestCPU, ConvertToPerfTest,
             Values(0.0),
             Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(KMeansNDNoInitPerfTestCPU, KMeansNDPerfTest,
-                        Combine(Values(CV_32FC1, CV_32FC3),
-                                Values(cv::Size(1, 20),
-                                       cv::Size(2, 20),
-                                       cv::Size(5, 720)),
+INSTANTIATE_TEST_CASE_P(KMeansNDPerfTestCPU, KMeansNDPerfTest,
+                        Combine(Values(cv::Size(1, 20),
+                                       cv::Size(16, 4096)),
                                 Values(AbsTolerance(0.01).to_compare_obj()),
                                 Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS),
-                                Values(cv::compile_args(CORE_CPU))));
-
-INSTANTIATE_TEST_CASE_P(KMeansNDInitPerfTestCPU, KMeansNDPerfTest,
-                        Combine(Values(CV_32FC1, CV_32FC3),
-                                Values(cv::Size(1, 20),
-                                       cv::Size(2, 20),
-                                       cv::Size(5, 720)),
-                                Values(AbsTolerance(0.01).to_compare_obj()),
-                                Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
                                 Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(KMeans2DNoInitPerfTestCPU, KMeans2DPerfTest,
-                        Combine(Values(20, 720),
+INSTANTIATE_TEST_CASE_P(KMeans2DPerfTestCPU, KMeans2DPerfTest,
+                        Combine(Values(20, 4096),
                                 Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS),
-                                Values(cv::compile_args(CORE_CPU))));
-
-INSTANTIATE_TEST_CASE_P(KMeans2DInitPerfTestCPU, KMeans2DPerfTest,
-                        Combine(Values(20, 720),
-                                Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
                                 Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(KMeans3DNoInitPerfTestCPU, KMeans3DPerfTest,
-                        Combine(Values(20, 720),
+INSTANTIATE_TEST_CASE_P(KMeans3DPerfTestCPU, KMeans3DPerfTest,
+                        Combine(Values(20, 4096),
                                 Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS),
-                                Values(cv::compile_args(CORE_CPU))));
-
-INSTANTIATE_TEST_CASE_P(KMeans3DInitPerfTestCPU, KMeans3DPerfTest,
-                        Combine(Values(20, 720),
-                                Values(5, 15),
-                                Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
                                 Values(cv::compile_args(CORE_CPU))));
 

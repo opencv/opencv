@@ -1909,21 +1909,21 @@ PERF_TEST_P_(ConvertToPerfTest, TestPerformance)
 
 PERF_TEST_P_(KMeansNDPerfTest, TestPerformance)
 {
-    MatType2 type = -1;
     cv::Size sz;
     CompareMats cmpF;
     int K = -1;
     cv::KmeansFlags flags = cv::KMEANS_RANDOM_CENTERS;
     cv::GCompileArgs compile_args;
-    std::tie(type, sz, cmpF, K, flags, compile_args) = GetParam();
+    std::tie(sz, cmpF, K, flags, compile_args) = GetParam();
 
+    MatType2 type = CV_32FC1;
     initMatrixRandU(type, sz, -1, false);
 
     double compact_gapi = -1.;
     cv::Mat labels_gapi, centers_gapi;
     if (flags & cv::KMEANS_USE_INITIAL_LABELS)
     {
-        const int amount = sz.height != 1 ? sz.height : sz.width;
+        const int amount = sz.height;
         cv::Mat bestLabels(cv::Size{1, amount}, CV_32SC1);
         cv::randu(bestLabels, 0, K);
 
