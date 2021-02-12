@@ -13,11 +13,6 @@ if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
-if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
-  list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
-endif()
-
 if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR} ${${JPEG_LIBRARY}_BINARY_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
@@ -56,6 +51,11 @@ endif()
 if(HAVE_OPENEXR)
   include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
+endif()
+
+if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
+  list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 
 if(HAVE_GDAL)
