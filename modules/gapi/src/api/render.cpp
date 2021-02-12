@@ -85,7 +85,7 @@ cv::gapi::wip::draw::renderNV12(const cv::GMat& y,
 }
 
 cv::GFrame cv::gapi::wip::draw::renderFrameNV12(const cv::GFrame& nv12,
-    const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
+                                                const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {
     return cv::gapi::wip::draw::GRenderFrameNV12::on(nv12, prims);
 }
