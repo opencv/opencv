@@ -74,7 +74,7 @@ There are some conditions of samples:
 
 - green (success)
 
-  It means that your code was successful build, all tests passed and you code style is right
+  It means that your code was successful build, all tests passed.
 
 - orange (warnings)
 
