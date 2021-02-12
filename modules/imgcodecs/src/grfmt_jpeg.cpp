@@ -244,6 +244,7 @@ bool  JpegDecoder::readHeader()
 
         if (state->cinfo.src != 0)
         {
+            jpeg_save_markers(&state->cinfo, APP1, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
 
             state->cinfo.scale_num=1;
@@ -455,6 +456,29 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->out_color_components = 4;
                 }
             }
+
+            // Check for Exif marker APP1
+            jpeg_saved_marker_ptr exif_marker = NULL;
+            jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
+            while( cmarker && exif_marker == NULL )
+            {
+                if (cmarker->marker == APP1)
+                    exif_marker = cmarker;
+
+                cmarker = cmarker->next;
+            }
+
+            // Parse Exif data
+            if( exif_marker )
+            {
+                const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
+
+                if (exif_marker->data_length > offsetToTiffHeader)
+                {
+                    m_exif.parseExif(exif_marker->data + offsetToTiffHeader, exif_marker->data_length - offsetToTiffHeader);
+                }
+            }
+
 
             jpeg_start_decompress( cinfo );
 

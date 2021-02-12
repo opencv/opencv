@@ -356,6 +356,16 @@ public:
 };
 
 
+// Disable thread sanitization check when CV_USE_GLOBAL_WORKERS_COND_VAR is not
+// set because it triggers as the main thread reads isActive while the children
+// thread writes it (but it all works out because a mutex is locked in the main
+// thread and isActive re-checked).
+// This is to solve issue #19463.
+#if !defined(CV_USE_GLOBAL_WORKERS_COND_VAR) && defined(__clang__) && defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+__attribute__((no_sanitize("thread")))
+#endif
+#endif
 void WorkerThread::thread_body()
 {
     (void)cv::utils::getThreadID(); // notify OpenCV about new thread
