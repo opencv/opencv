@@ -13,6 +13,7 @@
 #ifdef HAVE_INF_ENGINE
 
 #include <ade/util/algorithm.hpp> // type_list_index
+#include <condition_variable>
 
 #include <inference_engine.hpp>
 
@@ -37,6 +38,37 @@ struct IECompiled {
     InferenceEngine::InferRequest      this_request;
 };
 
+// FIXME: Structure which collect all necessary sync primitives
+// will be deleted when the async request pool appears
+class SyncPrim {
+public:
+    void wait() {
+        std::unique_lock<std::mutex> l(m_mutex);
+        m_cv.wait(l, [this]{ return !m_is_busy; });
+    }
+
+    void release_and_notify() {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_is_busy = false;
+        }
+        m_cv.notify_one();
+    }
+
+    void acquire() {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_is_busy = true;
+    }
+
+private:
+    // To wait until the async request isn't over
+    std::condition_variable m_cv;
+    // To avoid spurious cond var wake up
+    bool m_is_busy = false;
+    // To sleep until condition variable wakes up
+    std::mutex m_mutex;
+};
+
 class GIEExecutable final: public GIslandExecutable
 {
     const ade::Graph &m_g;
@@ -50,11 +82,8 @@ class GIEExecutable final: public GIslandExecutable
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
-    // Actual data of all resources in graph (both internal and external)
-    Mag m_res;
-
-    // Execution helpers
-    GArg packArg(const GArg &arg);
+    // Sync primitive
+    SyncPrim m_sync;
 
 public:
     GIEExecutable(const ade::Graph                   &graph,
@@ -65,8 +94,14 @@ public:
         GAPI_Assert(false); // Not implemented yet
     }
 
-    virtual void run(std::vector<InObj>  &&input_objs,
-                     std::vector<OutObj> &&output_objs) override;
+    virtual void run(std::vector<InObj>  &&,
+                     std::vector<OutObj> &&) override {
+        GAPI_Assert(false && "Not implemented");
+    }
+
+    virtual void run(GIslandExecutable::IInput  &in,
+                     GIslandExecutable::IOutput &out) override;
+
 };
 
 }}}
