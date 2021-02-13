@@ -663,6 +663,7 @@ TEST_P(video_acceleration, write_read)
     std::string extension = get<0>(param).ext;
     double psnr_threshold = get<0>(param).PSNR;
     VideoAccelerationType va_type = get<1>(param);
+    int device_idx = -1;
     bool use_umat = get<2>(param);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(backend));
@@ -680,7 +681,10 @@ TEST_P(video_acceleration, write_read)
             VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
             fps,
             sz,
-            { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
+            {
+                VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
+                VIDEOWRITER_PROP_HW_DEVICE, device_idx
+            });
         EXPECT_TRUE(writer.isOpened());
         VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
         std::cout << writer.getBackendName() << ": VideoWriter acceleration = " << actual_va << std::endl;
@@ -699,7 +703,10 @@ TEST_P(video_acceleration, write_read)
     }
     // Read video and check PSNR on every frame
     {
-        VideoCapture reader(filename, backend, { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) });
+        VideoCapture reader(filename, backend, {
+            CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type),
+            CAP_PROP_HW_DEVICE, device_idx
+        });
         ASSERT_TRUE(reader.isOpened());
         VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(reader.get(CAP_PROP_HW_ACCELERATION)));
         std::cout << reader.getBackendName() << ": VideoCapture acceleration = " << actual_va << std::endl;

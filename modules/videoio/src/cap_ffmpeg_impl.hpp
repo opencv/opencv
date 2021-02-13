@@ -996,51 +996,60 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             int enc_width = enc->width;
             int enc_height = enc->height;
 
+            // find and open decoder, first try HW decoders
             AVCodec *codec = NULL;
-#if USE_AV_HW_CODECS
-            // try find HW decoder
+            err = -1;
             static std::vector<VideoAccelerationType> supported_va_types = {
 #ifdef _WIN32
                     VIDEO_ACCELERATION_D3D11,
 #else
                     VIDEO_ACCELERATION_VAAPI,
 #endif
-#if 1//def _WIN32
-                    VIDEO_ACCELERATION_MFX, // On Linux, MFX compatible with intel-media-va-driver-non-free, but not compatible with intel-media-va-driver
-#endif
+                    VIDEO_ACCELERATION_MFX,
+                    VIDEO_ACCELERATION_NONE
             };
             for (VideoAccelerationType va_type : supported_va_types) {
-                if (!(va_type & hw_type))
-                    continue;
-                enc->hw_device_ctx = hw_create_device(va_type, hw_device);
+#if USE_AV_HW_CODECS
+                enc->get_format = avcodec_default_get_format;
                 if (enc->hw_device_ctx) {
-                    AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                    codec = hw_find_codec(enc->codec_id, enc->hw_device_ctx, av_codec_is_decoder, &hw_pix_fmt);
-                    if (codec) {
-                        if (hw_pix_fmt != AV_PIX_FMT_NONE) {
+                    av_buffer_unref(&enc->hw_device_ctx);
+                }
+                if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
+                    enc->hw_device_ctx = hw_create_device(va_type, hw_device);
+                    if (enc->hw_device_ctx) {
+                        AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
+                        codec = hw_find_codec(enc->codec_id, enc->hw_device_ctx, av_codec_is_decoder, &hw_pix_fmt);
+                        if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
-                        }
-                        hw_type = va_type;
-                        if (hw_device < 0)
-                            hw_device = 0;
-                        break;
-                    } else {
-                        av_buffer_unref(&enc->hw_device_ctx);
                     }
                 }
-            }
 #endif
-            // SW decoder
-            if (!codec) {
-                if (av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
-                    codec = avcodec_find_decoder(enc->codec_id);
-                } else {
-                    codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+                if (va_type == VIDEO_ACCELERATION_NONE) {
+                    if (av_dict_get(dict, "video_codec", NULL, 0) == NULL) {
+                        codec = avcodec_find_decoder(enc->codec_id);
+                    } else {
+                        codec = avcodec_find_decoder_by_name(av_dict_get(dict, "video_codec", NULL, 0)->value);
+                    }
+                    if (!codec) {
+                        CV_LOG_ERROR(NULL, "Could not find encoder for codec_id=" << (int)enc->codec_id);
+                    }
                 }
-                hw_type = VIDEO_ACCELERATION_NONE;
+                if (!codec)
+                    continue;
+                err = avcodec_open2(enc, codec, NULL);
+                if (err >= 0) {
+                    hw_type = va_type;
+                    if (hw_type && hw_device < 0)
+                        hw_device = 0;
+                    break;
+                } else {
+                    CV_LOG_ERROR(NULL, "Could not open codec " << codec->name << ", error: " << err);
+                }
             }
-            if (!codec || avcodec_open2(enc, codec, NULL) < 0)
+            if (err < 0) {
+                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Failed to initilize VideoCapture");
                 goto exit_func;
+            }
 
             // checking width/height (since decoder can sometimes alter it, eg. vp6f)
             if (enc_width && (enc->width != enc_width)) { enc->width = enc_width; }
@@ -1975,6 +1984,7 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             break;
         }
 #else
+        CV_UNUSED(frame_idx);
         AVPacket pkt;
         av_init_packet(&pkt);
         int got_output = 0;
@@ -2483,11 +2493,10 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
     AVCodecContext *c = video_st->codec;
 
-    // Find and open codec, first try HW codecs
+    // Find and open encoder, first try HW encoder
     static std::vector<VideoAccelerationType> supported_va_types = {
             VIDEO_ACCELERATION_MFX,
 #ifdef _WIN32
-            //VIDEO_ACCELERATION_MFX, // On Linux, MFX compatible with intel-media-va-driver-non-free, but not compatible with intel-media-va-driver
             VIDEO_ACCELERATION_D3D11,
 #else
             VIDEO_ACCELERATION_VAAPI,
@@ -2501,10 +2510,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         if (hw_device_ctx)
             av_buffer_unref(&hw_device_ctx);
 #if USE_AV_HW_CODECS
-        if (va_type != VIDEO_ACCELERATION_NONE) {
-            if (!(va_type & hw_type))
-                continue;
-
+        if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
 #ifdef _WIN32
         if (VIDEO_ACCELERATION_MFX == va_type && CV_FOURCC('M', 'J', 'P', 'G') == fourcc) // MediaSDK works badly on MJPG
             continue;

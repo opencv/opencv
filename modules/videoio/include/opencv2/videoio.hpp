@@ -209,7 +209,7 @@ enum VideoWriterProperties {
 //! @{
 
 //! Video Acceleration type (used as value in CAP_PROP_HW_ACCELERATION and VIDEOWRITER_PROP_HW_ACCELERATION)
-// (in case of FFMPEG backend, it translated to enum https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h#L27)
+// In case of FFMPEG backend, it translated to enum AVHWDeviceType (https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h)
 enum VideoAccelerationType  {
     VIDEO_ACCELERATION_NONE     = 0,
     VIDEO_ACCELERATION_ANY      = 0x7FFFFFFF,
