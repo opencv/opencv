@@ -88,7 +88,7 @@ function(ocv_tbb_env_guess _found)
       if(NOT (CMAKE_VERSION VERSION_LESS "3.16.0"))  # https://gitlab.kitware.com/cmake/cmake/-/issues/19434
         target_compile_definitions(tbb INTERFACE "__TBB_NO_IMPLICIT_LINKAGE=1")
       else()
-        set_target_properties(tbb PROPERTIES INTERFACE_COMPILE_OPTIONS "__TBB_NO_IMPLICIT_LINKAGE=1")
+        set_target_properties(tbb PROPERTIES INTERFACE_COMPILE_DEFINITIONS "__TBB_NO_IMPLICIT_LINKAGE=1")
       endif()
     endif()
     message(STATUS "Found TBB (env): ${TBB_ENV_LIB}")
