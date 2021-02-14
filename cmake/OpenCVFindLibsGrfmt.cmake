@@ -17,10 +17,7 @@ else()
     unset(_zlib_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
   endif()
   if(ZLIB_FOUND AND ANDROID)
-    if(ZLIB_LIBRARIES MATCHES "/usr/(lib|lib32|lib64)/libz.so$"
-      OR ZLIB_LIBRARIES MATCHES "/usr/lib/(aarch64-linux-android|x86_64-linux-android)/(2[1-9]|3[0-9])/libz.so"
-      OR ZLIB_LIBRARIES MATCHES "/usr/lib/(arm-linux-androideabi|i686-linux-android)/(1[6-9]|(2|3)[0-9])/libz.so"
-    )
+    if(ZLIB_LIBRARIES MATCHES "/usr/lib.*/libz.so$")
       set(ZLIB_LIBRARIES z)
     endif()
   endif()
