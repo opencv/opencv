@@ -84,7 +84,7 @@ namespace util
 
     // Implementation //////////////////////////////////////////////////////////
     template<class T> optional<T>::optional(T &&v) noexcept
-        : m_holder(v)
+        : m_holder(std::move(v))
     {
     }
 
