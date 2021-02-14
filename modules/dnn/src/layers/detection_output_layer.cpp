@@ -844,19 +844,20 @@ public:
             CV_Assert(numLocClasses == 1);
         }
         locPreds.resize(num);
+        int label;
         for (int i = 0; i < num; ++i, locData += numPredsPerClass * numLocClasses * 4)
         {
             LabelBBox& labelBBox = locPreds[i];
+            label = shareLocation ? -1 : 0;
+            for (int c = 0; c < numLocClasses; ++c) {
+                labelBBox[label++].resize(numPredsPerClass);
+            }
             for (int p = 0; p < numPredsPerClass; ++p)
             {
                 int startIdx = p * numLocClasses * 4;
                 for (int c = 0; c < numLocClasses; ++c)
                 {
-                    int label = shareLocation ? -1 : c;
-                    if (labelBBox.find(label) == labelBBox.end())
-                    {
-                        labelBBox[label].resize(numPredsPerClass);
-                    }
+                    label = shareLocation ? -1 : c;
                     util::NormalizedBBox& bbox = labelBBox[label][p];
                     if (locPredTransposed)
                     {
