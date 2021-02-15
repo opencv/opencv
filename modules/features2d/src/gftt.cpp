@@ -110,12 +110,11 @@ public:
                                  cornersQuality, blockSize, gradSize, useHarrisDetector, k );
         }
 
-        keypoints.resize(corners.size());
-        std::vector<Point2f>::const_iterator corner_it = corners.begin();
-        std::vector<KeyPoint>::iterator keypoint_it = keypoints.begin();
-        std::vector<float>::iterator quality_it = cornersQuality.begin();
-        for( ; corner_it != corners.end() && keypoint_it != keypoints.end() && quality_it != cornersQuality.end(); ++corner_it, ++keypoint_it, ++quality_it )
-            *keypoint_it = KeyPoint( *corner_it, (float)blockSize, -1, *quality_it );
+        CV_Assert(corners.size() == cornersQuality.size());
+
+        keypoints.clear();
+        for (size_t i = 0; i < corners.size(); i++)
+            keypoints.emplace_back(corners[i], (float)blockSize, -1, cornersQuality[i]);
 
     }
 
