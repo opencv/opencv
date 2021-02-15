@@ -148,6 +148,8 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
 TEST_P(RenderFrameNV12OCVTestFTexts, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
+    cv::Mat y_copy_mat = y_gapi_mat;
+    cv::Mat uv_copy_mat = uv_gapi_mat;
     cv::gapi::wip::draw::Prims prims;
     prims.emplace_back(cv::gapi::wip::draw::FText{ text, org, fh, color });
     cv::MediaFrame nv12 = cv::MediaFrame::Create<TestMediaNV12>(y_gapi_mat, uv_gapi_mat);
@@ -155,6 +157,8 @@ TEST_P(RenderFrameNV12OCVTestFTexts, AccuracyTest)
         cv::compile_args(cv::gapi::wip::draw::freetype_font{
         "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"
             })));
+    EXPECT_NE(0, cv::norm(y_gapi_mat, y_copy_mat));
+    EXPECT_NE(0, cv::norm(uv_gapi_mat, uv_copy_mat));
 }
 
 
