@@ -347,6 +347,8 @@ namespace
                 sparse(prevImg, nextImg, prevPts, nextPts, status, err, stream);
             }
         }
+
+        virtual String getDefaultName() const { return "SparseOpticalFlow.SparsePyrLKOpticalFlow"; }
     };
 
     class DensePyrLKOpticalFlowImpl : public DensePyrLKOpticalFlow, private PyrLKOpticalFlowBase
@@ -388,6 +390,8 @@ namespace
             GpuMat flows[] = {u, v};
             cuda::merge(flows, 2, _flow, stream);
         }
+
+        virtual String getDefaultName() const { return "DenseOpticalFlow.DensePyrLKOpticalFlow"; }
     };
 }
 

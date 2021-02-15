@@ -129,6 +129,8 @@ namespace
 
         virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow, Stream& stream);
 
+        virtual String getDefaultName() const { return "DenseOpticalFlow.FarnebackOpticalFlow"; }
+
     private:
         int numLevels_;
         double pyrScale_;
