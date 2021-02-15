@@ -859,6 +859,14 @@ struct InferList: public cv::detail::KernelTag {
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
         }
 
+        // NB: If list of roi is empty need to post output data anyway.
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                 ctx->out.post(ctx->output(i));
+            }
+            return;
+        }
+
         for (auto&& rc : in_roi_vec) {
             // NB: Only single async request is supported now,
             // so need to wait until previos iteration is over.
@@ -982,6 +990,14 @@ struct InferList2: public cv::detail::KernelTag {
             ctx->outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
+        }
+
+        // NB: If list of roi is empty need to post output data anyway.
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                 ctx->out.post(ctx->output(i));
+            }
+            return;
         }
 
         for (const auto &list_idx : ade::util::iota(list_size)) {
