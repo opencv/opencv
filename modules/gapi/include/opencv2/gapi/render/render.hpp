@@ -99,11 +99,11 @@ void GAPI_EXPORTS render(cv::Mat& y_plane,
 
 /** @brief The function renders on the input media frame passed drawing primitivies
 
-@param m_frame input Media Frame :  @ref cv::MediaFrame.
+@param frame input Media Frame :  @ref cv::MediaFrame.
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::MediaFrame& m_frame,
+void GAPI_EXPORTS render(cv::MediaFrame& frame,
                          const Prims& prims,
                          cv::GCompileArgs&& args = {});
 
@@ -124,7 +124,7 @@ G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "or
      }
 };
 
-G_TYPED_KERNEL(GRenderMFrame, <cv::GFrame(cv::GFrame, cv::GArray<wip::draw::Prim>)>, "org.opencv.render.mframe")
+G_TYPED_KERNEL(GRenderFrame, <cv::GFrame(cv::GFrame, cv::GArray<wip::draw::Prim>)>, "org.opencv.render.frame")
 {
     static GFrameDesc outMeta(GFrameDesc desc, GArrayDesc)
     {
@@ -161,8 +161,8 @@ Output media frame frame cv::MediaFrame
 @param m_frame input image: cv::MediaFrame @ref cv::MediaFrame
 @param prims draw primitives
 */
-GAPI_EXPORTS GFrame renderMFrame(const GFrame& m_frame,
-                                    const GArray<Prim>& prims);
+GAPI_EXPORTS GFrame renderFrame(const GFrame& m_frame,
+                                const GArray<Prim>& prims);
 
 //! @} gapi_draw_api
 

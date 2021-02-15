@@ -148,8 +148,8 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
 TEST_P(RenderMFrameOCVTestFTexts, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
-    cv::Mat y_copy_mat = y_gapi_mat;
-    cv::Mat uv_copy_mat = uv_gapi_mat;
+    cv::Mat y_copy_mat = y_gapi_mat.clone();
+    cv::Mat uv_copy_mat = uv_gapi_mat.clone();
     cv::gapi::wip::draw::Prims prims;
     prims.emplace_back(cv::gapi::wip::draw::FText{ text, org, fh, color });
     cv::MediaFrame nv12 = cv::MediaFrame::Create<TestMediaNV12>(y_gapi_mat, uv_gapi_mat);
