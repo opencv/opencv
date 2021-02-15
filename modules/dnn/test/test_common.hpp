@@ -35,6 +35,7 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+#define CV_TEST_TAG_DNN_SKIP_IE_ARM              "dnn_skip_ie_arm"
 
 
 #ifdef HAVE_INF_ENGINE

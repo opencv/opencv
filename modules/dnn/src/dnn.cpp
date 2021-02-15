@@ -179,11 +179,10 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
 #endif
         }
-        if (checkIETarget(DNN_TARGET_ARM)) {
+        if (checkIETarget(DNN_TARGET_ARM))
 #ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_ARM));
 #endif
-        }
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (checkIETarget(DNN_TARGET_FPGA))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_FPGA));
