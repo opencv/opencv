@@ -518,16 +518,18 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
     // General alghoritm:
-    //     1. Get input message from IInput
+    //     1. Since only single async request is supported
+    //        wait until it is over and start collecting new data.
     //     2. Collect island inputs/outputs.
     //     3. Create kernel context. (Every kernel has his own context.)
-    //     4. Since only single async request is supported
-    //        wait until it is over and run kernel.
-    //        (At this point, an asynchronous request will be started.)
-    //     5. Without waiting for the completion of the asynchronous request
+    //     4. Without waiting for the completion of the asynchronous request
     //        started by kernel go to the next frame (1)
     //
-    //     6. If graph is compiled in non-streaming mode, wait until request is over.
+    //     5. If graph is compiled in non-streaming mode, wait until request is over.
+
+    // (1) To prevent data race on the IOutput object, need to wait
+    // for async request callback, which post outputs and only after that get new data.
+    m_sync.wait();
 
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
@@ -538,9 +540,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        // (1) Since kernel is executing asynchronously
-        // need to wait until the previous is over
-        m_sync.wait();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
@@ -570,9 +569,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
             std::move(input_objs), std::move(output_objs));
 
 
-    // (4) Only single async request is supported now,
-    // so need to wait until the previous is over.
-    m_sync.wait();
     // (5) Run the kernel and start handle next frame.
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
     // FIXME: Running just a single node now.
