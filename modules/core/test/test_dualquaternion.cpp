@@ -145,6 +145,15 @@ TEST_F(DualQuatTest, interpolation) {
     DualQuatd gdb = DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq, dq2}, Vec3d{0.4, 0, 0.6}, QUAT_ASSUME_UNIT);
     EXPECT_EQ(gdb, DualQuatd::dqblend(dqIdentity, dq2, 0.6));
     EXPECT_ANY_THROW(DualQuatd::gdqblend(Vec<DualQuatd, 1>{dq2}, Vec2d{0.5, 0.5}));
+    Mat gdqb_d(1, 2, CV_64FC(7));
+    gdqb_d.at<Vec<double, 7>>(0, 0) = Vec<double, 7>{1,2,3,4,5,6,7};
+    gdqb_d.at<Vec<double, 7>>(0, 1) = Vec<double, 7>{1,2,3,4,5,6,7};
+    EXPECT_ANY_THROW(DualQuatd::gdqblend(gdqb_d, Vec2d{0.5, 0.5}));
+    Mat gdqb_f(1, 2, CV_32FC(8));
+    gdqb_f.at<Vec<float, 8>>(0, 0) = Vec<float, 8>{1,2,3,4,5,6,7,8};
+    gdqb_f.at<Vec<float, 8>>(0, 1) = Vec<float, 8>{1,2,3,4,5,6,7,8};
+    EXPECT_ANY_THROW(DualQuatd::gdqblend(gdqb_f, Vec2d{0.5, 0.5}));
+    EXPECT_ANY_THROW(DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq, dq2}, Vec3f{0.4, 0, 0.6}, QUAT_ASSUME_UNIT));
     EXPECT_EQ(gdb, DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq * dualNumber1, -dq2}, Vec3d{0.4, 0, 0.6}));
 }
 

@@ -437,38 +437,50 @@ DualQuat<T> DualQuat<T>::dqblend(const DualQuat<T> &q1, const DualQuat<T> &q2, c
 }
 
 template <typename T>
-template <int cn>
-DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputArray _weight, QuatAssumeType assumeUnit)
+DualQuat<T> DualQuat<T>::gdqblend(InputArray _dualquat, InputArray _weight, QuatAssumeType assumeUnit)
 {
     CV_CheckTypeEQ(_weight.type(), cv::traits::Type<T>::value, "");
-    if (_weight.size() != Size(1, cn))
+    CV_CheckTypeEQ(_dualquat.type(), CV_MAKETYPE(CV_MAT_DEPTH(cv::traits::Type<T>::value), 8), "");
+    Size dq_s = _dualquat.size();
+    if (dq_s != _weight.size() || (dq_s.height != 1 && dq_s.width != 1))
     {
-        CV_Error(Error::StsBadArg, "The size of weight must be the same as dualquat");
+        CV_Error(Error::StsBadArg, "The size of weight must be the same as dualquat, both of them should be (1, n) or (n, 1)");
     }
-    if (cn == 0)
-    {
-        return DualQuat<T>(1, 0, 0, 0, 0, 0, 0, 0);
-    }
-    Vec<T, cn> weight;
-    _weight.copyTo(weight);
-    Vec<DualQuat<T>, cn> dualquat(_dualquat);
+    Mat dualquat = _dualquat.getMat(), weight = _weight.getMat();
+    const int cn = std::max(dq_s.width, dq_s.height);
     if (!assumeUnit)
     {
         for (int i = 0; i < cn; ++i)
         {
-            dualquat[i] = dualquat[i].normalize();
+            dualquat.at<Vec<T, 8>>(i, 0) = DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.normalize().toVec();
         }
     }
-    DualQuat<T> dq_blend = dualquat[0] * weight[0];
-    Quat<T> q0 = dualquat[0].getRotation(assumeUnit);
+    Vec<T, 8> dq_blend = dualquat.at<Vec<T, 8>>(0, 0) * weight.at<T>(0, 0);
+    Quat<T> q0 = DualQuat<T> {dualquat.at<Vec<T, 8>>(0, 0)}.getRotation(assumeUnit);
     for (int i = 1; i < cn; ++i)
     {
-        T k = q0.dot(dualquat[i].getRotation(assumeUnit)) < 0 ? -1: 1;
-        dq_blend = dq_blend + dualquat[i] * k * weight[i];
+        T k = q0.dot(DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.getRotation(assumeUnit)) < 0 ? -1: 1;
+        dq_blend = dq_blend + dualquat.at<Vec<T, 8>>(i, 0) * k * weight.at<T>(i, 0);
     }
-    return dq_blend.normalize();
+    return DualQuat<T>{dq_blend}.normalize();
 }
 
+template <typename T>
+template <int cn>
+DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputArray _weight, QuatAssumeType assumeUnit)
+{
+    Vec<DualQuat<T>, cn> dualquat(_dualquat);
+    if (cn == 0)
+    {
+        return DualQuat<T>(1, 0, 0, 0, 0, 0, 0, 0);
+    }
+    Mat dualquat_mat(cn, 1, CV_64FC(8));
+    for (size_t i = 0; i < cn ; ++i)
+    {
+        dualquat_mat.at<Vec<T, 8>>(0, i) = dualquat[i].toVec();
+    }
+    return gdqblend(dualquat_mat, _weight, assumeUnit);
+}
 
 } //namespace cv
 
