@@ -149,7 +149,7 @@ GAPI_OCV_KERNEL_ST(RenderFrameOCVImpl, cv::gapi::wip::draw::GRenderFrame, Render
          *
          *
          * 1) Collect yuv mat from two planes, uv plain in two times less than y plane
-         *    so, upsample uv in tow times, with bilinear interpolation
+         *    so, upsample uv in two times, with bilinear interpolation
          *
          * 2) Render primitives on YUV
          *
