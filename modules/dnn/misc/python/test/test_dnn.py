@@ -58,7 +58,8 @@ def printParams(backend, target):
         cv.dnn.DNN_TARGET_CPU: 'CPU',
         cv.dnn.DNN_TARGET_OPENCL: 'OCL',
         cv.dnn.DNN_TARGET_OPENCL_FP16: 'OCL_FP16',
-        cv.dnn.DNN_TARGET_MYRIAD: 'MYRIAD'
+        cv.dnn.DNN_TARGET_MYRIAD: 'MYRIAD',
+        cv.dnn.DNN_TARGET_ARM: 'ARM'
     }
     print('%s/%s' % (backendNames[backend], targetNames[target]))
 
@@ -85,6 +86,8 @@ class dnn_test(NewOpenCVTests):
             self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_CPU])
         if self.checkIETarget(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_MYRIAD):
             self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_MYRIAD])
+        if self.checkIETarget(cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_ARM):
+            self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_TARGET_ARM])
 
         if cv.ocl.haveOpenCL() and cv.ocl.useOpenCL():
             self.dnnBackendsAndTargets.append([cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_TARGET_OPENCL])

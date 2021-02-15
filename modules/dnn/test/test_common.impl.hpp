@@ -40,6 +40,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_ARM: *os << "ARM"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
