@@ -243,22 +243,22 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
     pyopencv_to_with_check(from, obj, "Failed to obtain " # O); \
     return cv::detail::OpaqueRef{std::move(obj)};               \
 }
-        switch (kind)
-        {
-            HANDLE_CASE(BOOL,    bool);
-            HANDLE_CASE(INT,     int);
-            HANDLE_CASE(DOUBLE,  double);
-            HANDLE_CASE(FLOAT,   float);
-            HANDLE_CASE(STRING,  std::string);
-            HANDLE_CASE(POINT,   cv::Point);
-            HANDLE_CASE(POINT2F, cv::Point2f);
-            HANDLE_CASE(SIZE,    cv::Size);
-            HANDLE_CASE(RECT,    cv::Rect);
+    switch (kind)
+    {
+        HANDLE_CASE(BOOL,    bool);
+        HANDLE_CASE(INT,     int);
+        HANDLE_CASE(DOUBLE,  double);
+        HANDLE_CASE(FLOAT,   float);
+        HANDLE_CASE(STRING,  std::string);
+        HANDLE_CASE(POINT,   cv::Point);
+        HANDLE_CASE(POINT2F, cv::Point2f);
+        HANDLE_CASE(SIZE,    cv::Size);
+        HANDLE_CASE(RECT,    cv::Rect);
 #undef HANDLE_CASE
-            default:
-                util::throw_error(std::logic_error("Unsupported type for GOpaqueT"));
-        }
-        GAPI_Assert(false && "Unreachable code");
+        default:
+            util::throw_error(std::logic_error("Unsupported type for GOpaqueT"));
+    }
+    GAPI_Assert(false && "Unreachable code");
 }
 
 static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::OpaqueKind kind)
@@ -269,24 +269,24 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
     pyopencv_to_generic_vec_with_check(from, obj, "Failed to obtain vector of " # O); \
     return cv::detail::VectorRef{std::move(obj)};                                     \
 }
-        switch (kind)
-        {
-            HANDLE_CASE(BOOL,    bool);
-            HANDLE_CASE(INT,     int);
-            HANDLE_CASE(DOUBLE,  double);
-            HANDLE_CASE(FLOAT,   float);
-            HANDLE_CASE(STRING,  std::string);
-            HANDLE_CASE(POINT,   cv::Point);
-            HANDLE_CASE(POINT2F, cv::Point2f);
-            HANDLE_CASE(SIZE,    cv::Size);
-            HANDLE_CASE(RECT,    cv::Rect);
-            HANDLE_CASE(SCALAR,  cv::Scalar);
-            HANDLE_CASE(MAT,     cv::Mat);
+    switch (kind)
+    {
+        HANDLE_CASE(BOOL,    bool);
+        HANDLE_CASE(INT,     int);
+        HANDLE_CASE(DOUBLE,  double);
+        HANDLE_CASE(FLOAT,   float);
+        HANDLE_CASE(STRING,  std::string);
+        HANDLE_CASE(POINT,   cv::Point);
+        HANDLE_CASE(POINT2F, cv::Point2f);
+        HANDLE_CASE(SIZE,    cv::Size);
+        HANDLE_CASE(RECT,    cv::Rect);
+        HANDLE_CASE(SCALAR,  cv::Scalar);
+        HANDLE_CASE(MAT,     cv::Mat);
 #undef HANDLE_CASE
-            default:
-                util::throw_error(std::logic_error("Unsupported type for GOpaqueT"));
-        }
-        GAPI_Assert(false && "Unreachable code");
+        default:
+            util::throw_error(std::logic_error("Unsupported type for GOpaqueT"));
+    }
+    GAPI_Assert(false && "Unreachable code");
 }
 
 static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
