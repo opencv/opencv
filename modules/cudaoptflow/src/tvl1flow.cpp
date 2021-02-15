@@ -119,6 +119,9 @@ namespace
 
         virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow, Stream& stream);
 
+        virtual String getDefaultName() const { return "DenseOpticalFlow.OpticalFlowDual_TVL1"; }
+
+
     private:
         double tau_;
         double lambda_;
