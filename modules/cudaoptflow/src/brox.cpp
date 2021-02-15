@@ -64,6 +64,8 @@ namespace {
         {
         }
 
+        virtual String getDefaultName() const { return "DenseOpticalFlow.BroxOpticalFlow"; }
+
         virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow, Stream& stream);
 
         virtual double getFlowSmoothness() const { return alpha_; }
