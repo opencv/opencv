@@ -131,7 +131,7 @@ ocv_create_module(${GRFMT_LIBS} ${IMGCODECS_LIBRARIES})
 
 macro(ocv_imgcodecs_configure_target)
 if(APPLE)
-  add_apple_compiler_options(the_module)
+  add_apple_compiler_options(${the_module})
 endif()
 
 if(MSVC)
