@@ -112,9 +112,9 @@ public:
 
         CV_Assert(corners.size() == cornersQuality.size());
 
-        keypoints.clear();
+        keypoints.resize(corners.size());
         for (size_t i = 0; i < corners.size(); i++)
-            keypoints.emplace_back(corners[i], (float)blockSize, -1, cornersQuality[i]);
+            keypoints[i] = KeyPoint(corners[i], (float)blockSize, -1, cornersQuality[i]);
 
     }
 
