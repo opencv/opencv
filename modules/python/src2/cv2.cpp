@@ -1608,8 +1608,7 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
     return true;
 }
 
-template<>
-bool pyopencv_to_generic_vec<bool>(PyObject* obj, std::vector<bool>& value, const ArgInfo& info)
+template<> inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<bool>& value, const ArgInfo& info)
 {
     if(!obj || obj == Py_None)
        return true;
@@ -1620,7 +1619,7 @@ bool pyopencv_to_generic_vec<bool>(PyObject* obj, std::vector<bool>& value, cons
     for(size_t i = 0; i < n; i++ )
     {
         SafeSeqItem item_wrap(obj, i);
-        bool elem;
+        bool elem{};
         if(!pyopencv_to(item_wrap.item, elem, info))
             return false;
         value[i] = elem;
@@ -1634,7 +1633,8 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const s
     PyObject* seq = PyList_New(n);
     for( i = 0; i < n; i++ )
     {
-        PyObject* item = pyopencv_from(value[i]);
+        _Tp elem = value[i];
+        PyObject* item = pyopencv_from(elem);
         if(!item)
             break;
         PyList_SetItem(seq, i, item);
@@ -1647,8 +1647,7 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const s
     return seq;
 }
 
-template<>
-PyObject* pyopencv_from_generic_vec<bool>(const std::vector<bool>& value)
+template<> inline PyObject* pyopencv_from_generic_vec(const std::vector<bool>& value)
 {
     int i, n = (int)value.size();
     PyObject* seq = PyList_New(n);

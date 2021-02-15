@@ -1917,7 +1917,6 @@ TEST(GAPI_Streaming, TestPythonAPI)
             {
                 GAPI_Assert(info.size() == 1u);
                 GAPI_Assert(info[0].shape == cv::GShape::GMAT);
-                return cv::GMetaArgs{};
                 return cv::GMetaArgs{cv::GMetaArg{cv::descr_of(in_mat)}};
             }});
 
