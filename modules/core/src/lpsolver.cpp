@@ -139,6 +139,15 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
             *it=b.at<double>(indexToRow[i]-nsize,b.cols-1);
         }
     }
+    //check constraints feasibility
+    Mat prod = Constr(Rect(0, 0, Constr.cols - 1, Constr.rows)) * z;
+    Mat constr_check = (prod - 1e-12) > Constr.col(Constr.cols - 1);
+    double constr_check_sum = sum(constr_check)[0];
+    if (constr_check_sum != 0)
+    {
+        z.release();
+        return SOLVELP_LOST;
+    }
 
     return res;
 }
@@ -259,10 +268,12 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         int e=-1,pos_ctr=0,min_var=INT_MAX;
         bool all_nonzero=true;
         for(pos_ptr=c.begin();pos_ptr!=c.end();pos_ptr++,pos_ctr++){
-            if(*pos_ptr==0){
+            if ((*pos_ptr >= -1e-12) && (*pos_ptr <= 1e-12))
+                *pos_ptr = 0.0;
+            if(*pos_ptr==0.0){
                 all_nonzero=false;
             }
-            if(*pos_ptr>0){
+            if(*pos_ptr>0.0){
                 if(N[pos_ctr]<min_var){
                     e=pos_ctr;
                     min_var=N[pos_ctr];
@@ -285,11 +296,16 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         int row_it=0;
         MatIterator_<double> min_row_ptr=b.begin();
         for(MatIterator_<double> it=b.begin();it!=b.end();it+=b.cols,row_it++){
-            double myite=0;
-            //check constraints, select the tightest one, reinforcing Bland's rule
-            if((myite=it[e])>0){
+            if ((it[b.cols-1] >= -1e-12) && (it[b.cols-1] <= 1e-12))
+                it[b.cols-1] = 0.0;
+
+            if ((it[e] >= -1e-12) && (it[e] <= 1e-12))
+                it[e] = 0.0;
+
+            double myite=it[e];
+            if(myite > 0.0){
                 double val=it[b.cols-1]/myite;
-                if(val<min || (val==min && B[row_it]<min_var)){
+                if((val<min) || ((val==min) && (B[row_it]<min_var))){
                     min_var=B[row_it];
                     min_row_ptr=it;
                     min=val;
