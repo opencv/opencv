@@ -249,7 +249,7 @@ CV_IMPL int cvInitSystem( int, char** )
     // check initialization status
     if( !wasInitialized )
     {
-        // Initialize the stogare
+        // Initialize the storage
         hg_windows = 0;
 
         // Register the class
@@ -594,6 +594,89 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
         errorMsg << "window(" << name << "): error reported by SetWindowPos(" << (topmost ? "HWND_TOPMOST" : "HWND_TOP") << "), error code:  " << GetLastError();
         CV_Error(Error::StsError, errorMsg.str().c_str());
     }
+}
+
+double cvGetPropVsync_W32(const char* name)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    // https://www.khronos.org/opengl/wiki/Swap_Interval
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_extensions_string.txt
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_swap_control.txt
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetExtensionsStringEXT
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        return -1; // Can't get WGL extensions string
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        return -1; // WGL extensions don't contain WGL_EXT_swap_control
+
+    typedef int (APIENTRY* PFNWGLGETSWAPINTERVALPROC)(void);
+    PFNWGLGETSWAPINTERVALPROC wglGetSwapInterval = 0;
+    wglGetSwapInterval = (PFNWGLGETSWAPINTERVALPROC)wglGetProcAddress("wglGetSwapIntervalEXT");
+    if (wglGetSwapInterval == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetSwapIntervalEXT
+
+    return wglGetSwapInterval();
+#endif
+}
+
+void cvSetPropVsync_W32(const char* name, const bool enable_vsync)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_UNUSED(enable_vsync);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglGetExtensionsStringEXT");
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        CV_Error(Error::OpenGlApiCallError, "Can't get WGL extensions string");
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        CV_Error(Error::OpenGlApiCallError, "WGL extensions don't contain WGL_EXT_swap_control");
+
+    typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALPROC)(int);
+    PFNWGLSWAPINTERVALPROC wglSwapInterval = 0;
+    wglSwapInterval = (PFNWGLSWAPINTERVALPROC)wglGetProcAddress("wglSwapIntervalEXT");
+    if (wglSwapInterval == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglSwapIntervalEXT");
+
+    wglSwapInterval(enable_vsync);
+#endif
 }
 
 void cv::setWindowTitle(const String& winname, const String& title)
@@ -1118,25 +1201,19 @@ static void icvScreenToClient( HWND hwnd, RECT* rect )
 /* Calculatess the window coordinates relative to the upper left corner of the mainhWnd window */
 static RECT icvCalcWindowRect( CvWindow* window )
 {
-    const int gutter = 1;
-    RECT crect = { 0 }, trect = { 0 } , rect = { 0 };
+    RECT crect = { 0 }, trect = { 0 }, rect = { 0 };
 
     assert(window);
 
     GetClientRect(window->frame, &crect);
-    if(window->toolbar.toolbar)
+    if (window->toolbar.toolbar)
     {
         GetWindowRect(window->toolbar.toolbar, &trect);
         icvScreenToClient(window->frame, &trect);
-        SubtractRect( &rect, &crect, &trect);
+        SubtractRect(&rect, &crect, &trect);
     }
     else
         rect = crect;
-
-    rect.top += gutter;
-    rect.left += gutter;
-    rect.bottom -= gutter;
-    rect.right -= gutter;
 
     return rect;
 }
@@ -1987,6 +2064,97 @@ static void showSaveDialog(CvWindow* window)
     }
 }
 
+/*
+ * message received. check if it belongs to our windows (frame, hwnd).
+ * returns true (and value in keyCode) if a key was pressed.
+ * otherwise returns false (indication to continue event loop).
+ */
+static bool handleMessage(MSG& message, int& keyCode)
+{
+    // whether we have to call translate and dispatch yet
+    // otherwise the message was handled specifically
+    bool is_processed = false;
+
+    for (CvWindow* window = hg_windows; window != 0 && is_processed == 0; window = window->next)
+    {
+        if (!(window->hwnd == message.hwnd || window->frame == message.hwnd))
+            continue;
+
+        is_processed = true;
+        switch (message.message)
+        {
+            case WM_DESTROY:
+            case WM_CHAR:
+                DispatchMessage(&message);
+                keyCode = (int)message.wParam;
+                return true;
+
+            case WM_SYSKEYDOWN:
+                if (message.wParam == VK_F10)
+                {
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+                break;
+
+            case WM_KEYDOWN:
+                TranslateMessage(&message);
+                if ((message.wParam >= VK_F1 && message.wParam <= VK_F24)      ||
+                    message.wParam == VK_HOME   || message.wParam == VK_END    ||
+                    message.wParam == VK_UP     || message.wParam == VK_DOWN   ||
+                    message.wParam == VK_LEFT   || message.wParam == VK_RIGHT  ||
+                    message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
+                    message.wParam == VK_PRIOR  || message.wParam == VK_NEXT)
+                {
+                    DispatchMessage(&message);
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+
+                // Intercept Ctrl+C for copy to clipboard
+                if ('C' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                // Intercept Ctrl+S for "save as" dialog
+                if ('S' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    showSaveDialog(window);
+
+            default:
+                DispatchMessage(&message);
+                is_processed = true;
+                break;
+        }
+    }
+
+    if (!is_processed)
+    {
+        TranslateMessage(&message);
+        DispatchMessage(&message);
+    }
+
+    return false; // no value to return, keep processing
+}
+
+/*
+ * process until queue is empty but don't wait.
+ */
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    for(;;)
+    {
+        MSG message;
+        if (PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE)
+            return -1;
+
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
+    }
+}
+
 CV_IMPL int
 cvWaitKey( int delay )
 {
@@ -1995,9 +2163,7 @@ cvWaitKey( int delay )
 
     for(;;)
     {
-        CvWindow* window;
         MSG message;
-        int is_processed = 0;
 
         if( (delay <= 0) && hg_windows)
             GetMessage(&message, 0, 0, 0);
@@ -2010,61 +2176,9 @@ cvWaitKey( int delay )
             continue;
         }
 
-        for( window = hg_windows; window != 0 && is_processed == 0; window = window->next )
-        {
-            if( window->hwnd == message.hwnd || window->frame == message.hwnd )
-            {
-                is_processed = 1;
-                switch(message.message)
-                {
-                case WM_DESTROY:
-                case WM_CHAR:
-                    DispatchMessage(&message);
-                    return (int)message.wParam;
-
-                case WM_SYSKEYDOWN:
-                    if( message.wParam == VK_F10 )
-                    {
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-                    break;
-
-                case WM_KEYDOWN:
-                    TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
-                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
-                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
-                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
-                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
-                    {
-                        DispatchMessage(&message);
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-
-                    // Intercept Ctrl+C for copy to clipboard
-                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
-
-                    // Intercept Ctrl+S for "save as" dialog
-                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        showSaveDialog(window);
-
-                default:
-                    DispatchMessage(&message);
-                    is_processed = 1;
-                    break;
-                }
-            }
-        }
-
-        if( !is_processed )
-        {
-            TranslateMessage(&message);
-            DispatchMessage(&message);
-        }
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
     }
 }
 

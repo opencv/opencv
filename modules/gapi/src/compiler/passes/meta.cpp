@@ -24,7 +24,7 @@ void cv::gimpl::passes::initMeta(ade::passes::PassContext &ctx, const GMetaArgs 
 
     const auto &proto = gr.metadata().get<Protocol>();
 
-    for (const auto& it : ade::util::indexed(proto.in_nhs))
+    for (const auto it : ade::util::indexed(proto.in_nhs))
     {
         auto& data = gr.metadata(ade::util::value(it)).get<Data>();
         data.meta = metas.at(ade::util::index(it));
@@ -125,7 +125,7 @@ void cv::gimpl::passes::storeResultingMeta(ade::passes::PassContext &ctx)
     const auto &proto = gr.metadata().get<Protocol>();
     GMetaArgs output_metas(proto.out_nhs.size());
 
-    for (const auto& it : ade::util::indexed(proto.out_nhs))
+    for (const auto it : ade::util::indexed(proto.out_nhs))
     {
         auto& data = gr.metadata(ade::util::value(it)).get<Data>();
         output_metas[ade::util::index(it)] = data.meta;

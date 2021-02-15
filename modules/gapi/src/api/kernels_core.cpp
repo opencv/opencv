@@ -427,5 +427,10 @@ GOpaque<Size> streaming::size(const GOpaque<Rect>& r)
     return streaming::GSizeR::on(r);
 }
 
+GOpaque<Size> streaming::size(const GFrame& src)
+{
+    return streaming::GSizeMF::on(src);
+}
+
 } //namespace gapi
 } //namespace cv

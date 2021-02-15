@@ -1,3 +1,10 @@
+<!--
+If you have a question rather than reporting a bug please go to https://forum.opencv.org where you get much faster responses.
+If you need further assistance please read [How To Contribute](https://github.com/opencv/opencv/wiki/How_to_contribute).
+
+This is a template helping you to create an issue which can be processed as quickly as possible. This is the bug reporting section for the OpenCV library.
+-->
+
 ##### System information (version)
 <!-- Example
 - OpenCV => 4.2
@@ -26,17 +33,17 @@
 
  - [ ] I report the issue, it's not a question
    <!--
-   OpenCV team works with answers.opencv.org, Stack Overflow and other communities
+   OpenCV team works with forum.opencv.org, Stack Overflow and other communities
    to discuss problems. Tickets with question without real issue statement will be
    closed.
    -->
  - [ ] I checked the problem with documentation, FAQ, open issues,
-       answers.opencv.org, Stack Overflow, etc and have not found solution
+       forum.opencv.org, Stack Overflow, etc and have not found solution
    <!--
    Places to check:
    * OpenCV documentation: https://docs.opencv.org
    * FAQ page: https://github.com/opencv/opencv/wiki/FAQ
-   * OpenCV forum: https://answers.opencv.org
+   * OpenCV forum: https://forum.opencv.org
    * OpenCV issue tracker: https://github.com/opencv/opencv/issues?q=is%3Aissue
    * Stack Overflow branch: https://stackoverflow.com/questions/tagged/opencv
    -->

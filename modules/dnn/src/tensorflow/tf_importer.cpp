@@ -1228,8 +1228,18 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
 
             int kernel_blob_index = -1;
             const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernel_blob_index);
-            blobFromTensor(kernelTensor, layerParams.blobs[0]);
-            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
+            const String kernelTensorName = layer.input(kernel_blob_index);
+            std::map<String, Mat>::iterator sharedWeightsIt = sharedWeights.find(kernelTensorName);
+            if (sharedWeightsIt == sharedWeights.end())
+            {
+                blobFromTensor(kernelTensor, layerParams.blobs[0]);
+                releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
+                sharedWeights[kernelTensorName] = layerParams.blobs[0];
+            }
+            else
+            {
+                layerParams.blobs[0] = sharedWeightsIt->second;
+            }
 
             if (kernel_blob_index == 1) { // In this case output is computed by x*W formula - W should be transposed
                 Mat data = layerParams.blobs[0].t();
@@ -2403,6 +2413,16 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
             layer_id[name] = id;
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        }
+        else if (type == "LeakyRelu")
+        {
+            CV_CheckGT(num_inputs, 0, "");
+            CV_Assert(hasLayerAttr(layer, "alpha"));
+            layerParams.set("negative_slope", getLayerAttr(layer, "alpha").f());
+
+            int id = dstNet.addLayer(name, "ReLU", layerParams);
+            layer_id[name] = id;
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
                  type == "Relu" || type == "Elu" ||

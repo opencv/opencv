@@ -305,7 +305,7 @@ public:
             numChannels = blobs[0].total();
 
         std::vector<size_t> shape(ieInpNode0->get_shape().size(), 1);
-        int cAxis = clamp(axis, shape.size());
+        int cAxis = normalize_axis(axis, shape.size());
         shape[cAxis] = numChannels;
 
         auto node = ieInpNode0;
@@ -314,7 +314,11 @@ public:
             auto weight = blobs.empty() ? ieInpNode1 :
                           std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
 
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+            node = std::make_shared<ngraph::op::v1::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#else
             node = std::make_shared<ngraph::op::v0::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#endif
         }
         if (hasBias || !hasWeights)
         {

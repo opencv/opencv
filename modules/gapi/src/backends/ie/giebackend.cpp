@@ -268,46 +268,168 @@ struct IEUnit {
     }
 };
 
-struct IECallContext
+class IECallContext
 {
-    // Input parameters passed to an inference operation.
-    std::vector<cv::GArg> args;
-    cv::GShapes in_shapes;
+public:
+    IECallContext(const IEUnit                                      &  unit,
+                  cv::gimpl::GIslandExecutable::IOutput             &  output,
+                  cv::gimpl::ie::SyncPrim                           &  sync,
+                  const cv::GArgs                                   &  args,
+                  const std::vector<cv::gimpl::RcDesc>              &  outs,
+                  std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
+                  std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs);
 
-    //FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
-    //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
-    //once on enter for input and output arguments, and once before return for output arguments only
-    //FIXME: check if the above applies to this backend (taken from CPU)
-    std::unordered_map<std::size_t, cv::GRunArgP> results;
+    const cv::GArgs& inArgs() const;
 
     // Generic accessor API
     template<typename T>
-    const T& inArg(std::size_t input) { return args.at(input).get<T>(); }
+    const T& inArg(std::size_t input) const {
+        return m_args.at(input).get<T>();
+    }
 
-    const cv::MediaFrame& inFrame(std::size_t input) {
-        return inArg<cv::MediaFrame>(input);
+    template<typename T>
+     std::vector<T>& outVecR(std::size_t output) {
+        return outVecRef(output).wref<T>();
     }
 
     // Syntax sugar
-    const cv::Mat&   inMat(std::size_t input) {
-        return inArg<cv::Mat>(input);
-    }
-    cv::Mat&         outMatR(std::size_t output) {
-        return *cv::util::get<cv::Mat*>(results.at(output));
-    }
+          cv::GShape      inShape(int i)             const;
+    const cv::Mat&        inMat(std::size_t input)   const;
+    const cv::MediaFrame& inFrame(std::size_t input) const;
 
-    template<typename T> std::vector<T>& outVecR(std::size_t output) { // FIXME: the same issue
-        return outVecRef(output).wref<T>();
-    }
-    cv::detail::VectorRef& outVecRef(std::size_t output) {
-        return cv::util::get<cv::detail::VectorRef>(results.at(output));
-    }
+    cv::Mat&     outMatR(std::size_t idx);
+    cv::GRunArgP output(int idx);
+
+    const IEUnit                          &uu;
+    cv::gimpl::GIslandExecutable::IOutput &out;
+    cv::gimpl::ie::SyncPrim               &sync;
+
+    // NB: Need to gurantee that MediaFrame::View don't die until request is over.
+    using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
+    Views views;
+
+private:
+    cv::detail::VectorRef& outVecRef(std::size_t idx);
+
+    cv::GArg packArg(const cv::GArg &arg);
+
+    // To store input/output data from frames
+    std::vector<cv::gimpl::GIslandExecutable::InObj>  m_input_objs;
+    std::vector<cv::gimpl::GIslandExecutable::OutObj> m_output_objs;
+
+    // To simplify access to cv::Mat inside cv::RMat
+    cv::gimpl::Mag m_res;
+
+    // FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
+    //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
+    //once on enter for input and output arguments, and once before return for output arguments only
+    // FIXME: check if the above applies to this backend (taken from CPU)
+    std::unordered_map<std::size_t, cv::GRunArgP> m_results;
+
+    // Input parameters passed to an inference operation.
+    cv::GArgs m_args;
+    cv::GShapes m_in_shapes;
 };
+
+IECallContext::IECallContext(const IEUnit                                      &  unit,
+                             cv::gimpl::GIslandExecutable::IOutput             &  output,
+                             cv::gimpl::ie::SyncPrim                           &  syncp,
+                             const cv::GArgs                                   &  args,
+                             const std::vector<cv::gimpl::RcDesc>              &  outs,
+                             std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
+                             std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs)
+: uu(unit), out(output), sync(syncp), m_input_objs(std::move(input_objs)),
+    m_output_objs(std::move(output_objs))
+{
+    for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
+    for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
+
+    m_args.reserve(args.size());
+    using namespace std::placeholders;
+    ade::util::transform(args,
+                         std::back_inserter(m_args),
+                         std::bind(&IECallContext::packArg, this, _1));
+
+    ade::util::transform(args, std::back_inserter(m_in_shapes),
+            [](const cv::GArg& arg) {
+                return arg.get<cv::gimpl::RcDesc>().shape;
+            });
+
+     for (const auto out_it : ade::util::indexed(outs)) {
+         // FIXME: Can the same GArg type resolution mechanism be reused here?
+         const auto port  = ade::util::index(out_it);
+         const auto desc  = ade::util::value(out_it);
+         m_results[port] = cv::gimpl::magazine::getObjPtr(m_res, desc);
+     }
+}
+
+const cv::GArgs& IECallContext::inArgs() const {
+    return m_args;
+}
+
+cv::GShape IECallContext::inShape(int i) const {
+    return m_in_shapes[i];
+}
+
+const cv::Mat& IECallContext::inMat(std::size_t input) const {
+    return inArg<cv::Mat>(input);
+}
+
+const cv::MediaFrame& IECallContext::inFrame(std::size_t input) const {
+    return inArg<cv::MediaFrame>(input);
+}
+
+cv::Mat& IECallContext::outMatR(std::size_t idx) {
+    return *cv::util::get<cv::Mat*>(m_results.at(idx));
+}
+
+cv::GRunArgP IECallContext::output(int idx) {
+    return m_output_objs[idx].second;
+};
+
+cv::detail::VectorRef& IECallContext::outVecRef(std::size_t idx) {
+    return cv::util::get<cv::detail::VectorRef>(m_results.at(idx));
+}
+
+cv::GArg IECallContext::packArg(const cv::GArg &arg) {
+    // No API placeholders allowed at this point
+    // FIXME: this check has to be done somewhere in compilation stage.
+    GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
+                && arg.kind != cv::detail::ArgKind::GSCALAR
+                && arg.kind != cv::detail::ArgKind::GARRAY);
+
+    if (arg.kind != cv::detail::ArgKind::GOBJREF) {
+        cv::util::throw_error(std::logic_error("Inference supports G-types ONLY!"));
+    }
+    GAPI_Assert(arg.kind == cv::detail::ArgKind::GOBJREF);
+
+    // Wrap associated CPU object (either host or an internal one)
+    // FIXME: object can be moved out!!! GExecutor faced that.
+    const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
+    switch (ref.shape)
+    {
+    case cv::GShape::GMAT: return cv::GArg(m_res.slot<cv::Mat>()[ref.id]);
+
+    // Note: .at() is intentional for GArray as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case cv::GShape::GARRAY:  return cv::GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
+
+    // Note: .at() is intentional for GOpaque as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case cv::GShape::GOPAQUE:  return cv::GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+
+    case cv::GShape::GFRAME:  return cv::GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
+
+    default:
+        cv::util::throw_error(std::logic_error("Unsupported GShape type"));
+        break;
+    }
+}
+
 
 struct IECallable {
     static const char *name() { return "IERequestCallable"; }
-    // FIXME: Make IECallContext manage them all? (3->1)
-    using Run = std::function<void(cv::gimpl::ie::IECompiled &, const IEUnit &, IECallContext &)>;
+    using Run = std::function<void(cv::gimpl::ie::IECompiled&, std::shared_ptr<IECallContext>)>;
     Run run;
 };
 
@@ -341,14 +463,12 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
-using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
-
-inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i, Views& views) {
-    switch (ctx.in_shapes[i]) {
+inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
+    switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             const auto& frame = ctx.inFrame(i);
-            views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-            return wrapIE(*views.back(), frame.desc());
+            ctx.views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+            return wrapIE(*(ctx.views.back()), frame.desc());
         }
         case cv::GShape::GMAT: {
             return wrapIE(ctx.inMat(i), cv::gapi::ie::TraitAs::IMAGE);
@@ -395,90 +515,76 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
     }
 }
 
-// FIXME: Document what it does
-cv::GArg cv::gimpl::ie::GIEExecutable::packArg(const cv::GArg &arg) {
-    // No API placeholders allowed at this point
-    // FIXME: this check has to be done somewhere in compilation stage.
-    GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
-                && arg.kind != cv::detail::ArgKind::GSCALAR
-                && arg.kind != cv::detail::ArgKind::GARRAY);
+void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
+                                       cv::gimpl::GIslandExecutable::IOutput &out) {
+    // General alghoritm:
+    //     1. Get input message from IInput
+    //     2. Collect island inputs/outputs.
+    //     3. Create kernel context. (Every kernel has his own context.)
+    //     4. Since only single async request is supported
+    //        wait until it is over and run kernel.
+    //        (At this point, an asynchronous request will be started.)
+    //     5. Without waiting for the completion of the asynchronous request
+    //        started by kernel go to the next frame (1)
+    //
+    //     6. If graph is compiled in non-streaming mode, wait until request is over.
 
-    if (arg.kind != cv::detail::ArgKind::GOBJREF) {
-        util::throw_error(std::logic_error("Inference supports G-types ONLY!"));
-    }
-    GAPI_Assert(arg.kind == cv::detail::ArgKind::GOBJREF);
+    std::vector<InObj>  input_objs;
+    std::vector<OutObj> output_objs;
 
-    // Wrap associated CPU object (either host or an internal one)
-    // FIXME: object can be moved out!!! GExecutor faced that.
-    const cv::gimpl::RcDesc &ref = arg.get<cv::gimpl::RcDesc>();
-    switch (ref.shape)
+    const auto &in_desc  = in.desc();
+    const auto &out_desc = out.desc();
+    const auto  in_msg   = in.get();
+
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-    case GShape::GMAT:    return GArg(m_res.slot<cv::Mat>()[ref.id]);
-
-    // Note: .at() is intentional for GArray as object MUST be already there
-    //   (and constructed by either bindIn/Out or resetInternal)
-    case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
-
-    // Note: .at() is intentional for GOpaque as object MUST be already there
-    //   (and constructed by either bindIn/Out or resetInternal)
-    case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
-
-    case GShape::GFRAME:  return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
-
-    default:
-        util::throw_error(std::logic_error("Unsupported GShape type"));
-        break;
+        // (1) Since kernel is executing asynchronously
+        // need to wait until the previous is over
+        m_sync.wait();
+        out.post(cv::gimpl::EndOfStream{});
+        return;
     }
-}
 
-void cv::gimpl::ie::GIEExecutable::run(std::vector<InObj>  &&input_objs,
-                                       std::vector<OutObj> &&output_objs) {
-    // Update resources with run-time information - what this Island
-    // has received from user (or from another Island, or mix...)
-    // FIXME: Check input/output objects against GIsland protocol
+    GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
+    const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
 
-    for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second);
-    for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second);
+    // (2) Collect inputs/outputs
+    input_objs.reserve(in_desc.size());
+    output_objs.reserve(out_desc.size());
+    for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
+                                   ade::util::toRange(in_vector)))
+    {
+        input_objs.emplace_back(std::get<0>(it), std::get<1>(it));
+    }
+    for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
+    {
+        output_objs.emplace_back(ade::util::value(it),
+                              out.get(ade::util::checked_cast<int>(ade::util::index(it))));
+    }
 
+    GConstGIEModel giem(m_g);
+    const auto &uu = giem.metadata(this_nh).get<IEUnit>();
+    const auto &op = m_gm.metadata(this_nh).get<Op>();
+    // (3) Create kernel context
+    auto context = std::make_shared<IECallContext>(uu, out, m_sync, op.args, op.outs,
+            std::move(input_objs), std::move(output_objs));
+
+
+    // (4) Only single async request is supported now,
+    // so need to wait until the previous is over.
+    m_sync.wait();
+    // (5) Run the kernel and start handle next frame.
+    const auto &kk = giem.metadata(this_nh).get<IECallable>();
     // FIXME: Running just a single node now.
     // Not sure if need to support many of them, though
     // FIXME: Make this island-unmergeable?
-    const auto &op = m_gm.metadata(this_nh).get<Op>();
+    kk.run(this_iec, context);
 
-    // Initialize kernel's execution context:
-    // - Input parameters
-    IECallContext context;
-    context.args.reserve(op.args.size());
-    using namespace std::placeholders;
-    ade::util::transform(op.args,
-                          std::back_inserter(context.args),
-                          std::bind(&GIEExecutable::packArg, this, _1));
-
-    // NB: Need to store inputs shape to recognize GFrame/GMat
-    ade::util::transform(op.args,
-                         std::back_inserter(context.in_shapes),
-                         [](const cv::GArg& arg) {
-                             return arg.get<cv::gimpl::RcDesc>().shape;
-                         });
-    // - Output parameters.
-    for (const auto &out_it : ade::util::indexed(op.outs)) {
-        // FIXME: Can the same GArg type resolution mechanism be reused here?
-        const auto out_port  = ade::util::index(out_it);
-        const auto out_desc  = ade::util::value(out_it);
-        context.results[out_port] = magazine::getObjPtr(m_res, out_desc);
+    // (6) In not-streaming mode need to wait until the async request is over
+    // FIXME: Is there more graceful way to handle this case ?
+    if (!m_gm.metadata().contains<Streaming>()) {
+        m_sync.wait();
     }
-
-    // And now trigger the execution
-    GConstGIEModel giem(m_g);
-    const auto &uu = giem.metadata(this_nh).get<IEUnit>();
-    const auto &kk = giem.metadata(this_nh).get<IECallable>();
-    kk.run(this_iec, uu, context);
-
-    for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
-
-    // In/Out args clean-up is mandatory now with RMat
-    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
-    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }
 
 namespace cv {
@@ -488,30 +594,81 @@ namespace ie {
 static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg mm) {
     switch (mm.index()) {
         case cv::GMetaArg::index_of<cv::GMatDesc>():
-            {
-                ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
-                break;
-            }
+        {
+            ii->setPrecision(toIE(util::get<cv::GMatDesc>(mm).depth));
+            break;
+        }
         case cv::GMetaArg::index_of<cv::GFrameDesc>():
-            {
-                const auto &meta = util::get<cv::GFrameDesc>(mm);
-                switch (meta.fmt) {
-                    case cv::MediaFormat::NV12:
-                        ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
-                        break;
-                    case cv::MediaFormat::BGR:
-                        // NB: Do nothing
-                        break;
-                    default:
-                        GAPI_Assert(false && "Unsupported media format for IE backend");
-                }
-                ii->setPrecision(toIE(CV_8U));
-                break;
+        {
+            const auto &meta = util::get<cv::GFrameDesc>(mm);
+            switch (meta.fmt) {
+                case cv::MediaFormat::NV12:
+                    ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+                    break;
+                case cv::MediaFormat::BGR:
+                    // NB: Do nothing
+                    break;
+                default:
+                    GAPI_Assert(false && "Unsupported media format for IE backend");
             }
+            ii->setPrecision(toIE(CV_8U));
+            break;
+        }
         default:
             util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
     }
 }
+
+// NB: This is a callback used by async infer
+// to post outputs blobs (cv::GMat's).
+struct PostOutputs {
+    // NB: Should be const to pass into SetCompletionCallback
+    void operator()() const {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+             auto& out_mat = ctx->outMatR(i);
+             IE::Blob::Ptr this_blob = iec.this_request.GetBlob(ctx->uu.params.output_names[i]);
+             copyFromIE(this_blob, out_mat);
+             ctx->out.post(ctx->output(i));
+        }
+        ctx->sync.release_and_notify();
+    }
+
+    IECompiled                            &iec ;
+    std::shared_ptr<IECallContext>         ctx ;
+};
+
+// NB: This is a callback used by async infer
+// to post output list of blobs (cv::GArray<cv::GMat>).
+struct PostOutputsList {
+    // NB: Should be const to pass into SetCompletionCallback
+    void operator()() const {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+            IE::Blob::Ptr out_blob = iec.this_request.GetBlob(ctx->uu.params.output_names[i]);
+
+            cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+            // FIXME: Avoid data copy. Not sure if it is possible though
+            copyFromIE(out_blob, out_mat);
+            out_vec.push_back(std::move(out_mat));
+        }
+        // NB: Callbacks run synchronously yet, so the lock isn't necessary
+        auto&& out_vec_size = ctx->outVecR<cv::Mat>(0).size();
+        // NB: Now output vector is collected and can be posted to output
+        if (nrequests == out_vec_size) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                 ctx->out.post(ctx->output(i));
+            }
+        }
+
+        ctx->sync.release_and_notify();
+    }
+
+    IECompiled                            &iec ;
+    std::shared_ptr<IECallContext>         ctx ;
+    std::vector< std::vector<int> >        cached_dims;
+    size_t                                 nrequests;
+};
 
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
@@ -563,29 +720,23 @@ struct Infer: public cv::detail::KernelTag {
         return result;
     }
 
-    static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
+    static void run(IECompiled &iec, std::shared_ptr<IECallContext> ctx) {
         // non-generic version for now:
         // - assumes all inputs/outputs are always Mats
-        Views views;
-        for (auto i : ade::util::iota(uu.params.num_in)) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
             // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
             // and redirect our data producers to this memory
             // (A memory dialog comes to the picture again)
-            IE::Blob::Ptr this_blob = extractBlob(ctx, i, views);
-            iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
+            IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
+            iec.this_request.SetBlob(ctx->uu.params.input_names[i], this_blob);
         }
-        iec.this_request.Infer();
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            // TODO: Think on avoiding copying here.
-            // Either we should ask IE to use our memory (what is not always the
-            // best policy) or use IE-allocated buffer inside (and pass it to the graph).
-            // Not a <very> big deal for classifiers and detectors,
-            // but may be critical to segmentation.
 
-            cv::Mat& out_mat = ctx.outMatR(i);
-            IE::Blob::Ptr this_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
-            copyFromIE(this_blob, out_mat);
-        }
+        iec.this_request.SetCompletionCallback(PostOutputs{iec, ctx});
+
+        // NB: Since only single async request is supported, need to lock other
+        // attempts to get access while request is working.
+        ctx->sync.acquire();
+        iec.this_request.StartAsync();
     }
 };
 
@@ -630,22 +781,22 @@ struct InferROI: public cv::detail::KernelTag {
         return result;
     }
 
-    static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
+    static void run(IECompiled &iec, std::shared_ptr<IECallContext> ctx) {
         // non-generic version for now, per the InferROI's definition
-        GAPI_Assert(uu.params.num_in == 1);
-        const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
+        GAPI_Assert(ctx->uu.params.num_in == 1);
+        const auto& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
-        Views views;
-        IE::Blob::Ptr this_blob = extractBlob(ctx, 1, views);
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1u);
 
-        iec.this_request.SetBlob(*uu.params.input_names.begin(),
-                                 IE::make_shared_blob(this_blob, toIE(this_roi)));
-        iec.this_request.Infer();
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            cv::Mat& out_mat = ctx.outMatR(i);
-            IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
-            copyFromIE(out_blob, out_mat);
-        }
+        iec.this_request.SetBlob(*(ctx->uu.params.input_names.begin()),
+                IE::make_shared_blob(this_blob, toIE(this_roi)));
+
+        iec.this_request.SetCompletionCallback(PostOutputs{iec, ctx});
+
+        // NB: Since only single async request is supported, need to lock other
+        // attempts to get access while request is working.
+        ctx->sync.acquire();
+        iec.this_request.StartAsync();
     }
 };
 
@@ -688,44 +839,43 @@ struct InferList: public cv::detail::KernelTag {
                              cv::GMetaArg{cv::empty_array_desc()});
     }
 
-    static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
+    static void run(IECompiled &iec, std::shared_ptr<IECallContext> ctx) {
         // non-generic version for now:
         // - assumes zero input is always ROI list
         // - assumes all inputs/outputs are always Mats
-        GAPI_Assert(uu.params.num_in == 1); // roi list is not counted in net's inputs
+        GAPI_Assert(ctx->uu.params.num_in == 1); // roi list is not counted in net's inputs
 
-        const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
+        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
 
-        Views views;
-        IE::Blob::Ptr this_blob = extractBlob(ctx, 1, views);
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1u);
 
         // FIXME: This could be done ONCE at graph compile stage!
-        std::vector< std::vector<int> > cached_dims(uu.params.num_out);
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
+        std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-            ctx.outVecR<cv::Mat>(i).clear();
+            ctx->outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
         }
 
-        for (const auto &rc : in_roi_vec) {
-            // FIXME: Assumed only 1 input
+        for (auto&& rc : in_roi_vec) {
+            // NB: Only single async request is supported now,
+            // so need to wait until previos iteration is over.
+            // However there is no need to wait async request from last iteration,
+            // this will be done by backend.
+            ctx->sync.wait();
+
             IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-            iec.this_request.SetBlob(uu.params.input_names[0u], roi_blob);
-            iec.this_request.Infer();
+            iec.this_request.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
 
-            // While input is fixed to be 1,
-            // there may be still multiple outputs
-            for (auto i : ade::util::iota(uu.params.num_out)) {
-                std::vector<cv::Mat> &out_vec = ctx.outVecR<cv::Mat>(i);
+            iec.this_request.SetCompletionCallback(
+                    PostOutputsList{iec, ctx, cached_dims, in_roi_vec.size()});
 
-                IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
-
-                cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-                copyFromIE(out_blob, out_mat);  // FIXME: Avoid data copy. Not sure if it is possible though
-                out_vec.push_back(std::move(out_mat));
-            }
+            // NB: Since only single async request is supported, need to lock other
+            // attempts to get access while request is working.
+            ctx->sync.acquire();
+            iec.this_request.StartAsync();
         }
     }
 };
@@ -813,69 +963,58 @@ struct InferList2: public cv::detail::KernelTag {
                              cv::GMetaArg{cv::empty_array_desc()});
     }
 
-    static void run(IECompiled &iec, const IEUnit &uu, IECallContext &ctx) {
-        GAPI_Assert(ctx.args.size() > 1u
-                    && "This operation must have at least two arguments");
+    static void run(IECompiled &iec, std::shared_ptr<IECallContext> ctx) {
+        GAPI_Assert(ctx->inArgs().size() > 1u
+                && "This operation must have at least two arguments");
 
-        Views views;
-        IE::Blob::Ptr blob_0 = extractBlob(ctx, 0, views);
+        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0u);
 
         // Take the next argument, which must be vector (of any kind).
         // Use it only to obtain the ROI list size (sizes of all other
         // vectors must be equal to this one)
-        const auto list_size = ctx.inArg<cv::detail::VectorRef>(1u).size();
+        const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
 
         // FIXME: This could be done ONCE at graph compile stage!
-        std::vector< std::vector<int> > cached_dims(uu.params.num_out);
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
+        std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-            ctx.outVecR<cv::Mat>(i).clear();
+            ctx->outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
         }
 
-        // For every ROI in the list {{{
         for (const auto &list_idx : ade::util::iota(list_size)) {
-            // For every input of the net {{{
-            for (auto in_idx : ade::util::iota(uu.params.num_in)) {
-                const auto &this_vec = ctx.inArg<cv::detail::VectorRef>(in_idx+1u);
+            // NB: Only single async request is supported now,
+            // so need to wait until previos iteration is over.
+            // However there is no need to wait async request from last iteration,
+            // this will be done by backend.
+            ctx->sync.wait();
+            for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
+                const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
                 GAPI_Assert(this_vec.size() == list_size);
-                // Prepare input {{{
                 IE::Blob::Ptr this_blob;
                 if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
-                    // ROI case - create an ROI blob
                     const auto &vec = this_vec.rref<cv::Rect>();
                     this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
                 } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
-                    // Mat case - create a regular blob
-                    // FIXME: NOW Assume Mats are always BLOBS (not
-                    // images)
                     const auto &vec = this_vec.rref<cv::Mat>();
                     const auto &mat = vec[list_idx];
                     this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
                 } else {
                     GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
                 }
-                iec.this_request.SetBlob(uu.params.input_names[in_idx], this_blob);
-                // }}} (Preapre input)
-            } // }}} (For every input of the net)
+                iec.this_request.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
+            }
 
-            // Run infer request {{{
-            iec.this_request.Infer();
-            // }}} (Run infer request)
+            iec.this_request.SetCompletionCallback(
+                    PostOutputsList{iec, ctx, cached_dims, list_size});
 
-            // For every output of the net {{{
-            for (auto i : ade::util::iota(uu.params.num_out)) {
-                // Push results to the list {{{
-                std::vector<cv::Mat> &out_vec = ctx.outVecR<cv::Mat>(i);
-                IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
-                cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-                copyFromIE(out_blob, out_mat);  // FIXME: Avoid data copy. Not sure if it is possible though
-                out_vec.push_back(std::move(out_mat));
-                // }}} (Push results to the list)
-            } // }}} (For every output of the net)
-        } // }}} (For every ROI in the list)
+            // NB: Since only single async request is supported, need to lock other
+            // attempts to get access while request is working.
+            ctx->sync.acquire();
+            iec.this_request.StartAsync();
+        }
     }
 };
 
