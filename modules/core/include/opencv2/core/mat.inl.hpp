@@ -112,7 +112,7 @@ _InputArray::_InputArray(const std::vector<_Tp>& vec)
 #ifdef CV_CXX_STD_ARRAY
 template<typename _Tp, std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
@@ -176,7 +176,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 {
     _InputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -199,7 +199,7 @@ inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::S
 inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
 inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR ||
                                                    kind() == _InputArray::STD_BOOL_VECTOR ||
-                                                   kind() == _InputArray::STD_ARRAY; }
+                                                   (kind() == _InputArray::MATX && (sz.width <= 1 || sz.height <= 1)); }
 inline bool _InputArray::isGpuMat() const { return kind() == _InputArray::CUDA_GPU_MAT; }
 inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT; }
 
@@ -219,7 +219,7 @@ _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 #ifdef CV_CXX_STD_ARRAY
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
@@ -261,7 +261,7 @@ _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
 #ifdef CV_CXX_STD_ARRAY
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
@@ -336,7 +336,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
 {
     _OutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -359,7 +359,7 @@ _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 #ifdef CV_CXX_STD_ARRAY
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
@@ -396,7 +396,7 @@ _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
 #ifdef CV_CXX_STD_ARRAY
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
@@ -473,7 +473,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
 {
     _InputOutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
