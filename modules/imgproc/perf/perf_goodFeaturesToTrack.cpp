@@ -41,4 +41,37 @@ PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_Use
     SANITY_CHECK(corners);
 }
 
+PERF_TEST_P(Image_MaxCorners_QualityLevel_MinDistance_BlockSize_gradientSize_UseHarris, goodFeaturesToTrackWithQuality,
+            testing::Combine(
+                    testing::Values( "stitching/a1.png", "cv/shared/pic5.png"),
+                    testing::Values( 50 ),
+                    testing::Values( 0.01 ),
+                    testing::Values( 3 ),
+                    testing::Values( 3 ),
+                    testing::Bool()
+            )
+)
+{
+    string filename = getDataPath(get<0>(GetParam()));
+    int maxCorners = get<1>(GetParam());
+    double qualityLevel = get<2>(GetParam());
+    int blockSize = get<3>(GetParam());
+    int gradientSize = get<4>(GetParam());
+    bool useHarrisDetector = get<5>(GetParam());
+    double minDistance = 1;
+
+    Mat image = imread(filename, IMREAD_GRAYSCALE);
+    if (image.empty())
+        FAIL() << "Unable to load source image" << filename;
+
+    std::vector<Point2f> corners;
+    std::vector<float> cornersQuality;
+
+    TEST_CYCLE() goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, noArray(),
+                                     cornersQuality, blockSize, gradientSize, useHarrisDetector);
+
+    SANITY_CHECK(corners);
+    SANITY_CHECK(cornersQuality, 1e-6);
+}
+
 } // namespace
