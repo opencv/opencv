@@ -130,7 +130,7 @@ struct Fixture : public RenderBGRTestBase API {                  \
 #define GAPI_RENDER_TEST_FIXTURES(Fixture, API, Number, ...)                    \
     GAPI_RENDER_TEST_FIXTURE_BGR(RenderBGR##Fixture,   GET_VA_ARGS(API), Number, __VA_ARGS__) \
     GAPI_RENDER_TEST_FIXTURE_NV12(RenderNV12##Fixture, GET_VA_ARGS(API), Number, __VA_ARGS__) \
-    GAPI_RENDER_TEST_FIXTURE_NV12(RenderFrameNV12##Fixture, GET_VA_ARGS(API), Number, __VA_ARGS__) \
+    GAPI_RENDER_TEST_FIXTURE_NV12(RenderMFrame##Fixture, GET_VA_ARGS(API), Number, __VA_ARGS__) \
 
 
 using Points = std::vector<cv::Point>;

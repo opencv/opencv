@@ -93,7 +93,7 @@ public:
     }
 };
 
-TEST_P(RenderFrameNV12OCVTestTexts, AccuracyTest)
+TEST_P(RenderMFrameOCVTestTexts, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -145,7 +145,7 @@ TEST_P(RenderNV12OCVTestFTexts, AccuracyTest)
                                 })));
 }
 
-TEST_P(RenderFrameNV12OCVTestFTexts, AccuracyTest)
+TEST_P(RenderMFrameOCVTestFTexts, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::Mat y_copy_mat = y_gapi_mat;
@@ -229,7 +229,7 @@ TEST_P(RenderNV12OCVTestRects, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestRects, AccuracyTest)
+TEST_P(RenderMFrameOCVTestRects, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -300,7 +300,7 @@ TEST_P(RenderNV12OCVTestCircles, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestCircles, AccuracyTest)
+TEST_P(RenderMFrameOCVTestCircles, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -371,7 +371,7 @@ TEST_P(RenderNV12OCVTestLines, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestLines, AccuracyTest)
+TEST_P(RenderMFrameOCVTestLines, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -442,7 +442,7 @@ TEST_P(RenderNV12OCVTestMosaics, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestMosaics, AccuracyTest)
+TEST_P(RenderMFrameOCVTestMosaics, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -525,7 +525,7 @@ TEST_P(RenderNV12OCVTestImages, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestImages, AccuracyTest)
+TEST_P(RenderMFrameOCVTestImages, AccuracyTest)
 {
     cv::Mat img(rect.size(), CV_8UC3, color);
     cv::Mat alpha(rect.size(), CV_32FC1, transparency);
@@ -605,7 +605,7 @@ TEST_P(RenderNV12OCVTestPolylines, AccuracyTest)
     }
 }
 
-TEST_P(RenderFrameNV12OCVTestPolylines, AccuracyTest)
+TEST_P(RenderMFrameOCVTestPolylines, AccuracyTest)
 {
     // G-API code //////////////////////////////////////////////////////////////
     cv::gapi::wip::draw::Prims prims;
@@ -650,7 +650,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestRectsImpl, RenderNV12OCVTestRects,
                                        Values(LINE_8),
                                        Values(0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestRectsImpl, RenderFrameNV12OCVTestRects,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestRectsImpl, RenderMFrameOCVTestRects,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(cv::Rect(100, 100, 200, 200)),
                                 Values(cv::Scalar(100, 50, 150)),
@@ -676,7 +676,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestCirclesImpl, RenderNV12OCVTestCircles,
                                 Values(LINE_8),
                                 Values(0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestCirclesImpl, RenderFrameNV12OCVTestCircles,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestCirclesImpl, RenderMFrameOCVTestCircles,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(cv::Point(100, 100)),
                                 Values(10),
@@ -703,7 +703,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestLinesImpl, RenderNV12OCVTestLines,
                                 Values(LINE_8),
                                 Values(0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestLinesImpl, RenderFrameNV12OCVTestLines,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestLinesImpl, RenderMFrameOCVTestLines,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(cv::Point(100, 100)),
                                 Values(cv::Point(200, 200)),
@@ -734,7 +734,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestTextsImpl, RenderNV12OCVTestTexts,
                                 Values(LINE_8),
                                 Values(false)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestTextsImpl, RenderFrameNV12OCVTestTexts,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestTextsImpl, RenderMFrameOCVTestTexts,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values("SomeText"),
                                 Values(cv::Point(200, 200)),
@@ -764,7 +764,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestFTextsImpl, RenderNV12OCVTestFTexts,
                             Values(64),
                             Values(cv::Scalar(0, 255, 0))));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestFTextsImpl, RenderFrameNV12OCVTestFTexts,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestFTextsImpl, RenderMFrameOCVTestFTexts,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(to_wstring("\xe4\xbd\xa0\xe5\xa5\xbd\xef\xbc\x8c\xe4\xb8\x96\xe7\x95\x8c"),
                                 to_wstring("\xe3\x80\xa4\xe3\x80\xa5\xe3\x80\xa6\xe3\x80\xa7\xe3\x80\xa8\xe3\x80\x85\xe3\x80\x86")),
@@ -812,7 +812,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestMosaicsImpl, RenderNV12OCVTestMosaics,
                                 Values(25),
                                 Values(0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestMosaicsImpl, RenderFrameNV12OCVTestMosaics,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestMosaicsImpl, RenderMFrameOCVTestMosaics,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(cv::Rect(100, 100, 200, 200),      // Normal case
                                        cv::Rect(-50, -50, 200, 200),      // Intersection with left-top corner
@@ -842,7 +842,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestImagesImpl, RenderNV12OCVTestImages,
                                 Values(cv::Scalar(100, 150, 60)),
                                 Values(1.0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestImagesImpl, RenderFrameNV12OCVTestImages,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestImagesImpl, RenderMFrameOCVTestImages,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(cv::Rect(100, 100, 200, 200)),
                                 Values(cv::Scalar(100, 150, 60)),
@@ -864,7 +864,7 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestPolylinesImpl, RenderNV12OCVTestPolylin
                                 Values(LINE_8),
                                 Values(0)));
 
-INSTANTIATE_TEST_CASE_P(RenderFrameNV12OCVTestPolylinesImpl, RenderFrameNV12OCVTestPolylines,
+INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestPolylinesImpl, RenderMFrameOCVTestPolylines,
                         Combine(Values(cv::Size(1280, 720)),
                                 Values(std::vector<cv::Point>{ {100, 100}, { 200, 200 }, { 150, 300 }, { 400, 150 }}),
                                 Values(cv::Scalar(100, 150, 60)),

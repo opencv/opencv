@@ -114,7 +114,7 @@ GAPI_OCV_KERNEL_ST(RenderNV12OCVImpl, cv::gapi::wip::draw::GRenderNV12, RenderOC
     }
 };
 
-GAPI_OCV_KERNEL_ST(RenderFrameNV12OCVImpl, cv::gapi::wip::draw::GRenderFrameNV12, RenderOCVState)
+GAPI_OCV_KERNEL_ST(RenderMFrameOCVImpl, cv::gapi::wip::draw::GRenderMFrame, RenderOCVState)
 {
     static void run(const cv::MediaFrame & in,
                     const cv::gapi::wip::draw::Prims & prims,
@@ -191,6 +191,6 @@ GAPI_OCV_KERNEL_ST(RenderFrameNV12OCVImpl, cv::gapi::wip::draw::GRenderFrameNV12
 
 cv::gapi::GKernelPackage cv::gapi::render::ocv::kernels()
 {
-    const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl, RenderNV12OCVImpl, RenderFrameNV12OCVImpl>();
+    const static auto pkg = cv::gapi::kernels<RenderBGROCVImpl, RenderNV12OCVImpl, RenderMFrameOCVImpl>();
     return pkg;
 }

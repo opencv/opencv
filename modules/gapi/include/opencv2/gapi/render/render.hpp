@@ -124,7 +124,7 @@ G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "or
      }
 };
 
-G_TYPED_KERNEL(GRenderFrameNV12, <cv::GFrame(cv::GFrame, cv::GArray<wip::draw::Prim>)>, "org.opencv.render.frameNV12")
+G_TYPED_KERNEL(GRenderMFrame, <cv::GFrame(cv::GFrame, cv::GArray<wip::draw::Prim>)>, "org.opencv.render.mframe")
 {
     static GFrameDesc outMeta(GFrameDesc desc, GArrayDesc)
     {
@@ -154,14 +154,14 @@ GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
                               const GMat& uv,
                               const GArray<Prim>& prims);
 
-/** @brief Renders NV12 frame
+/** @brief Renders Media Frame
 
-Output NV12 frame cv::MediaFrame
+Output media frame frame cv::MediaFrame
 
-@param nv12 input image: cv::MediaFrame @ref cv::MediaFrame
+@param m_frame input image: cv::MediaFrame @ref cv::MediaFrame
 @param prims draw primitives
 */
-GAPI_EXPORTS GFrame renderFrameNV12(const GFrame& nv12,
+GAPI_EXPORTS GFrame renderMFrame(const GFrame& m_frame,
                                     const GArray<Prim>& prims);
 
 //! @} gapi_draw_api
