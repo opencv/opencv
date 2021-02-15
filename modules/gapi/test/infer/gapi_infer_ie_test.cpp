@@ -1019,7 +1019,7 @@ TEST(Infer, TestStreamingInfer)
     }
 }
 
-TEST(InferROI, DISABLED_TestStreamingInfer)
+TEST(InferROI, TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1097,7 +1097,7 @@ TEST(InferROI, DISABLED_TestStreamingInfer)
     pipeline.stop();
 }
 
-TEST(InferList, DISABLED_TestStreamingInfer)
+TEST(InferList, TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1192,7 +1192,7 @@ TEST(InferList, DISABLED_TestStreamingInfer)
     pipeline.stop();
 }
 
-TEST(Infer2, DISABLED_TestStreamingInfer)
+TEST(Infer2, TestStreamingInfer)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1214,7 +1214,6 @@ TEST(Infer2, DISABLED_TestStreamingInfer)
     std::vector<cv::Rect> roi_list = {
         cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
         cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
-        cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
     };
 
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1231,7 +1230,6 @@ TEST(Infer2, DISABLED_TestStreamingInfer)
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" })
      .setNumRequests(4u);
-
 
     std::size_t num_frames = 0u;
     std::size_t max_frames = 10u;

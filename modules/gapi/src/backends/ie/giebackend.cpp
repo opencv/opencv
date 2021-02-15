@@ -285,10 +285,12 @@ struct IEUnit {
 class IECallContext
 {
 public:
-    IECallContext(const cv::GArgs                                   &  args,
+    IECallContext(const IEUnit                                      &  unit,
+                  cv::gimpl::GIslandExecutable::IOutput             &  output,
+                  const cv::GArgs                                   &  args,
                   const std::vector<cv::gimpl::RcDesc>              &  outs,
                   std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
-                  std::vector<cv::gimpl::GIslandExecutable::OutObj> && otuput_objs);
+                  std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs);
 
     const cv::GArgs& inArgs() const;
 
@@ -308,16 +310,26 @@ public:
     const cv::Mat&        inMat(std::size_t input)   const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
-    cv::Mat&     outMatR(std::size_t output);
-    cv::GRunArgP out(int output);
+    cv::Mat&     outMatR(std::size_t idx);
+    cv::GRunArgP output(int idx);
+
+    const IEUnit                          &uu;
+    cv::gimpl::GIslandExecutable::IOutput &out;
+
+    // NB: Need to gurantee that MediaFrame::View don't die until request is over.
+    using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
+    Views views;
+
+    // FIXME: Should be removed from here!!!
+    std::mutex m;
+    cv::GArg state;
 
 private:
-    cv::detail::VectorRef& outVecRef(std::size_t output);
+    cv::detail::VectorRef& outVecRef(std::size_t idx);
 
     cv::GArg packArg(const cv::GArg &arg);
 
     // To store input/output data from frames
-public:
     std::vector<cv::gimpl::GIslandExecutable::InObj>  m_input_objs;
     std::vector<cv::gimpl::GIslandExecutable::OutObj> m_output_objs;
 
@@ -333,17 +345,16 @@ public:
     // Input parameters passed to an inference operation.
     cv::GArgs m_args;
     cv::GShapes m_in_shapes;
-
-    // Task additional params
-    cv::GArg state;
-    std::mutex m;
 };
 
-IECallContext::IECallContext(const cv::GArgs                                   &  args,
+IECallContext::IECallContext(const IEUnit                                      &  unit,
+                             cv::gimpl::GIslandExecutable::IOutput             &  output,
+                             const cv::GArgs                                   &  args,
                              const std::vector<cv::gimpl::RcDesc>              &  outs,
                              std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                              std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs)
-    : m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs))
+: uu(unit), out(output), m_input_objs(std::move(input_objs)),
+    m_output_objs(std::move(output_objs))
 {
     for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
     for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
@@ -359,12 +370,12 @@ IECallContext::IECallContext(const cv::GArgs                                   &
                 return arg.get<cv::gimpl::RcDesc>().shape;
             });
 
-    for (const auto out_it : ade::util::indexed(outs)) {
-        // FIXME: Can the same GArg type resolution mechanism be reused here?
-        const auto port  = ade::util::index(out_it);
-        const auto desc  = ade::util::value(out_it);
-        m_results[port] = cv::gimpl::magazine::getObjPtr(m_res, desc);
-    }
+     for (const auto out_it : ade::util::indexed(outs)) {
+         // FIXME: Can the same GArg type resolution mechanism be reused here?
+         const auto port  = ade::util::index(out_it);
+         const auto desc  = ade::util::value(out_it);
+         m_results[port] = cv::gimpl::magazine::getObjPtr(m_res, desc);
+     }
 }
 
 const cv::GArgs& IECallContext::inArgs() const {
@@ -383,16 +394,16 @@ const cv::MediaFrame& IECallContext::inFrame(std::size_t input) const {
     return inArg<cv::MediaFrame>(input);
 }
 
-cv::Mat& IECallContext::outMatR(std::size_t output) {
-    return *cv::util::get<cv::Mat*>(m_results.at(output));
+cv::Mat& IECallContext::outMatR(std::size_t idx) {
+    return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
 
-cv::GRunArgP IECallContext::out(int output) {
-    return m_output_objs[output].second;
+cv::GRunArgP IECallContext::output(int idx) {
+    return m_output_objs[idx].second;
 };
 
-cv::detail::VectorRef& IECallContext::outVecRef(std::size_t output) {
-    return cv::util::get<cv::detail::VectorRef>(m_results.at(output));
+cv::detail::VectorRef& IECallContext::outVecRef(std::size_t idx) {
+    return cv::util::get<cv::detail::VectorRef>(m_results.at(idx));
 }
 
 cv::GArg IECallContext::packArg(const cv::GArg &arg) {
@@ -433,12 +444,7 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
 
 struct IECallable {
     static const char *name() { return "IERequestCallable"; }
-    // FIXME: Make IECallContext manage them all? (3->1)
-    using Run = std::function<void(const IEUnit                          &,
-                                   std::shared_ptr<IECallContext>         ,
-                                   cv::gimpl::ie::RequestPool            &,
-                                   cv::gimpl::GIslandExecutable::IOutput &
-                                   )>;
+    using Run = std::function<void(std::shared_ptr<IECallContext>, cv::gimpl::ie::RequestPool&)>;
     Run run;
 };
 
@@ -472,14 +478,12 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
-using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
-
-inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i, Views& views) {
+inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             const auto& frame = ctx.inFrame(i);
-            views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
-            return wrapIE(*views.back(), frame.desc());
+            ctx.views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+            return wrapIE(*(ctx.views.back()), frame.desc());
         }
         case cv::GShape::GMAT: {
             return wrapIE(ctx.inMat(i), cv::gapi::ie::TraitAs::IMAGE);
@@ -655,7 +659,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
 
-    // (2) Collect inputs/outputs.
     input_objs.reserve(in_desc.size());
     output_objs.reserve(out_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
@@ -663,30 +666,23 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     {
         input_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
-
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
     {
         output_objs.emplace_back(ade::util::value(it),
-                out.get(ade::util::checked_cast<int>(ade::util::index(it))));
+                              out.get(ade::util::checked_cast<int>(ade::util::index(it))));
     }
 
-    // FIXME: Running just a single node now.
-    // Not sure if need to support many of them, though
-    // FIXME: Make this island-unmergeable?
-    const auto &op = m_gm.metadata(this_nh).get<Op>();
-
-    // (3) Create kernel context
-    auto ctx = std::make_shared<IECallContext>(op.args,
-                                               op.outs,
-                                               std::move(input_objs),
-                                               std::move(output_objs));
-
     GConstGIEModel giem(m_g);
-    const auto &kk = giem.metadata(this_nh).get<IECallable>();
     const auto &uu = giem.metadata(this_nh).get<IEUnit>();
+    const auto &op = m_gm.metadata(this_nh).get<Op>();
+    // (3) Create kernel context
+    auto ctx = std::make_shared<IECallContext>(uu, out, op.args, op.outs,
+            std::move(input_objs), std::move(output_objs));
+
+    const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
     // (5) Run the kernel.
-    kk.run(uu, ctx, *m_reqPool, out);
+    kk.run(ctx, *m_reqPool);
 
     // (6) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
@@ -727,18 +723,17 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
     }
 }
 
+// NB: This is a callback used by async infer
+// to post outputs blobs (cv::GMat's).
 static void PostOutputs(IECompiled                            &iec,
-                        const IEUnit                          &uu,
-                        std::shared_ptr<IECallContext>         ctx,
-                        cv::gimpl::GIslandExecutable::IOutput &out) {
+                        std::shared_ptr<IECallContext>         ctx) {
 
-    for (auto i : ade::util::iota(uu.params.num_out))
+    for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
         auto& out_mat = ctx->outMatR(i);
-        IE::Blob::Ptr this_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
+        IE::Blob::Ptr this_blob = iec.this_request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
-        auto&& o = ctx->out(i);
-        out.post(std::move(o));
+        ctx->out.post(ctx->output(i));
     }
 }
 
@@ -751,18 +746,18 @@ struct PostListState {
     size_t ndone = 0u;
 };
 
+// NB: This is a callback used by async infer
+// to post output list of blobs (cv::GArray<cv::GMat>).
 static void PostOutputsList(IECompiled                            &iec,
-                            const IEUnit                          &uu,
                             std::shared_ptr<IECallContext>         ctx,
-                            size_t                                 position,
-                            cv::gimpl::GIslandExecutable::IOutput &out) {
+                            size_t                                 position) {
     // FIXME: Poor syncronization approach, just a global lock.
     std::lock_guard<std::mutex>(ctx->m);
     auto& state = ctx->state.get<PostListState>();
-    for (auto i : ade::util::iota(uu.params.num_out)) {
+    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
         std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
-        IE::Blob::Ptr out_blob = iec.this_request.GetBlob(uu.params.output_names[i]);
+        IE::Blob::Ptr out_blob = iec.this_request.GetBlob(ctx->uu.params.output_names[i]);
 
         cv::Mat out_mat(state.cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
         // FIXME: Avoid data copy. Not sure if it is possible though
@@ -773,9 +768,8 @@ static void PostOutputsList(IECompiled                            &iec,
     state.ndone++;
     // Now output vector is collected, let's push it.
     if (state.ndone == ctx->outVecR<cv::Mat>(0).size()) {
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            auto o = ctx->out(i);
-            out.post(std::move(o));
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            ctx->out.post(ctx->output(i));
         }
     }
 }
@@ -830,29 +824,26 @@ struct Infer: public cv::detail::KernelTag {
         return result;
     }
 
-    static void run(const IEUnit                          &uu,
-                    std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::RequestPool            &reqPool,
-                    cv::gimpl::GIslandExecutable::IOutput &out) {
+    static void run(std::shared_ptr<IECallContext>  ctx,
+                    cv::gimpl::ie::RequestPool     &reqPool) {
         using namespace std::placeholders;
         reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx, &uu](cv::gimpl::ie::IECompiled &iec) {
+                    [ctx](cv::gimpl::ie::IECompiled &iec) {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
-                        Views views;
-                        for (auto i : ade::util::iota(uu.params.num_in)) {
+                        for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
                             // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
-                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i, views);
-                            iec.this_request.SetBlob(uu.params.input_names[i], this_blob);
+                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
+                            iec.this_request.SetBlob(ctx->uu.params.input_names[i], this_blob);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         iec.this_request.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, std::cref(uu), ctx, std::ref(out))
+                    std::bind(PostOutputs, _1, ctx)
                 }
         );
     }
@@ -899,28 +890,25 @@ struct InferROI: public cv::detail::KernelTag {
         return result;
     }
 
-    static void run(const IEUnit                          &uu,
-                    std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::RequestPool            &reqPool,
-                    cv::gimpl::GIslandExecutable::IOutput &out) {
+    static void run(std::shared_ptr<IECallContext>  ctx,
+                    cv::gimpl::ie::RequestPool     &reqPool) {
         using namespace std::placeholders;
         reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx, &uu](cv::gimpl::ie::IECompiled &iec) {
-                        GAPI_Assert(uu.params.num_in == 1);
+                    [ctx](cv::gimpl::ie::IECompiled &iec) {
+                        GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
-                        Views views;
-                        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, views);
+                        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
 
-                        iec.this_request.SetBlob(*uu.params.input_names.begin(),
+                        iec.this_request.SetBlob(*(ctx->uu.params.input_names.begin()),
                                 IE::make_shared_blob(this_blob, toIE(this_roi)));
 
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         iec.this_request.StartAsync();
                     },
-                    std::bind(PostOutputs, _1, std::cref(uu), ctx, std::ref(out))
+                    std::bind(PostOutputs, _1, ctx)
                 }
         );
     }
@@ -965,27 +953,30 @@ struct InferList: public cv::detail::KernelTag {
                              cv::GMetaArg{cv::empty_array_desc()});
     }
 
-    static void run(const IEUnit                          &uu,
-                    std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::RequestPool            &reqPool,
-                    cv::gimpl::GIslandExecutable::IOutput &out) {
+    static void run(std::shared_ptr<IECallContext>  ctx,
+                    cv::gimpl::ie::RequestPool     &reqPool) {
         // non-generic version for now:
         // - assumes zero input is always ROI list
         // - assumes all inputs/outputs are always Mats
         using namespace std::placeholders;
         const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
+        // NB: In case there is no input data need to post output anyway
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                ctx->out.post(ctx->output(i));
+            }
+        }
 
-        Views views;
-        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, views);
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
 
-        for (auto i : ade::util::iota(uu.params.num_out)) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             ctx->outVecR<cv::Mat>(i).resize(in_roi_vec.size());
         }
 
         // FIXME: This could be done ONCE at graph compile stage!
-        std::vector<std::vector<int>> cached_dims(uu.params.num_out);
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
+        std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
@@ -998,24 +989,15 @@ struct InferList: public cv::detail::KernelTag {
             auto&& rc  = ade::util::value(it);
             reqPool.execute(
                     cv::gimpl::ie::RequestPool::Task {
-                        [ctx, &uu, this_blob, rc](cv::gimpl::ie::IECompiled &iec) {
+                        [ctx, this_blob, rc](cv::gimpl::ie::IECompiled &iec) {
                             IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                            iec.this_request.SetBlob(uu.params.input_names[0u], roi_blob);
+                            iec.this_request.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
                             iec.this_request.StartAsync();
                         },
-                        std::bind(PostOutputsList, _1, std::cref(uu), ctx, idx, std::ref(out)),
+                        std::bind(PostOutputsList, _1, ctx, idx),
                     }
             );
         }
-
-        // NB: In case there is no input data need to post output anyway
-        if (in_roi_vec.empty()) {
-            for (auto i : ade::util::iota(uu.params.num_out)) {
-                auto o = ctx->out(i);
-                out.post(std::move(o));
-            }
-        }
-
     }
 };
 
@@ -1102,29 +1084,31 @@ struct InferList2: public cv::detail::KernelTag {
                              cv::GMetaArg{cv::empty_array_desc()});
     }
 
-    static void run(const IEUnit                          &uu,
-                    std::shared_ptr<IECallContext>         ctx,
-                    cv::gimpl::ie::RequestPool            &reqPool,
-                    cv::gimpl::GIslandExecutable::IOutput &out) {
+    static void run(std::shared_ptr<IECallContext> ctx,
+                    cv::gimpl::ie::RequestPool    &reqPool) {
         GAPI_Assert(ctx->inArgs().size() > 1u
                 && "This operation must have at least two arguments");
 
-        Views views;
-        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, views);
+        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
 
         // Take the next argument, which must be vector (of any kind).
         // Use it only to obtain the ROI list size (sizes of all other
         // vectors must be equal to this one)
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                ctx->out.post(ctx->output(i));
+            }
+        }
 
-        for (auto i : ade::util::iota(uu.params.num_out)) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             ctx->outVecR<cv::Mat>(i).resize(list_size);
         }
 
         // FIXME: This could be done ONCE at graph compile stage!
-        std::vector< std::vector<int> > cached_dims(uu.params.num_out);
-        for (auto i : ade::util::iota(uu.params.num_out)) {
-            const IE::DataPtr& ie_out = uu.outputs.at(uu.params.output_names[i]);
+        std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
         }
 
@@ -1134,8 +1118,8 @@ struct InferList2: public cv::detail::KernelTag {
         for (const auto &list_idx : ade::util::iota(list_size)) {
             reqPool.execute(
                     cv::gimpl::ie::RequestPool::Task {
-                        [ctx, list_idx, list_size, blob_0, &uu](cv::gimpl::ie::IECompiled &iec) {
-                            for (auto in_idx : ade::util::iota(uu.params.num_in)) {
+                        [ctx, list_idx, list_size, blob_0](cv::gimpl::ie::IECompiled &iec) {
+                            for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
                                 const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
                                 GAPI_Assert(this_vec.size() == list_size);
                                 IE::Blob::Ptr this_blob;
@@ -1150,19 +1134,13 @@ struct InferList2: public cv::detail::KernelTag {
                                     GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                                 }
-                                iec.this_request.SetBlob(uu.params.input_names[in_idx], this_blob);
+                                iec.this_request.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
                             }
                             iec.this_request.StartAsync();
                         },
-                        std::bind(PostOutputsList, _1, std::cref(uu), ctx, list_idx, std::ref(out)),
+                        std::bind(PostOutputsList, _1, ctx, list_idx),
                     }
             );
-        }
-        if (list_size == 0u) {
-            for (auto i : ade::util::iota(uu.params.num_out)) {
-                auto o = ctx->out(i);
-                out.post(std::move(o));
-            }
         }
     }
 };
