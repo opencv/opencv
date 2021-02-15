@@ -485,7 +485,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         TEST_MESSAGEL ("                    TestCorners = ", corners.size())
         TEST_MESSAGE ("\n")
 
-        ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);
+        EXPECT_LE(e, eps); // never true
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         for(int i = 0; i < (int)std::min((unsigned int)(corners.size()), (unsigned int)(Refcorners.size())); i++){
@@ -506,7 +506,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 
     if (e > eps)
     {
-        ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);
+        EXPECT_LE(e, eps); // never true
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         for(int i = 0; i < (int)std::min((unsigned int)(cornersQuality.size()), (unsigned int)(cornersQuality.size())); i++) {
