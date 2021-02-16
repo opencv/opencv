@@ -594,7 +594,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
 
         // Allocate a new posting first, then bind this GRunArgP to this item
         auto iter    = m_postings[idx].insert(m_postings[idx].end(), Posting{});
-        const auto r = desc()[idx];
+        const auto r = unsafe_desc()[idx];
         cv::GRunArg& out_arg = cv::util::get<cv::GRunArg>(iter->data);
         cv::GRunArgP ret_val;
         switch (r.shape) {
@@ -668,6 +668,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
         // Mark the output ready for posting. If it is the first in the line,
         // actually post it and all its successors which are ready for posting too.
         std::lock_guard<std::mutex> lock{m_mutex};
+
         auto it = m_postIdx.find(cv::gimpl::proto::ptr(argp));
         GAPI_Assert(it != m_postIdx.end());
         const int out_idx = it->second.first;
@@ -751,12 +752,24 @@ public:
         m_postings.resize(out_descs.size());
     }
 
+
+    const std::vector<cv::gimpl::RcDesc> &desc() const override
+    {
+        std::lock_guard<std::mutex> lock{m_mutex};
+        return d;
+    }
+
+    const std::vector<cv::gimpl::RcDesc> &unsafe_desc() const
+    {
+        return d;
+    }
+
     bool done() const
     {
         std::lock_guard<std::mutex> lock{m_mutex};
         // The streaming actor work is considered DONE for this stream
         // when it posted/resent all STOP messages to all its outputs.
-        return m_stops_sent == desc().size();
+        return m_stops_sent == unsafe_desc().size();
     }
 };
 
@@ -899,9 +912,17 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     m_sink_queues   .resize(proto.out_nhs.size(), nullptr);
     m_sink_sync     .resize(proto.out_nhs.size(), -1);
 
+    const auto queue_capacity = 3*std::count_if
+        (m_gim.nodes().begin(),
+         m_gim.nodes().end(),
+         [&](ade::NodeHandle nh) {
+            return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+         });
+    const auto max_capacity = 100000;
+
     // Very rough estimation to limit internal queue sizes.
     // Pipeline depth is equal to number of its (pipeline) steps.
-    const auto queue_capacity = 100000;
+    //const auto queue_capacity = 100000;
     //std::cout << "QUEUE CAP " << 3*std::count_if
         //(m_gim.nodes().begin(),
          //m_gim.nodes().end(),
@@ -1055,7 +1076,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 // Also initialize Sink's input queue
                 ade::TypedGraph<DataQueue> qgr(*m_island_graph);
                 GAPI_Assert(nh->inEdges().size() == 1u);
-                qgr.metadata(nh->inEdges().front()).set(DataQueue(queue_capacity));
+                qgr.metadata(nh->inEdges().front()).set(DataQueue(max_capacity));
                 m_sink_queues[sink_idx] = qgr.metadata(nh->inEdges().front()).get<DataQueue>().q.get();
 
                 // Assign a desync tag

@@ -154,6 +154,7 @@ public:
 };
 
 class GIslandExecutable::IODesc {
+    protected:
     std::vector<cv::gimpl::RcDesc> d;
 public:
     void set(std::vector<cv::gimpl::RcDesc> &&newd)      { d = std::move(newd); }
