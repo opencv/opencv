@@ -100,4 +100,16 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BuildPyr_CalcOptFlow_PipelineInternalTe
                                       Values(3),
                                       Values(true),
                                       Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorPerfTestCPU),
+                              BackgroundSubtractorPerfTest,
+                              Combine(Values(cv::gapi::video::TYPE_BS_MOG2,
+                                             cv::gapi::video::TYPE_BS_KNN),
+                                      Values(true, false),
+                                      Values(0., 0.5, 1),
+                                      Values("cv/video/768x576.avi", "cv/video/1920x1080.avi"),
+                                      Values(1, 10),
+                                      Values(cv::compile_args(VIDEO_CPU)),
+                                      Values(AbsExact().to_compare_obj())));
+
 } // opencv_test

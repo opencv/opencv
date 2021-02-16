@@ -154,6 +154,79 @@ PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+#ifdef HAVE_OPENCV_VIDEO
+
+PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
+{
+    namespace gvideo = cv::gapi::video;
+    initTestDataPath();
+
+    gvideo::BackgroundSubtractorType opType;
+    bool detectShadows = false;
+    double learningRate = -1.;
+    std::string filePath = "";
+    std::size_t testNumFrames = 0;
+    cv::GCompileArgs compileArgs;
+    CompareMats cmpF;
+
+    std::tie(opType, detectShadows, learningRate, filePath, testNumFrames,
+             compileArgs, cmpF) = GetParam();
+
+    int histLength = 500;
+    double thr = -1;
+    if (opType == gvideo::TYPE_BS_MOG2)
+        thr = 16.;
+    else if (opType == gvideo::TYPE_BS_KNN)
+        thr = 400.;
+    gvideo::BackgroundSubtractorParams bsp(opType, histLength, thr, detectShadows, learningRate);
+
+    // Video source declaration
+    cv::VideoCapture cap;
+    if (!cap.open(findDataFile(filePath))) throw SkipTestException("Video file can not be opened");
+    cv::Mat frame;
+    cap >> frame;
+
+    // G-API graph declaration
+    cv::GMat in;
+    cv::GMat out = cv::gapi::BackgroundSubtractor(in, bsp);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // OpenCV Background Subtractor declaration
+    cv::Ptr<cv::BackgroundSubtractor> pOCVBackSub;
+    if (opType == gvideo::TYPE_BS_MOG2)
+        pOCVBackSub = cv::createBackgroundSubtractorMOG2(histLength, thr, detectShadows);
+    else if (opType == gvideo::TYPE_BS_KNN)
+        pOCVBackSub = cv::createBackgroundSubtractorKNN(histLength, thr, detectShadows);
+
+    // Initial step to compile the graph
+    cv::Mat gapiForeground, ocvForeground;
+    c.apply(frame, gapiForeground, std::move(compileArgs));
+    pOCVBackSub->apply(frame, ocvForeground, learningRate);
+    EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
+    std::size_t frames = 1u;
+
+    // Processing `testNumFrames` amount of frames without measurements:
+    while (frames <= testNumFrames && cap.grab())
+    {
+        cap.retrieve(frame);
+        c.apply(frame, gapiForeground);
+        pOCVBackSub->apply(frame, ocvForeground, learningRate);
+        EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
+        frames++;
+    }
+
+    // ...and then measuring the G-API subtractor performance on the single frame
+    TEST_CYCLE()
+    {
+        c.apply(frame, gapiForeground);
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+#endif // HAVE_OPENCV_VIDEO
+
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_PERF_TESTS_INL_HPP

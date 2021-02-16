@@ -127,9 +127,15 @@ struct OptFlowLKTestParams
     cv::GCompileArgs compileArgs;
     int flags                     = 0;
 };
+} // namespace
+} // namespace opencv_test
 
 #ifdef HAVE_OPENCV_VIDEO
 
+namespace opencv_test
+{
+namespace
+{
 inline GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional& testInst,
                                                    const BuildOpticalFlowPyramidTestParams& params,
                                                    BuildOpticalFlowPyramidTestOutput& outOCV,
@@ -349,9 +355,32 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(gapiBackSub.running());
 }
+} // namespace
+} // namespace opencv_test
+
+// Note: namespace must match the namespace of the type of the printed object
+namespace cv::gapi::video
+{
+inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
+{
+#define CASE(v) case BackgroundSubtractorType::v: os << #v; break
+    switch (op)
+    {
+        CASE(TYPE_BS_MOG2);
+        CASE(TYPE_BS_KNN);
+        default: GAPI_Assert(false && "unknown BackgroundSubtractor type");
+    }
+#undef CASE
+    return os;
+}
+} // namespace cv::gapi::video
 
 #else // !HAVE_OPENCV_VIDEO
 
+namespace opencv_test
+{
+namespace
+{
 inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
                                                        const BuildOpticalFlowPyramidTestParams&,
                                                        BuildOpticalFlowPyramidTestOutput&,
@@ -387,9 +416,15 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
 {
     GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
 }
+} // namespace
+} // namespace opencv_test
 
 #endif // HAVE_OPENCV_VIDEO
 
+namespace opencv_test
+{
+namespace
+{
 inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGAPI,
                                   const BuildOpticalFlowPyramidTestOutput& outOCV)
 {
