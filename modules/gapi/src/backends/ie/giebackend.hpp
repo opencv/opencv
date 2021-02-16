@@ -29,6 +29,7 @@ namespace gimpl {
 namespace ie {
 
 struct IECompiled {
+    using Ptr = std::shared_ptr<IECompiled>;
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
     InferenceEngine::InferencePlugin   this_plugin;
 #else

@@ -159,7 +159,7 @@ class GIslandExecutable::IODesc {
 public:
     void set(std::vector<cv::gimpl::RcDesc> &&newd)      { d = std::move(newd); }
     void set(const std::vector<cv::gimpl::RcDesc> &newd) { d = newd; }
-    virtual const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
+    const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
     virtual ~IODesc() = default;
 };
 struct EndOfStream {};

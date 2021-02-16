@@ -54,11 +54,6 @@ public:
 
     // Not thread-safe - as in TBB
     void clear();
-
-    size_t size() {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_data.size();
-    }
 };
 
 // Internal: do shared pop things assuming the lock is already there

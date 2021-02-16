@@ -142,8 +142,8 @@ public:
         return *this;
     }
 
-    Params& setNumRequests(size_t nireq) {
-        GAPI_Assert(nireq > 0 && "Number of infer requests must be more than zero!");
+    Params& cfgNumRequests(size_t nireq) {
+        GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
         return *this;
     }
