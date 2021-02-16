@@ -293,12 +293,12 @@ public:
     }
 
     // Syntax sugar
-          cv::GShape      inShape(int i)             const;
-    const cv::Mat&        inMat(std::size_t input)   const;
+          cv::GShape      inShape(std::size_t input) const;
+    const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
     cv::Mat&     outMatR(std::size_t idx);
-    cv::GRunArgP output(int idx);
+    cv::GRunArgP output (std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -367,7 +367,7 @@ const cv::GArgs& IECallContext::inArgs() const {
     return m_args;
 }
 
-cv::GShape IECallContext::inShape(int i) const {
+cv::GShape IECallContext::inShape(std::size_t i) const {
     return m_in_shapes[i];
 }
 
@@ -383,7 +383,7 @@ cv::Mat& IECallContext::outMatR(std::size_t idx) {
     return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
 
-cv::GRunArgP IECallContext::output(int idx) {
+cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
 
@@ -522,8 +522,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     //        wait until it is over and start collecting new data.
     //     2. Collect island inputs/outputs.
     //     3. Create kernel context. (Every kernel has his own context.)
-    //     4. Without waiting for the completion of the asynchronous request
-    //        started by kernel go to the next frame (1)
+    //     4. Go to the next frame without waiting until the async request is over (1)
     //
     //     5. If graph is compiled in non-streaming mode, wait until request is over.
 

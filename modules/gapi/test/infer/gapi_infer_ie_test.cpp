@@ -1112,10 +1112,7 @@ TEST(InferList, TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     std::vector<cv::Rect> roi_list = {
         cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
@@ -1206,10 +1203,7 @@ TEST(Infer2, TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     std::vector<cv::Rect> roi_list = {
         cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
@@ -1300,10 +1294,7 @@ TEST(InferEmptyList, TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     // NB: Empty list of roi
     std::vector<cv::Rect> roi_list;
@@ -1358,10 +1349,7 @@ TEST(Infer2EmptyList, TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     // NB: Empty list of roi
     std::vector<cv::Rect> roi_list;
