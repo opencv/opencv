@@ -153,7 +153,7 @@ TEST_F(DualQuatTest, interpolation) {
     gdqb_f.at<Vec<float, 8>>(0, 0) = Vec<float, 8>{1.f,2.f,3.f,4.f,5.f,6.f,7.f,8.f};
     gdqb_f.at<Vec<float, 8>>(0, 1) = Vec<float, 8>{1.f,2.f,3.f,4.f,5.f,6.f,7.f,8.f};
     EXPECT_ANY_THROW(DualQuatd::gdqblend(gdqb_f, Vec2d{0.5, 0.5}));
-    EXPECT_ANY_THROW(DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq, dq2}, Vec3f{0.4, 0, 0.6}, QUAT_ASSUME_UNIT));
+    EXPECT_ANY_THROW(DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq, dq2}, Vec3f{0.4f, 0.f, 0.6f}, QUAT_ASSUME_UNIT));
     EXPECT_EQ(gdb, DualQuatd::gdqblend(Vec<DualQuatd, 3>{dqIdentity, dq * dualNumber1, -dq2}, Vec3d{0.4, 0, 0.6}));
 }
 
