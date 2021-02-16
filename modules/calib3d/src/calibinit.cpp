@@ -2274,7 +2274,7 @@ bool findCirclesGrid2(InputArray _image, Size patternSize,
         }
     }
 
-    if (!H.empty())  // undone rectification
+    if (!centers.empty() && !H.empty())  // undone rectification
     {
         Mat orgPointsMat;
         transform(centers, orgPointsMat, H.inv());
