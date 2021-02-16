@@ -447,17 +447,17 @@ DualQuat<T> DualQuat<T>::gdqblend(InputArray _dualquat, InputArray _weight, Quat
         CV_Error(Error::StsBadArg, "The size of weight must be the same as dualquat, both of them should be (1, n) or (n, 1)");
     }
     Mat dualquat = _dualquat.getMat(), weight = _weight.getMat();
-    const size_t cn = std::max(dq_s.width, dq_s.height);
+    const int cn = std::max(dq_s.width, dq_s.height);
     if (!assumeUnit)
     {
-        for (size_t i = 0; i < cn; ++i)
+        for (int i = 0; i < cn; ++i)
         {
             dualquat.at<Vec<T, 8>>(i, 0) = DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.normalize().toVec();
         }
     }
     Vec<T, 8> dq_blend = dualquat.at<Vec<T, 8>>(0, 0) * weight.at<T>(0, 0);
     Quat<T> q0 = DualQuat<T> {dualquat.at<Vec<T, 8>>(0, 0)}.getRotation(assumeUnit);
-    for (size_t i = 1; i < cn; ++i)
+    for (int i = 1; i < cn; ++i)
     {
         T k = q0.dot(DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.getRotation(assumeUnit)) < 0 ? -1: 1;
         dq_blend = dq_blend + dualquat.at<Vec<T, 8>>(i, 0) * k * weight.at<T>(i, 0);
@@ -475,7 +475,7 @@ DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputAr
         return DualQuat<T>(1, 0, 0, 0, 0, 0, 0, 0);
     }
     Mat dualquat_mat(cn, 1, CV_64FC(8));
-    for (size_t i = 0; i < cn ; ++i)
+    for (int i = 0; i < cn ; ++i)
     {
         dualquat_mat.at<Vec<T, 8>>(0, i) = dualquat[i].toVec();
     }
