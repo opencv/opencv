@@ -34,7 +34,8 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
     ASSERT_EQ(CV_32FC1,img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    ASSERT_EQ(getFileSize(filenameOutput), 396);
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(396u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
@@ -127,32 +128,26 @@ TEST(Imgcodecs_EXR, readWrite_32FC3_half)
 
 TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
 {
-  const string root = cvtest::TS::ptr()->get_data_path();
-  const string filenameInput = root + "readwrite/test32FC1.exr";
-  const string filenameOutput = cv::tempfile(".exr");
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC1.exr";
+    const string filenameOutput = cv::tempfile(".exr");
 
-  std::vector<int> params;
-  params.push_back(IMWRITE_EXR_COMPRESSION);
-  params.push_back(IMWRITE_EXR_COMPRESSION_PIZ);
 
-#ifndef GENERATE_DATA
-  const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
-#else
-  const Size sz(64, 32);
-  Mat img(sz, CV_32FC1, Scalar(0.5, 0.1, 1));
-  img(Rect(10, 5, sz.width - 30, sz.height - 20)).setTo(Scalar(1, 0, 0));
-  ASSERT_TRUE(cv::imwrite(filenameInput, img, params));
-#endif
-  ASSERT_FALSE(img.empty());
-  ASSERT_EQ(CV_32FC1, img.type());
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
 
-  ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
-  ASSERT_EQ(getFileSize(filenameOutput), 849);
-  const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
-  ASSERT_EQ(img2.type(), img.type());
-  ASSERT_EQ(img2.size(), img.size());
-  EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
-  EXPECT_EQ(0, remove(filenameOutput.c_str()));
+    std::vector<int> params;
+    params.push_back(IMWRITE_EXR_COMPRESSION);
+    params.push_back(IMWRITE_EXR_COMPRESSION_PIZ);
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(849u, getFileSize(filenameOutput));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
 

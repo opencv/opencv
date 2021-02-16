@@ -112,17 +112,17 @@ enum ImwriteEXRTypeFlags {
      };
 
 enum ImwriteEXRCompressionFlags {
-      IMWRITE_EXR_COMPRESSION_NO    = 0, //!< no compression
-      IMWRITE_EXR_COMPRESSION_RLE   = 1, //!< run length encoding
-      IMWRITE_EXR_COMPRESSION_ZIPS  = 2, //!< zlib compression, one scan line at a time
-      IMWRITE_EXR_COMPRESSION_ZIP   = 3, //!< zlib compression, in blocks of 16 scan lines
-      IMWRITE_EXR_COMPRESSION_PIZ   = 4, //!< piz-based wavelet compression
-      IMWRITE_EXR_COMPRESSION_PXR24 = 5, //!< lossy 24-bit float compression
-      IMWRITE_EXR_COMPRESSION_B44   = 6, //!< lossy 4-by-4 pixel block compression, fixed compression rate
-      IMWRITE_EXR_COMPRESSION_B44A  = 7, //!< lossy 4-by-4 pixel block compression, flat fields are compressed more
-      IMWRITE_EXR_COMPRESSION_DWAA  = 8, //!< lossy DCT based compression, in blocks of 32 scanlines. More efficient for partial buffer access.
-      IMWRITE_EXR_COMPRESSION_DWAB  = 9, //!< lossy DCT based compression, in blocks of 256 scanlines. More efficient space wise and faster to decode full frames than DWAA_COMPRESSION.
-    };
+       IMWRITE_EXR_COMPRESSION_NO    = 0, //!< no compression
+       IMWRITE_EXR_COMPRESSION_RLE   = 1, //!< run length encoding
+       IMWRITE_EXR_COMPRESSION_ZIPS  = 2, //!< zlib compression, one scan line at a time
+       IMWRITE_EXR_COMPRESSION_ZIP   = 3, //!< zlib compression, in blocks of 16 scan lines
+       IMWRITE_EXR_COMPRESSION_PIZ   = 4, //!< piz-based wavelet compression
+       IMWRITE_EXR_COMPRESSION_PXR24 = 5, //!< lossy 24-bit float compression
+       IMWRITE_EXR_COMPRESSION_B44   = 6, //!< lossy 4-by-4 pixel block compression, fixed compression rate
+       IMWRITE_EXR_COMPRESSION_B44A  = 7, //!< lossy 4-by-4 pixel block compression, flat fields are compressed more
+       IMWRITE_EXR_COMPRESSION_DWAA  = 8, //!< lossy DCT based compression, in blocks of 32 scanlines. More efficient for partial buffer access.
+       IMWRITE_EXR_COMPRESSION_DWAB  = 9, //!< lossy DCT based compression, in blocks of 256 scanlines. More efficient space wise and faster to decode full frames than DWAA_COMPRESSION.
+     };
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
 /** These flags will be modify the way of PNG image compression and will be passed to the underlying zlib processing stage.
