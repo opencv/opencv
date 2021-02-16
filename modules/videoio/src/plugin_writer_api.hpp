@@ -146,14 +146,6 @@ typedef struct OpenCV_VideoIO_Writer_Plugin_API_v1_0 OpenCV_VideoIO_Writer_Plugi
 
 #ifdef BUILD_PLUGIN
 
-#ifndef CV_PLUGIN_EXPORTS
-#if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
-#  define CV_PLUGIN_EXPORTS __declspec(dllexport)
-#elif defined __GNUC__ && __GNUC__ >= 4
-#  define CV_PLUGIN_EXPORTS __attribute__ ((visibility ("default")))
-#endif
-#endif
-
 CV_PLUGIN_EXPORTS
 const OpenCV_VideoIO_Writer_Plugin_API* CV_API_CALL opencv_videoio_writer_plugin_init_v1
         (int requested_abi_version, int requested_api_version, void* reserved /*NULL*/) CV_NOEXCEPT;

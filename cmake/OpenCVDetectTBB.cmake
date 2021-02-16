@@ -1,4 +1,4 @@
-# Search TBB library (4.1 - 4.4, 2017)
+# Search TBB library: 4.1 - 4.4, 2017-2020, 2021+ (oneTBB)
 #
 # Own TBB (3rdparty/tbb):
 # - set cmake option BUILD_TBB to ON
