@@ -641,18 +641,20 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             int axis = 0;
             std::vector<int> begin;
             std::vector<int> end;
+            std::vector<int> steps;
             int inp_size = node_proto.input_size();
 
             if (inp_size == 1)
             {
                 if (layerParams.has("steps"))
                 {
-                    DictValue steps = layerParams.get("steps");
-                    for (int i = 0; i < steps.size(); ++i)
+                    DictValue steps_dict = layerParams.get("steps");
+                    for (int i = 0; i < steps_dict.size(); ++i)
                     {
-                        if (steps.get<int>(i) != 1)
+                        if (steps_dict.get<int>(i) != 1) {
                             CV_Error(Error::StsNotImplemented,
                                 "Slice layer only supports steps = 1");
+                        }
                     }
                 }
                 if (layerParams.has("axes")) {
@@ -677,7 +679,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     int finish = ends.get<int>(i);
                     end.push_back((finish < 0) ? --finish : finish); // numpy doesn't include last dim
                 }
-            } else {
+            } else { // inp_size > 1
                 CV_Assert(inp_size >= 3);
                 for (int i = 1; i < inp_size; i++) {
                     CV_Assert(constBlobs.find(node_proto.input(i)) != constBlobs.end());
@@ -711,6 +713,12 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 if (inp_size == 5) {
                     CV_Assert(constBlobs.find(node_proto.input(4)) != constBlobs.end());
                     Mat step_blob = getBlob(node_proto, 4);
+                    const int* steps_ptr = step_blob.ptr<int>();
+
+                    if (axis > 0)
+                        steps.resize(axis, 1);
+
+                    std::copy(steps_ptr, steps_ptr + step_blob.total(), std::back_inserter(steps));
 
                     // Very strange application for Slice op with tensor reversing.
                     // We just workaround it for 2d constants.
@@ -728,12 +736,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                             return;
                         }
                     }
-                    CV_CheckEQ(countNonZero(step_blob != 1), 0, "Slice layer only supports steps = 1");
                 }
             }
             layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
             layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
             layerParams.set("axis", axis);
+
+            if (!steps.empty())
+                layerParams.set("steps", DictValue::arrayInt(&steps[0], steps.size()));
 
             if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
             {

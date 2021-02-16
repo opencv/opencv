@@ -364,6 +364,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * Inner vector has slice ranges for the first number of input dimensions.
          */
         std::vector<std::vector<Range> > sliceRanges;
+        std::vector<std::vector<int> > sliceSteps;
         int axis;
         int num_split;
 
