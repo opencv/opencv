@@ -477,7 +477,7 @@ DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputAr
     Mat dualquat_mat(cn, 1, CV_64FC(8));
     for (size_t i = 0; i < cn ; ++i)
     {
-        dualquat_mat.at<Vec<T, 8>>(0, i) = dualquat[i].toVec();
+        dualquat_mat.at<Vec<T, 8>>(i, 0) = dualquat[i].toVec();
     }
     return gdqblend(dualquat_mat, _weight, assumeUnit);
 }
