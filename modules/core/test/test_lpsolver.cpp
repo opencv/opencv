@@ -154,15 +154,15 @@ TEST(Core_LPSolver, issue_12337)
 TEST(Core_LPSolver, issue_12343)
 {
     Mat A = (cv::Mat_<double>(4, 1) << 4., 2., 4., 1.);
-    Mat B = (cv::Mat_<double>(4, 5) <<  3., 2., 1., 4., 3., 
-                                        0., 2., 4., 1., 4., 
-                                        4., 3., 1., 4., 4.,
-                                        2., 0., 2., 3., 2.);
+    Mat B = (cv::Mat_<double>(4, 5) << 3., 2., 1., 4., 3.,
+                                       0., 2., 4., 1., 4.,
+                                       4., 3., 1., 4., 4.,
+                                       2., 0., 2., 3., 2.);
 
     Mat z;
     int result = cv::solveLP(A,B,z);
     EXPECT_EQ(result, 0);
-   
+
     Mat etalon_z = (cv::Mat_<double>(4, 1) << 1./3., 2./3., 2./3., 0.);
     ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
 }
