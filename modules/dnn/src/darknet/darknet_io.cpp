@@ -241,6 +241,10 @@ namespace cv {
                     {
                         activation_param.type = "Sigmoid";
                     }
+                    else if (type == "tanh")
+                    {
+                        activation_param.type = "TanH";
+                    }
                     else
                     {
                         CV_Error(cv::Error::StsParseError, "Unsupported activation: " + type);
