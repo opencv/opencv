@@ -359,7 +359,7 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
 } // namespace opencv_test
 
 // Note: namespace must match the namespace of the type of the printed object
-namespace cv::gapi::video
+namespace cv { namespace gapi { namespace video
 {
 inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
 {
@@ -373,7 +373,7 @@ inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
 #undef CASE
     return os;
 }
-} // namespace cv::gapi::video
+}}} // namespace cv::gapi::video
 
 #else // !HAVE_OPENCV_VIDEO
 
