@@ -452,15 +452,15 @@ DualQuat<T> DualQuat<T>::gdqblend(InputArray _dualquat, InputArray _weight, Quat
     {
         for (int i = 0; i < cn; ++i)
         {
-            dualquat.at<Vec<T, 8>>(i, 0) = DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.normalize().toVec();
+            dualquat.at<Vec<T, 8>>(i) = DualQuat<T>{dualquat.at<Vec<T, 8>>(i)}.normalize().toVec();
         }
     }
-    Vec<T, 8> dq_blend = dualquat.at<Vec<T, 8>>(0, 0) * weight.at<T>(0, 0);
-    Quat<T> q0 = DualQuat<T> {dualquat.at<Vec<T, 8>>(0, 0)}.getRotation(assumeUnit);
+    Vec<T, 8> dq_blend = dualquat.at<Vec<T, 8>>(0) * weight.at<T>(0);
+    Quat<T> q0 = DualQuat<T> {dualquat.at<Vec<T, 8>>(0)}.getRotation(assumeUnit);
     for (int i = 1; i < cn; ++i)
     {
-        T k = q0.dot(DualQuat<T>{dualquat.at<Vec<T, 8>>(i, 0)}.getRotation(assumeUnit)) < 0 ? -1: 1;
-        dq_blend = dq_blend + dualquat.at<Vec<T, 8>>(i, 0) * k * weight.at<T>(i, 0);
+        T k = q0.dot(DualQuat<T>{dualquat.at<Vec<T, 8>>(i)}.getRotation(assumeUnit)) < 0 ? -1: 1;
+        dq_blend = dq_blend + dualquat.at<Vec<T, 8>>(i) * k * weight.at<T>(i);
     }
     return DualQuat<T>{dq_blend}.normalize();
 }
@@ -477,7 +477,7 @@ DualQuat<T> DualQuat<T>::gdqblend(const Vec<DualQuat<T>, cn> &_dualquat, InputAr
     Mat dualquat_mat(cn, 1, CV_64FC(8));
     for (int i = 0; i < cn ; ++i)
     {
-        dualquat_mat.at<Vec<T, 8>>(i, 0) = dualquat[i].toVec();
+        dualquat_mat.at<Vec<T, 8>>(i) = dualquat[i].toVec();
     }
     return gdqblend(dualquat_mat, _weight, assumeUnit);
 }
