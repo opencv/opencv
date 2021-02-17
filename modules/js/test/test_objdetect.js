@@ -161,70 +161,37 @@ QUnit.test('Cascade classification', function(assert) {
 });
 QUnit.test('QR code detect and decode', function (assert) {
     {
-        assert.expect(12);
-        let done = assert.async(2);
-
         const detector = new cv.QRCodeDetector();
-        const imgSingleQrCode = new Image();
-        imgSingleQrCode.crossOrigin = 'anonymous';
-        imgSingleQrCode.onload = function () {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = imgSingleQrCode.width;
-            canvas.height = imgSingleQrCode.height;
-            ctx.drawImage(imgSingleQrCode, 0, 0, imgSingleQrCode.width,
-                imgSingleQrCode.height);
-            const imgMat = cv.imread(canvas);
-            assert.ok(imgMat);
+        let mat = cv.Mat.ones(800, 600, cv.CV_8U);
+        assert.ok(mat);
 
-            // test detect
-            let points = new cv.Mat();
-            let retVal = detector.detect(imgMat, points);
-            assert.ok(retVal);
-            assert.equal(points.size().width, 4)
-            assert.equal(points.size().height, 1);
+        // test detect
+        let points = new cv.Mat();
+        let qrCodeFound = detector.detect(mat, points);
+        assert.equal(points.rows,0)
+        assert.equal(points.cols,0)
+        assert.equal(qrCodeFound,false);
 
-            // test decode
-            retVal = detector.decode(imgMat, points);
-            assert.equal(retVal, "https://opencv.org/");
+        // test detectMult
+        qrCodeFound = detector.detectMulti(mat, points);
+         assert.equal(points.rows,0)
+        assert.equal(points.cols,0)
+        assert.equal(qrCodeFound,false);
 
-            // test detectAndDecode
-            retVal = '';
-            points = new cv.Mat();
-            retVal = detector.detectAndDecode(imgMat, points);
-            assert.equal(retVal, "https://opencv.org/");
-            assert.equal(points.size().width, 4);
-            assert.equal(points.size().height, 1);
-            points.delete();
-            imgMat.delete();
-            done();
+        // test decode (with random numbers)
+        let decodeTestPoints = cv.matFromArray(1, 4, cv.CV_32FC2, [10, 20, 30, 40, 60, 80, 90, 100]);
+        let qrCodeContent = detector.decode(mat, decodeTestPoints);
+        assert.equal(typeof qrCodeContent,"string");
+        assert.equal(qrCodeContent,"");
 
-        };
-        imgSingleQrCode.src = '/link_ocv.jpg';
+        //test detectAndDecode
+        qrCodeContent = detector.detectAndDecode(mat);
+        assert.equal(typeof qrCodeContent,"string");
+        assert.equal(qrCodeContent,"");
 
-        const imgMultiQrCode = new Image();
-        imgMultiQrCode.crossOrigin = 'anonymous';
-        imgMultiQrCode.onload = function () {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = imgMultiQrCode.width;
-            canvas.height = imgMultiQrCode.height;
-            ctx.drawImage(imgMultiQrCode, 0, 0, imgMultiQrCode.width,
-                imgMultiQrCode.height);
-            const imgMat = cv.imread(canvas);
-            assert.ok(imgMat);
+        decodeTestPoints.delete();
+        points.delete();
+        mat.delete();
 
-            // test detectMulti
-            const points = new cv.Mat();
-            let retVal = detector.detectMulti(imgMat, points);
-            assert.ok(retVal);
-            assert.equal(points.size().width, 4);
-            assert.equal(points.size().height, 6);
-            points.delete();
-            imgMat.delete();
-            done();
-
-        };
-        imgMultiQrCode.src = "/6_qrcodes.png";
     }
 });

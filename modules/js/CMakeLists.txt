@@ -93,8 +93,6 @@ set(test_dir ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(opencv_test_js_file_deps "")
 
 # message(STATUS "${opencv_test_js_bin_dir}")
-#message (FATAL_ERROR "${OPENCV_TEST_DATA_PATH}")
-
 
 # make sure the build directory exists
 file(MAKE_DIRECTORY "${opencv_test_js_bin_dir}")
@@ -112,39 +110,15 @@ foreach(f ${test_files})
 endforeach()
 
 # copy test data
-# haarcascade
-set(test_data_haarcascade "haarcascade_frontalface_default.xml")
-set(test_data_haarcascade_path "${PROJECT_SOURCE_DIR}/../../data/haarcascades/${test_data}")
+set(test_data "haarcascade_frontalface_default.xml")
+set(test_data_path "${PROJECT_SOURCE_DIR}/../../data/haarcascades/${test_data}")
 
-add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data_haarcascade}"
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_haarcascade_path}"
-                   "${opencv_test_js_bin_dir}/${test_data_haarcascade}"
-                   DEPENDS "${test_data_haarcascade_path}"
-                   COMMENT "Copying ${test_data_haarcascade}"
+add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data}"
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}"
+                   DEPENDS "${test_data_path}"
+                   COMMENT "Copying ${test_data}"
                   )
-list(APPEND opencv_test_js_file_deps "${test_data_haarcascade_path}" "${opencv_test_js_bin_dir}/${test_data_haarcascade}")
-# QR code
-if(BUILD_TESTS AND OPENCV_TEST_DATA_PATH)
-  set(test_data_qrcode_1 "link_ocv.jpg")
-  set(test_data_qrcode_1_path "${OPENCV_TEST_DATA_PATH}/cv/qrcode/${test_data_qrcode_1}")
-  add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data_qrcode_1}"
-                  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_qrcode_1_path}"
-                  "${opencv_test_js_bin_dir}/${test_data_qrcode_1}"
-                  DEPENDS "${test_data_qrcode_1_path}"
-                  COMMENT "Copying ${test_data_qrcode_1}"
-                  )
-  list(APPEND opencv_test_js_file_deps "${test_data_qrcode_1_path}" "${opencv_test_js_bin_dir}/${test_data_qrcode_1}")
-
-  set(test_data_qrcode_2 "6_qrcodes.png")
-  set(test_data_qrcode_2_path "${OPENCV_TEST_DATA_PATH}/cv/qrcode/multiple/${test_data_qrcode_2}")
-  add_custom_command(OUTPUT "${opencv_test_js_bin_dir}/${test_data_qrcode_2}"
-                  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${test_data_qrcode_2_path}"
-                  "${opencv_test_js_bin_dir}/${test_data_qrcode_2}"
-                  DEPENDS "${test_data_qrcode_2_path}"
-                  COMMENT "Copying ${test_data_qrcode_2}"
-                  )
-  list(APPEND opencv_test_js_file_deps "${test_data_qrcode_2_path}" "${opencv_test_js_bin_dir}/${test_data_qrcode_2}")
-endif()
+list(APPEND opencv_test_js_file_deps "${test_data_path}" "${opencv_test_js_bin_dir}/${test_data}")
 
 add_custom_target(${PROJECT_NAME}_test
                   DEPENDS ${OCV_JS_PATH} ${opencv_test_js_file_deps})
