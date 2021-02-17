@@ -880,7 +880,7 @@ Quat<T> createFromAxisRot(int axis, const T theta)
     CV_Assert(0);
 }
 
-static bool isIntAngleType(QuatEnum::EulerAnglesType eulerAnglesType)
+inline bool isIntAngleType(QuatEnum::EulerAnglesType eulerAnglesType)
 {
     return eulerAnglesType < QuatEnum::EXT_XYZ;
 }
