@@ -651,11 +651,135 @@ INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
 
 ////////////////////////////////////////// TEST_P(video_acceleration, write_read)
 
+struct VideoCaptureAccelerationInput
+{
+    const char* filename;
+    bool mandatory;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const VideoCaptureAccelerationInput &p)
+{
+    out << p.filename;
+    return out;
+}
+
+typedef testing::TestWithParam<tuple<VideoCaptureAccelerationInput, VideoCaptureAPIs, VideoAccelerationType, bool>> videocapture_acceleration;
+
+TEST_P(videocapture_acceleration, read) {
+    auto param = GetParam();
+    std::string filename = get<0>(param).filename;
+    bool mandatory = get<0>(param).mandatory;
+    VideoCaptureAPIs backend = get<1>(param);
+    VideoAccelerationType va_type = get<2>(param);
+    bool use_umat = get<3>(param);
+    int device_idx = -1;
+    double psnr_threshold = 30; // SW and HW output may have small difference due to different color conversion to RGB
+    const int frameNum = 15;
+    std::string backend_name = cv::videoio_registry::getBackendName(backend);
+    if (!videoio_registry::hasBackend(backend))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
+
+    std::string filepath = cvtest::TS::ptr()->get_data_path() + "video/" + filename;
+
+    // SW reader
+    VideoCapture sw_reader(filepath, backend, {
+            CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE
+    });
+    if (!sw_reader.isOpened() && !mandatory) {
+        throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported, skipping");
+    }
+    ASSERT_TRUE(sw_reader.isOpened());
+
+    // HW reader
+    VideoCapture hw_reader(filepath, backend, {
+            CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type),
+            CAP_PROP_HW_DEVICE, device_idx
+    });
+    ASSERT_TRUE(hw_reader.isOpened()); // HW acceleration should have fallback to SW codecs
+
+    double min_psnr_sw = 1000;
+    double min_psnr_original = 1000;
+    for (int i = 0;; i++) {
+        Mat reference;
+        Mat actual;
+        if (!sw_reader.read(reference)) {
+            //EXPECT_GT(i, 0);
+            //EXPECT_FALSE(hw_reader.read(actual));
+            break;
+        }
+        if (use_umat) {
+            UMat umat;
+            EXPECT_TRUE(hw_reader.read(umat)) << " on frame: " << i;
+            umat.copyTo(actual);
+        } else {
+            EXPECT_TRUE(hw_reader.read(actual)) << " on frame: " << i;
+        }
+        EXPECT_FALSE(reference.empty());
+        EXPECT_FALSE(actual.empty());
+        double psnr = cvtest::PSNR(actual, reference);
+        EXPECT_GE(psnr, psnr_threshold) << " frame " << i;
+        if (psnr < min_psnr_sw)
+            min_psnr_sw = psnr;
+        // PSNR against original picture for information purpose only
+        Mat original = reference;
+        generateFrame(i, frameNum, original);
+        psnr = cvtest::PSNR(actual, original);
+        if (psnr < min_psnr_original)
+            min_psnr_original = psnr;
+    }
+
+    VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
+    std::cout << hw_reader.getBackendName() << " VideoCapture on " << filename << ": acceleration = " << actual_va <<
+        ", PSNR-sw = " << min_psnr_sw << ", PSNR-original = " << min_psnr_original << std::endl;
+}
+
+static VideoCaptureAccelerationInput hw_filename[] = {
+        { "sample_322x242_15frames.yuv420p.libxvid.mp4", true },
+        { "sample_322x242_15frames.yuv420p.mjpeg.mp4", false },
+        { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", false },
+        { "sample_322x242_15frames.yuv420p.libx264.mp4", false },
+        { "sample_322x242_15frames.yuv420p.libx265.mp4", false },
+        { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", false },
+        { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", false }
+};
+
+static VideoCaptureAPIs hw_backends[] = {
+        CAP_FFMPEG,
+        //CAP_GSTREAMER, TODO: GStreamer backend has issues decoding 322x242 resolution (intentionally not aligned by 16), issues not related to video acceleration
+#ifdef _WIN32
+        CAP_MSMF,
+#endif
+};
+
+static VideoAccelerationType hw_types[] = {
+        VIDEO_ACCELERATION_ANY,
+        VIDEO_ACCELERATION_MFX,
+#ifdef _WIN32
+        VIDEO_ACCELERATION_D3D11,
+#else
+        VIDEO_ACCELERATION_VAAPI,
+#endif
+};
+
+static bool hw_use_umat[] = {
+        false,
+        //true
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, videocapture_acceleration, testing::Combine(
+    testing::ValuesIn(hw_filename),
+    testing::ValuesIn(hw_backends),
+    testing::ValuesIn(hw_types),
+    testing::ValuesIn(hw_use_umat)
+));
+
+////////////////////////////////////////// TEST_P(video_acceleration, write_read)
+
 typedef tuple<Ext_Fourcc_PSNR, VideoAccelerationType, bool> VATestParams;
 
-typedef testing::TestWithParam<VATestParams> video_acceleration;
+typedef testing::TestWithParam<VATestParams> videowriter_acceleration;
 
-TEST_P(video_acceleration, write_read)
+TEST_P(videowriter_acceleration, write)
 {
     auto param = GetParam();
     VideoCaptureAPIs backend = get<0>(param).api;
@@ -665,51 +789,66 @@ TEST_P(video_acceleration, write_read)
     VideoAccelerationType va_type = get<1>(param);
     int device_idx = -1;
     bool use_umat = get<2>(param);
+    std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
-        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(backend));
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
 
-    const Size sz(640, 480);
-    const int frameNum = 35;
+    const Size sz(320, 240);
+    const int frameNum = 15;
     const double fps = 25;
 
-    std::string filename = tempfile("videoio_video_acceleration.") + extension;
+    std::string filename = tempfile("videowriter_acceleration.") + extension;
+
+    // Check if SW encoder available
+    {
+        VideoWriter sw_writer(filename,
+                           backend,
+                           VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+                           fps,
+                           sz,
+                           {
+                                   VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE,
+                           });
+        if (!sw_writer.isOpened()) {
+            remove(filename.c_str());
+            throw SkipTestException(backend_name + " VideoWriter on codec " + codecid + " not supported, skipping");
+        }
+    }
+    remove(filename.c_str());
 
     // Write video
+    VideoAccelerationType actual_va;
     {
-        VideoWriter writer(filename,
-            backend,
-            VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
-            fps,
-            sz,
-            {
-                VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
-                VIDEOWRITER_PROP_HW_DEVICE, device_idx
-            });
-        EXPECT_TRUE(writer.isOpened());
-        VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
-        std::cout << writer.getBackendName() << ": VideoWriter acceleration = " << actual_va << std::endl;
+        VideoWriter hw_writer(filename,
+                           backend,
+                           VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+                           fps,
+                           sz,
+                           {
+                                   VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
+                                   VIDEOWRITER_PROP_HW_DEVICE, device_idx
+                           });
+        EXPECT_TRUE(hw_writer.isOpened());
+        actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
             generateFrame(i, frameNum, frame);
             if (use_umat) {
                 UMat umat;
                 frame.copyTo(umat);
-                writer.write(umat);
+                hw_writer.write(umat);
             }
             else {
-                writer.write(frame);
+                hw_writer.write(frame);
             }
         }
     }
     // Read video and check PSNR on every frame
     {
-        VideoCapture reader(filename, backend, {
-            CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type),
-            CAP_PROP_HW_DEVICE, device_idx
-        });
+        VideoCapture reader(filename,
+                            CAP_ANY /*backend*/,
+                            { VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE });
         ASSERT_TRUE(reader.isOpened());
-        VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(reader.get(CAP_PROP_HW_ACCELERATION)));
-        std::cout << reader.getBackendName() << ": VideoCapture acceleration = " << actual_va << std::endl;
         double min_psnr = 1000;
         Mat reference(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
@@ -737,48 +876,35 @@ TEST_P(video_acceleration, write_read)
         {
             std::ifstream ofile(filename, std::ios::binary);
             ofile.seekg(0, std::ios::end);
-            cout << "  Real bitrate = " << ofile.tellg() / (frameNum / fps) << " bits-per-second";
-            cout << " = " << double(ofile.tellg()) / (sz.width * sz.height * frameNum) << " bits-per-pixel" << std::endl;
+            std::cout << backend_name << " VideoWriter on codec " << codecid << ": acceleration = " << actual_va <<
+                ", bitrate = " << ofile.tellg() / (frameNum / fps) << ", PSNR = " << min_psnr << std::endl;
         }
-        std::cout << "  Test finished with min PSNR = " << min_psnr << std::endl;
         remove(filename.c_str());
     }
 }
 
 static Ext_Fourcc_PSNR hw_codecs[] = {
-        {"mp4", "MPEG", 30.f, CAP_FFMPEG},
-        {"avi", "XVID", 30.f, CAP_FFMPEG},
-        //{"mp4", "H264", 30.f, CAP_FFMPEG}, TODO
+        {"mp4", "MPEG", 29.f, CAP_FFMPEG},
+        {"mp4", "H264", 29.f, CAP_FFMPEG},
+        {"mp4", "HEVC", 29.f, CAP_FFMPEG},
+        {"avi", "MJPG", 29.f, CAP_FFMPEG},
+        {"avi", "XVID", 29.f, CAP_FFMPEG},
+        {"webm", "VP8", 29.f, CAP_FFMPEG},
+        {"webm", "VP9", 29.f, CAP_FFMPEG},
 
-        {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
-        //{"mkv", "H264", 30.f, CAP_GSTREAMER}, TODO
+        {"mkv", "MPEG", 29.f, CAP_GSTREAMER},
+        {"mkv", "H264", 29.f, CAP_GSTREAMER},
 
 #ifdef _WIN32
-        {"mp4", "MPEG", 30.f, CAP_MSMF},
-        {"mp4", "H264", 30.f, CAP_MSMF},
+        {"mp4", "MPEG", 29.f, CAP_MSMF},
+        {"mp4", "H264", 29.f, CAP_MSMF},
 #endif
 };
 
-static VideoAccelerationType hw_types[] = {
-        VIDEO_ACCELERATION_ANY,
-        VIDEO_ACCELERATION_NONE,
-        VIDEO_ACCELERATION_MFX,
-#ifdef _WIN32
-        VIDEO_ACCELERATION_D3D11,
-#else
-        VIDEO_ACCELERATION_VAAPI,
-#endif
-};
-
-static bool hw_use_umat[] = {
-        false,
-        true
-};
-
-INSTANTIATE_TEST_CASE_P(videoio, video_acceleration, testing::Combine(
-    testing::ValuesIn(hw_codecs),
-    testing::ValuesIn(hw_types),
-    testing::ValuesIn(hw_use_umat)
+INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
+        testing::ValuesIn(hw_codecs),
+        testing::ValuesIn(hw_types),
+        testing::ValuesIn(hw_use_umat)
 ));
 
 } // namespace

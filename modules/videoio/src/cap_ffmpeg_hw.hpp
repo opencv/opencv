@@ -23,12 +23,10 @@ extern "C" {
 
 using namespace cv;
 
+AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
 AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device);
 AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
-AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
-
-#if LIBAVUTIL_VERSION_MAJOR >= 56 // FFMPEG 4.0+
 
 #ifdef HAVE_D3D11
 #define D3D11_NO_HELPERS
@@ -60,7 +58,8 @@ static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_typ
     } ffmpeg_hw_types[] = {
         { VIDEO_ACCELERATION_D3D11, AV_HWDEVICE_TYPE_D3D11VA },
         { VIDEO_ACCELERATION_VAAPI, AV_HWDEVICE_TYPE_VAAPI },
-        { VIDEO_ACCELERATION_MFX, AV_HWDEVICE_TYPE_QSV }
+        { VIDEO_ACCELERATION_MFX, AV_HWDEVICE_TYPE_QSV },
+        { VIDEO_ACCELERATION_NONE, AV_HWDEVICE_TYPE_NONE },
     };
     for (const HWTypeFFMPEG& hw : ffmpeg_hw_types) {
         if (va_type == hw.va_type)
@@ -76,8 +75,6 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     if (!hw_device_ctx->hwctx)
         return false;
     bool ret = true;
-    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_CUDA)
-        return false;
 #ifdef HAVE_D3D11
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
         ID3D11Device* device = ((AVD3D11VADeviceContext*)hw_device_ctx->hwctx)->device;
@@ -201,18 +198,32 @@ AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device
     return hw_frames_ref;
 }
 
-AVCodec *hw_find_codec(AVCodecID id, AVBufferRef *hw_device_ctx, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt) {
-    AVHWDeviceType hw_type = AV_HWDEVICE_TYPE_NONE;
+static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type) {
+    // disable MJPG HW encoder due to low encoding quality
+    if (AV_CODEC_ID_MJPEG == codec->id && av_codec_is_encoder(codec) && AV_HWDEVICE_TYPE_NONE != hw_type)
+        return false;
+    // disable AV1 HW decoder due to SW fallback issue
+    if (AV_CODEC_ID_AV1 == codec->id && av_codec_is_decoder(codec) && AV_HWDEVICE_TYPE_NONE != hw_type)
+        return false;
+    // disable VP8 VAAPI decoder/encoder
+    if (AV_CODEC_ID_VP8 == codec->id && AV_HWDEVICE_TYPE_VAAPI == hw_type)
+        return false;
+    return true;
+}
+
+AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt) {
+    AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
     AVCodec *c;
     void *opaque = 0;
-
-    if (hw_device_ctx)
-        hw_type = ((AVHWDeviceContext *) hw_device_ctx->data)->type;
 
     while ((c = (AVCodec*)av_codec_iterate(&opaque))) {
         if (!check_category(c))
             continue;
         if (c->id != id)
+            continue;
+        if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
+            continue;
+        if (!hw_check_codec(c, hw_type))
             continue;
         if (hw_type != AV_HWDEVICE_TYPE_NONE) {
             AVPixelFormat hw_native_fmt = AV_PIX_FMT_NONE;
@@ -273,20 +284,3 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
     }
     return fmt[0];
 }
-
-#else
-
-AVBufferRef* hw_create_device(VideoAccelerationType, int) {
-    return NULL;
-}
-AVBufferRef* hw_create_frames(AVBufferRef *, int , int , AVPixelFormat , AVPixelFormat , int ) {
-    return NULL;
-}
-AVCodec *hw_find_codec(AVCodecID , AVBufferRef *, int (*)(const AVCodec *), AVPixelFormat *) {
-    return NULL;
-}
-AVPixelFormat hw_get_format_callback(struct AVCodecContext *, const enum AVPixelFormat * fmt) {
-    return fmt[0];
-}
-
-#endif

@@ -1015,12 +1015,14 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     av_buffer_unref(&enc->hw_device_ctx);
                 }
                 if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
-                    enc->hw_device_ctx = hw_create_device(va_type, hw_device);
-                    if (enc->hw_device_ctx) {
-                        AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                        codec = hw_find_codec(enc->codec_id, enc->hw_device_ctx, av_codec_is_decoder, &hw_pix_fmt);
+                    AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
+                    codec = hw_find_codec(enc->codec_id, va_type, av_codec_is_decoder, &hw_pix_fmt);
+                    if (codec) {
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
+                        enc->hw_device_ctx = hw_create_device(va_type, hw_device);
+                        if (!enc->hw_device_ctx)
+                            codec = NULL;
                     }
                 }
 #endif
@@ -2333,7 +2335,18 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
                 codec_bmp_tags, // fallback for avformat < 54.1
                 NULL };
-        if( (codec_id = av_codec_get_id(fallback_tags, fourcc)) == CV_CODEC(CODEC_ID_NONE) )
+        if (codec_id == CV_CODEC(CODEC_ID_NONE)) {
+            codec_id = av_codec_get_id(fallback_tags, fourcc);
+        }
+        if (codec_id == CV_CODEC(CODEC_ID_NONE)) {
+            char *p = (char *) &fourcc;
+            char name[] = {(char)tolower(p[0]), (char)tolower(p[1]), (char)tolower(p[2]), (char)tolower(p[3]), 0};
+            const AVCodecDescriptor *desc = avcodec_descriptor_get_by_name(name);
+            if (desc)
+                codec_id = desc->id;
+        }
+
+        if (codec_id == CV_CODEC(CODEC_ID_NONE))
         {
             fflush(stdout);
             fprintf(stderr, "OpenCV: FFMPEG: tag 0x%08x/'%c%c%c%c' is not found (format '%s / %s')'\n",
@@ -2511,17 +2524,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             av_buffer_unref(&hw_device_ctx);
 #if USE_AV_HW_CODECS
         if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
-#ifdef _WIN32
-        if (VIDEO_ACCELERATION_MFX == va_type && CV_FOURCC('M', 'J', 'P', 'G') == fourcc) // MediaSDK works badly on MJPG
-            continue;
-#endif
+            codec = hw_find_codec(codec_id, va_type, av_codec_is_encoder, &hw_format);
+            if (!codec)
+                continue;
 
             hw_device_ctx = hw_create_device(va_type, hw_device);
             if (!hw_device_ctx)
-                continue;
-
-            codec = hw_find_codec(codec_id, hw_device_ctx, av_codec_is_encoder, &hw_format);
-            if (!codec)
                 continue;
         }
 #endif
