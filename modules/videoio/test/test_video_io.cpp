@@ -889,8 +889,8 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
         {"mp4", "HEVC", 29.f, CAP_FFMPEG},
         {"avi", "MJPG", 29.f, CAP_FFMPEG},
         {"avi", "XVID", 29.f, CAP_FFMPEG},
-        {"webm", "VP8", 29.f, CAP_FFMPEG},
-        {"webm", "VP9", 29.f, CAP_FFMPEG},
+        //{"webm", "VP8", 29.f, CAP_FFMPEG},
+        //{"webm", "VP9", 29.f, CAP_FFMPEG},
 
         {"mkv", "MPEG", 29.f, CAP_GSTREAMER},
         {"mkv", "H264", 29.f, CAP_GSTREAMER},
