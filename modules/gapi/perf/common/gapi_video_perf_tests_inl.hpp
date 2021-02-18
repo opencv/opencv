@@ -206,13 +206,12 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
     std::size_t frames = 1u;
 
     // Processing `testNumFrames` amount of frames without measurements:
-    while (frames <= testNumFrames && cap.grab())
+    while (frames++ <= testNumFrames && cap.grab())
     {
         cap.retrieve(frame);
         c.apply(frame, gapiForeground);
         pOCVBackSub->apply(frame, ocvForeground, learningRate);
         EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
-        frames++;
     }
 
     // ...and then measuring the G-API subtractor performance on the single frame

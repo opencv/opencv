@@ -111,7 +111,7 @@ TEST_P(BackgroundSubtractorTest, AccuracyTest)
     auto gapiBackSub = c.compileStreaming(getCompileArgs());
 
     // Testing G-API Background Substractor in streaming mode
-    auto path = findDataFile(filePath);
+    const auto path = findDataFile(filePath);
     try
     {
         gapiBackSub.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));

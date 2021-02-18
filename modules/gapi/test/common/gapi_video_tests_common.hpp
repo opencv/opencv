@@ -132,7 +132,7 @@ inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGA
 {
     GAPI_Assert(outGAPI.maxLevel == outOCV.maxLevel);
     GAPI_Assert(outOCV.maxLevel >= 0);
-    size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
+    const size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
     for (size_t i = 0; i <= maxLevel; i++)
     {
         EXPECT_TRUE(AbsExact().to_compare_f()(outGAPI.pyramid[i], outOCV.pyramid[i]));
@@ -140,7 +140,8 @@ inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGA
 }
 
 template <typename Elem>
-inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outGAPI, std::vector<Elem> outOCV)
+inline bool compareVectorsAbsExactForOptFlow(const std::vector<Elem>& outGAPI,
+                                             const std::vector<Elem>& outOCV)
 {
     return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
 }
@@ -442,7 +443,7 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
 // Note: namespace must match the namespace of the type of the printed object
 namespace cv { namespace gapi { namespace video
 {
-inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
+inline std::ostream& operator<<(std::ostream& os, const BackgroundSubtractorType op)
 {
 #define CASE(v) case BackgroundSubtractorType::v: os << #v; break
     switch (op)
