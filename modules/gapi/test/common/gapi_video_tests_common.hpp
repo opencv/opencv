@@ -15,7 +15,6 @@
 #endif // HAVE_OPENCV_VIDEO
 
 
-
 namespace opencv_test
 {
 namespace
@@ -127,15 +126,56 @@ struct OptFlowLKTestParams
     cv::GCompileArgs compileArgs;
     int flags                     = 0;
 };
-} // namespace
-} // namespace opencv_test
+
+inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGAPI,
+                                  const BuildOpticalFlowPyramidTestOutput& outOCV)
+{
+    GAPI_Assert(outGAPI.maxLevel == outOCV.maxLevel);
+    GAPI_Assert(outOCV.maxLevel >= 0);
+    size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
+    for (size_t i = 0; i <= maxLevel; i++)
+    {
+        EXPECT_TRUE(AbsExact().to_compare_f()(outGAPI.pyramid[i], outOCV.pyramid[i]));
+    }
+}
+
+template <typename Elem>
+inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outGAPI, std::vector<Elem> outOCV)
+{
+    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
+}
+
+inline void compareOutputsOptFlow(const OptFlowLKTestOutput& outGAPI,
+                                  const OptFlowLKTestOutput& outOCV)
+{
+    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.nextPoints, outOCV.nextPoints));
+    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.statuses,   outOCV.statuses));
+    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.errors,     outOCV.errors));
+}
+
+inline std::ostream& operator<<(std::ostream& os, const cv::TermCriteria& criteria)
+{
+    os << "{";
+    switch (criteria.type) {
+    case cv::TermCriteria::COUNT:
+        os << "COUNT; ";
+        break;
+    case cv::TermCriteria::EPS:
+        os << "EPS; ";
+        break;
+    case cv::TermCriteria::COUNT | cv::TermCriteria::EPS:
+        os << "COUNT | EPS; ";
+        break;
+    default:
+        os << "TypeUndefined; ";
+        break;
+    };
+
+    return os << criteria.maxCount << "; " << criteria.epsilon <<"}";
+}
 
 #ifdef HAVE_OPENCV_VIDEO
 
-namespace opencv_test
-{
-namespace
-{
 inline GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional& testInst,
                                                    const BuildOpticalFlowPyramidTestParams& params,
                                                    BuildOpticalFlowPyramidTestOutput& outOCV,
@@ -355,32 +395,9 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(gapiBackSub.running());
 }
-} // namespace
-} // namespace opencv_test
-
-// Note: namespace must match the namespace of the type of the printed object
-namespace cv { namespace gapi { namespace video
-{
-inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
-{
-#define CASE(v) case BackgroundSubtractorType::v: os << #v; break
-    switch (op)
-    {
-        CASE(TYPE_BS_MOG2);
-        CASE(TYPE_BS_KNN);
-        default: GAPI_Assert(false && "unknown BackgroundSubtractor type");
-    }
-#undef CASE
-    return os;
-}
-}}} // namespace cv::gapi::video
 
 #else // !HAVE_OPENCV_VIDEO
 
-namespace opencv_test
-{
-namespace
-{
 inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,
                                                        const BuildOpticalFlowPyramidTestParams&,
                                                        BuildOpticalFlowPyramidTestOutput&,
@@ -416,63 +433,27 @@ inline GComputation runOCVnGAPIOptFlowPipeline(TestFunctional&,
 {
     GAPI_Assert(0 && "This function shouldn't be called without opencv_video");
 }
-} // namespace
-} // namespace opencv_test
 
 #endif // HAVE_OPENCV_VIDEO
 
-namespace opencv_test
-{
-namespace
-{
-inline void compareOutputPyramids(const BuildOpticalFlowPyramidTestOutput& outGAPI,
-                                  const BuildOpticalFlowPyramidTestOutput& outOCV)
-{
-    GAPI_Assert(outGAPI.maxLevel == outOCV.maxLevel);
-    GAPI_Assert(outOCV.maxLevel >= 0);
-    size_t maxLevel = static_cast<size_t>(outOCV.maxLevel);
-    for (size_t i = 0; i <= maxLevel; i++)
-    {
-        EXPECT_TRUE(AbsExact().to_compare_f()(outGAPI.pyramid[i], outOCV.pyramid[i]));
-    }
-}
-
-template <typename Elem>
-inline bool compareVectorsAbsExactForOptFlow(std::vector<Elem> outGAPI, std::vector<Elem> outOCV)
-{
-    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
-}
-
-inline void compareOutputsOptFlow(const OptFlowLKTestOutput& outGAPI,
-                                  const OptFlowLKTestOutput& outOCV)
-{
-    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.nextPoints, outOCV.nextPoints));
-    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.statuses,   outOCV.statuses));
-    EXPECT_TRUE(compareVectorsAbsExactForOptFlow(outGAPI.errors,     outOCV.errors));
-}
-
-inline std::ostream& operator<<(std::ostream& os, const cv::TermCriteria& criteria)
-{
-    os << "{";
-    switch (criteria.type) {
-    case cv::TermCriteria::COUNT:
-        os << "COUNT; ";
-        break;
-    case cv::TermCriteria::EPS:
-        os << "EPS; ";
-        break;
-    case cv::TermCriteria::COUNT | cv::TermCriteria::EPS:
-        os << "COUNT | EPS; ";
-        break;
-    default:
-        os << "TypeUndefined; ";
-        break;
-    };
-
-    return os << criteria.maxCount << "; " << criteria.epsilon <<"}";
-}
 } // namespace
 } // namespace opencv_test
 
+// Note: namespace must match the namespace of the type of the printed object
+namespace cv { namespace gapi { namespace video
+{
+inline std::ostream& operator<<(std::ostream& os, BackgroundSubtractorType op)
+{
+#define CASE(v) case BackgroundSubtractorType::v: os << #v; break
+    switch (op)
+    {
+        CASE(TYPE_BS_MOG2);
+        CASE(TYPE_BS_KNN);
+        default: GAPI_Assert(false && "unknown BackgroundSubtractor type");
+    }
+#undef CASE
+    return os;
+}
+}}} // namespace cv::gapi::video
 
 #endif // OPENCV_GAPI_VIDEO_TESTS_COMMON_HPP

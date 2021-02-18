@@ -172,13 +172,13 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
     std::tie(opType, detectShadows, learningRate, filePath, testNumFrames,
              compileArgs, cmpF) = GetParam();
 
-    int histLength = 500;
+    const int histLength = 500;
     double thr = -1;
     if (opType == gvideo::TYPE_BS_MOG2)
         thr = 16.;
     else if (opType == gvideo::TYPE_BS_KNN)
         thr = 400.;
-    gvideo::BackgroundSubtractorParams bsp(opType, histLength, thr, detectShadows, learningRate);
+    const gvideo::BackgroundSubtractorParams bsp(opType, histLength, thr, detectShadows, learningRate);
 
     // Video source declaration
     cv::VideoCapture cap;
