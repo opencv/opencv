@@ -777,8 +777,27 @@ std::string findDataDirectory(const std::string& relative_path, bool required = 
 
 class SystemInfoCollector : public testing::EmptyTestEventListener
 {
+public:
+    explicit SystemInfoCollector(const char* executable):
+        testing::EmptyTestEventListener()
+    {
+        std::string tmp(executable);
+        size_t last_slash1 = tmp.find_last_of('/');
+        size_t last_slash2 = tmp.find_last_of('\\');
+        if(last_slash1 == std::string::npos)
+           last_slash1 = 0;
+        if(last_slash2 == std::string::npos)
+           last_slash2 = 0;
+
+        size_t last_slash = std::max(last_slash1, last_slash2);
+        size_t last_dot = tmp.find_last_of('.');
+        if(last_dot < last_slash)
+            last_dot = std::string::npos;
+        module = tmp.substr(last_slash+1, last_dot);
+    }
 private:
     virtual void OnTestProgramStart(const testing::UnitTest&);
+    std::string module;
 };
 
 #ifndef __CV_TEST_EXEC_ARGS
@@ -807,7 +826,7 @@ int main(int argc, char **argv) \
     ts->init(resourcesubdir); \
     __CV_TEST_EXEC_ARGS(CV_TEST_INIT0_ ## INIT0) \
     ::testing::InitGoogleTest(&argc, argv); \
-    ::testing::UnitTest::GetInstance()->listeners().Append(new SystemInfoCollector); \
+    ::testing::UnitTest::GetInstance()->listeners().Append(new SystemInfoCollector(argv[0])); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
     parseCustomOptions(argc, argv); \
     } \

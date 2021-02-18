@@ -1118,6 +1118,7 @@ inline static void recordPropertyVerbose(const std::string & property,
 void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
 {
     std::cout << "CTEST_FULL_OUTPUT" << std::endl; // Tell CTest not to discard any output
+    recordPropertyVerbose("package", "OpenCV module", module);
     recordPropertyVerbose("cv_version", "OpenCV version", cv::getVersionString(), CV_VERSION);
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);

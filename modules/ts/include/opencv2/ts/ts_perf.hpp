@@ -653,7 +653,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), \
                            argc, argv); \
     ::testing::InitGoogleTest(&argc, argv); \
-    ::testing::UnitTest::GetInstance()->listeners().Append(new cvtest::SystemInfoCollector); \
+    ::testing::UnitTest::GetInstance()->listeners().Append(new cvtest::SystemInfoCollector(argv[0])); \
     ::testing::Test::RecordProperty("cv_module_name", #modulename); \
     ::perf::TestBase::RecordRunParameters(); \
     __CV_TEST_EXEC_ARGS(__VA_ARGS__) \
