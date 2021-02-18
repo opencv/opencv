@@ -33,7 +33,7 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
 #include <d3d11.h>
 #endif
 
-#ifdef HAVE_VAAPI
+#ifdef HAVE_VA
 #include <va/va_backend.h>
 #endif
 
@@ -44,7 +44,7 @@ extern "C" {
 #ifdef HAVE_D3D11
 #include <libavutil/hwcontext_d3d11va.h>
 #endif
-#ifdef HAVE_VAAPI
+#ifdef HAVE_VA
 #include <libavutil/hwcontext_vaapi.h>
 #endif
 #ifdef __cplusplus
@@ -95,7 +95,7 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     }
 #endif
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
-#ifdef HAVE_VAAPI
+#ifdef HAVE_VA
         VADisplay display = ((AVVAAPIDeviceContext *) hw_device_ctx->hwctx)->display;
         if (display) {
             VADriverContext *va_ctx = ((VADisplayContext *) display)->pDriverContext;
