@@ -87,7 +87,6 @@ static unsigned readId(const char* devName, const char* idName)
 static int findAdapter(unsigned desiredVendorId)
 {
     int adapterIndex = -1;
-    int numAdapters = 0;
 
     Directory dir(VA_INTEL_PCI_DIR);
 
@@ -101,10 +100,18 @@ static int findAdapter(unsigned desiredVendorId)
             unsigned vendorId = readId(name, "vendor");
             if (vendorId == desiredVendorId)
             {
-                adapterIndex = numAdapters;
+                char subdirName[256];
+                snprintf(subdirName, sizeof(subdirName), "%s/%s/%s", VA_INTEL_PCI_DIR, name, "drm");
+                Directory subdir(subdirName);
+                for (int j = 0; j < subdir.count(); ++j)
+                {
+                    if (!strncmp(subdir[j]->d_name, "card", 4))
+                    {
+                        adapterIndex = strtoul(subdir[j]->d_name + 4, NULL, 10);
+                    }
+                }
                 break;
             }
-            ++numAdapters;
         }
     }
 
