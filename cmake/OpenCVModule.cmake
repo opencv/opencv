@@ -98,6 +98,15 @@ macro(ocv_add_dependencies full_modname)
   endforeach()
   unset(__depsvar)
 
+  # hack for python
+  set(__python_idx)
+  list(FIND OPENCV_MODULE_${full_modname}_WRAPPERS "python" __python_idx)
+  if (NOT __python_idx EQUAL -1)
+    list(REMOVE_ITEM OPENCV_MODULE_${full_modname}_WRAPPERS "python")
+    list(APPEND OPENCV_MODULE_${full_modname}_WRAPPERS "python_bindings_generator" "python3")
+  endif()
+  unset(__python_idx)
+
   ocv_list_unique(OPENCV_MODULE_${full_modname}_REQ_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_OPT_DEPS)
   ocv_list_unique(OPENCV_MODULE_${full_modname}_PRIVATE_REQ_DEPS)
