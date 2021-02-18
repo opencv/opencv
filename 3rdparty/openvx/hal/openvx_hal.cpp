@@ -924,6 +924,11 @@ int ovx_hal_cvtGraytoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep,
 
 int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx)
 {
+    return ovx_hal_cvtTwoPlaneYUVtoBGREx(a, astep, a + h * astep, astep, b, bstep, w, h, bcn, swapBlue, uIdx);
+}
+
+int ovx_hal_cvtTwoPlaneYUVtoBGREx(const uchar * a, size_t astep, const uchar * b, size_t bstep, uchar * c, size_t cstep, int w, int h, int bcn, bool swapBlue, int uIdx)
+{
     if (skipSmallImages<VX_KERNEL_COLOR_CONVERT>(w, h))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dimTooBig(w) || dimTooBig(h))
@@ -933,8 +938,7 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
 
     if (w & 1 || h & 1) // It's not described in spec but sample implementation unable to convert odd sized images
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    refineStep(w, h, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, astep);
-    refineStep(w, h, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX, bstep);
+
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
@@ -943,8 +947,8 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
         std::vector<void *> ptrs;
             addr.push_back(ivx::Image::createAddressing(w, h, 1, (vx_int32)astep));
             ptrs.push_back((void*)a);
-            addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 2, (vx_int32)astep));
-            ptrs.push_back((void*)(a + h * astep));
+            addr.push_back(ivx::Image::createAddressing(w / 2, h / 2, 2, (vx_int32)bstep));
+            ptrs.push_back((void*)b);
 
         vxImage
             ia = ivx::Image::createFromHandle(ctx, uIdx ? VX_DF_IMAGE_NV21 : VX_DF_IMAGE_NV12, addr, ptrs);
@@ -952,7 +956,7 @@ int ovx_hal_cvtTwoPlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t
             return CV_HAL_ERROR_NOT_IMPLEMENTED; // OpenCV store NV12/NV21 as RANGE_RESTRICTED while OpenVX expect RANGE_FULL
         vxImage
             ib = ivx::Image::createFromHandle(ctx, bcn == 3 ? VX_DF_IMAGE_RGB : VX_DF_IMAGE_RGBX,
-                ivx::Image::createAddressing(w, h, bcn, (vx_int32)bstep), b);
+                ivx::Image::createAddressing(w, h, bcn, (vx_int32)cstep), c);
         ivx::IVX_CHECK_STATUS(vxuColorConvert(ctx, ia, ib));
     }
     catch (ivx::RuntimeError & e)
