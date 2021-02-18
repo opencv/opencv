@@ -611,7 +611,7 @@ public:
                 }
             }
             // Keep outputs k results per image.
-            // if _keepTopK * 8 > scoreIndexPairs.size(), apply partial sort. 
+            // if _keepTopK * 8 <= scoreIndexPairs.size(), apply partial sort.
             if ((_keepTopK << 3) > scoreIndexPairs.size()) {
                 std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
                           util::SortScorePairDescend<std::pair<int, int> >);
