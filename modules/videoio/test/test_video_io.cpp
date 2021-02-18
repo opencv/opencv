@@ -793,7 +793,7 @@ TEST_P(videowriter_acceleration, write)
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
 
-    const Size sz(320, 240);
+    const Size sz(640, 480);
     const int frameNum = 15;
     const double fps = 25;
 

@@ -151,7 +151,7 @@ int main(int argc, char** argv)
             return 1;
         }
         cout << "VideoWriter backend = " << writer.getBackendName() << endl;
-        VideoAccelerationType actual_accel = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(CAP_PROP_HW_ACCELERATION)));
+        actual_accel = static_cast<VideoAccelerationType>(static_cast<int>(writer.get(CAP_PROP_HW_ACCELERATION)));
         for (size_t i = 0; i < sizeof(acceleration_strings) / sizeof(acceleration_strings[0]); i++) {
             if (actual_accel == acceleration_strings[i].acceleration) {
                 cout << "VideoWriter acceleration = " << acceleration_strings[i].str << endl;
