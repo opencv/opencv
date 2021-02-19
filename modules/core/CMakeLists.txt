@@ -99,6 +99,9 @@ endif()
 if(HAVE_VA_INTEL_OLD_HEADER)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
 endif()
+if(OPENCV_LIBVA_LINK)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "OPENCV_LIBVA_LINK=1")
+endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
 
