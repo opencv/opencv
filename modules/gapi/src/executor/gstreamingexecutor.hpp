@@ -18,7 +18,7 @@
 #include <unordered_map>
 
 #if defined(HAVE_TBB)
-#  include <tbb/concurrent_queue.h>  FIXME: drop it from here!
+#  include <tbb/concurrent_queue.h> // FIXME: drop it from here!
 template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
 #else
 #  include "executor/conc_queue.hpp"

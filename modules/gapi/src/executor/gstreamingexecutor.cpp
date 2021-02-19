@@ -682,6 +682,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
         {
             return; // There are some pending postings in the beginning, return
         }
+
         GAPI_Assert(out_iter == m_postings[out_idx].begin());
         auto post_iter = m_postings[out_idx].begin();
         while (post_iter != m_postings[out_idx].end() && post_iter->ready == true)

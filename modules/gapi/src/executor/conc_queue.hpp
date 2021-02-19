@@ -66,7 +66,7 @@ void concurrent_bounded_queue<T>::unsafe_pop(T &t) {
 
 // Push an element to the queue. Blocking if there's no space left
 template<typename T>
-void concurrent_bounded_queue<T>::push(const T &t) {
+void concurrent_bounded_queue<T>::push(const T& t) {
     std::unique_lock<std::mutex> lock(m_mutex);
 
     if (m_capacity && m_capacity == m_data.size()) {

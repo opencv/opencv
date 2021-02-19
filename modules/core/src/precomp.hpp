@@ -43,6 +43,10 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#ifdef BUILD_PLUGIN
+#include "opencv2/core/utility.hpp"
+#else  // BUILD_PLUGIN
+
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"
 
@@ -375,4 +379,5 @@ int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
-#endif /*_CXCORE_INTERNAL_H_*/
+#endif  // BUILD_PLUGIN
+#endif  // __OPENCV_PRECOMP_H__

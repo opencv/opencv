@@ -992,7 +992,7 @@ TEST(Infer, DISABLED_DetectionNetworkProfile)
 
     auto pp = cv::gapi::ie::Params<PersonDetection> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgNumRequests(2u)
+    }.cfgNumRequests(4u)
      .pluginConfig({{IE::PluginConfigParams::KEY_CPU_THROUGHPUT_STREAMS, "2"}});
 
     std::size_t num_frames = 0u;
@@ -1010,23 +1010,23 @@ TEST(Infer, DISABLED_DetectionNetworkProfile)
     pipeline.start();
     while (pipeline.pull(cv::gout(gapi_detections)))
     {
-        IE::Blob::Ptr ie_det;
-        {
-            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
-            setNetParameters(net);
-            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
-            auto infer_request = this_network.CreateInferRequest();
+        //IE::Blob::Ptr ie_det;
+        //{
+            //auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            //auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            //setNetParameters(net);
+            //auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            //auto infer_request = this_network.CreateInferRequest();
 
-            const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
-                  auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
+            //const auto &iedims = net.getInputsInfo().begin()->second->getTensorDesc().getDims();
+                  //auto  cvdims = cv::gapi::ie::util::to_ocv(iedims);
 
-            infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
-            infer_request.Infer();
-            ie_det = infer_request.GetBlob("detection_out");
-        }
+            //infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+            //infer_request.Infer();
+            //ie_det = infer_request.GetBlob("detection_out");
+        //}
 
-        normAssert(cv::gapi::ie::util::to_ocv(ie_det), gapi_detections, "Test age output"   );
+        //normAssert(cv::gapi::ie::util::to_ocv(ie_det), gapi_detections, "Test age output"   );
         ++num_frames;
         cap >> in_mat;
     }
@@ -1037,7 +1037,7 @@ TEST(Infer, DISABLED_DetectionNetworkProfile)
                         << " ms" << endl;
 }
 
-TEST(Infer, DetectionNetworkInferList)
+TEST(Infer, DISABLED_DetectionNetworkInferList)
 {
     initTestDataPath();
     initDLDTDataPath();
@@ -1070,7 +1070,7 @@ TEST(Infer, DetectionNetworkInferList)
 
     auto pp = cv::gapi::ie::Params<PersonDetection> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgNumRequests(4u);
+    }.cfgNumRequests(2u);
 
     std::size_t num_frames = 0u;
 
@@ -1191,10 +1191,7 @@ TEST(InferList, DISABLED_TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     std::vector<cv::Rect> roi_list = {
         cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
@@ -1286,10 +1283,7 @@ TEST(Infer2, DISABLED_TestStreamingInfer)
 
     // Load IE network, initialize input data using that.
     cv::Mat in_mat;
-    std::vector<cv::Mat> ie_ages;
-    std::vector<cv::Mat> ie_genders;
-    std::vector<cv::Mat> gapi_ages;
-    std::vector<cv::Mat> gapi_genders;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
 
     std::vector<cv::Rect> roi_list = {
         cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
@@ -1364,6 +1358,116 @@ TEST(Infer2, DISABLED_TestStreamingInfer)
         cap >> in_mat;
     }
     pipeline.stop();
+}
+
+TEST(InferEmptyList, DISABLED_TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    // NB: Empty list of roi
+    std::vector<cv::Rect> roi_list;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GArray<cv::Rect> roi;
+    cv::GArray<GMat> age, gender;
+
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(roi, in);
+    cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 1u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        EXPECT_TRUE(gapi_ages.empty());
+        EXPECT_TRUE(gapi_genders.empty());
+    }
+}
+
+TEST(Infer2EmptyList, DISABLED_TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    // NB: Empty list of roi
+    std::vector<cv::Rect> roi_list;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GArray<cv::Rect> rr;
+    cv::GMat in;
+    cv::GArray<cv::GMat> age, gender;
+    std::tie(age, gender) = cv::gapi::infer2<AgeGender>(in, rr);
+
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 1u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        EXPECT_TRUE(gapi_ages.empty());
+        EXPECT_TRUE(gapi_genders.empty());
+    }
 }
 
 } // namespace opencv_test

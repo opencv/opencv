@@ -19,6 +19,7 @@
 #include <functional>
 #include <unordered_set>
 #include <thread>
+#include <queue>
 
 #include <ade/util/algorithm.hpp>
 
@@ -47,19 +48,9 @@
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
-#include "executor/conc_queue.hpp"
-
 #if INF_ENGINE_RELEASE < 2021010000
 #include "ie_compound_blob.h"
 #endif
-
-#if defined(HAVE_TBB)
-#  include <tbb/concurrent_queue.h>  // FIXME: drop it from here!
-template<typename T> using QueueType = tbb::concurrent_bounded_queue<T>;
-#else
-#  include "executor/conc_queue.hpp"
-template<typename T> using QueueType = cv::gapi::own::concurrent_bounded_queue<T>;
-#endif // TBB
 
 namespace IE = InferenceEngine;
 
@@ -304,12 +295,12 @@ public:
     }
 
     // Syntax sugar
-          cv::GShape      inShape(int i)             const;
-    const cv::Mat&        inMat(std::size_t input)   const;
+          cv::GShape      inShape(std::size_t input) const;
+    const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
     cv::Mat&     outMatR(std::size_t idx);
-    cv::GRunArgP output(int idx);
+    cv::GRunArgP output (std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -317,10 +308,6 @@ public:
     // NB: Need to gurantee that MediaFrame::View don't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
-
-    // FIXME: Should be removed from here!!!
-    std::mutex m;
-    cv::GArg state;
 
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
@@ -351,8 +338,7 @@ IECallContext::IECallContext(const IEUnit                                      &
                              const std::vector<cv::gimpl::RcDesc>              &  outs,
                              std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                              std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs)
-: uu(unit), out(output), m_input_objs(std::move(input_objs)),
-    m_output_objs(std::move(output_objs))
+: uu(unit), out(output), m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs))
 {
     for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
     for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
@@ -380,7 +366,7 @@ const cv::GArgs& IECallContext::inArgs() const {
     return m_args;
 }
 
-cv::GShape IECallContext::inShape(int i) const {
+cv::GShape IECallContext::inShape(std::size_t i) const {
     return m_in_shapes[i];
 }
 
@@ -396,7 +382,7 @@ cv::Mat& IECallContext::outMatR(std::size_t idx) {
     return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
 
-cv::GRunArgP IECallContext::output(int idx) {
+cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
 
@@ -523,10 +509,10 @@ private:
     std::vector<CompiledPtr> m_compiled_nets;
     // Queue which contains id's of idle IECompiled's.
     std::queue<size_t>       m_idle_ids;
-    std::thread              m_worker;
+    std::vector<std::thread> m_workers;
     // m_tasks and m_is_shutdown syncrhonization
-    std::mutex               m_mutex;
-    std::condition_variable  m_cv;
+    std::mutex               m_task_mutex;
+    std::condition_variable  m_task_cv;
     // m_idle_ids syncrhonization
     std::mutex               m_idle_mutex;
     std::condition_variable  m_idle_cv;
@@ -539,28 +525,36 @@ cv::gimpl::ie::RequestPool::RequestPool(const IEUnit& uu) {
         m_compiled_nets.push_back(uu.compile());
         m_idle_ids.push(i);
     }
-    m_worker = std::thread(&cv::gimpl::ie::RequestPool::worker, this);
+
+    // FIXME: The number of workers should be configured.
+    for (size_t i = 0; i < uu.params.nireq; ++i) {
+        m_workers.emplace_back(&cv::gimpl::ie::RequestPool::worker, this);
+    }
 }
 
 void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
     {
-        std::lock_guard<std::mutex> lk{m_mutex};
+        std::lock_guard<std::mutex> lk{m_task_mutex};
         m_tasks.push(std::move(t));
     }
-    m_cv.notify_one();
+    m_task_cv.notify_one();
 }
 
 void cv::gimpl::ie::RequestPool::wait_and_shutdown() {
     {
-        std::lock_guard<std::mutex> lk{m_mutex};
+        std::lock_guard<std::mutex> lk{m_task_mutex};
         // Check if it's already shutdown.
         if (m_is_shutdown) {
             return;
         }
         m_is_shutdown = true;
     }
-    m_cv.notify_one();
-    m_worker.join();
+
+    m_task_cv.notify_one();
+
+    for (auto&& worker : m_workers) {
+        worker.join();
+    }
 }
 
 cv::gimpl::ie::RequestPool::~RequestPool() {
@@ -572,55 +566,75 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           size_t id) {
     task.callback(*compiled);
     {
-        std::lock_guard<std::mutex> lock(m_idle_mutex);
+        std::lock_guard<std::mutex> idle_lock(m_idle_mutex);
         m_idle_ids.push(id);
     }
     m_idle_cv.notify_one();
 }
 
 void cv::gimpl::ie::RequestPool::worker() {
+    // The worker algorigthm:
+    // In infinite loop:
+    // 1. Worker waits for non-empty task queue or wait_and_shutdown is called.
+    // 2. If worker wakes up and queue isn't empty, then:
+    //     2.1 Get a task from queue and release lock.
+    //     2.2 Wait for idle IECompiled.
+    //     2.3 Get the id of the idle IECompiled
+    //     2.4 Drop this id from idle queue, which means that IECompiled isn't idle anymore.
+    //     2.5 Get IECompiled corresponing to id and release lock.
+    //     2.6 Run task and pass IECompiled id to the callback which returns it back to the queue.
+    //         Then go to the next iteration.
+    // 3. At this execution moment there is no tasks in queue and shutdown is called.
+    //    But some compiled networks probably are working at that moment, let's check it.
+    // 4. If all compiled networks are idle, need to double check a task queue,
+    //    because the tasks can submit the new ones in their callbacks, it that case go to (1).
+    // 5. Finally if all compiled networks are idle and task queue is empty, finish execution.
+
     while (true) {
-        // Wait for a task or shutdown.
+        // (1) Wait for a task or shutdown.
         {
-            std::unique_lock<std::mutex> lock{m_mutex};
-            m_cv.wait(lock, [this]() { return !m_tasks.empty() || m_is_shutdown; });
+            std::unique_lock<std::mutex> task_lk{m_task_mutex};
+            m_task_cv.wait(task_lk, [this]() { return !m_tasks.empty() || m_is_shutdown; });
 
             if (!m_tasks.empty()) {
-                // Get task from queue.
+                // (2.1) Get task from queue.
                 auto task = m_tasks.front();
                 m_tasks.pop();
-                lock.unlock();
+                task_lk.unlock();
 
-                // Wait for idle IECompiled.
+                // (2.2) Wait for idle IECompiled.
                 std::unique_lock<std::mutex> idle_lock(m_idle_mutex);
                 m_idle_cv.wait(idle_lock, [this](){ return !m_idle_ids.empty(); });
 
-                // Get the id of the first idle IECompiled.
+                // (2.3) Get the id of the first idle IECompiled.
                 size_t id = m_idle_ids.front();
+                // (2.4) Drop from queue.
                 m_idle_ids.pop();
-                // Get the first idle IECompiled by id.
+                // (2.5) Get the first idle IECompiled by id.
                 auto& compiled = m_compiled_nets[id];
                 idle_lock.unlock();
 
+                // (2.6) Run and go next.
                 compiled->this_request.SetCompletionCallback(
                         std::bind(&cv::gimpl::ie::RequestPool::callback, this, task, compiled, id));
                 task.run(*compiled);
                 continue;
             }
         }
-        // If execution is here, then task queue was empty and wait_and_shutdown was called.
-        // Let's check whether all compiled nets are done.
+        // (3) In this execution moment there is no tasks in queue and shutdown is called.
+
         // C++17 std::scoped_lock ???
+        // (4)
         std::lock_guard<std::mutex> idle_lock(m_idle_mutex);
         if (m_idle_ids.size() == m_compiled_nets.size()) {
             // Need to check that queue is empty again.
-            std::lock_guard<std::mutex> lock(m_mutex);
+            std::lock_guard<std::mutex> task_lk(m_task_mutex);
             if (m_tasks.empty()) {
-                // Finish the worker thread.
+                // (5) Finish the worker thread.
                 break;
             }
         }
-        // Some compileds are busy or the new task is appeared.
+        // (4) Some compiled networks are busy or the new task is appeared.
         continue;
     }
 }
@@ -664,28 +678,25 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
     // General alghoritm:
-    //     1. Get input message from IInput
-    //     2. Collect island inputs/outputs.
-    //     3. Create kernel context. (Every kernel has his own context).
-    //     4. If the EndOfStream message is recieved, wait until all passed task are done.
-    //     5.
+    //     1. Collect island inputs/outputs.
+    //     2. Create kernel context. (Every kernel has his own context).
+    //     3. If the EndOfStream message is recieved, wait until all passed task are done.
+    //     4.
     //        5.1 Run the kernel.
     //        5.2 Kernel just pushes corresponding tasks to reqPool queue and finishes.
     //        5.3 After the kernel is finished continue processing next frame
     //
-    //     6. If graph is compiled in non-streaming mode, wait until all tasks are done.
+    //     5. If graph is compiled in non-streaming mode, wait until all tasks are done.
 
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
 
-    // FIXME: Getting from IOutput must no to intersect with callbacks
     const auto &in_desc  = in.desc();
     const auto  in_msg   = in.get();
 
-    // (1). Get input message from IInput.
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        // (4) Wait until all passed task are done.
+        // (3) Wait until all passed task are done.
         m_reqPool->wait_and_shutdown();
         out.post(cv::gimpl::EndOfStream{});
         return;
@@ -694,6 +705,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
 
+    // (1) Collect island inputs/outputs
     input_objs.reserve(in_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                 ade::util::toRange(in_vector)))
@@ -712,16 +724,16 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     GConstGIEModel giem(m_g);
     const auto &uu = giem.metadata(this_nh).get<IEUnit>();
     const auto &op = m_gm.metadata(this_nh).get<Op>();
-    // (3) Create kernel context
+    // (2) Create kernel context
     auto ctx = std::make_shared<IECallContext>(uu, out, op.args, op.outs,
             std::move(input_objs), std::move(output_objs));
 
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
-    // (5) Run the kernel.
+    // (4) Run the kernel.
     kk.run(ctx, *m_reqPool);
 
-    // (6) In non-streaming mode need to wait until the all tasks are done
+    // (5) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
         m_reqPool->wait_and_shutdown();
