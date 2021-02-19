@@ -78,8 +78,10 @@ function(ocv_create_plugin module default_name dependency_target dependency_targ
     set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES PREFIX "${OPENCV_PLUGIN_MODULE_PREFIX}")
   endif()
 
-  # Hack for Windows only, Linux/MacOS uses global symbol table (without exact .so binding)
-  if(WIN32)
+  if(APPLE)
+    set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+  elseif(WIN32)
+    # Hack for Windows only, Linux/MacOS uses global symbol table (without exact .so binding)
     find_package(OpenCV REQUIRED ${module} ${OPENCV_PLUGIN_DEPS})
     target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE ${OpenCV_LIBRARIES})
   endif()
