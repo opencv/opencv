@@ -40,7 +40,6 @@ Notes:
 #endif
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/version.hpp"
 
 #ifdef OPENCV_SIMD_CONFIG_HEADER
 #include CVAUX_STR(OPENCV_SIMD_CONFIG_HEADER)
