@@ -311,19 +311,26 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
-    result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                      distCoeffs, rvec, tvec, useExtrinsicGuess,
-                      (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    try
+    {
+        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+                          distCoeffs, rvec, tvec, useExtrinsicGuess,
+                          (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    }
+    catch (const cv::Exception& e)
+    {
+        result = 0;
+        CV_UNUSED(e);
+        CV_LOG_DEBUG(NULL, "solvePnPRansac(): error occurred in solvePnP stage:\n" << e.what());
+    }
 
-    if( result <= 0 )
+    if(result <= 0)
     {
         _rvec.assign(_local_model.col(0));    // output rotation vector
         _tvec.assign(_local_model.col(1));    // output translation vector
 
-        if( _inliers.needed() )
-            _inliers.release();
-
-        return false;
+        CV_LOG_DEBUG(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points "
+            "in the consensus set failed, use result from MSS (Minimal Sample Sets) stage instead.");
     }
     else
     {

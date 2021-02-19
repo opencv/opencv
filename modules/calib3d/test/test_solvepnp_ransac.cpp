@@ -837,6 +837,39 @@ TEST(Calib3d_SolvePnPRansac, double_support)
     EXPECT_LE(cvtest::norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
 }
 
+TEST(Calib3d_SolvePnPRansac, bad_input_points)
+{
+    // with this specific data
+    // when computing the final pose using points in the consensus set with SOLVEPNP_ITERATIVE and solvePnP()
+    // an exception is thrown from solvePnP because there are 5 non-coplanar 3D points and the DLT algorithm needs at least 6 non-coplanar 3D points
+    // with PR #19253 we choose to return true, with the pose estimated from the MSS stage instead of throwing the exception
+
+    Mat pts2d = (Mat_<float>(6, 2) <<
+        -5.38358629e-01, -5.09638414e-02,
+        -5.07192254e-01, -2.20743284e-01,
+        -5.43107152e-01, -4.90474701e-02,
+        -5.54325163e-01, -1.86715424e-01,
+        -5.59334219e-01, -4.01909500e-02,
+        -5.43504596e-01, -4.61776406e-02);
+
+    Mat pts3d = (Mat_<float>(6, 3) <<
+        -3.01153604e-02, -1.55665115e-01, 4.50000018e-01,
+        4.27827090e-01, 4.28645730e-01, 1.08600008e+00,
+        -3.14165242e-02, -1.52656138e-01, 4.50000018e-01,
+        -1.46217480e-01, 5.57961613e-02, 7.17000008e-01,
+        -4.89348806e-02, -1.38795510e-01, 4.47000027e-01,
+        -3.13065052e-02, -1.52636901e-01, 4.51000035e-01);
+
+    Mat camera_mat = Mat::eye(3, 3, CV_64FC1);
+    Mat rvec, tvec;
+    vector<int> inliers;
+
+    // solvePnPRansac will return true with 5 inliers, which means the result is from MSS stage.
+    bool result = solvePnPRansac(pts3d, pts2d, camera_mat, noArray(), rvec, tvec, false, 100, 4.f / 460.f, 0.99, inliers);
+    EXPECT_EQ(inliers.size(), size_t(5));
+    EXPECT_TRUE(result);
+}
+
 TEST(Calib3d_SolvePnP, input_type)
 {
     Matx33d intrinsics(5.4794130238156129e+002, 0., 2.9835545700043139e+002, 0.,
