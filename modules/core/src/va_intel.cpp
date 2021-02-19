@@ -33,6 +33,17 @@ using namespace cv;
 #endif
 #endif
 
+#ifdef HAVE_VA
+#ifndef OPENCV_LIBVA_LINK
+#include "va_wrapper.impl.hpp"
+#else
+namespace cv { namespace detail {
+static void init_libva() { /* nothing */ }
+}}  // namespace
+#endif
+using namespace cv::detail;
+#endif
+
 namespace cv { namespace va_intel {
 
 #ifdef HAVE_VA_INTEL
@@ -54,6 +65,8 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
 #   ifdef HAVE_VA_INTEL
     contextInitialized = false;
     if (tryInterop)
@@ -507,6 +520,8 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
     const int stype = CV_8UC3;
 
     int srcType = src.type();
@@ -611,6 +626,8 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
     const int dtype = CV_8UC3;
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
