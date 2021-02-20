@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     log.debug("Args: %s", args)
 
-    os.environ["OPENCV_JS_WHITELIST"] = args.config
+    os.environ["OPENCV_JS_WHITELIST"] = os.path.abspath(args.config)
 
     if 'EMMAKEN_JUST_CONFIGURE' in os.environ:
         del os.environ['EMMAKEN_JUST_CONFIGURE']  # avoid linker errors with NODERAWFS message then using 'emcmake' launcher

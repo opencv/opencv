@@ -9,66 +9,26 @@
 #include "plugin_capture_api.hpp"
 #include "plugin_writer_api.hpp"
 
-#include "opencv2/core/utils/filesystem.hpp"
 #include "opencv2/core/utils/configuration.private.hpp"
+#include "opencv2/core/utils/logger.hpp"
+
 #include "opencv2/core/private.hpp"
 #include "videoio_registry.hpp"
 
 //==================================================================================================
 // Dynamic backend implementation
 
-#include "opencv2/core/utils/logger.hpp"
-#include <sstream>
-using namespace std;
+#include "opencv2/core/utils/plugin_loader.private.hpp"
 
-#if defined(_WIN32)
-#include <windows.h>
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__GLIBC__)
-#include <dlfcn.h>
-#endif
 
 #include "backend_plugin_legacy.impl.hpp"
 
+
 namespace cv { namespace impl {
 
-#if defined(_WIN32)
-typedef HMODULE LibHandle_t;
-typedef wchar_t FileSystemChar_t;
-typedef std::wstring FileSystemPath_t;
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(ENABLE_PLUGINS)
 
-static
-FileSystemPath_t toFileSystemPath(const std::string& p)
-{
-    FileSystemPath_t result;
-    result.resize(p.size());
-    for (size_t i = 0; i < p.size(); i++)
-        result[i] = (wchar_t)p[i];
-    return result;
-}
-static
-std::string toPrintablePath(const FileSystemPath_t& p)
-{
-    std::string result;
-    result.resize(p.size());
-    for (size_t i = 0; i < p.size(); i++)
-    {
-        wchar_t ch = p[i];
-        if ((int)ch >= ' ' && (int)ch < 128)
-            result[i] = (char)ch;
-        else
-            result[i] = '?';
-    }
-    return result;
-}
-#else  // !_WIN32
-typedef void* LibHandle_t;
-typedef char FileSystemChar_t;
-typedef std::string FileSystemPath_t;
-
-static inline FileSystemPath_t toFileSystemPath(const std::string& p) { return p; }
-static inline std::string toPrintablePath(const FileSystemPath_t& p) { return p; }
-#endif
-
+using namespace cv::plugin::impl;  // plugin_loader.hpp
 
 static Mutex& getInitializationMutex()
 {
@@ -76,125 +36,6 @@ static Mutex& getInitializationMutex()
     return initializationMutex;
 }
 
-static inline
-void* getSymbol_(LibHandle_t h, const char* symbolName)
-{
-#if defined(_WIN32)
-    return (void*)GetProcAddress(h, symbolName);
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__GLIBC__)
-    return dlsym(h, symbolName);
-#endif
-}
-
-static inline
-LibHandle_t libraryLoad_(const FileSystemPath_t& filename)
-{
-#if defined(_WIN32)
-# ifdef WINRT
-    return LoadPackagedLibrary(filename.c_str(), 0);
-# else
-    return LoadLibraryW(filename.c_str());
-#endif
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__GLIBC__)
-    return dlopen(filename.c_str(), RTLD_LAZY);
-#endif
-}
-
-static inline
-void libraryRelease_(LibHandle_t h)
-{
-#if defined(_WIN32)
-    FreeLibrary(h);
-#elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__GLIBC__)
-    dlclose(h);
-#endif
-}
-
-static inline
-std::string libraryPrefix()
-{
-#if defined(_WIN32)
-    return "";
-#else
-    return "lib";
-#endif
-}
-static inline
-std::string librarySuffix()
-{
-#if defined(_WIN32)
-    const char* suffix = ""
-        CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
-    #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
-        "_64"
-    #endif
-    #if defined(_DEBUG) && defined(DEBUG_POSTFIX)
-        CVAUX_STR(DEBUG_POSTFIX)
-    #endif
-        ".dll";
-    return suffix;
-#else
-    return ".so";
-#endif
-}
-
-//============================
-
-class DynamicLib
-{
-private:
-    LibHandle_t handle;
-    const FileSystemPath_t fname;
-
-public:
-    DynamicLib(const FileSystemPath_t& filename)
-        : handle(0), fname(filename)
-    {
-        libraryLoad(filename);
-    }
-    ~DynamicLib()
-    {
-        libraryRelease();
-    }
-    bool isLoaded() const
-    {
-        return handle != NULL;
-    }
-    void* getSymbol(const char* symbolName) const
-    {
-        if (!handle)
-        {
-            return 0;
-        }
-        void * res = getSymbol_(handle, symbolName);
-        if (!res)
-            CV_LOG_DEBUG(NULL, "No symbol '" << symbolName << "' in " << toPrintablePath(fname));
-        return res;
-    }
-    const std::string getName() const { return toPrintablePath(fname); }
-private:
-    void libraryLoad(const FileSystemPath_t& filename)
-    {
-        handle = libraryLoad_(filename);
-        CV_LOG_INFO(NULL, "load " << toPrintablePath(filename) << " => " << (handle ? "OK" : "FAILED"));
-    }
-    void libraryRelease()
-    {
-        if (handle)
-        {
-            CV_LOG_INFO(NULL, "unload "<< toPrintablePath(fname));
-            libraryRelease_(handle);
-            handle = 0;
-        }
-    }
-
-private:
-    DynamicLib(const DynamicLib &);
-    DynamicLib &operator=(const DynamicLib &);
-};
-
-
-//============================
 
 class PluginBackend: public IBackend
 {
@@ -345,12 +186,12 @@ protected:
     }
 
 public:
-    Ptr<DynamicLib> lib_;
+    Ptr<cv::plugin::impl::DynamicLib> lib_;
     const OpenCV_VideoIO_Capture_Plugin_API* capture_api_;
     const OpenCV_VideoIO_Writer_Plugin_API* writer_api_;
     const OpenCV_VideoIO_Plugin_API_preview* plugin_api_;  //!< deprecated
 
-    PluginBackend(const Ptr<DynamicLib>& lib)
+    PluginBackend(const Ptr<cv::plugin::impl::DynamicLib>& lib)
         : lib_(lib)
         , capture_api_(NULL), writer_api_(NULL)
         , plugin_api_(NULL)
@@ -416,11 +257,11 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
 {
     using namespace cv::utils;
     using namespace cv::utils::fs;
-    const string baseName_l = toLowerCase(baseName);
-    const string baseName_u = toUpperCase(baseName);
+    const std::string baseName_l = toLowerCase(baseName);
+    const std::string baseName_u = toUpperCase(baseName);
     const FileSystemPath_t baseName_l_fs = toFileSystemPath(baseName_l);
-    vector<FileSystemPath_t> paths;
-    const vector<string> paths_ = getConfigurationParameterPaths("OPENCV_VIDEOIO_PLUGIN_PATH", vector<string>());
+    std::vector<FileSystemPath_t> paths;
+    const std::vector<std::string> paths_ = getConfigurationParameterPaths("OPENCV_VIDEOIO_PLUGIN_PATH", std::vector<std::string>());
     if (paths_.size() != 0)
     {
         for (size_t i = 0; i < paths_.size(); i++)
@@ -441,9 +282,9 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
 #endif
         }
     }
-    const string default_expr = libraryPrefix() + "opencv_videoio_" + baseName_l + "*" + librarySuffix();
-    const string plugin_expr = getConfigurationParameterString((std::string("OPENCV_VIDEOIO_PLUGIN_") + baseName_u).c_str(), default_expr.c_str());
-    vector<FileSystemPath_t> results;
+    const std::string default_expr = libraryPrefix() + "opencv_videoio_" + baseName_l + "*" + librarySuffix();
+    const std::string plugin_expr = getConfigurationParameterString((std::string("OPENCV_VIDEOIO_PLUGIN_") + baseName_u).c_str(), default_expr.c_str());
+    std::vector<FileSystemPath_t> results;
 #ifdef _WIN32
     FileSystemPath_t moduleName = toFileSystemPath(libraryPrefix() + "opencv_videoio_" + baseName_l + librarySuffix());
 #ifndef WINRT
@@ -480,12 +321,12 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     }
 #endif // _DEBUG && DEBUG_POSTFIX
 #else
-    CV_LOG_INFO(NULL, "VideoIO pluigin (" << baseName << "): glob is '" << plugin_expr << "', " << paths.size() << " location(s)");
-    for (const string & path : paths)
+    CV_LOG_INFO(NULL, "VideoIO plugin (" << baseName << "): glob is '" << plugin_expr << "', " << paths.size() << " location(s)");
+    for (const std::string& path : paths)
     {
         if (path.empty())
             continue;
-        vector<string> candidates;
+        std::vector<std::string> candidates;
         cv::glob(utils::fs::join(path, plugin_expr), candidates);
         CV_LOG_INFO(NULL, "    - " << path << ": " << candidates.size());
         copy(candidates.begin(), candidates.end(), back_inserter(results));
@@ -499,7 +340,7 @@ void PluginBackendFactory::loadPlugin()
 {
     for (const FileSystemPath_t& plugin : getPluginCandidates(baseName_))
     {
-        Ptr<DynamicLib> lib = makePtr<DynamicLib>(plugin);
+        auto lib = makePtr<cv::plugin::impl::DynamicLib>(plugin);
         if (!lib->isLoaded())
             continue;
         try
@@ -834,11 +675,17 @@ Ptr<IVideoWriter> PluginBackend::createWriter(const std::string& filename, int f
     return Ptr<IVideoWriter>();
 }
 
+#endif  // OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(ENABLE_PLUGINS)
+
 }  // namespace
 
 Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char* baseName)
 {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(ENABLE_PLUGINS)
     return makePtr<impl::PluginBackendFactory>(id, baseName); //.staticCast<IBackendFactory>();
+#else
+    return Ptr<IBackendFactory>();
+#endif
 }
 
 }  // namespace

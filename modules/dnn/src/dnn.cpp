@@ -2972,7 +2972,7 @@ struct Net::Impl : public detail::NetImplBase
                 // the concatenation optimization is applied with batch_size > 1.
                 // so, for now, we only apply this optimization in the most popular
                 // case batch_size == 1.
-                int axis = clamp(concatLayer->axis, output.dims);
+                int axis = normalize_axis(concatLayer->axis, output.dims);
                 if( output.total(0, axis) == 1 )
                 {
                     size_t i, ninputs = ld.inputBlobsId.size();

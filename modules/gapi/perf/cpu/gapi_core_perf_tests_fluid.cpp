@@ -147,7 +147,9 @@ INSTANTIATE_TEST_CASE_P(AbsDiffPerfTestFluid, AbsDiffPerfTest,
 
 INSTANTIATE_TEST_CASE_P(AbsDiffCPerfTestFluid, AbsDiffCPerfTest,
     Combine(Values(szSmall128, szVGA, sz720p, sz1080p),
-            Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+            Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_8UC2,
+                   CV_16UC2, CV_16SC2, CV_8UC3, CV_16UC3,
+                   CV_16SC3, CV_8UC4, CV_16UC4, CV_16SC4),
             Values(cv::compile_args(CORE_FLUID))));
 
 // INSTANTIATE_TEST_CASE_P(SumPerfTestFluid, SumPerfTest,
