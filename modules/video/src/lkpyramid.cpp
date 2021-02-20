@@ -938,7 +938,7 @@ namespace
             {
                 if (!lkSparse_run(prevPyr[level], nextPyr[level], prevPts,
                                   nextPts, status, err,
-                                  prevPts.cols, level))
+                                  prevPts.total(), level))
                     return false;
             }
             return true;
