@@ -74,6 +74,8 @@ public:
     explicit Device(void* d);
     Device(const Device& d);
     Device& operator = (const Device& d);
+    Device(Device&& d) CV_NOEXCEPT;
+    Device& operator = (Device&& d) CV_NOEXCEPT;
     CV_WRAP ~Device();
 
     void set(void* d);
@@ -250,6 +252,8 @@ public:
     ~Context();
     Context(const Context& c);
     Context& operator= (const Context& c);
+    Context(Context&& c) CV_NOEXCEPT;
+    Context& operator = (Context&& c) CV_NOEXCEPT;
 
     /** @deprecated */
     bool create();
@@ -302,6 +306,8 @@ public:
     ~Platform();
     Platform(const Platform& p);
     Platform& operator = (const Platform& p);
+    Platform(Platform&& p) CV_NOEXCEPT;
+    Platform& operator = (Platform&& p) CV_NOEXCEPT;
 
     void* ptr() const;
 
@@ -362,6 +368,8 @@ public:
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
+    Queue(Queue&& q) CV_NOEXCEPT;
+    Queue& operator = (Queue&& q) CV_NOEXCEPT;
 
     bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
@@ -384,7 +392,7 @@ class CV_EXPORTS KernelArg
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
     KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
-    KernelArg();
+    KernelArg() CV_NOEXCEPT;
 
     static KernelArg Local(size_t localMemSize)
     { return KernelArg(LOCAL, 0, 1, 1, 0, localMemSize); }
@@ -428,6 +436,8 @@ public:
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
+    Kernel(Kernel&& k) CV_NOEXCEPT;
+    Kernel& operator = (Kernel&& k) CV_NOEXCEPT;
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
@@ -502,8 +512,9 @@ public:
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     Program(const Program& prog);
-
     Program& operator = (const Program& prog);
+    Program(Program&& prog) CV_NOEXCEPT;
+    Program& operator = (Program&& prog) CV_NOEXCEPT;
     ~Program();
 
     bool create(const ProgramSource& src,
@@ -551,6 +562,8 @@ public:
     ~ProgramSource();
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
+    ProgramSource(ProgramSource&& prog) CV_NOEXCEPT;
+    ProgramSource& operator = (ProgramSource&& prog) CV_NOEXCEPT;
 
     const String& source() const; // deprecated
     hash_t hash() const; // deprecated
@@ -623,6 +636,8 @@ public:
 
     PlatformInfo(const PlatformInfo& i);
     PlatformInfo& operator =(const PlatformInfo& i);
+    PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT;
+    PlatformInfo& operator = (PlatformInfo&& i) CV_NOEXCEPT;
 
     String name() const;
     String vendor() const;
@@ -683,7 +698,7 @@ CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const Str
 class CV_EXPORTS Image2D
 {
 public:
-    Image2D();
+    Image2D() CV_NOEXCEPT;
 
     /**
     @param src UMat object from which to get image properties and data
@@ -696,6 +711,8 @@ public:
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
+    Image2D(Image2D &&) CV_NOEXCEPT;
+    Image2D &operator=(Image2D &&) CV_NOEXCEPT;
 
     /** Indicates if creating an aliased image should succeed.
     Depends on the underlying platform and the dimensions of the UMat.
