@@ -7,7 +7,6 @@
 #include "opencv2/videoio.hpp"
 #include "cvconfig.h"
 #include <list>
-#include <codecvt>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +30,9 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
 #ifdef HAVE_D3D11
 #define D3D11_NO_HELPERS
 #include <d3d11.h>
+#if __cplusplus >= 201103L // C++11
+#include <codecvt>
+#endif
 #endif
 
 #ifdef HAVE_VA
@@ -74,8 +76,11 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     AVHWDeviceContext* hw_device_ctx = (AVHWDeviceContext*)ctx->data;
     if (!hw_device_ctx->hwctx)
         return false;
+    const char *hw_name = av_hwdevice_get_type_name(hw_type);
+    if (hw_type == AV_HWDEVICE_TYPE_QSV)
+        hw_name = "MFX";
     bool ret = true;
-#ifdef HAVE_D3D11
+#if defined(HAVE_D3D11) && __cplusplus >= 201103L // C++11
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
         ID3D11Device* device = ((AVD3D11VADeviceContext*)hw_device_ctx->hwctx)->device;
         IDXGIDevice* dxgiDevice = nullptr;
@@ -86,7 +91,8 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
                 if (SUCCEEDED(adapter->GetDesc(&desc))) {
                     std::wstring name(desc.Description);
                     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-                    CV_LOG_INFO(NULL, "FFMPEG: Using D3D11 video acceleration on GPU device: " << conv.to_bytes(name));
+                    CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << conv.to_bytes(name));
+                    return true;
                 }
                 adapter->Release();
             }
@@ -99,8 +105,6 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
         VADisplay display = ((AVVAAPIDeviceContext *) hw_device_ctx->hwctx)->display;
         if (display) {
             VADriverContext *va_ctx = ((VADisplayContext *) display)->pDriverContext;
-            const char *hw_string = (hw_type == AV_HWDEVICE_TYPE_QSV) ? "MFX" : "VAAPI";
-            CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_string << " video acceleration on GPU device: " << va_ctx->str_vendor);
             if (hw_type == AV_HWDEVICE_TYPE_QSV) {
                 // Workaround for issue fixed in MediaSDK 21.x https://github.com/Intel-Media-SDK/MediaSDK/issues/2595
                 // Checks VAAPI driver for support of VideoProc operation required by MediaSDK
@@ -116,10 +120,17 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
                     }
                 }
             }
+            if (ret) {
+                CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << va_ctx->str_vendor);
+                return true;
+            }
         }
 #else
-        ret = (hw_type != AV_HWDEVICE_TYPE_QSV);
+        ret = (hw_type != AV_HWDEVICE_TYPE_QSV); // disable MFX if we can't check VAAPI for VideoProc support (see above)
 #endif
+    }
+    if (ret) {
+        CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration");
     }
     return ret;
 }
