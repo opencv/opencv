@@ -2107,6 +2107,12 @@ public:
             randu(scales, -1.0f, 1.0f);
             activationParams.blobs.push_back(scales);
         }
+        else if (activationParams.type == "Exp")
+        {
+            activationParams.set("base", -1.0f);
+            activationParams.set("scale", 0.3f);
+            activationParams.set("shift", 0.6f);
+        }
     }
 
     static void makeDefaultTestEltwiseLayer(LayerParams& eltwiseParams, const std::string& op, bool withCoefficients)
@@ -2178,7 +2184,7 @@ public:
     static testing::internal::ParamGenerator<std::string> activationLayersList()
     {
         // TODO: automate list generation
-        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power");
+        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power", "Exp");
     }
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
