@@ -229,6 +229,25 @@ struct PowerFunctor {
 };
 
 template <class T>
+struct ExpFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() : normScale(1), normShift(0) { }
+        CUDA4DNN_HOST_DEVICE Params(T nScale_, T nShift_) : normScale(nScale_), normShift(nShift_) { }
+        T normScale, normShift;
+    };
+
+    CUDA4DNN_DEVICE ExpFunctor() : ExpFunctor(Params{}) { }
+    CUDA4DNN_DEVICE ExpFunctor(const Params& params) : normScale{params.normScale}, normShift{params.normShift} { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::fast_exp;
+        return fast_exp(normShift + normScale * value);
+    }
+
+    T normScale, normShift;
+};
+
+template <class T>
 struct MaxFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() { }
