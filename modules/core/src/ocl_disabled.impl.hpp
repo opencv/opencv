@@ -34,7 +34,7 @@ CV_EXPORTS_W void finish() { /* nothing */ }
 
 CV_EXPORTS bool haveSVM() { return false; }
 
-Device::Device() : p(NULL) { }
+Device::Device() CV_NOEXCEPT : p(NULL) { }
 Device::Device(void* d) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Device::Device(const Device& d) : p(NULL) { }
 Device& Device::operator=(const Device& d) { return *this; }
@@ -145,7 +145,7 @@ const Device& Device::getDefault()
 }
 
 
-Context::Context() : p(NULL) { }
+Context::Context() CV_NOEXCEPT : p(NULL) { }
 Context::Context(int dtype) : p(NULL) { }
 Context::~Context() { }
 Context::Context(const Context& c) : p(NULL) { }
@@ -169,7 +169,7 @@ void* Context::ptr() const { return NULL; }
 bool Context::useSVM() const { return false; }
 void Context::setUseSVM(bool enabled) { }
 
-Platform::Platform() : p(NULL) { }
+Platform::Platform() CV_NOEXCEPT : p(NULL) { }
 Platform::~Platform() { }
 Platform::Platform(const Platform&) : p(NULL) { }
 Platform& Platform::operator=(const Platform&) { return *this; }
@@ -189,7 +189,7 @@ void convertFromImage(void* cl_mem_image, UMat& dst) { OCL_NOT_AVAILABLE(); }
 
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device) { OCL_NOT_AVAILABLE(); }
 
-Queue::Queue() : p(NULL) { }
+Queue::Queue() CV_NOEXCEPT : p(NULL) { }
 Queue::Queue(const Context& c, const Device& d) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Queue::~Queue() { }
 Queue::Queue(const Queue& q) {}
@@ -209,7 +209,7 @@ Queue& Queue::getDefault()
 const Queue& Queue::getProfilingQueue() const { OCL_NOT_AVAILABLE(); }
 
 
-KernelArg::KernelArg()
+KernelArg::KernelArg() CV_NOEXCEPT
     : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
@@ -226,7 +226,7 @@ KernelArg KernelArg::Constant(const Mat& m)
 }
 
 
-Kernel::Kernel() : p(NULL) { }
+Kernel::Kernel() CV_NOEXCEPT : p(NULL) { }
 Kernel::Kernel(const char* kname, const Program& prog) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Kernel::Kernel(const char* kname, const ProgramSource& prog, const String& buildopts, String* errmsg) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Kernel::~Kernel() { }
@@ -255,7 +255,7 @@ size_t Kernel::localMemSize() const { OCL_NOT_AVAILABLE(); }
 void* Kernel::ptr() const { return NULL; }
 
 
-Program::Program() : p(NULL) { }
+Program::Program() CV_NOEXCEPT : p(NULL) { }
 Program::Program(const ProgramSource& src, const String& buildflags, String& errmsg) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Program::Program(const Program& prog) : p(NULL) { }
 Program& Program::operator=(const Program& prog) { return *this; }
@@ -274,7 +274,7 @@ String Program::getPrefix() const { OCL_NOT_AVAILABLE(); }
 /* static */ String Program::getPrefix(const String& buildflags) { OCL_NOT_AVAILABLE(); }
 
 
-ProgramSource::ProgramSource() : p(NULL) { }
+ProgramSource::ProgramSource() CV_NOEXCEPT : p(NULL) { }
 ProgramSource::ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash) : p(NULL) { }
 ProgramSource::ProgramSource(const String& prog) : p(NULL) { }
 ProgramSource::ProgramSource(const char* prog) : p(NULL) { }
@@ -289,7 +289,7 @@ ProgramSource::hash_t ProgramSource::hash() const { OCL_NOT_AVAILABLE(); }
 /* static */ ProgramSource ProgramSource::fromSPIR(const String& module, const String& name, const unsigned char* binary, const size_t size, const cv::String& buildOptions) { OCL_NOT_AVAILABLE(); }
 
 
-PlatformInfo::PlatformInfo() : p(NULL) { }
+PlatformInfo::PlatformInfo() CV_NOEXCEPT : p(NULL) { }
 PlatformInfo::PlatformInfo(void* id) : p(NULL) { OCL_NOT_AVAILABLE(); }
 PlatformInfo::~PlatformInfo() { }
 
@@ -332,7 +332,7 @@ int predictOptimalVectorWidthMax(InputArray src1, InputArray src2, InputArray sr
 void buildOptionsAddMatrixDescription(String& buildOptions, const String& name, InputArray _m) { OCL_NOT_AVAILABLE(); }
 
 
-Image2D::Image2D() : p(NULL) { }
+Image2D::Image2D() CV_NOEXCEPT : p(NULL) { }
 Image2D::Image2D(const UMat &src, bool norm, bool alias) { OCL_NOT_AVAILABLE(); }
 Image2D::Image2D(const Image2D & i) : p(NULL) { OCL_NOT_AVAILABLE(); }
 Image2D::~Image2D() { }
