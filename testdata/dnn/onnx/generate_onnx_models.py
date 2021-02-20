@@ -958,6 +958,14 @@ x = Variable(torch.randn(2, 2))
 model = Power(2)
 save_data_and_model("pow2", x, model)
 
+class Exp(nn.Module):
+  def forward(self, x):
+    return x.exp()
+
+x = Variable(torch.randn(2, 2))
+model = Exp()
+save_data_and_model("exp", x, model)
+
 class ReduceMaxGlobal(nn.Module):
   def forward(self, x):
     out = torch.max(x)
