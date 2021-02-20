@@ -413,11 +413,11 @@ if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/
 endif()
 
 if(ENABLE_BUILD_HARDENING)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake")
 endif()
 
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCRTLinkage.cmake")
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 
