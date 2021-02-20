@@ -499,6 +499,14 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         static Ptr<PowerLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS ExpLayer : public ActivationLayer
+    {
+    public:
+        float base, scale, shift;
+
+        static Ptr<ExpLayer> create(const LayerParams &params);
+    };
+
     /* Layers used in semantic segmentation */
 
     class CV_EXPORTS CropLayer : public Layer
