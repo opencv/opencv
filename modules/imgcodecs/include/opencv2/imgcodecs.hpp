@@ -95,6 +95,7 @@ enum ImwriteFlags {
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0, /* 48 */ //!< override EXR storage type (FLOAT (FP32) is default)
+       IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1, /* 49 */ //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)
        IMWRITE_WEBP_QUALITY        = 64, //!< For WEBP, it can be a quality from 1 to 100 (the higher is the better). By default (without any parameter) and for quality above 100 the lossless compression is used.
        IMWRITE_PAM_TUPLETYPE       = 128,//!< For PAM, sets the TUPLETYPE field to the corresponding string value that is defined for the format
        IMWRITE_TIFF_RESUNIT = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
@@ -108,6 +109,19 @@ enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
        IMWRITE_EXR_TYPE_HALF = 1,   //!< store as HALF (FP16)
        IMWRITE_EXR_TYPE_FLOAT = 2   //!< store as FP32 (default)
+     };
+
+enum ImwriteEXRCompressionFlags {
+       IMWRITE_EXR_COMPRESSION_NO    = 0, //!< no compression
+       IMWRITE_EXR_COMPRESSION_RLE   = 1, //!< run length encoding
+       IMWRITE_EXR_COMPRESSION_ZIPS  = 2, //!< zlib compression, one scan line at a time
+       IMWRITE_EXR_COMPRESSION_ZIP   = 3, //!< zlib compression, in blocks of 16 scan lines
+       IMWRITE_EXR_COMPRESSION_PIZ   = 4, //!< piz-based wavelet compression
+       IMWRITE_EXR_COMPRESSION_PXR24 = 5, //!< lossy 24-bit float compression
+       IMWRITE_EXR_COMPRESSION_B44   = 6, //!< lossy 4-by-4 pixel block compression, fixed compression rate
+       IMWRITE_EXR_COMPRESSION_B44A  = 7, //!< lossy 4-by-4 pixel block compression, flat fields are compressed more
+       IMWRITE_EXR_COMPRESSION_DWAA  = 8, //!< lossy DCT based compression, in blocks of 32 scanlines. More efficient for partial buffer access.
+       IMWRITE_EXR_COMPRESSION_DWAB  = 9, //!< lossy DCT based compression, in blocks of 256 scanlines. More efficient space wise and faster to decode full frames than DWAA_COMPRESSION.
      };
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
