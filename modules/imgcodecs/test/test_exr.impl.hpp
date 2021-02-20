@@ -12,7 +12,7 @@ size_t getFileSize(const string& filename)
     if (ifs.is_open())
     {
         ifs.seekg(0, std::ios::end);
-        return ifs.tellg();
+        return (size_t)ifs.tellg();
     }
     return 0;
 }
