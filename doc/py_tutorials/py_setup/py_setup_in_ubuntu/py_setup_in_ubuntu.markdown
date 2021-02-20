@@ -25,7 +25,7 @@ This method serves best when using just for programming and developing OpenCV ap
 Install package [python-opencv](https://packages.ubuntu.com/trusty/python-opencv) with following command in terminal (as root user).
 
 ```
-$ sudo apt-get install python3-opencv 
+$ sudo apt-get install python3-opencv
 ```
 
 Open Python IDLE (or IPython) and type following codes in Python terminal.
