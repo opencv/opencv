@@ -145,6 +145,11 @@ void power(const Stream& stream, Span<T> output, View<T> input, T exp, T scale, 
     generic_op<T, PowerFunctor<T>>(stream, output, input, {exp, scale, shift});
 }
 
+template <class T>
+void exp(const Stream& stream, Span<T> output, View<T> input, T normScale, T normShift) {
+    generic_op<T, ExpFunctor<T>>(stream, output, input, {normScale, normShift});
+}
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
 template void relu<__half>(const Stream&, Span<__half>, View<__half>, __half);
 template void clipped_relu<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
@@ -156,6 +161,7 @@ template void elu<__half>(const Stream&, Span<__half>, View<__half>);
 template void abs<__half>(const Stream& stream, Span<__half> output, View<__half> input);
 template void bnll<__half>(const Stream&, Span<__half>, View<__half>);
 template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
+template void exp<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 #endif
 
 
@@ -169,6 +175,7 @@ template void elu<float>(const Stream&, Span<float>, View<float>);
 template void abs<float>(const Stream& stream, Span<float> output, View<float> input);
 template void bnll<float>(const Stream&, Span<float>, View<float>);
 template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
+template void exp<float>(const Stream&, Span<float>, View<float>, float, float);
 
 template <class T, std::size_t N> static
 void launch_vectorized_axiswise_relu(const Stream& stream, Span<T> output, View<T> input, std::size_t inner_size, View<T> slope) {
