@@ -65,8 +65,15 @@ int solve_deg3(double a, double b, double c, double d,
       return 3;
     }
     else {
-      x0 = pow(2 * R, 1 / 3.0) - b_a_3;
-      return 1;
+      double cube_root = pow(abs(2 * R), (1.0 / 3.0));
+        if(R<0)
+        {
+            x0 = -cube_root - b_a_3;
+        }
+        else{
+            x0 = cube_root - b_a_3;
+        }
+        return 1;
     }
   }
 
