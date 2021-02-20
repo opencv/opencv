@@ -70,7 +70,7 @@ class CV_EXPORTS Image2D;
 class CV_EXPORTS_W_SIMPLE Device
 {
 public:
-    CV_WRAP Device();
+    CV_WRAP Device() CV_NOEXCEPT;
     explicit Device(void* d);
     Device(const Device& d);
     Device& operator = (const Device& d);
@@ -245,7 +245,7 @@ protected:
 class CV_EXPORTS Context
 {
 public:
-    Context();
+    Context() CV_NOEXCEPT;
     explicit Context(int dtype);  //!< @deprecated
     ~Context();
     Context(const Context& c);
@@ -298,7 +298,7 @@ public:
 class CV_EXPORTS Platform
 {
 public:
-    Platform();
+    Platform() CV_NOEXCEPT;
     ~Platform();
     Platform(const Platform& p);
     Platform& operator = (const Platform& p);
@@ -357,7 +357,7 @@ void initializeContextFromHandle(Context& ctx, void* platform, void* context, vo
 class CV_EXPORTS Queue
 {
 public:
-    Queue();
+    Queue() CV_NOEXCEPT;
     explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
@@ -421,7 +421,7 @@ public:
 class CV_EXPORTS Kernel
 {
 public:
-    Kernel();
+    Kernel() CV_NOEXCEPT;
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource& prog,
            const String& buildopts = String(), String* errmsg=0);
@@ -498,7 +498,7 @@ protected:
 class CV_EXPORTS Program
 {
 public:
-    Program();
+    Program() CV_NOEXCEPT;
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     Program(const Program& prog);
@@ -544,7 +544,7 @@ class CV_EXPORTS ProgramSource
 public:
     typedef uint64 hash_t; // deprecated
 
-    ProgramSource();
+    ProgramSource() CV_NOEXCEPT;
     explicit ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash);
     explicit ProgramSource(const String& prog); // deprecated
     explicit ProgramSource(const char* prog); // deprecated
@@ -614,7 +614,7 @@ protected:
 class CV_EXPORTS PlatformInfo
 {
 public:
-    PlatformInfo();
+    PlatformInfo() CV_NOEXCEPT;
     /**
      * @param id pointer cl_platform_id (cl_platform_id*)
      */
