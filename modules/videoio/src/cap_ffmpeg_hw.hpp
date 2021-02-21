@@ -226,10 +226,11 @@ static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type) {
 
 AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt) {
     AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
-    AVCodec *c;
+    AVCodec *c = 0;
     void *opaque = 0;
 
-    while ((c = (AVCodec*)av_codec_iterate(&opaque))) {
+    while (NULL != (c = (AVCodec*)av_codec_iterate(&opaque)))
+    {
         if (!check_category(c))
             continue;
         if (c->id != id)

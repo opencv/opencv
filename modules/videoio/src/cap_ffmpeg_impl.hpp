@@ -64,6 +64,9 @@ using namespace cv;
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
 
 #ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
 #define CV_UNUSED(name) (void)name
@@ -246,7 +249,7 @@ inline void get_monotonic_time(timespec *tv)
 
     t.QuadPart -= offset.QuadPart;
     microseconds = (double)t.QuadPart / frequencyToMicroseconds;
-    t.QuadPart = microseconds;
+    t.QuadPart = (LONGLONG)microseconds;
     tv->tv_sec = t.QuadPart / 1000000;
     tv->tv_nsec = (t.QuadPart % 1000000) * 1000;
 }
@@ -1672,7 +1675,7 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         return false;
     case CAP_PROP_ORIENTATION_AUTO:
 #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        rotation_auto = static_cast<bool>(value);
+        rotation_auto = value ? true : false;
         return true;
 #else
         rotation_auto = 0;
@@ -2047,7 +2050,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     // 2. (dataend - SIMD_SIZE) and (dataend + SIMD_SIZE) is from the same 4k page
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
-    const size_t CV_PAGE_MASK = ~(4096 - 1);
+    const size_t CV_PAGE_MASK = ~(size_t)(4096 - 1);
     const unsigned char* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
@@ -2130,13 +2133,15 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             return false;
         }
         hw_frame->pts = frame_idx;
-        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+        ret = ret_write >= 0 ? true : false;
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
-        ret = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture, frame_idx);
+        int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, outbuf, outbuf_size, picture, frame_idx);
+        ret = ret_write >= 0 ? true : false;
     }
 
     frame_idx++;
@@ -2268,7 +2273,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 {
     InternalFFMpegRegister::init();
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
-    int err;
     AVPixelFormat codec_pix_fmt;
     double bitrate_scale = 1;
 
@@ -2516,6 +2520,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
             VIDEO_ACCELERATION_NONE
     };
+    int err = -1;
     AVBufferRef* hw_device_ctx = NULL;
     for (VideoAccelerationType va_type : supported_va_types) {
         AVCodec* codec = NULL;
@@ -2572,7 +2577,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 #endif
 
         int64_t lbit_rate = (int64_t) c->bit_rate;
-        lbit_rate += (bitrate / 2);
+        lbit_rate += (int64_t)(bitrate / 2);
         lbit_rate = std::min(lbit_rate, (int64_t) INT_MAX);
         c->bit_rate_tolerance = (int) lbit_rate;
         c->bit_rate = (int) lbit_rate;
