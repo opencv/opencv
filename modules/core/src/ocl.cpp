@@ -1480,6 +1480,23 @@ Platform& Platform::operator = (const Platform& pl)
     return *this;
 }
 
+Platform::Platform(Platform&& pl) CV_NOEXCEPT
+{
+    p = pl.p;
+    pl.p = nullptr;
+}
+
+Platform& Platform::operator = (Platform&& pl) CV_NOEXCEPT
+{
+    if (this != &pl) {
+        if(p)
+            p->release();
+        p = pl.p;
+        pl.p = nullptr;
+    }
+    return *this;
+}
+
 void* Platform::ptr() const
 {
     return p ? p->handle : 0;
@@ -1703,6 +1720,23 @@ Device& Device::operator = (const Device& d)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Device::Device(Device&& d) CV_NOEXCEPT
+{
+    p = d.p;
+    d.p = nullptr;
+}
+
+Device& Device::operator = (Device&& d) CV_NOEXCEPT
+{
+    if (this != &d) {
+        if(p)
+            p->release();
+        p = d.p;
+        d.p = nullptr;
+    }
     return *this;
 }
 
@@ -2919,6 +2953,23 @@ Context& Context::operator = (const Context& c)
     return *this;
 }
 
+Context::Context(Context&& c) CV_NOEXCEPT
+{
+    p = c.p;
+    c.p = nullptr;
+}
+
+Context& Context::operator = (Context&& c) CV_NOEXCEPT
+{
+    if (this != &c) {
+        if(p)
+            p->release();
+        p = c.p;
+        c.p = nullptr;
+    }
+    return *this;
+}
+
 void* Context::ptr() const
 {
     return p == NULL ? NULL : p->handle;
@@ -3260,6 +3311,23 @@ Queue& Queue::operator = (const Queue& q)
     return *this;
 }
 
+Queue::Queue(Queue&& q) CV_NOEXCEPT
+{
+    p = q.p;
+    q.p = nullptr;
+}
+
+Queue& Queue::operator = (Queue&& q) CV_NOEXCEPT
+{
+    if (this != &q) {
+        if(p)
+            p->release();
+        p = q.p;
+        q.p = nullptr;
+    }
+    return *this;
+}
+
 Queue::~Queue()
 {
     if(p)
@@ -3315,7 +3383,7 @@ static cl_command_queue getQueue(const Queue& q)
 
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
-KernelArg::KernelArg()
+KernelArg::KernelArg() CV_NOEXCEPT
     : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
@@ -3490,6 +3558,23 @@ Kernel& Kernel::operator = (const Kernel& k)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Kernel::Kernel(Kernel&& k) CV_NOEXCEPT
+{
+    p = k.p;
+    k.p = nullptr;
+}
+
+Kernel& Kernel::operator = (Kernel&& k) CV_NOEXCEPT
+{
+    if (this != &k) {
+        if(p)
+            p->release();
+        p = k.p;
+        k.p = nullptr;
+    }
     return *this;
 }
 
@@ -4091,6 +4176,23 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
     return *this;
 }
 
+ProgramSource::ProgramSource(ProgramSource&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+ProgramSource& ProgramSource::operator = (ProgramSource&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
+    return *this;
+}
+
 const String& ProgramSource::source() const
 {
     CV_Assert(p);
@@ -4583,6 +4685,23 @@ Program& Program::operator = (const Program& prog)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Program::Program(Program&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+Program& Program::operator = (Program&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
     return *this;
 }
 
@@ -6647,6 +6766,23 @@ PlatformInfo& PlatformInfo::operator =(const PlatformInfo& i)
     return *this;
 }
 
+PlatformInfo::PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+PlatformInfo& PlatformInfo::operator = (PlatformInfo&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if(p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
+    }
+    return *this;
+}
+
 int PlatformInfo::deviceNumber() const
 {
     return p ? (int)p->devices.size() : 0;
@@ -7187,7 +7323,7 @@ struct Image2D::Impl
     cl_mem handle;
 };
 
-Image2D::Image2D()
+Image2D::Image2D() CV_NOEXCEPT
 {
     p = NULL;
 }
@@ -7241,6 +7377,23 @@ Image2D & Image2D::operator = (const Image2D & i)
         if (p)
             p->release();
         p = i.p;
+    }
+    return *this;
+}
+
+Image2D::Image2D(Image2D&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+Image2D& Image2D::operator = (Image2D&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if (p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
     }
     return *this;
 }
