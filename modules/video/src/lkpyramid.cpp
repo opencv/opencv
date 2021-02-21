@@ -938,7 +938,8 @@ namespace
             {
                 if (!lkSparse_run(prevPyr[level], nextPyr[level], prevPts,
                                   nextPts, status, err,
-                                  prevPts.cols, level))
+                                  static_cast<int>(prevPts.total()),
+                                  level))
                     return false;
             }
             return true;
