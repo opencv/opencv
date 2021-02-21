@@ -22,7 +22,7 @@ Installing OpenCV-Python from Pre-built Binaries
 
 This method serves best when using just for programming and developing OpenCV applications.
 
-Install package [python-opencv](https://packages.ubuntu.com/focal/python3-opencv) with following command in terminal (as root user).
+Install package [python3-opencv](https://packages.ubuntu.com/focal/python3-opencv) with following command in terminal (as root user).
 
 ```
 $ sudo apt-get install python3-opencv
