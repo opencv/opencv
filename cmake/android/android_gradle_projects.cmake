@@ -2,7 +2,7 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "4.1.2" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
-set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
+set(GRADLE_VERSION "6.8.2" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
 set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
