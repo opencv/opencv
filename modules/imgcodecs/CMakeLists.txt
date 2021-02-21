@@ -149,7 +149,7 @@ ocv_create_module(${GRFMT_LIBS} ${IMGCODECS_LIBRARIES})
 
 macro(ocv_imgcodecs_configure_target)
 if(APPLE)
-  add_apple_compiler_options(the_module)
+  add_apple_compiler_options(${the_module})
 endif()
 
 if(MSVC)
@@ -166,5 +166,9 @@ endif()
 ocv_add_accuracy_tests()
 if(TARGET opencv_test_imgcodecs AND HAVE_JASPER AND "$ENV{OPENCV_IO_ENABLE_JASPER}")
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_ENABLE_JASPER_TESTS=1)
+endif()
+if(TARGET opencv_test_imgcodecs AND HAVE_PNG AND NOT (PNG_VERSION VERSION_LESS "1.6.31"))
+  # details: https://github.com/glennrp/libpng/commit/68cb0aaee3de6371b81a4613476d9b33e43e95b1
+  ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_EXIF=1)
 endif()
 ocv_add_perf_tests()
