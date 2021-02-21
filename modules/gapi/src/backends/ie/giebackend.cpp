@@ -293,12 +293,12 @@ public:
     }
 
     // Syntax sugar
-          cv::GShape      inShape(int i)             const;
-    const cv::Mat&        inMat(std::size_t input)   const;
+          cv::GShape      inShape(std::size_t input) const;
+    const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
     cv::Mat&     outMatR(std::size_t idx);
-    cv::GRunArgP output(int idx);
+    cv::GRunArgP output (std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -367,7 +367,7 @@ const cv::GArgs& IECallContext::inArgs() const {
     return m_args;
 }
 
-cv::GShape IECallContext::inShape(int i) const {
+cv::GShape IECallContext::inShape(std::size_t i) const {
     return m_in_shapes[i];
 }
 
@@ -383,7 +383,7 @@ cv::Mat& IECallContext::outMatR(std::size_t idx) {
     return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
 
-cv::GRunArgP IECallContext::output(int idx) {
+cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
 
@@ -518,16 +518,17 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
     // General alghoritm:
-    //     1. Get input message from IInput
+    //     1. Since only single async request is supported
+    //        wait until it is over and start collecting new data.
     //     2. Collect island inputs/outputs.
     //     3. Create kernel context. (Every kernel has his own context.)
-    //     4. Since only single async request is supported
-    //        wait until it is over and run kernel.
-    //        (At this point, an asynchronous request will be started.)
-    //     5. Without waiting for the completion of the asynchronous request
-    //        started by kernel go to the next frame (1)
+    //     4. Go to the next frame without waiting until the async request is over (1)
     //
-    //     6. If graph is compiled in non-streaming mode, wait until request is over.
+    //     5. If graph is compiled in non-streaming mode, wait until request is over.
+
+    // (1) To prevent data race on the IOutput object, need to wait
+    // for async request callback, which post outputs and only after that get new data.
+    m_sync.wait();
 
     std::vector<InObj>  input_objs;
     std::vector<OutObj> output_objs;
@@ -538,9 +539,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
-        // (1) Since kernel is executing asynchronously
-        // need to wait until the previous is over
-        m_sync.wait();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
@@ -570,9 +568,6 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
             std::move(input_objs), std::move(output_objs));
 
 
-    // (4) Only single async request is supported now,
-    // so need to wait until the previous is over.
-    m_sync.wait();
     // (5) Run the kernel and start handle next frame.
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
     // FIXME: Running just a single node now.
@@ -859,6 +854,14 @@ struct InferList: public cv::detail::KernelTag {
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
         }
 
+        // NB: If list of roi is empty need to post output data anyway.
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                 ctx->out.post(ctx->output(i));
+            }
+            return;
+        }
+
         for (auto&& rc : in_roi_vec) {
             // NB: Only single async request is supported now,
             // so need to wait until previos iteration is over.
@@ -982,6 +985,14 @@ struct InferList2: public cv::detail::KernelTag {
             ctx->outVecR<cv::Mat>(i).clear();
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
+        }
+
+        // NB: If list of roi is empty need to post output data anyway.
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                 ctx->out.post(ctx->output(i));
+            }
+            return;
         }
 
         for (const auto &list_idx : ade::util::iota(list_size)) {
