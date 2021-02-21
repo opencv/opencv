@@ -5,7 +5,9 @@
 // Copyright (C) 2020-2021 Intel Corporation
 
 #include "opencv2/videoio.hpp"
+#if defined(__OPENCV_BUILD) || defined(OPENCV_HAVE_CVCONFIG_H)  // TODO Properly detect and add D3D11 / LIBVA dependencies for standalone plugins
 #include "cvconfig.h"
+#endif
 #include <list>
 
 #ifdef __cplusplus
