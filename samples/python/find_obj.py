@@ -125,7 +125,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
             kp1s, kp2s = [], []
             for i in idxs:
                 (x1, y1), (x2, y2) = p1[i], p2[i]
-                col = (red, green)[status[i][0]]
+                col = (red, green)[status[i]]
                 cv.line(cur_vis, (x1, y1), (x2, y2), col)
                 kp1, kp2 = kp_pairs[i]
                 kp1s.append(kp1)
