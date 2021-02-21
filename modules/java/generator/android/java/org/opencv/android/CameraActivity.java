@@ -8,12 +8,14 @@ import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import static android.Manifest.permission.CAMERA;
 
-public class CameraActivity extends Activity {
+public class CameraActivity extends AppCompatActivity {
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 200;
 

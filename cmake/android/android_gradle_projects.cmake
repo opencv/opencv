@@ -5,9 +5,9 @@ message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}"
 set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
-set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "28" CACHE STRING "Android compileSdkVersion")
 set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
-set(ANDROID_TARGET_SDK_VERSION "26" CACHE STRING "Android minSdkVersion")
+set(ANDROID_TARGET_SDK_VERSION "28" CACHE STRING "Android minSdkVersion")
 
 set(ANDROID_BUILD_BASE_DIR "${OpenCV_BINARY_DIR}/opencv_android" CACHE INTERNAL "")
 set(ANDROID_TMP_INSTALL_BASE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/install/opencv_android")
