@@ -61,6 +61,9 @@
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
 
 #ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
 #define CV_UNUSED(name) (void)name
@@ -250,7 +253,7 @@ inline void get_monotonic_time(timespec *tv)
 
     t.QuadPart -= offset.QuadPart;
     microseconds = (double)t.QuadPart / frequencyToMicroseconds;
-    t.QuadPart = microseconds;
+    t.QuadPart = (LONGLONG)microseconds;
     tv->tv_sec = t.QuadPart / 1000000;
     tv->tv_nsec = (t.QuadPart % 1000000) * 1000;
 }
@@ -722,16 +725,6 @@ struct ImplMutex::Impl
     int refcount;
 };
 
-#ifndef __GNUC__
-static int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
 
 #elif defined __APPLE__
 
@@ -1416,9 +1409,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.height : frame.width);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.width : frame.height);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
     case CV_FFMPEG_CAP_PROP_FPS:
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
@@ -1658,10 +1651,10 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
 #if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
      (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
-        rotation_auto = static_cast<bool>(value);
+        rotation_auto = value != 0 ? true : false;
         return true;
 #else
-        rotation_auto = 0;
+        rotation_auto = false;
         return false;
 #endif
         break;
@@ -2096,7 +2089,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     // 2. (dataend - SIMD_SIZE) and (dataend + SIMD_SIZE) is from the same 4k page
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
-    const size_t CV_PAGE_MASK = ~(4096 - 1);
+    const size_t CV_PAGE_MASK = ~(size_t)(4096 - 1);
     const unsigned char* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
@@ -2569,7 +2562,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     int64_t lbit_rate = (int64_t)c->bit_rate;
-    lbit_rate += (bitrate / 2);
+    lbit_rate += (int64_t)(bitrate / 2);
     lbit_rate = std::min(lbit_rate, (int64_t)INT_MAX);
     c->bit_rate_tolerance = (int)lbit_rate;
     c->bit_rate = (int)lbit_rate;
@@ -2962,7 +2955,7 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     #endif
 
     c->codec_tag = MKTAG('H', '2', '6', '4');
-    c->bit_rate_tolerance = c->bit_rate;
+    c->bit_rate_tolerance = (int)(c->bit_rate);
 
     // open the output file, if needed
     if (!(fmt_->flags & AVFMT_NOFILE))
