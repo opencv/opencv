@@ -286,7 +286,8 @@ public:
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
-        fakeImageBlob.create(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1);
+        // We don't allocate memory but just need the shape is correct.
+        Mat fakeImageBlob(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1, nullptr);
 
         // Generate prior boxes.
         std::vector<Mat> layerInputs(2), layerOutputs(1, priorBoxes);
@@ -427,7 +428,6 @@ private:
     Ptr<PermuteLayer> deltasPermute;
     Ptr<PermuteLayer> scoresPermute;
     uint32_t keepTopBeforeNMS, keepTopAfterNMS, featStride, baseSize;
-    Mat fakeImageBlob;
     float nmsThreshold;
     DictValue ratios, scales;
 #ifdef HAVE_OPENCL
