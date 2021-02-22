@@ -196,36 +196,25 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
   endforeach()
 endif()
 
-if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
-  ocv_update(CMAKE_CXX_STANDARD 11)
+if(NOT CMAKE_CXX_STANDARD)
+  ocv_update(CMAKE_CXX_STANDARD 14)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-  ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
-  if(CMAKE_CXX11_COMPILE_FEATURES)
-    set(HAVE_CXX11 ON)
-  endif()
-endif()
-if(NOT HAVE_CXX11)
-  ocv_check_compiler_flag(CXX "" HAVE_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-  if(NOT HAVE_CXX11)
-    ocv_check_compiler_flag(CXX "-std=c++11" HAVE_STD_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-    if(HAVE_STD_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(HAVE_CXX11 ON)
-    endif()
-  endif()
+  ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++14 instead of -std=gnu++14
 endif()
 
-if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11")
+if(CMAKE_CXX_STANDARD EQUAL 98 OR CMAKE_CXX_STANDARD LESS 14)
+  message(FATAL_ERROR "OpenCV 5.x requires at least C++14")
 endif()
+
+set(HAVE_CXX11 ON)
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
-if(HAVE_CXX11 AND (X86 OR X86_64))
+if(X86 OR X86_64)
   set(__OPENCV_ENABLE_ATOMIC_LONG_LONG ON)
 endif()
 option(OPENCV_ENABLE_ATOMIC_LONG_LONG "Enable C++ compiler support for atomic<long long>" ${__OPENCV_ENABLE_ATOMIC_LONG_LONG})
 
-if((HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG
+if((OPENCV_ENABLE_ATOMIC_LONG_LONG
         AND NOT MSVC
         AND NOT (X86 OR X86_64)
     AND NOT OPENCV_SKIP_LIBATOMIC_COMPILER_CHECK)
@@ -244,6 +233,6 @@ if((HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG
   else()
     set(HAVE_ATOMIC_LONG_LONG ON)
   endif()
-else(HAVE_CXX11 AND OPENCV_ENABLE_ATOMIC_LONG_LONG)
+else(OPENCV_ENABLE_ATOMIC_LONG_LONG)
   set(HAVE_ATOMIC_LONG_LONG ${OPENCV_ENABLE_ATOMIC_LONG_LONG})
 endif()
