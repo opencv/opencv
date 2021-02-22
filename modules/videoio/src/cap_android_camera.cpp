@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
+// Contributed by Giles Payne
 
 #include "precomp.hpp"
 
@@ -29,6 +30,20 @@ using namespace cv;
 #define COLOR_FormatUnknown -1
 #define COLOR_FormatYUV420Planar 19
 #define COLOR_FormatYUV420SemiPlanar 21
+
+template <typename T> class RangeValue {
+public:
+    T min, max;
+    /**
+     * return absolute value from relative value
+     * * value: in percent (50 for 50%)
+     * */
+    T value(int percent) {
+        return static_cast<T>(min + (max - min) * percent / 100);
+    }
+    RangeValue() { min = max = static_cast<T>(0); }
+    bool Supported(void) const { return (min != max); }
+};
 
 static inline void deleter_ACameraManager(ACameraManager *cameraManager) {
     ACameraManager_delete(cameraManager);
@@ -136,8 +151,18 @@ void OnCaptureFailed(void* context,
 
 #define CAPTURE_TIMEOUT_SECONDS 2
 
+/**
+ * Range of Camera Exposure Time:
+ *     Camera's capability range have a very long range which may be disturbing
+ *     on camera. For this sample purpose, clamp to a range showing visible
+ *     video on preview: 100000ns ~ 250000000ns
+ */
+static const long kMinExposureTime = 1000000L;
+static const long kMaxExposureTime = 250000000L;
+
 class AndroidCameraCapture : public IVideoCapture
 {
+    int cachedIndex;
     std::shared_ptr<ACameraManager> cameraManager;
     std::shared_ptr<ACameraDevice> cameraDevice;
     std::shared_ptr<AImageReader> imageReader;
@@ -148,12 +173,23 @@ class AndroidCameraCapture : public IVideoCapture
     std::shared_ptr<ACaptureRequest> captureRequest;
     std::shared_ptr<ACameraCaptureSession> captureSession;
     CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
-    int32_t frameWidth;
-    int32_t frameHeight;
+    int32_t frameWidth = 0;
+    int32_t frameHeight = 0;
     int32_t colorFormat;
     std::vector<uint8_t> buffer;
     bool sessionOutputAdded = false;
     bool targetAdded = false;
+    // properties
+    bool convertToRgb = false;
+    bool settingWidth = false;
+    bool settingHeight = false;
+    int desiredWidth = 640;
+    int desiredHeight = 480;
+    bool autoExposure = true;
+    int64_t exposureTime = 0L;
+    RangeValue<int64_t> exposureRange;
+    int32_t sensitivity = 0;
+    RangeValue<int32_t> sensitivityRange;
 
 public:
     // for synchronization with NDK capture callback
@@ -180,9 +216,9 @@ public:
     ACameraCaptureSession_stateCallbacks* GetSessionListener() {
         sessionListener = {
             .context = this,
-            .onActive = ::OnSessionActive,
-            .onReady = ::OnSessionReady,
             .onClosed = ::OnSessionClosed,
+            .onReady = ::OnSessionReady,
+            .onActive = ::OnSessionActive,
         };
         return &sessionListener;
     }
@@ -288,9 +324,9 @@ public:
         }
         Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
+            cv::cvtColor(yuv, out, convertToRgb ? cv::COLOR_YUV2RGB_YV12 : cv::COLOR_YUV2BGR_YV12);
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_NV21);
+            cv::cvtColor(yuv, out, convertToRgb ? COLOR_YUV2RGB_NV21 : cv::COLOR_YUV2BGR_NV21);
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
             return false;
@@ -298,18 +334,104 @@ public:
         return true;
     }
 
-    double getProperty(int /* property_id */) const CV_OVERRIDE
+    double getProperty(int property_id) const CV_OVERRIDE
     {
-        return 0;
+        switch (property_id) {
+            case CV_CAP_PROP_FRAME_WIDTH:
+                return isOpened() ? frameWidth : desiredWidth;
+            case CV_CAP_PROP_FRAME_HEIGHT:
+                return isOpened() ? frameHeight : desiredHeight;
+            case CV_CAP_PROP_CONVERT_RGB:
+                return convertToRgb ? 1 : 0;
+            case CAP_PROP_AUTO_EXPOSURE:
+                return autoExposure ? 1 : 0;
+            case CV_CAP_PROP_EXPOSURE:
+                return exposureTime;
+            case CV_CAP_PROP_ISO_SPEED:
+                return sensitivity;
+            default:
+                break;
+        }
+        // unknown parameter or value not available
+        return -1;
     }
 
-    bool setProperty(int /* property_id */, double /* value */) CV_OVERRIDE
+    bool setProperty(int property_id, double value) CV_OVERRIDE
     {
+        switch (property_id) {
+            case CV_CAP_PROP_FRAME_WIDTH:
+                desiredWidth = value;
+                settingWidth = true;
+                if (settingWidth && settingHeight) {
+                    setWidthHeight();
+                    settingWidth = false;
+                    settingHeight = false;
+                }
+                return true;
+            case CV_CAP_PROP_FRAME_HEIGHT:
+                desiredHeight = value;
+                settingHeight = true;
+                if (settingWidth && settingHeight) {
+                    setWidthHeight();
+                    settingWidth = false;
+                    settingHeight = false;
+                }
+                return true;
+            case CV_CAP_PROP_CONVERT_RGB:
+                convertToRgb = (value != 0);
+                return true;
+            case CAP_PROP_AUTO_EXPOSURE:
+                autoExposure = (value != 0);
+                if (isOpened()) {
+                    uint8_t aeMode = autoExposure ? ACAMERA_CONTROL_AE_MODE_ON : ACAMERA_CONTROL_AE_MODE_OFF;
+                    camera_status_t status = ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
+                    return status == ACAMERA_OK;
+                }
+                return true;
+            case CV_CAP_PROP_EXPOSURE:
+                if (isOpened() && exposureRange.Supported()) {
+                    exposureTime = (int64_t)value;
+                    camera_status_t status = ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
+                    return status == ACAMERA_OK;
+                }
+                break;
+            case CV_CAP_PROP_ISO_SPEED:
+                if (isOpened() && sensitivityRange.Supported()) {
+                    sensitivity = (int32_t)value;
+                    camera_status_t status = ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
+                    return status == ACAMERA_OK;
+                }
+                break;
+            default:
+                break;
+        }
         return false;
+    }
+
+    void setWidthHeight() {
+        cleanUp();
+        initCapture(cachedIndex);
+    }
+
+    // calculate a score based on how well the width and height match the desired width and height
+    // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
+    // area to the overlapping area
+    double getScore(int32_t width, int32_t height) {
+        double area1 = width * height;
+        double area2 = desiredWidth * desiredHeight;
+        if ((width < desiredWidth) == (height < desiredHeight)) {
+            return (width < desiredWidth) ? (area2 - area1)/area1 : (area1 - area2)/area2;
+        } else {
+            int32_t overlappedWidth = std::min(width, desiredWidth);
+            int32_t overlappedHeight = std::min(height, desiredHeight);
+            double overlappedArea = overlappedWidth * overlappedHeight;
+            return (area1 + area2 - overlappedArea)/overlappedArea;
+        }
     }
 
     bool initCapture(int index)
     {
+        cachedIndex = index;
         cameraManager = std::shared_ptr<ACameraManager>(ACameraManager_create(), deleter_ACameraManager);
         if (!cameraManager) {
             return false;
@@ -342,9 +464,9 @@ public:
         ACameraMetadata_const_entry entry;
         ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
 
-        // set some default values
-        frameWidth = 640;
-        frameHeight = 480;
+        double bestScore = std::numeric_limits<double>::max();
+        int32_t bestMatchWidth = 0;
+        int32_t bestMatchHeight = 0;
 
         for (uint32_t i = 0; i < entry.count; i += 4) {
             int32_t input = entry.data.i32[i + 3];
@@ -353,17 +475,60 @@ public:
                 continue;
             }
             if (format == AIMAGE_FORMAT_YUV_420_888) {
-                frameWidth = entry.data.i32[i + 1];
-                frameHeight = entry.data.i32[i + 2];
-                break;
+                int32_t width = entry.data.i32[i + 1];
+                int32_t height = entry.data.i32[i + 2];
+                if (width == desiredWidth && height == desiredHeight) {
+                    bestMatchWidth = width;
+                    bestMatchHeight = height;
+                    bestScore = 0;
+                    break;
+                } else {
+                    double score = getScore(width, height);
+                    if (score < bestScore) {
+                        bestMatchWidth = width;
+                        bestMatchHeight = height;
+                        bestScore = score;
+                    }
+                }
             }
         }
+
+        ACameraMetadata_const_entry val = { 0, };
+        camera_status_t status = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
+        if (status == ACAMERA_OK) {
+            exposureRange.min = val.data.i64[0];
+            if (exposureRange.min < kMinExposureTime) {
+                exposureRange.min = kMinExposureTime;
+            }
+            exposureRange.max = val.data.i64[1];
+            if (exposureRange.max > kMaxExposureTime) {
+                exposureRange.max = kMaxExposureTime;
+            }
+            exposureTime = exposureRange.value(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
+            exposureRange.min = exposureRange.max = 0l;
+            exposureTime = 0l;
+        }
+        status = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE, &val);
+        if (status == ACAMERA_OK){
+            sensitivityRange.min = val.data.i32[0];
+            sensitivityRange.max = val.data.i32[1];
+            sensitivity = sensitivityRange.value(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
+            sensitivityRange.min = sensitivityRange.max = 0;
+            sensitivity = 0;
+        }
+
         AImageReader* reader;
-        media_status_t mStatus = AImageReader_new(frameWidth, frameHeight, AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
+        media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight, AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
         if (mStatus != AMEDIA_OK) {
             LOGE("ImageReader creation failed with error code: %d", mStatus);
             return false;
         }
+        frameWidth = bestMatchWidth;
+        frameHeight = bestMatchHeight;
         imageReader = std::shared_ptr<AImageReader>(reader, deleter_AImageReader);
 
         ANativeWindow *window;
@@ -423,6 +588,12 @@ public:
             return false;
         }
         captureSession = std::shared_ptr<ACameraCaptureSession>(session, deleter_ACameraCaptureSession);
+        uint8_t aeMode = autoExposure ? ACAMERA_CONTROL_AE_MODE_ON : ACAMERA_CONTROL_AE_MODE_OFF;
+        ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
+        ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
+        if (!autoExposure) {
+            ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
+        }
 
         cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
