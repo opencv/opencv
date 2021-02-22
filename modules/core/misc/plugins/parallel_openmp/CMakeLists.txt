@@ -8,5 +8,5 @@ include("${OpenCV_SOURCE_DIR}/cmake/OpenCVPluginStandalone.cmake")
 set(WITH_OPENMP ON)
 include("${OpenCV_SOURCE_DIR}/modules/core/cmake/parallel/init.cmake")
 
-message(STATUS "OpenMP: ${OPENMP_VERSION}")
+message(STATUS "OpenMP: ${OpenMP_CXX_VERSION}")
 ocv_create_plugin(core "opencv_core_parallel_openmp" "ocv.3rdparty.openmp" "OPENMP" "src/parallel/parallel_openmp.cpp")

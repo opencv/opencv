@@ -5,6 +5,7 @@
 #ifndef OPENCV_CORE_PARALLEL_BACKEND_HPP
 #define OPENCV_CORE_PARALLEL_BACKEND_HPP
 
+#include "opencv2/core/cvdef.h"
 #include <memory>
 
 namespace cv { namespace parallel {
