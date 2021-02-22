@@ -611,8 +611,13 @@ public:
                 }
             }
             // Keep outputs k results per image.
-            std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
-                      util::SortScorePairDescend<std::pair<int, int> >);
+            if ((_keepTopK * 8) > scoreIndexPairs.size()) {
+                std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            } else {
+                std::partial_sort(scoreIndexPairs.begin(), scoreIndexPairs.begin() + _keepTopK, scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            }
             scoreIndexPairs.resize(_keepTopK);
 
             std::map<int, std::vector<int> > newIndices;
