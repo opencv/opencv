@@ -1998,7 +1998,6 @@ class TestInputArrayRangeChecking {
         C(EXPR);
         C(MATX);
         C(STD_VECTOR);
-        C(STD_ARRAY);
         C(NONE);
         C(STD_VECTOR_VECTOR);
         C(STD_BOOL_VECTOR);
