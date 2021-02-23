@@ -1325,13 +1325,12 @@ void copyMakeConstBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
         memcpy( dstInner + srcroi.width, constBuf, right );
     }
 
-    dst += dststep*top;
-
     for( i = 0; i < top; i++ )
-        memcpy(dst + (i - top)*dststep, constBuf, dstroi.width);
+        memcpy(dst + i * dststep, constBuf, dstroi.width);
 
+    dst += (top + srcroi.height) * dststep;
     for( i = 0; i < bottom; i++ )
-        memcpy(dst + (i + srcroi.height)*dststep, constBuf, dstroi.width);
+        memcpy(dst + i * dststep, constBuf, dstroi.width);
 }
 
 }
