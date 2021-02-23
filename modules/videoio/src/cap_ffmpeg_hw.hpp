@@ -8,23 +8,22 @@
 #if defined(__OPENCV_BUILD) || defined(OPENCV_HAVE_CVCONFIG_H)  // TODO Properly detect and add D3D11 / LIBVA dependencies for standalone plugins
 #include "cvconfig.h"
 #endif
-#include <list>
+#include <sstream>
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
-#ifdef __cplusplus
 }
-#endif
 
 #define HW_DEFAULT_POOL_SIZE    32
 #define HW_DEFAULT_SW_FORMAT    AV_PIX_FMT_NV12
+#define HW_DISABLE_DECODERS     "av1.vaapi,av1_qsv,vp8.vaapi,vp8_qsv"
+#define HW_DISABLE_ENCODERS     "mjpeg_vaapi,mjpeg_qsv,vp8_vaapi"
 
 using namespace cv;
 
-AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt = NULL);
+AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *),
+                       const char *disabled_codecs, AVPixelFormat *hw_pix_fmt);
 AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device);
 AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
@@ -32,18 +31,14 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
 #ifdef HAVE_D3D11
 #define D3D11_NO_HELPERS
 #include <d3d11.h>
-#if __cplusplus >= 201103L // C++11
 #include <codecvt>
-#endif
 #endif
 
 #ifdef HAVE_VA
 #include <va/va_backend.h>
 #endif
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 #include <libavutil/hwcontext.h>
 #ifdef HAVE_D3D11
 #include <libavutil/hwcontext_d3d11va.h>
@@ -51,9 +46,7 @@ extern "C" {
 #ifdef HAVE_VA
 #include <libavutil/hwcontext_vaapi.h>
 #endif
-#ifdef __cplusplus
 }
-#endif
 
 static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_type) {
     struct HWTypeFFMPEG {
@@ -82,7 +75,8 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     if (hw_type == AV_HWDEVICE_TYPE_QSV)
         hw_name = "MFX";
     bool ret = true;
-#if defined(HAVE_D3D11) && __cplusplus >= 201103L // C++11
+    std::string device_name;
+#if defined(HAVE_D3D11)
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
         ID3D11Device* device = ((AVD3D11VADeviceContext*)hw_device_ctx->hwctx)->device;
         IDXGIDevice* dxgiDevice = nullptr;
@@ -91,10 +85,8 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
             if (SUCCEEDED(dxgiDevice->GetAdapter(&adapter))) {
                 DXGI_ADAPTER_DESC desc;
                 if (SUCCEEDED(adapter->GetDesc(&desc))) {
-                    std::wstring name(desc.Description);
                     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-                    CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << conv.to_bytes(name));
-                    return true;
+                    device_name = conv.to_bytes(desc.Description);
                 }
                 adapter->Release();
             }
@@ -103,10 +95,11 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     }
 #endif
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
-#ifdef HAVE_VA
+#if defined(HAVE_VA) && (VA_MAJOR_VERSION >= 1)
         VADisplay display = ((AVVAAPIDeviceContext *) hw_device_ctx->hwctx)->display;
         if (display) {
             VADriverContext *va_ctx = ((VADisplayContext *) display)->pDriverContext;
+            device_name = va_ctx->str_vendor;
             if (hw_type == AV_HWDEVICE_TYPE_QSV) {
                 // Workaround for issue fixed in MediaSDK 21.x https://github.com/Intel-Media-SDK/MediaSDK/issues/2595
                 // Checks VAAPI driver for support of VideoProc operation required by MediaSDK
@@ -121,18 +114,20 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
                         }
                     }
                 }
-            }
-            if (ret) {
-                CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << va_ctx->str_vendor);
-                return true;
+                if (!ret)
+                    CV_LOG_INFO(NULL, "FFMPEG: Skipping MFX video acceleration as entrypoint VideoProc not found in: " << device_name);
             }
         }
 #else
-        ret = (hw_type != AV_HWDEVICE_TYPE_QSV); // disable MFX if we can't check VAAPI for VideoProc support (see above)
+        ret = (hw_type != AV_HWDEVICE_TYPE_QSV); // disable MFX if we can't check VAAPI for VideoProc entrypoint
 #endif
     }
     if (ret) {
-        CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration");
+        if (!device_name.empty()) {
+            CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << device_name);
+        } else {
+            CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration");
+        }
     }
     return ret;
 }
@@ -171,12 +166,19 @@ AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
         if (hw_type != child_type) {
             AVBufferRef *derived_ctx = NULL;
             av_hwdevice_ctx_create_derived(&derived_ctx, hw_type, hw_device_ctx, 0);
+            if (!derived_ctx) {
+                const char *hw_name = av_hwdevice_get_type_name(hw_type);
+                CV_LOG_INFO(NULL, "FFMPEG: Failed to create derived video acceleration (av_hwdevice_ctx_create_derived) for " << hw_name);
+            }
             av_buffer_unref(&hw_device_ctx);
             return derived_ctx;
         } else {
             return hw_device_ctx;
         }
     } else {
+        const char *hw_name = av_hwdevice_get_type_name(child_type);
+        const char *device_name = pdevice ? pdevice : "'default'";
+        CV_LOG_INFO(NULL, "FFMPEG: Failed to create " << hw_name << " video acceleration (av_hwdevice_ctx_create) on device " << device_name);
         return NULL;
     }
 }
@@ -191,7 +193,7 @@ AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device
         hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx);
     }
     if (!hw_frames_ref) {
-        CV_LOG_DEBUG(NULL, "Failed to create HW frame context");
+        CV_LOG_INFO(NULL, "FFMPEG: Failed to create HW frame context (av_hwframe_ctx_alloc)");
         return NULL;
     }
     AVHWFramesContext *frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
@@ -204,27 +206,30 @@ AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device
     if (frames_ctx->initial_pool_size == 0)
         frames_ctx->initial_pool_size = HW_DEFAULT_POOL_SIZE;
     if (av_hwframe_ctx_init(hw_frames_ref) < 0) {
-        CV_LOG_DEBUG(NULL, "Failed to initialize HW frame context");
+        CV_LOG_INFO(NULL, "FFMPEG: Failed to initialize HW frame context (av_hwframe_ctx_init)");
         av_buffer_unref(&hw_frames_ref);
         return NULL;
     }
     return hw_frames_ref;
 }
 
-static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type) {
-    // disable MJPG HW encoder due to low encoding quality
-    if (AV_CODEC_ID_MJPEG == codec->id && av_codec_is_encoder(codec) && AV_HWDEVICE_TYPE_NONE != hw_type)
-        return false;
-    // disable AV1 HW decoder due to SW fallback issue
-    if (AV_CODEC_ID_AV1 == codec->id && av_codec_is_decoder(codec) && AV_HWDEVICE_TYPE_NONE != hw_type)
-        return false;
-    // disable VP8 VAAPI decoder/encoder
-    if (AV_CODEC_ID_VP8 == codec->id && AV_HWDEVICE_TYPE_VAAPI == hw_type)
-        return false;
+static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type, const char *disabled_codecs) {
+    if (!disabled_codecs)
+        disabled_codecs = av_codec_is_decoder(codec) ? HW_DISABLE_DECODERS : HW_DISABLE_ENCODERS;
+    std::string hw_name = std::string(".") + av_hwdevice_get_type_name(hw_type);
+    std::stringstream s_stream(disabled_codecs);
+    while (s_stream.good()) {
+        std::string name;
+        getline(s_stream, name, ',');
+        if (name == codec->name || name == hw_name || name == codec->name + hw_name || name == "hw") {
+            CV_LOG_INFO(NULL, "FFMPEG: skipping codec " << codec->name << hw_name);
+            return false;
+        }
+    }
     return true;
 }
 
-AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), AVPixelFormat *hw_pix_fmt) {
+AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), const char *disabled_codecs, AVPixelFormat *hw_pix_fmt) {
     AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
     AVCodec *c = 0;
     void *opaque = 0;
@@ -236,8 +241,6 @@ AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_
         if (c->id != id)
             continue;
         if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
-            continue;
-        if (!hw_check_codec(c, hw_type))
             continue;
         if (hw_type != AV_HWDEVICE_TYPE_NONE) {
             AVPixelFormat hw_native_fmt = AV_PIX_FMT_NONE;
@@ -251,7 +254,8 @@ AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_
                 for (int i = 0; c->pix_fmts[i] != AV_PIX_FMT_NONE; i++) {
                     if (c->pix_fmts[i] == hw_native_fmt) {
                         *hw_pix_fmt = hw_native_fmt;
-                        return c;
+                        if (hw_check_codec(c, hw_type, disabled_codecs))
+                            return c;
                     }
                 }
             }
@@ -261,7 +265,8 @@ AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_
                     break;
                 if (hw_config->device_type == hw_type) {
                     *hw_pix_fmt = hw_config->pix_fmt;
-                    return c;
+                    if (hw_check_codec(c, hw_type, disabled_codecs))
+                        return c;
                 }
             }
         } else {

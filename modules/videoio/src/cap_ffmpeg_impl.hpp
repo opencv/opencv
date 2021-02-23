@@ -993,6 +993,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                 enc->skip_frame = AVDISCARD_NONREF;
         }
 
+        const char *disabled_codecs = NULL;
+        if (dict) {
+            AVDictionaryEntry *disable_entry = av_dict_get(dict, "disable_codecs", NULL, 0);
+            if (disable_entry)
+                disabled_codecs = disable_entry->value;
+        }
+
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
         {
             // backup encoder' width/height
@@ -1019,7 +1026,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                 }
                 if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
                     AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                    codec = hw_find_codec(enc->codec_id, va_type, av_codec_is_decoder, &hw_pix_fmt);
+                    codec = hw_find_codec(enc->codec_id, va_type, av_codec_is_decoder, disabled_codecs, &hw_pix_fmt);
                     if (codec) {
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
@@ -1344,7 +1351,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         sw_picture = av_frame_alloc();
         //if (av_hwframe_map(sw_picture, picture, AV_HWFRAME_MAP_READ) < 0) {
         if (av_hwframe_transfer_data(sw_picture, picture, 0) < 0) {
-            CV_Error(0, "Error copying data GPU->CPU (av_hwframe_transfer_data)");
+            CV_LOG_ERROR(NULL, "Error copying data from GPU to CPU (av_hwframe_transfer_data)");
             return false;
         }
     }
@@ -1970,6 +1977,8 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
             ret = 0;
         } else {
             ret = avcodec_send_frame(c, picture);
+            if (ret < 0)
+                CV_LOG_ERROR(NULL, "Error sending frame to encoder (avcodec_send_frame)");
         }
         while (ret >= 0)
         {
@@ -2122,13 +2131,16 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         // copy data to HW frame
         AVFrame* hw_frame = av_frame_alloc();
         if (!hw_frame) {
+            CV_LOG_ERROR(NULL, "Error allocating AVFrame (av_frame_alloc)");
             return false;
         }
         if (av_hwframe_get_buffer(video_st->codec->hw_frames_ctx, hw_frame, 0) < 0) {
+            CV_LOG_ERROR(NULL, "Error obtaining HW frame (av_hwframe_get_buffer)");
             av_frame_free(&hw_frame);
             return false;
         }
         if (av_hwframe_transfer_data(hw_frame, picture, 0) < 0) {
+            CV_LOG_ERROR(NULL, "Error copying data from CPU to GPU (av_hwframe_transfer_data)");
             av_frame_free(&hw_frame);
             return false;
         }
@@ -2508,6 +2520,21 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         CV_WARN("Could not allocate stream");
         return false;
     }
+
+    const char *disabled_codecs = NULL;
+    AVDictionary *dict = NULL;
+#if !defined(NO_GETENV) && (LIBAVUTIL_VERSION_MAJOR >= 53)
+    char* options = getenv("OPENCV_FFMPEG_WRITER_OPTIONS");
+    if (options) {
+        av_dict_parse_string(&dict, options, ";", "|", 0);
+        if (dict) {
+            AVDictionaryEntry *entry = av_dict_get(dict, "disable_codecs", NULL, 0);
+            if (entry)
+                disabled_codecs = entry->value;
+        }
+    }
+#endif
+
     AVCodecContext *c = video_st->codec;
 
     // Find and open encoder, first try HW encoder
@@ -2529,7 +2556,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             av_buffer_unref(&hw_device_ctx);
 #if USE_AV_HW_CODECS
         if ((va_type != VIDEO_ACCELERATION_NONE) && (va_type & hw_type)) {
-            codec = hw_find_codec(codec_id, va_type, av_codec_is_encoder, &hw_format);
+            codec = hw_find_codec(codec_id, va_type, av_codec_is_encoder, disabled_codecs, &hw_format);
             if (!codec)
                 continue;
 
@@ -2596,6 +2623,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
 
     if (hw_device_ctx)
         av_buffer_unref(&hw_device_ctx);
+
+    if (dict != NULL)
+        av_dict_free(&dict);
 
     if (err < 0) {
         CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Failed to initilize VideoWriter");
