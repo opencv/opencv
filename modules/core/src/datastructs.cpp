@@ -40,6 +40,8 @@
 //M*/
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 /* default alignment for dynamic data strucutures, resided in storages. */
 #define  CV_STRUCT_ALIGN    ((int)sizeof(double))
 
@@ -3585,4 +3587,5 @@ void  seqInsertSlice( CvSeq* seq, int before_index, const CvArr* from_arr )
 
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */
