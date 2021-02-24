@@ -917,7 +917,7 @@ public:
                             if (max_elem!=last)
                             {
                                 dstData[x0] = *max_elem;
-                                if( compMaxIdx )
+                                if( compMaxIdx && dstMaskData )
                                 {
                                     dstMaskData[x0] = std::distance(first, max_elem);
                                 }

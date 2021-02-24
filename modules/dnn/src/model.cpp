@@ -1213,6 +1213,7 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
     {
         double area = contourArea(inPoly);
         double length = arcLength(inPoly, true);
+        CV_Assert(length > FLT_EPSILON);
         double distance = area * unclipRatio / length;
 
         size_t numPoints = inPoly.size();
