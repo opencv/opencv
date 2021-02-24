@@ -6,6 +6,7 @@
 
 using namespace std;
 using namespace cv;
+#define ADD_MODE(ID) res.push_back({ID, #ID})
 
 struct BlendMode
 {
@@ -14,7 +15,6 @@ struct BlendMode
     static vector<BlendMode> getModes()
     {
         vector<BlendMode> res;
-#define ADD_MODE(ID) res.push_back({ID, #ID})
         ADD_MODE(BLEND_MODEL_DARKEN);
         ADD_MODE(BLEND_MODEL_MULTIPY);
         ADD_MODE(BLEND_MODEL_COLOR_BURN);
@@ -32,7 +32,6 @@ struct BlendMode
         ADD_MODE(BLEND_MODEL_DIFFERENCE);
         ADD_MODE(BLEND_MODEL_EXCLUSION);
         ADD_MODE(BLEND_MODEL_DIVIDE);
-#undef ADD_MODE
         return res;
     }
 };
