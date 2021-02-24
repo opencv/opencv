@@ -62,12 +62,15 @@ inline void GetMaxScoreIndex(const std::vector<float>& scores, const float thres
 //    score_threshold: a threshold used to filter detection results.
 //    nms_threshold: a threshold used in non maximum suppression.
 //    top_k: if not > 0, keep at most top_k picked indices.
+//    limit: early terminate once the # of picked indices has reached it.
 //    indices: the kept indices of bboxes after nms.
 template <typename BoxType>
 inline void NMSFast_(const std::vector<BoxType>& bboxes,
       const std::vector<float>& scores, const float score_threshold,
       const float nms_threshold, const float eta, const int top_k,
-      std::vector<int>& indices, float (*computeOverlap)(const BoxType&, const BoxType&))
+      std::vector<int>& indices,
+      float (*computeOverlap)(const BoxType&, const BoxType&),
+      int limit = std::numeric_limits<int>::max())
 {
     CV_Assert(bboxes.size() == scores.size());
 
@@ -86,8 +89,12 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
             float overlap = computeOverlap(bboxes[idx], bboxes[kept_idx]);
             keep = overlap <= adaptive_threshold;
         }
-        if (keep)
+        if (keep) {
             indices.push_back(idx);
+            if (indices.size() >= limit) {
+                break;
+            }
+        }
         if (keep && eta < 1 && adaptive_threshold > 0.5) {
           adaptive_threshold *= eta;
         }
