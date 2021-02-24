@@ -4,13 +4,12 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test
-{
+namespace opencv_test { namespace {
 
 typedef tuple< string, Size, Size, int > Param;
 typedef testing::TestWithParam< Param > videoio_gstreamer;
 
-TEST_P(videoio_gstreamer, read_write)
+TEST_P(videoio_gstreamer, read_check)
 {
     if (!videoio_registry::hasBackend(CAP_GSTREAMER))
         throw SkipTestException("GStreamer backend was not found");
@@ -57,7 +56,7 @@ TEST_P(videoio_gstreamer, read_write)
     ASSERT_FALSE(cap.isOpened());
 }
 
-Param test_data[] = {
+static const Param test_data[] = {
     make_tuple("video/x-raw, format=BGR"  , Size(640, 480), Size(640, 480), COLOR_BGR2RGB),
     make_tuple("video/x-raw, format=GRAY8", Size(640, 480), Size(640, 480), COLOR_GRAY2RGB),
     make_tuple("video/x-raw, format=UYVY" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_UYVY),
@@ -68,7 +67,15 @@ Param test_data[] = {
     make_tuple("video/x-raw, format=YV12" , Size(640, 480), Size(640, 720), COLOR_YUV2RGB_YV12),
     make_tuple("video/x-raw, format=I420" , Size(640, 480), Size(640, 720), COLOR_YUV2RGB_I420),
     make_tuple("video/x-bayer"            , Size(640, 480), Size(640, 480), COLOR_BayerBG2RGB),
-    make_tuple("jpegenc ! image/jpeg"     , Size(640, 480), Size(640, 480), COLOR_BGR2RGB)
+    make_tuple("jpegenc ! image/jpeg"     , Size(640, 480), Size(640, 480), COLOR_BGR2RGB),
+
+    // unaligned cases, strides information must be used
+    make_tuple("video/x-raw, format=BGR"  , Size(322, 242), Size(322, 242), COLOR_BGR2RGB),
+    make_tuple("video/x-raw, format=GRAY8", Size(322, 242), Size(322, 242), COLOR_GRAY2RGB),
+    make_tuple("video/x-raw, format=NV12" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_NV12),
+    make_tuple("video/x-raw, format=NV21" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_NV21),
+    make_tuple("video/x-raw, format=YV12" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_YV12),
+    make_tuple("video/x-raw, format=I420" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_I420),
 };
 
 INSTANTIATE_TEST_CASE_P(videoio, videoio_gstreamer, testing::ValuesIn(test_data));
@@ -132,4 +139,4 @@ TEST(videoio_gstreamer, gray16_writing)
     EXPECT_EQ(0, remove(temp_file.c_str()));
 }
 
-} // namespace
+}} // namespace
