@@ -649,15 +649,17 @@ TEST_P(safe_capture, frames_independency)
 static VideoCaptureAPIs safe_apis[] = {CAP_FFMPEG, CAP_GSTREAMER, CAP_MSMF,CAP_AVFOUNDATION};
 INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
 
-////////////////////////////////////////// TEST_P(video_acceleration, write_read)
+//==================================================================================================
+// TEST_P(videocapture_acceleration, ...)
 
 struct VideoCaptureAccelerationInput
 {
     const char* filename;
-    bool mandatory;
+    double psnr_threshold;
 };
 
-inline static std::ostream &operator<<(std::ostream &out, const VideoCaptureAccelerationInput &p)
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoCaptureAccelerationInput& p)
 {
     out << p.filename;
     return out;
@@ -665,93 +667,107 @@ inline static std::ostream &operator<<(std::ostream &out, const VideoCaptureAcce
 
 typedef testing::TestWithParam<tuple<VideoCaptureAccelerationInput, VideoCaptureAPIs, VideoAccelerationType, bool>> videocapture_acceleration;
 
-TEST_P(videocapture_acceleration, read) {
+TEST_P(videocapture_acceleration, read)
+{
     auto param = GetParam();
     std::string filename = get<0>(param).filename;
-    bool mandatory = get<0>(param).mandatory;
+    double psnr_threshold = get<0>(param).psnr_threshold;
     VideoCaptureAPIs backend = get<1>(param);
     VideoAccelerationType va_type = get<2>(param);
     bool use_umat = get<3>(param);
     int device_idx = -1;
-    double psnr_threshold = 30; // SW and HW output may have small difference due to different color conversion to RGB
     const int frameNum = 15;
+
+    std::string filepath = cvtest::findDataFile("video/" + filename);
+
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
 
-    std::string filepath = cvtest::TS::ptr()->get_data_path() + "video/" + filename;
-
-    // SW reader
-    VideoCapture sw_reader(filepath, backend, {
-            CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE
-    });
-    if (!sw_reader.isOpened() && !mandatory) {
-        throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported, skipping");
-    }
-    ASSERT_TRUE(sw_reader.isOpened());
 
     // HW reader
     VideoCapture hw_reader(filepath, backend, {
             CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type),
             CAP_PROP_HW_DEVICE, device_idx
     });
-    ASSERT_TRUE(hw_reader.isOpened()); // HW acceleration should have fallback to SW codecs
+    if (!hw_reader.isOpened())
+    {
+        if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
+        {
+            // ANY HW acceleration should have fallback to SW codecs
+            VideoCapture sw_reader(filepath, backend, {
+                    CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE
+            });
+            if (!sw_reader.isOpened())
+                throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported, skipping");
 
-    double min_psnr_sw = 1000;
+            ASSERT_TRUE(hw_reader.isOpened()) << "ANY HW acceleration should have fallback to SW codecs";
+        }
+        else
+        {
+            throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW support, skipping");
+        }
+    }
+
+    VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
+    std::cout << hw_reader.getBackendName() << " VideoCapture on " << filename
+            << ": acceleration = " << actual_va
+            << std::endl << std::flush;
+
     double min_psnr_original = 1000;
-    for (int i = 0;; i++) {
-        Mat reference;
-        Mat actual;
-        if (!sw_reader.read(reference)) {
-            //EXPECT_GT(i, 0);
-            //EXPECT_FALSE(hw_reader.read(actual));
-            break;
-        }
-        if (use_umat) {
+    for (int i = 0; i < frameNum; i++)
+    {
+        SCOPED_TRACE(cv::format("frame=%d", i));
+        Mat frame;
+        if (use_umat)
+        {
             UMat umat;
-            EXPECT_TRUE(hw_reader.read(umat)) << " on frame: " << i;
-            umat.copyTo(actual);
-        } else {
-            EXPECT_TRUE(hw_reader.read(actual)) << " on frame: " << i;
+            EXPECT_TRUE(hw_reader.read(umat));
+            ASSERT_FALSE(umat.empty());
+            umat.copyTo(frame);
         }
-        EXPECT_FALSE(reference.empty());
-        EXPECT_FALSE(actual.empty());
-        double psnr = cvtest::PSNR(actual, reference);
-        EXPECT_GE(psnr, psnr_threshold) << " frame " << i;
-        if (psnr < min_psnr_sw)
-            min_psnr_sw = psnr;
-        // PSNR against original picture for information purpose only
-        Mat original = reference;
+        else
+        {
+            EXPECT_TRUE(hw_reader.read(frame));
+        }
+        ASSERT_FALSE(frame.empty());
+
+        if (cvtest::debugLevel > 0)
+        {
+            imwrite(cv::format("test_frame%03d.png", i), frame);
+        }
+
+        Mat original(frame.size(), CV_8UC3, Scalar::all(0));
         generateFrame(i, frameNum, original);
-        psnr = cvtest::PSNR(actual, original);
+        double psnr = cvtest::PSNR(frame, original);
         if (psnr < min_psnr_original)
             min_psnr_original = psnr;
     }
 
-    VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
-    std::cout << hw_reader.getBackendName() << " VideoCapture on " << filename << ": acceleration = " << actual_va <<
-        ", PSNR-sw = " << min_psnr_sw << ", PSNR-original = " << min_psnr_original << std::endl;
+    std::cout << "PSNR-original = " << min_psnr_original << std::endl;
+    EXPECT_GE(min_psnr_original, psnr_threshold);
 }
 
-static VideoCaptureAccelerationInput hw_filename[] = {
-        { "sample_322x242_15frames.yuv420p.libxvid.mp4", true },
-        { "sample_322x242_15frames.yuv420p.mjpeg.mp4", false },
-        { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", false },
-        { "sample_322x242_15frames.yuv420p.libx264.mp4", false },
-        { "sample_322x242_15frames.yuv420p.libx265.mp4", false },
-        { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", false },
-        { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", false }
+static const VideoCaptureAccelerationInput hw_filename[] = {
+        { "sample_322x242_15frames.yuv420p.libxvid.mp4", 28.0 },
+        { "sample_322x242_15frames.yuv420p.mjpeg.mp4", 20.0 },
+        { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libx264.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libx265.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", 30.0 }
 };
 
-static VideoCaptureAPIs hw_backends[] = {
+static const VideoCaptureAPIs hw_backends[] = {
         CAP_FFMPEG,
-        //CAP_GSTREAMER, TODO: GStreamer backend has issues decoding 322x242 resolution (intentionally not aligned by 16), issues not related to video acceleration
+        CAP_GSTREAMER,
 #ifdef _WIN32
         CAP_MSMF,
 #endif
 };
 
-static VideoAccelerationType hw_types[] = {
+static const VideoAccelerationType hw_types[] = {
+        VIDEO_ACCELERATION_NONE,
         VIDEO_ACCELERATION_ANY,
         VIDEO_ACCELERATION_MFX,
 #ifdef _WIN32
