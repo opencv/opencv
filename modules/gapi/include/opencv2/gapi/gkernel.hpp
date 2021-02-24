@@ -517,6 +517,13 @@ namespace gapi {
         const std::vector<GTransform>& get_transformations() const;
 
         /**
+         * @brief Returns vector of kernel ids included in the package
+         *
+         * @return vector of kernel ids included in the package
+         */
+        std::vector<std::string> get_kernel_ids() const;
+
+        /**
          * @brief Test if a particular kernel _implementation_ KImpl is
          * included in this kernel package.
          *
@@ -603,6 +610,18 @@ namespace gapi {
         void include()
         {
             includeHelper<KImpl>();
+        }
+
+        void include(cv::gapi::GBackend bck, const std::string& id)
+        {
+            static auto kernel_helper = []() { return 42; };
+
+            cv::gapi::GBackend backend     = bck;
+            auto kernel_id   = id;
+            auto kernel_impl = GKernelImpl{kernel_helper/*, &KImpl::API::getOutMeta*/};
+            removeAPI(kernel_id);
+
+            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
         }
 
         /**

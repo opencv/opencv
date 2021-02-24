@@ -55,6 +55,16 @@ const std::vector<cv::GTransform> &cv::gapi::GKernelPackage::get_transformations
     return m_transformations;
 }
 
+std::vector<std::string> cv::gapi::GKernelPackage::get_kernel_ids() const
+{
+    std::vector<std::string> ids;
+    for (const auto& id : m_id_kernels)
+    {
+        ids.push_back(id.first);
+    }
+    return ids;
+}
+
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,
                                            const GKernelPackage  &rhs)
 {
