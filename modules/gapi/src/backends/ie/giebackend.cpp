@@ -18,8 +18,6 @@
 
 #include <functional>
 #include <unordered_set>
-#include <thread>
-#include <queue>
 
 #include <ade/util/algorithm.hpp>
 
@@ -51,6 +49,14 @@
 #if INF_ENGINE_RELEASE < 2021010000
 #include "ie_compound_blob.h"
 #endif
+
+#if defined(HAVE_TBB)
+#  include <tbb/concurrent_queue.h> // FIXME: drop it from here!
+template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
+#else
+#  include "executor/conc_queue.hpp"
+template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
+#endif // TBB
 
 namespace IE = InferenceEngine;
 
@@ -246,7 +252,7 @@ struct IEUnit {
     }
 
     // This method is [supposed to be] called at Island compilation stage
-    std::shared_ptr<cv::gimpl::ie::IECompiled> compile() const {
+    cv::gimpl::ie::IECompiled compile() const {
         IEUnit* non_const_this = const_cast<IEUnit*>(this);
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
@@ -256,18 +262,7 @@ struct IEUnit {
             non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
         }
 
-        auto this_request = non_const_this->this_network.CreateInferRequest();
-        // Bind const data to infer request
-        for (auto &&p : params.const_inputs) {
-            // FIXME: SetBlob is known to be inefficient,
-            // it is worth to make a customizable "initializer" and pass the
-            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
-            // Still, constant data is to set only once.
-            this_request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
-        }
-
-        return std::shared_ptr<cv::gimpl::ie::IECompiled>(
-                new cv::gimpl::ie::IECompiled{this_plugin, this_network, this_request});
+        return {params, this_plugin, this_network};
     }
 };
 
@@ -479,11 +474,30 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
 }
 } // anonymous namespace
 
+std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInferRequests() {
+    std::vector<InferenceEngine::InferRequest> requests;
+    requests.reserve(params.nireq);
+
+    for (size_t i = 0; i < params.nireq; ++i) {
+        requests.push_back(this_network.CreateInferRequest());
+        auto& request = requests.back();
+        // Bind const data to infer request
+        for (auto &&p : params.const_inputs) {
+            // FIXME: SetBlob is known to be inefficient,
+            // it is worth to make a customizable "initializer" and pass the
+            // cv::Mat-wrapped blob there to support IE's optimal "GetBlob idiom"
+            // Still, constant data is to set only once.
+            request.SetBlob(p.first, wrapIE(p.second.first, p.second.second));
+        }
+    }
+
+    return requests;
+}
+
 class cv::gimpl::ie::RequestPool {
 public:
-    using CompiledPtr = std::shared_ptr<cv::gimpl::ie::IECompiled>;
-    using RunF        = std::function<void(cv::gimpl::ie::IECompiled&)>;
-    using CallbackF   = std::function<void(cv::gimpl::ie::IECompiled&)>;
+    using RunF      = std::function<void(InferenceEngine::InferRequest&)>;
+    using CallbackF = std::function<void(InferenceEngine::InferRequest&)>;
 
     // NB: The task is represented by:
     // RunF      - function which is set blobs and run async inference.
@@ -493,149 +507,61 @@ public:
         CallbackF callback;
     };
 
-    explicit RequestPool(const IEUnit& uu);
+    explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
 
-    void execute(Task&& t);
-    void wait_and_shutdown();
-
-    ~RequestPool();
+    void execute(Task&& t, bool async = true);
+    void waitAndShutdown();
 
 private:
-    void callback(Task task, CompiledPtr compiled, size_t id);
-    void worker();
+    void callback(Task task, InferenceEngine::InferRequest& request, size_t id);
 
-    bool                     m_is_shutdown = false;
-    std::queue<Task>         m_tasks;
-    std::vector<CompiledPtr> m_compiled_nets;
-    // Queue which contains id's of idle IECompiled's.
-    std::queue<size_t>       m_idle_ids;
-    std::vector<std::thread> m_workers;
-    // m_tasks and m_is_shutdown syncrhonization
-    std::mutex               m_task_mutex;
-    std::condition_variable  m_task_cv;
-    // m_idle_ids syncrhonization
-    std::mutex               m_idle_mutex;
-    std::condition_variable  m_idle_cv;
+    QueueClass<size_t>                         m_idle_ids;
+    std::vector<InferenceEngine::InferRequest> m_requests;
 };
 
 // RequestPool implementation //////////////////////////////////////////////
-cv::gimpl::ie::RequestPool::RequestPool(const IEUnit& uu) {
-    // NB: Set up requests and run worker.
-    for (size_t i = 0; i < uu.params.nireq; ++i) {
-        m_compiled_nets.push_back(uu.compile());
-        m_idle_ids.push(i);
-    }
-
-    // FIXME: The number of workers should be configured.
-    for (size_t i = 0; i < uu.params.nireq; ++i) {
-        m_workers.emplace_back(&cv::gimpl::ie::RequestPool::worker, this);
-    }
-}
-
-void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
-    {
-        std::lock_guard<std::mutex> lk{m_task_mutex};
-        m_tasks.push(std::move(t));
-    }
-    m_task_cv.notify_one();
-}
-
-void cv::gimpl::ie::RequestPool::wait_and_shutdown() {
-    {
-        std::lock_guard<std::mutex> lk{m_task_mutex};
-        // Check if it's already shutdown.
-        if (m_is_shutdown) {
-            return;
+cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferRequest>&& requests)
+    : m_requests(std::move(requests)) {
+        for (size_t i = 0; i < m_requests.size(); ++i) {
+            m_idle_ids.push(i);
         }
-        m_is_shutdown = true;
     }
 
-    m_task_cv.notify_one();
+void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t, bool async) {
+    size_t id;
+    m_idle_ids.pop(id);
 
-    for (auto&& worker : m_workers) {
-        worker.join();
+    auto& request = m_requests[id];
+
+    // FIXME: This WA should be removed after supporting async mode for InferList and Infer2.
+    // InferList and Infer2 work synchronously without calling callback,
+    // therefore don't release InferRequest idle id.
+    if (!async) {
+        // NB: Synchronous execution.
+        t.run(request);
+        // NB: Explicitly call callback to release id.
+        callback(t, request, id);
+        return;
     }
-}
 
-cv::gimpl::ie::RequestPool::~RequestPool() {
-    wait_and_shutdown();
+    request.SetCompletionCallback(
+            std::bind(&cv::gimpl::ie::RequestPool::callback, this, t, std::ref(request), id));
+    t.run(request);
 }
 
 void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
-                                          cv::gimpl::ie::RequestPool::CompiledPtr compiled,
+                                          InferenceEngine::InferRequest& request,
                                           size_t id) {
-    task.callback(*compiled);
-    {
-        std::lock_guard<std::mutex> idle_lock(m_idle_mutex);
-        m_idle_ids.push(id);
-    }
-    m_idle_cv.notify_one();
+    task.callback(request);
+    m_idle_ids.push(id);
 }
 
-void cv::gimpl::ie::RequestPool::worker() {
-    // The worker algorigthm:
-    // In infinite loop:
-    // 1. Worker waits for non-empty task queue or wait_and_shutdown is called.
-    // 2. If worker wakes up and queue isn't empty, then:
-    //     2.1 Get a task from queue and release lock.
-    //     2.2 Wait for idle IECompiled.
-    //     2.3 Get the id of the idle IECompiled
-    //     2.4 Drop this id from idle queue, which means that IECompiled isn't idle anymore.
-    //     2.5 Get IECompiled corresponing to id and release lock.
-    //     2.6 Run task and pass IECompiled id to the callback which returns it back to the queue.
-    //         Then go to the next iteration.
-    // 3. At this execution moment there is no tasks in queue and shutdown is called.
-    //    But some compiled networks probably are working at that moment, let's check it.
-    // 4. If all compiled networks are idle, need to double check a task queue,
-    //    because the tasks can submit the new ones in their callbacks, it that case go to (1).
-    // 5. Finally if all compiled networks are idle and task queue is empty, finish execution.
-
-    while (true) {
-        // (1) Wait for a task or shutdown.
-        {
-            std::unique_lock<std::mutex> task_lk{m_task_mutex};
-            m_task_cv.wait(task_lk, [this]() { return !m_tasks.empty() || m_is_shutdown; });
-
-            if (!m_tasks.empty()) {
-                // (2.1) Get task from queue.
-                auto task = m_tasks.front();
-                m_tasks.pop();
-                task_lk.unlock();
-
-                // (2.2) Wait for idle IECompiled.
-                std::unique_lock<std::mutex> idle_lock(m_idle_mutex);
-                m_idle_cv.wait(idle_lock, [this](){ return !m_idle_ids.empty(); });
-
-                // (2.3) Get the id of the first idle IECompiled.
-                size_t id = m_idle_ids.front();
-                // (2.4) Drop from queue.
-                m_idle_ids.pop();
-                // (2.5) Get the first idle IECompiled by id.
-                auto& compiled = m_compiled_nets[id];
-                idle_lock.unlock();
-
-                // (2.6) Run and go next.
-                compiled->this_request.SetCompletionCallback(
-                        std::bind(&cv::gimpl::ie::RequestPool::callback, this, task, compiled, id));
-                task.run(*compiled);
-                continue;
-            }
-        }
-        // (3) In this execution moment there is no tasks in queue and shutdown is called.
-
-        // C++17 std::scoped_lock ???
-        // (4)
-        std::lock_guard<std::mutex> idle_lock(m_idle_mutex);
-        if (m_idle_ids.size() == m_compiled_nets.size()) {
-            // Need to check that queue is empty again.
-            std::lock_guard<std::mutex> task_lk(m_task_mutex);
-            if (m_tasks.empty()) {
-                // (5) Finish the worker thread.
-                break;
-            }
-        }
-        // (4) Some compiled networks are busy or the new task is appeared.
-        continue;
+// NB: Not thread-safe.
+void cv::gimpl::ie::RequestPool::waitAndShutdown() {
+    // NB: It will be blocked if at least one request is busy.
+    for (size_t i = 0; i < m_requests.size(); ++i) {
+        size_t id;
+        m_idle_ids.pop(id);
     }
 }
 
@@ -652,6 +578,8 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
         case NodeType::OP:
             if (this_nh == nullptr) {
                 this_nh = nh;
+                this_iec = iem.metadata(this_nh).get<IEUnit>().compile();
+                m_reqPool.reset(new RequestPool(this_iec.createInferRequests()));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -671,8 +599,6 @@ cv::gimpl::ie::GIEExecutable::GIEExecutable(const ade::Graph &g,
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));
         }
     }
-    const auto& uu = iem.metadata(this_nh).get<IEUnit>();
-    m_reqPool.reset(new RequestPool(uu));
 }
 
 void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
@@ -683,8 +609,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     //     3. If the EndOfStream message is recieved, wait until all passed task are done.
     //     4.
     //        5.1 Run the kernel.
-    //        5.2 Kernel just pushes corresponding tasks to reqPool queue and finishes.
-    //        5.3 After the kernel is finished continue processing next frame
+    //        5.2 Kernel wait for all nececcary infer requests and start asynchronous execution.
+    //        5.3 After the kernel is finished continue processing next frame.
     //
     //     5. If graph is compiled in non-streaming mode, wait until all tasks are done.
 
@@ -697,7 +623,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         // (3) Wait until all passed task are done.
-        m_reqPool->wait_and_shutdown();
+        m_reqPool->waitAndShutdown();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
@@ -736,7 +662,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // (5) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
-        m_reqPool->wait_and_shutdown();
+        m_reqPool->waitAndShutdown();
     }
 }
 
@@ -774,112 +700,14 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 
 // NB: This is a callback used by async infer
 // to post outputs blobs (cv::GMat's).
-static void PostOutputs(IECompiled                     &iec,
-                        std::shared_ptr<IECallContext>  ctx) {
+static void PostOutputs(InferenceEngine::InferRequest   &request,
+                        std::shared_ptr<IECallContext>   ctx) {
     for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
         auto& out_mat = ctx->outMatR(i);
-        IE::Blob::Ptr this_blob = iec.this_request.GetBlob(ctx->uu.params.output_names[i]);
+        IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         ctx->out.post(ctx->output(i));
-    }
-}
-
-// NB: This is a callback used by InferList
-class PostInferList {
-public:
-    PostInferList(std::shared_ptr<IECallContext> ctx,
-                  std::vector<std::vector<int>>  cached_dims,
-                  std::vector<cv::Rect>          in_roi_vec,
-                  IE::Blob::Ptr                  this_blob,
-                  cv::gimpl::ie::RequestPool     &reqPool);
-
-    // NB: Should be const to use it as a callback in InferenceEngine.
-    void operator()(IECompiled& iec) const;
-
-private:
-    struct Priv;
-    explicit PostInferList(std::shared_ptr<Priv> p);
-
-    std::shared_ptr<Priv> m_priv;
-};
-
-struct PostInferList::Priv {
-    std::shared_ptr<IECallContext>   ctx ;
-    std::vector< std::vector<int> >  cached_dims;
-    std::vector<cv::Rect>            in_roi_vec;
-    IE::Blob::Ptr                    this_blob;
-    cv::gimpl::ie::RequestPool      &reqPool;
-};
-
-PostInferList::PostInferList(std::shared_ptr<PostInferList::Priv> p)
-    : m_priv(p)
-{
-};
-
-PostInferList::PostInferList(std::shared_ptr<IECallContext> ctx,
-                                 std::vector<std::vector<int>>  cached_dims,
-                                 std::vector<cv::Rect>          in_roi_vec,
-                                 IE::Blob::Ptr                  this_blob,
-                                 cv::gimpl::ie::RequestPool     &reqPool)
-    : m_priv(new Priv{ctx, cached_dims, in_roi_vec, this_blob, reqPool})
-{
-}
-
-void PostInferList::operator()(IECompiled& iec) const {
-    // The Alghorithm brief overview:
-    // 1. Get inference results and push them to vector.
-    // 2. If the vector is fully collected, post it to output.
-    // 3. If the vector isn't collected:
-    //     3.1 Take the next item.
-    //     3.2 Put task to process this item to RequestPool.
-    //     3.3 Create PostInferList with current Priv and set it as a callback.
-    // So, the PostInferList will be executed recursively passing his state
-    // to the next callback until all items are computed.
-
-    // (1) Get inference results and push them to vector.
-    for (auto i : ade::util::iota(m_priv->ctx->uu.params.num_out)) {
-        std::vector<cv::Mat> &out_vec = m_priv->ctx->outVecR<cv::Mat>(i);
-
-        IE::Blob::Ptr out_blob = iec.this_request.GetBlob(m_priv->ctx->uu.params.output_names[i]);
-
-        cv::Mat out_mat(m_priv->cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-        // FIXME: Avoid data copy. Not sure if it is possible though
-        copyFromIE(out_blob, out_mat);
-        out_vec.push_back(std::move(out_mat));
-    }
-    // NB: Callbacks works synchronously yet, so the lock isn't necessary.
-    auto&& out_vec_size = m_priv->ctx->outVecR<cv::Mat>(0).size();
-    // (2) If the vector is fully collected, post it to output.
-    if (m_priv->in_roi_vec.size() == out_vec_size) {
-        for (auto i : ade::util::iota(m_priv->ctx->uu.params.num_out)) {
-             m_priv->ctx->out.post(m_priv->ctx->output(i));
-        }
-    } else {
-        // NB: Output vector isn't collected yet, create a task with the next item in the list.
-        using namespace std::placeholders;
-        // NB: There is some trick:
-        // Task will be executed when this object is already destructed,
-        // so need to make sure that state (Priv) doesn't die.
-        // Since Priv is shared_ptr, we can just copy it and put to the task lambda,
-        // therefore increase reference counter and extend the life of Priv.
-        // For callback, create the new PostInferList with current Priv.
-        auto priv = this->m_priv;
-        // (3.2) Put task to process next item to RequestPool.
-        m_priv->reqPool.execute(
-                cv::gimpl::ie::RequestPool::Task{
-                    [priv](cv::gimpl::ie::IECompiled &compiled) {
-                        auto idx = priv->ctx->outVecR<cv::Mat>(0).size();
-                        // (3.1) Take the next item.
-                        auto&& rc = priv->in_roi_vec[idx];
-                        IE::Blob::Ptr roi_blob = IE::make_shared_blob(priv->this_blob, toIE(rc));
-                        compiled.this_request.SetBlob(priv->ctx->uu.params.input_names[0u], roi_blob);
-                        compiled.this_request.StartAsync();
-                    },
-                    // 3.3 Create PostInferList with current Priv and set it as a callback.
-                    PostInferList{priv},
-                }
-        );
     }
 }
 
@@ -938,7 +766,7 @@ struct Infer: public cv::detail::KernelTag {
         using namespace std::placeholders;
         reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx](cv::gimpl::ie::IECompiled &iec) {
+                    [ctx](InferenceEngine::InferRequest &req) {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
@@ -946,11 +774,11 @@ struct Infer: public cv::detail::KernelTag {
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            iec.this_request.SetBlob(ctx->uu.params.input_names[i], this_blob);
+                            req.SetBlob(ctx->uu.params.input_names[i], this_blob);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
-                        iec.this_request.StartAsync();
+                        req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, ctx)
                 }
@@ -1004,18 +832,18 @@ struct InferROI: public cv::detail::KernelTag {
         using namespace std::placeholders;
         reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx](cv::gimpl::ie::IECompiled &iec) {
+                    [ctx](InferenceEngine::InferRequest &req) {
                         GAPI_Assert(ctx->uu.params.num_in == 1);
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
                         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
 
-                        iec.this_request.SetBlob(*(ctx->uu.params.input_names.begin()),
+                        req.SetBlob(*(ctx->uu.params.input_names.begin()),
                                 IE::make_shared_blob(this_blob, toIE(this_roi)));
 
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
-                        iec.this_request.StartAsync();
+                        req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, ctx)
                 }
@@ -1064,40 +892,60 @@ struct InferList: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
-        // non-generic version for now:
-        // - assumes zero input is always ROI list
-        // - assumes all inputs/outputs are always Mats
-        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
-        // NB: In case there is no input data need to post output anyway
-        if (in_roi_vec.empty()) {
-            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                ctx->out.post(ctx->output(i));
-            }
-        }
 
-        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
-
-        // FIXME: This could be done ONCE at graph compile stage!
-        std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
-        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-            ctx->outVecR<cv::Mat>(i).clear();
-            // FIXME: Isn't this should be done automatically
-            // by some resetInternalData(), etc? (Probably at the GExecutor level)
-        }
-
-        auto&& rc = in_roi_vec[0u];
         using namespace std::placeholders;
         reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx, this_blob, rc](cv::gimpl::ie::IECompiled &iec) {
-                        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        iec.this_request.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
-                        iec.this_request.StartAsync();
+                    [ctx](InferenceEngine::InferRequest &req) {
+                        // non-generic version for now:
+                        // - assumes zero input is always ROI list
+                        // - assumes all inputs/outputs are always Mats
+                        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
+                        // NB: In case there is no input data need to post output anyway
+                        if (in_roi_vec.empty()) {
+                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                ctx->out.post(ctx->output(i));
+                            }
+                            return;
+                        }
+
+                        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+
+                        // FIXME: This could be done ONCE at graph compile stage!
+                        std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
+                        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
+                            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+                            // FIXME: Isn't this should be done automatically
+                            // by some resetInternalData(), etc? (Probably at the GExecutor level)
+                            ctx->outVecR<cv::Mat>(i).clear();
+                        }
+
+                        for (auto&& rc : in_roi_vec) {
+                            IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
+                            req.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
+
+                            req.Infer();
+
+                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+                                IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+
+                                cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+                                // FIXME: Avoid data copy. Not sure if it is possible though
+                                copyFromIE(out_blob, out_mat);
+                                out_vec.push_back(std::move(out_mat));
+                            }
+                        }
+
+                        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                            ctx->out.post(ctx->output(i));
+                        }
                     },
-                    PostInferList{ctx, cached_dims, in_roi_vec, this_blob, reqPool},
-                }
+                    [](InferenceEngine::InferRequest &) { /* do nothing */ }
+                },
+            false /* not async */
         );
     }
 };
@@ -1187,64 +1035,81 @@ struct InferList2: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<IECallContext> ctx,
                     cv::gimpl::ie::RequestPool    &reqPool) {
-        GAPI_Assert(false && "WIP for new RequestPool");
-#if 0
-        GAPI_Assert(ctx->inArgs().size() > 1u
-                && "This operation must have at least two arguments");
-
-        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
-
-        // Take the next argument, which must be vector (of any kind).
-        // Use it only to obtain the ROI list size (sizes of all other
-        // vectors must be equal to this one)
-        const auto& vec      = ctx->inArg<cv::detail::VectorRef>(1u);
-        const auto list_size = vec.size();
-        if (list_size == 0u) {
-            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                ctx->out.post(ctx->output(i));
-            }
-        }
-
-        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            ctx->outVecR<cv::Mat>(i).resize(list_size);
-        }
-
-        // FIXME: This could be done ONCE at graph compile stage!
-        std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
-        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-        }
-
-        using namespace std::placeholders;
-        for (const auto &list_idx : ade::util::iota(list_size)) {
             reqPool.execute(
                     cv::gimpl::ie::RequestPool::Task {
-                        [ctx, list_idx, list_size, blob_0](cv::gimpl::ie::IECompiled &iec) {
-                            for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
-                                const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
-                                GAPI_Assert(this_vec.size() == list_size);
-                                IE::Blob::Ptr this_blob;
-                                if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
-                                    const auto &vec = this_vec.rref<cv::Rect>();
-                                    this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
-                                } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
-                                    const auto &vec = this_vec.rref<cv::Mat>();
-                                    const auto &mat = vec[list_idx];
-                                    this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
-                                } else {
-                                    GAPI_Assert(false &&
-                                        "Only Rect and Mat types are supported for infer list 2!");
+                        [ctx](InferenceEngine::InferRequest &req) {
+                            GAPI_Assert(ctx->inArgs().size() > 1u
+                                    && "This operation must have at least two arguments");
+
+                            IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
+
+                            // Take the next argument, which must be vector (of any kind).
+                            // Use it only to obtain the ROI list size (sizes of all other
+                            // vectors must be equal to this one)
+                            const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
+                            if (list_size == 0u) {
+                                for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                    ctx->out.post(ctx->output(i));
                                 }
-                                iec.this_request.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
+                                return;
                             }
-                            iec.this_request.StartAsync();
+
+                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                ctx->outVecR<cv::Mat>(i).resize(list_size);
+                            }
+
+                            // FIXME: This could be done ONCE at graph compile stage!
+                            std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
+                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
+                                cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+                                // FIXME: Isn't this should be done automatically
+                                // by some resetInternalData(), etc? (Probably at the GExecutor level)
+                                ctx->outVecR<cv::Mat>(i).clear();
+                            }
+
+                            for (const auto &list_idx : ade::util::iota(list_size)) {
+                                for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
+                                    const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
+                                    GAPI_Assert(this_vec.size() == list_size);
+                                    IE::Blob::Ptr this_blob;
+                                    if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
+                                        const auto &vec = this_vec.rref<cv::Rect>();
+                                        this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
+                                    } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
+                                        const auto &vec = this_vec.rref<cv::Mat>();
+                                        const auto &mat = vec[list_idx];
+                                        this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
+                                    } else {
+                                        GAPI_Assert(false &&
+                                                "Only Rect and Mat types are supported for infer list 2!");
+                                    }
+
+                                    req.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
+                                }
+
+                                req.Infer();
+
+                                for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                    std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+                                    IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+
+                                    cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+                                    // FIXME: Avoid data copy. Not sure if it is possible though
+                                    copyFromIE(out_blob, out_mat);
+                                    out_vec.push_back(std::move(out_mat));
+                                }
+                            }
+
+                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                                ctx->out.post(ctx->output(i));
+                            }
                         },
-                        PostInfer2{ctx, cached_dims, vec, blob_0, reqPool};
-                    }
+                        [](InferenceEngine::InferRequest &) { /* do nothing */ }
+                    },
+                false /* not async */
             );
-        }
-# endif
     }
 };
 

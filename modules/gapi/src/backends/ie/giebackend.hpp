@@ -24,18 +24,18 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
+#include "backends/ie/giebackend/giewrapper.hpp" // wrap::Plugin
+
 namespace cv {
 namespace gimpl {
 namespace ie {
 
 struct IECompiled {
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-    InferenceEngine::InferencePlugin   this_plugin;
-#else
-    InferenceEngine::Core              this_core;
-#endif
-    InferenceEngine::ExecutableNetwork this_network;
-    InferenceEngine::InferRequest      this_request;
+    std::vector<InferenceEngine::InferRequest> createInferRequests();
+
+    cv::gapi::ie::detail::ParamDesc     params;
+    cv::gimpl::ie::wrap::Plugin         this_plugin;
+    InferenceEngine::ExecutableNetwork  this_network;
 };
 
 struct RequestPool;
@@ -48,6 +48,7 @@ class GIEExecutable final: public GIslandExecutable
     // The only executable stuff in this graph
     // (assuming it is always single-op)
     ade::NodeHandle this_nh;
+    IECompiled this_iec;
 
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
