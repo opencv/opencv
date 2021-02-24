@@ -37,8 +37,13 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int, CV_OUT CvPluginC
             }
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
     }
     if (cap)
         delete cap;
@@ -69,8 +74,14 @@ CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OU
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -85,8 +96,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
         VideoCapture_IntelMFX* instance = (VideoCapture_IntelMFX*)handle;
         return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -101,8 +118,14 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
         VideoCapture_IntelMFX* instance = (VideoCapture_IntelMFX*)handle;
         return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -120,8 +143,14 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
             return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
         return CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -140,8 +169,13 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
             return CV_ERROR_OK;
         }
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
     }
     if (wrt)
         delete wrt;
@@ -182,8 +216,14 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
         instance->write(img);
         return CV_ERROR_OK;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }

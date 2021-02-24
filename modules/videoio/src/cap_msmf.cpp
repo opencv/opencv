@@ -1712,8 +1712,13 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
             return CV_ERROR_OK;
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
     }
     if (cap)
         delete cap;
@@ -1744,8 +1749,14 @@ CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OU
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1760,8 +1771,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
         CaptureT* instance = (CaptureT*)handle;
         return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1776,8 +1793,14 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
         CaptureT* instance = (CaptureT*)handle;
         return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1795,8 +1818,14 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
             return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
         return CV_ERROR_FAIL;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1815,8 +1844,13 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
             return CV_ERROR_OK;
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
     }
     if (wrt)
         delete wrt;
@@ -1859,8 +1893,14 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char*
         instance->write(img);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
