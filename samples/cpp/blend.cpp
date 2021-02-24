@@ -6,7 +6,6 @@
 
 using namespace std;
 using namespace cv;
-#define ADD_MODE(ID) res.push_back({ID, #ID})
 
 struct BlendMode
 {
@@ -15,23 +14,23 @@ struct BlendMode
     static vector<BlendMode> getModes()
     {
         vector<BlendMode> res;
-        ADD_MODE(BLEND_MODEL_DARKEN);
-        ADD_MODE(BLEND_MODEL_MULTIPY);
-        ADD_MODE(BLEND_MODEL_COLOR_BURN);
-        ADD_MODE(BLEND_MODEL_LINEAR_BURN);
-        ADD_MODE(BLEND_MODEL_LIGHTEN);
-        ADD_MODE(BLEND_MODEL_SCREEN);
-        ADD_MODE(BLEND_MODEL_COLOR_DODGE);
-        ADD_MODE(BLEND_MODEL_LINEAR_DODGE);
-        ADD_MODE(BLEND_MODEL_OVERLAY);
-        ADD_MODE(BLEND_MODEL_SOFT_LIGHT);
-        ADD_MODE(BLEND_MODEL_HARD_LIGHT);
-        ADD_MODE(BLEND_MODEL_VIVID_LIGHT);
-        ADD_MODE(BLEND_MODEL_LINEAR_LIGHT);
-        ADD_MODE(BLEND_MODEL_PIN_LIGHT);
-        ADD_MODE(BLEND_MODEL_DIFFERENCE);
-        ADD_MODE(BLEND_MODEL_EXCLUSION);
-        ADD_MODE(BLEND_MODEL_DIVIDE);
+        res.push_back(BLEND_MODEL_DARKEN);
+        res.push_back(BLEND_MODEL_MULTIPY);
+        res.push_back(BLEND_MODEL_COLOR_BURN);
+        res.push_back(BLEND_MODEL_LINEAR_BURN);
+        res.push_back(BLEND_MODEL_LIGHTEN);
+        res.push_back(BLEND_MODEL_SCREEN);
+        res.push_back(BLEND_MODEL_COLOR_DODGE);
+        res.push_back(BLEND_MODEL_LINEAR_DODGE);
+        res.push_back(BLEND_MODEL_OVERLAY);
+        res.push_back(BLEND_MODEL_SOFT_LIGHT);
+        res.push_back(BLEND_MODEL_HARD_LIGHT);
+        res.push_back(BLEND_MODEL_VIVID_LIGHT);
+        res.push_back(BLEND_MODEL_LINEAR_LIGHT);
+        res.push_back(BLEND_MODEL_PIN_LIGHT);
+        res.push_back(BLEND_MODEL_DIFFERENCE);
+        res.push_back(BLEND_MODEL_EXCLUSION);
+        res.push_back(BLEND_MODEL_DIVIDE);
         return res;
     }
 };
