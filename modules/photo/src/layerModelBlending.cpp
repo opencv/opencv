@@ -8,7 +8,7 @@
 using namespace std;
 using namespace cv;
 
-//The following macro definitions refer to
+//The following macro definitions  refer  to
 //stackoverflow.com/questions/5919663/how-does-photoshop-blend-two-images-together
 #define LayerModelBlend_Darken(A,B)     ((uchar)((B > A) ? A:B))
 #define LayerModelBlend_Lighten(A,B)    ((uchar)((B > A) ? B:A))
