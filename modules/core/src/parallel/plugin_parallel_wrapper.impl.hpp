@@ -279,6 +279,7 @@ std::shared_ptr<IParallelBackendFactory> createPluginParallelBackendFactory(cons
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(PARALLEL_ENABLE_PLUGINS)
     return std::make_shared<impl::PluginParallelBackendFactory>(baseName);
 #else
+    CV_UNUSED(baseName);
     return std::shared_ptr<IParallelBackendFactory>();
 #endif
 }

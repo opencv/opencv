@@ -444,7 +444,7 @@ int main(int argc, char* argv[])
 
     // -----------------------Show the undistorted image for the image list ------------------------
     //! [show_results]
-    if( s.inputType == Settings::IMAGE_LIST && s.showUndistorsed )
+    if( s.inputType == Settings::IMAGE_LIST && s.showUndistorsed && !cameraMatrix.empty())
     {
         Mat view, rview, map1, map2;
 

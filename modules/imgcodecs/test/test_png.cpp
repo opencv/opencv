@@ -7,12 +7,6 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_PNG
 
-#ifdef HAVE_LIBPNG_PNG_H
-#include <libpng/png.h>
-#else
-#include <png.h>
-#endif
-
 TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -99,7 +93,6 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
 }
 
-#ifdef PNG_eXIf_SUPPORTED
 /**
  * Test for check whether reading exif orientation tag was processed successfully or not
  * The test info is the set of 8 images named testExifRotate_{1 to 8}.png
@@ -144,7 +137,11 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
 typedef testing::TestWithParam<string> Imgcodecs_PNG_Exif;
 
 // Solution to issue 16579: PNG read doesn't support Exif orientation data
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
 TEST_P(Imgcodecs_PNG_Exif, exif_orientation)
+#else
+TEST_P(Imgcodecs_PNG_Exif, DISABLED_exif_orientation)
+#endif
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + GetParam();
@@ -188,7 +185,6 @@ const string exif_files[] =
 
 INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_PNG_Exif,
     testing::ValuesIn(exif_files));
-#endif // PNG_eXIf_SUPPORTED
 
 #endif // HAVE_PNG
 
