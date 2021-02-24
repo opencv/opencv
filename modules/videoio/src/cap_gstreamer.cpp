@@ -1064,7 +1064,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     std::vector<int> unused_params = params.getUnused();
     for (int key : unused_params) {
         if (!setProperty(key, params.get<double>(key))) {
-            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: can't set property " + key);
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: can't set property " << key);
             return false;
         }
     }

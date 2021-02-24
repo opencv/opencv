@@ -999,6 +999,9 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             if (disable_entry)
                 disabled_codecs = disable_entry->value;
         }
+#if !USE_AV_HW_CODECS
+        CV_UNUSED(disabled_codecs);
+#endif
 
         if( AVMEDIA_TYPE_VIDEO == enc->codec_type && video_stream < 0)
         {
@@ -2533,6 +2536,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                 disabled_codecs = entry->value;
         }
     }
+#endif
+#if !USE_AV_HW_CODECS
+    CV_UNUSED(disabled_codecs);
 #endif
 
     AVCodecContext *c = video_st->codec;

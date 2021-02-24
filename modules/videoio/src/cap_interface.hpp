@@ -185,7 +185,7 @@ public:
             {
                 found = true;
                 CV_LOG_INFO(NULL, "VIDEOIO: unused parameter: [" << param.key << "]=" <<
-                    cv::format("%lld / 0x%16llx", (long long)param.value, (long long)param.value));
+                    cv::format("%lld / 0x%016llx", (long long)param.value, (long long)param.value));
             }
         }
         return found;

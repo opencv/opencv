@@ -19,7 +19,7 @@ void applyParametersFallback(const Ptr<IVideoCapture>& cap, const VideoCapturePa
     {
         double value = params.get<double>(prop, -1);
         CV_LOG_INFO(NULL, "VIDEOIO: apply parameter: [" << prop << "]=" <<
-                          cv::format("%g / %lld / 0x%16llx", value, (long long)value, (long long)value));
+                          cv::format("%g / %lld / 0x%016llx", value, (long long)value, (long long)value));
         if (!cap->setProperty(prop, value))
         {
             if (prop != CAP_PROP_HW_ACCELERATION && prop != CAP_PROP_HW_DEVICE) { // optional parameters
