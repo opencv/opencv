@@ -120,6 +120,8 @@ function(ocv_create_plugin module default_name dependency_target dependency_targ
     set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES OUTPUT_NAME "${OPENCV_PLUGIN_OUTPUT_NAME_FULL}")
   elseif(OPENCV_PLUGIN_OUTPUT_NAME)
     set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES OUTPUT_NAME "${OPENCV_PLUGIN_OUTPUT_NAME}${OPENCV_PLUGIN_SUFFIX}")
+  else()
+    set_target_properties(${OPENCV_PLUGIN_NAME} PROPERTIES OUTPUT_NAME "${OPENCV_PLUGIN_NAME}${OPENCV_PLUGIN_SUFFIX}")
   endif()
 
   install(TARGETS ${OPENCV_PLUGIN_NAME} LIBRARY DESTINATION . COMPONENT plugins)
