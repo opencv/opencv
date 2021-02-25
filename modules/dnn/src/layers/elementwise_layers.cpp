@@ -1409,26 +1409,21 @@ struct ExpFunctor : public BaseFunctor
     ExpFunctor(float base_ = -1.f, float scale_ = 1.f, float shift_ = 0.f)
         : base(base_), scale(scale_), shift(shift_)
     {
+        // For base > 0 :
+        // y     = base^(scale * input + shift)
+        // ln(y) = ln(base)*(scale * input + shift)
+        // y     = exp((ln(base)*scale) * input + (ln(base)*shift))
+        // y     = exp(normalized_scale * input + normalized_shift)
         CV_Check(base, base == -1.f || base > 0.f, "Unsupported 'base' value");
+        const float ln_base = (base == -1.f) ? 1.f : log(base);
+        normScale = scale * ln_base;
+        normShift = shift * ln_base;
     }
 
     bool supportBackend(int backendId, int targetId)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-    }
-
-    void finalize()
-    {
-        // For base > 0 :
-        // y     = base^(scale * input + shift)
-        // ln(y) = ln(base)*(scale * input + shift)
-        // y     = exp((ln(base)*scale) * input + (ln(base)*shift))
-        // y     = exp(normalized_scale * input + normalized_shift)
-
-        float ln_base = (base == -1.f) ? 1.f : log(base);
-        normScale = scale * ln_base;
-        normShift = shift * ln_base;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const

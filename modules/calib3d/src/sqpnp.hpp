@@ -72,6 +72,7 @@ private:
         cv::Matx<double, 9, 1> r_hat;
         cv::Matx<double, 3, 1> t;
         double sq_error;
+        SQPSolution() : sq_error(0) {}
     };
 
     /*
