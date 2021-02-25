@@ -562,20 +562,20 @@ template<typename _Tp, int n> inline v_reg<_Tp2, n> func(const v_reg<_Tp, n>& a)
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_MATH_FUNC_FLOAT(func, cfunc) \
-inline v_reg<int, 4> func(const v_reg<float, 4>& a) \
+template<int n> inline v_reg<int, n> func(const v_reg<float, n>& a) \
 { \
-    v_reg<int, 4> c; \
-    for( int i = 0; i < 4; i++ ) \
+    v_reg<int, n> c; \
+    for( int i = 0; i < n; i++ ) \
         c.s[i] = cfunc(a.s[i]); \
     return c; \
 } \
-inline v_reg<int, 4> func(const v_reg<double, 2>& a) \
+template<int n> inline v_reg<int, 2*n> func(const v_reg<double, n>& a) \
 { \
-    v_reg<int, 4> c; \
-    for( int i = 0; i < 2; i++ ) \
+    v_reg<int, 2*n> c; \
+    for( int i = 0; i < n; i++ ) \
     { \
         c.s[i] = cfunc(a.s[i]); \
-        c.s[i + 2] = 0; \
+        c.s[i + n] = 0; \
     } \
     return c; \
 }
@@ -855,9 +855,9 @@ inline v_reg<typename V_TypeTraits<_Tp>::abs_type, n> v_absdiff(const v_reg<_Tp,
 /** @overload
 
 For 32-bit floating point values */
-inline v_float32x4 v_absdiff(const v_float32x4& a, const v_float32x4& b)
+template<int n> inline v_reg<float, n> v_absdiff(const v_reg<float, n>& a, const v_reg<float, n>& b)
 {
-    v_float32x4 c;
+    v_reg<float, n> c;
     for( int i = 0; i < c.nlanes; i++ )
         c.s[i] = _absdiff(a.s[i], b.s[i]);
     return c;
@@ -866,9 +866,9 @@ inline v_float32x4 v_absdiff(const v_float32x4& a, const v_float32x4& b)
 /** @overload
 
 For 64-bit floating point values */
-inline v_float64x2 v_absdiff(const v_float64x2& a, const v_float64x2& b)
+template<int n> inline v_reg<double, n> v_absdiff(const v_reg<double, n>& a, const v_reg<double, n>& b)
 {
-    v_float64x2 c;
+    v_reg<double, n> c;
     for( int i = 0; i < c.nlanes; i++ )
         c.s[i] = _absdiff(a.s[i], b.s[i]);
     return c;
@@ -1238,14 +1238,17 @@ template<typename _Tp, int n> inline typename V_TypeTraits<_Tp>::sum_type v_redu
  result[3] = d[0] + d[1] + d[2] + d[3]
  @endcode
 */
-inline v_float32x4 v_reduce_sum4(const v_float32x4& a, const v_float32x4& b,
-                                 const v_float32x4& c, const v_float32x4& d)
+template<int n> inline v_reg<float, n> v_reduce_sum4(const v_reg<float, n>& a, const v_reg<float, n>& b,
+    const v_reg<float, n>& c, const v_reg<float, n>& d)
 {
-    v_float32x4 r;
-    r.s[0] = a.s[0] + a.s[1] + a.s[2] + a.s[3];
-    r.s[1] = b.s[0] + b.s[1] + b.s[2] + b.s[3];
-    r.s[2] = c.s[0] + c.s[1] + c.s[2] + c.s[3];
-    r.s[3] = d.s[0] + d.s[1] + d.s[2] + d.s[3];
+    v_reg<float, n> r;
+    for(int i = 0; i < (n/4); i++)
+    {
+        r.s[i*4 + 0] = a.s[i*4 + 0] + a.s[i*4 + 1] + a.s[i*4 + 2] + a.s[i*4 + 3];
+        r.s[i*4 + 1] = b.s[i*4 + 0] + b.s[i*4 + 1] + b.s[i*4 + 2] + b.s[i*4 + 3];
+        r.s[i*4 + 2] = c.s[i*4 + 0] + c.s[i*4 + 1] + c.s[i*4 + 2] + c.s[i*4 + 3];
+        r.s[i*4 + 3] = d.s[i*4 + 0] + d.s[i*4 + 1] + d.s[i*4 + 2] + d.s[i*4 + 3];
+    }
     return r;
 }
 
@@ -2105,11 +2108,10 @@ template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, co
 /** @brief Convert to double
 
 Supported input type is cv::v_int32x4. */
-CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
+template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
 {
-    enum { n = 2 };
-    v_reg<double, n> c;
-    for( int i = 0; i < n; i++ )
+    v_reg<double, (n/2)> c;
+    for( int i = 0; i < (n/2); i++ )
         c.s[i] = (double)a.s[i];
     return c;
 }
@@ -2117,23 +2119,21 @@ CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<int, 4>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_int32x4. */
-CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<int, 4>& a)
+template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int, n>& a)
 {
-    enum { n = 2 };
-    v_reg<double, n> c;
-    for( int i = 0; i < n; i++ )
-        c.s[i] = (double)a.s[i + 2];
+    v_reg<double, (n/2)> c;
+    for( int i = 0; i < (n/2); i++ )
+        c.s[i] = (double)a.s[i + (n/2)];
     return c;
 }
 
 /** @brief Convert to double
 
 Supported input type is cv::v_float32x4. */
-CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
+template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64(const v_reg<float, n>& a)
 {
-    enum { n = 2 };
-    v_reg<double, n> c;
-    for( int i = 0; i < n; i++ )
+    v_reg<double, (n/2)> c;
+    for( int i = 0; i < (n/2); i++ )
         c.s[i] = (double)a.s[i];
     return c;
 }
@@ -2141,33 +2141,19 @@ CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<float, 4>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_float32x4. */
-CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<float, 4>& a)
+template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<float, n>& a)
 {
-    enum { n = 2 };
-    v_reg<double, n> c;
-    for( int i = 0; i < n; i++ )
-        c.s[i] = (double)a.s[i + 2];
+    v_reg<double, (n/2)> c;
+    for( int i = 0; i < (n/2); i++ )
+        c.s[i] = (double)a.s[i + (n/2)];
     return c;
 }
 
 /** @brief Convert to double
 
 Supported input type is cv::v_int64x2. */
-CV_INLINE v_reg<double, 2> v_cvt_f64(const v_reg<int64, 2>& a)
+template<int n> CV_INLINE v_reg<double, n> v_cvt_f64(const v_reg<int64, n>& a)
 {
-    enum { n = 2 };
-    v_reg<double, n> c;
-    for( int i = 0; i < n; i++ )
-        c.s[i] = (double)a.s[i];
-    return c;
-}
-
-/** @brief Convert to double high part of vector
-
-Supported input type is cv::v_int64x2. */
-CV_INLINE v_reg<double, 2> v_cvt_f64_high(const v_reg<int64, 2>& a)
-{
-    enum { n = 2 };
     v_reg<double, n> c;
     for( int i = 0; i < n; i++ )
         c.s[i] = (double)a.s[i];
@@ -2227,27 +2213,6 @@ template<int n> inline v_reg<double, n> v_lut(const double* tab, const v_reg<int
     for( int i = 0; i < n; i++ )
         c.s[i] = tab[idx.s[i]];
     return c;
-}
-
-
-inline v_int32x4 v_lut(const int* tab, const v_int32x4& idxvec)
-{
-    return v_lut(tab, idxvec.s);
-}
-
-inline v_uint32x4 v_lut(const unsigned* tab, const v_int32x4& idxvec)
-{
-    return v_lut(tab, idxvec.s);
-}
-
-inline v_float32x4 v_lut(const float* tab, const v_int32x4& idxvec)
-{
-    return v_lut(tab, idxvec.s);
-}
-
-inline v_float64x2 v_lut(const double* tab, const v_int32x4& idxvec)
-{
-    return v_lut(tab, idxvec.s);
 }
 
 
@@ -2330,16 +2295,23 @@ b2  {A3 B3 C3 D3}
 b3  {A4 B4 C4 D4}
 @endcode
 */
-template<typename _Tp>
-inline void v_transpose4x4( v_reg<_Tp, 4>& a0, const v_reg<_Tp, 4>& a1,
-                            const v_reg<_Tp, 4>& a2, const v_reg<_Tp, 4>& a3,
-                            v_reg<_Tp, 4>& b0, v_reg<_Tp, 4>& b1,
-                            v_reg<_Tp, 4>& b2, v_reg<_Tp, 4>& b3 )
+template<typename _Tp, int n>
+inline void v_transpose4x4( v_reg<_Tp, n>& a0, const v_reg<_Tp, n>& a1,
+                            const v_reg<_Tp, n>& a2, const v_reg<_Tp, n>& a3,
+                            v_reg<_Tp, n>& b0, v_reg<_Tp, n>& b1,
+                            v_reg<_Tp, n>& b2, v_reg<_Tp, n>& b3 )
 {
-    b0 = v_reg<_Tp, 4>(a0.s[0], a1.s[0], a2.s[0], a3.s[0]);
-    b1 = v_reg<_Tp, 4>(a0.s[1], a1.s[1], a2.s[1], a3.s[1]);
-    b2 = v_reg<_Tp, 4>(a0.s[2], a1.s[2], a2.s[2], a3.s[2]);
-    b3 = v_reg<_Tp, 4>(a0.s[3], a1.s[3], a2.s[3], a3.s[3]);
+    for (int i = 0; i < n / 4; i++)
+    {
+        b0.s[0 + i*4] = a0.s[0 + i*4]; b0.s[1 + i*4] = a1.s[0 + i*4];
+        b0.s[2 + i*4] = a2.s[0 + i*4]; b0.s[3 + i*4] = a3.s[0 + i*4];
+        b1.s[0 + i*4] = a0.s[1 + i*4]; b1.s[1 + i*4] = a1.s[1 + i*4];
+        b1.s[2 + i*4] = a2.s[1 + i*4]; b1.s[3 + i*4] = a3.s[1 + i*4];
+        b2.s[0 + i*4] = a0.s[2 + i*4]; b2.s[1 + i*4] = a1.s[2 + i*4];
+        b2.s[2 + i*4] = a2.s[2 + i*4]; b2.s[3 + i*4] = a3.s[2 + i*4];
+        b3.s[0 + i*4] = a0.s[3 + i*4]; b3.s[1 + i*4] = a1.s[3 + i*4];
+        b3.s[2 + i*4] = a2.s[3 + i*4]; b3.s[3 + i*4] = a3.s[3 + i*4];
+    }
 }
 
 //! @brief Helper macro
