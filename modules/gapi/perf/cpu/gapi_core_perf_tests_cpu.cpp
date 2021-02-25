@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #include "../perf_precomp.hpp"
@@ -281,6 +281,35 @@ INSTANTIATE_TEST_CASE_P(ConvertToPerfTestCPU, ConvertToPerfTest,
             Values(2.5, 1.0),
             Values(0.0),
             Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(KMeansNDPerfTestCPU, KMeansNDPerfTest,
+                        Combine(Values(cv::Size(1, 20),
+                                       cv::Size(16, 4096)),
+                                Values(AbsTolerance(0.01).to_compare_obj()),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(KMeans2DPerfTestCPU, KMeans2DPerfTest,
+                        Combine(Values(20, 4096),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
+                                Values(cv::compile_args(CORE_CPU))));
+
+INSTANTIATE_TEST_CASE_P(KMeans3DPerfTestCPU, KMeans3DPerfTest,
+                        Combine(Values(20, 4096),
+                                Values(5, 15),
+                                Values(cv::KMEANS_RANDOM_CENTERS,
+                                       cv::KMEANS_PP_CENTERS,
+                                       cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
+                                       cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS),
+                                Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
     Combine(Values(AbsExact().to_compare_f()),

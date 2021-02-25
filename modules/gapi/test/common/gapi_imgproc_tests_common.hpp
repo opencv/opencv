@@ -194,4 +194,4 @@ static void fitLineTestBody(const In& in, const cv::DistanceTypes distType,
 }
 } // namespace opencv_test
 
-#endif // OPENCV_GAPI_VIDEO_TESTS_COMMON_HPP
+#endif // OPENCV_GAPI_IMGPROC_TESTS_COMMON_HPP
