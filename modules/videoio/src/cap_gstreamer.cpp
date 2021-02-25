@@ -177,6 +177,20 @@ private:
     GSafePtr& operator=(const T*); // = disabled
 };
 
+class ScopeGuardGstMapInfo
+{
+    GstBuffer* buf_;
+    GstMapInfo* info_;
+public:
+    ScopeGuardGstMapInfo(GstBuffer* buf, GstMapInfo* info)
+        : buf_(buf), info_(info)
+    {}
+    ~ScopeGuardGstMapInfo()
+    {
+        gst_buffer_unmap(buf_, info_);
+    }
+};
+
 } // namespace
 
 /*!
@@ -300,7 +314,6 @@ public:
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
 
 protected:
-    bool determineFrameDims(CV_OUT Size& sz, CV_OUT gint& channels, CV_OUT bool& isOutputByteBuffer);
     bool isPipelinePlaying();
     void startPipeline();
     void stopPipeline();
@@ -369,72 +382,68 @@ bool GStreamerCapture::grabFrame()
 bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
 {
     if (!sample)
+    {
         return false;
-    Size sz;
-    gint channels = 0;
-    bool isOutputByteBuffer = false;
-    if (!determineFrameDims(sz, channels, isOutputByteBuffer))
+    }
+
+    GstCaps* frame_caps = gst_sample_get_caps(sample);  // no lifetime transfer
+    if (!frame_caps)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
         return false;
+    }
+
+    if (!GST_CAPS_IS_SIMPLE(frame_caps))
+    {
+        // bail out in no caps
+        CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
+        return false;
+    }
+
+    GstVideoInfo info = {};
+    gboolean video_info_res = gst_video_info_from_caps(&info, frame_caps);
+    if (!video_info_res)
+    {
+        CV_Error(Error::StsError, "GStreamer: gst_video_info_from_caps() is failed. Can't handle unknown layout");
+    }
+
+    int frame_width = GST_VIDEO_INFO_WIDTH(&info);
+    int frame_height = GST_VIDEO_INFO_HEIGHT(&info);
+    if (frame_width <= 0 || frame_height <= 0)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Can't query frame size from GStreamer sample");
+        return false;
+    }
+
+    GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
+    if (!structure)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
+        return false;
+    }
+
+    const gchar* name_ = gst_structure_get_name(structure);
+    if (!name_)
+    {
+        CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
+        return false;
+    }
+    std::string name = toLowerCase(std::string(name_));
 
     // gstreamer expects us to handle the memory at this point
     // so we can just wrap the raw buffer and be done with it
     GstBuffer* buf = gst_sample_get_buffer(sample);  // no lifetime transfer
     if (!buf)
         return false;
-    GstMapInfo info = {};
-    if (!gst_buffer_map(buf, &info, GST_MAP_READ))
+    GstMapInfo map_info = {};
+    if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
     {
-        //something weird went wrong here. abort. abort.
-        CV_WARN("Failed to map GStreamer buffer to system memory");
+        CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
         return false;
     }
+    ScopeGuardGstMapInfo map_guard(buf, &map_info);  // call gst_buffer_unmap(buf, &map_info) on scope leave
 
-    try
-    {
-        Mat src;
-        if (isOutputByteBuffer)
-            src = Mat(Size(info.size, 1), CV_8UC1, info.data);
-        else
-            src = Mat(sz, CV_MAKETYPE(CV_8U, channels), info.data);
-        CV_Assert(src.isContinuous());
-        src.copyTo(dst);
-    }
-    catch (...)
-    {
-        gst_buffer_unmap(buf, &info);
-        throw;
-    }
-    gst_buffer_unmap(buf, &info);
-
-    return true;
-}
-
-bool GStreamerCapture::determineFrameDims(Size &sz, gint& channels, bool& isOutputByteBuffer)
-{
-    GstCaps * frame_caps = gst_sample_get_caps(sample);  // no lifetime transfer
-
-    // bail out in no caps
-    if (!GST_CAPS_IS_SIMPLE(frame_caps))
-        return false;
-
-    GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
-
-    // bail out if width or height are 0
-    if (!gst_structure_get_int(structure, "width", &width)
-        || !gst_structure_get_int(structure, "height", &height))
-    {
-        CV_WARN("Can't query frame size from GStreeamer buffer");
-        return false;
-    }
-
-    sz = Size(width, height);
-
-    const gchar* name_ = gst_structure_get_name(structure);
-    if (!name_)
-        return false;
-    std::string name = toLowerCase(std::string(name_));
-
-    // we support 11 types of data:
+    // we support these types of data:
     //     video/x-raw, format=BGR   -> 8bit, 3 channels
     //     video/x-raw, format=GRAY8 -> 8bit, 1 channel
     //     video/x-raw, format=UYVY  -> 8bit, 2 channel
@@ -448,50 +457,117 @@ bool GStreamerCapture::determineFrameDims(Size &sz, gint& channels, bool& isOutp
     //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
     // bayer data is never decoded, the user is responsible for that
     // everything is 8 bit, so we just test the caps for bit depth
+    Size sz = Size(frame_width, frame_height);
+    guint n_planes = GST_VIDEO_INFO_N_PLANES(&info);
     if (name == "video/x-raw")
     {
         const gchar* format_ = gst_structure_get_string(structure, "format");
         if (!format_)
+        {
+            CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'video/x-raw'");
             return false;
+        }
         std::string format = toUpperCase(std::string(format_));
 
         if (format == "BGR")
         {
-            channels = 3;
-        }
-        else if (format == "UYVY" || format == "YUY2" || format == "YVYU")
-        {
-            channels = 2;
-        }
-        else if (format == "NV12" || format == "NV21" || format == "YV12" || format == "I420")
-        {
-            channels = 1;
-            sz.height = sz.height * 3 / 2;
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width * 3, "");
+            Mat src(sz, CV_8UC3, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
         }
         else if (format == "GRAY8")
         {
-            channels = 1;
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_8UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "UYVY" || format == "YUY2" || format == "YVYU")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width * 2, "");
+            Mat src(sz, CV_8UC2, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "NV12" || format == "NV21")
+        {
+            CV_CheckEQ((int)n_planes, 2, "");
+            size_t stepY = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(stepY, (size_t)frame_width, "");
+            size_t stepUV = GST_VIDEO_INFO_PLANE_STRIDE(&info, 1);
+            CV_CheckGE(stepUV, (size_t)frame_width, "");
+            size_t offsetY = GST_VIDEO_INFO_PLANE_OFFSET(&info, 0);
+            size_t offsetUV = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
+            if (stepY != stepUV || (offsetUV - offsetY) != (stepY * frame_height))
+            {
+                dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
+                Mat dst_ = dst.getMat();
+                Mat srcY(sz, CV_8UC1, map_info.data + offsetY, stepY);
+                Mat srcUV(Size(frame_width, frame_height / 2), CV_8UC1, map_info.data + offsetUV, stepUV);
+                srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
+                srcUV.copyTo(dst_(Rect(0, frame_height, frame_width, frame_height / 2)));
+            }
+            else
+            {
+                Mat src(Size(frame_width, frame_height * 3 / 2), CV_8UC1, map_info.data + offsetY, stepY);
+                src.copyTo(dst);
+            }
+            return true;
+        }
+        else if (format == "YV12" || format == "I420")
+        {
+            CV_CheckEQ((int)n_planes, 3, "");
+            size_t step0 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step0, (size_t)frame_width, "");
+            size_t step1 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 1);
+            CV_CheckGE(step1, (size_t)frame_width / 2, "");
+            size_t step2 = GST_VIDEO_INFO_PLANE_STRIDE(&info, 2);
+            CV_CheckGE(step2, (size_t)frame_width / 2, "");
+
+            size_t offset0 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 0);
+            size_t offset1 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 1);
+            size_t offset2 = GST_VIDEO_INFO_PLANE_OFFSET(&info, 2);
+            {
+                dst.create(Size(frame_width, frame_height * 3 / 2), CV_8UC1);
+                Mat dst_ = dst.getMat();
+                Mat srcY(sz, CV_8UC1, map_info.data + offset0, step0);
+                Size sz2(frame_width / 2, frame_height / 2);
+                Mat src1(sz2, CV_8UC1, map_info.data + offset1, step1);
+                Mat src2(sz2, CV_8UC1, map_info.data + offset2, step2);
+                srcY.copyTo(dst_(Rect(0, 0, frame_width, frame_height)));
+                src1.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height)));
+                src2.copyTo(Mat(sz2, CV_8UC1, dst_.ptr<uchar>(frame_height) + src1.total()));
+            }
+            return true;
         }
         else
         {
-            CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer format: %s", format.c_str()));
+            CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer 'video/x-raw' format: %s", format.c_str()));
         }
     }
     else if (name == "video/x-bayer")
     {
-        channels = 1;
+        CV_CheckEQ((int)n_planes, 0, "");
+        Mat src = Mat(sz, CV_8UC1, map_info.data);
+        src.copyTo(dst);
+        return true;
     }
     else if (name == "image/jpeg")
     {
-        // the correct size will be set once the first frame arrives
-        channels = 1;
-        isOutputByteBuffer = true;
+        CV_CheckEQ((int)n_planes, 0, "");
+        Mat src = Mat(Size(map_info.size, 1), CV_8UC1, map_info.data);
+        src.copyTo(dst);
+        return true;
     }
-    else
-    {
-        CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
-    }
-    return true;
+
+    CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
 }
 
 bool GStreamerCapture::isPipelinePlaying()
