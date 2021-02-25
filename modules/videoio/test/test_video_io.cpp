@@ -760,8 +760,8 @@ TEST_P(videocapture_acceleration, read)
 static const VideoCaptureAccelerationInput hw_filename[] = {
         { "sample_322x242_15frames.yuv420p.libxvid.mp4", 28.0 },
         { "sample_322x242_15frames.yuv420p.mjpeg.mp4", 20.0 },
-        { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", 30.0 },
-        { "sample_322x242_15frames.yuv420p.libx264.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
+        { "sample_322x242_15frames.yuv420p.libx264.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
         { "sample_322x242_15frames.yuv420p.libx265.mp4", 30.0 },
         { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", 30.0 },
         { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", 30.0 }
