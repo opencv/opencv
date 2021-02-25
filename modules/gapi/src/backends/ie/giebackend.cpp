@@ -528,7 +528,7 @@ cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferReques
     }
 
 void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t, bool async) {
-    size_t id;
+    size_t id = 0u;
     m_idle_ids.pop(id);
 
     auto& request = m_requests[id];
@@ -560,7 +560,7 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
 void cv::gimpl::ie::RequestPool::waitAndShutdown() {
     // NB: It will be blocked if at least one request is busy.
     for (size_t i = 0; i < m_requests.size(); ++i) {
-        size_t id;
+        size_t id = 0u;
         m_idle_ids.pop(id);
     }
 }
