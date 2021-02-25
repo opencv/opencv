@@ -309,7 +309,7 @@ class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
     SourceReaderCB() :
-        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0), m_lastSampleTimestamp(0)
     {
     }
 
