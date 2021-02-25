@@ -54,11 +54,11 @@ public:
             for (int i = 0; i < ratios.size(); ++i)
             {
                 float ratio = ratios.get<float>(i);
+                float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
+                float height = std::floor(width * ratio + 0.5f);
                 for (int j = 0; j < scales.size(); ++j)
                 {
                     float scale = scales.get<float>(j);
-                    float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
-                    float height = std::floor(width * ratio + 0.5f);
                     widths.push_back(scale * width);
                     heights.push_back(scale * height);
                 }
