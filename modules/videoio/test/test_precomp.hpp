@@ -15,12 +15,14 @@
 
 namespace cv {
 
-inline std::ostream &operator<<(std::ostream &out, const VideoCaptureAPIs& api)
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoCaptureAPIs& api)
 {
     out << cv::videoio_registry::getBackendName(api); return out;
 }
 
-inline std::ostream &operator<<(std::ostream &out, const VideoAccelerationType &va_type)
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type)
 {
     struct {
         VideoAccelerationType va_type;
@@ -32,7 +34,7 @@ inline std::ostream &operator<<(std::ostream &out, const VideoAccelerationType &
             {VIDEO_ACCELERATION_VAAPI, "VAAPI"},
             {VIDEO_ACCELERATION_MFX,   "MFX"},
     };
-    for (auto va : va_types) {
+    for (const auto& va : va_types) {
         if (va_type == va.va_type) {
             out << va.str;
             return out;

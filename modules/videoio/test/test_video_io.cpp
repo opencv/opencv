@@ -719,9 +719,7 @@ TEST_P(videocapture_acceleration, read)
     }
 
     VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
-    std::cout << hw_reader.getBackendName() << " VideoCapture on " << filename
-            << ": acceleration = " << actual_va
-            << std::endl << std::flush;
+    std::cout << "VideoCapture " << backend_name << ":" << actual_va << std::endl << std::flush;
 
     double min_psnr_original = 1000;
     for (int i = 0; i < frameNum; i++)
@@ -753,7 +751,12 @@ TEST_P(videocapture_acceleration, read)
             min_psnr_original = psnr;
     }
 
-    std::cout << "PSNR-original = " << min_psnr_original << std::endl;
+    std::ostringstream ss; ss << actual_va;
+    std::string actual_va_str = ss.str();
+    std::cout << "VideoCapture with acceleration = " <<  cv::format("%-6s @ %-10s", actual_va_str.c_str(), backend_name.c_str())
+            << " on " << filename
+            << " with PSNR-original = " << min_psnr_original
+            << std::endl << std::flush;
     EXPECT_GE(min_psnr_original, psnr_threshold);
 }
 
