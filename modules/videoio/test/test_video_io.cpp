@@ -680,6 +680,15 @@ TEST_P(videocapture_acceleration, read)
 
     std::string filepath = cvtest::findDataFile("video/" + filename);
 
+    if (backend == CAP_MSMF && (
+        filename == "sample_322x242_15frames.yuv420p.mjpeg.mp4" ||
+        filename == "sample_322x242_15frames.yuv420p.libx265.mp4" ||
+        filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4" ||
+        filename == "sample_322x242_15frames.yuv420p.mpeg2video.mp4"
+    ))
+        throw SkipTestException("Format/codec is not supported");
+
+
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
