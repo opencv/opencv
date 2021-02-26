@@ -38,7 +38,7 @@ struct IECompiled {
     InferenceEngine::ExecutableNetwork  this_network;
 };
 
-struct RequestPool;
+class RequestPool;
 
 class GIEExecutable final: public GIslandExecutable
 {
