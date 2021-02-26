@@ -906,6 +906,9 @@ GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma) {
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra) {
     os << ra;
 }
+GAPI_EXPORTS void serialize(IOStream& os, const std::vector<std::string> &vs) {
+    os << vs;
+}
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is) {
     GMetaArgs s;
     is >> s;
@@ -913,6 +916,11 @@ GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is) {
 }
 GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is) {
     GRunArgs s;
+    is >> s;
+    return s;
+}
+GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is) {
+    std::vector<std::string> s;
     is >> s;
     return s;
 }
