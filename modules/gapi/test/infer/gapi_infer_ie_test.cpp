@@ -1659,7 +1659,6 @@ TEST_F(InferWithReshapeNV12, TestInferListYUV)
     // Validate
     validate();
 }
-
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
