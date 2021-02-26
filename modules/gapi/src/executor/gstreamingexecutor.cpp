@@ -7,7 +7,6 @@
 #include "precomp.hpp"
 
 #include <memory> // make_shared
-#include <iostream>
 
 #include <ade/util/zip_range.hpp>
 
@@ -583,10 +582,16 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     std::vector< std::vector<Q*> > &m_out_queues;
     std::shared_ptr<cv::gimpl::GIslandExecutable> m_island;
 
+    // NB: StreamingOutput have to be thread-safe.
+    // Now synchronization approach is quite poor and inefficient.
+    mutable std::mutex m_mutex;
+
     // Allocate a new data object for output under idx
     // Prepare this object for posting
     virtual cv::GRunArgP get(int idx) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
+
         using MatType = cv::Mat;
         using SclType = cv::Scalar;
 
@@ -663,6 +668,8 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     }
     virtual void post(cv::GRunArgP&& argp) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
+
         // Mark the output ready for posting. If it is the first in the line,
         // actually post it and all its successors which are ready for posting too.
         auto it = m_postIdx.find(cv::gimpl::proto::ptr(argp));
@@ -700,6 +707,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     }
     virtual void post(cv::gimpl::EndOfStream&&) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         // If the posting list is empty, just broadcast the stop message.
         // If it is not, enqueue the Stop message in the postings list.
         for (auto &&it : ade::util::indexed(m_postings))
@@ -725,6 +733,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
     }
     void meta(const cv::GRunArgP &out, const cv::GRunArg::Meta &m) override
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         const auto it = m_postIdx.find(cv::gimpl::proto::ptr(out));
         GAPI_Assert(it != m_postIdx.end());
 
@@ -747,6 +756,7 @@ public:
 
     bool done() const
     {
+        std::lock_guard<std::mutex> lock{m_mutex};
         // The streaming actor work is considered DONE for this stream
         // when it posted/resent all STOP messages to all its outputs.
         return m_stops_sent == desc().size();

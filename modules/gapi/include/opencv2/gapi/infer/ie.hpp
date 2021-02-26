@@ -67,6 +67,9 @@ namespace detail {
         Kind kind;
         bool is_generic;
         IEConfig config;
+
+        // NB: Number of asyncrhonious infer requests
+        size_t nireq;
     };
 } // namespace detail
 
@@ -91,7 +94,8 @@ public:
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Load
               , false
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     Params(const std::string &model,
@@ -101,7 +105,8 @@ public:
               , std::tuple_size<typename Net::OutArgs>::value // num_out
               , detail::ParamDesc::Kind::Import
               , false
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
@@ -137,6 +142,12 @@ public:
         return *this;
     }
 
+    Params& cfgNumRequests(size_t nireq) {
+        GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
+        desc.nireq = nireq;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -154,13 +165,13 @@ public:
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, 1u}, m_tag(tag) {
     };
 
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}}, m_tag(tag) {
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, 1u}, m_tag(tag) {
     };
 
     Params& pluginConfig(IEConfig&& cfg) {
