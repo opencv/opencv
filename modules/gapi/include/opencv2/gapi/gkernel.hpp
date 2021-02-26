@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GKERNEL_HPP
@@ -612,16 +612,16 @@ namespace gapi {
             includeHelper<KImpl>();
         }
 
-        void include(cv::gapi::GBackend bck, const std::string& id)
+        /**
+         * @brief Adds a new kernel based on it's backend and id into the kernel package
+         *
+         * @param backend backend associated with the kernel
+         * @param kernel_id a name/id of the kernel
+         */
+        void include(cv::gapi::GBackend backend, const std::string& kernel_id)
         {
-            static auto kernel_helper = []() { return 42; };
-
-            cv::gapi::GBackend backend     = bck;
-            auto kernel_id   = id;
-            auto kernel_impl = GKernelImpl{kernel_helper/*, &KImpl::API::getOutMeta*/};
             removeAPI(kernel_id);
-
-            m_id_kernels[kernel_id] = std::make_pair(backend, kernel_impl);
+            m_id_kernels[kernel_id] = std::make_pair(backend, GKernelImpl{{}, {}});
         }
 
         /**
