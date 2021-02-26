@@ -15,18 +15,29 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 
+#ifdef _WIN32
+#define FFMPEG_DECODE_ACCELERATION_TYPES    "d3d11va"
+#define FFMPEG_ENCODE_ACCELERATION_TYPES    "qsv,d3d11va"
+#define FFMPEG_DECODE_DISABLE_CODECS        "none"
+#define FFMPEG_ENCODE_DISABLE_CODECS        "d3d11va.mjpeg,mjpeg_qsv"
+#else
+#define FFMPEG_DECODE_ACCELERATION_TYPES    "vaapi.iHD"
+#define FFMPEG_ENCODE_ACCELERATION_TYPES    "qsv.iHD,vaapi.iHD"
+#define FFMPEG_DECODE_DISABLE_CODECS        "av1.vaapi,av1_qsv,vp8.vaapi,vp8_qsv"
+#define FFMPEG_ENCODE_DISABLE_CODECS        "mjpeg_vaapi,mjpeg_qsv,vp8_vaapi"
+#endif
+
 #define HW_DEFAULT_POOL_SIZE    32
 #define HW_DEFAULT_SW_FORMAT    AV_PIX_FMT_NV12
-#define HW_DISABLE_DECODERS     "av1.vaapi,av1_qsv,vp8.vaapi,vp8_qsv"
-#define HW_DISABLE_ENCODERS     "mjpeg_vaapi,mjpeg_qsv,vp8_vaapi"
 
 using namespace cv;
 
-AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *),
+AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_category)(const AVCodec *),
                        const char *disabled_codecs, AVPixelFormat *hw_pix_fmt);
-AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device);
+AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname);
 AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
 AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
+VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type);
 
 #ifdef HAVE_D3D11
 #define D3D11_NO_HELPERS
@@ -48,24 +59,7 @@ extern "C" {
 #endif
 }
 
-static AVHWDeviceType VideoAccelerationTypeToFFMPEG(VideoAccelerationType va_type) {
-    struct HWTypeFFMPEG {
-        VideoAccelerationType va_type;
-        AVHWDeviceType ffmpeg_type;
-    } ffmpeg_hw_types[] = {
-        { VIDEO_ACCELERATION_D3D11, AV_HWDEVICE_TYPE_D3D11VA },
-        { VIDEO_ACCELERATION_VAAPI, AV_HWDEVICE_TYPE_VAAPI },
-        { VIDEO_ACCELERATION_MFX, AV_HWDEVICE_TYPE_QSV },
-        { VIDEO_ACCELERATION_NONE, AV_HWDEVICE_TYPE_NONE },
-    };
-    for (const HWTypeFFMPEG& hw : ffmpeg_hw_types) {
-        if (va_type == hw.va_type)
-            return hw.ffmpeg_type;
-    }
-    return AV_HWDEVICE_TYPE_NONE;
-}
-
-static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
+static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string& device_subname) {
     if (!ctx)
         return false;
     AVHWDeviceContext* hw_device_ctx = (AVHWDeviceContext*)ctx->data;
@@ -123,7 +117,10 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
 #endif
     }
     if (ret) {
-        if (!device_name.empty()) {
+        if (!device_subname.empty() && device_name.find(device_subname) == std::string::npos) {
+            CV_LOG_INFO(NULL, "FFMPEG: Skipping " << hw_name <<
+                " video acceleration on the following device name as not matching substring '" << device_subname << "': " << device_name);
+        } else if (!device_name.empty()) {
             CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << device_name);
         } else {
             CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration");
@@ -132,8 +129,7 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type) {
     return ret;
 }
 
-AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
-    AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
+AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname) {
     if (AV_HWDEVICE_TYPE_NONE == hw_type)
         return NULL;
 
@@ -159,7 +155,7 @@ AVBufferRef* hw_create_device(VideoAccelerationType va_type, int hw_device) {
     }
     av_hwdevice_ctx_create(&hw_device_ctx, child_type, pdevice, NULL, 0);
     if (hw_device_ctx) {
-        if (!hw_check_device(hw_device_ctx, hw_type)) {
+        if (!hw_check_device(hw_device_ctx, hw_type, device_subname)) {
             av_buffer_unref(&hw_device_ctx);
             return NULL;
         }
@@ -215,7 +211,7 @@ AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device
 
 static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type, const char *disabled_codecs) {
     if (!disabled_codecs)
-        disabled_codecs = av_codec_is_decoder(codec) ? HW_DISABLE_DECODERS : HW_DISABLE_ENCODERS;
+        disabled_codecs = av_codec_is_decoder(codec) ? FFMPEG_DECODE_DISABLE_CODECS : FFMPEG_ENCODE_DISABLE_CODECS;
     std::string hw_name = std::string(".") + av_hwdevice_get_type_name(hw_type);
     std::stringstream s_stream(disabled_codecs);
     while (s_stream.good()) {
@@ -229,8 +225,7 @@ static bool hw_check_codec(AVCodec* codec, AVHWDeviceType hw_type, const char *d
     return true;
 }
 
-AVCodec *hw_find_codec(AVCodecID id, VideoAccelerationType va_type, int (*check_category)(const AVCodec *), const char *disabled_codecs, AVPixelFormat *hw_pix_fmt) {
-    AVHWDeviceType hw_type = VideoAccelerationTypeToFFMPEG(va_type);
+AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_category)(const AVCodec *), const char *disabled_codecs, AVPixelFormat *hw_pix_fmt) {
     AVCodec *c = 0;
     void *opaque = 0;
 
@@ -303,3 +298,54 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
     }
     return fmt[0];
 }
+
+VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type) {
+    struct HWTypeFFMPEG {
+        AVHWDeviceType hw_type;
+        VideoAccelerationType va_type;
+    } known_hw_types[] = {
+            { AV_HWDEVICE_TYPE_D3D11VA, VIDEO_ACCELERATION_D3D11 },
+            { AV_HWDEVICE_TYPE_VAAPI, VIDEO_ACCELERATION_VAAPI },
+            { AV_HWDEVICE_TYPE_QSV, VIDEO_ACCELERATION_MFX },
+            { AV_HWDEVICE_TYPE_VULKAN, (VideoAccelerationType)(1 << 10) },
+            { AV_HWDEVICE_TYPE_CUDA, (VideoAccelerationType)(1 << 11) },
+    };
+    for (const HWTypeFFMPEG& hw : known_hw_types) {
+        if (hw_type == hw.hw_type)
+            return hw.va_type;
+    }
+    return VIDEO_ACCELERATION_NONE;
+}
+
+class AccelStringIterator {
+public:
+    AccelStringIterator(std::string accel_list) :
+        _s_stream(accel_list.empty() ? "" : accel_list + ",") // add no-acceleration case to the end of the list
+    {
+    }
+    bool good() const {
+        return _s_stream.good();
+    }
+    void parse_next() {
+        std::string hw_type_string;
+        getline(_s_stream, hw_type_string, ',');
+        size_t index = hw_type_string.find('.');
+        if (index != std::string::npos) {
+            _device_subname = hw_type_string.substr(index + 1);
+            hw_type_string = hw_type_string.substr(0, index);
+        } else {
+            _device_subname.clear();
+        }
+        _hw_type = av_hwdevice_find_type_by_name(hw_type_string.c_str());
+    }
+    AVHWDeviceType hw_type() {
+        return _hw_type;
+    }
+    std::string device_subname() {
+        return _device_subname;
+    }
+private:
+    std::stringstream _s_stream;
+    AVHWDeviceType _hw_type;
+    std::string _device_subname;
+};
