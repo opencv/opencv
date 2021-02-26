@@ -953,6 +953,16 @@ TEST_F(ROIListNV12, Infer2MediaInputNV12)
     validate();
 }
 
+TEST(Infer, SetInvalidNumberOfRequests)
+{
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::gapi::ie::Params<AgeGender> pp{"model", "weights", "device"};
+
+    EXPECT_ANY_THROW(pp.cfgNumRequests(0u));
+}
+
 TEST(Infer, TestStreamingInfer)
 {
     initTestDataPath();
@@ -980,7 +990,8 @@ TEST(Infer, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
 
     std::size_t num_frames = 0u;
@@ -1049,7 +1060,8 @@ TEST(InferROI, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
 
     std::size_t num_frames = 0u;
@@ -1131,7 +1143,8 @@ TEST(InferList, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
 
     std::size_t num_frames = 0u;
@@ -1222,8 +1235,8 @@ TEST(Infer2, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
-
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
     std::size_t num_frames = 0u;
     std::size_t max_frames = 10u;
@@ -1311,8 +1324,8 @@ TEST(InferEmptyList, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
-
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
     std::size_t num_frames = 0u;
     std::size_t max_frames = 1u;
@@ -1366,8 +1379,8 @@ TEST(Infer2EmptyList, TestStreamingInfer)
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
-    }.cfgOutputLayers({ "age_conv3", "prob" });
-
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
 
     std::size_t num_frames = 0u;
     std::size_t max_frames = 1u;
