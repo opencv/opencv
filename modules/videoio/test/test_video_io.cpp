@@ -827,23 +827,6 @@ TEST_P(videowriter_acceleration, write)
 
     std::string filename = tempfile("videowriter_acceleration.") + extension;
 
-    // Check if SW encoder available
-    {
-        VideoWriter sw_writer(filename,
-                           backend,
-                           VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
-                           fps,
-                           sz,
-                           {
-                                   VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE,
-                           });
-        if (!sw_writer.isOpened()) {
-            remove(filename.c_str());
-            throw SkipTestException(backend_name + " VideoWriter on codec " + codecid + " not supported, skipping");
-        }
-    }
-    remove(filename.c_str());
-
     // Write video
     VideoAccelerationType actual_va;
     {
@@ -856,7 +839,30 @@ TEST_P(videowriter_acceleration, write)
                                    VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
                                    VIDEOWRITER_PROP_HW_DEVICE, device_idx
                            });
-        EXPECT_TRUE(hw_writer.isOpened());
+
+        if (!hw_writer.isOpened()) {
+            if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE) {
+                { // ANY HW acceleration should have fallback to SW codecs
+                    VideoWriter sw_writer(filename,
+                                          backend,
+                                          VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+                                          fps,
+                                          sz,
+                                          {
+                                                  VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE,
+                                          });
+                    if (!sw_writer.isOpened()) {
+                        remove(filename.c_str());
+                        throw SkipTestException(backend_name + " VideoWriter on codec " + codecid + " not supported, skipping");
+                    }
+                }
+                remove(filename.c_str());
+                ASSERT_TRUE(hw_writer.isOpened()) << "ANY HW acceleration should have fallback to SW codecs";
+            } else {
+                throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW support, skipping");
+            }
+        }
+
         actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
