@@ -446,7 +446,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || sstep > 0x8000 )
+        if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
