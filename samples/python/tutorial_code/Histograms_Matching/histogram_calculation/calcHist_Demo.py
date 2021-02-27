@@ -53,14 +53,14 @@ cv.normalize(r_hist, r_hist, alpha=0, beta=hist_h, norm_type=cv.NORM_MINMAX)
 
 ## [Draw for each channel]
 for i in range(1, histSize):
-    cv.line(histImage, ( bin_w*(i-1), hist_h - int(round(b_hist[i-1])) ),
-            ( bin_w*(i), hist_h - int(round(b_hist[i])) ),
+    cv.line(histImage, ( bin_w*(i-1), hist_h - int(b_hist[i-1]) ),
+            ( bin_w*(i), hist_h - int(b_hist[i]) ),
             ( 255, 0, 0), thickness=2)
-    cv.line(histImage, ( bin_w*(i-1), hist_h - int(round(g_hist[i-1])) ),
-            ( bin_w*(i), hist_h - int(round(g_hist[i])) ),
+    cv.line(histImage, ( bin_w*(i-1), hist_h - int(g_hist[i-1]) ),
+            ( bin_w*(i), hist_h - int(g_hist[i]) ),
             ( 0, 255, 0), thickness=2)
-    cv.line(histImage, ( bin_w*(i-1), hist_h - int(round(r_hist[i-1])) ),
-            ( bin_w*(i), hist_h - int(round(r_hist[i])) ),
+    cv.line(histImage, ( bin_w*(i-1), hist_h - int(r_hist[i-1]) ),
+            ( bin_w*(i), hist_h - int(r_hist[i]) ),
             ( 0, 0, 255), thickness=2)
 ## [Draw for each channel]
 
