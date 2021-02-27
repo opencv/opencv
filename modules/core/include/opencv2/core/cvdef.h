@@ -390,7 +390,9 @@ typedef union Cv64suf
 }
 Cv64suf;
 
+#ifndef OPENCV_ABI_COMPATIBILITY
 #define OPENCV_ABI_COMPATIBILITY 400
+#endif
 
 #ifdef __OPENCV_BUILD
 #  define DISABLE_OPENCV_3_COMPATIBILITY
