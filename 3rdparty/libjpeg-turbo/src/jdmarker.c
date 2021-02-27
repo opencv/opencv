@@ -267,7 +267,7 @@ get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
   /* We don't support files in which the image height is initially specified */
   /* as 0 and is later redefined by DNL.  As long as we have to check that,  */
   /* might as well have a general sanity check. */
-  if (cinfo->image_height <= 0 || cinfo->image_width <= 0 ||
+  if (cinfo->image_height == 0 || cinfo->image_width == 0 ||
       cinfo->num_components <= 0)
     ERREXIT(cinfo, JERR_EMPTY_IMAGE);
 
@@ -709,7 +709,7 @@ get_interesting_appn(j_decompress_ptr cinfo)
 /* Process an APP0 or APP14 marker without saving it */
 {
   JLONG length;
-  JOCTET b[APPN_DATA_LEN];
+  JOCTET b[APPN_DATA_LEN] = {{0}};
   unsigned int i, numtoread;
   INPUT_VARS(cinfo);
 

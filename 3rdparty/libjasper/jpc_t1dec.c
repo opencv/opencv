@@ -239,7 +239,7 @@ static int jpc_dec_decodecblk(jpc_dec_t *dec, jpc_dec_tile_t *tile, jpc_dec_tcom
         for (i = 0; i < seg->numpasses; ++i) {
             if (cblk->numimsbs > band->numbps) {
                 ccp = &tile->cp->ccps[compno];
-                if (ccp->roishift <= 0) {
+                if (ccp->roishift == 0) {
                     jas_eprintf("warning: corrupt code stream\n");
                 } else {
                     if (cblk->numimsbs < ccp->roishift - band->numbps) {

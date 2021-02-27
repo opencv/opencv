@@ -106,7 +106,7 @@ fill_input_buffer(j_decompress_ptr cinfo)
 
   nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
 
-  if (nbytes <= 0) {
+  if (nbytes == 0) {
     if (src->start_of_file)     /* Treat empty input file as fatal error */
       ERREXIT(cinfo, JERR_INPUT_EMPTY);
     WARNMS(cinfo, JWRN_JPEG_EOF);

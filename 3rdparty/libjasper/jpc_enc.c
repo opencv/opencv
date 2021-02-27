@@ -1806,7 +1806,7 @@ if (jas_getdbglevel()) {
             if (pos > cumlen) {
                 /* The rate is too high. */
                 lo = thresh;
-            } else if (pos <= cumlen) {
+            } else {
                 /* The rate is low enough, so try higher. */
                 hi = thresh;
                 if (!success || thresh < goodthresh) {

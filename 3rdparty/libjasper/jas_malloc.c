@@ -145,8 +145,6 @@ void *jas_alloc2(size_t nmemb, size_t size)
 
 void *jas_alloc3(size_t a, size_t b, size_t c)
 {
-    size_t n;
-
     if (a && SIZE_MAX / a < b) {
         errno = ENOMEM;
         return NULL;
