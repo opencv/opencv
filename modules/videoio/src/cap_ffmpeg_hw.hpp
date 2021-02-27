@@ -17,9 +17,9 @@ extern "C" {
 
 #ifdef _WIN32
 #define FFMPEG_DECODE_ACCELERATION_TYPES    "d3d11va"
-#define FFMPEG_ENCODE_ACCELERATION_TYPES    "qsv,d3d11va"
+#define FFMPEG_ENCODE_ACCELERATION_TYPES    "qsv"
 #define FFMPEG_DECODE_DISABLE_CODECS        "none"
-#define FFMPEG_ENCODE_DISABLE_CODECS        "d3d11va.mjpeg,mjpeg_qsv"
+#define FFMPEG_ENCODE_DISABLE_CODECS        "mjpeg_qsv"
 #else
 #define FFMPEG_DECODE_ACCELERATION_TYPES    "vaapi.iHD"
 #define FFMPEG_ENCODE_ACCELERATION_TYPES    "qsv.iHD,vaapi.iHD"
@@ -307,7 +307,6 @@ VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type) {
             { AV_HWDEVICE_TYPE_D3D11VA, VIDEO_ACCELERATION_D3D11 },
             { AV_HWDEVICE_TYPE_VAAPI, VIDEO_ACCELERATION_VAAPI },
             { AV_HWDEVICE_TYPE_QSV, VIDEO_ACCELERATION_MFX },
-            { AV_HWDEVICE_TYPE_VULKAN, (VideoAccelerationType)(1 << 10) },
             { AV_HWDEVICE_TYPE_CUDA, (VideoAccelerationType)(1 << 11) },
     };
     for (const HWTypeFFMPEG& hw : known_hw_types) {
