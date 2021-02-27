@@ -431,11 +431,11 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     {"mkv", "MPEG", 30.f, CAP_FFMPEG},
     {"mkv", "MJPG", 30.f, CAP_FFMPEG},
 
-    {"avi", "MPEG", 30.f, CAP_GSTREAMER},
+    {"avi", "MPEG", 28.f, CAP_GSTREAMER},
     {"avi", "MJPG", 30.f, CAP_GSTREAMER},
     {"avi", "H264", 30.f, CAP_GSTREAMER},
 
-    {"mkv", "MPEG", 30.f, CAP_GSTREAMER},
+    {"mkv", "MPEG", 28.f, CAP_GSTREAMER},
     {"mkv", "MJPG", 30.f, CAP_GSTREAMER},
     {"mkv", "H264", 30.f, CAP_GSTREAMER},
 
