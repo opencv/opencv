@@ -286,12 +286,13 @@ static void find_hw_element(const GValue *item, gpointer va_type)
     GstElement *element = GST_ELEMENT(g_value_get_object(item));
     const gchar *name = g_type_name(G_OBJECT_TYPE(element));
     if (name) {
-        if (strstr(name, "Vaapi")) {
-            *(int*)va_type |= VIDEO_ACCELERATION_VAAPI;
-        } else if (strstr(name, "Mfx") || strstr(name, "Msdk")) {
-            *(int*)va_type |= VIDEO_ACCELERATION_MFX;
-        } else if (strstr(name, "D3d11")) {
-            *(int*)va_type |= VIDEO_ACCELERATION_D3D11;
+        std::string name_lower = toLowerCase(name);
+        if (name_lower.find("vaapi") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_VAAPI;
+        } else if (name_lower.find("mfx") != std::string::npos || name_lower.find("msdk") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_MFX;
+        } else if (name_lower.find("d3d11") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_D3D11;
         }
     }
 }
@@ -315,6 +316,8 @@ private:
     bool          isPosFramesEmulated;
     gint64        emulatedFrameNumber;
 
+    VideoAccelerationType va_type;
+    int hw_device;
 public:
     GStreamerCapture();
     virtual ~GStreamerCapture() CV_OVERRIDE;
@@ -342,6 +345,8 @@ GStreamerCapture::GStreamerCapture() :
     isPosFramesSupported(false),
     isPosFramesEmulated(false),
     emulatedFrameNumber(-1)
+    , va_type(VIDEO_ACCELERATION_NONE)
+    , hw_device(-1)
 {
 }
 
@@ -786,6 +791,30 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
 {
     gst_initializer::init();
 
+    if (params.has(CAP_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION);
+    }
+    if (params.has(CAP_PROP_HW_DEVICE))
+    {
+        hw_device = params.get<int>(CAP_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of CAP_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of CAP_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: CAP_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
+
     const gchar* filename = filename_.c_str();
 
     bool file = false;
@@ -1069,6 +1098,27 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         }
     }
 
+    if (pipeline)
+    {
+        VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+        GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
+        gst_iterator_foreach(iter, find_hw_element, (gpointer)&actual_va_type);
+        gst_iterator_free(iter);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            if (va_type != actual_va_type)
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Can't select requested video acceleration through CAP_PROP_HW_ACCELERATION: "
+                        << va_type << " (actual is " << actual_va_type << "). Bailout");
+                return false;
+            }
+        }
+        else
+        {
+            va_type = actual_va_type;
+        }
+    }
+
     return true;
 }
 
@@ -1152,16 +1202,10 @@ double GStreamerCapture::getProperty(int propId) const
             }
         }
         break;
-    case cv::CAP_PROP_HW_ACCELERATION:
-        if (pipeline) {
-            int va_type = VIDEO_ACCELERATION_NONE;
-            GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
-            gst_iterator_foreach(iter, find_hw_element, (gpointer)&va_type);
-            gst_iterator_free(iter);
-            return static_cast<double>(va_type);
-        } else {
-            return static_cast<double>(VIDEO_ACCELERATION_NONE);
-        }
+    case CAP_PROP_HW_ACCELERATION:
+        return static_cast<double>(va_type);
+    case CAP_PROP_HW_DEVICE:
+        return static_cast<double>(hw_device);
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
         if(!sink)
         {
@@ -1310,9 +1354,9 @@ bool GStreamerCapture::setProperty(int propId, double value)
     case CV_CAP_PROP_CONVERT_RGB:
         break;
     case cv::CAP_PROP_HW_ACCELERATION:
-        return true; // TODO can we use property 'force-sw-decoders' in decodebin?
+        return false; // open-only
     case cv::CAP_PROP_HW_DEVICE:
-        return (value < 0); // GStreamer doesn't support device selection
+        return false; // open-only
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
     {
         if(!sink)
@@ -1362,6 +1406,7 @@ public:
     CvVideoWriter_GStreamer()
         : ipl_depth(CV_8U)
         , input_pix_fmt(0), num_frames(0), framerate(0)
+        , va_type(VIDEO_ACCELERATION_NONE), hw_device(0)
     {
     }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE
@@ -1388,6 +1433,9 @@ public:
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 
     int getIplDepth() const { return ipl_depth; }
+
+    virtual double getProperty(int) const CV_OVERRIDE;
+
 protected:
     const char* filenameToMimetype(const char* filename);
     GSafePtr<GstElement> pipeline;
@@ -1396,6 +1444,9 @@ protected:
     int input_pix_fmt;
     int num_frames;
     double framerate;
+
+    VideoAccelerationType va_type;
+    int hw_device;
 
     void close_();
 };
@@ -1460,6 +1511,8 @@ void CvVideoWriter_GStreamer::close()
     close_();
     source.release();
     pipeline.release();
+    va_type = VIDEO_ACCELERATION_NONE;
+    hw_device = -1;
 }
 
 /*!
@@ -1540,12 +1593,34 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
-    // TODO is it possible to disable HW encoders in encodebin?
-    params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
-    params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
-    if (params.warnUnusedParameters()) {
-        CV_LOG_ERROR(NULL,
-                     "VIDEOIO/GStreamer: unsupported parameters in VideoWriter, see logger INFO channel for details");
+
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION);
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_DEVICE))
+    {
+        hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: VIDEOWRITER_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
+
+    if (params.warnUnusedParameters())
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: unsupported parameters in VideoWriter, see logger INFO channel for details");
         return false;
     }
 
@@ -1779,6 +1854,28 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     handleMessage(pipeline);
 
+    if (pipeline)
+    {
+        VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+        GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
+        gst_iterator_foreach(iter, find_hw_element, (gpointer)&actual_va_type);
+        gst_iterator_free(iter);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            if (va_type != actual_va_type)
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Can't select requested VideoWriter acceleration through VIDEOWRITER_PROP_HW_ACCELERATION: "
+                        << va_type << " (actual is " << actual_va_type << "). Bailout");
+                close();
+                return false;
+            }
+        }
+        else
+        {
+            va_type = actual_va_type;
+        }
+    }
+
     return true;
 }
 
@@ -1857,6 +1954,20 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     ++num_frames;
 
     return true;
+}
+
+
+double CvVideoWriter_GStreamer::getProperty(int propId) const
+{
+    if (propId == VIDEOWRITER_PROP_HW_ACCELERATION)
+    {
+        return static_cast<double>(va_type);
+    }
+    else if (propId == VIDEOWRITER_PROP_HW_DEVICE)
+    {
+        return static_cast<double>(hw_device);
+    }
+    return 0;
 }
 
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,
@@ -2179,10 +2290,24 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
+
 
 static
 CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)

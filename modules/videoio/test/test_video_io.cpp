@@ -714,11 +714,15 @@ TEST_P(videocapture_acceleration, read)
         }
         else
         {
-            throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW support, skipping");
+            throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW acceleration, skipping");
         }
     }
 
     VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
+    if (va_type != VIDEO_ACCELERATION_ANY && va_type != VIDEO_ACCELERATION_NONE)
+    {
+        ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
+    }
     std::cout << "VideoCapture " << backend_name << ":" << actual_va << std::endl << std::flush;
 
     double min_psnr_original = 1000;
@@ -753,7 +757,7 @@ TEST_P(videocapture_acceleration, read)
 
     std::ostringstream ss; ss << actual_va;
     std::string actual_va_str = ss.str();
-    std::cout << "VideoCapture with acceleration = " <<  cv::format("%-6s @ %-10s", actual_va_str.c_str(), backend_name.c_str())
+    std::cout << "VideoCapture with acceleration = " << cv::format("%-6s @ %-10s", actual_va_str.c_str(), backend_name.c_str())
             << " on " << filename
             << " with PSNR-original = " << min_psnr_original
             << std::endl << std::flush;
@@ -830,27 +834,33 @@ TEST_P(videowriter_acceleration, write)
     // Write video
     VideoAccelerationType actual_va;
     {
-        VideoWriter hw_writer(filename,
-                           backend,
-                           VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
-                           fps,
-                           sz,
-                           {
-                                   VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
-                                   VIDEOWRITER_PROP_HW_DEVICE, device_idx
-                           });
+        VideoWriter hw_writer(
+            filename,
+            backend,
+            VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+            fps,
+            sz,
+            {
+                VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
+                VIDEOWRITER_PROP_HW_DEVICE, device_idx
+            }
+        );
 
         if (!hw_writer.isOpened()) {
-            if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE) {
-                { // ANY HW acceleration should have fallback to SW codecs
-                    VideoWriter sw_writer(filename,
-                                          backend,
-                                          VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
-                                          fps,
-                                          sz,
-                                          {
-                                                  VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE,
-                                          });
+            if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
+            {
+                // ANY HW acceleration should have fallback to SW codecs
+                {
+                    VideoWriter sw_writer(
+                        filename,
+                        backend,
+                        VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
+                        fps,
+                        sz,
+                        {
+                            VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE,
+                        }
+                    );
                     if (!sw_writer.isOpened()) {
                         remove(filename.c_str());
                         throw SkipTestException(backend_name + " VideoWriter on codec " + codecid + " not supported, skipping");
@@ -859,11 +869,17 @@ TEST_P(videowriter_acceleration, write)
                 remove(filename.c_str());
                 ASSERT_TRUE(hw_writer.isOpened()) << "ANY HW acceleration should have fallback to SW codecs";
             } else {
-                throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW support, skipping");
+                throw SkipTestException(backend_name + " VideoWriter on " + filename + " not supported with HW acceleration, skipping");
             }
         }
 
         actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
+        if (va_type != VIDEO_ACCELERATION_ANY && va_type != VIDEO_ACCELERATION_NONE)
+        {
+            ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
+        }
+        std::cout << "VideoWriter " << backend_name << ":" << actual_va << std::endl << std::flush;
+
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
             generateFrame(i, frameNum, frame);
@@ -877,11 +893,20 @@ TEST_P(videowriter_acceleration, write)
             }
         }
     }
+
+    std::ifstream ofile(filename, std::ios::binary);
+    ofile.seekg(0, std::ios::end);
+    int64 fileSize = (int64)ofile.tellg();
+    ASSERT_GT(fileSize, 0);
+    std::cout << "File size: " << fileSize << std::endl;
+
     // Read video and check PSNR on every frame
     {
-        VideoCapture reader(filename,
-                            CAP_ANY /*backend*/,
-                            { VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE });
+        VideoCapture reader(
+            filename,
+            CAP_ANY /*backend*/,
+            { CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE }
+        );
         ASSERT_TRUE(reader.isOpened());
         double min_psnr = 1000;
         Mat reference(sz, CV_8UC3);
@@ -908,10 +933,13 @@ TEST_P(videowriter_acceleration, write)
         Mat actual;
         EXPECT_FALSE(reader.read(actual));
         {
-            std::ifstream ofile(filename, std::ios::binary);
-            ofile.seekg(0, std::ios::end);
-            std::cout << backend_name << " VideoWriter on codec " << codecid << ": acceleration = " << actual_va <<
-                ", bitrate = " << ofile.tellg() / (frameNum / fps) << ", PSNR = " << min_psnr << std::endl;
+            std::ostringstream ss; ss << actual_va;
+            std::string actual_va_str = ss.str();
+            std::cout << "VideoWriter with acceleration = " << cv::format("%-6s @ %-10s", actual_va_str.c_str(), backend_name.c_str())
+                    << " on codec=" << codecid << " (." << extension << ")"
+                    << ", bitrate = " << fileSize / (frameNum / fps)
+                    << ", with PSNR-original = " << min_psnr
+                    << std::endl << std::flush;
         }
         remove(filename.c_str());
     }

@@ -1024,21 +1024,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             int enc_width = enc->width;
             int enc_height = enc->height;
 
-#if USE_AV_HW_CODECS
-            const char *hw_acceleration = FFMPEG_DECODE_ACCELERATION_TYPES;
-            const char *disabled_codecs = FFMPEG_DECODE_DISABLE_CODECS;
-            if (dict)
-            {
-                entry = av_dict_get(dict, "hw_acceleration", NULL, 0);
-                if (entry)
-                    hw_acceleration = entry->value;
-                entry = av_dict_get(dict, "disable_codecs", NULL, 0);
-                if (entry)
-                    disabled_codecs = entry->value;
-            }
-            CV_LOG_DEBUG(NULL, "FFMPEG: allowed acceleration types: '" << hw_acceleration << "'");
-            CV_LOG_DEBUG(NULL, "FFMPEG: disabled codecs: '" << disabled_codecs << "'");
-#else
+#if !USE_AV_HW_CODECS
             va_type = VIDEO_ACCELERATION_NONE;
 #endif
 
@@ -1046,19 +1032,24 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             AVCodec *codec = NULL;
             err = -1;
 #if USE_AV_HW_CODECS
-            AccelStringIterator accel_iter(hw_acceleration);
+            HWAccelIterator accel_iter(va_type, false/*isEncoder*/, dict);
             while (accel_iter.good())
             {
+#else
+            do {
+#endif
+#if USE_AV_HW_CODECS
                 accel_iter.parse_next();
                 AVHWDeviceType hw_type = accel_iter.hw_type();
                 enc->get_format = avcodec_default_get_format;
                 if (enc->hw_device_ctx) {
                     av_buffer_unref(&enc->hw_device_ctx);
                 }
-                if ((hw_type != AV_HWDEVICE_TYPE_NONE) && (va_type & hw_type_to_va_type(hw_type))) {
+                if (hw_type != AV_HWDEVICE_TYPE_NONE)
+                {
                     CV_LOG_DEBUG(NULL, "FFMPEG: trying to configure H/W acceleration: '" << accel_iter.hw_type_device_string() << "'");
                     AVPixelFormat hw_pix_fmt = AV_PIX_FMT_NONE;
-                    codec = hw_find_codec(enc->codec_id, hw_type, av_codec_is_decoder, disabled_codecs, &hw_pix_fmt);
+                    codec = hw_find_codec(enc->codec_id, hw_type, av_codec_is_decoder, accel_iter.disabled_codecs().c_str(), &hw_pix_fmt);
                     if (codec) {
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
@@ -1070,9 +1061,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                         }
                     }
                 }
-                if (hw_type == AV_HWDEVICE_TYPE_NONE)
-#else
-           do {
+                else if (hw_type == AV_HWDEVICE_TYPE_NONE)
 #endif // USE_AV_HW_CODECS
                 {
                     AVDictionaryEntry* video_codec_param = av_dict_get(dict, "video_codec", NULL, 0);
@@ -2222,8 +2211,9 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 
 double CvVideoWriter_FFMPEG::getProperty(int propId) const
 {
+    CV_UNUSED(propId);
 #if USE_AV_HW_CODECS
-    if (propId == CAP_PROP_HW_ACCELERATION)
+    if (propId == VIDEOWRITER_PROP_HW_ACCELERATION)
     {
         return static_cast<double>(va_type);
     }
@@ -2356,11 +2346,35 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     close();
 
     const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
-    hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
-    if (params.warnUnusedParameters()) {
-        CV_LOG_ERROR(NULL,
-                     "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE);
+#if !USE_AV_HW_CODECS
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: FFmpeg backend is build without acceleration support. Can't handle VIDEOWRITER_PROP_HW_ACCELERATION parameter. Bailout");
+            return false;
+        }
+#endif
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_DEVICE))
+    {
+        hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE, -1);
+        if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+    }
+
+    if (params.warnUnusedParameters())
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
         return false;
     }
 
@@ -2594,20 +2608,6 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 #endif
 
-#if USE_AV_HW_CODECS
-    const char *hw_acceleration = FFMPEG_ENCODE_ACCELERATION_TYPES;
-    const char *disabled_codecs = FFMPEG_ENCODE_DISABLE_CODECS;
-    if (dict)
-    {
-        AVDictionaryEntry *entry = av_dict_get(dict, "hw_acceleration", NULL, 0);
-        if (entry)
-            hw_acceleration = entry->value;
-        entry = av_dict_get(dict, "disable_codecs", NULL, 0);
-        if (entry)
-            disabled_codecs = entry->value;
-    }
-#endif
-
     AVCodecContext *c = video_st->codec;
 
     // find and open encoder, try HW acceleration types specified in 'hw_acceleration' list (in order)
@@ -2615,17 +2615,22 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     AVCodec* codec = NULL;
 #if USE_AV_HW_CODECS
     AVBufferRef* hw_device_ctx = NULL;
-    AccelStringIterator accel_iter(hw_acceleration);
+    HWAccelIterator accel_iter(va_type, true/*isEncoder*/, dict);
     while (accel_iter.good())
     {
+#else
+    do {
+#endif
+#if USE_AV_HW_CODECS
         accel_iter.parse_next();
         AVHWDeviceType hw_type = accel_iter.hw_type();
         codec = NULL;
         AVPixelFormat hw_format = AV_PIX_FMT_NONE;
         if (hw_device_ctx)
             av_buffer_unref(&hw_device_ctx);
-        if ((hw_type != AV_HWDEVICE_TYPE_NONE) && (va_type & hw_type_to_va_type(hw_type))) {
-            codec = hw_find_codec(codec_id, hw_type, av_codec_is_encoder, disabled_codecs, &hw_format);
+        if (hw_type != AV_HWDEVICE_TYPE_NONE)
+        {
+            codec = hw_find_codec(codec_id, hw_type, av_codec_is_encoder, accel_iter.disabled_codecs().c_str(), &hw_format);
             if (!codec)
                 continue;
 
@@ -2633,10 +2638,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             if (!hw_device_ctx)
                 continue;
         }
-        if (hw_type == AV_HWDEVICE_TYPE_NONE)
-#else
-    do
-    {
+        else if (hw_type == AV_HWDEVICE_TYPE_NONE)
 #endif
         {
             codec = avcodec_find_encoder(codec_id);
@@ -2713,7 +2715,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         av_dict_free(&dict);
 
     if (err < 0) {
-        CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Failed to initilize VideoWriter");
+        CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Failed to initialize VideoWriter");
         return false;
     }
 

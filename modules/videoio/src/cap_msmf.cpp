@@ -84,6 +84,8 @@ struct IMFAttributes;
 #define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
 #define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
+using namespace cv;
+
 namespace
 {
 
@@ -600,10 +602,13 @@ protected:
     _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
     bool initStream(DWORD streamID, const MediaType& mt);
 
+    bool openFinalize_(const VideoCaptureParameters* params);
+
     Media_Foundation& MF;
     cv::String filename;
     int camid;
     MSMFCapture_Mode captureMode;
+    VideoAccelerationType va_type;
     int hwDeviceIndex;
 #ifdef HAVE_MSMF_DXVA
     _ComPtr<ID3D11Device> D3DDev;
@@ -628,6 +633,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     filename(""),
     camid(-1),
     captureMode(MODE_SW),
+    va_type(VIDEO_ACCELERATION_NONE),
     hwDeviceIndex(-1),
 #ifdef HAVE_MSMF_DXVA
     D3DDev(NULL),
@@ -802,10 +808,17 @@ bool CvCapture_MSMF::configureHW(bool enable)
 #endif
 }
 
-bool CvCapture_MSMF::configureHW(const cv::VideoCaptureParameters& params) {
-    hwDeviceIndex = params.get<int>(cv::VIDEOWRITER_PROP_HW_DEVICE, -1);
-    cv::VideoAccelerationType hw_type = params.get<cv::VideoAccelerationType>(cv::VIDEOWRITER_PROP_HW_ACCELERATION, cv::VIDEO_ACCELERATION_ANY);
-    return configureHW((hw_type & cv::VIDEO_ACCELERATION_D3D11) != 0);
+bool CvCapture_MSMF::configureHW(const VideoCaptureParameters& params)
+{
+    va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
+    hwDeviceIndex = params.get<int>(CAP_PROP_HW_DEVICE, -1);
+#ifndef HAVE_MSMF_DXVA
+    if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+    {
+        CV_LOG_INFO(NULL, "VIDEOIO/MSMF: MSMF backend is build without DXVA acceleration support. Can't handle CAP_PROP_HW_ACCELERATION parameter: " << va_type);
+    }
+#endif
+    return configureHW(va_type == VIDEO_ACCELERATION_D3D11 || va_type == VIDEO_ACCELERATION_ANY);
 }
 
 bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
@@ -861,7 +874,8 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     if (index < 0)
         return false;
 
-    if (params) {
+    if (params)
+    {
         configureHW(*params);
     }
 
@@ -890,15 +904,13 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     {
         frameStep = captureFormat.getFrameStep();
     }
-    if (params) {
-        std::vector<int> unused_params = params->getUnused();
-        for (int key : unused_params) {
-            if (!setProperty(key, params->get<double>(key))) {
-                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " + key);
-                return false;
-            }
-        }
+
+    if (isOpen && !openFinalize_(params))
+    {
+        close();
+        return false;
     }
+
     return isOpen;
 }
 
@@ -908,7 +920,8 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
     if (_filename.empty())
         return false;
 
-    if (params) {
+    if (params)
+    {
         configureHW(*params);
     }
 
@@ -937,17 +950,46 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
         }
     }
 
-    if (params) {
+    if (isOpen && !openFinalize_(params))
+    {
+        close();
+        return false;
+    }
+
+    return isOpen;
+}
+
+bool CvCapture_MSMF::openFinalize_(const VideoCaptureParameters* params)
+{
+    if (params)
+    {
         std::vector<int> unused_params = params->getUnused();
-        for (int key : unused_params) {
-            if (!setProperty(key, params->get<double>(key))) {
-                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " + key);
+        for (int key : unused_params)
+        {
+            if (!setProperty(key, params->get<double>(key)))
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " << key);
                 return false;
             }
         }
     }
 
-    return isOpen;
+    VideoAccelerationType actual_va_type = (captureMode == MODE_HW) ? VIDEO_ACCELERATION_D3D11 : VIDEO_ACCELERATION_NONE;
+    if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+    {
+        if (va_type != actual_va_type)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Can't select requested video acceleration through CAP_PROP_HW_ACCELERATION: "
+                    << va_type << " (actual is " << actual_va_type << "). Bailout");
+            return false;
+        }
+    }
+    else
+    {
+        va_type = actual_va_type;
+    }
+
+    return true;
 }
 
 bool CvCapture_MSMF::grabFrame()
@@ -1218,7 +1260,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         case cv::CAP_PROP_HW_DEVICE:
             return hwDeviceIndex;
         case cv::CAP_PROP_HW_ACCELERATION:
-            return (captureMode == MODE_HW) ? cv::VIDEO_ACCELERATION_D3D11 : 0;
+            return static_cast<double>(va_type);
         case CV_CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
         case CV_CAP_PROP_SAR_NUM:
@@ -1522,13 +1564,16 @@ public:
     virtual void close();
     virtual void write(cv::InputArray);
 
-    virtual double getProperty(int) const { return 0; }
+    virtual double getProperty(int) const override;
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const { return initiated; }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_MSMF; }
 private:
     Media_Foundation& MF;
+    VideoAccelerationType va_type;
+    int va_device;
+
     UINT32 videoWidth;
     UINT32 videoHeight;
     double fps;
@@ -1550,6 +1595,8 @@ private:
 
 CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     MF(Media_Foundation::getInstance()),
+    va_type(VIDEO_ACCELERATION_NONE),
+    va_device(-1),
     videoWidth(0),
     videoHeight(0),
     fps(0),
@@ -1623,10 +1670,40 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 }
 
 bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
-                               double _fps, cv::Size _frameSize, const cv::VideoWriterParameters& /*params*/)
+                               double _fps, cv::Size _frameSize, const cv::VideoWriterParameters& params)
 {
     if (initiated)
         close();
+
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: MSMF backend doesn't support writer acceleration support. Can't handle VIDEOWRITER_PROP_HW_ACCELERATION parameter. Bailout");
+            return false;
+        }
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_DEVICE))
+    {
+        va_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: VIDEOWRITER_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
+
     videoWidth = _frameSize.width;
     videoHeight = _frameSize.height;
     fps = _fps;
@@ -1675,6 +1752,23 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
                 initiated = true;
                 rtStart = 0;
                 MFFrameRateToAverageTimePerFrame((UINT32)(fps * 1000), 1000, &rtDuration);
+
+                VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+                if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+                {
+                    if (va_type != actual_va_type)
+                    {
+                        CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Can't select requested video acceleration through VIDEOWRITER_PROP_HW_ACCELERATION: "
+                                << va_type << " (actual is " << actual_va_type << "). Bailout");
+                        close();
+                        return false;
+                    }
+                }
+                else
+                {
+                    va_type = actual_va_type;
+                }
+
                 return true;
             }
         }
@@ -1728,6 +1822,20 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
             rtStart += rtDuration;
         }
     }
+}
+
+
+double CvVideoWriter_MSMF::getProperty(int propId) const
+{
+    if (propId == VIDEOWRITER_PROP_HW_ACCELERATION)
+    {
+        return static_cast<double>(va_type);
+    }
+    else if (propId == VIDEOWRITER_PROP_HW_DEVICE)
+    {
+        return static_cast<double>(va_device);
+    }
+    return 0;
 }
 
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,

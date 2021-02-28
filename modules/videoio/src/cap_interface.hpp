@@ -29,6 +29,7 @@ struct CvVideoWriter
     virtual ~CvVideoWriter() {}
     virtual bool writeFrame(const IplImage*) { return false; }
     virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
+    virtual double getProperty(int) const { return 0; }
 };
 
 //===================================================
@@ -312,8 +313,12 @@ public:
     {
         cvReleaseVideoWriter(&writer);
     }
-    double getProperty(int) const CV_OVERRIDE
+    double getProperty(int propId) const CV_OVERRIDE
     {
+        if (writer)
+        {
+            return writer->getProperty(propId);
+        }
         return 0.;
     }
     bool setProperty(int, double) CV_OVERRIDE
@@ -409,6 +414,21 @@ bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
         CV_OUT std::vector<int>& ready,
         int64 timeoutNs);
+
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type)
+{
+    switch (va_type)
+    {
+    case VIDEO_ACCELERATION_NONE: out << "NONE"; return out;
+    case VIDEO_ACCELERATION_ANY: out << "ANY"; return out;
+    case VIDEO_ACCELERATION_D3D11: out << "D3D11"; return out;
+    case VIDEO_ACCELERATION_VAAPI: out << "VAAPI"; return out;
+    case VIDEO_ACCELERATION_MFX: out << "MFX"; return out;
+    }
+    out << cv::format("UNKNOWN(0x%08x)", (int)va_type);
+    return out;
+}
 
 } // cv::
 

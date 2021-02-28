@@ -78,7 +78,7 @@ namespace cv
 //! @{
 
 
-/** @brief %VideoCapture API backends identifier.
+/** @brief cv::VideoCapture API backends identifier.
 
 Select preferred API for a capture object.
 To be used in the VideoCapture::VideoCapture() constructor or VideoCapture::open()
@@ -124,7 +124,7 @@ enum VideoCaptureAPIs {
        CAP_UEYE         = 2500,         //!< uEye Camera API
      };
 
-/** @brief %VideoCapture generic properties identifier.
+/** @brief cv::VideoCapture generic properties identifier.
 
  Reading / writing properties involves many layers. Some unexpected result might happens along this chain.
  Effective behaviour depends from device hardware, driver and API Backend.
@@ -182,14 +182,14 @@ enum VideoCaptureProperties {
        CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
        CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
        CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
-       CAP_PROP_HW_ACCELERATION=50, //!< Set/get hardware acceleration type (value is enum cv::VideoAccelerationType). Setting supported only via `params` parameter in VideoCapture constructor. Default is VIDEO_ACCELERATION_ANY
-       CAP_PROP_HW_DEVICE      =51, //!< Hardware device index (select GPU if multiple available)
+       CAP_PROP_HW_ACCELERATION=50, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in cv::VideoCapture constructor / .open() method. Default value is backend-specific.
+       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available)
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
      };
 
-/** @brief %VideoWriter generic properties identifier.
+/** @brief cv::VideoWriter generic properties identifier.
  @sa VideoWriter::get(), VideoWriter::set()
 */
 enum VideoWriterProperties {
@@ -199,8 +199,11 @@ enum VideoWriterProperties {
   VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
                                    //!< will work with grayscale frames.
   VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
-  VIDEOWRITER_PROP_HW_ACCELERATION = CAP_PROP_HW_ACCELERATION, //!< Set/get hardware acceleration type (value is enum cv::VideoAccelerationType). Setting supported only via `params` parameter in VideoCapture constructor. Default is VIDEO_ACCELERATION_NONE.
-  VIDEOWRITER_PROP_HW_DEVICE       = CAP_PROP_HW_DEVICE  //!< Hardware device index (select GPU if multiple available)
+  VIDEOWRITER_PROP_HW_ACCELERATION = 6, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in VideoWriter constructor / .open() method. Default value is backend-specific.
+  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available)
+#ifndef CV_DOXYGEN
+  CV__VIDEOWRITER_PROP_LATEST
+#endif
 };
 
 //! @} videoio_flags_base
@@ -208,15 +211,24 @@ enum VideoWriterProperties {
 //! @addtogroup videoio_flags_others
 //! @{
 
-//! Video Acceleration type (used as value in CAP_PROP_HW_ACCELERATION and VIDEOWRITER_PROP_HW_ACCELERATION)
-// In case of FFMPEG backend, it translated to enum AVHWDeviceType (https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h)
-enum VideoAccelerationType  {
-    VIDEO_ACCELERATION_NONE     = 0,
-    VIDEO_ACCELERATION_ANY      = 0x7FFFFFFF,
+/** @brief Video Acceleration type
+ *
+ * Used as value in #CAP_PROP_HW_ACCELERATION and #VIDEOWRITER_PROP_HW_ACCELERATION
+ *
+ * @note In case of FFmpeg backend, it translated to enum AVHWDeviceType (https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h)
+ */
+enum VideoAccelerationType
+{
+    VIDEO_ACCELERATION_NONE     =  0,  //!< Do not require any specific H/W acceleration, prefer software processing.
+                                       //!< Reading of this value means that special H/W accelerated handling is not added or not detected by OpenCV.
 
-    VIDEO_ACCELERATION_D3D11    = 1 << 1, // DirectX 11
-    VIDEO_ACCELERATION_VAAPI    = 1 << 2, // VAAPI
-    VIDEO_ACCELERATION_MFX      = 1 << 3  // libmfx (Intel MediaSDK/oneVPL)
+    VIDEO_ACCELERATION_ANY      =  1,  //!< Prefer to use H/W acceleration. If no one supported, then fallback to software processing.
+                                       //!< @note H/W acceleration may require special configuration of used environment.
+                                       //!< @note Results in encoding scenario may differ between software and hardware accelerated encoders.
+
+    VIDEO_ACCELERATION_D3D11    =  2,  //!< DirectX 11
+    VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
+    VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
 };
 
 /** @name IEEE 1394 drivers
