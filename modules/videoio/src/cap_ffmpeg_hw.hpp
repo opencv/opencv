@@ -186,13 +186,20 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
 AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format)
 {
     AVBufferRef *hw_frames_ref = nullptr;
-    if (ctx) {
-        avcodec_get_hw_frames_parameters(ctx, hw_device_ctx, hw_format, &hw_frames_ref);
+    if (ctx)
+    {
+        int res = avcodec_get_hw_frames_parameters(ctx, hw_device_ctx, hw_format, &hw_frames_ref);
+        if (res < 0)
+        {
+            CV_LOG_INFO(NULL, "FFMPEG: avcodec_get_hw_frames_parameters() call failed: " << res)
+        }
     }
-    if (!hw_frames_ref) {
+    if (!hw_frames_ref)
+    {
         hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx);
     }
-    if (!hw_frames_ref) {
+    if (!hw_frames_ref)
+    {
         CV_LOG_INFO(NULL, "FFMPEG: Failed to create HW frame context (av_hwframe_ctx_alloc)");
         return NULL;
     }
@@ -205,8 +212,10 @@ AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device
         frames_ctx->sw_format = HW_DEFAULT_SW_FORMAT;
     if (frames_ctx->initial_pool_size == 0)
         frames_ctx->initial_pool_size = HW_DEFAULT_POOL_SIZE;
-    if (av_hwframe_ctx_init(hw_frames_ref) < 0) {
-        CV_LOG_INFO(NULL, "FFMPEG: Failed to initialize HW frame context (av_hwframe_ctx_init)");
+    int res = av_hwframe_ctx_init(hw_frames_ref);
+    if (res < 0)
+    {
+        CV_LOG_INFO(NULL, "FFMPEG: Failed to initialize HW frame context (av_hwframe_ctx_init): " << res);
         av_buffer_unref(&hw_frames_ref);
         return NULL;
     }
@@ -300,6 +309,7 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
             }
         }
     }
+    CV_LOG_INFO(NULL, "FFMPEG: Can't select HW format, use default");
     return fmt[0];
 }
 
@@ -322,33 +332,49 @@ VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type) {
 
 class AccelStringIterator {
 public:
-    AccelStringIterator(std::string accel_list) :
-        _s_stream(accel_list.empty() ? "" : accel_list + ",") // add no-acceleration case to the end of the list
+    AccelStringIterator(std::string accel_list)
+        : s_stream_(accel_list.empty() ? "" : accel_list + ",") // add no-acceleration case to the end of the list
+        , hw_type_(AV_HWDEVICE_TYPE_NONE)
     {
+        // nothing
     }
-    bool good() const {
-        return _s_stream.good();
+    bool good() const
+    {
+        return s_stream_.good();
     }
-    void parse_next() {
-        std::string hw_type_string;
-        getline(_s_stream, hw_type_string, ',');
-        size_t index = hw_type_string.find('.');
+    void parse_next()
+    {
+        getline(s_stream_, hw_type_device_string_, ',');
+        size_t index = hw_type_device_string_.find('.');
         if (index != std::string::npos) {
-            _device_subname = hw_type_string.substr(index + 1);
-            hw_type_string = hw_type_string.substr(0, index);
+            device_subname_ = hw_type_device_string_.substr(index + 1);
+            hw_type_string_ = hw_type_device_string_.substr(0, index);
         } else {
-            _device_subname.clear();
+            device_subname_.clear();
+            hw_type_string_ = hw_type_device_string_;
         }
-        _hw_type = av_hwdevice_find_type_by_name(hw_type_string.c_str());
+        hw_type_ = av_hwdevice_find_type_by_name(hw_type_string_.c_str());
     }
-    AVHWDeviceType hw_type() {
-        return _hw_type;
+    std::string hw_type_device_string() const
+    {
+        return hw_type_device_string_;
     }
-    std::string device_subname() {
-        return _device_subname;
+    std::string hw_type_string() const
+    {
+        return hw_type_string_;
+    }
+    AVHWDeviceType hw_type() const
+    {
+        return hw_type_;
+    }
+    std::string device_subname() const
+    {
+        return device_subname_;
     }
 private:
-    std::stringstream _s_stream;
-    AVHWDeviceType _hw_type;
-    std::string _device_subname;
+    std::stringstream s_stream_;
+    std::string hw_type_device_string_;
+    std::string hw_type_string_;
+    AVHWDeviceType hw_type_;
+    std::string device_subname_;
 };
