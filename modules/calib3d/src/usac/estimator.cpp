@@ -236,13 +236,18 @@ public:
         CV_DbgAssert(points);
     }
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters(const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const m = (double *) model.data;
         m11=static_cast<float>(m[0]); m12=static_cast<float>(m[1]); m13=static_cast<float>(m[2]);
         m21=static_cast<float>(m[3]); m22=static_cast<float>(m[4]); m23=static_cast<float>(m[5]);
         m31=static_cast<float>(m[6]); m32=static_cast<float>(m[7]); m33=static_cast<float>(m[8]);
 
         const Mat model_inv = model.inv();
+        CV_CheckTypeEQ(model_inv.depth(), CV_64F, "");
         const auto * const minv = (double *) model_inv.data;
         minv11=(float)minv[0]; minv12=(float)minv[1]; minv13=(float)minv[2];
         minv21=(float)minv[3]; minv22=(float)minv[4]; minv23=(float)minv[5];
@@ -299,7 +304,11 @@ public:
         CV_DbgAssert(points);
     }
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters(const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const m = (double *) model.data;
         m11=static_cast<float>(m[0]); m12=static_cast<float>(m[1]); m13=static_cast<float>(m[2]);
         m21=static_cast<float>(m[3]); m22=static_cast<float>(m[4]); m23=static_cast<float>(m[5]);
@@ -349,7 +358,11 @@ public:
         CV_DbgAssert(points);
     }
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters(const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const m = (double *) model.data;
         m11=static_cast<float>(m[0]); m12=static_cast<float>(m[1]); m13=static_cast<float>(m[2]);
         m21=static_cast<float>(m[3]); m22=static_cast<float>(m[4]); m23=static_cast<float>(m[5]);
@@ -416,7 +429,11 @@ public:
         CV_DbgAssert(points);
     }
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters(const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const m = (double *) model.data;
         m11=static_cast<float>(m[0]); m12=static_cast<float>(m[1]); m13=static_cast<float>(m[2]);
         m21=static_cast<float>(m[3]); m22=static_cast<float>(m[4]); m23=static_cast<float>(m[5]);
@@ -476,7 +493,11 @@ public:
     }
 
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters (const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const p = (double *) model.data;
         p11 = (float)p[0]; p12 = (float)p[1]; p13 = (float)p[2];  p14 = (float)p[3];
         p21 = (float)p[4]; p22 = (float)p[5]; p23 = (float)p[6];  p24 = (float)p[7];
@@ -535,7 +556,11 @@ public:
         CV_DbgAssert(points);
     }
 
-    inline void setModelParameters (const Mat &model) override {
+    inline void setModelParameters(const Mat& model) override
+    {
+        CV_Assert(!model.empty());
+        CV_CheckTypeEQ(model.depth(), CV_64F, "");
+
         const auto * const m = (double *) model.data;
         m11 = (float)m[0]; m12 = (float)m[1]; m13 = (float)m[2];
         m21 = (float)m[3]; m22 = (float)m[4]; m23 = (float)m[5];
