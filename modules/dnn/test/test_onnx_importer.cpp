@@ -307,6 +307,13 @@ TEST_P(Test_ONNX_layers, Power)
     testONNXModels("pow2", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, Exp)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("exp");
+}
+
 TEST_P(Test_ONNX_layers, Concatenation)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
