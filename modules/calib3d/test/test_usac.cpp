@@ -4,7 +4,8 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test {
+namespace opencv_test { namespace {
+
 enum TestSolver { Homogr, Fundam, Essen, PnP, Affine};
 /*
 * rng -- reference to random generator
@@ -264,7 +265,40 @@ TEST(usac_Fundamental, accuracy) {
                                                            int(max_iters), mask);
             checkInliersMask(TestSolver::Fundam, inl_size, thr, pts1, pts2, F, mask);
         }
-    }}
+    }
+}
+
+TEST(usac_Fundamental, regression_19639)
+{
+    double x_[] = {
+        941, 890,
+        596, 940,
+        898, 941,
+        894, 933,
+        586, 938,
+        902, 933,
+        887, 935
+    };
+    Mat x(7, 1, CV_64FC2, x_);
+
+    double y_[] = {
+        1416,  806,
+        1157,  852,
+        1380,  855,
+        1378,  843,
+        1145,  849,
+        1378,  843,
+        1378,  843
+    };
+    Mat y(7, 1, CV_64FC2, y_);
+
+    //std::cout << x << std::endl;
+    //std::cout << y << std::endl;
+
+    Mat m = cv::findFundamentalMat(x, y, USAC_MAGSAC, 3, 0.99);
+    EXPECT_TRUE(m.empty());
+}
+
 
 TEST(usac_Essential, accuracy) {
     std::vector<int> gt_inliers;
@@ -405,4 +439,5 @@ TEST(usac_testUsacParams, accuracy) {
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 }
 
-}
+
+}}  // namespace
