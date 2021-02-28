@@ -421,7 +421,11 @@ public:
      * @current_hypothesis: current RANSAC iteration
      * Return: true if model is good, false - otherwise.
      */
-    inline bool isModelGood (const Mat &model) override {
+    inline bool isModelGood(const Mat& model) override
+    {
+        if (model.empty())
+            return false;
+
         // update error object with current model
         err->setModelParameters(model);
 
