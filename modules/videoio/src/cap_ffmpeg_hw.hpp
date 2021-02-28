@@ -116,12 +116,16 @@ static bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std:
         ret = (hw_type != AV_HWDEVICE_TYPE_QSV); // disable MFX if we can't check VAAPI for VideoProc entrypoint
 #endif
     }
-    if (ret) {
-        if (!device_subname.empty() && device_name.find(device_subname) == std::string::npos) {
-            CV_LOG_INFO(NULL, "FFMPEG: Skipping " << hw_name <<
-                " video acceleration on the following device name as not matching substring '" << device_subname << "': " << device_name);
-        } else if (!device_name.empty()) {
-            CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on GPU device: " << device_name);
+    if (ret && !device_subname.empty() && device_name.find(device_subname) == std::string::npos)
+    {
+        CV_LOG_INFO(NULL, "FFMPEG: Skipping '" << hw_name <<
+            "' video acceleration on the following device name as not matching substring '" << device_subname << "': " << device_name);
+        ret = false;  // reject configuration
+    }
+    if (ret)
+    {
+        if (!device_name.empty()) {
+            CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration on device: " << device_name);
         } else {
             CV_LOG_INFO(NULL, "FFMPEG: Using " << hw_name << " video acceleration");
         }
