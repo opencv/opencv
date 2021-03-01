@@ -3792,8 +3792,6 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
 
             auto process_layer = [&](const std::string& name) -> bool
             {
-                if (ngraphFunction)
-                {
                     CV_TRACE_REGION("ngraph_function");
                     for (const auto& op : ngraphOperations)
                     {
@@ -3806,25 +3804,6 @@ Net Net::Impl::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork& ieNe
                         }
                     }
                     return false;
-                }
-                else
-                {
-                    CV_TRACE_REGION("legacy_cnn_layer");
-                    try
-                    {
-                        InferenceEngine::CNNLayerPtr ieLayer = ieNet.getLayerByName(name.c_str());
-                        CV_Assert(ieLayer);
-
-                        cvLayer->type = ieLayer->type;
-                        return true;
-                    }
-                    catch (const std::exception& e)
-                    {
-                        CV_UNUSED(e);
-                        CV_LOG_DEBUG(NULL, "IE layer extraction failure: '" << name << "' - " << e.what());
-                        return false;
-                    }
-                }
             };
 
             bool found = process_layer(outputName);
