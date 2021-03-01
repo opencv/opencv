@@ -426,7 +426,7 @@ std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type
     case VIDEO_ACCELERATION_VAAPI: out << "VAAPI"; return out;
     case VIDEO_ACCELERATION_MFX: out << "MFX"; return out;
     }
-    out << cv::format("UNKNOWN(0x%08x)", (int)va_type);
+    out << cv::format("UNKNOWN(0x%ux)", static_cast<unsigned int>(va_type));
     return out;
 }
 

@@ -721,6 +721,10 @@ TEST_P(videocapture_acceleration, read)
     VideoAccelerationType actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_reader.get(CAP_PROP_HW_ACCELERATION)));
     if (va_type != VIDEO_ACCELERATION_ANY && va_type != VIDEO_ACCELERATION_NONE)
     {
+#ifdef _WIN32  // FIXIT FFmpeg wrapper upgrade is required
+        if (actual_va == static_cast<VideoAccelerationType>(0))
+            throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW acceleration (legacy FFmpeg wrapper), skipping");
+#endif
         ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
     }
     std::cout << "VideoCapture " << backend_name << ":" << actual_va << std::endl << std::flush;
@@ -876,6 +880,10 @@ TEST_P(videowriter_acceleration, write)
         actual_va = static_cast<VideoAccelerationType>(static_cast<int>(hw_writer.get(VIDEOWRITER_PROP_HW_ACCELERATION)));
         if (va_type != VIDEO_ACCELERATION_ANY && va_type != VIDEO_ACCELERATION_NONE)
         {
+#ifdef _WIN32  // FIXIT FFmpeg wrapper upgrade is required
+            if (actual_va == static_cast<VideoAccelerationType>(-1))
+                throw SkipTestException(backend_name + " VideoWriter on " + filename + " not supported with HW acceleration (legacy FFmpeg wrapper), skipping");
+#endif
             ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
         }
         std::cout << "VideoWriter " << backend_name << ":" << actual_va << std::endl << std::flush;
