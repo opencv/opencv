@@ -38,10 +38,6 @@ class GAPI_EXPORTS GCompiled::Priv
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GExecutor> m_exec;
 
-    // NB: Used by python wrapper to clarify input/output types
-    GTypesInfo m_out_info;
-    GTypesInfo m_in_info;
-
     void checkArgs(const cv::gimpl::GRuntimeArgs &args) const;
 
 public:
@@ -59,12 +55,6 @@ public:
     const GMetaArgs& outMetas() const;
 
     const cv::gimpl::GModel::Graph& model() const;
-
-    void setOutInfo(const GTypesInfo& info) { m_out_info = std::move(info); }
-    const GTypesInfo& outInfo() const { return m_out_info; }
-
-    void setInInfo(const GTypesInfo& info) { m_in_info = std::move(info); }
-    const GTypesInfo& inInfo() const { return m_in_info; }
 };
 
 }

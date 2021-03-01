@@ -30,6 +30,7 @@ struct GTypeInfo
 {
     GShape                 shape;
     cv::detail::OpaqueKind kind;
+    detail::HostCtor       ctor;
 };
 
 using GShapes    = std::vector<GShape>;

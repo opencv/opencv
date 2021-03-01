@@ -368,8 +368,6 @@ private:
     detail::GArrayU m_ref;
 };
 
-using GArrayP2f = GArray<cv::Point2f>;
-
 /** @} */
 
 } // namespace cv

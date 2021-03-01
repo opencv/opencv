@@ -1158,7 +1158,7 @@ if there are 2 channels, or have 2 columns if there is a single channel. Mat sho
 @param src Input gray-scale image @ref CV_8UC1; or input set of @ref CV_32S or @ref CV_32F
 2D points stored in Mat.
  */
-GAPI_EXPORTS GOpaque<Rect> boundingRect(const GMat& src);
+GAPI_EXPORTS_W GOpaque<Rect> boundingRect(const GMat& src);
 
 /** @overload
 

@@ -50,7 +50,9 @@ class gapi_imgproc_test(NewOpenCVTests):
             # OpenCV - (num_points, 1, 2)
             # G-API  - (num_points, 2)
             # Comparison
-            self.assertEqual(0.0, cv.norm(expected.flatten(), actual.flatten(), cv.NORM_INF),
+            self.assertEqual(0.0, cv.norm(expected.flatten(),
+                                          np.array(actual, dtype=np.float32).flatten(),
+                                          cv.NORM_INF),
                              'Failed on ' + pkg_name + ' backend')
 
 
@@ -70,6 +72,31 @@ class gapi_imgproc_test(NewOpenCVTests):
 
         for pkg_name, pkg in pkgs:
             actual = comp.apply(cv.gin(in1), args=cv.compile_args(pkg))
+            # Comparison
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
+                             'Failed on ' + pkg_name + ' backend')
+
+
+    def test_bounding_rect(self):
+        sz = 1280
+        fscale = 256
+
+        def sample_value(fscale):
+            return np.random.uniform(0, 255 * fscale) / fscale
+
+        points = np.array([(sample_value(fscale), sample_value(fscale)) for _ in range(1280)], np.float32)
+
+        # OpenCV
+        expected = cv.boundingRect(points)
+
+        # G-API
+        g_in  = cv.GMat()
+        g_out = cv.gapi.boundingRect(g_in)
+
+        comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
+
+        for pkg_name, pkg in pkgs:
+            actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
             # Comparison
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                              'Failed on ' + pkg_name + ' backend')

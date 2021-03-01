@@ -422,19 +422,6 @@ void cv::gimpl::GCompiler::compileIslands(ade::Graph &g, const cv::GCompileArgs 
     GIslandModel::compileIslands(gim, g, args);
 }
 
-static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
-                                  const std::vector<ade::NodeHandle>& nhs) {
-    cv::GTypesInfo info;
-    info.reserve(nhs.size());
-
-    ade::util::transform(nhs, std::back_inserter(info), [&g](const ade::NodeHandle& nh) {
-        const auto& data = g.metadata(nh).get<cv::gimpl::Data>();
-        return cv::GTypeInfo{data.shape, data.kind};
-    });
-
-    return info;
-}
-
 cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
 {
     // This is the final compilation step. Here:
@@ -454,22 +441,14 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     // ...before call to produceCompiled();
 
     GModel::ConstGraph cgr(*pg);
-
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
     // FIXME: select which executor will be actually used,
     // make GExecutor abstract.
+    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
-
-    // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
-    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
-
-    compiled.priv().setOutInfo(std::move(out_meta));
-    compiled.priv().setInInfo(std::move(in_meta));
 
     return compiled;
 }
@@ -486,15 +465,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
-
     GModel::ConstGraph cgr(*pg);
-
-    // NB: Need to store input/output GTypeInfo to allocate output arrays for python bindings
-    auto out_meta = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
-    auto in_meta  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
-
-    compiled.priv().setOutInfo(std::move(out_meta));
-    compiled.priv().setInInfo(std::move(in_meta));
 
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));
