@@ -634,16 +634,10 @@ PixarLogGuessDataFmt(TIFFDirectory *td)
 	return guess;
 }
 
-#define TIFF_SIZE_T_MAX ((size_t) ~ ((size_t)0))
-#define TIFF_TMSIZE_T_MAX (tmsize_t)(TIFF_SIZE_T_MAX >> 1)
-
 static tmsize_t
 multiply_ms(tmsize_t m1, tmsize_t m2)
 {
-        assert(m1 >= 0 && m2 >= 0);
-        if( m1 == 0 || m2 > TIFF_TMSIZE_T_MAX / m1 )
-            return 0;
-        return m1 * m2;
+        return _TIFFMultiplySSize(NULL, m1, m2, NULL);
 }
 
 static tmsize_t
@@ -1153,7 +1147,7 @@ PixarLogEncode(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
 
 	llen = sp->stride * td->td_imagewidth;
     /* Check against the number of elements (of size uint16) of sp->tbuf */
-    if( n > (tmsize_t)(td->td_rowsperstrip * llen) )
+    if( n > ((tmsize_t)td->td_rowsperstrip * llen) )
     {
         TIFFErrorExt(tif->tif_clientdata, module,
                      "Too many input bytes provided");
@@ -1206,7 +1200,8 @@ PixarLogEncode(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
 		}
 		if (sp->stream.avail_out == 0) {
 			tif->tif_rawcc = tif->tif_rawdatasize;
-			TIFFFlushData1(tif);
+			if (!TIFFFlushData1(tif))
+				return 0;
 			sp->stream.next_out = tif->tif_rawdata;
 			sp->stream.avail_out = (uInt) tif->tif_rawdatasize;  /* this is a safe typecast, as check is made already in PixarLogPreEncode */
 		}
@@ -1236,7 +1231,8 @@ PixarLogPostEncode(TIFF* tif)
 		    if ((tmsize_t)sp->stream.avail_out != tif->tif_rawdatasize) {
 			    tif->tif_rawcc =
 				tif->tif_rawdatasize - sp->stream.avail_out;
-			    TIFFFlushData1(tif);
+			    if (!TIFFFlushData1(tif))
+                                return 0;
 			    sp->stream.next_out = tif->tif_rawdata;
 			    sp->stream.avail_out = (uInt) tif->tif_rawdatasize;  /* this is a safe typecast, as check is made already in PixarLogPreEncode */
 		    }
@@ -1404,6 +1400,7 @@ TIFFInitPixarLog(TIFF* tif, int scheme)
 
 	PixarLogState* sp;
 
+        (void)scheme;
 	assert(scheme == COMPRESSION_PIXARLOG);
 
 	/*
