@@ -887,7 +887,7 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
 
   warpedKeypoints.clear();
-  for (auto &pt:dstKeypoints) 
+  for (auto &pt:dstKeypoints)
   {
     warpedKeypoints.emplace_back(std::move(pt));
   }
