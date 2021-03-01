@@ -339,7 +339,7 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
                                       InputArray inputMask, int gaussFiltSize);
 
 /** @overload */
-CV_EXPORTS
+CV_EXPORTS_W
 double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
