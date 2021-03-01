@@ -119,7 +119,8 @@ public:
             GAPI_Assert(false);
     }
 
-GAPI_WRAP gapi::ArgType type() { return m_type; }
+    GAPI_WRAP gapi::ArgType type() { return m_type; }
+    const Storage& arg() const     { return m_arg;  }
 
 private:
     gapi::ArgType m_type;
@@ -156,6 +157,7 @@ public:
     }
 
     GAPI_WRAP gapi::ArgType type() { return m_type; }
+    const Storage& arg() const     { return m_arg;  }
 
 private:
     gapi::ArgType m_type;

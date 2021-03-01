@@ -85,11 +85,11 @@ the larger side of the rectangle.
 @param filterOutOfBounds If provided true, out-of-frame boxes are filtered.
 @return a vector of detected bounding boxes.
 */
-GAPI_EXPORTS GArray<Rect> parseSSD(const GMat& in,
-                                   const GOpaque<Size>& inSz,
-                                   const float confidenceThreshold = 0.5f,
-                                   const bool alignmentToSquare = false,
-                                   const bool filterOutOfBounds = false);
+GAPI_EXPORTS_W GArray<Rect> parseSSD(const GMat& in,
+                                     const GOpaque<Size>& inSz,
+                                     const float confidenceThreshold = 0.5f,
+                                     const bool alignmentToSquare = false,
+                                     const bool filterOutOfBounds = false);
 
 /** @brief Parses output of Yolo network.
 

@@ -23,6 +23,31 @@
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gcompiler.hpp"
 #include "compiler/gcompiled_priv.hpp"
+#include "compiler/gstreaming_priv.hpp"
+
+static cv::GTypesInfo collectInfo(const cv::gimpl::GModel::ConstGraph& g,
+                                  const std::vector<ade::NodeHandle>& nhs) {
+    cv::GTypesInfo info;
+    info.reserve(nhs.size());
+
+    ade::util::transform(nhs, std::back_inserter(info), [&g](const ade::NodeHandle& nh) {
+        const auto& data = g.metadata(nh).get<cv::gimpl::Data>();
+        return cv::GTypeInfo{data.shape, data.kind, data.ctor};
+    });
+
+    return info;
+}
+
+// NB: This function is used to collect graph input/output info.
+// Needed for python bridge to unpack inputs and constructs outputs properly.
+static cv::GraphInfo::Ptr collectGraphInfo(const cv::GComputation::Priv& priv)
+{
+    auto g = cv::gimpl::GCompiler::makeGraph(priv);
+    cv::gimpl::GModel::ConstGraph cgr(*g);
+    auto in_info  = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().in_nhs);
+    auto out_info = collectInfo(cgr, cgr.metadata().get<cv::gimpl::Protocol>().out_nhs);
+    return cv::GraphInfo::Ptr(new cv::GraphInfo{std::move(in_info), std::move(out_info)});
+}
 
 // cv::GComputation private implementation /////////////////////////////////////
 // <none>
@@ -105,8 +130,37 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCo
 
 cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
 {
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
+    {
+        m_priv->m_info = collectGraphInfo(*m_priv);
+    }
+
     cv::gimpl::GCompiler comp(*this, {}, std::move(args));
-    return comp.compileStreaming();
+    auto compiled = comp.compileStreaming();
+
+    compiled.priv().setInInfo(m_priv->m_info->inputs);
+    compiled.priv().setOutInfo(m_priv->m_info->outputs);
+
+    return compiled;
+}
+
+cv::GStreamingCompiled cv::GComputation::compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                                GCompileArgs                   &&args)
+{
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
+    {
+        m_priv->m_info = collectGraphInfo(*m_priv);
+    }
+
+    auto ins = callback(m_priv->m_info->inputs);
+    cv::gimpl::GCompiler comp(*this, std::move(ins), std::move(args));
+    auto compiled = comp.compileStreaming();
+    compiled.priv().setInInfo(m_priv->m_info->inputs);
+    compiled.priv().setOutInfo(m_priv->m_info->outputs);
+
+    return compiled;
 }
 
 // FIXME: Introduce similar query/test method for GMetaArgs as a building block
@@ -172,50 +226,25 @@ void cv::GComputation::apply(const std::vector<cv::Mat> &ins,
 }
 
 // NB: This overload is called from python code
-cv::GRunArgs cv::GComputation::apply(GRunArgs &&ins, GCompileArgs &&args)
+cv::GRunArgs cv::GComputation::apply(const cv::detail::ExtractArgsCallback &callback,
+                                           GCompileArgs                   &&args)
 {
-    recompile(descr_of(ins), std::move(args));
+    // NB: Used by python bridge
+    if (!m_priv->m_info)
+    {
+        m_priv->m_info = collectGraphInfo(*m_priv);
+    }
 
-    const auto& out_info = m_priv->m_lastCompiled.priv().outInfo();
+    auto ins = callback(m_priv->m_info->inputs);
+    recompile(descr_of(ins), std::move(args));
 
     GRunArgs run_args;
     GRunArgsP outs;
-    run_args.reserve(out_info.size());
-    outs.reserve(out_info.size());
+    run_args.reserve(m_priv->m_info->outputs.size());
+    outs.reserve(m_priv->m_info->outputs.size());
 
-    for (auto&& info : out_info)
-    {
-        switch (info.shape)
-        {
-            case cv::GShape::GMAT:
-            {
-                run_args.emplace_back(cv::Mat{});
-                outs.emplace_back(&cv::util::get<cv::Mat>(run_args.back()));
-                break;
-            }
-            case cv::GShape::GSCALAR:
-            {
-                run_args.emplace_back(cv::Scalar{});
-                outs.emplace_back(&cv::util::get<cv::Scalar>(run_args.back()));
-                break;
-            }
-            case cv::GShape::GARRAY:
-            {
-                switch (info.kind)
-                {
-                    case cv::detail::OpaqueKind::CV_POINT2F:
-                        run_args.emplace_back(cv::detail::VectorRef{std::vector<cv::Point2f>{}});
-                        outs.emplace_back(cv::util::get<cv::detail::VectorRef>(run_args.back()));
-                        break;
-                    default:
-                        util::throw_error(std::logic_error("Unsupported kind for GArray"));
-                }
-                break;
-            }
-            default:
-                util::throw_error(std::logic_error("Only cv::GMat and cv::GScalar are supported for python output"));
-        }
-    }
+    cv::detail::constructGraphOutputs(m_priv->m_info->outputs, run_args, outs);
+
     m_priv->m_lastCompiled(std::move(ins), std::move(outs));
     return run_args;
 }

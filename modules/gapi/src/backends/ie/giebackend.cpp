@@ -707,7 +707,10 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         auto& out_mat = ctx->outMatR(i);
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
-        ctx->out.post(ctx->output(i));
+        auto output = ctx->output(i);
+        ctx->out.meta(output, cv::GRunArg::Meta{});
+        ctx->out.post(std::move(output));
+
     }
 }
 
@@ -904,7 +907,9 @@ struct InferList: public cv::detail::KernelTag {
                         // NB: In case there is no input data need to post output anyway
                         if (in_roi_vec.empty()) {
                             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                ctx->out.post(ctx->output(i));
+                                auto output = ctx->output(i);
+                                ctx->out.meta(output, cv::GRunArg::Meta{});
+                                ctx->out.post(std::move(output));
                             }
                             return;
                         }
@@ -940,7 +945,9 @@ struct InferList: public cv::detail::KernelTag {
                         }
 
                         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                            ctx->out.post(ctx->output(i));
+                            auto output = ctx->output(i);
+                            ctx->out.meta(output, cv::GRunArg::Meta{});
+                            ctx->out.post(std::move(output));
                         }
                     },
                     [](InferenceEngine::InferRequest &) { /* do nothing */ }
@@ -1049,7 +1056,9 @@ struct InferList2: public cv::detail::KernelTag {
                             const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
                             if (list_size == 0u) {
                                 for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                    ctx->out.post(ctx->output(i));
+                                    auto output = ctx->output(i);
+                                    ctx->out.meta(output, cv::GRunArg::Meta{});
+                                    ctx->out.post(std::move(output));
                                 }
                                 return;
                             }
@@ -1103,7 +1112,9 @@ struct InferList2: public cv::detail::KernelTag {
                             }
 
                             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                ctx->out.post(ctx->output(i));
+                                auto output = ctx->output(i);
+                                ctx->out.meta(output, cv::GRunArg::Meta{});
+                                ctx->out.post(std::move(output));
                             }
                         },
                         [](InferenceEngine::InferRequest &) { /* do nothing */ }
