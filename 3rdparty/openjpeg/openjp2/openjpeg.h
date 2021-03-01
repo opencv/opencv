@@ -78,7 +78,7 @@ Most compilers implement their own version of this keyword ...
 
 #if defined(OPJ_STATIC) || !defined(_WIN32)
 /* http://gcc.gnu.org/wiki/Visibility */
-#   if __GNUC__ >= 4
+#   if !defined(_WIN32) && __GNUC__ >= 4
 #       if defined(OPJ_STATIC) /* static library uses "hidden" */
 #           define OPJ_API    __attribute__ ((visibility ("hidden")))
 #       else
@@ -204,11 +204,11 @@ typedef size_t   OPJ_SIZE_T;
 #define OPJ_PROFILE_BC_MULTI    0x0200 /** Multi Tile Broadcast profile defined in 15444-1 AMD3 */
 #define OPJ_PROFILE_BC_MULTI_R  0x0300 /** Multi Tile Reversible Broadcast profile defined in 15444-1 AMD3 */
 #define OPJ_PROFILE_IMF_2K      0x0400 /** 2K Single Tile Lossy IMF profile defined in 15444-1 AMD 8 */
-#define OPJ_PROFILE_IMF_4K      0x0401 /** 4K Single Tile Lossy IMF profile defined in 15444-1 AMD 8 */
-#define OPJ_PROFILE_IMF_8K      0x0402 /** 8K Single Tile Lossy IMF profile defined in 15444-1 AMD 8 */
-#define OPJ_PROFILE_IMF_2K_R    0x0403 /** 2K Single/Multi Tile Reversible IMF profile defined in 15444-1 AMD 8 */
+#define OPJ_PROFILE_IMF_4K      0x0500 /** 4K Single Tile Lossy IMF profile defined in 15444-1 AMD 8 */
+#define OPJ_PROFILE_IMF_8K      0x0600 /** 8K Single Tile Lossy IMF profile defined in 15444-1 AMD 8 */
+#define OPJ_PROFILE_IMF_2K_R    0x0700 /** 2K Single/Multi Tile Reversible IMF profile defined in 15444-1 AMD 8 */
 #define OPJ_PROFILE_IMF_4K_R    0x0800 /** 4K Single/Multi Tile Reversible IMF profile defined in 15444-1 AMD 8 */
-#define OPJ_PROFILE_IMF_8K_R    0x0801  /** 8K Single/Multi Tile Reversible IMF profile defined in 15444-1 AMD 8 */
+#define OPJ_PROFILE_IMF_8K_R    0x0900 /** 8K Single/Multi Tile Reversible IMF profile defined in 15444-1 AMD 8 */
 
 /**
  * JPEG 2000 Part-2 extensions
@@ -224,6 +224,36 @@ typedef size_t   OPJ_SIZE_T;
 #define OPJ_IS_BROADCAST(v)  (((v) >= OPJ_PROFILE_BC_SINGLE)&&((v) <= ((OPJ_PROFILE_BC_MULTI_R) | (0x000b))))
 #define OPJ_IS_IMF(v)        (((v) >= OPJ_PROFILE_IMF_2K)&&((v) <= ((OPJ_PROFILE_IMF_8K_R) | (0x009b))))
 #define OPJ_IS_PART2(v)      ((v) & OPJ_PROFILE_PART2)
+
+#define OPJ_GET_IMF_PROFILE(v)   ((v) & 0xff00)      /** Extract IMF profile without mainlevel/sublevel */
+#define OPJ_GET_IMF_MAINLEVEL(v) ((v) & 0xf)         /** Extract IMF main level */
+#define OPJ_GET_IMF_SUBLEVEL(v)  (((v) >> 4) & 0xf)  /** Extract IMF sub level */
+
+#define OPJ_IMF_MAINLEVEL_MAX    11   /** Maximum main level */
+
+/** Max. Components Sampling Rate (MSamples/sec) per IMF main level */
+#define OPJ_IMF_MAINLEVEL_1_MSAMPLESEC   65      /** MSamples/sec for IMF main level 1 */
+#define OPJ_IMF_MAINLEVEL_2_MSAMPLESEC   130     /** MSamples/sec for IMF main level 2 */
+#define OPJ_IMF_MAINLEVEL_3_MSAMPLESEC   195     /** MSamples/sec for IMF main level 3 */
+#define OPJ_IMF_MAINLEVEL_4_MSAMPLESEC   260     /** MSamples/sec for IMF main level 4 */
+#define OPJ_IMF_MAINLEVEL_5_MSAMPLESEC   520     /** MSamples/sec for IMF main level 5 */
+#define OPJ_IMF_MAINLEVEL_6_MSAMPLESEC   1200    /** MSamples/sec for IMF main level 6 */
+#define OPJ_IMF_MAINLEVEL_7_MSAMPLESEC   2400    /** MSamples/sec for IMF main level 7 */
+#define OPJ_IMF_MAINLEVEL_8_MSAMPLESEC   4800    /** MSamples/sec for IMF main level 8 */
+#define OPJ_IMF_MAINLEVEL_9_MSAMPLESEC   9600    /** MSamples/sec for IMF main level 9 */
+#define OPJ_IMF_MAINLEVEL_10_MSAMPLESEC  19200   /** MSamples/sec for IMF main level 10 */
+#define OPJ_IMF_MAINLEVEL_11_MSAMPLESEC  38400   /** MSamples/sec for IMF main level 11 */
+
+/** Max. compressed Bit Rate (Mbits/s) per IMF sub level */
+#define OPJ_IMF_SUBLEVEL_1_MBITSSEC      200     /** Mbits/s for IMF sub level 1 */
+#define OPJ_IMF_SUBLEVEL_2_MBITSSEC      400     /** Mbits/s for IMF sub level 2 */
+#define OPJ_IMF_SUBLEVEL_3_MBITSSEC      800     /** Mbits/s for IMF sub level 3 */
+#define OPJ_IMF_SUBLEVEL_4_MBITSSEC     1600     /** Mbits/s for IMF sub level 4 */
+#define OPJ_IMF_SUBLEVEL_5_MBITSSEC     3200     /** Mbits/s for IMF sub level 5 */
+#define OPJ_IMF_SUBLEVEL_6_MBITSSEC     6400     /** Mbits/s for IMF sub level 6 */
+#define OPJ_IMF_SUBLEVEL_7_MBITSSEC    12800     /** Mbits/s for IMF sub level 7 */
+#define OPJ_IMF_SUBLEVEL_8_MBITSSEC    25600     /** Mbits/s for IMF sub level 8 */
+#define OPJ_IMF_SUBLEVEL_9_MBITSSEC    51200     /** Mbits/s for IMF sub level 9 */
 
 /**
  * JPEG 2000 codestream and component size limits in cinema profiles
@@ -318,6 +348,10 @@ typedef void (*opj_msg_callback)(const char *msg, void *client_data);
 ==========================================================
 */
 
+#ifndef OPJ_UINT32_SEMANTICALLY_BUT_INT32
+#define OPJ_UINT32_SEMANTICALLY_BUT_INT32 OPJ_INT32
+#endif
+
 /**
  * Progression order changes
  *
@@ -333,10 +367,10 @@ typedef struct opj_poc {
     OPJ_PROG_ORDER prg1, prg;
     /** Progression order string*/
     OPJ_CHAR progorder[5];
-    /** Tile number */
+    /** Tile number (starting at 1) */
     OPJ_UINT32 tile;
     /** Start and end values for Tile width and height*/
-    OPJ_INT32 tx0, tx1, ty0, ty1;
+    OPJ_UINT32_SEMANTICALLY_BUT_INT32 tx0, tx1, ty0, ty1;
     /** Start value, initialised in pi_initialise_encode*/
     OPJ_UINT32 layS, resS, compS, prcS;
     /** End value, initialised in pi_initialise_encode */
@@ -1314,15 +1348,14 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_decoder(opj_codec_t *p_codec,
  * number, or "ALL_CPUS". If OPJ_NUM_THREADS is set and this function is called,
  * this function will override the behaviour of the environment variable.
  *
- * Currently this function must be called after opj_setup_decoder() and
- * before opj_read_header().
+ * This function must be called after opj_setup_decoder() and
+ * before opj_read_header() for the decoding side, or after opj_setup_encoder()
+ * and before opj_start_compress() for the encoding side.
  *
- * Note: currently only has effect on the decompressor.
- *
- * @param p_codec       decompressor handler
+ * @param p_codec       decompressor or compressor handler
  * @param num_threads   number of threads.
  *
- * @return OPJ_TRUE     if the decoder is correctly set
+ * @return OPJ_TRUE     if the function is successful.
  */
 OPJ_API OPJ_BOOL OPJ_CALLCONV opj_codec_set_threads(opj_codec_t *p_codec,
         int num_threads);
@@ -1545,6 +1578,33 @@ OPJ_API void OPJ_CALLCONV opj_set_default_encoder_parameters(
 OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_encoder(opj_codec_t *p_codec,
         opj_cparameters_t *parameters,
         opj_image_t *image);
+
+
+/**
+ * Specify extra options for the encoder.
+ *
+ * This may be called after opj_setup_encoder() and before opj_start_compress()
+ *
+ * This is the way to add new options in a fully ABI compatible way, without
+ * extending the opj_cparameters_t structure.
+ *
+ * Currently supported options are:
+ * <ul>
+ * <li>PLT=YES/NO. Defaults to NO. If set to YES, PLT marker segments,
+ *     indicating the length of each packet in the tile-part header, will be
+ *     written. Since 2.3.2</li>
+ * </ul>
+ *
+ * @param p_codec       Compressor handle
+ * @param p_options     Compression options. This should be a NULL terminated
+ *                      array of strings. Each string is of the form KEY=VALUE.
+ *
+ * @return OPJ_TRUE in case of success.
+ * @since 2.3.2
+ */
+OPJ_API OPJ_BOOL OPJ_CALLCONV opj_encoder_set_extra_options(
+    opj_codec_t *p_codec,
+    const char* const* p_options);
 
 /**
  * Start to compress the current image.

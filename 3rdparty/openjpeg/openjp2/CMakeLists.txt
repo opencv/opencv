@@ -33,7 +33,11 @@ endif()
 #   set(WIN32 YES)
 # endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wundef -Wstrict-prototypes -Wcast-function-type)
+ocv_warnings_disable(CMAKE_C_FLAGS
+    -Wundef -Wstrict-prototypes -Wcast-function-type
+    -Wshadow   # v2.4.0: GCC
+    -Wunused-function   # v2.4.0: Clang
+)
 
 add_library(${OPENJPEG_LIBRARY_NAME} STATIC ${OPENJPEG_SRCS})
 
