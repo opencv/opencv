@@ -281,6 +281,22 @@ bool is_gst_element_exists(const std::string& name)
     return (bool)testfac;
 }
 
+static void find_hw_element(const GValue *item, gpointer va_type)
+{
+    GstElement *element = GST_ELEMENT(g_value_get_object(item));
+    const gchar *name = g_type_name(G_OBJECT_TYPE(element));
+    if (name) {
+        std::string name_lower = toLowerCase(name);
+        if (name_lower.find("vaapi") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_VAAPI;
+        } else if (name_lower.find("mfx") != std::string::npos || name_lower.find("msdk") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_MFX;
+        } else if (name_lower.find("d3d11") != std::string::npos) {
+            *(int*)va_type = VIDEO_ACCELERATION_D3D11;
+        }
+    }
+}
+
 //==================================================================================================
 
 class GStreamerCapture CV_FINAL : public IVideoCapture
@@ -300,6 +316,8 @@ private:
     bool          isPosFramesEmulated;
     gint64        emulatedFrameNumber;
 
+    VideoAccelerationType va_type;
+    int hw_device;
 public:
     GStreamerCapture();
     virtual ~GStreamerCapture() CV_OVERRIDE;
@@ -309,8 +327,8 @@ public:
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_GSTREAMER; }
-    bool open(int id);
-    bool open(const String &filename_);
+    bool open(int id, const cv::VideoCaptureParameters& params);
+    bool open(const String &filename_, const cv::VideoCaptureParameters& params);
     static void newPad(GstElement * /*elem*/, GstPad     *pad, gpointer    data);
 
 protected:
@@ -327,6 +345,8 @@ GStreamerCapture::GStreamerCapture() :
     isPosFramesSupported(false),
     isPosFramesEmulated(false),
     emulatedFrameNumber(-1)
+    , va_type(VIDEO_ACCELERATION_NONE)
+    , hw_device(-1)
 {
 }
 
@@ -754,7 +774,7 @@ void GStreamerCapture::newPad(GstElement *, GstPad *pad, gpointer data)
  *  is really slow if we need to restart the pipeline over and over again.
  *
  */
-bool GStreamerCapture::open(int id)
+bool GStreamerCapture::open(int id, const cv::VideoCaptureParameters& params)
 {
     gst_initializer::init();
 
@@ -764,12 +784,36 @@ bool GStreamerCapture::open(int id)
     desc << "v4l2src device=/dev/video" << id
              << " ! " << COLOR_ELEM
              << " ! appsink drop=true";
-    return open(desc.str());
+    return open(desc.str(), params);
 }
 
-bool GStreamerCapture::open(const String &filename_)
+bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParameters& params)
 {
     gst_initializer::init();
+
+    if (params.has(CAP_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION);
+    }
+    if (params.has(CAP_PROP_HW_DEVICE))
+    {
+        hw_device = params.get<int>(CAP_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of CAP_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of CAP_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: CAP_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
 
     const gchar* filename = filename_.c_str();
 
@@ -1046,6 +1090,35 @@ bool GStreamerCapture::open(const String &filename_)
         GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline.get()), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
     }
 
+    std::vector<int> unused_params = params.getUnused();
+    for (int key : unused_params) {
+        if (!setProperty(key, params.get<double>(key))) {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: can't set property " << key);
+            return false;
+        }
+    }
+
+    if (pipeline)
+    {
+        VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+        GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
+        gst_iterator_foreach(iter, find_hw_element, (gpointer)&actual_va_type);
+        gst_iterator_free(iter);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            if (va_type != actual_va_type)
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Can't select requested video acceleration through CAP_PROP_HW_ACCELERATION: "
+                        << va_type << " (actual is " << actual_va_type << "). Bailout");
+                return false;
+            }
+        }
+        else
+        {
+            va_type = actual_va_type;
+        }
+    }
+
     return true;
 }
 
@@ -1129,6 +1202,10 @@ double GStreamerCapture::getProperty(int propId) const
             }
         }
         break;
+    case CAP_PROP_HW_ACCELERATION:
+        return static_cast<double>(va_type);
+    case CAP_PROP_HW_DEVICE:
+        return static_cast<double>(hw_device);
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
         if(!sink)
         {
@@ -1276,6 +1353,10 @@ bool GStreamerCapture::setProperty(int propId, double value)
     case CV_CAP_PROP_GAIN:
     case CV_CAP_PROP_CONVERT_RGB:
         break;
+    case cv::CAP_PROP_HW_ACCELERATION:
+        return false; // open-only
+    case cv::CAP_PROP_HW_DEVICE:
+        return false; // open-only
     case CV_CAP_GSTREAMER_QUEUE_LENGTH:
     {
         if(!sink)
@@ -1297,18 +1378,18 @@ bool GStreamerCapture::setProperty(int propId, double value)
 }
 
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename)
+Ptr<IVideoCapture> createGStreamerCapture_file(const String& filename, const cv::VideoCaptureParameters& params)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->open(filename))
+    if (cap && cap->open(filename, params))
         return cap;
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index)
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureParameters& params)
 {
     Ptr<GStreamerCapture> cap = makePtr<GStreamerCapture>();
-    if (cap && cap->open(index))
+    if (cap && cap->open(index, params))
         return cap;
     return Ptr<IVideoCapture>();
 }
@@ -1325,6 +1406,7 @@ public:
     CvVideoWriter_GStreamer()
         : ipl_depth(CV_8U)
         , input_pix_fmt(0), num_frames(0), framerate(0)
+        , va_type(VIDEO_ACCELERATION_NONE), hw_device(0)
     {
     }
     virtual ~CvVideoWriter_GStreamer() CV_OVERRIDE
@@ -1346,11 +1428,14 @@ public:
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_GSTREAMER; }
 
     bool open(const std::string &filename, int fourcc,
-                       double fps, const Size &frameSize, bool isColor, int depth );
+              double fps, const Size &frameSize, const VideoWriterParameters& params );
     void close();
     bool writeFrame( const IplImage* image ) CV_OVERRIDE;
 
     int getIplDepth() const { return ipl_depth; }
+
+    virtual double getProperty(int) const CV_OVERRIDE;
+
 protected:
     const char* filenameToMimetype(const char* filename);
     GSafePtr<GstElement> pipeline;
@@ -1359,6 +1444,9 @@ protected:
     int input_pix_fmt;
     int num_frames;
     double framerate;
+
+    VideoAccelerationType va_type;
+    int hw_device;
 
     void close_();
 };
@@ -1423,6 +1511,8 @@ void CvVideoWriter_GStreamer::close()
     close_();
     source.release();
     pipeline.release();
+    va_type = VIDEO_ACCELERATION_NONE;
+    hw_device = -1;
 }
 
 /*!
@@ -1480,8 +1570,7 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  * \param fourcc desired codec fourcc
  * \param fps desired framerate
  * \param frameSize the size of the expected frames
- * \param is_color color or grayscale
- * \param depth the depth of the expected frames
+ * \param params other parameters
  * \return success
  *
  * We support 2 modes of operation. Either the user enters a filename and a fourcc
@@ -1495,12 +1584,45 @@ const char* CvVideoWriter_GStreamer::filenameToMimetype(const char *filename)
  */
 bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
                                     double fps, const cv::Size &frameSize,
-                                    bool is_color, int depth )
+                                    const VideoWriterParameters& params )
 {
     // check arguments
     CV_Assert(!filename.empty());
     CV_Assert(fps > 0);
     CV_Assert(frameSize.width > 0 && frameSize.height > 0);
+
+    const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
+
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION);
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_DEVICE))
+    {
+        hw_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (hw_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: VIDEOWRITER_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
+
+    if (params.warnUnusedParameters())
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: unsupported parameters in VideoWriter, see logger INFO channel for details");
+        return false;
+    }
 
     // init gstreamer
     gst_initializer::init();
@@ -1732,6 +1854,28 @@ bool CvVideoWriter_GStreamer::open( const std::string &filename, int fourcc,
 
     handleMessage(pipeline);
 
+    if (pipeline)
+    {
+        VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+        GstIterator *iter = gst_bin_iterate_recurse(GST_BIN (pipeline.get()));
+        gst_iterator_foreach(iter, find_hw_element, (gpointer)&actual_va_type);
+        gst_iterator_free(iter);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            if (va_type != actual_va_type)
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/GStreamer: Can't select requested VideoWriter acceleration through VIDEOWRITER_PROP_HW_ACCELERATION: "
+                        << va_type << " (actual is " << actual_va_type << "). Bailout");
+                close();
+                return false;
+            }
+        }
+        else
+        {
+            va_type = actual_va_type;
+        }
+    }
+
     return true;
 }
 
@@ -1812,15 +1956,27 @@ bool CvVideoWriter_GStreamer::writeFrame( const IplImage * image )
     return true;
 }
 
+
+double CvVideoWriter_GStreamer::getProperty(int propId) const
+{
+    if (propId == VIDEOWRITER_PROP_HW_ACCELERATION)
+    {
+        return static_cast<double>(va_type);
+    }
+    else if (propId == VIDEOWRITER_PROP_HW_DEVICE)
+    {
+        return static_cast<double>(hw_device);
+    }
+    return 0;
+}
+
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc, double fps,
                                           const cv::Size& frameSize, const VideoWriterParameters& params)
 {
     CvVideoWriter_GStreamer* wrt = new CvVideoWriter_GStreamer;
-    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
     try
     {
-        if (wrt->open(filename, fourcc, fps, frameSize, isColor, depth))
+        if (wrt->open(filename, fourcc, fps, frameSize, params))
             return makePtr<LegacyWriter>(wrt);
         delete wrt;
     }
@@ -1923,7 +2079,7 @@ void handleMessage(GstElement * pipeline)
 #if defined(BUILD_PLUGIN)
 
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 0
+#define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -1932,7 +2088,11 @@ void handleMessage(GstElement * pipeline)
 namespace cv {
 
 static
-CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+CvResult CV_API_CALL cv_capture_open_with_params(
+        const char* filename, int camera_index,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
 {
     if (!handle)
         return CV_ERROR_FAIL;
@@ -1942,12 +2102,13 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     GStreamerCapture *cap = 0;
     try
     {
+        cv::VideoCaptureParameters parameters(params, n_params);
         cap = new GStreamerCapture();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename));
+            res = cap->open(std::string(filename), parameters);
         else
-            res = cap->open(camera_index);
+            res = cap->open(camera_index, parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;
@@ -1965,6 +2126,12 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     if (cap)
         delete cap;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+{
+    return cv_capture_open_with_params(filename, camera_index, NULL, 0, handle);
 }
 
 static
@@ -2083,31 +2250,9 @@ CvResult CV_API_CALL cv_writer_open_with_params(
     try
     {
         CvSize sz = { width, height };
-        bool isColor = true;
-        int depth = CV_8U;
-        if (params)
-        {
-            for (unsigned i = 0; i < n_params; ++i)
-            {
-                const int prop = params[i*2];
-                const int value = params[i*2 + 1];
-                switch (prop)
-                {
-                case VIDEOWRITER_PROP_IS_COLOR:
-                    isColor = value != 0;
-                    break;
-                case VIDEOWRITER_PROP_DEPTH:
-                    depth = value;
-                    break;
-                default:
-                    // TODO emit message about non-recognized propert
-                    // FUTURE: there should be mandatory and optional properties
-                    return CV_ERROR_FAIL;
-                }
-            }
-        }
+        VideoWriterParameters parameters(params, n_params);
         wrt = new CvVideoWriter_GStreamer();
-        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor, depth))
+        if (wrt && wrt->open(filename, fourcc, fps, sz, parameters))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
@@ -2145,10 +2290,24 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_GStreamer* instance = (CvVideoWriter_GStreamer*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
+
 
 static
 CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)
@@ -2197,6 +2356,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_api =
         /*  5*/cv_capture_set_prop,
         /*  6*/cv_capture_grab,
         /*  7*/cv_capture_retrieve,
+    },
+    {
+        /*  8*/cv_capture_open_with_params,
     }
 };
 
