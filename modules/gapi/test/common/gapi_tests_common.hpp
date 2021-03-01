@@ -324,7 +324,7 @@ public:
     }
 
     template <typename T>
-    inline void initPointRandU(cv::RNG& rng, T& pt)
+    inline void initPointRandU(cv::RNG& rng, T& pt) const
     { ::initPointRandU(rng, pt); }
 
 // Disable unreachable code warning for MSVS 2015
@@ -334,7 +334,7 @@ public:
 #endif
     // initialize std::vector<cv::Point_<T>>/std::vector<cv::Point3_<T>>
     template <typename T, template <typename> class Pt>
-    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
+    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_) const
     {
         cv::RNG& rng = theRNG();
 

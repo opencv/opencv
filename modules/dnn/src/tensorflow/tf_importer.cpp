@@ -2425,7 +2425,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
             connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
-                 type == "Relu" || type == "Elu" ||
+                 type == "Relu" || type == "Elu" || type == "Exp" ||
                  type == "Identity" || type == "Relu6")
         {
             CV_CheckGT(num_inputs, 0, "");

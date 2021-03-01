@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -484,15 +484,16 @@ INSTANTIATE_TEST_CASE_P(NormalizeTestCPU, NormalizeTest,
                                 Values(NORM_MINMAX, NORM_INF, NORM_L1, NORM_L2),
                                 Values(-1, CV_8U, CV_16U, CV_16S, CV_32F)));
 
-INSTANTIATE_TEST_CASE_P(KMeansNDNoInitTestCPU, KMeansNDNoInitTest,
+INSTANTIATE_TEST_CASE_P(KMeansNDNoInitTestCPU, KMeansNDTest,
                         Combine(Values(CV_32FC1),
                                 Values(cv::Size(2, 20)),
                                 Values(-1),
                                 Values(CORE_CPU),
+                                Values(AbsTolerance(0.01).to_compare_obj()),
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
-INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDInitTest,
+INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDTest,
                         Combine(Values(CV_32FC1, CV_32FC3),
                                 Values(cv::Size(1, 20),
                                        cv::Size(2, 20),
@@ -504,7 +505,7 @@ INSTANTIATE_TEST_CASE_P(KMeansNDInitTestCPU, KMeansNDInitTest,
                                 Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
 
-INSTANTIATE_TEST_CASE_P(KMeansNDInitReverseTestCPU, KMeansNDInitTest,
+INSTANTIATE_TEST_CASE_P(KMeansNDInitReverseTestCPU, KMeansNDTest,
                         Combine(Values(CV_32FC3),
                                 Values(cv::Size(20, 1)),
                                 Values(-1),
@@ -514,7 +515,7 @@ INSTANTIATE_TEST_CASE_P(KMeansNDInitReverseTestCPU, KMeansNDInitTest,
                                 Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
 
-INSTANTIATE_TEST_CASE_P(KMeans2DNoInitTestCPU, KMeans2DNoInitTest,
+INSTANTIATE_TEST_CASE_P(KMeans2DNoInitTestCPU, KMeans2DTest,
                         Combine(Values(-1),
                                 Values(cv::Size(-1, 20)),
                                 Values(-1),
@@ -522,7 +523,7 @@ INSTANTIATE_TEST_CASE_P(KMeans2DNoInitTestCPU, KMeans2DNoInitTest,
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
-INSTANTIATE_TEST_CASE_P(KMeans2DInitTestCPU, KMeans2DInitTest,
+INSTANTIATE_TEST_CASE_P(KMeans2DInitTestCPU, KMeans2DTest,
                         Combine(Values(-1),
                                 Values(cv::Size(-1, 720),
                                        cv::Size(-1, 20)),
@@ -532,7 +533,7 @@ INSTANTIATE_TEST_CASE_P(KMeans2DInitTestCPU, KMeans2DInitTest,
                                 Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
 
-INSTANTIATE_TEST_CASE_P(KMeans3DNoInitTestCPU, KMeans3DNoInitTest,
+INSTANTIATE_TEST_CASE_P(KMeans3DNoInitTestCPU, KMeans3DTest,
                         Combine(Values(-1),
                                 Values(cv::Size(-1, 20)),
                                 Values(-1),
@@ -540,7 +541,7 @@ INSTANTIATE_TEST_CASE_P(KMeans3DNoInitTestCPU, KMeans3DNoInitTest,
                                 Values(5),
                                 Values(cv::KMEANS_RANDOM_CENTERS, cv::KMEANS_PP_CENTERS)));
 
-INSTANTIATE_TEST_CASE_P(KMeans3DInitTestCPU, KMeans3DInitTest,
+INSTANTIATE_TEST_CASE_P(KMeans3DInitTestCPU, KMeans3DTest,
                         Combine(Values(-1),
                                 Values(cv::Size(-1, 720),
                                        cv::Size(-1, 20)),
@@ -612,6 +613,13 @@ INSTANTIATE_TEST_CASE_P(SizeTestCPU, SizeTest,
                                 Values(CORE_CPU)));
 
 INSTANTIATE_TEST_CASE_P(SizeRTestCPU, SizeRTest,
+                        Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
+                                Values(cv::Size(32, 32),
+                                       cv::Size(640, 320)),
+                                Values(-1),
+                                Values(CORE_CPU)));
+
+INSTANTIATE_TEST_CASE_P(SizeMFTestCPU, SizeMFTest,
                         Combine(Values(CV_8UC1, CV_8UC3, CV_32FC1),
                                 Values(cv::Size(32, 32),
                                        cv::Size(640, 320)),

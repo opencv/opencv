@@ -45,6 +45,8 @@
 #ifndef OPENCV_CORE_CVDEF_H
 #define OPENCV_CORE_CVDEF_H
 
+#include "opencv2/core/version.hpp"
+
 //! @addtogroup core_utils
 //! @{
 
@@ -388,7 +390,9 @@ typedef union Cv64suf
 }
 Cv64suf;
 
+#ifndef OPENCV_ABI_COMPATIBILITY
 #define OPENCV_ABI_COMPATIBILITY 400
+#endif
 
 #ifdef __OPENCV_BUILD
 #  define DISABLE_OPENCV_3_COMPATIBILITY

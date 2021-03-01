@@ -1473,6 +1473,26 @@ TEST(Imgproc_Warp, multichannel)
     }
 }
 
+
+TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
+{
+    const Size imgSize(8192, 8);
+
+    Mat inMat = Mat::zeros(imgSize, CV_8UC4);
+    Mat outMat = Mat::zeros(imgSize, CV_8UC4);
+
+    warpAffine(
+        inMat,
+        outMat,
+        getRotationMatrix2D(Point2f(imgSize.width / 2.0f, imgSize.height / 2.0f), 45.0, 1.0),
+        imgSize,
+        INTER_LINEAR,
+        cv::BORDER_CONSTANT,
+        cv::Scalar(0.0, 0.0, 0.0, 255.0)
+    );
+}
+
+
 TEST(Imgproc_GetAffineTransform, singularity)
 {
     Point2f A_sample[3];

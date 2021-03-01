@@ -17,6 +17,14 @@ ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE
 ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2 AVX512_SKX)
 ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
+
+# parallel backends configuration
+set(PARALLEL_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building parallel plugin support")
+# TODO building plugins with OpenCV is not supported yet
+#set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
+#string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+
 ocv_add_module(core
                OPTIONAL opencv_cudev
                WRAP java objc python js)
@@ -91,6 +99,9 @@ endif()
 if(HAVE_VA_INTEL_OLD_HEADER)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
 endif()
+if(OPENCV_LIBVA_LINK)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "OPENCV_LIBVA_LINK=1")
+endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
 
@@ -113,6 +124,14 @@ elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
   if(DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
     message(STATUS "Allocator metrics storage type: '${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}'")
     add_definitions("-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}")
+  endif()
+endif()
+
+
+if(PARALLEL_ENABLE_PLUGINS)
+  ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")
+  if(OPENCV_DEBUG_POSTFIX)
+    ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/parallel/parallel.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")
   endif()
 endif()
 

@@ -5,6 +5,7 @@
 #ifndef OPENCV_CORE_PARALLEL_BACKEND_HPP
 #define OPENCV_CORE_PARALLEL_BACKEND_HPP
 
+#include "opencv2/core/cvdef.h"
 #include <memory>
 
 namespace cv { namespace parallel {
@@ -19,9 +20,10 @@ namespace cv { namespace parallel {
  *
  * Applications can replace OpenCV `parallel_for()` backend with own implementation (to reuse Application's thread pool).
  *
- * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions (and without any other created threads).
  *
- * #### Intel TBB usage example:
+ * ### Backend API usage examples
+ *
+ * #### Intel TBB
  *
  * - include header with simple implementation of TBB backend:
  *   @snippet parallel_backend/example-tbb.cpp tbb_include
@@ -29,13 +31,22 @@ namespace cv { namespace parallel {
  *   @snippet parallel_backend/example-tbb.cpp tbb_backend
  * - configuration of compiler/linker options is responsibility of Application's scripts
  *
- * #### OpenMP usage example:
+ * #### OpenMP
  *
  * - include header with simple implementation of OpenMP backend:
  *   @snippet parallel_backend/example-openmp.cpp openmp_include
  * - execute backend replacement code:
  *   @snippet parallel_backend/example-openmp.cpp openmp_backend
  * - Configuration of compiler/linker options is responsibility of Application's scripts
+ *
+ *
+ * ### Plugins support
+ *
+ * Runtime configuration options:
+ * - change backend priority: `OPENCV_PARALLEL_PRIORITY_<backend>=9999`
+ * - disable backend: `OPENCV_PARALLEL_PRIORITY_<backend>=0`
+ * - specify list of backends with high priority (>100000): `OPENCV_PARALLEL_PRIORITY_LIST=TBB,OPENMP`. Unknown backends are registered as new plugins.
+ *
  */
 
 /** Interface for parallel_for backends implementations
@@ -67,6 +78,12 @@ public:
  * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions (and without any other created threads).
  */
 CV_EXPORTS void setParallelForBackend(const std::shared_ptr<ParallelForAPI>& api, bool propagateNumThreads = true);
+
+/** @brief Change OpenCV parallel_for backend
+ *
+ * @note This call is not thread-safe. Consider calling this function from the `main()` before any other OpenCV processing functions (and without any other created threads).
+ */
+CV_EXPORTS_W bool setParallelForBackend(const std::string& backendName, bool propagateNumThreads = true);
 
 //! @}
 }}  // namespace

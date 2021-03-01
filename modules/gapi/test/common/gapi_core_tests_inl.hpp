@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_INL_HPP
@@ -12,19 +12,10 @@
 #include <opencv2/gapi/infer/parsers.hpp>
 #include "gapi_core_tests.hpp"
 
+#include "gapi_core_tests_common.hpp"
+
 namespace opencv_test
 {
-
-namespace
-{
-template <typename Elem>
-inline bool compareVectorsAbsExact(const std::vector<Elem>& outGAPI,
-                                   const std::vector<Elem>& outOCV)
-{
-    return AbsExactVector<Elem>().to_compare_f()(outGAPI, outOCV);
-}
-}
-
 TEST_P(MathOpTest, MatricesAccuracyTest)
 {
     // G-API code & corresponding OpenCV code ////////////////////////////////
@@ -1391,185 +1382,25 @@ TEST_P(NormalizeTest, Test)
     }
 }
 
-TEST_P(KMeansNDNoInitTest, AccuracyTest)
+TEST_P(KMeansNDTest, AccuracyTest)
 {
-    const int amount = sz.height != 1 ? sz.height : sz.width,
-              dim    = sz.height != 1 ? sz.width  : (type >> CV_CN_SHIFT) + 1;
-                                                    // amount of channels
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
-    double compact_gapi = -1.;
-    cv::Mat labels_gapi, centers_gapi;
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    cv::GOpaque<double> compactness;
-    cv::GMat outLabels, centers;
-    std::tie(compactness, outLabels, centers) = cv::gapi::kmeans(in, K, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_mat1), cv::gout(compact_gapi, labels_gapi, centers_gapi), getCompileArgs());
-    // Validation //////////////////////////////////////////////////////////////
-    {
-        EXPECT_GE(compact_gapi, 0.);
-        EXPECT_EQ(labels_gapi.cols, 1);
-        EXPECT_EQ(labels_gapi.rows, amount);
-        EXPECT_FALSE(labels_gapi.empty());
-        EXPECT_EQ(centers_gapi.cols, dim);
-        EXPECT_EQ(centers_gapi.rows, K);
-        EXPECT_FALSE(centers_gapi.empty());
-    }
+    kmeansTestBody(in_mat1, sz, type, K, flags, getCompileArgs(), cmpF);
 }
 
-TEST_P(KMeansNDInitTest, AccuracyTest)
-{
-    const int amount = sz.height != 1 ? sz.height : sz.width;
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
-    cv::Mat bestLabels(cv::Size{1, amount}, CV_32SC1);
-    double compact_ocv = -1., compact_gapi = -1.;
-    cv::Mat labels_ocv, labels_gapi, centers_ocv, centers_gapi;
-    cv::randu(bestLabels, 0, K);
-    bestLabels.copyTo(labels_ocv);
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in, inLabels;
-    cv::GOpaque<double> compactness;
-    cv::GMat outLabels, centers;
-    std::tie(compactness, outLabels, centers) =
-        cv::gapi::kmeans(in, K, inLabels, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in, inLabels), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_mat1, bestLabels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
-            getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    compact_ocv = cv::kmeans(in_mat1, K, labels_ocv, criteria, attempts, flags, centers_ocv);
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(compact_gapi == compact_ocv);
-        EXPECT_TRUE(cmpF(labels_gapi, labels_ocv));
-        EXPECT_TRUE(cmpF(centers_gapi, centers_ocv));
-    }
-}
-
-TEST_P(KMeans2DNoInitTest, AccuracyTest)
+TEST_P(KMeans2DTest, AccuracyTest)
 {
     const int amount = sz.height;
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
     std::vector<cv::Point2f> in_vector{};
-    double compact_gapi = -1.;
-    std::vector<int> labels_gapi{};
-    std::vector<cv::Point2f> centers_gapi{};
     initPointsVectorRandU(amount, in_vector);
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point2f> in;
-    cv::GArray<int> inLabels(std::vector<int>{});
-    cv::GOpaque<double> compactness;
-    cv::GArray<int> outLabels;
-    cv::GArray<cv::Point2f> centers;
-    std::tie(compactness, outLabels, centers) =
-        cv::gapi::kmeans(in, K, inLabels, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_vector), cv::gout(compact_gapi, labels_gapi, centers_gapi), getCompileArgs());
-    // Validation //////////////////////////////////////////////////////////////
-    {
-        EXPECT_GE(compact_gapi, 0.);
-        EXPECT_EQ(labels_gapi.size(), static_cast<size_t>(amount));
-        EXPECT_EQ(centers_gapi.size(), static_cast<size_t>(K));
-    }
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
 }
 
-TEST_P(KMeans2DInitTest, AccuracyTest)
+TEST_P(KMeans3DTest, AccuracyTest)
 {
     const int amount = sz.height;
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
-    std::vector<cv::Point2f> in_vector{};
-    std::vector<int> bestLabels(amount);
-    double compact_ocv = -1., compact_gapi = -1.;
-    std::vector<int> labels_ocv{}, labels_gapi{};
-    std::vector<cv::Point2f> centers_ocv{}, centers_gapi{};
-    initPointsVectorRandU(amount, in_vector);
-    cv::randu(bestLabels, 0, K);
-    labels_ocv = bestLabels;
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point2f> in;
-    cv::GArray<int> inLabels;
-    cv::GOpaque<double> compactness;
-    cv::GArray<int> outLabels;
-    cv::GArray<cv::Point2f> centers;
-    std::tie(compactness, outLabels, centers) =
-        cv::gapi::kmeans(in, K, inLabels, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in, inLabels), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_vector, bestLabels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
-            getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    compact_ocv = cv::kmeans(in_vector, K, labels_ocv, criteria, attempts, flags, centers_ocv);
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(compact_gapi == compact_ocv);
-        EXPECT_TRUE(compareVectorsAbsExact(labels_gapi, labels_ocv));
-        EXPECT_TRUE(compareVectorsAbsExact(centers_gapi, centers_ocv));
-    }
-}
-
-TEST_P(KMeans3DNoInitTest, AccuracyTest)
-{
-    const int amount = sz.height;
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
     std::vector<cv::Point3f> in_vector{};
-    double compact_gapi = -1.;
-    std::vector<int> labels_gapi{};
-    std::vector<cv::Point3f> centers_gapi{};
     initPointsVectorRandU(amount, in_vector);
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point3f> in;
-    cv::GArray<int> inLabels(std::vector<int>{});
-    cv::GOpaque<double> compactness;
-    cv::GArray<int> outLabels;
-    cv::GArray<cv::Point3f> centers;
-    std::tie(compactness, outLabels, centers) =
-        cv::gapi::kmeans(in, K, inLabels, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_vector), cv::gout(compact_gapi, labels_gapi, centers_gapi), getCompileArgs());
-    // Validation //////////////////////////////////////////////////////////////
-    {
-        EXPECT_GE(compact_gapi, 0.);
-        EXPECT_EQ(labels_gapi.size(), static_cast<size_t>(amount));
-        EXPECT_EQ(centers_gapi.size(), static_cast<size_t>(K));
-    }
-}
-
-TEST_P(KMeans3DInitTest, AccuracyTest)
-{
-    const int amount = sz.height;
-    const cv::TermCriteria criteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 30, 0);
-    const int attempts = 1;
-    std::vector<cv::Point3f> in_vector{};
-    std::vector<int> bestLabels(amount);
-    double compact_ocv = -1., compact_gapi = -1.;
-    std::vector<int> labels_ocv{}, labels_gapi{};
-    std::vector<cv::Point3f> centers_ocv{}, centers_gapi{};
-    initPointsVectorRandU(amount, in_vector);
-    cv::randu(bestLabels, 0, K);
-    labels_ocv = bestLabels;
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GArray<cv::Point3f> in;
-    cv::GArray<int> inLabels;
-    cv::GOpaque<double> compactness;
-    cv::GArray<int> outLabels;
-    cv::GArray<cv::Point3f> centers;
-    std::tie(compactness, outLabels, centers) =
-        cv::gapi::kmeans(in, K, inLabels, criteria, attempts, flags);
-    cv::GComputation c(cv::GIn(in, inLabels), cv::GOut(compactness, outLabels, centers));
-    c.apply(cv::gin(in_vector, bestLabels), cv::gout(compact_gapi, labels_gapi, centers_gapi),
-            getCompileArgs());
-    // OpenCV code /////////////////////////////////////////////////////////////
-    compact_ocv = cv::kmeans(in_vector, K, labels_ocv, criteria, attempts, flags, centers_ocv);
-    // Comparison //////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(compact_gapi == compact_ocv);
-        EXPECT_TRUE(compareVectorsAbsExact(labels_gapi, labels_ocv));
-        EXPECT_TRUE(compareVectorsAbsExact(centers_gapi, centers_ocv));
-    }
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
 }
 
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
@@ -1902,6 +1733,39 @@ TEST_P(SizeRTest, ParseTest)
     auto out = cv::gapi::streaming::size(op_rect);
     cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
     c.apply(cv::gin(rect), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
+}
+
+namespace {
+    class TestMediaBGR final : public cv::MediaFrame::IAdapter {
+        cv::Mat m_mat;
+
+    public:
+        explicit TestMediaBGR(cv::Mat m)
+            : m_mat(m) {
+        }
+        cv::GFrameDesc meta() const override {
+            return cv::GFrameDesc{ cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows) };
+        }
+        cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+            cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+            return cv::MediaFrame::View(std::move(pp), std::move(ss));
+        }
+    };
+};
+
+TEST_P(SizeMFTest, ParseTest)
+{
+    cv::Size out_sz;
+    cv::Mat bgr = cv::Mat::eye(sz.height, sz.width, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(frame), cv::gout(out_sz), getCompileArgs());
 
     EXPECT_EQ(out_sz, sz);
 }

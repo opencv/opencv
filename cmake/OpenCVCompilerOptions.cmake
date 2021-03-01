@@ -304,7 +304,9 @@ if(MSVC)
   endif()
 endif()
 
-include(cmake/OpenCVCompilerOptimizations.cmake)
+if(PROJECT_NAME STREQUAL "OpenCV")
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVCompilerOptimizations.cmake")
+endif()
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
 endif()
@@ -411,11 +413,11 @@ if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/
 endif()
 
 if(ENABLE_BUILD_HARDENING)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake")
 endif()
 
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCRTLinkage.cmake")
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 

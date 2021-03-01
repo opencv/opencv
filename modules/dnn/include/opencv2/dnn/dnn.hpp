@@ -1216,7 +1216,7 @@ CV__DNN_INLINE_NS_BEGIN
       * KeypointsModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and returns the x and y coordinates of each detected keypoint
       */
-     class CV_EXPORTS_W KeypointsModel: public Model
+     class CV_EXPORTS_W_SIMPLE KeypointsModel: public Model
      {
      public:
          /**
@@ -1248,7 +1248,7 @@ CV__DNN_INLINE_NS_BEGIN
       * SegmentationModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and returns the class prediction for each pixel.
       */
-     class CV_EXPORTS_W SegmentationModel: public Model
+     class CV_EXPORTS_W_SIMPLE SegmentationModel: public Model
      {
      public:
          /**
@@ -1406,7 +1406,7 @@ public:
 
 /** @brief Base class for text detection networks
  */
-class CV_EXPORTS_W TextDetectionModel : public Model
+class CV_EXPORTS_W_SIMPLE TextDetectionModel : public Model
 {
 protected:
     CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
