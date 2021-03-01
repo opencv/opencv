@@ -73,6 +73,7 @@ Encode the packets of a tile to a destination buffer
 @param p_data_written   FIXME DOC
 @param len              the length of the destination buffer
 @param cstr_info        Codestream information structure
+@param p_marker_info    Marker information structure
 @param tpnum            Tile part number of the current tile
 @param tppos            The position of the tile part flag in the progression order
 @param pino             FIXME DOC
@@ -87,6 +88,7 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t* t2,
                                OPJ_UINT32 * p_data_written,
                                OPJ_UINT32 len,
                                opj_codestream_info_t *cstr_info,
+                               opj_tcd_marker_info_t* p_marker_info,
                                OPJ_UINT32 tpnum,
                                OPJ_INT32 tppos,
                                OPJ_UINT32 pino,

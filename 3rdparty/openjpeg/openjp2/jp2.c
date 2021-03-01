@@ -586,6 +586,12 @@ static OPJ_BOOL opj_jp2_read_ihdr(opj_jp2_t *jp2,
     opj_read_bytes(p_image_header_data, &(jp2->numcomps), 2);   /* NC */
     p_image_header_data += 2;
 
+    if (jp2->h < 1 || jp2->w < 1 || jp2->numcomps < 1) {
+        opj_event_msg(p_manager, EVT_ERROR,
+                      "Wrong values for: w(%d) h(%d) numcomps(%d) (ihdr)\n",
+                      jp2->w, jp2->h, jp2->numcomps);
+        return OPJ_FALSE;
+    }
     if ((jp2->numcomps - 1U) >=
             16384U) { /* unsigned underflow is well defined: 1U <= jp2->numcomps <= 16384U */
         opj_event_msg(p_manager, EVT_ERROR, "Invalid number of components (ihdr)\n");
@@ -1584,9 +1590,7 @@ static OPJ_BOOL opj_jp2_read_colr(opj_jp2_t *jp2,
                       "COLR BOX meth value is not a regular value (%d), "
                       "so we will ignore the entire Colour Specification box. \n", jp2->meth);
     }
-    if (jp2->color.jp2_has_colr) {
-        jp2->j2k->enumcs = jp2->enumcs;
-    }
+
     return OPJ_TRUE;
 }
 
@@ -3235,6 +3239,18 @@ OPJ_BOOL opj_jp2_set_decoded_resolution_factor(opj_jp2_t *p_jp2,
 {
     return opj_j2k_set_decoded_resolution_factor(p_jp2->j2k, res_factor, p_manager);
 }
+
+/* ----------------------------------------------------------------------- */
+
+OPJ_BOOL opj_jp2_encoder_set_extra_options(
+    opj_jp2_t *p_jp2,
+    const char* const* p_options,
+    opj_event_mgr_t * p_manager)
+{
+    return opj_j2k_encoder_set_extra_options(p_jp2->j2k, p_options, p_manager);
+}
+
+/* ----------------------------------------------------------------------- */
 
 /* JPIP specific */
 

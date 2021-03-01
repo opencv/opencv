@@ -96,6 +96,8 @@ typedef struct opj_mqc {
     OPJ_BYTE backup[OPJ_COMMON_CBLK_DATA_EXTRA];
 } opj_mqc_t;
 
+#define BYPASS_CT_INIT  0xDEADBEEF
+
 #include "mqc_inl.h"
 
 /** @name Exported functions */
@@ -135,12 +137,7 @@ Set the current context used for coding/decoding
 @param ctxno Number that identifies the context
 */
 #define opj_mqc_setcurctx(mqc, ctxno)   (mqc)->curctx = &(mqc)->ctxs[(OPJ_UINT32)(ctxno)]
-/**
-Encode a symbol using the MQ-coder
-@param mqc MQC handle
-@param d The symbol to be encoded (0 or 1)
-*/
-void opj_mqc_encode(opj_mqc_t *mqc, OPJ_UINT32 d);
+
 /**
 Flush the encoder, so that all remaining data is written
 @param mqc MQC handle

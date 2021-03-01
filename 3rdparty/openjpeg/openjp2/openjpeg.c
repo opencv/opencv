@@ -652,6 +652,14 @@ opj_codec_t* OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format)
                 struct opj_image *,
                 struct opj_event_mgr *)) opj_j2k_setup_encoder;
 
+        l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
+                    *)(void *,
+                       const char* const*,
+                       struct opj_event_mgr *)) opj_j2k_encoder_set_extra_options;
+
+        l_codec->opj_set_threads =
+            (OPJ_BOOL(*)(void * p_codec, OPJ_UINT32 num_threads)) opj_j2k_set_threads;
+
         l_codec->m_codec = opj_j2k_create_compress();
         if (! l_codec->m_codec) {
             opj_free(l_codec);
@@ -690,6 +698,14 @@ opj_codec_t* OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format)
                 struct opj_image *,
                 struct opj_event_mgr *)) opj_jp2_setup_encoder;
 
+        l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
+                    *)(void *,
+                       const char* const*,
+                       struct opj_event_mgr *)) opj_jp2_encoder_set_extra_options;
+
+        l_codec->opj_set_threads =
+            (OPJ_BOOL(*)(void * p_codec, OPJ_UINT32 num_threads)) opj_jp2_set_threads;
+
         l_codec->m_codec = opj_jp2_create(OPJ_FALSE);
         if (! l_codec->m_codec) {
             opj_free(l_codec);
@@ -718,11 +734,11 @@ void OPJ_CALLCONV opj_set_default_encoder_parameters(opj_cparameters_t
         parameters->cp_cinema = OPJ_OFF; /* DEPRECATED */
         parameters->rsiz = OPJ_PROFILE_NONE;
         parameters->max_comp_size = 0;
-        parameters->numresolution = 6;
+        parameters->numresolution = OPJ_COMP_PARAM_DEFAULT_NUMRESOLUTION;
         parameters->cp_rsiz = OPJ_STD_RSIZ; /* DEPRECATED */
-        parameters->cblockw_init = 64;
-        parameters->cblockh_init = 64;
-        parameters->prog_order = OPJ_LRCP;
+        parameters->cblockw_init = OPJ_COMP_PARAM_DEFAULT_CBLOCKW;
+        parameters->cblockh_init = OPJ_COMP_PARAM_DEFAULT_CBLOCKH;
+        parameters->prog_order = OPJ_COMP_PARAM_DEFAULT_PROG_ORDER;
         parameters->roi_compno = -1;        /* no ROI */
         parameters->subsampling_dx = 1;
         parameters->subsampling_dy = 1;
@@ -787,6 +803,27 @@ OPJ_BOOL OPJ_CALLCONV opj_setup_encoder(opj_codec_t *p_codec,
 
     return OPJ_FALSE;
 }
+
+/* ----------------------------------------------------------------------- */
+
+OPJ_BOOL OPJ_CALLCONV opj_encoder_set_extra_options(opj_codec_t *p_codec,
+        const char* const* options)
+{
+    if (p_codec) {
+        opj_codec_private_t * l_codec = (opj_codec_private_t *) p_codec;
+
+        if (! l_codec->is_decompressor) {
+            return l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options(
+                       l_codec->m_codec,
+                       options,
+                       &(l_codec->m_event_mgr));
+        }
+    }
+
+    return OPJ_FALSE;
+}
+
+/* ----------------------------------------------------------------------- */
 
 OPJ_BOOL OPJ_CALLCONV opj_start_compress(opj_codec_t *p_codec,
         opj_image_t * p_image,
