@@ -709,8 +709,11 @@ get_interesting_appn(j_decompress_ptr cinfo)
 /* Process an APP0 or APP14 marker without saving it */
 {
   JLONG length;
-  JOCTET b[APPN_DATA_LEN] = {{0}};
+  JOCTET b[APPN_DATA_LEN];
   unsigned int i, numtoread;
+
+  MEMZERO(b, sizeof(b));
+
   INPUT_VARS(cinfo);
 
   INPUT_2BYTES(cinfo, length, return FALSE);
