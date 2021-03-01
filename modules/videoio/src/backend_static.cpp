@@ -19,15 +19,16 @@ void applyParametersFallback(const Ptr<IVideoCapture>& cap, const VideoCapturePa
     {
         double value = params.get<double>(prop, -1);
         CV_LOG_INFO(NULL, "VIDEOIO: apply parameter: [" << prop << "]=" <<
-                          cv::format("%g / %lld / 0x%16llx", value, (long long)value, (long long)value));
+                          cv::format("%g / %lld / 0x%016llx", value, (long long)value, (long long)value));
         if (!cap->setProperty(prop, value))
         {
-            CV_Error_(cv::Error::StsNotImplemented, ("VIDEOIO: Failed to apply invalid or unsupported parameter: [%d]=%g / %lld / 0x%08llx", prop, value, (long long)value, (long long)value));
+            if (prop != CAP_PROP_HW_ACCELERATION && prop != CAP_PROP_HW_DEVICE) { // optional parameters
+                CV_Error_(cv::Error::StsNotImplemented, ("VIDEOIO: Failed to apply invalid or unsupported parameter: [%d]=%g / %lld / 0x%08llx", prop, value, (long long)value, (long long)value));
+            }
         }
     }
     // NB: there is no dedicated "commit" parameters event, implementations should commit after each property automatically
 }
-
 
 // Legacy API. Modern API with parameters is below
 class StaticBackend: public IBackend

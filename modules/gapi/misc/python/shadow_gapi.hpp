@@ -16,10 +16,14 @@ namespace cv
    class GAPI_EXPORTS_W_SIMPLE GRunArg { };
    class GAPI_EXPORTS_W_SIMPLE GMetaArg { };
 
-   class GAPI_EXPORTS_W_SIMPLE GArrayP2f { };
-
    using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
    using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
+
+   namespace detail
+   {
+       struct GAPI_EXPORTS_W_SIMPLE ExtractArgsCallback { };
+       struct GAPI_EXPORTS_W_SIMPLE ExtractMetaCallback { };
+   } // namespace detail
 
    namespace gapi
    {

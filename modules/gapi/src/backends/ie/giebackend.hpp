@@ -24,50 +24,21 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
+#include "backends/ie/giebackend/giewrapper.hpp" // wrap::Plugin
+
 namespace cv {
 namespace gimpl {
 namespace ie {
 
 struct IECompiled {
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-    InferenceEngine::InferencePlugin   this_plugin;
-#else
-    InferenceEngine::Core              this_core;
-#endif
-    InferenceEngine::ExecutableNetwork this_network;
-    InferenceEngine::InferRequest      this_request;
+    std::vector<InferenceEngine::InferRequest> createInferRequests();
+
+    cv::gapi::ie::detail::ParamDesc     params;
+    cv::gimpl::ie::wrap::Plugin         this_plugin;
+    InferenceEngine::ExecutableNetwork  this_network;
 };
 
-// FIXME: Structure which collect all necessary sync primitives
-// will be deleted when the async request pool appears
-class SyncPrim {
-public:
-    void wait() {
-        std::unique_lock<std::mutex> l(m_mutex);
-        m_cv.wait(l, [this]{ return !m_is_busy; });
-    }
-
-    void release_and_notify() {
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_is_busy = false;
-        }
-        m_cv.notify_one();
-    }
-
-    void acquire() {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_is_busy = true;
-    }
-
-private:
-    // To wait until the async request isn't over
-    std::condition_variable m_cv;
-    // To avoid spurious cond var wake up
-    bool m_is_busy = false;
-    // To sleep until condition variable wakes up
-    std::mutex m_mutex;
-};
+class RequestPool;
 
 class GIEExecutable final: public GIslandExecutable
 {
@@ -82,8 +53,8 @@ class GIEExecutable final: public GIslandExecutable
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
-    // Sync primitive
-    SyncPrim m_sync;
+    // To manage multiple async requests
+    std::unique_ptr<RequestPool> m_reqPool;
 
 public:
     GIEExecutable(const ade::Graph                   &graph,
