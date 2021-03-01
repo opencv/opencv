@@ -165,7 +165,7 @@ class CvVideoWriter_FFMPEG_proxy CV_FINAL :
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }
-    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, isColor); }
+    CvVideoWriter_FFMPEG_proxy(const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params) { ffmpegWriter = 0; open(filename, fourcc, fps, frameSize, params); }
     virtual ~CvVideoWriter_FFMPEG_proxy() { close(); }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_FFMPEG; }
@@ -178,10 +178,10 @@ public:
 
         icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
-    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, bool isColor )
+    virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
     {
         close();
-        ffmpegWriter = icvCreateVideoWriter_FFMPEG_p( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, isColor );
+        ffmpegWriter = cvCreateVideoWriterWithParams_FFMPEG( filename.c_str(), fourcc, fps, frameSize.width, frameSize.height, params );
         return ffmpegWriter != 0;
     }
 
@@ -193,7 +193,12 @@ public:
         ffmpegWriter = 0;
     }
 
-    virtual double getProperty(int) const CV_OVERRIDE { return 0; }
+    virtual double getProperty(int propId) const CV_OVERRIDE {
+        if(!ffmpegWriter)
+            return 0;
+        return ffmpegWriter->getProperty(propId);
+    }
+
     virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
 
@@ -207,8 +212,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
                                                            double fps, const cv::Size& frameSize,
                                                            const VideoWriterParameters& params)
 {
-    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, isColor);
+    cv::Ptr<CvVideoWriter_FFMPEG_proxy> writer = cv::makePtr<CvVideoWriter_FFMPEG_proxy>(filename, fourcc, fps, frameSize, params);
     if (writer && writer->isOpened())
         return writer;
     return cv::Ptr<cv::IVideoWriter>();
@@ -233,7 +237,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #define CAPTURE_API_VERSION 1
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
-#define WRITER_API_VERSION 0
+#define WRITER_API_VERSION 1
 #include "plugin_writer_api.hpp"
 #endif
 
@@ -400,7 +404,7 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.channels(), userdata);
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
         return CV_ERROR_FAIL;
     }
     catch (const std::exception& e)
@@ -426,7 +430,7 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         Mat img;
         // TODO: avoid unnecessary copying
         if (instance->retrieveFrame(stream_idx, img))
-            return callback(stream_idx, img.data, img.step, img.cols, img.rows, img.type(), userdata);
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.type(), userdata);
         return CV_ERROR_FAIL;
     }
     catch (const std::exception& e)
@@ -443,14 +447,17 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
 #endif
 
 static
-CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
-                                    CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+        const char* filename, int fourcc, double fps, int width, int height,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginWriter* handle)
 {
     Size sz(width, height);
     CvVideoWriter_FFMPEG_proxy* wrt = 0;
     try
     {
-        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, isColor != 0);
+        VideoWriterParameters parameters(params, n_params);
+        wrt = new CvVideoWriter_FFMPEG_proxy(filename, fourcc, fps, sz, parameters);
         if(wrt && wrt->isOpened())
         {
             *handle = (CvPluginWriter)wrt;
@@ -471,6 +478,14 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
 }
 
 static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+    CV_OUT CvPluginWriter* handle)
+{
+    int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
+    return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
+}
+
+static
 CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 {
     if (!handle)
@@ -481,9 +496,22 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
 
 static
@@ -594,6 +622,9 @@ static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
         /*  4*/cv_writer_get_prop,
         /*  5*/cv_writer_set_prop,
         /*  6*/cv_writer_write
+    },
+    {
+        /*  7*/cv_writer_open_with_params
     }
 };
 

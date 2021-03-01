@@ -415,7 +415,7 @@ public:
         if (plugin_api->api_header.api_version >= 1 && plugin_api->v1.Capture_open_with_params)
         {
             std::vector<int> vint_params = params.getIntVector();
-            int* c_params = &vint_params[0];
+            int* c_params = vint_params.data();
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
             if (CV_ERROR_OK == plugin_api->v1.Capture_open_with_params(
@@ -547,7 +547,7 @@ public:
             }
             if (params.warnUnusedParameters())
             {
-                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in VideoWriter, see logger INFO channel for details");
+                CV_LOG_ERROR(NULL, "VIDEOIO: unsupported parameters in VideoWriter, see logger INFO channel for details");
                 return Ptr<PluginWriter>();
             }
             if (CV_ERROR_OK == plugin_api->v0.Writer_open(filename.c_str(), fourcc, fps, sz.width, sz.height, isColor, &writer))
