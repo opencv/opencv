@@ -230,7 +230,7 @@ UMatDataAutoLock::~UMatDataAutoLock()
 
 //////////////////////////////// UMat ////////////////////////////////
 
-UMat::UMat(UMatUsageFlags _usageFlags)
+UMat::UMat(UMatUsageFlags _usageFlags) CV_NOEXCEPT
 : flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0), size(&rows)
 {}
 
