@@ -174,10 +174,21 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
 
     const int histLength = 500;
     double thr = -1;
-    if (opType == gvideo::TYPE_BS_MOG2)
-        thr = 16.;
-    else if (opType == gvideo::TYPE_BS_KNN)
-        thr = 400.;
+    switch (opType)
+    {
+        case gvideo::TYPE_BS_MOG2:
+        {
+            thr = 16.;
+            break;
+        }
+        case gvideo::TYPE_BS_KNN:
+        {
+            thr = 400.;
+            break;
+        }
+        default:
+            FAIL() << "unsupported type of BackgroundSubtractor";
+    }
     const gvideo::BackgroundSubtractorParams bsp(opType, histLength, thr, detectShadows,
                                                  learningRate);
 
