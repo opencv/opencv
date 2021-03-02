@@ -35,27 +35,61 @@
 uint32
 _TIFFMultiply32(TIFF* tif, uint32 first, uint32 second, const char* where)
 {
-	uint32 bytes = first * second;
-
-	if (second && bytes / second != first) {
+	if (second && first > TIFF_UINT32_MAX / second) {
 		TIFFErrorExt(tif->tif_clientdata, where, "Integer overflow in %s", where);
-		bytes = 0;
+		return 0;
 	}
 
-	return bytes;
+	return first * second;
 }
 
 uint64
 _TIFFMultiply64(TIFF* tif, uint64 first, uint64 second, const char* where)
 {
-	uint64 bytes = first * second;
-
-	if (second && bytes / second != first) {
+	if (second && first > TIFF_UINT64_MAX / second) {
 		TIFFErrorExt(tif->tif_clientdata, where, "Integer overflow in %s", where);
-		bytes = 0;
+		return 0;
 	}
 
-	return bytes;
+	return first * second;
+}
+
+tmsize_t
+_TIFFMultiplySSize(TIFF* tif, tmsize_t first, tmsize_t second, const char* where)
+{
+    if( first <= 0 || second <= 0 )
+    {
+        if( tif != NULL && where != NULL )
+        {
+            TIFFErrorExt(tif->tif_clientdata, where,
+                        "Invalid argument to _TIFFMultiplySSize() in %s", where);
+        }
+        return 0;
+    }
+
+    if( first > TIFF_TMSIZE_T_MAX / second )
+    {
+        if( tif != NULL && where != NULL )
+        {
+            TIFFErrorExt(tif->tif_clientdata, where,
+                        "Integer overflow in %s", where);
+        }
+        return 0;
+    }
+    return first * second;
+}
+
+tmsize_t _TIFFCastUInt64ToSSize(TIFF* tif, uint64 val, const char* module)
+{
+    if( val > (uint64)TIFF_TMSIZE_T_MAX )
+    {
+        if( tif != NULL && module != NULL )
+        {
+            TIFFErrorExt(tif->tif_clientdata,module,"Integer overflow");
+        }
+        return 0;
+    }
+    return (tmsize_t)val;
 }
 
 void*
@@ -63,13 +97,14 @@ _TIFFCheckRealloc(TIFF* tif, void* buffer,
 		  tmsize_t nmemb, tmsize_t elem_size, const char* what)
 {
 	void* cp = NULL;
-	tmsize_t bytes = nmemb * elem_size;
-
+        tmsize_t count = _TIFFMultiplySSize(tif, nmemb, elem_size, NULL);
 	/*
-	 * XXX: Check for integer overflow.
+	 * Check for integer overflow.
 	 */
-	if (nmemb && elem_size && bytes / elem_size == nmemb)
-		cp = _TIFFrealloc(buffer, bytes);
+	if (count != 0)
+	{
+		cp = _TIFFrealloc(buffer, count);
+	}
 
 	if (cp == NULL) {
 		TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
@@ -235,7 +270,7 @@ TIFFVGetFieldDefaulted(TIFF* tif, uint32 tag, va_list ap)
 		return (1);
 	case TIFFTAG_EXTRASAMPLES:
 		*va_arg(ap, uint16 *) = td->td_extrasamples;
-		*va_arg(ap, uint16 **) = td->td_sampleinfo;
+		*va_arg(ap, const uint16 **) = td->td_sampleinfo;
 		return (1);
 	case TIFFTAG_MATTEING:
 		*va_arg(ap, uint16 *) =
@@ -257,8 +292,8 @@ TIFFVGetFieldDefaulted(TIFF* tif, uint32 tag, va_list ap)
 	case TIFFTAG_YCBCRCOEFFICIENTS:
 		{
 			/* defaults are from CCIR Recommendation 601-1 */
-			static float ycbcrcoeffs[] = { 0.299f, 0.587f, 0.114f };
-			*va_arg(ap, float **) = ycbcrcoeffs;
+			static const float ycbcrcoeffs[] = { 0.299f, 0.587f, 0.114f };
+			*va_arg(ap, const float **) = ycbcrcoeffs;
 			return 1;
 		}
 	case TIFFTAG_YCBCRSUBSAMPLING:
@@ -270,14 +305,14 @@ TIFFVGetFieldDefaulted(TIFF* tif, uint32 tag, va_list ap)
 		return (1);
 	case TIFFTAG_WHITEPOINT:
 		{
-			static float whitepoint[2];
-
 			/* TIFF 6.0 specification tells that it is no default
 			   value for the WhitePoint, but AdobePhotoshop TIFF
 			   Technical Note tells that it should be CIE D50. */
-			whitepoint[0] =	D50_X0 / (D50_X0 + D50_Y0 + D50_Z0);
-			whitepoint[1] =	D50_Y0 / (D50_X0 + D50_Y0 + D50_Z0);
-			*va_arg(ap, float **) = whitepoint;
+			static const float whitepoint[] = {
+						D50_X0 / (D50_X0 + D50_Y0 + D50_Z0),
+						D50_Y0 / (D50_X0 + D50_Y0 + D50_Z0)
+			};
+			*va_arg(ap, const float **) = whitepoint;
 			return 1;
 		}
 	case TIFFTAG_TRANSFERFUNCTION:
@@ -286,16 +321,16 @@ TIFFVGetFieldDefaulted(TIFF* tif, uint32 tag, va_list ap)
 			TIFFErrorExt(tif->tif_clientdata, tif->tif_name, "No space for \"TransferFunction\" tag");
 			return (0);
 		}
-		*va_arg(ap, uint16 **) = td->td_transferfunction[0];
+		*va_arg(ap, const uint16 **) = td->td_transferfunction[0];
 		if (td->td_samplesperpixel - td->td_extrasamples > 1) {
-			*va_arg(ap, uint16 **) = td->td_transferfunction[1];
-			*va_arg(ap, uint16 **) = td->td_transferfunction[2];
+			*va_arg(ap, const uint16 **) = td->td_transferfunction[1];
+			*va_arg(ap, const uint16 **) = td->td_transferfunction[2];
 		}
 		return (1);
 	case TIFFTAG_REFERENCEBLACKWHITE:
 		if (!td->td_refblackwhite && !TIFFDefaultRefBlackWhite(td))
 			return (0);
-		*va_arg(ap, float **) = td->td_refblackwhite;
+		*va_arg(ap, const float **) = td->td_refblackwhite;
 		return (1);
 	}
 	return 0;
