@@ -71,7 +71,7 @@ typedef struct {
   uint32_t palette_[MAX_PALETTE_SIZE];
 
   // Some 'scratch' (potentially large) objects.
-  struct VP8LBackwardRefs refs_[3];  // Backward Refs array for temporaries.
+  struct VP8LBackwardRefs refs_[4];  // Backward Refs array for temporaries.
   VP8LHashChain hash_chain_;         // HashChain data for constructing
                                      // backward references.
 } VP8LEncoder;
