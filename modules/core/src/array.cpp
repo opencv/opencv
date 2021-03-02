@@ -48,6 +48,8 @@
 
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 #define  CV_ORIGIN_TL  0
 #define  CV_ORIGIN_BL  1
 
@@ -3211,53 +3213,6 @@ void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const { cvReleaseMatND(&
 void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const { cvReleaseSparseMat(&obj); }
 void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const { cvReleaseMemStorage(&obj); }
 
-template <typename T> static inline
-void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
-{
-    int i = 0;
-    for(; i < cn; i++)
-        buf[i] = saturate_cast<T>(s.val[i]);
-    for(; i < unroll_to; i++)
-        buf[i] = buf[i-cn];
-}
-
-void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
-{
-    CV_INSTRUMENT_REGION();
-
-    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert(cn <= 4);
-    switch(depth)
-    {
-    case CV_8U:
-        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
-        break;
-    case CV_8S:
-        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
-        break;
-    case CV_16U:
-        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
-        break;
-    case CV_16S:
-        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
-        break;
-    case CV_32S:
-        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
-        break;
-    case CV_32F:
-        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
-        break;
-    case CV_64F:
-        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
-        break;
-    case CV_16F:
-        scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
-        break;
-    default:
-        CV_Error(CV_StsUnsupportedFormat,"");
-    }
-}
-
 } // cv::
 
 
@@ -3295,4 +3250,5 @@ void* cvClone( const void* struct_ptr )
 }
 
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */

@@ -1638,6 +1638,9 @@ void patchNaNs( InputOutputArray _a, double _val )
 
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL float cvCbrt(float value) { return cv::cubeRoot(value); }
 CV_IMPL float cvFastArctan(float y, float x) { return cv::fastAtan2(y, x); }
 
@@ -1721,6 +1724,7 @@ CV_IMPL int cvCheckArr( const CvArr* arr, int flags,
     return cv::checkRange(cv::cvarrToMat(arr), (flags & CV_CHECK_QUIET) != 0, 0, minVal, maxVal );
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 
 /*
   Finds real roots of cubic, quadratic or linear equation.
@@ -2016,6 +2020,8 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 }
 
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL int
 cvSolveCubic( const CvMat* coeffs, CvMat* roots )
 {
@@ -2035,6 +2041,7 @@ void cvSolvePoly(const CvMat* a, CvMat *r, int maxiter, int)
     CV_Assert( _r.data == _r0.data ); // check that the array of roots was not reallocated
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 
 
 // Common constants for dispatched code
