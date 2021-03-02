@@ -15,6 +15,7 @@
 #include <ade/util/iota_range.hpp>
 
 #include <opencv2/gapi/infer/ie.hpp>
+#include <opencv2/gapi/streaming/cap.hpp>
 
 #include "backends/ie/util.hpp"
 #include "backends/ie/giebackend/giewrapper.hpp"
@@ -22,6 +23,21 @@
 namespace opencv_test
 {
 namespace {
+void initTestDataPath()
+{
+#ifndef WINRT
+    static bool initialized = false;
+    if (!initialized)
+    {
+        // Since G-API has no own test data (yet), it is taken from the common space
+        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
+        if (testDataPath) {
+            cvtest::addDataSearchPath(testDataPath);
+        }
+        initialized = true;
+    }
+#endif // WINRT
+}
 
 class TestMediaBGR final: public cv::MediaFrame::IAdapter {
     cv::Mat m_mat;
@@ -1072,7 +1088,9 @@ TEST_F(SingleROI, GenericInfer)
     cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     comp.apply(cv::gin(m_in_mat, m_roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
             cv::compile_args(cv::gapi::networks(pp)));
@@ -1095,7 +1113,9 @@ TEST_F(SingleROI, GenericInferMediaBGR)
     cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
     comp.apply(cv::gin(frame, m_roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
@@ -1119,7 +1139,9 @@ TEST_F(SingleROINV12, GenericInferMediaNV12)
     cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     comp.apply(cv::gin(frame, m_roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
@@ -1142,7 +1164,9 @@ TEST_F(ROIList, GenericInfer)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     comp.apply(cv::gin(m_in_mat, m_roi_list),
             cv::gout(m_out_gapi_ages, m_out_gapi_genders),
@@ -1165,7 +1189,9 @@ TEST_F(ROIList, GenericInferMediaBGR)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
     comp.apply(cv::gin(frame, m_roi_list),
@@ -1189,7 +1215,9 @@ TEST_F(ROIListNV12, GenericInferMediaNV12)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     comp.apply(cv::gin(frame, m_roi_list),
@@ -1213,7 +1241,10 @@ TEST_F(ROIList, GenericInfer2)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
+
     comp.apply(cv::gin(m_in_mat, m_roi_list),
             cv::gout(m_out_gapi_ages, m_out_gapi_genders),
             cv::compile_args(cv::gapi::networks(pp)));
@@ -1234,7 +1265,9 @@ TEST_F(ROIList, GenericInfer2MediaInputBGR)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
     comp.apply(cv::gin(frame, m_roi_list),
@@ -1257,13 +1290,465 @@ TEST_F(ROIListNV12, GenericInfer2MediaInputNV12)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
 
     cv::gapi::ie::Params<cv::gapi::Generic> pp{
-        "age-gender-generic", params.model_path, params.weights_path, params.device_id};
+        "age-gender-generic", params.model_path, params.weights_path, params.device_id
+    };
+    pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     comp.apply(cv::gin(frame, m_roi_list),
             cv::gout(m_out_gapi_ages, m_out_gapi_genders),
             cv::compile_args(cv::gapi::networks(pp)));
     validate();
+}
+
+TEST(Infer, SetInvalidNumberOfRequests)
+{
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::gapi::ie::Params<AgeGender> pp{"model", "weights", "device"};
+
+    EXPECT_ANY_THROW(pp.cfgNumRequests(0u));
+}
+
+TEST(Infer, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    cv::Mat gapi_age, gapi_gender;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource<cv::gapi::wip::GCaptureSource>(filepath);
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_age, gapi_gender)))
+    {
+        IE::Blob::Ptr ie_age, ie_gender;
+        {
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            setNetParameters(net);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto infer_request = this_network.CreateInferRequest();
+
+            infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
+            infer_request.Infer();
+            ie_age    = infer_request.GetBlob("age_conv3");
+            ie_gender = infer_request.GetBlob("prob");
+        }
+        // Validate with IE itself (avoid DNN module dependency here)
+        normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+        normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+        ++num_frames;
+        cap >> in_mat;
+    }
+    pipeline.stop();
+}
+
+TEST(InferROI, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    cv::Mat gapi_age, gapi_gender;
+    cv::Rect rect(cv::Point{64, 60}, cv::Size{96, 96});
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GOpaque<cv::Rect> roi;
+    cv::GMat age, gender;
+
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(roi, in);
+    cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), rect));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_age, gapi_gender)))
+    {
+        // Load & run IE network
+        IE::Blob::Ptr ie_age, ie_gender;
+        {
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            setNetParameters(net);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto infer_request = this_network.CreateInferRequest();
+            const auto ie_rc = IE::ROI {
+                0u
+                , static_cast<std::size_t>(rect.x)
+                , static_cast<std::size_t>(rect.y)
+                , static_cast<std::size_t>(rect.width)
+                , static_cast<std::size_t>(rect.height)
+            };
+            IE::Blob::Ptr roi_blob = IE::make_shared_blob(cv::gapi::ie::util::to_ie(in_mat), ie_rc);
+            infer_request.SetBlob("data", roi_blob);
+            infer_request.Infer();
+            ie_age    = infer_request.GetBlob("age_conv3");
+            ie_gender = infer_request.GetBlob("prob");
+        }
+        // Validate with IE itself (avoid DNN module dependency here)
+        normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+        normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+        ++num_frames;
+        cap >> in_mat;
+    }
+    pipeline.stop();
+}
+
+TEST(InferList, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    std::vector<cv::Rect> roi_list = {
+        cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
+        cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
+    };
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GArray<cv::Rect> roi;
+    cv::GArray<GMat> age, gender;
+
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(roi, in);
+    cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        {
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            setNetParameters(net);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto infer_request = this_network.CreateInferRequest();
+            auto frame_blob = cv::gapi::ie::util::to_ie(in_mat);
+
+            for (auto &&rc : roi_list) {
+                const auto ie_rc = IE::ROI {
+                    0u
+                    , static_cast<std::size_t>(rc.x)
+                    , static_cast<std::size_t>(rc.y)
+                    , static_cast<std::size_t>(rc.width)
+                    , static_cast<std::size_t>(rc.height)
+                };
+                infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
+                infer_request.Infer();
+
+                using namespace cv::gapi::ie::util;
+                ie_ages.push_back(to_ocv(infer_request.GetBlob("age_conv3")).clone());
+                ie_genders.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
+            }
+        } // namespace IE = ..
+        // Validate with IE itself (avoid DNN module dependency here)
+        normAssert(ie_ages   [0], gapi_ages   [0], "0: Test age output");
+        normAssert(ie_genders[0], gapi_genders[0], "0: Test gender output");
+        normAssert(ie_ages   [1], gapi_ages   [1], "1: Test age output");
+        normAssert(ie_genders[1], gapi_genders[1], "1: Test gender output");
+
+        ie_ages.clear();
+        ie_genders.clear();
+
+        ++num_frames;
+        cap >> in_mat;
+    }
+    pipeline.stop();
+}
+
+TEST(Infer2, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    std::vector<cv::Rect> roi_list = {
+        cv::Rect(cv::Point{64, 60}, cv::Size{ 96,  96}),
+        cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
+    };
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GArray<cv::Rect> rr;
+    cv::GMat in;
+    cv::GArray<cv::GMat> age, gender;
+    std::tie(age, gender) = cv::gapi::infer2<AgeGender>(in, rr);
+
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 10u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        {
+            auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+            auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+            setNetParameters(net);
+            auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+            auto infer_request = this_network.CreateInferRequest();
+            auto frame_blob = cv::gapi::ie::util::to_ie(in_mat);
+
+            for (auto &&rc : roi_list) {
+                const auto ie_rc = IE::ROI {
+                    0u
+                    , static_cast<std::size_t>(rc.x)
+                    , static_cast<std::size_t>(rc.y)
+                    , static_cast<std::size_t>(rc.width)
+                    , static_cast<std::size_t>(rc.height)
+                };
+                infer_request.SetBlob("data", IE::make_shared_blob(frame_blob, ie_rc));
+                infer_request.Infer();
+
+                using namespace cv::gapi::ie::util;
+                ie_ages.push_back(to_ocv(infer_request.GetBlob("age_conv3")).clone());
+                ie_genders.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
+            }
+        } // namespace IE = ..
+        // Validate with IE itself (avoid DNN module dependency here)
+        normAssert(ie_ages   [0], gapi_ages   [0], "0: Test age output");
+        normAssert(ie_genders[0], gapi_genders[0], "0: Test gender output");
+        normAssert(ie_ages   [1], gapi_ages   [1], "1: Test age output");
+        normAssert(ie_genders[1], gapi_genders[1], "1: Test gender output");
+
+        ie_ages.clear();
+        ie_genders.clear();
+
+        ++num_frames;
+        cap >> in_mat;
+    }
+    pipeline.stop();
+}
+
+TEST(InferEmptyList, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    // NB: Empty list of roi
+    std::vector<cv::Rect> roi_list;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GArray<cv::Rect> roi;
+    cv::GArray<GMat> age, gender;
+
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(roi, in);
+    cv::GComputation comp(cv::GIn(in, roi), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 1u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        EXPECT_TRUE(gapi_ages.empty());
+        EXPECT_TRUE(gapi_genders.empty());
+    }
+}
+
+TEST(Infer2EmptyList, TestStreamingInfer)
+{
+    initTestDataPath();
+    initDLDTDataPath();
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat;
+    std::vector<cv::Mat> ie_ages, ie_genders, gapi_ages, gapi_genders;
+
+    // NB: Empty list of roi
+    std::vector<cv::Rect> roi_list;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GArray<cv::Rect> rr;
+    cv::GMat in;
+    cv::GArray<cv::GMat> age, gender;
+    std::tie(age, gender) = cv::gapi::infer2<AgeGender>(in, rr);
+
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgNumRequests(4u);
+
+    std::size_t num_frames = 0u;
+    std::size_t max_frames = 1u;
+
+    cv::VideoCapture cap;
+    cap.open(filepath);
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
+
+    cap >> in_mat;
+    auto pipeline = comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(filepath), roi_list));
+
+    pipeline.start();
+    while (num_frames < max_frames && pipeline.pull(cv::gout(gapi_ages, gapi_genders)))
+    {
+        EXPECT_TRUE(gapi_ages.empty());
+        EXPECT_TRUE(gapi_genders.empty());
+    }
 }
 
 } // namespace opencv_test

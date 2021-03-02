@@ -83,4 +83,4 @@ Additional Resources
 2.  [NumPy Quickstart tutorial](https://numpy.org/devdocs/user/quickstart.html)
 3.  [NumPy Reference](https://numpy.org/devdocs/reference/index.html#reference)
 4.  [OpenCV Documentation](http://docs.opencv.org/)
-5.  [OpenCV Forum](http://answers.opencv.org/questions/)
+5.  [OpenCV Forum](https://forum.opencv.org/)

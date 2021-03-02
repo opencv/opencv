@@ -13,6 +13,7 @@
 #ifdef HAVE_INF_ENGINE
 
 #include <ade/util/algorithm.hpp> // type_list_index
+#include <condition_variable>
 
 #include <inference_engine.hpp>
 
@@ -23,19 +24,21 @@
 #include "backends/common/gbackend.hpp"
 #include "compiler/gislandmodel.hpp"
 
+#include "backends/ie/giebackend/giewrapper.hpp" // wrap::Plugin
+
 namespace cv {
 namespace gimpl {
 namespace ie {
 
 struct IECompiled {
-#if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
-    InferenceEngine::InferencePlugin   this_plugin;
-#else
-    InferenceEngine::Core              this_core;
-#endif
-    InferenceEngine::ExecutableNetwork this_network;
-    InferenceEngine::InferRequest      this_request;
+    std::vector<InferenceEngine::InferRequest> createInferRequests();
+
+    cv::gapi::ie::detail::ParamDesc     params;
+    cv::gimpl::ie::wrap::Plugin         this_plugin;
+    InferenceEngine::ExecutableNetwork  this_network;
 };
+
+class RequestPool;
 
 class GIEExecutable final: public GIslandExecutable
 {
@@ -50,11 +53,8 @@ class GIEExecutable final: public GIslandExecutable
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
 
-    // Actual data of all resources in graph (both internal and external)
-    Mag m_res;
-
-    // Execution helpers
-    GArg packArg(const GArg &arg);
+    // To manage multiple async requests
+    std::unique_ptr<RequestPool> m_reqPool;
 
 public:
     GIEExecutable(const ade::Graph                   &graph,
@@ -65,8 +65,14 @@ public:
         GAPI_Assert(false); // Not implemented yet
     }
 
-    virtual void run(std::vector<InObj>  &&input_objs,
-                     std::vector<OutObj> &&output_objs) override;
+    virtual void run(std::vector<InObj>  &&,
+                     std::vector<OutObj> &&) override {
+        GAPI_Assert(false && "Not implemented");
+    }
+
+    virtual void run(GIslandExecutable::IInput  &in,
+                     GIslandExecutable::IOutput &out) override;
+
 };
 
 }}}

@@ -1149,14 +1149,14 @@ void OpenCLExecutionContext::release()
 }
 
 
+
 // true if we have initialized OpenCL subsystem with available platforms
-static bool g_isOpenCLActivated = false;
+static bool g_isOpenCLInitialized = false;
+static bool g_isOpenCLAvailable = false;
 
 bool haveOpenCL()
 {
     CV_TRACE_FUNCTION();
-    static bool g_isOpenCLInitialized = false;
-    static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
@@ -1178,7 +1178,7 @@ bool haveOpenCL()
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
-            g_isOpenCLActivated = n > 0;
+            g_isOpenCLAvailable &= n > 0;
             CV_LOG_INFO(NULL, "OpenCL: found " << n << " platforms");
         }
         catch (...)
@@ -1214,7 +1214,7 @@ bool useOpenCL()
 
 bool isOpenCLActivated()
 {
-    if (!g_isOpenCLActivated)
+    if (!g_isOpenCLAvailable)
         return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
     return useOpenCL();
 }
@@ -1451,7 +1451,7 @@ struct Platform::Impl
     bool initialized;
 };
 
-Platform::Platform()
+Platform::Platform() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1477,6 +1477,23 @@ Platform& Platform::operator = (const Platform& pl)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Platform::Platform(Platform&& pl) CV_NOEXCEPT
+{
+    p = pl.p;
+    pl.p = nullptr;
+}
+
+Platform& Platform::operator = (Platform&& pl) CV_NOEXCEPT
+{
+    if (this != &pl) {
+        if(p)
+            p->release();
+        p = pl.p;
+        pl.p = nullptr;
+    }
     return *this;
 }
 
@@ -1677,7 +1694,7 @@ struct Device::Impl
 };
 
 
-Device::Device()
+Device::Device() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1703,6 +1720,23 @@ Device& Device::operator = (const Device& d)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Device::Device(Device&& d) CV_NOEXCEPT
+{
+    p = d.p;
+    d.p = nullptr;
+}
+
+Device& Device::operator = (Device&& d) CV_NOEXCEPT
+{
+    if (this != &d) {
+        if(p)
+            p->release();
+        p = d.p;
+        d.p = nullptr;
+    }
     return *this;
 }
 
@@ -2834,7 +2868,7 @@ public:
 };
 
 
-Context::Context()
+Context::Context() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2916,6 +2950,23 @@ Context& Context::operator = (const Context& c)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Context::Context(Context&& c) CV_NOEXCEPT
+{
+    p = c.p;
+    c.p = nullptr;
+}
+
+Context& Context::operator = (Context&& c) CV_NOEXCEPT
+{
+    if (this != &c) {
+        if(p)
+            p->release();
+        p = c.p;
+        c.p = nullptr;
+    }
     return *this;
 }
 
@@ -3231,7 +3282,7 @@ struct Queue::Impl
     cv::ocl::Queue profiling_queue_;
 };
 
-Queue::Queue()
+Queue::Queue() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -3257,6 +3308,23 @@ Queue& Queue::operator = (const Queue& q)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Queue::Queue(Queue&& q) CV_NOEXCEPT
+{
+    p = q.p;
+    q.p = nullptr;
+}
+
+Queue& Queue::operator = (Queue&& q) CV_NOEXCEPT
+{
+    if (this != &q) {
+        if(p)
+            p->release();
+        p = q.p;
+        q.p = nullptr;
+    }
     return *this;
 }
 
@@ -3315,7 +3383,7 @@ static cl_command_queue getQueue(const Queue& q)
 
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
-KernelArg::KernelArg()
+KernelArg::KernelArg() CV_NOEXCEPT
     : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
@@ -3382,16 +3450,24 @@ struct Kernel::Impl
             haveTempSrcUMats = true;  // UMat is created on RAW memory (without proper lifetime management, even from Mat)
     }
 
-    void addImage(const Image2D& image)
+    /// Preserve image lifetime (while it is specified as Kernel argument)
+    void registerImageArgument(int arg, const Image2D& image)
     {
-        images.push_back(image);
+        CV_CheckGE(arg, 0, "");
+        CV_CheckLT(arg, (int)MAX_ARRS, "");
+        if (arg < (int)shadow_images.size() && shadow_images[arg].ptr() != image.ptr())  // TODO future: replace ptr => impl (more strong check)
+        {
+            CV_Check(arg, !isInProgress, "ocl::Kernel: clearing of pending Image2D arguments is not allowed");
+        }
+        shadow_images.reserve(MAX_ARRS);
+        shadow_images.resize(std::max(shadow_images.size(), (size_t)arg + 1));
+        shadow_images[arg] = image;
     }
 
     void finit(cl_event e)
     {
         CV_UNUSED(e);
         cleanupUMats();
-        images.clear();
         isInProgress = false;
         release();
     }
@@ -3416,7 +3492,7 @@ struct Kernel::Impl
     bool isInProgress;
     bool isAsyncRun;  // true if kernel was scheduled in async mode
     int nu;
-    std::list<Image2D> images;
+    std::vector<Image2D> shadow_images;
     bool haveTempDstUMats;
     bool haveTempSrcUMats;
 };
@@ -3449,7 +3525,7 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 namespace cv { namespace ocl {
 
-Kernel::Kernel()
+Kernel::Kernel() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -3482,6 +3558,23 @@ Kernel& Kernel::operator = (const Kernel& k)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Kernel::Kernel(Kernel&& k) CV_NOEXCEPT
+{
+    p = k.p;
+    k.p = nullptr;
+}
+
+Kernel& Kernel::operator = (Kernel&& k) CV_NOEXCEPT
+{
+    if (this != &k) {
+        if(p)
+            p->release();
+        p = k.p;
+        k.p = nullptr;
+    }
     return *this;
 }
 
@@ -3558,9 +3651,11 @@ int Kernel::set(int i, const void* value, size_t sz)
 
 int Kernel::set(int i, const Image2D& image2D)
 {
-    p->addImage(image2D);
     cl_mem h = (cl_mem)image2D.ptr();
-    return set(i, &h, sizeof(h));
+    int res = set(i, &h, sizeof(h));
+    if (res >= 0)
+        p->registerImageArgument(i, image2D);
+    return res;
 }
 
 int Kernel::set(int i, const UMat& m)
@@ -4037,7 +4132,7 @@ struct ProgramSource::Impl
 };
 
 
-ProgramSource::ProgramSource()
+ProgramSource::ProgramSource() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -4078,6 +4173,23 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+ProgramSource::ProgramSource(ProgramSource&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+ProgramSource& ProgramSource::operator = (ProgramSource&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
     return *this;
 }
 
@@ -4546,7 +4658,10 @@ struct Program::Impl
 };
 
 
-Program::Program() { p = 0; }
+Program::Program() CV_NOEXCEPT
+{
+    p = 0;
+}
 
 Program::Program(const ProgramSource& src,
         const String& buildflags, String& errmsg)
@@ -4570,6 +4685,23 @@ Program& Program::operator = (const Program& prog)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Program::Program(Program&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+Program& Program::operator = (Program&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
     return *this;
 }
 
@@ -6598,7 +6730,7 @@ struct PlatformInfo::Impl
     int versionMinor_;
 };
 
-PlatformInfo::PlatformInfo()
+PlatformInfo::PlatformInfo() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -6630,6 +6762,23 @@ PlatformInfo& PlatformInfo::operator =(const PlatformInfo& i)
         if (p)
             p->release();
         p = i.p;
+    }
+    return *this;
+}
+
+PlatformInfo::PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+PlatformInfo& PlatformInfo::operator = (PlatformInfo&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if(p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
     }
     return *this;
 }
@@ -7174,7 +7323,7 @@ struct Image2D::Impl
     cl_mem handle;
 };
 
-Image2D::Image2D()
+Image2D::Image2D() CV_NOEXCEPT
 {
     p = NULL;
 }
@@ -7228,6 +7377,23 @@ Image2D & Image2D::operator = (const Image2D & i)
         if (p)
             p->release();
         p = i.p;
+    }
+    return *this;
+}
+
+Image2D::Image2D(Image2D&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+Image2D& Image2D::operator = (Image2D&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if (p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
     }
     return *this;
 }

@@ -298,8 +298,8 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat, GScalar)>, "org.opencv.core.matrixop.absdiffC") {
-        static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
+    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat,GScalar)>, "org.opencv.core.matrixop.absdiffC") {
+        static GMatDesc outMeta(const GMatDesc& a, const GScalarDesc&) {
             return a;
         }
     };
@@ -588,6 +588,12 @@ G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.streaming.size") {
 
 G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.streaming.sizeR") {
     static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+
+G_TYPED_KERNEL(GSizeMF, <GOpaque<Size>(GFrame)>, "org.opencv.streaming.sizeMF") {
+    static GOpaqueDesc outMeta(const GFrameDesc&) {
         return empty_gopaque_desc();
     }
 };
@@ -1903,14 +1909,14 @@ kmeans(const GMat& data, const int K, const GMat& bestLabels,
  - Function textual ID is "org.opencv.core.kmeansNDNoInit"
  - #KMEANS_USE_INITIAL_LABELS flag must not be set while using this overload.
  */
-GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GMat,GMat>
 kmeans(const GMat& data, const int K, const TermCriteria& criteria, const int attempts,
        const KmeansFlags flags);
 
 /** @overload
 @note Function textual ID is "org.opencv.core.kmeans2D"
  */
-GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
 kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
        const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
 
@@ -1929,7 +1935,7 @@ namespace streaming {
 @param src Input tensor
 @return Size (tensor dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+GAPI_EXPORTS_W GOpaque<Size> size(const GMat& src);
 
 /** @overload
 Gets dimensions from rectangle.
@@ -1940,6 +1946,15 @@ Gets dimensions from rectangle.
 @return Size (rectangle dimensions).
 */
 GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
+
+/** @brief Gets dimensions from MediaFrame.
+
+@note Function textual ID is "org.opencv.streaming.sizeMF"
+
+@param src Input frame
+@return Size (frame dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GFrame& src);
 } //namespace streaming
 } //namespace gapi
 } //namespace cv

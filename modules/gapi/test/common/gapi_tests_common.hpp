@@ -324,7 +324,7 @@ public:
     }
 
     template <typename T>
-    inline void initPointRandU(cv::RNG& rng, T& pt)
+    inline void initPointRandU(cv::RNG& rng, T& pt) const
     { ::initPointRandU(rng, pt); }
 
 // Disable unreachable code warning for MSVS 2015
@@ -334,7 +334,7 @@ public:
 #endif
     // initialize std::vector<cv::Point_<T>>/std::vector<cv::Point3_<T>>
     template <typename T, template <typename> class Pt>
-    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
+    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_) const
     {
         cv::RNG& rng = theRNG();
 
@@ -593,6 +593,8 @@ using compare_vec_f = std::function<bool(const cv::Vec<Elem, cn> &a, const cv::V
 template<typename T1, typename T2>
 struct CompareF
 {
+    CompareF() = default;
+
     using callable_t = std::function<bool(const T1& a, const T2& b)>;
     CompareF(callable_t&& cmp, std::string&& cmp_name) :
         _comparator(std::move(cmp)), _name(std::move(cmp_name)) {}

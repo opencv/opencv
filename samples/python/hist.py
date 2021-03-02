@@ -76,7 +76,7 @@ def main():
     a - show histogram for color image in curve mode \n
     b - show histogram in bin mode \n
     c - show equalized histogram (always in bin mode) \n
-    d - show histogram for color image in curve mode \n
+    d - show histogram for gray image in curve mode \n
     e - show histogram for a normalized image in curve mode \n
     Esc - exit \n
     ''')

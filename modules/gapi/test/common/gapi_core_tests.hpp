@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_HPP
@@ -151,16 +151,9 @@ GAPI_TEST_FIXTURE(WarpPerspectiveTest, initMatrixRandU,
 GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
         FIXTURE_API(CompareMats, double , double, int, int, cv::Scalar),
         6, cmpF, angle, scale, flags, border_mode, border_value)
-GAPI_TEST_FIXTURE(KMeansNDNoInitTest, initMatrixRandU, FIXTURE_API(int, cv::KmeansFlags),
-                  2, K, flags)
-GAPI_TEST_FIXTURE(KMeansNDInitTest, initMatrixRandU,
-                  FIXTURE_API(CompareMats, int, cv::KmeansFlags), 3, cmpF, K, flags)
-GAPI_TEST_FIXTURE(KMeans2DNoInitTest, initNothing, FIXTURE_API(int, cv::KmeansFlags),
-                  2, K, flags)
-GAPI_TEST_FIXTURE(KMeans2DInitTest, initNothing, FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
-GAPI_TEST_FIXTURE(KMeans3DNoInitTest, initNothing, FIXTURE_API(int, cv::KmeansFlags),
-                  2, K, flags)
-GAPI_TEST_FIXTURE(KMeans3DInitTest, initNothing, FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
+GAPI_TEST_FIXTURE(KMeansNDTest, initMatrixRandU, FIXTURE_API(CompareMats, int, cv::KmeansFlags), 3, cmpF, K, flags)
+GAPI_TEST_FIXTURE(KMeans2DTest, initNothing,     FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
+GAPI_TEST_FIXTURE(KMeans3DTest, initNothing,     FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
 
 GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDBLTest, ParserSSDTest, initNothing,
     FIXTURE_API(float, int), 2, confidence_threshold, filter_label)
@@ -170,6 +163,7 @@ GAPI_TEST_EXT_BASE_FIXTURE(ParseYoloTest, ParserYoloTest, initNothing,
     FIXTURE_API(float, float, int, std::pair<bool,int>), 4, confidence_threshold, nms_threshold, num_classes, dims_config)
 GAPI_TEST_FIXTURE(SizeTest, initMatrixRandU, <>, 0)
 GAPI_TEST_FIXTURE(SizeRTest, initNothing, <>, 0)
+GAPI_TEST_FIXTURE(SizeMFTest, initNothing, <>, 0)
 } // opencv_test
 
 #endif //OPENCV_GAPI_CORE_TESTS_HPP

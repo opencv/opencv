@@ -29,6 +29,7 @@ struct CvVideoWriter
     virtual ~CvVideoWriter() {}
     virtual bool writeFrame(const IplImage*) { return false; }
     virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
+    virtual double getProperty(int) const { return 0; }
 };
 
 //===================================================
@@ -52,22 +53,22 @@ inline bool castParameterTo(int paramValue)
 }
 }
 
-class VideoWriterParameters
+class VideoParameters
 {
 public:
-    struct VideoWriterParameter {
-        VideoWriterParameter() = default;
+    struct VideoParameter {
+        VideoParameter() = default;
 
-        VideoWriterParameter(int key_, int value_) : key(key_), value(value_) {}
+        VideoParameter(int key_, int value_) : key(key_), value(value_) {}
 
         int key{-1};
         int value{-1};
         mutable bool isConsumed{false};
     };
 
-    VideoWriterParameters() = default;
+    VideoParameters() = default;
 
-    explicit VideoWriterParameters(const std::vector<int>& params)
+    explicit VideoParameters(const std::vector<int>& params)
     {
         const auto count = params.size();
         if (count % 2 != 0)
@@ -82,18 +83,60 @@ public:
         }
     }
 
+    VideoParameters(int* params, unsigned n_params)
+    {
+        params_.reserve(n_params);
+        for (unsigned i = 0; i < n_params; ++i)
+        {
+            add(params[2*i], params[2*i + 1]);
+        }
+    }
+
     void add(int key, int value)
     {
         params_.emplace_back(key, value);
     }
 
-    template <class ValueType>
-    ValueType get(int key, ValueType defaultValue) const CV_NOEXCEPT
+    bool has(int key) const
     {
         auto it = std::find_if(params_.begin(), params_.end(),
-                               [key](const VideoWriterParameter &param) {
-                                   return param.key == key;
-                               });
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
+        return it != params_.end();
+    }
+
+    template <class ValueType>
+    ValueType get(int key) const
+    {
+        auto it = std::find_if(params_.begin(), params_.end(),
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
+        if (it != params_.end())
+        {
+            it->isConsumed = true;
+            return castParameterTo<ValueType>(it->value);
+        }
+        else
+        {
+            CV_Error_(Error::StsBadArg, ("Missing value for parameter: [%d]", key));
+        }
+    }
+
+    template <class ValueType>
+    ValueType get(int key, ValueType defaultValue) const
+    {
+        auto it = std::find_if(params_.begin(), params_.end(),
+            [key](const VideoParameter &param)
+            {
+                return param.key == key;
+            }
+        );
         if (it != params_.end())
         {
             it->isConsumed = true;
@@ -105,7 +148,8 @@ public:
         }
     }
 
-    std::vector<int> getUnused() const CV_NOEXCEPT {
+    std::vector<int> getUnused() const
+    {
         std::vector<int> unusedParams;
         for (const auto &param : params_)
         {
@@ -128,8 +172,41 @@ public:
         return vint_params;
     }
 
+    bool empty() const
+    {
+        return params_.empty();
+    }
+
+    bool warnUnusedParameters() const
+    {
+        bool found = false;
+        for (const auto &param : params_)
+        {
+            if (!param.isConsumed)
+            {
+                found = true;
+                CV_LOG_INFO(NULL, "VIDEOIO: unused parameter: [" << param.key << "]=" <<
+                    cv::format("%lld / 0x%016llx", (long long)param.value, (long long)param.value));
+            }
+        }
+        return found;
+    }
+
+
 private:
-    std::vector<VideoWriterParameter> params_;
+    std::vector<VideoParameter> params_;
+};
+
+class VideoWriterParameters : public VideoParameters
+{
+public:
+    using VideoParameters::VideoParameters;  // reuse constructors
+};
+
+class VideoCaptureParameters : public VideoParameters
+{
+public:
+    using VideoParameters::VideoParameters;  // reuse constructors
 };
 
 class IVideoCapture
@@ -236,8 +313,12 @@ public:
     {
         cvReleaseVideoWriter(&writer);
     }
-    double getProperty(int) const CV_OVERRIDE
+    double getProperty(int propId) const CV_OVERRIDE
     {
+        if (writer)
+        {
+            return writer->getProperty(propId);
+        }
         return 0.;
     }
     bool setProperty(int, double) CV_OVERRIDE
@@ -261,13 +342,13 @@ public:
 
 //==================================================================================================
 
-Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename);
+Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
                                                    double fps, const Size& frameSize,
                                                    const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename);
-Ptr<IVideoCapture> createGStreamerCapture_cam(int index);
+Ptr<IVideoCapture> createGStreamerCapture_file(const std::string& filename, const cv::VideoCaptureParameters& params);
+Ptr<IVideoCapture> createGStreamerCapture_cam(int index, const cv::VideoCaptureParameters& params);
 Ptr<IVideoWriter> create_GStreamer_writer(const std::string& filename, int fourcc,
                                           double fps, const Size& frameSize,
                                           const VideoWriterParameters& params);
@@ -285,8 +366,8 @@ Ptr<IVideoWriter> create_AVFoundation_writer(const std::string& filename, int fo
 
 Ptr<IVideoCapture> create_WRT_capture(int device);
 
-Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
-Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename);
+Ptr<IVideoCapture> cvCreateCapture_MSMF(int index, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc,
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
@@ -327,12 +408,28 @@ Ptr<IVideoCapture> createGPhoto2Capture(const std::string& deviceName);
 
 Ptr<IVideoCapture> createXINECapture(const std::string &filename);
 
+Ptr<IVideoCapture> createAndroidCapture_cam( int index );
 Ptr<IVideoCapture> createAndroidCapture_file(const std::string &filename);
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
         CV_OUT std::vector<int>& ready,
         int64 timeoutNs);
+
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type)
+{
+    switch (va_type)
+    {
+    case VIDEO_ACCELERATION_NONE: out << "NONE"; return out;
+    case VIDEO_ACCELERATION_ANY: out << "ANY"; return out;
+    case VIDEO_ACCELERATION_D3D11: out << "D3D11"; return out;
+    case VIDEO_ACCELERATION_VAAPI: out << "VAAPI"; return out;
+    case VIDEO_ACCELERATION_MFX: out << "MFX"; return out;
+    }
+    out << cv::format("UNKNOWN(0x%ux)", static_cast<unsigned int>(va_type));
+    return out;
+}
 
 } // cv::
 

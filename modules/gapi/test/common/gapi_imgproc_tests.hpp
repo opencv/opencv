@@ -68,17 +68,16 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(GoodFeaturesTest,
                               blockSize, useHarrisDetector)
 GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursNoOffsetTest,
                               FIXTURE_API(cv::Size,MatType2,cv::RetrievalModes,
-                                          cv::ContourApproximationModes),
-                              4, sz, type, mode, method)
+                                          cv::ContourApproximationModes, CompareMats),
+                              5, sz, type, mode, method, cmpF)
 GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursOffsetTest, <>, 0)
 GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursHNoOffsetTest,
                               FIXTURE_API(cv::Size,MatType2,cv::RetrievalModes,
-                                          cv::ContourApproximationModes),
-                              4, sz, type, mode, method)
+                                          cv::ContourApproximationModes, CompareMats),
+                              5, sz, type, mode, method, cmpF)
 GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursHOffsetTest, <>, 0)
-GAPI_TEST_FIXTURE(BoundingRectMatTest, initMatrixRandU, FIXTURE_API(CompareRects), 1, cmpF)
-GAPI_TEST_FIXTURE(BoundingRectMatVector32STest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
-GAPI_TEST_FIXTURE(BoundingRectMatVector32FTest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
+GAPI_TEST_FIXTURE(BoundingRectMatTest, initNothing, FIXTURE_API(CompareRects,bool),
+                  2, cmpF, initByVector)
 GAPI_TEST_FIXTURE(BoundingRectVector32STest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
 GAPI_TEST_FIXTURE(BoundingRectVector32FTest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
 GAPI_TEST_FIXTURE(FitLine2DMatVectorTest, initMatByPointsVectorRandU<cv::Point_>,

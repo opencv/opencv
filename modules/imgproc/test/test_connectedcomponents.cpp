@@ -74,11 +74,10 @@ void normalizeLabels(Mat1i& imgLabels, int iNumLabels) {
     }
 }
 
-
 void CV_ConnectedComponentsTest::run( int /* start_from */)
 {
 
-    int ccltype[] = { cv::CCL_WU, cv::CCL_DEFAULT, cv::CCL_GRANA };
+    int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
 
     string exp_path = string(ts->get_data_path()) + "connectedcomponents/ccomp_exp.png";
     Mat exp = imread(exp_path, 0);
@@ -149,7 +148,6 @@ TEST(Imgproc_ConnectedComponents, grana_buffer_overflow)
     int nbComponents = cv::connectedComponentsWithStats(darkMask, labels, stats, centroids, 8, CV_32S, cv::CCL_GRANA);
     EXPECT_EQ(1, nbComponents);
 }
-
 
 static cv::Mat createCrashMat(int numThreads) {
     const int h = numThreads * 4 * 2 + 8;
@@ -239,5 +237,124 @@ TEST(Imgproc_ConnectedComponents, missing_background_pixels)
     EXPECT_TRUE(std::isnan(centroids.at<double>(0, 1)));
 }
 
+TEST(Imgproc_ConnectedComponents, spaghetti_bbdt_sauf_stats)
+{
+    cv::Mat1b img(16, 16);
+    img << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+           0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0,
+           0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+           0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
+           0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1,
+           0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1,
+           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1;
+
+    cv::Mat1i labels;
+    cv::Mat1i stats;
+    cv::Mat1d centroids;
+
+    int ccltype[] = { cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
+
+    for (uint cclt = 0; cclt < sizeof(ccltype) / sizeof(int); ++cclt) {
+
+        EXPECT_NO_THROW(cv::connectedComponentsWithStats(img, labels, stats, centroids, 8, CV_32S, ccltype[cclt]));
+        EXPECT_EQ(stats(0, cv::CC_STAT_LEFT), 0);
+        EXPECT_EQ(stats(0, cv::CC_STAT_TOP), 0);
+        EXPECT_EQ(stats(0, cv::CC_STAT_WIDTH), 16);
+        EXPECT_EQ(stats(0, cv::CC_STAT_HEIGHT), 15);
+        EXPECT_EQ(stats(0, cv::CC_STAT_AREA), 144);
+
+        EXPECT_EQ(stats(1, cv::CC_STAT_LEFT), 1);
+        EXPECT_EQ(stats(1, cv::CC_STAT_TOP), 1);
+        EXPECT_EQ(stats(1, cv::CC_STAT_WIDTH), 3);
+        EXPECT_EQ(stats(1, cv::CC_STAT_HEIGHT), 3);
+        EXPECT_EQ(stats(1, cv::CC_STAT_AREA), 9);
+
+        EXPECT_EQ(stats(2, cv::CC_STAT_LEFT), 1);
+        EXPECT_EQ(stats(2, cv::CC_STAT_TOP), 1);
+        EXPECT_EQ(stats(2, cv::CC_STAT_WIDTH), 8);
+        EXPECT_EQ(stats(2, cv::CC_STAT_HEIGHT), 7);
+        EXPECT_EQ(stats(2, cv::CC_STAT_AREA), 40);
+
+        EXPECT_EQ(stats(3, cv::CC_STAT_LEFT), 10);
+        EXPECT_EQ(stats(3, cv::CC_STAT_TOP), 2);
+        EXPECT_EQ(stats(3, cv::CC_STAT_WIDTH), 5);
+        EXPECT_EQ(stats(3, cv::CC_STAT_HEIGHT), 2);
+        EXPECT_EQ(stats(3, cv::CC_STAT_AREA), 8);
+
+        EXPECT_EQ(stats(4, cv::CC_STAT_LEFT), 11);
+        EXPECT_EQ(stats(4, cv::CC_STAT_TOP), 5);
+        EXPECT_EQ(stats(4, cv::CC_STAT_WIDTH), 3);
+        EXPECT_EQ(stats(4, cv::CC_STAT_HEIGHT), 3);
+        EXPECT_EQ(stats(4, cv::CC_STAT_AREA), 9);
+
+        EXPECT_EQ(stats(5, cv::CC_STAT_LEFT), 2);
+        EXPECT_EQ(stats(5, cv::CC_STAT_TOP), 9);
+        EXPECT_EQ(stats(5, cv::CC_STAT_WIDTH), 1);
+        EXPECT_EQ(stats(5, cv::CC_STAT_HEIGHT), 1);
+        EXPECT_EQ(stats(5, cv::CC_STAT_AREA), 1);
+
+        EXPECT_EQ(stats(6, cv::CC_STAT_LEFT), 12);
+        EXPECT_EQ(stats(6, cv::CC_STAT_TOP), 9);
+        EXPECT_EQ(stats(6, cv::CC_STAT_WIDTH), 1);
+        EXPECT_EQ(stats(6, cv::CC_STAT_HEIGHT), 1);
+        EXPECT_EQ(stats(6, cv::CC_STAT_AREA), 1);
+
+        // Labels' order could be different!
+        if (cclt == cv::CCL_WU || cclt == cv::CCL_SAUF) {
+            // CCL_SAUF, CCL_WU
+            EXPECT_EQ(stats(9, cv::CC_STAT_LEFT), 1);
+            EXPECT_EQ(stats(9, cv::CC_STAT_TOP), 11);
+            EXPECT_EQ(stats(9, cv::CC_STAT_WIDTH), 4);
+            EXPECT_EQ(stats(9, cv::CC_STAT_HEIGHT), 2);
+            EXPECT_EQ(stats(9, cv::CC_STAT_AREA), 8);
+
+            EXPECT_EQ(stats(7, cv::CC_STAT_LEFT), 6);
+            EXPECT_EQ(stats(7, cv::CC_STAT_TOP), 10);
+            EXPECT_EQ(stats(7, cv::CC_STAT_WIDTH), 4);
+            EXPECT_EQ(stats(7, cv::CC_STAT_HEIGHT), 2);
+            EXPECT_EQ(stats(7, cv::CC_STAT_AREA), 8);
+
+            EXPECT_EQ(stats(8, cv::CC_STAT_LEFT), 0);
+            EXPECT_EQ(stats(8, cv::CC_STAT_TOP), 10);
+            EXPECT_EQ(stats(8, cv::CC_STAT_WIDTH), 16);
+            EXPECT_EQ(stats(8, cv::CC_STAT_HEIGHT), 6);
+            EXPECT_EQ(stats(8, cv::CC_STAT_AREA), 21);
+        }
+        else {
+            // CCL_BBDT, CCL_GRANA, CCL_SPAGHETTI, CCL_BOLELLI
+            EXPECT_EQ(stats(7, cv::CC_STAT_LEFT), 1);
+            EXPECT_EQ(stats(7, cv::CC_STAT_TOP), 11);
+            EXPECT_EQ(stats(7, cv::CC_STAT_WIDTH), 4);
+            EXPECT_EQ(stats(7, cv::CC_STAT_HEIGHT), 2);
+            EXPECT_EQ(stats(7, cv::CC_STAT_AREA), 8);
+
+            EXPECT_EQ(stats(8, cv::CC_STAT_LEFT), 6);
+            EXPECT_EQ(stats(8, cv::CC_STAT_TOP), 10);
+            EXPECT_EQ(stats(8, cv::CC_STAT_WIDTH), 4);
+            EXPECT_EQ(stats(8, cv::CC_STAT_HEIGHT), 2);
+            EXPECT_EQ(stats(8, cv::CC_STAT_AREA), 8);
+
+            EXPECT_EQ(stats(9, cv::CC_STAT_LEFT), 0);
+            EXPECT_EQ(stats(9, cv::CC_STAT_TOP), 10);
+            EXPECT_EQ(stats(9, cv::CC_STAT_WIDTH), 16);
+            EXPECT_EQ(stats(9, cv::CC_STAT_HEIGHT), 6);
+            EXPECT_EQ(stats(9, cv::CC_STAT_AREA), 21);
+        }
+        EXPECT_EQ(stats(10, cv::CC_STAT_LEFT), 9);
+        EXPECT_EQ(stats(10, cv::CC_STAT_TOP), 12);
+        EXPECT_EQ(stats(10, cv::CC_STAT_WIDTH), 5);
+        EXPECT_EQ(stats(10, cv::CC_STAT_HEIGHT), 2);
+        EXPECT_EQ(stats(10, cv::CC_STAT_AREA), 7);
+    }
+}
 
 }} // namespace

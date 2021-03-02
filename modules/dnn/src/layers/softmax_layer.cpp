@@ -89,7 +89,7 @@ public:
     {
         bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         MatShape shape = inputs[0];
-        int cAxis = clamp(axisRaw, shape.size());
+        int cAxis = normalize_axis(axisRaw, shape.size());
         shape[cAxis] = 1;
         internals.assign(1, shape);
         return inplace;
@@ -124,7 +124,7 @@ public:
 
         UMat& src = inputs[0];
         UMat& dstMat = outputs[0];
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
 
         if (softmaxOp.empty())
         {
@@ -216,7 +216,7 @@ public:
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis), channels = src.size[axis],
                 innerSize = src.total(axis + 1);
 
@@ -306,7 +306,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto channel_axis = clamp(axisRaw, input_wrapper->getRank());
+        auto channel_axis = normalize_axis(axisRaw, input_wrapper->getRank());
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
     }
 #endif
@@ -315,7 +315,7 @@ public:
     {
 #ifdef HAVE_VULKAN
         vkcom::Tensor in = VkComTensor(inputs[0]);
-        int cAxis = clamp(axisRaw, in.dimNum());
+        int cAxis = normalize_axis(axisRaw, in.dimNum());
         std::shared_ptr<vkcom::OpBase> op(new vkcom::OpSoftmax(cAxis, logSoftMax));
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
 #endif  // HAVE_VULKAN
@@ -354,7 +354,7 @@ public:
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axisRaw, input->getDims().size()));
+        ieLayer.setAxis(normalize_axis(axisRaw, input->getDims().size()));
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
@@ -365,7 +365,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int axis = clamp(axisRaw, ieInpNode->get_shape().size());
+        int axis = normalize_axis(axisRaw, ieInpNode->get_shape().size());
         auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
         if (logSoftMax)
             return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));

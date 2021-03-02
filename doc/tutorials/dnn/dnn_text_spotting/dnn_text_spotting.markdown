@@ -3,6 +3,7 @@
 @tableofcontents
 
 @prev_tutorial{tutorial_dnn_OCR}
+@next_tutorial{pytorch_cls_tutorial_dnn_conversion}
 
 |    |    |
 | -: | :- |

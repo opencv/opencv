@@ -37,8 +37,15 @@ class async_service {
 
     std::thread thrd;
 
-public:
     async_service() = default ;
+
+public:
+    // singleton
+    static async_service& instance()
+    {
+        static async_service the_ctx;
+        return the_ctx;
+    }
 
     void add_task(std::function<void()>&& t){
         if (!thread_started)
@@ -87,6 +94,8 @@ public:
             cv.notify_one();
         }
     }
+
+protected:
     ~async_service(){
         if (thread_started && thrd.joinable())
         {
@@ -99,7 +108,6 @@ public:
     }
 };
 
-async_service the_ctx;
 }
 
 namespace {
@@ -169,7 +177,7 @@ void async_apply(GComputation& gcomp, std::function<void(std::exception_ptr)>&& 
 
         call_with_callback(apply_l,std::move(callback), DummyContext{});
     };
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
 }
 
 std::future<void> async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args){
@@ -183,7 +191,7 @@ std::future<void> async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&o
         call_with_future(apply_l, prms.value, DummyContext{});
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
     return f;
 }
 
@@ -196,7 +204,7 @@ void async_apply(GComputation& gcomp, std::function<void(std::exception_ptr)>&& 
 
         call_with_callback(apply_l,std::move(callback), ctx);
     };
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
 }
 
 std::future<void> async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args, GAsyncContext& ctx){
@@ -210,7 +218,7 @@ std::future<void> async_apply(GComputation& gcomp, GRunArgs &&ins, GRunArgsP &&o
         call_with_future(apply_l, prms.value, ctx);
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
     return f;
 
 }
@@ -224,7 +232,7 @@ void async(GCompiled& gcmpld, std::function<void(std::exception_ptr)>&& callback
         call_with_callback(apply_l,std::move(callback), DummyContext{});
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
 }
 
 void async(GCompiled& gcmpld, std::function<void(std::exception_ptr)>&& callback, GRunArgs &&ins, GRunArgsP &&outs, GAsyncContext& ctx){
@@ -236,7 +244,7 @@ void async(GCompiled& gcmpld, std::function<void(std::exception_ptr)>&& callback
         call_with_callback(apply_l,std::move(callback), ctx);
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
 }
 
 std::future<void> async(GCompiled& gcmpld, GRunArgs &&ins, GRunArgsP &&outs){
@@ -250,7 +258,7 @@ std::future<void> async(GCompiled& gcmpld, GRunArgs &&ins, GRunArgsP &&outs){
         call_with_future(apply_l, prms.value, DummyContext{});
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
     return f;
 
 }
@@ -265,7 +273,7 @@ std::future<void> async(GCompiled& gcmpld, GRunArgs &&ins, GRunArgsP &&outs, GAs
         call_with_future(apply_l, prms.value, ctx);
     };
 
-    impl::the_ctx.add_task(l);
+    impl::async_service::instance().add_task(l);
     return f;
 
 }
