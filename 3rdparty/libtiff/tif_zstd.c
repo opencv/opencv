@@ -260,7 +260,8 @@ ZSTDEncode(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
                 }
                 if( sp->out_buffer.pos == sp->out_buffer.size ) {
                         tif->tif_rawcc = tif->tif_rawdatasize;
-                        TIFFFlushData1(tif);
+                        if (!TIFFFlushData1(tif))
+                                return 0;
                         sp->out_buffer.dst = tif->tif_rawcp;
                         sp->out_buffer.pos = 0;
                 }
@@ -289,7 +290,8 @@ ZSTDPostEncode(TIFF* tif)
                 }
                 if( sp->out_buffer.pos > 0 ) {
                         tif->tif_rawcc = sp->out_buffer.pos;
-                        TIFFFlushData1(tif);
+                        if (!TIFFFlushData1(tif))
+                                return 0;
                         sp->out_buffer.dst = tif->tif_rawcp;
                         sp->out_buffer.pos = 0;
                 }

@@ -231,7 +231,7 @@ void WebPFree(void* ptr) {
 void WebPCopyPlane(const uint8_t* src, int src_stride,
                    uint8_t* dst, int dst_stride, int width, int height) {
   assert(src != NULL && dst != NULL);
-  assert(src_stride >= width && dst_stride >= width);
+  assert(abs(src_stride) >= width && abs(dst_stride) >= width);
   while (height-- > 0) {
     memcpy(dst, src, width);
     src += src_stride;

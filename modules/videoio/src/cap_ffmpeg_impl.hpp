@@ -703,16 +703,6 @@ struct ImplMutex::Impl
     int refcount;
 };
 
-#ifndef __GNUC__
-static int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
 
 #elif defined __APPLE__
 
@@ -844,17 +834,10 @@ public:
     {
         AutoLock lock(_mutex);
         static InternalFFMpegRegister instance;
+        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
     }
-    InternalFFMpegRegister()
+    static void initLogger_()
     {
-        avformat_network_init();
-
-        /* register all codecs, demux and protocols */
-        av_register_all();
-
-        /* register a callback function for synchronization */
-        av_lockmgr_register(&LockCallBack);
-
 #ifndef NO_GETENV
         char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
         if (debug_option != NULL)
@@ -868,16 +851,31 @@ public:
             av_log_set_level(AV_LOG_ERROR);
         }
     }
+
+public:
+    InternalFFMpegRegister()
+    {
+        avformat_network_init();
+
+        /* register all codecs, demux and protocols */
+        av_register_all();
+
+        /* register a callback function for synchronization */
+        av_lockmgr_register(&LockCallBack);
+    }
     ~InternalFFMpegRegister()
     {
         av_lockmgr_register(NULL);
+        av_log_set_callback(NULL);
     }
 };
 
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
     InternalFFMpegRegister::init();
+
     AutoLock lock(_mutex);
+
     unsigned i;
     bool valid = false;
 
@@ -1501,9 +1499,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CAP_PROP_FRAME_WIDTH:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.height : frame.width);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
     case CAP_PROP_FRAME_HEIGHT:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.width : frame.height);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
     case CAP_PROP_FPS:
         return get_fps();
     case CAP_PROP_FOURCC:
@@ -1733,10 +1731,10 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         return false;
     case CAP_PROP_ORIENTATION_AUTO:
 #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        rotation_auto = value ? true : false;
+        rotation_auto = value != 0 ? true : false;
         return true;
 #else
-        rotation_auto = 0;
+        rotation_auto = false;
         return false;
 #endif
     default:
@@ -2342,6 +2340,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, const VideoWriterParameters& params)
 {
     InternalFFMpegRegister::init();
+
+    AutoLock lock(_mutex);
+
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     AVPixelFormat codec_pix_fmt;
     double bitrate_scale = 1;
