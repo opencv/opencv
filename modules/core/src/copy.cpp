@@ -1606,13 +1606,4 @@ cvFlip( const CvArr* srcarr, CvArr* dstarr, int flip_mode )
     cv::flip( src, dst, flip_mode );
 }
 
-CV_IMPL void
-cvRepeat( const CvArr* srcarr, CvArr* dstarr )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() &&
-        dst.rows % src.rows == 0 && dst.cols % src.cols == 0 );
-    cv::repeat(src, dst.rows/src.rows, dst.cols/src.cols, dst);
-}
-
 /* End of file. */

@@ -2000,115 +2000,12 @@ CV_IMPL void cvDiv( const CvArr* srcarr1, const CvArr* srcarr2,
 
 
 CV_IMPL void
-cvAddWeighted( const CvArr* srcarr1, double alpha,
-               const CvArr* srcarr2, double beta,
-               double gamma, CvArr* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), src2 = cv::cvarrToMat(srcarr2),
-        dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.channels() == dst.channels() );
-    cv::addWeighted( src1, alpha, src2, beta, gamma, dst, dst.type() );
-}
-
-
-CV_IMPL  void
-cvAbsDiff( const CvArr* srcarr1, const CvArr* srcarr2, CvArr* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::absdiff( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvAbsDiffS( const CvArr* srcarr1, CvArr* dstarr, CvScalar scalar )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::absdiff( src1, (const cv::Scalar&)scalar, dst );
-}
-
-
-CV_IMPL void
-cvInRange( const void* srcarr1, const void* srcarr2,
-           const void* srcarr3, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::inRange( src1, cv::cvarrToMat(srcarr2), cv::cvarrToMat(srcarr3), dst );
-}
-
-
-CV_IMPL void
-cvInRangeS( const void* srcarr1, CvScalar lowerb, CvScalar upperb, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::inRange( src1, (const cv::Scalar&)lowerb, (const cv::Scalar&)upperb, dst );
-}
-
-
-CV_IMPL void
-cvCmp( const void* srcarr1, const void* srcarr2, void* dstarr, int cmp_op )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
-
-    cv::compare( src1, cv::cvarrToMat(srcarr2), dst, cmp_op );
-}
-
-
-CV_IMPL void
 cvCmpS( const void* srcarr1, double value, void* dstarr, int cmp_op )
 {
     cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
     CV_Assert( src1.size == dst.size && dst.type() == CV_8U );
 
     cv::compare( src1, value, dst, cmp_op );
-}
-
-
-CV_IMPL void
-cvMin( const void* srcarr1, const void* srcarr2, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::min( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvMax( const void* srcarr1, const void* srcarr2, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::max( src1, cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvMinS( const void* srcarr1, double value, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::min( src1, value, dst );
-}
-
-
-CV_IMPL void
-cvMaxS( const void* srcarr1, double value, void* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src1.size == dst.size && src1.type() == dst.type() );
-
-    cv::max( src1, value, dst );
 }
 
 /* End of file. */

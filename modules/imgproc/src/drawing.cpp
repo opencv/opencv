@@ -2346,24 +2346,6 @@ cvDrawContours( void* _img, CvSeq* contour,
         contour0->h_next = h_next;
 }
 
-CV_IMPL int
-cvClipLine( CvSize size, CvPoint* pt1, CvPoint* pt2 )
-{
-    CV_Assert( pt1 && pt2 );
-    return cv::clipLine( size, *(cv::Point*)pt1, *(cv::Point*)pt2 );
-}
-
-
-CV_IMPL int
-cvEllipse2Poly( CvPoint center, CvSize axes, int angle,
-                int arc_start, int arc_end, CvPoint* _pts, int delta )
-{
-    std::vector<cv::Point> pts;
-    cv::ellipse2Poly( Point(center), Size(axes), angle, arc_start, arc_end, delta, pts );
-    memcpy( _pts, &pts[0], pts.size()*sizeof(_pts[0]) );
-    return (int)pts.size();
-}
-
 CV_IMPL CvScalar
 cvColorToScalar( double packed_color, int type )
 {
@@ -2464,15 +2446,6 @@ cvRectangle( CvArr* _img, CvPoint pt1, CvPoint pt2,
 }
 
 CV_IMPL void
-cvRectangleR( CvArr* _img, CvRect rec,
-              CvScalar color, int thickness,
-              int line_type, int shift )
-{
-    cv::Mat img = cv::cvarrToMat(_img);
-    cv::rectangle( img, rec, color, thickness, line_type, shift );
-}
-
-CV_IMPL void
 cvCircle( CvArr* _img, CvPoint center, int radius,
           CvScalar color, int thickness, int line_type, int shift )
 {
@@ -2488,15 +2461,6 @@ cvEllipse( CvArr* _img, CvPoint center, CvSize axes,
     cv::Mat img = cv::cvarrToMat(_img);
     cv::ellipse( img, center, axes, angle, start_angle, end_angle,
         color, thickness, line_type, shift );
-}
-
-CV_IMPL void
-cvFillConvexPoly( CvArr* _img, const CvPoint *pts, int npts,
-                  CvScalar color, int line_type, int shift )
-{
-    cv::Mat img = cv::cvarrToMat(_img);
-    cv::fillConvexPoly( img, (const cv::Point*)pts, npts,
-                        color, line_type, shift );
 }
 
 CV_IMPL void
@@ -2544,16 +2508,6 @@ cvInitFont( CvFont *font, int font_face, double hscale, double vscale,
     font->shear = (float)shear;
     font->greek = font->cyrillic = 0;
     font->line_type = line_type;
-}
-
-CV_IMPL void
-cvGetTextSize( const char *text, const CvFont *_font, CvSize *_size, int *_base_line )
-{
-    CV_Assert(text != 0 && _font != 0);
-    cv::Size size = cv::getTextSize( text, _font->font_face, (_font->hscale + _font->vscale)*0.5,
-                                     _font->thickness, _base_line );
-    if( _size )
-        *_size = cvSize(size);
 }
 
 /* End of file. */

@@ -546,24 +546,3 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         }
     }
 }
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-
-CV_IMPL void cvWatershed( const CvArr* _src, CvArr* _markers )
-{
-    cv::Mat src = cv::cvarrToMat(_src), markers = cv::cvarrToMat(_markers);
-    cv::watershed(src, markers);
-}
-
-
-CV_IMPL void
-cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
-                        double sp0, double sr, int max_level,
-                        CvTermCriteria termcrit )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr);
-    const cv::Mat dst = cv::cvarrToMat(dstarr);
-
-    cv::pyrMeanShiftFiltering(src, dst, sp0, sr, max_level, termcrit);
-}

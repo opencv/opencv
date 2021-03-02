@@ -1638,72 +1638,11 @@ void patchNaNs( InputOutputArray _a, double _val )
 
 }
 
-CV_IMPL float cvCbrt(float value) { return cv::cubeRoot(value); }
-CV_IMPL float cvFastArctan(float y, float x) { return cv::fastAtan2(y, x); }
-
-CV_IMPL void
-cvCartToPolar( const CvArr* xarr, const CvArr* yarr,
-               CvArr* magarr, CvArr* anglearr,
-               int angle_in_degrees )
-{
-    cv::Mat X = cv::cvarrToMat(xarr), Y = cv::cvarrToMat(yarr), Mag, Angle;
-    if( magarr )
-    {
-        Mag = cv::cvarrToMat(magarr);
-        CV_Assert( Mag.size() == X.size() && Mag.type() == X.type() );
-    }
-    if( anglearr )
-    {
-        Angle = cv::cvarrToMat(anglearr);
-        CV_Assert( Angle.size() == X.size() && Angle.type() == X.type() );
-    }
-    if( magarr )
-    {
-        if( anglearr )
-            cv::cartToPolar( X, Y, Mag, Angle, angle_in_degrees != 0 );
-        else
-            cv::magnitude( X, Y, Mag );
-    }
-    else
-        cv::phase( X, Y, Angle, angle_in_degrees != 0 );
-}
-
-CV_IMPL void
-cvPolarToCart( const CvArr* magarr, const CvArr* anglearr,
-               CvArr* xarr, CvArr* yarr, int angle_in_degrees )
-{
-    cv::Mat X, Y, Angle = cv::cvarrToMat(anglearr), Mag;
-    if( magarr )
-    {
-        Mag = cv::cvarrToMat(magarr);
-        CV_Assert( Mag.size() == Angle.size() && Mag.type() == Angle.type() );
-    }
-    if( xarr )
-    {
-        X = cv::cvarrToMat(xarr);
-        CV_Assert( X.size() == Angle.size() && X.type() == Angle.type() );
-    }
-    if( yarr )
-    {
-        Y = cv::cvarrToMat(yarr);
-        CV_Assert( Y.size() == Angle.size() && Y.type() == Angle.type() );
-    }
-
-    cv::polarToCart( Mag, Angle, X, Y, angle_in_degrees != 0 );
-}
-
 CV_IMPL void cvExp( const CvArr* srcarr, CvArr* dstarr )
 {
     cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
     CV_Assert( src.type() == dst.type() && src.size == dst.size );
     cv::exp( src, dst );
-}
-
-CV_IMPL void cvLog( const CvArr* srcarr, CvArr* dstarr )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    CV_Assert( src.type() == dst.type() && src.size == dst.size );
-    cv::log( src, dst );
 }
 
 CV_IMPL void cvPow( const CvArr* srcarr, CvArr* dstarr, double power )
@@ -2013,16 +1952,6 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
 
     Mat(roots0.size(), CV_64FC2, roots).convertTo(roots0, roots0.type());
     return maxDiff;
-}
-
-
-CV_IMPL int
-cvSolveCubic( const CvMat* coeffs, CvMat* roots )
-{
-    cv::Mat _coeffs = cv::cvarrToMat(coeffs), _roots = cv::cvarrToMat(roots), _roots0 = _roots;
-    int nroots = cv::solveCubic(_coeffs, _roots);
-    CV_Assert( _roots.data == _roots0.data ); // check that the array of roots was not reallocated
-    return nroots;
 }
 
 

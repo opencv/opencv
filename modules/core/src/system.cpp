@@ -1178,58 +1178,6 @@ redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
 
 }
 
-CV_IMPL int cvCheckHardwareSupport(int feature)
-{
-    CV_DbgAssert( 0 <= feature && feature <= CV_HARDWARE_MAX_FEATURE );
-    return cv::currentFeatures->have[feature];
-}
-
-CV_IMPL int cvUseOptimized( int flag )
-{
-    int prevMode = cv::useOptimizedFlag;
-    cv::setUseOptimized( flag != 0 );
-    return prevMode;
-}
-
-CV_IMPL int64  cvGetTickCount(void)
-{
-    return cv::getTickCount();
-}
-
-CV_IMPL double cvGetTickFrequency(void)
-{
-    return cv::getTickFrequency()*1e-6;
-}
-
-CV_IMPL CvErrorCallback
-cvRedirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
-{
-    return cv::redirectError(errCallback, userdata, prevUserdata);
-}
-
-CV_IMPL int cvNulDevReport( int, const char*, const char*,
-                            const char*, int, void* )
-{
-    return 0;
-}
-
-CV_IMPL int cvStdErrReport( int, const char*, const char*,
-                            const char*, int, void* )
-{
-    return 0;
-}
-
-CV_IMPL int cvGuiBoxReport( int, const char*, const char*,
-                            const char*, int, void* )
-{
-    return 0;
-}
-
-CV_IMPL int cvGetErrInfo( const char**, const char**, const char**, int* )
-{
-    return 0;
-}
-
 
 CV_IMPL const char* cvErrorStr( int status )
 {

@@ -972,18 +972,3 @@ const char* currentParallelFramework() {
 }
 
 }  // namespace cv::
-
-CV_IMPL void cvSetNumThreads(int nt)
-{
-    cv::setNumThreads(nt);
-}
-
-CV_IMPL int cvGetNumThreads()
-{
-    return cv::getNumThreads();
-}
-
-CV_IMPL int cvGetThreadNum()
-{
-    return cv::getThreadNum();
-}
