@@ -5,6 +5,8 @@
 
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL CvScalar cvSum( const CvArr* srcarr )
 {
     cv::Scalar sum = cv::sum(cv::cvarrToMat(srcarr, false, true, 1));
@@ -117,3 +119,5 @@ cvNorm( const void* imgA, const void* imgB, int normType, const void* maskarr )
 
     return !maskarr ? cv::norm(a, b, normType) : cv::norm(a, b, normType, mask);
 }
+
+#endif  // OPENCV_EXCLUDE_C_API

@@ -316,6 +316,7 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
 
 cuda::GpuMat _InputArray::getGpuMat() const
 {
+#ifdef HAVE_CUDA
     _InputArray::KindFlag k = kind();
 
     if (k == CUDA_GPU_MAT)
@@ -339,14 +340,22 @@ cuda::GpuMat _InputArray::getGpuMat() const
         return cuda::GpuMat();
 
     CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for cuda::GpuMat and cuda::HostMem");
+#else
+    CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
 }
 void _InputArray::getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const
 {
+#ifdef HAVE_CUDA
     _InputArray::KindFlag k = kind();
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
         gpumv = *(std::vector<cuda::GpuMat>*)obj;
     }
+#else
+    CV_UNUSED(gpumv);
+    CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
 }
 ogl::Buffer _InputArray::getOGlBuffer() const
 {
@@ -453,11 +462,15 @@ Size _InputArray::size(int i) const
 
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
+#ifdef HAVE_CUDA
         const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
         if (i < 0)
             return vv.empty() ? Size() : Size((int)vv.size(), 1);
         CV_Assert(i < (int)vv.size());
         return vv[i].size();
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
 
     if( k == STD_VECTOR_UMAT )
@@ -792,6 +805,7 @@ int _InputArray::type(int i) const
 
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
+#ifdef HAVE_CUDA
         const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
         if (vv.empty())
         {
@@ -800,6 +814,9 @@ int _InputArray::type(int i) const
         }
         CV_Assert(i < (int)vv.size());
         return vv[i >= 0 ? i : 0].type();
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
 
     if( k == OPENGL_BUFFER )
@@ -1161,22 +1178,34 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _Out
     {
         CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == _sz);
         CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
+#ifdef HAVE_CUDA
         ((cuda::GpuMat*)obj)->create(_sz, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == _sz);
         CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
+#ifdef HAVE_OPENGL
         ((ogl::Buffer*)obj)->create(_sz, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "OpenGL support is not enabled in this OpenCV build (missing HAVE_OPENGL)");
+#endif
     }
     if( k == CUDA_HOST_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((cuda::HostMem*)obj)->size() == _sz);
         CV_Assert(!fixedType() || ((cuda::HostMem*)obj)->type() == mtype);
+#ifdef HAVE_CUDA
         ((cuda::HostMem*)obj)->create(_sz, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     int sizes[] = {_sz.height, _sz.width};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
@@ -1203,22 +1232,34 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
     {
         CV_Assert(!fixedSize() || ((cuda::GpuMat*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((cuda::GpuMat*)obj)->type() == mtype);
+#ifdef HAVE_CUDA
         ((cuda::GpuMat*)obj)->create(_rows, _cols, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     if( k == OPENGL_BUFFER && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
+#ifdef HAVE_OPENGL
         ((ogl::Buffer*)obj)->create(_rows, _cols, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "OpenGL support is not enabled in this OpenCV build (missing HAVE_OPENGL)");
+#endif
     }
     if( k == CUDA_HOST_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
     {
         CV_Assert(!fixedSize() || ((cuda::HostMem*)obj)->size() == Size(_cols, _rows));
         CV_Assert(!fixedType() || ((cuda::HostMem*)obj)->type() == mtype);
+#ifdef HAVE_CUDA
         ((cuda::HostMem*)obj)->create(_rows, _cols, mtype);
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     int sizes[] = {_rows, _cols};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
@@ -1641,20 +1682,32 @@ void _OutputArray::release() const
 
     if( k == CUDA_GPU_MAT )
     {
+#ifdef HAVE_CUDA
         ((cuda::GpuMat*)obj)->release();
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
 
     if( k == CUDA_HOST_MEM )
     {
+#ifdef HAVE_CUDA
         ((cuda::HostMem*)obj)->release();
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
 
     if( k == OPENGL_BUFFER )
     {
+#ifdef HAVE_OPENGL
         ((ogl::Buffer*)obj)->release();
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "OpenGL support is not enabled in this OpenCV build (missing HAVE_OPENGL)");
+#endif
     }
 
     if( k == NONE )
@@ -1685,8 +1738,12 @@ void _OutputArray::release() const
     }
     if (k == STD_VECTOR_CUDA_GPU_MAT)
     {
+#ifdef HAVE_CUDA
         ((std::vector<cuda::GpuMat>*)obj)->clear();
         return;
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
@@ -1794,9 +1851,13 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
         ((UMat*)obj)->setTo(arr, mask);
     else if( k == CUDA_GPU_MAT )
     {
+#ifdef HAVE_CUDA
         Mat value = arr.getMat();
         CV_Assert( checkScalar(value, type(), arr.kind(), _InputArray::CUDA_GPU_MAT) );
         ((cuda::GpuMat*)obj)->setTo(Scalar(Vec<double, 4>(value.ptr<double>())), mask);
+#else
+        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+#endif
     }
     else
         CV_Error(Error::StsNotImplemented, "");
