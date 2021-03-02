@@ -205,7 +205,7 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
             frames.push_back(frame);
         }
     }
-    testNumFrames = frames.size();
+    GAPI_Assert(testNumFrames == frames.size() && "Can't read required number of frames");
 
     // G-API graph declaration
     cv::GMat in;
