@@ -87,6 +87,9 @@
 /* Support Deflate compression */
 #cmakedefine ZIP_SUPPORT 1
 
+/* Support libdeflate enhanced compression */
+#cmakedefine LIBDEFLATE_SUPPORT 1
+
 /* Support strip chopping (whether or not to convert single-strip uncompressed
    images to mutiple strips of ~8Kb to reduce memory usage) */
 #cmakedefine STRIPCHOP_DEFAULT 1

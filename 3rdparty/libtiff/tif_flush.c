@@ -45,36 +45,8 @@ TIFFFlush(TIFF* tif)
         && !(tif->tif_flags & TIFF_DIRTYDIRECT) 
         && tif->tif_mode == O_RDWR )
     {
-        uint64  *offsets=NULL, *sizes=NULL;
-
-        if( TIFFIsTiled(tif) )
-        {
-            if( TIFFGetField( tif, TIFFTAG_TILEOFFSETS, &offsets ) 
-                && TIFFGetField( tif, TIFFTAG_TILEBYTECOUNTS, &sizes ) 
-                && _TIFFRewriteField( tif, TIFFTAG_TILEOFFSETS, TIFF_LONG8, 
-                                      tif->tif_dir.td_nstrips, offsets )
-                && _TIFFRewriteField( tif, TIFFTAG_TILEBYTECOUNTS, TIFF_LONG8, 
-                                      tif->tif_dir.td_nstrips, sizes ) )
-            {
-                tif->tif_flags &= ~TIFF_DIRTYSTRIP;
-                tif->tif_flags &= ~TIFF_BEENWRITING;
-                return 1;
-            }
-        }
-        else
-        {
-            if( TIFFGetField( tif, TIFFTAG_STRIPOFFSETS, &offsets ) 
-                && TIFFGetField( tif, TIFFTAG_STRIPBYTECOUNTS, &sizes ) 
-                && _TIFFRewriteField( tif, TIFFTAG_STRIPOFFSETS, TIFF_LONG8, 
-                                      tif->tif_dir.td_nstrips, offsets )
-                && _TIFFRewriteField( tif, TIFFTAG_STRIPBYTECOUNTS, TIFF_LONG8, 
-                                      tif->tif_dir.td_nstrips, sizes ) )
-            {
-                tif->tif_flags &= ~TIFF_DIRTYSTRIP;
-                tif->tif_flags &= ~TIFF_BEENWRITING;
-                return 1;
-            }
-        }
+        if( TIFFForceStrileArrayWriting(tif) )
+            return 1;
     }
 
     if ((tif->tif_flags & (TIFF_DIRTYDIRECT|TIFF_DIRTYSTRIP)) 
@@ -82,6 +54,92 @@ TIFFFlush(TIFF* tif)
         return (0);
 
     return (1);
+}
+
+/*
+ * This is an advanced writing function that must be used in a particular
+ * sequence, and together with TIFFDeferStrileArrayWriting(),
+ * to make its intended effect. Its aim is to force the writing of
+ * the [Strip/Tile][Offsets/ByteCounts] arrays at the end of the file, when
+ * they have not yet been rewritten.
+ *
+ * The typical sequence of calls is:
+ * TIFFOpen()
+ * [ TIFFCreateDirectory(tif) ]
+ * Set fields with calls to TIFFSetField(tif, ...)
+ * TIFFDeferStrileArrayWriting(tif)
+ * TIFFWriteCheck(tif, ...)
+ * TIFFWriteDirectory(tif)
+ * ... potentially create other directories and come back to the above directory
+ * TIFFForceStrileArrayWriting(tif)
+ *
+ * Returns 1 in case of success, 0 otherwise.
+ */
+int TIFFForceStrileArrayWriting(TIFF* tif)
+{
+    static const char module[] = "TIFFForceStrileArrayWriting";
+    const int isTiled = TIFFIsTiled(tif);
+
+    if (tif->tif_mode == O_RDONLY)
+    {
+        TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+                     "File opened in read-only mode");
+        return 0;
+    }
+    if( tif->tif_diroff == 0 )
+    {
+        TIFFErrorExt(tif->tif_clientdata, module,
+                     "Directory has not yet been written");
+        return 0;
+    }
+    if( (tif->tif_flags & TIFF_DIRTYDIRECT) != 0 )
+    {
+        TIFFErrorExt(tif->tif_clientdata, module,
+                     "Directory has changes other than the strile arrays. "
+                     "TIFFRewriteDirectory() should be called instead");
+        return 0;
+    }
+
+    if( !(tif->tif_flags & TIFF_DIRTYSTRIP) )
+    {
+        if( !(tif->tif_dir.td_stripoffset_entry.tdir_tag != 0 &&
+             tif->tif_dir.td_stripoffset_entry.tdir_count == 0 &&
+             tif->tif_dir.td_stripoffset_entry.tdir_type == 0 &&
+             tif->tif_dir.td_stripoffset_entry.tdir_offset.toff_long8 == 0 &&
+             tif->tif_dir.td_stripbytecount_entry.tdir_tag != 0 &&
+             tif->tif_dir.td_stripbytecount_entry.tdir_count == 0 &&
+             tif->tif_dir.td_stripbytecount_entry.tdir_type == 0 &&
+             tif->tif_dir.td_stripbytecount_entry.tdir_offset.toff_long8 == 0) )
+        {
+            TIFFErrorExt(tif->tif_clientdata, module,
+                        "Function not called together with "
+                        "TIFFDeferStrileArrayWriting()");
+            return 0;
+        }
+
+        if (tif->tif_dir.td_stripoffset_p == NULL && !TIFFSetupStrips(tif))
+            return 0;
+    }
+
+    if( _TIFFRewriteField( tif,
+                           isTiled ? TIFFTAG_TILEOFFSETS :
+                                     TIFFTAG_STRIPOFFSETS,
+                           TIFF_LONG8,
+                           tif->tif_dir.td_nstrips,
+                           tif->tif_dir.td_stripoffset_p )
+        && _TIFFRewriteField( tif,
+                              isTiled ? TIFFTAG_TILEBYTECOUNTS :
+                                        TIFFTAG_STRIPBYTECOUNTS,
+                              TIFF_LONG8,
+                              tif->tif_dir.td_nstrips,
+                              tif->tif_dir.td_stripbytecount_p ) )
+    {
+        tif->tif_flags &= ~TIFF_DIRTYSTRIP;
+        tif->tif_flags &= ~TIFF_BEENWRITING;
+        return 1;
+    }
+
+    return 0;
 }
 
 /*

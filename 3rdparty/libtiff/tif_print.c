@@ -652,8 +652,6 @@ TIFFPrintDirectory(TIFF* tif, FILE* fd, long flags)
 	if (tif->tif_tagmethods.printdir)
 		(*tif->tif_tagmethods.printdir)(tif, fd, flags);
 
-        _TIFFFillStriles( tif );
-        
 	if ((flags & TIFFPRINT_STRIPS) &&
 	    TIFFFieldSet(tif,FIELD_STRIPOFFSETS)) {
 		uint32 s;
@@ -665,13 +663,13 @@ TIFFPrintDirectory(TIFF* tif, FILE* fd, long flags)
 #if defined(__WIN32__) && (defined(_MSC_VER) || defined(__MINGW32__))
 			fprintf(fd, "    %3lu: [%8I64u, %8I64u]\n",
 			    (unsigned long) s,
-			    td->td_stripoffset ? (unsigned __int64) td->td_stripoffset[s] : 0,
-			    td->td_stripbytecount ? (unsigned __int64) td->td_stripbytecount[s] : 0);
+			    (unsigned __int64) TIFFGetStrileOffset(tif, s),
+			    (unsigned __int64) TIFFGetStrileByteCount(tif, s));
 #else
 			fprintf(fd, "    %3lu: [%8llu, %8llu]\n",
 			    (unsigned long) s,
-			    td->td_stripoffset ? (unsigned long long) td->td_stripoffset[s] : 0,
-			    td->td_stripbytecount ? (unsigned long long) td->td_stripbytecount[s] : 0);
+			    (unsigned long long) TIFFGetStrileOffset(tif, s),
+			    (unsigned long long) TIFFGetStrileByteCount(tif, s));
 #endif
 	}
 }

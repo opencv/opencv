@@ -239,6 +239,9 @@ if(HOST_BIG_ENDIAN)
 else()
   set(HOST_BIG_ENDIAN 0)
 endif()
+if(HOST_BIG_ENDIAN)
+  add_definitions(-DWORDS_BIGENDIAN)
+endif()
 
 # IEEE floating point
 set(HAVE_IEEEFP 1 CACHE STRING "IEEE floating point is available")
