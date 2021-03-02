@@ -300,7 +300,8 @@ LZMAEncode(TIFF* tif, uint8* bp, tmsize_t cc, uint16 s)
 		}
 		if (sp->stream.avail_out == 0) {
 			tif->tif_rawcc = tif->tif_rawdatasize;
-			TIFFFlushData1(tif);
+			if (!TIFFFlushData1(tif))
+				return 0;
 			sp->stream.next_out = tif->tif_rawdata;
 			sp->stream.avail_out = (size_t)tif->tif_rawdatasize;  /* this is a safe typecast, as check is made already in LZMAPreEncode */
 		}
@@ -328,7 +329,8 @@ LZMAPostEncode(TIFF* tif)
 			if ((tmsize_t)sp->stream.avail_out != tif->tif_rawdatasize) {
 				tif->tif_rawcc =
 					tif->tif_rawdatasize - sp->stream.avail_out;
-				TIFFFlushData1(tif);
+				if (!TIFFFlushData1(tif))
+					return 0;
 				sp->stream.next_out = tif->tif_rawdata;
 				sp->stream.avail_out = (size_t)tif->tif_rawdatasize;  /* this is a safe typecast, as check is made already in ZIPPreEncode */
 			}
@@ -418,6 +420,7 @@ TIFFInitLZMA(TIFF* tif, int scheme)
 	LZMAState* sp;
 	lzma_stream tmp_stream = LZMA_STREAM_INIT;
 
+        (void)scheme;
 	assert( scheme == COMPRESSION_LZMA );
 
 	/*

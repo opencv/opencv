@@ -29,6 +29,7 @@
  * (and also some miscellaneous stuff)
  */
 #include "tiffiop.h"
+#include <float.h>	/*--: for Rational2Double */
 
 /*
  * These are used in the backwards compatibility code...
@@ -46,8 +47,8 @@ setByteArray(void** vpp, void* vp, size_t nmemb, size_t elem_size)
 		*vpp = 0;
 	}
 	if (vp) {
-		tmsize_t bytes = (tmsize_t)(nmemb * elem_size);
-		if (elem_size && bytes / elem_size == nmemb)
+		tmsize_t bytes = _TIFFMultiplySSize(NULL, nmemb, elem_size, NULL);
+		if (bytes)
 			*vpp = (void*) _TIFFmalloc(bytes);
 		if (*vpp)
 			_TIFFmemcpy(*vpp, vp, bytes);
@@ -123,7 +124,7 @@ setExtraSamples(TIFF* tif, va_list ap, uint32* v)
         {
                 TIFFWarningExt(tif->tif_clientdata,module,
                     "ExtraSamples tag value is changing, "
-                    "but TransferFunction was read with a different value. Cancelling it");
+                    "but TransferFunction was read with a different value. Canceling it");
                 TIFFClrFieldBit(tif,FIELD_TRANSFERFUNCTION);
                 _TIFFfree(td->td_transferfunction[0]);
                 td->td_transferfunction[0] = NULL;
@@ -205,7 +206,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 		/*
 		 * If the data require post-decoding processing to byte-swap
 		 * samples, set it up here.  Note that since tags are required
-		 * to be ordered, compression code can override this behaviour
+		 * to be ordered, compression code can override this behavior
 		 * in the setup method if it wants to roll the post decoding
 		 * work in with its normal work.
 		 */
@@ -275,7 +276,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
             {
                 TIFFWarningExt(tif->tif_clientdata,module,
                     "SamplesPerPixel tag value is changing, "
-                    "but SMinSampleValue tag was read with a different value. Cancelling it");
+                    "but SMinSampleValue tag was read with a different value. Canceling it");
                 TIFFClrFieldBit(tif,FIELD_SMINSAMPLEVALUE);
                 _TIFFfree(td->td_sminsamplevalue);
                 td->td_sminsamplevalue = NULL;
@@ -284,7 +285,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
             {
                 TIFFWarningExt(tif->tif_clientdata,module,
                     "SamplesPerPixel tag value is changing, "
-                    "but SMaxSampleValue tag was read with a different value. Cancelling it");
+                    "but SMaxSampleValue tag was read with a different value. Canceling it");
                 TIFFClrFieldBit(tif,FIELD_SMAXSAMPLEVALUE);
                 _TIFFfree(td->td_smaxsamplevalue);
                 td->td_smaxsamplevalue = NULL;
@@ -296,7 +297,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
             {
                     TIFFWarningExt(tif->tif_clientdata,module,
                         "SamplesPerPixel tag value is changing, "
-                        "but TransferFunction was read with a different value. Cancelling it");
+                        "but TransferFunction was read with a different value. Canceling it");
                     TIFFClrFieldBit(tif,FIELD_TRANSFERFUNCTION);
                     _TIFFfree(td->td_transferfunction[0]);
                     td->td_transferfunction[0] = NULL;
@@ -393,7 +394,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 			if (tif->tif_mode != O_RDONLY)
 				goto badvalue32;
 			TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
-				"Nonstandard tile width %d, convert file", v32);
+				"Nonstandard tile width %u, convert file", v32);
 		}
 		td->td_tilewidth = v32;
 		tif->tif_flags |= TIFF_ISTILED;
@@ -404,7 +405,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 			if (tif->tif_mode != O_RDONLY)
 				goto badvalue32;
 			TIFFWarningExt(tif->tif_clientdata, tif->tif_name,
-			    "Nonstandard tile length %d, convert file", v32);
+			    "Nonstandard tile length %u, convert file", v32);
 		}
 		td->td_tilelength = v32;
 		tif->tif_flags |= TIFF_ISTILED;
@@ -559,6 +560,10 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 		 * Set custom value ... save a copy of the custom tag value.
 		 */
 		tv_size = _TIFFDataSize(fip->field_type);
+		/*--: Rational2Double: For Rationals evaluate "set_field_type" to determine internal storage size. */
+		if (fip->field_type == TIFF_RATIONAL || fip->field_type == TIFF_SRATIONAL) {
+			tv_size = _TIFFSetGetFieldSize(fip->set_field_type);
+		}
 		if (tv_size == 0) {
 			status = 0;
 			TIFFErrorExt(tif->tif_clientdata, module,
@@ -638,6 +643,7 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 				  || fip->field_writecount == TIFF_VARIABLE2
 				  || fip->field_writecount == TIFF_SPP
 				  || tv->count > 1) {
+			  /*--: Rational2Double: For Rationals tv_size is set above to 4 or 8 according to fip->set_field_type! */
 				_TIFFmemcpy(tv->value, va_arg(ap, void *),
 				    tv->count * tv_size);
 			} else {
@@ -698,6 +704,22 @@ _TIFFVSetField(TIFF* tif, uint32 tag, va_list ap)
 					break;
 				case TIFF_RATIONAL:
 				case TIFF_SRATIONAL:
+					/*-- Rational2Double: For Rationals tv_size is set above to 4 or 8 according to fip->set_field_type! */
+					{
+						if (tv_size == 8) {
+							double v2 = va_arg(ap, double);
+							_TIFFmemcpy(val, &v2, tv_size);
+						} else {
+							/*-- default should be tv_size == 4 */
+							float v3 = (float)va_arg(ap, double);
+							_TIFFmemcpy(val, &v3, tv_size);
+							/*-- ToDo: After Testing, this should be removed and tv_size==4 should be set as default. */
+							if (tv_size != 4) {
+								TIFFErrorExt(0,"TIFFLib: _TIFFVSetField()", "Rational2Double: .set_field_type in not 4 but %d", tv_size); 
+							}
+						}
+					}
+					break;
 				case TIFF_FLOAT:
 					{
 						float v2 = _TIFFClampDoubleToFloat(va_arg(ap, double));
@@ -1011,19 +1033,19 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 			*va_arg(ap, uint16*) = td->td_halftonehints[1];
 			break;
 		case TIFFTAG_COLORMAP:
-			*va_arg(ap, uint16**) = td->td_colormap[0];
-			*va_arg(ap, uint16**) = td->td_colormap[1];
-			*va_arg(ap, uint16**) = td->td_colormap[2];
+			*va_arg(ap, const uint16**) = td->td_colormap[0];
+			*va_arg(ap, const uint16**) = td->td_colormap[1];
+			*va_arg(ap, const uint16**) = td->td_colormap[2];
 			break;
 		case TIFFTAG_STRIPOFFSETS:
 		case TIFFTAG_TILEOFFSETS:
 			_TIFFFillStriles( tif );
-			*va_arg(ap, uint64**) = td->td_stripoffset;
+			*va_arg(ap, const uint64**) = td->td_stripoffset_p;
 			break;
 		case TIFFTAG_STRIPBYTECOUNTS:
 		case TIFFTAG_TILEBYTECOUNTS:
 			_TIFFFillStriles( tif );
-			*va_arg(ap, uint64**) = td->td_stripbytecount;
+			*va_arg(ap, const uint64**) = td->td_stripbytecount_p;
 			break;
 		case TIFFTAG_MATTEING:
 			*va_arg(ap, uint16*) =
@@ -1032,7 +1054,7 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 			break;
 		case TIFFTAG_EXTRASAMPLES:
 			*va_arg(ap, uint16*) = td->td_extrasamples;
-			*va_arg(ap, uint16**) = td->td_sampleinfo;
+			*va_arg(ap, const uint16**) = td->td_sampleinfo;
 			break;
 		case TIFFTAG_TILEWIDTH:
 			*va_arg(ap, uint32*) = td->td_tilewidth;
@@ -1067,7 +1089,7 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 			break;
 		case TIFFTAG_SUBIFD:
 			*va_arg(ap, uint16*) = td->td_nsubifd;
-			*va_arg(ap, uint64**) = td->td_subifd;
+			*va_arg(ap, const uint64**) = td->td_subifd;
 			break;
 		case TIFFTAG_YCBCRPOSITIONING:
 			*va_arg(ap, uint16*) = td->td_ycbcrpositioning;
@@ -1077,20 +1099,20 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 			*va_arg(ap, uint16*) = td->td_ycbcrsubsampling[1];
 			break;
 		case TIFFTAG_TRANSFERFUNCTION:
-			*va_arg(ap, uint16**) = td->td_transferfunction[0];
+			*va_arg(ap, const uint16**) = td->td_transferfunction[0];
 			if (td->td_samplesperpixel - td->td_extrasamples > 1) {
-				*va_arg(ap, uint16**) = td->td_transferfunction[1];
-				*va_arg(ap, uint16**) = td->td_transferfunction[2];
+				*va_arg(ap, const uint16**) = td->td_transferfunction[1];
+				*va_arg(ap, const uint16**) = td->td_transferfunction[2];
 			} else {
-				*va_arg(ap, uint16**) = NULL;
-				*va_arg(ap, uint16**) = NULL;
+				*va_arg(ap, const uint16**) = NULL;
+				*va_arg(ap, const uint16**) = NULL;
 			}
 			break;
 		case TIFFTAG_REFERENCEBLACKWHITE:
-			*va_arg(ap, float**) = td->td_refblackwhite;
+			*va_arg(ap, const float**) = td->td_refblackwhite;
 			break;
 		case TIFFTAG_INKNAMES:
-			*va_arg(ap, char**) = td->td_inknames;
+			*va_arg(ap, const char**) = td->td_inknames;
 			break;
 		default:
 			{
@@ -1132,7 +1154,7 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 							*va_arg(ap, uint32*) = (uint32)tv->count;
 						else  /* Assume TIFF_VARIABLE */
 							*va_arg(ap, uint16*) = (uint16)tv->count;
-						*va_arg(ap, void **) = tv->value;
+						*va_arg(ap, const void **) = tv->value;
 						ret_val = 1;
 					} else if (fip->field_tag == TIFFTAG_DOTRANGE
 						   && strcmp(fip->field_name,"DotRange") == 0) {
@@ -1200,6 +1222,23 @@ _TIFFVGetField(TIFF* tif, uint32 tag, va_list ap)
 								break;
 							case TIFF_RATIONAL:
 							case TIFF_SRATIONAL:
+								{
+									/*-- Rational2Double: For Rationals evaluate "set_field_type" to determine internal storage size and return value size. */
+									int tv_size = _TIFFSetGetFieldSize(fip->set_field_type);
+									if (tv_size == 8) {
+										*va_arg(ap, double*) = *(double *)val;
+										ret_val = 1;
+									} else {
+										/*-- default should be tv_size == 4  */
+										*va_arg(ap, float*) = *(float *)val;
+										ret_val = 1;
+										/*-- ToDo: After Testing, this should be removed and tv_size==4 should be set as default. */
+										if (tv_size != 4) {
+											TIFFErrorExt(0,"TIFFLib: _TIFFVGetField()", "Rational2Double: .set_field_type in not 4 but %d", tv_size); 
+										}
+									}
+								}
+								break;
 							case TIFF_FLOAT:
 								*va_arg(ap, float*) =
 									*(float *)val;
@@ -1282,8 +1321,9 @@ TIFFFreeDirectory(TIFF* tif)
 	CleanupField(td_transferfunction[0]);
 	CleanupField(td_transferfunction[1]);
 	CleanupField(td_transferfunction[2]);
-	CleanupField(td_stripoffset);
-	CleanupField(td_stripbytecount);
+	CleanupField(td_stripoffset_p);
+	CleanupField(td_stripbytecount_p);
+        td->td_stripoffsetbyteallocsize = 0;
 	TIFFClrFieldBit(tif, FIELD_YCBCRSUBSAMPLING);
 	TIFFClrFieldBit(tif, FIELD_YCBCRPOSITIONING);
 
@@ -1296,10 +1336,8 @@ TIFFFreeDirectory(TIFF* tif)
 	td->td_customValueCount = 0;
 	CleanupField(td_customValues);
 
-#if defined(DEFER_STRILE_LOAD)
         _TIFFmemset( &(td->td_stripoffset_entry), 0, sizeof(TIFFDirEntry));
         _TIFFmemset( &(td->td_stripbytecount_entry), 0, sizeof(TIFFDirEntry));
-#endif        
 }
 #undef CleanupField
 
@@ -1366,6 +1404,17 @@ TIFFCreateEXIFDirectory(TIFF* tif)
 }
 
 /*
+ * Creates the EXIF GPS custom directory 
+ */
+int
+TIFFCreateGPSDirectory(TIFF* tif)
+{
+	const TIFFFieldArray* gpsFieldArray;
+	gpsFieldArray = _TIFFGetGpsFields();
+	return TIFFCreateCustomDirectory(tif, gpsFieldArray);
+}
+
+/*
  * Setup a default directory structure.
  */
 int
@@ -1387,7 +1436,9 @@ TIFFDefaultDirectory(TIFF* tif)
 	td->td_tilewidth = 0;
 	td->td_tilelength = 0;
 	td->td_tiledepth = 1;
+#ifdef STRIPBYTECOUNTSORTED_UNUSED
 	td->td_stripbytecountsorted = 1; /* Our own arrays always sorted. */  
+#endif
 	td->td_resolutionunit = RESUNIT_INCH;
 	td->td_sampleformat = SAMPLEFORMAT_UINT;
 	td->td_imagedepth = 1;
