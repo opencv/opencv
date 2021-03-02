@@ -224,6 +224,7 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t* p_t2,
                                OPJ_UINT32 * p_data_written,
                                OPJ_UINT32 p_max_len,
                                opj_codestream_info_t *cstr_info,
+                               opj_tcd_marker_info_t* p_marker_info,
                                OPJ_UINT32 p_tp_num,
                                OPJ_INT32 p_tp_pos,
                                OPJ_UINT32 p_pino,
@@ -244,7 +245,7 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t* p_t2,
                             l_image->numcomps : 1;
     OPJ_UINT32 l_nb_pocs = l_tcp->numpocs + 1;
 
-    l_pi = opj_pi_initialise_encode(l_image, l_cp, p_tile_no, p_t2_mode);
+    l_pi = opj_pi_initialise_encode(l_image, l_cp, p_tile_no, p_t2_mode, p_manager);
     if (!l_pi) {
         return OPJ_FALSE;
     }
@@ -310,6 +311,20 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t* p_t2,
             opj_pi_destroy(l_pi, l_nb_pocs);
             return OPJ_FALSE;
         }
+
+        if (p_marker_info && p_marker_info->need_PLT) {
+            /* One time use intended */
+            assert(p_marker_info->packet_count == 0);
+            assert(p_marker_info->p_packet_size == NULL);
+
+            p_marker_info->p_packet_size = (OPJ_UINT32*) opj_malloc(
+                                               opj_get_encoding_packet_count(l_image, l_cp, p_tile_no) * sizeof(OPJ_UINT32));
+            if (p_marker_info->p_packet_size == NULL) {
+                opj_pi_destroy(l_pi, l_nb_pocs);
+                return OPJ_FALSE;
+            }
+        }
+
         while (opj_pi_next(l_current_pi)) {
             if (l_current_pi->layno < p_maxlayers) {
                 l_nb_bytes = 0;
@@ -325,6 +340,11 @@ OPJ_BOOL opj_t2_encode_packets(opj_t2_t* p_t2,
                 p_max_len -= l_nb_bytes;
 
                 * p_data_written += l_nb_bytes;
+
+                if (p_marker_info && p_marker_info->need_PLT) {
+                    p_marker_info->p_packet_size[p_marker_info->packet_count] = l_nb_bytes;
+                    p_marker_info->packet_count ++;
+                }
 
                 /* INDEX >> */
                 if (cstr_info) {
@@ -405,7 +425,7 @@ OPJ_BOOL opj_t2_decode_packets(opj_tcd_t* tcd,
 #endif
 
     /* create a packet iterator */
-    l_pi = opj_pi_create_decode(l_image, l_cp, p_tile_no);
+    l_pi = opj_pi_create_decode(l_image, l_cp, p_tile_no, p_manager);
     if (!l_pi) {
         return OPJ_FALSE;
     }
@@ -673,6 +693,14 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
     OPJ_BOOL packet_empty = OPJ_FALSE;
 #endif
 
+#ifdef DEBUG_VERBOSE
+    if (p_t2_mode == FINAL_PASS) {
+        fprintf(stderr,
+                "encode packet compono=%d, resno=%d, precno=%d, layno=%d\n",
+                compno, resno, precno, layno);
+    }
+#endif
+
     /* <SOP 0xff91> */
     if (tcp->csty & J2K_CP_CSTY_SOP) {
         if (length < 6) {
@@ -709,6 +737,15 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
             /* Skip empty bands */
             if (opj_tcd_is_band_empty(band)) {
                 continue;
+            }
+
+            /* Avoid out of bounds access of https://github.com/uclouvain/openjpeg/issues/1294 */
+            /* but likely not a proper fix. */
+            if (precno >= res->pw * res->ph) {
+                opj_event_msg(p_manager, EVT_ERROR,
+                              "opj_t2_encode_packet(): accessing precno=%u >= %u\n",
+                              precno, res->pw * res->ph);
+                return OPJ_FALSE;
             }
 
             prc = &band->precincts[precno];
@@ -776,6 +813,15 @@ static OPJ_BOOL opj_t2_encode_packet(OPJ_UINT32 tileno,
         /* Skip empty bands */
         if (opj_tcd_is_band_empty(band)) {
             continue;
+        }
+
+        /* Avoid out of bounds access of https://github.com/uclouvain/openjpeg/issues/1297 */
+        /* but likely not a proper fix. */
+        if (precno >= res->pw * res->ph) {
+            opj_event_msg(p_manager, EVT_ERROR,
+                          "opj_t2_encode_packet(): accessing precno=%u >= %u\n",
+                          precno, res->pw * res->ph);
+            return OPJ_FALSE;
         }
 
         prc = &band->precincts[precno];

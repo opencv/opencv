@@ -47,27 +47,6 @@
 /*@{*/
 
 /**
-Output a byte, doing bit-stuffing if necessary.
-After a 0xff byte, the next byte must be smaller than 0x90.
-@param mqc MQC handle
-*/
-static void opj_mqc_byteout(opj_mqc_t *mqc);
-/**
-Renormalize mqc->a and mqc->c while encoding, so that mqc->a stays between 0x8000 and 0x10000
-@param mqc MQC handle
-*/
-static void opj_mqc_renorme(opj_mqc_t *mqc);
-/**
-Encode the most probable symbol
-@param mqc MQC handle
-*/
-static void opj_mqc_codemps(opj_mqc_t *mqc);
-/**
-Encode the most least symbol
-@param mqc MQC handle
-*/
-static void opj_mqc_codelps(opj_mqc_t *mqc);
-/**
 Fill mqc->c with 1's for flushing
 @param mqc MQC handle
 */
@@ -182,80 +161,6 @@ static const opj_mqc_state_t mqc_states[47 * 2] = {
 ==========================================================
 */
 
-static void opj_mqc_byteout(opj_mqc_t *mqc)
-{
-    /* bp is initialized to start - 1 in opj_mqc_init_enc() */
-    /* but this is safe, see opj_tcd_code_block_enc_allocate_data() */
-    assert(mqc->bp >= mqc->start - 1);
-    if (*mqc->bp == 0xff) {
-        mqc->bp++;
-        *mqc->bp = (OPJ_BYTE)(mqc->c >> 20);
-        mqc->c &= 0xfffff;
-        mqc->ct = 7;
-    } else {
-        if ((mqc->c & 0x8000000) == 0) {
-            mqc->bp++;
-            *mqc->bp = (OPJ_BYTE)(mqc->c >> 19);
-            mqc->c &= 0x7ffff;
-            mqc->ct = 8;
-        } else {
-            (*mqc->bp)++;
-            if (*mqc->bp == 0xff) {
-                mqc->c &= 0x7ffffff;
-                mqc->bp++;
-                *mqc->bp = (OPJ_BYTE)(mqc->c >> 20);
-                mqc->c &= 0xfffff;
-                mqc->ct = 7;
-            } else {
-                mqc->bp++;
-                *mqc->bp = (OPJ_BYTE)(mqc->c >> 19);
-                mqc->c &= 0x7ffff;
-                mqc->ct = 8;
-            }
-        }
-    }
-}
-
-static void opj_mqc_renorme(opj_mqc_t *mqc)
-{
-    do {
-        mqc->a <<= 1;
-        mqc->c <<= 1;
-        mqc->ct--;
-        if (mqc->ct == 0) {
-            opj_mqc_byteout(mqc);
-        }
-    } while ((mqc->a & 0x8000) == 0);
-}
-
-static void opj_mqc_codemps(opj_mqc_t *mqc)
-{
-    mqc->a -= (*mqc->curctx)->qeval;
-    if ((mqc->a & 0x8000) == 0) {
-        if (mqc->a < (*mqc->curctx)->qeval) {
-            mqc->a = (*mqc->curctx)->qeval;
-        } else {
-            mqc->c += (*mqc->curctx)->qeval;
-        }
-        *mqc->curctx = (*mqc->curctx)->nmps;
-        opj_mqc_renorme(mqc);
-    } else {
-        mqc->c += (*mqc->curctx)->qeval;
-    }
-}
-
-static void opj_mqc_codelps(opj_mqc_t *mqc)
-{
-    mqc->a -= (*mqc->curctx)->qeval;
-    if (mqc->a < (*mqc->curctx)->qeval) {
-        mqc->c += (*mqc->curctx)->qeval;
-    } else {
-        mqc->a = (*mqc->curctx)->qeval;
-    }
-    *mqc->curctx = (*mqc->curctx)->nlps;
-    opj_mqc_renorme(mqc);
-}
-
 static void opj_mqc_setbits(opj_mqc_t *mqc)
 {
     OPJ_UINT32 tempc = mqc->c + mqc->a;
@@ -303,14 +208,6 @@ void opj_mqc_init_enc(opj_mqc_t *mqc, OPJ_BYTE *bp)
     mqc->end_of_byte_stream_counter = 0;
 }
 
-void opj_mqc_encode(opj_mqc_t *mqc, OPJ_UINT32 d)
-{
-    if ((*mqc->curctx)->mps == d) {
-        opj_mqc_codemps(mqc);
-    } else {
-        opj_mqc_codelps(mqc);
-    }
-}
 
 void opj_mqc_flush(opj_mqc_t *mqc)
 {
@@ -328,8 +225,6 @@ void opj_mqc_flush(opj_mqc_t *mqc)
         mqc->bp++;
     }
 }
-
-#define BYPASS_CT_INIT  0xDEADBEEF
 
 void opj_mqc_bypass_init_enc(opj_mqc_t *mqc)
 {
@@ -475,6 +370,43 @@ void opj_mqc_erterm_enc(opj_mqc_t *mqc)
     }
 }
 
+static INLINE void opj_mqc_renorme(opj_mqc_t *mqc)
+{
+    opj_mqc_renorme_macro(mqc, mqc->a, mqc->c, mqc->ct);
+}
+
+/**
+Encode the most probable symbol
+@param mqc MQC handle
+*/
+static INLINE void opj_mqc_codemps(opj_mqc_t *mqc)
+{
+    opj_mqc_codemps_macro(mqc, mqc->curctx, mqc->a, mqc->c, mqc->ct);
+}
+
+/**
+Encode the most least symbol
+@param mqc MQC handle
+*/
+static INLINE void opj_mqc_codelps(opj_mqc_t *mqc)
+{
+    opj_mqc_codelps_macro(mqc, mqc->curctx, mqc->a, mqc->c, mqc->ct);
+}
+
+/**
+Encode a symbol using the MQ-coder
+@param mqc MQC handle
+@param d The symbol to be encoded (0 or 1)
+*/
+static INLINE void opj_mqc_encode(opj_mqc_t *mqc, OPJ_UINT32 d)
+{
+    if ((*mqc->curctx)->mps == d) {
+        opj_mqc_codemps(mqc);
+    } else {
+        opj_mqc_codelps(mqc);
+    }
+}
+
 void opj_mqc_segmark_enc(opj_mqc_t *mqc)
 {
     OPJ_UINT32 i;
@@ -557,4 +489,36 @@ void opj_mqc_setstate(opj_mqc_t *mqc, OPJ_UINT32 ctxno, OPJ_UINT32 msb,
     mqc->ctxs[ctxno] = &mqc_states[msb + (OPJ_UINT32)(prob << 1)];
 }
 
-
+void opj_mqc_byteout(opj_mqc_t *mqc)
+{
+    /* bp is initialized to start - 1 in opj_mqc_init_enc() */
+    /* but this is safe, see opj_tcd_code_block_enc_allocate_data() */
+    assert(mqc->bp >= mqc->start - 1);
+    if (*mqc->bp == 0xff) {
+        mqc->bp++;
+        *mqc->bp = (OPJ_BYTE)(mqc->c >> 20);
+        mqc->c &= 0xfffff;
+        mqc->ct = 7;
+    } else {
+        if ((mqc->c & 0x8000000) == 0) {
+            mqc->bp++;
+            *mqc->bp = (OPJ_BYTE)(mqc->c >> 19);
+            mqc->c &= 0x7ffff;
+            mqc->ct = 8;
+        } else {
+            (*mqc->bp)++;
+            if (*mqc->bp == 0xff) {
+                mqc->c &= 0x7ffffff;
+                mqc->bp++;
+                *mqc->bp = (OPJ_BYTE)(mqc->c >> 20);
+                mqc->c &= 0xfffff;
+                mqc->ct = 7;
+            } else {
+                mqc->bp++;
+                *mqc->bp = (OPJ_BYTE)(mqc->c >> 19);
+                mqc->c &= 0x7ffff;
+                mqc->ct = 8;
+            }
+        }
+    }
+}

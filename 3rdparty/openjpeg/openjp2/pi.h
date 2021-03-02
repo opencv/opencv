@@ -102,11 +102,13 @@ typedef struct opj_pi_iterator {
     /** Components*/
     opj_pi_comp_t *comps;
     /** FIXME DOC*/
-    OPJ_INT32 tx0, ty0, tx1, ty1;
+    OPJ_UINT32 tx0, ty0, tx1, ty1;
     /** FIXME DOC*/
-    OPJ_INT32 x, y;
+    OPJ_UINT32 x, y;
     /** FIXME DOC*/
     OPJ_UINT32 dx, dy;
+    /** event manager */
+    opj_event_mgr_t* manager;
 } opj_pi_iterator_t;
 
 /** @name Exported functions */
@@ -119,13 +121,15 @@ typedef struct opj_pi_iterator {
  * @param   cp      the coding parameters.
  * @param   tileno  index of the tile being encoded.
  * @param   t2_mode the type of pass for generating the packet iterator
+ * @param   manager Event manager
  *
  * @return  a list of packet iterator that points to the first packet of the tile (not true).
 */
 opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *image,
         opj_cp_t *cp,
         OPJ_UINT32 tileno,
-        J2K_T2_MODE t2_mode);
+        J2K_T2_MODE t2_mode,
+        opj_event_mgr_t* manager);
 
 /**
  * Updates the encoding parameters of the codec.
@@ -161,12 +165,14 @@ Create a packet iterator for Decoder
 @param image Raw image for which the packets will be listed
 @param cp Coding parameters
 @param tileno Number that identifies the tile for which to list the packets
+@param manager Event manager
 @return Returns a packet iterator that points to the first packet of the tile
 @see opj_pi_destroy
 */
 opj_pi_iterator_t *opj_pi_create_decode(opj_image_t * image,
                                         opj_cp_t * cp,
-                                        OPJ_UINT32 tileno);
+                                        OPJ_UINT32 tileno,
+                                        opj_event_mgr_t* manager);
 /**
  * Destroys a packet iterator array.
  *
@@ -182,6 +188,17 @@ Modify the packet iterator to point to the next packet
 @return Returns false if pi pointed to the last packet or else returns true
 */
 OPJ_BOOL opj_pi_next(opj_pi_iterator_t * pi);
+
+/**
+ * Return the number of packets in the tile.
+ * @param   image       the image being encoded.
+ * @param cp Coding parameters
+ * @param tileno Number that identifies the tile.
+ */
+OPJ_UINT32 opj_get_encoding_packet_count(const opj_image_t *p_image,
+        const opj_cp_t *p_cp,
+        OPJ_UINT32 p_tile_no);
+
 /* ----------------------------------------------------------------------- */
 /*@}*/
 
