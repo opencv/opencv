@@ -254,7 +254,8 @@ struct IEUnit {
             params.output_names = { outputs.begin()->first };
         }
         if (!params.reshape_table.empty()) {
-            GAPI_Assert(params.reshape_table.size() <= params.num_in &&
+            GAPI_Assert((params.reshape_table.size() + params.layer_names_to_reshape.size()) <=
+                         params.num_in &&
                         "Number of layers to reshape must be less than or equal to number of inputs");
         }
     }
@@ -678,53 +679,44 @@ namespace cv {
 namespace gimpl {
 namespace ie {
 static void configureInputReshapeByImage(const IE::InputInfo::Ptr& ii,
-                                         const IEUnit& uu,
                                          const cv::GMetaArg mm,
                                          IE::ICNNNetwork::InputShapes& input_reshape_table) {
-    const auto& current_layer_name = ii->name();
-    // Finding name in layers names for reshape by image
-    const auto pos_in_params =
-        ade::util::find(uu.params.layer_names_to_reshape, current_layer_name);
-    if (pos_in_params == uu.params.layer_names_to_reshape.end()) {
-        GAPI_Assert(false && "CNN input doesn't contain layer with this name");
-    }
+    const auto& layer_name = ii->name();
     // Finding name in reshape table
-    const auto name_pos_in_table = input_reshape_table.find(current_layer_name);
+    const auto name_pos_in_table = input_reshape_table.find(layer_name);
     // If contains then reshape for this layer already configured by shapes
     // otherwise create a new element of reshape table with name and dimension
     // which based on input image size.
-    if (name_pos_in_table == input_reshape_table.end()) {
-        std::vector<int> image_size;
-        switch (mm.index()) {
-            case cv::GMetaArg::index_of<cv::GMatDesc>():
-                {
-                    const auto &meta = util::get<cv::GMatDesc>(mm);
-                    image_size = {meta.size.height, meta.size.width};
-                    break;
-                }
-            case cv::GMetaArg::index_of<cv::GFrameDesc>():
-                {
-                    const auto &meta = util::get<cv::GFrameDesc>(mm);
-                    image_size = {meta.size.height, meta.size.width};
-                    break;
-                }
-            default:
-                util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
-        }
-        auto input_dims = ii->getTensorDesc().getDims();
-        const auto size = input_dims.size();
-        if (size > 1) {
-            input_dims.at(size - 2) = static_cast<size_t>(image_size.at(0));
-            input_dims.at(size - 1) = static_cast<size_t>(image_size.at(1));
-            // Adding new element to reshape table
-            input_reshape_table.emplace(current_layer_name, input_dims);
-        } else {
-            GAPI_Assert(false && "Unsupported layout for reshape by image size");
-        }
-    } else {
+    if (name_pos_in_table != input_reshape_table.end()) {
         GAPI_Assert(false &&
                     "Names of layers for reshape with specified dimensions shouldn't intersect with names for reshape by image");
     }
+    cv::Size image_sz;
+    switch (mm.index()) {
+        case cv::GMetaArg::index_of<cv::GMatDesc>():
+            {
+                const auto &meta = util::get<cv::GMatDesc>(mm);
+                image_sz = meta.size;
+                break;
+            }
+        case cv::GMetaArg::index_of<cv::GFrameDesc>():
+            {
+                const auto &meta = util::get<cv::GFrameDesc>(mm);
+                image_sz = meta.size;
+                break;
+            }
+        default:
+            util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
+    }
+    auto input_dims = ii->getTensorDesc().getDims();
+    const auto size = input_dims.size();
+    if (size <= 1) {
+        GAPI_Assert(false && "Unsupported number of dimensions for reshape by image");
+    }
+    input_dims.at(size - 2) = static_cast<size_t>(image_sz.height);
+    input_dims.at(size - 1) = static_cast<size_t>(image_sz.width);
+    // Adding new element to reshape table
+    input_reshape_table.emplace(layer_name, input_dims);
 }
 
 static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg mm) {
@@ -795,12 +787,14 @@ struct Infer: public cv::detail::KernelTag {
                     && "Known input layers count doesn't match input meta count");
         for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                         ade::util::toRange(in_metas))) {
-            auto       &&ii = uu.inputs.at(std::get<0>(it));
+            const auto &input_name = std::get<0>(it);
+            auto       &&ii = uu.inputs.at(input_name);
             const auto & mm =              std::get<1>(it);
 
             configureInputInfo(ii, mm);
-            if (!uu.params.layer_names_to_reshape.empty()) {
-                configureInputReshapeByImage(ii, uu, mm, input_reshape_table);
+            if (uu.params.layer_names_to_reshape.find(input_name) !=
+                uu.params.layer_names_to_reshape.end()) {
+                configureInputReshapeByImage(ii, mm, input_reshape_table);
             }
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
@@ -874,11 +868,13 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(2u == in_metas.size());
 
         // 0th is ROI, 1st is input image
-        auto &&ii = uu.inputs.at(uu.params.input_names.at(0));
+        const auto &input_name = uu.params.input_names.at(0);
+        auto &&ii = uu.inputs.at(input_name);
         auto &&mm = in_metas.at(1u);
         configureInputInfo(ii, mm);
-        if (!uu.params.layer_names_to_reshape.empty()) {
-            configureInputReshapeByImage(ii, uu, mm, input_reshape_table);
+        if (uu.params.layer_names_to_reshape.find(input_name) !=
+            uu.params.layer_names_to_reshape.end()) {
+            configureInputReshapeByImage(ii, mm, input_reshape_table);
         }
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 
@@ -958,8 +954,9 @@ struct InferList: public cv::detail::KernelTag {
             auto       &&ii = uu.inputs.at(input_name);
             const auto & mm = in_metas[idx++];
             configureInputInfo(ii, mm);
-            if (!uu.params.layer_names_to_reshape.empty()) {
-                configureInputReshapeByImage(ii, uu, mm, input_reshape_table);
+            if (uu.params.layer_names_to_reshape.find(input_name) !=
+                uu.params.layer_names_to_reshape.end()) {
+                configureInputReshapeByImage(ii, mm, input_reshape_table);
             }
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
         }
@@ -1105,8 +1102,9 @@ struct InferList2: public cv::detail::KernelTag {
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // This is a cv::Rect -- configure the IE preprocessing
                 configureInputInfo(ii, mm_0);
-                if (!uu.params.layer_names_to_reshape.empty()) {
-                    configureInputReshapeByImage(ii, uu, mm_0, input_reshape_table);
+                if (uu.params.layer_names_to_reshape.find(input_name) !=
+                    uu.params.layer_names_to_reshape.end()) {
+                    configureInputReshapeByImage(ii, mm_0, input_reshape_table);
                 }
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
 

@@ -8,6 +8,7 @@
 #define OPENCV_GAPI_INFER_IE_HPP
 
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
@@ -69,7 +70,7 @@ namespace detail {
         IEConfig config;
 
         std::map<std::string, std::vector<std::size_t>> reshape_table;
-        std::vector<std::string> layer_names_to_reshape;
+        std::unordered_set<std::string> layer_names_to_reshape;
 
         // NB: Number of asyncrhonious infer requests
         size_t nireq;
@@ -175,12 +176,12 @@ public:
         return *this;
     }
 
-    Params<Net>& cfgInputReshape(std::vector<std::string>&& layer_names) {
+    Params<Net>& cfgInputReshape(std::unordered_set<std::string>&& layer_names) {
         desc.layer_names_to_reshape = std::move(layer_names);
         return *this;
     }
 
-    Params<Net>& cfgInputReshape(const std::vector<std::string>& layer_names) {
+    Params<Net>& cfgInputReshape(const std::unordered_set<std::string>& layer_names) {
         desc.layer_names_to_reshape = layer_names;
         return *this;
     }
