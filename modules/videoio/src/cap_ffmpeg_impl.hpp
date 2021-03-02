@@ -852,51 +852,70 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 
 class InternalFFMpegRegister
 {
-public:
-    InternalFFMpegRegister()
+    static void init_()
     {
-        AutoLock lock(_mutex);
+        static InternalFFMpegRegister instance;
+    }
+
+    static void initLogger_()
+    {
+    #ifndef NO_GETENV
+        char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+        if (debug_option != NULL)
+        {
+            av_log_set_level(AV_LOG_VERBOSE);
+            av_log_set_callback(ffmpeg_log_callback);
+        }
+        else
+    #endif
+        {
+            av_log_set_level(AV_LOG_ERROR);
+        }
+    }
+
+public:
+    static void init()
+    {
         if (!_initialized)
         {
-    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
-            avformat_network_init();
-    #endif
-
-            /* register all codecs, demux and protocols */
-            av_register_all();
-
-            /* register a callback function for synchronization */
-            av_lockmgr_register(&LockCallBack);
-
-#ifndef NO_GETENV
-            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-            if (debug_option != NULL)
+            AutoLock lock(_mutex);
+            if (!_initialized)
             {
-                av_log_set_level(AV_LOG_VERBOSE);
-                av_log_set_callback(ffmpeg_log_callback);
+                init_();
             }
-            else
-#endif
-            {
-                av_log_set_level(AV_LOG_ERROR);
-            }
-
-            _initialized = true;
         }
+        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
+    }
+
+    InternalFFMpegRegister()
+    {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
+        avformat_network_init();
+#endif
+
+        /* register all codecs, demux and protocols */
+        av_register_all();
+
+        /* register a callback function for synchronization */
+        av_lockmgr_register(&LockCallBack);
+
+        _initialized = true;
     }
 
     ~InternalFFMpegRegister()
     {
         _initialized = false;
         av_lockmgr_register(NULL);
+        av_log_set_callback(NULL);
     }
 };
 
-static InternalFFMpegRegister _init;
-
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    InternalFFMpegRegister::init();
+
     AutoLock lock(_mutex);
+
     unsigned i;
     bool valid = false;
 
@@ -2288,6 +2307,10 @@ static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
+    InternalFFMpegRegister::init();
+
+    AutoLock lock(_mutex);
+
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     int err, codec_pix_fmt;
     double bitrate_scale = 1;
