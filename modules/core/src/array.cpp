@@ -48,6 +48,8 @@
 
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 #define  CV_ORIGIN_TL  0
 #define  CV_ORIGIN_BL  1
 
@@ -3223,51 +3225,50 @@ template<> void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) con
 template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const
 { cvReleaseFileStorage(&obj); }
 
-template <typename T> static inline
-void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
-{
-    int i = 0;
-    for(; i < cn; i++)
-        buf[i] = saturate_cast<T>(s.val[i]);
-    for(; i < unroll_to; i++)
-        buf[i] = buf[i-cn];
-}
-
-void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
-{
-    CV_INSTRUMENT_REGION();
-
-    const int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert(cn <= 4);
-    switch(depth)
-    {
-    case CV_8U:
-        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
-        break;
-    case CV_8S:
-        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
-        break;
-    case CV_16U:
-        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
-        break;
-    case CV_16S:
-        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
-        break;
-    case CV_32S:
-        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
-        break;
-    case CV_32F:
-        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
-        break;
-    case CV_64F:
-        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
-        break;
-    default:
-        CV_Error(CV_StsUnsupportedFormat,"");
-    }
-}
-
 } // cv::
 
 
+/* universal functions */
+CV_IMPL void
+cvRelease( void** struct_ptr )
+{
+    CvTypeInfo* info;
+
+    if( !struct_ptr )
+        CV_Error( CV_StsNullPtr, "NULL double pointer" );
+
+    if( *struct_ptr )
+    {
+        info = cvTypeOf( *struct_ptr );
+        if( !info )
+            CV_Error( CV_StsError, "Unknown object type" );
+        if( !info->release )
+            CV_Error( CV_StsError, "release function pointer is NULL" );
+
+        info->release( struct_ptr );
+        *struct_ptr = 0;
+    }
+}
+
+
+void* cvClone( const void* struct_ptr )
+{
+    void* struct_copy = 0;
+    CvTypeInfo* info;
+
+    if( !struct_ptr )
+        CV_Error( CV_StsNullPtr, "NULL structure pointer" );
+
+    info = cvTypeOf( struct_ptr );
+    if( !info )
+        CV_Error( CV_StsError, "Unknown object type" );
+    if( !info->clone )
+        CV_Error( CV_StsError, "clone function pointer is NULL" );
+
+    struct_copy = info->clone( struct_ptr );
+    return struct_copy;
+}
+
+
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */
