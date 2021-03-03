@@ -486,7 +486,7 @@ public:
         if (va_type == VIDEO_ACCELERATION_ANY)
         {
             if (!accel_list.empty())
-                accel_list = ",";  // add no-acceleration case to the end of the list
+                accel_list += ",";  // add no-acceleration case to the end of the list
         }
         CV_LOG_DEBUG(NULL, "FFMPEG: allowed acceleration types (" << getVideoAccelerationName(va_type) << "): '" << accel_list << "'");
 
