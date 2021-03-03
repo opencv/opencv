@@ -753,8 +753,6 @@ SVBkSb( int m, int n, const double* w, size_t wstep,
                 (double*)alignPtr(buffer, sizeof(double)), DBL_EPSILON*2 );
 }
 
-}
-
 /****************************************************************************************\
 *                                 Determinant of the matrix                              *
 \****************************************************************************************/
@@ -764,7 +762,7 @@ SVBkSb( int m, int n, const double* w, size_t wstep,
                    m(0,1)*((double)m(1,0)*m(2,2) - (double)m(1,2)*m(2,0)) +  \
                    m(0,2)*((double)m(1,0)*m(2,1) - (double)m(1,1)*m(2,0)))
 
-double cv::determinant( InputArray _mat )
+double determinant( InputArray _mat )
 {
     CV_INSTRUMENT_REGION();
 
@@ -842,7 +840,7 @@ double cv::determinant( InputArray _mat )
 #define Df( y, x ) ((float*)(dstdata + y*dststep))[x]
 #define Dd( y, x ) ((double*)(dstdata + y*dststep))[x]
 
-double cv::invert( InputArray _src, OutputArray _dst, int method )
+double invert( InputArray _src, OutputArray _dst, int method )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1069,13 +1067,19 @@ double cv::invert( InputArray _src, OutputArray _dst, int method )
     return result;
 }
 
+UMat UMat::inv(int method) const
+{
+    UMat m;
+    invert(*this, m, method);
+    return m;
+}
 
 
 /****************************************************************************************\
 *                              Solving a linear system                                   *
 \****************************************************************************************/
 
-bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
+bool solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1374,7 +1378,7 @@ bool cv::solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int meth
 
 /////////////////// finding eigenvalues and eigenvectors of a symmetric matrix ///////////////
 
-bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
+bool eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1396,7 +1400,7 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
     const bool evecNeeded = _evects.needed();
     const int esOptions = evecNeeded ? Eigen::ComputeEigenvectors : Eigen::EigenvaluesOnly;
     _evals.create(n, 1, type);
-    cv::Mat evals = _evals.getMat();
+    Mat evals = _evals.getMat();
     if ( type == CV_64F )
     {
         Eigen::MatrixXd src_eig, zeros_eig;
@@ -1447,9 +1451,6 @@ bool cv::eigen( InputArray _src, OutputArray _evals, OutputArray _evects )
     return ok;
 #endif
 }
-
-namespace cv
-{
 
 static void _SVDcompute( InputArray _aarr, OutputArray _w,
                          OutputArray _u, OutputArray _vt, int flags )
@@ -1597,6 +1598,9 @@ void cv::SVBackSubst(InputArray w, InputArray u, InputArray vt, InputArray rhs, 
     SVD::backSubst(w, u, vt, rhs, dst);
 }
 
+
+
+#ifndef OPENCV_EXCLUDE_C_API
 
 CV_IMPL double
 cvDet( const CvArr* arr )
@@ -1789,3 +1793,4 @@ cvSVBkSb( const CvArr* warr, const CvArr* uarr,
     cv::SVD::backSubst(w, u, v, rhs, dst);
     CV_Assert( dst.data == dst0.data );
 }
+#endif  // OPENCV_EXCLUDE_C_API

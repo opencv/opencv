@@ -4640,6 +4640,9 @@ int cv::getOptimalDFTSize( int size0 )
     return optimalDFTSizeTab[b];
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL void
 cvDFT( const CvArr* srcarr, CvArr* dstarr, int flags, int nonzero_rows )
 {
@@ -4695,4 +4698,5 @@ cvGetOptimalDFTSize( int size0 )
     return cv::getOptimalDFTSize(size0);
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */
