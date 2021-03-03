@@ -359,6 +359,11 @@ static int HasAlpha32b_C(const uint8_t* src, int length) {
   return 0;
 }
 
+static void AlphaReplace_C(uint32_t* src, int length, uint32_t color) {
+  int x;
+  for (x = 0; x < length; ++x) if ((src[x] >> 24) == 0) src[x] = color;
+}
+
 //------------------------------------------------------------------------------
 // Simple channel manipulations.
 
@@ -400,6 +405,7 @@ void (*WebPPackRGB)(const uint8_t* r, const uint8_t* g, const uint8_t* b,
 
 int (*WebPHasAlpha8b)(const uint8_t* src, int length);
 int (*WebPHasAlpha32b)(const uint8_t* src, int length);
+void (*WebPAlphaReplace)(uint32_t* src, int length, uint32_t color);
 
 //------------------------------------------------------------------------------
 // Init function
@@ -428,6 +434,7 @@ WEBP_DSP_INIT_FUNC(WebPInitAlphaProcessing) {
 
   WebPHasAlpha8b = HasAlpha8b_C;
   WebPHasAlpha32b = HasAlpha32b_C;
+  WebPAlphaReplace = AlphaReplace_C;
 
   // If defined, use CPUInfo() to overwrite some pointers with faster versions.
   if (VP8GetCPUInfo != NULL) {
@@ -469,4 +476,5 @@ WEBP_DSP_INIT_FUNC(WebPInitAlphaProcessing) {
   assert(WebPPackRGB != NULL);
   assert(WebPHasAlpha8b != NULL);
   assert(WebPHasAlpha32b != NULL);
+  assert(WebPAlphaReplace != NULL);
 }
