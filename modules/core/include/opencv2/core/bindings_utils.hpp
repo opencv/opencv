@@ -145,9 +145,9 @@ AsyncArray testAsyncException()
 }
 
 namespace fs {
-    CV_EXPORTS_AS(getCacheDirectory) cv::String getCacheDirectoryForDownloads();
-}
+    CV_EXPORTS_W cv::String getCacheDirectoryForDownloads();
+} // namespace fs
 //! @}
-}} // namespace fs
+}} // namespaces cv /  utils
 
 #endif // OPENCV_CORE_BINDINGS_UTILS_HPP
