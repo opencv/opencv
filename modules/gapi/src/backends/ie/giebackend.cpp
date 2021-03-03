@@ -789,7 +789,7 @@ struct Infer: public cv::detail::KernelTag {
                                         ade::util::toRange(in_metas))) {
             const auto &input_name = std::get<0>(it);
             auto       &&ii = uu.inputs.at(input_name);
-            const auto & mm =              std::get<1>(it);
+            const auto & mm = std::get<1>(it);
 
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
