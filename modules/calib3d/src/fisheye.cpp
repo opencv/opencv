@@ -754,8 +754,8 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     IntrinsicParams currentParam;
     IntrinsicParams errors;
 
-    finalParam.isEstimate[0] = 1;
-    finalParam.isEstimate[1] = 1;
+    finalParam.isEstimate[0] = flags & CALIB_FIX_FOCAL_LENGTH ? 0 : 1;
+    finalParam.isEstimate[1] = flags & CALIB_FIX_FOCAL_LENGTH ? 0 : 1;
     finalParam.isEstimate[2] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
     finalParam.isEstimate[3] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
     finalParam.isEstimate[4] = flags & CALIB_FIX_SKEW ? 0 : 1;
