@@ -615,6 +615,8 @@ protected:
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
     _ComPtr<IMFSourceReader> videoFileSource;
+    _ComPtr<IMFSample> videoSample;
+    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
     DWORD dwStreamIndex;
     MediaType nativeFormat;
     MediaType captureFormat;
@@ -622,10 +624,8 @@ protected:
     bool convertFormat;
     MFTIME duration;
     LONGLONG frameStep;
-    _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     bool isOpen;
-    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -641,8 +641,12 @@ CvCapture_MSMF::CvCapture_MSMF():
 #endif
     videoFileSource(NULL),
     videoSample(NULL),
+    readCallback(NULL),
+    dwStreamIndex(0),
     outputFormat(CV_CAP_MODE_BGR),
     convertFormat(true),
+    duration(0),
+    frameStep(0),
     sampleTime(0),
     isOpen(false)
 {
