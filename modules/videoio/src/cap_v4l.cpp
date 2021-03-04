@@ -272,6 +272,15 @@ typedef uint32_t __u32;
 #define V4L2_PIX_FMT_Y12 v4l2_fourcc('Y', '1', '2', ' ')
 #endif
 
+#ifndef V4L2_PIX_FMT_Y16
+#define V4L2_PIX_FMT_Y16 v4l2_fourcc('Y', '1', '6', ' ')
+#endif
+
+#ifndef V4L2_PIX_FMT_Y16_BE
+#define V4L2_PIX_FMT_Y16_BE v4l2_fourcc_be('Y', '1', '6', ' ')
+#endif
+
+
 /* Defaults - If your board can do better, set it here.  Set for the most common type inputs. */
 #define DEFAULT_V4L_WIDTH  640
 #define DEFAULT_V4L_HEIGHT 480
@@ -1605,22 +1614,20 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     }
     case V4L2_PIX_FMT_Y16_BE:
     {
-        cv::Mat temp(imageSize, CV_8UC1, buffers2[MAX_V4L_BUFFERS].start);       
-        cv::Mat temp2(imageSize, CV_16UC1, currentBuffer.start)
-            
-        struct Operator {
-            void operator ()(uint16_t &pixel, const int * position) {
-            uint16_t ptemp = pixel; 
-               ptemp << 8; 
-               pixel >> 8;
-               pixel = pixel | ptemp;
-            }
-        };        
-        temp2.ForEach(<uint16_t>(Operator()); 
-        
-        temp2.convertTo(temp, CV_8U, 1.0 / 256);
-        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        cv::Mat temp(imageSize, CV_8UC2, currentBuffer.start);
+        cv::Mat temp2(imageSize, CV_16UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::Mat temp3(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+
+        cv::Mat channels[2];
+
+        cv::split(temp,channels);
+        cv::addWeighted(channels[0],256,channels[1],1,0,temp2,CV_16UC1);
+
+        temp2.convertTo(temp3, CV_8U, 1.0 / 256);
+
+        cv::cvtColor(temp3, destination, COLOR_GRAY2BGR);
         return;
+
     }        
     case V4L2_PIX_FMT_Y12:
     {
