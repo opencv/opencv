@@ -1753,14 +1753,4 @@ cvThreshold( const void* srcarr, void* dstarr, double thresh, double maxval, int
     return thresh;
 }
 
-
-CV_IMPL void
-cvAdaptiveThreshold( const void *srcIm, void *dstIm, double maxValue,
-                     int method, int type, int blockSize, double delta )
-{
-    cv::Mat src = cv::cvarrToMat(srcIm), dst = cv::cvarrToMat(dstIm);
-    CV_Assert( src.size == dst.size && src.type() == dst.type() );
-    cv::adaptiveThreshold( src, dst, maxValue, method, type, blockSize, delta );
-}
-
 /* End of file. */

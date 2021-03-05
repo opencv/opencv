@@ -408,18 +408,6 @@ CV_INLINE  CvMat*  cvGetCol( const CvArr* arr, CvMat* submat, int col )
     return cvGetCols( arr, submat, col, col + 1 );
 }
 
-/** @brief Returns one of array diagonals.
-
-The function returns the header, corresponding to a specified diagonal of the input array.
-@param arr Input array
-@param submat Pointer to the resulting sub-array header
-@param diag Index of the array diagonal. Zero value corresponds to the main diagonal, -1
-corresponds to the diagonal above the main, 1 corresponds to the diagonal below the main, and so
-forth.
- */
-CVAPI(CvMat*) cvGetDiag( const CvArr* arr, CvMat* submat,
-                            int diag CV_DEFAULT(0));
-
 /** low-level scalar <-> raw data conversion functions */
 CVAPI(void) cvScalarToRawData( const CvScalar* scalar, void* data, int type,
                               int extend_to_12 CV_DEFAULT(0) );
@@ -558,37 +546,6 @@ CV_INLINE CvSparseNode* cvGetNextSparseNode( CvSparseMatIterator* mat_iterator )
         return NULL;
     }
 }
-
-
-#define CV_MAX_ARR 10
-
-/** matrix iterator: used for n-ary operations on dense arrays */
-typedef struct CvNArrayIterator
-{
-    int count; /**< number of arrays */
-    int dims; /**< number of dimensions to iterate */
-    CvSize size; /**< maximal common linear size: { width = size, height = 1 } */
-    uchar* ptr[CV_MAX_ARR]; /**< pointers to the array slices */
-    int stack[CV_MAX_DIM]; /**< for internal use */
-    CvMatND* hdr[CV_MAX_ARR]; /**< pointers to the headers of the
-                                 matrices that are processed */
-}
-CvNArrayIterator;
-
-#define CV_NO_DEPTH_CHECK     1
-#define CV_NO_CN_CHECK        2
-#define CV_NO_SIZE_CHECK      4
-
-/** initializes iterator that traverses through several arrays simultaneously
-   (the function together with cvNextArraySlice is used for
-    N-ari element-wise operations) */
-CVAPI(int) cvInitNArrayIterator( int count, CvArr** arrs,
-                                 const CvArr* mask, CvMatND* stubs,
-                                 CvNArrayIterator* array_iterator,
-                                 int flags CV_DEFAULT(0) );
-
-/** returns zero value if iteration is finished, non-zero (slice length) otherwise */
-CVAPI(int) cvNextNArraySlice( CvNArrayIterator* array_iterator );
 
 
 /** @brief Returns type of array elements.
@@ -793,46 +750,6 @@ this function, we will get different headers if the ROI is set in the original i
 CVAPI(IplImage*) cvGetImage( const CvArr* arr, IplImage* image_header );
 
 
-/** @brief Changes the shape of a multi-dimensional array without copying the data.
-
-The function is an advanced version of cvReshape that can work with multi-dimensional arrays as
-well (though it can work with ordinary images and matrices) and change the number of dimensions.
-
-Below are the two samples from the cvReshape description rewritten using cvReshapeMatND:
-@code
-    IplImage* color_img = cvCreateImage(cvSize(320,240), IPL_DEPTH_8U, 3);
-    IplImage gray_img_hdr, *gray_img;
-    gray_img = (IplImage*)cvReshapeMatND(color_img, sizeof(gray_img_hdr), &gray_img_hdr, 1, 0, 0);
-    ...
-    int size[] = { 2, 2, 2 };
-    CvMatND* mat = cvCreateMatND(3, size, CV_32F);
-    CvMat row_header, *row;
-    row = (CvMat*)cvReshapeMatND(mat, sizeof(row_header), &row_header, 0, 1, 0);
-@endcode
-In C, the header file for this function includes a convenient macro cvReshapeND that does away with
-the sizeof_header parameter. So, the lines containing the call to cvReshapeMatND in the examples
-may be replaced as follow:
-@code
-    gray_img = (IplImage*)cvReshapeND(color_img, &gray_img_hdr, 1, 0, 0);
-    ...
-    row = (CvMat*)cvReshapeND(mat, &row_header, 0, 1, 0);
-@endcode
-@param arr Input array
-@param sizeof_header Size of output header to distinguish between IplImage, CvMat and CvMatND
-output headers
-@param header Output header to be filled
-@param new_cn New number of channels. new_cn = 0 means that the number of channels remains
-unchanged.
-@param new_dims New number of dimensions. new_dims = 0 means that the number of dimensions
-remains the same.
-@param new_sizes Array of new dimension sizes. Only new_dims-1 values are used, because the
-total number of elements must remain the same. Thus, if new_dims = 1, new_sizes array is not
-used.
- */
-CVAPI(CvArr*) cvReshapeMatND( const CvArr* arr,
-                             int sizeof_header, CvArr* header,
-                             int new_cn, int new_dims, int* new_sizes );
-
 #define cvReshapeND( arr, header, new_cn, new_dims, new_sizes )   \
       cvReshapeMatND( (arr), sizeof(*(header)), (header),         \
                       (new_cn), (new_dims), (new_sizes))
@@ -866,10 +783,6 @@ unchanged unless it needs to be changed according to new_cn value.
 */
 CVAPI(CvMat*) cvReshape( const CvArr* arr, CvMat* header,
                         int new_cn, int new_rows CV_DEFAULT(0) );
-
-/** Repeats source 2d array several times in both horizontal and
-   vertical direction to fill destination array */
-CVAPI(void) cvRepeat( const CvArr* src, CvArr* dst );
 
 /** @brief Allocates array data
 
@@ -1084,12 +997,6 @@ CVAPI(void)  cvDiv( const CvArr* src1, const CvArr* src2,
 /** dst = src1 * scale + src2 */
 CVAPI(void)  cvScaleAdd( const CvArr* src1, CvScalar scale,
                          const CvArr* src2, CvArr* dst );
-#define cvAXPY( A, real_scalar, B, C ) cvScaleAdd(A, cvRealScalar(real_scalar), B, C)
-
-/** dst = src1 * alpha + src2 * beta + gamma */
-CVAPI(void)  cvAddWeighted( const CvArr* src1, double alpha,
-                            const CvArr* src2, double beta,
-                            double gamma, CvArr* dst );
 
 /** @brief Calculates the dot product of two arrays in Euclidean metrics.
 
@@ -1132,14 +1039,6 @@ CVAPI(void) cvXorS( const CvArr* src, CvScalar value,
 /** dst(idx) = ~src(idx) */
 CVAPI(void) cvNot( const CvArr* src, CvArr* dst );
 
-/** dst(idx) = lower(idx) <= src(idx) < upper(idx) */
-CVAPI(void) cvInRange( const CvArr* src, const CvArr* lower,
-                      const CvArr* upper, CvArr* dst );
-
-/** dst(idx) = lower <= src(idx) < upper */
-CVAPI(void) cvInRangeS( const CvArr* src, CvScalar lower,
-                       CvScalar upper, CvArr* dst );
-
 #define CV_CMP_EQ   0
 #define CV_CMP_GT   1
 #define CV_CMP_GE   2
@@ -1150,47 +1049,12 @@ CVAPI(void) cvInRangeS( const CvArr* src, CvScalar lower,
 /** The comparison operation support single-channel arrays only.
    Destination image should be 8uC1 or 8sC1 */
 
-/** dst(idx) = src1(idx) _cmp_op_ src2(idx) */
-CVAPI(void) cvCmp( const CvArr* src1, const CvArr* src2, CvArr* dst, int cmp_op );
-
 /** dst(idx) = src1(idx) _cmp_op_ value */
 CVAPI(void) cvCmpS( const CvArr* src, double value, CvArr* dst, int cmp_op );
-
-/** dst(idx) = min(src1(idx),src2(idx)) */
-CVAPI(void) cvMin( const CvArr* src1, const CvArr* src2, CvArr* dst );
-
-/** dst(idx) = max(src1(idx),src2(idx)) */
-CVAPI(void) cvMax( const CvArr* src1, const CvArr* src2, CvArr* dst );
-
-/** dst(idx) = min(src(idx),value) */
-CVAPI(void) cvMinS( const CvArr* src, double value, CvArr* dst );
-
-/** dst(idx) = max(src(idx),value) */
-CVAPI(void) cvMaxS( const CvArr* src, double value, CvArr* dst );
-
-/** dst(x,y,c) = abs(src1(x,y,c) - src2(x,y,c)) */
-CVAPI(void) cvAbsDiff( const CvArr* src1, const CvArr* src2, CvArr* dst );
-
-/** dst(x,y,c) = abs(src(x,y,c) - value(c)) */
-CVAPI(void) cvAbsDiffS( const CvArr* src, CvArr* dst, CvScalar value );
-#define cvAbs( src, dst ) cvAbsDiffS( (src), (dst), cvScalarAll(0))
 
 /****************************************************************************************\
 *                                Math operations                                         *
 \****************************************************************************************/
-
-/** Does cartesian->polar coordinates conversion.
-   Either of output components (magnitude or angle) is optional */
-CVAPI(void)  cvCartToPolar( const CvArr* x, const CvArr* y,
-                            CvArr* magnitude, CvArr* angle CV_DEFAULT(NULL),
-                            int angle_in_degrees CV_DEFAULT(0));
-
-/** Does polar->cartesian coordinates conversion.
-   Either of output components (magnitude or angle) is optional.
-   If magnitude is missing it is assumed to be all 1's */
-CVAPI(void)  cvPolarToCart( const CvArr* magnitude, const CvArr* angle,
-                            CvArr* x, CvArr* y,
-                            int angle_in_degrees CV_DEFAULT(0));
 
 /** Does powering: dst(idx) = src(idx)^power */
 CVAPI(void)  cvPow( const CvArr* src, CvArr* dst, double power );
@@ -1200,17 +1064,6 @@ CVAPI(void)  cvPow( const CvArr* src, CvArr* dst, double power );
    Maximal relative error is ~7e-6 for single-precision input */
 CVAPI(void)  cvExp( const CvArr* src, CvArr* dst );
 
-/** Calculates natural logarithms: dst(idx) = log(abs(src(idx))).
-   Logarithm of 0 gives large negative number(~-700)
-   Maximal relative error is ~3e-7 for single-precision output
-*/
-CVAPI(void)  cvLog( const CvArr* src, CvArr* dst );
-
-/** Fast arctangent calculation */
-CVAPI(float) cvFastArctan( float y, float x );
-
-/** Fast cubic root calculation */
-CVAPI(float)  cvCbrt( float value );
 
 #define  CV_CHECK_RANGE    1
 #define  CV_CHECK_QUIET    2
@@ -1256,8 +1109,6 @@ CVAPI(void) cvSort( const CvArr* src, CvArr* dst CV_DEFAULT(NULL),
                     CvArr* idxmat CV_DEFAULT(NULL),
                     int flags CV_DEFAULT(0));
 
-/** Finds real roots of a cubic equation */
-CVAPI(int) cvSolveCubic( const CvMat* coeffs, CvMat* roots );
 
 /** Finds all real and complex roots of a polynomial equation */
 CVAPI(void) cvSolvePoly(const CvMat* coeffs, CvMat *roots2,
@@ -1917,20 +1768,9 @@ CVAPI(void) cvRemoveNodeFromTree( void* node, void* frame );
 CVAPI(CvSeq*) cvTreeToNodeSeq( const void* first, int header_size,
                               CvMemStorage* storage );
 
-/** The function implements the K-means algorithm for clustering an array of sample
-   vectors in a specified number of classes */
-#define CV_KMEANS_USE_INITIAL_LABELS    1
-CVAPI(int) cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels,
-                      CvTermCriteria termcrit, int attempts CV_DEFAULT(1),
-                      CvRNG* rng CV_DEFAULT(0), int flags CV_DEFAULT(0),
-                      CvArr* _centers CV_DEFAULT(0), double* compactness CV_DEFAULT(0) );
-
 /****************************************************************************************\
 *                                    System functions                                    *
 \****************************************************************************************/
-
-/** Loads optimized functions from IPP, MKL etc. or switches back to pure C code */
-CVAPI(int)  cvUseOptimized( int on_off );
 
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
                             (int,int,int,char*,char*,int,int,int,int,int,
@@ -1966,598 +1806,6 @@ CVAPI(void) cvSetIPLAllocators( Cv_iplCreateImageHeader create_header,
     cvSetIPLAllocators( iplCreateImageHeader, iplAllocateImage,         \
                         iplDeallocate, iplCreateROI, iplCloneImage )
 
-/****************************************************************************************\
-*                                    Data Persistence                                    *
-\****************************************************************************************/
-
-#if 0
-/********************************** High-level functions ********************************/
-
-/** @brief Opens file storage for reading or writing data.
-
-The function opens file storage for reading or writing data. In the latter case, a new file is
-created or an existing file is rewritten. The type of the read or written file is determined by the
-filename extension: .xml for XML, .yml or .yaml for YAML and .json for JSON.
-
-At the same time, it also supports adding parameters like "example.xml?base64".
-
-The function returns a pointer to the CvFileStorage structure.
-If the file cannot be opened then the function returns NULL.
-@param filename Name of the file associated with the storage
-@param memstorage Memory storage used for temporary data and for
-:   storing dynamic structures, such as CvSeq or CvGraph . If it is NULL, a temporary memory
-    storage is created and used.
-@param flags Can be one of the following:
-> -   **CV_STORAGE_READ** the storage is open for reading
-> -   **CV_STORAGE_WRITE** the storage is open for writing
-      (use **CV_STORAGE_WRITE | CV_STORAGE_WRITE_BASE64** to write rawdata in Base64)
-@param encoding
- */
-CVAPI(CvFileStorage*)  cvOpenFileStorage( const char* filename, CvMemStorage* memstorage,
-                                          int flags, const char* encoding CV_DEFAULT(NULL) );
-
-/** @brief Releases file storage.
-
-The function closes the file associated with the storage and releases all the temporary structures.
-It must be called after all I/O operations with the storage are finished.
-@param fs Double pointer to the released file storage
- */
-CVAPI(void) cvReleaseFileStorage( CvFileStorage** fs );
-
-/** returns attribute value or 0 (NULL) if there is no such attribute */
-CVAPI(const char*) cvAttrValue( const CvAttrList* attr, const char* attr_name );
-
-/** @brief Starts writing a new structure.
-
-The function starts writing a compound structure (collection) that can be a sequence or a map. After
-all the structure fields, which can be scalars or structures, are written, cvEndWriteStruct should
-be called. The function can be used to group some objects or to implement the write function for a
-some user object (see CvTypeInfo).
-@param fs File storage
-@param name Name of the written structure. The structure can be accessed by this name when the
-storage is read.
-@param struct_flags A combination one of the following values:
--   **CV_NODE_SEQ** the written structure is a sequence (see discussion of CvFileStorage ),
-    that is, its elements do not have a name.
--   **CV_NODE_MAP** the written structure is a map (see discussion of CvFileStorage ), that
-    is, all its elements have names.
-One and only one of the two above flags must be specified
--   **CV_NODE_FLOW** the optional flag that makes sense only for YAML streams. It means that
-     the structure is written as a flow (not as a block), which is more compact. It is
-     recommended to use this flag for structures or arrays whose elements are all scalars.
-@param type_name Optional parameter - the object type name. In
-    case of XML it is written as a type_id attribute of the structure opening tag. In the case of
-    YAML it is written after a colon following the structure name (see the example in
-    CvFileStorage description). In case of JSON it is written as a name/value pair.
-    Mainly it is used with user objects. When the storage is read, the
-    encoded type name is used to determine the object type (see CvTypeInfo and cvFindType ).
-@param attributes This parameter is not used in the current implementation
- */
-CVAPI(void) cvStartWriteStruct( CvFileStorage* fs, const char* name,
-                                int struct_flags, const char* type_name CV_DEFAULT(NULL),
-                                CvAttrList attributes CV_DEFAULT(cvAttrList()));
-
-/** @brief Finishes writing to a file node collection.
-@param fs File storage
-@sa cvStartWriteStruct.
- */
-CVAPI(void) cvEndWriteStruct( CvFileStorage* fs );
-
-/** @brief Writes an integer value.
-
-The function writes a single integer value (with or without a name) to the file storage.
-@param fs File storage
-@param name Name of the written value. Should be NULL if and only if the parent structure is a
-sequence.
-@param value The written value
- */
-CVAPI(void) cvWriteInt( CvFileStorage* fs, const char* name, int value );
-
-/** @brief Writes a floating-point value.
-
-The function writes a single floating-point value (with or without a name) to file storage. Special
-values are encoded as follows: NaN (Not A Number) as .NaN, infinity as +.Inf or -.Inf.
-
-The following example shows how to use the low-level writing functions to store custom structures,
-such as termination criteria, without registering a new type. :
-@code
-    void write_termcriteria( CvFileStorage* fs, const char* struct_name,
-                             CvTermCriteria* termcrit )
-    {
-        cvStartWriteStruct( fs, struct_name, CV_NODE_MAP, NULL, cvAttrList(0,0));
-        cvWriteComment( fs, "termination criteria", 1 ); // just a description
-        if( termcrit->type & CV_TERMCRIT_ITER )
-            cvWriteInteger( fs, "max_iterations", termcrit->max_iter );
-        if( termcrit->type & CV_TERMCRIT_EPS )
-            cvWriteReal( fs, "accuracy", termcrit->epsilon );
-        cvEndWriteStruct( fs );
-    }
-@endcode
-@param fs File storage
-@param name Name of the written value. Should be NULL if and only if the parent structure is a
-sequence.
-@param value The written value
-*/
-CVAPI(void) cvWriteReal( CvFileStorage* fs, const char* name, double value );
-
-/** @brief Writes a text string.
-
-The function writes a text string to file storage.
-@param fs File storage
-@param name Name of the written string . Should be NULL if and only if the parent structure is a
-sequence.
-@param str The written text string
-@param quote If non-zero, the written string is put in quotes, regardless of whether they are
-required. Otherwise, if the flag is zero, quotes are used only when they are required (e.g. when
-the string starts with a digit or contains spaces).
- */
-CVAPI(void) cvWriteString( CvFileStorage* fs, const char* name,
-                           const char* str, int quote CV_DEFAULT(0) );
-
-/** @brief Writes a comment.
-
-The function writes a comment into file storage. The comments are skipped when the storage is read.
-@param fs File storage
-@param comment The written comment, single-line or multi-line
-@param eol_comment If non-zero, the function tries to put the comment at the end of current line.
-If the flag is zero, if the comment is multi-line, or if it does not fit at the end of the current
-line, the comment starts a new line.
- */
-CVAPI(void) cvWriteComment( CvFileStorage* fs, const char* comment,
-                            int eol_comment );
-
-/** @brief Writes an object to file storage.
-
-The function writes an object to file storage. First, the appropriate type info is found using
-cvTypeOf. Then, the write method associated with the type info is called.
-
-Attributes are used to customize the writing procedure. The standard types support the following
-attributes (all the dt attributes have the same format as in cvWriteRawData):
-
--# CvSeq
-    -   **header_dt** description of user fields of the sequence header that follow CvSeq, or
-        CvChain (if the sequence is a Freeman chain) or CvContour (if the sequence is a contour or
-        point sequence)
-    -   **dt** description of the sequence elements.
-    -   **recursive** if the attribute is present and is not equal to "0" or "false", the whole
-        tree of sequences (contours) is stored.
--# CvGraph
-    -   **header_dt** description of user fields of the graph header that follows CvGraph;
-    -   **vertex_dt** description of user fields of graph vertices
-    -   **edge_dt** description of user fields of graph edges (note that the edge weight is
-        always written, so there is no need to specify it explicitly)
-
-Below is the code that creates the YAML file shown in the CvFileStorage description:
-@code
-    #include "cxcore.h"
-
-    int main( int argc, char** argv )
-    {
-        CvMat* mat = cvCreateMat( 3, 3, CV_32F );
-        CvFileStorage* fs = cvOpenFileStorage( "example.yml", 0, CV_STORAGE_WRITE );
-
-        cvSetIdentity( mat );
-        cvWrite( fs, "A", mat, cvAttrList(0,0) );
-
-        cvReleaseFileStorage( &fs );
-        cvReleaseMat( &mat );
-        return 0;
-    }
-@endcode
-@param fs File storage
-@param name Name of the written object. Should be NULL if and only if the parent structure is a
-sequence.
-@param ptr Pointer to the object
-@param attributes The attributes of the object. They are specific for each particular type (see
-the discussion below).
- */
-CVAPI(void) cvWrite( CvFileStorage* fs, const char* name, const void* ptr,
-                         CvAttrList attributes CV_DEFAULT(cvAttrList()));
-
-/** @brief Starts the next stream.
-
-The function finishes the currently written stream and starts the next stream. In the case of XML
-the file with multiple streams looks like this:
-@code{.xml}
-    <opencv_storage>
-    <!-- stream #1 data -->
-    </opencv_storage>
-    <opencv_storage>
-    <!-- stream #2 data -->
-    </opencv_storage>
-    ...
-@endcode
-The YAML file will look like this:
-@code{.yaml}
-    %YAML 1.0
-    # stream #1 data
-    ...
-    ---
-    # stream #2 data
-@endcode
-This is useful for concatenating files or for resuming the writing process.
-@param fs File storage
- */
-CVAPI(void) cvStartNextStream( CvFileStorage* fs );
-
-/** @brief Writes multiple numbers.
-
-The function writes an array, whose elements consist of single or multiple numbers. The function
-call can be replaced with a loop containing a few cvWriteInt and cvWriteReal calls, but a single
-call is more efficient. Note that because none of the elements have a name, they should be written
-to a sequence rather than a map.
-@param fs File storage
-@param src Pointer to the written array
-@param len Number of the array elements to write
-@param dt Specification of each array element, see @ref format_spec "format specification"
- */
-CVAPI(void) cvWriteRawData( CvFileStorage* fs, const void* src,
-                                int len, const char* dt );
-
-/** @brief Writes multiple numbers in Base64.
-
-If either CV_STORAGE_WRITE_BASE64 or cv::FileStorage::WRITE_BASE64 is used,
-this function will be the same as cvWriteRawData. If neither, the main
-difference is that it outputs a sequence in Base64 encoding rather than
-in plain text.
-
-This function can only be used to write a sequence with a type "binary".
-
-@param fs File storage
-@param src Pointer to the written array
-@param len Number of the array elements to write
-@param dt Specification of each array element, see @ref format_spec "format specification"
-*/
-CVAPI(void) cvWriteRawDataBase64( CvFileStorage* fs, const void* src,
-                                 int len, const char* dt );
-
-/** @brief Returns a unique pointer for a given name.
-
-The function returns a unique pointer for each particular file node name. This pointer can be then
-passed to the cvGetFileNode function that is faster than cvGetFileNodeByName because it compares
-text strings by comparing pointers rather than the strings' content.
-
-Consider the following example where an array of points is encoded as a sequence of 2-entry maps:
-@code
-    points:
-      - { x: 10, y: 10 }
-      - { x: 20, y: 20 }
-      - { x: 30, y: 30 }
-      # ...
-@endcode
-Then, it is possible to get hashed "x" and "y" pointers to speed up decoding of the points. :
-@code
-    #include "cxcore.h"
-
-    int main( int argc, char** argv )
-    {
-        CvFileStorage* fs = cvOpenFileStorage( "points.yml", 0, CV_STORAGE_READ );
-        CvStringHashNode* x_key = cvGetHashedNode( fs, "x", -1, 1 );
-        CvStringHashNode* y_key = cvGetHashedNode( fs, "y", -1, 1 );
-        CvFileNode* points = cvGetFileNodeByName( fs, 0, "points" );
-
-        if( CV_NODE_IS_SEQ(points->tag) )
-        {
-            CvSeq* seq = points->data.seq;
-            int i, total = seq->total;
-            CvSeqReader reader;
-            cvStartReadSeq( seq, &reader, 0 );
-            for( i = 0; i < total; i++ )
-            {
-                CvFileNode* pt = (CvFileNode*)reader.ptr;
-    #if 1 // faster variant
-                CvFileNode* xnode = cvGetFileNode( fs, pt, x_key, 0 );
-                CvFileNode* ynode = cvGetFileNode( fs, pt, y_key, 0 );
-                assert( xnode && CV_NODE_IS_INT(xnode->tag) &&
-                        ynode && CV_NODE_IS_INT(ynode->tag));
-                int x = xnode->data.i; // or x = cvReadInt( xnode, 0 );
-                int y = ynode->data.i; // or y = cvReadInt( ynode, 0 );
-    #elif 1 // slower variant; does not use x_key & y_key
-                CvFileNode* xnode = cvGetFileNodeByName( fs, pt, "x" );
-                CvFileNode* ynode = cvGetFileNodeByName( fs, pt, "y" );
-                assert( xnode && CV_NODE_IS_INT(xnode->tag) &&
-                        ynode && CV_NODE_IS_INT(ynode->tag));
-                int x = xnode->data.i; // or x = cvReadInt( xnode, 0 );
-                int y = ynode->data.i; // or y = cvReadInt( ynode, 0 );
-    #else // the slowest yet the easiest to use variant
-                int x = cvReadIntByName( fs, pt, "x", 0 );
-                int y = cvReadIntByName( fs, pt, "y", 0 );
-    #endif
-                CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
-                printf("
-            }
-        }
-        cvReleaseFileStorage( &fs );
-        return 0;
-    }
-@endcode
-Please note that whatever method of accessing a map you are using, it is still much slower than
-using plain sequences; for example, in the above example, it is more efficient to encode the points
-as pairs of integers in a single numeric sequence.
-@param fs File storage
-@param name Literal node name
-@param len Length of the name (if it is known apriori), or -1 if it needs to be calculated
-@param create_missing Flag that specifies, whether an absent key should be added into the hash table
-*/
-CVAPI(CvStringHashNode*) cvGetHashedKey( CvFileStorage* fs, const char* name,
-                                        int len CV_DEFAULT(-1),
-                                        int create_missing CV_DEFAULT(0));
-
-/** @brief Retrieves one of the top-level nodes of the file storage.
-
-The function returns one of the top-level file nodes. The top-level nodes do not have a name, they
-correspond to the streams that are stored one after another in the file storage. If the index is out
-of range, the function returns a NULL pointer, so all the top-level nodes can be iterated by
-subsequent calls to the function with stream_index=0,1,..., until the NULL pointer is returned.
-This function can be used as a base for recursive traversal of the file storage.
-@param fs File storage
-@param stream_index Zero-based index of the stream. See cvStartNextStream . In most cases,
-there is only one stream in the file; however, there can be several.
- */
-CVAPI(CvFileNode*) cvGetRootFileNode( const CvFileStorage* fs,
-                                     int stream_index CV_DEFAULT(0) );
-
-/** @brief Finds a node in a map or file storage.
-
-The function finds a file node. It is a faster version of cvGetFileNodeByName (see
-cvGetHashedKey discussion). Also, the function can insert a new node, if it is not in the map yet.
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches a top-level node. If both map and
-key are NULLs, the function returns the root file node - a map that contains top-level nodes.
-@param key Unique pointer to the node name, retrieved with cvGetHashedKey
-@param create_missing Flag that specifies whether an absent node should be added to the map
- */
-CVAPI(CvFileNode*) cvGetFileNode( CvFileStorage* fs, CvFileNode* map,
-                                 const CvStringHashNode* key,
-                                 int create_missing CV_DEFAULT(0) );
-
-/** @brief Finds a node in a map or file storage.
-
-The function finds a file node by name. The node is searched either in map or, if the pointer is
-NULL, among the top-level file storage nodes. Using this function for maps and cvGetSeqElem (or
-sequence reader) for sequences, it is possible to navigate through the file storage. To speed up
-multiple queries for a certain key (e.g., in the case of an array of structures) one may use a
-combination of cvGetHashedKey and cvGetFileNode.
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches in all the top-level nodes
-(streams), starting with the first one.
-@param name The file node name
- */
-CVAPI(CvFileNode*) cvGetFileNodeByName( const CvFileStorage* fs,
-                                       const CvFileNode* map,
-                                       const char* name );
-
-/** @brief Retrieves an integer value from a file node.
-
-The function returns an integer that is represented by the file node. If the file node is NULL, the
-default_value is returned (thus, it is convenient to call the function right after cvGetFileNode
-without checking for a NULL pointer). If the file node has type CV_NODE_INT, then node-\>data.i is
-returned. If the file node has type CV_NODE_REAL, then node-\>data.f is converted to an integer
-and returned. Otherwise the error is reported.
-@param node File node
-@param default_value The value that is returned if node is NULL
- */
-CV_INLINE int cvReadInt( const CvFileNode* node, int default_value CV_DEFAULT(0) )
-{
-    return !node ? default_value :
-        CV_NODE_IS_INT(node->tag) ? node->data.i :
-        CV_NODE_IS_REAL(node->tag) ? cvRound(node->data.f) : 0x7fffffff;
-}
-
-/** @brief Finds a file node and returns its value.
-
-The function is a simple superposition of cvGetFileNodeByName and cvReadInt.
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches a top-level node.
-@param name The node name
-@param default_value The value that is returned if the file node is not found
- */
-CV_INLINE int cvReadIntByName( const CvFileStorage* fs, const CvFileNode* map,
-                         const char* name, int default_value CV_DEFAULT(0) )
-{
-    return cvReadInt( cvGetFileNodeByName( fs, map, name ), default_value );
-}
-
-/** @brief Retrieves a floating-point value from a file node.
-
-The function returns a floating-point value that is represented by the file node. If the file node
-is NULL, the default_value is returned (thus, it is convenient to call the function right after
-cvGetFileNode without checking for a NULL pointer). If the file node has type CV_NODE_REAL ,
-then node-\>data.f is returned. If the file node has type CV_NODE_INT , then node-:math:\>data.f
-is converted to floating-point and returned. Otherwise the result is not determined.
-@param node File node
-@param default_value The value that is returned if node is NULL
- */
-CV_INLINE double cvReadReal( const CvFileNode* node, double default_value CV_DEFAULT(0.) )
-{
-    return !node ? default_value :
-        CV_NODE_IS_INT(node->tag) ? (double)node->data.i :
-        CV_NODE_IS_REAL(node->tag) ? node->data.f : 1e300;
-}
-
-/** @brief Finds a file node and returns its value.
-
-The function is a simple superposition of cvGetFileNodeByName and cvReadReal .
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches a top-level node.
-@param name The node name
-@param default_value The value that is returned if the file node is not found
- */
-CV_INLINE double cvReadRealByName( const CvFileStorage* fs, const CvFileNode* map,
-                        const char* name, double default_value CV_DEFAULT(0.) )
-{
-    return cvReadReal( cvGetFileNodeByName( fs, map, name ), default_value );
-}
-
-/** @brief Retrieves a text string from a file node.
-
-The function returns a text string that is represented by the file node. If the file node is NULL,
-the default_value is returned (thus, it is convenient to call the function right after
-cvGetFileNode without checking for a NULL pointer). If the file node has type CV_NODE_STR , then
-node-:math:\>data.str.ptr is returned. Otherwise the result is not determined.
-@param node File node
-@param default_value The value that is returned if node is NULL
- */
-CV_INLINE const char* cvReadString( const CvFileNode* node,
-                        const char* default_value CV_DEFAULT(NULL) )
-{
-    return !node ? default_value : CV_NODE_IS_STRING(node->tag) ? node->data.str.ptr : 0;
-}
-
-/** @brief Finds a file node by its name and returns its value.
-
-The function is a simple superposition of cvGetFileNodeByName and cvReadString .
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches a top-level node.
-@param name The node name
-@param default_value The value that is returned if the file node is not found
- */
-CV_INLINE const char* cvReadStringByName( const CvFileStorage* fs, const CvFileNode* map,
-                        const char* name, const char* default_value CV_DEFAULT(NULL) )
-{
-    return cvReadString( cvGetFileNodeByName( fs, map, name ), default_value );
-}
-
-
-/** @brief Decodes an object and returns a pointer to it.
-
-The function decodes a user object (creates an object in a native representation from the file
-storage subtree) and returns it. The object to be decoded must be an instance of a registered type
-that supports the read method (see CvTypeInfo). The type of the object is determined by the type
-name that is encoded in the file. If the object is a dynamic structure, it is created either in
-memory storage and passed to cvOpenFileStorage or, if a NULL pointer was passed, in temporary
-memory storage, which is released when cvReleaseFileStorage is called. Otherwise, if the object is
-not a dynamic structure, it is created in a heap and should be released with a specialized function
-or by using the generic cvRelease.
-@param fs File storage
-@param node The root object node
-@param attributes Unused parameter
- */
-CVAPI(void*) cvRead( CvFileStorage* fs, CvFileNode* node,
-                        CvAttrList* attributes CV_DEFAULT(NULL));
-
-/** @brief Finds an object by name and decodes it.
-
-The function is a simple superposition of cvGetFileNodeByName and cvRead.
-@param fs File storage
-@param map The parent map. If it is NULL, the function searches a top-level node.
-@param name The node name
-@param attributes Unused parameter
- */
-CV_INLINE void* cvReadByName( CvFileStorage* fs, const CvFileNode* map,
-                              const char* name, CvAttrList* attributes CV_DEFAULT(NULL) )
-{
-    return cvRead( fs, cvGetFileNodeByName( fs, map, name ), attributes );
-}
-
-
-/** @brief Initializes the file node sequence reader.
-
-The function initializes the sequence reader to read data from a file node. The initialized reader
-can be then passed to cvReadRawDataSlice.
-@param fs File storage
-@param src The file node (a sequence) to read numbers from
-@param reader Pointer to the sequence reader
- */
-CVAPI(void) cvStartReadRawData( const CvFileStorage* fs, const CvFileNode* src,
-                               CvSeqReader* reader );
-
-/** @brief Initializes file node sequence reader.
-
-The function reads one or more elements from the file node, representing a sequence, to a
-user-specified array. The total number of read sequence elements is a product of total and the
-number of components in each array element. For example, if dt=2if, the function will read total\*3
-sequence elements. As with any sequence, some parts of the file node sequence can be skipped or read
-repeatedly by repositioning the reader using cvSetSeqReaderPos.
-@param fs File storage
-@param reader The sequence reader. Initialize it with cvStartReadRawData .
-@param count The number of elements to read
-@param dst Pointer to the destination array
-@param dt Specification of each array element. It has the same format as in cvWriteRawData .
- */
-CVAPI(void) cvReadRawDataSlice( const CvFileStorage* fs, CvSeqReader* reader,
-                               int count, void* dst, const char* dt );
-
-/** @brief Reads multiple numbers.
-
-The function reads elements from a file node that represents a sequence of scalars.
-@param fs File storage
-@param src The file node (a sequence) to read numbers from
-@param dst Pointer to the destination array
-@param dt Specification of each array element. It has the same format as in cvWriteRawData .
- */
-CVAPI(void) cvReadRawData( const CvFileStorage* fs, const CvFileNode* src,
-                          void* dst, const char* dt );
-
-/** @brief Writes a file node to another file storage.
-
-The function writes a copy of a file node to file storage. Possible applications of the function are
-merging several file storages into one and conversion between XML, YAML and JSON formats.
-@param fs Destination file storage
-@param new_node_name New name of the file node in the destination file storage. To keep the
-existing name, use cvcvGetFileNodeName
-@param node The written node
-@param embed If the written node is a collection and this parameter is not zero, no extra level of
-hierarchy is created. Instead, all the elements of node are written into the currently written
-structure. Of course, map elements can only be embedded into another map, and sequence elements
-can only be embedded into another sequence.
- */
-CVAPI(void) cvWriteFileNode( CvFileStorage* fs, const char* new_node_name,
-                            const CvFileNode* node, int embed );
-
-/** @brief Returns the name of a file node.
-
-The function returns the name of a file node or NULL, if the file node does not have a name or if
-node is NULL.
-@param node File node
- */
-CVAPI(const char*) cvGetFileNodeName( const CvFileNode* node );
-
-/*********************************** Adding own types ***********************************/
-
-/** @brief Registers a new type.
-
-The function registers a new type, which is described by info . The function creates a copy of the
-structure, so the user should delete it after calling the function.
-@param info Type info structure
- */
-CVAPI(void) cvRegisterType( const CvTypeInfo* info );
-
-/** @brief Unregisters the type.
-
-The function unregisters a type with a specified name. If the name is unknown, it is possible to
-locate the type info by an instance of the type using cvTypeOf or by iterating the type list,
-starting from cvFirstType, and then calling cvUnregisterType(info-\>typeName).
-@param type_name Name of an unregistered type
- */
-CVAPI(void) cvUnregisterType( const char* type_name );
-
-/** @brief Returns the beginning of a type list.
-
-The function returns the first type in the list of registered types. Navigation through the list can
-be done via the prev and next fields of the CvTypeInfo structure.
- */
-CVAPI(CvTypeInfo*) cvFirstType(void);
-
-/** @brief Finds a type by its name.
-
-The function finds a registered type by its name. It returns NULL if there is no type with the
-specified name.
-@param type_name Type name
- */
-CVAPI(CvTypeInfo*) cvFindType( const char* type_name );
-
-/** @brief Returns the type of an object.
-
-The function finds the type of a given object. It iterates through the list of registered types and
-calls the is_instance function/method for every type info structure with that object until one of
-them returns non-zero or until the whole list has been traversed. In the latter case, the function
-returns NULL.
-@param struct_ptr The object pointer
- */
-CVAPI(CvTypeInfo*) cvTypeOf( const void* struct_ptr );
-
-#endif
 
 /** @brief Releases an object.
 
@@ -2565,34 +1813,6 @@ CVAPI(CvTypeInfo*) cvTypeOf( const void* struct_ptr );
  @param struct_ptr Double pointer to the object
  */
 CVAPI(void) cvRelease( void** struct_ptr );
-
-/** @brief Makes a clone of an object.
-
-The function finds the type of a given object and calls clone with the passed object. Of course, if
-you know the object type, for example, struct_ptr is CvMat\*, it is faster to call the specific
-function, like cvCloneMat.
-@param struct_ptr The object to clone
- */
-CVAPI(void*) cvClone( const void* struct_ptr );
-
-/*********************************** Measuring Execution Time ***************************/
-
-/** helper functions for RNG initialization and accurate time measurement:
-   uses internal clock counter on x86 */
-CVAPI(int64)  cvGetTickCount( void );
-CVAPI(double) cvGetTickFrequency( void );
-
-/*********************************** CPU capabilities ***********************************/
-
-CVAPI(int) cvCheckHardwareSupport(int feature);
-
-/*********************************** Multi-Threading ************************************/
-
-/** retrieve/set the number of threads used in OpenMP implementations */
-CVAPI(int)  cvGetNumThreads( void );
-CVAPI(void) cvSetNumThreads( int threads CV_DEFAULT(0) );
-/** get index of the thread being executed */
-CVAPI(int)  cvGetThreadNum( void );
 
 
 /********************************** Error Handling **************************************/
@@ -2629,25 +1849,6 @@ CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
 /** Maps IPP error codes to the counterparts from OpenCV */
 CVAPI(int) cvErrorFromIppStatus( int ipp_status );
 
-typedef int (CV_CDECL *CvErrorCallback)( int status, const char* func_name,
-                                        const char* err_msg, const char* file_name, int line, void* userdata );
-
-/** Assigns a new error-handling function */
-CVAPI(CvErrorCallback) cvRedirectError( CvErrorCallback error_handler,
-                                       void* userdata CV_DEFAULT(NULL),
-                                       void** prev_userdata CV_DEFAULT(NULL) );
-
-/** Output nothing */
-CVAPI(int) cvNulDevReport( int status, const char* func_name, const char* err_msg,
-                          const char* file_name, int line, void* userdata );
-
-/** Output to console(fprintf(stderr,...)) */
-CVAPI(int) cvStdErrReport( int status, const char* func_name, const char* err_msg,
-                          const char* file_name, int line, void* userdata );
-
-/** Output to MessageBox(WIN32) */
-CVAPI(int) cvGuiBoxReport( int status, const char* func_name, const char* err_msg,
-                          const char* file_name, int line, void* userdata );
 
 #define OPENCV_ERROR(status,func,context)                           \
 cvError((status),(func),(context),__FILE__,__LINE__)
@@ -2740,17 +1941,9 @@ CV_EXPORTS Mat cvarrToMat(const CvArr* arr, bool copyData=false,
                           bool allowND=true, int coiMode=0,
                           AutoBuffer<double>* buf=0);
 
-static inline Mat cvarrToMatND(const CvArr* arr, bool copyData=false, int coiMode=0)
-{
-    return cvarrToMat(arr, copyData, true, coiMode);
-}
-
 
 //! extracts Channel of Interest from CvMat or IplImage and makes cv::Mat out of it.
 CV_EXPORTS void extractImageCOI(const CvArr* arr, OutputArray coiimg, int coi=-1);
-//! inserts single-channel cv::Mat into a multi-channel CvMat or IplImage
-CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
-
 
 
 ////// specialized implementations of DefaultDeleter::operator() for classic OpenCV types //////

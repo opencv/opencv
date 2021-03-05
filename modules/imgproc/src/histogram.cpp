@@ -3172,50 +3172,6 @@ cvCalcBayesianProb( CvHistogram** src, int count, CvHistogram** dst )
 }
 
 
-CV_IMPL void
-cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
-                   CvHistogram* hist_dens, double scale )
-{
-    if( scale <= 0 )
-        CV_Error( CV_StsOutOfRange, "scale must be positive" );
-
-    if( !CV_IS_HIST(hist) || !CV_IS_HIST(hist_mask) || !CV_IS_HIST(hist_dens) )
-        CV_Error( CV_StsBadArg, "Invalid histogram pointer[s]" );
-
-    {
-        CvArr* arrs[] = { hist->bins, hist_mask->bins, hist_dens->bins };
-        CvMatND stubs[3];
-        CvNArrayIterator iterator;
-
-        cvInitNArrayIterator( 3, arrs, 0, stubs, &iterator );
-
-        if( CV_MAT_TYPE(iterator.hdr[0]->type) != CV_32FC1 )
-            CV_Error( CV_StsUnsupportedFormat, "All histograms must have 32fC1 type" );
-
-        do
-        {
-            const float* srcdata = (const float*)(iterator.ptr[0]);
-            const float* maskdata = (const float*)(iterator.ptr[1]);
-            float* dstdata = (float*)(iterator.ptr[2]);
-            int i;
-
-            for( i = 0; i < iterator.size.width; i++ )
-            {
-                float s = srcdata[i];
-                float m = maskdata[i];
-                if( s > FLT_EPSILON )
-                    if( m <= s )
-                        dstdata[i] = (float)(m*scale/s);
-                    else
-                        dstdata[i] = (float)scale;
-                else
-                    dstdata[i] = (float)0;
-            }
-        }
-        while( cvNextNArraySlice( &iterator ));
-    }
-}
-
 class EqualizeHistCalcHist_Invoker : public cv::ParallelLoopBody
 {
 public:

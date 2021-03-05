@@ -200,19 +200,6 @@ void extractImageCOI(const CvArr* arr, OutputArray _ch, int coi)
     mixChannels( &mat, 1, &ch, 1, _pairs, 1 );
 }
 
-void insertImageCOI(InputArray _ch, CvArr* arr, int coi)
-{
-    Mat ch = _ch.getMat(), mat = cvarrToMat(arr, false, true, 1);
-    if(coi < 0)
-    {
-        CV_Assert( CV_IS_IMAGE(arr) );
-        coi = cvGetImageCOI((const IplImage*)arr)-1;
-    }
-    CV_Assert(ch.size == mat.size && ch.depth() == mat.depth() && 0 <= coi && coi < mat.channels());
-    int _pairs[] = { 0, coi };
-    mixChannels( &ch, 1, &mat, 1, _pairs, 1 );
-}
-
 } // cv::
 
 // operations
@@ -354,34 +341,4 @@ cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
         cv::sort( src, dst, flags );
         CV_Assert( dst0.data == dst.data );
     }
-}
-
-
-CV_IMPL int
-cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
-           CvTermCriteria termcrit, int attempts, CvRNG*,
-           int flags, CvArr* _centers, double* _compactness )
-{
-    cv::Mat data = cv::cvarrToMat(_samples), labels = cv::cvarrToMat(_labels), centers;
-    if( _centers )
-    {
-        centers = cv::cvarrToMat(_centers);
-
-        centers = centers.reshape(1);
-        data = data.reshape(1);
-
-        CV_Assert( !centers.empty() );
-        CV_Assert( centers.rows == cluster_count );
-        CV_Assert( centers.cols == data.cols );
-        CV_Assert( centers.depth() == data.depth() );
-    }
-    CV_Assert( labels.isContinuous() && labels.type() == CV_32S &&
-        (labels.cols == 1 || labels.rows == 1) &&
-        labels.cols + labels.rows - 1 == data.rows );
-
-    double compactness = cv::kmeans(data, cluster_count, labels, termcrit, attempts,
-                                    flags, _centers ? cv::_OutputArray(centers) : cv::_OutputArray() );
-    if( _compactness )
-        *_compactness = compactness;
-    return 1;
 }

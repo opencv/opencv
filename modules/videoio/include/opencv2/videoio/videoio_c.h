@@ -65,18 +65,6 @@ In C++ use cv::VideoCapture
 */
 typedef struct CvCapture CvCapture;
 
-/** @brief start capturing frames from video file
-*/
-CVAPI(CvCapture*) cvCreateFileCapture( const char* filename );
-
-/** @brief start capturing frames from video file. allows specifying a preferred API to use
-*/
-CVAPI(CvCapture*) cvCreateFileCaptureWithPreference( const char* filename , int apiPreference);
-
-/** @brief start capturing frames from camera: index = camera_index + domain_offset (CV_CAP_*)
-*/
-CVAPI(CvCapture*) cvCreateCameraCapture( int index );
-
 /** @brief grab a frame, return 1 on success, 0 on fail.
 
   this function is thought to be fast
@@ -108,12 +96,6 @@ CVAPI(double) cvGetCaptureProperty( CvCapture* capture, int property_id );
 */
 CVAPI(int)    cvSetCaptureProperty( CvCapture* capture, int property_id, double value );
 
-/** @brief Return the type of the capturer (eg, ::CV_CAP_VFW, ::CV_CAP_UNICAP)
-
-It is unknown if created with ::CV_CAP_ANY
-*/
-CVAPI(int)    cvGetCaptureDomain( CvCapture* capture);
-
 /** @brief "black box" video file writer structure
 
 In C++ use cv::VideoWriter
@@ -133,16 +115,6 @@ CVAPI(int) cvWriteFrame( CvVideoWriter* writer, const IplImage* image );
 /** @brief close video file writer
 */
 CVAPI(void) cvReleaseVideoWriter( CvVideoWriter** writer );
-
-// ***************************************************************************************
-//! @name Obsolete functions/synonyms
-//! @{
-#define cvCaptureFromCAM cvCreateCameraCapture //!< @deprecated use cvCreateCameraCapture() instead
-#define cvCaptureFromFile cvCreateFileCapture  //!< @deprecated use cvCreateFileCapture() instead
-#define cvCaptureFromAVI cvCaptureFromFile     //!< @deprecated use cvCreateFileCapture() instead
-#define cvCreateAVIWriter cvCreateVideoWriter  //!< @deprecated use cvCreateVideoWriter() instead
-#define cvWriteToAVI cvWriteFrame              //!< @deprecated use cvWriteFrame() instead
-//!  @} Obsolete...
 
 //! @} videoio_c
 

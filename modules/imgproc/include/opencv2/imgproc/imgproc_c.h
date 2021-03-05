@@ -83,11 +83,6 @@ CVAPI(void)  cvRunningAvg( const CvArr* image, CvArr* acc, double alpha,
 *                                    Image Processing                                    *
 \****************************************************************************************/
 
-/** Copies source 2D array inside of the larger destination array and
-   makes a border of the specified type (IPL_BORDER_*) around the copied area. */
-CVAPI(void) cvCopyMakeBorder( const CvArr* src, CvArr* dst, CvPoint offset,
-                              int bordertype, CvScalar value CV_DEFAULT(cvScalarAll(0)));
-
 /** @brief Smooths the image in one of several ways.
 
 @param src The source image
@@ -156,47 +151,6 @@ CVAPI(void)  cvPyrDown( const CvArr* src, CvArr* dst,
 CVAPI(void)  cvPyrUp( const CvArr* src, CvArr* dst,
                       int filter CV_DEFAULT(CV_GAUSSIAN_5x5) );
 
-/** @brief Builds pyramid for an image
-@see buildPyramid
-*/
-CVAPI(CvMat**) cvCreatePyramid( const CvArr* img, int extra_layers, double rate,
-                                const CvSize* layer_sizes CV_DEFAULT(0),
-                                CvArr* bufarr CV_DEFAULT(0),
-                                int calc CV_DEFAULT(1),
-                                int filter CV_DEFAULT(CV_GAUSSIAN_5x5) );
-
-/** @brief Releases pyramid */
-CVAPI(void)  cvReleasePyramid( CvMat*** pyramid, int extra_layers );
-
-
-/** @brief Filters image using meanshift algorithm
-@see cv::pyrMeanShiftFiltering
-*/
-CVAPI(void) cvPyrMeanShiftFiltering( const CvArr* src, CvArr* dst,
-    double sp, double sr, int max_level CV_DEFAULT(1),
-    CvTermCriteria termcrit CV_DEFAULT(cvTermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,5,1)));
-
-/** @brief Segments image using seed "markers"
-@see cv::watershed
-*/
-CVAPI(void) cvWatershed( const CvArr* image, CvArr* markers );
-
-/** @brief Calculates an image derivative using generalized Sobel
-
-   (aperture_size = 1,3,5,7) or Scharr (aperture_size = -1) operator.
-   Scharr can be used only for the first dx or dy derivative
-@see cv::Sobel
-*/
-CVAPI(void) cvSobel( const CvArr* src, CvArr* dst,
-                    int xorder, int yorder,
-                    int aperture_size CV_DEFAULT(3));
-
-/** @brief Calculates the image Laplacian: (d2/dx + d2/dy)I
-@see cv::Laplacian
-*/
-CVAPI(void) cvLaplace( const CvArr* src, CvArr* dst,
-                      int aperture_size CV_DEFAULT(3) );
-
 /** @brief Converts input array pixels from one color space to another
 @see cv::cvtColor
 */
@@ -218,12 +172,6 @@ CVAPI(void)  cvWarpAffine( const CvArr* src, CvArr* dst, const CvMat* map_matrix
                            int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
                            CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
 
-/** @brief Computes affine transform matrix for mapping src[i] to dst[i] (i=0,1,2)
-@see cv::getAffineTransform
-*/
-CVAPI(CvMat*) cvGetAffineTransform( const CvPoint2D32f * src,
-                                    const CvPoint2D32f * dst,
-                                    CvMat * map_matrix );
 
 /** @brief Computes rotation_matrix matrix
 @see cv::getRotationMatrix2D
@@ -252,26 +200,6 @@ CVAPI(void)  cvRemap( const CvArr* src, CvArr* dst,
                       const CvArr* mapx, const CvArr* mapy,
                       int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
                       CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
-
-/** @brief Converts mapx & mapy from floating-point to integer formats for cvRemap
-@see cv::convertMaps
-*/
-CVAPI(void)  cvConvertMaps( const CvArr* mapx, const CvArr* mapy,
-                            CvArr* mapxy, CvArr* mapalpha );
-
-/** @brief Performs forward or inverse log-polar image transform
-@see cv::warpPolar
-*/
-CVAPI(void)  cvLogPolar( const CvArr* src, CvArr* dst,
-                         CvPoint2D32f center, double M,
-                         int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
-
-/** Performs forward or inverse linear-polar image transform
-@see cv::warpPolar
-*/
-CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
-                         CvPoint2D32f center, double maxRadius,
-                         int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
 /** @brief Returns a structuring element of the specified size and shape for morphological operations.
 
@@ -545,12 +473,6 @@ CVAPI(CvSeq*) cvConvexHull2( const CvArr* input,
 CVAPI(int)  cvCheckContourConvexity( const CvArr* contour );
 
 
-/** @brief Finds convexity defects for the contour
-@see cv::convexityDefects
-*/
-CVAPI(CvSeq*)  cvConvexityDefects( const CvArr* contour, const CvArr* convexhull,
-                                   CvMemStorage* storage CV_DEFAULT(NULL));
-
 /** @brief Fits ellipse into a set of 2d points
 @see cv::fitEllipse
 */
@@ -778,20 +700,6 @@ CVAPI(void)  cvCalcArrBackProjectPatch( CvArr** image, CvArr* dst, CvSize range,
      cvCalcArrBackProjectPatch( (CvArr**)image, dst, range, hist, method, factor )
 
 
-/** @brief Divides one histogram by another.
-
-The function calculates the object probability density from two histograms as:
-
-\f[\texttt{disthist} (I)= \forkthree{0}{if \(\texttt{hist1}(I)=0\)}{\texttt{scale}}{if \(\texttt{hist1}(I) \ne 0\) and \(\texttt{hist2}(I) > \texttt{hist1}(I)\)}{\frac{\texttt{hist2}(I) \cdot \texttt{scale}}{\texttt{hist1}(I)}}{if \(\texttt{hist1}(I) \ne 0\) and \(\texttt{hist2}(I) \le \texttt{hist1}(I)\)}\f]
-
-@param hist1 First histogram (the divisor).
-@param hist2 Second histogram.
-@param dst_hist Destination histogram.
-@param scale Scale factor for the destination histogram.
- */
-CVAPI(void)  cvCalcProbDensity( const CvHistogram* hist1, const CvHistogram* hist2,
-                                CvHistogram* dst_hist, double scale CV_DEFAULT(255) );
-
 /** @brief equalizes histogram of 8-bit single-channel image
 @see cv::equalizeHist
 */
@@ -818,19 +726,6 @@ CVAPI(double)  cvThreshold( const CvArr*  src, CvArr*  dst,
                             double  threshold, double  max_value,
                             int threshold_type );
 
-/** @brief Applies adaptive threshold to grayscale image.
-
-   The two parameters for methods CV_ADAPTIVE_THRESH_MEAN_C and
-   CV_ADAPTIVE_THRESH_GAUSSIAN_C are:
-   neighborhood size (3, 5, 7 etc.),
-   and a constant subtracted from mean (...,-3,-2,-1,0,1,2,3,...)
-@see cv::adaptiveThreshold
-*/
-CVAPI(void)  cvAdaptiveThreshold( const CvArr* src, CvArr* dst, double max_value,
-                                  int adaptive_method CV_DEFAULT(CV_ADAPTIVE_THRESH_MEAN_C),
-                                  int threshold_type CV_DEFAULT(CV_THRESH_BINARY),
-                                  int block_size CV_DEFAULT(3),
-                                  double param1 CV_DEFAULT(5));
 
 /** @brief Fills the connected component until the color difference gets large enough
 @see cv::floodFill
@@ -846,11 +741,6 @@ CVAPI(void)  cvFloodFill( CvArr* image, CvPoint seed_point,
 *                                  Feature detection                                     *
 \****************************************************************************************/
 
-/** @brief Runs canny edge detector
-@see cv::Canny
-*/
-CVAPI(void)  cvCanny( const CvArr* image, CvArr* edges, double threshold1,
-                      double threshold2, int  aperture_size CV_DEFAULT(3) );
 
 /** @brief Calculates constraint image for corner detection
 
@@ -875,15 +765,6 @@ CVAPI(void)  cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv,
 CVAPI(void)  cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval,
                                   int block_size, int aperture_size CV_DEFAULT(3) );
 
-/** @brief Harris corner detector:
-
-   Calculates det(M) - k*(trace(M)^2), where M is 2x2 gradient covariation matrix for each pixel
-@see cv::cornerHarris
-*/
-CVAPI(void)  cvCornerHarris( const CvArr* image, CvArr* harris_response,
-                             int block_size, int aperture_size CV_DEFAULT(3),
-                             double k CV_DEFAULT(0.04) );
-
 /** @brief Adjust corner position using some sort of gradient search
 @see cv::cornerSubPix
 */
@@ -891,18 +772,6 @@ CVAPI(void)  cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners,
                                  int count, CvSize win, CvSize zero_zone,
                                  CvTermCriteria  criteria );
 
-/** @brief Finds a sparse set of points within the selected region
-   that seem to be easy to track
-@see cv::goodFeaturesToTrack
-*/
-CVAPI(void)  cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image,
-                                    CvArr* temp_image, CvPoint2D32f* corners,
-                                    int* corner_count, double  quality_level,
-                                    double  min_distance,
-                                    const CvArr* mask CV_DEFAULT(NULL),
-                                    int block_size CV_DEFAULT(3),
-                                    int use_harris CV_DEFAULT(0),
-                                    double k CV_DEFAULT(0.04) );
 
 /** @brief Finds lines on binary image using one of several methods.
 
@@ -970,14 +839,6 @@ CVAPI(void)  cvRectangle( CvArr* img, CvPoint pt1, CvPoint pt2,
                           int line_type CV_DEFAULT(8),
                           int shift CV_DEFAULT(0));
 
-/** @brief Draws a rectangle specified by a CvRect structure
-@see cv::rectangle
-*/
-CVAPI(void)  cvRectangleR( CvArr* img, CvRect r,
-                           CvScalar color, int thickness CV_DEFAULT(1),
-                           int line_type CV_DEFAULT(8),
-                           int shift CV_DEFAULT(0));
-
 
 /** @brief Draws a circle with specified center and radius.
 
@@ -1012,12 +873,6 @@ CV_INLINE  void  cvEllipseBox( CvArr* img, CvBox2D box, CvScalar color,
                0, 360, color, thickness, line_type, shift );
 }
 
-/** @brief Fills convex or monotonous polygon.
-@see cv::fillConvexPoly
-*/
-CVAPI(void)  cvFillConvexPoly( CvArr* img, const CvPoint* pts, int npts, CvScalar color,
-                               int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0));
-
 /** @brief Fills an area bounded by one or more arbitrary polygons
 @see cv::fillPoly
 */
@@ -1032,19 +887,6 @@ CVAPI(void)  cvPolyLine( CvArr* img, CvPoint** pts, const int* npts, int contour
                          int is_closed, CvScalar color, int thickness CV_DEFAULT(1),
                          int line_type CV_DEFAULT(8), int shift CV_DEFAULT(0) );
 
-#define cvDrawRect cvRectangle
-#define cvDrawLine cvLine
-#define cvDrawCircle cvCircle
-#define cvDrawEllipse cvEllipse
-#define cvDrawPolyLine cvPolyLine
-
-/** @brief Clips the line segment connecting *pt1 and *pt2
-   by the rectangular window
-
-   (0<=x<img_size.width, 0<=y<img_size.height).
-@see cv::clipLine
-*/
-CVAPI(int) cvClipLine( CvSize img_size, CvPoint* pt1, CvPoint* pt2 );
 
 /** @brief Initializes line iterator.
 
@@ -1135,11 +977,6 @@ CV_INLINE CvFont cvFont( double scale, int thickness CV_DEFAULT(1) )
 CVAPI(void)  cvPutText( CvArr* img, const char* text, CvPoint org,
                         const CvFont* font, CvScalar color );
 
-/** @brief Calculates bounding box of text stroke (useful for alignment)
-@see cv::getTextSize
-*/
-CVAPI(void)  cvGetTextSize( const char* text_string, const CvFont* font,
-                            CvSize* text_size, int* baseline );
 
 /** @brief Unpacks color value
 

@@ -339,7 +339,7 @@ void BaseTest::safe_run( int start_from )
 void BaseTest::run( int start_from )
 {
     int test_case_idx, count = get_test_case_count();
-    int64 t_start = cvGetTickCount();
+    int64 t_start = cv::getTickCount();
     double freq = cv::getTickFrequency();
     bool ff = can_do_fast_forward();
     int progress = 0, code;

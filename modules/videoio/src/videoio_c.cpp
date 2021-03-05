@@ -10,29 +10,6 @@ using namespace cv;
 
 // Legacy C-like API
 
-CV_IMPL CvCapture* cvCreateCameraCapture(int)
-{
-    CV_LOG_WARNING(NULL, "cvCreateCameraCapture doesn't support legacy API anymore.")
-    return NULL;
-}
-
-CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char*, int)
-{
-    CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference doesn't support legacy API anymore.")
-    return NULL;
-}
-
-CV_IMPL CvCapture* cvCreateFileCapture(const char * filename)
-{
-    return cvCreateFileCaptureWithPreference(filename, CAP_ANY);
-}
-
-CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char*, int, double, CvSize, int)
-{
-    CV_LOG_WARNING(NULL, "cvCreateVideoWriter doesn't support legacy API anymore.")
-    return NULL;
-}
-
 CV_IMPL int cvWriteFrame(CvVideoWriter* writer, const IplImage* image)
 {
     return writer ? writer->writeFrame(image) : 0;
@@ -83,9 +60,4 @@ CV_IMPL double cvGetCaptureProperty(CvCapture* capture, int id)
 CV_IMPL int cvSetCaptureProperty(CvCapture* capture, int id, double value)
 {
     return capture ? capture->setProperty(id, value) : 0;
-}
-
-CV_IMPL int cvGetCaptureDomain(CvCapture* capture)
-{
-    return capture ? capture->getCaptureDomain() : 0;
 }

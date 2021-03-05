@@ -75,16 +75,4 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
     return (CvSeq*)contour_header;
 }
 
-CV_IMPL void
-cvCopyMakeBorder( const CvArr* srcarr, CvArr* dstarr, CvPoint offset,
-                  int borderType, CvScalar value )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-    int left = offset.x, right = dst.cols - src.cols - left;
-    int top = offset.y, bottom = dst.rows - src.rows - top;
-
-    CV_Assert( dst.type() == src.type() );
-    cv::copyMakeBorder( src, dst, top, bottom, left, right, borderType, value );
-}
-
 /* End of file. */

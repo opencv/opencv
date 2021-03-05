@@ -511,29 +511,6 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
 }
 
-CV_IMPL void
-cvGoodFeaturesToTrack( const void* _image, void*, void*,
-                       CvPoint2D32f* _corners, int *_corner_count,
-                       double quality_level, double min_distance,
-                       const void* _maskImage, int block_size,
-                       int use_harris, double harris_k )
-{
-    cv::Mat image = cv::cvarrToMat(_image), mask;
-    std::vector<cv::Point2f> corners;
-
-    if( _maskImage )
-        mask = cv::cvarrToMat(_maskImage);
-
-    CV_Assert( _corners && _corner_count );
-    cv::goodFeaturesToTrack( image, corners, *_corner_count, quality_level,
-        min_distance, mask, block_size, use_harris != 0, harris_k );
-
-    size_t i, ncorners = corners.size();
-    for( i = 0; i < ncorners; i++ )
-        _corners[i] = cvPoint2D32f(corners[i]);
-    *_corner_count = (int)ncorners;
-}
-
 void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
                               InputArray _mask, int blockSize,

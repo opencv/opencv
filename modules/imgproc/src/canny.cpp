@@ -1003,14 +1003,4 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
 
 } // namespace cv
 
-void cvCanny( const CvArr* image, CvArr* edges, double threshold1,
-              double threshold2, int aperture_size )
-{
-    cv::Mat src = cv::cvarrToMat(image), dst = cv::cvarrToMat(edges);
-    CV_Assert( src.size == dst.size && src.depth() == CV_8U && dst.type() == CV_8U );
-
-    cv::Canny(src, dst, threshold1, threshold2, aperture_size & 255,
-              (aperture_size & CV_CANNY_L2_GRADIENT) != 0);
-}
-
 /* End of file. */
