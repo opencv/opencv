@@ -1842,7 +1842,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         if (boardIdx != parentIdx && (boardIdx < 0 || contour_child_counter[boardIdx] < contour_child_counter[parentIdx]))
             boardIdx = parentIdx;
 
-        contour_quads.push_back(QuadCountour(pt, parentIdx));
+        contour_quads.emplace_back(pt, parentIdx);
     }
 
     size_t total = contour_quads.size();
