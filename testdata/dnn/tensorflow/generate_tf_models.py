@@ -5,6 +5,7 @@ import struct
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras as K
 from tensorflow.python.tools import optimize_for_inference_lib
 from tensorflow.tools.graph_transforms import TransformGraph
 
@@ -405,6 +406,16 @@ weights = tf.Variable(tf.random_normal([2 * 3 * 5, 10]), name='matmul_weights')
 mm = tf.matmul(flattened, weights) + biases
 save(inp, flattened, 'nhwc_transpose_reshape_matmul')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 24], 'input')
+# tf Reshape layer automatically adds 1 to the shape => (1, 2, 4, 3)
+out = K.layers.Reshape((2, 4, 3), name="reshape")(inp)
+save(inp, out, 'reshape_layer')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 3, 3, 4], 'input')
+conv2 = tf.layers.conv2d(inp, filters=4, kernel_size=1)
+out = tf.reshape(conv2, [1, 2, 3, 6], 'reshaped')
+save(inp, out, 'reshape_nchw')
+################################################################################
 inp = tf.placeholder(tf.float32, [1, 6, 5, 3], 'input')
 conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
                         activation=tf.nn.relu,
@@ -512,8 +523,6 @@ inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
 relu = tf.maximum(0.01 * inp, inp, name='leaky_relu') * 2
 save(inp, relu, 'leaky_relu_order3', optimize=False)
 ################################################################################
-from tensorflow import keras as K
-
 model = K.models.Sequential()
 model.add(K.layers.Softmax(name='keras_softmax', input_shape=(2, 3, 4)))
 sess = K.backend.get_session()
