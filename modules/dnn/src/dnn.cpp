@@ -239,11 +239,10 @@ private:
 #endif
 
 #ifdef HAVE_CUDA
-        if (haveCUDA() && cuda4dnn::isDeviceCompatible())
+        if (haveCUDA())
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            if (cuda4dnn::doesDeviceSupportFP16())
-                backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
     }
@@ -2363,6 +2362,9 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend == DNN_BACKEND_CUDA);
 
 #ifdef HAVE_CUDA
+        if (!cudaInfo) /* we need to check only once */
+            cuda4dnn::checkVersions();
+
         if (cuda4dnn::getDeviceCount() <= 0)
             CV_Error(Error::StsError, "No CUDA capable device found.");
 
@@ -2373,7 +2375,10 @@ struct Net::Impl : public detail::NetImplBase
             CV_Error(Error::GpuNotSupported, "OpenCV was not built to work with the selected device. Please check CUDA_ARCH_PTX or CUDA_ARCH_BIN in your build configuration.");
 
         if (preferableTarget == DNN_TARGET_CUDA_FP16 && !cuda4dnn::doesDeviceSupportFP16())
-            CV_Error(Error::StsError, "The selected CUDA device does not support FP16 operations.");
+        {
+            CV_LOG_WARNING(NULL, "The selected CUDA device does not support FP16 target; switching to FP32 target.");
+            preferableTarget = DNN_TARGET_CUDA;
+        }
 
         if (!cudaInfo)
         {
@@ -2384,7 +2389,6 @@ struct Net::Impl : public detail::NetImplBase
 
             auto d2h_stream = cuda4dnn::csl::Stream(true); // stream for background D2H data transfers
             cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
-            cuda4dnn::checkVersions();
         }
 
         cudaInfo->workspace = cuda4dnn::csl::Workspace(); // release workspace memory if any
