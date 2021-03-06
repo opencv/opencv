@@ -772,8 +772,14 @@ static InferenceEngine::Layout estimateLayout(const Mat& m)
 {
     if (m.dims == 4)
         return InferenceEngine::Layout::NCHW;
+    else if (m.dims == 3)
+        return InferenceEngine::Layout::CHW;
     else if (m.dims == 2)
         return InferenceEngine::Layout::NC;
+    else if (m.dims == 1)
+        return InferenceEngine::Layout::C;
+    else if (m.dims == 5)
+        return InferenceEngine::Layout::NCDHW;
     else
         return InferenceEngine::Layout::ANY;
 }
