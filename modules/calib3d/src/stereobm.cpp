@@ -1154,7 +1154,7 @@ public:
     }
 
     StereoBMImpl( int _numDisparities, int _SADWindowSize )
-        : params(StereoBMParams(_numDisparities, _SADWindowSize))
+        : params(_numDisparities, _SADWindowSize)
     {
         // nothing
     }
