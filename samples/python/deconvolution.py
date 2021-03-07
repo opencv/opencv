@@ -15,7 +15,7 @@ Usage:
 
   Use sliders to adjust PSF paramitiers.
   Keys:
-    SPACE - switch btw linear/cirular PSF
+    SPACE - switch btw linear/circular PSF
     ESC   - exit
 
 Examples:
@@ -65,8 +65,7 @@ def defocus_kernel(d, sz=65):
     return kern
 
 
-if __name__ == '__main__':
-    print(__doc__)
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['circle', 'angle=', 'd=', 'snr='])
     opts = dict(opts)
@@ -128,3 +127,11 @@ if __name__ == '__main__':
         if ch == ord(' '):
             defocus = not defocus
             update(None)
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

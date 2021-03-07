@@ -10,11 +10,12 @@
 
 #include <functional>
 
-#include "opencv2/gapi/util/util.hpp"
-#include "opencv2/gapi/gcommon.hpp"
-#include "opencv2/gapi/gproto.hpp"
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gcompiled.hpp"
+#include <opencv2/gapi/util/util.hpp>
+#include <opencv2/gapi/gcommon.hpp>
+#include <opencv2/gapi/gproto.hpp>
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gcompiled.hpp>
+#include <opencv2/gapi/gstreaming.hpp>
 
 namespace cv {
 
@@ -35,9 +36,19 @@ namespace detail
     using last_type_t = typename last_type<Ts...>::type;
 }
 
+// Forward-declare the serialization objects
+namespace gapi {
+namespace s11n {
+    struct IIStream;
+    struct IOStream;
+} // namespace s11n
+} // namespace gapi
+
 /**
  * \addtogroup gapi_main_classes
  * @{
+ *
+ * @brief G-API classes for constructed and compiled graphs.
  */
 /**
  * @brief GComputation class represents a captured computation
@@ -83,7 +94,7 @@ namespace detail
  * In the above example, sobelEdge expects one Mat on input and
  * produces one Mat; while sobelEdgeSub expects two Mats on input and
  * produces one Mat. GComputation's protocol defines how other
- * computaion methods should be used -- cv::GComputation::compile() and
+ * computation methods should be used -- cv::GComputation::compile() and
  * cv::GComputation::apply(). For example, if a graph is defined on
  * two GMat inputs, two cv::Mat objects have to be passed to apply()
  * for execution. GComputation checks protocol correctness in runtime
@@ -105,7 +116,7 @@ namespace detail
  *
  * @sa GCompiled
  */
-class GAPI_EXPORTS GComputation
+class GAPI_EXPORTS_W GComputation
 {
 public:
     class Priv;
@@ -148,8 +159,8 @@ public:
      *
      * @sa @ref gapi_data_objects
      */
-    GComputation(GProtoInputArgs &&ins,
-                 GProtoOutputArgs &&outs);             // Arg-to-arg overload
+    GAPI_WRAP GComputation(GProtoInputArgs &&ins,
+                           GProtoOutputArgs &&outs);             // Arg-to-arg overload
 
     // 2. Syntax sugar and compatibility overloads
     /**
@@ -159,7 +170,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GMat of the defined unary computation
      */
-    GComputation(GMat in, GMat out);                   // Unary overload
+    GAPI_WRAP GComputation(GMat in, GMat out);  // Unary overload
 
     /**
      * @brief Defines an unary (one input -- one output) computation
@@ -168,7 +179,7 @@ public:
      * @param in input GMat of the defined unary computation
      * @param out output GScalar of the defined unary computation
      */
-    GComputation(GMat in, GScalar out);                // Unary overload (scalar)
+    GAPI_WRAP GComputation(GMat in, GScalar out);      // Unary overload (scalar)
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -178,7 +189,7 @@ public:
      * @param in2 second input GMat of the defined binary computation
      * @param out output GMat of the defined binary computation
      */
-    GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
+    GAPI_WRAP GComputation(GMat in1, GMat in2, GMat out);        // Binary overload
 
     /**
      * @brief Defines a binary (two inputs -- one output) computation
@@ -247,8 +258,12 @@ public:
     void apply(GRunArgs &&ins, GRunArgsP &&outs, GCompileArgs &&args = {});       // Arg-to-arg overload
 
     /// @private -- Exclude this function from OpenCV documentation
-    void apply(const std::vector<cv::gapi::own::Mat>& ins,                        // Compatibility overload
-               const std::vector<cv::gapi::own::Mat>& outs,
+    GAPI_WRAP GRunArgs apply(const cv::detail::ExtractArgsCallback  &callback,
+                                   GCompileArgs                    &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
+    void apply(const std::vector<cv::Mat>& ins,                                   // Compatibility overload
+               const std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
 
     // 2. Syntax sugar and compatibility overloads
@@ -262,7 +277,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {});               // Unary overload
+    void apply(cv::Mat in, cv::Mat &out, GCompileArgs &&args = {}); // Unary overload
 
     /**
      * @brief Execute an unary computation (with compilation on the fly)
@@ -273,7 +288,7 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      */
-    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {});            // Unary overload (scalar)
+    void apply(cv::Mat in, cv::Scalar &out, GCompileArgs &&args = {}); // Unary overload (scalar)
 
     /**
      * @brief Execute a binary computation (with compilation on the fly)
@@ -311,11 +326,11 @@ public:
      * @param args compilation arguments for underlying compilation
      * process.
      *
-     * Numbers of elements in ins/outs vectos must match numbers of
+     * Numbers of elements in ins/outs vectors must match numbers of
      * inputs/outputs which were used to define this GComputation.
      */
     void apply(const std::vector<cv::Mat>& ins,         // Compatibility overload
-               const std::vector<cv::Mat>& outs,
+                     std::vector<cv::Mat>& outs,
                GCompileArgs &&args = {});
 #endif // !defined(GAPI_STANDALONE)
     // Various versions of compile(): //////////////////////////////////////////
@@ -370,7 +385,7 @@ public:
     //     template<typename... Ts>
     //     GCompiled compile(const Ts&... metas, GCompileArgs &&args)
     //
-    // But not all compilers can hande this (and seems they shouldn't be able to).
+    // But not all compilers can handle this (and seems they shouldn't be able to).
     // FIXME: SFINAE looks ugly in the generated documentation
     /**
      * @overload
@@ -394,15 +409,116 @@ public:
                        typename detail::MkSeq<sizeof...(Ts)-1>::type());
     }
 
+
+    // FIXME: Document properly in the Doxygen format
+    // Video-oriented pipeline compilation:
+    // 1. A generic version
+    /**
+     * @brief Compile the computation for streaming mode.
+     *
+     * This method triggers compilation process and produces a new
+     * GStreamingCompiled object which then can process video stream
+     * data of the given format. Passing a stream in a different
+     * format to the compiled computation will generate a run-time
+     * exception.
+     *
+     * @param in_metas vector of input metadata configuration. Grab
+     * metadata from real data objects (like cv::Mat or cv::Scalar)
+     * using cv::descr_of(), or create it on your own.
+     *
+     * @param args compilation arguments for this compilation
+     * process. Compilation arguments directly affect what kind of
+     * executable object would be produced, e.g. which kernels (and
+     * thus, devices) would be used to execute computation.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     *
+     * @sa @ref gapi_compile_args
+     */
+    GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                        GCompileArgs                   &&args = {});
+
+    /**
+     * @brief Compile the computation for streaming mode.
+     *
+     * This method triggers compilation process and produces a new
+     * GStreamingCompiled object which then can process video stream
+     * data in any format. Underlying mechanisms will be adjusted to
+     * every new input video stream automatically, but please note that
+     * _not all_ existing backends support this (see reshape()).
+     *
+     * @param args compilation arguments for this compilation
+     * process. Compilation arguments directly affect what kind of
+     * executable object would be produced, e.g. which kernels (and
+     * thus, devices) would be used to execute computation.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled for any input image format.
+     *
+     * @sa @ref gapi_compile_args
+     */
+    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+
+    // 2. Direct metadata version
+    /**
+     * @overload
+     *
+     * Takes a variadic parameter pack with metadata
+     * descriptors for which a compiled object needs to be produced.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     */
+    template<typename... Ts>
+    auto compileStreaming(const Ts&... metas) ->
+        typename std::enable_if<detail::are_meta_descrs<Ts...>::value, GStreamingCompiled>::type
+    {
+        return compileStreaming(GMetaArgs{GMetaArg(metas)...}, GCompileArgs());
+    }
+
+    // 2. Direct metadata + compile arguments version
+    /**
+     * @overload
+     *
+     * Takes a  variadic parameter pack with metadata
+     * descriptors for which a compiled object needs to be produced,
+     * followed by GCompileArgs object representing compilation
+     * arguments for this process.
+     *
+     * @return GStreamingCompiled, a streaming-oriented executable
+     * computation compiled specifically for the given input
+     * parameters.
+     */
+    template<typename... Ts>
+    auto compileStreaming(const Ts&... meta_and_compile_args) ->
+        typename std::enable_if<detail::are_meta_descrs_but_last<Ts...>::value
+                                && std::is_same<GCompileArgs, detail::last_type_t<Ts...> >::value,
+                                GStreamingCompiled>::type
+    {
+        //FIXME: wrapping meta_and_compile_args into a tuple to unwrap them inside a helper function is the overkill
+        return compileStreaming(std::make_tuple(meta_and_compile_args...),
+                                typename detail::MkSeq<sizeof...(Ts)-1>::type());
+    }
+
     // Internal use only
     /// @private
     Priv& priv();
     /// @private
     const Priv& priv() const;
+    /// @private
+    explicit GComputation(cv::gapi::s11n::IIStream &);
+    /// @private
+    void serialize(cv::gapi::s11n::IOStream &) const;
 
 protected:
 
-    // 4. Helper method for (3)
+    // 4. Helper methods for (3)
     /// @private
     template<typename... Ts, int... IIs>
     GCompiled compile(const std::tuple<Ts...> &meta_and_compile_args, detail::Seq<IIs...>)
@@ -411,6 +527,14 @@ protected:
         GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
         return compile(std::move(meta_args), std::move(comp_args));
     }
+    template<typename... Ts, int... IIs>
+    GStreamingCompiled compileStreaming(const std::tuple<Ts...> &meta_and_compile_args, detail::Seq<IIs...>)
+    {
+        GMetaArgs meta_args = {GMetaArg(std::get<IIs>(meta_and_compile_args))...};
+        GCompileArgs comp_args = std::get<sizeof...(Ts)-1>(meta_and_compile_args);
+        return compileStreaming(std::move(meta_args), std::move(comp_args));
+    }
+    void recompile(GMetaArgs&& in_metas, GCompileArgs &&args);
     /// @private
     std::shared_ptr<Priv> m_priv;
 };

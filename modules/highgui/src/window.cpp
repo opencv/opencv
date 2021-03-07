@@ -42,6 +42,7 @@
 #include "precomp.hpp"
 #include <map>
 #include "opencv2/core/opengl.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
@@ -78,6 +79,24 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     case CV_WND_PROP_ASPECTRATIO:
         #if defined (HAVE_QT)
             cvSetRatioWindow_QT(name,prop_value);
+        #endif
+    break;
+
+    case cv::WND_PROP_TOPMOST:
+        #if defined (HAVE_QT)
+            // nothing
+        #elif defined(HAVE_WIN32UI)
+            cvSetPropTopmost_W32(name, (prop_value != 0 ? true : false));
+        #elif defined(HAVE_COCOA)
+            cvSetPropTopmost_COCOA(name, (prop_value != 0 ? true : false));
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            cvSetPropVsync_W32(name, (prop_value != 0));
+        #else
+            // not implemented yet for other toolkits
         #endif
     break;
 
@@ -158,6 +177,27 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return -1;
         #endif
     break;
+
+    case cv::WND_PROP_TOPMOST:
+        #if defined (HAVE_QT)
+            return -1;
+        #elif defined(HAVE_WIN32UI)
+            return cvGetPropTopmost_W32(name);
+        #elif defined(HAVE_COCOA)
+            return cvGetPropTopmost_COCOA(name);
+        #else
+            return -1;
+        #endif
+    break;
+
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            return cvGetPropVsync_W32(name);
+        #else
+            return -1;
+        #endif
+    break;
+
     default:
         return -1;
     }
@@ -256,6 +296,18 @@ int cv::waitKey(int delay)
 #endif
     return (code != -1) ? (code & 0xff) : -1;
 }
+
+#if defined(HAVE_WIN32UI)
+// pollKey() implemented in window_w32.cpp
+#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
+// pollKey() fallback implementation
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+#endif
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
@@ -747,6 +799,10 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
 }
 
+int cv::pollKey()
+{
+    CV_NO_GUI_ERROR("cv::pollKey()");
+}
 
 #endif
 

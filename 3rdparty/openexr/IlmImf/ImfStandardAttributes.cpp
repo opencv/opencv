@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2003, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -45,59 +45,63 @@
 #define IMF_STRING(name) #name
 
 #define IMF_STD_ATTRIBUTE_IMP(name,suffix,type)				 \
-                                     \
+									 \
     void								 \
     add##suffix (Header &header, const type &value)			 \
     {									 \
-    header.insert (IMF_STRING (name), TypedAttribute<type> (value)); \
+	header.insert (IMF_STRING (name), TypedAttribute<type> (value)); \
     }									 \
-                                     \
+									 \
     bool								 \
     has##suffix (const Header &header)					 \
     {									 \
-    return header.findTypedAttribute <TypedAttribute <type> >	 \
-        (IMF_STRING (name)) != 0;				 \
+	return header.findTypedAttribute <TypedAttribute <type> >	 \
+		(IMF_STRING (name)) != 0;				 \
     }									 \
-                                     \
+									 \
     const TypedAttribute<type> &					 \
     name##Attribute (const Header &header)				 \
     {									 \
-    return header.typedAttribute <TypedAttribute <type> >		 \
-        (IMF_STRING (name));					 \
+	return header.typedAttribute <TypedAttribute <type> >		 \
+		(IMF_STRING (name));					 \
     }									 \
-                                     \
+									 \
     TypedAttribute<type> &						 \
     name##Attribute (Header &header)					 \
     {									 \
-    return header.typedAttribute <TypedAttribute <type> >		 \
-        (IMF_STRING (name));					 \
+	return header.typedAttribute <TypedAttribute <type> >		 \
+		(IMF_STRING (name));					 \
     }									 \
-                                     \
+									 \
     const type &							 \
     name (const Header &header)						 \
     {									 \
-    return name##Attribute(header).value();				 \
+	return name##Attribute(header).value();				 \
     }									 \
-                                     \
+									 \
     type &								 \
     name (Header &header)						 \
     {									 \
-    return name##Attribute(header).value();				 \
+	return name##Attribute(header).value();				 \
     }
 
+#include "ImfNamespace.h"
 
-namespace Imf {
+using namespace IMATH_NAMESPACE;
+using namespace std;
 
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
+   
 IMF_STD_ATTRIBUTE_IMP (chromaticities, Chromaticities, Chromaticities)
 IMF_STD_ATTRIBUTE_IMP (whiteLuminance, WhiteLuminance, float)
-IMF_STD_ATTRIBUTE_IMP (adoptedNeutral, AdoptedNeutral, Imath::V2f)
-IMF_STD_ATTRIBUTE_IMP (renderingTransform, RenderingTransform, std::string)
-IMF_STD_ATTRIBUTE_IMP (lookModTransform, LookModTransform, std::string)
+IMF_STD_ATTRIBUTE_IMP (adoptedNeutral, AdoptedNeutral, V2f)
+IMF_STD_ATTRIBUTE_IMP (renderingTransform, RenderingTransform, string)
+IMF_STD_ATTRIBUTE_IMP (lookModTransform, LookModTransform, string)
 IMF_STD_ATTRIBUTE_IMP (xDensity, XDensity, float)
-IMF_STD_ATTRIBUTE_IMP (owner, Owner, std::string)
-IMF_STD_ATTRIBUTE_IMP (comments, Comments, std::string)
-IMF_STD_ATTRIBUTE_IMP (capDate, CapDate, std::string)
+IMF_STD_ATTRIBUTE_IMP (owner, Owner, string)
+IMF_STD_ATTRIBUTE_IMP (comments, Comments, string)
+IMF_STD_ATTRIBUTE_IMP (capDate, CapDate, string)
 IMF_STD_ATTRIBUTE_IMP (utcOffset, UtcOffset, float)
 IMF_STD_ATTRIBUTE_IMP (longitude, Longitude, float)
 IMF_STD_ATTRIBUTE_IMP (latitude, Latitude, float)
@@ -109,10 +113,13 @@ IMF_STD_ATTRIBUTE_IMP (isoSpeed, IsoSpeed, float)
 IMF_STD_ATTRIBUTE_IMP (envmap, Envmap, Envmap)
 IMF_STD_ATTRIBUTE_IMP (keyCode, KeyCode, KeyCode)
 IMF_STD_ATTRIBUTE_IMP (timeCode, TimeCode, TimeCode)
-IMF_STD_ATTRIBUTE_IMP (wrapmodes, Wrapmodes, std::string)
+IMF_STD_ATTRIBUTE_IMP (wrapmodes, Wrapmodes, string)
 IMF_STD_ATTRIBUTE_IMP (framesPerSecond, FramesPerSecond, Rational)
 IMF_STD_ATTRIBUTE_IMP (multiView, MultiView, StringVector)
-IMF_STD_ATTRIBUTE_IMP (worldToCamera, WorldToCamera, Imath::M44f)
-IMF_STD_ATTRIBUTE_IMP (worldToNDC, WorldToNDC, Imath::M44f)
+IMF_STD_ATTRIBUTE_IMP (worldToCamera, WorldToCamera, M44f)
+IMF_STD_ATTRIBUTE_IMP (worldToNDC, WorldToNDC, M44f)
+IMF_STD_ATTRIBUTE_IMP (deepImageState, DeepImageState, DeepImageState)
+IMF_STD_ATTRIBUTE_IMP (originalDataWindow, OriginalDataWindow, Box2i)
+IMF_STD_ATTRIBUTE_IMP (dwaCompressionLevel, DwaCompressionLevel, float)
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

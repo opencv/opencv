@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,8 +46,9 @@
 
 
 #include <ImfWav.h>
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 namespace {
 
 
@@ -112,7 +113,7 @@ wenc16 (unsigned short  a, unsigned short  b,
     int d  =   ao - b;
 
     if (d < 0)
-    m = (m + M_OFFSET) & MOD_MASK;
+	m = (m + M_OFFSET) & MOD_MASK;
 
     d &= MOD_MASK;
 
@@ -160,98 +161,98 @@ wav2Encode
 
     while (p2 <= n)
     {
-    unsigned short *py = in;
-    unsigned short *ey = in + oy * (ny - p2);
-    int oy1 = oy * p;
-    int oy2 = oy * p2;
-    int ox1 = ox * p;
-    int ox2 = ox * p2;
-    unsigned short i00,i01,i10,i11;
+	unsigned short *py = in;
+	unsigned short *ey = in + oy * (ny - p2);
+	int oy1 = oy * p;
+	int oy2 = oy * p2;
+	int ox1 = ox * p;
+	int ox2 = ox * p2;
+	unsigned short i00,i01,i10,i11;
 
-    //
-    // Y loop
-    //
+	//
+	// Y loop
+	//
 
-    for (; py <= ey; py += oy2)
-    {
-        unsigned short *px = py;
-        unsigned short *ex = py + ox * (nx - p2);
+	for (; py <= ey; py += oy2)
+	{
+	    unsigned short *px = py;
+	    unsigned short *ex = py + ox * (nx - p2);
 
-        //
-        // X loop
-        //
+	    //
+	    // X loop
+	    //
 
-        for (; px <= ex; px += ox2)
-        {
-        unsigned short *p01 = px  + ox1;
-        unsigned short *p10 = px  + oy1;
-        unsigned short *p11 = p10 + ox1;
+	    for (; px <= ex; px += ox2)
+	    {
+		unsigned short *p01 = px  + ox1;
+		unsigned short *p10 = px  + oy1;
+		unsigned short *p11 = p10 + ox1;
 
-        //
-        // 2D wavelet encoding
-        //
+		//
+		// 2D wavelet encoding
+		//
 
-        if (w14)
-        {
-            wenc14 (*px,  *p01, i00, i01);
-            wenc14 (*p10, *p11, i10, i11);
-            wenc14 (i00, i10, *px,  *p10);
-            wenc14 (i01, i11, *p01, *p11);
-        }
-        else
-        {
-            wenc16 (*px,  *p01, i00, i01);
-            wenc16 (*p10, *p11, i10, i11);
-            wenc16 (i00, i10, *px,  *p10);
-            wenc16 (i01, i11, *p01, *p11);
-        }
-        }
+		if (w14)
+		{
+		    wenc14 (*px,  *p01, i00, i01);
+		    wenc14 (*p10, *p11, i10, i11);
+		    wenc14 (i00, i10, *px,  *p10);
+		    wenc14 (i01, i11, *p01, *p11);
+		}
+		else
+		{
+		    wenc16 (*px,  *p01, i00, i01);
+		    wenc16 (*p10, *p11, i10, i11);
+		    wenc16 (i00, i10, *px,  *p10);
+		    wenc16 (i01, i11, *p01, *p11);
+		}
+	    }
 
-        //
-        // Encode (1D) odd column (still in Y loop)
-        //
+	    //
+	    // Encode (1D) odd column (still in Y loop)
+	    //
 
-        if (nx & p)
-        {
-        unsigned short *p10 = px + oy1;
+	    if (nx & p)
+	    {
+		unsigned short *p10 = px + oy1;
 
-        if (w14)
-            wenc14 (*px, *p10, i00, *p10);
-        else
-            wenc16 (*px, *p10, i00, *p10);
+		if (w14)
+		    wenc14 (*px, *p10, i00, *p10);
+		else
+		    wenc16 (*px, *p10, i00, *p10);
 
-        *px= i00;
-        }
-    }
+		*px= i00;
+	    }
+	}
 
-    //
-    // Encode (1D) odd line (must loop in X)
-    //
+	//
+	// Encode (1D) odd line (must loop in X)
+	//
 
-    if (ny & p)
-    {
-        unsigned short *px = py;
-        unsigned short *ex = py + ox * (nx - p2);
+	if (ny & p)
+	{
+	    unsigned short *px = py;
+	    unsigned short *ex = py + ox * (nx - p2);
 
-        for (; px <= ex; px += ox2)
-        {
-        unsigned short *p01 = px + ox1;
+	    for (; px <= ex; px += ox2)
+	    {
+		unsigned short *p01 = px + ox1;
 
-        if (w14)
-            wenc14 (*px, *p01, i00, *p01);
-        else
-            wenc16 (*px, *p01, i00, *p01);
+		if (w14)
+		    wenc14 (*px, *p01, i00, *p01);
+		else
+		    wenc16 (*px, *p01, i00, *p01);
 
-        *px= i00;
-        }
-    }
+		*px= i00;
+	    }
+	}
 
-    //
-    // Next level
-    //
+	//
+	// Next level
+	//
 
-    p = p2;
-    p2 <<= 1;
+	p = p2;
+	p2 <<= 1;
     }
 }
 
@@ -279,7 +280,7 @@ wav2Decode
     //
 
     while (p <= n)
-    p <<= 1;
+	p <<= 1;
 
     p >>= 1;
     p2 = p;
@@ -291,100 +292,100 @@ wav2Decode
 
     while (p >= 1)
     {
-    unsigned short *py = in;
-    unsigned short *ey = in + oy * (ny - p2);
-    int oy1 = oy * p;
-    int oy2 = oy * p2;
-    int ox1 = ox * p;
-    int ox2 = ox * p2;
-    unsigned short i00,i01,i10,i11;
+	unsigned short *py = in;
+	unsigned short *ey = in + oy * (ny - p2);
+	int oy1 = oy * p;
+	int oy2 = oy * p2;
+	int ox1 = ox * p;
+	int ox2 = ox * p2;
+	unsigned short i00,i01,i10,i11;
 
-    //
-    // Y loop
-    //
+	//
+	// Y loop
+	//
 
-    for (; py <= ey; py += oy2)
-    {
-        unsigned short *px = py;
-        unsigned short *ex = py + ox * (nx - p2);
+	for (; py <= ey; py += oy2)
+	{
+	    unsigned short *px = py;
+	    unsigned short *ex = py + ox * (nx - p2);
 
-        //
-        // X loop
-        //
+	    //
+	    // X loop
+	    //
 
-        for (; px <= ex; px += ox2)
-        {
-        unsigned short *p01 = px  + ox1;
-        unsigned short *p10 = px  + oy1;
-        unsigned short *p11 = p10 + ox1;
+	    for (; px <= ex; px += ox2)
+	    {
+		unsigned short *p01 = px  + ox1;
+		unsigned short *p10 = px  + oy1;
+		unsigned short *p11 = p10 + ox1;
 
-        //
-        // 2D wavelet decoding
-        //
+		//
+		// 2D wavelet decoding
+		//
 
-        if (w14)
-        {
-            wdec14 (*px,  *p10, i00, i10);
-            wdec14 (*p01, *p11, i01, i11);
-            wdec14 (i00, i01, *px,  *p01);
-            wdec14 (i10, i11, *p10, *p11);
-        }
-        else
-        {
-            wdec16 (*px,  *p10, i00, i10);
-            wdec16 (*p01, *p11, i01, i11);
-            wdec16 (i00, i01, *px,  *p01);
-            wdec16 (i10, i11, *p10, *p11);
-        }
-        }
+		if (w14)
+		{
+		    wdec14 (*px,  *p10, i00, i10);
+		    wdec14 (*p01, *p11, i01, i11);
+		    wdec14 (i00, i01, *px,  *p01);
+		    wdec14 (i10, i11, *p10, *p11);
+		}
+		else
+		{
+		    wdec16 (*px,  *p10, i00, i10);
+		    wdec16 (*p01, *p11, i01, i11);
+		    wdec16 (i00, i01, *px,  *p01);
+		    wdec16 (i10, i11, *p10, *p11);
+		}
+	    }
 
-        //
-        // Decode (1D) odd column (still in Y loop)
-        //
+	    //
+	    // Decode (1D) odd column (still in Y loop)
+	    //
 
-        if (nx & p)
-        {
-        unsigned short *p10 = px + oy1;
+	    if (nx & p)
+	    {
+		unsigned short *p10 = px + oy1;
 
-        if (w14)
-            wdec14 (*px, *p10, i00, *p10);
-        else
-            wdec16 (*px, *p10, i00, *p10);
+		if (w14)
+		    wdec14 (*px, *p10, i00, *p10);
+		else
+		    wdec16 (*px, *p10, i00, *p10);
 
-        *px= i00;
-        }
-    }
+		*px= i00;
+	    }
+	}
 
-    //
-    // Decode (1D) odd line (must loop in X)
-    //
+	//
+	// Decode (1D) odd line (must loop in X)
+	//
 
-    if (ny & p)
-    {
-        unsigned short *px = py;
-        unsigned short *ex = py + ox * (nx - p2);
+	if (ny & p)
+	{
+	    unsigned short *px = py;
+	    unsigned short *ex = py + ox * (nx - p2);
 
-        for (; px <= ex; px += ox2)
-        {
-        unsigned short *p01 = px + ox1;
+	    for (; px <= ex; px += ox2)
+	    {
+		unsigned short *p01 = px + ox1;
 
-        if (w14)
-            wdec14 (*px, *p01, i00, *p01);
-        else
-            wdec16 (*px, *p01, i00, *p01);
+		if (w14)
+		    wdec14 (*px, *p01, i00, *p01);
+		else
+		    wdec16 (*px, *p01, i00, *p01);
 
-        *px= i00;
-        }
-    }
+		*px= i00;
+	    }
+	}
 
-    //
-    // Next level
-    //
+	//
+	// Next level
+	//
 
-    p2 = p;
-    p >>= 1;
+	p2 = p;
+	p >>= 1;
     }
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

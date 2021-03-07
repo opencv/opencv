@@ -170,12 +170,13 @@ static void CollectColorRedTransforms_SSE2(const uint32_t* argb, int stride,
 
 //------------------------------------------------------------------------------
 
+// Note we are adding uint32_t's as *signed* int32's (using _mm_add_epi32). But
+// that's ok since the histogram values are less than 1<<28 (max picture size).
 #define LINE_SIZE 16    // 8 or 16
 static void AddVector_SSE2(const uint32_t* a, const uint32_t* b, uint32_t* out,
                            int size) {
   int i;
-  assert(size % LINE_SIZE == 0);
-  for (i = 0; i < size; i += LINE_SIZE) {
+  for (i = 0; i + LINE_SIZE <= size; i += LINE_SIZE) {
     const __m128i a0 = _mm_loadu_si128((const __m128i*)&a[i +  0]);
     const __m128i a1 = _mm_loadu_si128((const __m128i*)&a[i +  4]);
 #if (LINE_SIZE == 16)
@@ -195,12 +196,14 @@ static void AddVector_SSE2(const uint32_t* a, const uint32_t* b, uint32_t* out,
     _mm_storeu_si128((__m128i*)&out[i + 12], _mm_add_epi32(a3, b3));
 #endif
   }
+  for (; i < size; ++i) {
+    out[i] = a[i] + b[i];
+  }
 }
 
 static void AddVectorEq_SSE2(const uint32_t* a, uint32_t* out, int size) {
   int i;
-  assert(size % LINE_SIZE == 0);
-  for (i = 0; i < size; i += LINE_SIZE) {
+  for (i = 0; i + LINE_SIZE <= size; i += LINE_SIZE) {
     const __m128i a0 = _mm_loadu_si128((const __m128i*)&a[i +  0]);
     const __m128i a1 = _mm_loadu_si128((const __m128i*)&a[i +  4]);
 #if (LINE_SIZE == 16)
@@ -220,35 +223,11 @@ static void AddVectorEq_SSE2(const uint32_t* a, uint32_t* out, int size) {
     _mm_storeu_si128((__m128i*)&out[i + 12], _mm_add_epi32(a3, b3));
 #endif
   }
+  for (; i < size; ++i) {
+    out[i] += a[i];
+  }
 }
 #undef LINE_SIZE
-
-// Note we are adding uint32_t's as *signed* int32's (using _mm_add_epi32). But
-// that's ok since the histogram values are less than 1<<28 (max picture size).
-static void HistogramAdd_SSE2(const VP8LHistogram* const a,
-                              const VP8LHistogram* const b,
-                              VP8LHistogram* const out) {
-  int i;
-  const int literal_size = VP8LHistogramNumCodes(a->palette_code_bits_);
-  assert(a->palette_code_bits_ == b->palette_code_bits_);
-  if (b != out) {
-    AddVector_SSE2(a->literal_, b->literal_, out->literal_, NUM_LITERAL_CODES);
-    AddVector_SSE2(a->red_, b->red_, out->red_, NUM_LITERAL_CODES);
-    AddVector_SSE2(a->blue_, b->blue_, out->blue_, NUM_LITERAL_CODES);
-    AddVector_SSE2(a->alpha_, b->alpha_, out->alpha_, NUM_LITERAL_CODES);
-  } else {
-    AddVectorEq_SSE2(a->literal_, out->literal_, NUM_LITERAL_CODES);
-    AddVectorEq_SSE2(a->red_, out->red_, NUM_LITERAL_CODES);
-    AddVectorEq_SSE2(a->blue_, out->blue_, NUM_LITERAL_CODES);
-    AddVectorEq_SSE2(a->alpha_, out->alpha_, NUM_LITERAL_CODES);
-  }
-  for (i = NUM_LITERAL_CODES; i < literal_size; ++i) {
-    out->literal_[i] = a->literal_[i] + b->literal_[i];
-  }
-  for (i = 0; i < NUM_DISTANCE_CODES; ++i) {
-    out->distance_[i] = a->distance_[i] + b->distance_[i];
-  }
-}
 
 //------------------------------------------------------------------------------
 // Entropy
@@ -270,6 +249,7 @@ static void HistogramAdd_SSE2(const VP8LHistogram* const a,
     }                                  \
   } while (0)
 
+#if !(defined(__i386__) || defined(_M_IX86))
 static float CombinedShannonEntropy_SSE2(const int X[256], const int Y[256]) {
   int i;
   double retval = 0.;
@@ -321,6 +301,8 @@ static float CombinedShannonEntropy_SSE2(const int X[256], const int Y[256]) {
   retval += VP8LFastSLog2(sumX) + VP8LFastSLog2(sumXY);
   return (float)retval;
 }
+#endif  // !(defined(__i386__) || defined(_M_IX86))
+
 #undef ANALYZE_X_OR_Y
 #undef ANALYZE_XY
 
@@ -384,7 +366,7 @@ static void BundleColorMap_SSE2(const uint8_t* const row, int width, int xbits,
   assert(xbits <= 3);
   switch (xbits) {
     case 0: {
-      const __m128i ff = _mm_set1_epi16(0xff00);
+      const __m128i ff = _mm_set1_epi16((short)0xff00);
       const __m128i zero = _mm_setzero_si128();
       // Store 0xff000000 | (row[x] << 8).
       for (x = 0; x + 16 <= width; x += 16, dst += 16) {
@@ -403,7 +385,7 @@ static void BundleColorMap_SSE2(const uint8_t* const row, int width, int xbits,
       break;
     }
     case 1: {
-      const __m128i ff = _mm_set1_epi16(0xff00);
+      const __m128i ff = _mm_set1_epi16((short)0xff00);
       const __m128i mul = _mm_set1_epi16(0x110);
       for (x = 0; x + 16 <= width; x += 16, dst += 8) {
         // 0a0b | (where a/b are 4 bits).
@@ -476,24 +458,27 @@ static void PredictorSub0_SSE2(const uint32_t* in, const uint32_t* upper,
     _mm_storeu_si128((__m128i*)&out[i], res);
   }
   if (i != num_pixels) {
-    VP8LPredictorsSub_C[0](in + i, upper + i, num_pixels - i, out + i);
+    VP8LPredictorsSub_C[0](in + i, NULL, num_pixels - i, out + i);
   }
+  (void)upper;
 }
 
-#define GENERATE_PREDICTOR_1(X, IN)                                           \
-static void PredictorSub##X##_SSE2(const uint32_t* in, const uint32_t* upper, \
-                                   int num_pixels, uint32_t* out) {           \
-  int i;                                                                      \
-  for (i = 0; i + 4 <= num_pixels; i += 4) {                                  \
-    const __m128i src = _mm_loadu_si128((const __m128i*)&in[i]);              \
-    const __m128i pred = _mm_loadu_si128((const __m128i*)&(IN));              \
-    const __m128i res = _mm_sub_epi8(src, pred);                              \
-    _mm_storeu_si128((__m128i*)&out[i], res);                                 \
-  }                                                                           \
-  if (i != num_pixels) {                                                      \
-    VP8LPredictorsSub_C[(X)](in + i, upper + i, num_pixels - i, out + i);     \
-  }                                                                           \
-}
+#define GENERATE_PREDICTOR_1(X, IN)                                         \
+  static void PredictorSub##X##_SSE2(const uint32_t* const in,              \
+                                     const uint32_t* const upper,           \
+                                     int num_pixels, uint32_t* const out) { \
+    int i;                                                                  \
+    for (i = 0; i + 4 <= num_pixels; i += 4) {                              \
+      const __m128i src = _mm_loadu_si128((const __m128i*)&in[i]);          \
+      const __m128i pred = _mm_loadu_si128((const __m128i*)&(IN));          \
+      const __m128i res = _mm_sub_epi8(src, pred);                          \
+      _mm_storeu_si128((__m128i*)&out[i], res);                             \
+    }                                                                       \
+    if (i != num_pixels) {                                                  \
+      VP8LPredictorsSub_C[(X)](in + i, WEBP_OFFSET_PTR(upper, i),           \
+                               num_pixels - i, out + i);                    \
+    }                                                                       \
+  }
 
 GENERATE_PREDICTOR_1(1, in[i - 1])       // Predictor1: L
 GENERATE_PREDICTOR_1(2, upper[i])        // Predictor2: T
@@ -675,8 +660,14 @@ WEBP_TSAN_IGNORE_FUNCTION void VP8LEncDspInitSSE2(void) {
   VP8LTransformColor = TransformColor_SSE2;
   VP8LCollectColorBlueTransforms = CollectColorBlueTransforms_SSE2;
   VP8LCollectColorRedTransforms = CollectColorRedTransforms_SSE2;
-  VP8LHistogramAdd = HistogramAdd_SSE2;
+  VP8LAddVector = AddVector_SSE2;
+  VP8LAddVectorEq = AddVectorEq_SSE2;
+  // TODO(https://crbug.com/webp/499): this function produces different results
+  // from the C code due to use of double/float resulting in output differences
+  // when compared to -noasm.
+#if !(defined(__i386__) || defined(_M_IX86))
   VP8LCombinedShannonEntropy = CombinedShannonEntropy_SSE2;
+#endif
   VP8LVectorMismatch = VectorMismatch_SSE2;
   VP8LBundleColorMap = BundleColorMap_SSE2;
 

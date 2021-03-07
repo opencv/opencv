@@ -98,6 +98,7 @@ DTrees::Split::Split()
 
 DTreesImpl::WorkData::WorkData(const Ptr<TrainData>& _data)
 {
+    CV_Assert(!_data.empty());
     data = _data;
     vector<int> subsampleIdx;
     Mat sidx0 = _data->getTrainSampleIdx();
@@ -136,6 +137,7 @@ void DTreesImpl::clear()
 
 void DTreesImpl::startTraining( const Ptr<TrainData>& data, int )
 {
+    CV_Assert(!data.empty());
     clear();
     w = makePtr<WorkData>(data);
 
@@ -223,6 +225,7 @@ void DTreesImpl::endTraining()
 
 bool DTreesImpl::train( const Ptr<TrainData>& trainData, int flags )
 {
+    CV_Assert(!trainData.empty());
     startTraining(trainData, flags);
     bool ok = addTree( w->sidx ) >= 0;
     w.release();

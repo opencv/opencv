@@ -7,8 +7,8 @@ Test for copyto with mask
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 import sys
 
 from tests_common import NewOpenCVTests
@@ -24,12 +24,15 @@ class copytomask_test(NewOpenCVTests):
         valeurBGRSup = np.array([70, 70,255])
         maskRed = cv.inRange(img, valeurBGRinf, valeurBGRSup)
         #New binding
-        dstcv  = cv.copyTo(img,maskRed)
+        dstcv = np.ndarray(np.array((2, 2, 1))*img.shape, dtype=img.dtype)
+        dstcv.fill(255)
+        cv.copyTo(img, maskRed, dstcv[:img.shape[0],:img.shape[1],:])
         #using numpy
+        dstnp = np.ndarray(np.array((2, 2, 1))*img.shape, dtype=img.dtype)
+        dstnp.fill(255)
         mask2=maskRed.astype(bool)
         _, mask_b = np.broadcast_arrays(img, mask2[..., None])
-        dstnp  = np.ma.masked_array(img, np.logical_not(mask_b))
-        dstnp =np.ma.filled(dstnp,[0])
+        np.copyto(dstnp[:img.shape[0],:img.shape[1],:], img, where=mask_b)
         self.assertEqual(cv.norm(dstnp ,dstcv), eps)
 
 

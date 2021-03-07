@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/gapi/gcompoundkernel.hpp" // compound::backend()
+#include <opencv2/gapi/gcompoundkernel.hpp> // compound::backend()
 
 #include "api/gbackend_priv.hpp"
 #include "compiler/gislandmodel.hpp" // GIslandExecutable

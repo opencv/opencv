@@ -16,10 +16,6 @@
 #include "src/enc/vp8i_enc.h"
 #include "src/dsp/yuv.h"
 
-static WEBP_INLINE uint32_t MakeARGB32(int r, int g, int b) {
-  return (0xff000000u | (r << 16) | (g << 8) | b);
-}
-
 //------------------------------------------------------------------------------
 // Helper: clean up fully transparent area to help compressibility.
 
@@ -85,6 +81,19 @@ static int SmoothenBlock(const uint8_t* a_ptr, int a_stride, uint8_t* y_ptr,
     }
   }
   return (count == 0);
+}
+
+void WebPReplaceTransparentPixels(WebPPicture* const pic, uint32_t color) {
+  if (pic != NULL && pic->use_argb) {
+    int y = pic->height;
+    uint32_t* argb = pic->argb;
+    color &= 0xffffffu;   // force alpha=0
+    WebPInitAlphaProcessing();
+    while (y-- > 0) {
+      WebPAlphaReplace(argb, pic->width, color);
+      argb += pic->argb_stride;
+    }
+  }
 }
 
 void WebPCleanupTransparentArea(WebPPicture* pic) {
@@ -169,24 +178,6 @@ void WebPCleanupTransparentArea(WebPPicture* pic) {
 #undef SIZE
 #undef SIZE2
 
-void WebPCleanupTransparentAreaLossless(WebPPicture* const pic) {
-  int x, y, w, h;
-  uint32_t* argb;
-  assert(pic != NULL && pic->use_argb);
-  w = pic->width;
-  h = pic->height;
-  argb = pic->argb;
-
-  for (y = 0; y < h; ++y) {
-    for (x = 0; x < w; ++x) {
-      if ((argb[x] & 0xff000000) == 0) {
-        argb[x] = 0x00000000;
-      }
-    }
-    argb += pic->argb_stride;
-  }
-}
-
 //------------------------------------------------------------------------------
 // Blend color and remove transparency info
 
@@ -194,6 +185,10 @@ void WebPCleanupTransparentAreaLossless(WebPPicture* const pic) {
     ((((V0) * (255 - (ALPHA)) + (V1) * (ALPHA)) * 0x101 + 256) >> 16)
 #define BLEND_10BIT(V0, V1, ALPHA) \
     ((((V0) * (1020 - (ALPHA)) + (V1) * (ALPHA)) * 0x101 + 1024) >> 18)
+
+static WEBP_INLINE uint32_t MakeARGB32(int r, int g, int b) {
+  return (0xff000000u | (r << 16) | (g << 8) | b);
+}
 
 void WebPBlendAlpha(WebPPicture* pic, uint32_t background_rgb) {
   const int red = (background_rgb >> 16) & 0xff;
@@ -208,39 +203,44 @@ void WebPBlendAlpha(WebPPicture* pic, uint32_t background_rgb) {
     const int U0 = VP8RGBToU(4 * red, 4 * green, 4 * blue, 4 * YUV_HALF);
     const int V0 = VP8RGBToV(4 * red, 4 * green, 4 * blue, 4 * YUV_HALF);
     const int has_alpha = pic->colorspace & WEBP_CSP_ALPHA_BIT;
-    if (!has_alpha || pic->a == NULL) return;    // nothing to do
+    uint8_t* y_ptr = pic->y;
+    uint8_t* u_ptr = pic->u;
+    uint8_t* v_ptr = pic->v;
+    uint8_t* a_ptr = pic->a;
+    if (!has_alpha || a_ptr == NULL) return;    // nothing to do
     for (y = 0; y < pic->height; ++y) {
       // Luma blending
-      uint8_t* const y_ptr = pic->y + y * pic->y_stride;
-      uint8_t* const a_ptr = pic->a + y * pic->a_stride;
       for (x = 0; x < pic->width; ++x) {
-        const int alpha = a_ptr[x];
+        const uint8_t alpha = a_ptr[x];
         if (alpha < 0xff) {
-          y_ptr[x] = BLEND(Y0, y_ptr[x], a_ptr[x]);
+          y_ptr[x] = BLEND(Y0, y_ptr[x], alpha);
         }
       }
       // Chroma blending every even line
       if ((y & 1) == 0) {
-        uint8_t* const u = pic->u + (y >> 1) * pic->uv_stride;
-        uint8_t* const v = pic->v + (y >> 1) * pic->uv_stride;
         uint8_t* const a_ptr2 =
             (y + 1 == pic->height) ? a_ptr : a_ptr + pic->a_stride;
         for (x = 0; x < uv_width; ++x) {
           // Average four alpha values into a single blending weight.
           // TODO(skal): might lead to visible contouring. Can we do better?
-          const int alpha =
+          const uint32_t alpha =
               a_ptr[2 * x + 0] + a_ptr[2 * x + 1] +
               a_ptr2[2 * x + 0] + a_ptr2[2 * x + 1];
-          u[x] = BLEND_10BIT(U0, u[x], alpha);
-          v[x] = BLEND_10BIT(V0, v[x], alpha);
+          u_ptr[x] = BLEND_10BIT(U0, u_ptr[x], alpha);
+          v_ptr[x] = BLEND_10BIT(V0, v_ptr[x], alpha);
         }
         if (pic->width & 1) {   // rightmost pixel
-          const int alpha = 2 * (a_ptr[2 * x + 0] + a_ptr2[2 * x + 0]);
-          u[x] = BLEND_10BIT(U0, u[x], alpha);
-          v[x] = BLEND_10BIT(V0, v[x], alpha);
+          const uint32_t alpha = 2 * (a_ptr[2 * x + 0] + a_ptr2[2 * x + 0]);
+          u_ptr[x] = BLEND_10BIT(U0, u_ptr[x], alpha);
+          v_ptr[x] = BLEND_10BIT(V0, v_ptr[x], alpha);
         }
+      } else {
+        u_ptr += pic->uv_stride;
+        v_ptr += pic->uv_stride;
       }
-      memset(a_ptr, 0xff, pic->width);
+      memset(a_ptr, 0xff, pic->width);  // reset alpha value to opaque
+      a_ptr += pic->a_stride;
+      y_ptr += pic->y_stride;
     }
   } else {
     uint32_t* argb = pic->argb;

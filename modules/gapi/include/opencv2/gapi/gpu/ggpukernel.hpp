@@ -8,10 +8,10 @@
 #ifndef OPENCV_GAPI_GGPUKERNEL_HPP
 #define OPENCV_GAPI_GGPUKERNEL_HPP
 /** @file
-* @deprecated Use "opencv2/gapi/ocl/goclkernel.hpp" instead.
+* @deprecated Use <opencv2/gapi/ocl/goclkernel.hpp> instead.
 */
 
-#include "opencv2/gapi/ocl/goclkernel.hpp"
+#include <opencv2/gapi/ocl/goclkernel.hpp>
 #define GAPI_GPU_KERNEL GAPI_OCL_KERNEL
 
 

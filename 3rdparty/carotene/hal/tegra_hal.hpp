@@ -1127,6 +1127,7 @@ inline int TEGRA_FILTERINIT(cvhalFilter2D **context, uchar *kernel_data, size_t 
         {
             std::memcpy(ctx->kernel_data + kernel_width * j, kernel_data + kernel_step * j, kernel_width * sizeof(int16_t));
         }
+        break;
     default:
         delete[] ctx->kernel_data;
         delete ctx;
@@ -1243,6 +1244,7 @@ inline int TEGRA_SEPFILTERINIT(cvhalFilter2D **context, int src_type, int dst_ty
         ctx->kernely_data[0]=((int16_t*)kernely_data)[0];
         ctx->kernely_data[1]=((int16_t*)kernely_data)[1];
         ctx->kernely_data[2]=((int16_t*)kernely_data)[2];
+        break;
     default:
         delete ctx;
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

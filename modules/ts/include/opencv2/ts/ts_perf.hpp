@@ -386,7 +386,7 @@ public:
     static enum PERF_STRATEGY getCurrentModulePerformanceStrategy();
     static enum PERF_STRATEGY setModulePerformanceStrategy(enum PERF_STRATEGY strategy);
 
-    class PerfSkipTestException: public cv::Exception
+    class PerfSkipTestException: public cvtest::SkipTestException
     {
     public:
         int dummy; // workaround for MacOSX Xcode 7.3 bug (don't make class "empty")
@@ -527,7 +527,15 @@ void PrintTo(const Size& sz, ::std::ostream* os);
     { \
        CV__TEST_NAMESPACE_CHECK \
        CV__TRACE_APP_FUNCTION_NAME("PERF_TEST: " name); \
+       try { \
+       ::cvtest::testSetUp(); \
        RunPerfTestBody(); \
+       } \
+       catch (cvtest::details::SkipTestExceptionBase& e) \
+       { \
+          printf("[     SKIP ] %s\n", e.what()); \
+       } \
+       ::cvtest::testTearDown(); \
     }
 
 #define PERF_PROXY_NAMESPACE_NAME_(test_case_name, test_name) \

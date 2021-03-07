@@ -1215,7 +1215,7 @@ _Tp Point_<_Tp>::dot(const Point_& pt) const
 template<typename _Tp> inline
 double Point_<_Tp>::ddot(const Point_& pt) const
 {
-    return (double)x*pt.x + (double)y*pt.y;
+    return (double)x*(double)(pt.x) + (double)y*(double)(pt.y);
 }
 
 template<typename _Tp> inline

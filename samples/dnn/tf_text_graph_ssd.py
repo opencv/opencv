@@ -62,12 +62,12 @@ class MultiscaleAnchorGenerator:
 
 def createSSDGraph(modelPath, configPath, outputPath):
     # Nodes that should be kept.
-    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
+    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'AddV2', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
                'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
-               'Sub', 'ResizeNearestNeighbor', 'Pad']
+               'Sub', 'ResizeNearestNeighbor', 'Pad', 'FusedBatchNormV3', 'Mean']
 
     # Node with which prefixes should be removed
-    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Postprocessor/', 'Preprocessor/map')
+    prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
 
     # Load a config file.
     config = readTextMessage(configPath)
@@ -122,7 +122,6 @@ def createSSDGraph(modelPath, configPath, outputPath):
     print('Input image size: %dx%d' % (image_width, image_height))
 
     # Read the graph.
-    inpNames = ['image_tensor']
     outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
 
     writeTextGraph(modelPath, outputPath, outNames)
@@ -151,6 +150,9 @@ def createSSDGraph(modelPath, configPath, outputPath):
         subgraphBatchNorm = ['Add',
             ['Mul', 'input', ['Mul', ['Rsqrt', ['Add', 'moving_variance', 'add_y']], 'gamma']],
             ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
+        subgraphBatchNormV2 = ['AddV2',
+            ['Mul', 'input', ['Mul', ['Rsqrt', ['AddV2', 'moving_variance', 'add_y']], 'gamma']],
+            ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
         # Detect unfused nearest neighbor resize.
         subgraphResizeNN = ['Reshape',
             ['Mul', ['Reshape', 'input', ['Pack', 'shape_1', 'shape_2', 'shape_3', 'shape_4', 'shape_5']],
@@ -177,7 +179,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
         for node in graph_def.node:
             inputs = {}
             fusedNodes = []
-            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes):
+            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes) or \
+               checkSubgraph(node, subgraphBatchNormV2, inputs, fusedNodes):
                 name = node.name
                 node.Clear()
                 node.name = name
@@ -230,12 +233,27 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     # Connect input node to the first layer
     assert(graph_def.node[0].op == 'Placeholder')
+    try:
+        input_shape = graph_def.node[0].attr['shape']['shape'][0]['dim']
+        input_shape[1]['size'] = image_height
+        input_shape[2]['size'] = image_width
+    except:
+        print("Input shapes are undefined")
     # assert(graph_def.node[1].op == 'Conv2D')
-    weights = graph_def.node[1].input[0]
+    weights = graph_def.node[1].input[-1]
     for i in range(len(graph_def.node[1].input)):
         graph_def.node[1].input.pop()
     graph_def.node[1].input.append(graph_def.node[0].name)
     graph_def.node[1].input.append(weights)
+
+    # check and correct the case when preprocessing block is after input
+    preproc_id = "Preprocessor/"
+    if graph_def.node[2].name.startswith(preproc_id) and \
+        graph_def.node[2].input[0].startswith(preproc_id):
+
+        if not any(preproc_id in inp for inp in graph_def.node[3].input):
+            graph_def.node[3].input.insert(0, graph_def.node[2].name)
+
 
     # Create SSD postprocessing head ###############################################
 
@@ -274,7 +292,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     num_matched_layers = 0
     for node in graph_def.node:
-        if re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
+        if re.match('BoxPredictor_\d/BoxEncodingPredictor/convolution', node.name) or \
+           re.match('BoxPredictor_\d/BoxEncodingPredictor/Conv2D', node.name) or \
            re.match('WeightSharedConvolutionalBoxPredictor(_\d)*/BoxPredictor/Conv2D', node.name):
             node.addAttr('loc_pred_transposed', True)
             num_matched_layers += 1
@@ -282,6 +301,9 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     # Add layers that generate anchors (bounding boxes proposals).
     priorBoxes = []
+    boxCoder = config['box_coder'][0]
+    fasterRcnnBoxCoder = boxCoder['faster_rcnn_box_coder'][0]
+    boxCoderVariance = [1.0/float(fasterRcnnBoxCoder['x_scale'][0]), 1.0/float(fasterRcnnBoxCoder['y_scale'][0]), 1.0/float(fasterRcnnBoxCoder['width_scale'][0]), 1.0/float(fasterRcnnBoxCoder['height_scale'][0])]
     for i in range(num_layers):
         priorBox = NodeDef()
         priorBox.name = 'PriorBox_%d' % i
@@ -302,7 +324,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
         priorBox.addAttr('width', widths)
         priorBox.addAttr('height', heights)
-        priorBox.addAttr('variance', [0.1, 0.1, 0.2, 0.2])
+        priorBox.addAttr('variance', boxCoderVariance)
 
         graph_def.node.extend([priorBox])
         priorBoxes.append(priorBox.name)
@@ -311,11 +333,15 @@ def createSSDGraph(modelPath, configPath, outputPath):
     addConcatNode('PriorBox/concat', priorBoxes, 'concat/axis_flatten')
 
     # Sigmoid for classes predictions and DetectionOutput layer
+    addReshape('ClassPredictor/concat', 'ClassPredictor/concat3d', [0, -1, num_classes + 1], graph_def)
+
     sigmoid = NodeDef()
     sigmoid.name = 'ClassPredictor/concat/sigmoid'
     sigmoid.op = 'Sigmoid'
-    sigmoid.input.append('ClassPredictor/concat')
+    sigmoid.input.append('ClassPredictor/concat3d')
     graph_def.node.extend([sigmoid])
+
+    addFlatten(sigmoid.name, sigmoid.name + '/Flatten', graph_def)
 
     detectionOut = NodeDef()
     detectionOut.name = 'detection_out'
@@ -325,17 +351,37 @@ def createSSDGraph(modelPath, configPath, outputPath):
         detectionOut.input.append('BoxEncodingPredictor/concat')
     else:
         detectionOut.input.append('BoxPredictor/concat')
-    detectionOut.input.append(sigmoid.name)
+    detectionOut.input.append(sigmoid.name + '/Flatten')
     detectionOut.input.append('PriorBox/concat')
 
     detectionOut.addAttr('num_classes', num_classes + 1)
     detectionOut.addAttr('share_location', True)
     detectionOut.addAttr('background_label_id', 0)
-    detectionOut.addAttr('nms_threshold', 0.6)
-    detectionOut.addAttr('top_k', 100)
+
+    postProcessing = config['post_processing'][0]
+    batchNMS = postProcessing['batch_non_max_suppression'][0]
+
+    if 'iou_threshold' in batchNMS:
+        detectionOut.addAttr('nms_threshold', float(batchNMS['iou_threshold'][0]))
+    else:
+        detectionOut.addAttr('nms_threshold', 0.6)
+
+    if 'score_threshold' in batchNMS:
+        detectionOut.addAttr('confidence_threshold', float(batchNMS['score_threshold'][0]))
+    else:
+        detectionOut.addAttr('confidence_threshold', 0.01)
+
+    if 'max_detections_per_class' in batchNMS:
+        detectionOut.addAttr('top_k', int(batchNMS['max_detections_per_class'][0]))
+    else:
+        detectionOut.addAttr('top_k', 100)
+
+    if 'max_total_detections' in batchNMS:
+        detectionOut.addAttr('keep_top_k', int(batchNMS['max_total_detections'][0]))
+    else:
+        detectionOut.addAttr('keep_top_k', 100)
+
     detectionOut.addAttr('code_type', "CENTER_SIZE")
-    detectionOut.addAttr('keep_top_k', 100)
-    detectionOut.addAttr('confidence_threshold', 0.01)
 
     graph_def.node.extend([detectionOut])
 

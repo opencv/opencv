@@ -20,61 +20,69 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-if __name__ == '__main__':
-    import sys
-    try:
-        fn = sys.argv[1]
-    except:
-        fn = 'fruits.jpg'
-    print(__doc__)
+import sys
 
-    img = cv.imread(cv.samples.findFile(fn))
-    if img is None:
-        print('Failed to load image file:', fn)
-        sys.exit(1)
+class App():
 
-    h, w = img.shape[:2]
-    mask = np.zeros((h+2, w+2), np.uint8)
-    seed_pt = None
-    fixed_range = True
-    connectivity = 4
-
-    def update(dummy=None):
-        if seed_pt is None:
-            cv.imshow('floodfill', img)
+    def update(self, dummy=None):
+        if self.seed_pt is None:
+            cv.imshow('floodfill', self.img)
             return
-        flooded = img.copy()
-        mask[:] = 0
+        flooded = self.img.copy()
+        self.mask[:] = 0
         lo = cv.getTrackbarPos('lo', 'floodfill')
         hi = cv.getTrackbarPos('hi', 'floodfill')
-        flags = connectivity
-        if fixed_range:
+        flags = self.connectivity
+        if self.fixed_range:
             flags |= cv.FLOODFILL_FIXED_RANGE
-        cv.floodFill(flooded, mask, seed_pt, (255, 255, 255), (lo,)*3, (hi,)*3, flags)
-        cv.circle(flooded, seed_pt, 2, (0, 0, 255), -1)
+        cv.floodFill(flooded, self.mask, self.seed_pt, (255, 255, 255), (lo,)*3, (hi,)*3, flags)
+        cv.circle(flooded, self.seed_pt, 2, (0, 0, 255), -1)
         cv.imshow('floodfill', flooded)
 
-    def onmouse(event, x, y, flags, param):
-        global seed_pt
+    def onmouse(self, event, x, y, flags, param):
         if flags & cv.EVENT_FLAG_LBUTTON:
-            seed_pt = x, y
-            update()
+            self.seed_pt = x, y
+            self.update()
 
-    update()
-    cv.setMouseCallback('floodfill', onmouse)
-    cv.createTrackbar('lo', 'floodfill', 20, 255, update)
-    cv.createTrackbar('hi', 'floodfill', 20, 255, update)
+    def run(self):
+        try:
+            fn = sys.argv[1]
+        except:
+            fn = 'fruits.jpg'
 
-    while True:
-        ch = cv.waitKey()
-        if ch == 27:
-            break
-        if ch == ord('f'):
-            fixed_range = not fixed_range
-            print('using %s range' % ('floating', 'fixed')[fixed_range])
-            update()
-        if ch == ord('c'):
-            connectivity = 12-connectivity
-            print('connectivity =', connectivity)
-            update()
+        self.img = cv.imread(cv.samples.findFile(fn))
+        if self.img is None:
+            print('Failed to load image file:', fn)
+            sys.exit(1)
+
+        h, w = self.img.shape[:2]
+        self.mask = np.zeros((h+2, w+2), np.uint8)
+        self.seed_pt = None
+        self.fixed_range = True
+        self.connectivity = 4
+
+        self.update()
+        cv.setMouseCallback('floodfill', self.onmouse)
+        cv.createTrackbar('lo', 'floodfill', 20, 255, self.update)
+        cv.createTrackbar('hi', 'floodfill', 20, 255, self.update)
+
+        while True:
+            ch = cv.waitKey()
+            if ch == 27:
+                break
+            if ch == ord('f'):
+                self.fixed_range = not self.fixed_range
+                print('using %s range' % ('floating', 'fixed')[self.fixed_range])
+                self.update()
+            if ch == ord('c'):
+                self.connectivity = 12-self.connectivity
+                print('connectivity =', self.connectivity)
+                self.update()
+
+        print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    App().run()
     cv.destroyAllWindows()

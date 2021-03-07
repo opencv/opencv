@@ -3,7 +3,7 @@ typedef std::vector<VideoCaptureAPIs> vector_VideoCaptureAPIs;
 
 template<> struct pyopencvVecConverter<cv::VideoCaptureAPIs>
 {
-    static bool to(PyObject* obj, std::vector<cv::VideoCaptureAPIs>& value, const ArgInfo info)
+    static bool to(PyObject* obj, std::vector<cv::VideoCaptureAPIs>& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
@@ -15,9 +15,9 @@ template<> struct pyopencvVecConverter<cv::VideoCaptureAPIs>
 };
 
 template<>
-bool pyopencv_to(PyObject *o, std::vector<cv::VideoCaptureAPIs>& apis, const char *name)
+bool pyopencv_to(PyObject *o, std::vector<cv::VideoCaptureAPIs>& apis, const ArgInfo& info)
 {
-  return pyopencvVecConverter<cv::VideoCaptureAPIs>::to(o, apis, ArgInfo(name, false));
+  return pyopencvVecConverter<cv::VideoCaptureAPIs>::to(o, apis, info);
 }
 
 #endif // HAVE_OPENCV_VIDEOIO

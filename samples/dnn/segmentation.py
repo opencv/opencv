@@ -6,7 +6,7 @@ import sys
 from common import *
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL)
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -28,7 +28,8 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: CPU target (by default), '
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
-                         '%d: VPU' % targets)
+                         '%d: NCS2 VPU, '
+                         '%d: HDDL VPU' % targets)
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'segmentation')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -65,7 +66,7 @@ def showLegend(classes):
         for i in range(len(classes)):
             block = legend[i * blockHeight:(i + 1) * blockHeight]
             block[:,:] = colors[i]
-            cv.putText(block, classes[i], (0, blockHeight/2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+            cv.putText(block, classes[i], (0, blockHeight//2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
 
         cv.namedWindow('Legend', cv.WINDOW_NORMAL)
         cv.imshow('Legend', legend)
@@ -76,7 +77,7 @@ net = cv.dnn.readNet(args.model, args.config, args.framework)
 net.setPreferableBackend(args.backend)
 net.setPreferableTarget(args.target)
 
-winName = 'Deep learning image classification in OpenCV'
+winName = 'Deep learning semantic segmentation in OpenCV'
 cv.namedWindow(winName, cv.WINDOW_NORMAL)
 
 cap = cv.VideoCapture(args.input if args.input else 0)

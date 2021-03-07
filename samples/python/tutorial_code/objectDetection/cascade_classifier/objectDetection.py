@@ -25,7 +25,7 @@ def detectAndDisplay(frame):
 parser = argparse.ArgumentParser(description='Code for Cascade Classifier tutorial.')
 parser.add_argument('--face_cascade', help='Path to face cascade.', default='data/haarcascades/haarcascade_frontalface_alt.xml')
 parser.add_argument('--eyes_cascade', help='Path to eyes cascade.', default='data/haarcascades/haarcascade_eye_tree_eyeglasses.xml')
-parser.add_argument('--camera', help='Camera devide number.', type=int, default=0)
+parser.add_argument('--camera', help='Camera divide number.', type=int, default=0)
 args = parser.parse_args()
 
 face_cascade_name = args.face_cascade

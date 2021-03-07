@@ -42,8 +42,7 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
-namespace cv
-{
+namespace cv {
 
 int validateToInt(size_t sz)
 {
@@ -57,59 +56,65 @@ int validateToInt(size_t sz)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
 #define  cB  ((1 << SCALE) - cR - cG)
 
-void icvCvt_BGR2Gray_8u_C3C1R( const uchar* rgb, int rgb_step,
+void icvCvt_BGR2Gray_8u_C3C1R( const uchar* bgr, int bgr_step,
                                uchar* gray, int gray_step,
                                Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgb += 3 )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgr += 3 )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( bgr[0]*cBGR0 + bgr[1]*cG + bgr[2]*cBGR2, SCALE );
             gray[i] = (uchar)t;
         }
 
-        rgb += rgb_step - size.width*3;
+        bgr += bgr_step - size.width*3;
     }
 }
 
 
-void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* rgb, int rgb_step,
+void icvCvt_BGRA2Gray_16u_CnC1R( const ushort* bgr, int bgr_step,
                                 ushort* gray, int gray_step,
                                 Size size, int ncn, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgb += ncn )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgr += ncn )
         {
-            int t = descale( rgb[swap_rb]*cB + rgb[1]*cG + rgb[swap_rb^2]*cR, SCALE );
+            int t = descale( bgr[0]*cBGR0 + bgr[1]*cG + bgr[2]*cBGR2, SCALE );
             gray[i] = (ushort)t;
         }
 
-        rgb += rgb_step - size.width*ncn;
+        bgr += bgr_step - size.width*ncn;
     }
 }
 
 
-void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* rgba, int rgba_step,
+void icvCvt_BGRA2Gray_8u_C4C1R( const uchar* bgra, int rgba_step,
                                 uchar* gray, int gray_step,
                                 Size size, int _swap_rb )
 {
     int i;
-    int swap_rb = _swap_rb ? 2 : 0;
     for( ; size.height--; gray += gray_step )
     {
-        for( i = 0; i < size.width; i++, rgba += 4 )
+        short cBGR0 = cB;
+        short cBGR2 = cR;
+        if (_swap_rb) std::swap(cBGR0, cBGR2);
+        for( i = 0; i < size.width; i++, bgra += 4 )
         {
-            int t = descale( rgba[swap_rb]*cB + rgba[1]*cG + rgba[swap_rb^2]*cR, SCALE );
+            int t = descale( bgra[0]*cBGR0 + bgra[1]*cG + bgra[2]*cBGR2, SCALE );
             gray[i] = (uchar)t;
         }
 
-        rgba += rgba_step - size.width*4;
+        bgra += rgba_step - size.width*4;
     }
 }
 
@@ -601,4 +606,4 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
     return data;
 }
 
-}
+}  // namespace

@@ -6,15 +6,16 @@
 using namespace cv;
 using namespace std;
 
-static void help()
+static void help(char** argv)
 {
     cout
-    << "\nThis program illustrates the use of findContours and drawContours\n"
-    << "The original image is put up along with the image of drawn contours\n"
-    << "Usage:\n"
-    << "./contours2\n"
-    << "\nA trackbar is put up which controls the contour level from -3 to 3\n"
-    << endl;
+        << "\nThis program illustrates the use of findContours and drawContours\n"
+        << "The original image is put up along with the image of drawn contours\n"
+        << "Usage:\n";
+    cout
+        << argv[0]
+        << "\nA trackbar is put up which controls the contour level from -3 to 3\n"
+        << endl;
 }
 
 const int w = 500;
@@ -38,7 +39,7 @@ int main( int argc, char** argv)
     cv::CommandLineParser parser(argc, argv, "{help h||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     Mat img = Mat::zeros(w, w, CV_8UC1);

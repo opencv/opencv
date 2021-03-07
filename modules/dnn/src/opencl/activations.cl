@@ -95,10 +95,23 @@ __kernel void SigmoidForward(const int count, __global const T* in, __global T* 
   out[index] = 1.0f / (1.0f + exp(-in[index]));
 }
 
+__kernel void SwishForward(const int count, __global const T* in, __global T* out) {
+  int index = get_global_id(0);
+  if(index < count)
+  out[index] = in[index] / (1.0f + exp(-in[index]));
+}
+
+__kernel void MishForward(const int count, __global const T* in, __global T* out) {
+  int index = get_global_id(0);
+  if(index < count)
+  out[index] = in[index] * tanh(log(1.0f + exp(in[index])));
+}
+
 __kernel void BNLLForward(const int n, __global const T* in, __global T* out) {
   int index = get_global_id(0);
   if (index < n) {
-    out[index] = in[index] > 0 ? in[index] + log(1.0f + exp(-in[index])) : log(1.0f + exp(in[index]));
+    T x = in[index];
+    out[index] = x > 0 ? x + log(1.0f + exp(-x)) : log(1.0f + exp(x));
   }
 }
 
@@ -125,5 +138,16 @@ __kernel void ELUForward(const int n, __global const T* in, __global T* out)
   {
     T src = in[index];
     out[index] = (src >= 0.f) ? src : exp(src) - 1;
+  }
+}
+
+__kernel void ExpForward(const int n, __global const T* in, __global T* out,
+                         const KERNEL_ARG_DTYPE normScale,
+                         const KERNEL_ARG_DTYPE normShift)
+{
+  int index = get_global_id(0);
+  if (index < n)
+  {
+    out[index] = exp(normShift + normScale * in[index]);
   }
 }

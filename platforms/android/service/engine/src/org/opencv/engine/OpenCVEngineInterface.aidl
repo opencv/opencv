@@ -1,7 +1,7 @@
 package org.opencv.engine;
 
 /**
-* Class provides Java interface to OpenCV Engine Service. Is synchronious with native OpenCVEngine class.
+* Class provides Java interface to OpenCV Engine Service. Is synchronous with native OpenCVEngine class.
 */
 interface OpenCVEngineInterface
 {

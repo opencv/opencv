@@ -5,8 +5,8 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
-#include "opencv2/gapi/util/variant.hpp"
+#include "../test_precomp.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 #include <cstddef> //std::max_align_t
 
 namespace opencv_test
@@ -33,7 +33,7 @@ TEST(Variant, EmptyCTor)
     EXPECT_EQ("", util::get<std::string>(vsi));
 }
 
-TEST(Variant, ValueMoveCTor)
+TEST(Variant, ConvertingCTorMove)
 {
     util::variant<int> vi(42);
     EXPECT_EQ(0u,     vi.index());
@@ -55,16 +55,25 @@ TEST(Variant, ValueMoveCTor)
     EXPECT_EQ(0u,     vsi.index());
     EXPECT_EQ("2017", util::get<std::string>(vsi));
 
+    std::string rvs("2017");
+    util::variant<std::string, int> vsi3(std::move(rvs));
+    EXPECT_EQ(0u,     vsi3.index());
+    EXPECT_EQ("2017", util::get<std::string>(vsi3));
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("2017", rvs) <<"Rvalue source argument was not moved from while should?";
+
     util::variant<std::string, int> vsi2(42);
     EXPECT_EQ(1u,     vsi2.index());
     EXPECT_EQ(42,     util::get<int>(vsi2));
 }
 
-TEST(Variant, ValueCopyCTor)
+TEST(Variant, ConvertingCTorCopy)
 {
     const int i42         = 42;
     const int i17         = 2017;
     const std::string s17 = "2017";
+    std::string s17_lvref = s17;
 
     util::variant<int> vi(i42);
     EXPECT_EQ(0u,     vi.index());
@@ -81,6 +90,11 @@ TEST(Variant, ValueCopyCTor)
     util::variant<std::string> vs(s17);
     EXPECT_EQ(0u,     vs.index());
     EXPECT_EQ(s17,    util::get<std::string>(vs));
+
+    util::variant<std::string> vs_lv(s17_lvref);
+    EXPECT_EQ(0u,           vs_lv.index());
+    EXPECT_EQ(s17, s17_lvref);
+    EXPECT_EQ(s17_lvref,    util::get<std::string>(vs_lv));
 
     util::variant<std::string, int> vsi(s17);
     EXPECT_EQ(0u,     vsi.index());
@@ -115,6 +129,18 @@ TEST(Variant, Assign_Basic)
     EXPECT_EQ(42, util::get<int>(vis));
 }
 
+TEST(Variant, Assign_LValueRef)
+{
+    TestVar vis;
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(0,  util::get<int>(vis));
+
+    int val = 42;
+    vis = val;
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(42, util::get<int>(vis));
+}
+
 TEST(Variant, Assign_ValueUpdate_SameType)
 {
     TestVar vis(42);
@@ -139,7 +165,53 @@ TEST(Variant, Assign_ValueUpdate_DiffType)
     EXPECT_EQ("42", util::get<std::string>(vis));
 }
 
-TEST(Variant, Assign_ValueUpdate_Const)
+TEST(Variant, Assign_RValueRef_DiffType)
+{
+    TestVar vis(42);
+
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(42, util::get<int>(vis));
+
+    std::string s("42");
+    vis = std::move(s);
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("42", util::get<std::string>(vis));
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("42", s) << "right hand side argument of assignment operation was not moved from while should?";
+}
+
+TEST(Variant, Assign_RValueRef_SameType)
+{
+    TestVar vis(std::string("43"));
+
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("43", util::get<std::string>(vis));
+
+    std::string s("42");
+    vis = std::move(s);
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("42", util::get<std::string>(vis));
+    //C++ standard state that std::string instance that was moved from stays in valid, but unspecified state.
+    //So the best assumption we can made here is that s is not the same as it was before move.
+    EXPECT_NE("42", s) << "right hand side argument of assignment operation was not moved from while should?";
+}
+
+TEST(Variant, Assign_LValueRef_DiffType)
+{
+    TestVar vis(42);
+
+    EXPECT_EQ(0u, vis.index());
+    EXPECT_EQ(42, util::get<int>(vis));
+
+    std::string s("42");
+    vis = s;
+    EXPECT_EQ(1u, vis.index());
+    EXPECT_EQ("42", util::get<std::string>(vis));
+    EXPECT_EQ("42", s) << "right hand side argument of assignment operation was moved from while should not ?";
+}
+
+TEST(Variant, Assign_ValueUpdate_Const_Variant)
 {
     TestVar va(42);
     const TestVar vb(43);
@@ -156,7 +228,7 @@ TEST(Variant, Assign_ValueUpdate_Const)
     EXPECT_EQ(43, util::get<int>(va));
 }
 
-TEST(Variant, Assign_ValueUpdate_Const_DiffType)
+TEST(Variant, Assign_ValueUpdate_Const_DiffType_Variant)
 {
     TestVar va(42);
     const TestVar vb(std::string("42"));
@@ -173,10 +245,11 @@ TEST(Variant, Assign_ValueUpdate_Const_DiffType)
     EXPECT_EQ("42", util::get<std::string>(va));
 }
 
-TEST(Variant, Assign_Move)
+TEST(Variant, Assign_Move_Variant)
 {
     TestVar va(42);
     TestVar vb(std::string("42"));
+    TestVar vd(std::string("43"));
     TestVar vc(43);
 
     EXPECT_EQ(0u, va.index());
@@ -188,9 +261,23 @@ TEST(Variant, Assign_Move)
     EXPECT_EQ(0u, vc.index());
     EXPECT_EQ(43, util::get<int>(vc));
 
+    EXPECT_EQ(1u, vd.index());
+    EXPECT_EQ("43", util::get<std::string>(vd));
+
     va = std::move(vb);
     EXPECT_EQ(1u, va.index());
     EXPECT_EQ("42", util::get<std::string>(va));
+
+    EXPECT_EQ(1u, vb.index());
+    EXPECT_EQ("", util::get<std::string>(vb));
+
+
+    vb = std::move(vd);
+    EXPECT_EQ(1u, vb.index());
+    EXPECT_EQ("43", util::get<std::string>(vb));
+
+    EXPECT_EQ(1u, vd.index());
+    EXPECT_EQ("", util::get<std::string>(vd));
 
     va = std::move(vc);
     EXPECT_EQ(0u, va.index());
@@ -235,6 +322,22 @@ TEST(Variant, Swap_DiffIndex)
 
     EXPECT_EQ(1u, tv1.index());
     EXPECT_EQ(3.14f, util::get<float>(tv1));
+}
+
+TEST(Variant, GetIf)
+{
+    const TestVar cv(42);
+
+    // Test const& get_if()
+    EXPECT_EQ(nullptr, util::get_if<std::string>(&cv));
+    ASSERT_NE(nullptr, util::get_if<int>(&cv));
+    EXPECT_EQ(42, *util::get_if<int>(&cv));
+
+    // Test &get_if
+    TestVar cv2(std::string("42"));
+    EXPECT_EQ(nullptr, util::get_if<int>(&cv2));
+    ASSERT_NE(nullptr, util::get_if<std::string>(&cv2));
+    EXPECT_EQ("42", *util::get_if<std::string>(&cv2));
 }
 
 TEST(Variant, Get)

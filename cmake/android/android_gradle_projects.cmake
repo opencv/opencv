@@ -1,9 +1,16 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version (3.0+)")
+set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
+set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
+message(STATUS "Gradle version: ${GRADLE_VERSION}")
+
 set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
-set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
+if(ANDROID_NATIVE_API_LEVEL GREATER 21)
+  set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
+else()
+  set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
+endif()
 set(ANDROID_TARGET_SDK_VERSION "26" CACHE STRING "Android minSdkVersion")
 
 set(ANDROID_BUILD_BASE_DIR "${OpenCV_BINARY_DIR}/opencv_android" CACHE INTERNAL "")
@@ -38,9 +45,11 @@ set(ANDROID_ABI_FILTER "${ANDROID_INSTALL_ABI_FILTER}")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}" COMPONENT samples)
 
+configure_file("${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/gradle/wrapper/gradle-wrapper.properties.in" "${ANDROID_BUILD_BASE_DIR}/gradle/wrapper/gradle-wrapper.properties" @ONLY)
+install(FILES "${ANDROID_BUILD_BASE_DIR}/gradle/wrapper/gradle-wrapper.properties" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/gradle/wrapper" COMPONENT samples)
+
 set(GRADLE_WRAPPER_FILES
     "gradle/wrapper/gradle-wrapper.jar"
-    "gradle/wrapper/gradle-wrapper.properties"
     "gradlew.bat"
     "gradlew"
     "gradle.properties"
@@ -105,17 +114,29 @@ macro(add_android_project target path)
 include ':${__dir}'
 ")
 
-  # build apk
-  set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
-  ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
-  add_custom_command(
-      OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
-      COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
-      COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
-      WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
-      DEPENDS ${depends} opencv_java_android
-      COMMENT "Building OpenCV Android sample project: ${__dir}"
-  )
+  if (BUILD_ANDROID_EXAMPLES)
+    # build apk
+    set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
+    ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
+    add_custom_command(
+        OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"
+        COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
+        DEPENDS ${depends} opencv_java_android
+        COMMENT "Building OpenCV Android sample project: ${__dir}"
+    )
+  else()  # install only
+    # copy samples
+    add_custom_command(
+        OUTPUT "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/android_sample_${__dir}"
+        WORKING_DIRECTORY "${ANDROID_BUILD_BASE_DIR}"
+        DEPENDS ${depends} opencv_java_android
+        COMMENT "Copying OpenCV Android sample project: ${__dir}"
+    )
+  endif()
+
   file(REMOVE "${OPENCV_DEPHELPER}/android_sample_${__dir}")  # force rebuild after CMake run
 
   add_custom_target(android_sample_${__dir} ALL DEPENDS "${OPENCV_DEPHELPER}/android_sample_${__dir}" SOURCES "${ANDROID_SAMPLE_MANIFEST_PATH}")

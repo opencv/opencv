@@ -53,7 +53,7 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     }
 }
 
-// variant for convrsions 16f <-> ... w/o unrolling
+// variant for conversions 16f <-> ... w/o unrolling
 template<typename _Ts, typename _Td> inline void
 cvtabs1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
              Size size, float a, float b )
@@ -123,7 +123,7 @@ cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     }
 }
 
-// variant for convrsions 16f <-> ... w/o unrolling
+// variant for conversions 16f <-> ... w/o unrolling
 template<typename _Ts, typename _Td> inline void
 cvt1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
           Size size, float a, float b )
@@ -197,17 +197,23 @@ cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
 //==================================================================================================
 
 #define DEF_CVT_SCALE_ABS_FUNC(suffix, cvt, stype, dtype, wtype) \
-static void cvtScaleAbs##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
-                                 dtype* dst, size_t dstep, Size size, double* scale) \
+static void cvtScaleAbs##suffix( const uchar* src_, size_t sstep, const uchar*, size_t, \
+                                 uchar* dst_, size_t dstep, Size size, void* scale_) \
 { \
+    const stype* src = (const stype*)src_; \
+    dtype* dst = (dtype*)dst_; \
+    double* scale = (double*)scale_; \
     cvt(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
 
 #define DEF_CVT_SCALE_FUNC(suffix, cvt, stype, dtype, wtype) \
-static void cvtScale##suffix( const stype* src, size_t sstep, const uchar*, size_t, \
-                              dtype* dst, size_t dstep, Size size, double* scale) \
+static void cvtScale##suffix( const uchar* src_, size_t sstep, const uchar*, size_t, \
+                              uchar* dst_, size_t dstep, Size size, void* scale_) \
 { \
+    const stype* src = (const stype*)src_; \
+    dtype* dst = (dtype*)dst_; \
+    double* scale = (double*)scale_; \
     cvt(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 

@@ -7,8 +7,10 @@
 #include "test_precomp.hpp"
 
 #include <iomanip>
+#include <vector>
 #include "gapi_fluid_test_kernels.hpp"
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/own/saturate.hpp>
 
 namespace cv
 {
@@ -72,7 +74,8 @@ GAPI_FLUID_KERNEL(FAddCSimple, TAddCSimple, false)
             for (int i = 0, w = in.length(); i < w; i++)
             {
                 //std::cout << std::setw(4) << int(in_row[i]);
-                out_row[i] = static_cast<uint8_t>(in_row[i] + cval);
+                //FIXME: it seems that over kernels might need it as well
+                out_row[i] = cv::gapi::own::saturate<uint8_t>(in_row[i] + cval);
             }
             //std::cout << std::endl;
         }
@@ -181,7 +184,7 @@ GAPI_FLUID_KERNEL(FBlur3x3, TBlur3x3, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -197,7 +200,7 @@ GAPI_FLUID_KERNEL(FBlur5x5, TBlur5x5, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -214,7 +217,7 @@ GAPI_FLUID_KERNEL(FBlur3x3_2lpi, TBlur3x3_2lpi, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue)};
+        return { borderType, borderValue};
     }
 };
 
@@ -231,7 +234,7 @@ GAPI_FLUID_KERNEL(FBlur5x5_2lpi, TBlur5x5_2lpi, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc &/*src*/, int borderType, cv::Scalar borderValue)
     {
-        return { borderType, to_own(borderValue )};
+        return { borderType, borderValue};
     }
 };
 
@@ -258,7 +261,7 @@ GAPI_FLUID_KERNEL(FIdentity, TId, false)
 
     static gapi::fluid::Border getBorder(const cv::GMatDesc &)
     {
-        return { cv::BORDER_REPLICATE, cv::gapi::own::Scalar{} };
+        return { cv::BORDER_REPLICATE, cv::Scalar{} };
     }
 };
 
@@ -305,7 +308,7 @@ GAPI_FLUID_KERNEL(FId7x7, TId7x7, false)
 
     static cv::gapi::fluid::Border getBorder(const cv::GMatDesc&/* src*/)
     {
-        return { cv::BORDER_REPLICATE, cv::gapi::own::Scalar{} };
+        return { cv::BORDER_REPLICATE, cv::Scalar{} };
     }
 };
 
@@ -359,6 +362,34 @@ GAPI_FLUID_KERNEL(FPlusRow0, TPlusRow0, true)
     }
 };
 
+static void split3Row(const cv::gapi::fluid::View   &in,
+                      cv::gapi::fluid::Buffer &o1,
+                      cv::gapi::fluid::Buffer &o2,
+                      cv::gapi::fluid::Buffer &o3)
+{
+    for (int l = 0; l < o1.lpi(); l++)
+    {
+        // std::cout << "Split3  {{{\n";
+        // std::cout << "  a - "; in.debug(std::cout);
+        // std::cout << "  1 - "; o1.debug(std::cout);
+        // std::cout << "  2 - "; o2.debug(std::cout);
+        // std::cout << "  3 - "; o3.debug(std::cout);
+        // std::cout << "}}} " << std::endl;;
+
+        const uint8_t* in_rgb = in.InLine<uint8_t>(l);
+              uint8_t* out_r  = o1.OutLine<uint8_t>(l);
+              uint8_t* out_g  = o2.OutLine<uint8_t>(l);
+              uint8_t* out_b  = o3.OutLine<uint8_t>(l);
+
+        for (int i = 0, w = in.length(); i < w; i++)
+        {
+            out_r[i] = in_rgb[3*i];
+            out_g[i] = in_rgb[3*i+1];
+            out_b[i] = in_rgb[3*i+2];
+        }
+    }
+}
+
 GAPI_FLUID_KERNEL(FTestSplit3, cv::gapi::core::GSplit3, false)
 {
     static const int Window = 1;
@@ -368,26 +399,28 @@ GAPI_FLUID_KERNEL(FTestSplit3, cv::gapi::core::GSplit3, false)
                           cv::gapi::fluid::Buffer &o2,
                           cv::gapi::fluid::Buffer &o3)
     {
-        // std::cout << "Split3  {{{\n";
-        // std::cout << "  a - "; in.debug(std::cout);
-        // std::cout << "  1 - "; o1.debug(std::cout);
-        // std::cout << "  2 - "; o2.debug(std::cout);
-        // std::cout << "  3 - "; o3.debug(std::cout);
-        // std::cout << "}}} " << std::endl;;
-
-        const uint8_t* in_rgb = in.InLine<uint8_t>(0);
-              uint8_t* out_r  = o1.OutLine<uint8_t>();
-              uint8_t* out_g  = o2.OutLine<uint8_t>();
-              uint8_t* out_b  = o3.OutLine<uint8_t>();
-
-        for (int i = 0, w = in.length(); i < w; i++)
-        {
-            out_r[i] = in_rgb[3*i];
-            out_g[i] = in_rgb[3*i+1];
-            out_b[i] = in_rgb[3*i+2];
-        }
+        split3Row(in, o1, o2, o3);
     }
 };
+
+GAPI_FLUID_KERNEL(FTestSplit3_4lpi, TSplit3_4lpi, false)
+{
+    static const int Window = 1;
+    static const int LPI = 4;
+
+    static void run(const cv::gapi::fluid::View   &in,
+                          cv::gapi::fluid::Buffer &o1,
+                          cv::gapi::fluid::Buffer &o2,
+                          cv::gapi::fluid::Buffer &o3)
+    {
+        split3Row(in, o1, o2, o3);
+    }
+};
+
+std::tuple<GMat, GMat, GMat> split3_4lpi(const GMat& src)
+{
+    return TSplit3_4lpi::on(src);
+}
 
 GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
 {
@@ -412,6 +445,56 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
                 out_row[i] = static_cast<uint8_t>(in_row1[i] + in_row2[i] + cval[0]);
             }
             std::cout << std::endl;
+        }
+    }
+};
+
+GAPI_FLUID_KERNEL(FEqualizeHist, TEqualizeHist, false)
+{
+    static const int Window = 1;
+    static const int LPI    = 2;
+
+    static void run(const cv::gapi::fluid::View   &mat,
+                    const std::vector<int>        &arr,
+                          cv::gapi::fluid::Buffer &out)
+    {
+        for (int l = 0, lpi = out.lpi(); l < lpi; l++)
+        {
+            const uint8_t* in_row  = mat.InLine <uint8_t>(l);
+                  uint8_t* out_row = out.OutLine<uint8_t>(l);
+
+            for (int i = 0, w = mat.length(); i < w; i++)
+            {
+                out_row[i] = static_cast<uint8_t>(arr[in_row[i]]);
+            }
+        }
+    }
+};
+
+GAPI_OCV_KERNEL(OCVCalcHist, TCalcHist)
+{
+    static void run(const cv::Mat& in, std::vector<int>& out)
+    {
+        out = std::vector<int>(256, 0);
+
+        // Calculate normalized accumulated integral transformation array for gapi
+        for(int i = 0; i < in.rows; ++i)
+            for(int j = 0; j < in.cols; ++j)
+                ++out[in.at<uint8_t>(i, j)];
+
+        for(unsigned int i = 1; i < out.size(); ++i)
+            out[i] += out[i-1];
+
+        int size = in.size().width * in.size().height;
+        int min = size;
+        for(unsigned int i = 0; i < out.size(); ++i)
+            if(out[i] != 0 && out[i] < min)
+                min = out[i];
+
+        for(auto & el : out)
+        {
+            // General histogram equalization formula
+            el = cvRound(((float)(el - min) / (float)(size - min))*255);
         }
     }
 };
@@ -447,7 +530,7 @@ GAPI_FLUID_KERNEL(FNV12toRGB, cv::gapi::imgproc::GNV12toRGB, false)
 {
     static const int Window = 1;
     static const int LPI    = 2;
-    static const auto Kind = GFluidKernel::Kind::NV12toRGB;
+    static const auto Kind = GFluidKernel::Kind::YUV420toRGB;
 
     static void run(const cv::gapi::fluid::View   &in1,
                     const cv::gapi::fluid::View   &in2,
@@ -486,6 +569,39 @@ GAPI_FLUID_KERNEL(FNV12toRGB, cv::gapi::imgproc::GNV12toRGB, false)
     }
 };
 
+
+GAPI_FLUID_KERNEL(FMerge3_4lpi, TMerge3_4lpi, false)
+{
+    static const int Window = 1;
+    static const int LPI = 4;
+
+    static void run(const cv::gapi::fluid::View &src1,
+                    const cv::gapi::fluid::View &src2,
+                    const cv::gapi::fluid::View &src3,
+                          cv::gapi::fluid::Buffer &dst)
+    {
+        for (int l = 0; l < dst.lpi(); l++)
+        {
+            const auto *in1 = src1.InLine<uchar>(l);
+            const auto *in2 = src2.InLine<uchar>(l);
+            const auto *in3 = src3.InLine<uchar>(l);
+            auto *out = dst.OutLine<uchar>(l);
+
+            for (int w = 0; w < dst.length(); w++)
+            {
+                out[3*w    ] = in1[w];
+                out[3*w + 1] = in2[w];
+                out[3*w + 2] = in3[w];
+            }
+        }
+    }
+};
+
+GMat merge3_4lpi(const GMat& src1, const GMat& src2, const GMat& src3)
+{
+    return TMerge3_4lpi::on(src1, src2, src3);
+}
+
 cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         <FAddSimple
         ,FAddCSimple
@@ -498,10 +614,14 @@ cv::gapi::GKernelPackage fluidTestPackage = cv::gapi::kernels
         ,FBlur5x5_2lpi
         ,FIdentity
         ,FId7x7
+        ,FMerge3_4lpi
         ,FNV12toRGB
         ,FPlusRow0
         ,FSum2MatsAndScalar
         ,FTestSplit3
+        ,FTestSplit3_4lpi
+        ,FEqualizeHist
+        ,OCVCalcHist
         >();
 } // namespace gapi_test_kernels
 } // namespace cv

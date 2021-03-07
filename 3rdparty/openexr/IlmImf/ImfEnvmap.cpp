@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,25 +39,30 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfEnvmap.h>
+#include "ImfEnvmap.h"
 #include "ImathFun.h"
+#include "ImfNamespace.h"
+
 #include <algorithm>
 #include <math.h>
 
 using namespace std;
-using namespace Imath;
+using namespace IMATH_NAMESPACE;
 
-namespace Imf {
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
+
+
 namespace LatLongMap {
 
-V2f
+V2f	
 latLong (const V3f &dir)
 {
     float r = sqrt (dir.z * dir.z + dir.x * dir.x);
 
     float latitude = (r < abs (dir.y))?
-             acos (r / dir.length()) * sign (dir.y):
-             asin (dir.y / dir.length());
+			 acos (r / dir.length()) * sign (dir.y):
+			 asin (dir.y / dir.length());
 
     float longitude = (dir.z == 0 && dir.x == 0)? 0: atan2 (dir.x, dir.z);
 
@@ -72,24 +77,24 @@ latLong (const Box2i &dataWindow, const V2f &pixelPosition)
 
     if (dataWindow.max.y > dataWindow.min.y)
     {
-    latitude = -M_PI *
-          ((pixelPosition.y  - dataWindow.min.y) /
-           (dataWindow.max.y - dataWindow.min.y) - 0.5f);
+        latitude = -1 * float(M_PI) *
+            ((pixelPosition.y  - dataWindow.min.y) /
+            (dataWindow.max.y - dataWindow.min.y) - 0.5f);
     }
     else
     {
-    latitude = 0;
+	latitude = 0;
     }
 
     if (dataWindow.max.x > dataWindow.min.x)
     {
-    longitude = -2 * M_PI *
-           ((pixelPosition.x  - dataWindow.min.x) /
-            (dataWindow.max.x - dataWindow.min.x) - 0.5f);
+	longitude = -2 * float(M_PI) *
+		   ((pixelPosition.x  - dataWindow.min.x) /
+		    (dataWindow.max.x - dataWindow.min.x) - 0.5f);
     }
     else
     {
-    longitude = 0;
+	longitude = 0;
     }
 
     return V2f (latitude, longitude);
@@ -99,11 +104,11 @@ latLong (const Box2i &dataWindow, const V2f &pixelPosition)
 V2f
 pixelPosition (const Box2i &dataWindow, const V2f &latLong)
 {
-    float x = latLong.y / (-2 * M_PI) + 0.5f;
-    float y = latLong.x / -M_PI + 0.5f;
+    float x = latLong.y / (-2 * float(M_PI)) + 0.5f;
+    float y = latLong.x / (-1 * float(M_PI)) + 0.5f;
 
     return V2f (x * (dataWindow.max.x - dataWindow.min.x) + dataWindow.min.x,
-        y * (dataWindow.max.y - dataWindow.min.y) + dataWindow.min.y);
+		y * (dataWindow.max.y - dataWindow.min.y) + dataWindow.min.y);
 }
 
 
@@ -120,8 +125,8 @@ direction (const Box2i &dataWindow, const V2f &pixelPosition)
     V2f ll = latLong (dataWindow, pixelPosition);
 
     return V3f (sin (ll.y) * cos (ll.x),
-        sin (ll.x),
-        cos (ll.y) * cos (ll.x));
+		sin (ll.x),
+		cos (ll.y) * cos (ll.x));
 }
 
 } // namespace LatLongMap
@@ -133,7 +138,7 @@ int
 sizeOfFace (const Box2i &dataWindow)
 {
     return min ((dataWindow.max.x - dataWindow.min.x + 1),
-        (dataWindow.max.y - dataWindow.min.y + 1) / 6);
+		(dataWindow.max.y - dataWindow.min.y + 1) / 6);
 }
 
 
@@ -163,39 +168,39 @@ pixelPosition (CubeMapFace face, const Box2i &dataWindow, V2f positionInFace)
     {
       case CUBEFACE_POS_X:
 
-    pos.x = dwf.min.x + positionInFace.y;
-    pos.y = dwf.max.y - positionInFace.x;
-    break;
+	pos.x = dwf.min.x + positionInFace.y;
+	pos.y = dwf.max.y - positionInFace.x;
+	break;
 
       case CUBEFACE_NEG_X:
 
-    pos.x = dwf.max.x - positionInFace.y;
-    pos.y = dwf.max.y - positionInFace.x;
-    break;
+	pos.x = dwf.max.x - positionInFace.y;
+	pos.y = dwf.max.y - positionInFace.x;
+	break;
 
       case CUBEFACE_POS_Y:
 
-    pos.x = dwf.min.x + positionInFace.x;
-    pos.y = dwf.max.y - positionInFace.y;
-    break;
+	pos.x = dwf.min.x + positionInFace.x;
+	pos.y = dwf.max.y - positionInFace.y;
+	break;
 
       case CUBEFACE_NEG_Y:
 
-    pos.x = dwf.min.x + positionInFace.x;
-    pos.y = dwf.min.y + positionInFace.y;
-    break;
+	pos.x = dwf.min.x + positionInFace.x;
+	pos.y = dwf.min.y + positionInFace.y;
+	break;
 
       case CUBEFACE_POS_Z:
 
-    pos.x = dwf.max.x - positionInFace.x;
-    pos.y = dwf.max.y - positionInFace.y;
-    break;
+	pos.x = dwf.max.x - positionInFace.x;
+	pos.y = dwf.max.y - positionInFace.y;
+	break;
 
       case CUBEFACE_NEG_Z:
 
-    pos.x = dwf.min.x + positionInFace.x;
-    pos.y = dwf.max.y - positionInFace.y;
-    break;
+	pos.x = dwf.min.x + positionInFace.x;
+	pos.y = dwf.max.y - positionInFace.y;
+	break;
     }
 
     return pos;
@@ -204,9 +209,9 @@ pixelPosition (CubeMapFace face, const Box2i &dataWindow, V2f positionInFace)
 
 void
 faceAndPixelPosition (const V3f &direction,
-              const Box2i &dataWindow,
-              CubeMapFace &face,
-              V2f &pif)
+		      const Box2i &dataWindow,
+		      CubeMapFace &face,
+		      V2f &pif)
 {
     int sof = sizeOfFace (dataWindow);
     float absx = abs (direction.x);
@@ -215,44 +220,44 @@ faceAndPixelPosition (const V3f &direction,
 
     if (absx >= absy && absx >= absz)
     {
-    if (absx == 0)
-    {
-        //
-        // Special case - direction is (0, 0, 0)
-        //
+	if (absx == 0)
+	{
+	    //
+	    // Special case - direction is (0, 0, 0)
+	    //
 
-        face = CUBEFACE_POS_X;
-        pif = V2f (0, 0);
-        return;
-    }
+	    face = CUBEFACE_POS_X;
+	    pif = V2f (0, 0);
+	    return;
+	}
 
-    pif.x = (direction.y / absx + 1) / 2 * (sof - 1);
-    pif.y = (direction.z / absx + 1) / 2 * (sof - 1);
+	pif.x = (direction.y / absx + 1) / 2 * (sof - 1);
+	pif.y = (direction.z / absx + 1) / 2 * (sof - 1);
 
-    if (direction.x > 0)
-        face = CUBEFACE_POS_X;
-    else
-        face = CUBEFACE_NEG_X;
+	if (direction.x > 0)
+	    face = CUBEFACE_POS_X;
+	else
+	    face = CUBEFACE_NEG_X;
     }
     else if (absy >= absz)
     {
-    pif.x = (direction.x / absy + 1) / 2 * (sof - 1);
-    pif.y = (direction.z / absy + 1) / 2 * (sof - 1);
+	pif.x = (direction.x / absy + 1) / 2 * (sof - 1);
+	pif.y = (direction.z / absy + 1) / 2 * (sof - 1);
 
-    if (direction.y > 0)
-        face = CUBEFACE_POS_Y;
-    else
-        face = CUBEFACE_NEG_Y;
+	if (direction.y > 0)
+	    face = CUBEFACE_POS_Y;
+	else
+	    face = CUBEFACE_NEG_Y;
     }
     else
     {
-    pif.x = (direction.x / absz + 1) / 2 * (sof - 1);
-    pif.y = (direction.y / absz + 1) / 2 * (sof - 1);
+	pif.x = (direction.x / absz + 1) / 2 * (sof - 1);
+	pif.y = (direction.y / absz + 1) / 2 * (sof - 1);
 
-    if (direction.z > 0)
-        face = CUBEFACE_POS_Z;
-    else
-        face = CUBEFACE_NEG_Z;
+	if (direction.z > 0)
+	    face = CUBEFACE_POS_Z;
+	else
+	    face = CUBEFACE_NEG_Z;
     }
 }
 
@@ -263,15 +268,15 @@ direction (CubeMapFace face, const Box2i &dataWindow, const V2f &positionInFace)
     int sof = sizeOfFace (dataWindow);
 
     V2f pos;
-
+    
     if (sof > 1)
     {
-    pos = V2f (positionInFace.x / (sof - 1) * 2 - 1,
-           positionInFace.y / (sof - 1) * 2 - 1);
+	pos = V2f (positionInFace.x / (sof - 1) * 2 - 1,
+		   positionInFace.y / (sof - 1) * 2 - 1);
     }
     else
     {
-    pos = V2f (0, 0);
+	pos = V2f (0, 0);
     }
 
     V3f dir (1, 0, 0);
@@ -280,49 +285,51 @@ direction (CubeMapFace face, const Box2i &dataWindow, const V2f &positionInFace)
     {
       case CUBEFACE_POS_X:
 
-    dir.x = 1;
-    dir.y = pos.x;
-    dir.z = pos.y;
-    break;
+	dir.x = 1;
+	dir.y = pos.x;
+	dir.z = pos.y;
+	break;
 
       case CUBEFACE_NEG_X:
 
-    dir.x = -1;
-    dir.y = pos.x;
-    dir.z = pos.y;
-    break;
+	dir.x = -1;
+	dir.y = pos.x;
+	dir.z = pos.y;
+	break;
 
       case CUBEFACE_POS_Y:
 
-    dir.x = pos.x;
-    dir.y = 1;
-    dir.z = pos.y;
-    break;
+	dir.x = pos.x;
+	dir.y = 1;
+	dir.z = pos.y;
+	break;
 
       case CUBEFACE_NEG_Y:
 
-    dir.x = pos.x;
-    dir.y = -1;
-    dir.z = pos.y;
-    break;
+	dir.x = pos.x;
+	dir.y = -1;
+	dir.z = pos.y;
+	break;
 
       case CUBEFACE_POS_Z:
 
-    dir.x = pos.x;
-    dir.y = pos.y;
-    dir.z = 1;
-    break;
+	dir.x = pos.x;
+	dir.y = pos.y;
+	dir.z = 1;
+	break;
 
       case CUBEFACE_NEG_Z:
 
-    dir.x = pos.x;
-    dir.y = pos.y;
-    dir.z = -1;
-    break;
+	dir.x = pos.x;
+	dir.y = pos.y;
+	dir.z = -1;
+	break;
     }
 
     return dir;
 }
 
 } // namespace CubeMap
-} // namespace Imf
+
+
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

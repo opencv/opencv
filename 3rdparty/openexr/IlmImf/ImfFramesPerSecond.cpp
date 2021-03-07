@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2006, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,9 +41,10 @@
 #include <ImfFramesPerSecond.h>
 #include "ImathFun.h"
 
-using namespace Imath;
+using namespace IMATH_NAMESPACE;
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 Rational
 guessExactFps (double fps)
@@ -58,18 +59,18 @@ guessExactFps (const Rational &fps)
     const double e = 0.002;
 
     if (abs (double (fps) - double (fps_23_976())) < e)
-    return fps_23_976();
+	return fps_23_976();
 
     if (abs (double (fps) - double (fps_29_97())) < e)
-    return fps_29_97();
+	return fps_29_97();
 
     if (abs (double (fps) - double (fps_47_952())) < e)
-    return fps_47_952();
+	return fps_47_952();
 
     if (abs (double (fps) - double (fps_59_94())) < e)
-    return fps_59_94();
+	return fps_59_94();
 
     return fps;
 }
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

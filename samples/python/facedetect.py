@@ -30,9 +30,8 @@ def draw_rects(img, rects, color):
     for x1, y1, x2, y2 in rects:
         cv.rectangle(img, (x1, y1), (x2, y2), color, 2)
 
-if __name__ == '__main__':
+def main():
     import sys, getopt
-    print(__doc__)
 
     args, video_src = getopt.getopt(sys.argv[1:], '', ['cascade=', 'nested-cascade='])
     try:
@@ -49,7 +48,7 @@ if __name__ == '__main__':
     cam = create_capture(video_src, fallback='synth:bg={}:noise=0.05'.format(cv.samples.findFile('samples/data/lena.jpg')))
 
     while True:
-        ret, img = cam.read()
+        _ret, img = cam.read()
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         gray = cv.equalizeHist(gray)
 
@@ -70,4 +69,11 @@ if __name__ == '__main__':
 
         if cv.waitKey(5) == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

@@ -23,9 +23,9 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 import video
 from common import anorm2, draw_str
-from time import clock
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
@@ -96,9 +96,11 @@ def main():
     except:
         video_src = 0
 
-    print(__doc__)
     App(video_src).run()
-    cv.destroyAllWindows()
+    print('Done')
+
 
 if __name__ == '__main__':
+    print(__doc__)
     main()
+    cv.destroyAllWindows()

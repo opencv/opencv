@@ -6,6 +6,7 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.KeyPoint;
+import org.opencv.features2d.SIFT;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -29,7 +30,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = createClassInstance(XFEATURES2D+"SIFT", DEFAULT_FACTORY, null, null);
+        extractor = SIFT.create();
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
         truth = new Mat(1, 128, CvType.CV_32FC1) {

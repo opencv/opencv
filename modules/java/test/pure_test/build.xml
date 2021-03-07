@@ -4,6 +4,9 @@
   <property name="test.dir" value="testResults"/>
   <property name="build.dir" value="build"/>
 
+  <property name="opencv.test.package" value="*"/>
+  <property name="opencv.test.class" value="*"/>
+
   <path id="master-classpath">
     <fileset dir="lib">
       <include name="*.jar"/>
@@ -21,7 +24,7 @@
   <target name="compile">
     <mkdir dir="build/classes"/>
 
-    <javac sourcepath="" srcdir="src" destdir="build/classes" includeantruntime="false" >
+    <javac sourcepath="" srcdir="src" destdir="build/classes" debug="on" includeantruntime="false" >
       <include name="**/*.java"/>
       <classpath refid="master-classpath"/>
     </javac>
@@ -38,9 +41,10 @@
 
   <target name="test" depends="jar">
     <mkdir dir="${test.dir}"/>
-    <junit printsummary="true" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
+    <junit printsummary="withOutAndErr" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${opencv.lib.path}"/>
       <env key="PATH" path="${opencv.lib.path}:${env.PATH}:${env.Path}"/>
+      <env key="DYLD_LIBRARY_PATH" path="${env.OPENCV_SAVED_DYLD_LIBRARY_PATH}"/>  <!-- https://github.com/opencv/opencv/issues/14353 -->
       <classpath refid="master-classpath"/>
       <classpath>
         <pathelement location="build/classes"/>
@@ -49,7 +53,7 @@
       <formatter type="xml"/>
 
       <batchtest fork="yes" todir="${test.dir}">
-        <zipfileset src="build/jar/opencv-test.jar" includes="**/*.class" excludes="**/OpenCVTest*">
+        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*">
           <exclude name="**/*$*.class"/>
         </zipfileset>
       </batchtest>

@@ -5,7 +5,7 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "opencv2/gapi/cpu/gcpukernel.hpp"
+#include <opencv2/gapi/cpu/gcpukernel.hpp>
 
 #include "api/gbackend_priv.hpp" // directly instantiate GBackend::Priv
 

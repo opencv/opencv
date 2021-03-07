@@ -42,13 +42,21 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+
 #include <float.h>
 #include <algorithm>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/permute.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -106,7 +114,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine()) ||
+               backendId == DNN_BACKEND_CUDA ||
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine()) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
@@ -175,21 +184,9 @@ public:
         computeStrides(shape(inputs[0]), shape(outputs[0]));
 
 #ifdef HAVE_OPENCL
-        if (uorder.empty())
-        {
-            std::vector<int> orderVec(_order.begin(), _order.end());;
-            Mat morder(1, orderVec.size(), CV_32SC1, &orderVec[0]);
-
-            std::vector<int> oldStrideVec(_oldStride.begin(), _oldStride.end());
-            Mat mold_stride(1, _oldStride.size(), CV_32SC1, &oldStrideVec[0]);
-
-            std::vector<int> newStrideVec(_newStride.begin(), _newStride.end());
-            Mat mnew_stride(1, newStrideVec.size(), CV_32SC1, &newStrideVec[0]);
-
-            morder.copyTo(uorder);
-            mold_stride.copyTo(uold_stride);
-            mnew_stride.copyTo(unew_stride);
-        }
+        uorder.release();
+        uold_stride.release();
+        unew_stride.release();
 #endif
     }
 
@@ -277,6 +274,22 @@ public:
         if (!_needsPermute)
             return false;
 
+        if (uorder.empty())
+        {
+            std::vector<int> orderVec(_order.begin(), _order.end());;
+            Mat morder(1, orderVec.size(), CV_32SC1, &orderVec[0]);
+
+            std::vector<int> oldStrideVec(_oldStride.begin(), _oldStride.end());
+            Mat mold_stride(1, _oldStride.size(), CV_32SC1, &oldStrideVec[0]);
+
+            std::vector<int> newStrideVec(_newStride.begin(), _newStride.end());
+            Mat mnew_stride(1, newStrideVec.size(), CV_32SC1, &newStrideVec[0]);
+
+            morder.copyTo(uorder);
+            mold_stride.copyTo(uold_stride);
+            mnew_stride.copyTo(unew_stride);
+        }
+
         bool use_half = (inps.depth() == CV_16S);
         String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
@@ -343,7 +356,7 @@ public:
                 CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
 
                 CV_Assert(inp.isContinuous() && out.isContinuous());
-                CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
+                // CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
 
                 if( numAxes == 4 )
                 {
@@ -372,40 +385,53 @@ public:
         }
     }
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        CV_Assert(!_order.empty());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-#endif // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::PermuteLayer ieLayer(name);
         ieLayer.setOrder(_order);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Permute";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        CV_Assert(!_order.empty());
-        ieLayer->params["order"] = format("%zu", _order[0]);
-        for (int i = 1; i < _order.size(); ++i)
-            ieLayer->params["order"] += format(",%zu", _order[i]);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::vector<int64_t> order(_order.begin(), _order.end());
+        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                       ngraph::Shape({order.size()}), order.data());
+        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(context->stream), _order);
+    }
+#endif
+
+
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+    {
+        CV_Assert(!_order.empty());
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
+        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+    }
+#endif // HAVE_VULKAN
+
 
     size_t _count;
     std::vector<size_t> _order;

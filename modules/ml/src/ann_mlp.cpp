@@ -848,6 +848,7 @@ public:
 
     bool train( const Ptr<TrainData>& trainData, int flags ) CV_OVERRIDE
     {
+        CV_Assert(!trainData.empty());
         const int MAX_ITER = 1000;
         const double DEFAULT_EPSILON = FLT_EPSILON;
 
@@ -883,6 +884,7 @@ public:
     }
     int train_anneal(const Ptr<TrainData>& trainData)
     {
+        CV_Assert(!trainData.empty());
         SimulatedAnnealingANN_MLP s(*this, trainData);
         trained = true; // Enable call to CalcError
         int iter = simulatedAnnealingSolver(s, params.initialT, params.finalT, params.coolingRatio, params.itePerStep, NULL, params.rEnergy);
@@ -899,7 +901,7 @@ public:
         int count = inputs.rows;
 
         int iter = -1, max_iter = termCrit.maxCount*count;
-        double epsilon = termCrit.epsilon*count;
+        double epsilon = (termCrit.type & CV_TERMCRIT_EPS) ? termCrit.epsilon*count : 0;
 
         int l_count = layer_count();
         int ivcount = layer_sizes[0];

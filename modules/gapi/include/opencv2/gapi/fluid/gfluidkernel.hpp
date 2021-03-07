@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_FLUID_KERNEL_HPP
@@ -17,7 +17,6 @@
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/gkernel.hpp>
 #include <opencv2/gapi/garg.hpp>
-#include <opencv2/gapi/own/types.hpp>
 
 #include <opencv2/gapi/fluid/gfluidbuffer.hpp>
 
@@ -29,7 +28,7 @@ namespace gapi
 namespace fluid
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -39,7 +38,7 @@ namespace fluid
      */
     GAPI_EXPORTS cv::gapi::GBackend backend();
     /** @} */
-} // namespace flud
+} // namespace fluid
 } // namespace gapi
 
 
@@ -50,7 +49,7 @@ public:
     {
         Filter,
         Resize,
-        NV12toRGB
+        YUV420toRGB //Color conversion of 4:2:0 chroma sub-sampling formats (NV12, I420 ..etc) to RGB
     };
 
     // This function is a generic "doWork" callback
@@ -68,19 +67,21 @@ public:
     // This function is a generic "getBorder" callback (extracts border-related data from kernel's input parameters)
     using B = std::function<gapi::fluid::BorderOpt(const GMetaArgs&, const GArgs&)>;
 
+    // This function is a generic "getWindow" callback (extracts window-related data from kernel's input parameters)
+    using GW = std::function<int(const GMetaArgs&, const GArgs&)>;
+
     // FIXME: move implementations out of header file
     GFluidKernel() {}
-    GFluidKernel(int w, Kind k, int l, bool scratch, const F& f, const IS &is, const RS &rs, const B& b)
-        : m_window(w)
-        , m_kind(k)
+    GFluidKernel(Kind k, int l, bool scratch, const F& f, const IS &is, const RS &rs, const B& b, const GW& win)
+        : m_kind(k)
         , m_lpi(l)
         , m_scratch(scratch)
         , m_f(f)
         , m_is(is)
         , m_rs(rs)
-        , m_b(b) {}
+        , m_b(b)
+        , m_gw(win) {}
 
-    int m_window = -1;
     Kind m_kind;
     const int  m_lpi     = -1;
     const bool m_scratch = false;
@@ -89,15 +90,60 @@ public:
     const IS   m_is;
     const RS   m_rs;
     const B    m_b;
+    const GW   m_gw;
 };
 
 // FIXME!!!
 // This is the temporary and experimental API
 // which should be replaced by runtime roi-based scheduling
+/** \addtogroup gapi_compile_args
+ * @{
+ */
+/**
+ * @brief This structure allows to control the output image region
+ * which Fluid backend will produce in the graph.
+ *
+ * This feature is useful for external tiling and parallelism, but
+ * will be deprecated in the future releases.
+ */
 struct GFluidOutputRois
 {
-    std::vector<cv::gapi::own::Rect> rois;
+    std::vector<cv::Rect> rois;
 };
+
+/**
+ * @brief This structure forces Fluid backend to generate multiple
+ * parallel output regions in the graph. These regions execute in parallel.
+ *
+ * This feature may be deprecated in the future releases.
+ */
+struct GFluidParallelOutputRois
+{
+    std::vector<GFluidOutputRois> parallel_rois;
+};
+
+/**
+ * @brief This structure allows to customize the way how Fluid executes
+ * parallel regions.
+ *
+ * For example, user can utilize his own threading runtime via this parameter.
+ * The `parallel_for` member functor is called by the Fluid runtime with the
+ * following arguments:
+ *
+ * @param size Size of the parallel range to process
+ * @param f A function which should be called for every integer index
+ *   in this range by the specified parallel_for implementation.
+ *
+ * This feature may be deprecated in the future releases.
+ */
+struct GFluidParallelFor
+{
+    //this function accepts:
+    // - size of the "parallel" range as the first argument
+    // - and a function to be called on the range items, designated by item index
+    std::function<void(std::size_t size, std::function<void(std::size_t index)>)> parallel_for;
+};
+/** @} gapi_compile_args */
 
 namespace detail
 {
@@ -105,6 +151,17 @@ template<> struct CompileArgTag<GFluidOutputRois>
 {
     static const char* tag() { return "gapi.fluid.outputRois"; }
 };
+
+template<> struct CompileArgTag<GFluidParallelFor>
+{
+    static const char* tag() { return "gapi.fluid.parallelFor"; }
+};
+
+template<> struct CompileArgTag<GFluidParallelOutputRois>
+{
+    static const char* tag() { return "gapi.fluid.parallelOutputRois"; }
+};
+
 } // namespace detail
 
 namespace detail
@@ -114,25 +171,35 @@ template<> struct fluid_get_in<cv::GMat>
 {
     static const cv::gapi::fluid::View& get(const cv::GArgs &in_args, int idx)
     {
-        return in_args[idx].unsafe_get<cv::gapi::fluid::View>();
+        return *in_args[idx].unsafe_get<cv::gapi::fluid::View*>();
     }
 };
 
 template<> struct fluid_get_in<cv::GScalar>
 {
     // FIXME: change to return by reference when moved to own::Scalar
-#if !defined(GAPI_STANDALONE)
     static const cv::Scalar get(const cv::GArgs &in_args, int idx)
     {
-        return cv::gapi::own::to_ocv(in_args[idx].unsafe_get<cv::gapi::own::Scalar>());
+        return in_args[idx].unsafe_get<cv::Scalar>();
     }
-#else
-    static const cv::gapi::own::Scalar get(const cv::GArgs &in_args, int idx)
-    {
-        return in_args[idx].get<cv::gapi::own::Scalar>();
-    }
-#endif // !defined(GAPI_STANDALONE)
 };
+
+template<typename U> struct fluid_get_in<cv::GArray<U>>
+{
+    static const std::vector<U>& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::VectorRef>().rref<U>();
+    }
+};
+
+template<typename U> struct fluid_get_in<cv::GOpaque<U>>
+{
+    static const U& get(const cv::GArgs &in_args, int idx)
+    {
+        return in_args.at(idx).unsafe_get<cv::detail::OpaqueRef>().rref<U>();
+    }
+};
+
 template<class T> struct fluid_get_in
 {
     static const T& get(const cv::GArgs &in_args, int idx)
@@ -222,6 +289,67 @@ struct get_border_helper<false, Impl, Ins...>
     }
 };
 
+template<bool CallCustomGetWindow, typename, typename... Ins>
+struct get_window_helper;
+
+template<typename Impl, typename... Ins>
+struct get_window_helper<true, Impl, Ins...>
+{
+    template<int... IIs>
+    static int get_window_impl(const GMetaArgs &metas,
+                               const cv::GArgs &in_args,
+                               cv::detail::Seq<IIs...>)
+    {
+        return Impl::getWindow(cv::detail::get_in_meta<Ins>(metas, in_args, IIs)...);
+    }
+
+    static int help(const GMetaArgs &metas, const cv::GArgs &in_args)
+    {
+        return get_window_impl(metas, in_args, typename detail::MkSeq<sizeof...(Ins)>::type());
+    }
+};
+
+template<typename Impl, typename... Ins>
+struct get_window_helper<false, Impl, Ins...>
+{
+    static int help(const cv::GMetaArgs &,
+                    const cv::GArgs     &)
+    {
+        return Impl::Window;
+    }
+};
+
+template<typename C, typename T>
+struct has_Window
+{
+private:
+    template<class U>
+    static constexpr auto Check(U*) -> typename std::is_same<decltype(U::Window), T>::type;
+
+    template<typename>
+    static constexpr std::false_type Check(...);
+
+    typedef decltype(Check<C>(0)) Result;
+
+public:
+    static constexpr bool value = Result::value;
+};
+
+template<bool hasWindow, typename Impl>
+struct callCustomGetBorder;
+
+template<typename Impl>
+struct callCustomGetBorder<true, Impl>
+{
+    static constexpr bool value = (Impl::Window != 1);
+};
+
+template<typename Impl>
+struct callCustomGetBorder<false, Impl>
+{
+    static constexpr bool value = true;
+};
+
 template<typename, typename, typename, bool UseScratch>
 struct FluidCallHelper;
 
@@ -229,6 +357,7 @@ template<typename Impl, typename... Ins, typename... Outs, bool UseScratch>
 struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch>
 {
     static_assert(all_satisfy<is_gmat_type, Outs...>::value, "return type must be GMat");
+    static_assert(contains<GMat, Ins...>::value, "input must contain at least one GMat");
 
     // Execution dispatcher ////////////////////////////////////////////////////
     template<int... IIs, int... OIs>
@@ -265,17 +394,24 @@ struct FluidCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>, UseScratch
 
     static gapi::fluid::BorderOpt getBorder(const GMetaArgs &metas, const cv::GArgs &in_args)
     {
+        constexpr bool hasWindow = has_Window<Impl, const int>::value;
+
         // User must provide "init" callback if Window != 1
         // TODO: move to constexpr if when we enable C++17
-        constexpr bool callCustomGetBorder = (Impl::Window != 1);
-        return get_border_helper<callCustomGetBorder, Impl, Ins...>::help(metas, in_args);
+        return get_border_helper<callCustomGetBorder<hasWindow, Impl>::value, Impl, Ins...>::help(metas, in_args);
+    }
+
+    static int getWindow(const GMetaArgs &metas, const cv::GArgs &in_args)
+    {
+        constexpr bool callCustomGetWindow = !(has_Window<Impl, const int>::value);
+        return get_window_helper<callCustomGetWindow, Impl, Ins...>::help(metas, in_args);
     }
 };
 } // namespace detail
 
 
 template<class Impl, class K, bool UseScratch>
-class GFluidKernelImpl
+class GFluidKernelImpl : public cv::detail::KernelTag
 {
     static const int LPI = 1;
     static const auto Kind = GFluidKernel::Kind::Filter;
@@ -288,9 +424,9 @@ public:
     {
         // FIXME: call() and getOutMeta() needs to be renamed so it is clear these
         // functions are internal wrappers, not user API
-        return GFluidKernel(Impl::Window, Impl::Kind, Impl::LPI,
+        return GFluidKernel(Impl::Kind, Impl::LPI,
                             UseScratch,
-                            &P::call, &P::init_scratch, &P::reset_scratch, &P::getBorder);
+                            &P::call, &P::init_scratch, &P::reset_scratch, &P::getBorder, &P::getWindow);
     }
 
     static cv::gapi::GBackend backend() { return cv::gapi::fluid::backend(); }

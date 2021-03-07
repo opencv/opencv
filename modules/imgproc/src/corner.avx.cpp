@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#undef CV_FORCE_SIMD128_CPP  // expected AVX implementation only
 #include "opencv2/core/hal/intrin.hpp"
 #include "corner.hpp"
 
@@ -113,9 +114,9 @@ static void store_interleave(float* ptr, const __m256& a, const __m256& b, const
     v_pack4x3to3x4(u0.val, u1.val, u2.val, u3.val, a1, b1, c1);
 
 #if !defined(__GNUC__) || defined(__INTEL_COMPILER)
-    _mm256_storeu_ps(ptr, _mm256_setr_m128(_mm_castsi128_ps(a0), _mm_castsi128_ps(b0)));
-    _mm256_storeu_ps(ptr + 8, _mm256_setr_m128(_mm_castsi128_ps(c0), _mm_castsi128_ps(a1)));
-    _mm256_storeu_ps(ptr + 16,  _mm256_setr_m128(_mm_castsi128_ps(b1), _mm_castsi128_ps(c1)));
+    _mm256_storeu_ps(ptr,      _mm256_castsi256_ps(_mm256_setr_m128i(a0, b0)));
+    _mm256_storeu_ps(ptr + 8,  _mm256_castsi256_ps(_mm256_setr_m128i(c0, a1)));
+    _mm256_storeu_ps(ptr + 16, _mm256_castsi256_ps(_mm256_setr_m128i(b1, c1)));
 #else
     // GCC: workaround for missing AVX intrinsic: "_mm256_setr_m128()"
     _mm256_storeu_ps(ptr, _mm256_insertf128_ps(_mm256_castps128_ps256(_mm_castsi128_ps(a0)), _mm_castsi128_ps(b0), 1));

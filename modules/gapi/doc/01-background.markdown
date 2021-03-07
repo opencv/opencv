@@ -36,7 +36,7 @@ software optimization due to diffent costs of memory access on modern
 computer architectures -- the more data is reused in the first level
 cache, the more efficient pipeline is.
 
-Definitely the aforementioned techinques can be applied manually --
+Definitely the aforementioned techniques can be applied manually --
 but it requires extra skills and knowledge of the target platform and
 the algorithm implementation changes irrevocably -- becoming more
 specific, less flexible, and harder to extend and maintain.
@@ -46,12 +46,12 @@ majority of the work by itself, keeping the algorithm code clean from
 device or optimization details. This approach has its own limitations,
 though, as graph model is a _constrained_ model and not every
 algorithm can be represented as a graph, so the G-API scope is limited
-only to regular image processing -- various filters, arithmentic,
+only to regular image processing -- various filters, arithmetic,
 binary operations, and well-defined geometrical transformations.
 
 ## Porting with Graph API {#gapi_intro_port}
 
-The essense of G-API is declaring a sequence of operations to run, and
+The essence of G-API is declaring a sequence of operations to run, and
 then executing that sequence. G-API is a constrained API, so it puts a
 number of limitations on which operations can form a pipeline and
 which data these operations may exchange each other.
@@ -67,7 +67,7 @@ interfaces, not implementations -- thus the same graph can be executed
 on different devices (and, of course, using different optimization
 techniques) with little-to-no changes in the graph itself.
 
-G-API supports plugins (_Backends_) which aggreate logic and
+G-API supports plugins (_Backends_) which aggregate logic and
 intelligence on what is the best way to execute on a particular
 platform. Once a pipeline is built with G-API, it can be parametrized
 to use either of the backends (or a combination of it) and so a graph

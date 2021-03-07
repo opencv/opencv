@@ -47,6 +47,7 @@
 
 #if defined(HAVE_OPENCL_STATIC)
 #if defined __APPLE__
+#define CL_SILENCE_DEPRECATION
 #include <OpenCL/cl.h>
 #else
 #include <CL/cl.h>
@@ -154,7 +155,7 @@ static void* WinGetProcAddress(const char* name)
 #define CV_CL_GET_PROC_ADDRESS(name) WinGetProcAddress(name)
 #endif // _WIN32
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 #include <dlfcn.h>
 #include <stdio.h>
 
@@ -175,6 +176,55 @@ static void *GetHandle(const char *file)
 
     return handle;
 }
+
+#ifdef __ANDROID__
+
+static const char *defaultAndroidPaths[] = {
+    "libOpenCL.so",
+    "/system/lib64/libOpenCL.so",
+    "/system/vendor/lib64/libOpenCL.so",
+    "/system/vendor/lib64/egl/libGLES_mali.so",
+    "/system/vendor/lib64/libPVROCL.so",
+    "/data/data/org.pocl.libs/files/lib64/libpocl.so",
+    "/system/lib/libOpenCL.so",
+    "/system/vendor/lib/libOpenCL.so",
+    "/system/vendor/lib/egl/libGLES_mali.so",
+    "/system/vendor/lib/libPVROCL.so",
+    "/data/data/org.pocl.libs/files/lib/libpocl.so"
+};
+
+static void* GetProcAddress(const char* name)
+{
+    static bool initialized = false;
+    static void* handle = NULL;
+    if (!handle && !initialized)
+    {
+        cv::AutoLock lock(cv::getInitializationMutex());
+        if (!initialized)
+        {
+            bool foundOpenCL = false;
+            for (unsigned int i = 0; i < (sizeof(defaultAndroidPaths)/sizeof(char*)); i++)
+            {
+                const char* path = (i==0) ? getRuntimePath(defaultAndroidPaths[i]) : defaultAndroidPaths[i];
+                if (path) {
+                    handle = GetHandle(path);
+                    if (handle) {
+                        foundOpenCL = true;
+                        break;
+                    }
+                }
+            }
+            initialized = true;
+            if (!foundOpenCL)
+                fprintf(stderr, ERROR_MSG_CANT_LOAD);
+        }
+    }
+    if (!handle)
+        return NULL;
+    return dlsym(handle, name);
+}
+
+#else // NOT __ANDROID__
 
 static void* GetProcAddress(const char* name)
 {
@@ -205,6 +255,8 @@ static void* GetProcAddress(const char* name)
         return NULL;
     return dlsym(handle, name);
 }
+#endif // __ANDROID__
+
 #define CV_CL_GET_PROC_ADDRESS(name) GetProcAddress(name)
 #endif
 

@@ -15,11 +15,9 @@ if(DOXYGEN_FOUND)
 
   # not documented modules list
   set(blacklist "${DOXYGEN_BLACKLIST}")
-  list(APPEND blacklist "ts" "java_bindings_generator" "java" "python_bindings_generator" "python2" "python3" "js" "world")
+  list(APPEND blacklist "ts" "world")
   unset(CMAKE_DOXYGEN_TUTORIAL_CONTRIB_ROOT)
   unset(CMAKE_DOXYGEN_TUTORIAL_JS_ROOT)
-
-  set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
 
   set(OPENCV_DOCS_EXCLUDE_CUDA ON)
   if(";${OPENCV_MODULES_EXTRA};" MATCHES ";cudev;")
@@ -38,8 +36,18 @@ if(DOXYGEN_FOUND)
   set(refs_extra)
   set(deps)
   foreach(m ${OPENCV_MODULES_MAIN} ${OPENCV_MODULES_EXTRA})
+    set(the_module "${m}")
+    if(NOT the_module MATCHES "^opencv_")
+      set(the_module "opencv_${m}")
+    endif()
     list(FIND blacklist ${m} _pos)
+    if(NOT EXISTS "${OPENCV_MODULE_${the_module}_LOCATION}/include"
+        AND NOT EXISTS "${OPENCV_MODULE_${the_module}_LOCATION}/doc"
+    )
+      set(_pos -2)  # blacklist
+    endif()
     if(${_pos} EQUAL -1)
+      list(APPEND CMAKE_DOXYGEN_ENABLED_SECTIONS "HAVE_opencv_${m}")
       # include folder
       set(header_dir "${OPENCV_MODULE_opencv_${m}_LOCATION}/include")
       if(EXISTS "${header_dir}")
@@ -137,9 +145,23 @@ if(DOXYGEN_FOUND)
   set(tutorial_js_path "${CMAKE_CURRENT_SOURCE_DIR}/js_tutorials")
   set(example_path "${CMAKE_SOURCE_DIR}/samples")
 
+  set(doxygen_image_path
+      ${CMAKE_CURRENT_SOURCE_DIR}/images
+      ${paths_doc}
+      ${tutorial_path}
+      ${tutorial_py_path}
+      ${tutorial_js_path}
+      ${paths_tutorial}
+      #${OpenCV_SOURCE_DIR}/samples/data         # TODO: need to resolve ambiguous conflicts first
+      ${OpenCV_SOURCE_DIR}
+      ${OpenCV_SOURCE_DIR}/modules               # <opencv>/modules
+      ${OPENCV_EXTRA_MODULES_PATH}               # <opencv_contrib>/modules
+      ${OPENCV_DOCS_EXTRA_IMAGE_PATH}            # custom variable for user modules
+  )
+
   # set export variables
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_INPUT_LIST "${rootfile} ; ${faqfile} ; ${paths_include} ; ${paths_hal_interface} ; ${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial} ; ${tutorial_contrib_root}")
-  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${paths_doc} ; ${tutorial_path} ; ${tutorial_py_path} ; ${tutorial_js_path} ; ${paths_tutorial}")
+  string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_IMAGE_PATH "${doxygen_image_path}")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_EXCLUDE_LIST "${CMAKE_DOXYGEN_EXCLUDE_LIST}")
   string(REPLACE ";" " " CMAKE_DOXYGEN_ENABLED_SECTIONS "${CMAKE_DOXYGEN_ENABLED_SECTIONS}")
   # TODO: remove paths_doc from EXAMPLE_PATH after face module tutorials/samples moved to separate folders
@@ -164,9 +186,27 @@ if(DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
+  set(OPENCV_DOCS_DOT_PATH "" CACHE PATH "Doxygen/DOT_PATH value")
+  set(CMAKECONFIG_DOT_PATH "${OPENCV_DOCS_DOT_PATH}")
+
+  set(OPENCV_DOCS_HAVE_DOT "NO" CACHE BOOL "Doxygen: build extra diagrams")
+  set(CMAKECONFIG_HAVE_DOT "${OPENCV_DOCS_HAVE_DOT}")
+
+  # 'png' is good enough for compatibility (but requires +50% storage space)
+  set(OPENCV_DOCS_DOT_IMAGE_FORMAT "svg" CACHE STRING "Doxygen/DOT_IMAGE_FORMAT value")
+  set(CMAKECONFIG_DOT_IMAGE_FORMAT "${OPENCV_DOCS_DOT_IMAGE_FORMAT}")
+
+  # Doxygen 1.8.16 fix: https://github.com/doxygen/doxygen/pull/6870
+  # NO is needed here: https://github.com/opencv/opencv/pull/16039
+  set(OPENCV_DOCS_INTERACTIVE_SVG "NO" CACHE BOOL "Doxygen/INTERACTIVE_SVG value")
+  set(CMAKECONFIG_INTERACTIVE_SVG "${OPENCV_DOCS_INTERACTIVE_SVG}")
+
+  set(OPENCV_DOCS_DOXYFILE_IN "Doxyfile.in" CACHE PATH "Doxygen configuration template file (Doxyfile.in)")
+  set(OPENCV_DOCS_DOXYGEN_LAYOUT "DoxygenLayout.xml" CACHE PATH "Doxygen layout file (.xml)")
+
   # writing file
-  configure_file(DoxygenLayout.xml DoxygenLayout.xml @ONLY)
-  configure_file(Doxyfile.in ${doxyfile} @ONLY)
+  configure_file("${OPENCV_DOCS_DOXYGEN_LAYOUT}" DoxygenLayout.xml @ONLY)
+  configure_file("${OPENCV_DOCS_DOXYFILE_IN}" ${doxyfile} @ONLY)
   configure_file(root.markdown.in ${rootfile} @ONLY)
 
   # js tutorial assets

@@ -48,7 +48,7 @@ public class RotatedRectTest extends OpenCVTestCase {
         RotatedRect rrect = new RotatedRect(center, size, angle);
         RotatedRect clone = rrect.clone();
 
-        assertTrue(clone != null);
+        assertNotNull(clone);
         assertTrue(rrect.center.equals(clone.center));
         assertTrue(rrect.size.equals(clone.size));
         assertTrue(rrect.angle == clone.angle);
@@ -66,24 +66,24 @@ public class RotatedRectTest extends OpenCVTestCase {
         RotatedRect clone2 = rrect2.clone();
 
         assertTrue(rrect1.equals(rrect3));
-        assertTrue(!rrect1.equals(rrect2));
+        assertFalse(rrect1.equals(rrect2));
 
         assertTrue(rrect2.equals(clone2));
         clone2.angle = 10;
-        assertTrue(!rrect2.equals(clone2));
+        assertFalse(rrect2.equals(clone2));
 
         assertTrue(rrect1.equals(clone1));
 
         clone1.center.x += 1;
-        assertTrue(!rrect1.equals(clone1));
+        assertFalse(rrect1.equals(clone1));
 
         clone1.center.x -= 1;
         assertTrue(rrect1.equals(clone1));
 
         clone1.size.width += 1;
-        assertTrue(!rrect1.equals(clone1));
+        assertFalse(rrect1.equals(clone1));
 
-        assertTrue(!rrect1.equals(size));
+        assertFalse(rrect1.equals(size));
     }
 
     public void testHashCode() {
@@ -140,10 +140,10 @@ public class RotatedRectTest extends OpenCVTestCase {
     public void testRotatedRect() {
         RotatedRect rr = new RotatedRect();
 
-        assertTrue(rr != null);
-        assertTrue(rr.center != null);
-        assertTrue(rr.size != null);
-        assertTrue(rr.angle == 0.0);
+        assertNotNull(rr);
+        assertNotNull(rr.center);
+        assertNotNull(rr.size);
+        assertEquals(0.0, rr.angle);
     }
 
     public void testRotatedRectDoubleArray() {
@@ -161,10 +161,10 @@ public class RotatedRectTest extends OpenCVTestCase {
     public void testRotatedRectPointSizeDouble() {
         RotatedRect rr = new RotatedRect(center, size, 40);
 
-        assertTrue(rr != null);
-        assertTrue(rr.center != null);
-        assertTrue(rr.size != null);
-        assertTrue(rr.angle == 40.0);
+        assertNotNull(rr);
+        assertNotNull(rr.center);
+        assertNotNull(rr.size);
+        assertEquals(40.0, rr.angle);
     }
 
     public void testSet() {

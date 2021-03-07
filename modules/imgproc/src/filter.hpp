@@ -45,18 +45,26 @@
 
 namespace cv
 {
-#if CV_TRY_AVX2
-    int RowVec_32f_AVX(const float* src0, const float* _kx, float* dst, int width, int cn, int _ksize);
-    int SymmColumnVec_32f_Symm_AVX(const float** src, const float* ky, float* dst, float delta, int width, int ksize2);
-    int SymmColumnVec_32f_Unsymm_AVX(const float** src, const float* ky, float* dst, float delta, int width, int ksize2);
+#ifdef HAVE_OPENCL
+bool ocl_sepFilter2D(
+        InputArray _src, OutputArray _dst, int ddepth,
+        InputArray _kernelX, InputArray _kernelY, Point anchor,
+        double delta, int borderType
+);
+
+bool ocl_sepFilter2D_BitExact(
+        InputArray _src, OutputArray _dst, int ddepth,
+        const Size& ksize,
+        const uint16_t *fkx, const uint16_t *fky,
+        Point anchor,
+        double delta, int borderType,
+        int shift_bits
+);
 #endif
 
-#ifdef HAVE_OPENCL
-    bool ocl_sepFilter2D( InputArray _src, OutputArray _dst, int ddepth,
-                          InputArray _kernelX, InputArray _kernelY, Point anchor,
-                          double delta, int borderType );
-#endif
-}
+void preprocess2DKernel(const Mat& kernel, std::vector<Point>& coords, std::vector<uchar>& coeffs);
+
+}  // namespace
 
 #endif
 

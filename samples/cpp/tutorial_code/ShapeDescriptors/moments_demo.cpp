@@ -26,8 +26,8 @@ void thresh_callback(int, void* );
 int main( int argc, char** argv )
 {
     /// Load source image
-    CommandLineParser parser( argc, argv, "{@input | ../data/stuff.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input | stuff.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ) );
 
     if( src.empty() )
     {

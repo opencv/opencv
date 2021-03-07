@@ -36,7 +36,7 @@ public:
     void load(const std::string &path);
 
 private:
-    /** The current number of correspondecnes */
+    /** The current number of correspondences */
     int n_correspondences_;
     /** The list of 2D points on the model surface */
     std::vector<cv::KeyPoint> list_keypoints_;

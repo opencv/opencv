@@ -9,7 +9,7 @@ def main():
     os.chdir(SCRIPT_DIR)
 
     package_name = 'opencv'
-    package_version = os.environ.get('OPENCV_VERSION', '4.0.1')  # TODO
+    package_version = os.environ.get('OPENCV_VERSION', '4.5.2')  # TODO
 
     long_description = 'Open Source Computer Vision Library Python bindings'  # TODO
 
@@ -17,7 +17,7 @@ def main():
         name=package_name,
         version=package_version,
         url='https://github.com/opencv/opencv',
-        license='BSD',
+        license='Apache 2.0',
         description='OpenCV python bindings',
         long_description=long_description,
         long_description_content_type="text/markdown",
@@ -31,7 +31,7 @@ def main():
           'Intended Audience :: Education',
           'Intended Audience :: Information Technology',
           'Intended Audience :: Science/Research',
-          'License :: BSD License',
+          'License :: Apache 2.0 License',
           'Operating System :: MacOS',
           'Operating System :: Microsoft :: Windows',
           'Operating System :: POSIX',
@@ -44,6 +44,8 @@ def main():
           'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
           'Programming Language :: C++',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Scientific/Engineering',

@@ -71,12 +71,26 @@
 #include <emscripten/bind.h>
 
 @INCLUDES@
+#include "../../../modules/core/src/parallel_impl.hpp"
+
+#ifdef TEST_WASM_INTRIN
+#include "../../../modules/core/include/opencv2/core/hal/intrin.hpp"
+#include "../../../modules/core/include/opencv2/core/utils/trace.hpp"
+#include "../../../modules/ts/include/opencv2/ts/ts_gtest.h"
+namespace cv {
+namespace hal {
+#include "../../../modules/core/test/test_intrin_utils.hpp"
+}
+}
+#endif
 
 using namespace emscripten;
 using namespace cv;
 
+using namespace cv::segmentation;  // FIXIT
+
 #ifdef HAVE_OPENCV_DNN
-using namespace dnn;
+using namespace cv::dnn;
 #endif
 
 #ifdef HAVE_OPENCV_ARUCO
@@ -296,6 +310,40 @@ namespace binding_utils
         cv::minEnclosingCircle(points, circle.center, circle.radius);
         return circle;
     }
+
+    int floodFill_withRect_helper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6 = Scalar(), Scalar arg7 = Scalar(), int arg8 = 4)
+    {
+        cv::Rect rect;
+
+        int rc = cv::floodFill(arg1, arg2, arg3, arg4, &rect, arg6, arg7, arg8);
+
+        arg5.set("x", emscripten::val(rect.x));
+        arg5.set("y", emscripten::val(rect.y));
+        arg5.set("width", emscripten::val(rect.width));
+        arg5.set("height", emscripten::val(rect.height));
+
+        return rc;
+    }
+
+    int floodFill_wrapper(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7, int arg8) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+
+    int floodFill_wrapper_1(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6, Scalar arg7) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+
+    int floodFill_wrapper_2(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5, Scalar arg6) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+
+    int floodFill_wrapper_3(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4, emscripten::val arg5) {
+        return floodFill_withRect_helper(arg1, arg2, arg3, arg4, arg5);
+    }
+
+    int floodFill_wrapper_4(cv::Mat& arg1, cv::Mat& arg2, Point arg3, Scalar arg4) {
+        return cv::floodFill(arg1, arg2, arg3, arg4);
+    }
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
@@ -334,6 +382,51 @@ namespace binding_utils
     std::string getBuildInformation() {
         return cv::getBuildInformation();
     }
+
+#ifdef TEST_WASM_INTRIN
+    void test_hal_intrin_uint8() {
+        cv::hal::test_hal_intrin_uint8();
+    }
+    void test_hal_intrin_int8() {
+        cv::hal::test_hal_intrin_int8();
+    }
+    void test_hal_intrin_uint16() {
+        cv::hal::test_hal_intrin_uint16();
+    }
+    void test_hal_intrin_int16() {
+        cv::hal::test_hal_intrin_int16();
+    }
+    void test_hal_intrin_uint32() {
+        cv::hal::test_hal_intrin_uint32();
+    }
+    void test_hal_intrin_int32() {
+        cv::hal::test_hal_intrin_int32();
+    }
+    void test_hal_intrin_uint64() {
+        cv::hal::test_hal_intrin_uint64();
+    }
+    void test_hal_intrin_int64() {
+        cv::hal::test_hal_intrin_int64();
+    }
+    void test_hal_intrin_float32() {
+        cv::hal::test_hal_intrin_float32();
+    }
+    void test_hal_intrin_float64() {
+        cv::hal::test_hal_intrin_float64();
+    }
+    void test_hal_intrin_all() {
+        cv::hal::test_hal_intrin_uint8();
+        cv::hal::test_hal_intrin_int8();
+        cv::hal::test_hal_intrin_uint16();
+        cv::hal::test_hal_intrin_int16();
+        cv::hal::test_hal_intrin_uint32();
+        cv::hal::test_hal_intrin_int32();
+        cv::hal::test_hal_intrin_uint64();
+        cv::hal::test_hal_intrin_int64();
+        cv::hal::test_hal_intrin_float32();
+        cv::hal::test_hal_intrin_float64();
+    }
+#endif
 }
 
 EMSCRIPTEN_BINDINGS(binding_utils)
@@ -508,10 +601,10 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("distance", &cv::DMatch::distance);
 
     emscripten::value_array<cv::Scalar_<double>> ("Scalar")
-        .element(index<0>())
-        .element(index<1>())
-        .element(index<2>())
-        .element(index<3>());
+        .element(emscripten::index<0>())
+        .element(emscripten::index<1>())
+        .element(emscripten::index<2>())
+        .element(emscripten::index<3>());
 
     emscripten::value_object<binding_utils::MinMaxLoc>("MinMaxLoc")
         .field("minVal", &binding_utils::MinMaxLoc::minVal)
@@ -557,6 +650,16 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
 #ifdef HAVE_OPENCV_IMGPROC
     function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar, int)>(&binding_utils::floodFill_wrapper));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar)>(&binding_utils::floodFill_wrapper_1));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar)>(&binding_utils::floodFill_wrapper_2));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val)>(&binding_utils::floodFill_wrapper_3));
+
+    function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar)>(&binding_utils::floodFill_wrapper_4));
 #endif
 
     function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));
@@ -576,6 +679,25 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 #endif
 
     function("getBuildInformation", &binding_utils::getBuildInformation);
+
+#ifdef HAVE_PTHREADS_PF
+    function("parallel_pthreads_set_threads_num", &cv::parallel_pthreads_set_threads_num);
+    function("parallel_pthreads_get_threads_num", &cv::parallel_pthreads_get_threads_num);
+#endif
+
+#ifdef TEST_WASM_INTRIN
+    function("test_hal_intrin_uint8", &binding_utils::test_hal_intrin_uint8);
+    function("test_hal_intrin_int8", &binding_utils::test_hal_intrin_int8);
+    function("test_hal_intrin_uint16", &binding_utils::test_hal_intrin_uint16);
+    function("test_hal_intrin_int16", &binding_utils::test_hal_intrin_int16);
+    function("test_hal_intrin_uint32", &binding_utils::test_hal_intrin_uint32);
+    function("test_hal_intrin_int32", &binding_utils::test_hal_intrin_int32);
+    function("test_hal_intrin_uint64", &binding_utils::test_hal_intrin_uint64);
+    function("test_hal_intrin_int64", &binding_utils::test_hal_intrin_int64);
+    function("test_hal_intrin_float32", &binding_utils::test_hal_intrin_float32);
+    function("test_hal_intrin_float64", &binding_utils::test_hal_intrin_float64);
+    function("test_hal_intrin_all", &binding_utils::test_hal_intrin_all);
+#endif
 
     constant("CV_8UC1", CV_8UC1);
     constant("CV_8UC2", CV_8UC2);

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2019 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GCOMPOUNDKERNEL_HPP
@@ -65,20 +65,24 @@ template<typename U> struct get_compound_in<cv::GArray<U>>
     }
 };
 
-// Kernel may return one object(GMat, GScalar) or a tuple of objects.
-// This helper is needed to cast return value to the same form(tuple)
-template<typename>
-struct tuple_wrap_helper;
-
-template<typename T> struct tuple_wrap_helper
+template<typename U> struct get_compound_in<cv::GOpaque<U>>
 {
-    static std::tuple<T> get(T&& obj) { return std::make_tuple(std::move(obj)); }
+    static cv::GOpaque<U> get(GCompoundContext &ctx, int idx)
+    {
+        auto opaq = cv::GOpaque<U>();
+        ctx.m_args[idx] = GArg(opaq);
+        return opaq;
+    }
 };
 
-template<typename... Objs>
-struct tuple_wrap_helper<std::tuple<Objs...>>
+template<> struct get_compound_in<cv::GMatP>
 {
-    static std::tuple<Objs...> get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
+    static cv::GMatP get(GCompoundContext &ctx, int idx)
+    {
+        auto mat = cv::GMatP();
+        ctx.m_args[idx] = GArg(mat);
+        return mat;
+    }
 };
 
 template<typename, typename, typename>
@@ -104,7 +108,8 @@ struct GCompoundCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 };
 
 template<class Impl, class K>
-class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GCompoundKernelImpl: public cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                           public cv::detail::KernelTag
 {
     using P = cv::detail::GCompoundCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 
@@ -116,7 +121,18 @@ public:
 };
 
 } // namespace detail
-#define GAPI_COMPOUND_KERNEL(Name, API) struct Name: public cv::detail::GCompoundKernelImpl<Name, API>
+
+
+/**
+ * Declares a new compound kernel. See this
+ * [documentation chapter](@ref gapi_kernel_compound)
+ * on compound kernels for more details.
+ *
+ * @param Name type name for new kernel
+ * @param API the interface this kernel implements
+ */
+#define GAPI_COMPOUND_KERNEL(Name, API) \
+    struct Name: public cv::detail::GCompoundKernelImpl<Name, API>
 
 } // namespace cv
 

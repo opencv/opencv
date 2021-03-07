@@ -12,13 +12,14 @@
 #include <vector>
 #include <ostream>
 
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 
-#include "opencv2/gapi/gmat.hpp"
-#include "opencv2/gapi/gscalar.hpp"
-#include "opencv2/gapi/garray.hpp"
-#include "opencv2/gapi/garg.hpp"
-#include "opencv2/gapi/gmetaarg.hpp"
+#include <opencv2/gapi/gmat.hpp>
+#include <opencv2/gapi/gscalar.hpp>
+#include <opencv2/gapi/garray.hpp>
+#include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/gmetaarg.hpp>
 
 namespace cv {
 
@@ -34,8 +35,11 @@ namespace cv {
 // directly.
 using GProtoArg = util::variant
     < GMat
+    , GMatP
+    , GFrame
     , GScalar
-    , detail::GArrayU // instead of GArray<T>
+    , detail::GArrayU  // instead of GArray<T>
+    , detail::GOpaqueU // instead of GOpaque<T>
     >;
 
 using GProtoArgs = std::vector<GProtoArg>;
@@ -53,11 +57,34 @@ template<class Tag>
 struct GIOProtoArgs
 {
 public:
+    // NB: Used by python wrapper
+    GIOProtoArgs() = default;
     explicit GIOProtoArgs(const GProtoArgs& args) : m_args(args) {}
     explicit GIOProtoArgs(GProtoArgs &&args)      : m_args(std::move(args)) {}
 
     GProtoArgs m_args;
+
+    // TODO: Think about the addition operator
+    /**
+     * @brief This operator allows to complement the proto vectors at runtime.
+     *
+     * It's an ordinary overload of addition assignment operator.
+     *
+     * Example of usage:
+     * @snippet dynamic_graph.cpp  GIOProtoArgs usage
+     *
+     */
+    template<typename Tg>
+    friend GIOProtoArgs<Tg>& operator += (GIOProtoArgs<Tg> &lhs, const GIOProtoArgs<Tg> &rhs);
 };
+
+template<typename Tg>
+cv::GIOProtoArgs<Tg>& operator += (cv::GIOProtoArgs<Tg> &lhs, const cv::GIOProtoArgs<Tg> &rhs)
+{
+    lhs.m_args.reserve(lhs.m_args.size() + rhs.m_args.size());
+    lhs.m_args.insert(lhs.m_args.end(), rhs.m_args.begin(), rhs.m_args.end());
+    return lhs;
+}
 
 struct In_Tag{};
 struct Out_Tag{};
@@ -112,8 +139,20 @@ GMetaArgs GAPI_EXPORTS descr_of(const GRunArgs &args);
 
 // Transform run-time operation result argument into metadata extracted from that argument
 // Used to compare the metadata, which generated at compile time with the metadata result operation in run time
-GMetaArg  GAPI_EXPORTS descr_of(const GRunArgP& argp);
+GMetaArg GAPI_EXPORTS descr_of(const GRunArgP& argp);
 
+// Checks if run-time computation argument can be described by metadata
+bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArg&  arg);
+bool GAPI_EXPORTS can_describe(const GMetaArgs& metas, const GRunArgs& args);
+
+// Checks if run-time computation result argument can be described by metadata.
+// Used to check if the metadata generated at compile time
+// coincides with output arguments passed to computation in cpu and ocl backends
+bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
+
+// Validates input arguments
+void GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
+void GAPI_EXPORTS validate_input_args(const GRunArgs& args);
 
 } // namespace cv
 

@@ -36,10 +36,8 @@ class DummyTask:
     def get(self):
         return self.data
 
-if __name__ == '__main__':
+def main():
     import sys
-
-    print(__doc__)
 
     try:
         fn = sys.argv[1]
@@ -72,7 +70,7 @@ if __name__ == '__main__':
             draw_str(res, (20, 60), "frame interval :  %.1f ms" % (frame_interval.value*1000))
             cv.imshow('threaded video', res)
         if len(pending) < threadn:
-            ret, frame = cap.read()
+            _ret, frame = cap.read()
             t = clock()
             frame_interval.update(t - last_frame_time)
             last_frame_time = t
@@ -86,4 +84,11 @@ if __name__ == '__main__':
             threaded_mode = not threaded_mode
         if ch == 27:
             break
-cv.destroyAllWindows()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

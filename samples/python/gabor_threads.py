@@ -19,6 +19,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 from multiprocessing.pool import ThreadPool
 
 
@@ -47,11 +48,10 @@ def process_threaded(img, filters, threadn = 8):
         np.maximum(accum, fimg, accum)
     return accum
 
-if __name__ == '__main__':
+def main():
     import sys
     from common import Timer
 
-    print(__doc__)
     try:
         img_fn = sys.argv[1]
     except:
@@ -73,4 +73,10 @@ if __name__ == '__main__':
     cv.imshow('img', img)
     cv.imshow('result', res2)
     cv.waitKey()
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

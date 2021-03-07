@@ -104,7 +104,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     /* rotating calipers sides will always have coordinates
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
-    /* this is a first base bector (a,b) initialized by (1,0) */
+    /* this is a first base vector (a,b) initialized by (1,0) */
     float orientation = 0;
     float base_a;
     float base_b = 0;
@@ -352,7 +352,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Point2f out[3];
     RotatedRect box;
 
-    convexHull(_points, hull, true, true);
+    convexHull(_points, hull, false, true);
 
     if( hull.depth() != CV_32F )
     {

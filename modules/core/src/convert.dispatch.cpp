@@ -154,7 +154,7 @@ static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int 
                               sdepth == CV_32F ? "half" : "float",
                               rowsPerWI,
                               sdepth == CV_32F ? " -D FLOAT_TO_HALF " : "");
-    ocl::Kernel k("convertFp16", ocl::core::halfconvert_oclsrc, build_opt);
+    ocl::Kernel k(sdepth == CV_32F ? "convertFp16_FP32_to_FP16" : "convertFp16_FP16_to_FP32", ocl::core::halfconvert_oclsrc, build_opt);
     if (k.empty())
         return false;
 
@@ -244,12 +244,12 @@ void convertFp16(InputArray _src, OutputArray _dst)
         }
         else
             ddepth =  CV_16S;
-        func = (BinaryFunc)getConvertFunc(CV_32F, CV_16F);
+        func = getConvertFunc(CV_32F, CV_16F);
         break;
     case CV_16S:
     case CV_16F:
         ddepth = CV_32F;
-        func = (BinaryFunc)getConvertFunc(CV_16F, CV_32F);
+        func = getConvertFunc(CV_16F, CV_32F);
         break;
     default:
         CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");

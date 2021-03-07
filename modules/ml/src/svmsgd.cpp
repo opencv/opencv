@@ -230,6 +230,7 @@ float SVMSGDImpl::calcShift(InputArray _samples, InputArray _responses) const
 
 bool SVMSGDImpl::train(const Ptr<TrainData>& data, int)
 {
+    CV_Assert(!data.empty());
     clear();
     CV_Assert( isClassifier() );   //toDo: consider
 

@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_UTIL_OPTIONAL_HPP
 #define OPENCV_GAPI_UTIL_OPTIONAL_HPP
 
-#include "opencv2/gapi/util/variant.hpp"
+#include <opencv2/gapi/util/variant.hpp>
 
 // A poor man's `optional` implementation, incompletely modeled against C++17 spec.
 namespace cv
@@ -35,9 +35,9 @@ namespace util
         // instead {}
         optional() {};
         optional(const optional&) = default;
-        explicit optional(T &&value) noexcept;
-        explicit optional(const T &value) noexcept;
-        optional(optional &&) noexcept;
+        explicit optional(T&&) noexcept;
+        explicit optional(const T&) noexcept;
+        optional(optional&&) noexcept;
         // TODO: optional(nullopt_t) noexcept;
         // TODO: optional(const optional<U> &)
         // TODO: optional(optional<U> &&)
@@ -46,8 +46,8 @@ namespace util
         // TODO: optional(U&& value);
 
         // Assignment
-        optional& operator=(const optional& rhs) = default;
-        optional& operator=(optional&& rhs);
+        optional& operator=(const optional&) = default;
+        optional& operator=(optional&&);
 
         // Observers
         T* operator-> ();
@@ -84,7 +84,7 @@ namespace util
 
     // Implementation //////////////////////////////////////////////////////////
     template<class T> optional<T>::optional(T &&v) noexcept
-        : m_holder(v)
+        : m_holder(std::move(v))
     {
     }
 

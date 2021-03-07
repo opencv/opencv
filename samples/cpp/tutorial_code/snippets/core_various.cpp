@@ -2,6 +2,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -52,5 +53,32 @@ int main()
     imshow("rectangles", test_image);
     waitKey(0);
     //! [RotatedRect_demo]
+
+    {
+        //! [TickMeter_total]
+        TickMeter tm;
+        tm.start();
+        // do something ...
+        tm.stop();
+        cout << "Total time: " << tm.getTimeSec() << endl;
+        //! [TickMeter_total]
+    }
+
+    {
+        const int COUNT = 100;
+        //! [TickMeter_average]
+        TickMeter tm;
+        for (int i = 0; i < COUNT; i++)
+        {
+            tm.start();
+            // do something ...
+            tm.stop();
+        }
+        cout << "Average time per iteration in seconds: " << tm.getAvgTimeSec() << endl;
+        cout << "Average FPS: " << tm.getFPS() << endl;
+        //! [TickMeter_average]
+    }
+
+
     return 0;
 }

@@ -61,13 +61,13 @@ static void orderContours(const std::vector<std::vector<Point> >& contours, Poin
     for(i = 0; i < n; i++)
     {
         size_t ni = contours[i].size();
-        double min_dist = std::numeric_limits<double>::max();
+        float min_dist = std::numeric_limits<float>::max();
         for(j = 0; j < ni; j++)
         {
             double dist = norm(Point2f((float)contours[i][j].x, (float)contours[i][j].y) - point);
-            min_dist = MIN(min_dist, dist);
+            min_dist = (float)MIN((double)min_dist, dist);
         }
-        order.push_back(std::pair<int, float>((int)i, (float)min_dist));
+        order.push_back(std::pair<int, float>((int)i, min_dist));
     }
 
     std::sort(order.begin(), order.end(), is_smaller);

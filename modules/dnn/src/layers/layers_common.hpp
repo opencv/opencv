@@ -59,22 +59,20 @@ namespace cv
 {
 namespace dnn
 {
+void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
+                                std::vector<size_t>& pads_end, std::vector<size_t>& strides, std::vector<size_t>& dilations,
+                                cv::String &padMode, std::vector<size_t>& adjust_pads);
 
-void getConvolutionKernelParams(const LayerParams &params, int &kernelH, int &kernelW, int &padT, int &padL, int &padB, int &padR,
-                                int &strideH, int &strideW, int &dilationH, int &dilationW, cv::String& padMode);
+void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<bool>& globalPooling,
+                            std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end, std::vector<size_t>& strides, cv::String &padMode);
 
-void getPoolingKernelParams(const LayerParams &params, int &kernelH, int &kernelW, bool &globalPooling,
-                            int &padT, int &padL, int &padB, int &padR, int &strideH, int &strideW, cv::String& padMode);
+void getConvPoolOutParams(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& stride, const String &padMode,
+                          const std::vector<size_t>& dilation, std::vector<int>& out);
 
-void getConvPoolOutParams(const Size& inp, const Size &kernel,
-                          const Size &stride, const String &padMode,
-                          const Size &dilation, Size& out);
-
-
-void getConvPoolPaddings(const Size& inp, const Size& out,
-                         const Size &kernel, const Size &stride,
-                         const String &padMode, const Size &dilation, int &padT, int &padL, int &padB, int &padR);
-
+ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>& kernel,
+                          const std::vector<size_t>& strides, const String &padMode,
+                          std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end);
 }
 }
 

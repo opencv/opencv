@@ -70,10 +70,12 @@ class CV_EXPORTS Image2D;
 class CV_EXPORTS_W_SIMPLE Device
 {
 public:
-    CV_WRAP Device();
+    CV_WRAP Device() CV_NOEXCEPT;
     explicit Device(void* d);
     Device(const Device& d);
     Device& operator = (const Device& d);
+    Device(Device&& d) CV_NOEXCEPT;
+    Device& operator = (Device&& d) CV_NOEXCEPT;
     CV_WRAP ~Device();
 
     void set(void* d);
@@ -229,8 +231,15 @@ public:
 
     CV_WRAP static const Device& getDefault();
 
-protected:
+    /**
+     * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
+     */
+    static Device fromHandle(void* d);
+
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -238,48 +247,77 @@ protected:
 class CV_EXPORTS Context
 {
 public:
-    Context();
-    explicit Context(int dtype);
+    Context() CV_NOEXCEPT;
+    explicit Context(int dtype);  //!< @deprecated
     ~Context();
     Context(const Context& c);
-    Context& operator = (const Context& c);
+    Context& operator= (const Context& c);
+    Context(Context&& c) CV_NOEXCEPT;
+    Context& operator = (Context&& c) CV_NOEXCEPT;
 
+    /** @deprecated */
     bool create();
+    /** @deprecated */
     bool create(int dtype);
+
     size_t ndevices() const;
-    const Device& device(size_t idx) const;
+    Device& device(size_t idx) const;
     Program getProg(const ProgramSource& prog,
                     const String& buildopt, String& errmsg);
     void unloadProg(Program& prog);
 
+
+    /** Get thread-local OpenCL context (initialize if necessary) */
+#if 0  // OpenCV 5.0
+    static Context& getDefault();
+#else
     static Context& getDefault(bool initialize = true);
+#endif
+
+    /** @returns cl_context value */
     void* ptr() const;
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
 
+    /**
+     * @param context OpenCL handle (cl_context). clRetainContext() is called on success
+     */
+    static Context fromHandle(void* context);
+    static Context fromDevice(const ocl::Device& device);
+    static Context create(const std::string& configuration);
+
+    void release();
+
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+// TODO OpenCV 5.0
 //protected:
     Impl* p;
 };
 
+/** @deprecated */
 class CV_EXPORTS Platform
 {
 public:
-    Platform();
+    Platform() CV_NOEXCEPT;
     ~Platform();
     Platform(const Platform& p);
     Platform& operator = (const Platform& p);
+    Platform(Platform&& p) CV_NOEXCEPT;
+    Platform& operator = (Platform&& p) CV_NOEXCEPT;
 
     void* ptr() const;
+
+    /** @deprecated */
     static Platform& getDefault();
 
-    friend void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
-protected:
     struct Impl;
+    inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -319,16 +357,19 @@ CV_EXPORTS void convertFromBuffer(void* cl_mem_buffer, size_t step, int rows, in
 CV_EXPORTS void convertFromImage(void* cl_mem_image, UMat& dst);
 
 // TODO Move to internal header
+/// @deprecated
 void initializeContextFromHandle(Context& ctx, void* platform, void* context, void* device);
 
 class CV_EXPORTS Queue
 {
 public:
-    Queue();
+    Queue() CV_NOEXCEPT;
     explicit Queue(const Context& c, const Device& d=Device());
     ~Queue();
     Queue(const Queue& q);
     Queue& operator = (const Queue& q);
+    Queue(Queue&& q) CV_NOEXCEPT;
+    Queue& operator = (Queue&& q) CV_NOEXCEPT;
 
     bool create(const Context& c=Context(), const Device& d=Device());
     void finish();
@@ -340,6 +381,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -350,7 +392,7 @@ class CV_EXPORTS KernelArg
 public:
     enum { LOCAL=1, READ_ONLY=2, WRITE_ONLY=4, READ_WRITE=6, CONSTANT=8, PTR_ONLY = 16, NO_SIZE=256 };
     KernelArg(int _flags, UMat* _m, int wscale=1, int iwscale=1, const void* _obj=0, size_t _sz=0);
-    KernelArg();
+    KernelArg() CV_NOEXCEPT;
 
     static KernelArg Local(size_t localMemSize)
     { return KernelArg(LOCAL, 0, 1, 1, 0, localMemSize); }
@@ -387,13 +429,15 @@ public:
 class CV_EXPORTS Kernel
 {
 public:
-    Kernel();
+    Kernel() CV_NOEXCEPT;
     Kernel(const char* kname, const Program& prog);
     Kernel(const char* kname, const ProgramSource& prog,
            const String& buildopts = String(), String* errmsg=0);
     ~Kernel();
     Kernel(const Kernel& k);
     Kernel& operator = (const Kernel& k);
+    Kernel(Kernel&& k) CV_NOEXCEPT;
+    Kernel& operator = (Kernel&& k) CV_NOEXCEPT;
 
     bool empty() const;
     bool create(const char* kname, const Program& prog);
@@ -407,161 +451,28 @@ public:
     template<typename _Tp> int set(int i, const _Tp& value)
     { return set(i, &value, sizeof(value)); }
 
-    template<typename _Tp0>
-    Kernel& args(const _Tp0& a0)
-    {
-        set(0, a0); return *this;
-    }
 
-    template<typename _Tp0, typename _Tp1>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1)
-    {
-        int i = set(0, a0); set(i, a1); return *this;
-    }
+protected:
+    template<typename _Tp0> inline
+    int set_args_(int i, const _Tp0& a0) { return set(i, a0); }
+    template<typename _Tp0, typename... _Tps> inline
+    int set_args_(int i, const _Tp0& a0, const _Tps&... rest_args) { i = set(i, a0); return set_args_(i, rest_args...); }
+public:
+    /** @brief Setup OpenCL Kernel arguments.
+    Avoid direct using of set(i, ...) methods.
+    @code
+    bool ok = kernel
+        .args(
+            srcUMat, dstUMat,
+            (float)some_float_param
+        ).run(ndims, globalSize, localSize);
+    if (!ok) return false;
+    @endcode
+    */
+    template<typename... _Tps> inline
+    Kernel& args(const _Tps&... kernel_args) { set_args_(0, kernel_args...); return *this; }
 
-    template<typename _Tp0, typename _Tp1, typename _Tp2>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2)
-    {
-        int i = set(0, a0); i = set(i, a1); set(i, a2); return *this;
-    }
 
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
-                 const _Tp3& a3, const _Tp4& a4)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
-        i = set(i, a3); set(i, a4); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2,
-             typename _Tp3, typename _Tp4, typename _Tp5>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2,
-                 const _Tp3& a3, const _Tp4& a4, const _Tp5& a5)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2);
-        i = set(i, a3); i = set(i, a4); set(i, a5); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
-        i = set(i, a4); i = set(i, a5); set(i, a6); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3);
-        i = set(i, a4); i = set(i, a5); i = set(i, a6); set(i, a7); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
-             typename _Tp5, typename _Tp6, typename _Tp7, typename _Tp8>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4);
-        i = set(i, a5); i = set(i, a6); i = set(i, a7); set(i, a8); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3, typename _Tp4,
-             typename _Tp5, typename _Tp6, typename _Tp7, typename _Tp8, typename _Tp9>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); set(i, a9); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); set(i, a10); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); set(i, a11); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
-                 const _Tp12& a12)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
-        set(i, a12); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
-             typename _Tp13>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
-                 const _Tp12& a12, const _Tp13& a13)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
-        i = set(i, a12); set(i, a13); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
-             typename _Tp13, typename _Tp14>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
-                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
-        i = set(i, a12); i = set(i, a13); set(i, a14); return *this;
-    }
-
-    template<typename _Tp0, typename _Tp1, typename _Tp2, typename _Tp3,
-             typename _Tp4, typename _Tp5, typename _Tp6, typename _Tp7,
-             typename _Tp8, typename _Tp9, typename _Tp10, typename _Tp11, typename _Tp12,
-             typename _Tp13, typename _Tp14, typename _Tp15>
-    Kernel& args(const _Tp0& a0, const _Tp1& a1, const _Tp2& a2, const _Tp3& a3,
-                 const _Tp4& a4, const _Tp5& a5, const _Tp6& a6, const _Tp7& a7,
-                 const _Tp8& a8, const _Tp9& a9, const _Tp10& a10, const _Tp11& a11,
-                 const _Tp12& a12, const _Tp13& a13, const _Tp14& a14, const _Tp15& a15)
-    {
-        int i = set(0, a0); i = set(i, a1); i = set(i, a2); i = set(i, a3); i = set(i, a4); i = set(i, a5);
-        i = set(i, a6); i = set(i, a7); i = set(i, a8); i = set(i, a9); i = set(i, a10); i = set(i, a11);
-        i = set(i, a12); i = set(i, a13); i = set(i, a14); set(i, a15); return *this;
-    }
     /** @brief Run the OpenCL kernel.
     @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
     @param globalsize work items for each dimension. It is not the final globalsize passed to
@@ -597,12 +508,13 @@ protected:
 class CV_EXPORTS Program
 {
 public:
-    Program();
+    Program() CV_NOEXCEPT;
     Program(const ProgramSource& src,
             const String& buildflags, String& errmsg);
     Program(const Program& prog);
-
     Program& operator = (const Program& prog);
+    Program(Program&& prog) CV_NOEXCEPT;
+    Program& operator = (Program&& prog) CV_NOEXCEPT;
     ~Program();
 
     bool create(const ProgramSource& src,
@@ -623,6 +535,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 public:
@@ -642,13 +555,15 @@ class CV_EXPORTS ProgramSource
 public:
     typedef uint64 hash_t; // deprecated
 
-    ProgramSource();
+    ProgramSource() CV_NOEXCEPT;
     explicit ProgramSource(const String& module, const String& name, const String& codeStr, const String& codeHash);
     explicit ProgramSource(const String& prog); // deprecated
     explicit ProgramSource(const char* prog); // deprecated
     ~ProgramSource();
     ProgramSource(const ProgramSource& prog);
     ProgramSource& operator = (const ProgramSource& prog);
+    ProgramSource(ProgramSource&& prog) CV_NOEXCEPT;
+    ProgramSource& operator = (ProgramSource&& prog) CV_NOEXCEPT;
 
     const String& source() const; // deprecated
     hash_t hash() const; // deprecated
@@ -704,6 +619,7 @@ public:
 
     struct Impl; friend struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
+    inline bool empty() const { return !p; }
 protected:
     Impl* p;
 };
@@ -711,21 +627,32 @@ protected:
 class CV_EXPORTS PlatformInfo
 {
 public:
-    PlatformInfo();
+    PlatformInfo() CV_NOEXCEPT;
+    /**
+     * @param id pointer cl_platform_id (cl_platform_id*)
+     */
     explicit PlatformInfo(void* id);
     ~PlatformInfo();
 
     PlatformInfo(const PlatformInfo& i);
     PlatformInfo& operator =(const PlatformInfo& i);
+    PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT;
+    PlatformInfo& operator = (PlatformInfo&& i) CV_NOEXCEPT;
 
     String name() const;
     String vendor() const;
+
+    /// See CL_PLATFORM_VERSION
     String version() const;
+    int versionMajor() const;
+    int versionMinor() const;
+
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
-protected:
     struct Impl;
+    bool empty() const { return !p; }
+protected:
     Impl* p;
 };
 
@@ -771,7 +698,7 @@ CV_EXPORTS void buildOptionsAddMatrixDescription(String& buildOptions, const Str
 class CV_EXPORTS Image2D
 {
 public:
-    Image2D();
+    Image2D() CV_NOEXCEPT;
 
     /**
     @param src UMat object from which to get image properties and data
@@ -784,6 +711,8 @@ public:
     ~Image2D();
 
     Image2D & operator = (const Image2D & i);
+    Image2D(Image2D &&) CV_NOEXCEPT;
+    Image2D &operator=(Image2D &&) CV_NOEXCEPT;
 
     /** Indicates if creating an aliased image should succeed.
     Depends on the underlying platform and the dimensions of the UMat.
@@ -821,6 +750,108 @@ private:
 
 CV_EXPORTS MatAllocator* getOpenCLAllocator();
 
+
+class CV_EXPORTS_W OpenCLExecutionContext
+{
+public:
+    OpenCLExecutionContext() = default;
+    ~OpenCLExecutionContext() = default;
+
+    OpenCLExecutionContext(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext(OpenCLExecutionContext&&) = default;
+
+    OpenCLExecutionContext& operator=(const OpenCLExecutionContext&) = default;
+    OpenCLExecutionContext& operator=(OpenCLExecutionContext&&) = default;
+
+    /** Get associated ocl::Context */
+    Context& getContext() const;
+    /** Get the single default associated ocl::Device */
+    Device& getDevice() const;
+    /** Get the single ocl::Queue that is associated with the ocl::Context and
+     *  the single default ocl::Device
+     */
+    Queue& getQueue() const;
+
+    bool useOpenCL() const;
+    void setUseOpenCL(bool flag);
+
+    /** Get OpenCL execution context of current thread.
+     *
+     * Initialize OpenCL execution context if it is empty
+     * - create new
+     * - reuse context of the main thread (threadID = 0)
+     */
+    static OpenCLExecutionContext& getCurrent();
+
+    /** Get OpenCL execution context of current thread (can be empty) */
+    static OpenCLExecutionContext& getCurrentRef();
+
+    /** Bind this OpenCL execution context to current thread.
+     *
+     * Context can't be empty.
+     *
+     * @note clFinish is not called for queue of previous execution context
+     */
+    void bind() const;
+
+    /** Creates new execution context with same OpenCV context and device
+     *
+     * @param q OpenCL queue
+     */
+    OpenCLExecutionContext cloneWithNewQueue(const ocl::Queue& q) const;
+    /** @overload */
+    OpenCLExecutionContext cloneWithNewQueue() const;
+
+    /** @brief Creates OpenCL execution context
+     * OpenCV will check if available OpenCL platform has platformName name, then assign context to
+     * OpenCV and call `clRetainContext` function. The deviceID device will be used as target device and
+     * new command queue will be created.
+     *
+     * @note Lifetime of passed handles is transferred to OpenCV wrappers on success
+     *
+     * @param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
+     * @param platformID ID of platform attached context was created for (cl_platform_id)
+     * @param context OpenCL context to be attached to OpenCV (cl_context)
+     * @param deviceID OpenCL device (cl_device_id)
+     */
+    static OpenCLExecutionContext create(const std::string& platformName, void* platformID, void* context, void* deviceID);
+
+    /** @brief Creates OpenCL execution context
+     *
+     * @param context non-empty OpenCL context
+     * @param device non-empty OpenCL device (must be a part of context)
+     * @param queue non-empty OpenCL queue for provided context and device
+     */
+    static OpenCLExecutionContext create(const Context& context, const Device& device, const ocl::Queue& queue);
+    /** @overload */
+    static OpenCLExecutionContext create(const Context& context, const Device& device);
+
+    struct Impl;
+    inline bool empty() const { return !p; }
+    void release();
+protected:
+    std::shared_ptr<Impl> p;
+};
+
+class OpenCLExecutionContextScope
+{
+    OpenCLExecutionContext ctx_;
+public:
+    inline OpenCLExecutionContextScope(const OpenCLExecutionContext& ctx)
+    {
+        CV_Assert(!ctx.empty());
+        ctx_ = OpenCLExecutionContext::getCurrentRef();
+        ctx.bind();
+    }
+
+    inline ~OpenCLExecutionContextScope()
+    {
+        if (!ctx_.empty())
+        {
+            ctx_.bind();
+        }
+    }
+};
 
 #ifdef __OPENCV_BUILD
 namespace internal {

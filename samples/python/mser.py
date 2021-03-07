@@ -14,12 +14,16 @@ Keys:
 
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
+
 import numpy as np
 import cv2 as cv
+
 import video
 import sys
 
-if __name__ == '__main__':
+def main():
     try:
         video_src = sys.argv[1]
     except:
@@ -42,4 +46,11 @@ if __name__ == '__main__':
         cv.imshow('img', vis)
         if cv.waitKey(5) == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

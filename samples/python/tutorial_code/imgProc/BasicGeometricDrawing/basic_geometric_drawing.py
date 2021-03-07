@@ -8,8 +8,8 @@ def my_ellipse(img, angle):
     line_type = 8
 
     cv.ellipse(img,
-                (W / 2, W / 2),
-                (W / 4, W / 16),
+                (W // 2, W // 2),
+                (W // 4, W // 16),
                 angle,
                 0,
                 360,
@@ -24,7 +24,7 @@ def my_filled_circle(img, center):
 
     cv.circle(img,
                center,
-               W / 32,
+               W // 32,
                (0, 0, 255),
                thickness,
                line_type)
@@ -82,7 +82,7 @@ my_ellipse(atom_image, 45)
 my_ellipse(atom_image, -45)
 
 # 1.b. Creating circles
-my_filled_circle(atom_image, (W / 2, W / 2))
+my_filled_circle(atom_image, (W // 2, W // 2))
 ## [draw_atom]
 ## [draw_rook]
 
@@ -93,7 +93,7 @@ my_polygon(rook_image)
 ## [rectangle]
 # 2.b. Creating rectangles
 cv.rectangle(rook_image,
-              (0, 7 * W / 8),
+              (0, 7 * W // 8),
               (W, W),
               (0, 255, 255),
               -1,
@@ -101,10 +101,10 @@ cv.rectangle(rook_image,
 ## [rectangle]
 
 #  2.c. Create a few lines
-my_line(rook_image, (0, 15 * W / 16), (W, 15 * W / 16))
-my_line(rook_image, (W / 4, 7 * W / 8), (W / 4, W))
-my_line(rook_image, (W / 2, 7 * W / 8), (W / 2, W))
-my_line(rook_image, (3 * W / 4, 7 * W / 8), (3 * W / 4, W))
+my_line(rook_image, (0, 15 * W // 16), (W, 15 * W // 16))
+my_line(rook_image, (W // 4, 7 * W // 8), (W // 4, W))
+my_line(rook_image, (W // 2, 7 * W // 8), (W // 2, W))
+my_line(rook_image, (3 * W // 4, 7 * W // 8), (3 * W // 4, W))
 ## [draw_rook]
 cv.imshow(atom_window, atom_image)
 cv.moveWindow(atom_window, 0, 200)

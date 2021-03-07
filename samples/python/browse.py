@@ -26,11 +26,7 @@ import cv2 as cv
 # built-in modules
 import sys
 
-if __name__ == '__main__':
-    print('This sample shows how to implement a simple hi resolution image navigation.')
-    print('USAGE: browse.py [image filename]')
-    print()
-
+def main():
     if len(sys.argv) > 1:
         fn = cv.samples.findFile(sys.argv[1])
         print('loading %s ...' % fn)
@@ -49,7 +45,7 @@ if __name__ == '__main__':
 
 
     small = img
-    for i in xrange(3):
+    for _i in xrange(3):
         small = cv.pyrDown(small)
 
     def onmouse(event, x, y, flags, param):
@@ -62,4 +58,10 @@ if __name__ == '__main__':
     cv.imshow('preview', small)
     cv.setMouseCallback('preview', onmouse)
     cv.waitKey()
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

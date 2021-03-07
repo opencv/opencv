@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -37,31 +37,33 @@
 #ifndef INCLUDED_IMATHFRAME_H
 #define INCLUDED_IMATHFRAME_H
 
-namespace Imath {
+#include "ImathNamespace.h"
+
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 template<class T> class Vec3;
 template<class T> class Matrix44;
 
 //
 //  These methods compute a set of reference frames, defined by their
-//  transformation matrix, along a curve. It is designed so that the
-//  array of points and the array of matrices used to fetch these routines
+//  transformation matrix, along a curve. It is designed so that the 
+//  array of points and the array of matrices used to fetch these routines 
 //  don't need to be ordered as the curve.
-//
+//  
 //  A typical usage would be :
 //
-//      m[0] = Imath::firstFrame( p[0], p[1], p[2] );
+//      m[0] = IMATH_INTERNAL_NAMESPACE::firstFrame( p[0], p[1], p[2] );
 //      for( int i = 1; i < n - 1; i++ )
 //      {
-//          m[i] = Imath::nextFrame( m[i-1], p[i-1], p[i], t[i-1], t[i] );
+//          m[i] = IMATH_INTERNAL_NAMESPACE::nextFrame( m[i-1], p[i-1], p[i], t[i-1], t[i] );
 //      }
-//      m[n-1] = Imath::lastFrame( m[n-2], p[n-2], p[n-1] );
+//      m[n-1] = IMATH_INTERNAL_NAMESPACE::lastFrame( m[n-2], p[n-2], p[n-1] );
 //
 //  See Graphics Gems I for the underlying algorithm.
-//
+// 
 
 template<class T> Matrix44<T> firstFrame( const Vec3<T>&,    // First point
-                                          const Vec3<T>&,    // Second point
+                                          const Vec3<T>&,    // Second point 
                                           const Vec3<T>& );  // Third point
 
 template<class T> Matrix44<T> nextFrame( const Matrix44<T>&, // Previous matrix
@@ -86,7 +88,7 @@ template<class T> Matrix44<T> lastFrame( const Matrix44<T>&, // Previous matrix
 //
 
 template<class T> Matrix44<T> firstFrame
-(
+( 
     const Vec3<T>& pi,             // First point
     const Vec3<T>& pj,             // Second point
     const Vec3<T>& pk )            // Third point
@@ -118,13 +120,13 @@ template<class T> Matrix44<T> firstFrame
 //
 //  nextFrame - Compute the next reference frame along a curve.
 //
-//  This function returns the transformation matrix to the next reference
+//  This function returns the transformation matrix to the next reference 
 //  frame defined by the previously computed transformation matrix and the
 //  new point and tangent vector along the curve.
 //
 
 template<class T> Matrix44<T> nextFrame
-(
+( 
     const Matrix44<T>&  Mi,             // Previous matrix
     const Vec3<T>&      pi,             // Previous point
     const Vec3<T>&      pj,             // Current point
@@ -137,13 +139,13 @@ template<class T> Matrix44<T> nextFrame
     if( ti.length() != 0.0 && tj.length() != 0.0 )
     {
         ti.normalize(); tj.normalize();
-        T dot = ti.dot( tj );
+        T dot = ti.dot( tj ); 
 
         //
         //  This is *really* necessary :
         //
 
-        if( dot > 1.0 ) dot = 1.0;
+        if( dot > 1.0 ) dot = 1.0; 
         else if( dot < -1.0 ) dot = -1.0;
 
         r = acosf( dot );
@@ -169,13 +171,13 @@ template<class T> Matrix44<T> nextFrame
 //
 //  lastFrame - Compute the last reference frame along a curve.
 //
-//  This function returns the transformation matrix to the last reference
+//  This function returns the transformation matrix to the last reference 
 //  frame defined by the previously computed transformation matrix and the
 //  last point along the curve.
 //
 
 template<class T> Matrix44<T> lastFrame
-(
+( 
     const Matrix44<T>&  Mi,             // Previous matrix
     const Vec3<T>&      pi,             // Previous point
     const Vec3<T>&      pj )            // Last point
@@ -185,6 +187,6 @@ template<class T> Matrix44<T> lastFrame
     return Mi * Tr;
 }
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHFRAME_H

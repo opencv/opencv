@@ -63,7 +63,7 @@ def main(argv):
     # [horiz]
     # Specify size on horizontal axis
     cols = horizontal.shape[1]
-    horizontal_size = cols / 30
+    horizontal_size = cols // 30
 
     # Create structure element for extracting horizontal lines through morphology operations
     horizontalStructure = cv.getStructuringElement(cv.MORPH_RECT, (horizontal_size, 1))
@@ -79,7 +79,7 @@ def main(argv):
     # [vert]
     # Specify size on vertical axis
     rows = vertical.shape[0]
-    verticalsize = rows / 30
+    verticalsize = rows // 30
 
     # Create structure element for extracting vertical lines through morphology operations
     verticalStructure = cv.getStructuringElement(cv.MORPH_RECT, (1, verticalsize))

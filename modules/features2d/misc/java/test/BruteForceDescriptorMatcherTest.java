@@ -12,6 +12,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
+import org.opencv.features2d.BFMatcher;
 import org.opencv.core.KeyPoint;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
@@ -85,12 +86,21 @@ public class BruteForceDescriptorMatcherTest extends OpenCVTestCase {
         matSize = 100;
 
         truth = new DMatch[] {
-                new DMatch(0, 0, 0, 0.6211397f),
+                new DMatch(0, 0, 0, 0.6159003f),
                 new DMatch(1, 1, 0, 0.9177120f),
                 new DMatch(2, 1, 0, 0.3112163f),
                 new DMatch(3, 1, 0, 0.2925074f),
-                new DMatch(4, 1, 0, 0.9309178f)
+                new DMatch(4, 1, 0, 0.26520672f)
                 };
+    }
+
+    // https://github.com/opencv/opencv/issues/11268
+    public void testConstructor()
+    {
+        BFMatcher self_created_matcher = new BFMatcher();
+        Mat train = new Mat(1, 1, CvType.CV_8U, new Scalar(123));
+        self_created_matcher.add(Arrays.asList(train));
+        assertTrue(!self_created_matcher.empty());
     }
 
     public void testAdd() {

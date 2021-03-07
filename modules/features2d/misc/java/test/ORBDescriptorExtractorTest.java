@@ -52,7 +52,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
                 put(0, 0,
-                        6, 74, 6, 129, 2, 130, 56, 0, 36, 132, 66, 165, 172, 6, 3, 72, 102, 61, 163, 214, 0, 144, 65, 232, 4, 32, 138, 129, 4, 21, 37, 88);
+                        6, 74, 6, 129, 2, 130, 56, 0, 44, 132, 66, 165, 172, 6, 3, 72, 102, 61, 171, 214, 0, 144, 65, 232, 4, 32, 138, 131, 4, 21, 37, 217);
             }
         };
         assertDescriptorsClose(truth, descriptors, 1);
@@ -91,7 +91,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
         Mat truth = new Mat(1, 32, CvType.CV_8UC1) {
             {
                 put(0, 0,
-                        6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 10, 131, 0, 37, 37, 67);
+                        6, 10, 22, 5, 2, 130, 56, 0, 44, 164, 66, 165, 140, 6, 1, 72, 38, 61, 163, 210, 0, 208, 1, 104, 4, 32, 74, 131, 0, 37, 37, 67);
             }
         };
         assertDescriptorsClose(truth, descriptors, 1);

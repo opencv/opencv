@@ -14,9 +14,9 @@ if(NOT HAVE_MFX)
   endif()
   find_path(MFX_INCLUDE mfxdefs.h
     PATHS ${paths}
-    PATH_SUFFIXES "include"
+    PATH_SUFFIXES "include" "include/mfx"
     NO_DEFAULT_PATH)
-  find_library(MFX_LIBRARY mfx libmfx${vs_suffix}
+  find_library(MFX_LIBRARY NAMES mfx libmfx${vs_suffix}
     PATHS ${paths}
     PATH_SUFFIXES "lib64" "lib/lin_x64" "lib/${vs_arch}"
     NO_DEFAULT_PATH)
@@ -28,16 +28,24 @@ if(NOT HAVE_MFX)
 endif()
 
 if(HAVE_MFX AND UNIX)
-  find_path(MFX_va_INCLUDE va/va.h PATHS ${paths} PATH_SUFFIXES "include")
-  find_library(MFX_va_LIBRARY va PATHS ${paths} PATH_SUFFIXES "lib64" "lib/lin_x64")
-  find_library(MFX_va_drm_LIBRARY va-drm PATHS ${paths} PATH_SUFFIXES "lib64" "lib/lin_x64")
-  if(MFX_va_INCLUDE AND MFX_va_LIBRARY AND MFX_va_drm_LIBRARY)
-    list(APPEND MFX_INCLUDE_DIRS "${MFX_va_INCLUDE}")
-    list(APPEND MFX_LIBRARIES "${MFX_va_LIBRARY}" "${MFX_va_drm_LIBRARY}")
-    # list(APPEND MFX_LIBRARIES "-Wl,--exclude-libs=libmfx")
-  else()
+  foreach(mode NO_DEFAULT_PATH "")
+    find_path(MFX_va_INCLUDE va/va.h PATHS ${paths} PATH_SUFFIXES "include" ${mode})
+    find_library(MFX_va_LIBRARY va PATHS ${paths} PATH_SUFFIXES "lib64" "lib/lin_x64" ${mode})
+    find_library(MFX_va_drm_LIBRARY va-drm PATHS ${paths} PATH_SUFFIXES "lib64" "lib/lin_x64" ${mode})
+    if(MFX_va_INCLUDE AND MFX_va_LIBRARY AND MFX_va_drm_LIBRARY)
+      list(APPEND MFX_INCLUDE_DIRS "${MFX_va_INCLUDE}")
+      list(APPEND MFX_LIBRARIES "${MFX_va_LIBRARY}" "${MFX_va_drm_LIBRARY}")
+      # list(APPEND MFX_LIBRARIES "-Wl,--exclude-libs=libmfx")
+      break()
+    endif()
+    unset(MFX_va_INCLUDE CACHE)
+    unset(MFX_va_LIBRARY CACHE)
+    unset(MFX_va_drm_LIBRARY CACHE)
+  endforeach()
+  if(NOT(MFX_va_INCLUDE AND MFX_va_LIBRARY AND MFX_va_drm_LIBRARY))
     set(HAVE_MFX FALSE)
   endif()
+
 endif()
 
 if(HAVE_MFX)

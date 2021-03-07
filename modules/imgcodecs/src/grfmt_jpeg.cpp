@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <setjmp.h>
 
-// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// the following defines are a hack to avoid multiple problems with frame pointer handling and setjmp
 // see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
 #define mingw_getsp(...) 0
 #define __builtin_frame_address(...) 0
@@ -74,6 +74,17 @@ typedef unsigned char boolean;
 extern "C" {
 #include "jpeglib.h"
 }
+
+#ifndef CV_MANUAL_JPEG_STD_HUFF_TABLES
+  #if defined(LIBJPEG_TURBO_VERSION_NUMBER) && LIBJPEG_TURBO_VERSION_NUMBER >= 1003090
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 0  // libjpeg-turbo handles standard huffman tables itself (jstdhuff.c)
+  #else
+    #define CV_MANUAL_JPEG_STD_HUFF_TABLES 1
+  #endif
+#endif
+#if CV_MANUAL_JPEG_STD_HUFF_TABLES == 0
+  #undef CV_MANUAL_JPEG_STD_HUFF_TABLES
+#endif
 
 namespace cv
 {
@@ -233,6 +244,7 @@ bool  JpegDecoder::readHeader()
 
         if (state->cinfo.src != 0)
         {
+            jpeg_save_markers(&state->cinfo, APP1, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
 
             state->cinfo.scale_num=1;
@@ -252,6 +264,7 @@ bool  JpegDecoder::readHeader()
     return result;
 }
 
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
 /***************************************************************************
  * following code is for supporting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
@@ -385,6 +398,7 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
  * end of code for supportting MJPEG image files
  * based on a message of Laurent Pinchart on the video4linux mailing list
  ***************************************************************************/
+#endif  // CV_MANUAL_JPEG_STD_HUFF_TABLES
 
 bool  JpegDecoder::readData( Mat& img )
 {
@@ -400,6 +414,7 @@ bool  JpegDecoder::readData( Mat& img )
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
+#ifdef CV_MANUAL_JPEG_STD_HUFF_TABLES
             /* check if this is a mjpeg image format */
             if ( cinfo->ac_huff_tbl_ptrs[0] == NULL &&
                 cinfo->ac_huff_tbl_ptrs[1] == NULL &&
@@ -413,6 +428,7 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->ac_huff_tbl_ptrs,
                     cinfo->dc_huff_tbl_ptrs );
             }
+#endif
 
             if( color )
             {
@@ -440,6 +456,29 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->out_color_components = 4;
                 }
             }
+
+            // Check for Exif marker APP1
+            jpeg_saved_marker_ptr exif_marker = NULL;
+            jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
+            while( cmarker && exif_marker == NULL )
+            {
+                if (cmarker->marker == APP1)
+                    exif_marker = cmarker;
+
+                cmarker = cmarker->next;
+            }
+
+            // Parse Exif data
+            if( exif_marker )
+            {
+                const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
+
+                if (exif_marker->data_length > offsetToTiffHeader)
+                {
+                    m_exif.parseExif(exif_marker->data + offsetToTiffHeader, exif_marker->data_length - offsetToTiffHeader);
+                }
+            }
+
 
             jpeg_start_decompress( cinfo );
 

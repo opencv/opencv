@@ -102,7 +102,9 @@ bool  BmpDecoder::readHeader()
             m_width  = m_strm.getDWord();
             m_height = m_strm.getDWord();
             m_bpp    = m_strm.getDWord() >> 16;
-            m_rle_code = (BmpCompression)m_strm.getDWord();
+            int m_rle_code_ = m_strm.getDWord();
+            CV_Assert(m_rle_code_ >= 0 && m_rle_code_ <= BMP_BITFIELDS);
+            m_rle_code = (BmpCompression)m_rle_code_;
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
             m_strm.skip( size - 36 );
@@ -202,6 +204,9 @@ bool  BmpDecoder::readData( Mat& img )
     int  src_pitch = ((m_width*(m_bpp != 15 ? m_bpp : 16) + 7)/8 + 3) & -4;
     int  nch = color ? 3 : 1;
     int  y, width3 = m_width*nch;
+
+    // FIXIT: use safe pointer arithmetic (avoid 'int'), use size_t, intptr_t, etc
+    CV_Assert(((uint64)m_height * m_width * nch < (CV_BIG_UINT(1) << 30)) && "BMP reader implementation doesn't support large images >= 1Gb");
 
     if( m_offset < 0 || !m_strm.isOpened())
         return false;

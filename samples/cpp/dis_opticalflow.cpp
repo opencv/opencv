@@ -2,30 +2,24 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
 #include "opencv2/video.hpp"
 
 using namespace std;
 using namespace cv;
 
-static void help()
-{
-    printf("Usage: dis_optflow <video_file>\n");
-}
-
 int main(int argc, char **argv)
 {
+    CommandLineParser parser(argc, argv, "{ @video  | vtest.avi  | use video as input }");
+    string filename = samples::findFileOrKeep(parser.get<string>("@video"));
+
     VideoCapture cap;
+    cap.open(filename);
 
-    if (argc < 2)
-    {
-        help();
-        exit(1);
-    }
-
-    cap.open(argv[1]);
     if(!cap.isOpened())
     {
-        printf("ERROR: Cannot open file %s\n", argv[1]);
+        printf("ERROR: Cannot open file %s\n", filename.c_str());
+        parser.printMessage();
         return -1;
     }
 
@@ -34,9 +28,6 @@ int main(int argc, char **argv)
     Mat mag, ang;
     Mat hsv_split[3], hsv;
     char ret;
-
-    namedWindow("flow", 1);
-    namedWindow("orig", 1);
 
     Ptr<DenseOpticalFlow> algorithm = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
 

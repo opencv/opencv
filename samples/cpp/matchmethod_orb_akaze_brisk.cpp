@@ -8,11 +8,11 @@
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(char* argv[])
 {
     cout << "\n This program demonstrates how to detect compute and match ORB BRISK and AKAZE descriptors \n"
-        "Usage: \n"
-        "  ./matchmethod_orb_akaze_brisk --image1=<image1(basketball1.png as default)> --image2=<image2(basketball2.png as default)>\n"
+            "Usage: \n  "
+         << argv[0] << " --image1=<image1(basketball1.png as default)> --image2=<image2(basketball2.png as default)>\n"
         "Press a key when image window is active to change algorithm or descriptor";
 }
 
@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
     vector<String> typeAlgoMatch;
     vector<String> fileName;
     // This descriptor are going to be detect and compute
-    typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
-    typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/trunk/d8/d30/classcv_1_1AKAZE.html
-    typeDesc.push_back("ORB");      // see http://docs.opencv.org/trunk/de/dbf/classcv_1_1BRISK.html
-    typeDesc.push_back("BRISK");    // see http://docs.opencv.org/trunk/db/d95/classcv_1_1ORB.html
-    // This algorithm would be used to match descriptors see http://docs.opencv.org/trunk/db/d39/classcv_1_1DescriptorMatcher.html#ab5dc5036569ecc8d47565007fa518257
+    typeDesc.push_back("AKAZE-DESCRIPTOR_KAZE_UPRIGHT");    // see https://docs.opencv.org/master/d8/d30/classcv_1_1AKAZE.html
+    typeDesc.push_back("AKAZE");    // see http://docs.opencv.org/master/d8/d30/classcv_1_1AKAZE.html
+    typeDesc.push_back("ORB");      // see http://docs.opencv.org/master/de/dbf/classcv_1_1BRISK.html
+    typeDesc.push_back("BRISK");    // see http://docs.opencv.org/master/db/d95/classcv_1_1ORB.html
+    // This algorithm would be used to match descriptors see http://docs.opencv.org/master/db/d39/classcv_1_1DescriptorMatcher.html#ab5dc5036569ecc8d47565007fa518257
     typeAlgoMatch.push_back("BruteForce");
     typeAlgoMatch.push_back("BruteForce-L1");
     typeAlgoMatch.push_back("BruteForce-Hamming");
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         "{help h ||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     fileName.push_back(samples::findFile(parser.get<string>(0)));

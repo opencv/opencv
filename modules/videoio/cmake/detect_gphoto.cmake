@@ -1,6 +1,6 @@
 # --- gPhoto2 ---
 if(NOT HAVE_GPHOTO2 AND PKG_CONFIG_FOUND)
-  pkg_check_modules(GPHOTO2 libgphoto2 QUIET)
+  ocv_check_modules(GPHOTO2 libgphoto2)
   if(GPHOTO2_FOUND)
     set(HAVE_GPHOTO2 TRUE)
   endif()

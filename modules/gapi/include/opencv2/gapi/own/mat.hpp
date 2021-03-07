@@ -8,15 +8,17 @@
 #ifndef OPENCV_GAPI_OWN_MAT_HPP
 #define OPENCV_GAPI_OWN_MAT_HPP
 
-#include "opencv2/gapi/opencv_includes.hpp"
-#include "opencv2/gapi/own/types.hpp"
-#include "opencv2/gapi/own/scalar.hpp"
-#include "opencv2/gapi/own/saturate.hpp"
-#include "opencv2/gapi/own/assert.hpp"
+#include <opencv2/gapi/opencv_includes.hpp>
+#include <opencv2/gapi/own/types.hpp>
+#include <opencv2/gapi/own/scalar.hpp>
+#include <opencv2/gapi/own/saturate.hpp>
+#include <opencv2/gapi/own/assert.hpp>
 
 #include <memory>                   //std::shared_ptr
 #include <cstring>                  //std::memcpy
-#include "opencv2/gapi/util/throw.hpp"
+#include <numeric>                  //std::accumulate
+#include <vector>
+#include <opencv2/gapi/util/throw.hpp>
 
 namespace cv { namespace gapi { namespace own {
     namespace detail {
@@ -49,6 +51,10 @@ namespace cv { namespace gapi { namespace own {
             : flags((type & TYPE_MASK)), rows(_rows), cols(_cols), data((uchar*)_data), step(_step == AUTO_STEP ? detail::default_step(type, _cols) : _step)
             {}
 
+            MatHeader(const std::vector<int> &_dims, int type, void* _data)
+            : flags((type & TYPE_MASK)), data((uchar*)_data), step(0), dims(_dims)
+            {}
+
             MatHeader(const MatHeader& ) = default;
             MatHeader(MatHeader&& src) : MatHeader(src) // reuse copy constructor here
             {
@@ -74,8 +80,10 @@ namespace cv { namespace gapi { namespace own {
             //! pointer to the data
             uchar* data = nullptr;
             size_t step = 0;
+            //! dimensions (ND-case)
+            std::vector<int> dims;
         };
-    }
+    } // namespace detail
     //concise version of cv::Mat suitable for GAPI needs (used when no dependence on OpenCV is required)
     class Mat : public detail::MatHeader{
     public:
@@ -100,6 +108,14 @@ namespace cv { namespace gapi { namespace own {
         : MatHeader (_rows, _cols, _type, _data, _step)
         {}
 
+        Mat(const std::vector<int> &_dims, int _type, void* _data)
+        : MatHeader (_dims, _type, _data)
+        {}
+
+        Mat(std::vector<int> &&_dims, int _type, void* _data)
+        : MatHeader (std::move(_dims), _type, _data)
+        {}
+
         Mat(Mat const& src, const Rect& roi )
         : Mat(src)
         {
@@ -108,11 +124,11 @@ namespace cv { namespace gapi { namespace own {
            data = ptr(roi.y, roi.x);
         }
 
-        Mat(Mat const& src) = default;
-        Mat(Mat&& src) = default;
+        Mat(Mat const& ) = default;
+        Mat(Mat&& ) = default;
 
-        Mat& operator=(Mat const& src) = default;
-        Mat& operator=(Mat&& src) = default;
+        Mat& operator=(Mat const& ) = default;
+        Mat& operator=(Mat&& ) = default;
 
         /** @brief Sets all or some of the array elements to the specified value.
         @param s Assigned scalar converted to the actual array type.
@@ -120,9 +136,6 @@ namespace cv { namespace gapi { namespace own {
         Mat& operator = (const Scalar& s)
         {
             constexpr unsigned max_channels = 4; //Scalar can't fit more than 4
-            const auto channels = static_cast<unsigned int>(this->channels());
-            GAPI_Assert(channels <= max_channels);
-
             using func_p_t = void (*)(void*, int, Scalar const&);
             using detail::assign_row;
             #define TABLE_ENTRY(type)  {assign_row<type, 1>, assign_row<type, 2>, assign_row<type, 3>, assign_row<type, 4>}
@@ -145,10 +158,22 @@ namespace cv { namespace gapi { namespace own {
             const auto depth = static_cast<unsigned int>(this->depth());
             GAPI_Assert(depth < sizeof(func_tbl)/sizeof(func_tbl[0]));
 
-            for (int r = 0; r < rows; ++r)
+            if (dims.empty())
             {
-                auto* f = func_tbl[depth][channels -1];
-                (*f)(static_cast<void *>(ptr(r)), cols, s );
+                const auto channels = static_cast<unsigned int>(this->channels());
+                GAPI_Assert(channels <= max_channels);
+
+                auto* f = func_tbl[depth][channels - 1];
+                for (int r = 0; r < rows; ++r)
+                {
+                    (*f)(static_cast<void *>(ptr(r)), cols, s );
+                }
+            }
+            else
+            {
+                auto* f = func_tbl[depth][0];
+                // FIXME: better to refactor assign_row to use std::size_t by default
+                (*f)(static_cast<void *>(data), static_cast<int>(total()), s);
             }
             return *this;
         }
@@ -187,8 +212,9 @@ namespace cv { namespace gapi { namespace own {
         /** @brief Returns the number of matrix channels.
 
         The method returns the number of matrix channels.
+        If matrix is N-dimensional, -1 is returned.
          */
-        int channels() const        {return CV_MAT_CN(flags);}
+        int channels() const        {return dims.empty() ? CV_MAT_CN(flags) : -1;}
 
         /**
         @param _rows New number of rows.
@@ -197,7 +223,7 @@ namespace cv { namespace gapi { namespace own {
          */
         void create(int _rows, int _cols, int _type)
         {
-            create({_cols, _rows}, _type);
+            create(Size{_cols, _rows}, _type);
         }
         /** @overload
         @param _size Alternative new matrix size specification: Size(cols, rows)
@@ -205,6 +231,7 @@ namespace cv { namespace gapi { namespace own {
         */
         void create(Size _size, int _type)
         {
+            GAPI_Assert(_size.height >= 0 && _size.width >= 0);
             if (_size != Size{cols, rows} )
             {
                 Mat tmp{_size.height, _size.width, _type, nullptr};
@@ -213,6 +240,30 @@ namespace cv { namespace gapi { namespace own {
 
                 *this = std::move(tmp);
             }
+        }
+
+        void create(const std::vector<int> &_dims, int _type)
+        {
+            // FIXME: make a proper reallocation-on-demands
+            // WARNING: no tensor views, so no strides
+            Mat tmp{_dims, _type, nullptr};
+            // FIXME: this accumulate duplicates a lot
+            const auto sz = std::accumulate(_dims.begin(), _dims.end(), 1, std::multiplies<int>());
+            tmp.memory.reset(new uchar[CV_ELEM_SIZE(_type)*sz], [](uchar * p){delete[] p;});
+            tmp.data = tmp.memory.get();
+            *this = std::move(tmp);
+        }
+
+        /** @brief Creates a full copy of the matrix and the underlying data.
+
+        The method creates a full copy of the matrix. The original step[] is not taken into account.
+        So, the copy has a continuous buffer occupying total() * elemSize() bytes.
+         */
+        Mat clone() const
+        {
+            Mat m;
+            copyTo(m);
+            return m;
         }
 
         /** @brief Copies the matrix to another one.
@@ -227,10 +278,18 @@ namespace cv { namespace gapi { namespace own {
          */
         void copyTo(Mat& dst) const
         {
-            dst.create(rows, cols, type());
-            for (int r = 0; r < rows; ++r)
+            if (dims.empty())
             {
-                std::copy_n(ptr(r), detail::default_step(type(),cols), dst.ptr(r));
+                dst.create(rows, cols, type());
+                for (int r = 0; r < rows; ++r)
+                {
+                    std::copy_n(ptr(r), detail::default_step(type(),cols), dst.ptr(r));
+                }
+            }
+            else
+            {
+                dst.create(dims, depth());
+                std::copy_n(data, total()*elemSize(), data);
             }
         }
 
@@ -239,7 +298,10 @@ namespace cv { namespace gapi { namespace own {
         The method returns true if Mat::total() is 0 or if Mat::data is NULL. Because of pop_back() and
         resize() methods `M.total() == 0` does not imply that `M.data == NULL`.
          */
-        bool empty() const;
+        bool empty() const
+        {
+            return data == 0 || total() == 0;
+        }
 
         /** @brief Returns the total number of array elements.
 
@@ -248,9 +310,10 @@ namespace cv { namespace gapi { namespace own {
          */
         size_t total() const
         {
-            return static_cast<size_t>(rows * cols);
+            return dims.empty()
+                 ? (static_cast<std::size_t>(rows) * cols)
+                 : std::accumulate(dims.begin(), dims.end(), static_cast<std::size_t>(1), std::multiplies<size_t>());
         }
-
 
         /** @overload
         @param roi Extracted submatrix specified as a rectangle.

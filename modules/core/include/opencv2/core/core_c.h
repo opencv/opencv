@@ -53,7 +53,7 @@
                           which is incompatible with C
 
    It is OK to disable it because we only extend few plain structures with
-   C++ construrtors for simpler interoperability with C++ API of the library
+   C++ constructors for simpler interoperability with C++ API of the library
 */
 #    pragma warning(disable:4190)
 #  elif defined __clang__ && __clang_major__ >= 3
@@ -579,7 +579,7 @@ CvNArrayIterator;
 #define CV_NO_CN_CHECK        2
 #define CV_NO_SIZE_CHECK      4
 
-/** initializes iterator that traverses through several arrays simulteneously
+/** initializes iterator that traverses through several arrays simultaneously
    (the function together with cvNextArraySlice is used for
     N-ari element-wise operations) */
 CVAPI(int) cvInitNArrayIterator( int count, CvArr** arrs,
@@ -1309,7 +1309,7 @@ CVAPI(void) cvMulTransposed( const CvArr* src, CvArr* dst, int order,
                              const CvArr* delta CV_DEFAULT(NULL),
                              double scale CV_DEFAULT(1.) );
 
-/** Tranposes matrix. Square matrices can be transposed in-place */
+/** Transposes matrix. Square matrices can be transposed in-place */
 CVAPI(void)  cvTranspose( const CvArr* src, CvArr* dst );
 #define cvT cvTranspose
 

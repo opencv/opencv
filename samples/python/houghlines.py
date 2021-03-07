@@ -13,12 +13,11 @@ from __future__ import print_function
 
 import cv2 as cv
 import numpy as np
+
 import sys
 import math
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     try:
         fn = sys.argv[1]
     except IndexError:
@@ -30,14 +29,14 @@ if __name__ == '__main__':
 
     if True: # HoughLinesP
         lines = cv.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)
-        a,b,c = lines.shape
+        a, b, _c = lines.shape
         for i in range(a):
             cv.line(cdst, (lines[i][0][0], lines[i][0][1]), (lines[i][0][2], lines[i][0][3]), (0, 0, 255), 3, cv.LINE_AA)
 
     else:    # HoughLines
         lines = cv.HoughLines(dst, 1, math.pi/180.0, 50, np.array([]), 0, 0)
         if lines is not None:
-            a,b,c = lines.shape
+            a, b, _c = lines.shape
             for i in range(a):
                 rho = lines[i][0][0]
                 theta = lines[i][0][1]
@@ -52,3 +51,10 @@ if __name__ == '__main__':
 
     cv.imshow("source", src)
     cv.waitKey(0)
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

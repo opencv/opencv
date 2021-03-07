@@ -50,7 +50,6 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/version.hpp"
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
@@ -68,12 +67,15 @@
         @defgroup core_c_glue Connections with C++
     @}
     @defgroup core_array Operations on arrays
+    @defgroup core_async Asynchronous API
     @defgroup core_xml XML/YAML Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
+        @defgroup core_logging Logging facilities
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
+        @defgroup core_utils_vsx VSX utilities
         @defgroup core_utils_softfloat Softfloat support
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
@@ -93,6 +95,10 @@
             @defgroup core_hal_intrin_impl Private implementation helpers
         @}
         @defgroup core_lowlevel_api Low-level API for external libraries / plugins
+    @}
+    @defgroup core_parallel Parallel Processing
+    @{
+        @defgroup core_parallel_backend Parallel backends API
     @}
 @}
  */
@@ -200,6 +206,9 @@ enum CovarFlags {
     COVAR_COLS      = 16
 };
 
+//! @addtogroup core_cluster
+//!  @{
+
 //! k-Means flags
 enum KmeansFlags {
     /** Select random initial centers in each attempt.*/
@@ -213,12 +222,18 @@ enum KmeansFlags {
     KMEANS_USE_INITIAL_LABELS = 1
 };
 
+//! @} core_cluster
+
+//! @addtogroup core_array
+//! @{
+
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
                    REDUCE_MIN = 3  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
                  };
 
+//! @} core_array
 
 /** @brief Swaps two matrices
 */
@@ -291,9 +306,9 @@ if src was not a ROI, use borderType | #BORDER_ISOLATED.
 @param src Source image.
 @param dst Destination image of the same type as src and the size Size(src.cols+left+right,
 src.rows+top+bottom) .
-@param top
-@param bottom
-@param left
+@param top the top pixels
+@param bottom the bottom pixels
+@param left the left pixels
 @param right Parameter specifying how many pixels in each direction from the source image rectangle
 to extrapolate. For example, top=1, bottom=1, left=1, right=1 mean that 1 pixel-wide border needs
 to be built.
@@ -1611,7 +1626,9 @@ elements.
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
-/** @brief converts NaN's to the given number
+/** @brief converts NaNs to the given number
+@param a input/output matrix (CV_32F type).
+@param val value to convert the NaNs
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 

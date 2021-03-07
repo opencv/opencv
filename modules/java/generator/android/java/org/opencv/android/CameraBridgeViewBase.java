@@ -30,7 +30,7 @@ import android.view.SurfaceView;
 public abstract class CameraBridgeViewBase extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = "CameraBridge";
-    private static final int MAX_UNSPECIFIED = -1;
+    protected static final int MAX_UNSPECIFIED = -1;
     private static final int STOPPED = 0;
     private static final int STARTED = 1;
 
@@ -48,6 +48,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mPreviewFormat = RGBA;
     protected int mCameraIndex = CAMERA_ID_ANY;
     protected boolean mEnabled;
+    protected boolean mCameraPermissionGranted = false;
     protected FpsMeter mFpsMeter = null;
 
     public static final int CAMERA_ID_ANY   = -1;
@@ -219,9 +220,24 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         }
     }
 
+
+    /**
+     * This method is provided for clients, so they can signal camera permission has been granted.
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
+     */
+    public void setCameraPermissionGranted() {
+        synchronized(mSyncObject) {
+            mCameraPermissionGranted = true;
+            checkCurrentState();
+        }
+    }
+
+
     /**
      * This method is provided for clients, so they can enable the camera connection.
-     * The actual onCameraViewStarted callback will be delivered only after both this method is called and surface is available
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
      */
     public void enableView() {
         synchronized(mSyncObject) {
@@ -232,7 +248,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 
     /**
      * This method is provided for clients, so they can disable camera connection and stop
-     * the delivery of frames even though the surface view itself is not destroyed and still stays on the scren
+     * the delivery of frames even though the surface view itself is not destroyed and still stays on the screen
      */
     public void disableView() {
         synchronized(mSyncObject) {
@@ -300,7 +316,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         Log.d(TAG, "call checkCurrentState");
         int targetState;
 
-        if (mEnabled && mSurfaceExist && getVisibility() == VISIBLE) {
+        if (mEnabled && mCameraPermissionGranted && mSurfaceExist && getVisibility() == VISIBLE) {
             targetState = STARTED;
         } else {
             targetState = STOPPED;
@@ -481,6 +497,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         for (Object size : supportedSizes) {
             int width = accessor.getWidth(size);
             int height = accessor.getHeight(size);
+            Log.d(TAG, "trying size: " + width + "x" + height);
 
             if (width <= maxAllowedWidth && height <= maxAllowedHeight) {
                 if (width >= calcWidth && height >= calcHeight) {
@@ -488,6 +505,13 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                     calcHeight = (int) height;
                 }
             }
+        }
+        if ((calcWidth == 0 || calcHeight == 0) && supportedSizes.size() > 0)
+        {
+            Log.i(TAG, "fallback to the first frame size");
+            Object size = supportedSizes.get(0);
+            calcWidth = accessor.getWidth(size);
+            calcHeight = accessor.getHeight(size);
         }
 
         return new Size(calcWidth, calcHeight);

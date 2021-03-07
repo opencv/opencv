@@ -22,6 +22,9 @@ set(OPENCV_DOWNLOAD_PATH "${OpenCV_SOURCE_DIR}/.cache" CACHE PATH "${HELP_OPENCV
 set(OPENCV_DOWNLOAD_LOG "${OpenCV_BINARY_DIR}/CMakeDownloadLog.txt")
 set(OPENCV_DOWNLOAD_WITH_CURL "${OpenCV_BINARY_DIR}/download_with_curl.sh")
 set(OPENCV_DOWNLOAD_WITH_WGET "${OpenCV_BINARY_DIR}/download_with_wget.sh")
+set(OPENCV_DOWNLOAD_TRIES_LIST 1 CACHE STRING "List of download tries") # a list
+set(OPENCV_DOWNLOAD_PARAMS INACTIVITY_TIMEOUT 60 TIMEOUT 600 CACHE STRING "Download parameters to be passed to file(DOWNLAOD ...)")
+mark_as_advanced(OPENCV_DOWNLOAD_TRIES_LIST OPENCV_DOWNLOAD_PARAMS)
 
 # Init download cache directory and log file and helper scripts
 if(NOT EXISTS "${OPENCV_DOWNLOAD_PATH}")
@@ -154,11 +157,17 @@ function(ocv_download)
   # Download
   if(NOT EXISTS "${CACHE_CANDIDATE}")
     ocv_download_log("#cmake_download \"${CACHE_CANDIDATE}\" \"${DL_URL}\"")
-    file(DOWNLOAD "${DL_URL}" "${CACHE_CANDIDATE}"
-         INACTIVITY_TIMEOUT 60
-         TIMEOUT 600
-         STATUS status
-         LOG __log)
+    foreach(try ${OPENCV_DOWNLOAD_TRIES_LIST})
+      ocv_download_log("#try ${try}")
+      file(DOWNLOAD "${DL_URL}" "${CACHE_CANDIDATE}"
+           STATUS status
+           LOG __log
+           ${OPENCV_DOWNLOAD_PARAMS})
+      if(status EQUAL 0)
+        break()
+      endif()
+      message(STATUS "Try ${try} failed")
+    endforeach()
     if(NOT OPENCV_SKIP_FILE_DOWNLOAD_DUMP)  # workaround problem with old CMake versions: "Invalid escape sequence"
       string(LENGTH "${__log}" __log_length)
       if(__log_length LESS 65536)
@@ -195,8 +204,8 @@ For details please refer to the download log file:
 ${OPENCV_DOWNLOAD_LOG}
 ")
       # write helper scripts for failed downloads
-      file(APPEND "${OPENCV_DOWNLOAD_WITH_CURL}" "curl --output \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
-      file(APPEND "${OPENCV_DOWNLOAD_WITH_WGET}" "wget -O \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_CURL}" "curl --create-dirs --output \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
+      file(APPEND "${OPENCV_DOWNLOAD_WITH_WGET}" "mkdir -p $(dirname ${CACHE_CANDIDATE}) && wget -O \"${CACHE_CANDIDATE}\" \"${DL_URL}\"\n")
       return()
     endif()
 

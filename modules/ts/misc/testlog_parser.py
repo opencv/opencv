@@ -30,7 +30,8 @@ class TestInfo(object):
             self.status = xmlnode.getAttribute("status")
 
         if self.name.startswith("DISABLED_"):
-            self.status = "disabled"
+            if self.status == 'notrun':
+                self.status = "disabled"
             self.fixture = self.fixture.replace("DISABLED_", "")
             self.name = self.name.replace("DISABLED_", "")
         self.properties = {
@@ -51,6 +52,7 @@ class TestInfo(object):
         self.parseLongMetric(xmlnode, "stddev");
         self.parseFloatMetric(xmlnode, "gstddev");
         self.parseFloatMetric(xmlnode, "time");
+        self.parseLongMetric(xmlnode, "total_memory_usage");
 
     def parseLongMetric(self, xmlnode, name, default = 0):
         if name in self.properties:

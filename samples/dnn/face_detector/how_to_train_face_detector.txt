@@ -67,7 +67,7 @@ You need to prepare 2 LMDB databases: one for training images, one for validatio
 
 3. Train your detector
 For training you need to have 3 files: train.prototxt, test.prototxt and solver.prototxt. You can find these files in the same directory as for this readme.
-Also you need to edit train.prototxt and test.prototxt to replace paths for your LMDB databases to actual databases you've crated in step 2.
+Also you need to edit train.prototxt and test.prototxt to replace paths for your LMDB databases to actual databases you've created in step 2.
 
 Now all is done for launch training process.
 Execute next lines in Terminal:

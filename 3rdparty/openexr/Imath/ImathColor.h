@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2004-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -44,9 +44,10 @@
 //----------------------------------------------------
 
 #include "ImathVec.h"
+#include "ImathNamespace.h"
 #include "half.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 template <class T>
@@ -340,7 +341,7 @@ Color3<T>::operator += (const Color3 &c)
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator + (const Color3 &c) const
 {
     return Color3 (*(Vec3<T> *)this + (const Vec3<T> &)c);
@@ -355,14 +356,14 @@ Color3<T>::operator -= (const Color3 &c)
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator - (const Color3 &c) const
 {
     return Color3 (*(Vec3<T> *)this - (const Vec3<T> &)c);
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator - () const
 {
     return Color3 (-(*(Vec3<T> *)this));
@@ -393,14 +394,14 @@ Color3<T>::operator *= (T a)
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator * (const Color3 &c) const
 {
     return Color3 (*(Vec3<T> *)this * (const Vec3<T> &)c);
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator * (T a) const
 {
     return Color3 (*(Vec3<T> *)this * a);
@@ -423,14 +424,14 @@ Color3<T>::operator /= (T a)
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator / (const Color3 &c) const
 {
     return Color3 (*(Vec3<T> *)this / (const Vec3<T> &)c);
 }
 
 template <class T>
-inline Color3<T>
+inline Color3<T>	
 Color3<T>::operator / (T a) const
 {
     return Color3 (*(Vec3<T> *)this / a);
@@ -729,6 +730,7 @@ operator * (S x, const Color4<T> &v)
     return Color4<T> (x * v.r, x * v.g, x * v.b, x * v.a);
 }
 
-} // namespace Imath
 
-#endif
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
+
+#endif // INCLUDED_IMATHCOLOR_H 

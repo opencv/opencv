@@ -109,6 +109,7 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
+#define NO_DSHOW_STRSAFE
 #include "dshow.h"
 #include "strmif.h"
 #include "aviriff.h"
@@ -481,7 +482,7 @@ class videoInput{
         bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
         //These two are only for capture cards
-        //USB and Firewire cameras souldn't specify connection
+        //USB and Firewire cameras shouldn't specify connection
         bool setupDevice(int deviceID, int connection);
         bool setupDevice(int deviceID, int w, int h, int connection);
 
@@ -527,6 +528,8 @@ class videoInput{
         int  getSize(int deviceID) const;
         int  getFourcc(int deviceID) const;
         double getFPS(int deviceID) const;
+
+        int getChannel(int deviceID) const;
 
         // RGB conversion setting
         bool getConvertRGB(int deviceID);
@@ -963,6 +966,16 @@ videoDevice::~videoDevice(){
 
     HRESULT HR = NOERROR;
 
+    //Check to see if the graph is running, if so stop it.
+    if( (pControl) )
+    {
+        HR = pControl->Pause();
+        if (FAILED(HR)) DebugPrintOut("ERROR - Could not pause pControl\n");
+
+        HR = pControl->Stop();
+        if (FAILED(HR)) DebugPrintOut("ERROR - Could not stop pControl\n");
+    }
+
     //Stop the callback and free it
     if( (sgCallback) && (pGrabber) )
     {
@@ -977,16 +990,6 @@ videoDevice::~videoDevice(){
         }
 
         delete sgCallback;
-    }
-
-    //Check to see if the graph is running, if so stop it.
-     if( (pControl) )
-    {
-        HR = pControl->Pause();
-        if (FAILED(HR)) DebugPrintOut("ERROR - Could not pause pControl\n");
-
-        HR = pControl->Stop();
-        if (FAILED(HR)) DebugPrintOut("ERROR - Could not stop pControl\n");
     }
 
     //Disconnect filters from capture device
@@ -1480,6 +1483,12 @@ double videoInput::getFPS(int id) const
 
 }
 
+int videoInput::getChannel(int deviceID) const
+{
+    if (!isDeviceSetup(deviceID))
+        return 0;
+    return VDList[deviceID]->storeConn;
+}
 
 // ----------------------------------------------------------------------
 //
@@ -2938,6 +2947,22 @@ int videoInput::start(int deviceID, videoDevice *VD){
     DebugPrintOut("SETUP: Device is setup and ready to capture.\n\n");
     VD->readyToCapture = true;
 
+    // check for optional saving the direct show graph to a file
+    const char* graph_filename = getenv("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
+    if (graph_filename) {
+        size_t filename_len = strlen(graph_filename);
+        std::vector<WCHAR> wfilename(filename_len + 1);
+        size_t len = mbstowcs(&wfilename[0], graph_filename, filename_len  + 1);
+        CV_Assert(len == filename_len);
+
+        HRESULT res = SaveGraphFile(VD->pGraph, &wfilename[0]);
+        if (SUCCEEDED(res)) {
+            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename);
+        } else {
+            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename);
+        }
+    }
+
     //Release filters - seen someone else do this
     //looks like it solved the freezes
 
@@ -3316,6 +3341,7 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_fourcc(-1)
     , m_widthSet(-1)
     , m_heightSet(-1)
+    , m_convertRGBSet(true)
 {
     CoInitialize(0);
     open(index);
@@ -3342,11 +3368,15 @@ double VideoCapture_DShow::getProperty(int propIdx) const
         return g_VI.getFourcc(m_index);
     case CV_CAP_PROP_FPS:
         return g_VI.getFPS(m_index);
+    case CV_CAP_PROP_CONVERT_RGB:
+        return g_VI.getConvertRGB(m_index);
+    case CAP_PROP_CHANNEL:
+        return g_VI.getChannel(m_index);
     case CV_CAP_PROP_AUTOFOCUS:
       // Flags indicate whether or not autofocus is enabled
       if (g_VI.getVideoSettingCamera(m_index, CameraControl_Focus, min_value, max_value, stepping_delta, current_value, flags, defaultValue))
         return (double)flags;
-      return -1;
+      break;
 
     // video filter properties
     case CV_CAP_PROP_BRIGHTNESS:
@@ -3361,7 +3391,7 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_GAIN:
         if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
-        return -1;
+        break;
 
     // camera properties
     case CV_CAP_PROP_PAN:
@@ -3373,14 +3403,12 @@ double VideoCapture_DShow::getProperty(int propIdx) const
     case CV_CAP_PROP_FOCUS:
         if (g_VI.getVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
             return (double)current_value;
-        return -1;
-    }
-
-    if (propIdx == CV_CAP_PROP_SETTINGS )
-    {
+        break;
+    case CV_CAP_PROP_SETTINGS:
         return g_VI.property_window_count(m_index);
+    default:
+        break;
     }
-
     // unknown parameter or value not available
     return -1;
 }
@@ -3423,6 +3451,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
             break;
         g_VI.stopDevice(m_index);
         g_VI.setupDevice(m_index,  cvFloor(propVal));
+        g_VI.setConvertRGB(m_index, m_convertRGBSet);
         break;
 
     case CV_CAP_PROP_FPS:
@@ -3436,6 +3465,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.setupDevice(m_index, m_widthSet, m_heightSet);
             else
                 g_VI.setupDevice(m_index);
+            g_VI.setConvertRGB(m_index, m_convertRGBSet);
         }
         return g_VI.isDeviceSetup(m_index);
     }
@@ -3454,7 +3484,11 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
     case CV_CAP_PROP_CONVERT_RGB:
     {
-        return g_VI.setConvertRGB(m_index, cvRound(propVal) == 1);
+        const bool convertRgb = cvRound(propVal) == 1;
+        const bool success = g_VI.setConvertRGB(m_index, convertRgb);
+        if(success)
+            m_convertRGBSet = convertRgb;
+        return success;
     }
 
     }
@@ -3470,6 +3504,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.stopDevice(m_index);
                 g_VI.setIdealFramerate(m_index, fps);
                 g_VI.setupDeviceFourcc(m_index, m_width, m_height, m_fourcc);
+                g_VI.setConvertRGB(m_index, m_convertRGBSet);
             }
 
             bool success = g_VI.isDeviceSetup(m_index);
@@ -3486,12 +3521,6 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
             return success;
         }
         return true;
-    }
-
-    // show video/camera filter dialog
-    if (propIdx == CV_CAP_PROP_SETTINGS )
-    {
-        return g_VI.showSettingsWindow(m_index);
     }
 
     //video Filter properties
@@ -3521,6 +3550,9 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
     case CV_CAP_PROP_IRIS:
     case CV_CAP_PROP_FOCUS:
         return g_VI.setVideoSettingCamera(m_index, g_VI.getCameraPropertyFromCV(propIdx), (long)propVal);
+    // show video/camera filter dialog
+    case CV_CAP_PROP_SETTINGS:
+        return g_VI.showSettingsWindow(m_index);
     }
 
     return false;
@@ -3578,6 +3610,7 @@ void VideoCapture_DShow::close()
         m_index = -1;
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
+    m_convertRGBSet = true;
 }
 
 Ptr<IVideoCapture> create_DShow_capture(int index)

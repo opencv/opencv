@@ -31,6 +31,11 @@ using namespace cv;
 
 namespace {
 
+static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
+static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
+static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
+static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
+
 #ifdef __EMSCRIPTEN__
 static inline float atan_f32(float y, float x)
 {
@@ -42,11 +47,6 @@ static inline float atan_f32(float y, float x)
     return a; // range [0; 360)
 }
 #else
-static const float atan2_p1 = 0.9997878412794807f*(float)(180/CV_PI);
-static const float atan2_p3 = -0.3258083974640975f*(float)(180/CV_PI);
-static const float atan2_p5 = 0.1555786518463281f*(float)(180/CV_PI);
-static const float atan2_p7 = -0.04432655554792128f*(float)(180/CV_PI);
-
 static inline float atan_f32(float y, float x)
 {
     float ax = std::abs(x), ay = std::abs(y);
@@ -422,7 +422,7 @@ void log64f(const double *src, double *dst, int n)
 
 #define EXPPOLY_32F_A0 .9670371139572337719125840413672004409288e-2
 
-// the code below uses _mm_cast* intrinsics, which are not avialable on VS2005
+// the code below uses _mm_cast* intrinsics, which are not available on VS2005
 #if (defined _MSC_VER && _MSC_VER < 1500) || \
 (!defined __APPLE__ && defined __GNUC__ && __GNUC__*100 + __GNUC_MINOR__ < 402)
 #undef CV_SSE2
@@ -725,7 +725,7 @@ void log32f( const float *_x, float *y, int n )
 
         yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        v_float32 delta = v_reinterpret_as_f32(h0 == vx_setall_s32(510)) & vshift;
+        v_float32 delta = v_select(v_reinterpret_as_f32(h0 == vx_setall_s32(510)), vshift, vx_setall<float>(0));
         xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
 
         v_float32 zf0 = v_fma(xf0, vA0, vA1);

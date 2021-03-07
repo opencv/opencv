@@ -2687,9 +2687,9 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
@@ -2780,9 +2780,9 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
                                    << "Iteration: " << iter << endl
                                    << "Hash vs Correct hash: " << h << ", " << goodHash << endl
                                    << "Error in: (" << x << ", " << y << ")" << endl
-                                   << "Reference value: " << gx[0] << " " << gx[1] << " " << gx[2] << endl
-                                   << "Actual value: "    << rx[0] << " " << rx[1] << " " << rx[2] << endl
-                                   << "Src value: " << px[0] << " " << px[1] << " " << px[2] << endl
+                                   << "Reference value: " << int(gx[0]) << " " << int(gx[1]) << " " << int(gx[2]) << endl
+                                   << "Actual value: "    << int(rx[0]) << " " << int(rx[1]) << " " << int(rx[2]) << endl
+                                   << "Src value: " << int(px[0]) << " " << int(px[1]) << " " << int(px[2]) << endl
                                    << "Size: (" << probe.rows << ", " << probe.cols << ")" << endl;
 
                             break;
@@ -3071,5 +3071,22 @@ TEST(ImgProc_RGB2YUV, regression_13668)
     Vec3b ref(159, 90, 0);
     EXPECT_EQ(res, ref);
 }
+
+TEST(ImgProc_cvtColorTwoPlane, missing_check_17036)  // test can be removed if required feature is implemented
+{
+    std::vector<uchar> y_data(700 * 480);
+    std::vector<uchar> uv_data(640 * 240);
+
+    Mat y_plane_padding(480, 640, CV_8UC1, y_data.data(), 700);  // with stride
+    Mat uv_plane(240, 320, CV_8UC2, uv_data.data());
+
+    Mat result;
+
+    EXPECT_THROW(
+        cvtColorTwoPlane(y_plane_padding, uv_plane, result, COLOR_YUV2RGB_NV21);
+        , cv::Exception
+    );
+}
+
 
 }} // namespace

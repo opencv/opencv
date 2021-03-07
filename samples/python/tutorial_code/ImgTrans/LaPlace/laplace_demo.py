@@ -40,7 +40,7 @@ def main(argv):
 
     # [laplacian]
     # Apply Laplace function
-    dst = cv.Laplacian(src_gray, ddepth, kernel_size)
+    dst = cv.Laplacian(src_gray, ddepth, ksize=kernel_size)
     # [laplacian]
 
     # [convert]

@@ -84,17 +84,31 @@ endfunction()
 
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
 
+if((NOT DEFINED CMAKE_SYSTEM_PROCESSOR OR CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+    AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SYSTEM_PROCESSOR)
+  message(WARNING "OpenCV: CMAKE_SYSTEM_PROCESSOR is not defined. Perhaps CMake toolchain is broken")
+endif()
+if(NOT DEFINED CMAKE_SIZEOF_VOID_P
+    AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SIZEOF_VOID_P)
+  message(WARNING "OpenCV: CMAKE_SIZEOF_VOID_P is not defined. Perhaps CMake toolchain is broken")
+endif()
+
 if(DEFINED OpenCV_ARCH AND DEFINED OpenCV_RUNTIME)
   # custom overridden values
 elseif(MSVC)
-  if(CMAKE_CL_64)
-    set(OpenCV_ARCH x64)
-  elseif((CMAKE_GENERATOR MATCHES "ARM") OR ("${arch_hint}" STREQUAL "ARM") OR (CMAKE_VS_EFFECTIVE_PLATFORMS MATCHES "ARM|arm"))
-    # see Modules/CmakeGenericSystem.cmake
-    set(OpenCV_ARCH ARM)
+  # see Modules/CMakeGenericSystem.cmake
+  if("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+    set(OpenCV_ARCH "x64")
+  elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "ARM64")
+    set(OpenCV_ARCH "ARM64")
+  elseif("${CMAKE_GENERATOR}" MATCHES "ARM")
+    set(OpenCV_ARCH "ARM")
+  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+    set(OpenCV_ARCH "x64")
   else()
     set(OpenCV_ARCH x86)
   endif()
+
   if(MSVC_VERSION EQUAL 1400)
     set(OpenCV_RUNTIME vc8)
   elseif(MSVC_VERSION EQUAL 1500)
@@ -127,11 +141,7 @@ elseif(MSVC)
 elseif(MINGW)
   set(OpenCV_RUNTIME mingw)
 
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpmachine
-                  OUTPUT_VARIABLE OPENCV_GCC_TARGET_MACHINE
-                  OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(OPENCV_GCC_TARGET_MACHINE MATCHES "amd64|x86_64|AMD64")
-    set(MINGW64 1)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "amd64.*|x86_64.*|AMD64.*")
     set(OpenCV_ARCH x64)
   else()
     set(OpenCV_ARCH x86)

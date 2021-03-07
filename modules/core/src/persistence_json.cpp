@@ -296,6 +296,8 @@ public:
 
         while ( is_eof == false && is_completed == false )
         {
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
             switch ( *ptr )
             {
                 /* comment */
@@ -381,6 +383,7 @@ public:
         if ( is_eof || !is_completed )
         {
             ptr = fs->bufferStart();
+            CV_Assert(ptr);
             *ptr = '\0';
             fs->setEof();
             if( !is_completed )
@@ -392,6 +395,9 @@ public:
 
     char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must start with \'\"\'" );
 
@@ -405,7 +411,10 @@ public:
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
 
-        const char * end = ptr;
+        if( ptr == beg )
+            CV_PARSE_ERROR_CPP( "Key is empty" );
+        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(ptr - beg)), FileNode::NONE);
+
         ptr++;
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
@@ -414,22 +423,30 @@ public:
         if( *ptr != ':' )
             CV_PARSE_ERROR_CPP( "Missing \':\' between key and value" );
 
-        /* [beg, end) */
-        if( end <= beg )
-            CV_PARSE_ERROR_CPP( "Key is empty" );
-
-        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(end - beg)), FileNode::NONE);
         return ++ptr;
     }
 
-    bool getBase64Row(char*, int /*indent*/, char*&, char*&)
+    bool getBase64Row(char* ptr, int /*indent*/, char* &beg, char* &end)
     {
-        CV_PARSE_ERROR_CPP("Currently, JSON parser does not support base64 data");
-        return false;
+        beg = end = ptr;
+        if( !ptr || !*ptr )
+            return false;
+
+        // find end of the row
+        while( cv_isprint(*ptr) && (*ptr != ',') && (*ptr != '"'))
+            ++ptr;
+        if ( *ptr == '\0' )
+            CV_PARSE_ERROR_CPP( "Unexpected end of line" );
+
+        end = ptr;
+        return true;
     }
 
     char* parseValue( char* ptr, FileNode& node )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid value input");
+
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
             CV_PARSE_ERROR_CPP( "Unexpected End-Of-File" );
@@ -442,117 +459,15 @@ public:
             for ( ; (cv_isalnum(*ptr) || *ptr == '$' ) && len <= 9u; ptr++ )
                 len++;
 
-            if ( len >= 8u && memcmp( beg, "$base64$", 8u ) == 0 )
+            if ((len >= 8u) && (memcmp( beg, "$base64$", 8u ) == 0) )
             {   /**************** Base64 string ****************/
-                CV_PARSE_ERROR_CPP("base64 data is not supported");
-#if 0
-                ptr = beg += 8;
-
-                std::string base64_buffer;
-                base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
-
-                bool is_matching = false;
-                while ( !is_matching )
-                {
-                    switch ( *ptr )
-                    {
-                        case '\0':
-                        {
-                            base64_buffer.append( beg, ptr );
-
-                            ptr = fs->gets();
-                            if( !ptr || !*ptr )
-                                CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
-                            beg = ptr;
-                            break;
-                        }
-                        case '\"':
-                        {
-                            base64_buffer.append( beg, ptr );
-                            beg = ptr;
-                            is_matching = true;
-                            break;
-                        }
-                        case '\n':
-                        case '\r':
-                        {
-                            CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
-                            break;
-                        }
-                        default:
-                        {
-                            ptr++;
-                            break;
-                        }
-                    }
-                }
+                ptr = beg + 8;
+                ptr = fs->parseBase64(ptr, 0, node);
 
                 if ( *ptr != '\"' )
                     CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
                 else
                     ptr++;
-
-                if ( base64_buffer.size() >= base64::ENCODED_HEADER_SIZE )
-                {
-                    const char * base64_beg = base64_buffer.data();
-                    const char * base64_end = base64_beg + base64_buffer.size();
-
-                    /* get dt from header */
-                    std::string dt;
-                    {
-                        std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
-                        base64::base64_decode(base64_beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
-                        if ( !base64::read_base64_header(header, dt) || dt.empty() )
-                            CV_PARSE_ERROR_CPP("Invalid `dt` in Base64 header");
-                    }
-
-
-                    if ( base64_buffer.size() > base64::ENCODED_HEADER_SIZE )
-                    {
-                        /* set base64_beg to beginning of base64 data */
-                        base64_beg = &base64_buffer.at( base64::ENCODED_HEADER_SIZE );
-                        if ( !base64::base64_valid( base64_beg, 0U, base64_end - base64_beg ) )
-                            CV_PARSE_ERROR_CPP( "Invalid Base64 data." );
-
-                        /* buffer for decoded data(exclude header) */
-                        std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_end - base64_beg) );
-                        int total_byte_size = static_cast<int>(
-                                                               base64::base64_decode_buffer_size( base64_end - base64_beg, base64_beg, false )
-                                                               );
-                        {
-                            base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
-                            const uchar * binary_beg = reinterpret_cast<const uchar *>( base64_beg );
-                            const uchar * binary_end = binary_beg + (base64_end - base64_beg);
-                            parser.read( binary_beg, binary_end );
-                            parser.flush();
-                        }
-
-                        /* save as CvSeq */
-                        int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
-                        if (total_byte_size % elem_size != 0)
-                            CV_PARSE_ERROR_CPP("Byte size not match elememt size");
-                        int elem_cnt = total_byte_size / elem_size;
-
-                        /* after icvFSCreateCollection, node->tag == struct_flags */
-                        icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                        base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
-                    }
-                    else
-                    {
-                        /* empty */
-                        icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                    }
-                }
-                else if ( base64_buffer.empty() )
-                {
-                    /* empty */
-                    icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                }
-                else
-                {
-                    CV_PARSE_ERROR("Unrecognized Base64 header");
-                }
-#endif
             }
             else
             {   /**************** normal string ****************/
@@ -569,10 +484,14 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
                             ptr++;
+                            if (i + 1 >= CV_FS_MAX_LEN)
+                                CV_PARSE_ERROR_CPP("string is too long");
                             switch ( *ptr )
                             {
                             case '\\':
@@ -596,6 +515,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
@@ -611,6 +532,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
@@ -800,7 +723,9 @@ public:
             else if ( *ptr == '}' )
                 break;
             else
+            {
                 CV_PARSE_ERROR_CPP( "Unexpected character" );
+            }
         }
 
         if (!ptr)
@@ -817,6 +742,9 @@ public:
 
     bool parse( char* ptr )
     {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
         ptr = skipSpaces( ptr );
         if ( !ptr || !*ptr )
             return false;
@@ -838,8 +766,6 @@ public:
             CV_PARSE_ERROR_CPP( "left-brace of top level is missing" );
         }
 
-        if( !ptr || !*ptr )
-            CV_PARSE_ERROR_CPP( "Unexpected End-Of-File" );
         return true;
     }
 

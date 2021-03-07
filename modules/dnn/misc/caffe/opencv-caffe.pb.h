@@ -1886,6 +1886,30 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
 
   // accessors -------------------------------------------------------
 
+  // repeated float min_size = 1;
+  int min_size_size() const;
+  void clear_min_size();
+  static const int kMinSizeFieldNumber = 1;
+  float min_size(int index) const;
+  void set_min_size(int index, float value);
+  void add_min_size(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      min_size() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_min_size();
+
+  // repeated float max_size = 2;
+  int max_size_size() const;
+  void clear_max_size();
+  static const int kMaxSizeFieldNumber = 2;
+  float max_size(int index) const;
+  void set_max_size(int index, float value);
+  void add_max_size(float value);
+  const ::google::protobuf::RepeatedField< float >&
+      max_size() const;
+  ::google::protobuf::RepeatedField< float >*
+      mutable_max_size();
+
   // repeated float aspect_ratio = 3;
   int aspect_ratio_size() const;
   void clear_aspect_ratio();
@@ -1958,20 +1982,6 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   ::google::protobuf::RepeatedField< float >*
       mutable_height();
 
-  // optional float min_size = 1;
-  bool has_min_size() const;
-  void clear_min_size();
-  static const int kMinSizeFieldNumber = 1;
-  float min_size() const;
-  void set_min_size(float value);
-
-  // optional float max_size = 2;
-  bool has_max_size() const;
-  void clear_max_size();
-  static const int kMaxSizeFieldNumber = 2;
-  float max_size() const;
-  void set_max_size(float value);
-
   // optional uint32 img_size = 7;
   bool has_img_size() const;
   void clear_img_size();
@@ -2037,10 +2047,6 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
 
   // @@protoc_insertion_point(class_scope:opencv_caffe.PriorBoxParameter)
  private:
-  void set_has_min_size();
-  void clear_has_min_size();
-  void set_has_max_size();
-  void clear_has_max_size();
   void set_has_flip();
   void clear_has_flip();
   void set_has_clip();
@@ -2063,14 +2069,14 @@ class PriorBoxParameter : public ::google::protobuf::Message /* @@protoc_inserti
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::internal::HasBits<1> _has_bits_;
   mutable int _cached_size_;
+  ::google::protobuf::RepeatedField< float > min_size_;
+  ::google::protobuf::RepeatedField< float > max_size_;
   ::google::protobuf::RepeatedField< float > aspect_ratio_;
   ::google::protobuf::RepeatedField< float > variance_;
   ::google::protobuf::RepeatedField< float > offset_h_;
   ::google::protobuf::RepeatedField< float > offset_w_;
   ::google::protobuf::RepeatedField< float > width_;
   ::google::protobuf::RepeatedField< float > height_;
-  float min_size_;
-  float max_size_;
   ::google::protobuf::uint32 img_size_;
   ::google::protobuf::uint32 img_h_;
   ::google::protobuf::uint32 img_w_;
@@ -15271,52 +15277,64 @@ inline void NormalizeBBoxParameter::set_eps(float value) {
 
 // PriorBoxParameter
 
-// optional float min_size = 1;
-inline bool PriorBoxParameter::has_min_size() const {
-  return (_has_bits_[0] & 0x00000001u) != 0;
-}
-inline void PriorBoxParameter::set_has_min_size() {
-  _has_bits_[0] |= 0x00000001u;
-}
-inline void PriorBoxParameter::clear_has_min_size() {
-  _has_bits_[0] &= ~0x00000001u;
+// repeated float min_size = 1;
+inline int PriorBoxParameter::min_size_size() const {
+  return min_size_.size();
 }
 inline void PriorBoxParameter::clear_min_size() {
-  min_size_ = 0;
-  clear_has_min_size();
+  min_size_.Clear();
 }
-inline float PriorBoxParameter::min_size() const {
+inline float PriorBoxParameter::min_size(int index) const {
   // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.min_size)
-  return min_size_;
+  return min_size_.Get(index);
 }
-inline void PriorBoxParameter::set_min_size(float value) {
-  set_has_min_size();
-  min_size_ = value;
+inline void PriorBoxParameter::set_min_size(int index, float value) {
+  min_size_.Set(index, value);
   // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.min_size)
 }
+inline void PriorBoxParameter::add_min_size(float value) {
+  min_size_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.min_size)
+}
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::min_size() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.min_size)
+  return min_size_;
+}
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_min_size() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.min_size)
+  return &min_size_;
+}
 
-// optional float max_size = 2;
-inline bool PriorBoxParameter::has_max_size() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
-}
-inline void PriorBoxParameter::set_has_max_size() {
-  _has_bits_[0] |= 0x00000002u;
-}
-inline void PriorBoxParameter::clear_has_max_size() {
-  _has_bits_[0] &= ~0x00000002u;
+// repeated float max_size = 2;
+inline int PriorBoxParameter::max_size_size() const {
+  return max_size_.size();
 }
 inline void PriorBoxParameter::clear_max_size() {
-  max_size_ = 0;
-  clear_has_max_size();
+  max_size_.Clear();
 }
-inline float PriorBoxParameter::max_size() const {
+inline float PriorBoxParameter::max_size(int index) const {
   // @@protoc_insertion_point(field_get:opencv_caffe.PriorBoxParameter.max_size)
+  return max_size_.Get(index);
+}
+inline void PriorBoxParameter::set_max_size(int index, float value) {
+  max_size_.Set(index, value);
+  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.max_size)
+}
+inline void PriorBoxParameter::add_max_size(float value) {
+  max_size_.Add(value);
+  // @@protoc_insertion_point(field_add:opencv_caffe.PriorBoxParameter.max_size)
+}
+inline const ::google::protobuf::RepeatedField< float >&
+PriorBoxParameter::max_size() const {
+  // @@protoc_insertion_point(field_list:opencv_caffe.PriorBoxParameter.max_size)
   return max_size_;
 }
-inline void PriorBoxParameter::set_max_size(float value) {
-  set_has_max_size();
-  max_size_ = value;
-  // @@protoc_insertion_point(field_set:opencv_caffe.PriorBoxParameter.max_size)
+inline ::google::protobuf::RepeatedField< float >*
+PriorBoxParameter::mutable_max_size() {
+  // @@protoc_insertion_point(field_mutable_list:opencv_caffe.PriorBoxParameter.max_size)
+  return &max_size_;
 }
 
 // repeated float aspect_ratio = 3;
@@ -15351,13 +15369,13 @@ PriorBoxParameter::mutable_aspect_ratio() {
 
 // optional bool flip = 4 [default = true];
 inline bool PriorBoxParameter::has_flip() const {
-  return (_has_bits_[0] & 0x00000100u) != 0;
+  return (_has_bits_[0] & 0x00000040u) != 0;
 }
 inline void PriorBoxParameter::set_has_flip() {
-  _has_bits_[0] |= 0x00000100u;
+  _has_bits_[0] |= 0x00000040u;
 }
 inline void PriorBoxParameter::clear_has_flip() {
-  _has_bits_[0] &= ~0x00000100u;
+  _has_bits_[0] &= ~0x00000040u;
 }
 inline void PriorBoxParameter::clear_flip() {
   flip_ = true;
@@ -15375,13 +15393,13 @@ inline void PriorBoxParameter::set_flip(bool value) {
 
 // optional bool clip = 5 [default = true];
 inline bool PriorBoxParameter::has_clip() const {
-  return (_has_bits_[0] & 0x00000200u) != 0;
+  return (_has_bits_[0] & 0x00000080u) != 0;
 }
 inline void PriorBoxParameter::set_has_clip() {
-  _has_bits_[0] |= 0x00000200u;
+  _has_bits_[0] |= 0x00000080u;
 }
 inline void PriorBoxParameter::clear_has_clip() {
-  _has_bits_[0] &= ~0x00000200u;
+  _has_bits_[0] &= ~0x00000080u;
 }
 inline void PriorBoxParameter::clear_clip() {
   clip_ = true;
@@ -15429,13 +15447,13 @@ PriorBoxParameter::mutable_variance() {
 
 // optional uint32 img_size = 7;
 inline bool PriorBoxParameter::has_img_size() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+  return (_has_bits_[0] & 0x00000001u) != 0;
 }
 inline void PriorBoxParameter::set_has_img_size() {
-  _has_bits_[0] |= 0x00000004u;
+  _has_bits_[0] |= 0x00000001u;
 }
 inline void PriorBoxParameter::clear_has_img_size() {
-  _has_bits_[0] &= ~0x00000004u;
+  _has_bits_[0] &= ~0x00000001u;
 }
 inline void PriorBoxParameter::clear_img_size() {
   img_size_ = 0u;
@@ -15453,13 +15471,13 @@ inline void PriorBoxParameter::set_img_size(::google::protobuf::uint32 value) {
 
 // optional uint32 img_h = 8;
 inline bool PriorBoxParameter::has_img_h() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
 inline void PriorBoxParameter::set_has_img_h() {
-  _has_bits_[0] |= 0x00000008u;
+  _has_bits_[0] |= 0x00000002u;
 }
 inline void PriorBoxParameter::clear_has_img_h() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void PriorBoxParameter::clear_img_h() {
   img_h_ = 0u;
@@ -15477,13 +15495,13 @@ inline void PriorBoxParameter::set_img_h(::google::protobuf::uint32 value) {
 
 // optional uint32 img_w = 9;
 inline bool PriorBoxParameter::has_img_w() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
 inline void PriorBoxParameter::set_has_img_w() {
-  _has_bits_[0] |= 0x00000010u;
+  _has_bits_[0] |= 0x00000004u;
 }
 inline void PriorBoxParameter::clear_has_img_w() {
-  _has_bits_[0] &= ~0x00000010u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void PriorBoxParameter::clear_img_w() {
   img_w_ = 0u;
@@ -15501,13 +15519,13 @@ inline void PriorBoxParameter::set_img_w(::google::protobuf::uint32 value) {
 
 // optional float step = 10;
 inline bool PriorBoxParameter::has_step() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
 inline void PriorBoxParameter::set_has_step() {
-  _has_bits_[0] |= 0x00000020u;
+  _has_bits_[0] |= 0x00000008u;
 }
 inline void PriorBoxParameter::clear_has_step() {
-  _has_bits_[0] &= ~0x00000020u;
+  _has_bits_[0] &= ~0x00000008u;
 }
 inline void PriorBoxParameter::clear_step() {
   step_ = 0;
@@ -15525,13 +15543,13 @@ inline void PriorBoxParameter::set_step(float value) {
 
 // optional float step_h = 11;
 inline bool PriorBoxParameter::has_step_h() const {
-  return (_has_bits_[0] & 0x00000040u) != 0;
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
 inline void PriorBoxParameter::set_has_step_h() {
-  _has_bits_[0] |= 0x00000040u;
+  _has_bits_[0] |= 0x00000010u;
 }
 inline void PriorBoxParameter::clear_has_step_h() {
-  _has_bits_[0] &= ~0x00000040u;
+  _has_bits_[0] &= ~0x00000010u;
 }
 inline void PriorBoxParameter::clear_step_h() {
   step_h_ = 0;
@@ -15549,13 +15567,13 @@ inline void PriorBoxParameter::set_step_h(float value) {
 
 // optional float step_w = 12;
 inline bool PriorBoxParameter::has_step_w() const {
-  return (_has_bits_[0] & 0x00000080u) != 0;
+  return (_has_bits_[0] & 0x00000020u) != 0;
 }
 inline void PriorBoxParameter::set_has_step_w() {
-  _has_bits_[0] |= 0x00000080u;
+  _has_bits_[0] |= 0x00000020u;
 }
 inline void PriorBoxParameter::clear_has_step_w() {
-  _has_bits_[0] &= ~0x00000080u;
+  _has_bits_[0] &= ~0x00000020u;
 }
 inline void PriorBoxParameter::clear_step_w() {
   step_w_ = 0;
@@ -15573,13 +15591,13 @@ inline void PriorBoxParameter::set_step_w(float value) {
 
 // optional float offset = 13 [default = 0.5];
 inline bool PriorBoxParameter::has_offset() const {
-  return (_has_bits_[0] & 0x00000400u) != 0;
+  return (_has_bits_[0] & 0x00000100u) != 0;
 }
 inline void PriorBoxParameter::set_has_offset() {
-  _has_bits_[0] |= 0x00000400u;
+  _has_bits_[0] |= 0x00000100u;
 }
 inline void PriorBoxParameter::clear_has_offset() {
-  _has_bits_[0] &= ~0x00000400u;
+  _has_bits_[0] &= ~0x00000100u;
 }
 inline void PriorBoxParameter::clear_offset() {
   offset_ = 0.5f;

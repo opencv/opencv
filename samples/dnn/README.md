@@ -2,19 +2,52 @@
 
 ## Model Zoo
 
-### Object detection
+Check [a wiki](https://github.com/opencv/opencv/wiki/Deep-Learning-in-OpenCV) for a list of tested models.
 
-|    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
-|---------------|-------|-----------|--------------------|-------|
-| [MobileNet-SSD, Caffe](https://github.com/chuanqi305/MobileNet-SSD/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | BGR |
-| [OpenCV face detector](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector) | `1.0` | `300x300` | `104 177 123` | BGR |
-| [SSDs from TensorFlow](https://github.com/tensorflow/models/tree/master/research/object_detection/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | RGB |
-| [YOLO](https://pjreddie.com/darknet/yolo/) | `0.00392 (1/255)` | `416x416` | `0 0 0` | RGB |
-| [VGG16-SSD](https://github.com/weiliu89/caffe/tree/ssd) | `1.0` | `300x300` | `104 117 123` | BGR |
-| [Faster-RCNN](https://github.com/rbgirshick/py-faster-rcnn) | `1.0` | `800x600` | `102.9801 115.9465 122.7717` | BGR |
-| [R-FCN](https://github.com/YuwenXiong/py-R-FCN) | `1.0` | `800x600` | `102.9801 115.9465 122.7717` | BGR |
-| [Faster-RCNN, ResNet backbone](https://github.com/tensorflow/models/tree/master/research/object_detection/) | `1.0` | `300x300` | `103.939 116.779 123.68` | RGB |
-| [Faster-RCNN, InceptionV2 backbone](https://github.com/tensorflow/models/tree/master/research/object_detection/) | `0.00784 (2/255)` | `300x300` | `127.5 127.5 127.5` | RGB |
+If OpenCV is built with [Intel's Inference Engine support](https://github.com/opencv/opencv/wiki/Intel%27s-Deep-Learning-Inference-Engine-backend) you can use [Intel's pre-trained](https://github.com/opencv/open_model_zoo) models.
+
+There are different preprocessing parameters such mean subtraction or scale factors for different models.
+You may check the most popular models and their parameters at [models.yml](https://github.com/opencv/opencv/blob/master/samples/dnn/models.yml) configuration file. It might be also used for aliasing samples parameters. In example,
+
+```bash
+python object_detection.py opencv_fd --model /path/to/caffemodel --config /path/to/prototxt
+```
+
+Check `-h` option to know which values are used by default:
+
+```bash
+python object_detection.py opencv_fd -h
+```
+
+### Sample models
+
+You can download sample models using ```download_models.py```. For example, the following command will download network weights for OpenCV Face Detector model and store them in FaceDetector folder:
+
+```bash
+python download_models.py --save_dir FaceDetector opencv_fd
+```
+
+You can use default configuration files adopted for OpenCV from [here](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn).
+
+You also can use the script to download necessary files from your code. Assume you have the following code inside ```your_script.py```:
+
+```python
+from download_models import downloadFile
+
+filepath1 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", None, filename="MobileNetSSD_deploy.caffemodel", save_dir="save_dir_1")
+filepath2 = downloadFile("https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc", "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a", filename="MobileNetSSD_deploy.caffemodel")
+print(filepath1)
+print(filepath2)
+# Your code
+```
+
+By running the following commands, you will get **MobileNetSSD_deploy.caffemodel** file:
+```bash
+export OPENCV_DOWNLOAD_DATA_PATH=download_folder
+python your_script.py
+```
+
+**Note** that you can provide a directory using **save_dir** parameter or via **OPENCV_SAVE_DIR** environment variable.
 
 #### Face detection
 [An origin model](https://github.com/opencv/opencv/tree/master/samples/dnn/face_detector)
@@ -44,20 +77,8 @@ AR @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] | 0.481     | 0.480 (-0.001) |
 AR @[ IoU=0.50:0.95 | area= large | maxDets=100 ] | 0.528     | 0.528          | 0.520     | 0.462 (-0.058) |
 ```
 
-### Classification
-|    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
-|---------------|-------|-----------|--------------------|-------|
-| GoogLeNet | `1.0` | `224x224` | `104 117 123` | BGR |
-| [SqueezeNet](https://github.com/DeepScale/SqueezeNet) | `1.0` | `227x227` | `0 0 0` | BGR |
-
-### Semantic segmentation
-|    Model | Scale |   Size WxH|   Mean subtraction | Channels order |
-|---------------|-------|-----------|--------------------|-------|
-| [ENet](https://github.com/e-lab/ENet-training) | `0.00392 (1/255)` | `1024x512` | `0 0 0` | RGB |
-| FCN8s | `1.0` | `500x500` | `0 0 0` | BGR |
-
 ## References
-* [Models downloading script](https://github.com/opencv/opencv_extra/blob/master/testdata/dnn/download_models.py)
+* [Models downloading script](https://github.com/opencv/opencv/samples/dnn/download_models.py)
 * [Configuration files adopted for OpenCV](https://github.com/opencv/opencv_extra/tree/master/testdata/dnn)
 * [How to import models from TensorFlow Object Detection API](https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API)
 * [Names of classes from different datasets](https://github.com/opencv/opencv/tree/master/samples/data/dnn)

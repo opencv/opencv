@@ -2,10 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-
+#include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types_c.h"
-#include "precomp.hpp"
 
 namespace cv {
 
@@ -174,6 +173,94 @@ void SparseMat::Hdr::clear()
     pool.clear();
     pool.resize(nodeSize);
     nodeCount = freeList = 0;
+}
+
+///////////////////////////// SparseMat /////////////////////////////
+
+SparseMat::SparseMat()
+    : flags(MAGIC_VAL), hdr(0)
+{}
+
+SparseMat::SparseMat(int _dims, const int* _sizes, int _type)
+    : flags(MAGIC_VAL), hdr(0)
+{
+    create(_dims, _sizes, _type);
+}
+
+SparseMat::SparseMat(const SparseMat& m)
+    : flags(m.flags), hdr(m.hdr)
+{
+    addref();
+}
+
+SparseMat::~SparseMat()
+{
+    release();
+}
+
+SparseMat& SparseMat::operator = (const SparseMat& m)
+{
+    if( this != &m )
+    {
+        if( m.hdr )
+            CV_XADD(&m.hdr->refcount, 1);
+        release();
+        flags = m.flags;
+        hdr = m.hdr;
+    }
+    return *this;
+}
+
+SparseMat& SparseMat::operator=(const Mat& m)
+{
+    return (*this = SparseMat(m));
+}
+
+void SparseMat::assignTo(SparseMat& m, int _type) const
+{
+    if( _type < 0 )
+        m = *this;
+    else
+        convertTo(m, _type);
+}
+
+void SparseMat::addref()
+{
+    if( hdr )
+        CV_XADD(&hdr->refcount, 1);
+}
+
+void SparseMat::release()
+{
+    if( hdr && CV_XADD(&hdr->refcount, -1) == 1 )
+        delete hdr;
+    hdr = 0;
+}
+
+size_t SparseMat::hash(int i0) const
+{
+    return (size_t)i0;
+}
+
+size_t SparseMat::hash(int i0, int i1) const
+{
+    return (size_t)(unsigned)i0 * HASH_SCALE + (unsigned)i1;
+}
+
+size_t SparseMat::hash(int i0, int i1, int i2) const
+{
+    return ((size_t)(unsigned)i0 * HASH_SCALE + (unsigned)i1) * HASH_SCALE + (unsigned)i2;
+}
+
+size_t SparseMat::hash(const int* idx) const
+{
+    size_t h = (unsigned)idx[0];
+    if( !hdr )
+        return 0;
+    int d = hdr->dims;
+    for(int i = 1; i < d; i++ )
+        h = h * HASH_SCALE + (unsigned)idx[i];
+    return h;
 }
 
 

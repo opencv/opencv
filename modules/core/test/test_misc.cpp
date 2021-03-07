@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <cmath>
 
 namespace opencv_test { namespace {
 
@@ -177,12 +178,19 @@ TEST(Core_OutputArray, FixedType)
     EXPECT_EQ(2, num_defaultResult);
 }
 
+TEST(Core_OutputArrayCreate, _13772)
+{
+    cv::Mat1d mat;
+    cv::OutputArray o(mat);
+    ASSERT_NO_THROW(o.create(3, 5, CV_64F, -1, true));
+}
+
 
 
 TEST(Core_String, find_last_of__with__empty_string)
 {
     cv::String s;
-    size_t p = s.find_last_of("q", 0);
+    size_t p = s.find_last_of('q', 0);
     // npos is not exported: EXPECT_EQ(cv::String::npos, p);
     EXPECT_EQ(std::string::npos, p);
 }
@@ -664,7 +672,8 @@ TEST(Core_Check, testMatType_fail_2)
         EXPECT_STREQ(e.err.c_str(),
 "> Unsupported src:\n"
 ">     'src_type == CV_32FC1 || src_type == CV_32FC3'\n"
-"> where\n>     'src_type' is 0 (CV_8UC1)\n"
+"> where\n"
+">     'src_type' is 0 (CV_8UC1)\n"
 );
     }
     catch (const std::exception& e)
@@ -730,7 +739,8 @@ TEST(Core_Check, testMatDepth_fail_2)
         EXPECT_STREQ(e.err.c_str(),
 "> Unsupported src:\n"
 ">     'src_depth == CV_32F || src_depth == CV_64F'\n"
-"> where\n>     'src_depth' is 0 (CV_8U)\n"
+"> where\n"
+">     'src_depth' is 0 (CV_8U)\n"
 );
     }
     catch (const std::exception& e)
@@ -743,5 +753,49 @@ TEST(Core_Check, testMatDepth_fail_2)
     }
 }
 
+
+void test_check_Size_1(const Size& srcSz)
+{
+    CV_Check(srcSz, srcSz == Size(4, 3), "Unsupported src size");
+}
+TEST(Core_Check, testSize_1)
+{
+    try
+    {
+        test_check_Size_1(Size(2, 1));
+        FAIL() << "Unreachable code called";
+    }
+    catch (const cv::Exception& e)
+    {
+        EXPECT_STREQ(e.err.c_str(),
+"> Unsupported src size:\n"
+">     'srcSz == Size(4, 3)'\n"
+"> where\n"
+">     'srcSz' is [2 x 1]\n"
+);
+    }
+    catch (const std::exception& e)
+    {
+        FAIL() << "Unexpected C++ exception: " << e.what();
+    }
+    catch (...)
+    {
+        FAIL() << "Unexpected unknown exception";
+    }
+}
+
+TEST(Core_Allocation, alignedAllocation)
+{
+    // iterate from size=1 to approximate byte size of 8K 32bpp image buffer
+    for (int i = 0; i < 200; i++) {
+        const size_t size = static_cast<size_t>(std::pow(1.091, (double)i));
+        void * const buf = cv::fastMalloc(size);
+        ASSERT_NE((uintptr_t)0, (uintptr_t)buf)
+            << "failed to allocate memory";
+        ASSERT_EQ((uintptr_t)0, (uintptr_t)buf % CV_MALLOC_ALIGN)
+            << "memory not aligned to " << CV_MALLOC_ALIGN;
+        cv::fastFree(buf);
+    }
+}
 
 }} // namespace

@@ -10,7 +10,7 @@
 
 #include "logger.hpp"
 #include "common/gapi_tests_common.hpp"
-#include "opencv2/gapi/gpu/ggpukernel.hpp"
+#include <opencv2/gapi/gpu/ggpukernel.hpp>
 #include "opencl_kernels_test_gapi.hpp"
 
 

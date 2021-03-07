@@ -19,6 +19,15 @@
 }
 
 {
+   GTest-RegisterTests
+   Memcheck:Leak
+   ...
+   fun:RegisterTests
+   ...
+   fun:_ZN7testing14InitGoogleTestEPiPPc
+}
+
+{
    OpenCL
    Memcheck:Cond
    ...
@@ -55,10 +64,10 @@
 }
 
 {
-   glib
+   GTK-css
    Memcheck:Leak
-   fun:*alloc
-   obj:*/libglib*
+   ...
+   fun:gtk_css_provider*
 }
 
 {
@@ -119,4 +128,90 @@
    fun:sws_scale
    ...
    fun:cvWriteFrame_FFMPEG
+}
+
+{
+   GStreamer-orc_program_compile_full
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:orc_program_compile_full
+   ...
+   fun:clone
+}
+
+{
+   GStreamer-orc_program_new_from_static_bytecode
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:orc_program_new_from_static_bytecode
+   ...
+   fun:clone
+}
+
+{
+   GStreamer-matroska-other
+   Memcheck:Leak
+   ...
+   fun:gst*
+   obj:*gstmatroska*
+   ...
+   obj:*glib*
+   fun:start_thread
+   fun:clone
+}
+
+{
+   GStreamer-matroska-gst_riff_create_video_caps
+   Memcheck:Leak
+   ...
+   fun:gst_riff_create_video_caps
+   obj:*gstmatroska*
+   ...
+   fun:clone
+}
+
+
+{
+   GStreamer-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+}
+
+{
+   GStreamer-registry
+   Memcheck:Leak
+   ...
+   fun:gst_update_registry
+}
+
+{
+   GStreamer-plugin_load
+   Memcheck:Leak
+   ...
+   fun:gst_plugin_load_by_name
+}
+
+{
+   GStreamer-separate-threads
+   Memcheck:Leak
+   ...
+   obj:*/libglib*
+   fun:start_thread
+   fun:clone
+}
+
+{
+   clone-unknown-leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   obj:*
+   obj:*
+   fun:start_thread
+   fun:clone
 }

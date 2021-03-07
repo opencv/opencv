@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -48,8 +48,9 @@
 #include <ImfVecAttribute.h>
 
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
+using namespace OPENEXR_IMF_INTERNAL_NAMESPACE;
 
 template <>
 const char *
@@ -61,7 +62,7 @@ V2iAttribute::staticTypeName ()
 
 template <>
 void
-V2iAttribute::writeValueTo (OStream &os, int) const
+V2iAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -70,7 +71,7 @@ V2iAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V2iAttribute::readValueFrom (IStream &is, int, int)
+V2iAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -87,7 +88,7 @@ V2fAttribute::staticTypeName ()
 
 template <>
 void
-V2fAttribute::writeValueTo (OStream &os, int) const
+V2fAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -96,7 +97,7 @@ V2fAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V2fAttribute::readValueFrom (IStream &is, int, int)
+V2fAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -113,7 +114,7 @@ V2dAttribute::staticTypeName ()
 
 template <>
 void
-V2dAttribute::writeValueTo (OStream &os, int) const
+V2dAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -122,7 +123,7 @@ V2dAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V2dAttribute::readValueFrom (IStream &is, int, int)
+V2dAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -139,7 +140,7 @@ V3iAttribute::staticTypeName ()
 
 template <>
 void
-V3iAttribute::writeValueTo (OStream &os, int) const
+V3iAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -149,7 +150,7 @@ V3iAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V3iAttribute::readValueFrom (IStream &is, int, int)
+V3iAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -167,7 +168,7 @@ V3fAttribute::staticTypeName ()
 
 template <>
 void
-V3fAttribute::writeValueTo (OStream &os, int) const
+V3fAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -177,7 +178,7 @@ V3fAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V3fAttribute::readValueFrom (IStream &is, int, int)
+V3fAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -195,7 +196,7 @@ V3dAttribute::staticTypeName ()
 
 template <>
 void
-V3dAttribute::writeValueTo (OStream &os, int) const
+V3dAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &os, int version) const
 {
     Xdr::write <StreamIO> (os, _value.x);
     Xdr::write <StreamIO> (os, _value.y);
@@ -205,7 +206,7 @@ V3dAttribute::writeValueTo (OStream &os, int) const
 
 template <>
 void
-V3dAttribute::readValueFrom (IStream &is, int, int)
+V3dAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &is, int size, int version)
 {
     Xdr::read <StreamIO> (is, _value.x);
     Xdr::read <StreamIO> (is, _value.y);
@@ -213,4 +214,4 @@ V3dAttribute::readValueFrom (IStream &is, int, int)
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT 

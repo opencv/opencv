@@ -2,26 +2,28 @@
 
 [TOC]
 
-# G-API Implementation details {#gapi_impl_header}
+# G-API Implementation details
 
-## Api layer details {#gapi_detail_api}
+Note -- this section is still in progress.
 
-### Expression unrolling {#gapi_detail_expr}
+# API layer {#gapi_detail_api}
 
-### Parameter marshalling {#gapi_detail_params}
+## Expression unrolling {#gapi_detail_expr}
 
-### Operations representation {#gapi_detail_operations}
+## Parameter marshalling {#gapi_detail_params}
 
-## Graph compiler details {#gapi_detail_compiler}
+## Operations representation {#gapi_detail_operations}
 
-### ADE basics {#gapi_detail_ade}
+# Graph compiler {#gapi_detail_compiler}
 
-### Graph model representation {#gapi_detail_gmodel}
+## ADE basics {#gapi_detail_ade}
 
-### G-API metadata and passes {#gapi_detail_meta}
+## Graph model representation {#gapi_detail_gmodel}
 
-## Backends details {#gapi_detail_backends}
+## G-API metadata and passes {#gapi_detail_meta}
 
-### Backend scope of work {#gapi_backend_scope}
+# Backends {#gapi_detail_backends}
 
-### Graph transformation {#gapi_backend_pass}
+## Backend scope of work {#gapi_backend_scope}
+
+## Graph transformation {#gapi_backend_pass}

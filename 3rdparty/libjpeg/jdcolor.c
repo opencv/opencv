@@ -2,7 +2,7 @@
  * jdcolor.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2011-2015 by Guido Vollbeding.
+ * Modified 2011-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -12,6 +12,12 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+
+
+#if RANGE_BITS < 2
+  /* Deliberate syntax err */
+  Sorry, this code requires 2 or more range extension bits.
+#endif
 
 
 /* Private subobject */
@@ -118,28 +124,22 @@ build_ycc_rgb_table (j_decompress_ptr cinfo)
   INT32 x;
   SHIFT_TEMPS
 
-  cconvert->Cr_r_tab = (int *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
-  cconvert->Cb_b_tab = (int *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
-  cconvert->Cr_g_tab = (INT32 *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
-  cconvert->Cb_g_tab = (INT32 *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
+  cconvert->Cr_r_tab = (int *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(int));
+  cconvert->Cb_b_tab = (int *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(int));
+  cconvert->Cr_g_tab = (INT32 *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(INT32));
+  cconvert->Cb_g_tab = (INT32 *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(INT32));
 
   for (i = 0, x = -CENTERJSAMPLE; i <= MAXJSAMPLE; i++, x++) {
     /* i is the actual input pixel value, in the range 0..MAXJSAMPLE */
     /* The Cb or Cr value we are thinking of is x = i - CENTERJSAMPLE */
     /* Cr=>R value is nearest int to 1.402 * x */
-    cconvert->Cr_r_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(1.402) * x + ONE_HALF, SCALEBITS);
+    cconvert->Cr_r_tab[i] = (int) DESCALE(FIX(1.402) * x, SCALEBITS);
     /* Cb=>B value is nearest int to 1.772 * x */
-    cconvert->Cb_b_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(1.772) * x + ONE_HALF, SCALEBITS);
+    cconvert->Cb_b_tab[i] = (int) DESCALE(FIX(1.772) * x, SCALEBITS);
     /* Cr=>G value is scaled-up -0.714136286 * x */
     cconvert->Cr_g_tab[i] = (- FIX(0.714136286)) * x;
     /* Cb=>G value is scaled-up -0.344136286 * x */
@@ -158,28 +158,22 @@ build_bg_ycc_rgb_table (j_decompress_ptr cinfo)
   INT32 x;
   SHIFT_TEMPS
 
-  cconvert->Cr_r_tab = (int *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
-  cconvert->Cb_b_tab = (int *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(int));
-  cconvert->Cr_g_tab = (INT32 *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
-  cconvert->Cb_g_tab = (INT32 *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(MAXJSAMPLE+1) * SIZEOF(INT32));
+  cconvert->Cr_r_tab = (int *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(int));
+  cconvert->Cb_b_tab = (int *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(int));
+  cconvert->Cr_g_tab = (INT32 *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(INT32));
+  cconvert->Cb_g_tab = (INT32 *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, (MAXJSAMPLE+1) * SIZEOF(INT32));
 
   for (i = 0, x = -CENTERJSAMPLE; i <= MAXJSAMPLE; i++, x++) {
     /* i is the actual input pixel value, in the range 0..MAXJSAMPLE */
     /* The Cb or Cr value we are thinking of is x = i - CENTERJSAMPLE */
     /* Cr=>R value is nearest int to 2.804 * x */
-    cconvert->Cr_r_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(2.804) * x + ONE_HALF, SCALEBITS);
+    cconvert->Cr_r_tab[i] = (int) DESCALE(FIX(2.804) * x, SCALEBITS);
     /* Cb=>B value is nearest int to 3.544 * x */
-    cconvert->Cb_b_tab[i] = (int)
-		    RIGHT_SHIFT(FIX(3.544) * x + ONE_HALF, SCALEBITS);
+    cconvert->Cb_b_tab[i] = (int) DESCALE(FIX(3.544) * x, SCALEBITS);
     /* Cr=>G value is scaled-up -1.428272572 * x */
     cconvert->Cr_g_tab[i] = (- FIX(1.428272572)) * x;
     /* Cb=>G value is scaled-up -0.688272572 * x */
@@ -195,6 +189,7 @@ build_bg_ycc_rgb_table (j_decompress_ptr cinfo)
  * Note that we change from noninterleaved, one-plane-per-component format
  * to interleaved-pixel format.  The output buffer is therefore three times
  * as wide as the input buffer.
+ *
  * A starting row offset is provided only for the input buffer.  The caller
  * can easily adjust the passed output_buf value to accommodate any row
  * offset required on that side.
@@ -258,9 +253,8 @@ build_rgb_y_table (j_decompress_ptr cinfo)
   INT32 i;
 
   /* Allocate and fill in the conversion tables. */
-  cconvert->rgb_y_tab = rgb_y_tab = (INT32 *)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(TABLE_SIZE * SIZEOF(INT32)));
+  cconvert->rgb_y_tab = rgb_y_tab = (INT32 *) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, TABLE_SIZE * SIZEOF(INT32));
 
   for (i = 0; i <= MAXJSAMPLE; i++) {
     rgb_y_tab[i+R_Y_OFF] = FIX(0.299) * i;
@@ -280,8 +274,8 @@ rgb_gray_convert (j_decompress_ptr cinfo,
 		  JSAMPARRAY output_buf, int num_rows)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
-  register INT32 * ctab = cconvert->rgb_y_tab;
   register int r, g, b;
+  register INT32 * ctab = cconvert->rgb_y_tab;
   register JSAMPROW outptr;
   register JSAMPROW inptr0, inptr1, inptr2;
   register JDIMENSION col;
@@ -307,6 +301,7 @@ rgb_gray_convert (j_decompress_ptr cinfo,
 
 
 /*
+ * Convert some rows of samples to the output colorspace.
  * [R-G,G,B-G] to [R,G,B] conversion with modulo calculation
  * (inverse color transform).
  * This can be seen as an adaption of the general YCbCr->RGB
@@ -358,8 +353,8 @@ rgb1_gray_convert (j_decompress_ptr cinfo,
 		   JSAMPARRAY output_buf, int num_rows)
 {
   my_cconvert_ptr cconvert = (my_cconvert_ptr) cinfo->cconvert;
-  register INT32 * ctab = cconvert->rgb_y_tab;
   register int r, g, b;
+  register INT32 * ctab = cconvert->rgb_y_tab;
   register JSAMPROW outptr;
   register JSAMPROW inptr0, inptr1, inptr2;
   register JDIMENSION col;
@@ -390,6 +385,7 @@ rgb1_gray_convert (j_decompress_ptr cinfo,
 
 
 /*
+ * Convert some rows of samples to the output colorspace.
  * No colorspace change, but conversion from separate-planes
  * to interleaved representation.
  */
@@ -424,6 +420,7 @@ rgb_convert (j_decompress_ptr cinfo,
 /*
  * Color conversion for no colorspace change: just copy the data,
  * converting from separate-planes to interleaved representation.
+ * We assume out_color_components == num_components.
  */
 
 METHODDEF(void)
@@ -431,20 +428,21 @@ null_convert (j_decompress_ptr cinfo,
 	      JSAMPIMAGE input_buf, JDIMENSION input_row,
 	      JSAMPARRAY output_buf, int num_rows)
 {
-  int ci;
-  register int nc = cinfo->num_components;
   register JSAMPROW outptr;
   register JSAMPROW inptr;
-  register JDIMENSION col;
+  register JDIMENSION count;
+  register int num_comps = cinfo->num_components;
   JDIMENSION num_cols = cinfo->output_width;
+  int ci;
 
   while (--num_rows >= 0) {
-    for (ci = 0; ci < nc; ci++) {
+    /* It seems fastest to make a separate pass for each component. */
+    for (ci = 0; ci < num_comps; ci++) {
       inptr = input_buf[ci][input_row];
       outptr = output_buf[0] + ci;
-      for (col = 0; col < num_cols; col++) {
-	*outptr = *inptr++;	/* needn't bother with GETJSAMPLE() here */
-	outptr += nc;
+      for (count = num_cols; count > 0; count--) {
+	*outptr = *inptr++;	/* don't need GETJSAMPLE() here */
+	outptr += num_comps;
       }
     }
     input_row++;
@@ -498,9 +496,10 @@ gray_rgb_convert (j_decompress_ptr cinfo,
 
 
 /*
- * Adobe-style YCCK->CMYK conversion.
- * We convert YCbCr to R=1-C, G=1-M, and B=1-Y using the same
- * conversion as above, while passing K (black) unchanged.
+ * Convert some rows of samples to the output colorspace.
+ * This version handles Adobe-style YCCK->CMYK conversion,
+ * where we convert YCbCr to R=1-C, G=1-M, and B=1-Y using the
+ * same conversion as above, while passing K (black) unchanged.
  * We assume build_ycc_rgb_table has been called.
  */
 
@@ -571,9 +570,8 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
   my_cconvert_ptr cconvert;
   int ci;
 
-  cconvert = (my_cconvert_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_color_deconverter));
+  cconvert = (my_cconvert_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_color_deconverter));
   cinfo->cconvert = &cconvert->pub;
   cconvert->pub.start_pass = start_pass_dcolor;
 
@@ -601,7 +599,6 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
   default:			/* JCS_UNKNOWN can be anything */
     if (cinfo->num_components < 1)
       ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
-    break;
   }
 
   /* Support color transform only for RGB colorspaces */
@@ -678,19 +675,18 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
 
   case JCS_BG_RGB:
     cinfo->out_color_components = RGB_PIXELSIZE;
-    if (cinfo->jpeg_color_space == JCS_BG_RGB) {
-      switch (cinfo->color_transform) {
-      case JCT_NONE:
-	cconvert->pub.color_convert = rgb_convert;
-	break;
-      case JCT_SUBTRACT_GREEN:
-	cconvert->pub.color_convert = rgb1_rgb_convert;
-	break;
-      default:
-	ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
-      }
-    } else
+    if (cinfo->jpeg_color_space != JCS_BG_RGB)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+    switch (cinfo->color_transform) {
+    case JCT_NONE:
+      cconvert->pub.color_convert = rgb_convert;
+      break;
+    case JCT_SUBTRACT_GREEN:
+      cconvert->pub.color_convert = rgb1_rgb_convert;
+      break;
+    default:
+      ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+    }
     break;
 
   case JCS_CMYK:
@@ -708,14 +704,12 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
     }
     break;
 
-  default:
-    /* Permit null conversion to same output space */
-    if (cinfo->out_color_space == cinfo->jpeg_color_space) {
-      cinfo->out_color_components = cinfo->num_components;
-      cconvert->pub.color_convert = null_convert;
-    } else			/* unsupported non-null conversion */
+  default:		/* permit null conversion to same output space */
+    if (cinfo->out_color_space != cinfo->jpeg_color_space)
+      /* unsupported non-null conversion */
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
-    break;
+    cinfo->out_color_components = cinfo->num_components;
+    cconvert->pub.color_convert = null_convert;
   }
 
   if (cinfo->quantize_colors)

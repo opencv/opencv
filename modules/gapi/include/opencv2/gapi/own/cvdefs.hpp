@@ -9,7 +9,6 @@
 #define OPENCV_GAPI_CV_DEFS_HPP
 
 #if defined(GAPI_STANDALONE)
-
 // Simulate OpenCV definitions taken from various
 // OpenCV interface headers if G-API is built in a
 // standalone mode.
@@ -107,6 +106,10 @@ typedef unsigned short ushort;
 /** 0x3a50 = 11 10 10 01 01 00 00 ~ array of log2(sizeof(arr_type_elem)) */
 #define CV_ELEM_SIZE(type) \
     (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
+
+#ifndef CV_OVERRIDE
+#  define CV_OVERRIDE override
+#endif
 
 // base.h:
 namespace cv

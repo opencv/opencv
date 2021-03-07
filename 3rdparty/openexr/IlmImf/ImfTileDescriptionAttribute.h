@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,32 +42,31 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfAttribute.h>
-#include <ImfTileDescription.h>
+#include "ImfAttribute.h"
+#include "ImfTileDescription.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
-
-typedef TypedAttribute<TileDescription> TileDescriptionAttribute;
+typedef TypedAttribute<OPENEXR_IMF_INTERNAL_NAMESPACE::TileDescription> TileDescriptionAttribute;
 
 template <>
+IMF_EXPORT 
 const char *
 TileDescriptionAttribute::staticTypeName ();
 
 template <>
+IMF_EXPORT 
 void
-TileDescriptionAttribute::writeValueTo (OStream &, int) const;
+TileDescriptionAttribute::writeValueTo (OPENEXR_IMF_INTERNAL_NAMESPACE::OStream &,
+                                        int) const;
 
 template <>
+IMF_EXPORT 
 void
-TileDescriptionAttribute::readValueFrom (IStream &, int, int);
+TileDescriptionAttribute::readValueFrom (OPENEXR_IMF_INTERNAL_NAMESPACE::IStream &,
+                                         int, int);
 
 
-} // namespace Imf
-
-// Metrowerks compiler wants the .cpp file inlined, too
-#ifdef __MWERKS__
-#include <ImfTileDescriptionAttribute.cpp>
-#endif
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
 #endif

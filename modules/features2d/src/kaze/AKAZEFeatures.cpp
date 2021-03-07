@@ -1323,6 +1323,7 @@ void quantized_counting_sort(const float a[], const int n,
                              const float quantum, const int nkeys,
                              int idx[/*n*/], int cum[/*nkeys + 1*/])
 {
+  CV_Assert(nkeys > 0);
   memset(cum, 0, sizeof(cum[0]) * (nkeys + 1));
 
   // Count up the quantized values

@@ -112,6 +112,7 @@ public:
 
     bool train(const Ptr<TrainData>& data, int) CV_OVERRIDE
     {
+        CV_Assert(!data.empty());
         Mat samples = data->getTrainSamples(), labels;
         return trainEM(samples, labels, noArray(), noArray());
     }

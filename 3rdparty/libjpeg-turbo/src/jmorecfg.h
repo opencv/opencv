@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 1997-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009, 2011, 2014-2015, 2018, D. R. Commander.
+ * Copyright (C) 2009, 2011, 2014-2015, 2018, 2020, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -273,9 +273,9 @@ typedef int boolean;
 
 /* Capability options common to encoder and decoder: */
 
-#define DCT_ISLOW_SUPPORTED     /* slow but accurate integer algorithm */
-#define DCT_IFAST_SUPPORTED     /* faster, less accurate integer method */
-#define DCT_FLOAT_SUPPORTED     /* floating-point: accurate, fast on fast HW */
+#define DCT_ISLOW_SUPPORTED     /* accurate integer method */
+#define DCT_IFAST_SUPPORTED     /* less accurate int method [legacy feature] */
+#define DCT_FLOAT_SUPPORTED     /* floating-point method [legacy feature] */
 
 /* Encoder capability options: */
 

@@ -13,7 +13,7 @@
 
 #include <ade/util/filter_range.hpp>
 
-#include "opencv2/gapi/own/assert.hpp" // GAPI_Assert
+#include <opencv2/gapi/own/assert.hpp> // GAPI_Assert
 #include "compiler/passes/helpers.hpp"
 
 namespace {

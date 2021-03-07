@@ -175,8 +175,11 @@ void  RBaseStream::setPos( int pos )
     }
 
     int offset = pos % m_block_size;
+    int old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
+    if (old_block_pos != m_block_pos)
+        readBlock();
 }
 
 

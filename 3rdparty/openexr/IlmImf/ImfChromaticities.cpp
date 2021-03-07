@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2003, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,14 +41,16 @@
 //-----------------------------------------------------------------------------
 
 #include <ImfChromaticities.h>
+#include "ImfNamespace.h"
+#include <string.h>
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
-
-Chromaticities::Chromaticities (const Imath::V2f &red,
-                const Imath::V2f &green,
-                const Imath::V2f &blue,
-                const Imath::V2f &white)
+   
+Chromaticities::Chromaticities (const IMATH_NAMESPACE::V2f &red,
+				const IMATH_NAMESPACE::V2f &green,
+				const IMATH_NAMESPACE::V2f &blue,
+				const IMATH_NAMESPACE::V2f &white)
 :
     red (red),
     green (green),
@@ -58,14 +60,28 @@ Chromaticities::Chromaticities (const Imath::V2f &red,
     // empty
 }
 
+    
+bool
+Chromaticities::operator == (const Chromaticities & c) const
+{
+    return red == c.red && green == c.green && blue == c.blue;
+}
 
-Imath::M44f
+    
+bool
+Chromaticities::operator != (const Chromaticities & c) const
+{
+    return red != c.red || green != c.green || blue != c.blue;
+}
+    
+    
+IMATH_NAMESPACE::M44f
 RGBtoXYZ (const Chromaticities chroma, float Y)
 {
     //
     // For an explanation of how the color conversion matrix is derived,
     // see Roy Hall, "Illumination and Color in Computer Generated Imagery",
-    // Springer-Verlag, 1989, chapter 3, "Perceptual Response"; and
+    // Springer-Verlag, 1989, chapter 3, "Perceptual Response"; and 
     // Charles A. Poynton, "A Technical Introduction to Digital Video",
     // John Wiley & Sons, 1996, chapter 7, "Color science for video".
     //
@@ -82,32 +98,32 @@ RGBtoXYZ (const Chromaticities chroma, float Y)
     //
 
     float d = chroma.red.x   * (chroma.blue.y  - chroma.green.y) +
-          chroma.blue.x  * (chroma.green.y - chroma.red.y) +
-          chroma.green.x * (chroma.red.y   - chroma.blue.y);
+	      chroma.blue.x  * (chroma.green.y - chroma.red.y) +
+	      chroma.green.x * (chroma.red.y   - chroma.blue.y);
 
     float Sr = (X * (chroma.blue.y - chroma.green.y) -
-            chroma.green.x * (Y * (chroma.blue.y - 1) +
-        chroma.blue.y  * (X + Z)) +
-        chroma.blue.x  * (Y * (chroma.green.y - 1) +
-        chroma.green.y * (X + Z))) / d;
+	        chroma.green.x * (Y * (chroma.blue.y - 1) +
+		chroma.blue.y  * (X + Z)) +
+		chroma.blue.x  * (Y * (chroma.green.y - 1) +
+		chroma.green.y * (X + Z))) / d;
 
     float Sg = (X * (chroma.red.y - chroma.blue.y) +
-        chroma.red.x   * (Y * (chroma.blue.y - 1) +
-        chroma.blue.y  * (X + Z)) -
-        chroma.blue.x  * (Y * (chroma.red.y - 1) +
-        chroma.red.y   * (X + Z))) / d;
+		chroma.red.x   * (Y * (chroma.blue.y - 1) +
+		chroma.blue.y  * (X + Z)) -
+		chroma.blue.x  * (Y * (chroma.red.y - 1) +
+		chroma.red.y   * (X + Z))) / d;
 
     float Sb = (X * (chroma.green.y - chroma.red.y) -
-        chroma.red.x   * (Y * (chroma.green.y - 1) +
-        chroma.green.y * (X + Z)) +
-        chroma.green.x * (Y * (chroma.red.y - 1) +
-        chroma.red.y   * (X + Z))) / d;
+		chroma.red.x   * (Y * (chroma.green.y - 1) +
+		chroma.green.y * (X + Z)) +
+		chroma.green.x * (Y * (chroma.red.y - 1) +
+		chroma.red.y   * (X + Z))) / d;
 
     //
     // Assemble the matrix
     //
 
-    Imath::M44f M;
+    IMATH_NAMESPACE::M44f M;
 
     M[0][0] = Sr * chroma.red.x;
     M[0][1] = Sr * chroma.red.y;
@@ -125,11 +141,11 @@ RGBtoXYZ (const Chromaticities chroma, float Y)
 }
 
 
-Imath::M44f
+IMATH_NAMESPACE::M44f
 XYZtoRGB (const Chromaticities chroma, float Y)
 {
     return RGBtoXYZ (chroma, Y).inverse();
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

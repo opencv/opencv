@@ -1,5 +1,5 @@
 /**
- * @file houghclines.cpp
+ * @file houghlines.cpp
  * @brief This program demonstrates line finding with the Hough transform
  */
 
@@ -16,11 +16,11 @@ int main(int argc, char** argv)
     Mat dst, cdst, cdstP;
 
     //![load]
-    const char* default_file = "../data/sudoku.png";
+    const char* default_file = "sudoku.png";
     const char* filename = argc >=2 ? argv[1] : default_file;
 
     // Loads an image
-    Mat src = imread( filename, IMREAD_GRAYSCALE );
+    Mat src = imread( samples::findFile( filename ), IMREAD_GRAYSCALE );
 
     // Check if image is loaded fine
     if(src.empty()){

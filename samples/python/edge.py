@@ -23,9 +23,7 @@ import video
 import sys
 
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     try:
         fn = sys.argv[1]
     except:
@@ -40,7 +38,7 @@ if __name__ == '__main__':
 
     cap = video.create_capture(fn)
     while True:
-        flag, img = cap.read()
+        _flag, img = cap.read()
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         thrs1 = cv.getTrackbarPos('thrs1', 'edge')
         thrs2 = cv.getTrackbarPos('thrs2', 'edge')
@@ -52,4 +50,11 @@ if __name__ == '__main__':
         ch = cv.waitKey(5)
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

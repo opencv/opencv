@@ -11,9 +11,18 @@ Implementation of Scale layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
+#include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/scale_shift.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -44,14 +53,17 @@ public:
     {
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        hasWeights = blobs.size() == 2 || (blobs.size() == 1 && !hasBias);
+        hasWeights = blobs.size() == 2 || (blobs.size() <= 1 && !hasBias);
         CV_Assert((inputs.size() == 2 && blobs.empty()) || blobs.size() == (int)hasWeights + (int)hasBias);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && axis == 1);
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_HALIDE ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && axis == 1 && !blobs.empty()) ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && axis > 0);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -75,10 +87,9 @@ public:
         Mat &outBlob = outputs[0];
         // There is a mode when we multiply a first blob by a second one
         // instead of trainable weights.
-        Mat weights = blobs.empty() ? inputs[1] : (hasWeights ? blobs[0] : Mat());
-        Mat bias = hasBias ? blobs.back().reshape(1, 1) : Mat();
-        if (!weights.empty())
-            weights = weights.reshape(1, 1);
+        Mat weights = hasWeights ? (blobs.empty() ? inputs[1] : blobs[0]).reshape(1, 1) : Mat();;
+        Mat bias = hasBias ? (blobs.empty() ? inputs[1] : blobs.back()).reshape(1, 1) : Mat();
+
         MatShape inpShape = shape(inpBlob);
         const int numWeights = !weights.empty() ? weights.total() : bias.total();
         CV_Assert(numWeights != 0);
@@ -138,6 +149,63 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(!blobs.empty() || inputs.size() == 2);
+
+        auto weightsMat = Mat(), biasMat = Mat();
+
+        cuda4dnn::ScaleShiftConfiguration config;
+        if (hasWeights)
+        {
+            if (blobs.empty())
+            {
+                config.scaleMode = cuda4dnn::ScaleShiftConfiguration::OpMode::UNTRAINABLE;
+            }
+            else
+            {
+                weightsMat = blobs[0];
+                config.scaleMode = cuda4dnn::ScaleShiftConfiguration::OpMode::TRAINABLE;
+            }
+        }
+        else
+        {
+            config.scaleMode = cuda4dnn::ScaleShiftConfiguration::OpMode::NONE;
+        }
+
+        if (hasBias)
+        {
+            if(blobs.empty())
+            {
+                config.shiftMode = cuda4dnn::ScaleShiftConfiguration::OpMode::UNTRAINABLE;
+            }
+            else
+            {
+                /* if the weights are provided, bias will be in blobs[1]; otherwise, it will be in blobs[0]
+                 * in either case, it is at the end of the blobs vector => bias = blobs.back()
+                 */
+                biasMat = blobs.back();
+                config.shiftMode = cuda4dnn::ScaleShiftConfiguration::OpMode::TRAINABLE;
+            }
+        }
+        else
+        {
+            config.shiftMode = cuda4dnn::ScaleShiftConfiguration::OpMode::NONE;
+        }
+
+        config.axis = axis;
+
+        return make_cuda_node<cuda4dnn::ScaleShiftOp>(preferableTarget, std::move(context->stream), config, weightsMat, biasMat);
+    }
+#endif
+
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
@@ -194,10 +262,9 @@ public:
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::Layer l = InferenceEngine::Builder::ScaleShiftLayer(name);
 
         CV_Assert(!blobs.empty());
@@ -208,53 +275,73 @@ public:
         }
         else
         {
-            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    {numChannels});
+            auto weights = InferenceEngine::make_shared_blob<float>({
+                               InferenceEngine::Precision::FP32, {(size_t)numChannels},
+                               InferenceEngine::Layout::C
+                           });
             weights->allocate();
-
-            std::vector<float> ones(numChannels, 1);
-            weights->set(ones);
+            float* buf = weights->buffer().as<float*>();
+            std::fill(buf, buf + numChannels, 1);
             addConstantData("weights", weights, l);
         }
         if (hasBias)
             addConstantData("biases", wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C), l);
         return Ptr<BackendNode>(new InfEngineBackendNode(l));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "ScaleShift";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::ScaleShiftLayer> ieLayer(new InferenceEngine::ScaleShiftLayer(lp));
+    }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
-        CV_Assert(!blobs.empty());
-        const size_t numChannels = blobs[0].total();
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto ieInpNode0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode1 = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+
+        size_t numChannels = 1;
+        if (blobs.empty())
+            for (const size_t& dim : ieInpNode1->get_shape())
+                numChannels *= dim;
+        else
+            numChannels = blobs[0].total();
+
+        std::vector<size_t> shape(ieInpNode0->get_shape().size(), 1);
+        int cAxis = normalize_axis(axis, shape.size());
+        shape[cAxis] = numChannels;
+
+        auto node = ieInpNode0;
         if (hasWeights)
         {
-            ieLayer->_weights = wrapToInfEngineBlob(blobs[0], {numChannels}, InferenceEngine::Layout::C);
-        }
-        else
-        {
-            auto weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                    {numChannels});
-            weights->allocate();
+            auto weight = blobs.empty() ? ieInpNode1 :
+                          std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
 
-            std::vector<float> ones(numChannels, 1);
-            weights->set(ones);
-            ieLayer->_weights = weights;
-        }
-        if (hasBias)
-            ieLayer->_biases = wrapToInfEngineBlob(blobs.back(), {numChannels}, InferenceEngine::Layout::C);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+            node = std::make_shared<ngraph::op::v1::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#else
+            node = std::make_shared<ngraph::op::v0::Multiply>(node, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
+        }
+        if (hasBias || !hasWeights)
+        {
+            std::shared_ptr<ngraph::Node> bias;
+            if (hasBias)
+            {
+                bias = blobs.empty() ? ieInpNode1 :
+                       std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                              ngraph::Shape(shape), blobs.back().data);
+            }
+            else
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                              ngraph::Shape(shape), std::vector<float>(numChannels, 0).data());
+            node = std::make_shared<ngraph::op::v1::Add>(node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
+#endif  // HAVE_DNN_NGRAPH
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {
-        scale = hasWeights ? blobs[0] : Mat();
-        shift = hasBias ? blobs.back() : Mat();
+        scale = (hasWeights && !blobs.empty()) ? blobs[0] : Mat();
+        shift = (hasBias && !blobs.empty()) ? blobs.back() : Mat();
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
@@ -288,6 +375,124 @@ Ptr<Layer> ShiftLayer::create(const LayerParams& params)
     scaleParams.set("bias_term", true);
     scaleParams.set("axis", 0);
     return Ptr<ScaleLayer>(new ScaleLayerImpl(scaleParams));
+}
+
+class DataAugmentationLayerImpl CV_FINAL : public DataAugmentationLayer
+{
+public:
+    DataAugmentationLayerImpl(const LayerParams& params)
+    {
+        setParamsFrom(params);
+        recompute_mean = params.get<int>("recompute_mean", 1);
+        CV_CheckGT(recompute_mean, 0, "");
+        mean_per_pixel = params.get<bool>("mean_per_pixel", false);
+    }
+
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert_N(inputs.size() == 1, blobs.size() == 3);
+        CV_Assert_N(blobs[0].total() == 1,
+                    blobs[2].total() == inputs[0][1]);
+
+        outputs.assign(1, inputs[0]);
+        return true;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        CV_Assert_N(outputs.size() == 1, blobs.size() == 3, inputs.size() == 1);
+        int num_iter = 0;
+
+        float* inpData = inputs[0].ptr<float>();
+        float* outData = outputs[0].ptr<float>();
+
+        Mat data_mean_cpu = blobs[1].clone();
+        Mat mean_resize = Mat(inputs[0].size[3], inputs[0].size[2], CV_32FC3);
+        Mat mean_3d = Mat(data_mean_cpu.size[3], data_mean_cpu.size[2], CV_32FC3, data_mean_cpu.ptr<float>(0));
+        resize(mean_3d, mean_resize, Size(inputs[0].size[3], inputs[0].size[2]));
+        int new_size[] = {1, mean_resize.channels(), mean_resize.cols, mean_resize.rows};
+        Mat data_mean_cpu_resize = mean_resize.reshape(1, *new_size);
+        Mat data_mean_per_channel_cpu = blobs[2].clone();
+
+        const int numWeights = data_mean_cpu_resize.total();
+        CV_Assert(numWeights != 0);
+
+        ++num_iter;
+        if (num_iter <= recompute_mean)
+        {
+            data_mean_cpu_resize *= (num_iter - 1);
+            const int batch = inputs[0].size[0];
+            float alpha = 1.0 / batch;
+
+            for (int i = 0; i < batch; ++i)
+            {
+                Mat inpSlice(1, numWeights, CV_32F, inpData);
+                inpSlice = alpha * inpSlice;
+
+                add(data_mean_cpu_resize.reshape(1, 1), inpSlice, data_mean_cpu_resize.reshape(1, 1));
+                inpData += numWeights;
+            }
+            data_mean_cpu_resize *= (1.0 / num_iter);
+
+            int newsize[] = {inputs[0].size[1], (int)inputs[0].total(2)};
+            reduce(data_mean_cpu_resize.reshape(1, 2, &newsize[0]), data_mean_per_channel_cpu, 1, REDUCE_SUM, CV_32F);
+
+            int area = inputs[0].total(2);
+            data_mean_per_channel_cpu *= (1.0 / area);
+        }
+
+        MatShape inpShape = shape(inputs[0]);
+
+        inpData = inputs[0].ptr<float>();
+        if (mean_per_pixel)
+        {
+            int numSlices = inputs[0].size[0];
+            for (int i = 0; i < numSlices; ++i)
+            {
+                Mat inpSlice(1, numWeights, CV_32F, inpData);
+                Mat outSlice(1, numWeights, CV_32F, outData);
+
+                add(inpSlice, (-1) * data_mean_cpu_resize, outSlice);
+                inpData += numWeights;
+                outData += numWeights;
+            }
+        }
+        else
+        {
+            int numSlices = inpShape[1];
+            int count = numWeights / numSlices;
+
+            for (int i = 0; i < numSlices; ++i)
+            {
+                Mat inpSlice(1, count, CV_32F, inpData);
+                Mat outSlice(1, count, CV_32F, outData);
+                float coeff = data_mean_per_channel_cpu.reshape(1, 1).at<float>(0, i);
+                outSlice = inpSlice - coeff;
+
+                inpData += count;
+                outData += count;
+            }
+        }
+    }
+
+private:
+    int recompute_mean;
+    bool mean_per_pixel;
+};
+
+Ptr<DataAugmentationLayer> DataAugmentationLayer::create(const LayerParams& params)
+{
+    return Ptr<DataAugmentationLayer>(new DataAugmentationLayerImpl(params));
 }
 
 }  // namespace dnn

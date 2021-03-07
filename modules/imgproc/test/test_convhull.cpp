@@ -1085,6 +1085,87 @@ int CV_MinCircleTest2::validate_test_results( int test_case_idx )
 }
 
 /****************************************************************************************\
+*                                 minEnclosingCircle Test 3                              *
+\****************************************************************************************/
+
+TEST(Imgproc_minEnclosingCircle, basic_test)
+{
+    vector<Point2f> pts;
+    pts.push_back(Point2f(0, 0));
+    pts.push_back(Point2f(10, 0));
+    pts.push_back(Point2f(5, 1));
+    const float EPS = 1.0e-3f;
+    Point2f center;
+    float radius;
+
+    // pts[2] is within the circle with diameter pts[0] - pts[1].
+    //        2
+    // 0             1
+    // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // pts[2] is on the circle with diameter pts[0] - pts[1].
+    //  2
+    // 0 1
+    pts[2] = Point2f(5, 5);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // pts[2] is outside the circle with diameter pts[0] - pts[1].
+    //   2
+    //
+    //
+    // 0   1
+    // NB: The triangle is acute, so all 3 points are on the circle.
+    pts[2] = Point2f(5, 10);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 3.75, EPS);
+    EXPECT_NEAR(6.25f, radius, EPS);
+
+    // The 3 points are colinear.
+    pts[2] = Point2f(3, 0);
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // 2 points are the same.
+    pts[2] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 5, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(5, radius, EPS);
+
+    // 3 points are the same.
+    pts[0] = pts[1];
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 10, EPS);
+    EXPECT_NEAR(center.y, 0, EPS);
+    EXPECT_NEAR(0, radius, EPS);
+}
+
+TEST(Imgproc_minEnclosingCircle, regression_16051) {
+    vector<Point2f> pts;
+    pts.push_back(Point2f(85, 1415));
+    pts.push_back(Point2f(87, 1415));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(89, 1414));
+    pts.push_back(Point2f(87, 1412));
+    Point2f center;
+    float radius;
+    minEnclosingCircle(pts, center, radius);
+    EXPECT_NEAR(center.x, 86.9f, 1e-3);
+    EXPECT_NEAR(center.y, 1414.1f, 1e-3);
+    EXPECT_NEAR(2.1024551f, radius, 1e-3);
+}
+
+/****************************************************************************************\
 *                                   Perimeter Test                                     *
 \****************************************************************************************/
 
@@ -1609,6 +1690,8 @@ int CV_FitLineTest::validate_test_results( int test_case_idx )
     int k, max_k = 0;
     double vec_diff = 0, t;
 
+    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << std::endl;
+
     for( k = 0; k < dims*2; k++ )
     {
         if( cvIsNaN(line[k]) || cvIsInf(line[k]) )
@@ -2037,6 +2120,269 @@ INSTANTIATE_TEST_CASE_P(Imgproc, ConvexityDefects_regression_5908,
                 testing::Bool(),
                 testing::Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
         ));
+
+TEST(Imgproc_FitLine, regression_15083)
+{
+    int points2i_[] = {
+        432, 654,
+        370, 656,
+        390, 656,
+        410, 656,
+        348, 658
+    };
+    Mat points(5, 1, CV_32SC2, points2i_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_L1, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[0]), fabs(lineParam[1]) * 4) << lineParam;
+}
+
+TEST(Imgproc_FitLine, regression_4903)
+{
+    float points2f_[] = {
+        1224.0, 576.0,
+        1234.0, 683.0,
+        1215.0, 471.0,
+        1184.0, 137.0,
+        1079.0, 377.0,
+        1239.0, 788.0,
+    };
+    Mat points(6, 1, CV_32FC2, points2f_);
+
+    Vec4f lineParam;
+    fitLine(points, lineParam, DIST_WELSCH, 0, 0.01, 0.01);
+    EXPECT_GE(fabs(lineParam[1]), fabs(lineParam[0]) * 4) << lineParam;
+}
+
+#if 0
+#define DRAW(x) x
+#else
+#define DRAW(x)
+#endif
+
+// the Python test by @hannarud is converted to C++; see the issue #4539
+TEST(Imgproc_ConvexityDefects, ordering_4539)
+{
+    int contour[][2] =
+    {
+        {26,  9}, {25, 10}, {24, 10}, {23, 10}, {22, 10}, {21, 10}, {20, 11}, {19, 11}, {18, 11}, {17, 12},
+        {17, 13}, {18, 14}, {18, 15}, {18, 16}, {18, 17}, {19, 18}, {19, 19}, {20, 20}, {21, 21}, {21, 22},
+        {22, 23}, {22, 24}, {23, 25}, {23, 26}, {24, 27}, {25, 28}, {26, 29}, {27, 30}, {27, 31}, {28, 32},
+        {29, 32}, {30, 33}, {31, 34}, {30, 35}, {29, 35}, {30, 35}, {31, 34}, {32, 34}, {33, 34}, {34, 33},
+        {35, 32}, {35, 31}, {35, 30}, {36, 29}, {37, 28}, {37, 27}, {38, 26}, {39, 25}, {40, 24}, {40, 23},
+        {41, 22}, {42, 21}, {42, 20}, {42, 19}, {43, 18}, {43, 17}, {44, 16}, {45, 15}, {45, 14}, {46, 13},
+        {46, 12}, {45, 11}, {44, 11}, {43, 11}, {42, 10}, {41, 10}, {40,  9}, {39,  9}, {38,  9}, {37,  9},
+        {36,  9}, {35,  9}, {34,  9}, {33,  9}, {32,  9}, {31,  9}, {30,  9}, {29,  9}, {28,  9}, {27,  9}
+    };
+    int npoints = (int)(sizeof(contour)/sizeof(contour[0][0])/2);
+    Mat contour_(1, npoints, CV_32SC2, contour);
+    vector<Point> hull;
+    vector<int> hull_ind;
+    vector<Vec4i> defects;
+
+    // first, check the original contour as-is, without intermediate fillPoly/drawContours.
+    convexHull(contour_, hull_ind, false, false);
+    EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+
+    int scale = 20;
+    contour_ *= (double)scale;
+
+    Mat canvas_gray(Size(60*scale, 45*scale), CV_8U, Scalar::all(0));
+    const Point* ptptr = contour_.ptr<Point>();
+    fillPoly(canvas_gray, &ptptr, &npoints, 1, Scalar(255, 255, 255));
+
+    vector<vector<Point> > contours;
+    findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    convexHull(contours[0], hull_ind, false, false);
+
+    // the original contour contains self-intersections,
+    // therefore convexHull does not return a monotonous sequence of points
+    // and therefore convexityDefects throws an exception
+    EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+
+#if 1
+    // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
+    // so that the self-repeating points are not self-repeating anymore
+    dilate(canvas_gray, canvas_gray, Mat());
+#else
+    // another popular technique to eliminate such thin "hair" is to use morphological "close" operation,
+    // which is erode() + dilate()
+    erode(canvas_gray, canvas_gray, Mat());
+    dilate(canvas_gray, canvas_gray, Mat());
+#endif
+
+    // after the "fix", the newly retrieved contour should not have self-intersections,
+    // and everything should work well
+    findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
+    convexHull(contours[0], hull, false, true);
+    convexHull(contours[0], hull_ind, false, false);
+
+    DRAW(Mat canvas(Size(60*scale, 45*scale), CV_8UC3, Scalar::all(0));
+        drawContours(canvas, contours, -1, Scalar(255, 255, 255), -1));
+
+    size_t nhull = hull.size();
+    ASSERT_EQ( nhull, hull_ind.size() );
+
+    if( nhull > 2 )
+    {
+        bool initial_lt = hull_ind[0] < hull_ind[1];
+        for( size_t i = 0; i < nhull; i++ )
+        {
+            int ind = hull_ind[i];
+            Point pt = contours[0][ind];
+
+            ASSERT_EQ(pt, hull[i]);
+            if( i > 0 )
+            {
+                // check that the convex hull indices are monotone
+                if( initial_lt )
+                {
+                    ASSERT_LT(hull_ind[i-1], hull_ind[i]);
+                }
+                else
+                {
+                    ASSERT_GT(hull_ind[i-1], hull_ind[i]);
+                }
+            }
+            DRAW(circle(canvas, pt, 7, Scalar(180, 0, 180), -1, LINE_AA);
+                putText(canvas, format("%d (%d)", (int)i, ind), pt+Point(15, 0), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(200, 0, 200), 1, LINE_AA));
+            //printf("%d. ind=%d, pt=(%d, %d)\n", (int)i, ind, pt.x, pt.y);
+        }
+    }
+
+    convexityDefects(contours[0], hull_ind, defects);
+
+    for(size_t i = 0; i < defects.size(); i++ )
+    {
+        Vec4i d = defects[i];
+        //printf("defect %d. start=%d, end=%d, farthest=%d, depth=%d\n", (int)i, d[0], d[1], d[2], d[3]);
+        EXPECT_LT(d[0], d[1]);
+        EXPECT_LE(d[0], d[2]);
+        EXPECT_LE(d[2], d[1]);
+
+        DRAW(Point start = contours[0][d[0]];
+             Point end = contours[0][d[1]];
+             Point far = contours[0][d[2]];
+             line(canvas, start, end, Scalar(255, 255, 128), 3, LINE_AA);
+             line(canvas, start, far, Scalar(255, 150, 255), 3, LINE_AA);
+             line(canvas, end, far, Scalar(255, 150, 255), 3, LINE_AA);
+             circle(canvas, start, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, end, 7, Scalar(0, 0, 255), -1, LINE_AA);
+             circle(canvas, far, 7, Scalar(255, 0, 0), -1, LINE_AA));
+    }
+
+    DRAW(imshow("defects", canvas);
+         waitKey());
+}
+
+#undef DRAW
+
+TEST(Imgproc_ConvexHull, overflow)
+{
+    std::vector<Point> points;
+    std::vector<Point2f> pointsf;
+
+    points.push_back(Point(14763, 2890));
+    points.push_back(Point(14388, 72088));
+    points.push_back(Point(62810, 72274));
+    points.push_back(Point(63166, 3945));
+    points.push_back(Point(56782, 3945));
+    points.push_back(Point(56763, 3077));
+    points.push_back(Point(34666, 2965));
+    points.push_back(Point(34547, 2953));
+    points.push_back(Point(34508, 2866));
+    points.push_back(Point(34429, 2965));
+
+    size_t i, n = points.size();
+    for( i = 0; i < n; i++ )
+        pointsf.push_back(Point2f(points[i]));
+
+    std::vector<int> hull;
+    std::vector<int> hullf;
+
+    convexHull(points, hull, false, false);
+    convexHull(pointsf, hullf, false, false);
+
+    ASSERT_EQ(hull, hullf);
+}
+
+static
+bool checkMinAreaRect(const RotatedRect& rr, const Mat& c, double eps = 0.5f)
+{
+    int N = c.rows;
+
+    Mat rr_pts;
+    boxPoints(rr, rr_pts);
+
+    double maxError = 0.0;
+    int nfailed = 0;
+    for (int i = 0; i < N; i++)
+    {
+        double d = pointPolygonTest(rr_pts, c.at<Point2f>(i), true);
+        maxError = std::max(-d, maxError);
+        if (d < -eps)
+            nfailed++;
+    }
+
+    if (nfailed)
+        std::cout << "nfailed=" << nfailed << " (total=" << N << ")   maxError=" << maxError << std::endl;
+    return nfailed == 0;
+}
+
+TEST(Imgproc_minAreaRect, reproducer_18157)
+{
+    const int N = 168;
+    float pts_[N][2] = {
+        { 1903, 266 }, { 1897, 267 }, { 1893, 268 }, { 1890, 269 },
+        { 1878, 275 }, { 1875, 277 }, { 1872, 279 }, { 1868, 282 },
+        { 1862, 287 }, { 1750, 400 }, { 1748, 402 }, { 1742, 407 },
+        { 1742, 408 }, { 1740, 410 }, { 1738, 412 }, { 1593, 558 },
+        { 1590, 560 }, { 1588, 562 }, { 1586, 564 }, { 1580, 570 },
+        { 1443, 709 }, { 1437, 714 }, { 1435, 716 }, { 1304, 848 },
+        { 1302, 850 }, { 1292, 860 }, { 1175, 979 }, { 1172, 981 },
+        { 1049, 1105 }, { 936, 1220 }, { 933, 1222 }, { 931, 1224 },
+        { 830, 1326 }, { 774, 1383 }, { 769, 1389 }, { 766, 1393 },
+        { 764, 1396 }, { 762, 1399 }, { 760, 1402 }, { 757, 1408 },
+        { 757, 1410 }, { 755, 1413 }, { 754, 1416 }, { 753, 1420 },
+        { 752, 1424 }, { 752, 1442 }, { 753, 1447 }, { 754, 1451 },
+        { 755, 1454 }, { 757, 1457 }, { 757, 1459 }, { 761, 1467 },
+        { 763, 1470 }, { 765, 1473 }, { 767, 1476 }, { 771, 1481 },
+        { 779, 1490 }, { 798, 1510 }, { 843, 1556 }, { 847, 1560 },
+        { 851, 1564 }, { 863, 1575 }, { 907, 1620 }, { 909, 1622 },
+        { 913, 1626 }, { 1154, 1866 }, { 1156, 1868 }, { 1158, 1870 },
+        { 1207, 1918 }, { 1238, 1948 }, { 1252, 1961 }, { 1260, 1968 },
+        { 1264, 1971 }, { 1268, 1974 }, { 1271, 1975 }, { 1273, 1977 },
+        { 1283, 1982 }, { 1286, 1983 }, { 1289, 1984 }, { 1294, 1985 },
+        { 1300, 1986 }, { 1310, 1986 }, { 1316, 1985 }, { 1320, 1984 },
+        { 1323, 1983 }, { 1326, 1982 }, { 1338, 1976 }, { 1341, 1974 },
+        { 1344, 1972 }, { 1349, 1968 }, { 1358, 1960 }, { 1406, 1911 },
+        { 1421, 1897 }, { 1624, 1693 }, { 1788, 1528 }, { 1790, 1526 },
+        { 1792, 1524 }, { 1794, 1522 }, { 1796, 1520 }, { 1798, 1518 },
+        { 1800, 1516 }, { 1919, 1396 }, { 1921, 1394 }, { 2038, 1275 },
+        { 2047, 1267 }, { 2048, 1265 }, { 2145, 1168 }, { 2148, 1165 },
+        { 2260, 1052 }, { 2359, 952 }, { 2434, 876 }, { 2446, 863 },
+        { 2450, 858 }, { 2453, 854 }, { 2455, 851 }, { 2457, 846 },
+        { 2459, 844 }, { 2460, 842 }, { 2460, 840 }, { 2462, 837 },
+        { 2463, 834 }, { 2464, 830 }, { 2465, 825 }, { 2465, 809 },
+        { 2464, 804 }, { 2463, 800 }, { 2462, 797 }, { 2461, 794 },
+        { 2456, 784 }, { 2454, 781 }, { 2452, 778 }, { 2450, 775 },
+        { 2446, 770 }, { 2437, 760 }, { 2412, 734 }, { 2410, 732 },
+        { 2408, 730 }, { 2382, 704 }, { 2380, 702 }, { 2378, 700 },
+        { 2376, 698 }, { 2372, 694 }, { 2370, 692 }, { 2368, 690 },
+        { 2366, 688 }, { 2362, 684 }, { 2360, 682 }, { 2252, 576 },
+        { 2250, 573 }, { 2168, 492 }, { 2166, 490 }, { 2085, 410 },
+        { 2026, 352 }, { 1988, 315 }, { 1968, 296 }, { 1958, 287 },
+        { 1953, 283 }, { 1949, 280 }, { 1946, 278 }, { 1943, 276 },
+        { 1940, 274 }, { 1936, 272 }, { 1934, 272 }, { 1931, 270 },
+        { 1928, 269 }, { 1925, 268 }, { 1921, 267 }, { 1915, 266 }
+    };
+
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+}
 
 }} // namespace
 /* End of file. */

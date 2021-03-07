@@ -26,18 +26,18 @@ using namespace cv;
 
 int main( int argc, char *argv[] )
 {
-    CommandLineParser parser( argc, argv, "{@input | ../data/HappyFish.jpg | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ), IMREAD_COLOR );
+    CommandLineParser parser( argc, argv, "{@input | HappyFish.jpg | input image}" );
+    Mat src = imread( samples::findFile( parser.get<String>( "@input" ) ), IMREAD_COLOR );
     if ( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;
         cout << "Usage: " << argv[0] << " <Input image>" << endl;
-        return -1;
+        return EXIT_FAILURE;
     }
-    Mat gray = Mat( src.size(), CV_8UC1 );
-    Mat color_boost = Mat( src.size(), CV_8UC3 );
 
+    Mat gray, color_boost;
     decolor( src, gray, color_boost );
+    imshow( "Source Image", src );
     imshow( "grayscale", gray );
     imshow( "color_boost", color_boost );
     waitKey(0);

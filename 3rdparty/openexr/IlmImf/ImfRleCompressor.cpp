@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -40,124 +40,13 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ImfRleCompressor.h>
-#include <ImfCheckedArithmetic.h>
+#include "ImfRleCompressor.h"
+#include "ImfCheckedArithmetic.h"
+#include "ImfRle.h"
 #include "Iex.h"
+#include "ImfNamespace.h"
 
-namespace Imf {
-namespace {
-
-const int MIN_RUN_LENGTH = 3;
-const int MAX_RUN_LENGTH = 127;
-
-
-//
-// Compress an array of bytes, using run-length encoding,
-// and return the length of the compressed data.
-//
-
-int
-rleCompress (int inLength, const char in[], signed char out[])
-{
-    const char *inEnd = in + inLength;
-    const char *runStart = in;
-    const char *runEnd = in + 1;
-    signed char *outWrite = out;
-
-    while (runStart < inEnd)
-    {
-    while (runEnd < inEnd &&
-           *runStart == *runEnd &&
-           runEnd - runStart - 1 < MAX_RUN_LENGTH)
-    {
-        ++runEnd;
-    }
-
-    if (runEnd - runStart >= MIN_RUN_LENGTH)
-    {
-        //
-        // Compressable run
-        //
-
-        *outWrite++ = (runEnd - runStart) - 1;
-        *outWrite++ = *(signed char *) runStart;
-        runStart = runEnd;
-    }
-    else
-    {
-        //
-        // Uncompressable run
-        //
-
-        while (runEnd < inEnd &&
-           ((runEnd + 1 >= inEnd ||
-             *runEnd != *(runEnd + 1)) ||
-            (runEnd + 2 >= inEnd ||
-             *(runEnd + 1) != *(runEnd + 2))) &&
-           runEnd - runStart < MAX_RUN_LENGTH)
-        {
-        ++runEnd;
-        }
-
-        *outWrite++ = runStart - runEnd;
-
-        while (runStart < runEnd)
-        {
-        *outWrite++ = *(signed char *) (runStart++);
-        }
-    }
-
-    ++runEnd;
-    }
-
-    return outWrite - out;
-}
-
-
-//
-// Uncompress an array of bytes compressed with rleCompress().
-// Returns the length of the oncompressed data, or 0 if the
-// length of the uncompressed data would be more than maxLength.
-//
-
-int
-rleUncompress (int inLength, int maxLength, const signed char in[], char out[])
-{
-    char *outStart = out;
-
-    while (inLength > 0)
-    {
-    if (*in < 0)
-    {
-        int count = -((int)*in++);
-        inLength -= count + 1;
-
-        if (0 > (maxLength -= count))
-        return 0;
-
-        while (count-- > 0)
-        *out++ = *(char *) (in++);
-    }
-    else
-    {
-        int count = *in++;
-        inLength -= 2;
-
-        if (0 > (maxLength -= count + 1))
-        return 0;
-
-        while (count-- >= 0)
-        *out++ = *(char *) in;
-
-        in++;
-    }
-    }
-
-    return out - outStart;
-}
-
-} // namespace
-
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
 
 RleCompressor::RleCompressor (const Header &hdr, size_t maxScanLineSize):
     Compressor (hdr),
@@ -190,18 +79,18 @@ RleCompressor::numScanLines () const
 
 int
 RleCompressor::compress (const char *inPtr,
-             int inSize,
-             int /*minY*/,
-             const char *&outPtr)
+			 int inSize,
+			 int minY,
+			 const char *&outPtr)
 {
     //
-    // Special case ­- empty input buffer
+    // Special case ï¿½- empty input buffer
     //
 
     if (inSize == 0)
     {
-    outPtr = _outBuffer;
-    return 0;
+	outPtr = _outBuffer;
+	return 0;
     }
 
     //
@@ -209,22 +98,22 @@ RleCompressor::compress (const char *inPtr,
     //
 
     {
-    char *t1 = _tmpBuffer;
-    char *t2 = _tmpBuffer + (inSize + 1) / 2;
-    const char *stop = inPtr + inSize;
+	char *t1 = _tmpBuffer;
+	char *t2 = _tmpBuffer + (inSize + 1) / 2;
+	const char *stop = inPtr + inSize;
 
-    while (true)
-    {
-        if (inPtr < stop)
-        *(t1++) = *(inPtr++);
-        else
-        break;
+	while (true)
+	{
+	    if (inPtr < stop)
+		*(t1++) = *(inPtr++);
+	    else
+		break;
 
-        if (inPtr < stop)
-        *(t2++) = *(inPtr++);
-        else
-        break;
-    }
+	    if (inPtr < stop)
+		*(t2++) = *(inPtr++);
+	    else
+		break;
+	}
     }
 
     //
@@ -232,17 +121,17 @@ RleCompressor::compress (const char *inPtr,
     //
 
     {
-    unsigned char *t = (unsigned char *) _tmpBuffer + 1;
-    unsigned char *stop = (unsigned char *) _tmpBuffer + inSize;
-    int p = t[-1];
+	unsigned char *t = (unsigned char *) _tmpBuffer + 1;
+	unsigned char *stop = (unsigned char *) _tmpBuffer + inSize;
+	int p = t[-1];
 
-    while (t < stop)
-    {
-        int d = int (t[0]) - p + (128 + 256);
-        p = t[0];
-        t[0] = d;
-        ++t;
-    }
+	while (t < stop)
+	{
+	    int d = int (t[0]) - p + (128 + 256);
+	    p = t[0];
+	    t[0] = d;
+	    ++t;
+	}
     }
 
     //
@@ -256,18 +145,18 @@ RleCompressor::compress (const char *inPtr,
 
 int
 RleCompressor::uncompress (const char *inPtr,
-               int inSize,
-               int /*minY*/,
-               const char *&outPtr)
+			   int inSize,
+			   int minY,
+			   const char *&outPtr)
 {
     //
-    // Special case ­- empty input buffer
+    // Special case ï¿½- empty input buffer
     //
 
     if (inSize == 0)
     {
-    outPtr = _outBuffer;
-    return 0;
+	outPtr = _outBuffer;
+	return 0;
     }
 
     //
@@ -277,10 +166,10 @@ RleCompressor::uncompress (const char *inPtr,
     int outSize;
 
     if (0 == (outSize = rleUncompress (inSize, _maxScanLineSize,
-                       (const signed char *) inPtr,
-                       _tmpBuffer)))
+				       (const signed char *) inPtr,
+				       _tmpBuffer)))
     {
-    throw Iex::InputExc ("Data decoding (rle) failed.");
+	throw IEX_NAMESPACE::InputExc ("Data decoding (rle) failed.");
     }
 
     //
@@ -288,15 +177,15 @@ RleCompressor::uncompress (const char *inPtr,
     //
 
     {
-    unsigned char *t = (unsigned char *) _tmpBuffer + 1;
-    unsigned char *stop = (unsigned char *) _tmpBuffer + outSize;
+	unsigned char *t = (unsigned char *) _tmpBuffer + 1;
+	unsigned char *stop = (unsigned char *) _tmpBuffer + outSize;
 
-    while (t < stop)
-    {
-        int d = int (t[-1]) + int (t[0]) - 128;
-        t[0] = d;
-        ++t;
-    }
+	while (t < stop)
+	{
+	    int d = int (t[-1]) + int (t[0]) - 128;
+	    t[0] = d;
+	    ++t;
+	}
     }
 
     //
@@ -304,23 +193,23 @@ RleCompressor::uncompress (const char *inPtr,
     //
 
     {
-    const char *t1 = _tmpBuffer;
-    const char *t2 = _tmpBuffer + (outSize + 1) / 2;
-    char *s = _outBuffer;
-    char *stop = s + outSize;
+	const char *t1 = _tmpBuffer;
+	const char *t2 = _tmpBuffer + (outSize + 1) / 2;
+	char *s = _outBuffer;
+	char *stop = s + outSize;
 
-    while (true)
-    {
-        if (s < stop)
-        *(s++) = *(t1++);
-        else
-        break;
+	while (true)
+	{
+	    if (s < stop)
+		*(s++) = *(t1++);
+	    else
+		break;
 
-        if (s < stop)
-        *(s++) = *(t2++);
-        else
-        break;
-    }
+	    if (s < stop)
+		*(s++) = *(t2++);
+	    else
+		break;
+	}
     }
 
     outPtr = _outBuffer;
@@ -328,4 +217,4 @@ RleCompressor::uncompress (const char *inPtr,
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

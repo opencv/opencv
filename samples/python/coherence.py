@@ -46,7 +46,7 @@ def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     return img
 
 
-if __name__ == '__main__':
+def main():
     import sys
     try:
         fn = sys.argv[1]
@@ -82,4 +82,11 @@ if __name__ == '__main__':
             update()
         if ch == 27:
             break
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

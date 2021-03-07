@@ -8,6 +8,15 @@
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
 
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/proposal.hpp>
+#else
+#include <ngraph/op/experimental/layers/proposal.hpp>
+#endif
+#endif
+
 namespace cv { namespace dnn {
 
 class ProposalLayerImpl CV_FINAL : public ProposalLayer
@@ -45,11 +54,11 @@ public:
             for (int i = 0; i < ratios.size(); ++i)
             {
                 float ratio = ratios.get<float>(i);
+                float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
+                float height = std::floor(width * ratio + 0.5f);
                 for (int j = 0; j < scales.size(); ++j)
                 {
                     float scale = scales.get<float>(j);
-                    float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
-                    float height = std::floor(width * ratio + 0.5f);
                     widths.push_back(scale * width);
                     heights.push_back(scale * height);
                 }
@@ -86,8 +95,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && preferableTarget != DNN_TARGET_MYRIAD);
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            return !isMyriad;
+        }
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -130,6 +145,9 @@ public:
         CV_Assert(layerOutputs.size() == 1);
         CV_Assert(layerInternals.empty());
         internals.push_back(layerOutputs[0]);
+
+        // Detections layer.
+        internals.push_back(shape(1, 1, keepTopAfterNMS, 7));
 
         outputs.resize(2);
         outputs[0] = shape(keepTopAfterNMS, 5);
@@ -176,13 +194,14 @@ public:
         internals_.getUMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
-        CV_Assert(internals.size() == 3);
+        CV_Assert(internals.size() == 4);
         const UMat& scores = inputs[0];
         const UMat& bboxDeltas = inputs[1];
         const UMat& imInfo = inputs[2];
         UMat& priorBoxes = internals[0];
         UMat& permuttedScores = internals[1];
         UMat& permuttedDeltas = internals[2];
+        UMat& detections = internals[3];
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
@@ -217,7 +236,7 @@ public:
         layerInputs[2] = priorBoxes;
         layerInputs[3] = umat_fakeImageBlob;
 
-        layerOutputs[0] = UMat();
+        layerOutputs[0] = detections;
         detectionOutputLayer->forward(layerInputs, layerOutputs, internals);
 
         // DetectionOutputLayer produces 1x1xNx7 output where N might be less or
@@ -236,10 +255,6 @@ public:
         // The scores.
         dst = outputs[1].rowRange(0, numDets);
         layerOutputs[0].col(2).copyTo(dst);
-
-        if (numDets < keepTopAfterNMS)
-            for (int i = 0; i < 2; ++i)
-                outputs[i].rowRange(numDets, keepTopAfterNMS).setTo(0);
 
         return true;
     }
@@ -266,17 +281,19 @@ public:
         internals_arr.getMatVector(internals);
 
         CV_Assert(inputs.size() == 3);
-        CV_Assert(internals.size() == 3);
+        CV_Assert(internals.size() == 4);
         const Mat& scores = inputs[0];
         const Mat& bboxDeltas = inputs[1];
         const Mat& imInfo = inputs[2];
         Mat& priorBoxes = internals[0];
         Mat& permuttedScores = internals[1];
         Mat& permuttedDeltas = internals[2];
+        Mat& detections = internals[3];
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
-        fakeImageBlob.create(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1);
+        // We don't allocate memory but just need the shape is correct.
+        Mat fakeImageBlob(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1, NULL);
 
         // Generate prior boxes.
         std::vector<Mat> layerInputs(2), layerOutputs(1, priorBoxes);
@@ -302,7 +319,7 @@ public:
         layerInputs[2] = priorBoxes;
         layerInputs[3] = fakeImageBlob;
 
-        layerOutputs[0] = Mat();
+        layerOutputs[0] = detections;
         detectionOutputLayer->forward(layerInputs, layerOutputs, internals);
 
         // DetectionOutputLayer produces 1x1xNx7 output where N might be less or
@@ -319,16 +336,11 @@ public:
         // The scores.
         dst = outputs[1].rowRange(0, numDets);
         layerOutputs[0].col(2).copyTo(dst);
-
-        if (numDets < keepTopAfterNMS)
-            for (int i = 0; i < 2; ++i)
-                outputs[i].rowRange(numDets, keepTopAfterNMS).setTo(0);
     }
 
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
-#ifdef HAVE_INF_ENGINE
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
         InferenceEngine::Builder::ProposalLayer ieLayer(name);
 
         ieLayer.setBaseSize(baseSize);
@@ -349,36 +361,47 @@ public:
         ieLayer.setRatio(ratiosVec);
 
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#else
-        InferenceEngine::LayerParams lp;
-        lp.name = name;
-        lp.type = "Proposal";
-        lp.precision = InferenceEngine::Precision::FP32;
-        std::shared_ptr<InferenceEngine::CNNLayer> ieLayer(new InferenceEngine::CNNLayer(lp));
-
-        ieLayer->params["base_size"] = format("%d", baseSize);
-        ieLayer->params["feat_stride"] = format("%d", featStride);
-        ieLayer->params["min_size"] = "16";
-        ieLayer->params["nms_thresh"] = format("%f", nmsThreshold);
-        ieLayer->params["post_nms_topn"] = format("%d", keepTopAfterNMS);
-        ieLayer->params["pre_nms_topn"] = format("%d", keepTopBeforeNMS);
-        if (ratios.size())
-        {
-            ieLayer->params["ratio"] = format("%f", ratios.get<float>(0));
-            for (int i = 1; i < ratios.size(); ++i)
-                ieLayer->params["ratio"] += format(",%f", ratios.get<float>(i));
-        }
-        if (scales.size())
-        {
-            ieLayer->params["scale"] = format("%f", scales.get<float>(0));
-            for (int i = 1; i < scales.size(); ++i)
-                ieLayer->params["scale"] += format(",%f", scales.get<float>(i));
-        }
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-#endif
-#endif  // HAVE_INF_ENGINE
-        return Ptr<BackendNode>();
     }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(nodes.size() == 3);
+        ngraph::op::ProposalAttrs attr;
+        attr.base_size     = baseSize;
+        attr.nms_thresh    = nmsThreshold;
+        attr.feat_stride   = featStride;
+        attr.min_size      = 16;
+        attr.pre_nms_topn  = keepTopBeforeNMS;
+        attr.post_nms_topn = keepTopAfterNMS;
+
+        std::vector<float> ratiosVec(ratios.size());
+        for (int i = 0; i < ratios.size(); ++i)
+            ratiosVec[i] = ratios.get<float>(i);
+        attr.ratio = ratiosVec;
+
+        std::vector<float> scalesVec(scales.size());
+        for (int i = 0; i < scales.size(); ++i)
+            scalesVec[i] = scales.get<float>(i);
+        attr.scale = scalesVec;
+
+        auto& class_probs  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& class_logits = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& image_shape  = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+
+        CV_Assert_N(image_shape->get_shape().size() == 2, image_shape->get_shape().front() == 1);
+        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                       ngraph::Shape{1},
+                       std::vector<int64_t>{(int64_t)image_shape->get_shape().back()});
+        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(image_shape, shape, true);
+
+        auto proposal = std::make_shared<ngraph::op::Proposal>(class_probs, class_logits, reshape, attr);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(proposal));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     // A first half of channels are background scores. We need only a second one.
@@ -411,7 +434,6 @@ private:
     Ptr<PermuteLayer> deltasPermute;
     Ptr<PermuteLayer> scoresPermute;
     uint32_t keepTopBeforeNMS, keepTopAfterNMS, featStride, baseSize;
-    Mat fakeImageBlob;
     float nmsThreshold;
     DictValue ratios, scales;
 #ifdef HAVE_OPENCL

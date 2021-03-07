@@ -381,7 +381,7 @@ static auto fluidResizeTestPackage = [](int interpolation, cv::Size szIn, cv::Si
     }break;
     default: CV_Assert(false);
     }
-    return combine(pkg, fluidTestPackage, unite_policy::KEEP);
+    return combine(pkg, fluidTestPackage);
 
 #undef RESIZE_SWITCH
 #undef RESIZE_CASE
@@ -422,9 +422,7 @@ TEST_P(ResizeTestFluid, SanityTest)
     cv::blur(in_mat1, mid_mat, {3,3}, {-1,-1},  cv::BORDER_REPLICATE);
     cv::resize(mid_mat, out_mat_ocv, sz_out, fx, fy, interp);
 
-    cv::Mat absDiff;
-    cv::absdiff(out_mat(outRoi), out_mat_ocv(outRoi), absDiff);
-    EXPECT_EQ(0, cv::countNonZero(absDiff > tolerance));
+    EXPECT_LE(cvtest::norm(out_mat(outRoi), out_mat_ocv(outRoi), NORM_INF), tolerance);
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeTestFluid,
@@ -618,8 +616,8 @@ TEST_P(ResizeAndAnotherReaderTest, SanityTest)
     cv::Mat ocv_blur_out = cv::Mat::zeros(sz, CV_8UC1);
     cvBlur(in_mat, ocv_blur_out, kernelSize);
 
-    EXPECT_EQ(0, cv::countNonZero(gapi_resize_out(resizedRoi) != ocv_resize_out(resizedRoi)));
-    EXPECT_EQ(0, cv::countNonZero(gapi_blur_out(roi) != ocv_blur_out(roi)));
+    EXPECT_EQ(0, cvtest::norm(gapi_resize_out(resizedRoi), ocv_resize_out(resizedRoi), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gapi_blur_out(roi), ocv_blur_out(roi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, ResizeAndAnotherReaderTest,
@@ -691,8 +689,8 @@ TEST_P(BlursAfterResizeTest, SanityTest)
     cvBlur(resized, ocv_out1, kernelSize1);
     cvBlur(resized, ocv_out2, kernelSize2);
 
-    EXPECT_EQ(0, cv::countNonZero(gapi_out1(outRoi) != ocv_out1(outRoi)));
-    EXPECT_EQ(0, cv::countNonZero(gapi_out2(outRoi) != ocv_out2(outRoi)));
+    EXPECT_EQ(0, cvtest::norm(gapi_out1(outRoi), ocv_out1(outRoi), NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(gapi_out2(outRoi), ocv_out2(outRoi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(ResizeTestCPU, BlursAfterResizeTest,
@@ -743,16 +741,16 @@ TEST_P(NV12PlusResizeTest, Test)
     auto out = cv::gapi::resize(rgb, out_sz, 0, 0, interp);
     cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
 
-    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels(), cv::unite_policy::KEEP);
+    auto pkg = cv::gapi::combine(fluidTestPackage, cv::gapi::core::fluid::kernels());
 
     c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
-           ,cv::compile_args(pkg, cv::GFluidOutputRois{{to_own(roi)}}));
+           ,cv::compile_args(pkg, cv::GFluidOutputRois{{roi}}));
 
     cv::Mat rgb_mat;
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
     cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != out_mat_ocv(roi)));
+    EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, NV12PlusResizeTest,
@@ -789,5 +787,81 @@ INSTANTIATE_TEST_CASE_P(Fluid, NV12PlusResizeTest,
                               ,std::make_tuple(cv::Size{256, 400},
                                                cv::Size{ 32,  64}, cv::Rect{0, 48, 32, 16})
                                ));
+
+struct Preproc4lpiTest : public TestWithParam <std::tuple<cv::Size, cv::Size, cv::Rect>>{};
+TEST_P(Preproc4lpiTest, Test)
+{
+    using namespace gapi_test_kernels;
+    cv::Size y_sz, out_sz;
+    cv::Rect roi;
+    std::tie(y_sz, out_sz, roi) = GetParam();
+    int interp = cv::INTER_LINEAR;
+
+    cv::Size uv_sz(y_sz.width / 2, y_sz.height / 2);
+    cv::Size in_sz(y_sz.width, y_sz.height*3/2);
+
+    cv::Mat in_mat = cv::Mat(in_sz, CV_8UC1);
+    cv::randn(in_mat, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
+
+    cv::Mat y_mat  = cv::Mat(y_sz, CV_8UC1, in_mat.data);
+    cv::Mat uv_mat = cv::Mat(uv_sz, CV_8UC2, in_mat.data + in_mat.step1() * y_sz.height);
+    cv::Mat out_mat, out_mat_ocv;
+
+    cv::GMat y, uv;
+    auto rgb = cv::gapi::NV12toRGB(y, uv);
+    auto splitted = split3_4lpi(rgb);
+
+    cv::GMat resized[3] = { cv::gapi::resize(std::get<0>(splitted), out_sz, 0, 0, interp)
+                          , cv::gapi::resize(std::get<1>(splitted), out_sz, 0, 0, interp)
+                          , cv::gapi::resize(std::get<2>(splitted), out_sz, 0, 0, interp) };
+
+    auto out = merge3_4lpi(resized[0], resized[1], resized[2]);
+
+    cv::GComputation c(cv::GIn(y, uv), cv::GOut(out));
+
+    auto pkg = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
+                                 fluidResizeTestPackage(interp, in_sz, out_sz, 4));
+
+    c.apply(cv::gin(y_mat, uv_mat), cv::gout(out_mat)
+           ,cv::compile_args(pkg, cv::GFluidOutputRois{{roi}}));
+
+    cv::Mat rgb_mat;
+    cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
+    cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
+
+    EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(Fluid, Preproc4lpiTest,
+                        Values(std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 0, 4, 4})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 0, 4, 1})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 1, 4, 2})
+                              ,std::make_tuple(cv::Size{8, 8},
+                                               cv::Size{4, 4}, cv::Rect{0, 2, 4, 2})
+                              ,std::make_tuple(cv::Size{24, 24},
+                                               cv::Size{12, 12}, cv::Rect{0, 0, 12, 3})
+                              ,std::make_tuple(cv::Size{24, 24},
+                                               cv::Size{12, 12}, cv::Rect{0, 3, 12, 3})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0,  0, 49, 49})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0,  0, 49, 12})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0, 11, 49, 15})
+                              ,std::make_tuple(cv::Size{64, 64},
+                                               cv::Size{49, 49}, cv::Rect{0, 39, 49, 10})
+                              ,std::make_tuple(cv::Size{640, 480},
+                                               cv::Size{300, 199}, cv::Rect{0, 0, 300, 50})
+                              ,std::make_tuple(cv::Size{640, 480},
+                                               cv::Size{300, 199}, cv::Rect{0, 50, 300, 50})
+                              ,std::make_tuple(cv::Size{640, 480},
+                                               cv::Size{300, 199}, cv::Rect{0, 100, 300, 50})
+                              ,std::make_tuple(cv::Size{640, 480},
+                                               cv::Size{300, 199}, cv::Rect{0, 150, 300, 49})
+                              ));
+
 
 } // namespace opencv_test

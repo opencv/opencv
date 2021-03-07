@@ -45,7 +45,7 @@
 namespace cv
 {
 
-template<typename _Tp>
+template<typename _Tp, typename _DotTp>
 static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
 {
     int incr = end > start ? 1 : -1;
@@ -79,7 +79,7 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
             _Tp ax = array[pcur]->x - array[pprev]->x;
             _Tp bx = array[pnext]->x - array[pcur]->x;
             _Tp ay = cury - array[pprev]->y;
-            _Tp convexity = ay*bx - ax*by; // if >0 then convex angle
+            _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
 
             if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
             {
@@ -122,7 +122,13 @@ template<typename _Tp>
 struct CHullCmpPoints
 {
     bool operator()(const Point_<_Tp>* p1, const Point_<_Tp>* p2) const
-    { return p1->x < p2->x || (p1->x == p2->x && p1->y < p2->y); }
+    {
+        if( p1->x != p2->x )
+            return p1->x < p2->x;
+        if( p1->y != p2->y )
+            return p1->y < p2->y;
+        return p1 < p2;
+    }
 };
 
 
@@ -194,12 +200,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // upper half
         int *tl_stack = stack;
         int tl_count = !is_float ?
-            Sklansky_( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
+            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
-            Sklansky_( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
+            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -217,12 +223,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // lower half
         int *bl_stack = stack;
         int bl_count = !is_float ?
-            Sklansky_( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_( pointerf, 0, miny_ind, bl_stack, 1, -1);
+            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
+            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
-            Sklansky_( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_( pointerf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
+            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
 
         if( clockwise )
         {
@@ -250,6 +256,45 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
         for( i = br_count-1; i > 0; i-- )
             hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
+
+        // try to make the convex hull indices form
+        // an ascending or descending sequence by the cyclic
+        // shift of the output sequence.
+        if( nout >= 3 )
+        {
+            int min_idx = 0, max_idx = 0, lt = 0;
+            for( i = 1; i < nout; i++ )
+            {
+                int idx = hullbuf[i];
+                lt += hullbuf[i-1] < idx;
+                if( lt > 1 && lt <= i-2 )
+                    break;
+                if( idx < hullbuf[min_idx] )
+                    min_idx = i;
+                if( idx > hullbuf[max_idx] )
+                    max_idx = i;
+            }
+            int mmdist = std::abs(max_idx - min_idx);
+            if( (mmdist == 1 || mmdist == nout-1) && (lt <= 1 || lt >= nout-2) )
+            {
+                int ascending = (max_idx + 1) % nout == min_idx;
+                int i0 = ascending ? min_idx : max_idx, j = i0;
+                if( i0 > 0 )
+                {
+                    for( i = 0; i < nout; i++ )
+                    {
+                        int curr_idx = stack[i] = hullbuf[j];
+                        int next_j = j+1 < nout ? j+1 : 0;
+                        int next_idx = hullbuf[next_j];
+                        if( i < nout-1 && (ascending != (curr_idx < next_idx)) )
+                            break;
+                        j = next_j;
+                    }
+                    if( i == nout )
+                        memcpy(hullbuf, stack, nout*sizeof(hullbuf[0]));
+                }
+            }
+        }
     }
 
     if( !returnPoints )
@@ -299,12 +344,22 @@ void convexityDefects( InputArray _points, InputArray _hull, OutputArray _defect
     int hcurr = hptr[rev_orientation ? 0 : hpoints-1];
     CV_Assert( 0 <= hcurr && hcurr < npoints );
 
+    int increasing_idx = -1;
+
     for( i = 0; i < hpoints; i++ )
     {
         int hnext = hptr[rev_orientation ? hpoints - i - 1 : i];
         CV_Assert( 0 <= hnext && hnext < npoints );
 
         Point pt0 = ptr[hcurr], pt1 = ptr[hnext];
+        if( increasing_idx < 0 )
+            increasing_idx = !(hcurr < hnext);
+        else if( increasing_idx != (hcurr < hnext))
+        {
+            CV_Error(Error::StsBadArg,
+            "The convex hull indices are not monotonous, which can be in the case when the input contour contains self-intersections");
+        }
+
         double dx0 = pt1.x - pt0.x;
         double dy0 = pt1.y - pt0.y;
         double scale = dx0 == 0 && dy0 == 0 ? 0. : 1./std::sqrt(dx0*dx0 + dy0*dy0);

@@ -5,19 +5,27 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#ifndef OPENCV_GAPI_GMATREF_HPP
-#define OPENCV_GAPI_GMATREF_HPP
+#ifndef OPENCV_GAPI_GOBJREF_HPP
+#define OPENCV_GAPI_GOBJREF_HPP
 
 #include "opencv2/gapi/util/variant.hpp"
 #include "opencv2/gapi/garg.hpp"
-
-#include "api/gapi_priv.hpp" // GShape, HostCtor
 
 namespace cv
 {
 
 namespace gimpl
 {
+    // HostCtor was there, but then moved to public
+    // Redeclare here to avoid changing tons of code
+    using HostCtor = cv::detail::HostCtor;
+
+    using ConstVal = util::variant
+    < util::monostate
+    , cv::Scalar
+    , cv::detail::VectorRef
+    >;
+
     struct RcDesc
     {
         int      id;      // id is unique but local to shape
@@ -47,4 +55,4 @@ namespace detail
 
 } // cv
 
-#endif // OPENCV_GAPI_GMATREF_HPP
+#endif // OPENCV_GAPI_GOBJREF_HPP

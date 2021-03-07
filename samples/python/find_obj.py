@@ -19,6 +19,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+
 from common import anorm, getsize
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
@@ -28,7 +29,7 @@ FLANN_INDEX_LSH    = 6
 def init_feature(name):
     chunks = name.split('-')
     if chunks[0] == 'sift':
-        detector = cv.xfeatures2d.SIFT_create()
+        detector = cv.SIFT_create()
         norm = cv.NORM_L2
     elif chunks[0] == 'surf':
         detector = cv.xfeatures2d.SURF_create(800)
@@ -137,9 +138,7 @@ def explore_match(win, img1, img2, kp_pairs, status = None, H = None):
     return vis
 
 
-if __name__ == '__main__':
-    print(__doc__)
-
+def main():
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -187,4 +186,11 @@ if __name__ == '__main__':
 
     match_and_draw('find_obj')
     cv.waitKey()
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

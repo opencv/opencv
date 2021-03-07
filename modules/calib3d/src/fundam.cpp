@@ -44,6 +44,8 @@
 #include "rho.h"
 #include <iostream>
 
+#include "usac.hpp"
+
 namespace cv
 {
 
@@ -72,7 +74,7 @@ public:
         // are geometrically consistent. We check if every 3 correspondences sets
         // fulfills the constraint.
         //
-        // The usefullness of this constraint is explained in the paper:
+        // The usefulness of this constraint is explained in the paper:
         //
         // "Speeding-up homography estimation in mobile devices"
         // Journal of Real-Time Image Processing. 2013. DOI: 10.1007/s11554-012-0314-1
@@ -353,6 +355,10 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 {
     CV_INSTRUMENT_REGION();
 
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return usac::findHomography(_points1, _points2, method, ransacReprojThreshold,
+            _mask, maxIters, confidence);
+
     const double defaultRANSACReprojThreshold = 3;
     bool result = false;
 
@@ -374,6 +380,9 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
                 return Mat();
             convertPointsFromHomogeneous(p, p);
         }
+        // Need at least 4 point correspondences to calculate Homography
+        if( npoints < 4 )
+            CV_Error(Error::StsVecLengthErr , "The input arrays should have at least 4 corresponding point sets to calculate Homography");
         p.reshape(2, npoints).convertTo(m, CV_32F);
     }
 
@@ -439,6 +448,18 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 }
 
 
+cv::Mat cv::findHomography(InputArray srcPoints, InputArray dstPoints, OutputArray mask,
+                   const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::Homography, params, mask.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, srcPoints, dstPoints, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel() / ransac_output->getModel().at<double>(2,2);
+    } else return Mat();
+}
+
 
 /* Estimation of Fundamental Matrix from point correspondences.
    The original code has been written by Valery Mosyagin */
@@ -490,12 +511,47 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     double* fmatrix = _fmatrix.ptr<double>();
     int i, k, n;
 
+    Point2d m1c(0, 0), m2c(0, 0);
+    double t, scale1 = 0, scale2 = 0;
+    const int count = 7;
+
+    // compute centers and average distances for each of the two point sets
+    for( i = 0; i < count; i++ )
+    {
+        m1c += Point2d(m1[i]);
+        m2c += Point2d(m2[i]);
+    }
+
+    // calculate the normalizing transformations for each of the point sets:
+    // after the transformation each set will have the mass center at the coordinate origin
+    // and the average distance from the origin will be ~sqrt(2).
+    t = 1./count;
+    m1c *= t;
+    m2c *= t;
+
+    for( i = 0; i < count; i++ )
+    {
+        scale1 += norm(Point2d(m1[i].x - m1c.x, m1[i].y - m1c.y));
+        scale2 += norm(Point2d(m2[i].x - m2c.x, m2[i].y - m2c.y));
+    }
+
+    scale1 *= t;
+    scale2 *= t;
+
+    if( scale1 < FLT_EPSILON || scale2 < FLT_EPSILON )
+        return 0;
+
+    scale1 = std::sqrt(2.)/scale1;
+    scale2 = std::sqrt(2.)/scale2;
+
     // form a linear system: i-th row of A(=a) represents
     // the equation: (m2[i], 1)'*F*(m1[i], 1) = 0
     for( i = 0; i < 7; i++ )
     {
-        double x0 = m1[i].x, y0 = m1[i].y;
-        double x1 = m2[i].x, y1 = m2[i].y;
+        double x0 = (m1[i].x - m1c.x)*scale1;
+        double y0 = (m1[i].y - m1c.y)*scale1;
+        double x1 = (m2[i].x - m2c.x)*scale2;
+        double y1 = (m2[i].y - m2c.y)*scale2;
 
         a[i*9+0] = x1*x0;
         a[i*9+1] = x1*y0;
@@ -559,6 +615,10 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     if( n < 1 || n > 3 )
         return n;
 
+    // transformation matrices
+    Matx33d T1( scale1, 0, -scale1*m1c.x, 0, scale1, -scale1*m1c.y, 0, 0, 1 );
+    Matx33d T2( scale2, 0, -scale2*m2c.x, 0, scale2, -scale2*m2c.y, 0, 0, 1 );
+
     for( k = 0; k < n; k++, fmatrix += 9 )
     {
         // for each root form the fundamental matrix
@@ -577,6 +637,14 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 
         for( i = 0; i < 8; i++ )
             fmatrix[i] = f1[i]*lambda + f2[i]*mu;
+
+        // de-normalize
+        Mat F(3, 3, CV_64F, fmatrix);
+        F = T2.t() * F * T1;
+
+        // make F(3,3) = 1
+        if(fabs(F.at<double>(8)) > FLT_EPSILON )
+            F *= 1. / F.at<double>(8);
     }
 
     return n;
@@ -762,9 +830,13 @@ public:
 
 cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
                                 int method, double ransacReprojThreshold, double confidence,
-                                OutputArray _mask )
+                                int maxIters, OutputArray _mask )
 {
     CV_INSTRUMENT_REGION();
+
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return usac::findFundamentalMat(_points1, _points2, method,
+            ransacReprojThreshold, confidence, maxIters, _mask);
 
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
@@ -814,7 +886,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
             confidence = 0.99;
 
         if( (method & ~3) == FM_RANSAC && npoints >= 15 )
-            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence)->run(m1, m2, F, _mask);
+            result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence, maxIters)->run(m1, m2, F, _mask);
         else
             result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
     }
@@ -825,12 +897,33 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     return F;
 }
 
-cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
-                               OutputArray _mask, int method,
-                               double ransacReprojThreshold , double confidence)
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2,
+                                     int method, double ransacReprojThreshold, double confidence,
+                                     cv::OutputArray mask )
 {
-    return cv::findFundamentalMat(_points1, _points2, method, ransacReprojThreshold, confidence, _mask);
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
 }
+
+cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, cv::OutputArray mask,
+                                int method, double ransacReprojThreshold, double confidence )
+{
+    return cv::findFundamentalMat(points1, points2, method, ransacReprojThreshold, confidence, 1000, mask);
+}
+
+cv::Mat cv::findFundamentalMat( InputArray points1, InputArray points2,
+                        OutputArray mask, const UsacParams &params) {
+    Ptr<usac::Model> model;
+    setParameters(model, usac::EstimationMethod::Fundamental, params, mask.needed());
+    CV_Assert(model);
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel();
+    } else return Mat();
+}
+
+
 
 
 void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
@@ -909,6 +1002,14 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     }
 }
 
+static inline double scaleFor(double x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
+}
+static inline float scaleFor(float x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
+}
+
+
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
@@ -967,7 +1068,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point2f* dptr = dst.ptr<Point2f>();
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i].z != 0.f ? 1.f/sptr[i].z : 1.f;
+                float scale = scaleFor(sptr[i].z);
                 dptr[i] = Point2f(sptr[i].x*scale, sptr[i].y*scale);
             }
         }
@@ -977,7 +1078,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point3f* dptr = dst.ptr<Point3f>();
             for( i = 0; i < npoints; i++ )
             {
-                float scale = sptr[i][3] != 0.f ? 1.f/sptr[i][3] : 1.f;
+                float scale = scaleFor(sptr[i][3]);
                 dptr[i] = Point3f(sptr[i][0]*scale, sptr[i][1]*scale, sptr[i][2]*scale);
             }
         }
@@ -990,7 +1091,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point2d* dptr = dst.ptr<Point2d>();
             for( i = 0; i < npoints; i++ )
             {
-                double scale = sptr[i].z != 0. ? 1./sptr[i].z : 1.;
+                double scale = scaleFor(sptr[i].z);
                 dptr[i] = Point2d(sptr[i].x*scale, sptr[i].y*scale);
             }
         }
@@ -1000,7 +1101,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
             Point3d* dptr = dst.ptr<Point3d>();
             for( i = 0; i < npoints; i++ )
             {
-                double scale = sptr[i][3] != 0.f ? 1./sptr[i][3] : 1.;
+                double scale = scaleFor(sptr[i][3]);
                 dptr[i] = Point3d(sptr[i][0]*scale, sptr[i][1]*scale, sptr[i][2]*scale);
             }
         }

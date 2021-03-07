@@ -1,4 +1,4 @@
-#include <opencv2/core/utility.hpp>
+#include "opencv2/core/utility.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/videoio.hpp"
@@ -57,13 +57,13 @@ string hot_keys =
     "\tp - pause video\n"
     "To initialize tracking, select the object with mouse\n";
 
-static void help()
+static void help(const char** argv)
 {
     cout << "\nThis is a demo that shows mean-shift based tracking\n"
             "You select a color objects such as your face and it tracks it.\n"
             "This reads from video camera (0 by default, or the camera number the user enters\n"
-            "Usage: \n"
-            "   ./camshiftdemo [camera number]\n";
+            "Usage: \n\t";
+    cout << argv[0] << " [camera number]\n";
     cout << hot_keys;
 }
 
@@ -82,7 +82,7 @@ int main( int argc, const char** argv )
     CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     int camNum = parser.get<int>(0);
@@ -90,7 +90,7 @@ int main( int argc, const char** argv )
 
     if( !cap.isOpened() )
     {
-        help();
+        help(argv);
         cout << "***Could not initialize capturing...***\n";
         cout << "Current parameter's value: \n";
         parser.printMessage();

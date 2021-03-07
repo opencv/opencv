@@ -1,6 +1,16 @@
 Anisotropic image segmentation by a gradient structure tensor {#tutorial_anisotropic_image_segmentation_by_a_gst}
 ==========================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_motion_deblur_filter}
+@next_tutorial{tutorial_periodic_noise_removing_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Karpushin Vladislav |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 
@@ -34,7 +44,7 @@ J_{12} & J_{22}
 where \f$J_{11} = M[Z_{x}^{2}]\f$, \f$J_{22} = M[Z_{y}^{2}]\f$, \f$J_{12} = M[Z_{x}Z_{y}]\f$ - components of the tensor, \f$M[]\f$ is a symbol of mathematical expectation (we can consider this operation as averaging in a window w), \f$Z_{x}\f$ and \f$Z_{y}\f$ are partial derivatives of an image \f$Z\f$ with respect to \f$x\f$ and \f$y\f$.
 
 The eigenvalues of the tensor can be found in the below formula:
-\f[\lambda_{1,2} = J_{11} + J_{22} \pm \sqrt{(J_{11} - J_{22})^{2} + 4J_{12}^{2}}\f]
+\f[\lambda_{1,2} = \frac{1}{2} \left [ J_{11} + J_{22} \pm \sqrt{(J_{11} - J_{22})^{2} + 4J_{12}^{2}} \right ] \f]
 where \f$\lambda_1\f$ - largest eigenvalue, \f$\lambda_2\f$ - smallest eigenvalue.
 
 ### How to estimate orientation and coherency of an anisotropic image by gradient structure tensor?
@@ -45,28 +55,65 @@ The orientation of an anisotropic image:
 Coherency:
 \f[C = \frac{\lambda_1 - \lambda_2}{\lambda_1 + \lambda_2}\f]
 
-The coherency ranges from 0 to 1. For ideal local orientation (\f$\lambda_2\f$ = 0, \f$\lambda_1\f$ > 0) it is one, for an isotropic gray value structure (\f$\lambda_1\f$ = \f$\lambda_2\f$ > 0) it is zero.
+The coherency ranges from 0 to 1. For ideal local orientation (\f$\lambda_2\f$ = 0, \f$\lambda_1\f$ > 0) it is one, for an isotropic gray value structure (\f$\lambda_1\f$ = \f$\lambda_2\f$ \> 0) it is zero.
 
 Source code
 -----------
 
 You can find source code in the `samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp` of the OpenCV source code library.
 
-@include cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp
+@add_toggle_cpp
+    @include cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp
+@end_toggle
+
+@add_toggle_python
+    @include samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py
+@end_toggle
 
 Explanation
 -----------
 An anisotropic image segmentation algorithm consists of a gradient structure tensor calculation, an orientation calculation, a coherency calculation and an orientation and coherency thresholding:
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp main
+
+@add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp main
+@end_toggle
+
+@add_toggle_python
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py main
+@end_toggle
 
 A function calcGST() calculates orientation and coherency by using a gradient structure tensor. An input parameter w defines a window size:
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp calcGST
+
+@add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp calcGST
+@end_toggle
+
+@add_toggle_python
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py calcGST
+@end_toggle
+
 
 The below code applies a thresholds LowThr and HighThr to image orientation and a threshold C_Thr to image coherency calculated by the previous function. LowThr and HighThr define orientation range:
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp thresholding
+
+@add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp thresholding
+@end_toggle
+
+@add_toggle_python
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py thresholding
+@end_toggle
+
 
 And finally we combine thresholding results:
-@snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp combining
+
+@add_toggle_cpp
+    @snippet samples/cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp combining
+@end_toggle
+
+@add_toggle_python
+    @snippet samples/python/tutorial_code/imgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.py combining
+@end_toggle
+
 
 Result
 ------

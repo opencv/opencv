@@ -60,7 +60,7 @@ namespace opencv_test { namespace {
 // 6 - partial intersection, rectangle on top of different size
 // 7 - full intersection, rectangle fully enclosed in the other
 // 8 - partial intersection, rectangle corner just touching. point contact
-// 9 - partial intersetion. rectangle side by side, line contact
+// 9 - partial intersection. rectangle side by side, line contact
 
 static void compare(const std::vector<Point2f>& test, const std::vector<Point2f>& target)
 {
@@ -364,6 +364,31 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_12221_2)
     int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
     EXPECT_EQ(INTERSECT_PARTIAL, interType);
     EXPECT_LE(intersections.size(), (size_t)8);
+}
+
+TEST(Imgproc_RotatedRectangleIntersection, regression_18520)
+{
+    RotatedRect rr_empty(
+        Point2f(2, 2),
+        Size2f(0, 0),  // empty
+        0);
+    RotatedRect rr(
+        Point2f(50, 50),
+        Size2f(4, 4),
+        0);
+
+    {
+        std::vector<Point2f> intersections;
+        int interType = cv::rotatedRectangleIntersection(rr_empty, rr, intersections);
+        EXPECT_EQ(INTERSECT_NONE, interType) << "rr_empty, rr";
+        EXPECT_EQ((size_t)0, intersections.size()) << "rr_empty, rr";
+    }
+    {
+        std::vector<Point2f> intersections;
+        int interType = cv::rotatedRectangleIntersection(rr, rr_empty, intersections);
+        EXPECT_EQ(INTERSECT_NONE, interType) << "rr, rr_empty";
+        EXPECT_EQ((size_t)0, intersections.size()) << "rr, rr_empty";
+    }
 }
 
 }} // namespace

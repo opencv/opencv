@@ -18,6 +18,10 @@ except ImportError:
 
 def bootstrap():
     import sys
+
+    import copy
+    save_sys_path = copy.copy(sys.path)
+
     if hasattr(sys, 'OpenCV_LOADER'):
         print(sys.path)
         raise ImportError('ERROR: recursion is detected during loading of "cv2" binary extensions. Check OpenCV installation.')
@@ -39,7 +43,7 @@ def bootstrap():
     l_vars = locals()
 
     if sys.version_info[:2] < (3, 0):
-        from cv2.load_config_py2 import exec_file_wrapper
+        from . load_config_py2 import exec_file_wrapper
     else:
         from . load_config_py3 import exec_file_wrapper
 
@@ -68,6 +72,13 @@ def bootstrap():
         sys.path.insert(1, p)
 
     if os.name == 'nt':
+        if sys.version_info[:2] >= (3, 8):  # https://github.com/python/cpython/pull/12302
+            for p in l_vars['BINARIES_PATHS']:
+                try:
+                    os.add_dll_directory(p)
+                except Exception as e:
+                    if DEBUG: print('Failed os.add_dll_directory(): '+ str(e))
+                    pass
         os.environ['PATH'] = ';'.join(l_vars['BINARIES_PATHS']) + ';' + os.environ.get('PATH', '')
         if DEBUG: print('OpenCV loader: PATH={}'.format(str(os.environ['PATH'])))
     else:
@@ -77,6 +88,8 @@ def bootstrap():
     if DEBUG: print('OpenCV loader: replacing cv2 module')
     del sys.modules['cv2']
     import cv2
+
+    sys.path = save_sys_path  # multiprocessing should start from bootstrap code (https://github.com/opencv/opencv/issues/18502)
 
     try:
         import sys

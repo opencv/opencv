@@ -21,6 +21,11 @@ if(ANDROID AND ARMEABI_V7A AND NOT NEON)
   endforeach()
 endif()
 
+# FIX for quant.h - requires C99 for() loops
+ocv_check_flag_support(C "-std=c99" _varname "${CMAKE_C_FLAGS}")
+if(${_varname})
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+endif()
 
 
 # ----------------------------------------------------------------------------------
@@ -29,7 +34,7 @@ endif()
 
 add_definitions(-DWEBP_USE_THREAD)
 
-add_library(${WEBP_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+add_library(${WEBP_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 if(ANDROID)
   target_link_libraries(${WEBP_LIBRARY} ${CPUFEATURES_LIBRARIES})
 endif()
@@ -54,6 +59,6 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${WEBP_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${WEBP_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 

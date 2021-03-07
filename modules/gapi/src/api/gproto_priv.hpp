@@ -11,7 +11,7 @@
 #include "opencv2/gapi/gproto.hpp"
 #include "opencv2/gapi/garg.hpp"
 
-#include "api/gapi_priv.hpp"
+#include "api/gorigin.hpp"
 
 namespace cv {
 namespace gimpl {
@@ -28,8 +28,14 @@ GAPI_EXPORTS const GOrigin& origin_of (const GArg      &arg);
 bool           is_dynamic(const GArg      &arg);
 GProtoArg      rewrap    (const GArg      &arg);
 
+// FIXME:: GAPI_EXPORTS because of tests only!!
+GAPI_EXPORTS const void*    ptr       (const GRunArgP  &arg);
+
 } // proto
 } // gimpl
 } // cv
+
+// FIXME: the gproto.cpp file has more functions that listed here
+// where those are declared??
 
 #endif // OPENCV_GAPI_GPROTO_PRIV_HPP

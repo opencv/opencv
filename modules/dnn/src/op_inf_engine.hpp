@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
+// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
 #ifndef __OPENCV_DNN_OP_INF_ENGINE_HPP__
@@ -12,32 +12,67 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/dnn.hpp"
 
-#ifdef HAVE_INF_ENGINE
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#endif
-#include <inference_engine.hpp>
-#if defined(__GNUC__) && __GNUC__ >= 5
-//#pragma GCC diagnostic pop
-#endif
+#include "opencv2/core/async.hpp"
+#include "opencv2/core/detail/async_promise.hpp"
 
-#define INF_ENGINE_RELEASE_2018R3 2018030000
-#define INF_ENGINE_RELEASE_2018R4 2018040000
+#include "opencv2/dnn/utils/inference_engine.hpp"
+
+#ifdef HAVE_INF_ENGINE
+
 #define INF_ENGINE_RELEASE_2018R5 2018050000
+#define INF_ENGINE_RELEASE_2019R1 2019010000
+#define INF_ENGINE_RELEASE_2019R2 2019020000
+#define INF_ENGINE_RELEASE_2019R3 2019030000
+#define INF_ENGINE_RELEASE_2020_1 2020010000
+#define INF_ENGINE_RELEASE_2020_2 2020020000
+#define INF_ENGINE_RELEASE_2020_3 2020030000
+#define INF_ENGINE_RELEASE_2020_4 2020040000
+#define INF_ENGINE_RELEASE_2021_1 2021010000
+#define INF_ENGINE_RELEASE_2021_2 2021020000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2018R5 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2018R5
+#warning("IE version have not been provided via command-line. Using 2021.2 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_2
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_GE(ver) (((INF_ENGINE_RELEASE) / 10000) >= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_LT(ver) (((INF_ENGINE_RELEASE) / 10000) < ((ver) / 10000))
+#define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
+
+#if defined(HAVE_DNN_IE_NN_BUILDER_2019) || INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2020_4)
+//#define INFERENCE_ENGINE_DEPRECATED  // turn off deprecation warnings from IE
+//there is no way to suppress warnings from IE only at this moment, so we are forced to suppress warnings globally
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
+#pragma GCC visibility push(default)
+#endif
+
+#include <inference_engine.hpp>
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 #include <ie_builders.hpp>
+#endif
+
+#if defined(__GNUC__) && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_1)
+#pragma GCC visibility pop
+#endif
+
+#if defined(__GNUC__) && __GNUC__ >= 5
+//#pragma GCC diagnostic pop
 #endif
 
 #endif  // HAVE_INF_ENGINE
@@ -46,112 +81,14 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2018R5)
-class InfEngineBackendNet : public InferenceEngine::ICNNNetwork
-{
-public:
-    InfEngineBackendNet();
+Backend& getInferenceEngineBackendTypeParam();
 
-    InfEngineBackendNet(InferenceEngine::CNNNetwork& net);
+Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
 
-    virtual void Release() CV_NOEXCEPT CV_OVERRIDE;
+void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+                          std::vector<Mat>& mats);
 
-    void setPrecision(InferenceEngine::Precision p) CV_NOEXCEPT;
-
-    virtual InferenceEngine::Precision getPrecision() CV_NOEXCEPT;
-
-    virtual InferenceEngine::Precision getPrecision() const CV_NOEXCEPT;
-
-    virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) CV_NOEXCEPT /*CV_OVERRIDE*/;
-
-    virtual void getOutputsInfo(InferenceEngine::OutputsDataMap &out) const CV_NOEXCEPT /*CV_OVERRIDE*/;
-
-    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) CV_NOEXCEPT /*CV_OVERRIDE*/;
-
-    virtual void getInputsInfo(InferenceEngine::InputsDataMap &inputs) const CV_NOEXCEPT /*CV_OVERRIDE*/;
-
-    virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) CV_NOEXCEPT;
-
-    virtual InferenceEngine::InputInfo::Ptr getInput(const std::string &inputName) const CV_NOEXCEPT;
-
-    virtual InferenceEngine::StatusCode serialize(const std::string &xmlPath, const std::string &binPath, InferenceEngine::ResponseDesc* resp) const CV_NOEXCEPT;
-
-    virtual void getName(char *pName, size_t len) CV_NOEXCEPT;
-
-    virtual void getName(char *pName, size_t len) const CV_NOEXCEPT;
-
-    virtual const std::string& getName() const CV_NOEXCEPT;
-
-    virtual size_t layerCount() CV_NOEXCEPT;
-
-    virtual size_t layerCount() const CV_NOEXCEPT;
-
-    virtual InferenceEngine::DataPtr& getData(const char *dname) CV_NOEXCEPT CV_OVERRIDE;
-
-    virtual void addLayer(const InferenceEngine::CNNLayerPtr &layer) CV_NOEXCEPT CV_OVERRIDE;
-
-    virtual InferenceEngine::StatusCode addOutput(const std::string &layerName,
-                                                  size_t outputIndex = 0,
-                                                  InferenceEngine::ResponseDesc *resp = nullptr) CV_NOEXCEPT;
-
-    virtual InferenceEngine::StatusCode getLayerByName(const char *layerName,
-                                                       InferenceEngine::CNNLayerPtr &out,
-                                                       InferenceEngine::ResponseDesc *resp) CV_NOEXCEPT;
-
-    virtual InferenceEngine::StatusCode getLayerByName(const char *layerName,
-                                                       InferenceEngine::CNNLayerPtr &out,
-                                                       InferenceEngine::ResponseDesc *resp) const CV_NOEXCEPT;
-
-    virtual void setTargetDevice(InferenceEngine::TargetDevice device) CV_NOEXCEPT CV_OVERRIDE;
-
-    virtual InferenceEngine::TargetDevice getTargetDevice() CV_NOEXCEPT;
-
-    virtual InferenceEngine::TargetDevice getTargetDevice() const CV_NOEXCEPT;
-
-    virtual InferenceEngine::StatusCode setBatchSize(const size_t size) CV_NOEXCEPT CV_OVERRIDE;
-
-    virtual InferenceEngine::StatusCode setBatchSize(size_t size, InferenceEngine::ResponseDesc* responseDesc) CV_NOEXCEPT;
-
-    virtual size_t getBatchSize() const CV_NOEXCEPT CV_OVERRIDE;
-
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2018R2)
-    virtual InferenceEngine::StatusCode AddExtension(const InferenceEngine::IShapeInferExtensionPtr& extension, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT;
-    virtual InferenceEngine::StatusCode reshape(const InputShapes& inputShapes, InferenceEngine::ResponseDesc* resp) CV_NOEXCEPT;
-#endif
-
-    void init(int targetId);
-
-    void addBlobs(const std::vector<Ptr<BackendWrapper> >& wrappers);
-
-    void forward();
-
-    bool isInitialized();
-
-private:
-    std::vector<InferenceEngine::CNNLayerPtr> layers;
-    InferenceEngine::InputsDataMap inputs;
-    InferenceEngine::OutputsDataMap outputs;
-    InferenceEngine::BlobMap inpBlobs;
-    InferenceEngine::BlobMap outBlobs;
-    InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::TargetDevice targetDevice;
-    InferenceEngine::Precision precision;
-    InferenceEngine::InferenceEnginePluginPtr enginePtr;
-    InferenceEngine::InferencePlugin plugin;
-    InferenceEngine::ExecutableNetwork netExec;
-    InferenceEngine::InferRequest infRequest;
-    // In case of models from Model Optimizer we need to manage their lifetime.
-    InferenceEngine::CNNNetwork netOwner;
-    // There is no way to check if netOwner is initialized or not so we use
-    // a separate flag to determine if the model has been loaded from IR.
-    bool hasNetOwner;
-
-    std::string name;
-
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
-};
-
-#else  // IE < R5
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
 
 class InfEngineBackendNet
 {
@@ -170,25 +107,43 @@ public:
 
     bool isInitialized();
 
-    void init(int targetId);
+    void init(Target targetId);
 
-    void forward();
+    void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                 bool isAsync);
 
-    void initPlugin(InferenceEngine::ICNNNetwork& net);
+    void initPlugin(InferenceEngine::CNNNetwork& net);
 
-    void addBlobs(const std::vector<Ptr<BackendWrapper> >& ptrs);
+    void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
+
+    void reset();
 
 private:
     InferenceEngine::Builder::Network netBuilder;
 
+    InferenceEngine::ExecutableNetwork netExec;
+    InferenceEngine::BlobMap allBlobs;
+    std::string device_name;
+#if INF_ENGINE_VER_MAJOR_LE(2019010000)
     InferenceEngine::InferenceEnginePluginPtr enginePtr;
     InferenceEngine::InferencePlugin plugin;
-    InferenceEngine::ExecutableNetwork netExec;
-    InferenceEngine::InferRequest infRequest;
-    InferenceEngine::BlobMap allBlobs;
-    InferenceEngine::BlobMap inpBlobs;
-    InferenceEngine::BlobMap outBlobs;
-    InferenceEngine::TargetDevice targetDevice;
+#else
+    bool isInit = false;
+#endif
+
+    struct InfEngineReqWrapper
+    {
+        InfEngineReqWrapper() : isReady(true) {}
+
+        void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
+
+        InferenceEngine::InferRequest req;
+        std::vector<cv::AsyncPromise> outProms;
+        std::vector<std::string> outsNames;
+        bool isReady;
+    };
+
+    std::vector<Ptr<InfEngineReqWrapper> > infRequests;
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
@@ -196,30 +151,25 @@ private:
     std::map<std::string, int> layers;
     std::vector<std::string> requestedOutputs;
 
-    std::set<int> unconnectedLayersIds;
+    std::set<std::pair<int, int> > unconnectedPorts;
 };
-#endif  // IE < R5
 
 class InfEngineBackendNode : public BackendNode
 {
 public:
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
     InfEngineBackendNode(const InferenceEngine::Builder::Layer& layer);
-#else
-    InfEngineBackendNode(const InferenceEngine::CNNLayerPtr& layer);
-#endif
+
+    InfEngineBackendNode(Ptr<Layer>& layer, std::vector<Mat*>& inputs,
+                         std::vector<Mat>& outputs, std::vector<Mat>& internals);
 
     void connect(std::vector<Ptr<BackendWrapper> >& inputs,
                  std::vector<Ptr<BackendWrapper> >& outputs);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
     InferenceEngine::Builder::Layer layer;
     Ptr<InfEngineBackendNet> net;
-#else
-    InferenceEngine::CNNLayerPtr layer;
-    Ptr<InfEngineBackendNet> net;
-#endif
+    // CPU fallback in case of unsupported Inference Engine layer.
+    Ptr<dnn::Layer> cvLayer;
 };
 
 class InfEngineBackendWrapper : public BackendWrapper
@@ -239,6 +189,7 @@ public:
 
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
+    AsyncArray futureMat;
 };
 
 InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, InferenceEngine::Layout layout = InferenceEngine::Layout::ANY);
@@ -247,15 +198,11 @@ InferenceEngine::Blob::Ptr wrapToInfEngineBlob(const Mat& m, const std::vector<s
 
 InferenceEngine::DataPtr infEngineDataNode(const Ptr<BackendWrapper>& ptr);
 
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
-
 // Convert Inference Engine blob with FP32 precision to FP16 precision.
 // Allocates memory for a new blob.
 InferenceEngine::Blob::Ptr convertFp16(const InferenceEngine::Blob::Ptr& blob);
 
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2018R5)
 void addConstantData(const std::string& name, InferenceEngine::Blob::Ptr data, InferenceEngine::Builder::Layer& l);
-#endif
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by
@@ -279,11 +226,55 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+
+class InfEngineExtension : public InferenceEngine::IExtension
+{
+public:
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+#endif
+    virtual void Unload() noexcept {}
+    virtual void Release() noexcept {}
+    virtual void GetVersion(const InferenceEngine::Version*&) const noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept;
+};
+
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+CV__DNN_INLINE_NS_BEGIN
+
+bool isMyriadX();
+
+CV__DNN_INLINE_NS_END
+
+InferenceEngine::Core& getCore(const std::string& id);
+
+template<typename T = size_t>
+static inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+}
+
+
 #endif  // HAVE_INF_ENGINE
 
 bool haveInfEngine();
 
-void forwardInfEngine(Ptr<BackendNode>& node);
+void forwardInfEngine(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
+                      Ptr<BackendNode>& node, bool isAsync);
 
 }}  // namespace dnn, namespace cv
 

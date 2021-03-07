@@ -81,8 +81,8 @@ void calcGST(const Mat& inputImg, Mat& imgCoherencyOut, Mat& imgOrientationOut, 
     // GST components calculation (stop)
 
     // eigenvalue calculation (start)
-    // lambda1 = J11 + J22 + sqrt((J11-J22)^2 + 4*J12^2)
-    // lambda2 = J11 + J22 - sqrt((J11-J22)^2 + 4*J12^2)
+    // lambda1 = 0.5*(J11 + J22 + sqrt((J11-J22)^2 + 4*J12^2))
+    // lambda2 = 0.5*(J11 + J22 - sqrt((J11-J22)^2 + 4*J12^2))
     Mat tmp1, tmp2, tmp3, tmp4;
     tmp1 = J11 + J22;
     tmp2 = J11 - J22;
@@ -91,8 +91,10 @@ void calcGST(const Mat& inputImg, Mat& imgCoherencyOut, Mat& imgOrientationOut, 
     sqrt(tmp2 + 4.0 * tmp3, tmp4);
 
     Mat lambda1, lambda2;
-    lambda1 = tmp1 + tmp4;      // biggest eigenvalue
-    lambda2 = tmp1 - tmp4;      // smallest eigenvalue
+    lambda1 = tmp1 + tmp4;
+    lambda1 = 0.5*lambda1;      // biggest eigenvalue
+    lambda2 = tmp1 - tmp4;
+    lambda2 = 0.5*lambda2;      // smallest eigenvalue
     // eigenvalue calculation (stop)
 
     // Coherency calculation (start)

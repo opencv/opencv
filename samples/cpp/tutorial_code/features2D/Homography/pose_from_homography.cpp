@@ -42,7 +42,7 @@ void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& co
 void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intrinsicsPath, const Size &patternSize,
                                              const float squareSize)
 {
-    Mat img = imread(imgPath);
+    Mat img = imread( samples::findFile( imgPath) );
     Mat img_corners = img.clone(), img_pose = img.clone();
 
     //! [find-chessboard-corners]
@@ -69,7 +69,7 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
     //! [compute-object-points]
 
     //! [load-intrinsics]
-    FileStorage fs(intrinsicsPath, FileStorage::READ);
+    FileStorage fs( samples::findFile( intrinsicsPath ), FileStorage::READ);
     Mat cameraMatrix, distCoeffs;
     fs["camera_matrix"] >> cameraMatrix;
     fs["distortion_coefficients"] >> distCoeffs;
@@ -126,8 +126,8 @@ void poseEstimationFromCoplanarPoints(const string &imgPath, const string &intri
 
 const char* params
     = "{ help h         |       | print usage }"
-      "{ image          | ../data/left04.jpg | path to a chessboard image }"
-      "{ intrinsics     | ../data/left_intrinsics.yml | path to camera intrinsics }"
+      "{ image          | left04.jpg | path to a chessboard image }"
+      "{ intrinsics     | left_intrinsics.yml | path to camera intrinsics }"
       "{ width bw       | 9     | chessboard width }"
       "{ height bh      | 6     | chessboard height }"
       "{ square_size    | 0.025 | chessboard square size }";

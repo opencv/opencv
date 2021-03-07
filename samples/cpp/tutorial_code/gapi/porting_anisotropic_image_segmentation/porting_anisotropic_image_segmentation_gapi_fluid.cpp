@@ -65,8 +65,7 @@ int main()
     // Prepare the kernel package and run the graph
     cv::gapi::GKernelPackage fluid_kernels = cv::gapi::combine        // Define a custom kernel package:
         (cv::gapi::core::fluid::kernels(),                            // ...with Fluid Core kernels
-         cv::gapi::imgproc::fluid::kernels(),                         // ...and Fluid ImgProc kernels
-         cv::unite_policy::KEEP);
+         cv::gapi::imgproc::fluid::kernels());                        // ...and Fluid ImgProc kernels
     //! [kernel_pkg]
     //! [kernel_hotfix]
     fluid_kernels.remove<cv::gapi::imgproc::GBoxFilter>();            // Remove Fluid Box filter as unsuitable,

@@ -139,9 +139,13 @@
 #endif
 
 #define DIG(a) a,
+#if defined(INTEGER_ARITHMETIC)
+__constant int mat_kernel[] = { COEFF };
+#else
 __constant dstT1 mat_kernel[] = { COEFF };
+#endif
 
-#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
+#if defined(INTEGER_ARITHMETIC)
 #define dstT4 int4
 #define convertDstVec convert_int4
 #else
@@ -263,7 +267,7 @@ __kernel void row_filter_C1_D0(__global const uchar * src, int src_step_in_pixel
     {
         temp[0] = vload4(0, (__local uchar*)&LDS_DAT[l_y][l_x] + RADIUSX + offset - i);
         temp[1] = vload4(0, (__local uchar*)&LDS_DAT[l_y][l_x] + RADIUSX + offset + i);
-#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
+#if defined(INTEGER_ARITHMETIC)
         sum += mad24(convertDstVec(temp[0]), mat_kernel[RADIUSX-i], convertDstVec(temp[1]) * mat_kernel[RADIUSX + i]);
 #else
         sum += mad(convertDstVec(temp[0]), mat_kernel[RADIUSX-i], convertDstVec(temp[1]) * mat_kernel[RADIUSX + i]);
@@ -368,7 +372,7 @@ __kernel void row_filter(__global const uchar * src, int src_step, int src_offse
     {
         temp[0] = LDS_DAT[l_y][l_x + RADIUSX - i];
         temp[1] = LDS_DAT[l_y][l_x + RADIUSX + i];
-#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
+#if defined(INTEGER_ARITHMETIC)
         sum += mad24(convertToDstT(temp[0]), mat_kernel[RADIUSX - i], convertToDstT(temp[1]) * mat_kernel[RADIUSX + i]);
 #else
         sum += mad(convertToDstT(temp[0]), mat_kernel[RADIUSX - i], convertToDstT(temp[1]) * mat_kernel[RADIUSX + i]);

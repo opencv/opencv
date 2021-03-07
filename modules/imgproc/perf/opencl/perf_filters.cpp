@@ -238,15 +238,13 @@ OCL_PERF_TEST_P(ScharrFixture, Scharr,
 
 ///////////// GaussianBlur ////////////////////////
 
-typedef FilterFixture GaussianBlurFixture;
+typedef FilterFixture OCL_GaussianBlurFixture;
 
-OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
-            ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, OCL_PERF_ENUM(3, 5, 7)))
+PERF_TEST_P_(OCL_GaussianBlurFixture, GaussianBlur)
 {
-    const FilterParams params = GetParam();
+    const FilterParams& params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 + DBL_EPSILON : 3e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
@@ -255,8 +253,41 @@ OCL_PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
 
     OCL_TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 1, 1, cv::BORDER_CONSTANT);
 
-    SANITY_CHECK(dst, eps);
+    SANITY_CHECK_NOTHING();
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_GaussianBlurFixture,
+    ::testing::Combine(
+        OCL_TEST_SIZES,
+        OCL_TEST_TYPES,
+        OCL_PERF_ENUM(3, 5, 7)
+    )
+);
+
+INSTANTIATE_TEST_CASE_P(SIFT, OCL_GaussianBlurFixture,
+    ::testing::Combine(
+        ::testing::Values(sz1080p),
+        ::testing::Values(CV_32FC1),
+        OCL_PERF_ENUM(11, 13, 17, 21, 27)
+    )
+);
+
+INSTANTIATE_TEST_CASE_P(DISABLED_FULL, OCL_GaussianBlurFixture,
+    ::testing::Combine(
+        ::testing::Values(sz1080p),
+        ::testing::Values(
+            CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+            CV_8SC1, CV_8SC2, CV_8SC3, CV_8SC4,
+            CV_16UC1, CV_16UC2, CV_16UC3, CV_16UC4,
+            CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
+            CV_32SC1, CV_32SC2, CV_32SC3, CV_32SC4,
+            CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4,
+            CV_64FC1, CV_64FC2, CV_64FC3, CV_64FC4
+        ),
+        OCL_PERF_ENUM(3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29)
+    )
+);
+
 
 ///////////// Filter2D ////////////////////////
 
@@ -281,6 +312,62 @@ OCL_PERF_TEST_P(Filter2DFixture, Filter2D,
 
     SANITY_CHECK(dst, eps);
 }
+
+///////////// SepFilter2D /////////////
+
+typedef FilterFixture OCL_SepFilter2D;
+
+PERF_TEST_P_(OCL_SepFilter2D, SepFilter2D)
+{
+    const FilterParams& params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    Mat kernelX(1, ksize, CV_32FC1);
+    randu(kernelX, -3.0, 3.0);
+    Mat kernelY(1, ksize, CV_32FC1);
+    randu(kernelY, -3.0, 3.0);
+
+    OCL_TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, cv::Point(-1, -1), 1.0f, cv::BORDER_CONSTANT);
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(OCL_SepFilter2D, SepFilter2D_BitExact)
+{
+    const FilterParams& params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    Mat kernelX(1, ksize, CV_32SC1);
+    randu(kernelX, -16.0, 16.0);
+    kernelX.convertTo(kernelX, CV_32FC1, 1/16.0f, 0);
+    Mat kernelY(1, ksize, CV_32SC1);
+    randu(kernelY, -16.0, 16.0);
+    kernelY.convertTo(kernelY, CV_32FC1, 1/16.0f, 0);
+
+    OCL_TEST_CYCLE() cv::sepFilter2D(src, dst, -1, kernelX, kernelY, cv::Point(-1, -1), 1.0f, cv::BORDER_CONSTANT);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_SepFilter2D,
+    ::testing::Combine(
+        ::testing::Values(sz1080p),
+        OCL_TEST_TYPES,
+        OCL_PERF_ENUM(3, 5, 7, 9, 11)
+    )
+);
 
 ///////////// Bilateral ////////////////////////
 

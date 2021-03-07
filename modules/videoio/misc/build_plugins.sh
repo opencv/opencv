@@ -3,7 +3,7 @@
 set -e
 
 if [ -z $1 ] ; then
-    echo "<script> <destination directory>"
+    echo "$0 <destination directory>"
     exit 1
 fi
 

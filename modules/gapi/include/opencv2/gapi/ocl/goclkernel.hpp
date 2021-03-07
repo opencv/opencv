@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GOCLKERNEL_HPP
@@ -32,7 +32,7 @@ namespace gapi
 namespace ocl
 {
     /**
-     * \addtogroup gapi_std_backends G-API Standard backends
+     * \addtogroup gapi_std_backends G-API Standard Backends
      * @{
      */
     /**
@@ -62,15 +62,20 @@ public:
     const cv::UMat&  inMat(int input);
     cv::UMat&  outMatR(int output); // FIXME: Avoid cv::Mat m = ctx.outMatR()
 
-    const cv::gapi::own::Scalar& inVal(int input);
-    cv::gapi::own::Scalar& outValR(int output); // FIXME: Avoid cv::gapi::own::Scalar s = ctx.outValR()
+    const cv::Scalar& inVal(int input);
+    cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
     }
+    template<typename T> T& outOpaqueR(int output) // FIXME: the same issue
+    {
+        return outOpaqueRef(output).wref<T>();
+    }
 
 protected:
     detail::VectorRef& outVecRef(int output);
+    detail::OpaqueRef& outOpaqueRef(int output);
 
     std::vector<GArg> m_args;
     std::unordered_map<std::size_t, GRunArgP> m_results;
@@ -94,7 +99,7 @@ protected:
     F m_f;
 };
 
-// FIXME: This is an ugly ad-hoc imlpementation. TODO: refactor
+// FIXME: This is an ugly ad-hoc implementation. TODO: refactor
 
 namespace detail
 {
@@ -105,11 +110,15 @@ template<> struct ocl_get_in<cv::GMat>
 };
 template<> struct ocl_get_in<cv::GScalar>
 {
-    static cv::Scalar get(GOCLContext &ctx, int idx) { return to_ocv(ctx.inVal(idx)); }
+    static cv::Scalar get(GOCLContext &ctx, int idx) { return ctx.inVal(idx); }
 };
 template<typename U> struct ocl_get_in<cv::GArray<U> >
 {
     static const std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.inArg<VectorRef>(idx).rref<U>(); }
+};
+template<typename U> struct ocl_get_in<cv::GOpaque<U> >
+{
+    static const U& get(GOCLContext &ctx, int idx) { return ctx.inArg<OpaqueRef>(idx).rref<U>(); }
 };
 template<class T> struct ocl_get_in
 {
@@ -119,8 +128,9 @@ template<class T> struct ocl_get_in
 struct tracked_cv_umat{
     //TODO Think if T - API could reallocate UMat to a proper size - how do we handle this ?
     //tracked_cv_umat(cv::UMat& m) : r{(m)}, original_data{m.getMat(ACCESS_RW).data} {}
-    tracked_cv_umat(cv::UMat& m) : r{ (m) }, original_data{ nullptr } {}
-    cv::UMat r;
+    tracked_cv_umat(cv::UMat& m) : r(m), original_data{ nullptr } {}
+    cv::UMat &r; // FIXME: It was a value (not a reference) before.
+                 // Actually OCL backend should allocate its internal data!
     uchar* original_data;
 
     operator cv::UMat& (){ return r;}
@@ -136,24 +146,12 @@ struct tracked_cv_umat{
     }
 };
 
-struct scalar_wrapper_ocl
-{
-    //FIXME reuse CPU (OpenCV) plugin code
-    scalar_wrapper_ocl(cv::gapi::own::Scalar& s) : m_s{cv::gapi::own::to_ocv(s)}, m_org_s(s) {};
-    operator cv::Scalar& () { return m_s; }
-    void writeBack() const  { m_org_s = to_own(m_s); }
-
-    cv::Scalar m_s;
-    cv::gapi::own::Scalar& m_org_s;
-};
-
 template<typename... Outputs>
 void postprocess_ocl(Outputs&... outs)
 {
     struct
     {
         void operator()(tracked_cv_umat* bm) { bm->validate(); }
-        void operator()(scalar_wrapper_ocl* sw) { sw->writeBack(); }
         void operator()(...) {                  }
 
     } validate;
@@ -173,15 +171,18 @@ template<> struct ocl_get_out<cv::GMat>
 };
 template<> struct ocl_get_out<cv::GScalar>
 {
-    static scalar_wrapper_ocl get(GOCLContext &ctx, int idx)
+    static cv::Scalar& get(GOCLContext &ctx, int idx)
     {
-        auto& s = ctx.outValR(idx);
-        return{ s };
+        return ctx.outValR(idx);
     }
 };
 template<typename U> struct ocl_get_out<cv::GArray<U> >
 {
     static std::vector<U>& get(GOCLContext &ctx, int idx) { return ctx.outVecR<U>(idx);  }
+};
+template<typename U> struct ocl_get_out<cv::GOpaque<U> >
+{
+    static U& get(GOCLContext &ctx, int idx) { return ctx.outOpaqueR<U>(idx);  }
 };
 
 template<typename, typename, typename>
@@ -198,7 +199,7 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
         static void call(Inputs&&... ins, Outputs&&... outs)
         {
             //not using a std::forward on outs is deliberate in order to
-            //cause compilation error, by tring to bind rvalue references to lvalue references
+            //cause compilation error, by trying to bind rvalue references to lvalue references
             Impl::run(std::forward<Inputs>(ins)..., outs...);
 
             postprocess_ocl(outs...);
@@ -226,7 +227,8 @@ struct OCLCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...> >
 } // namespace detail
 
 template<class Impl, class K>
-class GOCLKernelImpl: public detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>
+class GOCLKernelImpl: public cv::detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>,
+                      public cv::detail::KernelTag
 {
     using P = detail::OCLCallHelper<Impl, typename K::InArgs, typename K::OutArgs>;
 

@@ -1,6 +1,16 @@
 YOLO DNNs  {#tutorial_dnn_yolo}
 ===============================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_dnn_android}
+@next_tutorial{tutorial_dnn_javascript}
+
+|    |    |
+| -: | :- |
+| Original author | Alessandro de Oliveira Faria |
+| Compatibility | OpenCV >= 3.3.1 |
+
 Introduction
 ------------
 

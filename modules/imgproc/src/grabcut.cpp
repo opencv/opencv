@@ -46,6 +46,8 @@
 using namespace cv;
 using namespace detail;
 
+namespace {
+
 /*
 This is implementation of image segmentation algorithm GrabCut described in
 "GrabCut - Interactive Foreground Extraction using Iterated Graph Cuts".
@@ -229,6 +231,8 @@ void GMM::calcInverseCovAndDeterm(int ci, const double singularFix)
     }
 }
 
+} // namespace
+
 /*
   Calculate beta - parameter of GrabCut algorithm.
   beta = 1/(2*avg(sqr(||color[i] - color[j]||)))
@@ -380,12 +384,20 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
         }
     }
     CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
-    Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
-    kmeans( _bgdSamples, GMM::componentsCount, bgdLabels,
-            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
-    Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
-    kmeans( _fgdSamples, GMM::componentsCount, fgdLabels,
-            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+    {
+        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
+        int num_clusters = GMM::componentsCount;
+        num_clusters = std::min(num_clusters, (int)bgdSamples.size());
+        kmeans( _bgdSamples, num_clusters, bgdLabels,
+                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+    }
+    {
+        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
+        int num_clusters = GMM::componentsCount;
+        num_clusters = std::min(num_clusters, (int)fgdSamples.size());
+        kmeans( _fgdSamples, num_clusters, fgdLabels,
+                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+    }
 
     bgdGMM.initLearning();
     for( int i = 0; i < (int)bgdSamples.size(); i++ )

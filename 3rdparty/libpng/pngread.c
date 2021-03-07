@@ -1,7 +1,7 @@
 
 /* pngread.c - read a PNG file
  *
- * Copyright (c) 2018 Cosmin Truta
+ * Copyright (c) 2018-2019 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -992,6 +992,12 @@ png_read_destroy(png_structrp png_ptr)
 #ifdef PNG_SET_UNKNOWN_CHUNKS_SUPPORTED
    png_free(png_ptr, png_ptr->chunk_list);
    png_ptr->chunk_list = NULL;
+#endif
+
+#if defined(PNG_READ_EXPAND_SUPPORTED) && \
+    defined(PNG_ARM_NEON_IMPLEMENTATION)
+   png_free(png_ptr, png_ptr->riffled_palette);
+   png_ptr->riffled_palette = NULL;
 #endif
 
    /* NOTE: the 'setjmp' buffer may still be allocated and the memory and error

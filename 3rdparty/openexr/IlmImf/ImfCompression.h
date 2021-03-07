@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2004, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -42,9 +42,9 @@
 //	enum Compression
 //
 //-----------------------------------------------------------------------------
+#include "ImfNamespace.h"
 
-namespace Imf {
-
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_ENTER
 
 enum Compression
 {
@@ -61,15 +61,24 @@ enum Compression
     PXR24_COMPRESSION = 5,	// lossy 24-bit float compression
 
     B44_COMPRESSION = 6,	// lossy 4-by-4 pixel block compression,
-                    // fixed compression rate
+    				// fixed compression rate
 
     B44A_COMPRESSION = 7,	// lossy 4-by-4 pixel block compression,
-                    // flat fields are compressed more
+    				// flat fields are compressed more
+
+    DWAA_COMPRESSION = 8,       // lossy DCT based compression, in blocks
+                                // of 32 scanlines. More efficient for partial
+                                // buffer access.
+
+    DWAB_COMPRESSION = 9,       // lossy DCT based compression, in blocks
+                                // of 256 scanlines. More efficient space
+                                // wise and faster to decode full frames
+                                // than DWAA_COMPRESSION.
 
     NUM_COMPRESSION_METHODS	// number of different compression methods
 };
 
+OPENEXR_IMF_INTERNAL_NAMESPACE_HEADER_EXIT
 
-} // namespace Imf
 
 #endif

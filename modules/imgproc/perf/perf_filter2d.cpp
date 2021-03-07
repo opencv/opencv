@@ -39,7 +39,7 @@ PERF_TEST_P( TestFilter2d, Filter2d,
     SANITY_CHECK(dst, 1);
 }
 
-PERF_TEST_P(TestFilter2d, Filter2d_ovx,
+PERF_TEST_P(TestFilter2d, DISABLED_Filter2d_ovx,
             Combine(
                 Values(Size(320, 240), sz1080p),
                 Values(3, 5),

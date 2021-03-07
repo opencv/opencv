@@ -73,7 +73,7 @@
   static inline TYPE FUNC_NAME(const void* const psrc) {  \
     const uint8_t* const psrc_m = (const uint8_t*)psrc;   \
     TYPE val_m;                                           \
-    asm volatile (                                        \
+    __asm__ volatile (                                        \
       "" #INSTR " %[val_m], %[psrc_m]  \n\t"              \
       : [val_m] "=r" (val_m)                              \
       : [psrc_m] "m" (*psrc_m));                          \
@@ -86,7 +86,7 @@
   static inline void FUNC_NAME(TYPE val, void* const pdst) { \
     uint8_t* const pdst_m = (uint8_t*)pdst;                  \
     TYPE val_m = val;                                        \
-    asm volatile (                                           \
+    __asm__ volatile (                                           \
       " " #INSTR "  %[val_m],  %[pdst_m]  \n\t"              \
       : [pdst_m] "=m" (*pdst_m)                              \
       : [val_m] "r" (val_m));                                \
@@ -1389,4 +1389,4 @@ static WEBP_INLINE uint32_t func_hadd_uh_u32(v8u16 in) {
 } while (0)
 #define AVER_UB2_UB(...) AVER_UB2(v16u8, __VA_ARGS__)
 
-#endif  /* WEBP_DSP_MSA_MACRO_H_ */
+#endif  // WEBP_DSP_MSA_MACRO_H_

@@ -53,6 +53,10 @@
 
 #include <opencv2/core/utils/trace.hpp>
 
+#ifdef ENABLE_INSTRUMENTATION
+#include "opencv2/core/utils/instrumentation.hpp"
+#endif
+
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
@@ -141,12 +145,19 @@ namespace cv
 {
 CV_EXPORTS void scalarToRawData(const cv::Scalar& s, void* buf, int type, int unroll_to = 0);
 
-//! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call.
 CV_EXPORTS void* allocSingletonBuffer(size_t size);
 
-//! Allocate all memory buffers which will not be freed, ease filtering memcheck issues
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses fastMalloc() call
 template <typename T> static inline
 T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffer(sizeof(T) * count)); }
+
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues. Uses generic malloc() call.
+CV_EXPORTS void* allocSingletonNewBuffer(size_t size);
+
+//! Allocate memory buffers which will not be freed, ease filtering memcheck issues.  Uses generic malloc() call.
+template <typename T> static inline
+T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 } // namespace
 
@@ -198,8 +209,6 @@ T* allocSingleton(size_t count = 1) { return static_cast<T*>(allocSingletonBuffe
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
 #define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
-
-#define IPP_DISABLE_GAUSSIANBLUR_PARALLEL 1 // not supported (2017u2 / 2017u3)
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
@@ -702,10 +711,10 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #endif
 
 // Instrument region
-#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
+#define CV_INSTRUMENT_REGION_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)        ::cv::instr::IntrumentationRegion  CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CV_INSTRUMENT_GET_RETURN_ADDRESS, ALWAYS_EXPAND, TYPE, IMPL);
 #define CV_INSTRUMENT_REGION_CUSTOM_META(NAME, ALWAYS_EXPAND, TYPE, IMPL)\
-    void *__curr_address__ = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
-    ::cv::instr::IntrumentationRegion __instr_region__(NAME, __FILE__, __LINE__, __curr_address__, false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
+    void *CVAUX_CONCAT(__curr_address__, __LINE__) = [&]() {return CV_INSTRUMENT_GET_RETURN_ADDRESS;}();\
+    ::cv::instr::IntrumentationRegion CVAUX_CONCAT(__instr_region__, __LINE__) (NAME, __FILE__, __LINE__, CVAUX_CONCAT(__curr_address__, __LINE__), false, ::cv::instr::TYPE_GENERAL, ::cv::instr::IMPL_PLAIN);
 // Instrument functions with non-void return type
 #define CV_INSTRUMENT_FUN_RT_META(TYPE, IMPL, ERROR_COND, FUN, ...) ([&]()\
 {\
@@ -789,9 +798,9 @@ CV_EXPORTS InstrNode*   getCurrentNode();
 #endif
 
 #ifdef __CV_AVX_GUARD
-#define CV_INSTRUMENT_REGION(); __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() __CV_AVX_GUARD CV_INSTRUMENT_REGION_();
 #else
-#define CV_INSTRUMENT_REGION(); CV_INSTRUMENT_REGION_();
+#define CV_INSTRUMENT_REGION() CV_INSTRUMENT_REGION_();
 #endif
 
 namespace cv {
@@ -865,9 +874,17 @@ Passed subdirectories are used in LIFO order.
 */
 CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir);
 
-/** @brief Return location of OpenCV libraries or current executable
+/** @brief Retrieve location of OpenCV libraries or current executable
  */
-CV_EXPORTS std::string getBinLocation();
+CV_EXPORTS bool getBinLocation(std::string& dst);
+
+#if defined(_WIN32)
+/** @brief Retrieve location of OpenCV libraries or current executable
+
+@note WIN32 only
+ */
+CV_EXPORTS bool getBinLocation(std::wstring& dst);
+#endif
 
 //! @}
 

@@ -29,6 +29,8 @@
 #ifndef OPENCV_FLANN_SAVING_H_
 #define OPENCV_FLANN_SAVING_H_
 
+//! @cond IGNORED
+
 #include <cstring>
 #include <vector>
 
@@ -110,11 +112,11 @@ inline IndexHeader load_header(FILE* stream)
     size_t read_size = fread(&header,sizeof(header),1,stream);
 
     if (read_size!=(size_t)1) {
-        throw FLANNException("Invalid index file, cannot read");
+        FLANN_THROW(cv::Error::StsError, "Invalid index file, cannot read");
     }
 
     if (strcmp(header.signature,FLANN_SIGNATURE_)!=0) {
-        throw FLANNException("Invalid index file, wrong signature");
+        FLANN_THROW(cv::Error::StsError, "Invalid index file, wrong signature");
     }
 
     return header;
@@ -148,7 +150,7 @@ void load_value(FILE* stream, T& value, size_t count = 1)
 {
     size_t read_cnt = fread(&value, sizeof(value), count, stream);
     if (read_cnt != count) {
-        throw FLANNException("Cannot read from file");
+        FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
     }
 }
 
@@ -157,12 +159,12 @@ void load_value(FILE* stream, cvflann::Matrix<T>& value)
 {
     size_t read_cnt = fread(&value, sizeof(value), 1, stream);
     if (read_cnt != 1) {
-        throw FLANNException("Cannot read from file");
+        FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
     }
     value.data = new T[value.rows*value.cols];
     read_cnt = fread(value.data, sizeof(T), value.rows*value.cols, stream);
     if (read_cnt != (size_t)(value.rows*value.cols)) {
-        throw FLANNException("Cannot read from file");
+        FLANN_THROW(cv::Error::StsParseError, "Cannot read from file");
     }
 }
 
@@ -173,15 +175,17 @@ void load_value(FILE* stream, std::vector<T>& value)
     size_t size;
     size_t read_cnt = fread(&size, sizeof(size_t), 1, stream);
     if (read_cnt!=1) {
-        throw FLANNException("Cannot read from file");
+        FLANN_THROW(cv::Error::StsError, "Cannot read from file");
     }
     value.resize(size);
     read_cnt = fread(&value[0], sizeof(T), size, stream);
     if (read_cnt != size) {
-        throw FLANNException("Cannot read from file");
+        FLANN_THROW(cv::Error::StsError, "Cannot read from file");
     }
 }
 
 }
+
+//! @endcond
 
 #endif /* OPENCV_FLANN_SAVING_H_ */

@@ -346,14 +346,24 @@ protected:
 
 CV_ResizeExactTest::CV_ResizeExactTest() : CV_ResizeTest()
 {
-    max_interpolation = 1;
+    max_interpolation = 2;
 }
 
 
 void CV_ResizeExactTest::get_test_array_types_and_sizes(int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types)
 {
     CV_ResizeTest::get_test_array_types_and_sizes(test_case_idx, sizes, types);
-    interpolation = INTER_LINEAR_EXACT;
+    switch (interpolation)
+    {
+    case 0:
+        interpolation = INTER_LINEAR_EXACT;
+        break;
+    case 1:
+        interpolation = INTER_NEAREST_EXACT;
+        break;
+    default:
+        CV_Assert(interpolation < max_interpolation);
+    }
     if (CV_MAT_DEPTH(types[INPUT][0]) == CV_32F ||
         CV_MAT_DEPTH(types[INPUT][0]) == CV_64F)
         types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = CV_MAKETYPE(CV_8U, CV_MAT_CN(types[INPUT][0]));
@@ -1400,6 +1410,34 @@ TEST(Resize, Area_half)
     }
 }
 
+TEST(Resize, lanczos4_regression_16192)
+{
+    Size src_size(11, 17);
+    Size dst_size(11, 153);
+    Mat src(src_size, CV_8UC3, Scalar::all(128));
+    Mat dst(dst_size, CV_8UC3, Scalar::all(255));
+
+    cv::resize(src, dst, dst_size, 0, 0, INTER_LANCZOS4);
+
+    Mat expected(dst_size, CV_8UC3, Scalar::all(128));
+    EXPECT_EQ(cvtest::norm(dst, expected, NORM_INF), 0) << dst(Rect(0,0,8,8));
+}
+
+TEST(Resize, nearest_regression_15075)
+{
+    const int C = 5;
+    const int i1 = 5, j1 = 5;
+    Size src_size(12, 12);
+    Size dst_size(11, 11);
+
+    cv::Mat src = cv::Mat::zeros(src_size, CV_8UC(C)), dst;
+    for (int j = 0; j < C; j++)
+        src.col(i1).row(j1).data[j] = 1;
+
+    cv::resize(src, dst, dst_size, 0, 0, INTER_NEAREST);
+    EXPECT_EQ(C, cvtest::norm(dst, NORM_L1)) << src.size;
+}
+
 TEST(Imgproc_Warp, multichannel)
 {
     static const int inter_types[] = {INTER_NEAREST, INTER_AREA, INTER_CUBIC,
@@ -1434,6 +1472,26 @@ TEST(Imgproc_Warp, multichannel)
         ASSERT_EQ(0.0, cvtest::norm(dst, NORM_INF));
     }
 }
+
+
+TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
+{
+    const Size imgSize(8192, 8);
+
+    Mat inMat = Mat::zeros(imgSize, CV_8UC4);
+    Mat outMat = Mat::zeros(imgSize, CV_8UC4);
+
+    warpAffine(
+        inMat,
+        outMat,
+        getRotationMatrix2D(Point2f(imgSize.width / 2.0f, imgSize.height / 2.0f), 45.0, 1.0),
+        imgSize,
+        INTER_LINEAR,
+        cv::BORDER_CONSTANT,
+        cv::Scalar(0.0, 0.0, 0.0, 255.0)
+    );
+}
+
 
 TEST(Imgproc_GetAffineTransform, singularity)
 {

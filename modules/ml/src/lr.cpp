@@ -142,12 +142,10 @@ Ptr<LogisticRegression> LogisticRegression::load(const String& filepath, const S
 bool LogisticRegressionImpl::train(const Ptr<TrainData>& trainData, int)
 {
     CV_TRACE_FUNCTION_SKIP_NESTED();
+    CV_Assert(!trainData.empty());
+
     // return value
     bool ok = false;
-
-    if (trainData.empty()) {
-        return false;
-    }
     clear();
     Mat _data_i = trainData->getSamples();
     Mat _labels_i = trainData->getResponses();

@@ -18,12 +18,13 @@ PY3 = sys.version_info[0] == 3
 if PY3:
     long = int
 
+import numpy as np
 import cv2 as cv
+
 from math import cos, sin, sqrt
 import numpy as np
 
-if __name__ == "__main__":
-
+def main():
     img_height = 500
     img_width = 500
     kalman = cv.KalmanFilter(2, 1, 0)
@@ -93,4 +94,10 @@ if __name__ == "__main__":
         if code in [27, ord('q'), ord('Q')]:
             break
 
-    cv.destroyWindow("Kalman")
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
+    cv.destroyAllWindows()

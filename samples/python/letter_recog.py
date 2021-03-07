@@ -145,11 +145,9 @@ class MLP(LetterStatModel):
 
 
 
-if __name__ == '__main__':
+def main():
     import getopt
     import sys
-
-    print(__doc__)
 
     models = [RTrees, KNearest, Boost, SVM, MLP] # NBayes
     models = dict( [(cls.__name__.lower(), cls) for cls in models] )
@@ -186,4 +184,11 @@ if __name__ == '__main__':
         fn = args['--save']
         print('saving model to %s ...' % fn)
         model.save(fn)
+
+    print('Done')
+
+
+if __name__ == '__main__':
+    print(__doc__)
+    main()
     cv.destroyAllWindows()

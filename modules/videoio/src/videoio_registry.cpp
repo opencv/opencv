@@ -16,8 +16,6 @@
 #include "cap_mfx_writer.hpp"
 #endif
 
-#include "plugin_api.hpp"
-
 // All WinRT versions older than 8.0 should provide classes used for video support
 #if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
 #   include "cap_winrt_capture.hpp"
@@ -51,14 +49,14 @@ namespace {
 - platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
 - RGB-D: OpenNI/OpenNI2, REALSENSE
 - special OpenCV (file-based): "images", "mjpeg"
-- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)
+- special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)/uEye
 - other: XINE, gphoto2, etc
 */
 static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
     DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateVideoWriter_FFMPEG_proxy),
-#elif defined(ENABLE_PLUGINS)
+#elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
     DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 #endif
 
@@ -70,6 +68,8 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 #ifdef HAVE_MFX // Media SDK
     DECLARE_STATIC_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, create_MFX_capture, 0, create_MFX_writer),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_INTEL_MFX, "INTEL_MFX", MODE_CAPTURE_BY_FILENAME | MODE_WRITER),
 #endif
 
     // Apple platform
@@ -81,9 +81,13 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef WINRT_VIDEO
     DECLARE_STATIC_BACKEND(CAP_WINRT, "WINRT", MODE_CAPTURE_BY_INDEX, 0, create_WRT_capture, 0),
 #endif
+
 #ifdef HAVE_MSMF
     DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER),
 #endif
+
 #ifdef HAVE_DSHOW
     DECLARE_STATIC_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0),
 #endif
@@ -124,14 +128,44 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_STATIC_BACKEND(CAP_ARAVIS, "ARAVIS", MODE_CAPTURE_BY_INDEX, 0, create_Aravis_capture, 0),
 #endif
 
+#ifdef HAVE_UEYE // uEye
+    DECLARE_STATIC_BACKEND(CAP_UEYE, "UEYE", MODE_CAPTURE_BY_INDEX, 0, create_ueye_camera, 0),
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_UEYE, "UEYE", MODE_CAPTURE_BY_INDEX),
+#endif
+
 #ifdef HAVE_GPHOTO2
     DECLARE_STATIC_BACKEND(CAP_GPHOTO2, "GPHOTO2", MODE_CAPTURE_ALL, createGPhoto2Capture, createGPhoto2Capture, 0),
 #endif
 #ifdef HAVE_XINE
     DECLARE_STATIC_BACKEND(CAP_XINE, "XINE", MODE_CAPTURE_BY_FILENAME, createXINECapture, 0, 0),
 #endif
-
-    // dropped backends: MIL, TYZX, Android
+#if defined(HAVE_ANDROID_MEDIANDK) || defined(HAVE_ANDROID_NATIVE_CAMERA)
+    DECLARE_STATIC_BACKEND(CAP_ANDROID, "ANDROID_NATIVE",
+#ifdef HAVE_ANDROID_MEDIANDK
+                           MODE_CAPTURE_BY_FILENAME
+#else
+                           0
+#endif
+                           |
+#ifdef HAVE_ANDROID_NATIVE_CAMERA
+                           MODE_CAPTURE_BY_INDEX,
+#else
+                           0,
+#endif
+#ifdef HAVE_ANDROID_MEDIANDK
+                           createAndroidCapture_file,
+#else
+                           0,
+#endif
+#ifdef HAVE_ANDROID_NATIVE_CAMERA
+                           createAndroidCapture_cam,
+#else
+                           0,
+#endif
+                           0),
+#endif
+    // dropped backends: MIL, TYZX
 };
 
 bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)

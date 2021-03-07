@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2006, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -45,8 +45,10 @@
 #include <cmath>
 
 using namespace std;
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER
+
 namespace {
 
 double
@@ -72,8 +74,8 @@ denom (double x, double e)
     }
     else
     {
-    double r = frac (1 / x, e);
-
+	double r = frac (1 / x, e);
+	
         if (e > r)
         {
             return floor (1 / x + e);
@@ -95,25 +97,25 @@ Rational::Rational (double x)
 
     if (x >= 0)
     {
-    sign = 1;	// positive
+	sign = 1;	// positive
     }
     else if (x < 0)
     {
-    sign = -1;	// negative
-    x = -x;
+	sign = -1;	// negative
+	x = -x;
     }
     else
     {
-    n = 0;		// NaN
-    d = 0;
-    return;
+	n = 0;		// NaN
+	d = 0;
+	return;
     }
 
     if (x >= (1U << 31) - 0.5)
     {
-    n = sign;	// infinity
-    d = 0;
-    return;
+	n = sign;	// infinity
+	d = 0;
+	return;
     }
 
     double e = (x < 1? 1: x) / (1U << 30);
@@ -122,4 +124,4 @@ Rational::Rational (double x)
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

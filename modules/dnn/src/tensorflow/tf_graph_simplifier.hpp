@@ -21,11 +21,13 @@ void RemoveIdentityOps(tensorflow::GraphDef& net);
 
 void simplifySubgraphs(tensorflow::GraphDef& net);
 
-Mat getTensorContent(const tensorflow::TensorProto &tensor);
+Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy = true);
 
 void releaseTensor(tensorflow::TensorProto* tensor);
 
 void sortByExecutionOrder(tensorflow::GraphDef& net);
+
+void removePhaseSwitches(tensorflow::GraphDef& net);
 
 CV__DNN_INLINE_NS_END
 }}  // namespace dnn, namespace cv

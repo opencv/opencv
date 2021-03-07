@@ -124,7 +124,7 @@ streams.
 
 Here is an example:
 @code
-    #include "opencv2/opencv.hpp"
+    #include "opencv2/core.hpp"
     #include <time.h>
 
     using namespace cv;
@@ -403,8 +403,8 @@ public:
 
     /**
      * @brief Simplified writing API to use with bindings.
-     * @param name Name of the written object
-     * @param val Value of the written object
+     * @param name Name of the written object. When writing to sequences (a.k.a. "arrays"), pass an empty string.
+     * @param val Value of the written object.
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
@@ -436,12 +436,21 @@ public:
      */
     CV_WRAP void writeComment(const String& comment, bool append = false);
 
-    void startWriteStruct(const String& name, int flags, const String& typeName);
-    void endWriteStruct();
+    /** @brief Starts to write a nested structure (sequence or a mapping).
+    @param name name of the structure. When writing to sequences (a.k.a. "arrays"), pass an empty string.
+    @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
+    @param typeName optional name of the type you store. The effect of setting this depends on the storage format.
+    I.e. if the format has a specification for storing type information, this parameter is used.
+    */
+    CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
+
+    /** @brief Finishes writing nested structure (should pair startWriteStruct())
+    */
+    CV_WRAP void endWriteStruct();
 
     /** @brief Returns the normalized object name for the specified name of a file.
-     @param filename Name of a file
-     @returns The normalized object name.
+    @param filename Name of a file
+    @returns The normalized object name.
      */
     static String getDefaultObjectName(const String& filename);
 
@@ -502,6 +511,8 @@ public:
      @param fs Pointer to the file storage structure.
      @param blockIdx Index of the memory block where the file node is stored
      @param ofs Offset in bytes from the beginning of the serialized storage
+
+     @deprecated
      */
     FileNode(const FileStorage* fs, size_t blockIdx, size_t ofs);
 
@@ -509,6 +520,8 @@ public:
      @param node File node to be used as initialization for the created file node.
      */
     FileNode(const FileNode& node);
+
+    FileNode& operator=(const FileNode& node);
 
     /** @brief Returns element of a mapping node or a sequence node.
      @param nodename Name of an element in the mapping node.
@@ -583,11 +596,11 @@ public:
 
     /** @brief Reads node elements to the buffer with the specified format.
 
-     Usually it is more convenient to use operator `>>` instead of this method.
-     @param fmt Specification of each array element. See @ref format_spec "format specification"
-     @param vec Pointer to the destination array.
-     @param len Number of elements to read. If it is greater than number of remaining elements then all
-     of them will be read.
+    Usually it is more convenient to use operator `>>` instead of this method.
+    @param fmt Specification of each array element. See @ref format_spec "format specification"
+    @param vec Pointer to the destination array.
+    @param len Number of bytes to read (buffer size limit). If it is greater than number of
+               remaining elements then all of them will be read.
      */
     void readRaw( const String& fmt, void* vec, size_t len ) const;
 
@@ -604,7 +617,9 @@ public:
     CV_WRAP Mat mat() const;
 
     //protected:
-    const FileStorage* fs;
+    FileNode(FileStorage::Impl* fs, size_t blockIdx, size_t ofs);
+
+    FileStorage::Impl* fs;
     size_t blockIdx;
     size_t ofs;
 };
@@ -640,6 +655,8 @@ public:
      */
     FileNodeIterator(const FileNodeIterator& it);
 
+    FileNodeIterator& operator=(const FileNodeIterator& it);
+
     //! returns the currently observed element
     FileNode operator *() const;
 
@@ -652,14 +669,14 @@ public:
 
     /** @brief Reads node elements to the buffer with the specified format.
 
-     Usually it is more convenient to use operator `>>` instead of this method.
-     @param fmt Specification of each array element. See @ref format_spec "format specification"
-     @param vec Pointer to the destination array.
-     @param maxCount Number of elements to read. If it is greater than number of remaining elements then
-     all of them will be read.
+    Usually it is more convenient to use operator `>>` instead of this method.
+    @param fmt Specification of each array element. See @ref format_spec "format specification"
+    @param vec Pointer to the destination array.
+    @param len Number of bytes to read (buffer size limit). If it is greater than number of
+               remaining elements then all of them will be read.
      */
     FileNodeIterator& readRaw( const String& fmt, void* vec,
-                               size_t maxCount=(size_t)INT_MAX );
+                               size_t len=(size_t)INT_MAX );
 
     //! returns the number of remaining (not read yet) elements
     size_t remaining() const;
@@ -667,7 +684,7 @@ public:
     bool equalTo(const FileNodeIterator& it) const;
 
 protected:
-    const FileStorage* fs;
+    FileStorage::Impl* fs;
     size_t blockIdx;
     size_t ofs;
     size_t blockSize;

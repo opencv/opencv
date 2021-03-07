@@ -4,12 +4,13 @@
 
 #include "test_precomp.hpp"
 
-#ifdef HAVE_MFX
-
 namespace opencv_test { namespace {
 
 TEST(videoio_mfx, read_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     VideoCapture cap;
     ASSERT_NO_THROW(cap.open("nonexistent-file", CAP_INTEL_MFX));
     ASSERT_FALSE(cap.isOpened());
@@ -20,6 +21,9 @@ TEST(videoio_mfx, read_invalid)
 
 TEST(videoio_mfx, write_invalid)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const string filename = cv::tempfile(".264");
     VideoWriter writer;
     bool res = true;
@@ -35,7 +39,7 @@ TEST(videoio_mfx, write_invalid)
     ASSERT_NO_THROW(res = writer.open(String(), CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
-    ASSERT_ANY_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
+    ASSERT_NO_THROW(res = writer.open(filename, CAP_INTEL_MFX, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
     EXPECT_FALSE(res);
     EXPECT_FALSE(writer.isOpened());
 
@@ -84,6 +88,9 @@ typedef testing::TestWithParam< Size_FPS_Ext > videoio_mfx;
 
 TEST_P(videoio_mfx, read_write_raw)
 {
+    if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
+        throw SkipTestException("MediaSDK backend was not found");
+
     const Size FRAME_SIZE = get<0>(GetParam());
     const double FPS = get<1>(GetParam());
     const char *ext = get<2>(GetParam());
@@ -111,6 +118,8 @@ TEST_P(videoio_mfx, read_write_raw)
     VideoCapture cap;
     cap.open(filename, CAP_INTEL_MFX);
     ASSERT_TRUE(cap.isOpened());
+    EXPECT_EQ(FRAME_SIZE.width, cap.get(CAP_PROP_FRAME_WIDTH));
+    EXPECT_EQ(FRAME_SIZE.height, cap.get(CAP_PROP_FRAME_HEIGHT));
     for (int i = 0; i < FRAME_COUNT; ++i)
     {
         ASSERT_TRUE(cap.read(frame));
@@ -137,12 +146,20 @@ TEST_P(videoio_mfx, read_write_raw)
     remove(filename.c_str());
 }
 
+inline static std::string videoio_mfx_name_printer(const testing::TestParamInfo<videoio_mfx::ParamType>& info)
+{
+    std::ostringstream out;
+    const Size sz = get<0>(info.param);
+    const std::string ext = get<2>(info.param);
+    out << sz.width << "x" << sz.height << "x" << get<1>(info.param) << "x" << ext.substr(1, ext.size() - 1);
+    return out.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videoio_mfx,
                         testing::Combine(
                             testing::Values(Size(640, 480), Size(638, 478), Size(636, 476), Size(1920, 1080)),
                             testing::Values(1, 30, 100),
-                            testing::Values(".mpeg2", ".264", ".265")));
+                            testing::Values(".mpeg2", ".264", ".265")),
+                        videoio_mfx_name_printer);
 
 }} // namespace
-
-#endif

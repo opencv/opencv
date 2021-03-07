@@ -653,6 +653,7 @@ bool dls::is_empty(const cv::Mat * M)
 
 bool dls::positive_eigenvalues(const cv::Mat * eigenvalues)
 {
+    CV_Assert(eigenvalues && !eigenvalues->empty());
     cv::MatConstIterator_<double> it = eigenvalues->begin<double>();
     return *(it) > 0 && *(it+1) > 0 && *(it+2) > 0;
 }

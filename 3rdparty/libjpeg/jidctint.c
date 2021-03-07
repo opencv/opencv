@@ -2,7 +2,7 @@
  * jidctint.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modification developed 2002-2015 by Guido Vollbeding.
+ * Modification developed 2002-2018 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -166,6 +166,7 @@
 /*
  * Perform dequantization and inverse DCT on one block of coefficients.
  *
+ * Optimized algorithm with 12 multiplications in the 1-D kernel.
  * cK represents sqrt(2) * cos(K*pi/16).
  */
 
@@ -428,7 +429,7 @@ jpeg_idct_islow (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 7x7 output block.
+ * producing a reduced-size 7x7 output block.
  *
  * Optimized algorithm with 12 multiplications in the 1-D kernel.
  * cK represents sqrt(2) * cos(K*pi/14).
@@ -1473,7 +1474,7 @@ jpeg_idct_10x10 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 11x11 output block.
+ * producing an 11x11 output block.
  *
  * Optimized algorithm with 24 multiplications in the 1-D kernel.
  * cK represents sqrt(2) * cos(K*pi/22).
@@ -2623,7 +2624,7 @@ jpeg_idct_16x16 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     tmp0 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     tmp0 <<= CONST_BITS;
     /* Add fudge factor here for final descale. */
-    tmp0 += 1 << (CONST_BITS-PASS1_BITS-1);
+    tmp0 += ONE << (CONST_BITS-PASS1_BITS-1);
 
     z1 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
     tmp1 = MULTIPLY(z1, FIX(1.306562965));      /* c4[16] = c2[8] */
@@ -2920,13 +2921,6 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
      * The rotator is c(-6).
      */
 
-    z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
-    z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
-
-    z1 = MULTIPLY(z2 + z3, FIX_0_541196100);       /* c6 */
-    tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);     /* c2-c6 */
-    tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);     /* c2+c6 */
-
     z2 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
     z2 <<= CONST_BITS;
@@ -2936,6 +2930,13 @@ jpeg_idct_16x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = z2 + z3;
     tmp1 = z2 - z3;
+
+    z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
+    z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
+
+    z1 = MULTIPLY(z2 + z3, FIX_0_541196100);       /* c6 */
+    tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);     /* c2-c6 */
+    tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);     /* c2+c6 */
 
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
@@ -3674,7 +3675,7 @@ jpeg_idct_10x5 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 8x4 output block.
+ * producing an 8x4 output block.
  *
  * 4-point IDCT in pass 1 (columns), 8-point in pass 2 (rows).
  */
@@ -3834,7 +3835,7 @@ jpeg_idct_8x4 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a reduced-size 6x3 output block.
+ * producing a 6x3 output block.
  *
  * 3-point IDCT in pass 1 (columns), 6-point in pass 2 (rows).
  */
@@ -4081,7 +4082,7 @@ jpeg_idct_2x1 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a 8x16 output block.
+ * producing an 8x16 output block.
  *
  * 16-point IDCT in pass 1 (columns), 8-point in pass 2 (rows).
  */
@@ -4883,13 +4884,6 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
      * The rotator is c(-6).
      */
 
-    z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
-    z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
-
-    z1 = MULTIPLY(z2 + z3, FIX_0_541196100);       /* c6 */
-    tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);     /* c2-c6 */
-    tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);     /* c2+c6 */
-
     z2 = DEQUANTIZE(inptr[DCTSIZE*0], quantptr[DCTSIZE*0]);
     z3 = DEQUANTIZE(inptr[DCTSIZE*4], quantptr[DCTSIZE*4]);
     z2 <<= CONST_BITS;
@@ -4899,6 +4893,13 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
     tmp0 = z2 + z3;
     tmp1 = z2 - z3;
+
+    z2 = DEQUANTIZE(inptr[DCTSIZE*2], quantptr[DCTSIZE*2]);
+    z3 = DEQUANTIZE(inptr[DCTSIZE*6], quantptr[DCTSIZE*6]);
+
+    z1 = MULTIPLY(z2 + z3, FIX_0_541196100);       /* c6 */
+    tmp2 = z1 + MULTIPLY(z2, FIX_0_765366865);     /* c2-c6 */
+    tmp3 = z1 - MULTIPLY(z3, FIX_1_847759065);     /* c2+c6 */
 
     tmp10 = tmp0 + tmp2;
     tmp13 = tmp0 - tmp2;
@@ -5003,7 +5004,7 @@ jpeg_idct_4x8 (j_decompress_ptr cinfo, jpeg_component_info * compptr,
 
 /*
  * Perform dequantization and inverse DCT on one block of coefficients,
- * producing a reduced-size 3x6 output block.
+ * producing a 3x6 output block.
  *
  * 6-point IDCT in pass 1 (columns), 3-point in pass 2 (rows).
  */

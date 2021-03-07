@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -74,8 +74,9 @@
 #include "ImathLine.h"
 #include "ImathVecAlgo.h"
 #include "ImathFun.h"
+#include "ImathNamespace.h"
 
-namespace Imath {
+IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 
 template <class T>
@@ -104,16 +105,16 @@ closestPoints
     T absD = abs (d);
 
     if ((absD > 1) ||
-    (abs (n1) < limits<T>::max() * absD &&
-     abs (n2) < limits<T>::max() * absD))
+	(abs (n1) < limits<T>::max() * absD &&
+	 abs (n2) < limits<T>::max() * absD))
     {
-    point1 = line1 (n1 / d);
-    point2 = line2 (n2 / d);
-    return true;
+	point1 = line1 (n1 / d);
+	point2 = line2 (n2 / d);
+	return true;
     }
     else
     {
-    return false;
+	return false;
     }
 }
 
@@ -160,9 +161,9 @@ intersect
     T l = normal.length();
 
     if (l != 0)
-    normal /= l;
+	normal /= l;
     else
-    return false;	// zero-area triangle
+	return false;	// zero-area triangle
 
     //
     // d is the distance of line.pos from the plane that contains the triangle.
@@ -173,9 +174,9 @@ intersect
     T nd = normal ^ line.dir;
 
     if (abs (nd) > 1 || abs (d) < limits<T>::max() * abs (nd))
-    pt = line (d / nd);
+	pt = line (d / nd);
     else
-    return false;  // line and plane are nearly parallel
+	return false;  // line and plane are nearly parallel
 
     //
     // Compute the barycentric coordinates of the intersection point.
@@ -184,39 +185,39 @@ intersect
     //
 
     {
-    Vec3<T> en = edge0.normalized();
-    Vec3<T> a = pt - v0;
-    Vec3<T> b = v2 - v0;
-    Vec3<T> c = (a - en * (en ^ a));
-    Vec3<T> d = (b - en * (en ^ b));
-    T e = c ^ d;
-    T f = d ^ d;
+	Vec3<T> en = edge0.normalized();
+	Vec3<T> a = pt - v0;
+	Vec3<T> b = v2 - v0;
+	Vec3<T> c = (a - en * (en ^ a));
+	Vec3<T> d = (b - en * (en ^ b));
+	T e = c ^ d;
+	T f = d ^ d;
 
-    if (e >= 0 && e <= f)
-        barycentric.z = e / f;
-    else
-        return false; // outside
+	if (e >= 0 && e <= f)
+	    barycentric.z = e / f;
+	else
+	    return false; // outside
     }
 
     {
-    Vec3<T> en = edge1.normalized();
-    Vec3<T> a = pt - v1;
-    Vec3<T> b = v0 - v1;
-    Vec3<T> c = (a - en * (en ^ a));
-    Vec3<T> d = (b - en * (en ^ b));
-    T e = c ^ d;
-    T f = d ^ d;
+	Vec3<T> en = edge1.normalized();
+	Vec3<T> a = pt - v1;
+	Vec3<T> b = v0 - v1;
+	Vec3<T> c = (a - en * (en ^ a));
+	Vec3<T> d = (b - en * (en ^ b));
+	T e = c ^ d;
+	T f = d ^ d;
 
-    if (e >= 0 && e <= f)
-        barycentric.x = e / f;
-    else
-        return false; // outside
+	if (e >= 0 && e <= f)
+	    barycentric.x = e / f;
+	else
+	    return false; // outside
     }
 
     barycentric.y = 1 - barycentric.x - barycentric.z;
 
     if (barycentric.y < 0)
-    return false; // outside
+	return false; // outside
 
     front = ((line.dir ^ normal) < 0);
     return true;
@@ -233,7 +234,7 @@ closestVertex
 {
     Vec3<T> nearest = v0;
     T neardot       = (v0 - l.closestPointTo(v0)).length2();
-
+    
     T tmp           = (v1 - l.closestPointTo(v1)).length2();
 
     if (tmp < neardot)
@@ -276,12 +277,12 @@ rotatePoint (const Vec3<T> p, Line3<T> l, T angle)
     T cosangle = Math<T>::cos(angle);
     T sinangle = Math<T>::sin(angle);
 
-    Vec3<T> r = q + x * radius * cosangle + y * radius * sinangle;
+    Vec3<T> r = q + x * radius * cosangle + y * radius * sinangle; 
 
     return r;
 }
 
 
-} // namespace Imath
+IMATH_INTERNAL_NAMESPACE_HEADER_EXIT
 
-#endif
+#endif // INCLUDED_IMATHLINEALGO_H

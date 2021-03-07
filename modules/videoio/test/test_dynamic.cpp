@@ -79,5 +79,51 @@ TEST(videoio_dynamic, basic_write)
     remove(filename.c_str());
 }
 
+TEST(videoio_dynamic, write_invalid)
+{
+    vector<VideoCaptureAPIs> backends = videoio_registry::getWriterBackends();
+    for (VideoCaptureAPIs be : backends)
+    {
+        SCOPED_TRACE(be);
+        const string filename = cv::tempfile(".mkv");
+        VideoWriter writer;
+        bool res = true;
+
+        // Bad FourCC
+        EXPECT_NO_THROW(res = writer.open(filename, be, VideoWriter::fourcc('A', 'B', 'C', 'D'), 1, Size(640, 480), true));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+
+        // Empty filename
+        EXPECT_NO_THROW(res = writer.open(String(), be, VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480), true));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+        EXPECT_NO_THROW(res = writer.open(String(), be, VideoWriter::fourcc('M', 'J', 'P', 'G'), 1, Size(640, 480), true));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+
+        // zero FPS
+        EXPECT_NO_THROW(res = writer.open(filename, be, VideoWriter::fourcc('H', '2', '6', '4'), 0, Size(640, 480), true));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+
+        // cleanup
+        EXPECT_NO_THROW(writer.release());
+        remove(filename.c_str());
+    }
+
+    // Generic
+    {
+        VideoWriter writer;
+        bool res = true;
+        EXPECT_NO_THROW(res = writer.open(std::string(), VideoWriter::fourcc('H', '2', '6', '4'), 1, Size(640, 480)));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+        EXPECT_NO_THROW(res = writer.open(std::string(), VideoWriter::fourcc('M', 'J', 'P', 'G'), 1, Size(640, 480)));
+        EXPECT_FALSE(res);
+        EXPECT_FALSE(writer.isOpened());
+    }
+}
+
 
 }} // opencv_test::<anonymous>::

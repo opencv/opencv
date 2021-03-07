@@ -5,14 +5,14 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "compiler/transactions.hpp"
 
-#include "gapi_mock_kernels.hpp"
+#include "../gapi_mock_kernels.hpp"
 
-#include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/gcompiler.hpp"
+#include "compiler/gmodel_priv.hpp"
 
 namespace opencv_test
 {
@@ -34,7 +34,7 @@ TEST(IslandFusion, TwoOps_OneIsland)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -44,10 +44,11 @@ TEST(IslandFusion, TwoOps_OneIsland)
 
     // Inspect the graph and verify the islands configuration
     cv::gimpl::GModel::ConstGraph gm(*graph);
+    cv::gimpl::GModel::ConstLayoutGraph glm(*graph);
 
-    auto in_nh  = cv::gimpl::GModel::dataNodeOf(gm, in);
-    auto tmp_nh = cv::gimpl::GModel::dataNodeOf(gm, tmp0);
-    auto out_nh = cv::gimpl::GModel::dataNodeOf(gm, out);
+    auto in_nh  = cv::gimpl::GModel::dataNodeOf(glm, in);
+    auto tmp_nh = cv::gimpl::GModel::dataNodeOf(glm, tmp0);
+    auto out_nh = cv::gimpl::GModel::dataNodeOf(glm, out);
 
     // in/out mats shouldn't be assigned to any Island
     EXPECT_FALSE(gm.metadata(in_nh ).contains<cv::gimpl::Island>());
@@ -76,7 +77,7 @@ TEST(IslandFusion, TwoOps_TwoIslands)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, S::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -141,8 +142,8 @@ TEST(IslandFusion, ConsumerHasTwoInputs)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -210,7 +211,7 @@ TEST(IslandFusion, DataNodeUsedDifferentBackend)
     cv::GComputation cc(cv::GIn(in), cv::GOut(out0, out1));
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, S::Baz>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -271,7 +272,7 @@ TEST(IslandFusion, LoopBetweenDifferentBackends)
     cv::GComputation cc(cv::GIn(in), cv::GOut(out1, out0));
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Baz, J::Quux, S::Foo, S::Qux>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -333,8 +334,8 @@ TEST(IslandsFusion, PartionOverlapUserIsland)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, J::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -390,8 +391,8 @@ TEST(IslandsFusion, DISABLED_IslandContainsDifferentBackends)
     cv::GComputation cc(cv::GIn(in[0], in[1]), cv::GOut(out));
 
     // Prepare compilation parameters manually
-    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)}),
-                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)})};
+    cv::GMetaArgs in_metas = {GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)}),
+                              GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)})};
     const auto pkg = cv::gapi::kernels<J::Foo, S::Bar>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -423,7 +424,7 @@ TEST(IslandFusion, WithLoop)
     cv::GComputation cc(in, out);
 
     // Prepare compilation parameters manually
-    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::gapi::own::Size(32,32)});
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
     const auto pkg     = cv::gapi::kernels<J::Foo, J::Baz, J::Qux>();
 
     // Directly instantiate G-API graph compiler and run partial compilation
@@ -512,7 +513,67 @@ TEST(IslandFusion, Regression_ShouldFuseAll)
     EXPECT_EQ(1u, isl_nhs.size());  // 1 island
 }
 
-// FIXME: add more tests on mixed (hetero) graphs
+TEST(IslandFusion, Test_Desync_NoFuse)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = in*0.5f;
+    cv::GMat tmp2 = tmp1 + in;
+
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat tmp4 = tmp3*0.1f;
+
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
+    cv::GComputation comp(cv::GIn(in), cv::GOut(tmp2, tmp4));
+
+    //////////////////////////////////////////////////////////////////
+    // Compile the graph in "regular" mode, it should produce a single island
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
+    {
+        using namespace cv::gimpl;
+
+        GCompiler compiler(comp, {in_meta}, cv::compile_args());
+        GCompiler::GPtr graph = compiler.generateGraph();
+        compiler.runPasses(*graph);
+
+        auto isl_model = GModel::ConstGraph(*graph).metadata()
+            .get<IslandModel>().model;
+        GIslandModel::ConstGraph gim(*isl_model);
+
+        const auto is_island = [&](ade::NodeHandle nh) {
+            return (NodeKind::ISLAND == gim.metadata(nh).get<NodeKind>().k);
+        };
+        const auto num_isl = std::count_if(gim.nodes().begin(),
+                                           gim.nodes().end(),
+                                           is_island);
+        EXPECT_EQ(3, num_isl);
+    }
+    //////////////////////////////////////////////////////////////////
+    // Now compile the graph in the streaming mode.
+    // It has to produce two islands
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
+    {
+        using namespace cv::gimpl;
+
+        GCompiler compiler(comp, {in_meta}, cv::compile_args());
+        GCompiler::GPtr graph = compiler.generateGraph();
+        GModel::Graph(*graph).metadata().set(Streaming{});
+        compiler.runPasses(*graph);
+
+        auto isl_model = GModel::ConstGraph(*graph).metadata()
+             .get<IslandModel>().model;
+        GIslandModel::ConstGraph gim(*isl_model);
+
+        const auto is_island = [&](ade::NodeHandle nh) {
+            return (NodeKind::ISLAND == gim.metadata(nh).get<NodeKind>().k);
+        };
+        const auto num_isl = std::count_if(gim.nodes().begin(),
+                                           gim.nodes().end(),
+                                           is_island);
+        EXPECT_EQ(3, num_isl);
+    }
+}
+
+// Fixme: add more tests on mixed (hetero) graphs
 // ADE-222, ADE-223
 
 // FIXME: add test on combination of user-specified island

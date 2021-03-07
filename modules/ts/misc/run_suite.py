@@ -112,7 +112,10 @@ class TestSuite(object):
         args = args[:]
         exe = os.path.abspath(path)
         if module == "java":
-            cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type, "buildAndTest"]
+            cmd = [self.cache.ant_executable, "-Dopencv.build.type=%s" % self.cache.build_type]
+            if self.options.package:
+                cmd += ["-Dopencv.test.package=%s" % self.options.package]
+            cmd += ["buildAndTest"]
             ret = execute(cmd, cwd=self.cache.java_test_dir)
             return None, ret
         elif module in ['python2', 'python3']:

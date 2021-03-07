@@ -11,7 +11,7 @@ set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 # get list of modules to wrap
 set(OPENCV_PYTHON_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
-  if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";${MODULE_NAME};" AND HAVE_${m})
+  if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";python;" AND HAVE_${m})
     list(APPEND OPENCV_PYTHON_MODULES ${m})
     #message(STATUS "\t${m}")
   endif()
@@ -26,6 +26,12 @@ foreach(m ${OPENCV_PYTHON_MODULES})
       list(APPEND opencv_hdrs "${hdr}")
     endif()
   endforeach()
+
+  # both wrapping and C++ implementation
+  file(GLOB hdr2 ${OPENCV_MODULE_${m}_LOCATION}/misc/python/python_*.hpp)
+  list(APPEND opencv_hdrs ${hdr2})
+  list(APPEND opencv_userdef_hdrs ${hdr2})
+
   file(GLOB hdr ${OPENCV_MODULE_${m}_LOCATION}/misc/python/shadow*.hpp)
   list(APPEND opencv_hdrs ${hdr})
   file(GLOB userdef_hdrs ${OPENCV_MODULE_${m}_LOCATION}/misc/python/pyopencv*.hpp)
@@ -51,11 +57,13 @@ if(NOT HAVE_CUDA)
 endif()
 
 set(cv2_generated_files
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_enums.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_funcs.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_include.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_modules.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_modules_content.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_type_reg.h"
-    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_ns_reg.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types_content.h"
     "${OPENCV_PYTHON_SIGNATURES_FILE}"
 )
 

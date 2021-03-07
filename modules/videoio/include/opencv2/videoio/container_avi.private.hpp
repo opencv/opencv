@@ -58,7 +58,7 @@ RIFF ('AVI '
      {xxdb|xxdc|xxpc|xxwb}
      xx - stream number: 00, 01, 02, ...
      db - uncompressed video frame
-     dc - commpressed video frame
+     dc - compressed video frame
      pc - palette change
      wb - audio frame
 
@@ -139,7 +139,7 @@ class BitStream;
 // {xxdb|xxdc|xxpc|xxwb}
 // xx - stream number: 00, 01, 02, ...
 // db - uncompressed video frame
-// dc - commpressed video frame
+// dc - compressed video frame
 // pc - palette change
 // wb - audio frame
 

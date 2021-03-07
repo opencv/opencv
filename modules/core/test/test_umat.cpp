@@ -1154,6 +1154,30 @@ TEST(UMat, map_unmap_counting)
 }
 
 
+static void process_with_async_cleanup(Mat& frame)
+{
+    UMat blurResult;
+    {
+        UMat umat_buffer = frame.getUMat(ACCESS_READ);
+        cv::blur(umat_buffer, blurResult, Size(3, 3));  // UMat doesn't support inplace, this call is not synchronized
+    }
+    Mat result;
+    blurResult.copyTo(result);
+    swap(result, frame);
+    // umat_buffer cleanup is done asynchronously, silence warning about original 'frame' cleanup here (through 'result')
+    // - release input 'frame' (as 'result')
+    // - release 'umat_buffer' asynchronously and silence warning about "parent" buffer (in debug builds)
+}
+TEST(UMat, async_cleanup_without_call_chain_warning)
+{
+    Mat frame(Size(640, 480), CV_8UC1, Scalar::all(128));
+    for (int i = 0; i < 10; i++)
+    {
+        process_with_async_cleanup(frame);
+    }
+}
+
+
 ///////////// oclCleanupCallback threadsafe check (#5062) /////////////////////
 
 // Case 1: reuse of old src Mat in OCL pipe. Hard to catch!
@@ -1381,6 +1405,18 @@ TEST(UMat, testTempObjects_Mat_issue_8693)
     srcMat.convertTo(srcMat, CV_64FC1);
 
     EXPECT_EQ(0, cvtest::norm(srcUMat.getMat(ACCESS_READ), srcMat, NORM_INF));
+}
+
+TEST(UMat, resize_Mat_issue_13577)
+{
+    // save the current state
+    bool useOCL = cv::ocl::useOpenCL();
+
+    cv::ocl::setUseOpenCL(false);
+    UMat foo(10, 10, CV_32FC1);
+    cv::resize(foo, foo, cv::Size(), .5, .5);
+
+    cv::ocl::setUseOpenCL(useOCL);  // restore state
 }
 
 } } // namespace opencv_test::ocl

@@ -5,12 +5,12 @@
 // Copyright (C) 2018 Intel Corporation
 
 
-#include "test_precomp.hpp"
+#include "../test_precomp.hpp"
 #include "api/gcomputation_priv.hpp"
 
-#include "opencv2/gapi/fluid/gfluidkernel.hpp"
-#include "opencv2/gapi/fluid/core.hpp"
-#include "opencv2/gapi/fluid/imgproc.hpp"
+#include <opencv2/gapi/fluid/gfluidkernel.hpp>
+#include <opencv2/gapi/fluid/core.hpp>
+#include <opencv2/gapi/fluid/imgproc.hpp>
 
 namespace opencv_test
 {
@@ -116,8 +116,8 @@ TEST(GComputationCompile, FluidReshapeResizeDownScale)
     cv::resize(in_mat1, cv_out_mat1, szOut);
     cv::resize(in_mat2, cv_out_mat2, szOut);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
 }
 
 TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
@@ -151,9 +151,9 @@ TEST(GComputationCompile, FluidReshapeSwitchToUpscaleFromDownscale)
     cv::resize(in_mat2, cv_out_mat2, szOut);
     cv::resize(in_mat3, cv_out_mat3, szOut);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
-    EXPECT_EQ(0, cv::countNonZero(out_mat3 != cv_out_mat3));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat3, cv_out_mat3, NORM_INF));
 }
 
 TEST(GComputationCompile, ReshapeBlur)
@@ -181,8 +181,8 @@ TEST(GComputationCompile, ReshapeBlur)
     cv::blur(in_mat1, cv_out_mat1, kernelSize);
     cv::blur(in_mat2, cv_out_mat2, kernelSize);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat1 != cv_out_mat1));
-    EXPECT_EQ(0, cv::countNonZero(out_mat2 != cv_out_mat2));
+    EXPECT_EQ(0, cvtest::norm(out_mat1, cv_out_mat1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat2, cv_out_mat2, NORM_INF));
 }
 
 TEST(GComputationCompile, ReshapeRois)
@@ -197,8 +197,7 @@ TEST(GComputationCompile, ReshapeRois)
     cv::randn(first_in_mat, cv::Scalar::all(127), cv::Scalar::all(40.f));
     cv::Mat first_out_mat;
     auto fluidKernels = cv::gapi::combine(gapi::imgproc::fluid::kernels(),
-                                          gapi::core::fluid::kernels(),
-                                          cv::unite_policy::REPLACE);
+                                          gapi::core::fluid::kernels());
     cc.apply(first_in_mat, first_out_mat, cv::compile_args(fluidKernels));
     auto first_comp = cc.priv().m_lastCompiled;
 
@@ -217,7 +216,7 @@ TEST(GComputationCompile, ReshapeRois)
         int roiH = szOut.height / niter;
         cv::Rect roi{x, y, roiW, roiH};
 
-        cc.apply(in_mat, out_mat, cv::compile_args(cv::GFluidOutputRois{{to_own(roi)}}));
+        cc.apply(in_mat, out_mat, cv::compile_args(cv::GFluidOutputRois{{roi}}));
         auto comp = cc.priv().m_lastCompiled;
 
         EXPECT_EQ(&first_comp.priv(), &comp.priv());
@@ -226,7 +225,7 @@ TEST(GComputationCompile, ReshapeRois)
         cv::blur(in_mat, blur_mat, kernelSize);
         cv::resize(blur_mat, cv_out_mat, szOut);
 
-        EXPECT_EQ(0, cv::countNonZero(out_mat(roi) != cv_out_mat(roi)));
+        EXPECT_EQ(0, cvtest::norm(out_mat(roi), cv_out_mat(roi), NORM_INF));
     }
 }
 

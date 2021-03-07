@@ -77,7 +77,7 @@ Replaced y(1,ndim,0.0) ------> y(1,ndim+1,0.0)
 
 ***********************************************************************************************************************************
 
-The code below was used in tesing the source code.
+The code below was used in testing the source code.
 Created by @SareeAlnaghy
 
 #include <iostream>

@@ -1,6 +1,6 @@
 # --- Dc1394 ---
 if(NOT HAVE_DC1394_2 AND PKG_CONFIG_FOUND)
-  pkg_check_modules(DC1394_2 libdc1394-2 QUIET)
+  ocv_check_modules(DC1394_2 libdc1394-2)
   if(DC1394_2_FOUND)
     set(DC1394_2_VERSION "${DC1394_2_VERSION}" PARENT_SCOPE) # informational
     set(HAVE_DC1394_2 TRUE)

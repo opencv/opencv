@@ -2,9 +2,9 @@
 //
 // Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,11 +46,13 @@
 #include <string.h>
 #include <map>
 
+#include "ImfNamespace.h"
 
-namespace Imf {
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_ENTER 
 
-using IlmThread::Mutex;
-using IlmThread::Lock;
+
+using ILMTHREAD_NAMESPACE::Mutex;
+using ILMTHREAD_NAMESPACE::Lock;
 
 
 Attribute::Attribute () {}
@@ -61,12 +63,12 @@ Attribute::~Attribute () {}
 
 namespace {
 
-struct NameCompare: std::binary_function <const char *, const char *, bool>
+struct NameCompare
 {
     bool
     operator () (const char *x, const char *y) const
     {
-    return strcmp (x, y) < 0;
+	return strcmp (x, y) < 0;
     }
 };
 
@@ -86,22 +88,28 @@ class LockedTypeMap: public TypeMap
 LockedTypeMap &
 typeMap ()
 {
+    // c++11 requires thread-safe static variable initialization
+#if __cplusplus >= 201103L
+    static LockedTypeMap tMap;
+    return tMap;
+#else
     static Mutex criticalSection;
     Lock lock (criticalSection);
 
     static LockedTypeMap* typeMap = 0;
 
     if (typeMap == 0)
-    typeMap = new LockedTypeMap ();
+	typeMap = new LockedTypeMap ();
 
     return *typeMap;
+#endif
 }
 
 
 } // namespace
 
 
-bool
+bool		
 Attribute::knownType (const char typeName[])
 {
     LockedTypeMap& tMap = typeMap();
@@ -111,17 +119,17 @@ Attribute::knownType (const char typeName[])
 }
 
 
-void
+void	
 Attribute::registerAttributeType (const char typeName[],
-                      Attribute *(*newAttribute)())
+			          Attribute *(*newAttribute)())
 {
     LockedTypeMap& tMap = typeMap();
     Lock lock (tMap.mutex);
 
     if (tMap.find (typeName) != tMap.end())
-    THROW (Iex::ArgExc, "Cannot register image file attribute "
-                "type \"" << typeName << "\". "
-                "The type has already been registered.");
+	THROW (IEX_NAMESPACE::ArgExc, "Cannot register image file attribute "
+			    "type \"" << typeName << "\". "
+			    "The type has already been registered.");
 
     tMap.insert (TypeMap::value_type (typeName, newAttribute));
 }
@@ -146,11 +154,11 @@ Attribute::newAttribute (const char typeName[])
     TypeMap::const_iterator i = tMap.find (typeName);
 
     if (i == tMap.end())
-    THROW (Iex::ArgExc, "Cannot create image file attribute of "
-                "unknown type \"" << typeName << "\".");
+	THROW (IEX_NAMESPACE::ArgExc, "Cannot create image file attribute of "
+			    "unknown type \"" << typeName << "\".");
 
     return (i->second)();
 }
 
 
-} // namespace Imf
+OPENEXR_IMF_INTERNAL_NAMESPACE_SOURCE_EXIT

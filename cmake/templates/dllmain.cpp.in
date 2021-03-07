@@ -18,11 +18,17 @@ namespace cv {
 extern __declspec(dllimport) bool __termination;  // Details: #12750
 }
 
-extern "C"
-BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved);
+#ifdef _WIN32_WCE
+#define DLL_MAIN_ARG0 HANDLE
+#else
+#define DLL_MAIN_ARG0 HINSTANCE
+#endif
 
 extern "C"
-BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
+BOOL WINAPI DllMain(DLL_MAIN_ARG0, DWORD fdwReason, LPVOID lpReserved);
+
+extern "C"
+BOOL WINAPI DllMain(DLL_MAIN_ARG0, DWORD fdwReason, LPVOID lpReserved)
 {
     if (fdwReason == DLL_THREAD_DETACH || fdwReason == DLL_PROCESS_DETACH)
     {

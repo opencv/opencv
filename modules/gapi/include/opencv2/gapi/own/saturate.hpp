@@ -8,7 +8,7 @@
 #ifndef OPENCV_GAPI_OWN_SATURATE_HPP
 #define OPENCV_GAPI_OWN_SATURATE_HPP
 
-#include <cmath>
+#include <math.h>
 
 #include <limits>
 #include <type_traits>
@@ -66,7 +66,7 @@ static inline DST saturate(SRC x, R round)
         GAPI_DbgAssert(std::is_integral<DST>::value &&
                  std::is_floating_point<SRC>::value);
 #ifdef _WIN32
-// Suppress warning about convering x to floating-point
+// Suppress warning about converting x to floating-point
 // Note that x is already floating-point at this point
 #pragma warning(disable: 4244)
 #endif
@@ -79,10 +79,10 @@ static inline DST saturate(SRC x, R round)
 }
 
 // explicit suffix 'd' for double type
-inline double  ceild(double x) { return std::ceil(x); }
-inline double floord(double x) { return std::floor(x); }
-inline double roundd(double x) { return std::round(x); }
-inline double  rintd(double x) { return std::rint(x); }
+inline double  ceild(double x) { return ceil(x); }
+inline double floord(double x) { return floor(x); }
+inline double roundd(double x) { return round(x); }
+inline double  rintd(double x) { return rint(x); }
 
 } //namespace own
 } //namespace gapi

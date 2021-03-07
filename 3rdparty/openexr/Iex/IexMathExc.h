@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2002, Industrial Light & Magic, a division of Lucas
+// Copyright (c) 2002-2012, Industrial Light & Magic, a division of Lucas
 // Digital Ltd. LLC
-//
+// 
 // All rights reserved.
-//
+// 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -16,8 +16,8 @@
 // distribution.
 // *       Neither the name of Industrial Light & Magic nor the names of
 // its contributors may be used to endorse or promote products derived
-// from this software without specific prior written permission.
-//
+// from this software without specific prior written permission. 
+// 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 // "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,7 +39,7 @@
 
 #include "IexBaseExc.h"
 
-namespace Iex {
+IEX_INTERNAL_NAMESPACE_HEADER_ENTER
 
 //---------------------------------------------------------
 // Exception classess which correspond to specific floating
@@ -52,7 +52,6 @@ DEFINE_EXC (DivzeroExc,     MathExc)	// Division by zero
 DEFINE_EXC (InexactExc,     MathExc)	// Inexact result
 DEFINE_EXC (InvalidFpOpExc, MathExc)	// Invalid operation
 
+IEX_INTERNAL_NAMESPACE_HEADER_EXIT
 
-} // namespace Iex
-
-#endif
+#endif // INCLUDED_IEXMATHEXC_H

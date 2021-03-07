@@ -19,48 +19,51 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 using namespace std;
 using namespace cv;
 
-const char* helphelp =
-"\nThis program's purpose is to collect data sets of an object and its segmentation mask.\n"
-"\n"
-"It shows how to use a calibrated camera together with a calibration pattern to\n"
-"compute the homography of the plane the calibration pattern is on. It also shows grabCut\n"
-"segmentation etc.\n"
-"\n"
-"select3dobj -w=<board_width> -h=<board_height> [-s=<square_size>]\n"
-"           -i=<camera_intrinsics_filename> -o=<output_prefix>\n"
-"\n"
-" -w=<board_width>          Number of chessboard corners wide\n"
-" -h=<board_height>         Number of chessboard corners width\n"
-" [-s=<square_size>]            Optional measure of chessboard squares in meters\n"
-" -i=<camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
-" -o=<output_prefix>        Prefix the output segmentation images with this\n"
-" [video_filename/cameraId]  If present, read from that video file or that ID\n"
-"\n"
-"Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an\n"
-"image of the object sitting on a planar surface with a calibration pattern of\n"
-"(board_width x board_height) on the surface, we draw a 3D box around the object. From\n"
-"then on, we can move a camera and as long as it sees the chessboard calibration pattern,\n"
-"it will store a mask of where the object is. We get successive images using <output_prefix>\n"
-"of the segmentation mask containing the object. This makes creating training sets easy.\n"
-"It is best if the chessboard is odd x even in dimensions to avoid ambiguous poses.\n"
-"\n"
-"The actions one can use while the program is running are:\n"
-"\n"
-"  Select object as 3D box with the mouse.\n"
-"   First draw one line on the plane to outline the projection of that object on the plane\n"
-"    Then extend that line into a box to encompass the projection of that object onto the plane\n"
-"    The use the mouse again to extend the box upwards from the plane to encase the object.\n"
-"  Then use the following commands\n"
-"    ESC   - Reset the selection\n"
-"    SPACE - Skip the frame; move to the next frame (not in video mode)\n"
-"    ENTER - Confirm the selection. Grab next object in video mode.\n"
-"    q     - Exit the program\n"
-"\n\n";
-
+static string helphelp(char** argv)
+{
+    return  string("\nThis program's purpose is to collect data sets of an object and its segmentation mask.\n")
+        +   "\n"
+            "It shows how to use a calibrated camera together with a calibration pattern to\n"
+            "compute the homography of the plane the calibration pattern is on. It also shows grabCut\n"
+            "segmentation etc.\n"
+            "\n"
+        +   argv[0]
+        +   " -w=<board_width> -h=<board_height> [-s=<square_size>]\n"
+            "           -i=<camera_intrinsics_filename> -o=<output_prefix>\n"
+            "\n"
+            " -w=<board_width>          Number of chessboard corners wide\n"
+            " -h=<board_height>         Number of chessboard corners width\n"
+            " [-s=<square_size>]            Optional measure of chessboard squares in meters\n"
+            " -i=<camera_intrinsics_filename> Camera matrix .yml file from calibration.cpp\n"
+            " -o=<output_prefix>        Prefix the output segmentation images with this\n"
+            " [video_filename/cameraId]  If present, read from that video file or that ID\n"
+            "\n"
+            "Using a camera's intrinsics (from calibrating a camera -- see calibration.cpp) and an\n"
+            "image of the object sitting on a planar surface with a calibration pattern of\n"
+            "(board_width x board_height) on the surface, we draw a 3D box around the object. From\n"
+            "then on, we can move a camera and as long as it sees the chessboard calibration pattern,\n"
+            "it will store a mask of where the object is. We get successive images using <output_prefix>\n"
+            "of the segmentation mask containing the object. This makes creating training sets easy.\n"
+            "It is best if the chessboard is odd x even in dimensions to avoid ambiguous poses.\n"
+            "\n"
+            "The actions one can use while the program is running are:\n"
+            "\n"
+            "  Select object as 3D box with the mouse.\n"
+            "   First draw one line on the plane to outline the projection of that object on the plane\n"
+            "    Then extend that line into a box to encompass the projection of that object onto the plane\n"
+            "    The use the mouse again to extend the box upwards from the plane to encase the object.\n"
+            "  Then use the following commands\n"
+            "    ESC   - Reset the selection\n"
+            "    SPACE - Skip the frame; move to the next frame (not in video mode)\n"
+            "    ENTER - Confirm the selection. Grab next object in video mode.\n"
+            "    q     - Exit the program\n"
+            "\n\n";
+}
 // static void help()
 // {
 //     puts(helphelp);
@@ -384,7 +387,7 @@ static bool readStringList( const string& filename, vector<string>& l )
 
 int main(int argc, char** argv)
 {
-    const char* help = "Usage: select3dobj -w=<board_width> -h=<board_height> [-s=<square_size>]\n"
+    string help = string("Usage: ") + argv[0] + " -w=<board_width> -h=<board_height> [-s=<square_size>]\n" +
            "\t-i=<intrinsics_filename> -o=<output_prefix> [video_filename/cameraId]\n";
     const char* screen_help =
     "Actions: \n"
@@ -397,8 +400,8 @@ int main(int argc, char** argv)
     cv::CommandLineParser parser(argc, argv, "{help h||}{w||}{h||}{s|1|}{i||}{o||}{@input|0|}");
     if (parser.has("help"))
     {
-        puts(helphelp);
-        puts(help);
+        puts(helphelp(argv).c_str());
+        puts(help.c_str());
         return 0;
     }
     string intrinsicsFilename;
@@ -419,26 +422,26 @@ int main(int argc, char** argv)
         inputName = samples::findFileOrKeep(parser.get<string>("@input"));
     if (!parser.check())
     {
-        puts(help);
+        puts(help.c_str());
         parser.printErrors();
         return 0;
     }
     if ( boardSize.width <= 0 )
     {
         printf("Incorrect -w parameter (must be a positive integer)\n");
-        puts(help);
+        puts(help.c_str());
         return 0;
     }
     if ( boardSize.height <= 0 )
     {
         printf("Incorrect -h parameter (must be a positive integer)\n");
-        puts(help);
+        puts(help.c_str());
         return 0;
     }
     if ( squareSize <= 0 )
     {
         printf("Incorrect -s parameter (must be a positive real number)\n");
-        puts(help);
+        puts(help.c_str());
         return 0;
     }
     Mat cameraMatrix, distCoeffs;
