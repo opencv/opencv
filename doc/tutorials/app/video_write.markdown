@@ -66,7 +66,7 @@ extension, its first version. A direct limitation of this is that you cannot sav
 larger than 2 GB. Furthermore you can only create and expand a single video track inside the
 container. No audio or other track editing support here. Nevertheless, any video codec present on
 your system might work. If you encounter some of these limitations you will need to look into more
-specialized video writing libraries such as *FFMpeg* or codecs as *HuffYUV*, *CorePNG* and *LCL*. As
+specialized video writing libraries such as *FFmpeg* or codecs as *HuffYUV*, *CorePNG* and *LCL*. As
 an alternative, create the video track with OpenCV and expand it with sound tracks or convert it to
 other formats by using video manipulation programs such as *VirtualDub* or *AviSynth*.
 
