@@ -500,7 +500,6 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
 //! @} XIMEA
 
 /** @name AVFoundation framework for iOS
-    OS X Lion will have the same API
     @{
 */
 
@@ -511,6 +510,9 @@ enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
        CAP_PROP_IOS_DEVICE_TORCH        = 9005
      };
+
+//! @} AVFoundation framework for iOS
+
 
 /** @name Smartek Giganetix GigEVisionSDK
     @{
@@ -990,8 +992,10 @@ protected:
                                     Size frameSize, bool isColor = true);
 };
 
+//! @cond IGNORED
 template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
 template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
+//! @endcond IGNORED
 
 //! @} videoio
 
