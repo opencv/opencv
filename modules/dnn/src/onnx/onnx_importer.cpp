@@ -8,6 +8,8 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include <opencv2/dnn/layer_reg.private.hpp>
+
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
@@ -37,6 +39,7 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+extern bool DNN_DIAGNOSTICS_RUN;
 
 class ONNXImporter
 {
@@ -58,6 +61,7 @@ class ONNXImporter
     void addConstant(const std::string& name, const Mat& blob);
     void addLayer(LayerParams& layerParams,
                   const opencv_onnx::NodeProto& node_proto);
+    static const std::set<String>& getSupportedTypes();
 
 public:
 
@@ -65,7 +69,6 @@ public:
         : dstNet(net), utilNet()
     {
         hasDynamicShapes = false;
-        diagnosticRun = true;
         CV_Assert(onnxFile);
         CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
 
@@ -87,7 +90,6 @@ public:
         : dstNet(net), utilNet()
     {
         hasDynamicShapes = false;
-        diagnosticRun = true;
         CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
 
         struct _Buf : public std::streambuf
@@ -113,7 +115,6 @@ public:
 protected:
     Net& dstNet;
     Net utilNet;
-    static std::set<String> supportedTypes;
 
     opencv_onnx::GraphProto graph_proto;
     std::string framework_name;
@@ -122,83 +123,12 @@ protected:
 
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
     bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
-    bool diagnosticRun; // Whether the current run is for diagnostic purposes
     typedef std::map<std::string, MatShape>::iterator IterShape_t;
 
     std::map<std::string, LayerInfo> layer_id;
     typedef std::map<std::string, LayerInfo>::iterator IterLayerId_t;
 
     void handleNode(const opencv_onnx::NodeProto& node_proto);
-};
-
-std::set<String> ONNXImporter::supportedTypes = {
-    "MaxPool",
-    "AveragePool",
-    "GlobalAveragePool",
-    "GlobalMaxPool",
-    "ReduceMean",
-    "ReduceSum",
-    "ReduceMax",
-    "Slice",
-    "Split",
-    "Add",
-    "Sum",
-    "Sub",
-    "Pow",
-    "Max",
-    "Neg",
-    "Constant",
-    "LSTM",
-    "ImageScaler",
-    "Clip",
-    "LeakyRelu",
-    "Relu",
-    "Elu",
-    "Tanh",
-    "PRelu",
-    "LRN",
-    "InstanceNormalization",
-    "BatchNormalization",
-    "Gemm",
-    "MatMul",
-    "Mul",
-    "Div",
-    "Conv",
-    "ConvTranspose",
-    "Transpose",
-    "Squeeze",
-    "Flatten",
-    "Unsqueeze",
-    "Expand",
-    "Reshape",
-    "Pad",
-    "Shape",
-    "Cast",
-    "ConstantOfShape",
-    "ConstantFill",
-    "Gather",
-    "Concat",
-    "Resize",
-    "Upsample",
-    "SoftMax",
-    "Softmax",
-    "LogSoftmax",
-    "DetectionOutput",
-    "Interp",
-    "CropAndResize",
-    "ROIPooling",
-    "PSROIPooling",
-    "ChannelsPReLU",
-    "Sigmoid",
-    "Swish",
-    "Mish",
-    "AbsVal",
-    "BNLL",
-    "MaxUnpool",
-    "Dropout",
-    "Identity",
-    "Crop",
-    "Normalize"
 };
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
@@ -257,6 +187,10 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
     tensor_proto = graph_proto.initializer(i);
     Mat mat = getMatFromTensor(tensor_proto);
     releaseONNXTensor(tensor_proto);
+
+    if (DNN_DIAGNOSTICS_RUN && mat.empty())
+        continue;
+
     layers_weights.insert(std::make_pair(tensor_proto.name(), mat));
   }
   return layers_weights;
@@ -394,7 +328,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         catch (const cv::Exception& e)
         {
-            if (diagnosticRun)
+            if (DNN_DIAGNOSTICS_RUN)
             {
                 CV_LOG_ERROR(NULL, "DNN/ONNX: Potential problem with processing attributes for node " << node_proto.name() << " Attribute " << attribute_name.c_str()
                 );
@@ -427,7 +361,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
                             const opencv_onnx::NodeProto& node_proto)
 {
     int id;
-    if (diagnosticRun)
+    if (DNN_DIAGNOSTICS_RUN)
         id = utilNet.addLayer(layerParams.name, layerParams.type, layerParams);
     else
         id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
@@ -443,7 +377,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
         const std::string& input_name = node_proto.input(j);
         IterLayerId_t layerId = layer_id.find(input_name);
         if (layerId != layer_id.end()) {
-            if (diagnosticRun)
+            if (DNN_DIAGNOSTICS_RUN)
                 utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
             else
                 dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
@@ -456,7 +390,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
     }
     // Compute shape of output blob for this layer.
     Ptr<Layer> layer;
-    if (diagnosticRun)
+    if (DNN_DIAGNOSTICS_RUN)
         layer = utilNet.getLayer(id);
     else
         layer = dstNet.getLayer(id);  // FIXIT: avoid instantiation of layers during the import stage
@@ -539,8 +473,8 @@ void ONNXImporter::populateNet()
     utilNet.setInputsNames(netInputs);
     dstNet.setInputsNames(netInputs);
 
-    if (diagnosticRun) {
-
+    if (DNN_DIAGNOSTICS_RUN) {
+        auto &supportedTypes = getSupportedTypes();
         for (int li = 0; li < layersSize; li++) {
             const opencv_onnx::NodeProto &node_proto = graph_proto.node(li);
             std::string name = node_proto.output(0);
@@ -564,7 +498,7 @@ void ONNXImporter::populateNet()
         constBlobs = oldConstBlobs;
         outShapes = oldOutShapes;
         layer_id = oldLayerId;
-        diagnosticRun = false;
+        enableModelDiagnostics(false);
     }
 
     for(int li = 0; li < layersSize; li++)
@@ -574,6 +508,80 @@ void ONNXImporter::populateNet()
     }
 
     CV_LOG_DEBUG(NULL, "DNN/ONNX: import completed!");
+}
+
+const std::set<String>& ONNXImporter::getSupportedTypes()
+{
+    static const std::set<String> layerTypes = {
+        "MaxPool",
+        "AveragePool",
+        "GlobalAveragePool",
+        "GlobalMaxPool",
+        "ReduceMean",
+        "ReduceSum",
+        "ReduceMax",
+        "Slice",
+        "Split",
+        "Add",
+        "Sum",
+        "Sub",
+        "Pow",
+        "Max",
+        "Neg",
+        "Constant",
+        "LSTM",
+        "ImageScaler",
+        "Clip",
+        "LeakyRelu",
+        "Relu",
+        "Elu",
+        "Tanh",
+        "PRelu",
+        "LRN",
+        "InstanceNormalization",
+        "BatchNormalization",
+        "Gemm",
+        "MatMul",
+        "Mul",
+        "Div",
+        "Conv",
+        "ConvTranspose",
+        "Transpose",
+        "Squeeze",
+        "Flatten",
+        "Unsqueeze",
+        "Expand",
+        "Reshape",
+        "Pad",
+        "Shape",
+        "Cast",
+        "ConstantOfShape",
+        "ConstantFill",
+        "Gather",
+        "Concat",
+        "Resize",
+        "Upsample",
+        "SoftMax",
+        "Softmax",
+        "LogSoftmax",
+        "DetectionOutput",
+        "Interp",
+        "CropAndResize",
+        "ROIPooling",
+        "PSROIPooling",
+        "ChannelsPReLU",
+        "Sigmoid",
+        "Swish",
+        "Mish",
+        "AbsVal",
+        "BNLL",
+        "MaxUnpool",
+        "Dropout",
+        "Identity",
+        "Crop",
+        "Normalize"
+    };
+    return layerTypes;
 }
 
 void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
@@ -927,7 +935,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                         constParams.type = "Const";
                         constParams.blobs.push_back((isSub ? -1 : 1) * blob);
                         int id;
-                        if (diagnosticRun)
+                        if (DNN_DIAGNOSTICS_RUN)
                             id = utilNet.addLayer(constParams.name, constParams.type, constParams);
                         else
                             id = dstNet.addLayer(constParams.name, constParams.type, constParams);
@@ -977,14 +985,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
                     int id;
                     //Create Power layer
-                    if (diagnosticRun)
+                    if (DNN_DIAGNOSTICS_RUN)
                         id = utilNet.addLayer(powerParams.name, powerParams.type, powerParams);
                     else
                         id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
                     //Connect to input
                     IterLayerId_t layerId = layer_id.find(node_proto.input(1));
                     CV_Assert(layerId != layer_id.end());
-                    if (diagnosticRun)
+                    if (DNN_DIAGNOSTICS_RUN)
                         utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
                     else
                         dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
@@ -1175,14 +1183,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
             //Create MVN layer
             int id;
-            if (diagnosticRun)
+            if (DNN_DIAGNOSTICS_RUN)
                 id = utilNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
             else
                 id = dstNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
             //Connect to input
             IterLayerId_t layerId = layer_id.find(node_proto.input(0));
             CV_Assert(layerId != layer_id.end());
-            if (diagnosticRun)
+            if (DNN_DIAGNOSTICS_RUN)
                 utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
             else
                 dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
@@ -1380,14 +1388,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
                     int id;
                     //Create Power layer
-                    if (diagnosticRun)
+                    if (DNN_DIAGNOSTICS_RUN)
                         id = utilNet.addLayer(powerParams.name, powerParams.type, powerParams);
                     else
                         id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
                     //Connect to input
                     IterLayerId_t layerId = layer_id.find(node_proto.input(1));
                     CV_Assert(layerId != layer_id.end());
-                    if (diagnosticRun)
+                    if (DNN_DIAGNOSTICS_RUN)
                         utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
                     else
                         dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
@@ -2075,12 +2083,12 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
     }
     catch (const cv::Exception& e)
     {
-        if (diagnosticRun)
+        if (DNN_DIAGNOSTICS_RUN)
         {
             CV_LOG_ERROR(NULL, "DNN/ONNX: Potential problem during processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
                     << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str()) << "\n" << e.msg
             );
-            auto registeredLayers = LayerFactory::getRegisteredLayers();
+            auto registeredLayers = getLayerFactoryImpl();
             if (registeredLayers.find(layerParams.type) != registeredLayers.end())
             {
                 try
@@ -2089,7 +2097,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 }
                 catch (const std::exception& e)
                 {
-                    CV_LOG_ERROR(NULL, "DNN/ONNX: Layer of type " << layerParams.type << "(" << layer_type << ") cannot be created with parameters" << layerParams << ". Error: " << e.what()
+                    CV_LOG_ERROR(NULL, "DNN/ONNX: Layer of type " << layerParams.type << "(" << layer_type << ") cannot be created with parameters " << layerParams << ". Error: " << e.what()
                     );
                 }
             }
@@ -2108,7 +2116,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
         {
             CV_LOG_INFO(NULL, "    Output[" << i << "] = '" << node_proto.output(i) << "'");
         }
-        if (diagnosticRun)
+        if (DNN_DIAGNOSTICS_RUN)
         {
             for (int i = 0; i < node_proto.output_size(); ++i)
             {

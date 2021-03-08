@@ -63,6 +63,7 @@
 #include <memory>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/dnn/layer_reg.private.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -92,6 +93,13 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
 static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
+
+bool DNN_DIAGNOSTICS_RUN = false;
+
+void enableModelDiagnostics(bool isDiagnosticsMode)
+{
+    DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
+}
 
 using std::vector;
 using std::map;
@@ -5310,15 +5318,13 @@ static Mutex& getLayerFactoryMutex()
     return *instance;
 }
 
-typedef std::map<String, std::vector<LayerFactory::Constructor> > LayerFactory_Impl;
-
 static LayerFactory_Impl& getLayerFactoryImpl_()
 {
     static LayerFactory_Impl impl;
     return impl;
 }
 
-static LayerFactory_Impl& getLayerFactoryImpl()
+LayerFactory_Impl& getLayerFactoryImpl()
 {
     static LayerFactory_Impl* volatile instance = NULL;
     if (instance == NULL)
@@ -5332,9 +5338,6 @@ static LayerFactory_Impl& getLayerFactoryImpl()
     }
     return *instance;
 }
-
-
-std::map<String, int> LayerFactory::registeredTypes = {};
 
 void LayerFactory::registerLayer(const String &type, Constructor constructor)
 {
@@ -5351,7 +5354,6 @@ void LayerFactory::registerLayer(const String &type, Constructor constructor)
         it->second.push_back(constructor);
     }
     getLayerFactoryImpl().insert(std::make_pair(type, std::vector<Constructor>(1, constructor)));
-    registeredTypes.insert(std::make_pair(type, 1));
 }
 
 void LayerFactory::unregisterLayer(const String &type)
