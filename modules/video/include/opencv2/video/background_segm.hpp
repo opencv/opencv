@@ -71,6 +71,9 @@ public:
      */
     CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 
+	CV_WRAP virtual void applyWithMask(InputArray image, InputArray _imageMask, OutputArray fgmask, double learningRate = -1) = 0;
+
+
     /** @brief Computes a background image.
 
     @param backgroundImage The output background image.
@@ -205,7 +208,30 @@ public:
     rate. 0 means that the background model is not updated at all, 1 means that the background model
     is completely reinitialized from the last frame.
      */
-    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+
+
+	CV_WRAP virtual void applyWithMask(InputArray image, InputArray _imageMask, OutputArray fgmask, double learningRate = -1) = 0;
+
+	CV_WRAP virtual void getModel(OutputArray& model) const = 0;
+
+	CV_WRAP virtual void setModel(OutputArray& model) = 0;
+
+	CV_WRAP virtual void getModelUsedModes(OutputArray& model) const = 0;
+
+	CV_WRAP virtual void setModelUsedModes(OutputArray& model) = 0;
+
+	CV_WRAP virtual void getWeight(OutputArray& model) const = 0;
+
+	CV_WRAP virtual void setWeight(OutputArray& model) = 0;
+
+	CV_WRAP virtual void getVariance(OutputArray& model) const = 0;
+
+	CV_WRAP virtual void setVariance(OutputArray& model) = 0;
+
+	CV_WRAP virtual void getMean(OutputArray& model) const = 0;
+
+	CV_WRAP virtual void setMean(OutputArray& model) = 0;	
 };
 
 /** @brief Creates MOG2 Background Subtractor
