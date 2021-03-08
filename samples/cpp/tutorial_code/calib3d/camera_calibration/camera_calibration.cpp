@@ -391,7 +391,12 @@ int main(int argc, char* argv[])
         {
             Mat temp = view.clone();
             if (s.useFisheye)
-              cv::fisheye::undistortImage(temp, view, cameraMatrix, distCoeffs);
+            {
+                Mat newCamMat;
+                fisheye::estimateNewCameraMatrixForUndistortRectify(cameraMatrix, distCoeffs, imageSize,
+                                                                    Matx33d::eye(), newCamMat, 1);
+                cv::fisheye::undistortImage(temp, view, cameraMatrix, distCoeffs, newCamMat);
+            }
             else
               undistort(temp, view, cameraMatrix, distCoeffs);
         }
