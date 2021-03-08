@@ -524,7 +524,7 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 {
     //! [fixed_aspect]
     cameraMatrix = Mat::eye(3, 3, CV_64F);
-    if( s.flag & CALIB_FIX_ASPECT_RATIO )
+    if( !s.useFisheye && s.flag & CALIB_FIX_ASPECT_RATIO )
         cameraMatrix.at<double>(0,0) = s.aspectRatio;
     //! [fixed_aspect]
     if (s.useFisheye) {
@@ -591,7 +591,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     fs << "board_height" << s.boardSize.height;
     fs << "square_size" << s.squareSize;
 
-    if( s.flag & CALIB_FIX_ASPECT_RATIO )
+    if( !s.useFisheye && s.flag & CALIB_FIX_ASPECT_RATIO )
         fs << "fix_aspect_ratio" << s.aspectRatio;
 
     if (s.flag)
