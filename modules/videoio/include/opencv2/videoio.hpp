@@ -52,10 +52,11 @@
 
   ### See also:
   - @ref videoio_overview
-  - Tutorials: @ref tutorial_table_of_content_videoio
+  - Tutorials: @ref tutorial_table_of_content_app
   @{
     @defgroup videoio_flags_base Flags for video I/O
     @defgroup videoio_flags_others Additional flags for video I/O API backends
+    @defgroup videoio_hwaccel Hardware-accelerated video decoding and encoding
     @defgroup videoio_c C API for video I/O
     @defgroup videoio_ios iOS glue for video I/O
     @defgroup videoio_winrt WinRT glue for video I/O
@@ -211,6 +212,10 @@ enum VideoWriterProperties {
 //! @addtogroup videoio_flags_others
 //! @{
 
+/** @name Hardware acceleration support
+    @{
+*/
+
 /** @brief Video Acceleration type
  *
  * Used as value in #CAP_PROP_HW_ACCELERATION and #VIDEOWRITER_PROP_HW_ACCELERATION
@@ -230,6 +235,8 @@ enum VideoAccelerationType
     VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
     VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
 };
+
+//! @} Hardware acceleration support
 
 /** @name IEEE 1394 drivers
     @{
@@ -521,8 +528,9 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
 
 //! @} XIMEA
 
-/** @name XIMEA Camera API
-*  @{
+
+/** @name ARAVIS Camera API
+    @{
 */
 
 //! Properties of cameras available through ARAVIS backend
@@ -532,7 +540,6 @@ enum { CAP_PROP_ARAVIS_AUTOTRIGGER                              = 600 //!< Autom
 //! @} ARAVIS
 
 /** @name AVFoundation framework for iOS
-    OS X Lion will have the same API
     @{
 */
 
@@ -543,6 +550,9 @@ enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
        CAP_PROP_IOS_DEVICE_TORCH        = 9005
      };
+
+//! @} AVFoundation framework for iOS
+
 
 /** @name Smartek Giganetix GigEVisionSDK
     @{
@@ -1089,8 +1099,10 @@ protected:
                                     Size frameSize, bool isColor = true);
 };
 
+//! @cond IGNORED
 template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
 template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
+//! @endcond IGNORED
 
 //! @} videoio
 
