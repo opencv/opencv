@@ -57,6 +57,11 @@ CV_EXPORTS_W void resetMyriadDevice();
  */
 CV_EXPORTS_W cv::String getInferenceEngineVPUType();
 
+/** @brief Returns Inference Engine CPU type.
+ *
+ * Specify OpenVINO plugin: CPU or ARM.
+ */
+CV_EXPORTS_W cv::String getInferenceEngineCPUType();
 
 CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace

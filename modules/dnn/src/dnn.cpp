@@ -113,11 +113,9 @@ public:
         {
             if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
                 return true;
-            else if (std::string::npos != i->find("ARM") && target == DNN_TARGET_ARM)
-                return true;
             else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
                 return true;
-            else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
+            else if ((std::string::npos != i->find("CPU") || std::string::npos != i->find("ARM")) && target == DNN_TARGET_CPU)
                 return true;
             else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
                 return true;
@@ -179,10 +177,6 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
 #endif
         }
-        if (checkIETarget(DNN_TARGET_ARM))
-#ifdef HAVE_DNN_NGRAPH
-            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_ARM));
-#endif
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (checkIETarget(DNN_TARGET_FPGA))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_FPGA));
@@ -1292,18 +1286,19 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL);
+#ifdef HAVE_INF_ENGINE
         if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
             preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             CV_Assert(
-                  preferableTarget == DNN_TARGET_CPU ||
+                  (preferableTarget == DNN_TARGET_CPU && (!isArmPlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
-                  preferableTarget == DNN_TARGET_FPGA ||
-                  (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && preferableTarget == DNN_TARGET_ARM)
+                  preferableTarget == DNN_TARGET_FPGA
             );
         }
+#endif
         if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
         {
             if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
@@ -1979,8 +1974,8 @@ struct Net::Impl : public detail::NetImplBase
             return;
         }
 
-        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
-                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+        bool supportsCPUFallback = !isArmPlugin() && (preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU));
 
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
@@ -4001,7 +3996,7 @@ string Net::Impl::dump()
             prevNode = itBackend->second;
         }
     }
-    string colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#cc827b", "#fdb462"};
+    string colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462"};
     string backend;
     switch (prefBackend)
     {
@@ -4140,12 +4135,11 @@ string Net::Impl::dump()
                                  : (Target)(ld.layerInstance->preferableTarget);  // TODO fix preferableTarget type
         switch (target)
         {
-            case DNN_TARGET_CPU: out << "CPU"; colorId = layerBackend.empty() ? 0 : 6; break;
+            case DNN_TARGET_CPU: out << "CPU"; colorId = layerBackend.empty() ? 0 : 5; break;
             case DNN_TARGET_OPENCL: out << "OCL"; colorId = 1; break;
             case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16"; colorId = 2; break;
             case DNN_TARGET_MYRIAD: out << "MYRIAD"; colorId = 3; break;
             case DNN_TARGET_FPGA: out << "FPGA"; colorId = 4; break;
-            case DNN_TARGET_ARM: out << "ARM"; colorId = 5; break;
             // don't use default:
         }
         out << "\\n";  // align center

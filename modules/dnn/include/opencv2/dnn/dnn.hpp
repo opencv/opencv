@@ -98,8 +98,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
         DNN_TARGET_OPENCL,
         DNN_TARGET_OPENCL_FP16,
         DNN_TARGET_MYRIAD,
-        DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
-        DNN_TARGET_ARM,
+        DNN_TARGET_FPGA  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -563,7 +562,6 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
          * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |
          * | DNN_TARGET_MYRIAD      |                    |                            + |                    |
          * | DNN_TARGET_FPGA        |                    |                            + |                    |
-         * | DNN_TARGET_ARM         |                    |                            + |                    |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

@@ -547,7 +547,7 @@ void InfEngineNgraphNet::init(Target targetId)
     switch (targetId)
     {
         case DNN_TARGET_CPU:
-            device_name = "CPU";
+            device_name = isArmPlugin() ? "ARM" : "CPU";
             break;
         case DNN_TARGET_OPENCL:
         case DNN_TARGET_OPENCL_FP16:
@@ -558,9 +558,6 @@ void InfEngineNgraphNet::init(Target targetId)
             break;
         case DNN_TARGET_FPGA:
             device_name = "FPGA";
-            break;
-        case DNN_TARGET_ARM:
-            device_name = "ARM";
             break;
         default:
             CV_Error(Error::StsNotImplemented, "Unknown target");

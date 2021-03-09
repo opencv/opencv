@@ -651,6 +651,18 @@ InferenceEngine::Core& getCore(const std::string& id)
 }
 #endif
 
+static bool detectArmPlugin_()
+{
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+    AutoLock lock(getInitializationMutex());
+    InferenceEngine::Core& ie = getCore("ARM");
+    const std::vector<std::string> devices = ie.GetAvailableDevices();
+    return std::find(devices.begin(), devices.end(), std::string("ARM")) != devices.end();
+#else
+    return false;
+#endif
+}
+
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
 static bool detectMyriadX_()
 {
@@ -1162,6 +1174,12 @@ bool isMyriadX()
      return myriadX;
 }
 
+bool isArmPlugin()
+{
+     static bool armPlugin = getInferenceEngineCPUType() == "ARM";
+     return armPlugin;
+}
+
 static std::string getInferenceEngineVPUType_()
 {
     static std::string param_vpu_type = utils::getConfigurationParameterString("OPENCV_DNN_IE_VPU_TYPE", "");
@@ -1199,6 +1217,12 @@ cv::String getInferenceEngineVPUType()
     return vpu_type;
 }
 
+cv::String getInferenceEngineCPUType()
+{
+    static cv::String cpu_type = detectArmPlugin_() ? "ARM" : "CPU";
+    return cpu_type;
+}
+
 #else  // HAVE_INF_ENGINE
 
 cv::String getInferenceEngineBackendType()
@@ -1211,6 +1235,11 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
     CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
 }
 cv::String getInferenceEngineVPUType()
+{
+    CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
+}
+
+cv::String getInferenceEngineCPUType()
 {
     CV_Error(Error::StsNotImplemented, "This OpenCV build doesn't include InferenceEngine support");
 }

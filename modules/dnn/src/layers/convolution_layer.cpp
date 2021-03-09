@@ -273,12 +273,13 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            if (preferableTarget == DNN_TARGET_ARM && blobs.empty())
+            bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmPlugin();
+            if (isArmTarget && blobs.empty())
                 return false;
             if (ksize == 1)
-                return preferableTarget == DNN_TARGET_ARM;
+                return isArmTarget;
             if (ksize == 3)
-                return preferableTarget != DNN_TARGET_MYRIAD && preferableTarget != DNN_TARGET_ARM;
+                return preferableTarget != DNN_TARGET_MYRIAD && !isArmTarget;
             if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
                 return false;
             return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);

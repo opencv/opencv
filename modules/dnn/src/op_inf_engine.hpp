@@ -254,6 +254,8 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 bool isMyriadX();
 
+bool isArmPlugin();
+
 CV__DNN_EXPERIMENTAL_NS_END
 
 InferenceEngine::Core& getCore(const std::string& id);
