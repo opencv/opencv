@@ -936,6 +936,7 @@ struct InferList: public cv::detail::KernelTag {
                                 std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
                                 IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+                                GAPI_Assert(out_blob);
 
                                 cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
                                 // FIXME: Avoid data copy. Not sure if it is possible though
@@ -1103,6 +1104,7 @@ struct InferList2: public cv::detail::KernelTag {
                                     std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
                                     IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+                                    GAPI_Assert(out_blob);
 
                                     cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
                                     // FIXME: Avoid data copy. Not sure if it is possible though

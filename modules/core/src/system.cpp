@@ -345,7 +345,6 @@ struct HWFeatures
 
     HWFeatures(bool run_initialize = false)
     {
-        memset( have, 0, sizeof(have[0]) * MAX_FEATURE );
         if (run_initialize)
             initialize();
     }
@@ -730,7 +729,7 @@ struct HWFeatures
         }
     }
 
-    bool have[MAX_FEATURE+1];
+    bool have[MAX_FEATURE+1]{};
 };
 
 static HWFeatures  featuresEnabled(true), featuresDisabled = HWFeatures(false);

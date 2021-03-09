@@ -3773,7 +3773,8 @@ namespace fisheye
         CALIB_FIX_K4                = 1 << 7,
         CALIB_FIX_INTRINSIC         = 1 << 8,
         CALIB_FIX_PRINCIPAL_POINT   = 1 << 9,
-        CALIB_ZERO_DISPARITY        = 1 << 10
+        CALIB_ZERO_DISPARITY        = 1 << 10,
+        CALIB_FIX_FOCAL_LENGTH      = 1 << 11
     };
 
     /** @brief Projects points using fisheye model
@@ -3927,6 +3928,8 @@ namespace fisheye
     are set to zeros and stay zero.
     -    @ref fisheye::CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
+    -    @ref fisheye::CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
+optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
     @param criteria Termination criteria for the iterative optimization algorithm.
      */
     CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
