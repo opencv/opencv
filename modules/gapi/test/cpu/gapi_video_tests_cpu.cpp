@@ -107,7 +107,7 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorTestCPU),
                                              std::make_tuple(cv::gapi::video::TYPE_BS_KNN, 400),
                                              std::make_tuple(cv::gapi::video::TYPE_BS_KNN, 200)),
                                              Values(500, 50),
-                                             Values(true, false),
+                                             testing::Bool(),
                                              Values(-1, 0, 0.5, 1),
                                              Values("cv/video/768x576.avi"),
                                              Values(3)));
