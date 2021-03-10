@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include <opencv2/gapi/s11n.hpp>
 #include <opencv2/gapi/garg.hpp>
@@ -30,6 +30,11 @@ cv::GRunArgs cv::gapi::detail::getRunArgs(const std::vector<char> &p) {
     return run_args_deserialize(is);
 }
 
+std::vector<std::string> cv::gapi::detail::getVectorOfStrings(const std::vector<char> &p) {
+    cv::gapi::s11n::ByteMemoryInStream is(p);
+    return vector_of_strings_deserialize(is);
+}
+
 std::vector<char> cv::gapi::serialize(const cv::GMetaArgs& ma)
 {
     cv::gapi::s11n::ByteMemoryOutStream os;
@@ -48,6 +53,13 @@ std::vector<char> cv::gapi::serialize(const cv::GCompileArgs& ca)
 {
     cv::gapi::s11n::ByteMemoryOutStream os;
     serialize(os, ca);
+    return os.data();
+}
+
+std::vector<char> cv::gapi::serialize(const std::vector<std::string>& vs)
+{
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    serialize(os, vs);
     return os.data();
 }
 

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #ifndef OPENCV_GAPI_S11N_HPP
 #define OPENCV_GAPI_S11N_HPP
@@ -24,6 +24,8 @@ namespace detail {
 
     GAPI_EXPORTS cv::GRunArgs getRunArgs(const std::vector<char> &p);
 
+    GAPI_EXPORTS std::vector<std::string> getVectorOfStrings(const std::vector<char> &p);
+
     template<typename... Types>
     cv::GCompileArgs getCompileArgs(const std::vector<char> &p);
 
@@ -42,6 +44,7 @@ T deserialize(const std::vector<char> &p);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GCompileArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GMetaArgs&);
 GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs&);
+GAPI_EXPORTS std::vector<char> serialize(const std::vector<std::string>&);
 
 template<> inline
 cv::GComputation deserialize(const std::vector<char> &p) {
@@ -56,6 +59,11 @@ cv::GMetaArgs deserialize(const std::vector<char> &p) {
 template<> inline
 cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
+}
+
+template<> inline
+std::vector<std::string> deserialize(const std::vector<char> &p) {
+    return detail::getVectorOfStrings(p);
 }
 
 template<typename T, typename... Types> inline

@@ -571,6 +571,16 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     }
 }
 
+TEST_F(S11N_Basic, Test_Vector_Of_Strings) {
+    std::vector<std::string> vs{"hello", "world", "42"};
+
+    const std::vector<char> ser = cv::gapi::serialize(vs);
+    auto des = cv::gapi::deserialize<std::vector<std::string>>(ser);
+    EXPECT_EQ("hello", des[0]);
+    EXPECT_EQ("world", des[1]);
+    EXPECT_EQ("42", des[2]);
+}
+
 TEST_F(S11N_Basic, Test_RunArg_RMat) {
     cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
     cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
