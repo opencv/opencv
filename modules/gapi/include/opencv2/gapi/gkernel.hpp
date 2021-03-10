@@ -618,7 +618,7 @@ namespace gapi {
          * @param backend backend associated with the kernel
          * @param kernel_id a name/id of the kernel
          */
-        void include(cv::gapi::GBackend backend, const std::string& kernel_id)
+        void include(const cv::gapi::GBackend& backend, const std::string& kernel_id)
         {
             removeAPI(kernel_id);
             m_id_kernels[kernel_id] = std::make_pair(backend, GKernelImpl{{}, {}});

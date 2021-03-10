@@ -165,9 +165,9 @@ TEST(KernelPackage, GetIds)
     pkg.include(J::backend(), "test.kernels.bar");
     pkg.include<J::Baz>();
     auto ids = pkg.get_kernel_ids();
-    EXPECT_NE(std::find(ids.begin(), ids.end(), "test.kernels.foo"), ids.end());
-    EXPECT_NE(std::find(ids.begin(), ids.end(), "test.kernels.bar"), ids.end());
-    EXPECT_NE(std::find(ids.begin(), ids.end(), "test.kernels.baz"), ids.end());
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.foo"));
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.bar"));
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.baz"));
 }
 
 TEST(KernelPackage, IncludesAPI)
