@@ -235,9 +235,11 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
 vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 {
     CV_TRACE_FUNCTION();
-
-    for (int coeff_epsilon = 1; coeff_epsilon < 10; coeff_epsilon++)
+    const double min_dist_between_points = 10.0;
+    const double max_ratio = 1.0;
+    for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
     {
+        const float coeff_epsilon = coeff_epsilon_i * 0.1f;
         vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon);
         if (!point2f_result.empty())
         {
@@ -247,9 +249,23 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
                     point2f_result, 3, labels,
                     TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
                     3, KMEANS_PP_CENTERS, centers);
-            if (compactness == 0)
+            double min_dist = std::numeric_limits<double>::max();
+            for (size_t i = 0; i < centers.size(); i++)
+            {
+                double dist = norm(centers[i] - centers[(i+1) % centers.size()]);
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                }
+            }
+            if (min_dist < min_dist_between_points)
+            {
                 continue;
-            if (compactness > 0)
+            }
+            double mean_compactness = compactness / point2f_result.size();
+            double ratio = mean_compactness / min_dist;
+
+            if (ratio < max_ratio)
             {
                 return point2f_result;
             }
@@ -456,7 +472,6 @@ bool QRDetect::localization()
     vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
     if( list_lines_y.empty() ) { return false; }
 
-    vector<Point2f> centers;
     Mat labels;
     kmeans(list_lines_y, 3, labels,
            TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
@@ -464,7 +479,7 @@ bool QRDetect::localization()
 
     fixationPoints(localization_points);
 
-    bool suare_flag = false, local_points_flag = false;
+    bool square_flag = false, local_points_flag = false;
     double triangle_sides[3];
     double triangle_perim, square_area, img_square_area;
     if (localization_points.size() == 3)
@@ -482,14 +497,14 @@ bool QRDetect::localization()
 
         if (square_area > (img_square_area * 0.2))
         {
-            suare_flag = true;
+            square_flag = true;
         }
     }
     else
     {
         local_points_flag = true;
     }
-    if ((suare_flag || local_points_flag) && purpose == SHRINKING)
+    if ((square_flag || local_points_flag) && purpose == SHRINKING)
     {
         localization_points.clear();
         bin_barcode = resized_bin_barcode.clone();
@@ -1960,6 +1975,13 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
                     spline_lines[idx].push_back(horizontal_order ? Point2f(static_cast<float>(index), val) : Point2f(val, static_cast<float>(index)));
                 }
             }
+        }
+    }
+    for (int i = 0; i < NUM_SIDES; i++)
+    {
+        if (spline_lines[i].size() == 0)
+        {
+            return false;
         }
     }
     return true;

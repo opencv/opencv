@@ -478,6 +478,16 @@ TEST_P(Test_TensorFlow_layers, unfused_flatten)
     runTensorFlowNet("unfused_flatten_unknown_batch");
 }
 
+TEST_P(Test_TensorFlow_layers, reshape_layer)
+{
+    runTensorFlowNet("reshape_layer");
+}
+
+TEST_P(Test_TensorFlow_layers, reshape_nchw)
+{
+    runTensorFlowNet("reshape_nchw");
+}
+
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)

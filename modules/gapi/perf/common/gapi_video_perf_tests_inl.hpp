@@ -154,6 +154,95 @@ PERF_TEST_P_(BuildPyr_CalcOptFlow_PipelinePerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+#ifdef HAVE_OPENCV_VIDEO
+
+PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
+{
+    namespace gvideo = cv::gapi::video;
+    initTestDataPath();
+
+    gvideo::BackgroundSubtractorType opType;
+    std::string filePath = "";
+    bool detectShadows = false;
+    double learningRate = -1.;
+    std::size_t testNumFrames = 0;
+    cv::GCompileArgs compileArgs;
+    CompareMats cmpF;
+
+    std::tie(opType, filePath, detectShadows, learningRate, testNumFrames,
+             compileArgs, cmpF) = GetParam();
+
+    const int histLength = 500;
+    double thr = -1;
+    switch (opType)
+    {
+        case gvideo::TYPE_BS_MOG2:
+        {
+            thr = 16.;
+            break;
+        }
+        case gvideo::TYPE_BS_KNN:
+        {
+            thr = 400.;
+            break;
+        }
+        default:
+            FAIL() << "unsupported type of BackgroundSubtractor";
+    }
+    const gvideo::BackgroundSubtractorParams bsp(opType, histLength, thr, detectShadows,
+                                                 learningRate);
+
+    // Retrieving frames
+    std::vector<cv::Mat> frames;
+    frames.reserve(testNumFrames);
+    {
+        cv::Mat frame;
+        cv::VideoCapture cap;
+        if (!cap.open(findDataFile(filePath)))
+            throw SkipTestException("Video file can not be opened");
+        for (std::size_t i = 0; i < testNumFrames && cap.read(frame); i++)
+        {
+            frames.push_back(frame);
+        }
+    }
+    GAPI_Assert(testNumFrames == frames.size() && "Can't read required number of frames");
+
+    // G-API graph declaration
+    cv::GMat in;
+    cv::GMat out = cv::gapi::BackgroundSubtractor(in, bsp);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    auto cc = c.compile(cv::descr_of(frames[0]), std::move(compileArgs));
+
+    cv::Mat gapiForeground;
+    TEST_CYCLE()
+    {
+        cc.prepareForNewStream();
+        for (size_t i = 0; i < testNumFrames; i++)
+        {
+            cc(cv::gin(frames[i]), cv::gout(gapiForeground));
+        }
+    }
+
+    // OpenCV Background Subtractor declaration
+    cv::Ptr<cv::BackgroundSubtractor> pOCVBackSub;
+    if (opType == gvideo::TYPE_BS_MOG2)
+        pOCVBackSub = cv::createBackgroundSubtractorMOG2(histLength, thr, detectShadows);
+    else if (opType == gvideo::TYPE_BS_KNN)
+        pOCVBackSub = cv::createBackgroundSubtractorKNN(histLength, thr, detectShadows);
+    cv::Mat ocvForeground;
+    for (size_t i = 0; i < testNumFrames; i++)
+    {
+        pOCVBackSub->apply(frames[i], ocvForeground, learningRate);
+    }
+    // Validation
+    EXPECT_TRUE(cmpF(gapiForeground, ocvForeground));
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+#endif // HAVE_OPENCV_VIDEO
+
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_PERF_TESTS_INL_HPP

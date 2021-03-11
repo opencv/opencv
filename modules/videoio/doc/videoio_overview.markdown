@@ -3,7 +3,7 @@ Video I/O with OpenCV Overview {#videoio_overview}
 
 ### See also:
   - @ref videoio "Video I/O Code Reference"
-  - Tutorials: @ref tutorial_table_of_content_videoio
+  - Tutorials: @ref tutorial_table_of_content_app
 
 General Information
 ===================
@@ -15,7 +15,7 @@ I/O APIs used as backend.
 
 ![Video I/O with OpenCV](pics/videoio_overview.svg)
 
-Some backends such as (DSHOW) Direct Show, Microsoft Media Foundation (MSMF),
+Some backends such as Direct Show (DSHOW), Microsoft Media Foundation (MSMF),
 Video 4 Linux (V4L), etc... are interfaces to the video I/O library provided by the operating system.
 
 Some others backends like OpenNI2 for Kinect, Intel Perceptual Computing SDK, GStreamer,
@@ -90,7 +90,7 @@ The FFmpeg library
 OpenCV can use the FFmpeg library (http://ffmpeg.org/) as backend to record, convert and stream audio and video.
 FFmpeg is a complete, cross-reference solution. If you enable FFmpeg while configuring OpenCV than
 CMake will download and install the binaries in `OPENCV_SOURCE_CODE/3rdparty/ffmpeg/`. To use
-FFmpeg at runtime, you must deploy the FFMepg binaries with your application.
+FFmpeg at runtime, you must deploy the FFmpeg binaries with your application.
 
 @note FFmpeg is licensed under the GNU Lesser General Public License (LGPL) version 2.1 or later.
 See `OPENCV_SOURCE_CODE/3rdparty/ffmpeg/readme.txt` and http://ffmpeg.org/legal.html for details and
