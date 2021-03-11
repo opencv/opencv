@@ -766,7 +766,7 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
 
 class PostOutputsList {
 public:
-    PostOutputsList(int size,
+    PostOutputsList(size_t size,
                     std::shared_ptr<IECallContext> ctx,
                     std::vector<std::vector<int>>&& cached_dims);
 
@@ -774,15 +774,15 @@ public:
 
 private:
     struct Priv {
-        int              size;
-        std::atomic<int> finished{0};
+        size_t              size;
+        std::atomic<size_t> finished{0u};
         std::shared_ptr<IECallContext> ctx;
         std::vector<std::vector<int>> cached_dims;
     };
     std::shared_ptr<Priv> m_priv;
 };
 
-PostOutputsList::PostOutputsList(int size,
+PostOutputsList::PostOutputsList(size_t size,
                                  std::shared_ptr<IECallContext> ctx,
                                  std::vector<std::vector<int>>&& cached_dims)
     : m_priv(new Priv()) {
