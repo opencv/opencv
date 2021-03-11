@@ -111,4 +111,20 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(BackgroundSubtractorPerfTestCPU),
                                       Values(5),
                                       Values(cv::compile_args(VIDEO_CPU)),
                                       Values(AbsExact().to_compare_obj())));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(KalmanFilterControlPerfTestCPU),
+                              KalmanFilterControlPerfTest,
+                              Combine(Values(CV_32FC1, CV_64FC1),
+                                      Values(2, 5),
+                                      Values(2, 5),
+                                      Values(5),
+                                      Values(cv::compile_args(VIDEO_CPU))));
+
+INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(KalmanFilterNoControlPerfTestCPU),
+                              KalmanFilterNoControlPerfTest,
+                              Combine(Values(CV_32FC1, CV_64FC1),
+                                      Values(2, 5),
+                                      Values(2, 5),
+                                      Values(5),
+                                      Values(cv::compile_args(VIDEO_CPU))));
 } // opencv_test

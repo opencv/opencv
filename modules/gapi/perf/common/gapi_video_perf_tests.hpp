@@ -29,6 +29,12 @@ class BuildPyr_CalcOptFlow_PipelinePerfTest : public TestPerfParams<tuple<std::s
 class BackgroundSubtractorPerfTest:
     public TestPerfParams<tuple<cv::gapi::video::BackgroundSubtractorType, std::string,
                                 bool, double, std::size_t, cv::GCompileArgs, CompareMats>> {};
+
+class KalmanFilterControlPerfTest   :
+    public TestPerfParams<tuple<MatType2, int, int, size_t, cv::GCompileArgs>> {};
+class KalmanFilterNoControlPerfTest :
+    public TestPerfParams<tuple<MatType2, int, int, size_t, cv::GCompileArgs>> {};
+
 } // opencv_test
 
 #endif // OPENCV_GAPI_VIDEO_PERF_TESTS_HPP
