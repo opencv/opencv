@@ -26,6 +26,10 @@ cv::MediaFrame::View cv::MediaFrame::access(Access code) const {
     return m->adapter->access(code);
 }
 
+cv::MediaFrame::IAdapter* cv::MediaFrame::getAdapter() const {
+    return m->adapter.get();
+}
+
 cv::MediaFrame::View::View(Ptrs&& ptrs, Strides&& strs, Callback &&cb)
     : ptr   (std::move(ptrs))
     , stride(std::move(strs))

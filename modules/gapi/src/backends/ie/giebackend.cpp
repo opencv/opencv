@@ -126,25 +126,20 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     if (sz.dims() == 2 && hint == cv::gapi::ie::TraitAs::IMAGE)
     {
         // NB: This logic is mainly taken from IE samples
-        const size_t pixsz    = CV_ELEM_SIZE1(mat.type());
         const size_t channels = mat.channels();
         const size_t height   = mat.size().height;
         const size_t width    = mat.size().width;
 
-        const size_t strideH  = mat.step.buf[0];
-        const size_t strideW  = mat.step.buf[1];
+        const size_t strideH  = mat.step[0];
 
-        const bool is_dense =
-            strideW == pixsz * channels &&
-            strideH == strideW * width;
-
-        if (!is_dense)
-            cv::util::throw_error(std::logic_error("Doesn't support conversion"
-                                                   " from non-dense cv::Mat"));
+        IE::BlockingDesc bdesc({1, height, width, channels} /* dims */,
+                               {0, 2, 3, 1} /* order for NHWC */,
+                               0 /* offset */,
+                               {0, 0, 0, 0} /* offsets for dims */,
+                               {strideH * height, strideH, channels, 1} /* strides for dims */);
 
         return IE::TensorDesc(toIE(mat.depth()),
-                              IE::SizeVector{1, channels, height, width},
-                              IE::Layout::NHWC);
+                              IE::SizeVector{1, channels, height, width}, bdesc);
     }
 
     return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
