@@ -837,28 +837,32 @@ TEST(Calib3d_SolvePnPRansac, double_support)
     EXPECT_LE(cvtest::norm(t, Mat_<double>(tF), NORM_INF), 1e-3);
 }
 
-TEST(Calib3d_SolvePnPRansac, bad_input_points)
+TEST(Calib3d_SolvePnPRansac, bad_input_points_19253)
 {
     // with this specific data
     // when computing the final pose using points in the consensus set with SOLVEPNP_ITERATIVE and solvePnP()
     // an exception is thrown from solvePnP because there are 5 non-coplanar 3D points and the DLT algorithm needs at least 6 non-coplanar 3D points
     // with PR #19253 we choose to return true, with the pose estimated from the MSS stage instead of throwing the exception
 
-    Mat pts2d = (Mat_<float>(6, 2) <<
-        -5.38358629e-01, -5.09638414e-02,
-        -5.07192254e-01, -2.20743284e-01,
-        -5.43107152e-01, -4.90474701e-02,
-        -5.54325163e-01, -1.86715424e-01,
-        -5.59334219e-01, -4.01909500e-02,
-        -5.43504596e-01, -4.61776406e-02);
+    float pts2d_[] = {
+        -5.38358629e-01f, -5.09638414e-02f,
+        -5.07192254e-01f, -2.20743284e-01f,
+        -5.43107152e-01f, -4.90474701e-02f,
+        -5.54325163e-01f, -1.86715424e-01f,
+        -5.59334219e-01f, -4.01909500e-02f,
+        -5.43504596e-01f, -4.61776406e-02f
+    };
+    Mat pts2d(6, 2, CV_32FC1, pts2d_);
 
-    Mat pts3d = (Mat_<float>(6, 3) <<
-        -3.01153604e-02, -1.55665115e-01, 4.50000018e-01,
-        4.27827090e-01, 4.28645730e-01, 1.08600008e+00,
-        -3.14165242e-02, -1.52656138e-01, 4.50000018e-01,
-        -1.46217480e-01, 5.57961613e-02, 7.17000008e-01,
-        -4.89348806e-02, -1.38795510e-01, 4.47000027e-01,
-        -3.13065052e-02, -1.52636901e-01, 4.51000035e-01);
+    float pts3d_[] = {
+        -3.01153604e-02f, -1.55665115e-01f, 4.50000018e-01f,
+        4.27827090e-01f, 4.28645730e-01f, 1.08600008e+00f,
+        -3.14165242e-02f, -1.52656138e-01f, 4.50000018e-01f,
+        -1.46217480e-01f, 5.57961613e-02f, 7.17000008e-01f,
+        -4.89348806e-02f, -1.38795510e-01f, 4.47000027e-01f,
+        -3.13065052e-02f, -1.52636901e-01f, 4.51000035e-01f
+    };
+    Mat pts3d(6, 3, CV_32FC1, pts3d_);
 
     Mat camera_mat = Mat::eye(3, 3, CV_64FC1);
     Mat rvec, tvec;

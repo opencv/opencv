@@ -319,18 +319,35 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     }
     catch (const cv::Exception& e)
     {
-        result = 0;
-        CV_UNUSED(e);
-        CV_LOG_DEBUG(NULL, "solvePnPRansac(): error occurred in solvePnP stage:\n" << e.what());
+        if (flags == SOLVEPNP_ITERATIVE &&
+            npoints1 == 5 &&
+            e.what() &&
+            std::string(e.what()).find("DLT algorithm needs at least 6 points") != std::string::npos
+        )
+        {
+            CV_LOG_INFO(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points "
+                "in the consensus set raised DLT 6 points exception, use result from MSS (Minimal Sample Sets) stage instead.");
+            rvec = _local_model.col(0);    // output rotation vector
+            tvec = _local_model.col(1);    // output translation vector
+            result = 1;
+        }
+        else
+        {
+            // raise other exceptions
+            throw;
+        }
     }
 
-    if(result <= 0)
+    if (result <= 0)
     {
         _rvec.assign(_local_model.col(0));    // output rotation vector
         _tvec.assign(_local_model.col(1));    // output translation vector
 
-        CV_LOG_DEBUG(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points "
-            "in the consensus set failed, use result from MSS (Minimal Sample Sets) stage instead.");
+        if (_inliers.needed())
+            _inliers.release();
+
+        CV_LOG_DEBUG(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points in the consensus set failed. Return false");
+        return false;
     }
     else
     {
