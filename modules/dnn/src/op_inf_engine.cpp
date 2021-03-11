@@ -1176,8 +1176,11 @@ bool isMyriadX()
 
 bool isArmPlugin()
 {
-     static bool armPlugin = getInferenceEngineCPUType() == "ARM";
-     return armPlugin;
+#ifdef __arm__
+    return true;
+#else
+    return false;
+#endif
 }
 
 static std::string getInferenceEngineVPUType_()
