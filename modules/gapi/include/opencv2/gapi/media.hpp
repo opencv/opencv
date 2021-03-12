@@ -30,9 +30,21 @@ public:
     View access(Access) const;
     cv::GFrameDesc desc() const;
 
+    // Cast underlying MediaFrame adapter to the particular adapter type,
+    // return nullptr if underlying type is different
+    template<typename T> T* get() const
+    {
+        static_assert(std::is_base_of<IAdapter, T>::value,
+                      "T is not derived from cv::MediaFrame::IAdapter!");
+        auto* adapter = getAdapter();
+        GAPI_Assert(adapter != nullptr);
+        return dynamic_cast<T*>(adapter);
+    }
+
 private:
     struct Priv;
     std::shared_ptr<Priv> m;
+    IAdapter* getAdapter() const;
 };
 
 template<class T, class... Args>
