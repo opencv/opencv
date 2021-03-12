@@ -128,11 +128,8 @@ Building OpenCV.js from Source
 
     For example:
     @code{.bash}
-    emcmake python ./opencv/platforms/js/build_js.py build_js --build_test --cmake_option="-DOPENCV_TEST_DATA_PATH=./opencv_extra/testdata"
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_test
     @endcode
-
-    @note
-    It requires the [opencv_extra repository](https://github.com/opencv/opencv.git) located in your development environment.
 
 -#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
 
@@ -335,21 +332,4 @@ Now run the build command again, this time using the new image and passing `--bu
 
 @code{.bash}
 docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) "opencv-js-doc" emcmake python3 ./platforms/js/build_js.py build_js --build_doc
-@endcode
-
-### Building the tests with Docker
-
-To build the tests the folder containing the 'opencv_extra' repository has to be mounted to the docker container.
-The following shell script should work in Linux and MacOS:
-
-@code{.bash}
-git clone https://github.com/opencv/opencv.git
-git clone https://github.com/opencv/opencv_extra.git
-docker run --rm --workdir /src/opencv -v $(pwd)/opencv:/src/opencv -v $(pwd)/opencv_extra:/src/opencv_extra -u $(id -u):$(id -g) emscripten/emsdk emcmake python3 ./platforms/js/build_js.py ./build_js --build_test --cmake_option="-DOPENCV_TEST_DATA_PATH=/src/opencv_extra/testdata"
-@endcode
-
-In Windows use the following PowerShell command:
-
-@code{.bash}
-docker run --rm --workdir /src/opencv -v "$(get-location)/opencv:/src/opencv" -v "$(get-location)/opencv_extra:/src/opencv_extra" "emscripten/emsdk" emcmake python3 ./platforms/js/build_js.py ./build_js --build_test --cmake_option="-DOPENCV_TEST_DATA_PATH=/src/opencv_extra/testdata"
 @endcode
