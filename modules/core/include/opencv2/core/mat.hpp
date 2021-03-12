@@ -576,24 +576,24 @@ CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
 struct CV_EXPORTS MatSize
 {
-    explicit MatSize(int* _p);
-    int dims() const;
+    explicit MatSize(int* _p) CV_NOEXCEPT;
+    int dims() const CV_NOEXCEPT;
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
-    operator const int*() const;  // TODO OpenCV 4.0: drop this
-    bool operator == (const MatSize& sz) const;
-    bool operator != (const MatSize& sz) const;
+    operator const int*() const CV_NOEXCEPT;  // TODO OpenCV 4.0: drop this
+    bool operator == (const MatSize& sz) const CV_NOEXCEPT;
+    bool operator != (const MatSize& sz) const CV_NOEXCEPT;
 
     int* p;
 };
 
 struct CV_EXPORTS MatStep
 {
-    MatStep();
-    explicit MatStep(size_t s);
-    const size_t& operator[](int i) const;
-    size_t& operator[](int i);
+    MatStep() CV_NOEXCEPT;
+    explicit MatStep(size_t s) CV_NOEXCEPT;
+    const size_t& operator[](int i) const CV_NOEXCEPT;
+    size_t& operator[](int i) CV_NOEXCEPT;
     operator size_t() const;
     MatStep& operator = (size_t s);
 
@@ -807,7 +807,7 @@ public:
     The constructed matrix can further be assigned to another matrix or matrix expression or can be
     allocated with Mat::create . In the former case, the old content is de-referenced.
      */
-    Mat();
+    Mat() CV_NOEXCEPT;
 
     /** @overload
     @param rows Number of rows in a 2D array.
@@ -2193,7 +2193,7 @@ public:
     typedef MatConstIterator_<_Tp> const_iterator;
 
     //! default constructor
-    Mat_();
+    Mat_() CV_NOEXCEPT;
     //! equivalent to Mat(_rows, _cols, DataType<_Tp>::type)
     Mat_(int _rows, int _cols);
     //! constructor that sets each matrix element to specified value
@@ -2385,7 +2385,7 @@ class CV_EXPORTS UMat
 {
 public:
     //! default constructor
-    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT) CV_NOEXCEPT;
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
     UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
