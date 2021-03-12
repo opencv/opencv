@@ -286,7 +286,7 @@ public:
             attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::linear_onnx;
             attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::asymmetric;
         } else {
-            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
+            CV_Error(Error::StsNotImplemented, format("Unsupported interpolation: %s", interpolation.c_str()));
         }
         attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::sizes;
 
@@ -300,7 +300,8 @@ public:
         auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
 
         auto& input_shape = ieInpNode->get_shape();
-        std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outHeight) / input_shape[2]};
+        CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
+        std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outWidth) / input_shape[3]};
         auto scales_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{2}, scales.data());
 
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, 3});
