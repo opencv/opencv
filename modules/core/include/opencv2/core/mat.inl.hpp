@@ -1218,11 +1218,11 @@ Mat& Mat::operator = (Mat&& m)
 ///////////////////////////// MatSize ////////////////////////////
 
 inline
-MatSize::MatSize(int* _p)
+MatSize::MatSize(int* _p) CV_NOEXCEPT
     : p(_p) {}
 
 inline
-int MatSize::dims() const
+int MatSize::dims() const CV_NOEXCEPT
 {
     return (p - 1)[0];
 }
@@ -1255,13 +1255,13 @@ int& MatSize::operator[](int i)
 }
 
 inline
-MatSize::operator const int*() const
+MatSize::operator const int*() const CV_NOEXCEPT
 {
     return p;
 }
 
 inline
-bool MatSize::operator != (const MatSize& sz) const
+bool MatSize::operator != (const MatSize& sz) const CV_NOEXCEPT
 {
     return !(*this == sz);
 }
@@ -1271,25 +1271,25 @@ bool MatSize::operator != (const MatSize& sz) const
 ///////////////////////////// MatStep ////////////////////////////
 
 inline
-MatStep::MatStep()
+MatStep::MatStep() CV_NOEXCEPT
 {
     p = buf; p[0] = p[1] = 0;
 }
 
 inline
-MatStep::MatStep(size_t s)
+MatStep::MatStep(size_t s) CV_NOEXCEPT
 {
     p = buf; p[0] = s; p[1] = 0;
 }
 
 inline
-const size_t& MatStep::operator[](int i) const
+const size_t& MatStep::operator[](int i) const CV_NOEXCEPT
 {
     return p[i];
 }
 
 inline
-size_t& MatStep::operator[](int i)
+size_t& MatStep::operator[](int i) CV_NOEXCEPT
 {
     return p[i];
 }
@@ -1312,7 +1312,7 @@ inline MatStep& MatStep::operator = (size_t s)
 ////////////////////////////// Mat_<_Tp> ////////////////////////////
 
 template<typename _Tp> inline
-Mat_<_Tp>::Mat_()
+Mat_<_Tp>::Mat_() CV_NOEXCEPT
     : Mat()
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) | traits::Type<_Tp>::value;

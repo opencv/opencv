@@ -204,7 +204,7 @@ MatAllocator* Mat::getStdAllocator()
 
 //==================================================================================================
 
-bool MatSize::operator==(const MatSize& sz) const
+bool MatSize::operator==(const MatSize& sz) const CV_NOEXCEPT
 {
     int d = dims();
     int dsz = sz.dims();
@@ -337,7 +337,7 @@ void finalizeHdr(Mat& m)
 
 //======================================= Mat ======================================================
 
-Mat::Mat()
+Mat::Mat() CV_NOEXCEPT
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {}
