@@ -76,6 +76,9 @@
   #if defined __PPC64__ && defined __GNUC__ && defined _ARCH_PWR8 \
       && !defined(OPENCV_SKIP_INCLUDE_ALTIVEC_H)
     #include <altivec.h>
+    #undef vector
+    #undef bool
+    #undef pixel
   #endif
 
   #if defined(CV_INLINE_ROUND_FLT)

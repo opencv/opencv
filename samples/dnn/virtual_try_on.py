@@ -113,7 +113,7 @@ class BilinearFilter(object):
             out[yy] = np.round(np.sum(img[ymin : ymin + ymax, 0:out.shape[1]] * k[:, np.newaxis], axis=0))
 
     def imaging_resample(self, img, xsize, ysize):
-        height, width, *args = img.shape
+        height, width = img.shape[0:2]
         bounds_horiz, kk_horiz, ksize_horiz = self._precompute_coeffs(width, xsize)
         bounds_vert, kk_vert, ksize_vert    = self._precompute_coeffs(height, ysize)
 
@@ -233,7 +233,6 @@ class CpVton(object):
         return Li
 
     def _prepare_to_transform(self, out_h=256, out_w=192, grid_size=5):
-        grid = np.zeros([out_h, out_w, 3], dtype=np.float32)
         grid_X, grid_Y = np.meshgrid(np.linspace(-1, 1, out_w), np.linspace(-1, 1, out_h))
         grid_X = np.expand_dims(np.expand_dims(grid_X, axis=0), axis=3)
         grid_Y = np.expand_dims(np.expand_dims(grid_Y, axis=0), axis=3)
@@ -398,7 +397,7 @@ class CorrelationLayer(object):
 
     def getMemoryShapes(self, inputs):
         fetureAShape = inputs[0]
-        b, c, h, w = fetureAShape
+        b, _, h, w = fetureAShape
         return [[b, h * w, h, w]]
 
     def forward(self, inputs):

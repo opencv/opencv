@@ -120,6 +120,11 @@ TEST(OpenCL, support_SPIR_programs)
         cv::ocl::ProgramSource src = cv::ocl::ProgramSource::fromSPIR(module_name, "simple_spir", (uchar*)&program_binary_code[0], program_binary_code.size(), "");
         cv::String errmsg;
         cv::ocl::Program program(src, "", errmsg);
+        if (program.ptr() == NULL && device.isAMD())
+        {
+            // https://community.amd.com/t5/opencl/spir-support-in-new-drivers-lost/td-p/170165
+            throw cvtest::SkipTestException("Bypass AMD OpenCL runtime bug: 'cl_khr_spir' extension is declared, but it doesn't really work");
+        }
         ASSERT_TRUE(program.ptr() != NULL);
         k.create("test_kernel", program);
     }
