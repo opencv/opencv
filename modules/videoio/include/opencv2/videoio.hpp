@@ -189,6 +189,16 @@ enum VideoCaptureProperties {
        CAP_PROP_OPEN_TIMEOUT_MSEC=53, //!< (**open-only**) timeout in milliseconds for opening a video capture (applicable for FFmpeg back-end only)
        CAP_PROP_READ_TIMEOUT_MSEC=54, //!< (**open-only**) timeout in milliseconds for reading from a video capture (applicable for FFmpeg back-end only)
        CAP_PROP_STREAM_OPEN_TIME_USEC =55, //<! (read-only) time in microseconds since Jan 1 1970 when stream was opened. Applicable for FFmpeg backend only. Useful for RTSP and other live streams
+       CAP_PROP_VIDEO_TOTAL_CHANNELS = 56, //!< Number of video channels
+       CAP_PROP_VIDEO_STREAM = 57, //!< Default value is 0 (based index), -1 is disable. If used for devices, then -1 - camera is off, 0 - camera is on
+       CAP_PROP_AUDIO_STREAM = 58, //!< Specify stream in multi-language media files, -1 - disable audio processing (default). If used for devices, then -1 - microphone is off, 0 - microphone is on
+       CAP_PROP_AUDIO_POS = 59, //!< Audio position is measured in samples. Accurate audio sample timestamp of previous grabbed fragment. See CAP_PROP_AUDIO_SAMPLES_PER_SECOND
+       CAP_PROP_AUDIO_DATA_DEPTH = 60, //!< Alternative definition to bits-per-sample, but with clear handling of 32F / 32S
+       CAP_PROP_AUDIO_SAMPLES_PER_SECOND = 61, //!< determined from file/codec input. If not specified, then selected audio sample rate is 44100
+       CAP_PROP_AUDIO_BASE_INDEX = 62, //!< Index of the first audio channel. That audio channel number continues enumeration after video channels.
+       CAP_PROP_AUDIO_TOTAL_CHANNELS = 63, //!< Number of audio channels in the selected audio stream.
+       CAP_PROP_AUDIO_TOTAL_STREAMS = 64, //!< Number of audio stream in the used media.
+       CAP_PROP_AUDIO_SYNC_LAST_FRAME = 65, //!< Default value is 1 (the last audio frame is synchronized with the video frame by duration), 0 is no audio and video last frames sync(the last audio frame will contain all remaining audio data. The duration of the received audio data may be longer than the duration of the received video data)
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
