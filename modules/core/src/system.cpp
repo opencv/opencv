@@ -1938,7 +1938,7 @@ class ParseError
 {
     std::string bad_value;
 public:
-    ParseError(const std::string bad_value_) :bad_value(bad_value_) {}
+    ParseError(const std::string &bad_value_) :bad_value(bad_value_) {}
     std::string toString(const std::string &param) const
     {
         std::ostringstream out;
