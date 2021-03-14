@@ -138,6 +138,12 @@ public:
 
     typedef std::map<int, std::vector<util::NormalizedBBox> > LabelBBox;
 
+    inline int getNumOfTargetClasses() {
+        unsigned numBackground =
+            (_backgroundLabelId >= 0 && _backgroundLabelId < _numClasses) ? 1 : 0;
+        return (_numClasses - numBackground);
+    }
+
     bool getParameterDict(const LayerParams &params,
                           const std::string &parameterName,
                           DictValue& result)
@@ -590,12 +596,13 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+            int limit = (getNumOfTargetClasses() == 1) ? _keepTopK : std::numeric_limits<int>::max();
             if (_bboxesNormalized)
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_norm_box_overlap);
+                         indices[c], util::caffe_norm_box_overlap, limit);
             else
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_box_overlap);
+                         indices[c], util::caffe_box_overlap, limit);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)

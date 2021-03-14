@@ -145,6 +145,7 @@ Building OpenCV.js from Source
     python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
     @endcode
 
+
 Running OpenCV.js Tests
 ---------------------------------------
 
@@ -308,6 +309,12 @@ The example uses latest version of emscripten. If the build fails you should try
 
 @code{.bash}
 docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk:2.0.10 emcmake python3 ./platforms/js/build_js.py build_js
+@endcode
+
+In Windows use the following PowerShell command:
+
+@code{.bash}
+docker run --rm --workdir /src -v "$(get-location):/src" "emscripten/emsdk:2.0.10" emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 ### Building the documentation with Docker

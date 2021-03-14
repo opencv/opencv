@@ -403,7 +403,15 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
         auto mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, acrossChannels, normVariance, eps);
+#else
+        int64_t start_axis = acrossChannels ? 1 : 2;
+        std::vector<int64_t> axes_v(ieInpNode->get_shape().size() - start_axis);
+        std::iota(axes_v.begin(), axes_v.end(), start_axis);
+        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
+        auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
+#endif
         return Ptr<BackendNode>(new InfEngineNgraphNode(mvn));
     }
 #endif  // HAVE_DNN_NGRAPH

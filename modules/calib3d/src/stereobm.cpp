@@ -1148,13 +1148,15 @@ class StereoBMImpl CV_FINAL : public StereoBM
 {
 public:
     StereoBMImpl()
+        : params()
     {
-        params = StereoBMParams();
+        // nothing
     }
 
     StereoBMImpl( int _numDisparities, int _SADWindowSize )
+        : params(_numDisparities, _SADWindowSize)
     {
-        params = StereoBMParams(_numDisparities, _SADWindowSize);
+        // nothing
     }
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE
