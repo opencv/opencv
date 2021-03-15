@@ -803,6 +803,11 @@ TEST_P(Test_Darknet_layers, relu)
     testDarknetLayer("relu");
 }
 
+TEST_P(Test_Darknet_layers, sam)
+{
+    testDarknetLayer("sam", true);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
 }} // namespace

@@ -198,7 +198,6 @@ typedef struct opj_t1 {
     OPJ_UINT32 h;
     OPJ_UINT32 datasize;
     OPJ_UINT32 flagssize;
-    OPJ_UINT32 data_stride;
     OPJ_BOOL   encoder;
 
     /* Thre 3 variables below are only used by the decoder */
@@ -216,13 +215,13 @@ typedef struct opj_t1 {
 
 /**
 Encode the code-blocks of a tile
-@param t1 T1 handle
+@param tcd TCD handle
 @param tile The tile to encode
 @param tcp Tile coding parameters
 @param mct_norms  FIXME DOC
 @param mct_numcomps Number of components used for MCT
 */
-OPJ_BOOL opj_t1_encode_cblks(opj_t1_t *t1,
+OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t* tcd,
                              opj_tcd_tile_t *tile,
                              opj_tcp_t *tcp,
                              const OPJ_FLOAT64 * mct_norms,

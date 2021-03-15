@@ -45,6 +45,7 @@
 #include "backends/ie/giebackend/giewrapper.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+#include "logger.hpp"
 
 #if INF_ENGINE_RELEASE < 2021010000
 #include "ie_compound_blob.h"
@@ -125,25 +126,20 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     if (sz.dims() == 2 && hint == cv::gapi::ie::TraitAs::IMAGE)
     {
         // NB: This logic is mainly taken from IE samples
-        const size_t pixsz    = CV_ELEM_SIZE1(mat.type());
         const size_t channels = mat.channels();
         const size_t height   = mat.size().height;
         const size_t width    = mat.size().width;
 
-        const size_t strideH  = mat.step.buf[0];
-        const size_t strideW  = mat.step.buf[1];
+        const size_t strideH  = mat.step[0];
 
-        const bool is_dense =
-            strideW == pixsz * channels &&
-            strideH == strideW * width;
-
-        if (!is_dense)
-            cv::util::throw_error(std::logic_error("Doesn't support conversion"
-                                                   " from non-dense cv::Mat"));
+        IE::BlockingDesc bdesc({1, height, width, channels} /* dims */,
+                               {0, 2, 3, 1} /* order for NHWC */,
+                               0 /* offset */,
+                               {0, 0, 0, 0} /* offsets for dims */,
+                               {strideH * height, strideH, channels, 1} /* strides for dims */);
 
         return IE::TensorDesc(toIE(mat.depth()),
-                              IE::SizeVector{1, channels, height, width},
-                              IE::Layout::NHWC);
+                              IE::SizeVector{1, channels, height, width}, bdesc);
     }
 
     return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
@@ -224,6 +220,9 @@ struct IEUnit {
             // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
             inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
             outputs = cv::gimpl::ie::wrap::toOutputsDataMap(this_network.GetOutputsInfo());
+            if (!params.reshape_table.empty() || !params.layer_names_to_reshape.empty()) {
+                GAPI_LOG_WARNING(NULL, "Reshape isn't supported for imported network");
+            }
         } else {
             cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
         }
@@ -248,6 +247,11 @@ struct IEUnit {
         }
         if (params.num_out == 1u && params.output_names.empty()) {
             params.output_names = { outputs.begin()->first };
+        }
+        if (!params.reshape_table.empty()) {
+            GAPI_Assert((params.reshape_table.size() + params.layer_names_to_reshape.size()) <=
+                         params.num_in &&
+                        "Number of layers to reshape must be less than or equal to number of inputs");
         }
     }
 
@@ -669,6 +673,46 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 namespace cv {
 namespace gimpl {
 namespace ie {
+static void configureInputReshapeByImage(const IE::InputInfo::Ptr& ii,
+                                         const cv::GMetaArg mm,
+                                         IE::ICNNNetwork::InputShapes& input_reshape_table) {
+    const auto& layer_name = ii->name();
+    // Finding name in reshape table
+    const auto name_pos_in_table = input_reshape_table.find(layer_name);
+    // If contains then reshape for this layer already configured by shapes
+    // otherwise create a new element of reshape table with name and dimension
+    // which based on input image size.
+    if (name_pos_in_table != input_reshape_table.end()) {
+        GAPI_Assert(false &&
+                    "Names of layers for reshape with specified dimensions shouldn't intersect with names for reshape by image");
+    }
+    cv::Size image_sz;
+    switch (mm.index()) {
+        case cv::GMetaArg::index_of<cv::GMatDesc>():
+            {
+                const auto &meta = util::get<cv::GMatDesc>(mm);
+                image_sz = meta.size;
+                break;
+            }
+        case cv::GMetaArg::index_of<cv::GFrameDesc>():
+            {
+                const auto &meta = util::get<cv::GFrameDesc>(mm);
+                image_sz = meta.size;
+                break;
+            }
+        default:
+            util::throw_error(std::runtime_error("Unsupported input meta for IE backend"));
+    }
+    auto input_dims = ii->getTensorDesc().getDims();
+    const auto size = input_dims.size();
+    if (size <= 1) {
+        GAPI_Assert(false && "Unsupported number of dimensions for reshape by image");
+    }
+    input_dims.at(size - 2) = static_cast<size_t>(image_sz.height);
+    input_dims.at(size - 1) = static_cast<size_t>(image_sz.width);
+    // Adding new element to reshape table
+    input_reshape_table.emplace(layer_name, input_dims);
+}
 
 static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg mm) {
     switch (mm.index()) {
@@ -732,20 +776,32 @@ struct Infer: public cv::detail::KernelTag {
 
         GConstGIEModel gm(gr);
         const auto &uu = gm.metadata(nh).get<IEUnit>();
+        IE::ICNNNetwork::InputShapes input_reshape_table = uu.params.reshape_table;
 
         // Initialize input information
         // Note our input layers list order matches the API order and so
         // meta order.
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
-
         for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                         ade::util::toRange(in_metas))) {
-            auto       &&ii = uu.inputs.at(std::get<0>(it));
-            const auto & mm =              std::get<1>(it);
+            const auto &input_name = std::get<0>(it);
+            auto       &&ii = uu.inputs.at(input_name);
+            const auto & mm = std::get<1>(it);
 
             configureInputInfo(ii, mm);
+            if (uu.params.layer_names_to_reshape.find(input_name) !=
+                uu.params.layer_names_to_reshape.end()) {
+                configureInputReshapeByImage(ii, mm, input_reshape_table);
+            }
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        }
+
+        // FIXME: This isn't the best place to call reshape function.
+        // Сorrect solution would be to do this in compile() method of network,
+        // but now input meta isn't passed to compile() method.
+        if (!input_reshape_table.empty()) {
+            const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
         }
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -802,6 +858,7 @@ struct InferROI: public cv::detail::KernelTag {
 
         GConstGIEModel gm(gr);
         const auto &uu = gm.metadata(nh).get<IEUnit>();
+        IE::ICNNNetwork::InputShapes input_reshape_table = uu.params.reshape_table;
 
         // Initialize input information
         // FIXME: So far it is pretty limited
@@ -809,10 +866,22 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(2u == in_metas.size());
 
         // 0th is ROI, 1st is input image
-        auto &&ii = uu.inputs.at(uu.params.input_names.at(0));
+        const auto &input_name = uu.params.input_names.at(0);
+        auto &&ii = uu.inputs.at(input_name);
         auto &&mm = in_metas.at(1u);
         configureInputInfo(ii, mm);
+        if (uu.params.layer_names_to_reshape.find(input_name) !=
+            uu.params.layer_names_to_reshape.end()) {
+            configureInputReshapeByImage(ii, mm, input_reshape_table);
+        }
         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+
+        // FIXME: This isn't the best place to call reshape function.
+        // Сorrect solution would be to do this in compile() method of network,
+        // but now input meta isn't passed to compile() method.
+        if (!input_reshape_table.empty()) {
+            const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
+        }
 
         // FIXME: It would be nice here to have an exact number of network's
         // input/output parameters. Probably GCall should store it here for us.
@@ -870,6 +939,7 @@ struct InferList: public cv::detail::KernelTag {
 
         GConstGIEModel gm(gr);
         const auto &uu = gm.metadata(nh).get<IEUnit>();
+        IE::ICNNNetwork::InputShapes input_reshape_table = uu.params.reshape_table;
 
         // Initialize input information
         // Note our input layers list order matches the API order and so
@@ -882,7 +952,18 @@ struct InferList: public cv::detail::KernelTag {
             auto       &&ii = uu.inputs.at(input_name);
             const auto & mm = in_metas[idx++];
             configureInputInfo(ii, mm);
+            if (uu.params.layer_names_to_reshape.find(input_name) !=
+                uu.params.layer_names_to_reshape.end()) {
+                configureInputReshapeByImage(ii, mm, input_reshape_table);
+            }
             ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        }
+
+        // FIXME: This isn't the best place to call reshape function.
+        // Сorrect solution would be to do this in compile() method of network,
+        // but now input meta isn't passed to compile() method.
+        if (!input_reshape_table.empty()) {
+            const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
         }
 
         // roi-list version is much easier at the moment.
@@ -936,6 +1017,7 @@ struct InferList: public cv::detail::KernelTag {
                                 std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
                                 IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+                                GAPI_Assert(out_blob);
 
                                 cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
                                 // FIXME: Avoid data copy. Not sure if it is possible though
@@ -972,6 +1054,7 @@ struct InferList2: public cv::detail::KernelTag {
 
         GConstGIEModel gm(gr);
         const auto &uu = gm.metadata(nh).get<IEUnit>();
+        IE::ICNNNetwork::InputShapes input_reshape_table = uu.params.reshape_table;
 
         // Initialize input information
         // Note our input layers list order matches the API order and so
@@ -1022,7 +1105,18 @@ struct InferList2: public cv::detail::KernelTag {
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // This is a cv::Rect -- configure the IE preprocessing
                 configureInputInfo(ii, mm_0);
+                if (uu.params.layer_names_to_reshape.find(input_name) !=
+                    uu.params.layer_names_to_reshape.end()) {
+                    configureInputReshapeByImage(ii, mm_0, input_reshape_table);
+                }
                 ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+
+                // FIXME: This isn't the best place to call reshape function.
+                // Сorrect solution would be to do this in compile() method of network,
+                // but now input meta isn't passed to compile() method.
+                if (!input_reshape_table.empty()) {
+                    const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
+                }
             } else {
                 // This is a cv::GMat (equals to: cv::Mat)
                 // Just validate that it is really the type
@@ -1103,6 +1197,7 @@ struct InferList2: public cv::detail::KernelTag {
                                     std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
 
                                     IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+                                    GAPI_Assert(out_blob);
 
                                     cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
                                     // FIXME: Avoid data copy. Not sure if it is possible though
