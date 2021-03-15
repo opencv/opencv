@@ -547,7 +547,7 @@ void InfEngineNgraphNet::init(Target targetId)
     switch (targetId)
     {
         case DNN_TARGET_CPU:
-            device_name = isArmPlugin() ? "ARM" : "CPU";
+            device_name = "CPU";
             break;
         case DNN_TARGET_OPENCL:
         case DNN_TARGET_OPENCL_FP16:

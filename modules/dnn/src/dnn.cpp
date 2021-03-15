@@ -115,7 +115,7 @@ public:
                 return true;
             else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
                 return true;
-            else if ((std::string::npos != i->find("CPU") || std::string::npos != i->find("ARM")) && target == DNN_TARGET_CPU)
+            else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
                 return true;
             else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
                 return true;

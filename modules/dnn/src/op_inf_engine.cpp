@@ -653,11 +653,11 @@ InferenceEngine::Core& getCore(const std::string& id)
 
 static bool detectArmPlugin_()
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2) && (defined(__arm__) || defined(__aarch64__))
     AutoLock lock(getInitializationMutex());
-    InferenceEngine::Core& ie = getCore("ARM");
+    InferenceEngine::Core& ie = getCore("CPU");
     const std::vector<std::string> devices = ie.GetAvailableDevices();
-    return std::find(devices.begin(), devices.end(), std::string("ARM")) != devices.end();
+    return std::find(devices.begin(), devices.end(), std::string("CPU")) != devices.end();
 #else
     return false;
 #endif
@@ -1176,11 +1176,8 @@ bool isMyriadX()
 
 bool isArmPlugin()
 {
-#ifdef __arm__
-    return true;
-#else
-    return false;
-#endif
+    static bool armPlugin = getInferenceEngineCPUType() == "ARM";
+    return armPlugin;
 }
 
 static std::string getInferenceEngineVPUType_()
