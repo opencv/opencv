@@ -167,6 +167,9 @@ protected:
     std::vector<ade::NodeHandle> m_emitters;
     std::vector<ade::NodeHandle> m_sinks;
 
+    class Synchronizer;
+    std::unique_ptr<Synchronizer> m_sync;
+
     std::vector<std::thread> m_threads;
     std::vector<stream::SyncQueue>   m_emitter_queues;
 
