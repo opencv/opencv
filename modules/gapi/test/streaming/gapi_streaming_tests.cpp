@@ -1102,25 +1102,37 @@ struct GAPI_Streaming_Unit: public ::testing::Test {
 // FIXME: (GAPI_Streaming_Types, XChangeOpaque) test is missing here!
 // FIXME: (GAPI_Streaming_Types,  OutputOpaque) test is missing here!
 
-TEST_F(GAPI_Streaming_Unit, TestTwoVideoSourcesFail)
+TEST(GAPI_Streaming, TestTwoVideosDifferentLength)
 {
-    auto c_desc = cv::GMatDesc{CV_8U,3,{768,576}};
-    auto m_desc = cv::descr_of(m);
-    auto path = findDataFile("cv/video/768x576.avi");
+    initTestDataPath();
+    auto desc = cv::GMatDesc{CV_8U,3,{768,576}};
+    std::string path1, path2;
     try {
-        sc = cc.compileStreaming(c_desc, m_desc);
-        // FIXME: it should be EXPECT_NO_THROW()
-        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path), m));
-        sc = cc.compileStreaming(m_desc, c_desc);
-        // FIXME: it should be EXPECT_NO_THROW()
-        sc.setSource(cv::gin(m, gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path)));
+        path1 = findDataFile("cv/video/768x576.avi");
+        path2 = findDataFile("highgui/video/big_buck_bunny.avi");
     } catch(...) {
-        throw SkipTestException("Video file can not be opened");
+        throw SkipTestException("Video file can not be found");
     }
 
-    sc = cc.compileStreaming(c_desc, c_desc);
-    auto c_ptr = gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path);
-    EXPECT_ANY_THROW(sc.setSource(cv::gin(c_ptr, c_ptr)));
+    cv::GMat in1, in2;
+    auto out = in1 + cv::gapi::resize(in2, desc.size);
+
+    cv::GComputation cc(cv::GIn(in1, in2), cv::GOut(out));
+    auto sc = cc.compileStreaming();
+
+    sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path1),
+                         gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path2)));
+    sc.start();
+
+    cv::Mat out_mat;
+    std::size_t frames = 0u;
+    while(sc.pull(cv::gout(out_mat))) {
+        frames++;
+    }
+
+    // big_buck_bunny.avi has 125 frames, 768x576.avi - 100 frames,
+    // expect framework to stop after 100 frames
+    EXPECT_EQ(100u, frames);
 }
 
 TEST_F(GAPI_Streaming_Unit, TestStartWithoutnSetSource)
