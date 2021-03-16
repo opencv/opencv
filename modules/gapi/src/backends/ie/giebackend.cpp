@@ -1244,7 +1244,7 @@ namespace {
             // NB: In case generic infer, info about in/out names is stored in operation (op.params)
             if (pp.is_generic)
             {
-                auto& info      = cv::util::any_cast<cv::InOutInfo>(op.params);
+                auto& info      = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
                 pp.input_names  = info.in_names;
                 pp.output_names = info.out_names;
                 pp.num_in       = info.in_names.size();
