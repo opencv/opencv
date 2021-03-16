@@ -93,7 +93,7 @@ float search_with_ground_truth(NNIndex<Distance>& index, const Matrix<typename D
     if (matches.cols<size_t(nn)) {
         Logger::info("matches.cols=%d, nn=%d\n",matches.cols,nn);
 
-        throw FLANNException("Ground truth is not computed for as many neighbors as requested");
+        FLANN_THROW(cv::Error::StsError, "Ground truth is not computed for as many neighbors as requested");
     }
 
     KNNResultSet<DistanceType> resultSet(nn+skipMatches);

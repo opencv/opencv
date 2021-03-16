@@ -168,7 +168,7 @@ Vec3d Math::rotMat2RotVec (const Matx33d &R) {
 /*
  * Eliminate matrix of m rows and n columns to be upper triangular.
  */
-void Math::eliminateUpperTriangular (std::vector<double> &a, int m, int n) {
+bool Math::eliminateUpperTriangular (std::vector<double> &a, int m, int n) {
     for (int r = 0; r < m; r++){
         double pivot = a[r*n+r];
         int row_with_pivot = r;
@@ -182,7 +182,7 @@ void Math::eliminateUpperTriangular (std::vector<double> &a, int m, int n) {
 
         // if pivot value is 0 continue
         if (fabs(pivot) < DBL_EPSILON)
-            continue;
+            return false; // matrix is not full rank -> terminate
 
         // swap row with maximum pivot value with current row
         for (int c = r; c < n; c++)
@@ -190,11 +190,14 @@ void Math::eliminateUpperTriangular (std::vector<double> &a, int m, int n) {
 
         // eliminate other rows
         for (int j = r+1; j < m; j++){
-            const auto fac = a[j*n+r] / pivot;
-            for (int c = r; c < n; c++)
-                a[j*n+c] -= fac * a[r*n+c];
+            const int row_idx1 = j*n, row_idx2 = r*n;
+            const auto fac = a[row_idx1+r] / pivot;
+            a[row_idx1+r] = 0; // zero eliminated element
+            for (int c = r+1; c < n; c++)
+                a[row_idx1+c] -= fac * a[row_idx2+c];
         }
     }
+    return true;
 }
 
 //////////////////////////////////////// RANDOM GENERATOR /////////////////////////////
@@ -467,7 +470,8 @@ private:
     std::vector<std::vector<int>> graph;
 public:
     GridNeighborhoodGraphImpl (const Mat &container_, int points_size,
-          int cell_size_x_img1, int cell_size_y_img1, int cell_size_x_img2, int cell_size_y_img2) {
+          int cell_size_x_img1, int cell_size_y_img1, int cell_size_x_img2, int cell_size_y_img2,
+          int max_neighbors) {
 
         const auto * const container = (float *) container_.data;
         // <int, int, int, int> -> {neighbors set}
@@ -501,11 +505,14 @@ public:
             for (int v_in_cell : neighbors) {
                 // there is always at least one neighbor
                 auto &graph_row = graph[v_in_cell];
-                graph_row = std::vector<int>(neighbors_in_cell-1);
+                graph_row = std::vector<int>(std::min(max_neighbors, neighbors_in_cell-1));
                 int j = 0;
                 for (int n : neighbors)
-                    if (n != v_in_cell)
+                    if (n != v_in_cell){
                         graph_row[j++] = n;
+                        if (j >= max_neighbors)
+                            break;
+                    }
             }
         }
     }
@@ -519,8 +526,8 @@ public:
 
 Ptr<GridNeighborhoodGraph> GridNeighborhoodGraph::create(const Mat &points,
      int points_size, int cell_size_x_img1_, int cell_size_y_img1_,
-     int cell_size_x_img2_, int cell_size_y_img2_) {
+     int cell_size_x_img2_, int cell_size_y_img2_, int max_neighbors) {
     return makePtr<GridNeighborhoodGraphImpl>(points, points_size,
-      cell_size_x_img1_, cell_size_y_img1_, cell_size_x_img2_, cell_size_y_img2_);
+      cell_size_x_img1_, cell_size_y_img1_, cell_size_x_img2_, cell_size_y_img2_, max_neighbors);
 }
 }}

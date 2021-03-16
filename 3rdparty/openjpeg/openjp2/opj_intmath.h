@@ -208,6 +208,16 @@ static INLINE OPJ_INT32 opj_int_floordivpow2(OPJ_INT32 a, OPJ_INT32 b)
 {
     return a >> b;
 }
+
+/**
+Divide an integer by a power of 2 and round downwards
+@return Returns a divided by 2^b
+*/
+static INLINE OPJ_UINT32 opj_uint_floordivpow2(OPJ_UINT32 a, OPJ_UINT32 b)
+{
+    return a >> b;
+}
+
 /**
 Get logarithm of an integer and round downwards
 @return Returns log2(a)

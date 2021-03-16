@@ -34,6 +34,7 @@ private:
     MFXVideoDECODE *decoder;
     SurfacePool *pool;
     void *outSurface;
+    cv::Size frameSize;
     bool good;
 };
 

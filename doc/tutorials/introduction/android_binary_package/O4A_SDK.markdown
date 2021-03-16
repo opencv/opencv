@@ -4,6 +4,13 @@ OpenCV4Android SDK {#tutorial_O4A_SDK}
 @prev_tutorial{tutorial_android_dev_intro}
 @next_tutorial{tutorial_dev_with_OCV_on_Android}
 
+|    |    |
+| -: | :- |
+| Original author | Vsevolod Glumov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
 
 This tutorial was designed to help you with installation and configuration of OpenCV4Android SDK.
 
@@ -21,7 +28,7 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
-forum](http://answers.opencv.org). We'll do our best to help you out.
+forum](https://forum.opencv.org). We'll do our best to help you out.
 
 General info
 ------------

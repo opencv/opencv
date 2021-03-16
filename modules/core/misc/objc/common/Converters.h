@@ -7,7 +7,7 @@
 #pragma once
 
 #ifdef __cplusplus
-#import <opencv2/opencv.hpp>
+#import <opencv2/core.hpp>
 #else
 #define CV_EXPORTS
 #endif

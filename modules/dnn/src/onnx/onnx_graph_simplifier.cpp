@@ -249,6 +249,40 @@ public:
     }
 };
 
+class NormalizeSubgraph4 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph4() : NormalizeSubgraphBase(1)
+    {
+        int input = addNodeToMatch("");
+        int mul = addNodeToMatch("Mul", input, input);
+        int sum = addNodeToMatch("ReduceSum", mul);
+        int eps = addNodeToMatch("");
+        int max = addNodeToMatch("Max", sum, eps);
+        int sqrt = addNodeToMatch("Sqrt", max);
+        int reciprocal = addNodeToMatch("Reciprocal", sqrt);
+        addNodeToMatch("Mul", input, reciprocal);
+        setFusedNode("Normalize", input);
+    }
+};
+
+class NormalizeSubgraph5 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph5() : NormalizeSubgraphBase(1)
+    {
+        int input = addNodeToMatch("");
+        int mul = addNodeToMatch("Mul", input, input);
+        int sum = addNodeToMatch("ReduceSum", mul);
+        int clip = addNodeToMatch("Clip", sum);
+        int sqrt = addNodeToMatch("Sqrt", clip);
+        int one = addNodeToMatch("Constant");
+        int div = addNodeToMatch("Div", one, sqrt);
+        addNodeToMatch("Mul", input, div);
+        setFusedNode("Normalize", input);
+    }
+};
+
 class GatherCastSubgraph : public Subgraph
 {
 public:
@@ -259,6 +293,40 @@ public:
         int gather = addNodeToMatch("Gather", input, index);
         addNodeToMatch("Cast", gather);
         setFusedNode("Gather", input, index);
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        bool retVal = Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds);
+        size_t matchedNodesNum = matchedNodesIds.size();
+        // Now we check if merging can be made for these Gather and Cast nodes
+        if (!retVal || matchedNodesNum < 2)
+            return retVal;
+        else {
+            int nodeToMatch = matchedNodesIds[matchedNodesNum - 1];
+            const Ptr<ImportNodeWrapper> node = net->getNode(nodeToMatch);
+            if (node->getType() == "Cast") {
+                int inpNodeId = matchedNodesIds[matchedNodesNum - 2];
+                const Ptr<ImportNodeWrapper> inpNode = net->getNode(inpNodeId);
+                if (inpNode->getType() == "Gather") {
+                    int numNodes = net->getNumNodes();
+                    std::string inpNodeName = node->getInputName(0);
+                    for (int i = 0; i < numNodes; ++i) {
+                        const Ptr<ImportNodeWrapper> node_to_check = net->getNode(i);
+                        int numInp = node_to_check->getNumInputs();
+                        for (int inp = 0; inp < numInp; ++inp) {
+                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(0)) {
+                                // Another node has the same input node, so it cannot be merged.
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return retVal;
     }
 };
 
@@ -277,6 +345,19 @@ public:
         int where = addNodeToMatch("Where", condition, init, addNodeToMatch("Constant"));
         addNodeToMatch("Expand", input, where);
         setFusedNode("Expand", input, shape);
+    }
+};
+
+class MishSubgraph : public Subgraph
+{
+public:
+    MishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int softplus = addNodeToMatch("Softplus", input);
+        int tanh = addNodeToMatch("Tanh", softplus);
+        addNodeToMatch("Mul", input, tanh);
+        setFusedNode("Mish", input);
     }
 };
 
@@ -478,6 +559,9 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
     subgraphs.push_back(makePtr<ExpandSubgraph>());
+    subgraphs.push_back(makePtr<MishSubgraph>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph4>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph5>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
@@ -512,6 +596,19 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
         CV_Assert(!field.empty());
         Mat(sizes, CV_64FC1, (void*)field.data()).convertTo(blob, CV_32FC1);
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
+    {
+        if (!tensor_proto.int32_data().empty())
+        {
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+            Mat(sizes, CV_32SC1, (void*)field.data()).copyTo(blob);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            Mat(sizes, CV_32SC1, val).copyTo(blob);
+        }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT64)
     {

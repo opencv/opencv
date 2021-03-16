@@ -21,6 +21,9 @@ std::string qrcode_images_close[] = {
 std::string qrcode_images_monitor[] = {
   "monitor_1.png", "monitor_2.png", "monitor_3.png", "monitor_4.png", "monitor_5.png"
 };
+std::string qrcode_images_curved[] = {
+  "curved_1.jpg", "curved_2.jpg", "curved_3.jpg", "curved_4.jpg", "curved_5.jpg", "curved_6.jpg", "curved_7.jpg", "curved_8.jpg"
+};
 std::string qrcode_images_multiple[] = {
   "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
   "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
@@ -137,7 +140,38 @@ TEST(Objdetect_QRCode_Monitor, generate_test_data)
     file_config << "]";
     file_config.release();
 }
+TEST(Objdetect_QRCode_Curved, generate_test_data)
+{
+    const std::string root = "qrcode/curved/";
+    const std::string dataset_config = findDataFile(root + "dataset_config.json");
+    FileStorage file_config(dataset_config, FileStorage::WRITE);
 
+    file_config << "test_images" << "[";
+    size_t images_count = sizeof(qrcode_images_curved) / sizeof(qrcode_images_curved[0]);
+    for (size_t i = 0; i < images_count; i++)
+    {
+        file_config << "{:" << "image_name" << qrcode_images_curved[i];
+        std::string image_path = findDataFile(root + qrcode_images_curved[i]);
+        std::vector<Point> corners;
+        Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+        std::string decoded_info;
+        ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+        EXPECT_TRUE(detectQRCode(src, corners));
+#ifdef HAVE_QUIRC
+        EXPECT_TRUE(decodeCurvedQRCode(src, corners, decoded_info, straight_barcode));
+#endif
+        file_config << "x" << "[:";
+        for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].x; }
+        file_config << "]";
+        file_config << "y" << "[:";
+        for (size_t j = 0; j < corners.size(); j++) { file_config << corners[j].y; }
+        file_config << "]";
+        file_config << "info" << decoded_info;
+        file_config << "}";
+    }
+    file_config << "]";
+    file_config.release();
+}
 TEST(Objdetect_QRCode_Multi, generate_test_data)
 {
     const std::string root = "qrcode/multiple/";
@@ -218,6 +252,8 @@ TEST_P(Objdetect_QRCode, regression)
     decoded_info = qrcode.detectAndDecode(src, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(src, corners));
 #endif
@@ -283,6 +319,8 @@ TEST_P(Objdetect_QRCode_Close, regression)
     decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
@@ -348,6 +386,8 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     decoded_info = qrcode.detectAndDecode(barcode, corners, straight_barcode);
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
 #else
     ASSERT_TRUE(qrcode.detect(barcode, corners));
 #endif
@@ -357,6 +397,68 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
     ASSERT_TRUE(file_config.isOpened()) << "Can't read validation data: " << dataset_config;
     {
         FileNode images_list = file_config["monitor_images"];
+        size_t images_count = static_cast<size_t>(images_list.size());
+        ASSERT_GT(images_count, 0u) << "Can't find validation data entries in 'test_images': " << dataset_config;
+
+        for (size_t index = 0; index < images_count; index++)
+        {
+            FileNode config = images_list[(int)index];
+            std::string name_test_image = config["image_name"];
+            if (name_test_image == name_current_image)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    int x = config["x"][i];
+                    int y = config["y"][i];
+                    EXPECT_NEAR(x, corners[i].x, pixels_error);
+                    EXPECT_NEAR(y, corners[i].y, pixels_error);
+                }
+
+#ifdef HAVE_QUIRC
+                std::string original_info = config["info"];
+                EXPECT_EQ(decoded_info, original_info);
+#endif
+
+                return; // done
+            }
+        }
+        std::cerr
+            << "Not found results for '" << name_current_image
+            << "' image in config file:" << dataset_config << std::endl
+            << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
+            << std::endl;
+    }
+}
+
+typedef testing::TestWithParam< std::string > Objdetect_QRCode_Curved;
+TEST_P(Objdetect_QRCode_Curved, regression)
+{
+    const std::string name_current_image = GetParam();
+    const std::string root = "qrcode/curved/";
+    const int pixels_error = 3;
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path, IMREAD_GRAYSCALE), straight_barcode;
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
+    std::vector<Point> corners;
+    std::string decoded_info;
+    QRCodeDetector qrcode;
+#ifdef HAVE_QUIRC
+    decoded_info = qrcode.detectAndDecodeCurved(src, corners, straight_barcode);
+    ASSERT_FALSE(corners.empty());
+    ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    EXPECT_EQ(expected_barcode_type, straight_barcode.type());
+#else
+    ASSERT_TRUE(qrcode.detect(src, corners));
+#endif
+
+    const std::string dataset_config = findDataFile(root + "dataset_config.json");
+    FileStorage file_config(dataset_config, FileStorage::READ);
+    ASSERT_TRUE(file_config.isOpened()) << "Can't read validation data: " << dataset_config;
+    {
+        FileNode images_list = file_config["test_images"];
         size_t images_count = static_cast<size_t>(images_list.size());
         ASSERT_GT(images_count, 0u) << "Can't find validation data entries in 'test_images': " << dataset_config;
 
@@ -408,6 +510,9 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
+    int expected_barcode_type = CV_8UC1;
+    for(size_t i = 0; i < straight_barcode.size(); i++)
+        EXPECT_EQ(expected_barcode_type, straight_barcode[i].type());
 #else
     ASSERT_TRUE(qrcode.detectMulti(src, corners));
 #endif
@@ -478,6 +583,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode, testing::ValuesIn(qrcode_images_name));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Close, testing::ValuesIn(qrcode_images_close));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Monitor, testing::ValuesIn(qrcode_images_monitor));
+INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Curved, testing::ValuesIn(qrcode_images_curved));
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Multi, testing::ValuesIn(qrcode_images_multiple));
 
 TEST(Objdetect_QRCode_decodeMulti, decode_regression_16491)
@@ -515,6 +621,32 @@ TEST(Objdetect_QRCode_detectMulti, detect_regression_16961)
     ASSERT_FALSE(corners.empty());
     size_t expect_corners_size = 36;
     EXPECT_EQ(corners.size(), expect_corners_size);
+}
+
+TEST(Objdetect_QRCode_decodeMulti, check_output_parameters_type_19363)
+{
+    const std::string name_current_image = "9_qrcodes.jpg";
+    const std::string root = "qrcode/multiple/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+#ifdef HAVE_QUIRC
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    std::vector<cv::String> decoded_info;
+#if 0  // FIXIT: OutputArray::create() type check
+    std::vector<Mat2b> straight_barcode_nchannels;
+    EXPECT_ANY_THROW(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode_nchannels));
+#endif
+
+    int expected_barcode_type = CV_8UC1;
+    std::vector<Mat1b> straight_barcode;
+    EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
+    ASSERT_FALSE(corners.empty());
+    for(size_t i = 0; i < straight_barcode.size(); i++)
+        EXPECT_EQ(expected_barcode_type, straight_barcode[i].type());
+#endif
 }
 
 TEST(Objdetect_QRCode_basic, not_found_qrcode)

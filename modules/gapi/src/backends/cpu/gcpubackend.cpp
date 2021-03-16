@@ -128,9 +128,10 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     // No API placeholders allowed at this point
     // FIXME: this check has to be done somewhere in compilation stage.
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
-              && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY
-              && arg.kind != cv::detail::ArgKind::GOPAQUE);
+                && arg.kind != cv::detail::ArgKind::GSCALAR
+                && arg.kind != cv::detail::ArgKind::GARRAY
+                && arg.kind != cv::detail::ArgKind::GOPAQUE
+                && arg.kind != cv::detail::ArgKind::GFRAME);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {
@@ -150,6 +151,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
     case GShape::GOPAQUE: return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:  return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -194,7 +196,7 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     {
         const auto &desc = gm.metadata(nh).get<Data>();
 
-        if (   desc.storage == Data::Storage::INTERNAL
+        if (   desc.storage == Data::Storage::INTERNAL               // FIXME: to reconsider
             && !util::holds_alternative<util::monostate>(desc.ctor))
         {
             // FIXME: Note that compile-time constant data objects (like
@@ -235,11 +237,11 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta
-        for (const auto &out_it : ade::util::indexed(op.outs))
+        for (const auto out_it : ade::util::indexed(op.outs))
         {
             // FIXME: Can the same GArg type resolution mechanism be reused here?
-            const auto out_port  = ade::util::index(out_it);
-            const auto out_desc  = ade::util::value(out_it);
+            const auto  out_port  = ade::util::index(out_it);
+            const auto& out_desc  = ade::util::value(out_it);
             context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc);
         }
 
@@ -257,10 +259,10 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
         //FIXME: unify with cv::detail::ensure_out_mats_not_reallocated
         //FIXME: when it's done, remove can_describe(const GMetaArg&, const GRunArgP&)
         //and descr_of(const cv::GRunArgP &argp)
-        for (const auto &out_it : ade::util::indexed(op_info.expected_out_metas))
+        for (const auto out_it : ade::util::indexed(op_info.expected_out_metas))
         {
-            const auto out_index      = ade::util::index(out_it);
-            const auto expected_meta  = ade::util::value(out_it);
+            const auto  out_index      = ade::util::index(out_it);
+            const auto& expected_meta  = ade::util::value(out_it);
 
             if (!can_describe(expected_meta, context.m_results[out_index]))
             {
@@ -276,4 +278,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     } // for(m_script)
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }

@@ -588,16 +588,16 @@ bool OCL4DNNConvSpatial<Dtype>::Forward(const UMat& bottom,
         fused_eltwise_ = false;
     }
 
-    if (use_half_ && bias_half.empty() && !bias.empty())
-        convertFp16(bias, bias_half);
+    if (use_half_ && !bias.empty())
+        CV_CheckTypeEQ(bias.type(), CV_16SC1, "");
 
-    if (use_half_ && weights_half.empty())
-        convertFp16(weight, weights_half);
+    if (use_half_)
+        CV_CheckTypeEQ(weight.type(), CV_16SC1, "");
 
-    prepareKernel(bottom, top, weight, (use_half_) ? bias_half : bias, numImages);
+    prepareKernel(bottom, top, weight, bias, numImages);
     if (bestKernelConfig.empty())
         return false;
-    return convolve(bottom, top, weight, (use_half_) ? bias_half : bias, numImages, bestKernelConfig);
+    return convolve(bottom, top, weight, bias, numImages, bestKernelConfig);
 }
 
 template<typename Dtype>
@@ -607,6 +607,7 @@ void OCL4DNNConvSpatial<Dtype>::calculateBenchmark(const UMat &bottom, UMat &ver
 {
     options_.str(""); options_.clear(); // clear contents and state flags
     createBasicKernel(1, 1, 1);
+    CV_Assert(!kernelQueue.empty());  // basic kernel must be available
     kernel_index_ = kernelQueue.size() - 1;
     convolve(bottom, verifyTop, weight, bias, numImages, kernelQueue[kernel_index_]);
     CV_Assert(phash.find(kernelQueue[kernel_index_]->kernelName) != phash.end());
@@ -743,29 +744,26 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
                                      kernel_h_ * (int)alignSize(kernel_w_, 2),
                                      (use_half_) ? CV_16SC1 : CV_32FC1);
 
-    UMat swizzled_weights_tmp;
-    if (use_half_)
-        swizzled_weights_tmp.create(shape(swizzled_weights_umat), CV_32F);
-
     if (!interleave) {
-        cl_uint argIdx = 0;
         int32_t channels = channels_ / group_;
 
-        ocl::Kernel oclk_copy_weight(CL_KERNEL_SELECT("copyWeightsSwizzled"),
-                                     cv::ocl::dnn::conv_spatial_helper_oclsrc);
+        ocl::Kernel oclk_copy_weight(
+            use_half_ ? "copyWeightsSwizzled_half" : "copyWeightsSwizzled_float",
+            cv::ocl::dnn::conv_spatial_helper_oclsrc,
+            use_half_ ? "-DHALF_SUPPORT=1 -DDtype=half" : "-DDtype=float"
+        );
         if (oclk_copy_weight.empty())
             return false;
 
-        oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
-        if (use_half_)
-            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_tmp));
-        else
-            oclk_copy_weight.set(argIdx++, ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat));
-        oclk_copy_weight.set(argIdx++, kernel_w_);
-        oclk_copy_weight.set(argIdx++, kernel_h_);
-        oclk_copy_weight.set(argIdx++, channels);
-        oclk_copy_weight.set(argIdx++, num_output_);
-        oclk_copy_weight.set(argIdx++, swizzled_factor);
+        oclk_copy_weight.args(
+            ocl::KernelArg::PtrReadOnly(weight),
+            ocl::KernelArg::PtrWriteOnly(swizzled_weights_umat),
+            kernel_w_,
+            kernel_h_,
+            channels,
+            num_output_,
+            swizzled_factor
+        );
 
         size_t global_work_size_copy[3] = {
             (size_t) (alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
@@ -777,13 +775,24 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         }
     } else {
         // assumption: kernel dimension is 2
-        Mat weightMat = weight.getMat(ACCESS_READ);
-        Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
+        Mat weightMat;
         Mat swizzledWeightMat;
+        UMat weight_tmp; // FP32 in half mode, TODO implement FP16 repack
         if (use_half_)
-            swizzledWeightMat = swizzled_weights_tmp.getMat(ACCESS_WRITE);
+        {
+            CV_CheckTypeEQ(weight.type(), CV_16SC1, "");
+            convertFp16(weight, weight_tmp);
+            weightMat = weight_tmp.getMat(ACCESS_READ);
+            swizzledWeightMat.create(shape(swizzled_weights_umat), CV_32F);
+        }
         else
+        {
+            weightMat = weight.getMat(ACCESS_READ);
             swizzledWeightMat = swizzled_weights_umat.getMat(ACCESS_WRITE);
+        }
+
+        CV_CheckTypeEQ(weightMat.type(), CV_32FC1, "");
+        Dtype* cpu_weight = (Dtype *)weightMat.ptr<float>();
         Dtype* cpu_swizzled_weight = (Dtype *)swizzledWeightMat.ptr<float>();
 
         int interleavedRows = (kernel_w_ / 2) * 2;
@@ -791,26 +800,28 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
         int blockWidth = swizzled_factor;  // should equal to simd size.
         int rowAlignment = 32;
         size_t interleaved_filter_size = M_ * kernel_w_ * kernel_h_ * channels_ * sizeof(Dtype);
-        Dtype * tmpSwizzledWeight = reinterpret_cast<Dtype*>(malloc(interleaved_filter_size));
-        CHECK_EQ(tmpSwizzledWeight != NULL, true) << "Failed to allocate temporary swizzled weight";
+        cv::AutoBuffer<Dtype, 0> tmpSwizzledWeight(interleaved_filter_size);
         for (int od = 0; od < M_; od++)
             for (int id = 0; id < channels_; id++)
                 for (int r = 0; r < kernel_h_; r++)
                     for (int c = 0; c < kernel_w_; c++)
                         tmpSwizzledWeight[((id * kernel_h_ + r)* kernel_w_ + c) * M_ + od] =
                             cpu_weight[((od * channels_ + id) * kernel_h_ + r)*kernel_w_+c];
+
         interleaveMatrix(cpu_swizzled_weight,
-                         tmpSwizzledWeight,
+                         tmpSwizzledWeight.data(),
                          kernel_w_ * kernel_h_ * channels_, M_,
                          interleavedRows,
                          nonInterleavedRows,
                          blockWidth,
                          rowAlignment);
-        free(tmpSwizzledWeight);
-    }
 
-    if (use_half_)
-        convertFp16(swizzled_weights_tmp, swizzled_weights_umat);
+        // unmap OpenCL buffers
+        weightMat.release();
+
+        if (use_half_)
+            convertFp16(swizzledWeightMat, swizzled_weights_umat);
+    }
 
     return true;
 }
@@ -1103,10 +1114,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         cl_uint argIdx = 0;
         setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
         kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-        if (use_half_)
-            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
-        else
-            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
         if (bias_term_)
             kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
         kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
@@ -1147,10 +1155,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
-                if (use_half_)
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weights_half));
-                else
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
                 kernel.set(argIdx++, kernel_offset);
                 if (bias_term_)
                     kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
@@ -1713,6 +1718,7 @@ void OCL4DNNConvSpatial<float>::useFirstAvailable(const UMat &bottom,
                                     tunerItems[i]->blockHeight,
                                     tunerItems[i]->blockDepth))
         {
+            CV_Assert(!kernelQueue.empty());  // basic kernel must be available
             int kernelIdx = kernelQueue.size() - 1;
             kernelConfig* config = kernelQueue[kernelIdx].get();
             bool failed = false;
@@ -1883,6 +1889,7 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
         CV_LOG_INFO(NULL, "fallback to basic kernel");
         options_.str(""); options_.clear(); // clear contents and state flags
         createBasicKernel(1, 1, 1);
+        CV_Assert(!kernelQueue.empty());  // basic kernel must be available
         kernel_index_ = kernelQueue.size() - 1;
     }
     this->bestKernelConfig = kernelQueue[kernel_index_];
@@ -1953,7 +1960,7 @@ void OCL4DNNConvSpatial<Dtype>::prepareKernel(const UMat &bottom, UMat &top,
 
     UMat benchData(1, numImages * top_dim_, (use_half_) ? CV_16SC1 : CV_32FC1);
 
-    calculateBenchmark(bottom, benchData, (use_half_) ? weights_half : weight, bias, numImages);
+    calculateBenchmark(bottom, benchData, weight, bias, numImages);
 
     if (run_auto_tuning_ || force_auto_tuning_)
     {

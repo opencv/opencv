@@ -1,8 +1,15 @@
 Smoothing Images {#tutorial_gausian_median_blur_bilateral_filter}
 ================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_random_generator_and_text}
 @next_tutorial{tutorial_erosion_dilatation}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

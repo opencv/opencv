@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -10,6 +10,7 @@
 #include <ade/util/zip_range.hpp>   // util::indexed
 
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/gcommon.hpp>
 #include "compiler/gmodelbuilder.hpp"
 #include "compiler/gmodel.hpp" // RcDesc, GModel::init
 
@@ -27,8 +28,10 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.unaryop"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC }
-                                    , { GShape::GMAT } }).pass(m).yield(0);
+                                    , { GShape::GMAT }
+                                    , { D::OpaqueKind::CV_UNKNOWN }
+                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    }).pass(m).yield(0);
     }
 
     cv::GMat binaryOp(cv::GMat m1, cv::GMat m2)
@@ -36,8 +39,10 @@ namespace
         return cv::GCall(cv::GKernel{ "gapi.test.binaryOp"
                                     , ""
                                     , nullptr
-                                    , { D::ArgSpec::OPAQUE_SPEC, D::ArgSpec::OPAQUE_SPEC }
-                                    , { GShape::GMAT } }).pass(m1, m2).yield(0);
+                                    , { GShape::GMAT }
+                                    , { D::OpaqueKind::CV_UNKNOWN, D::OpaqueKind::CV_UNKNOWN }
+                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    }).pass(m1, m2).yield(0);
     }
 
     std::vector<ade::NodeHandle> collectOperations(const cv::gimpl::GModel::Graph& gr)
@@ -208,7 +213,7 @@ TEST(GModelBuilder, Check_Multiple_Outputs)
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[1]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(1u, gm.metadata(p.out_nhs[2]->inEdges().front()).get<cv::gimpl::Output>().port);
     EXPECT_EQ(0u, gm.metadata(p.out_nhs[3]->inEdges().front()).get<cv::gimpl::Output>().port);
-    for (const auto& it : ade::util::indexed(p.out_nhs))
+    for (const auto it : ade::util::indexed(p.out_nhs))
     {
         const auto& out_nh = ade::util::value(it);
 

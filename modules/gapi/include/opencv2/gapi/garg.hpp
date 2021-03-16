@@ -2,18 +2,21 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GARG_HPP
 #define OPENCV_GAPI_GARG_HPP
 
 #include <vector>
+#include <unordered_map>
 #include <type_traits>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/own/mat.hpp>
+#include <opencv2/gapi/media.hpp>
 
+#include <opencv2/gapi/util/util.hpp>
 #include <opencv2/gapi/util/any.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 
@@ -21,9 +24,11 @@
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/garray.hpp>
 #include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/gtype_traits.hpp>
 #include <opencv2/gapi/gmetaarg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/rmat.hpp>
 
 namespace cv {
 
@@ -90,16 +95,73 @@ using GArgs = std::vector<GArg>;
 
 // FIXME: Express as M<GProtoArg...>::type
 // FIXME: Move to a separate file!
-using GRunArg  = util::variant<
+using GRunArgBase  = util::variant<
 #if !defined(GAPI_STANDALONE)
     cv::UMat,
 #endif // !defined(GAPI_STANDALONE)
+    cv::RMat,
     cv::gapi::wip::IStreamSource::Ptr,
     cv::Mat,
     cv::Scalar,
     cv::detail::VectorRef,
-    cv::detail::OpaqueRef
+    cv::detail::OpaqueRef,
+    cv::MediaFrame
     >;
+
+namespace detail {
+template<typename,typename>
+struct in_variant;
+
+template<typename T, typename... Types>
+struct in_variant<T, util::variant<Types...> >
+    : std::integral_constant<bool, cv::detail::contains<T, Types...>::value > {
+};
+} // namespace detail
+
+struct GAPI_EXPORTS GRunArg: public GRunArgBase
+{
+    // Metadata information here
+    using Meta = std::unordered_map<std::string, util::any>;
+    Meta meta;
+
+    // Mimic the old GRunArg semantics here, old of the times when
+    // GRunArg was an alias to variant<>
+    GRunArg();
+    GRunArg(const cv::GRunArg &arg);
+    GRunArg(cv::GRunArg &&arg);
+
+    GRunArg& operator= (const GRunArg &arg);
+    GRunArg& operator= (GRunArg &&arg);
+
+    template <typename T>
+    GRunArg(const T &t,
+            const Meta &m = Meta{},
+            typename std::enable_if< detail::in_variant<T, GRunArgBase>::value, int>::type = 0)
+        : GRunArgBase(t)
+        , meta(m)
+    {
+    }
+    template <typename T>
+    GRunArg(T &&t,
+            const Meta &m = Meta{},
+            typename std::enable_if< detail::in_variant<T, GRunArgBase>::value, int>::type = 0)
+        : GRunArgBase(std::move(t))
+        , meta(m)
+    {
+    }
+    template <typename T> auto operator= (const T &t)
+        -> typename std::enable_if< detail::in_variant<T, GRunArgBase>::value, cv::GRunArg>::type&
+    {
+        GRunArgBase::operator=(t);
+        return *this;
+    }
+    template <typename T> auto operator= (T&& t)
+        -> typename std::enable_if< detail::in_variant<T, GRunArgBase>::value, cv::GRunArg>::type&
+    {
+        GRunArgBase::operator=(std::move(t));
+        return *this;
+    }
+};
 using GRunArgs = std::vector<GRunArg>;
 
 // TODO: Think about the addition operator
@@ -124,11 +186,13 @@ namespace gapi
 namespace wip
 {
 /**
- * @brief This aggregate type represents all types which G-API can handle (via variant).
+ * @brief This aggregate type represents all types which G-API can
+ * handle (via variant).
  *
- * It only exists to overcome C++ language limitations (where a `using`-defined class can't be forward-declared).
+ * It only exists to overcome C++ language limitations (where a
+ * `using`-defined class can't be forward-declared).
  */
-struct Data: public GRunArg
+struct GAPI_EXPORTS Data: public GRunArg
 {
     using GRunArg::GRunArg;
     template <typename T>
@@ -144,7 +208,9 @@ using GRunArgP = util::variant<
     cv::UMat*,
 #endif // !defined(GAPI_STANDALONE)
     cv::Mat*,
+    cv::RMat*,
     cv::Scalar*,
+    cv::MediaFrame*,
     cv::detail::VectorRef,
     cv::detail::OpaqueRef
     >;
@@ -170,7 +236,8 @@ inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
 namespace gapi
 {
     GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
-} // namespace gapi
+    GAPI_EXPORTS cv::GRunArg   bind(cv::GRunArgP &out);     // FIXME: think more about it
+}
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)
 {
@@ -181,6 +248,30 @@ template<typename... Ts> inline GRunArgsP gout(Ts&... args)
 {
     return GRunArgsP{ GRunArgP(detail::wrap_host_helper<Ts>::wrap_out(args))... };
 }
+
+struct GTypeInfo;
+using GTypesInfo = std::vector<GTypeInfo>;
+
+// FIXME: Needed for python bridge, must be moved to more appropriate header
+namespace detail {
+struct ExtractArgsCallback
+{
+    cv::GRunArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
+    using CallBackT = std::function<cv::GRunArgs(const cv::GTypesInfo& info)>;
+    CallBackT c;
+};
+
+struct ExtractMetaCallback
+{
+    cv::GMetaArgs operator()(const cv::GTypesInfo& info) const { return c(info); }
+    using CallBackT = std::function<cv::GMetaArgs(const cv::GTypesInfo& info)>;
+    CallBackT c;
+};
+
+void constructGraphOutputs(const cv::GTypesInfo &out_info,
+                           cv::GRunArgs         &args,
+                           cv::GRunArgsP        &outs);
+} // namespace detail
 
 } // namespace cv
 

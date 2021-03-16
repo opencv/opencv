@@ -215,6 +215,13 @@
             "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
             "swift_type": "String"
         },
+        "string": {
+            "cast_to": "std::string",
+            "objc_type": "NSString*",
+            "to_cpp": "std::string(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
+            "swift_type": "String"
+        },
         "TermCriteria": {
             "objc_type": "TermCriteria*",
             "to_cpp": "%(n)s.nativeRef",

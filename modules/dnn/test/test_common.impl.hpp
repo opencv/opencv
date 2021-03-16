@@ -40,6 +40,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_HDDL: *os << "HDDL"; return;
     case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
     case DNN_TARGET_CUDA: *os << "CUDA"; return;
@@ -67,10 +68,10 @@ void normAssert(
         double l1 /*= 0.00001*/, double lInf /*= 0.0001*/)
 {
     double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
-    EXPECT_LE(normL1, l1) << comment;
+    EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
-    EXPECT_LE(normInf, lInf) << comment;
+    EXPECT_LE(normInf, lInf) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 }
 
 std::vector<cv::Rect2d> matToBoxes(const cv::Mat& m)
@@ -176,6 +177,52 @@ void normAssertDetections(
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
+// For text detection networks
+// Curved text polygon is not supported in the current version.
+// (concave polygon is invalid input to intersectConvexConvex)
+void normAssertTextDetections(
+        const std::vector<std::vector<Point>>& gtPolys,
+        const std::vector<std::vector<Point>>& testPolys,
+        const char *comment /*= ""*/, double boxes_iou_diff /*= 1e-4*/)
+{
+    std::vector<bool> matchedRefBoxes(gtPolys.size(), false);
+    for (uint i = 0; i < testPolys.size(); ++i)
+    {
+        const std::vector<Point>& testPoly = testPolys[i];
+        bool matched = false;
+        double topIoU = 0;
+        for (uint j = 0; j < gtPolys.size() && !matched; ++j)
+        {
+            if (!matchedRefBoxes[j])
+            {
+                std::vector<Point> intersectionPolygon;
+                float intersectArea = intersectConvexConvex(testPoly, gtPolys[j], intersectionPolygon, true);
+                double iou = intersectArea / (contourArea(testPoly) + contourArea(gtPolys[j]) - intersectArea);
+                topIoU = std::max(topIoU, iou);
+                if (1.0 - iou < boxes_iou_diff)
+                {
+                    matched = true;
+                    matchedRefBoxes[j] = true;
+                }
+            }
+        }
+        if (!matched) {
+            std::cout << cv::format("Unmatched-det:") << testPoly << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
+        EXPECT_TRUE(matched) << comment;
+    }
+
+    // Check unmatched groundtruth.
+    for (uint i = 0; i < gtPolys.size(); ++i)
+    {
+        if (!matchedRefBoxes[i]) {
+            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << std::endl;
+        }
+        EXPECT_TRUE(matchedRefBoxes[i]);
+    }
+}
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
     const std::ios::openmode mode = std::ios::in | std::ios::binary;
@@ -221,7 +268,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
@@ -231,7 +278,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
@@ -281,7 +328,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
@@ -291,7 +338,7 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
@@ -323,7 +370,7 @@ static bool validateVPUType_()
     bool have_vpu_target = false;
     for (std::vector<Target>::const_iterator i = available.begin(); i != available.end(); ++i)
     {
-        if (*i == DNN_TARGET_MYRIAD)
+        if (*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL)
         {
             have_vpu_target = true;
             break;

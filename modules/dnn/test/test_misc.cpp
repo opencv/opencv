@@ -99,6 +99,15 @@ TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/
     EXPECT_TRUE(res.empty()) << res.size;
 }
 
+TEST(Net, empty_forward_18392)
+{
+    cv::dnn::Net net;
+    Mat image(Size(512, 512), CV_8UC3, Scalar::all(0));
+    Mat inputBlob = cv::dnn::blobFromImage(image, 1.0, Size(512, 512), Scalar(0,0,0), true, false);
+    net.setInput(inputBlob);
+    EXPECT_ANY_THROW(Mat output = net.forward());
+}
+
 #ifdef HAVE_INF_ENGINE
 static
 void test_readNet_IE_do_not_call_setInput(Backend backendId)

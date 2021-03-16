@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -234,6 +234,11 @@ GScalar sum(const GMat& src)
     return core::GSum::on(src);
 }
 
+GOpaque<int> countNonZero(const GMat& src)
+{
+    return core::GCountNonZero::on(src);
+}
+
 GMat addWeighted(const GMat& src1, double alpha, const GMat& src2, double beta, double gamma, int dtype)
 {
     return core::GAddW::on(src1, alpha, src2, beta, gamma, dtype);
@@ -323,11 +328,6 @@ GMat crop(const GMat& src, const Rect& rect)
     return core::GCrop::on(src, rect);
 }
 
-GMat copy(const GMat& src)
-{
-    return core::GCopy::on(src);
-}
-
 GMat concatHor(const GMat& src1, const GMat& src2)
 {
     return core::GConcatHor::on(src1, src2);
@@ -381,6 +381,55 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
                 int borderMode, const Scalar& borderValue)
 {
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
+}
+
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K, const GMat& bestLabels,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags)
+{
+    return core::GKMeansND::on(data, K, bestLabels, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags)
+{
+    return core::GKMeansNDNoInit::on(data, K, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>> kmeans(const GArray<Point2f>& data,
+                                                               const int              K,
+                                                               const GArray<int>&     bestLabels,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags)
+{
+    return core::GKMeans2D::on(data, K, bestLabels, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>> kmeans(const GArray<Point3f>& data,
+                                                               const int              K,
+                                                               const GArray<int>&     bestLabels,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags)
+{
+    return core::GKMeans3D::on(data, K, bestLabels, criteria, attempts, flags);
+}
+
+GOpaque<Size> streaming::size(const GMat& src)
+{
+    return streaming::GSize::on(src);
+}
+
+GOpaque<Size> streaming::size(const GOpaque<Rect>& r)
+{
+    return streaming::GSizeR::on(r);
+}
+
+GOpaque<Size> streaming::size(const GFrame& src)
+{
+    return streaming::GSizeMF::on(src);
 }
 
 } //namespace gapi

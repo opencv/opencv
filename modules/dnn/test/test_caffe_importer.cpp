@@ -563,7 +563,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     }
     normAssert(outs[0], ref, "", l1, lInf);
     if (target != DNN_TARGET_MYRIAD || getInferenceEngineVPUType() != CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
-        expectNoFallbacksFromIE(model);
+        expectNoFallbacksFromIE(model.getNetwork_());
 }
 
 TEST(Test_Caffe, multiple_inputs)
@@ -749,7 +749,7 @@ TEST_P(Test_Caffe_nets, RFCN)
     if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 0.0034;
-        iouDiff = 0.11;
+        iouDiff = 0.12;
     }
     static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
                                            0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);

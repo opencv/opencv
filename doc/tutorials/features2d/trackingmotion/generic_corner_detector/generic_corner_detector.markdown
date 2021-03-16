@@ -1,9 +1,15 @@
 Creating your own corner detector {#tutorial_generic_corner_detector}
 =================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_good_features_to_track}
 @next_tutorial{tutorial_corner_subpixels}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----

@@ -234,10 +234,10 @@ class SiamRPNTracker:
         """
         Args:
             img(np.ndarray):    bgr based input image frame
-            bbox: (x,y,w,h):    bounding box
+            bbox: (x, y, w, h): bounding box
         """
-        x,y,h,w = bbox
-        self.center_pos = np.array([x + (h - 1) / 2, y + (w - 1) / 2])
+        x, y, w, h = bbox
+        self.center_pos = np.array([x + (w - 1) / 2, y + (h - 1) / 2])
         self.h = h
         self.w = w
         w_z = self.w + self.track_context_amount * np.add(h, w)

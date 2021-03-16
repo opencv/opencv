@@ -1,23 +1,19 @@
-macro(add_backend backend_id cond_var)
-  if(${cond_var})
-    include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
-  endif()
-endmacro()
+include(FindPkgConfig)
 
-function(ocv_add_external_target name inc link def)
-  if(BUILD_SHARED_LIBS)
-    set(imp IMPORTED)
-  endif()
-  add_library(ocv.3rdparty.${name} INTERFACE ${imp})
-  set_target_properties(ocv.3rdparty.${name} PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${inc}"
-    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${inc}"
-    INTERFACE_LINK_LIBRARIES "${link}"
-    INTERFACE_COMPILE_DEFINITIONS "${def}")
-  if(NOT BUILD_SHARED_LIBS)
-    install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
-  endif()
-endfunction()
+# FIXIT: stop using PARENT_SCOPE in dependencies
+if(PROJECT_NAME STREQUAL "OpenCV")
+  macro(add_backend backend_id cond_var)
+    if(${cond_var})
+      include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
+    endif()
+  endmacro()
+else()
+  function(add_backend backend_id cond_var)
+    if(${cond_var})
+      include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
+    endif()
+  endfunction()
+endif()
 
 add_backend("ffmpeg" WITH_FFMPEG)
 add_backend("gstreamer" WITH_GSTREAMER)
@@ -30,6 +26,7 @@ add_backend("msdk" WITH_MFX)
 add_backend("openni2" WITH_OPENNI2)
 add_backend("pvapi" WITH_PVAPI)
 add_backend("realsense" WITH_LIBREALSENSE)
+add_backend("ueye" WITH_UEYE)
 add_backend("ximea" WITH_XIMEA)
 add_backend("xine" WITH_XINE)
 
@@ -40,3 +37,4 @@ add_backend("dshow" WITH_DSHOW)
 add_backend("msmf" WITH_MSMF)
 
 add_backend("android_mediandk" WITH_ANDROID_MEDIANDK)
+add_backend("android_camera" WITH_ANDROID_NATIVE_CAMERA)

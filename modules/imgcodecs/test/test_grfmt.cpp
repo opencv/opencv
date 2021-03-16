@@ -78,7 +78,9 @@ const string all_images[] =
     "readwrite/Bretagne2.jp2",
     "readwrite/Grey.jp2",
     "readwrite/Grey.jp2",
+    "readwrite/balloon.j2c",
 #endif
+
 #ifdef HAVE_GDCM
     "readwrite/int16-mono1.dcm",
     "readwrite/uint8-mono2.dcm",
@@ -109,11 +111,11 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_FileMode,
                             testing::ValuesIn(all_images),
                             testing::ValuesIn(basic_modes)));
 
-// GDAL does not support "hdr", "dcm" and have problems with "jp2"
+// GDAL does not support "hdr", "dcm" and has problems with JPEG2000 files (jp2, j2c)
 struct notForGDAL {
     bool operator()(const string &name) const {
         const string &ext = name.substr(name.size() - 3, 3);
-        return ext == "hdr" || ext == "dcm" || ext == "jp2" ||
+        return ext == "hdr" || ext == "dcm" || ext == "jp2" || ext == "j2c" ||
                 name.find("rle8.bmp") != std::string::npos;
     }
 };

@@ -140,3 +140,14 @@ __kernel void ELUForward(const int n, __global const T* in, __global T* out)
     out[index] = (src >= 0.f) ? src : exp(src) - 1;
   }
 }
+
+__kernel void ExpForward(const int n, __global const T* in, __global T* out,
+                         const KERNEL_ARG_DTYPE normScale,
+                         const KERNEL_ARG_DTYPE normShift)
+{
+  int index = get_global_id(0);
+  if (index < n)
+  {
+    out[index] = exp(normShift + normScale * in[index]);
+  }
+}

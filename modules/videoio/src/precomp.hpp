@@ -42,6 +42,13 @@
 #ifndef __VIDEOIO_H_
 #define __VIDEOIO_H_
 
+#if defined(__OPENCV_BUILD) && defined(BUILD_PLUGIN)
+#undef __OPENCV_BUILD  // allow public API only
+#define OPENCV_HAVE_CVCONFIG_H 1  // but we still have access to cvconfig.h (TODO remove this)
+#include <opencv2/core.hpp>
+#include <opencv2/core/utils/trace.hpp>
+#endif
+
 #if defined __linux__ || defined __APPLE__ || defined __HAIKU__
 #include <unistd.h>  // -D_FORTIFY_SOURCE=2 workaround: https://github.com/opencv/opencv/issues/15020
 #endif

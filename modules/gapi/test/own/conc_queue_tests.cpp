@@ -55,7 +55,7 @@ TEST(ConcQueue, Clear)
     EXPECT_FALSE(q.try_pop(x));
 }
 
-// In this test, every writer thread produce its own range of integer
+// In this test, every writer thread produces its own range of integer
 // numbers, writing those to a shared queue.
 //
 // Every reader thread pops elements from the queue (until -1 is
@@ -64,12 +64,12 @@ TEST(ConcQueue, Clear)
 // Finally, the master thread waits for completion of all other
 // threads and verifies that all the necessary data is
 // produced/obtained.
+namespace
+{
 using StressParam = std::tuple<int           // Num writer threads
                               ,int           // Num elements per writer
                               ,int           // Num reader threads
                               ,std::size_t>; // Queue capacity
-namespace
-{
 constexpr int STOP_SIGN = -1;
 constexpr int BASE      = 1000;
 }

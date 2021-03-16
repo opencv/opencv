@@ -21,9 +21,11 @@
  * Note for developers: please don't put videoio dependency in G-API
  * because of this file.
  */
+#include <chrono>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/streaming/meta.hpp>
 
 namespace cv {
 namespace gapi {
@@ -55,6 +57,7 @@ protected:
     cv::VideoCapture cap;
     cv::Mat first;
     bool first_pulled = false;
+    int64_t counter = 0;
 
     void prep()
     {
@@ -80,19 +83,26 @@ protected:
             GAPI_Assert(!first.empty());
             first_pulled = true;
             data = first; // no need to clone here since it was cloned already
-            return true;
         }
-
-        if (!cap.isOpened()) return false;
-
-        cv::Mat frame;
-        if (!cap.read(frame))
+        else
         {
-            // end-of-stream happened
-            return false;
+            if (!cap.isOpened()) return false;
+
+            cv::Mat frame;
+            if (!cap.read(frame))
+            {
+                // end-of-stream happened
+                return false;
+            }
+            // Same reason to clone as in prep()
+            data = frame.clone();
         }
-        // Same reason to clone as in prep()
-        data = frame.clone();
+        // Tag data with seq_id/ts
+        const auto now = std::chrono::system_clock::now();
+        const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+            (now.time_since_epoch());
+        data.meta[cv::gapi::streaming::meta_tag::timestamp] = int64_t{dur.count()};
+        data.meta[cv::gapi::streaming::meta_tag::seq_id]    = int64_t{counter++};
         return true;
     }
 
@@ -102,6 +112,12 @@ protected:
         return cv::GMetaArg{cv::descr_of(first)};
     }
 };
+
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string& path)
+{
+    return make_src<GCaptureSource>(path);
+}
 
 } // namespace wip
 } // namespace gapi

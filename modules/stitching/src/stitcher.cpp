@@ -118,7 +118,6 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, InputArr
 }
 
 
-
 Stitcher::Status Stitcher::composePanorama(OutputArray pano)
 {
     CV_INSTRUMENT_REGION();
@@ -539,6 +538,103 @@ Stitcher::Status Stitcher::estimateCameraParams()
     }
 
     return OK;
+}
+
+Stitcher::Status Stitcher::setTransform(InputArrayOfArrays images, const std::vector<detail::CameraParams> &cameras)
+{
+    std::vector<int> component;
+    for (int i = 0; i < (int)images.total(); i++)
+        component.push_back(i);
+
+    return setTransform(images, cameras, component);
+}
+
+
+Stitcher::Status Stitcher::setTransform(
+        InputArrayOfArrays images, const std::vector<detail::CameraParams> &cameras, const std::vector<int> &component)
+{
+//    CV_Assert(images.size() == cameras.size());
+
+    images.getUMatVector(imgs_);
+    masks_.clear();
+
+    if ((int)imgs_.size() < 2)
+    {
+        LOGLN("Need more images");
+        return ERR_NEED_MORE_IMGS;
+    }
+
+    work_scale_ = 1;
+    seam_work_aspect_ = 1;
+    seam_scale_ = 1;
+    bool is_work_scale_set = false;
+    bool is_seam_scale_set = false;
+    seam_est_imgs_.resize(imgs_.size());
+    full_img_sizes_.resize(imgs_.size());
+
+
+    for (size_t i = 0; i < imgs_.size(); ++i)
+    {
+        full_img_sizes_[i] = imgs_[i].size();
+        if (registr_resol_ < 0)
+        {
+            work_scale_ = 1;
+            is_work_scale_set = true;
+        }
+        else
+        {
+            if (!is_work_scale_set)
+            {
+                work_scale_ = std::min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img_sizes_[i].area()));
+                is_work_scale_set = true;
+            }
+        }
+        if (!is_seam_scale_set)
+        {
+            seam_scale_ = std::min(1.0, std::sqrt(seam_est_resol_ * 1e6 / full_img_sizes_[i].area()));
+            seam_work_aspect_ = seam_scale_ / work_scale_;
+            is_seam_scale_set = true;
+        }
+
+        resize(imgs_[i], seam_est_imgs_[i], Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
+    }
+
+    features_.clear();
+    pairwise_matches_.clear();
+
+    indices_ = component;
+    std::vector<UMat> seam_est_imgs_subset;
+    std::vector<UMat> imgs_subset;
+    std::vector<Size> full_img_sizes_subset;
+    for (size_t i = 0; i < indices_.size(); ++i)
+    {
+        imgs_subset.push_back(imgs_[indices_[i]]);
+        seam_est_imgs_subset.push_back(seam_est_imgs_[indices_[i]]);
+        full_img_sizes_subset.push_back(full_img_sizes_[indices_[i]]);
+    }
+    seam_est_imgs_ = seam_est_imgs_subset;
+    imgs_ = imgs_subset;
+    full_img_sizes_ = full_img_sizes_subset;
+
+    if ((int)imgs_.size() < 2)
+    {
+        LOGLN("Need more images");
+        return ERR_NEED_MORE_IMGS;
+    }
+
+    cameras_ = cameras;
+
+    std::vector<double> focals;
+    for (size_t i = 0; i < cameras.size(); ++i)
+        focals.push_back(cameras_[i].focal);
+
+    std::sort(focals.begin(), focals.end());
+    if (focals.size() % 2 == 1)
+        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2]);
+    else
+        warped_image_scale_ = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
+
+    return Status::OK;
 }
 
 

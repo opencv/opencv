@@ -1537,7 +1537,7 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
 static void
 transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD && !defined(__aarch64__) && !defined(_M_ARM64)
+#if CV_SIMD
     if( scn == 3 && dcn == 3 )
     {
         int x = 0;

@@ -28,6 +28,16 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(BuildPyr_CalcOptFlow_PipelineTest,
                               FIXTURE_API(std::string,int,int,bool), 4,
                               fileNamePattern, winSize, maxLevel, withDerivatives)
 
+GAPI_TEST_FIXTURE_SPEC_PARAMS(BackgroundSubtractorTest, FIXTURE_API(tuple<cv::gapi::video::BackgroundSubtractorType,double>,
+                                                                    int, bool, double, std::string, std::size_t),
+                              6, typeAndThreshold, histLength, detectShadows, learningRate, filePath, testNumFrames)
+
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterTest, FIXTURE_API(int, int, int, int, int), 5, type, dDim, mDim, cDim, numIter)
+
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterNoControlTest, FIXTURE_API(int, int, int, int), 4, type, dDim, mDim, numIter)
+
+GAPI_TEST_FIXTURE_SPEC_PARAMS(KalmanFilterCircleSampleTest, FIXTURE_API(int, int), 2, type, numIter)
+
 } // opencv_test
 
 

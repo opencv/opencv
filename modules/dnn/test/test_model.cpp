@@ -25,7 +25,8 @@ public:
                          double scoreDiff, double iouDiff,
                          double confThreshold = 0.24, double nmsThreshold = 0.0,
                          const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                         double scale = 1.0, bool swapRB = false, bool crop = false)
+                         double scale = 1.0, bool swapRB = false, bool crop = false,
+                         bool nmsAcrossClasses = false)
     {
         checkBackend();
 
@@ -37,6 +38,8 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+
+        model.setNmsAcrossClasses(nmsAcrossClasses);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -110,6 +113,156 @@ public:
         model.segment(frame, mask);
         normAssert(mask, exp, "", norm, norm);
     }
+
+    void testTextRecognitionModel(const std::string& weights, const std::string& cfg,
+                                  const std::string& imgPath, const std::string& seq,
+                                  const std::string& decodeType, const std::vector<std::string>& vocabulary,
+                                  const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                                  double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat frame = imread(imgPath, IMREAD_GRAYSCALE);
+
+        TextRecognitionModel model(weights, cfg);
+        model.setDecodeType(decodeType)
+             .setVocabulary(vocabulary)
+             .setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+
+        std::string result = model.recognize(frame);
+        EXPECT_EQ(result, seq) << "Full frame: " << imgPath;
+
+        std::vector<Rect> rois;
+        rois.push_back(Rect(0, 0, frame.cols, frame.rows));
+        rois.push_back(Rect(0, 0, frame.cols, frame.rows));  // twice
+        std::vector<std::string> results;
+        model.recognize(frame, rois, results);
+        EXPECT_EQ((size_t)2u, results.size()) << "ROI: " << imgPath;
+        EXPECT_EQ(results[0], seq) << "ROI[0]: " << imgPath;
+        EXPECT_EQ(results[1], seq) << "ROI[1]: " << imgPath;
+    }
+
+    void testTextDetectionModelByDB(const std::string& weights, const std::string& cfg,
+                                    const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
+                                    float binThresh, float polyThresh,
+                                    uint maxCandidates, double unclipRatio,
+                                    const Size& size = {-1, -1}, Scalar mean = Scalar(),
+                                    double scale = 1.0, bool swapRB = false, bool crop = false)
+    {
+        checkBackend();
+
+        Mat frame = imread(imgPath);
+
+        TextDetectionModel_DB model(weights, cfg);
+        model.setBinaryThreshold(binThresh)
+             .setPolygonThreshold(polyThresh)
+             .setUnclipRatio(unclipRatio)
+             .setMaxCandidates(maxCandidates)
+             .setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+
+        // 1. Check common TextDetectionModel API through RotatedRect
+        std::vector<cv::RotatedRect> results;
+        model.detectTextRectangles(frame, results);
+
+        EXPECT_GT(results.size(), (size_t)0);
+
+        std::vector< std::vector<Point> > contours;
+        for (size_t i = 0; i < results.size(); i++)
+        {
+            const RotatedRect& box = results[i];
+            Mat contour;
+            boxPoints(box, contour);
+            std::vector<Point> contour2i(4);
+            for (int i = 0; i < 4; i++)
+            {
+                contour2i[i].x = cvRound(contour.at<float>(i, 0));
+                contour2i[i].y = cvRound(contour.at<float>(i, 1));
+            }
+            contours.push_back(contour2i);
+        }
+#if 0 // test debug
+        Mat result = frame.clone();
+        drawContours(result, contours, -1, Scalar(0, 0, 255), 1);
+        imshow("result", result); // imwrite("result.png", result);
+        waitKey(0);
+#endif
+        normAssertTextDetections(gt, contours, "", 0.05f);
+
+        // 2. Check quadrangle-based API
+        // std::vector< std::vector<Point> > contours;
+        model.detect(frame, contours);
+
+#if 0 // test debug
+        Mat result = frame.clone();
+        drawContours(result, contours, -1, Scalar(0, 0, 255), 1);
+        imshow("result_contours", result); // imwrite("result_contours.png", result);
+        waitKey(0);
+#endif
+        normAssertTextDetections(gt, contours, "", 0.05f);
+    }
+
+    void testTextDetectionModelByEAST(
+            const std::string& weights, const std::string& cfg,
+            const std::string& imgPath, const std::vector<RotatedRect>& gt,
+            float confThresh, float nmsThresh,
+            const Size& size = {-1, -1}, Scalar mean = Scalar(),
+            double scale = 1.0, bool swapRB = false, bool crop = false,
+            double eps_center = 5/*pixels*/, double eps_size = 5/*pixels*/, double eps_angle = 1
+    )
+    {
+        checkBackend();
+
+        Mat frame = imread(imgPath);
+
+        TextDetectionModel_EAST model(weights, cfg);
+        model.setConfidenceThreshold(confThresh)
+             .setNMSThreshold(nmsThresh)
+             .setInputSize(size).setInputMean(mean).setInputScale(scale)
+             .setInputSwapRB(swapRB).setInputCrop(crop);
+
+        model.setPreferableBackend(backend);
+        model.setPreferableTarget(target);
+
+        std::vector<cv::RotatedRect> results;
+        model.detectTextRectangles(frame, results);
+
+        EXPECT_EQ(results.size(), (size_t)1);
+        for (size_t i = 0; i < results.size(); i++)
+        {
+            const RotatedRect& box = results[i];
+#if 0 // test debug
+            Mat contour;
+            boxPoints(box, contour);
+            std::vector<Point> contour2i(4);
+            for (int i = 0; i < 4; i++)
+            {
+                contour2i[i].x = cvRound(contour.at<float>(i, 0));
+                contour2i[i].y = cvRound(contour.at<float>(i, 1));
+            }
+            std::vector< std::vector<Point> > contours;
+            contours.push_back(contour2i);
+
+            Mat result = frame.clone();
+            drawContours(result, contours, -1, Scalar(0, 0, 255), 1);
+            imshow("result", result); //imwrite("result.png", result);
+            waitKey(0);
+#endif
+            const RotatedRect& gtBox = gt[i];
+            EXPECT_NEAR(box.center.x, gtBox.center.x, eps_center);
+            EXPECT_NEAR(box.center.y, gtBox.center.y, eps_center);
+            EXPECT_NEAR(box.size.width, gtBox.size.width, eps_size);
+            EXPECT_NEAR(box.size.height, gtBox.size.height, eps_size);
+            EXPECT_NEAR(box.angle, gtBox.angle, eps_angle);
+        }
+    }
 };
 
 TEST_P(Test_Model, Classify)
@@ -177,6 +330,58 @@ TEST_P(Test_Model, DetectRegion)
                     Scalar(), scale, swapRB);
 }
 
+TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD
+        && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
+#endif
+
+    std::vector<int> refClassIds = { 6, 11 };
+    std::vector<float> refConfidences = { 0.750469f, 0.901615f };
+    std::vector<Rect2d> refBoxes = { Rect2d(240, 53, 135, 72),
+                                    Rect2d(58, 141, 117, 249) };
+
+    std::string img_path = _tf("dog416.png");
+    std::string weights_file = _tf("yolo-voc.weights", false);
+    std::string config_file = _tf("yolo-voc.cfg");
+
+    double scale = 1.0 / 255.0;
+    Size size{ 416, 416 };
+    bool swapRB = true;
+    bool crop = false;
+    bool nmsAcrossClasses = true;
+
+    double confThreshold = 0.24;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.15: 0.15;
+    double scoreDiff = 8e-5, iouDiff = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 1.6e-2;
+    }
+
+    testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences,
+        refBoxes, scoreDiff, iouDiff, confThreshold, nmsThreshold, size,
+        Scalar(), scale, swapRB, crop,
+        nmsAcrossClasses);
+}
+
 TEST_P(Test_Model, DetectionOutput)
 {
 #if defined(INF_ENGINE_RELEASE)
@@ -206,6 +411,8 @@ TEST_P(Test_Model, DetectionOutput)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
+        else
+            scoreDiff = 2e-2;
         iouDiff = 1.8e-1;
     }
 
@@ -261,7 +468,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 4e-4;
+        scoreDiff = 0.002;
         iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
@@ -363,7 +570,7 @@ TEST_P(Test_Model, Detection_normalized)
         scoreDiff = 5e-3;
         iouDiff = 0.09;
     }
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
     {
         iouDiff = 0.095f;
@@ -387,6 +594,87 @@ TEST_P(Test_Model, Segmentation)
     bool swapRB = false;
 
     testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
+}
+
+TEST_P(Test_Model, TextRecognition)
+{
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    std::string imgPath = _tf("text_rec_test.png");
+    std::string weightPath = _tf("onnx/models/crnn.onnx", false);
+    std::string seq = "welcome";
+
+    Size size{100, 32};
+    double scale = 1.0 / 127.5;
+    Scalar mean = Scalar(127.5);
+    std::string decodeType = "CTC-greedy";
+    std::vector<std::string> vocabulary = {"0","1","2","3","4","5","6","7","8","9",
+                                           "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
+
+    testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
+}
+
+TEST_P(Test_Model, TextDetectionByDB)
+{
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    std::string imgPath = _tf("text_det_test1.png");
+    std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
+
+    // GroundTruth
+    std::vector<std::vector<Point>> gt = {
+        { Point(142, 193), Point(136, 164), Point(213, 150), Point(219, 178) },
+        { Point(136, 165), Point(122, 114), Point(319, 71), Point(330, 122) }
+    };
+
+    Size size{736, 736};
+    double scale = 1.0 / 255.0;
+    Scalar mean = Scalar(122.67891434, 116.66876762, 104.00698793);
+
+    float binThresh = 0.3;
+    float polyThresh = 0.5;
+    uint maxCandidates = 200;
+    double unclipRatio = 2.0;
+
+    testTextDetectionModelByDB(weightPath, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
+}
+
+TEST_P(Test_Model, TextDetectionByEAST)
+{
+    std::string imgPath = _tf("text_det_test2.jpg");
+    std::string weightPath = _tf("frozen_east_text_detection.pb", false);
+
+    // GroundTruth
+    std::vector<RotatedRect> gt = {
+        RotatedRect(Point2f(657.55f, 409.5f), Size2f(316.84f, 62.45f), -4.79)
+    };
+
+    // Model parameters
+    Size size{320, 320};
+    double scale = 1.0;
+    Scalar mean = Scalar(123.68, 116.78, 103.94);
+    bool swapRB = true;
+
+    // Detection algorithm parameters
+    float confThresh = 0.5;
+    float nmsThresh = 0.4;
+
+    double eps_center = 5/*pixels*/;
+    double eps_size = 5/*pixels*/;
+    double eps_angle = 1;
+
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        eps_center = 10;
+        eps_size = 25;
+        eps_angle = 3;
+    }
+
+    testTextDetectionModelByEAST(weightPath, "", imgPath, gt, confThresh, nmsThresh, size, mean, scale, swapRB, false/*crop*/,
+        eps_center, eps_size, eps_angle
+    );
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());

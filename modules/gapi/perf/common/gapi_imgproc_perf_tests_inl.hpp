@@ -11,6 +11,8 @@
 
 #include "gapi_imgproc_perf_tests.hpp"
 
+#include "../../test/common/gapi_imgproc_tests_common.hpp"
+
 namespace opencv_test
 {
 
@@ -491,6 +493,49 @@ PERF_TEST_P_(Dilate3x3PerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(MorphologyExPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    MatType type = 0;
+    cv::MorphTypes op = cv::MORPH_ERODE;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, op, compile_args) = GetParam();
+
+    initMatrixRandN(type, sz, type, false);
+
+    cv::MorphShapes defShape = cv::MORPH_RECT;
+    int defKernSize = 3;
+    cv::Mat kernel = cv::getStructuringElement(defShape, cv::Size(defKernSize, defKernSize));
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::morphologyEx(in_mat1, out_mat_ocv, op, kernel);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::morphologyEx(in, op, kernel);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(SobelPerfTest, TestPerformance)
 {
     compare_f cmpF;
@@ -750,6 +795,332 @@ PERF_TEST_P_(GoodFeaturesPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(FindContoursPerfTest, TestPerformance)
+{
+    CompareMats cmpF;
+    MatType type;
+    cv::Size sz;
+    cv::RetrievalModes mode;
+    cv::ContourApproximationModes method;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, mode, method, compile_args) = GetParam();
+
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+    cv::Point offset = cv::Point();
+    std::vector<cv::Vec4i> out_hier_gapi = std::vector<cv::Vec4i>();
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    cv::GComputation c(findContoursTestGAPI(in, mode, method, std::move(compile_args),
+                                            out_cnts_gapi, out_hier_gapi, offset));
+
+    TEST_CYCLE()
+    {
+        c.apply(gin(in, offset), gout(out_cnts_gapi));
+    }
+
+    findContoursTestOpenCVCompare(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FindContoursHPerfTest, TestPerformance)
+{
+    CompareMats cmpF;
+    MatType type;
+    cv::Size sz;
+    cv::RetrievalModes mode;
+    cv::ContourApproximationModes method;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, mode, method, compile_args) = GetParam();
+
+    cv::Mat in;
+    initMatForFindingContours(in, sz, type);
+    cv::Point offset = cv::Point();
+
+    std::vector<std::vector<cv::Point>> out_cnts_gapi;
+    std::vector<cv::Vec4i>              out_hier_gapi;
+    cv::GComputation c(findContoursTestGAPI<HIERARCHY>(in, mode, method, std::move(compile_args),
+                                                       out_cnts_gapi, out_hier_gapi, offset));
+
+    TEST_CYCLE()
+    {
+        c.apply(gin(in, offset), gout(out_cnts_gapi, out_hier_gapi));
+    }
+
+    findContoursTestOpenCVCompare<HIERARCHY>(in, mode, method, out_cnts_gapi, out_hier_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BoundingRectMatPerfTest, TestPerformance)
+{
+    CompareRects cmpF;
+    cv::Size sz;
+    MatType type;
+    bool initByVector = false;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, initByVector, compile_args) = GetParam();
+
+    if (initByVector)
+    {
+        initMatByPointsVectorRandU<cv::Point_>(type, sz, -1);
+    }
+    else
+    {
+        initMatrixRandU(type, sz, -1, false);
+    }
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(boundingRectTestGAPI(in_mat1, std::move(compile_args), out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_mat1, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BoundingRectVector32SPerfTest, TestPerformance)
+{
+    CompareRects cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(boundingRectTestGAPI(in_vector, std::move(compile_args), out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_vector, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(BoundingRectVector32FPerfTest, TestPerformance)
+{
+    CompareRects cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Rect out_rect_gapi;
+    cv::GComputation c(boundingRectTestGAPI(in_vector, std::move(compile_args), out_rect_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_rect_gapi));
+    }
+
+    boundingRectTestOpenCVCompare(in_vector, out_rect_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(FitLine2DMatVectorPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    MatType type;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, distType, compile_args) = GetParam();
+
+    initMatByPointsVectorRandU<cv::Point_>(type, sz, -1);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_mat1, distType, std::move(compile_args), out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_mat1, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector32SPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector32FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine2DVector64FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 4> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point2d> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec4f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DMatVectorPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    MatType type;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, type, sz, distType, compile_args) = GetParam();
+
+    initMatByPointsVectorRandU<cv::Point3_>(type, sz, -1);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_mat1, distType, std::move(compile_args), out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_mat1, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector32SPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3i> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector32FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3f> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(FitLine3DVector64FPerfTest, TestPerformance)
+{
+    CompareVecs<float, 6> cmpF;
+    cv::Size sz;
+    cv::DistanceTypes distType;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, distType, compile_args) = GetParam();
+
+    std::vector<cv::Point3d> in_vector;
+    initPointsVectorRandU(sz.width, in_vector);
+
+    cv::Vec6f out_vec_gapi;
+    cv::GComputation c(fitLineTestGAPI(in_vector, distType, std::move(compile_args),
+                                       out_vec_gapi));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_vector), cv::gout(out_vec_gapi));
+    }
+
+    fitLineTestOpenCVCompare(in_vector, distType, out_vec_gapi, cmpF);
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 {
     compare_f cmpF = get<0>(GetParam());
@@ -784,6 +1155,44 @@ PERF_TEST_P_(EqHistPerfTest, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BGR2RGBPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BGR2RGB);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::BGR2RGB(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), sz);
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //------------------------------------------------------------------------------
@@ -936,6 +1345,158 @@ PERF_TEST_P_(YUV2RGBPerfTest, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BGR2I420PerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_BGR2YUV_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::BGR2I420(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 3 / 2));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(RGB2I420PerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC3, sz, CV_8UC1, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_RGB2YUV_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::RGB2I420(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 3 / 2));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(I4202BGRPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2BGR_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202BGR(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(I4202RGBPerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz, compile_args) = GetParam();
+
+    initMatrixRandN(CV_8UC1, sz, CV_8UC3, false);
+
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::cvtColor(in_mat1, out_mat_ocv, cv::COLOR_YUV2RGB_I420);
+    }
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::I4202RGB(in);
+    cv::GComputation c(in, out);
+
+    // Warm-up graph engine:
+    c.apply(in_mat1, out_mat_gapi, std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(in_mat1, out_mat_gapi);
+    }
+
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+        EXPECT_EQ(out_mat_gapi.size(), Size(sz.width, sz.height * 2 / 3));
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 //------------------------------------------------------------------------------

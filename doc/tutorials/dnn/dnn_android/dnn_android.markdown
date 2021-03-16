@@ -1,7 +1,14 @@
 # How to run deep networks on Android device {#tutorial_dnn_android}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_halide_scheduling}
 @next_tutorial{tutorial_dnn_yolo}
+
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3 |
 
 ## Introduction
 In this tutorial you'll know how to run deep learning networks on Android device
@@ -15,7 +22,7 @@ Tutorial was written for the following versions of corresponding software:
 
 - Download and install Android Studio from https://developer.android.com/studio.
 
-- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it (for example, `opencv-4.4.0-android-sdk.zip`).
+- Get the latest pre-built OpenCV for Android release from https://github.com/opencv/opencv/releases and unpack it (for example, `opencv-4.X.Y-android-sdk.zip`).
 
 - Download MobileNet object detection model from https://github.com/chuanqi305/MobileNet-SSD. We need a configuration file `MobileNetSSD_deploy.prototxt` and weights `MobileNetSSD_deploy.caffemodel`.
 

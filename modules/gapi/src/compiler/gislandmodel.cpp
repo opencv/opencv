@@ -174,13 +174,26 @@ void GIslandModel::generateInitial(GIslandModel::Graph &g,
         {
             auto src_data_nh = in_edge->srcNode();
             auto isl_slot_nh = data_to_slot.at(src_data_nh);
-            g.link(isl_slot_nh, nh); // no other data stored yet
+            auto isl_new_eh  = g.link(isl_slot_nh, nh); // no other data stored yet
+            // Propagate some special metadata from the GModel to GIslandModel
+            // TODO: Make it a single place (a function) for both inputs/outputs?
+            // (since it is duplicated in the below code block)
+            if (src_g.metadata(in_edge).contains<DesyncEdge>())
+            {
+                const auto idx = src_g.metadata(in_edge).get<DesyncEdge>().index;
+                g.metadata(isl_new_eh).set(DesyncIslEdge{idx});
+            }
         }
         for (auto out_edge : src_op_nh->outEdges())
         {
             auto dst_data_nh = out_edge->dstNode();
             auto isl_slot_nh = data_to_slot.at(dst_data_nh);
-            g.link(nh, isl_slot_nh);
+            auto isl_new_eh  = g.link(nh, isl_slot_nh);
+            if (src_g.metadata(out_edge).contains<DesyncEdge>())
+            {
+                const auto idx = src_g.metadata(out_edge).get<DesyncEdge>().index;
+                g.metadata(isl_new_eh).set(DesyncIslEdge{idx});
+            }
         }
     } // for(all_operations)
 }
@@ -253,6 +266,9 @@ void GIslandModel::syncIslandTags(Graph &g, ade::Graph &orig_g)
 void GIslandModel::compileIslands(Graph &g, const ade::Graph &orig_g, const GCompileArgs &args)
 {
     GModel::ConstGraph gm(orig_g);
+    if (gm.metadata().contains<HasIntrinsics>()) {
+        util::throw_error(std::logic_error("FATAL: The graph has unresolved intrinsics"));
+    }
 
     auto original_sorted = gm.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : g.nodes())
@@ -340,27 +356,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                                    ade::util::toRange(in_vector)))
     {
-        // FIXME: Not every Island expects a cv::Mat instead of own::Mat on input
-        // This kludge should go as a result of de-ownification
-        const cv::GRunArg& in_data_orig = std::get<1>(it);
-        cv::GRunArg in_data;
-#if !defined(GAPI_STANDALONE)
-        switch (in_data_orig.index())
-        {
-        case cv::GRunArg::index_of<cv::Mat>():
-            in_data = cv::GRunArg{cv::util::get<cv::Mat>(in_data_orig)};
-            break;
-        case cv::GRunArg::index_of<cv::Scalar>():
-            in_data = cv::GRunArg{(cv::util::get<cv::Scalar>(in_data_orig))};
-            break;
-        default:
-            in_data = in_data_orig;
-            break;
-        }
-#else
-        in_data = in_data_orig;
-#endif // GAPI_STANDALONE
-        in_objs.emplace_back(std::get<0>(it), std::move(in_data));
+        in_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
     {
@@ -368,9 +364,27 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
                               out.get(ade::util::checked_cast<int>(ade::util::index(it))));
     }
     run(std::move(in_objs), std::move(out_objs));
+
+    // Propagate in-graph meta down to the graph
+    // Note: this is not a complete implementation! Mainly this is a stub
+    // and the proper implementation should come later.
+    //
+    // Propagating the meta information here has its pros and cons.
+    // Pros: it works here uniformly for both regular and streaming cases,
+    //   also for the majority of old-fashioned (synchronous) backends
+    // Cons: backends implementing the asynchronous run(IInput,IOutput)
+    //   won't get it out of the box
+    cv::GRunArg::Meta stub_meta;
+    for (auto &&in_arg : in_vector)
+    {
+        stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
+    }
+    // Report output objects as "ready" to the executor, also post
+    // calculated in-graph meta for the objects
     for (auto &&it: out_objs)
     {
-        out.post(std::move(it.second)); // report output objects as "ready" to the executor
+        out.meta(it.second, stub_meta);
+        out.post(std::move(it.second));
     }
 }
 

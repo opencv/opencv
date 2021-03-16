@@ -87,8 +87,10 @@ namespace hal {
 using namespace emscripten;
 using namespace cv;
 
+using namespace cv::segmentation;  // FIXIT
+
 #ifdef HAVE_OPENCV_DNN
-using namespace dnn;
+using namespace cv::dnn;
 #endif
 
 #ifdef HAVE_OPENCV_ARUCO

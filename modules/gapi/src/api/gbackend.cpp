@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -67,6 +67,21 @@ cv::gapi::GKernelPackage cv::gapi::GBackend::Priv::auxiliaryKernels() const
     return {};
 }
 
+bool cv::gapi::GBackend::Priv::controlsMerge() const
+{
+    return false;
+}
+
+bool cv::gapi::GBackend::Priv::allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                                           const ade::NodeHandle &,
+                                           const ade::NodeHandle &,
+                                           const ade::NodeHandle &) const
+{
+    GAPI_Assert(controlsMerge());
+    return true;
+}
+
+
 // GBackend public implementation //////////////////////////////////////////////
 cv::gapi::GBackend::GBackend()
 {
@@ -103,37 +118,41 @@ namespace cv {
 namespace gimpl {
 namespace magazine {
 
-// FIXME implement the below functions with visit()?
+namespace {
+// Utility function, used in both bindInArg and bindOutArg,
+// implements default RMat bind behaviour (if backend doesn't handle RMats in specific way):
+// view + wrapped cv::Mat are placed into the magazine
+void bindRMat(Mag& mag, const RcDesc& rc, const cv::RMat& rmat, RMat::Access a)
+{
+    auto& matv = mag.template slot<RMat::View>()[rc.id];
+    matv = rmat.access(a);
+    mag.template slot<cv::Mat>()[rc.id] = asMat(matv);
+}
+} // anonymous namespace
 
-void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
+// FIXME implement the below functions with visit()?
+void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, HandleRMat handleRMat)
 {
     switch (rc.shape)
     {
     case GShape::GMAT:
     {
-        switch (arg.index())
-        {
-        case GRunArg::index_of<cv::Mat>() :
-            if (is_umat)
-            {
+        // In case of handleRMat == SKIP
+        // We assume that backend can work with some device-specific RMats
+        // and will handle them in some specific way, so just return
+        if (handleRMat == HandleRMat::SKIP) return;
+        GAPI_Assert(arg.index() == GRunArg::index_of<cv::RMat>());
+        bindRMat(mag, rc, util::get<cv::RMat>(arg), RMat::Access::R);
+
+        // FIXME: Here meta may^WWILL be copied multiple times!
+        // Replace it is reference-counted object?
+        mag.meta<cv::RMat>()[rc.id] = arg.meta;
+        mag.meta<cv::Mat>()[rc.id] = arg.meta;
 #if !defined(GAPI_STANDALONE)
-                auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
-                mag_umat = util::get<cv::Mat>(arg).getUMat(ACCESS_READ);
-#else
-                util::throw_error(std::logic_error("UMat is not supported in standalone build"));
-#endif // !defined(GAPI_STANDALONE)
-            }
-            else
-            {
-                auto& mag_mat = mag.template slot<cv::Mat>()[rc.id];
-                mag_mat = util::get<cv::Mat>(arg);
-            }
-            break;
-        default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
-        }
+        mag.meta<cv::UMat>()[rc.id] = arg.meta;
+#endif
         break;
     }
-
 
     case GShape::GSCALAR:
     {
@@ -143,15 +162,23 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
         case GRunArg::index_of<cv::Scalar>() : mag_scalar = util::get<cv::Scalar>(arg);    break;
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
+        mag.meta<cv::Scalar>()[rc.id] = arg.meta;
         break;
     }
 
     case GShape::GARRAY:
-        mag.template slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
+        mag.slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
+        mag.meta<cv::detail::VectorRef>()[rc.id] = arg.meta;
         break;
 
     case GShape::GOPAQUE:
-        mag.template slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        mag.slot<cv::detail::OpaqueRef>()[rc.id] = util::get<cv::detail::OpaqueRef>(arg);
+        mag.meta<cv::detail::OpaqueRef>()[rc.id] = arg.meta;
+        break;
+
+    case GShape::GFRAME:
+        mag.slot<cv::MediaFrame>()[rc.id] = util::get<cv::MediaFrame>(arg);
+        mag.meta<cv::MediaFrame>()[rc.id] = arg.meta;
         break;
 
     default:
@@ -159,32 +186,18 @@ void bindInArg(Mag& mag, const RcDesc &rc, const GRunArg &arg, bool is_umat)
     }
 }
 
-void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
+void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, HandleRMat handleRMat)
 {
     switch (rc.shape)
     {
     case GShape::GMAT:
     {
-        switch (arg.index())
-        {
-        case GRunArgP::index_of<cv::Mat*>() :
-            if (is_umat)
-            {
-#if !defined(GAPI_STANDALONE)
-                auto& mag_umat = mag.template slot<cv::UMat>()[rc.id];
-                mag_umat = util::get<cv::Mat*>(arg)->getUMat(ACCESS_RW);
-#else
-                util::throw_error(std::logic_error("UMat is not supported in standalone build"));
-#endif // !defined(GAPI_STANDALONE)
-            }
-            else
-            {
-                auto& mag_mat = mag.template slot<cv::Mat>()[rc.id];
-                mag_mat = *util::get<cv::Mat*>(arg);
-            }
-            break;
-        default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
-        }
+        // In case of handleRMat == SKIP
+        // We assume that backend can work with some device-specific RMats
+        // and will handle them in some specific way, so just return
+        if (handleRMat == HandleRMat::SKIP) return;
+        GAPI_Assert(arg.index() == GRunArgP::index_of<cv::RMat*>());
+        bindRMat(mag, rc, *util::get<cv::RMat*>(arg), RMat::Access::W);
         break;
     }
 
@@ -198,6 +211,9 @@ void bindOutArg(Mag& mag, const RcDesc &rc, const GRunArgP &arg, bool is_umat)
         }
         break;
     }
+    case GShape::GFRAME:
+        mag.template slot<cv::MediaFrame>()[rc.id] = *util::get<cv::MediaFrame*>(arg);
+        break;
     case GShape::GARRAY:
         mag.template slot<cv::detail::VectorRef>()[rc.id] = util::get<cv::detail::VectorRef>(arg);
         break;
@@ -234,6 +250,7 @@ void resetInternalData(Mag& mag, const Data &d)
         break;
 
     case GShape::GMAT:
+    case GShape::GFRAME:
         // Do nothing here - FIXME unify with initInternalData?
         break;
 
@@ -248,12 +265,23 @@ cv::GRunArg getArg(const Mag& mag, const RcDesc &ref)
     // Wrap associated CPU object (either host or an internal one)
     switch (ref.shape)
     {
-    case GShape::GMAT:    return GRunArg(mag.template slot<cv::Mat>().at(ref.id));
-    case GShape::GSCALAR: return GRunArg(mag.template slot<cv::Scalar>().at(ref.id));
+    case GShape::GMAT:
+        return GRunArg(mag.slot<cv::RMat>().at(ref.id),
+                       mag.meta<cv::RMat>().at(ref.id));
+    case GShape::GSCALAR:
+        return GRunArg(mag.slot<cv::Scalar>().at(ref.id),
+                       mag.meta<cv::Scalar>().at(ref.id));
     // Note: .at() is intentional for GArray and GOpaque as objects MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
-    case GShape::GARRAY:  return GRunArg(mag.template slot<cv::detail::VectorRef>().at(ref.id));
-    case GShape::GOPAQUE: return GRunArg(mag.template slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GARRAY:
+        return GRunArg(mag.slot<cv::detail::VectorRef>().at(ref.id),
+                       mag.meta<cv::detail::VectorRef>().at(ref.id));
+    case GShape::GOPAQUE:
+        return GRunArg(mag.slot<cv::detail::OpaqueRef>().at(ref.id),
+                       mag.meta<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:
+        return GRunArg(mag.slot<cv::MediaFrame>().at(ref.id),
+                       mag.meta<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -294,52 +322,24 @@ cv::GRunArgP getObjPtr(Mag& mag, const RcDesc &rc, bool is_umat)
         // debugging this!!!1
         return GRunArgP(const_cast<const Mag&>(mag)
                         .template slot<cv::detail::OpaqueRef>().at(rc.id));
+    case GShape::GFRAME:
+        return GRunArgP(&mag.template slot<cv::MediaFrame>()[rc.id]);
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
     }
 }
 
-void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
+void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
 {
     switch (rc.shape)
     {
     case GShape::GARRAY:
-        // Do nothing - should we really do anything here?
-        break;
-        case GShape::GOPAQUE:
-        // Do nothing - should we really do anything here?
-        break;
-
     case GShape::GMAT:
-    {
-        //simply check that memory was not reallocated, i.e.
-        //both instances of Mat pointing to the same memory
-        uchar* out_arg_data = nullptr;
-        switch (g_arg.index())
-        {
-            case GRunArgP::index_of<cv::Mat*>() : out_arg_data = util::get<cv::Mat*>(g_arg)->data; break;
-#if !defined(GAPI_STANDALONE)
-            case GRunArgP::index_of<cv::UMat*>() : out_arg_data = (util::get<cv::UMat*>(g_arg))->getMat(ACCESS_RW).data; break;
-#endif //  !defined(GAPI_STANDALONE)
-            default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
-        }
-        if (is_umat)
-        {
-#if !defined(GAPI_STANDALONE)
-            auto& in_mag = mag.template slot<cv::UMat>().at(rc.id);
-            GAPI_Assert((out_arg_data == (in_mag.getMat(ACCESS_RW).data)) && " data for output parameters was reallocated ?");
-#else
-            util::throw_error(std::logic_error("UMat is not supported in standalone build"));
-#endif // !defined(GAPI_STANDALONE)
-        }
-        else
-        {
-            auto& in_mag = mag.template slot<cv::Mat>().at(rc.id);
-            GAPI_Assert((out_arg_data == in_mag.data) && " data for output parameters was reallocated ?");
-        }
+    case GShape::GOPAQUE:
+        // Do nothing - should we really do anything here?
         break;
-    }
 
     case GShape::GSCALAR:
     {
@@ -351,9 +351,47 @@ void writeBack(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg, bool is_umat)
         break;
     }
 
+    case GShape::GFRAME:
+    {
+        *util::get<cv::MediaFrame*>(g_arg) = mag.template slot<cv::MediaFrame>().at(rc.id);
+        break;
+    }
+
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
+    }
+}
+
+void unbind(Mag& mag, const RcDesc &rc)
+{
+    switch (rc.shape)
+    {
+    case GShape::GARRAY:
+    case GShape::GOPAQUE:
+    case GShape::GSCALAR:
+        // TODO: Do nothing - should we really do anything here?
+        break;
+
+    case GShape::GMAT:
+        // Clean-up everything - a cv::Mat, cv::RMat::View, a cv::UMat, and cv::RMat
+        // if applicable
+        mag.slot<cv::Mat>().erase(rc.id);
+#if !defined(GAPI_STANDALONE)
+        mag.slot<cv::UMat>().erase(rc.id);
+#endif
+        mag.slot<cv::RMat::View>().erase(rc.id);
+        mag.slot<cv::RMat>().erase(rc.id);
+        break;
+
+    case GShape::GFRAME:
+        // MediaFrame can also be associated with external memory,
+        // so requires a special handling here.
+        mag.slot<cv::MediaFrame>().erase(rc.id);
+        break;
+
+    default:
+        GAPI_Assert(false);
     }
 }
 

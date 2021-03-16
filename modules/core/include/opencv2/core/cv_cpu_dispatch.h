@@ -170,6 +170,7 @@
 
 #if defined CV_CPU_COMPILE_RVV
 #  define CV_RVV 1
+#  include <riscv_vector.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -218,6 +219,11 @@ struct VZeroUpperGuard {
 #  undef pixel
 #  undef bool
 #  define CV_VSX 1
+#endif
+
+#ifdef __F16C__
+#  include <immintrin.h>
+#  define CV_FP16 1
 #endif
 
 #endif // !__OPENCV_BUILD && !__CUDACC (Compatibility code)

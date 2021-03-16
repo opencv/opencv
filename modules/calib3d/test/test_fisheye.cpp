@@ -345,7 +345,7 @@ TEST_F(fisheyeTest, Calibration)
     std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
@@ -373,6 +373,53 @@ TEST_F(fisheyeTest, Calibration)
     EXPECT_MAT_NEAR(theD, this->D, 1e-10);
 }
 
+TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
+{
+    const int n_images = 34;
+
+    std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
+    std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
+
+    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_left.isOpened());
+    for(int i = 0; i < n_images; ++i)
+        fs_left[cv::format("image_%d", i )] >> imagePoints[i];
+    fs_left.release();
+
+    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_object.isOpened());
+    for(int i = 0; i < n_images; ++i)
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+    fs_object.release();
+
+    int flag = 0;
+    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::fisheye::CALIB_CHECK_COND;
+    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::fisheye::CALIB_FIX_FOCAL_LENGTH;
+    flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
+
+    cv::Matx33d theK = this->K;
+    const cv::Matx33d newK(
+        558.478088, 0.000000, 620.458461,
+        0.000000, 560.506767, 381.939362,
+        0.000000, 0.000000, 1.000000);
+
+    cv::Vec4d theD;
+    const cv::Vec4d newD(-0.001461, -0.003298, 0.006057, -0.003742);
+
+    cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
+                           cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
+
+    // ensure that CALIB_FIX_FOCAL_LENGTH works and focal lenght has not changed
+    EXPECT_EQ(theK(0,0), K(0,0));
+    EXPECT_EQ(theK(1,1), K(1,1));
+
+    EXPECT_MAT_NEAR(theK, newK, 1e-6);
+    EXPECT_MAT_NEAR(theD, newD, 1e-6);
+}
+
 TEST_F(fisheyeTest, Homography)
 {
     const int n_images = 1;
@@ -380,7 +427,7 @@ TEST_F(fisheyeTest, Homography)
     std::vector<std::vector<cv::Point2d> > imagePoints(n_images);
     std::vector<std::vector<cv::Point3d> > objectPoints(n_images);
 
-    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
     cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
     CV_Assert(fs_left.isOpened());
     for(int i = 0; i < n_images; ++i)
@@ -492,7 +539,13 @@ TEST_F(fisheyeTest, EstimateUncertainties)
 
 TEST_F(fisheyeTest, stereoRectify)
 {
-    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    // For consistency purposes
+    CV_StaticAssert(
+        static_cast<int>(cv::CALIB_ZERO_DISPARITY) == static_cast<int>(cv::fisheye::CALIB_ZERO_DISPARITY),
+        "For the purpose of continuity the following should be true: cv::CALIB_ZERO_DISPARITY == cv::fisheye::CALIB_ZERO_DISPARITY"
+    );
+
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
 
     cv::Size calibration_size = this->imageSize, requested_size = calibration_size;
     cv::Matx33d K1 = this->K, K2 = K1;
@@ -504,7 +557,7 @@ TEST_F(fisheyeTest, stereoRectify)
     double balance = 0.0, fov_scale = 1.1;
     cv::Mat R1, R2, P1, P2, Q;
     cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
-                      cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
+                      cv::fisheye::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
     // Collected with these CMake flags: -DWITH_IPP=OFF -DCV_ENABLE_INTRINSICS=OFF -DCV_DISABLE_OPTIMIZATION=ON -DCMAKE_BUILD_TYPE=Debug
     cv::Matx33d R1_ref(
@@ -551,7 +604,10 @@ TEST_F(fisheyeTest, stereoRectify)
             << "Q =" << std::endl << Q << std::endl;
     }
 
-#if 1 // Debug code
+    if (cvtest::debugLevel == 0)
+        return;
+    // DEBUG code is below
+
     cv::Mat lmapx, lmapy, rmapx, rmapy;
     //rewrite for fisheye
     cv::fisheye::initUndistortRectifyMap(K1, D1, R1, P1, requested_size, CV_32F, lmapx, lmapy);
@@ -584,14 +640,13 @@ TEST_F(fisheyeTest, stereoRectify)
 
         cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
     }
-#endif
 }
 
 TEST_F(fisheyeTest, stereoCalibrate)
 {
     const int n_images = 34;
 
-    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
 
     std::vector<std::vector<cv::Point2d> > leftPoints(n_images);
     std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
@@ -658,7 +713,7 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
 {
     const int n_images = 34;
 
-    const std::string folder =combine(datasets_repository_path, "calib-3_stereo_from_JY");
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
 
     std::vector<std::vector<cv::Point2d> > leftPoints(n_images);
     std::vector<std::vector<cv::Point2d> > rightPoints(n_images);
@@ -813,6 +868,7 @@ const cv::Matx33d fisheyeTest::K(558.478087865323,               0, 620.45851536
                               0,               0,                1);
 
 const cv::Vec4d fisheyeTest::D(-0.0014613319981768, -0.00329861110580401, 0.00605760088590183, -0.00374209380722371);
+
 
 const cv::Matx33d fisheyeTest::R ( 9.9756700084424932e-01, 6.9698277640183867e-02, 1.4929569991321144e-03,
                             -6.9711825162322980e-02, 9.9748249845531767e-01, 1.2997180766418455e-02,
