@@ -360,9 +360,24 @@ struct GInferList2 final
     static constexpr const char* tag() { return Net::tag(); }
 };
 
-using GInferInputs      = cv::detail::GInferInputsTyped<cv::GMat, cv::GFrame>;
-using GInferListInputs  = cv::detail::GInferInputsTyped<cv::GArray<cv::GMat>, cv::GArray<cv::Rect>>;
-using GInferOutputs     = cv::detail::GInferOutputsTyped<cv::GMat>;
+/**
+ * @brief G-API object used to collect network inputs
+ */
+using GInferInputs = cv::detail::GInferInputsTyped<cv::GMat, cv::GFrame>;
+
+/**
+ * @brief G-API object used to collect the list of network inputs
+ */
+using GInferListInputs = cv::detail::GInferInputsTyped<cv::GArray<cv::GMat>, cv::GArray<cv::Rect>>;
+
+/**
+ * @brief G-API object used to collect network outputs
+ */
+using GInferOutputs = cv::detail::GInferOutputsTyped<cv::GMat>;
+
+/**
+ * @brief G-API object used to collect the list of network outputs
+ */
 using GInferListOutputs = cv::detail::GInferOutputsTyped<cv::GArray<cv::GMat>>;
 
 namespace detail {
