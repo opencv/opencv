@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <unordered_set>
+#include <atomic>
 
 #include <ade/util/algorithm.hpp>
 
@@ -289,7 +290,7 @@ public:
     }
 
     template<typename T>
-     std::vector<T>& outVecR(std::size_t output) {
+    std::vector<T>& outVecR(std::size_t output) {
         return outVecRef(output).wref<T>();
     }
 
@@ -298,8 +299,9 @@ public:
     const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
-    cv::Mat&     outMatR(std::size_t idx);
-    cv::GRunArgP output (std::size_t idx);
+    const cv::GRunArg& input  (std::size_t idx) const;
+          cv::GRunArgP output (std::size_t idx);
+          cv::Mat&     outMatR(std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -385,6 +387,10 @@ cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
 
+const cv::GRunArg& IECallContext::input(std::size_t idx) const {
+    return m_input_objs[idx].second;
+}
+
 cv::detail::VectorRef& IECallContext::outVecRef(std::size_t idx) {
     return cv::util::get<cv::detail::VectorRef>(m_results.at(idx));
 }
@@ -423,7 +429,6 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
         break;
     }
 }
-
 
 struct IECallable {
     static const char *name() { return "IERequestCallable"; }
@@ -513,7 +518,7 @@ public:
 
     explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
 
-    void execute(Task&& t, bool async = true);
+    void execute(Task&& t);
     void waitAndShutdown();
 
 private:
@@ -531,22 +536,11 @@ cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferReques
         }
     }
 
-void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t, bool async) {
+void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
     size_t id = 0u;
     m_idle_ids.pop(id);
 
     auto& request = m_requests[id];
-
-    // FIXME: This WA should be removed after supporting async mode for InferList and Infer2.
-    // InferList and Infer2 work synchronously without calling callback,
-    // therefore don't release InferRequest idle id.
-    if (!async) {
-        // NB: Synchronous execution.
-        t.run(request);
-        // NB: Explicitly call callback to release id.
-        callback(t, request, id);
-        return;
-    }
 
     request.SetCompletionCallback(
             std::bind(&cv::gimpl::ie::RequestPool::callback, this, t, std::ref(request), id));
@@ -638,7 +632,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // (1) Collect island inputs/outputs
     input_objs.reserve(in_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
-                ade::util::toRange(in_vector)))
+                    ade::util::toRange(in_vector)))
     {
         input_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
@@ -752,9 +746,62 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
-        ctx->out.meta(output, cv::GRunArg::Meta{});
+        ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.post(std::move(output));
 
+    }
+}
+
+class PostOutputsList {
+public:
+    PostOutputsList(size_t size,
+                    std::shared_ptr<IECallContext> ctx,
+                    std::vector<std::vector<int>>&& cached_dims);
+
+    void operator()(InferenceEngine::InferRequest &request, size_t pos) const;
+
+private:
+    struct Priv {
+        size_t              size;
+        std::atomic<size_t> finished{0u};
+        std::shared_ptr<IECallContext> ctx;
+        std::vector<std::vector<int>> cached_dims;
+    };
+    std::shared_ptr<Priv> m_priv;
+};
+
+PostOutputsList::PostOutputsList(size_t size,
+                                 std::shared_ptr<IECallContext> ctx,
+                                 std::vector<std::vector<int>>&& cached_dims)
+    : m_priv(new Priv()) {
+    m_priv->size = size;
+    m_priv->ctx = ctx;
+    m_priv->cached_dims = std::move(cached_dims);
+}
+
+void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos) const {
+    auto&& ctx         = m_priv->ctx;
+    auto&& cached_dims = m_priv->cached_dims;
+    auto&& finished    = m_priv->finished;
+    auto&& size        = m_priv->size;
+    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+        std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+        IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
+        GAPI_Assert(out_blob);
+
+        // FIXME: Avoid data copy. Not sure if it is possible though
+        out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+        copyFromIE(out_blob, out_vec[pos]);
+    }
+    ++finished;
+
+    if (finished == size) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            auto output = ctx->output(i);
+            ctx->out.meta(output, ctx->input(0).meta);
+            ctx->out.post(std::move(output));
+        }
     }
 }
 
@@ -977,65 +1024,44 @@ struct InferList: public cv::detail::KernelTag {
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
 
-        using namespace std::placeholders;
-        reqPool.execute(
+        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
+        // NB: In case there is no input data need to post output anyway
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                auto output = ctx->output(i);
+                ctx->out.meta(output, ctx->input(0).meta);
+                ctx->out.post(std::move(output));
+            }
+            return;
+        }
+
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+        std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
+            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+            // FIXME: Isn't this should be done automatically
+            // by some resetInternalData(), etc? (Probably at the GExecutor level)
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(in_roi_vec.size());
+        }
+
+        PostOutputsList callback(in_roi_vec.size(), ctx, std::move(cached_dims));
+        for (auto&& it : ade::util::indexed(in_roi_vec)) {
+                  auto  pos = ade::util::index(it);
+            const auto& rc  = ade::util::value(it);
+            reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
-                    [ctx](InferenceEngine::InferRequest &req) {
-                        // non-generic version for now:
-                        // - assumes zero input is always ROI list
-                        // - assumes all inputs/outputs are always Mats
-                        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
-                        // NB: In case there is no input data need to post output anyway
-                        if (in_roi_vec.empty()) {
-                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                auto output = ctx->output(i);
-                                ctx->out.meta(output, cv::GRunArg::Meta{});
-                                ctx->out.post(std::move(output));
-                            }
-                            return;
-                        }
-
-                        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
-
-                        // FIXME: This could be done ONCE at graph compile stage!
-                        std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
-                        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-                            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-                            // FIXME: Isn't this should be done automatically
-                            // by some resetInternalData(), etc? (Probably at the GExecutor level)
-                            ctx->outVecR<cv::Mat>(i).clear();
-                        }
-
-                        for (auto&& rc : in_roi_vec) {
-                            IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                            req.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
-
-                            req.Infer();
-
-                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
-
-                                IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
-                                GAPI_Assert(out_blob);
-
-                                cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-                                // FIXME: Avoid data copy. Not sure if it is possible though
-                                copyFromIE(out_blob, out_mat);
-                                out_vec.push_back(std::move(out_mat));
-                            }
-                        }
-
-                        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                            auto output = ctx->output(i);
-                            ctx->out.meta(output, cv::GRunArg::Meta{});
-                            ctx->out.post(std::move(output));
-                        }
+                    [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
+                        IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
+                        req.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
+                        req.StartAsync();
                     },
-                    [](InferenceEngine::InferRequest &) { /* do nothing */ }
-                },
-            false /* not async */
-        );
+                    std::bind(callback, std::placeholders::_1, pos)
+                }
+            );
+        }
     }
 };
 
@@ -1136,86 +1162,59 @@ struct InferList2: public cv::detail::KernelTag {
 
     static void run(std::shared_ptr<IECallContext> ctx,
                     cv::gimpl::ie::RequestPool    &reqPool) {
+        GAPI_Assert(ctx->inArgs().size() > 1u
+                && "This operation must have at least two arguments");
+        IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
+        const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                auto output = ctx->output(i);
+                ctx->out.meta(output, ctx->input(0).meta);
+                ctx->out.post(std::move(output));
+            }
+            return;
+        }
+        // FIXME: This could be done ONCE at graph compile stage!
+        std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
+            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+            // FIXME: Isn't this should be done automatically
+            // by some resetInternalData(), etc? (Probably at the GExecutor level)
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(list_size);
+        }
+
+        PostOutputsList callback(list_size, ctx, std::move(cached_dims));
+        for (const auto &list_idx : ade::util::iota(list_size)) {
             reqPool.execute(
-                    cv::gimpl::ie::RequestPool::Task {
-                        [ctx](InferenceEngine::InferRequest &req) {
-                            GAPI_Assert(ctx->inArgs().size() > 1u
-                                    && "This operation must have at least two arguments");
-
-                            IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0);
-
-                            // Take the next argument, which must be vector (of any kind).
-                            // Use it only to obtain the ROI list size (sizes of all other
-                            // vectors must be equal to this one)
-                            const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
-                            if (list_size == 0u) {
-                                for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                    auto output = ctx->output(i);
-                                    ctx->out.meta(output, cv::GRunArg::Meta{});
-                                    ctx->out.post(std::move(output));
-                                }
-                                return;
+                cv::gimpl::ie::RequestPool::Task {
+                    [ctx, list_idx, list_size, blob_0](InferenceEngine::InferRequest &req) {
+                        for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
+                            const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
+                            GAPI_Assert(this_vec.size() == list_size);
+                            IE::Blob::Ptr this_blob;
+                            if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
+                                const auto &vec = this_vec.rref<cv::Rect>();
+                                this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
+                            } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
+                                const auto &vec = this_vec.rref<cv::Mat>();
+                                const auto &mat = vec[list_idx];
+                                this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
+                            } else {
+                                GAPI_Assert(false &&
+                                        "Only Rect and Mat types are supported for infer list 2!");
                             }
 
-                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                ctx->outVecR<cv::Mat>(i).resize(list_size);
-                            }
-
-                            // FIXME: This could be done ONCE at graph compile stage!
-                            std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
-                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-                                cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
-                                // FIXME: Isn't this should be done automatically
-                                // by some resetInternalData(), etc? (Probably at the GExecutor level)
-                                ctx->outVecR<cv::Mat>(i).clear();
-                            }
-
-                            for (const auto &list_idx : ade::util::iota(list_size)) {
-                                for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
-                                    const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
-                                    GAPI_Assert(this_vec.size() == list_size);
-                                    IE::Blob::Ptr this_blob;
-                                    if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
-                                        const auto &vec = this_vec.rref<cv::Rect>();
-                                        this_blob = IE::make_shared_blob(blob_0, toIE(vec[list_idx]));
-                                    } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
-                                        const auto &vec = this_vec.rref<cv::Mat>();
-                                        const auto &mat = vec[list_idx];
-                                        this_blob = wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR);
-                                    } else {
-                                        GAPI_Assert(false &&
-                                                "Only Rect and Mat types are supported for infer list 2!");
-                                    }
-
-                                    req.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
-                                }
-
-                                req.Infer();
-
-                                for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                    std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
-
-                                    IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
-                                    GAPI_Assert(out_blob);
-
-                                    cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
-                                    // FIXME: Avoid data copy. Not sure if it is possible though
-                                    copyFromIE(out_blob, out_mat);
-                                    out_vec.push_back(std::move(out_mat));
-                                }
-                            }
-
-                            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-                                auto output = ctx->output(i);
-                                ctx->out.meta(output, cv::GRunArg::Meta{});
-                                ctx->out.post(std::move(output));
-                            }
-                        },
-                        [](InferenceEngine::InferRequest &) { /* do nothing */ }
+                            req.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
+                        }
+                        req.StartAsync();
                     },
-                false /* not async */
+                    std::bind(callback, std::placeholders::_1, list_idx)
+                } // task
             );
+        } // for
     }
 };
 
