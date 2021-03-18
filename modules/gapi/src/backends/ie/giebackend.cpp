@@ -770,7 +770,7 @@ public:
                     std::shared_ptr<IECallContext> ctx,
                     std::vector<std::vector<int>>&& cached_dims);
 
-    void operator()(InferenceEngine::InferRequest &request) const;
+    void operator()(InferenceEngine::InferRequest &request, size_t pos) const;
 
 private:
     struct Priv {
@@ -791,7 +791,7 @@ PostOutputsList::PostOutputsList(size_t size,
     m_priv->cached_dims = std::move(cached_dims);
 }
 
-void PostOutputsList::operator()(InferenceEngine::InferRequest &req) const {
+void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos) const {
     auto&& ctx         = m_priv->ctx;
     auto&& cached_dims = m_priv->cached_dims;
     auto&& finished    = m_priv->finished;
@@ -804,8 +804,8 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req) const {
 
         cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
         // FIXME: Avoid data copy. Not sure if it is possible though
-        copyFromIE(out_blob, out_mat);
-        out_vec.push_back(std::move(out_mat));
+        out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
+        copyFromIE(out_blob, out_vec[pos]);
     }
     ++finished;
 
@@ -1037,7 +1037,6 @@ struct InferList: public cv::detail::KernelTag {
     static void run(std::shared_ptr<IECallContext>  ctx,
                     cv::gimpl::ie::RequestPool     &reqPool) {
 
-        using namespace std::placeholders;
         const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
         // NB: In case there is no input data need to post output anyway
         if (in_roi_vec.empty()) {
@@ -1048,6 +1047,7 @@ struct InferList: public cv::detail::KernelTag {
             }
             return;
         }
+
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
@@ -1055,11 +1055,15 @@ struct InferList: public cv::detail::KernelTag {
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
-            ctx->outVecR<cv::Mat>(i).clear();
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(in_roi_vec.size());
         }
 
         PostOutputsList callback(in_roi_vec.size(), ctx, std::move(cached_dims));
-        for (auto&& rc : in_roi_vec) {
+        for (auto&& it : ade::util::indexed(in_roi_vec)) {
+                  auto  pos = ade::util::index(it);
+            const auto& rc  = ade::util::value(it);
             reqPool.execute(
                 cv::gimpl::ie::RequestPool::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
@@ -1067,7 +1071,7 @@ struct InferList: public cv::detail::KernelTag {
                         req.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
                         req.StartAsync();
                     },
-                    callback
+                    std::bind(callback, std::placeholders::_1, pos)
                 }
             );
         }
@@ -1190,7 +1194,9 @@ struct InferList2: public cv::detail::KernelTag {
             cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
-            ctx->outVecR<cv::Mat>(i).clear();
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(list_size);
         }
 
         PostOutputsList callback(list_size, ctx, std::move(cached_dims));
@@ -1218,7 +1224,7 @@ struct InferList2: public cv::detail::KernelTag {
                         }
                         req.StartAsync();
                     },
-                    callback
+                    std::bind(callback, std::placeholders::_1, list_idx)
                 } // task
             );
         } // for
