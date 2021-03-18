@@ -339,9 +339,9 @@ public:
             auto weight = std::make_shared<ngraph::op::Constant>(
                                       ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #else
-        auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #endif
             return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
         }

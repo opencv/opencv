@@ -273,7 +273,7 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmPlugin();
+            bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmComputePlugin();
             if (isArmTarget && blobs.empty())
                 return false;
             if (ksize == 1)
@@ -581,7 +581,7 @@ public:
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
-        CV_Assert(dims.size() >= 3 && dims.size() <= 5);
+        CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         if (nodes.size() > 1)
             CV_Assert(ieWeights);  // dynamic_cast should not fail

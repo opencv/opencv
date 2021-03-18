@@ -254,7 +254,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 bool isMyriadX();
 
-bool isArmPlugin();
+bool isArmComputePlugin();
 
 CV__DNN_EXPERIMENTAL_NS_END
 

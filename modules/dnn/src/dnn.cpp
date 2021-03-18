@@ -1291,7 +1291,7 @@ struct Net::Impl : public detail::NetImplBase
             preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             CV_Assert(
-                  (preferableTarget == DNN_TARGET_CPU && (!isArmPlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
+                  (preferableTarget == DNN_TARGET_CPU && (!isArmComputePlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
@@ -1974,7 +1974,7 @@ struct Net::Impl : public detail::NetImplBase
             return;
         }
 
-        bool supportsCPUFallback = !isArmPlugin() && (preferableTarget == DNN_TARGET_CPU ||
+        bool supportsCPUFallback = !isArmComputePlugin() && (preferableTarget == DNN_TARGET_CPU ||
                                    BackendRegistry::checkIETarget(DNN_TARGET_CPU));
 
         // Build Inference Engine networks from sets of layers that support this

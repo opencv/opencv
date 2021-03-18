@@ -653,14 +653,18 @@ InferenceEngine::Core& getCore(const std::string& id)
 
 static bool detectArmPlugin_()
 {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2) && (defined(__arm__) || defined(__aarch64__))
-    AutoLock lock(getInitializationMutex());
     InferenceEngine::Core& ie = getCore("CPU");
     const std::vector<std::string> devices = ie.GetAvailableDevices();
-    return std::find(devices.begin(), devices.end(), std::string("CPU")) != devices.end();
-#else
+    for (std::vector<std::string>::const_iterator i = devices.begin(); i != devices.end(); ++i)
+    {
+        if (i->find("CPU") != std::string::npos)
+        {
+            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+            CV_LOG_INFO(NULL, "CPU plugin: " << name);
+            return name.find("arm_compute::NEON") != std::string::npos;
+        }
+    }
     return false;
-#endif
 }
 
 #if !defined(OPENCV_DNN_IE_VPU_TYPE_DEFAULT)
@@ -1174,9 +1178,9 @@ bool isMyriadX()
      return myriadX;
 }
 
-bool isArmPlugin()
+bool isArmComputePlugin()
 {
-    static bool armPlugin = getInferenceEngineCPUType() == "ARM";
+    static bool armPlugin = getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE;
     return armPlugin;
 }
 
@@ -1219,7 +1223,9 @@ cv::String getInferenceEngineVPUType()
 
 cv::String getInferenceEngineCPUType()
 {
-    static cv::String cpu_type = detectArmPlugin_() ? "ARM" : "CPU";
+    static cv::String cpu_type = detectArmPlugin_() ?
+                                 CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE :
+                                 CV_DNN_INFERENCE_ENGINE_CPU_TYPE_X86;
     return cpu_type;
 }
 

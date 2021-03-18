@@ -101,7 +101,7 @@ public:
             if (INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) && preferableTarget == DNN_TARGET_MYRIAD)
                 return dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0;
 
-            return (dstRanges.size() <= 4 || !isArmPlugin());
+            return (dstRanges.size() <= 4 || !isArmComputePlugin());
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
