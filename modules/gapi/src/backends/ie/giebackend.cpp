@@ -523,7 +523,7 @@ public:
 
     explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
 
-    void execute(Task&& t, bool async = true);
+    void execute(Task&& t);
     void waitAndShutdown();
 
 private:
@@ -541,22 +541,11 @@ cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferReques
         }
     }
 
-void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t, bool async) {
+void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
     size_t id = 0u;
     m_idle_ids.pop(id);
 
     auto& request = m_requests[id];
-
-    // FIXME: This WA should be removed after supporting async mode for InferList and Infer2.
-    // InferList and Infer2 work synchronously without calling callback,
-    // therefore don't release InferRequest idle id.
-    if (!async) {
-        // NB: Synchronous execution.
-        t.run(request);
-        // NB: Explicitly call callback to release id.
-        callback(t, request, id);
-        return;
-    }
 
     request.SetCompletionCallback(
             std::bind(&cv::gimpl::ie::RequestPool::callback, this, t, std::ref(request), id));
