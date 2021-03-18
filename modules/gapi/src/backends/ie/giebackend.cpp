@@ -295,7 +295,7 @@ public:
     }
 
     template<typename T>
-     std::vector<T>& outVecR(std::size_t output) {
+    std::vector<T>& outVecR(std::size_t output) {
         return outVecRef(output).wref<T>();
     }
 
@@ -304,8 +304,9 @@ public:
     const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
-    cv::Mat&     outMatR(std::size_t idx);
-    cv::GRunArgP output (std::size_t idx);
+    const cv::GRunArg& input  (std::size_t idx) const;
+          cv::GRunArgP output (std::size_t idx);
+          cv::Mat&     outMatR(std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -391,6 +392,10 @@ cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
 
+const cv::GRunArg& IECallContext::input(std::size_t idx) const {
+    return m_input_objs[idx].second;
+}
+
 cv::detail::VectorRef& IECallContext::outVecRef(std::size_t idx) {
     return cv::util::get<cv::detail::VectorRef>(m_results.at(idx));
 }
@@ -429,7 +434,6 @@ cv::GArg IECallContext::packArg(const cv::GArg &arg) {
         break;
     }
 }
-
 
 struct IECallable {
     static const char *name() { return "IERequestCallable"; }
@@ -644,7 +648,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // (1) Collect island inputs/outputs
     input_objs.reserve(in_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
-                ade::util::toRange(in_vector)))
+                    ade::util::toRange(in_vector)))
     {
         input_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
@@ -758,7 +762,7 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
-        ctx->out.meta(output, cv::GRunArg::Meta{});
+        ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.post(std::move(output));
 
     }
@@ -802,7 +806,6 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos)
         IE::Blob::Ptr out_blob = req.GetBlob(ctx->uu.params.output_names[i]);
         GAPI_Assert(out_blob);
 
-        cv::Mat out_mat(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
         // FIXME: Avoid data copy. Not sure if it is possible though
         out_vec[pos].create(cached_dims[i], toCV(out_blob->getTensorDesc().getPrecision()));
         copyFromIE(out_blob, out_vec[pos]);
@@ -812,7 +815,7 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req, size_t pos)
     if (finished == size) {
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             auto output = ctx->output(i);
-            ctx->out.meta(output, cv::GRunArg::Meta{});
+            ctx->out.meta(output, ctx->input(0).meta);
             ctx->out.post(std::move(output));
         }
     }
@@ -1042,7 +1045,7 @@ struct InferList: public cv::detail::KernelTag {
         if (in_roi_vec.empty()) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
                 auto output = ctx->output(i);
-                ctx->out.meta(output, cv::GRunArg::Meta{});
+                ctx->out.meta(output, ctx->input(0).meta);
                 ctx->out.post(std::move(output));
             }
             return;
@@ -1182,7 +1185,7 @@ struct InferList2: public cv::detail::KernelTag {
         if (list_size == 0u) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
                 auto output = ctx->output(i);
-                ctx->out.meta(output, cv::GRunArg::Meta{});
+                ctx->out.meta(output, ctx->input(0).meta);
                 ctx->out.post(std::move(output));
             }
             return;
