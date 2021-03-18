@@ -1255,7 +1255,6 @@ TEST(InferList, TestStreamingInfer)
     }.cfgOutputLayers({ "age_conv3", "prob" })
      .cfgNumRequests(4u);
 
-
     std::size_t num_frames = 0u;
     std::size_t max_frames = 10u;
 
@@ -1308,7 +1307,6 @@ TEST(InferList, TestStreamingInfer)
         ++num_frames;
         cap >> in_mat;
     }
-    pipeline.stop();
 }
 
 TEST(Infer2, TestStreamingInfer)
