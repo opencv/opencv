@@ -118,6 +118,7 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(KalmanFilterControlPerfTestCPU),
                                       Values(2, 5),
                                       Values(2, 5),
                                       Values(5),
+                                      testing::Bool(),
                                       Values(cv::compile_args(VIDEO_CPU))));
 
 INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(KalmanFilterNoControlPerfTestCPU),
@@ -126,5 +127,6 @@ INSTANTIATE_TEST_CASE_MACRO_P(WITH_VIDEO(KalmanFilterNoControlPerfTestCPU),
                                       Values(2, 5),
                                       Values(2, 5),
                                       Values(5),
+                                      testing::Bool(),
                                       Values(cv::compile_args(VIDEO_CPU))));
 } // opencv_test

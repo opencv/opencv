@@ -241,13 +241,64 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+inline void generateInputKalman(const int mDim, const MatType2& type,
+                                const size_t testNumMeasurements, const bool receiveRandMeas,
+                                std::vector<bool>&    haveMeasurements,
+                                std::vector<cv::Mat>& measurements)
+{
+    cv::RNG& rng = cv::theRNG();
+    measurements.reserve(testNumMeasurements);
+    haveMeasurements.reserve(testNumMeasurements);
+    cv::Mat measurement(mDim, 1, type);
+    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    {
+        if (receiveRandMeas)
+        {
+            haveMeasurements[i] = rng(2u) == 1; // returns 0 or 1 - whether we have measurement
+                                                // at this iteration or not
+        }
+        else // testing the slowest case in which we have measurements at every iteration
+        {
+            haveMeasurements[i] = true;
+        }
+
+        if (haveMeasurements[i])
+        {
+            cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
+            measurements.push_back(measurement);
+        }
+        else
+        {
+            measurements.push_back(cv::Mat::zeros(mDim, 1, type));
+        }
+    }
+}
+
+inline void generateInputKalman(const int mDim, const int cDim, const MatType2& type,
+                                const size_t testNumMeasurements, const bool receiveRandMeas,
+                                std::vector<bool>&    haveMeasurements,
+                                std::vector<cv::Mat>& measurements,
+                                std::vector<cv::Mat>& ctrls)
+{
+    generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements);
+    ctrls.reserve(testNumMeasurements);
+    cv::Mat ctrl(cDim, 1, type);
+    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    {
+        cv::randu(ctrl, cv::Scalar::all(-1), cv::Scalar::all(1));
+        ctrls.push_back(ctrl);
+    }
+}
+
 PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
 {
     MatType2 type = -1;
     int dDim = -1, mDim = -1;
     std::size_t testNumMeasurements = 0;
+    bool receiveRandMeas = true;
     cv::GCompileArgs compileArgs;
-    std::tie(type, dDim, mDim, testNumMeasurements, compileArgs) = GetParam();
+    std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
 
     const int cDim = 2;
     cv::gapi::KalmanParams kp;
@@ -256,30 +307,8 @@ PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
     // Generating input
     std::vector<bool> haveMeasurements;
     std::vector<cv::Mat> measurements, ctrls;
-    measurements.reserve(testNumMeasurements);
-    ctrls.reserve(testNumMeasurements);
-    haveMeasurements.reserve(testNumMeasurements);
-    cv::RNG& rng = cv::theRNG();
-    {
-        cv::Mat measurement(mDim, 1, type);
-        cv::Mat ctrl(cDim, 1, type);
-        for (std::size_t i = 0; i < testNumMeasurements; i++)
-        {
-            haveMeasurements[i] = rng(2u) == 1; // returns 0 or 1 - whether we have measurement
-                                                // at this iteration or not
-            if (haveMeasurements[i])
-            {
-                cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
-                measurements.push_back(measurement);
-            }
-            else
-            {
-                measurements.push_back(cv::Mat::zeros(mDim, 1, type));
-            }
-            cv::randu(ctrl, cv::Scalar::all(-1), cv::Scalar::all(1));
-            ctrls.push_back(ctrl);
-        }
-    }
+    generateInputKalman(mDim, cDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements, ctrls);
 
     // G-API graph declaration
     cv::GMat m, ctrl;
@@ -322,35 +351,19 @@ PERF_TEST_P_(KalmanFilterNoControlPerfTest, TestPerformance)
     MatType2 type = -1;
     int dDim = -1, mDim = -1;
     std::size_t testNumMeasurements = 0;
+    bool receiveRandMeas = true;
     cv::GCompileArgs compileArgs;
-    std::tie(type, dDim, mDim, testNumMeasurements, compileArgs) = GetParam();
+    std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
 
     const int cDim = 0;
     cv::gapi::KalmanParams kp;
     initKalmanParams(type, dDim, mDim, cDim, kp);
 
     // Generating input
-    std::vector<bool> haveMeasurements(testNumMeasurements);
+    std::vector<bool> haveMeasurements;
     std::vector<cv::Mat> measurements;
-    measurements.reserve(testNumMeasurements);
-    cv::RNG& rng = cv::theRNG();
-    {
-        cv::Mat measurement(mDim, 1, type);
-        for (std::size_t i = 0; i < testNumMeasurements; i++)
-        {
-            haveMeasurements[i] = rng(2u) == 1; // returns 0 or 1 - whether we have measurement
-                                                // at this iteration or not
-            if (haveMeasurements[i])
-            {
-                cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
-                measurements.push_back(measurement);
-            }
-            else
-            {
-                measurements.push_back(cv::Mat::zeros(mDim, 1, type));
-            }
-        }
-    }
+    generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements);
 
     // G-API graph declaration
     cv::GMat m;

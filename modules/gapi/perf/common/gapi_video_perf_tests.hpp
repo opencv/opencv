@@ -31,9 +31,9 @@ class BackgroundSubtractorPerfTest:
                                 bool, double, std::size_t, cv::GCompileArgs, CompareMats>> {};
 
 class KalmanFilterControlPerfTest   :
-    public TestPerfParams<tuple<MatType2, int, int, size_t, cv::GCompileArgs>> {};
+    public TestPerfParams<tuple<MatType2, int, int, size_t, bool, cv::GCompileArgs>> {};
 class KalmanFilterNoControlPerfTest :
-    public TestPerfParams<tuple<MatType2, int, int, size_t, cv::GCompileArgs>> {};
+    public TestPerfParams<tuple<MatType2, int, int, size_t, bool, cv::GCompileArgs>> {};
 
 } // opencv_test
 
