@@ -170,7 +170,10 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return -1;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+        GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+        return -1;
+    }
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
@@ -198,7 +201,7 @@ inline cv::Mat toCV(Ort::Value &v) {
     const int64_t* ptr = v.GetTensorMutableData<int64_t>();
     cv::Mat mt({total}, CV_32S);
     for (int i = 0; i < total; ++i) {
-        mt.at<int>(i) = (static_cast<int>(ptr[i]));
+        mt.at<int>(i) = static_cast<int>(ptr[i]);
     }
     return mt.reshape(1, shape);
 }

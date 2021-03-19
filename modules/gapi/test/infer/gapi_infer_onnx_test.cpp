@@ -245,13 +245,17 @@ void remapRCNNPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
     const cv::Mat& in_labels = onnx.at("6381");
     const cv::Mat& in_scores = onnx.at("6383");
 
+    GAPI_Assert(in_boxes.depth() == CV_32F);
+    GAPI_Assert(in_labels.depth() == CV_32S);
+    GAPI_Assert(in_scores.depth() == CV_32F);
+
     cv::Mat& out_boxes = gapi.at("out1");
     cv::Mat& out_labels = gapi.at("out2");
     cv::Mat& out_scores = gapi.at("out3");
 
     copyToOut<float>(in_boxes, out_boxes);
-    copyToOut<float>(in_scores, out_scores);
     copyToOut<int>(in_labels, out_labels);
+    copyToOut<float>(in_scores, out_scores);
 }
 
 class ONNXtest : public ::testing::Test {
@@ -322,12 +326,12 @@ public:
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
+            const auto type = toCV(info.GetElementType());
             const std::vector<int> dims(shape.begin(), shape.end());
-            const auto type = info.GetElementType();
-            if (toCV(type) != -1){
-                cv::Mat mt(dims, toCV(type),
-                           reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
-                mt.copyTo(outs[i]);
+            if (type != -1){
+                cv::Mat(dims, type,
+                        reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()))
+                .copyTo(outs[i]);
             } else {
                 std::vector<int> out_vec;
                 const size_t total = std::accumulate(dims.begin(), dims.end(), 0);
@@ -335,8 +339,7 @@ public:
                 for (size_t l = 0; l < total; ++l) {
                     out_vec.push_back(static_cast<int>(ptr[l]));
                 }
-                cv::Mat mt(dims, CV_32S, out_vec.data());
-                mt.copyTo(outs[i]);
+                cv::Mat (dims, CV_32S, out_vec.data()).copyTo(outs[i]);
             }
         }
     }
