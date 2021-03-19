@@ -151,7 +151,7 @@ void SoftNMS_(
     float threshold = score_threshold > soft_nms_threshold ? score_threshold : soft_nms_threshold;
     int s = 0; // start index; elements before it has been ouput.
     while (indices.size() < top_k_) {
-        std::vector<std::pair<float, int> >::iterator it = 
+        std::vector<std::pair<float, int> >::iterator it =
             std::max_element(score_index_vec.begin() + s, score_index_vec.end());
         if (it->first < threshold) {
             break;
