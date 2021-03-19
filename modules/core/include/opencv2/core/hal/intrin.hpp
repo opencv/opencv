@@ -309,28 +309,28 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 //==================================================================================================
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix) \
-    inline vtyp vx_setall_##short_typ(typ v) { return prefix##_setall_##short_typ(v); } \
-    inline vtyp vx_setzero_##short_typ() { return prefix##_setzero_##short_typ(); } \
-    inline vtyp vx_load(const typ* ptr) { return prefix##_load(ptr); } \
-    inline vtyp vx_load_aligned(const typ* ptr) { return prefix##_load_aligned(ptr); } \
-    inline vtyp vx_load_low(const typ* ptr) { return prefix##_load_low(ptr); } \
-    inline vtyp vx_load_halves(const typ* ptr0, const typ* ptr1) { return prefix##_load_halves(ptr0, ptr1); } \
+    inline vtyp vx_setall_##short_typ(typ v) /** @brief Create maximum available capacity vector with elements set to a specific value */ { return prefix##_setall_##short_typ(v); } \
+    inline vtyp vx_setzero_##short_typ() /** @brief Create maximum available capacity vector with elements set to zero */ { return prefix##_setzero_##short_typ(); } \
+    inline vtyp vx_load(const typ* ptr) /** @brief Load maximum available capacity register contents from memory */ { return prefix##_load(ptr); } \
+    inline vtyp vx_load_aligned(const typ* ptr) /** @brief Load maximum available capacity register contents from memory(aligned) */ { return prefix##_load_aligned(ptr); } \
+    inline vtyp vx_load_low(const typ* ptr) /** @brief Load lower half of maximum available capacity register from memory(aligned) */ { return prefix##_load_low(ptr); } \
+    inline vtyp vx_load_halves(const typ* ptr0, const typ* ptr1) /** @brief Load maximum available capacity register contents from two memory blocks */ { return prefix##_load_halves(ptr0, ptr1); } \
     inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
     inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); } \
-    inline vtyp vx_lut(const typ* ptr, const int* idx) { return prefix##_lut(ptr, idx); } \
-    inline vtyp vx_lut_pairs(const typ* ptr, const int* idx) { return prefix##_lut_pairs(ptr, idx); }
+    inline vtyp vx_lut(const typ* ptr, const int* idx) /** @brief Load maximum available capacity register contents with array elements by provided indexes */ { return prefix##_lut(ptr, idx); } \
+    inline vtyp vx_lut_pairs(const typ* ptr, const int* idx) /** @brief Load maximum available capacity register contents with array element pairs by provided indexes */ { return prefix##_lut_pairs(ptr, idx); }
 
 #define CV_INTRIN_DEFINE_WIDE_LUT_QUAD(typ, vtyp, prefix) \
-    inline vtyp vx_lut_quads(const typ* ptr, const int* idx) { return prefix##_lut_quads(ptr, idx); }
+    inline vtyp vx_lut_quads(const typ* ptr, const int* idx) /** @brief Load maximum available capacity register contents with array element quads by provided indexes */ { return prefix##_lut_quads(ptr, idx); }
 
 #define CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
-    inline wtyp vx_load_expand(const typ* ptr) { return prefix##_load_expand(ptr); }
+    inline wtyp vx_load_expand(const typ* ptr) /** @brief Load maximum available capacity register contents from memory with double expand */ { return prefix##_load_expand(ptr); }
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(typ, vtyp, short_typ, wtyp, qtyp, prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN(typ, vtyp, short_typ, prefix) \
     CV_INTRIN_DEFINE_WIDE_LUT_QUAD(typ, vtyp, prefix) \
     CV_INTRIN_DEFINE_WIDE_LOAD_EXPAND(typ, wtyp, prefix) \
-    inline qtyp vx_load_expand_q(const typ * ptr) { return prefix##_load_expand_q(ptr); }
+    inline qtyp vx_load_expand_q(const typ * ptr) /** @brief Load maximum available capacity register contents from memory with quad expand */ { return prefix##_load_expand_q(ptr); }
 
 #define CV_INTRIN_DEFINE_WIDE_INTRIN_ALL_TYPES(prefix) \
     CV_INTRIN_DEFINE_WIDE_INTRIN_WITH_EXPAND(uchar, v_uint8, u8, v_uint16, v_uint32, prefix) \
