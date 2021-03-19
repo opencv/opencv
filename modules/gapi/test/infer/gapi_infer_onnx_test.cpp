@@ -481,8 +481,8 @@ public:
         rsz.convertTo(cvt, CV_32F, 1.f);
         toCHW(cvt, chw);
         mn = chw - rcnn_mean;
-        int padded_h = std::ceil(new_h / 32.f) * 32;
-        int padded_w = std::ceil(new_w / 32.f) * 32;
+        const int padded_h = std::ceil(new_h / 32.f) * 32;
+        const int padded_w = std::ceil(new_w / 32.f) * 32;
         cv::Mat pad_im(cv::Size(padded_w, 3 * padded_h), CV_32F, 0.f);
         pad_im(cv::Rect(0, 0, mn.cols, mn.rows)) += mn;
         dst = pad_im.reshape(1, {3, padded_h, padded_w});
