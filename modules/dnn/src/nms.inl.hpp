@@ -101,6 +101,86 @@ inline void NMSFast_(const std::vector<BoxType>& bboxes,
     }
 }
 
+enum SoftNMSMethod{ SOFTNMS_LINEAR = 1, SOFTNMS_GAUSSIAN = 2 };
+
+static inline void updateScore(float& score, float IOU, float sigma) {
+    if (IOU <= 0.0)
+        return;
+    score = score * exp(-(IOU * IOU) / sigma);
+}
+
+static inline void updateScore(float& score, float IOU) {
+    score = score * (1.0 - IOU);
+}
+
+// Implement soft NMS.
+// https://arxiv.org/abs/1704.04503
+//    bboxes: a set of bounding boxes.
+//    scores: a set of corresponding confidences.
+//    updated_scores: the adjusted scores after soft NMS.
+//    score_threshold: a threshold used to filter detection results.
+//    nms_threshold: a threshold used in non maximum suppression.
+//    top_k: if not > 0, keep at most top_k picked indices.
+//    indices: the kept indices of bboxes after nms.
+//    sigma: parameter of Gaussian weighting.
+//    soft_nms_threshold: threshold once below it box will be discarded.
+//    method: Gaussian or linear.
+template <typename BoxType>
+void SoftNMS_(
+      const std::vector<BoxType>& bboxes,
+      const std::vector<float>& scores,
+      std::vector<float>& updated_scores,
+      const float score_threshold,
+      const float nms_threshold,
+      const int top_k,
+      std::vector<int>& indices,
+      float (*computeOverlap)(const BoxType&, const BoxType&),
+      const float sigma = 0.5,
+      const float soft_nms_threshold = 0.001,
+      SoftNMSMethod method = SOFTNMS_GAUSSIAN)
+{
+    CV_Assert(bboxes.size() == scores.size());
+
+    std::vector<std::pair<float, int> > score_index_vec(scores.size());
+    for (size_t i = 0; i < scores.size(); i++) {
+        score_index_vec[i].first = scores[i];
+        score_index_vec[i].second = i;
+    }
+
+    int top_k_ = top_k == 0 ? scores.size() : (top_k < scores.size() ? top_k : scores.size());
+    float threshold = score_threshold > soft_nms_threshold ? score_threshold : soft_nms_threshold;
+    int s = 0; // start index; elements before it has been ouput.
+    while (indices.size() < top_k_) {
+        std::vector<std::pair<float, int> >::iterator it = 
+            std::max_element(std::begin(score_index_vec) + s, std::end(score_index_vec));
+        if (it->first < threshold) {
+            break;
+        }
+        int bidx = it->second; // box index
+        indices.push_back(bidx);
+        int idx = std::distance(std::begin(score_index_vec), it);
+        std::swap(score_index_vec[s], score_index_vec[idx]);
+        for (int i = s + 1; i < scores.size(); i++) {
+            if (score_index_vec[i].first < threshold) {
+                continue;
+            }
+            int bidx_i = score_index_vec[i].second;
+            float overlap = computeOverlap(bboxes[bidx], bboxes[bidx_i]);
+            if ((method == SOFTNMS_LINEAR) && (overlap > nms_threshold)) {
+                updateScore(score_index_vec[bidx_i].first, overlap);
+            } else {
+                CV_Assert(method == SOFTNMS_GAUSSIAN);
+                updateScore(score_index_vec[bidx_i].first, overlap, sigma);
+            }
+        }
+        s++;
+    }
+    updated_scores.resize(scores.size());
+    for (size_t i = 0; i < score_index_vec.size(); i++) {
+        updated_scores[score_index_vec[i].second] = score_index_vec[i].first;
+    }
+}
+
 }// dnn
 }// cv
 
