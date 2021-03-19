@@ -26,7 +26,7 @@ CV_NORETURN void throw_no_ocl()
 #define OCL_NOT_AVAILABLE() throw_no_ocl();
 
 CV_EXPORTS_W bool haveOpenCL() { return false; }
-CV_EXPORTS_W bool useOpenCL() { return false; }
+CV_EXPORTS_W bool useOpenCL(bool init) { return false; }
 CV_EXPORTS_W bool haveAmdBlas() { return false; }
 CV_EXPORTS_W bool haveAmdFft() { return false; }
 CV_EXPORTS_W void setUseOpenCL(bool flag) { /* nothing */ }

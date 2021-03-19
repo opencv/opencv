@@ -50,7 +50,7 @@ namespace cv { namespace ocl {
 //! @{
 
 CV_EXPORTS_W bool haveOpenCL();
-CV_EXPORTS_W bool useOpenCL();
+CV_EXPORTS_W bool useOpenCL(bool init = true); // TODO: can we change function signature?
 CV_EXPORTS_W bool haveAmdBlas();
 CV_EXPORTS_W bool haveAmdFft();
 CV_EXPORTS_W void setUseOpenCL(bool flag);
@@ -277,6 +277,8 @@ public:
     /** @returns cl_context value */
     void* ptr() const;
 
+    /** @returns Property specified on context creation */
+    void* getProperty(long propertyId) const;
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
@@ -289,6 +291,13 @@ public:
     static Context create(const std::string& configuration);
 
     void release();
+
+    class CV_EXPORTS UserContext {
+    public:
+        virtual ~UserContext() {};
+    };
+    void setUserContext(std::string id, std::shared_ptr<UserContext> userContext);
+    std::shared_ptr<UserContext> getUserContext(std::string id);
 
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }

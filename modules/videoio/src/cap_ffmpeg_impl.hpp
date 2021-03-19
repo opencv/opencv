@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+ /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -476,6 +476,7 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
     void init();
@@ -572,7 +573,7 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
-    va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
+    va_type = cv::VIDEO_ACCELERATION_NONE;
     hw_device = -1;
 }
 
@@ -1476,6 +1477,19 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
+bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
+{
+    //CV_INSTRUMENT_REGION();
+
+    // check that we have HW frame in GPU memory
+    if (!picture || !picture->hw_frames_ctx) {
+        return false;
+    }
+
+    // GPU color conversion NV12->BGRA, from GPU media buffer to GPU OpenCL buffer
+    return hw_copy_frame_to_umat(video_st->codec->hw_device_ctx, picture, output);
+}
+
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
@@ -1752,6 +1766,7 @@ struct CvVideoWriter_FFMPEG
                double fps, int width, int height, const VideoWriterParameters& params );
     void close();
     bool writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin );
+    bool writeHWFrame(cv::InputArray input);
     double getProperty(int propId) const;
 
     void init();
@@ -2208,6 +2223,40 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     frame_idx++;
 
     return ret;
+}
+
+bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
+    if (!video_st->codec->hw_frames_ctx)
+        return false;
+
+    // check that current OpenCL context initilized on same media device as codec
+    //if (!hw_check_opencl_context(video_st->codec->hw_device_ctx))
+    //    return false;
+
+    // Get hardware frame from frame pool
+    AVFrame* hw_frame = av_frame_alloc();
+    if (!hw_frame) {
+        return false;
+    }
+    if (av_hwframe_get_buffer(video_st->codec->hw_frames_ctx, hw_frame, 0) < 0) {
+        av_frame_free(&hw_frame);
+        return false;
+    }
+
+    // GPU to GPU copy
+    if (!hw_copy_umat_to_frame(video_st->codec->hw_device_ctx, input, hw_frame)) {
+        av_frame_free(&hw_frame);
+        return false;
+    }
+
+    // encode
+    hw_frame->pts = frame_idx;
+    icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+    frame_idx++;
+
+    av_frame_free(&hw_frame);
+
+    return true;
 }
 
 double CvVideoWriter_FFMPEG::getProperty(int propId) const

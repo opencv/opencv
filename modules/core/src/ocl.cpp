@@ -1190,9 +1190,11 @@ bool haveOpenCL()
     return g_isOpenCLAvailable;
 }
 
-bool useOpenCL()
+bool useOpenCL(bool init)
 {
     CoreTLSData& data = getCoreTlsData();
+    if (!init)
+        return data.useOpenCL != 0;
     if (data.useOpenCL < 0)
     {
         try
@@ -2718,6 +2720,18 @@ public:
     }
 #endif
 
+    std::map<std::string, std::shared_ptr<UserContext>> userContextStorage;
+    void setUserContext(std::string id, std::shared_ptr<UserContext> userContext) {
+        userContextStorage[id] = userContext;
+    }
+    std::shared_ptr<UserContext> getUserContext(std::string id) {
+        auto it = userContextStorage.find(id);
+        if (it != userContextStorage.end())
+            return it->second;
+        else
+            return nullptr;
+    }
+
 #ifdef HAVE_OPENCL_SVM
     bool svmInitialized;
     bool svmAvailable;
@@ -3036,6 +3050,23 @@ Context Context::create(const std::string& configuration)
     return ctx;
 }
 
+void* Context::getProperty(long propertyId) const {
+    if (p == NULL)
+        return nullptr;
+    ::size_t size = 0;
+    if (CL_SUCCESS == clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, 0, NULL, &size)) {
+        std::vector<cl_context_properties> prop(size / sizeof(cl_context_properties));
+        if (CL_SUCCESS == clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, size, prop.data(), NULL)) {
+            for (size_t i = 0; i < prop.size(); i += 2) {
+                if (prop[i] == propertyId) {
+                    return (void *) prop[i + 1];
+                }
+            }
+        }
+    }
+    return nullptr;
+}
+
 #ifdef HAVE_OPENCL_SVM
 bool Context::useSVM() const
 {
@@ -3097,6 +3128,17 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
+void Context::setUserContext(std::string id, std::shared_ptr<Context::UserContext> userContext) {
+    if (p)
+        p->setUserContext(id, userContext);
+}
+
+std::shared_ptr<Context::UserContext> Context::getUserContext(std::string id) {
+    if (p)
+        return p->getUserContext(id);
+    else
+        return nullptr;
+}
 
 static void get_platform_name(cl_platform_id id, String& name)
 {
