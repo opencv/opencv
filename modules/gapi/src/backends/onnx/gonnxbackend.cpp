@@ -170,6 +170,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return -1;
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
@@ -185,10 +186,21 @@ inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
 }
 
 inline cv::Mat toCV(Ort::Value &v) {
-    auto info = v.GetTensorTypeAndShapeInfo();
-    return cv::Mat(toCV(info.GetShape()),
-                   toCV(info.GetElementType()),
-                   reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
+    const auto info = v.GetTensorTypeAndShapeInfo();
+    const auto type = toCV(info.GetElementType());
+    const auto shape = toCV(info.GetShape());
+    if (type != -1) {
+        return cv::Mat(shape,
+                       type,
+                       reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
+    }
+    const int total = std::accumulate(shape.begin(), shape.end(), 0);
+    const int64_t* ptr = v.GetTensorMutableData<int64_t>();
+    cv::Mat mt({total}, CV_32S);
+    for (int i = 0; i < total; ++i) {
+        mt.at<int>(i) = (static_cast<int>(ptr[i]));
+    }
+    return mt.reshape(1, shape);
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {

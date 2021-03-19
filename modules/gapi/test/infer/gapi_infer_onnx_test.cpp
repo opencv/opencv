@@ -127,6 +127,7 @@ inline int toCV(const ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return -1;
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
@@ -237,6 +238,22 @@ void remapSSDPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
     remapToIESSDOut({num_detections, detection_boxes, detection_scores, detection_classes}, ssd_output);
 }
 
+void remapRCNNPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
+                          std::unordered_map<std::string, cv::Mat> &gapi) {
+    // Simple copy for outputs
+    const cv::Mat& in_boxes = onnx.at("6379");
+    const cv::Mat& in_labels = onnx.at("6381");
+    const cv::Mat& in_scores = onnx.at("6383");
+
+    cv::Mat& out_boxes = gapi.at("out1");
+    cv::Mat& out_labels = gapi.at("out2");
+    cv::Mat& out_scores = gapi.at("out3");
+
+    copyToOut<float>(in_boxes, out_boxes);
+    copyToOut<float>(in_scores, out_scores);
+    copyToOut<int>(in_labels, out_labels);
+}
+
 class ONNXtest : public ::testing::Test {
 public:
     std::string model_path;
@@ -305,10 +322,22 @@ public:
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
+            const std::vector<int> dims(shape.begin(), shape.end());
             const auto type = info.GetElementType();
-            cv::Mat mt(std::vector<int>(shape.begin(), shape.end()), toCV(type),
-                       reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
-            mt.copyTo(outs[i]);
+            if (toCV(type) != -1){
+                cv::Mat mt(dims, toCV(type),
+                           reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
+                mt.copyTo(outs[i]);
+            } else {
+                std::vector<int> out_vec;
+                const size_t total = std::accumulate(dims.begin(), dims.end(), 0);
+                const int64_t* ptr = result[i].GetTensorMutableData<int64_t>();
+                for (size_t l = 0; l < total; ++l) {
+                    out_vec.push_back(static_cast<int>(ptr[l]));
+                }
+                cv::Mat mt(dims, CV_32S, out_vec.data());
+                mt.copyTo(outs[i]);
+            }
         }
     }
     // One input/output overload
@@ -423,6 +452,37 @@ public:
                 ASSERT_EQ(op[d_idx], gp[d_idx]);
             }
         }
+    }
+};
+
+class ONNXRCNN : public ONNXWithRemap {
+private:
+    const cv::Scalar rcnn_mean = { 102.9801, 115.9465, 122.7717 };
+    float range_max = 1333;
+    float range_min = 800;
+public:
+    void preprocess(const cv::Mat& src, cv::Mat& dst) {
+        cv::Mat rsz, cvt, chw, mn;
+        const auto get_ratio = [&](const int dim) -> float {
+                                   return ((dim > range_max) || (dim < range_min))
+                                              ? dim > range_max
+                                                  ? range_max / dim
+                                                  : range_min / dim
+                                              : 1.f;
+                               };
+        const auto ratio_h = get_ratio(src.rows);
+        const auto ratio_w = get_ratio(src.cols);
+        const auto new_h = static_cast<int>(ratio_h * src.rows);
+        const auto new_w = static_cast<int>(ratio_w * src.cols);
+        cv::resize(src, rsz, cv::Size(new_w, new_h));
+        rsz.convertTo(cvt, CV_32F, 1.f);
+        toCHW(cvt, chw);
+        mn = chw - rcnn_mean;
+        int padded_h = std::ceil(new_h / 32.f) * 32;
+        int padded_w = std::ceil(new_w / 32.f) * 32;
+        cv::Mat pad_im(cv::Size(padded_w, 3 * padded_h), CV_32F, 0.f);
+        pad_im(cv::Rect(0, 0, mn.cols, mn.rows)) += mn;
+        dst = pad_im.reshape(1, {3, padded_h, padded_w});
     }
 };
 
@@ -912,6 +972,32 @@ TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out1, out2, out3));
     out_gapi.resize(num_out);
     comp.apply(cv::gin(ins[0], bad_shape),
+               cv::gout(out_gapi[0], out_gapi[1], out_gapi[2]),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXRCNN, InferRCNN)
+{
+    useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
+    cv::Mat dst;
+    preprocess(in_mat1, dst);
+    // ONNX_API code
+    infer<float>(dst, out_onnx);
+    // G_API code
+    using FRCNNOUT = std::tuple<cv::GMat,cv::GMat,cv::GMat>;
+    G_API_NET(FasterRCNN, <FRCNNOUT(cv::GMat)>, "FasterRCNN");
+    auto net = cv::gapi::onnx::Params<FasterRCNN>{model_path}
+        .cfgOutputLayers({"out1", "out2", "out3"})
+        .cfgPostProc({cv::GMatDesc{CV_32F, {7,4}},
+                      cv::GMatDesc{CV_32S, {7}},
+                      cv::GMatDesc{CV_32F, {7}}}, remapRCNNPorts);
+    cv::GMat in, out1, out2, out3;
+    std::tie(out1, out2, out3) = cv::gapi::infer<FasterRCNN>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out1, out2, out3));
+    out_gapi.resize(num_out);
+    comp.apply(cv::gin(dst),
                cv::gout(out_gapi[0], out_gapi[1], out_gapi[2]),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
