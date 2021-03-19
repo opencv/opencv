@@ -91,7 +91,7 @@ class GInferOutputsTyped
 public:
     GInferOutputsTyped() = default;
     GInferOutputsTyped(std::shared_ptr<cv::GCall> call)
-        : m_priv(std::make_shared<Priv<OutT>>(std::move(call)))
+        : m_priv(std::make_shared<Priv>(std::move(call)))
     {
     }
 
@@ -111,7 +111,6 @@ public:
         return it->second;
     }
 private:
-    template<typename T>
     struct Priv
     {
         Priv(std::shared_ptr<cv::GCall> c)
@@ -121,10 +120,10 @@ private:
 
         std::shared_ptr<cv::GCall> call;
         InOutInfo* info = nullptr;
-        std::unordered_map<std::string, T> blobs;
+        std::unordered_map<std::string, OutT> blobs;
     };
 
-    std::shared_ptr<Priv<OutT>> m_priv;
+    std::shared_ptr<Priv> m_priv;
 };
 
 template <typename... Ts>
@@ -132,7 +131,7 @@ class GInferInputsTyped
 {
 public:
     GInferInputsTyped()
-        : m_priv(std::make_shared<Priv<StorageT>>())
+        : m_priv(std::make_shared<Priv>())
     {
     }
 
@@ -155,13 +154,12 @@ public:
     }
 
 private:
-    template<typename T>
     struct Priv
     {
-        std::unordered_map<std::string, T> blobs;
+        std::unordered_map<std::string, StorageT> blobs;
     };
 
-    std::shared_ptr<Priv<StorageT>> m_priv;
+    std::shared_ptr<Priv> m_priv;
 };
 
 template<typename InferT>
