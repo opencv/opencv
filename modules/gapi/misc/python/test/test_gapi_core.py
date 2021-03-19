@@ -13,7 +13,7 @@ pkgs = [
           ('cpu'    , cv.gapi.core.cpu.kernels()),
           ('fluid'  , cv.gapi.core.fluid.kernels())
           # ('plaidml', cv.gapi.core.plaidml.kernels())
-      ]
+       ]
 
 
 class gapi_core_test(NewOpenCVTests):
@@ -127,7 +127,6 @@ class gapi_core_test(NewOpenCVTests):
             self.assertEqual(expected_thresh, actual_thresh[0],
                              'Failed on ' + pkg_name + ' backend')
 
-
     def test_kmeans(self):
         # K-means params
         count    = 100
@@ -154,9 +153,11 @@ class gapi_core_test(NewOpenCVTests):
         self.assertEqual(centers.shape[0], K);
         self.assertTrue(centers.size != 0);
 
+
     def generate_random_points(self, sz):
         arr = np.random.random(sz).astype(np.float32).T
         return list(zip(arr[0], arr[1]))
+
 
     def test_kmeans_2d(self):
         # K-means 2D params
