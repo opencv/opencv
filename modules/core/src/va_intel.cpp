@@ -162,8 +162,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             try
             {
                 clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                std::shared_ptr<VAAPIInterop> userCtx = std::make_shared<VAAPIInterop>(platform);
-                clExecCtx.getContext().setUserContext(VAAPI_INTEROP_CONTEXT_ID, userCtx);
+                clExecCtx.getContext().setUserContext(std::make_shared<VAAPIInterop>(platform));
             }
             catch (...)
             {
@@ -535,11 +534,9 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
-    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_CONTEXT_ID);
-    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && userCtx)
+    VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
-        VAAPIInterop* interop = dynamic_cast<VAAPIInterop*>(userCtx.get());
-
         UMat u = src.getUMat();
 
         // TODO Add support for roi
@@ -640,11 +637,9 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
-    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_CONTEXT_ID);
-    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && userCtx)
+    VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
-        VAAPIInterop* interop = dynamic_cast<VAAPIInterop*>(userCtx.get());
-
         UMat u = dst.getUMat();
 
         // TODO Add support for roi

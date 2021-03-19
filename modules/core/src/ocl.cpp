@@ -2393,6 +2393,11 @@ protected:
         }
 
         {
+            cv::AutoLock lock(userContextMutex);
+            userContextStorage.clear();
+        }
+
+        {
             cv::AutoLock lock(cv::getInitializationMutex());
             auto& container = getGlobalContainer();
             CV_CheckLT((size_t)contextId, container.size(), "");
@@ -2698,10 +2703,13 @@ public:
     }
 
     std::map<std::type_index, std::shared_ptr<UserContext>> userContextStorage;
+    cv::Mutex userContextMutex;
     void setUserContext(std::type_index typeId, std::shared_ptr<UserContext> userContext) {
+        cv::AutoLock lock(userContextMutex);
         userContextStorage[typeId] = userContext;
     }
     std::shared_ptr<UserContext> getUserContext(std::type_index typeId) {
+        cv::AutoLock lock(userContextMutex);
         auto it = userContextStorage.find(typeId);
         if (it != userContextStorage.end())
             return it->second;

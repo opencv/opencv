@@ -42,15 +42,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/videoio/videoio_c.h"
-#include "opencv2/core/ocl.hpp"
-#ifdef HAVE_VA_INTEL
-#include <CL/cl_va_api_media_sharing_intel.h>
-#endif
-#ifdef HAVE_D3D11
-#ifdef HAVE_OPENCL
-#include <CL/cl_d3d11.h>
-#endif
-#endif
 
 namespace opencv_test
 {
@@ -676,22 +667,6 @@ std::ostream& operator<<(std::ostream& out, const VideoCaptureAccelerationInput&
 
 typedef testing::TestWithParam<tuple<VideoCaptureAccelerationInput, VideoCaptureAPIs, VideoAccelerationType, bool>> videocapture_acceleration;
 
-// release OpenCL context if created without media device context attached
-static void release_ocl_context() {
-    ocl::OpenCLExecutionContext &ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
-    if (!ocl_context.empty()) {
-        void *media_context = NULL;
-#ifdef HAVE_VA_INTEL
-        media_context = ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
-#endif
-#ifdef HAVE_D3D11
-        media_context = ocl_context.getContext().getProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
-#endif
-        if (!media_context)
-            ocl_context.release();
-    }
-}
-
 TEST_P(videocapture_acceleration, read)
 {
     auto param = GetParam();
@@ -718,8 +693,6 @@ TEST_P(videocapture_acceleration, read)
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
 
-    if (use_umat)
-        release_ocl_context();
 
     // HW reader
     VideoCapture hw_reader(filepath, backend, {
@@ -857,9 +830,6 @@ TEST_P(videowriter_acceleration, write)
     const double fps = 25;
 
     std::string filename = tempfile("videowriter_acceleration.") + extension;
-
-    if (use_umat)
-        release_ocl_context();
 
     // Write video
     VideoAccelerationType actual_va;
