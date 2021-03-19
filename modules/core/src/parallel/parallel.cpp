@@ -63,7 +63,11 @@ std::shared_ptr<ParallelForAPI> createParallelForAPI()
         try
         {
             CV_LOG_DEBUG(NULL, "core(parallel): trying backend: " << info.name << " (priority=" << info.priority << ")");
-            CV_Assert(info.backendFactory);
+            if (!info.backendFactory)
+            {
+                CV_LOG_DEBUG(NULL, "core(parallel): factory is not available (plugins require filesystem support): " << info.name);
+                continue;
+            }
             std::shared_ptr<ParallelForAPI> backend = info.backendFactory->create();
             if (!backend)
             {
