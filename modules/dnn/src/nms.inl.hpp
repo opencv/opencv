@@ -152,13 +152,13 @@ void SoftNMS_(
     int s = 0; // start index; elements before it has been ouput.
     while (indices.size() < top_k_) {
         std::vector<std::pair<float, int> >::iterator it = 
-            std::max_element(std::begin(score_index_vec) + s, std::end(score_index_vec));
+            std::max_element(score_index_vec.begin() + s, score_index_vec.end());
         if (it->first < threshold) {
             break;
         }
         int bidx = it->second; // box index
         indices.push_back(bidx);
-        int idx = std::distance(std::begin(score_index_vec), it);
+        int idx = std::distance(score_index_vec.begin(), it);
         std::swap(score_index_vec[s], score_index_vec[idx]);
         for (int i = s + 1; i < scores.size(); i++) {
             if (score_index_vec[i].first < threshold) {
