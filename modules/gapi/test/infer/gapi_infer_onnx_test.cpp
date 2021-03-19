@@ -326,9 +326,11 @@ public:
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
-            const auto type = toCV(info.GetElementType());
+            const auto type = toCV(info.GetElementType()) != -1
+                ? toCV(info.GetElementType())
+                : CV_32S;
             const std::vector<int> dims(shape.begin(), shape.end());
-            if (type != -1){
+            if (type != -1) {
                 cv::Mat(dims, type,
                         reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()))
                 .copyTo(outs[i]);
