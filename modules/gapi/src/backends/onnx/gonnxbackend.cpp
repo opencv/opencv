@@ -214,12 +214,14 @@ inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
     GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
-
+    const auto type = toCV(ti.type) != -1
+        ? toCV(ti.type)
+        : CV_32S;
     if (src.depth() == CV_32F) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(toCV(ti.type) == CV_32F && "Only 32F model input is supported for 32F data");
+        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
@@ -240,7 +242,7 @@ inline void preprocess(const cv::Mat& src,
         const bool with_batch = ti.dims.size() == 4u ? true : false;
         const int shift = with_batch ? 0 : 1;
 
-        const auto ddepth = toCV(ti.type);
+        const auto ddepth = type;
         GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
                     && "Only 8U and 32F model input is supported for 8U data");
 
@@ -700,7 +702,10 @@ cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
         return params.out_metas.at(idx);
     }
     const auto ort_idx = getIdxByName(out_tensor_info, params.output_names[idx]);
-    return cv::GMatDesc(toCV(out_tensor_info[ort_idx].type),
+    const auto type = toCV(out_tensor_info[ort_idx].type) != -1
+        ? toCV(out_tensor_info[ort_idx].type)
+        : CV_32S;
+    return cv::GMatDesc(type,
                         toCV(out_tensor_info[ort_idx].dims));
 }
 
@@ -737,8 +742,11 @@ void ONNXCompiled::setOutput(int i, cv::Mat &m) {
 
 cv::Mat ONNXCompiled::allocOutput(int i) const {
     cv::Mat m;
+    const auto type = toCV(out_tensor_info[i].type) != -1
+        ? toCV(out_tensor_info[i].type)
+        : CV_32S;
     m.create(toCV(out_tensor_info[i].dims),
-             toCV(out_tensor_info[i].type));
+             type);
     return m;
 }
 
