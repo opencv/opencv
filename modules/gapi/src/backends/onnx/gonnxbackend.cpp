@@ -242,8 +242,7 @@ inline void preprocess(const cv::Mat& src,
         const bool with_batch = ti.dims.size() == 4u ? true : false;
         const int shift = with_batch ? 0 : 1;
 
-        const auto ddepth = type;
-        GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
+        GAPI_Assert((type == CV_8U || type == CV_32F)
                     && "Only 8U and 32F model input is supported for 8U data");
 
         // Assess the expected input layout
@@ -278,8 +277,8 @@ inline void preprocess(const cv::Mat& src,
 
         cv::Mat rsz, pp;
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
-        if (src.depth() == CV_8U && ddepth == CV_32F) {
-            rsz.convertTo(pp, ddepth, ti.normalize ? 1.f / 255 : 1.f);
+        if (src.depth() == CV_8U && type == CV_32F) {
+            rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -290,7 +289,7 @@ inline void preprocess(const cv::Mat& src,
 
         if (!is_hwc && new_c > 1) {
             // Convert to CHW
-            dst.create(cv::Size(new_w, new_h * new_c), ddepth);
+            dst.create(cv::Size(new_w, new_h * new_c), type);
             std::vector<cv::Mat> planes(new_c);
             for (int ch = 0; ch < new_c; ++ch) {
                 planes[ch] = dst.rowRange(ch * new_h, (ch + 1) * new_h);

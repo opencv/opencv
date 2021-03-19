@@ -326,9 +326,7 @@ public:
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
-            const auto type = toCV(info.GetElementType()) != -1
-                ? toCV(info.GetElementType())
-                : CV_32S;
+            const auto type = toCV(info.GetElementType());
             const std::vector<int> dims(shape.begin(), shape.end());
             if (type != -1) {
                 cv::Mat(dims, type,
@@ -341,7 +339,7 @@ public:
                 for (size_t l = 0; l < total; ++l) {
                     out_vec.push_back(static_cast<int>(ptr[l]));
                 }
-                cv::Mat (dims, CV_32S, out_vec.data()).copyTo(outs[i]);
+                cv::Mat(dims, CV_32S, out_vec.data()).copyTo(outs[i]);
             }
         }
     }
@@ -463,8 +461,8 @@ public:
 class ONNXRCNN : public ONNXWithRemap {
 private:
     const cv::Scalar rcnn_mean = { 102.9801, 115.9465, 122.7717 };
-    float range_max = 1333;
-    float range_min = 800;
+    const float range_max = 1333;
+    const float range_min = 800;
 public:
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
         cv::Mat rsz, cvt, chw, mn;
@@ -983,7 +981,7 @@ TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
     validate();
 }
 
-TEST_F(ONNXRCNN, InferRCNN)
+TEST_F(ONNXRCNN, InferRCNN64to32)
 {
     useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
     cv::Mat dst;
