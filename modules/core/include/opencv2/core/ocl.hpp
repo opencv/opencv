@@ -43,6 +43,8 @@
 #define OPENCV_OPENCL_HPP
 
 #include "opencv2/core.hpp"
+#include <typeinfo>
+#include <typeindex>
 
 namespace cv { namespace ocl {
 
@@ -296,8 +298,16 @@ public:
     public:
         virtual ~UserContext() {};
     };
-    void setUserContext(std::string id, std::shared_ptr<UserContext> userContext);
-    std::shared_ptr<UserContext> getUserContext(std::string id);
+    template <typename T>
+    void setUserContext(std::shared_ptr<T> userContext) {
+        setUserContext(typeid(T), userContext);
+    }
+    template <typename T>
+    std::shared_ptr<T> getUserContext() {
+        return std::dynamic_pointer_cast<T>(getUserContext(typeid(T)));
+    }
+    void setUserContext(std::type_index typeId, std::shared_ptr<UserContext> userContext);
+    std::shared_ptr<UserContext> getUserContext(std::type_index typeId);
 
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }

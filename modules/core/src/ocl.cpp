@@ -113,10 +113,6 @@
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
-#ifdef HAVE_DIRECTX
-#include "directx.hpp"
-#endif
-
 #ifdef HAVE_OPENCL_SVM
 #include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
 #include "opencv2/core/opencl/runtime/opencl_svm_hsa_extension.hpp"
@@ -2369,9 +2365,6 @@ protected:
         , contextId(CV_XADD(&g_contextId, 1))
         , configuration(configuration_)
         , handle(0)
-#ifdef HAVE_DIRECTX
-        , p_directx_impl(0)
-#endif
 #ifdef HAVE_OPENCL_SVM
         , svmInitialized(false)
 #endif
@@ -2397,9 +2390,6 @@ protected:
                 handle = NULL;
             }
             devices.clear();
-#ifdef HAVE_DIRECTX
-            directx::internal::deleteDirectXImpl(&p_directx_impl);
-#endif
         }
 
         {
@@ -2707,25 +2697,12 @@ public:
         return *bufferPoolHostPtr_.get();
     }
 
-#ifdef HAVE_DIRECTX
-    directx::internal::OpenCLDirectXImpl* p_directx_impl;
-
-    directx::internal::OpenCLDirectXImpl* getDirectXImpl()
-    {
-        if (!p_directx_impl)
-        {
-            p_directx_impl = directx::internal::createDirectXImpl();
-        }
-        return p_directx_impl;
+    std::map<std::type_index, std::shared_ptr<UserContext>> userContextStorage;
+    void setUserContext(std::type_index typeId, std::shared_ptr<UserContext> userContext) {
+        userContextStorage[typeId] = userContext;
     }
-#endif
-
-    std::map<std::string, std::shared_ptr<UserContext>> userContextStorage;
-    void setUserContext(std::string id, std::shared_ptr<UserContext> userContext) {
-        userContextStorage[id] = userContext;
-    }
-    std::shared_ptr<UserContext> getUserContext(std::string id) {
-        auto it = userContextStorage.find(id);
+    std::shared_ptr<UserContext> getUserContext(std::type_index typeId) {
+        auto it = userContextStorage.find(typeId);
         if (it != userContextStorage.end())
             return it->second;
         else
@@ -3128,14 +3105,14 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
-void Context::setUserContext(std::string id, std::shared_ptr<Context::UserContext> userContext) {
+void Context::setUserContext(std::type_index typeId, std::shared_ptr<Context::UserContext> userContext) {
     if (p)
-        p->setUserContext(id, userContext);
+        p->setUserContext(typeId, userContext);
 }
 
-std::shared_ptr<Context::UserContext> Context::getUserContext(std::string id) {
+std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId) {
     if (p)
-        return p->getUserContext(id);
+        return p->getUserContext(typeId);
     else
         return nullptr;
 }
@@ -7546,16 +7523,5 @@ uint64 Timer::durationNS() const
 }
 
 }} // namespace
-
-#ifdef HAVE_DIRECTX
-namespace cv { namespace directx { namespace internal {
-OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx)
-{
-    ocl::Context::Impl* i = ctx.getImpl();
-    CV_Assert(i);
-    return i->getDirectXImpl();
-}
-}}} // namespace cv::directx::internal
-#endif
 
 #endif // HAVE_OPENCL

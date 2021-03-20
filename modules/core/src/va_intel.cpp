@@ -48,9 +48,8 @@ namespace cv { namespace va_intel {
 
 #ifdef HAVE_VA_INTEL
 
-#define VAAPI_INTEROP_ID "VAAPIInterop"
-
-class VAAPIInterop : public ocl::Context::UserContext {
+class VAAPIInterop : public ocl::Context::UserContext
+{
 public:
     VAAPIInterop(cl_platform_id platform) {
         clCreateFromVA_APIMediaSurfaceINTEL       = (clCreateFromVA_APIMediaSurfaceINTEL_fn)
@@ -66,7 +65,6 @@ public:
         }
     }
     virtual ~VAAPIInterop() {
-        printf("~\n");
     }
     clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL;
     clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL;
@@ -164,9 +162,8 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             try
             {
                 clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                std::shared_ptr<VAAPIInterop> userCtx;
-                userCtx = std::make_shared<VAAPIInterop>(platform);
-                clExecCtx.getContext().setUserContext(VAAPI_INTEROP_ID, userCtx);
+                std::shared_ptr<VAAPIInterop> userCtx = std::make_shared<VAAPIInterop>(platform);
+                clExecCtx.getContext().setUserContext(VAAPI_INTEROP_CONTEXT_ID, userCtx);
             }
             catch (...)
             {
@@ -538,7 +535,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
-    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_ID);
+    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_CONTEXT_ID);
     if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && userCtx)
     {
         VAAPIInterop* interop = dynamic_cast<VAAPIInterop*>(userCtx.get());
@@ -643,7 +640,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
-    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_ID);
+    auto userCtx = ocl_context.getContext().getUserContext(VAAPI_INTEROP_CONTEXT_ID);
     if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && userCtx)
     {
         VAAPIInterop* interop = dynamic_cast<VAAPIInterop*>(userCtx.get());

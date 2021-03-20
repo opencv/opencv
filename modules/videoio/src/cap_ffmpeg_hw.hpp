@@ -48,7 +48,6 @@ extern "C" {
 
 #define HW_DEFAULT_POOL_SIZE    32
 #define HW_DEFAULT_SW_FORMAT    AV_PIX_FMT_NV12
-#define OCL_USER_CONTEXT_ID     "AVHWDeviceContext"
 
 using namespace cv;
 
@@ -363,7 +362,7 @@ static void hw_init_opencl(AVBufferRef* ctx) {
             AVBufferRef* ctx_;
         };
         ocl::Context &ocl_context = ocl::OpenCLExecutionContext::getCurrent().getContext();
-        ocl_context.setUserContext(OCL_USER_CONTEXT_ID, std::make_shared<HWContext>(ctx));
+        ocl_context.setUserContext(std::make_shared<HWContext>(ctx));
     }
 }
 
@@ -716,8 +715,14 @@ hw_copy_frame_to_umat(AVBufferRef* ctx, AVFrame* hw_frame, cv::OutputArray outpu
         VADisplay va_display = hw_get_va_display(hw_device_ctx);
         VASurfaceID va_surface = hw_get_va_surface(hw_frame);
         if (va_display && va_surface != VA_INVALID_SURFACE) {
-            va_intel::convertFromVASurface(va_display, va_surface, { hw_frame->width, hw_frame->height }, output);
-            return true;
+            try {
+                va_intel::convertFromVASurface(va_display, va_surface, { hw_frame->width, hw_frame->height }, output);
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
         }
     }
 #endif
@@ -734,8 +739,14 @@ hw_copy_frame_to_umat(AVBufferRef* ctx, AVFrame* hw_frame, cv::OutputArray outpu
                 // Copy GPU sub-texture to GPU texture
                 deviceContext->CopySubresourceRegion(singleTexture, 0, 0, 0, 0, arrayTexture, subresource, NULL);
                 // Copy GPU texture to cv::UMat
-                directx::convertFromD3D11Texture2D(singleTexture, output);
-                return true;
+                try {
+                    directx::convertFromD3D11Texture2D(singleTexture, output);
+                    return true;
+                }
+                catch (...)
+                {
+                    return false;
+                }
             }
         }
         if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) {
@@ -766,8 +777,14 @@ hw_copy_umat_to_frame(AVBufferRef* ctx, cv::InputArray input, AVFrame* hw_frame)
         VADisplay va_display = hw_get_va_display(hw_device_ctx);
         VASurfaceID va_surface = hw_get_va_surface(hw_frame);
         if (va_display != NULL && va_surface != VA_INVALID_SURFACE) {
-            va_intel::convertToVASurface(va_display, input, va_surface, { hw_frame->width, hw_frame->height });
-            return true;
+            try {
+                va_intel::convertToVASurface(va_display, input, va_surface, { hw_frame->width, hw_frame->height });
+                return true;
+            }
+            catch (...)
+            {
+                return false;
+            }
         }
     }
 #endif

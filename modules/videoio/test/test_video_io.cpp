@@ -46,6 +46,11 @@
 #ifdef HAVE_VA_INTEL
 #include <CL/cl_va_api_media_sharing_intel.h>
 #endif
+#ifdef HAVE_D3D11
+#ifdef HAVE_OPENCL
+#include <CL/cl_d3d11.h>
+#endif
+#endif
 
 namespace opencv_test
 {
