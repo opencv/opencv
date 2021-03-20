@@ -273,10 +273,13 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            if (ksize == 1)
+            bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmComputePlugin();
+            if (isArmTarget && blobs.empty())
                 return false;
+            if (ksize == 1)
+                return isArmTarget;
             if (ksize == 3)
-                return preferableTarget == DNN_TARGET_CPU;
+                return preferableTarget != DNN_TARGET_MYRIAD && !isArmTarget;
             if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
                 return false;
             return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
@@ -578,7 +581,7 @@ public:
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
-        CV_Assert(dims.size() == 4 || dims.size() == 5);
+        CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         if (nodes.size() > 1)
             CV_Assert(ieWeights);  // dynamic_cast should not fail
@@ -616,7 +619,7 @@ public:
         else
         {
             auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                             ngraph::Shape{kernel_shape.size()}, kernel_shape.data());
+                             ngraph::Shape{kernel_shape.size()}, std::vector<int64_t>(kernel_shape.begin(), kernel_shape.end()));
             ieWeights  = std::make_shared<ngraph::op::v1::Reshape>(ieWeights, shape, true);
         }
 
@@ -651,7 +654,7 @@ public:
             if (nodes.size() == 3)
             {
                 auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                    ngraph::Shape{shape.size()}, shape.data());
+                                    ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
                 bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
             }
             else
