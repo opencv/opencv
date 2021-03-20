@@ -222,6 +222,19 @@ public:
         return *this;
     }
 
+    Params& constInput(const std::string &layer_name,
+                       const cv::Mat &data,
+                       TraitAs hint = TraitAs::TENSOR) {
+        desc.const_inputs[layer_name] = {data, hint};
+        return *this;
+    }
+
+    Params& cfgNumRequests(size_t nireq) {
+        GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
+        desc.nireq = nireq;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return m_tag; }

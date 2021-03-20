@@ -18,8 +18,12 @@ ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2 AVX512_SKX)
 ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
 
+set(PARALLEL_ENABLE_PLUGINS_DEFAULT ON)
+if(EMSCRIPTEN OR IOS OR WINRT)
+  set(PARALLEL_ENABLE_PLUGINS_DEFAULT OFF)
+endif()
 # parallel backends configuration
-set(PARALLEL_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building parallel plugin support")
+set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building parallel plugin support")
 # TODO building plugins with OpenCV is not supported yet
 #set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
 #string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too

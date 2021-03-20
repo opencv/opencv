@@ -19,6 +19,21 @@ namespace cv
    using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
    using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
 
+   class GAPI_EXPORTS_W_SIMPLE GInferInputs
+   {
+   public:
+       GAPI_WRAP GInferInputs();
+       GAPI_WRAP void setInput(const std::string& name, const cv::GMat&   value);
+       GAPI_WRAP void setInput(const std::string& name, const cv::GFrame& value);
+   };
+
+   class GAPI_EXPORTS_W_SIMPLE GInferOutputs
+   {
+   public:
+       GAPI_WRAP GInferOutputs();
+       GAPI_WRAP cv::GMat at(const std::string& name);
+   };
+
    namespace detail
    {
        struct GAPI_EXPORTS_W_SIMPLE ExtractArgsCallback { };
