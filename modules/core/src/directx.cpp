@@ -1013,7 +1013,6 @@ static void __convertToD3D11Texture2DKHR(InputArray src, ID3D11Texture2D* pD3D11
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    using namespace cv::ocl;
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
@@ -1114,7 +1113,6 @@ static void __convertToD3D11Texture2DNV(InputArray src, ID3D11Texture2D* pD3D11T
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    using namespace cv::ocl;
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11_NV* impl = ctx.getUserContext<OpenCL_D3D11_NV>().get();
@@ -1211,7 +1209,6 @@ static void __convertFromD3D11Texture2DKHR(ID3D11Texture2D* pD3D11Texture2D, Out
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    using namespace cv::ocl;
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11* impl = ctx.getUserContext<OpenCL_D3D11>().get();
@@ -1309,7 +1306,6 @@ static void __convertFromD3D11Texture2DNV(ID3D11Texture2D* pD3D11Texture2D, Outp
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-    using namespace cv::ocl;
     ocl::Context& ctx = ocl::OpenCLExecutionContext::getCurrent().getContext();
     cl_context context = (cl_context)ctx.ptr();
     OpenCL_D3D11_NV* impl = ctx.getUserContext<OpenCL_D3D11_NV>().get();
@@ -1462,7 +1458,6 @@ void convertToD3D10Texture2D(InputArray src, ID3D10Texture2D* pD3D10Texture2D)
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
-    using namespace cv::ocl;
     cl_context context = (cl_context)ctx.ptr();
 
     UMat u = src.getUMat();
@@ -1522,7 +1517,6 @@ void convertFromD3D10Texture2D(ID3D10Texture2D* pD3D10Texture2D, OutputArray dst
     int textureType = getTypeFromDXGI_FORMAT(desc.Format);
     CV_Assert(textureType >= 0);
 
-    using namespace cv::ocl;
     cl_context context = (cl_context)ctx.ptr();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
@@ -1592,7 +1586,6 @@ void convertToDirect3DSurface9(InputArray src, IDirect3DSurface9* pDirect3DSurfa
     Size srcSize = src.size();
     CV_Assert(srcSize.width == (int)desc.Width && srcSize.height == (int)desc.Height);
 
-    using namespace cv::ocl;
     cl_context context = (cl_context)ctx.ptr();
 
     UMat u = src.getUMat();
@@ -1659,7 +1652,6 @@ void convertFromDirect3DSurface9(IDirect3DSurface9* pDirect3DSurface9, OutputArr
     int surfaceType = getTypeFromD3DFORMAT(desc.Format);
     CV_Assert(surfaceType >= 0);
 
-    using namespace cv::ocl;
     cl_context context = (cl_context)ctx.ptr();
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!

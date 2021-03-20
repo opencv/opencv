@@ -1,4 +1,4 @@
- /*M///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -573,7 +573,7 @@ void CvCapture_FFMPEG::init()
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
-    va_type = cv::VIDEO_ACCELERATION_NONE;
+    va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
 }
 
@@ -1479,8 +1479,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
 bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 {
-    //CV_INSTRUMENT_REGION();
-
     // check that we have HW frame in GPU memory
     if (!picture || !picture->hw_frames_ctx) {
         return false;
