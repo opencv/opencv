@@ -1479,6 +1479,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
 
 bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 {
+#if USE_AV_HW_CODECS
     // check that we have HW frame in GPU memory
     if (!picture || !picture->hw_frames_ctx) {
         return false;
@@ -1486,6 +1487,10 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 
     // GPU color conversion NV12->BGRA, from GPU media buffer to GPU OpenCL buffer
     return hw_copy_frame_to_umat(video_st->codec->hw_device_ctx, picture, output);
+#else
+    CV_UNUSED(output);
+    return false;
+#endif
 }
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
@@ -2224,6 +2229,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 }
 
 bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
+#if USE_AV_HW_CODECS
     if (!video_st->codec->hw_frames_ctx)
         return false;
 
@@ -2255,6 +2261,10 @@ bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
     av_frame_free(&hw_frame);
 
     return true;
+#else
+    CV_UNUSED(input);
+    return false;
+#endif
 }
 
 double CvVideoWriter_FFMPEG::getProperty(int propId) const
