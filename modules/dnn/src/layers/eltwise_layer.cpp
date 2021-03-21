@@ -45,6 +45,7 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -90,6 +91,7 @@ public:
         : outputChannels(0)
     {
         setParamsFrom(params);
+        hasVecInput = false;
         op = SUM;
         if (params.has("operation"))
         {
@@ -149,6 +151,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (hasVecInput && ELTWISE_CHANNNELS_SAME)
+            return backendId == DNN_BACKEND_OPENCV;
+
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_HALIDE ||
                ((((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (preferableTarget != DNN_TARGET_OPENCL || coeffs.empty()))
@@ -239,6 +244,21 @@ public:
         return false;
     }
 
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            MatShape inpShape = shape(inputs[i].size);
+            if (isAllOnes(inpShape, 2, inputs[i].dims))
+            {
+                hasVecInput = true;
+                return;
+            }
+        }
+    }
 
     class EltwiseInvoker : public ParallelLoopBody
     {
@@ -531,6 +551,9 @@ public:
         if ((inputs_.depth() == CV_16S && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
             return false;
 
+        if (hasVecInput)
+            return false; // TODO not implemented yet: https://github.com/opencv/opencv/pull/19477
+
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
@@ -811,15 +834,7 @@ public:
     Ptr<ActivationLayer> activ;
 
 private:
-    static bool isAllOnes(const MatShape &inputs, int startPos, int endPos) const
-    {
-        for (size_t i = startPos; i < endPos; i++)
-        {
-            if (inputs[i] != 1)
-                return false;
-        }
-        return true;
-    }
+    bool hasVecInput;
 };
 
 Ptr<EltwiseLayer> EltwiseLayer::create(const LayerParams& params)

@@ -207,11 +207,6 @@ TEST_P(Test_TensorFlow_layers, eltwise)
 
 TEST_P(Test_TensorFlow_layers, eltwise_add_vec)
 {
-    if (target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
     runTensorFlowNet("eltwise_add_vec");
 }
 
