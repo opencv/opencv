@@ -247,8 +247,8 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
                                 std::vector<cv::Mat>& measurements)
 {
     cv::RNG& rng = cv::theRNG();
-    measurements.reserve(testNumMeasurements);
-    haveMeasurements.reserve(testNumMeasurements);
+    measurements = std::vector<cv::Mat>(testNumMeasurements, cv::Mat::zeros(mDim, 1, type));
+    haveMeasurements = std::vector<bool>(testNumMeasurements, true);
     cv::Mat measurement(mDim, 1, type);
     for (std::size_t i = 0; i < testNumMeasurements; i++)
     {
@@ -256,20 +256,12 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
         {
             haveMeasurements[i] = rng(2u) == 1; // returns 0 or 1 - whether we have measurement
                                                 // at this iteration or not
-        }
-        else // testing the slowest case in which we have measurements at every iteration
-        {
-            haveMeasurements[i] = true;
-        }
+        } // if not - testing the slowest case in which we have measurements at every iteration
 
         if (haveMeasurements[i])
         {
             cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
             measurements.push_back(measurement);
-        }
-        else
-        {
-            measurements.push_back(cv::Mat::zeros(mDim, 1, type));
         }
     }
 }
