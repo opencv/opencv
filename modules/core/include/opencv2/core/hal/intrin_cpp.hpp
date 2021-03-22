@@ -63,6 +63,9 @@
 #define CV_SIMD256_64F 1
 #define CV_SIMD512 1
 #define CV_SIMD512_64F 1
+#else
+#define CV_SIMD256 0 // Explicitly disable SIMD256 and SIMD512 support for scalar intrinsic implementation
+#define CV_SIMD512 0 // to avoid warnings during compilation
 #endif
 //! @endcond
 
@@ -154,14 +157,15 @@ depending on chosen platform capabilities.
 - Constructors:
 @ref v_reg::v_reg(const _Tp *ptr) "from memory",
 - Other create methods:
-@ref vx_setall_s8, @ref vx_setall_u8, ...,
-@ref vx_setzero_u8, @ref vx_setzero_s8, ...
+vx_setall_s8, vx_setall_u8, ...,
+vx_setzero_u8, vx_setzero_s8, ...
 - Memory load operations:
-@ref vx_load, @ref vx_load_aligned, @ref vx_load_low, @ref vx_load_halves,
+vx_load, vx_load_aligned, vx_load_low, vx_load_halves,
 - Memory operations with expansion of values:
-@ref vx_load_expand, @ref vx_load_expand_q
+vx_load_expand, vx_load_expand_q
 
 Also there are fixed size register load/store operations.
+
 For 128 bit registers
 - Constructors:
 @ref v_reg::v_reg(const _Tp *ptr) "from memory",
@@ -173,6 +177,7 @@ For 128 bit registers
 @ref v_load, @ref v_load_aligned, @ref v_load_low, @ref v_load_halves,
 - Memory operations with expansion of values:
 @ref v_load_expand, @ref v_load_expand_q
+
 For 256 bit registers(check CV_SIMD256 preprocessor definition)
 - Constructors:
 @ref v_reg::v_reg(const _Tp *ptr) "from memory",
@@ -184,6 +189,7 @@ For 256 bit registers(check CV_SIMD256 preprocessor definition)
 @ref v256_load, @ref v256_load_aligned, @ref v256_load_low, @ref v256_load_halves,
 - Memory operations with expansion of values:
 @ref v256_load_expand, @ref v256_load_expand_q
+
 For 512 bit registers(check CV_SIMD512 preprocessor definition)
 - Constructors:
 @ref v_reg::v_reg(const _Tp *ptr) "from memory",
@@ -1583,7 +1589,7 @@ inline v_reg<_Tp, simd128_width / sizeof(_Tp)> v_load(const _Tp* ptr)
 #if CV_STRONG_ALIGNMENT
     CV_Assert(isAligned<sizeof(_Tp)>(ptr));
 #endif
-    return v_reg<_Tp, V_TypeTraits<_Tp>::nlanes128>(ptr);
+    return v_reg<_Tp, simd128_width / sizeof(_Tp)>(ptr);
 }
 
 #if CV_SIMD256
@@ -3292,6 +3298,12 @@ v_pack_store(float16_t* ptr, const v_reg<float, n>& v)
 }
 
 inline void v_cleanup() {}
+#if CV_SIMD256
+inline void v256_cleanup() {}
+#endif
+#if CV_SIMD512
+inline void v512_cleanup() {}
+#endif
 
 //! @}
 
