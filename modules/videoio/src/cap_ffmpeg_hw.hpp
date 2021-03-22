@@ -272,11 +272,11 @@ bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string
 
 #ifdef HAVE_VA
 static VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx) {
-    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
-        return ((AVVAAPIDeviceContext*)hw_device_ctx->hwctx)->display;
+    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) { // we stored pointer to child context in 'user_opaque' field
+        hw_device_ctx = (AVHWDeviceContext*)hw_device_ctx->user_opaque;
     }
-    else if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) {
-        return (VADisplay)hw_device_ctx->user_opaque;
+    if (hw_device_ctx && hw_device_ctx->type == AV_HWDEVICE_TYPE_VAAPI) {
+        return ((AVVAAPIDeviceContext*)hw_device_ctx->hwctx)->display;
     }
     return NULL;
 }
@@ -286,6 +286,7 @@ static VASurfaceID hw_get_va_surface(AVFrame* picture) {
         return (VASurfaceID)(size_t)picture->data[3]; // As defined by AV_PIX_FMT_VAAPI
     }
     else if (picture->format == AV_PIX_FMT_QSV) {
+        // TODO: should be possible to remove this hack by using function av_hwframe_ctx_create_derived()
         void* /*mfxFrameSurface1*/ *surface = (void **) picture->data[3]; // As defined by AV_PIX_FMT_QSV
         // Access Data.MemId field of mfxFrameSurface1 structure by offset, to avoid dependency on MFX headers.
         // mfxFrameSurface1 is packed structure with binary backward compatibility
@@ -301,11 +302,11 @@ static VASurfaceID hw_get_va_surface(AVFrame* picture) {
 
 #ifdef HAVE_D3D11
 static ID3D11Device* hw_get_d3d11_device(AVHWDeviceContext* hw_device_ctx) {
-    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
-        return ((AVD3D11VADeviceContext*)hw_device_ctx->hwctx)->device;
+    if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) { // we stored pointer to child context in 'user_opaque' field
+        hw_device_ctx = (AVHWDeviceContext*)hw_device_ctx->user_opaque;
     }
-    else if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) {
-        return (ID3D11Device*)hw_device_ctx->user_opaque;
+    if (hw_device_ctx && hw_device_ctx->type == AV_HWDEVICE_TYPE_D3D11VA) {
+        return ((AVD3D11VADeviceContext*)hw_device_ctx->hwctx)->device;
     }
     return NULL;
 }
@@ -415,14 +416,9 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
             CV_LOG_INFO(NULL, "FFMPEG: Failed to create derived video acceleration (av_hwdevice_ctx_create_derived) for " << hw_name << ". Error=" << err);
             return NULL;
         } else {
-            // Store device pointer of child context in 'user_opaque' field of parent context.
+            // Store child context in 'user_opaque' field of parent context.
             // Parent context keeps reference to child context, but in private section.
-#ifdef _WIN32
-            void* device_ptr = hw_get_d3d11_device((AVHWDeviceContext *)ctx->data);
-#else
-            void* device_ptr = hw_get_va_display((AVHWDeviceContext *)ctx->data);
-#endif
-            ((AVHWDeviceContext *)derived_ctx->data)->user_opaque = device_ptr;
+            ((AVHWDeviceContext *)derived_ctx->data)->user_opaque = (AVHWDeviceContext *)ctx->data;
             av_buffer_unref(&ctx);
             CV_LOG_INFO(NULL, "FFMPEG: Created " << hw_name << " derived video acceleration context from " << child_name << " device attached to OpenCL context");
             return derived_ctx;
@@ -490,14 +486,9 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
             }
             else
             {
-                // Store device pointer of child context in 'user_opaque' field of parent context.
-                // Parent context keeps reference to child context, but in private non-accesible section.
-#ifdef _WIN32
-                void* device_ptr = hw_get_d3d11_device((AVHWDeviceContext *)hw_device_ctx->data);
-#else
-                void* device_ptr = hw_get_va_display((AVHWDeviceContext *)hw_device_ctx->data);
-#endif
-                ((AVHWDeviceContext *)derived_ctx->data)->user_opaque = device_ptr;
+                // Store child context in 'user_opaque' field of parent context.
+                // Parent context keeps reference to child context, but in private section.
+                ((AVHWDeviceContext *)derived_ctx->data)->user_opaque = (AVHWDeviceContext *)hw_device_ctx->data;
                 CV_LOG_INFO(NULL, "FFMPEG: Created derived video acceleration context (av_hwdevice_ctx_create_derived) for " << hw_name);
             }
         }
@@ -701,6 +692,8 @@ AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPi
 // GPU color conversion NV12->BGRA via OpenCL extensions
 static bool
 hw_copy_frame_to_umat(AVBufferRef* ctx, AVFrame* hw_frame, cv::OutputArray output) {
+    CV_UNUSED(hw_frame);
+    CV_UNUSED(output);
     if (!ctx)
         return false;
 
