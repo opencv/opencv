@@ -126,9 +126,11 @@ DEFINE_SIMD_TESTS(256, AVX512_SKX)
 
 TEST(hal_intrin256, float16x16_FP16)
 {
+#if CV_TRY_FP16
     //CV_CPU_CALL_FP16_(test_hal_intrin_float16, ());
     CV_CPU_CALL_AVX2_(test_hal_intrin_float16, ());
-    throw SkipTestException("Unsupported hardware: FP16 is not available");
+#endif
+    throw SkipTestException("Unsupported: FP16 is not available");
 }
 
 
@@ -142,8 +144,10 @@ namespace intrin512 {
 
 TEST(hal_intrin512, float16x32_FP16)
 {
+#if CV_TRY_FP16
     CV_CPU_CALL_AVX512_SKX_(test_hal_intrin_float16, ());
-    throw SkipTestException("Unsupported hardware: FP16 is not available");
+#endif
+    throw SkipTestException("Unsupported: FP16 is not available");
 }
 
 

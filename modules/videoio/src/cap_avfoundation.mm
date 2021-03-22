@@ -36,6 +36,7 @@
 #include "opencv2/imgproc.hpp"
 #include "cap_interface.hpp"
 #include <iostream>
+#include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
 
@@ -1255,16 +1256,25 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
         //exception;
     }
 
-    // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
+    // Three codec supported AVVideoCodecH264 AVVideoCodecJPEG AVVideoCodecTypeHEVC
     // On iPhone 3G H264 is not supported.
     if (fourcc == CV_FOURCC('J','P','E','G') || fourcc == CV_FOURCC('j','p','e','g') ||
-            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g') ){
+            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g')){
         codec = [AVVideoCodecJPEG copy]; // Use JPEG codec if specified, otherwise H264
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
+// Available since iOS 11
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+    }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
+            fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
+        if (@available(iOS 11, *)) {
+            codec = [AVVideoCodecTypeHEVC copy];
+        } else {
+            codec = [AVVideoCodecH264 copy];
+        }
+#endif
     }else{
         codec = [AVVideoCodecH264 copy]; // default canonical H264.
-
     }
 
     //NSLog(@"Path: %@", path);

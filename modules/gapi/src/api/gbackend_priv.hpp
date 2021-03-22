@@ -19,7 +19,7 @@
 #include "opencv2/gapi/gkernel.hpp"
 
 #include "compiler/gmodel.hpp"
-
+#include "compiler/gislandmodel.hpp"
 
 namespace cv
 {
@@ -67,6 +67,22 @@ public:
     virtual void addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupContext &);
 
     virtual cv::gapi::GKernelPackage auxiliaryKernels() const;
+
+    // Ask backend if it has a custom control over island fusion process
+    // This method is quite redundant but there's nothing better fits
+    // the current fusion process. By default, [existing] backends don't
+    // control the merge.
+    // FIXME: Refactor to a single entity?
+    virtual bool controlsMerge() const;
+
+    // Ask backend if it is ok to merge these two islands connected
+    // via a data slot. By default, [existing] backends allow to merge everything.
+    // FIXME: Refactor to a single entity?
+    // FIXME: Strip down the type details form graph? (make it ade::Graph?)
+    virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &g,
+                             const ade::NodeHandle &a_nh,
+                             const ade::NodeHandle &slot_nh,
+                             const ade::NodeHandle &b_nh) const;
 
     virtual ~Priv() = default;
 };

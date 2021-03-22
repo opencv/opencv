@@ -1,7 +1,12 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+#include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types_c.h"
-#include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
 // glue
 
 CvMatND cvMatND(const cv::Mat& m)
@@ -356,7 +361,6 @@ cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
     }
 }
 
-
 CV_IMPL int
 cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
            CvTermCriteria termcrit, int attempts, CvRNG*,
@@ -385,3 +389,5 @@ cvKMeans2( const CvArr* _samples, int cluster_count, CvArr* _labels,
         *_compactness = compactness;
     return 1;
 }
+
+#endif  // OPENCV_EXCLUDE_C_API

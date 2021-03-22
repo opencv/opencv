@@ -21,7 +21,10 @@ cv::GOrigin::GOrigin(GShape s,
 }
 
 cv::GOrigin::GOrigin(GShape s, cv::gimpl::ConstVal v)
-    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT), kind(cv::detail::OpaqueKind::CV_UNKNOWN)
+    : shape(s), node(cv::GNode::Const()), value(v), port(INVALID_PORT),
+      kind(util::holds_alternative<detail::VectorRef>(v)
+               ? util::get<detail::VectorRef>(v).getKind()
+               : cv::detail::OpaqueKind::CV_UNKNOWN)
 {
 }
 

@@ -663,6 +663,10 @@ class CppHeaderParser(object):
         stack_top = self.block_stack[-1]
         context = stack_top[self.BLOCK_TYPE]
 
+        if stmt.startswith('inline namespace'):
+            # emulate anonymous namespace
+            return "namespace", "", True, None
+
         stmt_type = ""
         if end_token == "{":
             stmt_type = "block"
@@ -958,7 +962,9 @@ class CppHeaderParser(object):
                         else:
                             decls.append(decl)
 
-                            if self._generate_gpumat_decls and "cv.cuda" in decl[0]:
+                            if self._generate_gpumat_decls and ("cv.cuda" in decl[0] or decl[0] in [
+                                "cv.imshow", # https://github.com/opencv/opencv/issues/18553
+                            ]):
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
                                 # same declaration working with GpuMat
                                 args = decl[3]

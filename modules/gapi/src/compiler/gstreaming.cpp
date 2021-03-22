@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 
 #include <ade/graph.hpp>
+#include <ade/util/zip_range.hpp>   // util::indexed
 
 #include <opencv2/gapi/gproto.hpp> // can_describe
 #include <opencv2/gapi/gcompiled.hpp>
@@ -69,6 +70,11 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
+bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
+{
+    return m_exec->pull(std::move(outs));
+}
+
 bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
 {
     return m_exec->try_pull(std::move(outs));
@@ -90,6 +96,12 @@ cv::GStreamingCompiled::GStreamingCompiled()
 {
 }
 
+// NB: This overload is called from python code
+void cv::GStreamingCompiled::setSource(const cv::detail::ExtractArgsCallback& callback)
+{
+    setSource(callback(m_priv->inInfo()));
+}
+
 void cv::GStreamingCompiled::setSource(GRunArgs &&ins)
 {
     // FIXME: verify these input parameters according to the graph input meta
@@ -107,6 +119,25 @@ void cv::GStreamingCompiled::start()
 }
 
 bool cv::GStreamingCompiled::pull(cv::GRunArgsP &&outs)
+{
+    return m_priv->pull(std::move(outs));
+}
+
+std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
+{
+    GRunArgs run_args;
+    GRunArgsP outs;
+    const auto& out_info = m_priv->outInfo();
+    run_args.reserve(out_info.size());
+    outs.reserve(out_info.size());
+
+    cv::detail::constructGraphOutputs(m_priv->outInfo(), run_args, outs);
+
+    bool is_over = m_priv->pull(std::move(outs));
+    return std::make_tuple(is_over, run_args);
+}
+
+bool cv::GStreamingCompiled::pull(cv::GOptRunArgsP &&outs)
 {
     return m_priv->pull(std::move(outs));
 }

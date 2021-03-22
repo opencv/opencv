@@ -122,6 +122,8 @@ public:
         {
             if (std::string::npos != i->find("MYRIAD") && target == DNN_TARGET_MYRIAD)
                 return true;
+            if (std::string::npos != i->find("HDDL") && target == DNN_TARGET_HDDL)
+                return true;
             else if (std::string::npos != i->find("FPGA") && target == DNN_TARGET_FPGA)
                 return true;
             else if (std::string::npos != i->find("CPU") && target == DNN_TARGET_CPU)
@@ -186,6 +188,14 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
 #endif
         }
+        if (checkIETarget(DNN_TARGET_HDDL)) {
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_HDDL));
+#endif
+#ifdef HAVE_DNN_NGRAPH
+            backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_HDDL));
+#endif
+        }
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (checkIETarget(DNN_TARGET_FPGA))
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, DNN_TARGET_FPGA));
@@ -229,11 +239,10 @@ private:
 #endif
 
 #ifdef HAVE_CUDA
-        if (haveCUDA() && cuda4dnn::isDeviceCompatible())
+        if (haveCUDA())
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            if (cuda4dnn::doesDeviceSupportFP16())
-                backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
     }
@@ -1172,6 +1181,7 @@ struct Net::Impl : public detail::NetImplBase
         preferableBackend = DNN_BACKEND_DEFAULT;
         preferableTarget = DNN_TARGET_CPU;
         skipInfEngineInit = false;
+        hasDynamicShapes = false;
     }
 
     Ptr<DataLayer> netInputLayer;
@@ -1183,6 +1193,7 @@ struct Net::Impl : public detail::NetImplBase
     int preferableTarget;
     String halideConfigFile;
     bool skipInfEngineInit;
+    bool hasDynamicShapes;
     // Map host data to backend specific wrapper.
     std::map<void*, Ptr<BackendWrapper> > backendWrappers;
 
@@ -1379,6 +1390,7 @@ struct Net::Impl : public detail::NetImplBase
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
+                  preferableTarget == DNN_TARGET_HDDL ||
                   preferableTarget == DNN_TARGET_FPGA
             );
         }
@@ -1585,7 +1597,9 @@ struct Net::Impl : public detail::NetImplBase
     {
         CV_TRACE_FUNCTION();
         if (preferableBackend == DNN_BACKEND_OPENCV)
+        {
             CV_Assert(preferableTarget == DNN_TARGET_CPU || IS_DNN_OPENCL_TARGET(preferableTarget));
+        }
         else if (preferableBackend == DNN_BACKEND_HALIDE)
             initHalideBackend();
         else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -1811,7 +1825,7 @@ struct Net::Impl : public detail::NetImplBase
                                     INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R2) &&
                                     supportsCPUFallback;
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
-                if (preferableTarget == DNN_TARGET_MYRIAD)
+                if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
                 {
                     for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
                     {
@@ -1821,6 +1835,7 @@ struct Net::Impl : public detail::NetImplBase
 
                 // TODO: fix these workarounds
                 if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_HDDL ||
                     preferableTarget == DNN_TARGET_OPENCL ||
                     preferableTarget == DNN_TARGET_OPENCL_FP16)
                     customizable &= ld.type != "Concat";
@@ -1908,6 +1923,7 @@ struct Net::Impl : public detail::NetImplBase
             // Convert weights in FP16 for specific targets.
             if ((preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                  preferableTarget == DNN_TARGET_MYRIAD ||
+                 preferableTarget == DNN_TARGET_HDDL ||
                  preferableTarget == DNN_TARGET_FPGA) && !fused)
             {
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1)
@@ -2102,7 +2118,7 @@ struct Net::Impl : public detail::NetImplBase
                 bool customizable = ld.id != 0 && supportsCPUFallback;
 
                 // TODO: there is a bug in Myriad plugin with custom layers shape infer.
-                if (preferableTarget == DNN_TARGET_MYRIAD)
+                if (preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL)
                 {
                     for (int i = 0; customizable && i < ld.inputBlobs.size(); ++i)
                     {
@@ -2112,6 +2128,7 @@ struct Net::Impl : public detail::NetImplBase
 
                 // TODO: fix these workarounds
                 if (preferableTarget == DNN_TARGET_MYRIAD ||
+                    preferableTarget == DNN_TARGET_HDDL ||
                     preferableTarget == DNN_TARGET_OPENCL ||
                     preferableTarget == DNN_TARGET_OPENCL_FP16)
                     customizable &= ld.type != "Concat";
@@ -2345,6 +2362,9 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend == DNN_BACKEND_CUDA);
 
 #ifdef HAVE_CUDA
+        if (!cudaInfo) /* we need to check only once */
+            cuda4dnn::checkVersions();
+
         if (cuda4dnn::getDeviceCount() <= 0)
             CV_Error(Error::StsError, "No CUDA capable device found.");
 
@@ -2355,7 +2375,10 @@ struct Net::Impl : public detail::NetImplBase
             CV_Error(Error::GpuNotSupported, "OpenCV was not built to work with the selected device. Please check CUDA_ARCH_PTX or CUDA_ARCH_BIN in your build configuration.");
 
         if (preferableTarget == DNN_TARGET_CUDA_FP16 && !cuda4dnn::doesDeviceSupportFP16())
-            CV_Error(Error::StsError, "The selected CUDA device does not support FP16 operations.");
+        {
+            CV_LOG_WARNING(NULL, "The selected CUDA device does not support FP16 target; switching to FP32 target.");
+            preferableTarget = DNN_TARGET_CUDA;
+        }
 
         if (!cudaInfo)
         {
@@ -2366,7 +2389,6 @@ struct Net::Impl : public detail::NetImplBase
 
             auto d2h_stream = cuda4dnn::csl::Stream(true); // stream for background D2H data transfers
             cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
-            cuda4dnn::checkVersions();
         }
 
         cudaInfo->workspace = cuda4dnn::csl::Workspace(); // release workspace memory if any
@@ -2652,15 +2674,17 @@ struct Net::Impl : public detail::NetImplBase
 
                 // OpenCL: fuse convolution layer followed by eltwise + relu
                 // CUDA: fuse convolution layer followed by eltwise (and optional activation)
-                if ((IS_DNN_OPENCL_TARGET(preferableTarget) || IS_DNN_CUDA_TARGET(preferableTarget)) &&
-                    ld.layerInstance->type == "Convolution" )
+                while (nextData &&
+                    (IS_DNN_OPENCL_TARGET(preferableTarget) || IS_DNN_CUDA_TARGET(preferableTarget)) &&
+                    ld.layerInstance->type == "Convolution"
+                )  // semantic of 'if'
                 {
-                    Ptr<EltwiseLayer> nextEltwiseLayer;
-                    if( nextData )
-                        nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                    if (nextEltwiseLayer.empty())
+                        break;
+
 #ifdef HAVE_CUDA
                     // CUDA backend supports fusion with eltwise sum (without variable channels)
-                    // `nextEltwiseLayer` is reset if eltwise layer doesn't have a compatible configuration for fusion
                     if (IS_DNN_CUDA_TARGET(preferableTarget) && !nextEltwiseLayer.empty())
                     {
                         // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
@@ -2670,10 +2694,43 @@ struct Net::Impl : public detail::NetImplBase
                         // CUDA backend uses EltwiseOp when all operands have the same number of channels; otherwise, ShortcutOp is used.
                         // Hence, a successful cast to EltwiseOp implies that the number of channels is same in all operand tensors.
                         if (eltwiseNode.empty() || eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
-                            nextEltwiseLayer = Ptr<EltwiseLayer>();
+                            break;
                     }
 #endif
-                    if (!nextEltwiseLayer.empty() && nextData && nextData->inputBlobsId.size() == 2)
+
+                    if (IS_DNN_OPENCL_TARGET(preferableTarget) && pinsToKeep.count(lpNext) != 0)
+                        break;
+                    if (nextData->inputBlobsId.size() != 2)
+                        break;
+
+                    if (IS_DNN_OPENCL_TARGET(preferableTarget))
+                    {
+                        if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) == "sum")
+                        {
+                            if (nextData->params.has("coeff"))
+                            {
+                                DictValue paramCoeff = nextData->params.get("coeff");
+                                int n = paramCoeff.size();
+                                bool isCoeffOneOne = (n == 2);
+                                for (int i = 0; isCoeffOneOne && i < n; i++)
+                                {
+                                    float c = paramCoeff.get<float>(i);
+                                    isCoeffOneOne &= (c == 1.0f);
+                                }
+                                if (!isCoeffOneOne)
+                                {
+                                    CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion of 'Sum' without coeffs (or {1.0, 1.0}) is supported only");
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            CV_LOG_DEBUG(NULL, "DNN/OpenCL: fusion with eltwise operation is not supported: " << nextData->params.get<String>("operation"));
+                            break;
+                        }
+                    }
+
                     {
                         LayerData *eltwiseData = nextData;
 
@@ -2730,11 +2787,13 @@ struct Net::Impl : public detail::NetImplBase
                                 // we need to check them separately; hence, the fuse variables
                                 bool fuse_eltwise = false, fuse_activation = false;
 
+                                Ptr<PowerLayer> activ_power;
                                 if (IS_DNN_OPENCL_TARGET(preferableTarget) && !nextFusabeleActivLayer.empty() &&
                                     nextData &&
                                     (!nextData->type.compare("ReLU") ||
                                      !nextData->type.compare("ChannelsPReLU") ||
-                                     !nextData->type.compare("Power")) &&
+                                     (!nextData->type.compare("Power") && (activ_power = nextFusabeleActivLayer.dynamicCast<PowerLayer>()) && activ_power->scale == 1.0f)
+                                    ) &&
                                     currLayer->setActivation(nextFusabeleActivLayer))
                                 {
                                     fuse_eltwise = true;
@@ -2866,6 +2925,8 @@ struct Net::Impl : public detail::NetImplBase
                             }
                         }
                     }
+
+                    break;
                 }
             }
 
@@ -2915,7 +2976,7 @@ struct Net::Impl : public detail::NetImplBase
                 // the concatenation optimization is applied with batch_size > 1.
                 // so, for now, we only apply this optimization in the most popular
                 // case batch_size == 1.
-                int axis = clamp(concatLayer->axis, output.dims);
+                int axis = normalize_axis(concatLayer->axis, output.dims);
                 if( output.total(0, axis) == 1 )
                 {
                     size_t i, ninputs = ld.inputBlobsId.size();
@@ -3105,11 +3166,11 @@ struct Net::Impl : public detail::NetImplBase
 
         Ptr<Layer> layer = ld.layerInstance;
 
-        TickMeter tm;
-        tm.start();
-
         if( !ld.skip )
         {
+            TickMeter tm;
+            tm.start();
+
             std::map<int, Ptr<BackendNode> >::iterator it = ld.backendNodes.find(preferableBackend);
             if (preferableBackend == DNN_BACKEND_OPENCV || it == ld.backendNodes.end() || it->second.empty())
             {
@@ -3318,12 +3379,15 @@ struct Net::Impl : public detail::NetImplBase
                     CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
                 }
             }
+
+            tm.stop();
+            int64 t = tm.getTimeTicks();
+            layersTimings[ld.id] = (t > 0) ? t : t + 1;  // zero for skipped layers only
         }
         else
-            tm.reset();
-
-        tm.stop();
-        layersTimings[ld.id] = tm.getTimeTicks();
+        {
+            layersTimings[ld.id] = 0;
+        }
 
         ld.flag = 1;
     }
@@ -3481,6 +3545,46 @@ struct Net::Impl : public detail::NetImplBase
         inOutShapes[0].in = netInputShapes; //insert shape for first input layer
         getLayerShapesRecursively(layerId, inOutShapes);
         shapes = inOutShapes[layerId];
+    }
+
+    void updateLayersShapes()
+    {
+        CV_Assert(!layers[0].outputBlobs.empty());
+        ShapesVec inputShapes;
+        for(int i = 0; i < layers[0].outputBlobs.size(); i++)
+        {
+            Mat& inp = layers[0].outputBlobs[i];
+            CV_Assert(inp.total());
+            if (preferableBackend == DNN_BACKEND_OPENCV &&
+                preferableTarget == DNN_TARGET_OPENCL_FP16)
+            {
+                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+            }
+            inputShapes.push_back(shape(inp));
+        }
+        LayersShapesMap layersShapes;
+        layersShapes[0].in = inputShapes;
+        for (MapIdToLayerData::iterator it = layers.begin();
+             it != layers.end(); it++)
+        {
+            int layerId = it->first;
+            std::vector<LayerPin>& inputLayerIds = it->second.inputBlobsId;
+            if (layersShapes[layerId].in.empty())
+            {
+                for(int i = 0; i < inputLayerIds.size(); i++)
+                {
+                    int inputLayerId = inputLayerIds[i].lid;
+                    LayersShapesMap::iterator inputIt = layersShapes.find(inputLayerId);
+                    if(inputIt == layersShapes.end() || inputIt->second.out.empty())
+                    {
+                        getLayerShapesRecursively(inputLayerId, layersShapes);
+                    }
+                    const MatShape& shape = layersShapes[inputLayerId].out[inputLayerIds[i].oid];
+                    layersShapes[layerId].in.push_back(shape);
+                }
+                it->second.layerInstance->updateMemoryShapes(layersShapes[layerId].in);
+            }
+        }
     }
 
     LayerPin getLatestLayerPin(const std::vector<LayerPin>& pins)
@@ -3896,6 +4000,8 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
     int id = ++impl->lastLayerId;
     impl->layerNameToId.insert(std::make_pair(name, id));
     impl->layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
+    if (params.get<bool>("has_dynamic_shapes", false))
+        impl->hasDynamicShapes = true;
 
     return id;
 }
@@ -3932,11 +4038,16 @@ void Net::connect(String _outPin, String _inPin)
 Mat Net::forward(const String& outputName)
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!empty());
 
     String layerName = outputName;
 
     if (layerName.empty())
-        layerName = getLayerNames().back();
+    {
+        std::vector<String> layerNames = getLayerNames();
+        CV_Assert(!layerNames.empty());
+        layerName = layerNames.back();
+    }
 
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
@@ -3948,11 +4059,17 @@ Mat Net::forward(const String& outputName)
 AsyncArray Net::forwardAsync(const String& outputName)
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!empty());
+
 #ifdef CV_CXX11
     String layerName = outputName;
 
     if (layerName.empty())
-        layerName = getLayerNames().back();
+    {
+        std::vector<String> layerNames = getLayerNames();
+        CV_Assert(!layerNames.empty());
+        layerName = layerNames.back();
+    }
 
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
@@ -3973,11 +4090,16 @@ AsyncArray Net::forwardAsync(const String& outputName)
 void Net::forward(OutputArrayOfArrays outputBlobs, const String& outputName)
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!empty());
 
     String layerName = outputName;
 
     if (layerName.empty())
-        layerName = getLayerNames().back();
+    {
+        std::vector<String> layerNames = getLayerNames();
+        CV_Assert(!layerNames.empty());
+        layerName = layerNames.back();
+    }
 
     std::vector<LayerPin> pins(1, impl->getPinByAlias(layerName));
     impl->setUpNet(pins);
@@ -4211,8 +4333,13 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     bool oldShape = prevShape == blobShape;
 
     blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
-    if (!oldShape)
+    if (!oldShape) {
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
+        if (impl->hasDynamicShapes)
+        {
+            impl->updateLayersShapes();
+        }
+    }
 
     if (!ld.outputBlobsWrappers[pin.oid].empty())
     {
@@ -4338,7 +4465,7 @@ string Net::Impl::dump()
             prevNode = itBackend->second;
         }
     }
-    string colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151"};
+    std::vector<string> colors = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff"};
     string backend;
     switch (prefBackend)
     {
@@ -4483,12 +4610,14 @@ string Net::Impl::dump()
             case DNN_TARGET_OPENCL: out << "OCL"; colorId = 1; break;
             case DNN_TARGET_OPENCL_FP16: out << "OCL_FP16"; colorId = 2; break;
             case DNN_TARGET_MYRIAD: out << "MYRIAD"; colorId = 3; break;
+            case DNN_TARGET_HDDL: out << "HDDL"; colorId = 8; break;
             case DNN_TARGET_VULKAN: out << "VULKAN"; colorId = 7; break;
             case DNN_TARGET_FPGA: out << "FPGA"; colorId = 4; break;
             case DNN_TARGET_CUDA: out << "CUDA"; colorId = 5; break;
             case DNN_TARGET_CUDA_FP16: out << "CUDA_FP16"; colorId = 6; break;
             // don't use default:
         }
+        CV_Assert(colorId < colors.size());
         out << "\\n";  // align center
         out << ((clusterIds.size() == 1)? "\" " : " }\" ");
         out << "fillcolor=\"" << colors[colorId] << "\" ";
@@ -4569,6 +4698,8 @@ std::vector<Ptr<Layer> > Net::getLayerInputs(LayerId layerId)
 
 std::vector<String> Net::getLayerNames() const
 {
+    CV_TRACE_FUNCTION();
+
     std::vector<String> res;
     res.reserve(impl->layers.size());
 
@@ -5159,6 +5290,10 @@ bool Layer::getMemoryShapes(const std::vector<MatShape> &inputs,
     return false;
 }
 
+bool Layer::updateMemoryShapes(const std::vector<MatShape> &inputs)
+{
+    return true;
+}
 //////////////////////////////////////////////////////////////////////////
 
 static Mutex& getLayerFactoryMutex()

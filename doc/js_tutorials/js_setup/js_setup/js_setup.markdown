@@ -7,12 +7,12 @@ You don't have to build your own copy if you simply want to start using it. Refe
 Installing Emscripten
 -----------------------------
 
-[Emscripten](https://github.com/kripken/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV.js.
+[Emscripten](https://github.com/emscripten-core/emscripten) is an LLVM-to-JavaScript compiler. We will use Emscripten to build OpenCV.js.
 
 @note
 While this describes installation of required tools from scratch, there's a section below also describing an alternative procedure to perform the same build using docker containers which is often easier.
 
-To Install Emscripten, follow instructions of [Emscripten SDK](https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
+To Install Emscripten, follow instructions of [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html).
 
 For example:
 @code{.bash}
@@ -21,15 +21,29 @@ For example:
 ./emsdk activate latest
 @endcode
 
-@note
-To compile to [WebAssembly](http://webassembly.org), you need to install and activate [Binaryen](https://github.com/WebAssembly/binaryen) with the `emsdk` command. Please refer to [Developer's Guide](http://webassembly.org/getting-started/developers-guide/) for more details.
 
-After install, ensure the `EMSCRIPTEN` environment is setup correctly.
+After install, ensure the `EMSDK` environment is setup correctly.
 
 For example:
 @code{.bash}
 source ./emsdk_env.sh
-echo ${EMSCRIPTEN}
+echo ${EMSDK}
+@endcode
+
+Modern versions of Emscripten requires to use `emcmake` / `emmake` launchers:
+
+@code{.bash}
+emcmake sh -c 'echo ${EMSCRIPTEN}'
+@endcode
+
+
+The version 2.0.10 of emscripten is verified for latest WebAssembly. Please check the version of Emscripten to use the newest features of WebAssembly.
+
+For example:
+@code{.bash}
+./emsdk update
+./emsdk install 2.0.10
+./emsdk activate 2.0.10
 @endcode
 
 Obtaining OpenCV Source Code
@@ -62,8 +76,7 @@ Building OpenCV.js from Source
 
     For example, to build in `build_js` directory:
     @code{.bash}
-    cd opencv
-    python ./platforms/js/build_js.py build_js
+    emcmake python ./opencv/platforms/js/build_js.py build_js
     @endcode
 
     @note
@@ -73,14 +86,39 @@ Building OpenCV.js from Source
 
     For example, to build wasm version in `build_wasm` directory:
     @code{.bash}
-    python ./platforms/js/build_js.py build_wasm --build_wasm
+    emcmake python ./opencv/platforms/js/build_js.py build_wasm --build_wasm
     @endcode
+
+-#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
+
+    For example:
+    @code{.bash}
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_loader
+    @endcode
+
+    @note
+    The loader is implemented as a js file in the path `<opencv_js_dir>/bin/loader.js`. The loader utilizes the [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) to detect the features of the broswer and load corresponding OpenCV.js automatically. To use it, you need to use the UMD version of [WebAssembly Feature Detection](https://github.com/GoogleChromeLabs/wasm-feature-detect) and introduce the `loader.js` in your Web application.
+
+    Example Code:
+    @code{.javascipt}
+    // Set paths configuration
+    let pathsConfig = {
+        wasm: "../../build_wasm/opencv.js",
+        threads: "../../build_mt/opencv.js",
+        simd: "../../build_simd/opencv.js",
+        threadsSimd: "../../build_mtSIMD/opencv.js",
+    }
+
+    // Load OpenCV.js and use the pathsConfiguration and main function as the params.
+    loadOpenCV(pathsConfig, main);
+    @endcode
+
 
 -#  [optional] To build documents, append `--build_doc` option.
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_doc
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_doc
     @endcode
 
     @note
@@ -90,8 +128,23 @@ Building OpenCV.js from Source
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_test
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_test
     @endcode
+
+-#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
+    @endcode
+
+-#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
+
+    For example:
+    @code{.bash}
+    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
+    @endcode
+
 
 Running OpenCV.js Tests
 ---------------------------------------
@@ -152,7 +205,7 @@ node tests.js
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_wasm --threads
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_wasm --threads
     @endcode
 
     The default threads number is the logic core number of your device. You can use `cv.parallel_pthreads_set_threads_num(number)` to set threads number by yourself and use `cv.parallel_pthreads_get_threads_num()` to get the current threads number.
@@ -164,7 +217,7 @@ node tests.js
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_wasm --simd
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_wasm --simd
     @endcode
 
     The simd optimization is experimental as wasm simd is still in development.
@@ -188,7 +241,7 @@ node tests.js
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_wasm --simd --build_wasm_intrin_test
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_wasm --simd --build_wasm_intrin_test
     @endcode
 
     For wasm intrinsics tests, you can use the following function to test all the cases:
@@ -216,7 +269,7 @@ node tests.js
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --build_perf
+    emcmake python ./opencv/platforms/js/build_js.py build_js --build_perf
     @endcode
 
     To run performance tests, launch a local web server in \<build_dir\>/bin folder. For example, node http-server which serves on `localhost:8080`.
@@ -237,25 +290,31 @@ Building OpenCV.js with Docker
 
 Alternatively, the same build can be can be accomplished using [docker](https://www.docker.com/) containers which is often easier and more reliable, particularly in non linux systems. You only need to install [docker](https://www.docker.com/) on your system and use a popular container that provides a clean well tested environment for emscripten builds like this, that already has latest versions of all the necessary tools installed.
 
-So, make sure [docker](https://www.docker.com/) is installed in your system and running. The following shell script should work in linux and MacOS:
+So, make sure [docker](https://www.docker.com/) is installed in your system and running. The following shell script should work in Linux and MacOS:
 
 @code{.bash}
 git clone https://github.com/opencv/opencv.git
 cd opencv
-docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 In Windows use the following PowerShell command:
 
 @code{.bash}
-docker run --rm --workdir /code -v "$(get-location):/code" "trzeci/emscripten:latest" python ./platforms/js/build_js.py build
+docker run --rm --workdir /src -v "$(get-location):/src" "emscripten/emsdk" emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 @warning
-The example uses latest version of emscripten. If the build fails you should try a version that is known to work fine which is `1.38.32` using the following command:
+The example uses latest version of emscripten. If the build fails you should try a version that is known to work fine which is `2.0.10` using the following command:
 
 @code{.bash}
-docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:sdk-tag-1.38.32-64bit" python ./platforms/js/build_js.py build
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) emscripten/emsdk:2.0.10 emcmake python3 ./platforms/js/build_js.py build_js
+@endcode
+
+In Windows use the following PowerShell command:
+
+@code{.bash}
+docker run --rm --workdir /src -v "$(get-location):/src" "emscripten/emsdk:2.0.10" emcmake python3 ./platforms/js/build_js.py build_js
 @endcode
 
 ### Building the documentation with Docker
@@ -263,10 +322,11 @@ docker run --rm --workdir /code -v "$PWD":/code "trzeci/emscripten:sdk-tag-1.38.
 To build the documentation `doxygen` needs to be installed. Create a file named `Dockerfile` with the following content:
 
 ```
-FROM trzeci/emscripten:sdk-tag-1.38.32-64bit
+FROM emscripten/emsdk:2.0.10
 
-RUN apt-get update -y
-RUN apt-get install -y doxygen
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends doxygen \
+  && rm -rf /var/lib/apt/lists/*
 ```
 
 Then we build the docker image and name it `opencv-js-doc` with the following command (that needs to be run only once):
@@ -278,5 +338,5 @@ docker build . -t opencv-js-doc
 Now run the build command again, this time using the new image and passing `--build_doc`:
 
 @code{.bash}
-docker run --rm --workdir /code -v "$PWD":/code "opencv-js-doc" python ./platforms/js/build_js.py build --build_doc
+docker run --rm -v $(pwd):/src -u $(id -u):$(id -g) "opencv-js-doc" emcmake python3 ./platforms/js/build_js.py build_js --build_doc
 @endcode

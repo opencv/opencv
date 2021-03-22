@@ -2186,19 +2186,21 @@ class StereoSGBMImpl CV_FINAL : public StereoSGBM
 {
 public:
     StereoSGBMImpl()
+        : params()
     {
-        params = StereoSGBMParams();
+        // nothing
     }
 
     StereoSGBMImpl( int _minDisparity, int _numDisparities, int _SADWindowSize,
                     int _P1, int _P2, int _disp12MaxDiff, int _preFilterCap,
                     int _uniquenessRatio, int _speckleWindowSize, int _speckleRange,
                     int _mode )
+        : params(_minDisparity, _numDisparities, _SADWindowSize,
+                 _P1, _P2, _disp12MaxDiff, _preFilterCap,
+                 _uniquenessRatio, _speckleWindowSize, _speckleRange,
+                 _mode)
     {
-        params = StereoSGBMParams( _minDisparity, _numDisparities, _SADWindowSize,
-                                   _P1, _P2, _disp12MaxDiff, _preFilterCap,
-                                   _uniquenessRatio, _speckleWindowSize, _speckleRange,
-                                   _mode );
+        // nothing
     }
 
     void compute( InputArray leftarr, InputArray rightarr, OutputArray disparr ) CV_OVERRIDE

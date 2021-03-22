@@ -1,7 +1,14 @@
 OpenCV iOS - Video Processing {#tutorial_video_processing}
 =============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_image_manipulation}
+
+|    |    |
+| -: | :- |
+| Original author | Eduard Feicho |
+| Compatibility | OpenCV >= 3.0 |
 
 
 This tutorial explains how to process video frames using the iPhone's camera and OpenCV.

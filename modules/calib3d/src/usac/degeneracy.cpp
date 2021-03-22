@@ -18,17 +18,11 @@ public:
      * Do oriented constraint to verify if epipolar geometry is in front or behind the camera.
      * Return: true if all points are in front of the camers w.r.t. tested epipolar geometry - satisfies constraint.
      *         false - otherwise.
-     */
-    inline bool isModelValid(const Mat &F, const std::vector<int> &sample) const override {
-        return isModelValid(F, sample, min_sample_size);
-    }
-
-    /* Oriented constraint:
      * x'^T F x = 0
      * e' × x' ~+ Fx   <=>  λe' × x' = Fx, λ > 0
      * e  × x ~+ x'^T F
      */
-    inline bool isModelValid(const Mat &F_, const std::vector<int> &sample, int sample_size_) const override {
+    inline bool isModelValid(const Mat &F_, const std::vector<int> &sample) const override {
         // F is of rank 2, taking cross product of two rows we obtain null vector of F
         Vec3d ec_mat = F_.row(0).cross(F_.row(2));
         auto * ec = ec_mat.val; // of size 3x1
@@ -40,7 +34,6 @@ public:
             ec_mat = F_.row(1).cross(F_.row(2));
             ec = ec_mat.val;
         }
-        // F is 9x1 row-major ordered F matrix. ec is 3x1
         const auto * const F = (double *) F_.data;
 
         // without loss of generality, let the first point in sample be in front of the camera.
@@ -50,17 +43,12 @@ public:
         // sign1 = s1 * s2
         const double sign1 = (F[0]*points[pt+2]+F[3]*points[pt+3]+F[6])*(ec[1]-ec[2]*points[pt+1]);
 
-        int num_pts_behind = 0;
-        for (int i = 1; i < sample_size_; i++) {
+        for (int i = 1; i < min_sample_size; i++) {
             pt = 4 * sample[i];
             // if signum of the first point and tested point differs
             // then two points are on different sides of the camera.
             if (sign1*(F[0]*points[pt+2]+F[3]*points[pt+3]+F[6])*(ec[1]-ec[2]*points[pt+1])<0)
-                // if 3 points are behind the camera for non-minimal sample then model is
-                // not valid. Testing by one point as in case for minimal sample is not very
-                // precise. The number 3 was chosen experimentally.
-                if (min_sample_size == sample_size_ || ++num_pts_behind >= 3)
-                    return false;
+                return false;
         }
         return true;
     }
@@ -69,15 +57,20 @@ public:
         return makePtr<EpipolarGeometryDegeneracyImpl>(*points_mat, min_sample_size);
     }
 };
-void EpipolarGeometryDegeneracy::recoverRank (Mat &model) {
+void EpipolarGeometryDegeneracy::recoverRank (Mat &model, bool is_fundamental_mat) {
     /*
      * Do singular value decomposition.
      * Make last eigen value zero of diagonal matrix of singular values.
      */
     Matx33d U, Vt;
     Vec3d w;
-    SVD::compute(model, w, U, Vt, SVD::FULL_UV + SVD::MODIFY_A);
-    model = Mat(U * Matx33d(w(0), 0, 0, 0, w(1), 0, 0, 0, 0) * Vt);
+    SVD::compute(model, w, U, Vt, SVD::MODIFY_A);
+    if (is_fundamental_mat)
+        model = Mat(U * Matx33d(w(0), 0, 0, 0, w(1), 0, 0, 0, 0) * Vt);
+    else {
+        const double mean_singular_val = (w[0] + w[1]) * 0.5;
+        model = Mat(U * Matx33d(mean_singular_val, 0, 0, 0, mean_singular_val, 0, 0, 0, 0) * Vt);
+    }
 }
 Ptr<EpipolarGeometryDegeneracy> EpipolarGeometryDegeneracy::create (const Mat &points_,
         int sample_size_) {
@@ -157,11 +150,15 @@ private:
     const float * const points;
     const Mat * points_mat;
     const Ptr<ReprojectionErrorForward> h_reproj_error;
+    Ptr<HomographyNonMinimalSolver> h_non_min_solver;
     const EpipolarGeometryDegeneracyImpl ep_deg;
     // threshold to find inliers for homography model
     const double homography_threshold, log_conf = log(0.05);
     // points (1-7) to verify in sample
     std::vector<std::vector<int>> h_sample {{0,1,2},{3,4,5},{0,1,6},{3,4,6},{2,5,6}};
+    std::vector<int> h_inliers;
+    std::vector<double> weights;
+    std::vector<Mat> h_models;
     const int points_size, sample_size;
 public:
 
@@ -179,14 +176,12 @@ public:
             h_sample.emplace_back(std::vector<int>{3, 6, 7});
             h_sample.emplace_back(std::vector<int>{2, 4, 7});
         }
+        h_inliers = std::vector<int>(points_size);
+        h_non_min_solver = HomographyNonMinimalSolver::create(points_);
     }
     inline bool isModelValid(const Mat &F, const std::vector<int> &sample) const override {
         return ep_deg.isModelValid(F, sample);
     }
-    inline bool isModelValid(const Mat &F, const std::vector<int> &sample, int sample_size_) const override {
-        return ep_deg.isModelValid(F, sample, sample_size_);
-    }
-
     bool recoverIfDegenerate (const std::vector<int> &sample, const Mat &F_best,
                  Mat &non_degenerate_model, Score &non_degenerate_model_score) override {
         non_degenerate_model_score = Score(); // set worst case
@@ -239,23 +234,32 @@ public:
             }
 
             // compute H
-            const Matx33d H = A - e_prime * (M.inv() * b).t();
+            Matx33d H = A - e_prime * (M.inv() * b).t();
 
-            int inliers_on_plane = 0;
+            int inliers_out_plane = 0;
             h_reproj_error->setModelParameters(Mat(H));
 
             // find inliers from sample, points related to H, x' ~ Hx
             for (int s = 0; s < sample_size; s++)
-                if (h_reproj_error->getError(sample[s]) < homography_threshold)
-                    if (++inliers_on_plane >= 5)
+                if (h_reproj_error->getError(sample[s]) > homography_threshold)
+                    if (++inliers_out_plane > 2)
                         break;
 
             // if there are at least 5 points lying on plane then F is degenerate
-            if (inliers_on_plane >= 5) {
+            if (inliers_out_plane <= 2) {
                 is_model_degenerate = true;
 
+                // update homography by polishing on all inliers
+                int h_inls_cnt = 0;
+                const auto &h_errors = h_reproj_error->getErrors(Mat(H));
+                for (int pt = 0; pt < points_size; pt++)
+                    if (h_errors[pt] < homography_threshold)
+                        h_inliers[h_inls_cnt++] = pt;
+                if (h_non_min_solver->estimate(h_inliers, h_inls_cnt, h_models, weights) != 0)
+                    H = Matx33d(h_models[0]);
+
                 Mat newF;
-                const Score newF_score = planeAndParallaxRANSAC(H, newF);
+                const Score newF_score = planeAndParallaxRANSAC(H, newF, h_errors);
                 if (newF_score.isBetter(non_degenerate_model_score)) {
                     // store non degenerate model
                     non_degenerate_model_score = newF_score;
@@ -271,7 +275,7 @@ public:
     }
 private:
     // RANSAC with plane-and-parallax to find new Fundamental matrix
-    Score planeAndParallaxRANSAC (const Matx33d &H, Mat &best_F) {
+    Score planeAndParallaxRANSAC (const Matx33d &H, Mat &best_F, const std::vector<float> &h_errors) {
         int max_iters = 100; // with 95% confidence assume at least 17% of inliers
         Score best_score;
         for (int iters = 0; iters < max_iters; iters++) {
@@ -282,18 +286,17 @@ private:
                 h_outlier2 = rng.uniform(0, points_size);
 
             // find outliers of homography H
-            if (h_reproj_error->getError(h_outlier1) > homography_threshold &&
-                h_reproj_error->getError(h_outlier2) > homography_threshold) {
+            if (h_errors[h_outlier1] > homography_threshold &&
+                h_errors[h_outlier2] > homography_threshold) {
 
                 // do plane and parallax with outliers of H
-                const Vec3d pt1 (points[4*h_outlier1], points[4*h_outlier1+1], 1);
-                const Vec3d pt2 (points[4*h_outlier2], points[4*h_outlier2+1], 1);
-                const Vec3d pt1_prime (points[4*h_outlier1+2],points[4*h_outlier1+3],1);
-                const Vec3d pt2_prime (points[4*h_outlier2+2],points[4*h_outlier2+3],1);
-
                 // F = [(p1' x Hp1) x (p2' x Hp2)]_x H
-                const Matx33d F = Math::getSkewSymmetric((pt1_prime.cross(H * pt1)).cross
-                                                         (pt2_prime.cross(H * pt2))) * H;
+                const Matx33d F = Math::getSkewSymmetric(
+                       (Vec3d(points[4*h_outlier1+2], points[4*h_outlier1+3], 1).cross   // p1'
+                   (H * Vec3d(points[4*h_outlier1  ], points[4*h_outlier1+1], 1))).cross // Hp1
+                       (Vec3d(points[4*h_outlier2+2], points[4*h_outlier2+3], 1).cross   // p2'
+                   (H * Vec3d(points[4*h_outlier2  ], points[4*h_outlier2+1], 1)))       // Hp2
+                 ) * H;
 
                 const Score score = quality->getScore(Mat(F));
                 if (score.isBetter(best_score)) {

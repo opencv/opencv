@@ -77,18 +77,18 @@ void PoseSolver::solveGeneric(InputArray _objectPoints, InputArray _normalizedIn
                               OutputArray _Ma, OutputArray _Mb)
 {
     //argument checking:
-    size_t n = static_cast<size_t>(_objectPoints.rows() * _objectPoints.cols()); //number of points
+    size_t n = static_cast<size_t>(_normalizedInputPoints.rows()) * static_cast<size_t>(_normalizedInputPoints.cols()); //number of points
     int objType = _objectPoints.type();
     int type_input = _normalizedInputPoints.type();
 
     CV_CheckType(objType, objType == CV_32FC3 || objType == CV_64FC3,
                  "Type of _objectPoints must be CV_32FC3 or CV_64FC3" );
     CV_CheckType(type_input, type_input == CV_32FC2 || type_input == CV_64FC2,
-                 "Type of _normalizedInputPoints must be CV_32FC3 or CV_64FC3" );
+                 "Type of _normalizedInputPoints must be CV_32FC2 or CV_64FC2" );
     CV_Assert(_objectPoints.rows() == 1 || _objectPoints.cols() == 1);
     CV_Assert(_objectPoints.rows() >= 4 || _objectPoints.cols() >= 4);
     CV_Assert(_normalizedInputPoints.rows() == 1 || _normalizedInputPoints.cols() == 1);
-    CV_Assert(static_cast<size_t>(_objectPoints.rows() * _objectPoints.cols()) == n);
+    CV_Assert(static_cast<size_t>(_objectPoints.rows()) * static_cast<size_t>(_objectPoints.cols()) == n);
 
     Mat normalizedInputPoints;
     if (type_input == CV_32FC2)
@@ -101,7 +101,7 @@ void PoseSolver::solveGeneric(InputArray _objectPoints, InputArray _normalizedIn
     }
 
     Mat objectInputPoints;
-    if (type_input == CV_32FC3)
+    if (objType == CV_32FC3)
     {
         _objectPoints.getMat().convertTo(objectInputPoints, CV_64F);
     }

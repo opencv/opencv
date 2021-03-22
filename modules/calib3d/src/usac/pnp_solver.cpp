@@ -71,7 +71,7 @@ public:
     */
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
-        std::vector<double> A1 (5*12, 0), A2(7*8, 0);
+        std::vector<double> A1 (60, 0), A2(56, 0); // 5x12, 7x8
 
         int cnt1 = 0, cnt2 = 0;
         for (int i = 0; i < 6; i++) {
@@ -100,6 +100,7 @@ public:
             A2[cnt2++] = -v * Z;
             A2[cnt2++] = -v;
         }
+        // matrix is sparse -> do not test for singularity
         Math::eliminateUpperTriangular(A1, 5, 12);
 
         int offset = 4*12;
@@ -107,7 +108,9 @@ public:
         for (int i = 0; i < 8; i++)
             A2[cnt2++] = A1[offset + i + 4/* skip 4 first cols*/];
 
-        Math::eliminateUpperTriangular(A2, 7, 8);
+        // must be full-rank
+        if (!Math::eliminateUpperTriangular(A2, 7, 8))
+            return 0;
         // fixed scale to 1. In general the projection matrix is up-to-scale.
         // P = alpha * P^, alpha = 1 / P^_[3,4]
 

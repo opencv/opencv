@@ -1,5 +1,8 @@
 # Porting anisotropic image segmentation on G-API {#tutorial_gapi_anisotropic_segmentation}
 
+@prev_tutorial{tutorial_gapi_interactive_face_detection}
+@next_tutorial{tutorial_gapi_face_beautification}
+
 [TOC]
 
 # Introduction {#gapi_anisotropic_intro}

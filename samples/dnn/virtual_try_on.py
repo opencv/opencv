@@ -17,7 +17,7 @@ from common import findFile
 from human_parsing import parse_human
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL)
 
 parser = argparse.ArgumentParser(description='Use this script to run virtial try-on using CP-VTON',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -39,7 +39,8 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                             '%d: CPU target (by default), '
                             '%d: OpenCL, '
                             '%d: OpenCL fp16 (half-float precision), '
-                            '%d: VPU' % targets)
+                            '%d: NCS2 VPU, '
+                            '%d: HDDL VPU' % targets)
 args, _ = parser.parse_known_args()
 
 
@@ -112,7 +113,7 @@ class BilinearFilter(object):
             out[yy] = np.round(np.sum(img[ymin : ymin + ymax, 0:out.shape[1]] * k[:, np.newaxis], axis=0))
 
     def imaging_resample(self, img, xsize, ysize):
-        height, width, *args = img.shape
+        height, width = img.shape[0:2]
         bounds_horiz, kk_horiz, ksize_horiz = self._precompute_coeffs(width, xsize)
         bounds_vert, kk_vert, ksize_vert    = self._precompute_coeffs(height, ysize)
 
@@ -232,7 +233,6 @@ class CpVton(object):
         return Li
 
     def _prepare_to_transform(self, out_h=256, out_w=192, grid_size=5):
-        grid = np.zeros([out_h, out_w, 3], dtype=np.float32)
         grid_X, grid_Y = np.meshgrid(np.linspace(-1, 1, out_w), np.linspace(-1, 1, out_h))
         grid_X = np.expand_dims(np.expand_dims(grid_X, axis=0), axis=3)
         grid_Y = np.expand_dims(np.expand_dims(grid_Y, axis=0), axis=3)
@@ -397,7 +397,7 @@ class CorrelationLayer(object):
 
     def getMemoryShapes(self, inputs):
         fetureAShape = inputs[0]
-        b, c, h, w = fetureAShape
+        b, _, h, w = fetureAShape
         return [[b, h * w, h, w]]
 
     def forward(self, inputs):

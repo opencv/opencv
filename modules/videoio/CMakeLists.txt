@@ -1,7 +1,6 @@
 set(VIDEOIO_PLUGIN_LIST "" CACHE STRING "List of videoio backends to be compiled as plugins (ffmpeg, gstreamer, mfx, msmf or special value 'all')")
 set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin support")
-set(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK "ON" CACHE BOOL "Make sure OpenCV version is the same in plugin and host code")
-mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
+mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS)
 
 string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
 
@@ -138,6 +137,15 @@ if(TARGET ocv.3rdparty.ximea)
   list(APPEND tgts ocv.3rdparty.ximea)
 endif()
 
+if(TARGET ocv.3rdparty.ueye)
+  if("ueye" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
+    ocv_create_builtin_videoio_plugin("opencv_videoio_ueye" ocv.3rdparty.ueye "cap_ueye.cpp")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ueye.cpp)
+    list(APPEND tgts ocv.3rdparty.ueye)
+  endif()
+endif()
+
 if(TARGET ocv.3rdparty.ffmpeg)
   if(HAVE_FFMPEG_WRAPPER)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
@@ -193,6 +201,12 @@ if(TARGET ocv.3rdparty.android_mediandk)
   list(APPEND tgts ocv.3rdparty.android_mediandk)
 endif()
 
+if(TARGET ocv.3rdparty.android_native_camera)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_camera.cpp)
+  list(APPEND tgts ocv.3rdparty.android_native_camera)
+endif()
+
 ocv_set_module_sources(HEADERS ${videoio_ext_hdrs} ${videoio_hdrs} SOURCES ${videoio_srcs})
 ocv_module_include_directories()
 ocv_create_module()
@@ -201,10 +215,6 @@ ocv_add_perf_tests(${tgts})
 
 if(VIDEOIO_ENABLE_PLUGINS)
   ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)
-endif()
-
-if(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
-  ocv_target_compile_definitions(${the_module} PRIVATE STRICT_PLUGIN_CHECK)
 endif()
 
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})

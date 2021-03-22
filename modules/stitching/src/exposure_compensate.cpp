@@ -90,6 +90,7 @@ void GainCompensator::feed(const std::vector<Point> &corners, const std::vector<
 
     const int num_images = static_cast<int>(images.size());
     Mat accumulated_gains;
+    prepareSimilarityMask(corners, images);
 
     for (int n = 0; n < nr_feeds_; ++n)
     {
@@ -133,6 +134,8 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
     Mat subimg1, subimg2;
     Mat_<uchar> submask1, submask2, intersect;
 
+    std::vector<UMat>::iterator similarity_it = similarities_.begin();
+
     for (int i = 0; i < num_images; ++i)
     {
         for (int j = i; j < num_images; ++j)
@@ -146,6 +149,17 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
                 submask1 = masks[i].first(Rect(roi.tl() - corners[i], roi.br() - corners[i])).getMat(ACCESS_READ);
                 submask2 = masks[j].first(Rect(roi.tl() - corners[j], roi.br() - corners[j])).getMat(ACCESS_READ);
                 intersect = (submask1 == masks[i].second) & (submask2 == masks[j].second);
+
+                if (!similarities_.empty())
+                {
+                    CV_Assert(similarity_it != similarities_.end());
+                    UMat similarity = *similarity_it++;
+                    // in-place operation has an issue. don't remove the swap
+                    // detail https://github.com/opencv/opencv/issues/19184
+                    Mat_<uchar> intersect_updated;
+                    bitwise_and(intersect, similarity, intersect_updated);
+                    std::swap(intersect, intersect_updated);
+                }
 
                 int intersect_count = countNonZero(intersect);
                 N(i, j) = N(j, i) = std::max(1, intersect_count);
@@ -298,6 +312,88 @@ void GainCompensator::setMatGains(std::vector<Mat>& umv)
     }
 }
 
+void GainCompensator::prepareSimilarityMask(
+    const std::vector<Point> &corners, const std::vector<UMat> &images)
+{
+    if (similarity_threshold_ >= 1)
+    {
+        LOGLN("  skipping similarity mask: disabled");
+        return;
+    }
+    if (!similarities_.empty())
+    {
+        LOGLN("  skipping similarity mask: already set");
+        return;
+    }
+
+    LOGLN("  calculating similarity mask");
+    const int num_images = static_cast<int>(images.size());
+    for (int i = 0; i < num_images; ++i)
+    {
+        for (int j = i; j < num_images; ++j)
+        {
+            Rect roi;
+            if (overlapRoi(corners[i], corners[j], images[i].size(), images[j].size(), roi))
+            {
+                UMat subimg1 = images[i](Rect(roi.tl() - corners[i], roi.br() - corners[i]));
+                UMat subimg2 = images[j](Rect(roi.tl() - corners[j], roi.br() - corners[j]));
+                UMat similarity = buildSimilarityMask(subimg1, subimg2);
+                similarities_.push_back(similarity);
+            }
+        }
+    }
+}
+
+UMat GainCompensator::buildSimilarityMask(InputArray src_array1, InputArray src_array2)
+{
+    CV_Assert(src_array1.rows() == src_array2.rows() && src_array1.cols() == src_array2.cols());
+    CV_Assert(src_array1.type() == src_array2.type());
+    CV_Assert(src_array1.type() == CV_8UC3 || src_array1.type() == CV_8UC1);
+
+    Mat src1 = src_array1.getMat();
+    Mat src2 = src_array2.getMat();
+
+    UMat umat_similarity(src1.rows, src1.cols, CV_8UC1);
+    Mat similarity = umat_similarity.getMat(ACCESS_WRITE);
+
+    if (src1.channels() == 3)
+    {
+        for (int y = 0; y < similarity.rows; ++y)
+        {
+            for (int x = 0; x < similarity.cols; ++x)
+            {
+                Vec<float, 3> vec_diff =
+                    Vec<float, 3>(*src1.ptr<Vec<uchar, 3>>(y, x))
+                    - Vec<float, 3>(*src2.ptr<Vec<uchar, 3>>(y, x));
+                double diff = norm(vec_diff * (1.f / 255.f));
+
+                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
+            }
+        }
+    }
+    else // if (src1.channels() == 1)
+    {
+        for (int y = 0; y < similarity.rows; ++y)
+        {
+            for (int x = 0; x < similarity.cols; ++x)
+            {
+                float diff = std::abs(static_cast<int>(*src1.ptr<uchar>(y, x))
+                    - static_cast<int>(*src2.ptr<uchar>(y, x))) / 255.f;
+
+                *similarity.ptr<uchar>(y, x) = diff <= similarity_threshold_ ? 255 : 0;
+            }
+        }
+    }
+    similarity.release();
+
+    Mat kernel = getStructuringElement(MORPH_RECT, Size(3,3));
+    UMat umat_erode;
+    erode(umat_similarity, umat_erode, kernel);
+    dilate(umat_erode, umat_similarity, kernel);
+
+    return umat_similarity;
+}
+
 void ChannelsCompensator::feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
                                const std::vector<std::pair<UMat,uchar> > &masks)
 {
@@ -317,11 +413,15 @@ void ChannelsCompensator::feed(const std::vector<Point> &corners, const std::vec
     // For each channel, feed the channel of each image in a GainCompensator
     gains_.clear();
     gains_.resize(images.size());
+
+    GainCompensator compensator(getNrFeeds());
+    compensator.setSimilarityThreshold(getSimilarityThreshold());
+    compensator.prepareSimilarityMask(corners, images);
+
     for (int c = 0; c < 3; ++c)
     {
         const std::vector<UMat>& channels = images_channels[c];
 
-        GainCompensator compensator(getNrFeeds());
         compensator.feed(corners, channels, masks);
 
         std::vector<double> gains = compensator.gains();
@@ -400,6 +500,7 @@ void BlocksCompensator::feed(const std::vector<Point> &corners, const std::vecto
     {
         Compensator compensator;
         compensator.setNrFeeds(getNrFeeds());
+        compensator.setSimilarityThreshold(getSimilarityThreshold());
         compensator.feed(block_corners, block_images, block_masks);
 
         gain_maps_.clear();

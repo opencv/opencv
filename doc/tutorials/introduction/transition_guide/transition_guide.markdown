@@ -4,6 +4,10 @@ Transition guide {#tutorial_transition_guide}
 @prev_tutorial{tutorial_documentation}
 @next_tutorial{tutorial_cross_referencing}
 
+|    |    |
+| -: | :- |
+| Original author | Maksim Shabunin |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 

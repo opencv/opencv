@@ -154,7 +154,7 @@ static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int 
                               sdepth == CV_32F ? "half" : "float",
                               rowsPerWI,
                               sdepth == CV_32F ? " -D FLOAT_TO_HALF " : "");
-    ocl::Kernel k("convertFp16", ocl::core::halfconvert_oclsrc, build_opt);
+    ocl::Kernel k(sdepth == CV_32F ? "convertFp16_FP32_to_FP16" : "convertFp16_FP16_to_FP32", ocl::core::halfconvert_oclsrc, build_opt);
     if (k.empty())
         return false;
 

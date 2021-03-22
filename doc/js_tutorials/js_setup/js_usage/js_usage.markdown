@@ -4,7 +4,7 @@ Using OpenCV.js {#tutorial_js_usage}
 Steps
 -----
 
-In this tutorial, you will learn how to include and start to use `opencv.js` inside a web page. You can get a copy of `opencv.js` from `opencv-{VERSION_NUMBER}-docs.zip` in each [release](https://github.com/opencv/opencv/releases), or simply download the prebuilt script from the online documentations at "https://docs.opencv.org/{VERISON_NUMBER}/opencv.js" (For example, [https://docs.opencv.org/3.4.0/opencv.js](https://docs.opencv.org/3.4.0/opencv.js). Use `master` if you want the latest build). You can also build your own copy by following the tutorial on Build Opencv.js.
+In this tutorial, you will learn how to include and start to use `opencv.js` inside a web page. You can get a copy of `opencv.js` from `opencv-{VERSION_NUMBER}-docs.zip` in each [release](https://github.com/opencv/opencv/releases), or simply download the prebuilt script from the online documentations at "https://docs.opencv.org/{VERSION_NUMBER}/opencv.js" (For example, [https://docs.opencv.org/3.4.0/opencv.js](https://docs.opencv.org/3.4.0/opencv.js). Use `master` if you want the latest build). You can also build your own copy by following the tutorial on Build Opencv.js.
 
 ### Create a web page
 
@@ -82,7 +82,7 @@ In this tutorial, we just show a cv.Mat on screen. To show a cv.Mat, you need a 
 
 You can use cv.imshow to show cv.Mat on the canvas.
 @code{.js}
-cv.imshow(mat, "outputCanvas");
+cv.imshow("outputCanvas", mat);
 @endcode
 
 Putting all of the steps together, the final index.html is shown below.
@@ -129,7 +129,7 @@ function onOpenCvReady() {
 </html>
 @endcode
 
-@note You have to call delete method of cv.Mat to free memory allocated in Emscripten's heap. Please refer to [Memory management of Emscripten](https://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/embind.html#memory-management) for details.
+@note You have to call delete method of cv.Mat to free memory allocated in Emscripten's heap. Please refer to [Memory management of Emscripten](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html#memory-management) for details.
 
 Try it
 ------

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include <opencv2/gapi/s11n.hpp>
 #include <opencv2/gapi/garg.hpp>
@@ -10,37 +10,56 @@
 #include "backends/common/serialization.hpp"
 
 std::vector<char> cv::gapi::serialize(const cv::GComputation &c) {
-    cv::gimpl::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::ByteMemoryOutStream os;
     c.serialize(os);
     return os.data();
 }
 
 cv::GComputation cv::gapi::detail::getGraph(const std::vector<char> &p) {
-    cv::gimpl::s11n::ByteMemoryInStream is(p);
+    cv::gapi::s11n::ByteMemoryInStream is(p);
     return cv::GComputation(is);
 }
 
 cv::GMetaArgs cv::gapi::detail::getMetaArgs(const std::vector<char> &p) {
-    cv::gimpl::s11n::ByteMemoryInStream is(p);
+    cv::gapi::s11n::ByteMemoryInStream is(p);
     return meta_args_deserialize(is);
 }
 
 cv::GRunArgs cv::gapi::detail::getRunArgs(const std::vector<char> &p) {
-    cv::gimpl::s11n::ByteMemoryInStream is(p);
+    cv::gapi::s11n::ByteMemoryInStream is(p);
     return run_args_deserialize(is);
+}
+
+std::vector<std::string> cv::gapi::detail::getVectorOfStrings(const std::vector<char> &p) {
+    cv::gapi::s11n::ByteMemoryInStream is(p);
+    return vector_of_strings_deserialize(is);
 }
 
 std::vector<char> cv::gapi::serialize(const cv::GMetaArgs& ma)
 {
-    cv::gimpl::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::ByteMemoryOutStream os;
     serialize(os, ma);
     return os.data();
 }
 
 std::vector<char> cv::gapi::serialize(const cv::GRunArgs& ra)
 {
-    cv::gimpl::s11n::ByteMemoryOutStream os;
+    cv::gapi::s11n::ByteMemoryOutStream os;
     serialize(os, ra);
+    return os.data();
+}
+
+std::vector<char> cv::gapi::serialize(const cv::GCompileArgs& ca)
+{
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    serialize(os, ca);
+    return os.data();
+}
+
+std::vector<char> cv::gapi::serialize(const std::vector<std::string>& vs)
+{
+    cv::gapi::s11n::ByteMemoryOutStream os;
+    serialize(os, vs);
     return os.data();
 }
 
@@ -71,6 +90,9 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
             break;
         case T::index_of<cv::detail::OpaqueRef>() :
             outputs.emplace_back(cv::util::get<cv::detail::OpaqueRef>(res_obj));
+            break;
+        case cv::GRunArg::index_of<cv::RMat>() :
+            outputs.emplace_back((cv::RMat*)(&(cv::util::get<cv::RMat>(res_obj))));
             break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
@@ -104,6 +126,9 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
 
     case T::index_of<cv::Scalar*>() :
         return cv::GRunArg(*cv::util::get<cv::Scalar*>(out));
+
+    case T::index_of<cv::RMat*>() :
+        return cv::GRunArg(*cv::util::get<cv::RMat*>(out));
 
     default:
         // ...maybe our types were extended

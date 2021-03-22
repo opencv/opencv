@@ -34,80 +34,78 @@
 #ifdef HAVE_TENGINE
 
 #include "tengine_c_api.h"
-#include "tengine_c_compat.h"
-#include "tengine_operations.h"
+
 
 namespace cv
 {
 namespace dnn
 {
-
-int create_input_node(graph_t graph, const char* node_name, int inch, int in_h, int in_w)
+static int create_input_node(teng_graph_t graph, const char* node_name, int inch, int in_h, int in_w)
 {
-    node_t node     = create_graph_node(graph, node_name, "InputOp");
-    tensor_t tensor = create_graph_tensor(graph, node_name, TENGINE_DT_FP32);
-    set_node_output_tensor(node, 0, tensor, TENSOR_TYPE_INPUT);
+    node_t node     = teng_create_graph_node(graph, node_name, "InputOp");
+    tensor_t tensor = teng_create_graph_tensor(graph, node_name, TENGINE_DT_FP32);
+    teng_set_node_output_tensor(node, 0, tensor, TENSOR_TYPE_INPUT);
 
     int dims[4] = {1, inch, in_h, in_w};
-    set_tensor_shape(tensor, dims, 4);
+    teng_set_tensor_shape(tensor, dims, 4);
 
-    release_graph_tensor(tensor);
-    release_graph_node(node);
+    teng_release_graph_tensor(tensor);
+    teng_release_graph_node(node);
 
     return 0;
 }
 
-int create_conv_node(graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
+static int create_conv_node(teng_graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
     int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h, int pad_w, int inch, int outch, int group,
     int dilation_h, int dilation_w, int activation, std::string padMode)
 {
-    node_t conv_node      = create_graph_node(graph, node_name, "Convolution");
-    tensor_t input_tensor = get_graph_tensor(graph, input_name);
+    node_t conv_node      = teng_create_graph_node(graph, node_name, "Convolution");
+    tensor_t input_tensor = teng_get_graph_tensor(graph, input_name);
 
     if (input_tensor == NULL)
     {
-        CV_LOG_WARNING(NULL,"Tengine :input_tensor is NULL . " );
+        CV_LOG_WARNING(NULL,"Tengine: input_tensor is NULL." );
         return -1;
     }
 
-    set_node_input_tensor(conv_node, 0, input_tensor);
-    release_graph_tensor(input_tensor);
+    teng_set_node_input_tensor(conv_node, 0, input_tensor);
+    teng_release_graph_tensor(input_tensor);
 
     /* output */
-    tensor_t output_tensor = create_graph_tensor(graph, node_name, TENGINE_DT_FP32);
+    tensor_t output_tensor = teng_create_graph_tensor(graph, node_name, TENGINE_DT_FP32);
 
-    set_node_output_tensor(conv_node, 0, output_tensor, TENSOR_TYPE_VAR);
-    release_graph_tensor(output_tensor);
+    teng_set_node_output_tensor(conv_node, 0, output_tensor, TENSOR_TYPE_VAR);
+    teng_release_graph_tensor(output_tensor);
 
     /* weight */
     std::string weight_name(node_name);
     weight_name += "/weight";
 
-    node_t w_node = create_graph_node(graph, weight_name.c_str(), "Const");
-    tensor_t w_tensor = create_graph_tensor(graph, weight_name.c_str(), TENGINE_DT_FP32);
-    set_node_output_tensor(w_node, 0, w_tensor, TENSOR_TYPE_CONST);
-    set_node_input_tensor(conv_node, 1, w_tensor);
+    node_t w_node = teng_create_graph_node(graph, weight_name.c_str(), "Const");
+    tensor_t w_tensor = teng_create_graph_tensor(graph, weight_name.c_str(), TENGINE_DT_FP32);
+    teng_set_node_output_tensor(w_node, 0, w_tensor, TENSOR_TYPE_CONST);
+    teng_set_node_input_tensor(conv_node, 1, w_tensor);
     int w_dims[] = {outch, inch / group, kernel_h, kernel_w};
 
-    set_tensor_shape(w_tensor, w_dims, 4);
+    teng_set_tensor_shape(w_tensor, w_dims, 4);
 
-    release_graph_node(w_node);
-    release_graph_tensor(w_tensor);
+    teng_release_graph_node(w_node);
+    teng_release_graph_tensor(w_tensor);
 
     /* bias */
     std::string bias_name(node_name);
     bias_name += "/bias";
 
-    node_t b_node = create_graph_node(graph, bias_name.c_str(), "Const");
-    tensor_t b_tensor = create_graph_tensor(graph, bias_name.c_str(), TENGINE_DT_FP32);
-    set_node_output_tensor(b_node, 0, b_tensor, TENSOR_TYPE_CONST);
+    node_t b_node = teng_create_graph_node(graph, bias_name.c_str(), "Const");
+    tensor_t b_tensor = teng_create_graph_tensor(graph, bias_name.c_str(), TENGINE_DT_FP32);
+    teng_set_node_output_tensor(b_node, 0, b_tensor, TENSOR_TYPE_CONST);
     int b_dims[] = {outch};
 
-    set_tensor_shape(b_tensor, b_dims, 1);
+    teng_set_tensor_shape(b_tensor, b_dims, 1);
 
-    set_node_input_tensor(conv_node, 2, b_tensor);
-    release_graph_node(b_node);
-    release_graph_tensor(b_tensor);
+    teng_set_node_input_tensor(conv_node, 2, b_tensor);
+    teng_release_graph_node(b_node);
+    teng_release_graph_tensor(b_tensor);
 
     int pad_h1 = pad_h;
     int pad_w1 = pad_w;
@@ -127,31 +125,32 @@ int create_conv_node(graph_t graph, const char* node_name, const char* input_nam
     }
 
     /* attr */
-    set_node_attr_int(conv_node, "kernel_h", &kernel_h);
-    set_node_attr_int(conv_node, "kernel_w", &kernel_w);
-    set_node_attr_int(conv_node, "stride_h", &stride_h);
-    set_node_attr_int(conv_node, "stride_w", &stride_w);
-    set_node_attr_int(conv_node, "pad_h0", &pad_h);
-    set_node_attr_int(conv_node, "pad_w0", &pad_w);
-    set_node_attr_int(conv_node, "pad_h1", &pad_h1);
-    set_node_attr_int(conv_node, "pad_w1", &pad_w1);
-    set_node_attr_int(conv_node, "output_channel", &outch);
-    set_node_attr_int(conv_node, "group", &group);
-    set_node_attr_int(conv_node, "dilation_h", &dilation_h);
-    set_node_attr_int(conv_node, "dilation_w", &dilation_w);
-    set_node_attr_int(conv_node, "activation", &activation);
+    teng_set_node_attr_int(conv_node, "kernel_h", &kernel_h);
+    teng_set_node_attr_int(conv_node, "kernel_w", &kernel_w);
+    teng_set_node_attr_int(conv_node, "stride_h", &stride_h);
+    teng_set_node_attr_int(conv_node, "stride_w", &stride_w);
+    teng_set_node_attr_int(conv_node, "pad_h0", &pad_h);
+    teng_set_node_attr_int(conv_node, "pad_w0", &pad_w);
+    teng_set_node_attr_int(conv_node, "pad_h1", &pad_h1);
+    teng_set_node_attr_int(conv_node, "pad_w1", &pad_w1);
+    teng_set_node_attr_int(conv_node, "output_channel", &outch);
+    teng_set_node_attr_int(conv_node, "input_channel", &inch);
+    teng_set_node_attr_int(conv_node, "group", &group);
+    teng_set_node_attr_int(conv_node, "dilation_h", &dilation_h);
+    teng_set_node_attr_int(conv_node, "dilation_w", &dilation_w);
+  //  set_node_attr_int(conv_node, "activation", &activation);
 
-    release_graph_node(conv_node);
+    teng_release_graph_node(conv_node);
 
     return 0;
 }
 
-graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int in_w,
-                        float *output_data, int outch, int out_h, int out_w,
+static teng_graph_t create_conv_graph(const char* layer_name, float* input_data, int inch, int group, int in_h, int in_w,
+                        float* output_data, int outch, int out_h, int out_w,
                         int kernel_h, int kernel_w,
                         int stride_h,int stride_w,
                         int pad_h, int pad_w,  int dilation_h, int dilation_w, int activation,
-                        float * teg_weight , float * teg_bias , std::string padMode)
+                        float* teg_weight, float* teg_bias, std::string padMode, int nstripes)
 {
     node_t    conv_node     = NULL;
 
@@ -170,28 +169,28 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     int input_num = 0;
 
     /* create graph */
-    graph_t graph = create_graph(NULL, NULL, NULL);
+    teng_graph_t graph = teng_create_graph(NULL, NULL, NULL);
     bool ok = true;
 
     if(graph == NULL)
     {
-        CV_LOG_WARNING(NULL,"Tengine :create_graph failed . " );
+        CV_LOG_WARNING(NULL,"Tengine: create_graph failed." );
         ok = false;
     }
 
     const char* input_name = "data";
-    const char* conv_name  = "conv";
+    const char* conv_name  = layer_name;
 
     if (ok && create_input_node(graph, input_name, inch, in_h, in_w) < 0)
     {
-        CV_LOG_WARNING(NULL,"Tengine :create_input_node failed. " );
+        CV_LOG_WARNING(NULL,"Tengine: create_input_node failed." );
         ok = false;
     }
 
     if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w,
         stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
-        CV_LOG_WARNING(NULL,"Tengine :create conv node failed. " );
+        CV_LOG_WARNING(NULL,"Tengine: create conv node failed." );
         ok = false;
     }
 
@@ -199,94 +198,101 @@ graph_t create_conv_graph(float *input_data, int inch, int group, int in_h, int 
     const char* inputs_name[]  = {input_name};
     const char* outputs_name[] = {conv_name};
 
-    if (ok && set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
+    if (ok && teng_set_graph_input_node(graph, inputs_name, sizeof(inputs_name) / sizeof(char*)) < 0)
     {
-        CV_LOG_WARNING(NULL,"Tengine :set inputs failed . " );
+        CV_LOG_WARNING(NULL,"Tengine: set inputs failed." );
         ok = false;
     }
 
-    if (ok && set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
+    if (ok && teng_set_graph_output_node(graph, outputs_name, sizeof(outputs_name) / sizeof(char*)) < 0)
     {
-        CV_LOG_WARNING(NULL,"Tengine :set outputs failed . " );
+        CV_LOG_WARNING(NULL,"Tengine: set outputs failed." );
         ok = false;
     }
 
     /* set input data */
     if (ok)
     {
-        input_tensor = get_graph_input_tensor(graph, 0, 0);
-        buf_size     = get_tensor_buffer_size(input_tensor);
+        input_tensor = teng_get_graph_input_tensor(graph, 0, 0);
+        buf_size     = teng_get_tensor_buffer_size(input_tensor);
         if (buf_size != in_size * FLOAT_TO_REALSIZE)
         {
-            CV_LOG_WARNING(NULL,"Tengine :Input data size check failed . ");
+            CV_LOG_WARNING(NULL,"Tengine: Input data size check failed.");
             ok = false;
         }
     }
 
     if (ok)
     {
-        set_tensor_buffer(input_tensor, (float *)input_data, buf_size);
-        release_graph_tensor(input_tensor);
+        teng_set_tensor_buffer(input_tensor, (float *)input_data, buf_size);
+        teng_release_graph_tensor(input_tensor);
 
         /* create convolution node */
         /* set weight node */
-        conv_node     = get_graph_node(graph, "conv");
-        weight_tensor = get_node_input_tensor(conv_node, 1);
-        buf_size      = get_tensor_buffer_size(weight_tensor);
+        conv_node     = teng_get_graph_node(graph, conv_name);
+        weight_tensor = teng_get_node_input_tensor(conv_node, 1);
+        buf_size      = teng_get_tensor_buffer_size(weight_tensor);
 
         if (buf_size != weight_size * FLOAT_TO_REALSIZE)
         {
-            CV_LOG_WARNING(NULL,"Input weight size check failed . ");
+            CV_LOG_WARNING(NULL,"Tengine: Input weight size check failed.");
             ok = false;
         }
     }
 
     if (ok)
     {
-        set_tensor_buffer(weight_tensor, teg_weight, buf_size);
+        teng_set_tensor_buffer(weight_tensor, teg_weight, buf_size);
 
         /* set bias node */
-        input_num = get_node_input_number(conv_node);
+        input_num = teng_get_node_input_number(conv_node);
         if (input_num > 2)
         {
-            bias_tensor = get_node_input_tensor(conv_node, 2);
-            buf_size    = get_tensor_buffer_size(bias_tensor);
+            bias_tensor = teng_get_node_input_tensor(conv_node, 2);
+            buf_size    = teng_get_tensor_buffer_size(bias_tensor);
             if (buf_size != bias_size * FLOAT_TO_REALSIZE)
             {
-                CV_LOG_WARNING(NULL,"Tengine :Input bias size check failed . ");
+                CV_LOG_WARNING(NULL,"Tengine: Input bias size check failed.");
                 ok = false;
             }
-            else set_tensor_buffer(bias_tensor, teg_bias, buf_size);
+            else teng_set_tensor_buffer(bias_tensor, teg_bias, buf_size);
         }
+    }
+
+    /* prerun */
+    if (ok && teng_prerun_graph_multithread(graph, TENGINE_CLUSTER_BIG, nstripes) < 0)
+    {
+        CV_LOG_WARNING(NULL, "Tengine: prerun_graph failed.");
+        ok = false;
     }
 
     if (ok)
     {
         /* set output data */
-        output_tensor = get_node_output_tensor(conv_node, 0);
-        int ret = set_tensor_buffer(output_tensor, output_data, out_size * FLOAT_TO_REALSIZE);
+        output_tensor = teng_get_node_output_tensor(conv_node, 0);
+        int ret = teng_set_tensor_buffer(output_tensor, output_data, out_size * FLOAT_TO_REALSIZE);
         if(ret)
         {
-            CV_LOG_WARNING(NULL,"Tengine :Set output tensor buffer failed . " );
+            CV_LOG_WARNING(NULL,"Tengine: Set output tensor buffer failed." );
+            ok = false;
         }
     }
 
-    if (!ok)
+    if (false == ok)
     {
-        destroy_graph(graph);
-        return NULL;
+        teng_destroy_graph(graph) ;
+        return NULL ;
     }
     return graph;
 }
-
-bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
+static bool tengine_init_flag = false;
+teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int group, int in_h, int in_w,
                         float *output_, int out_b, int outch, int out_h, int out_w,
                         float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
                         float *teg_bias, int stride_h,int stride_w,
                         int pad_h, int pad_w,  int dilation_h, int dilation_w,
-                        size_t wstep,const std::string padMode)
+                        size_t wstep, const std::string padMode, teng_graph_t &graph, int nstripes)
 {
-    graph_t graph = NULL;
     std::vector<float> teg_weight_vec;
     float *teg_weight = NULL;
     int kernel_inwh = (inch / group) * kernel_w * kernel_h;
@@ -296,17 +302,20 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
     if (!(kernel_s == 2 && kernel_h == kernel_w && pad_h == pad_w
         && dilation_h == dilation_w && stride_h == stride_w
         && out_b == 1 && pad_h < 10)) // just for Conv2D
-        return false;
+    {
+       // printf("return : just for Conv2D\n");
+        return NULL;
+    }
 
     {
-        /*printf("Tengine: input (1 x %d x %d x %d),output (%d x %d x %d x %d), kernel (%d x %d), stride (%d x %d), dilation (%d x %d), pad (%d x %d).\n",
-               inch, in_h, in_w,
-               out_b,outch,out_h,out_w,
+      /*   printf("Tengine(%s): input (1 x %d x %d x %d),output (%d x %d x %d x %d), kernel (%d x %d), stride (%d x %d), dilation (%d x %d), pad (%d x %d).\n",
+               layer_name, inch, in_h, in_w,
+               out_b, outch, out_h, out_w,
                kernel_w, kernel_h,
                stride_w, stride_h,
                dilation_w, dilation_h,
-               pad_w,pad_h);*/
-
+               pad_w, pad_h);
+     */
         // weight
         if (kernel_inwh != wstep)
         {
@@ -323,35 +332,42 @@ bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
         }
 
         /* initial the resoruce of tengine */
-        init_tengine();
+        if(false == tengine_init_flag)
+        {
+            init_tengine();
+            tengine_init_flag = true;
+        }
 
         /* create the convolution graph */
-        graph = create_conv_graph( input_, inch, group, in_h, in_w,
+        graph = create_conv_graph(layer_name, input_, inch, group, in_h, in_w,
                                     output_, outch, out_h, out_w,
                                     kernel_h, kernel_w, stride_h,stride_w,
                                     pad_h, pad_w, dilation_h, dilation_w, activation,
-                                    teg_weight , teg_bias , padMode);
-
-        /* prerun */
-        if(prerun_graph(graph) < 0)
+                                    teg_weight, teg_bias, padMode, nstripes);
+        if(NULL == graph )
         {
-            CV_LOG_WARNING(NULL, "Tengine :prerun_graph failed .");
-            return false ;
+            return NULL;
         }
-
-        /* run */
-        if(run_graph(graph, 1) < 0)
-        {
-            CV_LOG_WARNING(NULL,"Tengine :run_graph failed .");
-            return false ;
-        }
-
-        postrun_graph(graph);
-        destroy_graph(graph);
     }
-    return true ;
+    return graph ;
 }
 
+bool tengine_forward(teng_graph_t &graph)
+{
+    /* run */
+    if(teng_run_graph(graph, 1) < 0)
+    {
+        CV_LOG_WARNING(NULL,"Tengine: run_graph failed.");
+        return false ;
+    }
+    return true;
+}
+bool tengine_release(teng_graph_t &graph)
+{
+    teng_postrun_graph(graph);
+    teng_destroy_graph(graph);
+    return true;
+}
 }
 }
 #endif

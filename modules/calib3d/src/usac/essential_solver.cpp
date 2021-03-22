@@ -54,7 +54,8 @@ public:
         const int num_cols = 9, num_e_mat = 4;
         double ee[36]; // 9*4
         // eliminate linear equations
-        Math::eliminateUpperTriangular(coefficients, 5, num_cols);
+        if (!Math::eliminateUpperTriangular(coefficients, 5, num_cols))
+            return 0;
         for (int i = 0; i < num_e_mat; i++)
             for (int j = 5; j < num_cols; j++)
                 ee[num_cols * i + j] = (i + 5 == j) ? 1 : 0;
@@ -244,25 +245,91 @@ Ptr<EssentialMinimalSolverStewenius5pts> EssentialMinimalSolverStewenius5pts::cr
 class EssentialNonMinimalSolverImpl : public EssentialNonMinimalSolver {
 private:
     const Mat * points_mat;
-    const Ptr<FundamentalNonMinimalSolver> non_min_fundamental;
+    const float * const points;
 public:
     /*
      * Input calibrated points K^-1 x.
      * Linear 8 points algorithm is used for estimation.
      */
     explicit EssentialNonMinimalSolverImpl (const Mat &points_) :
-        points_mat(&points_), non_min_fundamental(FundamentalNonMinimalSolver::create(points_)) {}
+        points_mat(&points_), points ((float *) points_.data) {}
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat>
-        &models, const std::vector<double> &weights) const override {
-        return non_min_fundamental->estimate(sample, sample_size, models, weights);
+            &models, const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+
+        // ------- 8 points algorithm with Eigen and covariance matrix --------------
+        double a[9] = {0, 0, 0, 0, 0, 0, 0, 0, 1};
+        double AtA[81] = {0}; // 9x9
+
+        if (weights.empty()) {
+            for (int i = 0; i < sample_size; i++) {
+                const int pidx = 4*sample[i];
+                const double x1 = points[pidx  ], y1 = points[pidx+1],
+                             x2 = points[pidx+2], y2 = points[pidx+3];
+                a[0] = x2*x1;
+                a[1] = x2*y1;
+                a[2] = x2;
+                a[3] = y2*x1;
+                a[4] = y2*y1;
+                a[5] = y2;
+                a[6] = x1;
+                a[7] = y1;
+
+                // calculate covariance for eigen
+                for (int row = 0; row < 9; row++)
+                    for (int col = row; col < 9; col++)
+                        AtA[row*9+col] += a[row]*a[col];
+            }
+        } else {
+            for (int i = 0; i < sample_size; i++) {
+                const int smpl = 4*sample[i];
+                const double weight = weights[i];
+                const double x1 = points[smpl  ], y1 = points[smpl+1],
+                             x2 = points[smpl+2], y2 = points[smpl+3];
+                const double weight_times_x2 = weight * x2,
+                             weight_times_y2 = weight * y2;
+
+                a[0] = weight_times_x2 * x1;
+                a[1] = weight_times_x2 * y1;
+                a[2] = weight_times_x2;
+                a[3] = weight_times_y2 * x1;
+                a[4] = weight_times_y2 * y1;
+                a[5] = weight_times_y2;
+                a[6] = weight * x1;
+                a[7] = weight * y1;
+                a[8] = weight;
+
+                // calculate covariance for eigen
+                for (int row = 0; row < 9; row++)
+                    for (int col = row; col < 9; col++)
+                        AtA[row*9+col] += a[row]*a[col];
+            }
+        }
+
+        // copy symmetric part of covariance matrix
+        for (int j = 1; j < 9; j++)
+            for (int z = 0; z < j; z++)
+                AtA[j*9+z] = AtA[z*9+j];
+
+#ifdef HAVE_EIGEN
+        models = std::vector<Mat>{ Mat_<double>(3,3) };
+        const Eigen::JacobiSVD<Eigen::Matrix<double, 9, 9>> svd((Eigen::Matrix<double, 9, 9>(AtA)),
+                Eigen::ComputeFullV);
+        // extract the last nullspace
+        Eigen::Map<Eigen::Matrix<double, 9, 1>>((double *)models[0].data) = svd.matrixV().col(8);
+#else
+        Matx<double, 9, 9> AtA_(AtA), U, Vt;
+        Vec<double, 9> W;
+        SVD::compute(AtA_, W, U, Vt, SVD::FULL_UV + SVD::MODIFY_A);
+        models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/) };
+#endif
+        FundamentalDegeneracy::recoverRank(models[0], false /*E*/);
+        return 1;
     }
-    int getMinimumRequiredSampleSize() const override {
-        return non_min_fundamental->getMinimumRequiredSampleSize();
-    }
-    int getMaxNumberOfSolutions () const override {
-        return non_min_fundamental->getMaxNumberOfSolutions();
-    }
+    int getMinimumRequiredSampleSize() const override { return 8; }
+    int getMaxNumberOfSolutions () const override { return 1; }
     Ptr<NonMinimalSolver> clone () const override {
         return makePtr<EssentialNonMinimalSolverImpl>(*points_mat);
     }

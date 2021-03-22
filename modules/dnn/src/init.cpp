@@ -110,6 +110,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(BNLL,           BNLLLayer);
     CV_DNN_REGISTER_LAYER_CLASS(AbsVal,         AbsLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Power,          PowerLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Exp,            ExpLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNorm,      BatchNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(MaxUnpool,      MaxUnpoolLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dropout,        BlankLayer);

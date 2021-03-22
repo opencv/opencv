@@ -16,6 +16,7 @@ struct ProtoPtrTest : public ::testing::Test { using Type = T; };
 using ProtoPtrTestTypes = ::testing::Types< cv::Mat
                                           , cv::UMat
                                           , cv::gapi::own::Mat
+                                          , cv::RMat
                                           , cv::Scalar
                                           , std::vector<int>
                                           , int

@@ -20,13 +20,17 @@ namespace gimpl
 
 // FIXME: GAPI_EXPORTS is here only due to tests and Windows linker issues
 // FIXME: It seems it clearly duplicates the GStreamingCompiled and
-// GStreamingExecutable APIs so is highly redundant now.
+// GStreamingIntrinExecutable APIs so is highly redundant now.
 // Same applies to GCompiled/GCompiled::Priv/GExecutor.
 class GAPI_EXPORTS GStreamingCompiled::Priv
 {
     GMetaArgs  m_metas;    // passed by user
     GMetaArgs  m_outMetas; // inferred by compiler
     std::unique_ptr<cv::gimpl::GStreamingExecutor> m_exec;
+
+    // NB: Used by python wrapper to clarify input/output types
+    GTypesInfo m_out_info;
+    GTypesInfo m_in_info;
 
 public:
     void setup(const GMetaArgs &metaArgs,
@@ -41,10 +45,17 @@ public:
     void setSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
+    bool pull(cv::GOptRunArgsP &&outs);
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
 
     bool running() const;
+
+    void setOutInfo(const GTypesInfo& info) { m_out_info = std::move(info); }
+    const GTypesInfo& outInfo() const { return m_out_info; }
+
+    void setInInfo(const GTypesInfo& info) { m_in_info = std::move(info); }
+    const GTypesInfo& inInfo() const { return m_in_info; }
 };
 
 } // namespace cv

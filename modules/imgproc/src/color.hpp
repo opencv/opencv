@@ -104,6 +104,7 @@ inline int dstChannels(int code)
             return 4;
 
         case COLOR_BGRA2BGR: case COLOR_RGBA2BGR: case COLOR_RGB2BGR:
+        case COLOR_YUV2RGB: case COLOR_YUV2BGR: case COLOR_RGB2YUV: case COLOR_BGR2YUV:
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_GRAY2BGR:
         case COLOR_YUV2BGR_NV21: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV12:

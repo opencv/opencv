@@ -4,6 +4,13 @@ Use OpenCL in Android camera preview based CV application {#tutorial_android_ocl
 @prev_tutorial{tutorial_dev_with_OCV_on_Android}
 @next_tutorial{tutorial_macos_install}
 
+|    |    |
+| -: | :- |
+| Original author | Andrey Pavlenko |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
 
 This guide was designed to help you in use of [OpenCL &trade;](https://www.khronos.org/opencl/) in Android camera preview based CV application.
 It was written for [Eclipse-based ADT tools](http://developer.android.com/tools/help/adt.html)

@@ -2,18 +2,20 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_INL_HPP
 #define OPENCV_GAPI_CORE_TESTS_INL_HPP
 
 #include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/infer/parsers.hpp>
 #include "gapi_core_tests.hpp"
+
+#include "gapi_core_tests_common.hpp"
 
 namespace opencv_test
 {
-
 TEST_P(MathOpTest, MatricesAccuracyTest)
 {
     // G-API code & corresponding OpenCV code ////////////////////////////////
@@ -47,14 +49,14 @@ TEST_P(MathOpTest, MatricesAccuracyTest)
         {
             if( doReverseOp )
             {
-                in_mat1.setTo(1, in_mat1 == 0);  // avoid zeros in divide input data
+                in_mat1.setTo(1, in_mat1 == 0);  // avoiding zeros in divide input data
                 out = cv::gapi::divRC(sc1, in1, scale, dtype);
                 cv::divide(sc, in_mat1, out_mat_ocv, scale, dtype);
                 break;
             }
             else
             {
-                sc += Scalar(1, 1, 1, 1);  // avoid zeros in divide input data
+                sc += Scalar(sc[0] == 0, sc[1] == 0, sc[2] == 0, sc[3] == 0);  // avoiding zeros in divide input data
                 out = cv::gapi::divC(in1, sc1, scale, dtype);
                 cv::divide(in_mat1, sc, out_mat_ocv, scale, dtype);
                 break;
@@ -93,7 +95,7 @@ TEST_P(MathOpTest, MatricesAccuracyTest)
         }
         case (DIV):
         {
-            in_mat2.setTo(1, in_mat2 == 0);  // avoid zeros in divide input data
+            in_mat2.setTo(1, in_mat2 == 0);  // avoiding zeros in divide input data
             out = cv::gapi::div(in1, in2, scale, dtype);
             cv::divide(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
             break;
@@ -405,7 +407,7 @@ TEST_P(CmpTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     {
         ASSERT_EQ(out_mat_gapi.size(), sz);
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 }
 
@@ -413,33 +415,52 @@ TEST_P(BitwiseTest, AccuracyTest)
 {
     // G-API code & corresponding OpenCV code ////////////////////////////////
     cv::GMat in1, in2, out;
-    switch(opType)
+    if( testWithScalar )
     {
-        case AND:
+        cv::GScalar sc1;
+        switch(opType)
         {
-            out = cv::gapi::bitwise_and(in1, in2);
-            cv::bitwise_and(in_mat1, in_mat2, out_mat_ocv);
-            break;
+            case AND:
+                out = cv::gapi::bitwise_and(in1, sc1);
+                cv::bitwise_and(in_mat1, sc, out_mat_ocv);
+                break;
+            case OR:
+                out = cv::gapi::bitwise_or(in1, sc1);
+                cv::bitwise_or(in_mat1, sc, out_mat_ocv);
+                break;
+            case XOR:
+                out = cv::gapi::bitwise_xor(in1, sc1);
+                cv::bitwise_xor(in_mat1, sc, out_mat_ocv);
+                break;
+            default:
+                FAIL() << "no such bitwise operation type!";
         }
-        case OR:
-        {
-            out = cv::gapi::bitwise_or(in1, in2);
-            cv::bitwise_or(in_mat1, in_mat2, out_mat_ocv);
-            break;
-        }
-        case XOR:
-        {
-            out = cv::gapi::bitwise_xor(in1, in2);
-            cv::bitwise_xor(in_mat1, in_mat2, out_mat_ocv);
-            break;
-        }
-        default:
-        {
-            FAIL() << "no such bitwise operation type!";
-        }
+        cv::GComputation c(GIn(in1, sc1), GOut(out));
+        c.apply(gin(in_mat1, sc), gout(out_mat_gapi), getCompileArgs());
     }
-    cv::GComputation c(GIn(in1, in2), GOut(out));
-    c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
+    else
+    {
+        switch(opType)
+        {
+            case AND:
+                out = cv::gapi::bitwise_and(in1, in2);
+                cv::bitwise_and(in_mat1, in_mat2, out_mat_ocv);
+                break;
+            case OR:
+                out = cv::gapi::bitwise_or(in1, in2);
+                cv::bitwise_or(in_mat1, in_mat2, out_mat_ocv);
+                break;
+            case XOR:
+                out = cv::gapi::bitwise_xor(in1, in2);
+                cv::bitwise_xor(in_mat1, in_mat2, out_mat_ocv);
+                break;
+            default:
+                FAIL() << "no such bitwise operation type!";
+        }
+        cv::GComputation c(GIn(in1, in2), GOut(out));
+        c.apply(gin(in_mat1, in_mat2), gout(out_mat_gapi), getCompileArgs());
+    }
+
 
     // Comparison //////////////////////////////////////////////////////////////
     {
@@ -593,6 +614,30 @@ TEST_P(SumTest, AccuracyTest)
         EXPECT_TRUE(cmpF(out_sum, out_sum_ocv));
     }
 }
+
+#pragma push_macro("countNonZero")
+#undef countNonZero
+TEST_P(CountNonZeroTest, AccuracyTest)
+{
+    int out_cnz_gapi = -1;
+    int out_cnz_ocv = -2;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::countNonZero(in);
+
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_cnz_gapi), getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        out_cnz_ocv = cv::countNonZero(in_mat1);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_cnz_gapi, out_cnz_ocv));
+    }
+}
+#pragma pop_macro("countNonZero")
 
 TEST_P(AddWeightedTest, AccuracyTest)
 {
@@ -1243,7 +1288,11 @@ TEST_P(PhaseTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: use a comparison functor instead (after enabling OpenCL)
     {
+#if defined(__aarch64__) || defined(__arm__)
+        EXPECT_NEAR(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF), 4e-6);
+#else
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+#endif
     }
 }
 
@@ -1331,6 +1380,27 @@ TEST_P(NormalizeTest, Test)
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
+}
+
+TEST_P(KMeansNDTest, AccuracyTest)
+{
+    kmeansTestBody(in_mat1, sz, type, K, flags, getCompileArgs(), cmpF);
+}
+
+TEST_P(KMeans2DTest, AccuracyTest)
+{
+    const int amount = sz.height;
+    std::vector<cv::Point2f> in_vector{};
+    initPointsVectorRandU(amount, in_vector);
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
+}
+
+TEST_P(KMeans3DTest, AccuracyTest)
+{
+    const int amount = sz.height;
+    std::vector<cv::Point3f> in_vector{};
+    initPointsVectorRandU(amount, in_vector);
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
 }
 
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
@@ -1576,6 +1646,128 @@ TEST_P(ReInitOutTest, TestWithAdd)
     // run for initialized output (can be initialized with a different size)
     initOutMats(out_sz, type);
     run_and_compare();
+}
+
+TEST_P(ParseSSDBLTest, ParseTest)
+{
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold, filter_label);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDBLref(in_mat, sz, confidence_threshold, filter_label, boxes_ref, labels_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+    EXPECT_TRUE(labels_gapi == labels_ref);
+}
+
+TEST_P(ParseSSDTest, ParseTest)
+{
+    cv::Mat in_mat = generateSSDoutput(sz);
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseSSD(in, op_sz, confidence_threshold,
+                                  alignment_to_square, filter_out_of_bounds);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(out));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseSSDref(in_mat, sz, confidence_threshold, alignment_to_square,
+                filter_out_of_bounds, boxes_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+}
+
+TEST_P(ParseYoloTest, ParseTest)
+{
+    cv::Mat in_mat = generateYoloOutput(num_classes, dims_config);
+    auto anchors = cv::gapi::nn::parsers::GParseYolo::defaultAnchors();
+    std::vector<cv::Rect> boxes_gapi, boxes_ref;
+    std::vector<int> labels_gapi, labels_ref;
+
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    cv::GOpaque<cv::Size> op_sz;
+    auto out = cv::gapi::parseYolo(in, op_sz, confidence_threshold, nms_threshold, anchors);
+    cv::GComputation c(cv::GIn(in, op_sz), cv::GOut(std::get<0>(out), std::get<1>(out)));
+    c.apply(cv::gin(in_mat, sz), cv::gout(boxes_gapi, labels_gapi), getCompileArgs());
+
+    // Reference code //////////////////////////////////////////////////////////
+    parseYoloRef(in_mat, sz, confidence_threshold, nms_threshold, num_classes, anchors, boxes_ref, labels_ref);
+
+    // Comparison //////////////////////////////////////////////////////////////
+    EXPECT_TRUE(boxes_gapi == boxes_ref);
+    EXPECT_TRUE(labels_gapi == labels_ref);
+}
+
+TEST_P(SizeTest, ParseTest)
+{
+    cv::GMat in;
+    cv::Size out_sz;
+
+    auto out = cv::gapi::streaming::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(in_mat1), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
+}
+
+TEST_P(SizeRTest, ParseTest)
+{
+    cv::Rect rect(cv::Point(0,0), sz);
+    cv::Size out_sz;
+
+    cv::GOpaque<cv::Rect> op_rect;
+    auto out = cv::gapi::streaming::size(op_rect);
+    cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
+    c.apply(cv::gin(rect), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
+}
+
+namespace {
+    class TestMediaBGR final : public cv::MediaFrame::IAdapter {
+        cv::Mat m_mat;
+
+    public:
+        explicit TestMediaBGR(cv::Mat m)
+            : m_mat(m) {
+        }
+        cv::GFrameDesc meta() const override {
+            return cv::GFrameDesc{ cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows) };
+        }
+        cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+            cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+            return cv::MediaFrame::View(std::move(pp), std::move(ss));
+        }
+    };
+};
+
+TEST_P(SizeMFTest, ParseTest)
+{
+    cv::Size out_sz;
+    cv::Mat bgr = cv::Mat::eye(sz.height, sz.width, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(frame), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
 }
 
 } // opencv_test

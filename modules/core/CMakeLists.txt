@@ -17,6 +17,18 @@ ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE
 ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2 AVX512_SKX)
 ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
+
+set(PARALLEL_ENABLE_PLUGINS_DEFAULT ON)
+if(EMSCRIPTEN OR IOS OR WINRT)
+  set(PARALLEL_ENABLE_PLUGINS_DEFAULT OFF)
+endif()
+# parallel backends configuration
+set(PARALLEL_ENABLE_PLUGINS "${PARALLEL_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building parallel plugin support")
+# TODO building plugins with OpenCV is not supported yet
+#set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
+#string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+
 ocv_add_module(core
                OPTIONAL opencv_cudev
                WRAP java objc python js)
@@ -58,10 +70,15 @@ file(GLOB_RECURSE module_opencl_hdrs
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
 
+file(GLOB_RECURSE core_parallel_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.h")
+ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${core_parallel_hdrs})
+
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)
@@ -80,21 +97,46 @@ endif()
 if(HAVE_MEMALIGN)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
 endif()
+if(HAVE_WIN32_ALIGNED_MALLOC)
+  ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_WIN32_ALIGNED_MALLOC=1")
+endif()
+if(HAVE_VA_INTEL_OLD_HEADER)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
+endif()
+if(OPENCV_LIBVA_LINK)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "OPENCV_LIBVA_LINK=1")
+endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
 
 if(NOT OPENCV_ENABLE_ALLOCATOR_STATS)
   add_definitions(-DOPENCV_DISABLE_ALLOCATOR_STATS=1)
-else()
+elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
   if(NOT DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
     if(HAVE_ATOMIC_LONG_LONG AND OPENCV_ENABLE_ATOMIC_LONG_LONG)
-      set(OPENCV_ALLOCATOR_STATS_COUNTER_TYPE "long long")
+      if(MINGW)
+        # command-line generation issue due to space in value, int/int64_t should be used instead
+        # https://github.com/opencv/opencv/issues/16990
+        message(STATUS "Consider adding OPENCV_ALLOCATOR_STATS_COUNTER_TYPE=int/int64_t according to your build configuration")
+      else()
+        set(OPENCV_ALLOCATOR_STATS_COUNTER_TYPE "long long")
+      endif()
     else()
       set(OPENCV_ALLOCATOR_STATS_COUNTER_TYPE "int")
     endif()
   endif()
-  message(STATUS "Allocator metrics storage type: '${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}'")
-  add_definitions("-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}")
+  if(DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
+    message(STATUS "Allocator metrics storage type: '${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}'")
+    add_definitions("-DOPENCV_ALLOCATOR_STATS_COUNTER_TYPE=${OPENCV_ALLOCATOR_STATS_COUNTER_TYPE}")
+  endif()
+endif()
+
+
+if(PARALLEL_ENABLE_PLUGINS)
+  ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")
+  if(OPENCV_DEBUG_POSTFIX)
+    ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/parallel/parallel.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")
+  endif()
 endif()
 
 
@@ -106,6 +148,10 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
 )
+
+if(OPENCV_CORE_EXCLUDE_C_API)
+  ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
+endif()
 
 if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")

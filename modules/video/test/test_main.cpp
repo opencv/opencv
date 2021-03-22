@@ -7,4 +7,19 @@
     #include <hpx/hpx_main.hpp>
 #endif
 
-CV_TEST_MAIN("cv")
+static
+void initTests()
+{
+    const char* extraTestDataPath =
+#ifdef WINRT
+        NULL;
+#else
+        getenv("OPENCV_DNN_TEST_DATA_PATH");
+#endif
+    if (extraTestDataPath)
+        cvtest::addDataSearchPath(extraTestDataPath);
+
+    cvtest::addDataSearchSubDirectory("");  // override "cv" prefix below to access without "../dnn" hacks
+}
+
+CV_TEST_MAIN("cv", initTests())

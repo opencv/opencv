@@ -79,6 +79,7 @@ cv::GRunArg cv::value_of(const cv::GOrigin &origin)
     switch (origin.shape)
     {
     case GShape::GSCALAR: return GRunArg(util::get<cv::Scalar>(origin.value));
+    case GShape::GARRAY:  return GRunArg(util::get<cv::detail::VectorRef>(origin.value));
     default: util::throw_error(std::logic_error("Unsupported shape for constant"));
     }
 }
@@ -118,6 +119,12 @@ cv::GMetaArg cv::descr_of(const cv::GRunArg &arg)
         case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>():
             return cv::util::get<cv::gapi::wip::IStreamSource::Ptr>(arg)->descr_of();
 
+        case GRunArg::index_of<cv::RMat>():
+            return cv::GMetaArg(cv::util::get<cv::RMat>(arg).desc());
+
+        case GRunArg::index_of<cv::MediaFrame>():
+            return cv::GMetaArg(cv::util::get<cv::MediaFrame>(arg).desc());
+
         default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
     }
 }
@@ -129,6 +136,7 @@ cv::GMetaArgs cv::descr_of(const cv::GRunArgs &args)
     return metas;
 }
 
+// FIXME: Is it tested for all types?
 cv::GMetaArg cv::descr_of(const cv::GRunArgP &argp)
 {
     switch (argp.index())
@@ -138,12 +146,14 @@ cv::GMetaArg cv::descr_of(const cv::GRunArgP &argp)
 #endif //  !defined(GAPI_STANDALONE)
     case GRunArgP::index_of<cv::Mat*>():               return GMetaArg(cv::descr_of(*util::get<cv::Mat*>(argp)));
     case GRunArgP::index_of<cv::Scalar*>():            return GMetaArg(descr_of(*util::get<cv::Scalar*>(argp)));
+    case GRunArgP::index_of<cv::MediaFrame*>():        return GMetaArg(descr_of(*util::get<cv::MediaFrame*>(argp)));
     case GRunArgP::index_of<cv::detail::VectorRef>():  return GMetaArg(util::get<cv::detail::VectorRef>(argp).descr_of());
     case GRunArgP::index_of<cv::detail::OpaqueRef>():  return GMetaArg(util::get<cv::detail::OpaqueRef>(argp).descr_of());
     default: util::throw_error(std::logic_error("Unsupported GRunArgP type"));
     }
 }
 
+// FIXME: Is it tested for all types??
 bool cv::can_describe(const GMetaArg& meta, const GRunArgP& argp)
 {
     switch (argp.index())
@@ -154,12 +164,14 @@ bool cv::can_describe(const GMetaArg& meta, const GRunArgP& argp)
     case GRunArgP::index_of<cv::Mat*>():               return util::holds_alternative<GMatDesc>(meta) &&
                                                               util::get<GMatDesc>(meta).canDescribe(*util::get<cv::Mat*>(argp));
     case GRunArgP::index_of<cv::Scalar*>():            return meta == GMetaArg(cv::descr_of(*util::get<cv::Scalar*>(argp)));
+    case GRunArgP::index_of<cv::MediaFrame*>():        return meta == GMetaArg(cv::descr_of(*util::get<cv::MediaFrame*>(argp)));
     case GRunArgP::index_of<cv::detail::VectorRef>():  return meta == GMetaArg(util::get<cv::detail::VectorRef>(argp).descr_of());
     case GRunArgP::index_of<cv::detail::OpaqueRef>():  return meta == GMetaArg(util::get<cv::detail::OpaqueRef>(argp).descr_of());
     default: util::throw_error(std::logic_error("Unsupported GRunArgP type"));
     }
 }
 
+// FIXME: Is it tested for all types??
 bool cv::can_describe(const GMetaArg& meta, const GRunArg& arg)
 {
     switch (arg.index())
@@ -173,6 +185,9 @@ bool cv::can_describe(const GMetaArg& meta, const GRunArg& arg)
     case GRunArg::index_of<cv::detail::VectorRef>(): return meta == cv::GMetaArg(util::get<cv::detail::VectorRef>(arg).descr_of());
     case GRunArg::index_of<cv::detail::OpaqueRef>(): return meta == cv::GMetaArg(util::get<cv::detail::OpaqueRef>(arg).descr_of());
     case GRunArg::index_of<cv::gapi::wip::IStreamSource::Ptr>(): return util::holds_alternative<GMatDesc>(meta); // FIXME(?) may be not the best option
+    case GRunArg::index_of<cv::RMat>():              return util::holds_alternative<GMatDesc>(meta) &&
+                                                            util::get<GMatDesc>(meta).canDescribe(cv::util::get<cv::RMat>(arg));
+    case GRunArg::index_of<cv::MediaFrame>():        return meta == cv::GMetaArg(util::get<cv::MediaFrame>(arg).desc());
     default: util::throw_error(std::logic_error("Unsupported GRunArg type"));
     }
 }
@@ -186,6 +201,8 @@ bool cv::can_describe(const GMetaArgs &metas, const GRunArgs &args)
                      });
 }
 
+// FIXME: Is it tested for all types?
+// FIXME: Where does this validation happen??
 void cv::validate_input_arg(const GRunArg& arg)
 {
     // FIXME: It checks only Mat argument
@@ -242,6 +259,11 @@ std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
     case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
         os << util::get<cv::GOpaqueDesc>(arg);
         break;
+
+    case cv::GMetaArg::index_of<cv::GFrameDesc>():
+        os << util::get<cv::GFrameDesc>(arg);
+        break;
+
     default:
         GAPI_Assert(false);
     }
@@ -262,10 +284,14 @@ const void* cv::gimpl::proto::ptr(const GRunArgP &arg)
         return static_cast<const void*>(cv::util::get<cv::Mat*>(arg));
     case GRunArgP::index_of<cv::Scalar*>():
         return static_cast<const void*>(cv::util::get<cv::Scalar*>(arg));
+    case GRunArgP::index_of<cv::RMat*>():
+        return static_cast<const void*>(cv::util::get<cv::RMat*>(arg));
     case GRunArgP::index_of<cv::detail::VectorRef>():
         return cv::util::get<cv::detail::VectorRef>(arg).ptr();
     case GRunArgP::index_of<cv::detail::OpaqueRef>():
         return cv::util::get<cv::detail::OpaqueRef>(arg).ptr();
+    case GRunArgP::index_of<cv::MediaFrame*>():
+        return static_cast<const void*>(cv::util::get<cv::MediaFrame*>(arg));
     default:
         util::throw_error(std::logic_error("Unknown GRunArgP type!"));
     }

@@ -21,6 +21,13 @@
 
 namespace cv {
 
+struct GraphInfo
+{
+    using Ptr = std::shared_ptr<GraphInfo>;
+    cv::GTypesInfo inputs;
+    cv::GTypesInfo outputs;
+};
+
 class GComputation::Priv
 {
 public:
@@ -29,16 +36,17 @@ public:
         cv::GProtoArgs m_outs;
     };
 
-    using Dump = cv::gimpl::s11n::GSerialized;
+    using Dump = cv::gapi::s11n::GSerialized;
 
     using Shape = cv::util::variant
         < Expr    // An expression-based graph
         , Dump    // A deserialized graph
         >;
 
-    GCompiled   m_lastCompiled;
-    GMetaArgs   m_lastMetas; // TODO: make GCompiled remember its metas?
-    Shape       m_shape;
+    GCompiled      m_lastCompiled;
+    GMetaArgs      m_lastMetas; // TODO: make GCompiled remember its metas?
+    Shape          m_shape;
+    GraphInfo::Ptr m_info;      // NB: Used by python bridge
 };
 
 }

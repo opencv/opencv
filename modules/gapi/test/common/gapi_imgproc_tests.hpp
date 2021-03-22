@@ -46,6 +46,8 @@ GAPI_TEST_FIXTURE(Erode3x3Test, initMatrixRandN, FIXTURE_API(CompareMats,int), 2
 GAPI_TEST_FIXTURE(DilateTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int), 3,
     cmpF, kernSize, kernType)
 GAPI_TEST_FIXTURE(Dilate3x3Test, initMatrixRandN, FIXTURE_API(CompareMats,int), 2, cmpF, numIters)
+GAPI_TEST_FIXTURE(MorphologyExTest, initMatrixRandN, FIXTURE_API(CompareMats,cv::MorphTypes),
+                  2, cmpF, op)
 GAPI_TEST_FIXTURE(SobelTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,int), 4,
     cmpF, kernSize, dx, dy)
 GAPI_TEST_FIXTURE(SobelXYTest, initMatrixRandN, FIXTURE_API(CompareMats,int,int,int,int), 5,
@@ -64,9 +66,44 @@ GAPI_TEST_FIXTURE_SPEC_PARAMS(GoodFeaturesTest,
                                           double,int,bool),
                               8, cmpF, fileName, type, maxCorners, qualityLevel, minDistance,
                               blockSize, useHarrisDetector)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursNoOffsetTest,
+                              FIXTURE_API(cv::Size,MatType2,cv::RetrievalModes,
+                                          cv::ContourApproximationModes, CompareMats),
+                              5, sz, type, mode, method, cmpF)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursOffsetTest, <>, 0)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursHNoOffsetTest,
+                              FIXTURE_API(cv::Size,MatType2,cv::RetrievalModes,
+                                          cv::ContourApproximationModes, CompareMats),
+                              5, sz, type, mode, method, cmpF)
+GAPI_TEST_FIXTURE_SPEC_PARAMS(FindContoursHOffsetTest, <>, 0)
+GAPI_TEST_FIXTURE(BoundingRectMatTest, initNothing, FIXTURE_API(CompareRects,bool),
+                  2, cmpF, initByVector)
+GAPI_TEST_FIXTURE(BoundingRectVector32STest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
+GAPI_TEST_FIXTURE(BoundingRectVector32FTest, initNothing, FIXTURE_API(CompareRects), 1, cmpF)
+GAPI_TEST_FIXTURE(FitLine2DMatVectorTest, initMatByPointsVectorRandU<cv::Point_>,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector32STest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector32FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine2DVector64FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 4>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DMatVectorTest, initMatByPointsVectorRandU<cv::Point3_>,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector32STest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector32FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(FitLine3DVector64FTest, initNothing,
+                  FIXTURE_API(CompareVecs<float, 6>,cv::DistanceTypes), 2, cmpF, distType)
+GAPI_TEST_FIXTURE(BGR2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(BGR2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(RGB2YUVTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(BGR2I420Test, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(RGB2I420Test, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(I4202BGRTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
+GAPI_TEST_FIXTURE(I4202RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(YUV2RGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(YUV2GrayTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)
 GAPI_TEST_FIXTURE(NV12toRGBTest, initMatrixRandN, FIXTURE_API(CompareMats), 1, cmpF)

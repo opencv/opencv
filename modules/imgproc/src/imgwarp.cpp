@@ -446,7 +446,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || sstep > 0x8000 )
+        if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
@@ -2167,7 +2167,8 @@ public:
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 64;
-        short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
+        AutoBuffer<short, 0> __XY(BLOCK_SZ * BLOCK_SZ * 2), __A(BLOCK_SZ * BLOCK_SZ);
+        short *XY = __XY.data(), *A = __A.data();
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;

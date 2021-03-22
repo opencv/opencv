@@ -34,6 +34,11 @@ cv::detail::VectorRef& cv::GOCLContext::outVecRef(int output)
     return util::get<cv::detail::VectorRef>(m_results.at(output));
 }
 
+cv::detail::OpaqueRef& cv::GOCLContext::outOpaqueRef(int output)
+{
+    return util::get<cv::detail::OpaqueRef>(m_results.at(output));
+}
+
 cv::GOCLKernel::GOCLKernel()
 {
 }

@@ -140,7 +140,8 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
-add_library(libprotobuf STATIC ${Protobuf_SRCS})
+include_directories(BEFORE "${PROTOBUF_ROOT}/src")  # ensure using if own headers: https://github.com/opencv/opencv/issues/13328
+add_library(libprotobuf STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${Protobuf_SRCS})
 target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
     PROPERTIES
@@ -152,11 +153,16 @@ set_target_properties(libprotobuf
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
     )
 
+if(ANDROID)
+  # https://github.com/opencv/opencv/issues/17282
+  target_link_libraries(libprotobuf INTERFACE "-landroid" "-llog")
+endif()
+
 get_protobuf_version(Protobuf_VERSION "${PROTOBUF_ROOT}/src")
 set(Protobuf_VERSION ${Protobuf_VERSION} CACHE INTERNAL "" FORCE)
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(libprotobuf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(libprotobuf EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(protobuf LICENSE README.md)

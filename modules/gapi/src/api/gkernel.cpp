@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -53,6 +53,16 @@ std::size_t cv::gapi::GKernelPackage::size() const
 const std::vector<cv::GTransform> &cv::gapi::GKernelPackage::get_transformations() const
 {
     return m_transformations;
+}
+
+std::vector<std::string> cv::gapi::GKernelPackage::get_kernel_ids() const
+{
+    std::vector<std::string> ids;
+    for (auto &&id : m_id_kernels)
+    {
+        ids.emplace_back(id.first);
+    }
+    return ids;
 }
 
 cv::gapi::GKernelPackage cv::gapi::combine(const GKernelPackage  &lhs,

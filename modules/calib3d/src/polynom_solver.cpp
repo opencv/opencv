@@ -65,7 +65,8 @@ int solve_deg3(double a, double b, double c, double d,
       return 3;
     }
     else {
-      x0 = pow(2 * R, 1 / 3.0) - b_a_3;
+      double cube_root = cv::cubeRoot(2 * R);
+      x0 = cube_root - b_a_3;
       return 1;
     }
   }
@@ -82,8 +83,15 @@ int solve_deg3(double a, double b, double c, double d,
   }
 
   // D > 0, only one real root
-  double AD = pow(fabs(R) + sqrt(D), 1.0 / 3.0) * (R > 0 ? 1 : (R < 0 ? -1 : 0));
-  double BD = (AD == 0) ? 0 : -Q / AD;
+  double AD = 0.;
+  double BD = 0.;
+  double R_abs = fabs(R);
+  if (R_abs > DBL_EPSILON)
+  {
+    AD = cv::cubeRoot(R_abs + sqrt(D));
+    AD = (R >= 0) ? AD : -AD;
+    BD = -Q / AD;
+  }
 
   // Calculate the only real root
   x0 = AD + BD - b_a_3;

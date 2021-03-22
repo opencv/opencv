@@ -656,6 +656,11 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
         target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB
     );
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)  // nGraph compilation failure
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     const double confThreshold = 0.5;
     // batchId, classId, confidence, left, top, right, bottom
     const int N0 = 2;
@@ -672,6 +677,8 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
     double scoreDiff = 0.01f;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.15 : 0.01f;
+    if (target == DNN_TARGET_CUDA_FP16)
+        iouDiff = 0.02;
 
     std::string config_file = "yolov4-tiny.cfg";
     std::string weights_file = "yolov4-tiny.weights";
@@ -726,6 +733,11 @@ TEST_P(Test_Darknet_layers, upsample)
 TEST_P(Test_Darknet_layers, mish)
 {
     testDarknetLayer("mish", true);
+}
+
+TEST_P(Test_Darknet_layers, tanh)
+{
+    testDarknetLayer("tanh");
 }
 
 TEST_P(Test_Darknet_layers, avgpool_softmax)
@@ -789,6 +801,11 @@ TEST_P(Test_Darknet_layers, relu)
      if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     testDarknetLayer("relu");
+}
+
+TEST_P(Test_Darknet_layers, sam)
+{
+    testDarknetLayer("sam", true);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());

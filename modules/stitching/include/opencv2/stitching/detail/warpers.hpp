@@ -70,6 +70,23 @@ public:
      */
     virtual Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R) = 0;
 
+    /** @brief Projects the image point backward.
+
+    @param pt Projected point
+    @param K Camera intrinsic parameters
+    @param R Camera rotation matrix
+    @return Backward-projected point
+    */
+#if CV_VERSION_MAJOR == 4
+    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
+    {
+        CV_UNUSED(pt); CV_UNUSED(K); CV_UNUSED(R);
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#else
+    virtual Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) = 0;
+#endif
+
     /** @brief Builds the projection maps according to the given camera data.
 
     @param src_size Source image size
@@ -143,6 +160,8 @@ class CV_EXPORTS_TEMPLATE RotationWarperBase : public RotationWarper
 public:
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R) CV_OVERRIDE;
 
+    Point2f warpPointBackward(const Point2f &pt, InputArray K, InputArray R) CV_OVERRIDE;
+
     Rect buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap) CV_OVERRIDE;
 
     Point warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
@@ -189,6 +208,9 @@ public:
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R) CV_OVERRIDE;
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray R, InputArray T);
 
+    Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R) CV_OVERRIDE;
+    Point2f warpPointBackward(const Point2f& pt, InputArray K, InputArray R, InputArray T);
+
     virtual Rect buildMaps(Size src_size, InputArray K, InputArray R, InputArray T, CV_OUT OutputArray xmap, CV_OUT OutputArray ymap);
     Rect buildMaps(Size src_size, InputArray K, InputArray R, CV_OUT OutputArray xmap, CV_OUT OutputArray ymap) CV_OVERRIDE;
 
@@ -227,6 +249,15 @@ public:
     @return Projected point
      */
     Point2f warpPoint(const Point2f &pt, InputArray K, InputArray H) CV_OVERRIDE;
+
+    /** @brief Projects the image point backward.
+
+    @param pt Projected point
+    @param K Camera intrinsic parameters
+    @param H Camera extrinsic parameters
+    @return Backward-projected point
+    */
+    Point2f warpPointBackward(const Point2f &pt, InputArray K, InputArray H) CV_OVERRIDE;
 
     /** @brief Builds the projection maps according to the given camera data.
 
