@@ -1354,11 +1354,15 @@ struct PowerFunctor : public BaseFunctor
                                                                  ngraph::Shape{1}, &scale);
         auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                                  ngraph::Shape{1}, &shift);
-        auto power_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &power);
 
         auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
         auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
+
+        if (power == 1)
+            return scale_shift;
+
+        auto power_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                                                 ngraph::Shape{1}, &power);
         return std::make_shared<ngraph::op::v1::Power>(scale_shift, power_node, ngraph::op::AutoBroadcastType::NUMPY);
     }
 #endif  // HAVE_DNN_NGRAPH
