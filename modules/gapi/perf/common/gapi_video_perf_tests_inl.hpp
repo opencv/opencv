@@ -249,7 +249,6 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
     cv::RNG& rng = cv::theRNG();
     measurements = std::vector<cv::Mat>(testNumMeasurements, cv::Mat::zeros(mDim, 1, type));
     haveMeasurements = std::vector<bool>(testNumMeasurements, true);
-    cv::Mat measurement(mDim, 1, type);
     for (std::size_t i = 0; i < testNumMeasurements; i++)
     {
         if (receiveRandMeas)
@@ -260,8 +259,7 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
 
         if (haveMeasurements[i])
         {
-            cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
-            measurements.push_back(measurement);
+            cv::randu(measurements[i], cv::Scalar::all(-1), cv::Scalar::all(1));
         }
     }
 }
@@ -274,12 +272,10 @@ inline void generateInputKalman(const int mDim, const int cDim, const MatType2& 
 {
     generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
                         haveMeasurements, measurements);
-    ctrls.reserve(testNumMeasurements);
-    cv::Mat ctrl(cDim, 1, type);
+    ctrls = std::vector<cv::Mat>(testNumMeasurements, cv::Mat(cDim, 1, type));
     for (std::size_t i = 0; i < testNumMeasurements; i++)
     {
-        cv::randu(ctrl, cv::Scalar::all(-1), cv::Scalar::all(1));
-        ctrls.push_back(ctrl);
+        cv::randu(ctrls[i], cv::Scalar::all(-1), cv::Scalar::all(1));
     }
 }
 
