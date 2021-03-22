@@ -410,7 +410,10 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v512, v_int64x8, int64, s64, v_uint64x8, void, void, v_int64x8, void);
     CV_DEF_REG_TRAITS(v512, v_float64x8, double, f64, v_float64x8, void, void, v_int64x8, v_int32x16);
 #endif
+//! @endcond
 
+//! @addtogroup core_hal_intrin
+//! @{
 #if CV_SIMD512 && (!defined(CV__SIMD_FORCE_WIDTH) || CV__SIMD_FORCE_WIDTH == 512)
 #define CV__SIMD_NAMESPACE simd512
 namespace CV__SIMD_NAMESPACE {
@@ -541,7 +544,9 @@ namespace CV__SIMD_NAMESPACE {
 } // namespace
 using namespace CV__SIMD_NAMESPACE;
 #endif
+//! @}
 
+//! @cond IGNORED
 #ifndef CV_SIMD_64F
 #define CV_SIMD_64F 0
 #endif
