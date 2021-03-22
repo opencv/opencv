@@ -29,7 +29,7 @@ BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
 FEATURES_FIND_CHOICES = OrderedDict()
 try:
-    cv.xfeatures2d_SURF.create()
+    cv.xfeatures2d_SURF.create() # check if the function can be called
     FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
 except (AttributeError, cv.error) as e:
     print("SURF not available")
@@ -312,7 +312,7 @@ def main():
     is_seam_scale_set = False
     is_compose_scale_set = False
     for name in img_names:
-        full_img = cv.imread(cv.samples.findFile(name))
+        full_img = cv.imread(name)
         if full_img is None:
             print("Cannot read image ", name)
             exit()
