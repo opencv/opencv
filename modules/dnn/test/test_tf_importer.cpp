@@ -210,6 +210,12 @@ TEST_P(Test_TensorFlow_layers, eltwise_add_vec)
     runTensorFlowNet("eltwise_add_vec");
 }
 
+TEST_P(Test_TensorFlow_layers, eltwise_mul_vec)
+{
+    runTensorFlowNet("eltwise_mul_vec");
+}
+
+
 TEST_P(Test_TensorFlow_layers, channel_broadcast)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
