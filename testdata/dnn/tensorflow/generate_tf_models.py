@@ -792,6 +792,12 @@ out2 = tf.keras.layers.ReLU(name="relu")(inp)
 final_out = tf.math.add(out1, out2, name='tf_sum')
 save(inp, final_out, 'eltwise_add_vec')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 4, 3], 'input')
+out1 = tf.keras.layers.MaxPool2D((2, 2), 4, "SAME", name="pooling")(inp)
+out2 = tf.keras.layers.ReLU(name="relu")(inp)
+final_out = tf.keras.layers.Multiply(name='tf_mul')([out1, out2])
+save(inp, final_out, 'eltwise_mul_vec')
+################################################################################
 inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
 softmax = tf.contrib.slim.softmax(conv)
