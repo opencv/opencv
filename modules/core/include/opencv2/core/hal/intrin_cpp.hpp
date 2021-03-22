@@ -149,17 +149,15 @@ check the CV_SIMD128_64F preprocessor definition.
 These operations allow to set contents of the register explicitly or by loading it from some memory
 block and to save contents of the register to memory block.
 
-There are variable size register load/store operations that provide result of maximum available size
+There are variable size register load operations that provide result of maximum available size
 depending on chosen platform capabilities.
 - Constructors:
 @ref v_reg::v_reg(const _Tp *ptr) "from memory",
 - Other create methods:
 @ref vx_setall_s8, @ref vx_setall_u8, ...,
 @ref vx_setzero_u8, @ref vx_setzero_s8, ...
-- Memory operations:
+- Memory load operations:
 @ref vx_load, @ref vx_load_aligned, @ref vx_load_low, @ref vx_load_halves,
-@ref vx_store, @ref vx_store_aligned,
-@ref vx_store_high, @ref vx_store_low
 - Memory operations with expansion of values:
 @ref vx_load_expand, @ref vx_load_expand_q
 
@@ -171,10 +169,8 @@ For 128 bit registers
 - Other create methods:
 @ref v_setall_s8, @ref v_setall_u8, ...,
 @ref v_setzero_u8, @ref v_setzero_s8, ...
-- Memory operations:
+- Memory load operations:
 @ref v_load, @ref v_load_aligned, @ref v_load_low, @ref v_load_halves,
-@ref v_store, @ref v_store_aligned,
-@ref v_store_high, @ref v_store_low
 - Memory operations with expansion of values:
 @ref v_load_expand, @ref v_load_expand_q
 For 256 bit registers(check CV_SIMD256 preprocessor definition)
@@ -184,10 +180,8 @@ For 256 bit registers(check CV_SIMD256 preprocessor definition)
 - Other create methods:
 @ref v256_setall_s8, @ref v256_setall_u8, ...,
 @ref v256_setzero_u8, @ref v256_setzero_s8, ...
-- Memory operations:
+- Memory load operations:
 @ref v256_load, @ref v256_load_aligned, @ref v256_load_low, @ref v256_load_halves,
-@ref v256_store, @ref v256_store_aligned,
-@ref v256_store_high, @ref v256_store_low
 - Memory operations with expansion of values:
 @ref v256_load_expand, @ref v256_load_expand_q
 For 512 bit registers(check CV_SIMD512 preprocessor definition)
@@ -197,13 +191,14 @@ For 512 bit registers(check CV_SIMD512 preprocessor definition)
 - Other create methods:
 @ref v512_setall_s8, @ref v512_setall_u8, ...,
 @ref v512_setzero_u8, @ref v512_setzero_s8, ...
-- Memory operations:
+- Memory load operations:
 @ref v512_load, @ref v512_load_aligned, @ref v512_load_low, @ref v512_load_halves,
-@ref v512_store, @ref v512_store_aligned,
-@ref v512_store_high, @ref v512_store_low
 - Memory operations with expansion of values:
 @ref v512_load_expand, @ref v512_load_expand_q
 
+Store to memory operations are similar across different platform capabilities:
+@ref v_store, @ref v_store_aligned,
+@ref v_store_high, @ref v_store_low
 
 ### Value reordering
 

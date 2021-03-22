@@ -315,8 +315,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
     inline vtyp vx_load_aligned(const typ* ptr) /** @brief Load maximum available capacity register contents from memory(aligned) */ { return prefix##_load_aligned(ptr); } \
     inline vtyp vx_load_low(const typ* ptr) /** @brief Load lower half of maximum available capacity register from memory(aligned) */ { return prefix##_load_low(ptr); } \
     inline vtyp vx_load_halves(const typ* ptr0, const typ* ptr1) /** @brief Load maximum available capacity register contents from two memory blocks */ { return prefix##_load_halves(ptr0, ptr1); } \
-    inline void vx_store(typ* ptr, const vtyp& v) { return v_store(ptr, v); } \
-    inline void vx_store_aligned(typ* ptr, const vtyp& v) { return v_store_aligned(ptr, v); } \
     inline vtyp vx_lut(const typ* ptr, const int* idx) /** @brief Load maximum available capacity register contents with array elements by provided indexes */ { return prefix##_lut(ptr, idx); } \
     inline vtyp vx_lut_pairs(const typ* ptr, const int* idx) /** @brief Load maximum available capacity register contents with array element pairs by provided indexes */ { return prefix##_lut_pairs(ptr, idx); }
 
