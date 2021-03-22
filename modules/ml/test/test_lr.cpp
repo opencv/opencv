@@ -1,11 +1,13 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+//
+// AUTHOR: Rahul Kavi rahulkavi[at]live[at]com
 
-// This is a implementation of the Logistic Regression algorithm in C++ in OpenCV.
-
-// AUTHOR:
-// Rahul Kavi rahulkavi[at]live[at]com
+//
+// Test data uses subset of data from the popular Iris Dataset (1936):
+// - http://archive.ics.uci.edu/ml/datasets/Iris
+// - https://en.wikipedia.org/wiki/Iris_flower_data_set
 //
 
 #include "test_precomp.hpp"

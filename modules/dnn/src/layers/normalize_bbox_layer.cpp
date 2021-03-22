@@ -334,8 +334,8 @@ public:
         if (!acrossSpatial) {
             axes_data.push_back(1);
         } else {
-            axes_data.resize(ieInpNode->get_shape().size());
-            std::iota(axes_data.begin(), axes_data.end(), 0);
+            axes_data.resize(ieInpNode->get_shape().size() - 1);
+            std::iota(axes_data.begin(), axes_data.end(), 1);
         }
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
         auto norm = std::make_shared<ngraph::op::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
@@ -344,23 +344,18 @@ public:
         std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
         shape[0] = blobs.empty() ? 1 : batch;
         shape[1] = numChannels;
-        std::shared_ptr<ngraph::op::Constant> weight;
-        if (blobs.empty())
+        if (!blobs.empty())
         {
-            std::vector<float> ones(numChannels, 1);
-            weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), ones.data());
-        }
-        else
-        {
-            weight = std::make_shared<ngraph::op::Constant>(
+            auto weight = std::make_shared<ngraph::op::Constant>(
                                       ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
-        }
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #else
-        auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
 #endif
-        return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
+            return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(norm));
     }
 #endif  // HAVE_DNN_NGRAPH
 
