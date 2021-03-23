@@ -416,6 +416,16 @@ conv2 = tf.layers.conv2d(inp, filters=4, kernel_size=1)
 out = tf.reshape(conv2, [1, 2, 3, 6], 'reshaped')
 save(inp, out, 'reshape_nchw')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 5, 5, 3], 'input')
+out = tf.keras.layers.MaxPool2D((2, 2), 4, "SAME", name='pooling')(inp)
+reshape = tf.reshape(out, [-1, 1, 1, 12], 'reshaped')
+conv_filter = tf.get_variable('filter', [1, 1, 12, 4],
+                              initializer=tf.truncated_normal_initializer(),
+                              dtype=tf.float32)
+conv = tf.nn.conv2d(input=reshape, filters=conv_filter, strides=[1, 1, 1, 1],
+                    padding='SAME', name='conv2d')
+save(inp, conv, 'reshape_conv')
+################################################################################
 inp = tf.placeholder(tf.float32, [1, 6, 5, 3], 'input')
 conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
                         activation=tf.nn.relu,
