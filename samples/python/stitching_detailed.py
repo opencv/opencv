@@ -312,7 +312,7 @@ def main():
     is_seam_scale_set = False
     is_compose_scale_set = False
     for name in img_names:
-        full_img = cv.imread(name)
+        full_img = cv.imread(cv.samples.findFile(name))
         if full_img is None:
             print("Cannot read image ", name)
             exit()
