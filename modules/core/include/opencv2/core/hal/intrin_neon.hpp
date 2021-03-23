@@ -1539,6 +1539,26 @@ OPENCV_HAL_IMPL_NEON_SELECT(v_float32x4, f32, u32)
 OPENCV_HAL_IMPL_NEON_SELECT(v_float64x2, f64, u64)
 #endif
 
+#if CV_NEON_AARCH64
+#define OPENCV_HAL_IMPL_NEON_EXPAND(_Tpvec, _Tpwvec, _Tp, suffix) \
+inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1) \
+{ \
+    b0.val = vmovl_##suffix(vget_low_##suffix(a.val)); \
+    b1.val = vmovl_high_##suffix(a.val); \
+} \
+inline _Tpwvec v_expand_low(const _Tpvec& a) \
+{ \
+    return _Tpwvec(vmovl_##suffix(vget_low_##suffix(a.val))); \
+} \
+inline _Tpwvec v_expand_high(const _Tpvec& a) \
+{ \
+    return _Tpwvec(vmovl_high_##suffix(a.val)); \
+} \
+inline _Tpwvec v_load_expand(const _Tp* ptr) \
+{ \
+    return _Tpwvec(vmovl_##suffix(vld1_##suffix(ptr))); \
+}
+#else
 #define OPENCV_HAL_IMPL_NEON_EXPAND(_Tpvec, _Tpwvec, _Tp, suffix) \
 inline void v_expand(const _Tpvec& a, _Tpwvec& b0, _Tpwvec& b1) \
 { \
@@ -1557,6 +1577,7 @@ inline _Tpwvec v_load_expand(const _Tp* ptr) \
 { \
     return _Tpwvec(vmovl_##suffix(vld1_##suffix(ptr))); \
 }
+#endif
 
 OPENCV_HAL_IMPL_NEON_EXPAND(v_uint8x16, v_uint16x8, uchar, u8)
 OPENCV_HAL_IMPL_NEON_EXPAND(v_int8x16, v_int16x8, schar, s8)
