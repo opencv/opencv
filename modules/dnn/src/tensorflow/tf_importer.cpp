@@ -306,7 +306,7 @@ bool hasAllOnes(const Mat &inputs, int startPos, int endPos)
 
     for (int i = startPos; i < endPos; i++)
     {
-        if (inputs.at<int>(i) != 1 || inputs.at<int>(i)!= -1)
+        if (inputs.at<int>(i) != 1 && inputs.at<int>(i) != -1)
             return false;
     }
     return true;
