@@ -478,6 +478,11 @@ TEST_P(Test_TensorFlow_layers, reshape_nchw)
     runTensorFlowNet("reshape_nchw");
 }
 
+TEST_P(Test_TensorFlow_layers, reshape_conv)
+{
+    runTensorFlowNet("reshape_conv");
+}
+
 TEST_P(Test_TensorFlow_layers, leaky_relu)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
