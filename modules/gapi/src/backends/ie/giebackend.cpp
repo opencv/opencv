@@ -132,7 +132,7 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         const size_t width    = mat.size().width;
 
         const size_t strideH  = mat.step1();
-        IE::BlockingDesc bdesc({1, channels, height, width} /* dims */,
+        IE::BlockingDesc bdesc({1, height, width, channels} /* blocking dims */,
                                {0, 2, 3, 1} /* order for NHWC   */,
                                0            /* offset           */,
                                {0, 0, 0, 0} /* offsets for dims */,
