@@ -395,6 +395,100 @@ OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float32x4, v_max, vfmax_vv_f32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float64x2, v_min, vfmin_vv_f64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_float64x2, v_max, vfmax_vv_f64m1, 2)
 
+inline v_float32x4 v_sqrt(const v_float32x4& x)
+{
+    return v_float32x4(vfsqrt_v_f32m1(x.val, 4));
+}
+
+inline v_float32x4 v_invsqrt(const v_float32x4& x)
+{
+    return v_float32x4(vfrdiv_vf_f32m1(vfsqrt_v_f32m1(x.val, 4), 1, 4));
+}
+
+inline v_float32x4 v_magnitude(const v_float32x4& a, const v_float32x4& b)
+{
+    v_float32x4 x(vfmacc_vv_f32m1(vfmul_vv_f32m1(a.val, a.val, 4), b.val, b.val, 4));
+    return v_sqrt(x);
+}
+
+inline v_float32x4 v_sqr_magnitude(const v_float32x4& a, const v_float32x4& b)
+{
+    return v_float32x4(vfmacc_vv_f32m1(vfmul_vv_f32m1(a.val, a.val, 4), b.val, b.val, 4));
+}
+
+inline v_float32x4 v_fma(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
+{
+    return v_float32x4(vfmacc_vv_f32m1(c.val, a.val, b.val, 4));
+}
+
+inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{
+    return v_int32x4(vmacc_vv_i32m1(c.val, a.val, b.val, 4));
+}
+
+inline v_float32x4 v_muladd(const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
+{
+    return v_fma(a, b, c);
+}
+
+inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
+{
+    return v_fma(a, b, c);
+}
+
+inline v_float32x4 v_matmul(const v_float32x4& v, const v_float32x4& m0,
+                            const v_float32x4& m1, const v_float32x4& m2,
+                            const v_float32x4& m3)
+{
+    vfloat32m1_t res = vfmul_vf_f32m1(m0.val, v.val[0], 4);//vmuli_f32(m0.val, v.val, 0);
+    res = vfmacc_vf_f32m1(res, v.val[1], m1.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    res = vfmacc_vf_f32m1(res, v.val[2], m2.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    res = vfmacc_vf_f32m1(res, v.val[3], m3.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    return v_float32x4(res);
+}
+
+inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
+                               const v_float32x4& m1, const v_float32x4& m2,
+                               const v_float32x4& a)
+{
+    vfloat32m1_t res = vfmul_vf_f32m1(m0.val, v.val[0], 4);//vmuli_f32(m0.val, v.val, 0);
+    res = vfmacc_vf_f32m1(res, v.val[1], m1.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    res = vfmacc_vf_f32m1(res, v.val[2], m2.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    res = vfadd_vv_f32m1(res, a.val, 4);//vmulai_f32(res, m1.val, v.val, 1);
+    return v_float32x4(res);
+}
+
+inline v_float64x2 v_sqrt(const v_float64x2& x)
+{
+    return v_float64x2(vfsqrt_v_f64m1(x.val, 2));
+}
+
+inline v_float64x2 v_invsqrt(const v_float64x2& x)
+{
+    return v_float64x2(vfrdiv_vf_f64m1(vfsqrt_v_f64m1(x.val, 2), 1, 2));
+}
+
+inline v_float64x2 v_magnitude(const v_float64x2& a, const v_float64x2& b)
+{
+    v_float64x2 x(vfmacc_vv_f64m1(vfmul_vv_f64m1(a.val, a.val, 2), b.val, b.val, 2));
+    return v_sqrt(x);
+}
+
+inline v_float64x2 v_sqr_magnitude(const v_float64x2& a, const v_float64x2& b)
+{
+    return v_float64x2(vfmacc_vv_f64m1(vfmul_vv_f64m1(a.val, a.val, 2), b.val, b.val, 2));
+}
+
+inline v_float64x2 v_fma(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
+{
+    return v_float64x2(vfmacc_vv_f64m1(c.val, a.val, b.val, 2));
+}
+
+inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
+{
+    return v_fma(a, b, c);
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
