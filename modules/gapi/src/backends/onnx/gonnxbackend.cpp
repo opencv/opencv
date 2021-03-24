@@ -86,6 +86,7 @@ struct TensorInfo {
 
     bool is_dynamic = false;
     bool is_grayscale = false;
+    bool is_postproc = false;
 
     struct MeanStdev {
         cv::Scalar mean;
@@ -165,18 +166,18 @@ inline int getIdxByName(const std::vector<cv::gimpl::onnx::TensorInfo>& info, co
     return std::distance(info.begin(), it);
 }
 
-inline int toCV(ONNXTensorElementDataType prec) {
+std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return std::make_tuple(CV_8U, false);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return std::make_tuple(CV_32F, false);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return std::make_tuple(CV_32S, false);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
         GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
-        return -1;
+        return std::make_tuple(CV_32S, true);
     }
     default: GAPI_Assert(false && "Unsupported data type");
     }
-    return -1;
+    return  std::make_tuple(-1, false);;
 }
 
 inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
@@ -190,20 +191,22 @@ inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
 
 inline cv::Mat toCV(Ort::Value &v) {
     const auto info = v.GetTensorTypeAndShapeInfo();
-    const auto type = toCV(info.GetElementType());
+    int type = -1;
+    bool is_converted = false;
+    std::tie(type, is_converted) = toCV(info.GetElementType());
     const auto shape = toCV(info.GetShape());
-    if (type != -1) {
+    if (!is_converted) {
         return cv::Mat(shape,
                        type,
                        reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
     }
     const int total = std::accumulate(shape.begin(), shape.end(), 0);
-    const int64_t* ptr = v.GetTensorMutableData<int64_t>();
-    cv::Mat mt({total}, CV_32S);
-    for (int i = 0; i < total; ++i) {
-        mt.at<int>(i) = static_cast<int>(ptr[i]);
-    }
-    return mt.reshape(1, shape);
+    cv::Mat mt(shape, CV_32S);
+    int64_t* ptr = v.GetTensorMutableData<int64_t>();
+    int* mt_ptr = mt.ptr<int>();
+    std::transform(ptr, ptr + total, mt_ptr,
+                   [](int64_t el) { return static_cast<int>(el); });
+    return mt;
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -214,9 +217,7 @@ inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
     GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
-    const auto type = toCV(ti.type) != -1
-        ? toCV(ti.type)
-        : CV_32S;
+    const auto type = std::get<0>(toCV(ti.type));
     if (src.depth() == CV_32F) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
@@ -701,10 +702,7 @@ cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
         return params.out_metas.at(idx);
     }
     const auto ort_idx = getIdxByName(out_tensor_info, params.output_names[idx]);
-    const auto type = toCV(out_tensor_info[ort_idx].type) != -1
-        ? toCV(out_tensor_info[ort_idx].type)
-        : CV_32S;
-    return cv::GMatDesc(type,
+    return cv::GMatDesc(std::get<0>(toCV(out_tensor_info[ort_idx].type)),
                         toCV(out_tensor_info[ort_idx].dims));
 }
 
@@ -741,11 +739,8 @@ void ONNXCompiled::setOutput(int i, cv::Mat &m) {
 
 cv::Mat ONNXCompiled::allocOutput(int i) const {
     cv::Mat m;
-    const auto type = toCV(out_tensor_info[i].type) != -1
-        ? toCV(out_tensor_info[i].type)
-        : CV_32S;
     m.create(toCV(out_tensor_info[i].dims),
-             type);
+             std::get<0>(toCV(out_tensor_info[i].type)));
     return m;
 }
 
