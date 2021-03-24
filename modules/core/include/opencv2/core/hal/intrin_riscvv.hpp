@@ -1232,6 +1232,44 @@ OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int64x2, vint64, i64, 2, 4, vmv_v_x, b64)
 OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float32x4, vfloat32, f32, 4, 8, vfmv_v_f, b32)
 OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float64x2, vfloat64, f64, 2, 4, vfmv_v_f, b64)
 
+#define OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(_Tpvec, _Tp, _Tp2, len, hnum, num) \
+inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
+{ \
+  typedef uint64 CV_DECL_ALIGNED(1) unaligned_uint64; \
+  vuint64m1_t tmp = {*(unaligned_uint64*)ptr0, *(unaligned_uint64*)ptr1};\
+    return _Tpvec(_Tp2##_t(tmp)); } \
+inline _Tpvec v_load_low(const _Tp* ptr) \
+{ return _Tpvec(vle_v_##len(ptr, hnum)); }\
+inline _Tpvec v_load_aligned(const _Tp* ptr) \
+{ return _Tpvec(vle_v_##len(ptr, num)); } \
+inline _Tpvec v_load(const _Tp* ptr) \
+{ return _Tpvec((_Tp2##_t)vle_v_##len((const _Tp *)ptr, num)); } \
+inline void v_store_low(_Tp* ptr, const _Tpvec& a) \
+{ vse_v_##len(ptr, a.val, hnum);}\
+inline void v_store_high(_Tp* ptr, const _Tpvec& a) \
+{ \
+  _Tp2##_t a0 = vslidedown_vx_##len(a.val, hnum, num);    \
+  vse_v_##len(ptr, a0, hnum);}\
+inline void v_store(_Tp* ptr, const _Tpvec& a) \
+{ vse_v_##len(ptr, a.val, num); } \
+inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
+{ vse_v_##len(ptr, a.val, num); } \
+inline void v_store_aligned_nocache(_Tp* ptr, const _Tpvec& a) \
+{ vse_v_##len(ptr, a.val, num); } \
+inline void v_store(_Tp* ptr, const _Tpvec& a, hal::StoreMode /*mode*/) \
+{ vse_v_##len(ptr, a.val, num); }
+
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_uint8x16, uchar, vuint8m1, u8m1, 8, 16)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_int8x16,  schar, vint8m1, i8m1, 8, 16)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_uint16x8, ushort, vuint16m1, u16m1, 4, 8)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_int16x8,  short,  vint16m1, i16m1, 4, 8)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_uint32x4, unsigned, vuint32m1, u32m1, 2, 4)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_int32x4,  int,     vint32m1, i32m1, 2, 4)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_uint64x2, unsigned long, vuint64m1, u64m1, 1, 2)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_int64x2,  long,     vint64m1, i64m1, 1, 2)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_float32x4, float, vfloat32m1, f32m1, 2, 4)
+OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(v_float64x2, double, vfloat64m1, f64m1, 1, 2)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
