@@ -1007,6 +1007,135 @@ OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_uint16x8, v_uint16x8)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_int32x4, v_uint32x4)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_uint32x4, v_uint32x4)
 
+#define OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(_Tpvec, _Tp, _T, num, uv) \
+inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmseq_vv_##_Tp##_b##_T(a.val, b.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmsne_vv_##_Tp##_b##_T(a.val, b.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+inline _Tpvec operator < (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmslt##uv##_Tp##_b##_T(a.val, b.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+inline _Tpvec operator > (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmslt##uv##_Tp##_b##_T(b.val, a.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmsle##uv##_Tp##_b##_T(a.val, b.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
+{ \
+    vbool##_T##_t mask = vmsle##uv##_Tp##_b##_T(b.val, a.val, num);    \
+    return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
+} \
+
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int8x16, i8m1,  8, 16, _vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int16x8, i16m1, 16, 8, _vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int32x4, i32m1, 32, 4, _vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_int64x2, i64m1, 64, 2, _vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint8x16, u8m1, 8, 16, u_vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint16x8, u16m1, 16, 8, u_vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint32x4, u32m1, 32, 4, u_vv_)
+OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint64x2, u64m1, 64, 2, u_vv_)
+
+//TODO: ==
+inline v_float32x4 operator == (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmfeq_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 operator != (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmfne_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 operator < (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmflt_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 operator <= (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmfle_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 operator > (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmfgt_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 operator >= (const v_float32x4& a, const v_float32x4& b) 
+{
+    vbool32_t mask = vmfge_vv_f32m1_b32(a.val, b.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+inline v_float32x4 v_not_nan(const v_float32x4& a)
+{ 
+    vbool32_t mask = vmford_vv_f32m1_b32(a.val, a.val, 4);
+    vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
+    return v_float32x4((vfloat32m1_t)res);
+} 
+
+//TODO: ==
+inline v_float64x2 operator == (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmfeq_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 operator != (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmfne_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 operator < (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmflt_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 operator <= (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmfle_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 operator > (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmfgt_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 operator >= (const v_float64x2& a, const v_float64x2& b) 
+{
+    vbool64_t mask = vmfge_vv_f64m1_b64(a.val, b.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+inline v_float64x2 v_not_nan(const v_float64x2& a)
+{ 
+    vbool64_t mask = vmford_vv_f64m1_b64(a.val, a.val, 2);
+    vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
+    return v_float64x2((vfloat64m1_t)res);
+} 
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
