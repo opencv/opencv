@@ -16,7 +16,7 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace testing;
 
-static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true)
+static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool skipCheck = false, bool randInput = true, double l1 = 0.0, double lInf = 0.0)
 {
     DNNTestLayer::checkBackend(backendId, targetId);
     if (randInput)
@@ -33,8 +33,12 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
     if (skipCheck)
         return;
 
-    double l1, lInf;
-    DNNTestLayer::getDefaultThresholds(backendId, targetId, &l1, &lInf);
+    double default_l1, default_lInf;
+    DNNTestLayer::getDefaultThresholds(backendId, targetId, &default_l1, &default_lInf);
+    if (l1 == 0.0)
+        l1 = default_l1;
+    if (lInf == 0.0)
+        lInf = default_lInf;
 #if 0
     std::cout << "l1=" << l1 << "  lInf=" << lInf << std::endl;
     std::cout << outputDefault.reshape(1, outputDefault.total()).t() << std::endl;
@@ -43,11 +47,11 @@ static void test(Mat& input, Net& net, Backend backendId, Target targetId, bool 
     normAssert(outputDefault, outputHalide, "", l1, lInf);
 }
 
-static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId, bool skipCheck = false)
+static void test(LayerParams& params, Mat& input, Backend backendId, Target targetId, bool skipCheck = false, double l1 = 0.0, double lInf = 0.0)
 {
     Net net;
     net.addLayerToPrev(params.name, params.type, params);
-    test(input, net, backendId, targetId, skipCheck);
+    test(input, net, backendId, targetId, skipCheck, true, l1, lInf);
 }
 
 static inline testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
@@ -251,7 +255,17 @@ TEST_P(LRN, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0, lInf = 0.0;
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    if (targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.01;
+        lInf = 0.01;
+    }
+    test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, LRN, Combine(
