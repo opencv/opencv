@@ -2473,6 +2473,98 @@ inline v_float64x2 v_cvt_f64(const v_int64x2& a)
 }
 #endif
 
+inline v_int8x16 v_interleave_pairs(const v_int8x16& vec)
+{
+    vuint64m1_t m0 = {0x0705060403010200, 0x0F0D0E0C0B090A08};
+    return v_int8x16(vrgather_vv_i8m1(vec.val, (vuint8m1_t)m0, 16));
+}
+inline v_uint8x16 v_interleave_pairs(const v_uint8x16& vec) 
+{ 
+    return v_reinterpret_as_u8(v_interleave_pairs(v_reinterpret_as_s8(vec))); 
+}
+
+inline v_int8x16 v_interleave_quads(const v_int8x16& vec)
+{
+    vuint64m1_t m0 = {0x0703060205010400, 0x0F0B0E0A0D090C08};
+    return v_int8x16(vrgather_vv_i8m1(vec.val, (vuint8m1_t)m0, 16));
+}
+inline v_uint8x16 v_interleave_quads(const v_uint8x16& vec) 
+{ 
+    return v_reinterpret_as_u8(v_interleave_quads(v_reinterpret_as_s8(vec))); 
+}
+
+inline v_int16x8 v_interleave_pairs(const v_int16x8& vec)
+{
+    vuint64m1_t m0 = {0x0706030205040100, 0x0F0E0B0A0D0C0908};
+    return v_int16x8((vint16m1_t)vrgather_vv_u8m1((vuint8m1_t)vec.val, (vuint8m1_t)m0, 16));
+}
+inline v_uint16x8 v_interleave_pairs(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_pairs(v_reinterpret_as_s16(vec))); }
+inline v_int16x8 v_interleave_quads(const v_int16x8& vec)
+{
+    vuint64m1_t m0 = {0x0B0A030209080100, 0x0F0E07060D0C0504};
+    return v_int16x8((vint16m1_t)vrgather_vv_u8m1((vuint8m1_t)(vec.val), (vuint8m1_t)m0, 16));
+}
+inline v_uint16x8 v_interleave_quads(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_interleave_quads(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_interleave_pairs(const v_int32x4& vec)
+{
+    vuint64m1_t m0 = {0x0B0A090803020100, 0x0F0E0D0C07060504};
+    return v_int32x4((vint32m1_t)vrgather_vv_u8m1((vuint8m1_t)(vec.val), (vuint8m1_t)m0, 16));
+}
+inline v_uint32x4 v_interleave_pairs(const v_uint32x4& vec) { return v_reinterpret_as_u32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_float32x4 v_interleave_pairs(const v_float32x4& vec) { return v_reinterpret_as_f32(v_interleave_pairs(v_reinterpret_as_s32(vec))); }
+inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
+{
+    vuint64m1_t m0 = {0x0908060504020100, 0xFFFFFFFF0E0D0C0A};
+    return v_int8x16((vint8m1_t)vrgather_vv_u8m1((vuint8m1_t)(vec.val), (vuint8m1_t)m0, 16));
+}
+inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec) { return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec))); }
+
+inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
+{
+    vuint64m1_t m0 = {0x0908050403020100, 0xFFFFFFFF0D0C0B0A};
+    return v_int16x8((vint16m1_t)vrgather_vv_u8m1((vuint8m1_t)(vec.val), (vuint8m1_t)m0, 16));
+}
+inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec) { return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec))); }
+
+inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
+inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
+inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
+
+#if CV_SIMD128_64F
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
+{ return v_cvt_f64(v_dotprod(a, b)); }
+inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
+                                    const v_float64x2& c)
+{ return v_dotprod_expand(a, b) + c; }
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
+{
+    vint64m2_t v1;
+    v1 = vwmul_vv_i64m2(a.val, b.val, 4);
+    vfloat64m1_t res = vfcvt_f_x_v_f64m1(vadd_vv_i64m1(vget_i64m2_i64m1(v1, 0), vget_i64m2_i64m1(v1, 1), 2), 2);
+    return v_float64x2(res); 
+}
+inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
+{ v_float64x2 res = v_dotprod_expand_fast(a, b);
+  return res + c; }
+#endif
+////// FP16 support ///////
+inline v_float32x4 v_load_expand(const float16_t* ptr)
+{
+    vfloat16m1_t v = vle_v_f16m1((__fp16*)ptr, 4);
+    vfloat32m2_t v32;
+    v32 = vfwcvt_f_f_v_f32m2(v, 4);
+    return v_float32x4(vget_f32m2_f32m1(v32, 0));
+}
+
+inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+{
+    vfloat32m2_t v32;
+    v32 = vset_f32m2(v32, 0, v.val);
+    vfloat16m1_t hv = vfncvt_f_f_v_f16m1(v32, 4);
+    vse_v_f16m1((__fp16*)ptr, hv, 4);
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
