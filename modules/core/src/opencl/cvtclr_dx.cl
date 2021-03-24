@@ -120,21 +120,21 @@ void YUV2BGR_NV12_8u(
             float4 G = (Y + guv) * CV_8U_MAX;
             float4 B = (Y + buv) * CV_8U_MAX;
 
-            pDstRow1[0 * NCHANNELS + 0] = convert_uchar_sat(B.x);
-            pDstRow1[0 * NCHANNELS + 1] = convert_uchar_sat(G.x);
-            pDstRow1[0 * NCHANNELS + 2] = convert_uchar_sat(R.x);
+            pDstRow1[0*NCHANNELS + 0] = convert_uchar_sat(B.x);
+            pDstRow1[0*NCHANNELS + 1] = convert_uchar_sat(G.x);
+            pDstRow1[0*NCHANNELS + 2] = convert_uchar_sat(R.x);
 
-            pDstRow1[1 * NCHANNELS + 0] = convert_uchar_sat(B.y);
-            pDstRow1[1 * NCHANNELS + 1] = convert_uchar_sat(G.y);
-            pDstRow1[1 * NCHANNELS + 2] = convert_uchar_sat(R.y);
+            pDstRow1[1*NCHANNELS + 0] = convert_uchar_sat(B.y);
+            pDstRow1[1*NCHANNELS + 1] = convert_uchar_sat(G.y);
+            pDstRow1[1*NCHANNELS + 2] = convert_uchar_sat(R.y);
 
-            pDstRow2[0 * NCHANNELS + 0] = convert_uchar_sat(B.z);
-            pDstRow2[0 * NCHANNELS + 1] = convert_uchar_sat(G.z);
-            pDstRow2[0 * NCHANNELS + 2] = convert_uchar_sat(R.z);
+            pDstRow2[0*NCHANNELS + 0] = convert_uchar_sat(B.z);
+            pDstRow2[0*NCHANNELS + 1] = convert_uchar_sat(G.z);
+            pDstRow2[0*NCHANNELS + 2] = convert_uchar_sat(R.z);
 
-            pDstRow2[1 * NCHANNELS + 0] = convert_uchar_sat(B.w);
-            pDstRow2[1 * NCHANNELS + 1] = convert_uchar_sat(G.w);
-            pDstRow2[1 * NCHANNELS + 2] = convert_uchar_sat(R.w);
+            pDstRow2[1*NCHANNELS + 0] = convert_uchar_sat(B.w);
+            pDstRow2[1*NCHANNELS + 1] = convert_uchar_sat(G.w);
+            pDstRow2[1*NCHANNELS + 2] = convert_uchar_sat(R.w);
         }
     }
 }
