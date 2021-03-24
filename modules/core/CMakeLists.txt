@@ -131,6 +131,9 @@ elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
   endif()
 endif()
 
+if (CV_SEMIHOSTING)
+  add_definitions("-DCV_SEMIHOSTING")
+endif(CV_SEMIHOSTING)
 
 if(PARALLEL_ENABLE_PLUGINS)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")

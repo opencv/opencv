@@ -888,6 +888,7 @@ T minNonZero(const T& val_1, const T& val_2)
 static
 int getNumberOfCPUs_()
 {
+#ifndef CV_SEMIHOSTING
     /*
      * Logic here is to try different methods of getting CPU counts and return
      * the minimum most value as it has high probablity of being right and safe.
@@ -979,6 +980,9 @@ int getNumberOfCPUs_()
 #endif
 
     return ncpus != 0 ? ncpus : 1;
+#else //  CV_SEMIHOSTING
+    return 1;
+#endif //CV_SEMIHOSTING
 }
 
 int getNumberOfCPUs()
