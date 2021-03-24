@@ -142,6 +142,11 @@
 #  define CV_NEON 1
 #endif
 
+#if defined(__riscv) && defined(__riscv_vector)
+# include<riscv-vector.h>
+# define CV_RISCVV 1
+#endif
+
 #if defined(__ARM_NEON__) || defined(__aarch64__)
 #  include <arm_neon.h>
 #endif
@@ -336,6 +341,10 @@ struct VZeroUpperGuard {
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_RISCVV
+#  define CV_RISCVV 0
 #endif
 
 #ifndef CV_VSX
