@@ -1804,6 +1804,126 @@ v_popcount(const v_int64x2& a)
     return v_uint64x2((unsigned long)vmv_x_s_u8m1_u8(res1, 8), (unsigned long)vmv_x_s_u8m1_u8(res2, 8));
 }
 
+#define SMASK 1, 2, 4, 8, 16, 32, 64, 128 
+inline int v_signmask(const v_uint8x16& a)
+{
+    vuint8m1_t t0  = vsrl_vx_u8m1(a.val, 7, 16);
+    vuint8m1_t m1  = (vuint8m1_t){SMASK, SMASK};
+    vuint16m2_t t1 = vwmulu_vv_u16m2(t0, m1, 16);
+    vuint32m1_t res = vmv_v_x_u32m1(0, 4);
+    vuint32m2_t t2 = vwmulu_vx_u32m2(vget_u16m2_u16m1(t1, 1), 256, 8);
+    res = vredsum_vs_u32m2_u32m1(res, t2, res, 8);
+    res = vwredsumu_vs_u16m1_u32m1(res, vget_u16m2_u16m1(t1, 0), res, 8);
+    return vmv_x_s_u32m1_u32(res, 8);
+}
+inline int v_signmask(const v_int8x16& a)
+{
+    vuint8m1_t t0 = vsrl_vx_u8m1((vuint8m1_t)a.val, 7, 16);
+    vuint8m1_t m1 = (vuint8m1_t){SMASK, SMASK};
+    vint16m2_t t1 = (vint16m2_t)vwmulu_vv_u16m2(t0, m1, 16);
+    vint32m1_t res = vmv_v_x_i32m1(0, 4);
+    vint32m2_t t2 = vwmul_vx_i32m2(vget_i16m2_i16m1(t1, 1), 256, 8);
+    res = vredsum_vs_i32m2_i32m1(res, t2, res, 8);
+    res = vwredsum_vs_i16m1_i32m1(res, vget_i16m2_i16m1(t1, 0), res, 8);
+    return vmv_x_s_i32m1_i32(res, 8);
+}
+
+inline int v_signmask(const v_int16x8& a)
+{
+    vint16m1_t t0 = (vint16m1_t)vsrl_vx_u16m1((vuint16m1_t)a.val, 15, 8);
+    vint16m1_t m1 = (vint16m1_t){SMASK};
+    vint16m1_t t1 = vmul_vv_i16m1(t0, m1, 8);
+    vint16m1_t res = vmv_v_x_i16m1(0, 8);
+    res = vredsum_vs_i16m1_i16m1(res, t1, res, 8);
+    return vmv_x_s_i16m1_i16(res, 8);
+}
+inline int v_signmask(const v_uint16x8& a)
+{
+    vint16m1_t t0 = (vint16m1_t)vsrl_vx_u16m1((vuint16m1_t)a.val, 15, 8);
+    vint16m1_t m1 = (vint16m1_t){SMASK};
+    vint16m1_t t1 = vmul_vv_i16m1(t0, m1, 8);
+    vint16m1_t res = vmv_v_x_i16m1(0, 8);
+    res = vredsum_vs_i16m1_i16m1(res, t1, res, 8);
+    return vmv_x_s_i16m1_i16(res, 8);
+}
+inline int v_signmask(const v_int32x4& a)
+{
+    vint32m1_t t0 = (vint32m1_t)vsrl_vx_u32m1((vuint32m1_t)a.val, 31, 4);
+    vint32m1_t m1 = (vint32m1_t){1, 2, 4, 8};
+    vint32m1_t res;
+    res = vmv_v_x_i32m1(0, 8);
+    vint32m1_t t1 = vmul_vv_i32m1(t0, m1, 4);
+    res = vredsum_vs_i32m1_i32m1(res, t1, res, 4);
+    return vmv_x_s_i32m1_i32(res, 4);
+}
+inline int v_signmask(const v_uint32x4& a)
+{
+    vint32m1_t t0 = (vint32m1_t)vsrl_vx_u32m1(a.val, 31, 4);
+    vint32m1_t m1 = (vint32m1_t){1, 2, 4, 8};
+    vint32m1_t res;
+    res = vmv_v_x_i32m1(0, 8);
+    vint32m1_t t1 = vmul_vv_i32m1(t0, m1, 4);
+    res = vredsum_vs_i32m1_i32m1(res, t1, res, 4);
+    return vmv_x_s_i32m1_i32(res, 4);
+}
+inline int v_signmask(const v_uint64x2& a)
+{
+    vuint64m1_t v0 = vsrl_vx_u64m1(a.val, 63, 2);
+    int res = (int)vext_x_v_u64m1_u64(v0, 0, 2) + ((int)vext_x_v_u64m1_u64(v0, 1, 2) << 1);
+    return res;
+}
+inline int v_signmask(const v_int64x2& a)
+{ return v_signmask(v_reinterpret_as_u64(a)); }
+inline int v_signmask(const v_float64x2& a)
+{ return v_signmask(v_reinterpret_as_u64(a)); }
+inline int v_signmask(const v_float32x4& a)
+{
+    vint32m1_t t0 = (vint32m1_t)vsrl_vx_u32m1((vuint32m1_t)a.val, 31, 4);
+    vint32m1_t m1 = (vint32m1_t){1, 2, 4, 8};
+    vint32m1_t res;
+    res = vmv_v_x_i32m1(0, 8);
+    vint32m1_t t1 = vmul_vv_i32m1(t0, m1, 4);
+    res = vredsum_vs_i32m1_i32m1(res, t1, res, 4); 
+    return vmv_x_s_i32m1_i32(res, 4);
+}
+
+inline int v_scan_forward(const v_int8x16& a) { 
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint8x16& a) { 
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_int16x8& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); } 
+inline int v_scan_forward(const v_uint16x8& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); } 
+inline int v_scan_forward(const v_int32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); } 
+inline int v_scan_forward(const v_uint32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); } 
+inline int v_scan_forward(const v_float32x4& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_int64x2& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+inline int v_scan_forward(const v_uint64x2& a) {
+int val = v_signmask(a);
+if(val==0) return 0;
+else return trailingZeros32(val); }
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
