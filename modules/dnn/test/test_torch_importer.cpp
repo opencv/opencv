@@ -218,9 +218,21 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    runTorchNet("net_conv_gemm_lrn", "", false, true, true,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.046 : 0.0,
-                target == DNN_TARGET_OPENCL_FP16 ? 0.023 : 0.0);
+    double l1 = 0.0, lInf = 0.0;
+    if (target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 0.046;
+        lInf = 0.023;
+    }
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    else if (target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.02;
+        lInf = 0.02;
+    }
+    runTorchNet("net_conv_gemm_lrn", "", false, true, true, l1, lInf);
 }
 
 TEST_P(Test_Torch_layers, net_inception_block)
