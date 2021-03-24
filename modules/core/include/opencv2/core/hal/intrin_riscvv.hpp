@@ -2145,6 +2145,49 @@ inline v_float64x2 v_reverse(const v_float64x2 &a)
     return v_float64x2(a.val[1], a.val[0]);
 }
 
+#define OPENCV_HAL_IMPL_RISCVV_EXTRACT(_Tpvec, suffix, size) \
+template <int n> \
+inline _Tpvec v_extract(const _Tpvec& a, const _Tpvec& b) \
+{ return v_rotate_right<n>(a, b);}
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint8x16, u8, 0)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int8x16, s8, 0)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint16x8, u16, 1)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int16x8, s16, 1)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint32x4, u32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int32x4, s32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_uint64x2, u64, 3)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_int64x2, s64, 3)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_float32x4, f32, 2)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT(v_float64x2, f64, 3)
+
+
+#define OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(_Tpvec, _Tp, suffix) \
+template<int i> inline _Tp v_extract_n(_Tpvec v) { return v.val[i]; }
+
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint8x16, uchar, u8)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int8x16, schar, s8)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint16x8, ushort, u16)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int16x8, short, s16)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint32x4, uint, u32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int32x4, int, s32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_uint64x2, uint64, u64)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_int64x2, int64, s64)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_float32x4, float, f32)
+OPENCV_HAL_IMPL_RISCVV_EXTRACT_N(v_float64x2, double, f64)
+
+#define OPENCV_HAL_IMPL_RISCVV_BROADCAST(_Tpvec, _Tp, num) \
+template<int i> inline _Tpvec v_broadcast_element(_Tpvec v) { return _Tpvec(vrgather_vi_##_Tp##m1(v.val, i, num)); }
+
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint8x16, u8, 16)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int8x16, i8, 16)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint16x8, u16, 8)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int16x8, i16, 8)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint32x4, u32, 4)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int32x4, i32, 4)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint64x2, u64, 2)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int64x2, i64, 2)
+OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_float32x4, f32, 4)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
