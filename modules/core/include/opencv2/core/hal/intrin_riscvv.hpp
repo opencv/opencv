@@ -1924,6 +1924,51 @@ int val = v_signmask(a);
 if(val==0) return 0;
 else return trailingZeros32(val); }
 
+#define OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(_Tpvec, suffix, _T, shift, num) \
+inline bool v_check_all(const v_##_Tpvec& a) \
+{ \
+    suffix##m1_t v0 = vsrl_vx_##_T(vnot_v_##_T(a.val, num), shift, num); \
+    vuint64m1_t v1 = vuint64m1_t(v0); \
+    return (v1[0] | v1[1]) == 0; \
+} \
+inline bool v_check_any(const v_##_Tpvec& a) \
+{ \
+    suffix##m1_t v0 = vsrl_vx_##_T(a.val, shift, num); \
+    vuint64m1_t v1 = vuint64m1_t(v0); \
+    return (v1[0] | v1[1]) != 0; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint8x16, vuint8,  u8m1, 7, 16)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint16x8, vuint16, u16m1, 15, 8)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint32x4, vuint32, u32m1, 31, 4)
+OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint64x2, vuint64, u64m1, 63, 2)
+
+inline bool v_check_all(const v_int8x16& a)
+{ return v_check_all(v_reinterpret_as_u8(a)); }
+inline bool v_check_all(const v_int16x8& a)
+{ return v_check_all(v_reinterpret_as_u16(a)); }
+inline bool v_check_all(const v_int32x4& a)
+{ return v_check_all(v_reinterpret_as_u32(a)); }
+inline bool v_check_all(const v_float32x4& a)
+{ return v_check_all(v_reinterpret_as_u32(a)); }
+inline bool v_check_all(const v_int64x2& a)
+{ return v_check_all(v_reinterpret_as_u64(a)); }
+inline bool v_check_all(const v_float64x2& a)
+{ return v_check_all(v_reinterpret_as_u64(a)); }
+
+inline bool v_check_any(const v_int8x16& a)
+{ return v_check_any(v_reinterpret_as_u8(a)); }
+inline bool v_check_any(const v_int16x8& a)
+{ return v_check_any(v_reinterpret_as_u16(a)); }
+inline bool v_check_any(const v_int32x4& a)
+{ return v_check_any(v_reinterpret_as_u32(a)); }
+inline bool v_check_any(const v_float32x4& a)
+{ return v_check_any(v_reinterpret_as_u32(a)); }
+inline bool v_check_any(const v_int64x2& a)
+{ return v_check_any(v_reinterpret_as_u64(a)); }
+inline bool v_check_any(const v_float64x2& a)
+{ return v_check_any(v_reinterpret_as_u64(a)); }
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
