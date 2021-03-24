@@ -796,7 +796,7 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
             try
             {
                 clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D9>(platform, (IDirect3DDevice9* )NULL, pDirect3DDevice9Ex));
+                clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D9>(platform, nullptr, pDirect3DDevice9Ex));
             }
             catch (...)
             {
@@ -917,7 +917,7 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
             try
             {
                 clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-                clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D9>(platform, pDirect3DDevice9, (IDirect3DDevice9Ex*)NULL));
+                clExecCtx.getContext().setUserContext(std::make_shared<OpenCL_D3D9>(platform, pDirect3DDevice9, nullptr));
             }
             catch (...)
             {
