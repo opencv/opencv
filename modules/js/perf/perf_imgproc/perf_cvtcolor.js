@@ -17,7 +17,11 @@ function perf() {
   if (isNodeJs) {
     global.cv = cv;
     global.combine = HelpFunc.combine;
-    global.cvtStr2cvSize = HelpFunc.cvtStr2cvSize;
+    global.constructMode = HelpFunc.constructMode;
+    global.log = HelpFunc.log;
+    global.decodeParams2Case = HelpFunc.decodeParams2Case;
+    global.setBenchmarkSuite = HelpFunc.setBenchmarkSuite;
+    global.addKernelCase = HelpFunc.addKernelCase;
     global.cvSize = Base.getCvSize();
   } else {
     enableButton();
@@ -25,7 +29,7 @@ function perf() {
   }
   let totalCaseNum, currentCaseId;
 
-  //extra color conversions supported implicitly
+  // extra color conversions supported implicitly
   {
     cv.CX_BGRA2HLS      = cv.COLOR_COLORCVT_MAX + cv.COLOR_BGR2HLS,
     cv.CX_BGRA2HLS_FULL = cv.COLOR_COLORCVT_MAX + cv.COLOR_BGR2HLS_FULL,
