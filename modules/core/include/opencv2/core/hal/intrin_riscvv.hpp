@@ -916,7 +916,7 @@ inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, c
     return v_int64x2(vadd_vv_i64m1(vadd_vv_i64m1(vget_i64m2_i64m1(v2, 0), vget_i64m2_i64m1(v2, 1), 2), c.val, 2));
 }
 
-define OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_W(_Tpvec, _Tpvec2, len, scalartype, func, intrin, num) \
+#define OPENCV_HAL_IMPL_RISCVV_REDUCE_OP_W(_Tpvec, _Tpvec2, len, scalartype, func, intrin, num) \
 inline scalartype v_reduce_##func(const v_##_Tpvec##x##num& a) \
 {\
     v##_Tpvec2##m1_t val = vmv_v_x_##len##m1(0, num); \
@@ -1663,7 +1663,7 @@ void v_rshr_pack_u_store(_Tp* ptr, const v_int##tp2##x##num2& a) \
 OPENCV_HAL_IMPL_RISCVV_PACK_U(8, 16, 16, 8, unsigned char )
 OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
 
-/ saturating multiply 8-bit, 16-bit
+// saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_RISCVV_MUL_SAT(_Tpvec, _Tpwvec)            \
     inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
     {                                                            \
