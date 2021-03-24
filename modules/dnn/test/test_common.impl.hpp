@@ -453,13 +453,13 @@ void initDNNTests()
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
 #endif
-        ""
+        CV_TEST_TAG_DNN_SKIP_IE_CPU
     );
-#endif
     registerGlobalSkipTag(
         // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
+#endif
 #ifdef HAVE_VULKAN
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_VULKAN

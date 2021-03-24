@@ -12,6 +12,7 @@ Implementation of Tensorflow models parser
 #include "../precomp.hpp"
 
 #include <opencv2/core/utils/logger.defines.hpp>
+#include <opencv2/dnn/shape_utils.hpp>
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
 #include <opencv2/core/utils/logger.hpp>
@@ -305,7 +306,7 @@ bool hasAllOnes(const Mat &inputs, int startPos, int endPos)
 
     for (int i = startPos; i < endPos; i++)
     {
-        if (inputs.at<int>(i) != 1 || inputs.at<int>(i)!= -1)
+        if (inputs.at<int>(i) != 1 && inputs.at<int>(i) != -1)
             return false;
     }
     return true;
@@ -1825,6 +1826,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
             {
                 // Check if all the inputs have the same shape.
                 bool equalInpShapes = true;
+                bool isShapeOnes = false;
                 MatShape outShape0;
                 for (int ii = 0; ii < num_inputs && !netInputShapes.empty(); ii++)
                 {
@@ -1845,12 +1847,14 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
                     else if (outShape != outShape0)
                     {
                         equalInpShapes = false;
+                        isShapeOnes = isAllOnes(outShape, 2, outShape.size()) ||
+                                      isAllOnes(outShape0, 2, outShape0.size());
                         break;
                     }
                 }
 
                 int id;
-                if (equalInpShapes || netInputShapes.empty())
+                if (equalInpShapes || netInputShapes.empty() || (!equalInpShapes && isShapeOnes))
                 {
                     layerParams.set("operation", type == "RealDiv" ? "div" : "prod");
                     id = dstNet.addLayer(name, "Eltwise", layerParams);
