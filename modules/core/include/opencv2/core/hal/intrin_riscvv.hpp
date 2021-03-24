@@ -1136,6 +1136,102 @@ inline v_float64x2 v_not_nan(const v_float64x2& a)
     return v_float64x2((vfloat64m1_t)res);
 } 
 
+#define OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(_Tp, _T) \
+inline void v_transpose4x4(const v_##_Tp##32x4& a0, const v_##_Tp##32x4& a1, \
+                         const v_##_Tp##32x4& a2, const v_##_Tp##32x4& a3, \
+                         v_##_Tp##32x4& b0, v_##_Tp##32x4& b1, \
+                         v_##_Tp##32x4& b2, v_##_Tp##32x4& b3) \
+{ \
+    v##_Tp##32m4_t val;    \
+    val = vset_##_T##m4(val, 0, a0.val);    \
+    val = vset_##_T##m4(val, 1, a1.val);    \
+    val = vset_##_T##m4(val, 2, a2.val);    \
+    val = vset_##_T##m4(val, 3, a3.val);   \
+    val = vrgather_vv_##_T##m4(val, (vuint32m4_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);    \
+    b0.val = vget_##_T##m4_##_T##m1(val, 0);   \
+    b1.val = vget_##_T##m4_##_T##m1(val, 1);   \
+    b2.val = vget_##_T##m4_##_T##m1(val, 2);   \
+    b3.val = vget_##_T##m4_##_T##m1(val, 3);   \
+}
+OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(uint, u32)
+OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(int, i32)
+OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(float, f32)
+
+
+#define OPENCV_HAL_IMPL_RISCVV_SHIFT_LEFT(_Tpvec, suffix, _T, num) \
+inline _Tpvec operator << (const _Tpvec& a, int n) \
+{ return _Tpvec((vsll_vx_##_T##m1(a.val, n, num))); } \
+template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
+{ return _Tpvec((vsll_vx_##_T##m1(a.val, n, num))); }
+
+#define OPENCV_HAL_IMPL_RISCVV_SHIFT_RIGHT(_Tpvec, suffix, _T, num, intric) \
+inline _Tpvec operator >> (const _Tpvec& a, int n) \
+{ return _Tpvec((v##intric##_vx_##_T##m1(a.val, n, num))); } \
+template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
+{ return _Tpvec((v##intric##_vx_##_T##m1(a.val, n, num))); }\
+template<int n> inline _Tpvec v_rshr(const _Tpvec& a) \
+{ return _Tpvec((v##intric##_vx_##_T##m1(vadd_vx_##_T##m1(a.val, 1<<(n-1), num), n, num))); }
+
+// trade efficiency for convenience
+#define OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(suffix, _T, num, intrin) \
+OPENCV_HAL_IMPL_RISCVV_SHIFT_LEFT(v_##suffix##x##num, suffix, _T, num) \
+OPENCV_HAL_IMPL_RISCVV_SHIFT_RIGHT(v_##suffix##x##num, suffix, _T, num, intrin)
+
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(uint8, u8, 16, srl)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(uint16, u16, 8, srl)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(uint32, u32, 4, srl)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(uint64, u64, 2, srl)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(int8, i8, 16, sra)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(int16, i16, 8, sra)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(int32, i32, 4, sra)
+OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(int64, i64, 2, sra)
+
+#define OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(_Tpvec, suffix, _T, num, num2, vmv, len) \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a) \
+{    \
+    suffix##m1_t tmp;    \
+    tmp = vmv##_##_T##m1(0, num);\
+        tmp = vslideup_vx_##_T##m1_m(vmset_m_##len(num), tmp, a.val, n, num);\
+        return _Tpvec(tmp);\
+} \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a) \
+{     \
+        return _Tpvec(vslidedown_vx_##_T##m1(a.val, n, num));\
+} \
+template<> inline _Tpvec v_rotate_left<0>(const _Tpvec& a) \
+{ return a; } \
+template<int n> inline _Tpvec v_rotate_right(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    suffix##m2_t tmp;    \
+    tmp = vset_##_T##m2(tmp, 0, a.val);    \
+    tmp = vset_##_T##m2(tmp, 1, b.val);    \
+        tmp = vslidedown_vx_##_T##m2(tmp, n, num2);\
+        return _Tpvec(vget_##_T##m2_##_T##m1(tmp, 0));\
+} \
+template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    suffix##m2_t tmp;    \
+    tmp = vset_##_T##m2(tmp, 0, b.val);    \
+    tmp = vset_##_T##m2(tmp, 1, a.val);    \
+        tmp = vslideup_vx_##_T##m2(tmp, n, num2);\
+        return _Tpvec(vget_##_T##m2_##_T##m1(tmp, 1));\
+} \
+template<> inline _Tpvec v_rotate_left<0>(const _Tpvec& a, const _Tpvec& b) \
+{ \
+    CV_UNUSED(b); return a; \
+}
+
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_uint8x16, vuint8, u8, 16, 32, vmv_v_x, b8)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int8x16, vint8, i8, 16, 32, vmv_v_x, b8)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_uint16x8, vuint16, u16, 8, 16, vmv_v_x, b16)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int16x8, vint16, i16, 8, 16, vmv_v_x, b16)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_uint32x4, vuint32, u32, 4, 8, vmv_v_x, b32)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int32x4, vint32, i32, 4, 8, vmv_v_x, b32)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_uint64x2, vuint64, u64, 2, 4, vmv_v_x, b64)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int64x2, vint64, i64, 2, 4, vmv_v_x, b64)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float32x4, vfloat32, f32, 4, 8, vfmv_v_f, b32)
+OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float64x2, vfloat64, f64, 2, 4, vfmv_v_f, b64)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
