@@ -697,6 +697,226 @@ OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int8x16, v_mul_wrap, vmul_vv_i8m1, 16)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_uint16x8, v_mul_wrap, vmul_vv_u16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BINN_FUNC(v_int16x8, v_mul_wrap, vmul_vv_i16m1, 8)
 
+//////// Dot Product ////////
+// 16 >> 32
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
+{
+    vint32m2_t res;
+    res = vwmul_vv_i32m2(a.val, b.val, 8);
+    res = vrgather_vv_i32m2(res, (vuint32m2_t){0, 2, 4, 6, 1, 3, 5, 7}, 8);
+    return v_int32x4(vadd_vv_i32m1(vget_i32m2_i32m1(res, 0), vget_i32m2_i32m1(res, 1), 4));
+}
+inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    vint32m2_t res;
+    res = vwmul_vv_i32m2(a.val, b.val, 8);
+    res = vrgather_vv_i32m2(res, (vuint32m2_t){0, 2, 4, 6, 1, 3, 5, 7}, 8);
+    return v_int32x4(vadd_vv_i32m1(vadd_vv_i32m1(vget_i32m2_i32m1(res, 0),vget_i32m2_i32m1(res, 1), 4), c.val, 4));
+}
+
+// 32 >> 64
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
+{
+    vint64m2_t res;
+    res = vwmul_vv_i64m2(a.val, b.val, 4);
+    res = vrgather_vv_i64m2(res, (vuint64m2_t){0, 2, 1, 3}, 4);
+    return v_int64x2(vadd_vv_i64m1(vget_i64m2_i64m1(res, 0), vget_i64m2_i64m1(res, 1), 2));
+}
+inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+    vint64m2_t res;
+    res = vwmul_vv_i64m2(a.val, b.val, 4);
+    res = vrgather_vv_i64m2(res, (vuint64m2_t){0, 2, 1, 3}, 4);
+    return v_int64x2(vadd_vv_i64m1(vadd_vv_i64m1(vget_i64m2_i64m1(res, 0), vget_i64m2_i64m1(res, 1), 2), c.val, 2));
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
+{
+    vuint16m2_t v1;
+    vuint32m2_t v2;
+    v1 = vwmulu_vv_u16m2(a.val, b.val, 16);
+    v1 = vrgather_vv_u16m2(v1, (vuint16m2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2 = vwaddu_vv_u32m2(vget_u16m2_u16m1(v1, 0), vget_u16m2_u16m1(v1, 1), 8);
+    return v_uint32x4(vadd_vv_u32m1(vget_u32m2_u32m1(v2, 0), vget_u32m2_u32m1(v2, 1), 4));
+}
+
+inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
+                                   const v_uint32x4& c)
+{
+    vuint16m2_t v1;
+    vuint32m2_t v2;
+    v1 = vwmulu_vv_u16m2(a.val, b.val, 16);
+    v1 = vrgather_vv_u16m2(v1, (vuint16m2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2 = vwaddu_vv_u32m2(vget_u16m2_u16m1(v1, 0), vget_u16m2_u16m1(v1, 1), 8);
+    return v_uint32x4(vadd_vv_u32m1(vadd_vv_u32m1(vget_u32m2_u32m1(v2, 0), vget_u32m2_u32m1(v2, 1), 4), c.val, 4));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
+{
+    vint16m2_t v1;
+    vint32m2_t v2;
+    v1 = vwmul_vv_i16m2(a.val, b.val, 16);
+    v1 = vrgather_vv_i16m2(v1, (vuint16m2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2 = vwadd_vv_i32m2(vget_i16m2_i16m1(v1, 0), vget_i16m2_i16m1(v1, 1), 8);
+    return v_int32x4(vadd_vv_i32m1(vget_i32m2_i32m1(v2, 0), vget_i32m2_i32m1(v2, 1), 4));
+}
+
+inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
+                                   const v_int32x4& c)
+{
+    vint16m2_t v1;
+    vint32m2_t v2;
+    v1 = vwmul_vv_i16m2(a.val, b.val, 16);
+    v1 = vrgather_vv_i16m2(v1, (vuint16m2_t){0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}, 16);
+    v2 = vwadd_vv_i32m2(vget_i16m2_i16m1(v1, 0), vget_i16m2_i16m1(v1, 1), 8);
+    return v_int32x4(vadd_vv_i32m1(vadd_vv_i32m1(vget_i32m2_i32m1(v2, 0), vget_i32m2_i32m1(v2, 1), 4), c.val, 4));
+}
+
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
+{
+    vuint32m2_t v1;
+    vuint64m2_t v2;
+    v1 = vwmulu_vv_u32m2(a.val, b.val, 8);
+    v1 = vrgather_vv_u32m2(v1, (vuint32m2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2 = vwaddu_vv_u64m2(vget_u32m2_u32m1(v1, 0), vget_u32m2_u32m1(v1, 1), 4);
+    return v_uint64x2(vadd_vv_u64m1(vget_u64m2_u64m1(v2, 0), vget_u64m2_u64m1(v2, 1), 2));
+}
+
+inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b,
+                                   const v_uint64x2& c)
+{
+    vuint32m2_t v1;
+    vuint64m2_t v2;
+    v1 = vwmulu_vv_u32m2(a.val, b.val, 8);
+    v1 = vrgather_vv_u32m2(v1, (vuint32m2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2 = vwaddu_vv_u64m2(vget_u32m2_u32m1(v1, 0), vget_u32m2_u32m1(v1, 1), 4);
+    return v_uint64x2(vadd_vv_u64m1(vadd_vv_u64m1(vget_u64m2_u64m1(v2, 0), vget_u64m2_u64m1(v2, 1), 2), c.val, 2));
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
+{
+    vint32m2_t v1;
+    vint64m2_t v2;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    v1 = vrgather_vv_i32m2(v1, (vuint32m2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2 = vwadd_vv_i64m2(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4);
+    return v_int64x2(vadd_vv_i64m1(vget_i64m2_i64m1(v2, 0), vget_i64m2_i64m1(v2, 1), 2));
+}
+
+inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b,
+                                   const v_int64x2& c)
+{
+    vint32m2_t v1;
+    vint64m2_t v2;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    v1 = vrgather_vv_i32m2(v1, (vuint32m2_t){0, 4, 1, 5, 2, 6, 3, 7}, 8);
+    v2 = vwadd_vv_i64m2(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4);
+    return v_int64x2(vadd_vv_i64m1(vadd_vv_i64m1(vget_i64m2_i64m1(v2, 0), vget_i64m2_i64m1(v2, 1), 2), c.val, 2));
+}
+
+//////// Fast Dot Product ////////
+// 16 >> 32
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
+{
+    vint32m2_t v1;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    return v_int32x4(vadd_vv_i32m1(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4));
+}
+
+inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
+{
+    vint32m2_t v1;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    return v_int32x4(vadd_vv_i32m1(vadd_vv_i32m1(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4), c.val, 4));
+}
+
+// 32 >> 64
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
+{
+    vint64m2_t v1;
+    v1 = vwmul_vv_i64m2(a.val, b.val, 4);
+    return v_int64x2(vadd_vv_i64m1(vget_i64m2_i64m1(v1, 0), vget_i64m2_i64m1(v1, 1), 2));
+}
+inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
+{
+    vint64m2_t v1;
+    v1 = vwmul_vv_i64m2(a.val, b.val, 8);
+    return v_int64x2(vadd_vv_i64m1(vadd_vv_i64m1(vget_i64m2_i64m1(v1, 0), vget_i64m2_i64m1(v1, 1), 4), c.val, 4));
+}
+
+// 8 >> 32
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
+{
+    vuint16m2_t v1;
+    vuint32m2_t v2;
+    v1 = vwmulu_vv_u16m2(a.val, b.val, 16);
+    v2 = vwaddu_vv_u32m2(vget_u16m2_u16m1(v1, 0), vget_u16m2_u16m1(v1, 1), 8);
+    return v_uint32x4(vadd_vv_u32m1(vget_u32m2_u32m1(v2, 0), vget_u32m2_u32m1(v2, 1), 4));
+}
+
+inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
+{
+    vuint16m2_t v1;
+    vuint32m2_t v2;
+    v1 = vwmulu_vv_u16m2(a.val, b.val, 16);
+    v2 = vwaddu_vv_u32m2(vget_u16m2_u16m1(v1, 0), vget_u16m2_u16m1(v1, 1), 8);
+    return v_uint32x4(vadd_vv_u32m1(vadd_vv_u32m1(vget_u32m2_u32m1(v2, 0), vget_u32m2_u32m1(v2, 1), 4), c.val, 4));
+}
+
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
+{
+    vint16m2_t v1;
+    vint32m2_t v2;
+    v1 = vwmul_vv_i16m2(a.val, b.val, 16);
+    v2 = vwadd_vv_i32m2(vget_i16m2_i16m1(v1, 0), vget_i16m2_i16m1(v1, 1), 8);
+    return v_int32x4(vadd_vv_i32m1(vget_i32m2_i32m1(v2, 0), vget_i32m2_i32m1(v2, 1), 4));
+}
+inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
+{
+    vint16m2_t v1;
+    vint32m2_t v2;
+    v1 = vwmul_vv_i16m2(a.val, b.val, 16);
+    v2 = vwadd_vv_i32m2(vget_i16m2_i16m1(v1, 0), vget_i16m2_i16m1(v1, 1), 8);
+    return v_int32x4(vadd_vv_i32m1(vadd_vv_i32m1(vget_i32m2_i32m1(v2, 0), vget_i32m2_i32m1(v2, 1), 4), c.val, 4));
+}
+
+// 16 >> 64
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
+{
+    vuint32m2_t v1;
+    vuint64m2_t v2;
+    v1 = vwmulu_vv_u32m2(a.val, b.val, 8);
+    v2 = vwaddu_vv_u64m2(vget_u32m2_u32m1(v1, 0), vget_u32m2_u32m1(v1, 1), 4);
+    return v_uint64x2(vadd_vv_u64m1(vget_u64m2_u64m1(v2, 0), vget_u64m2_u64m1(v2, 1), 2));
+}
+inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
+{
+    vuint32m2_t v1;
+    vuint64m2_t v2;
+    v1 = vwmulu_vv_u32m2(a.val, b.val, 8);
+    v2 = vwaddu_vv_u64m2(vget_u32m2_u32m1(v1, 0), vget_u32m2_u32m1(v1, 1), 4);
+    return v_uint64x2(vadd_vv_u64m1(vadd_vv_u64m1(vget_u64m2_u64m1(v2, 0), vget_u64m2_u64m1(v2, 1), 2), c.val, 2));
+}
+
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
+{
+    vint32m2_t v1;
+    vint64m2_t v2;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    v2 = vwadd_vv_i64m2(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4);
+    return v_int64x2(vadd_vv_i64m1(vget_i64m2_i64m1(v2, 0), vget_i64m2_i64m1(v2, 1), 2));
+}
+inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
+{
+    vint32m2_t v1;
+    vint64m2_t v2;
+    v1 = vwmul_vv_i32m2(a.val, b.val, 8);
+    v2 = vwadd_vv_i64m2(vget_i32m2_i32m1(v1, 0), vget_i32m2_i32m1(v1, 1), 4);
+    return v_int64x2(vadd_vv_i64m1(vadd_vv_i64m1(vget_i64m2_i64m1(v2, 0), vget_i64m2_i64m1(v2, 1), 2), c.val, 2));
+}
+
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
