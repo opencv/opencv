@@ -27,6 +27,13 @@ if(NOT HAVE_MFX)
   endif()
 endif()
 
+if(NOT HAVE_MFX AND PKG_CONFIG_FOUND)
+  ocv_check_modules(MFX mfx)
+  if(MFX_FOUND)
+    set(HAVE_MFX TRUE)
+  endif()
+endif()
+
 if(HAVE_MFX AND UNIX)
   foreach(mode NO_DEFAULT_PATH "")
     find_path(MFX_va_INCLUDE va/va.h PATHS ${paths} PATH_SUFFIXES "include" ${mode})

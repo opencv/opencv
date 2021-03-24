@@ -273,6 +273,23 @@ bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string
     return ret;
 }
 
+static
+int hw_find_qsv_surface_index(AVFrame* hw_frame) {
+#ifdef HAVE_MFX
+    if (AV_PIX_FMT_QSV != hw_frame->format)
+        return -1;
+    mfxFrameSurface1* surface = (mfxFrameSurface1*)hw_frame->data[3]; // As defined by AV_PIX_FMT_QSV
+    AVHWFramesContext* frames_ctx = (AVHWFramesContext*)hw_frame->hw_frames_ctx->data;
+    AVQSVFramesContext* qsv_ctx = (AVQSVFramesContext*)frames_ctx->hwctx;
+    for (int i = 0; i < qsv_ctx->nb_surfaces; i++) {
+        if (surface == qsv_ctx->surfaces + i) {
+            return i;
+        }
+    }
+#endif
+    return -1;
+}
+
 #ifdef HAVE_VA
 static VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx) {
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) { // we stored pointer to child context in 'user_opaque' field
@@ -285,19 +302,20 @@ static VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx) {
     return NULL;
 }
 
-static VASurfaceID hw_get_va_surface(AVFrame* picture) {
-    if (picture->format == AV_PIX_FMT_VAAPI) {
-        return (VASurfaceID)(size_t)picture->data[3]; // As defined by AV_PIX_FMT_VAAPI
+static VASurfaceID hw_get_va_surface(AVFrame* hw_frame) {
+    if (AV_PIX_FMT_VAAPI == hw_frame->format) {
+        return (VASurfaceID)(size_t)hw_frame->data[3]; // As defined by AV_PIX_FMT_VAAPI
     }
-    else if (picture->format == AV_PIX_FMT_QSV) {
-        // TODO: should be possible to remove this hack by using function av_hwframe_ctx_create_derived()
-        void* /*mfxFrameSurface1*/ *surface = (void **) picture->data[3]; // As defined by AV_PIX_FMT_QSV
-        // Access Data.MemId field of mfxFrameSurface1 structure by offset, to avoid dependency on MFX headers.
-        // mfxFrameSurface1 is packed structure with binary backward compatibility
-        if (8 == sizeof(void*)) {
-            return *(VASurfaceID *)surface[21];
-        } else {
-            return VA_INVALID_SURFACE;
+    else if (AV_PIX_FMT_QSV == hw_frame->format) {
+        int frame_idx = hw_find_qsv_surface_index(hw_frame);
+        if (frame_idx >= 0) { // frame index is same in parent (QSV) and child (VAAPI) frame context
+            AVHWFramesContext *frames_ctx = (AVHWFramesContext *) hw_frame->hw_frames_ctx->data;
+            AVHWFramesContext *child_ctx = (AVHWFramesContext *) frames_ctx->user_opaque;
+            if (child_ctx && AV_HWDEVICE_TYPE_VAAPI == child_ctx->device_ctx->type) {
+                AVVAAPIFramesContext *vaapi_ctx = (AVVAAPIFramesContext *) child_ctx->hwctx;
+                CV_Assert(frame_idx < vaapi_ctx->nb_surfaces);
+                return vaapi_ctx->surface_ids[frame_idx];
+            }
         }
     }
     return VA_INVALID_SURFACE;
@@ -322,21 +340,15 @@ ID3D11Texture2D* hw_get_d3d11_texture(AVFrame* hw_frame, int* subresource) {
         texture = (ID3D11Texture2D*)hw_frame->data[0]; // As defined by AV_PIX_FMT_D3D11
         *subresource = (intptr_t)hw_frame->data[1]; // As defined by AV_PIX_FMT_D3D11
     }
-#ifdef HAVE_MFX
-    if (AV_PIX_FMT_QSV == hw_frame->format) {
-        mfxFrameSurface1* surface = (mfxFrameSurface1*)hw_frame->data[3]; // As defined by AV_PIX_FMT_QSV
-        AVHWFramesContext* frames_ctx = (AVHWFramesContext*)hw_frame->hw_frames_ctx->data;
-        AVHWFramesContext* d3d11_ctx = (AVHWFramesContext*)frames_ctx->user_opaque;
-        texture = ((AVD3D11VAFramesContext*)d3d11_ctx->hwctx)->texture;
-        // subresource is surface index in surface array
-        AVQSVFramesContext* qsv_ctx = (AVQSVFramesContext*)frames_ctx->hwctx;
-        for (int i = 0; i < qsv_ctx->nb_surfaces; i++) {
-            if (surface == qsv_ctx->surfaces + i) {
-                *subresource = i;
-            }
+    else if (AV_PIX_FMT_QSV == hw_frame->format) {
+        AVHWFramesContext *frames_ctx = (AVHWFramesContext *) hw_frame->hw_frames_ctx->data;
+        AVHWFramesContext *child_ctx = (AVHWFramesContext *) frames_ctx->user_opaque;
+        if (child_ctx && AV_HWDEVICE_TYPE_D3D11VA == child_ctx->device_ctx->type) {
+            texture = ((AVD3D11VAFramesContext*)child_ctx->hwctx)->texture;
         }
+        *subresource = hw_find_qsv_surface_index(hw_frame);
+        CV_Assert(*subresource >= 0);
     }
-#endif
     return texture;
 }
 
@@ -578,10 +590,15 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
 static
 AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format)
 {
-    // In QSV case we first allocate child D3D11/VAAPI frames (except DXVA2 as not supported), then derive to parent QSV frames
-    AVBufferRef* child_ctx = (AVBufferRef*)((AVHWDeviceContext*)hw_device_ctx->data)->user_opaque;
-    if (!child_ctx || AV_HWDEVICE_TYPE_DXVA2 == ((AVHWDeviceContext*)child_ctx->data)->type)
-        child_ctx = hw_device_ctx;
+    AVHWDeviceContext *device_ctx = (AVHWDeviceContext*)hw_device_ctx->data;
+    AVBufferRef* child_ctx = hw_device_ctx;
+    // In QSV case we first allocate child D3D11/VAAPI frames (except DXVA2 as no OpenCL interop), then derive to parent QSV frames
+    if (AV_HWDEVICE_TYPE_QSV == device_ctx->type) {
+        AVBufferRef *ctx = (AVBufferRef *) device_ctx->user_opaque; // child context stored during creation of derived context
+        if (ctx && AV_HWDEVICE_TYPE_DXVA2 != ((AVHWDeviceContext *) ctx->data)->type) {
+            child_ctx = ctx;
+        }
+    }
     AVBufferRef *hw_frames_ref = nullptr;
     if (ctx)
     {
