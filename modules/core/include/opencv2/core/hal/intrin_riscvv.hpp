@@ -2414,6 +2414,65 @@ OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float64, double, 2, f64)
 OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(uint64, unsigned long, 2, u64)
 OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(int64, long, 2, i64)
 
+inline v_float32x4 v_cvt_f32(const v_int32x4& a)
+{
+    return v_float32x4(vfcvt_f_x_v_f32m1(a.val, 4));
+}
+
+#if CV_SIMD128_64F
+inline v_float32x4 v_cvt_f32(const v_float64x2& a)
+{
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 2);
+    return v_float32x4(aval);
+}
+
+inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
+{
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    _val = vset_f64m2(_val, 1, b.val);
+    vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 4);
+    return v_float32x4(aval);
+}
+
+inline v_float64x2 v_cvt_f64(const v_int32x4& a)
+{
+    vfloat32m1_t val = vfcvt_f_x_v_f32m1(a.val, 4);
+    vfloat64m2_t _val;
+    _val = vfwcvt_f_f_v_f64m2(val, 4);
+    return v_float64x2(vget_f64m2_f64m1(_val, 0));
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_int32x4& a)
+{
+    vfloat32m1_t val = vfcvt_f_x_v_f32m1(a.val, 4);
+    vfloat64m2_t _val;
+    _val = vfwcvt_f_f_v_f64m2(val, 4);
+    return v_float64x2(vget_f64m2_f64m1(_val, 1));
+}
+
+inline v_float64x2 v_cvt_f64(const v_float32x4& a)
+{
+    vfloat64m2_t _val;
+    _val = vfwcvt_f_f_v_f64m2(a.val, 4);
+    return v_float64x2(vget_f64m2_f64m1(_val, 0));
+}
+
+inline v_float64x2 v_cvt_f64_high(const v_float32x4& a)
+{
+    vfloat64m2_t _val;
+    _val = vfwcvt_f_f_v_f64m2(a.val, 4);
+    return v_float64x2(vget_f64m2_f64m1(_val, 1));
+}
+
+inline v_float64x2 v_cvt_f64(const v_int64x2& a)
+{
+    return v_float64x2(vfcvt_f_x_v_f64m1(a.val, 2));
+}
+#endif
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
