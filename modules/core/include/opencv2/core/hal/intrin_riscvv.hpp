@@ -2188,6 +2188,108 @@ OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_uint64x2, u64, 2)
 OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_int64x2, i64, 2)
 OPENCV_HAL_IMPL_RISCVV_BROADCAST(v_float32x4, f32, 4)
 
+inline v_int32x4 v_round(const v_float32x4& a)
+{
+    __builtin_riscv_fsrm(0);
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)a.val, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), a.val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_floor(const v_float32x4& a)
+{
+    __builtin_riscv_fsrm(2);
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)a.val, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), a.val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_ceil(const v_float32x4& a)
+{
+    __builtin_riscv_fsrm(3);
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)a.val, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), a.val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_trunc(const v_float32x4& a)
+{
+    __builtin_riscv_fsrm(1);
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)a.val, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), a.val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_round(const v_float64x2& a)
+{
+    __builtin_riscv_fsrm(0);
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    //_val = vset_f64m2(_val, 1, a.val);
+    _val = vset_f64m2(_val, 1, vfmv_v_f_f64m1(0, 2));
+    vint32m1_t val = vfncvt_x_f_v_i32m1(_val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
+{
+    __builtin_riscv_fsrm(0);
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    _val = vset_f64m2(_val, 1, b.val);
+    vint32m1_t val = vfncvt_x_f_v_i32m1(_val, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+inline v_int32x4 v_floor(const v_float64x2& a)
+{
+    __builtin_riscv_fsrm(2);
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 2);
+
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)aval, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), aval, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_ceil(const v_float64x2& a)
+{
+    __builtin_riscv_fsrm(3);
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 2);
+
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)aval, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), aval, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
+inline v_int32x4 v_trunc(const v_float64x2& a)
+{
+    __builtin_riscv_fsrm(1);
+    vfloat64m2_t _val;
+    _val = vset_f64m2(_val, 0, a.val);
+    vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 2);
+
+    vint32m1_t nan = vand_vx_i32m1((vint32m1_t)aval, 0x7f800000, 4);
+    vbool32_t mask = vmsne_vx_i32m1_b32(nan, 0x7f800000, 4);
+    vint32m1_t val = vfcvt_x_f_v_i32m1_m(mask, vmv_v_x_i32m1(0, 4), aval, 4);
+    __builtin_riscv_fsrm(0);
+    return v_int32x4(val);
+}
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
