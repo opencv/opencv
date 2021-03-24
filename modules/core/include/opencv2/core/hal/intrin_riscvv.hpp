@@ -555,6 +555,80 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
     return v_uint16x8(vmulhu_vv_u16m1(a.val, b.val, 8));
 }
 
+inline v_uint32x4 v_abs(v_int32x4 x)
+{
+    vbool32_t mask=vmslt_vx_i32m1_b32(x.val, 0, 4);
+    return v_uint32x4((vuint32m1_t)vrsub_vx_i32m1_m(mask, x.val, x.val, 0, 4));
+}
+
+inline v_uint16x8 v_abs(v_int16x8 x)
+{
+    vbool16_t mask=vmslt_vx_i16m1_b16(x.val, 0, 8);
+    return v_uint16x8((vuint16m1_t)vrsub_vx_i16m1_m(mask, x.val, x.val, 0, 8));
+}
+
+inline v_uint8x16 v_abs(v_int8x16 x)
+{
+    vbool8_t mask=vmslt_vx_i8m1_b8(x.val, 0, 16);
+    return v_uint8x16((vuint8m1_t)vrsub_vx_i8m1_m(mask, x.val, x.val, 0, 16));
+}
+
+inline v_float32x4 v_abs(v_float32x4 x)
+{
+    return (v_float32x4)vfsgnjx_vv_f32m1(x.val, x.val, 4);
+}
+
+inline v_float64x2 v_abs(v_float64x2 x)
+{
+    return (v_float64x2)vfsgnjx_vv_f64m1(x.val, x.val, 2);
+}
+
+inline v_float32x4 v_absdiff(const v_float32x4& a, const v_float32x4& b)
+{
+    vfloat32m1_t ret = vfsub_vv_f32m1(a.val, b.val, 4);
+    return (v_float32x4)vfsgnjx_vv_f32m1(ret, ret, 4);
+}
+
+inline v_float64x2 v_absdiff(const v_float64x2& a, const v_float64x2& b)
+{
+    vfloat64m1_t ret = vfsub_vv_f64m1(a.val, b.val, 2);
+    return (v_float64x2)vfsgnjx_vv_f64m1(ret, ret, 2);
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(bit, num) \
+inline v_uint##bit##x##num v_absdiff(v_uint##bit##x##num a, v_uint##bit##x##num b){    \
+    vuint##bit##m1_t vmax = vmaxu_vv_u##bit##m1(a.val, b.val, num);    \
+    vuint##bit##m1_t vmin = vminu_vv_u##bit##m1(a.val, b.val, num);    \
+    return v_uint##bit##x##num(vsub_vv_u##bit##m1(vmax, vmin, num));\
+}
+
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(8, 16)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(16, 8)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF_U(32, 4)
+
+/** Saturating absolute difference **/
+inline v_int8x16 v_absdiffs(v_int8x16 a, v_int8x16 b){    
+    vint8m1_t vmax = vmax_vv_i8m1(a.val, b.val, 16);
+    vint8m1_t vmin = vmin_vv_i8m1(a.val, b.val, 16);
+    return v_int8x16(vssub_vv_i8m1(vmax, vmin, 16));
+}
+inline v_int16x8 v_absdiffs(v_int16x8 a, v_int16x8 b){
+    vint16m1_t vmax = vmax_vv_i16m1(a.val, b.val, 8);
+    vint16m1_t vmin = vmin_vv_i16m1(a.val, b.val, 8);
+    return v_int16x8(vssub_vv_i16m1(vmax, vmin, 8));
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_ABSDIFF(_Tpvec, _Tpv, num) \
+inline v_uint##_Tpvec v_absdiff(v_int##_Tpvec a, v_int##_Tpvec b){    \
+     vint##_Tpv##_t max = vmax_vv_i##_Tpv(a.val, b.val, num);\
+     vint##_Tpv##_t min = vmin_vv_i##_Tpv(a.val, b.val, num);\
+    return v_uint##_Tpvec((vuint##_Tpv##_t)vsub_vv_i##_Tpv(max, min, num));    \
+}
+
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(8x16, 8m1, 16)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(16x8, 16m1, 8)
+OPENCV_HAL_IMPL_RISCVV_ABSDIFF(32x4, 32m1, 4)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
