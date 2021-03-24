@@ -2095,6 +2095,55 @@ OPENCV_HAL_IMPL_RISCVV_UNPACKS(int32x4, int32, i32, uint32, u32, 4, 8, b32, 2)
 OPENCV_HAL_IMPL_RISCVV_UNPACKS(float32x4, float32, f32, uint32, u32, 4, 8, b32, 2)
 OPENCV_HAL_IMPL_RISCVV_UNPACKS(float64x2, float64, f64, uint64, u64, 2, 4, b64, 1)
 
+inline v_uint8x16 v_reverse(const v_uint8x16 &a)
+{
+    vuint64m1_t mask = (vuint64m1_t){0x08090A0B0C0D0E0F, 0x0001020304050607};
+    return v_uint8x16(vrgather_vv_u8m1(a.val, (vuint8m1_t)mask, 16));
+}
+inline v_int8x16 v_reverse(const v_int8x16 &a)
+{
+    vint64m1_t mask = (vint64m1_t){0x08090A0B0C0D0E0F, 0x0001020304050607};
+    return v_int8x16(vrgather_vv_i8m1(a.val, (vuint8m1_t)mask, 16));
+}
+
+inline v_uint16x8 v_reverse(const v_uint16x8 &a)
+{
+    vuint64m1_t mask = (vuint64m1_t){0x0004000500060007, 0x000000100020003};
+    return v_uint16x8(vrgather_vv_u16m1(a.val, (vuint16m1_t)mask, 8));
+}
+
+inline v_int16x8 v_reverse(const v_int16x8 &a)
+{
+    vint64m1_t mask = (vint64m1_t){0x0004000500060007, 0x000000100020003};
+    return v_int16x8(vrgather_vv_i16m1(a.val, (vuint16m1_t)mask, 8));
+}
+inline v_uint32x4 v_reverse(const v_uint32x4 &a)
+{
+    return v_uint32x4(vrgather_vv_u32m1(a.val, (vuint32m1_t){3, 2, 1, 0}, 4));
+}
+
+inline v_int32x4 v_reverse(const v_int32x4 &a)
+{
+    return v_int32x4(vrgather_vv_i32m1(a.val, (vuint32m1_t){3, 2, 1, 0}, 4));
+}
+
+inline v_float32x4 v_reverse(const v_float32x4 &a)
+{ return v_reinterpret_as_f32(v_reverse(v_reinterpret_as_u32(a))); }
+
+inline v_uint64x2 v_reverse(const v_uint64x2 &a)
+{
+    return v_uint64x2(a.val[1], a.val[0]);
+}
+
+inline v_int64x2 v_reverse(const v_int64x2 &a)
+{
+    return v_int64x2(a.val[1], a.val[0]);
+}
+
+inline v_float64x2 v_reverse(const v_float64x2 &a)
+{
+    return v_float64x2(a.val[1], a.val[0]);
+}
 
 inline void v_cleanup() {}
 
