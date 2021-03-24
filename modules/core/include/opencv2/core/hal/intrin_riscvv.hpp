@@ -2045,6 +2045,57 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
     return v_int32x4(vget_i32m2_i32m1(c, 0));
 }
 
+#define VITL_16 (vuint64m2_t){0x1303120211011000, 0x1707160615051404, 0x1B0B1A0A19091808, 0x1F0F1E0E1D0D1C0C}
+#define VITL_8 (vuint64m2_t){0x0009000100080000, 0x000B0003000A0002, 0x000D0005000C0004, 0x000F0007000E0006}
+#define VITL_4 (vuint64m2_t){0x0000000400000000, 0x0000000500000001, 0x0000000600000002, 0x0000000700000003}
+#define VITL_2 (vuint64m2_t){0, 2, 1, 3}
+#define LOW_4  0x0000000100000000, 0x0000000500000004
+#define LOW_8  0x0003000200010000, 0x000B000A00090008
+#define LOW_16 0x0706050403020100, 0x1716151413121110
+#define HIGH_4  0x0000000300000002, 0x0000000700000006
+#define HIGH_8  0x0007000600050004, 0x000F000E000D000C
+#define HIGH_16 0x0F0E0D0C0B0A0908,  0x1F1E1D1C1B1A1918
+#define OPENCV_HAL_IMPL_RISCVV_UNPACKS(_Tpvec, _Tp, _T, _UTp, _UT, num, num2, len, numh) \
+inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
+{ \
+    v##_Tp##m2_t tmp;\
+    tmp = vset_##_T##m2(tmp, 0, a0.val); \
+    tmp = vset_##_T##m2(tmp, 1, a1.val); \
+    vuint64m2_t mask = VITL_##num;    \
+    tmp = (v##_Tp##m2_t)vrgather_vv_##_T##m2((v##_Tp##m2_t)tmp, (v##_UTp##m2_t)mask, num2);    \
+    b0.val = vget_##_T##m2_##_T##m1(tmp, 0); \
+    b1.val = vget_##_T##m2_##_T##m1(tmp, 1); \
+} \
+inline v_##_Tpvec v_combine_low(const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    v##_Tp##m1_t b0 = vslideup_vx_##_T##m1_m(vmset_m_##len(num), a.val, b.val, numh, num);    \
+    return v_##_Tpvec(b0);\
+} \
+inline v_##_Tpvec v_combine_high(const v_##_Tpvec& a, const v_##_Tpvec& b) \
+{ \
+    v##_Tp##m1_t b0 = vslidedown_vx_##_T##m1(b.val, numh, num);    \
+    v##_Tp##m1_t a0 = vslidedown_vx_##_T##m1(a.val, numh, num);    \
+    v##_Tp##m1_t b1 = vslideup_vx_##_T##m1_m(vmset_m_##len(num), a0, b0, numh, num);    \
+    return v_##_Tpvec(b1);\
+} \
+inline void v_recombine(const v_##_Tpvec& a, const v_##_Tpvec& b, v_##_Tpvec& c, v_##_Tpvec& d) \
+{ \
+    c.val = vslideup_vx_##_T##m1_m(vmset_m_##len(num), a.val, b.val, numh, num);    \
+    v##_Tp##m1_t b0 = vslidedown_vx_##_T##m1(b.val, numh, num);    \
+    v##_Tp##m1_t a0 = vslidedown_vx_##_T##m1(a.val, numh, num);    \
+    d.val = vslideup_vx_##_T##m1_m(vmset_m_##len(num), a0, b0, numh, num);    \
+}
+
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint8x16, uint8, u8, uint8, u8, 16, 32, b8, 8)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int8x16, int8, i8, uint8, u8, 16, 32, b8, 8)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint16x8, uint16, u16, uint16, u16, 8, 16, b16, 4)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int16x8, int16, i16, uint16, u16, 8, 16, b16, 4)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint32x4, uint32, u32, uint32, u32, 4, 8, b32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(int32x4, int32, i32, uint32, u32, 4, 8, b32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(float32x4, float32, f32, uint32, u32, 4, 8, b32, 2)
+OPENCV_HAL_IMPL_RISCVV_UNPACKS(float64x2, float64, f64, uint64, u64, 2, 4, b64, 1)
+
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
