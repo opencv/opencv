@@ -58,7 +58,7 @@ namespace
         return o;
     }
 
-    inline void initTestDataPath()
+    inline bool initTestDataPathSilent()
     {
 #ifndef WINRT
         static bool initialized = false;
@@ -66,13 +66,30 @@ namespace
         {
             // Since G-API has no own test data (yet), it is taken from the common space
             const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-            GAPI_Assert(testDataPath != nullptr &&
-            "OPENCV_TEST_DATA_PATH environment variable is either not set or set incorrectly.");
-
-            cvtest::addDataSearchPath(testDataPath);
-            initialized = true;
+            if (testDataPath != nullptr) {
+                cvtest::addDataSearchPath(testDataPath);
+                initialized = true;
+            }
         }
+
+        return initialized;
 #endif // WINRT
+    }
+
+    inline void initTestDataPath()
+    {
+        bool initialized = initTestDataPathSilent();
+        GAPI_Assert(initialized &&
+            "OPENCV_TEST_DATA_PATH environment variable is either not set or set incorrectly.");
+    }
+
+    inline void initTestDataPathOrSkip()
+    {
+        bool initialized = initTestDataPathSilent();
+        if (!initialized)
+        {
+            throw cvtest::SkipTestException("Can't find test data");
+        }
     }
 
     template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point_<T>& pt)
