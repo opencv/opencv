@@ -247,9 +247,9 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
                                 std::vector<cv::Mat>& measurements)
 {
     cv::RNG& rng = cv::theRNG();
-    measurements = std::vector<cv::Mat>(testNumMeasurements, cv::Mat::zeros(mDim, 1, type));
+    measurements.clear();
     haveMeasurements = std::vector<bool>(testNumMeasurements, true);
-    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    for (size_t i = 0; i < testNumMeasurements; i++)
     {
         if (receiveRandMeas)
         {
@@ -257,10 +257,12 @@ inline void generateInputKalman(const int mDim, const MatType2& type,
                                                 // at this iteration or not
         } // if not - testing the slowest case in which we have measurements at every iteration
 
+        cv::Mat measurement = cv::Mat::zeros(mDim, 1, type);
         if (haveMeasurements[i])
         {
-            cv::randu(measurements[i], cv::Scalar::all(-1), cv::Scalar::all(1));
+            cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
         }
+        measurements.push_back(measurement.clone());
     }
 }
 
@@ -272,10 +274,12 @@ inline void generateInputKalman(const int mDim, const int cDim, const MatType2& 
 {
     generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
                         haveMeasurements, measurements);
-    ctrls = std::vector<cv::Mat>(testNumMeasurements, cv::Mat(cDim, 1, type));
-    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    ctrls.clear();
+    cv::Mat ctrl(cDim, 1, type);
+    for (size_t i = 0; i < testNumMeasurements; i++)
     {
-        cv::randu(ctrls[i], cv::Scalar::all(-1), cv::Scalar::all(1));
+        cv::randu(ctrl, cv::Scalar::all(-1), cv::Scalar::all(1));
+        ctrls.push_back(ctrl.clone());
     }
 }
 
@@ -283,7 +287,7 @@ PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
 {
     MatType2 type = -1;
     int dDim = -1, mDim = -1;
-    std::size_t testNumMeasurements = 0;
+    size_t testNumMeasurements = 0;
     bool receiveRandMeas = true;
     cv::GCompileArgs compileArgs;
     std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
@@ -311,7 +315,7 @@ PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
     TEST_CYCLE()
     {
         cc.prepareForNewStream();
-        for (std::size_t i = 0; i < testNumMeasurements; i++)
+        for (size_t i = 0; i < testNumMeasurements; i++)
         {
             bool hvMeas = haveMeasurements[i];
             cc(cv::gin(measurements[i], hvMeas, ctrls[i]), cv::gout(gapiKState));
@@ -323,7 +327,7 @@ PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
     initKalmanFilter(kp, true, ocvKalman);
 
     cv::Mat ocvKState(dDim, 1, type);
-    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    for (size_t i = 0; i < testNumMeasurements; i++)
     {
         ocvKState = ocvKalman.predict(ctrls[i]);
         if (haveMeasurements[i])
@@ -338,7 +342,7 @@ PERF_TEST_P_(KalmanFilterNoControlPerfTest, TestPerformance)
 {
     MatType2 type = -1;
     int dDim = -1, mDim = -1;
-    std::size_t testNumMeasurements = 0;
+    size_t testNumMeasurements = 0;
     bool receiveRandMeas = true;
     cv::GCompileArgs compileArgs;
     std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
@@ -365,7 +369,7 @@ PERF_TEST_P_(KalmanFilterNoControlPerfTest, TestPerformance)
     TEST_CYCLE()
     {
         cc.prepareForNewStream();
-        for (std::size_t i = 0; i < testNumMeasurements; i++)
+        for (size_t i = 0; i < testNumMeasurements; i++)
         {
             bool hvMeas = haveMeasurements[i];
             cc(cv::gin(measurements[i], hvMeas), cv::gout(gapiKState));
@@ -377,7 +381,7 @@ PERF_TEST_P_(KalmanFilterNoControlPerfTest, TestPerformance)
     initKalmanFilter(kp, false, ocvKalman);
 
     cv::Mat ocvKState(dDim, 1, type);
-    for (std::size_t i = 0; i < testNumMeasurements; i++)
+    for (size_t i = 0; i < testNumMeasurements; i++)
     {
         ocvKState = ocvKalman.predict();
         if (haveMeasurements[i])
