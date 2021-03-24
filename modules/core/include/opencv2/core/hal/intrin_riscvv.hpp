@@ -2290,6 +2290,130 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
     return v_int32x4(val);
 }
 
+#define OPENCV_HAL_IMPL_RISCVV_LOAD_DEINTERLEAVED(intrin, _Tpvec, num, _Tp, _T)    \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b) \
+{ \
+    v##_Tpvec##m1x2_t ret = intrin##2e_v_##_T##m1x2(ptr, num);\
+    a.val = vget_##_T##m1x2_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x2_##_T##m1(ret, 1);  \
+} \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, v_##_Tpvec##x##num& c) \
+{ \
+    v##_Tpvec##m1x3_t ret = intrin##3e_v_##_T##m1x3(ptr, num);\
+    a.val = vget_##_T##m1x3_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x3_##_T##m1(ret, 1);  \
+    c.val = vget_##_T##m1x3_##_T##m1(ret, 2);  \
+}\
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, \
+                                v_##_Tpvec##x##num& c, v_##_Tpvec##x##num& d) \
+{ \
+    v##_Tpvec##m1x4_t ret = intrin##4e_v_##_T##m1x4(ptr, num);\
+    a.val = vget_##_T##m1x4_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x4_##_T##m1(ret, 1);  \
+    c.val = vget_##_T##m1x4_##_T##m1(ret, 2);  \
+    d.val = vget_##_T##m1x4_##_T##m1(ret, 3);  \
+} \
+
+#define OPENCV_HAL_IMPL_RISCVV_STORE_INTERLEAVED(intrin, _Tpvec, num, _Tp, _T)    \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    v##_Tpvec##m1x2_t ret;                              \
+    ret = vset_##_T##m1x2(ret, 0, a.val);  \
+    ret = vset_##_T##m1x2(ret, 1, b.val);  \
+    intrin##2e_v_##_T##m1x2(ptr, ret, num); \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    v##_Tpvec##m1x3_t ret;                              \
+    ret = vset_##_T##m1x3(ret, 0, a.val);  \
+    ret = vset_##_T##m1x3(ret, 1, b.val);  \
+    ret = vset_##_T##m1x3(ret, 2, c.val);  \
+    intrin##3e_v_##_T##m1x3(ptr, ret, num); \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, const v_##_Tpvec##x##num& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+{ \
+    v##_Tpvec##m1x4_t ret;                              \
+    ret = vset_##_T##m1x4(ret, 0, a.val);  \
+    ret = vset_##_T##m1x4(ret, 1, b.val);  \
+    ret = vset_##_T##m1x4(ret, 2, c.val);  \
+    ret = vset_##_T##m1x4(ret, 3, d.val);  \
+    intrin##4e_v_##_T##m1x4(ptr, ret, num); \
+}
+
+#define OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(_Tpvec, _Tp, num, ld, st, _T) \
+OPENCV_HAL_IMPL_RISCVV_LOAD_DEINTERLEAVED(ld, _Tpvec, num, _Tp, _T)    \
+OPENCV_HAL_IMPL_RISCVV_STORE_INTERLEAVED(st, _Tpvec, num, _Tp, _T)
+
+//OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint8, uchar, )
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int8, schar, 16, vlseg, vsseg, i8)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int16, short, 8, vlseg, vsseg, i16)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(int32, int, 4, vlseg, vsseg, i32)
+
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint8, unsigned char, 16, vlseg, vsseg, u8)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint16, unsigned short, 8, vlseg, vsseg, u16)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED(uint32, unsigned int, 4, vlseg, vsseg, u32)
+
+#define OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(_Tpvec, _Tp, num, _T) \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b) \
+{ \
+    v##_Tpvec##m1x2_t ret = vlseg2e_v_##_T##m1x2(ptr, num); \
+    a.val = vget_##_T##m1x2_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x2_##_T##m1(ret, 1);  \
+} \
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, v_##_Tpvec##x##num& c) \
+{ \
+    v##_Tpvec##m1x3_t ret = vlseg3e_v_##_T##m1x3(ptr, num);    \
+    a.val = vget_##_T##m1x3_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x3_##_T##m1(ret, 1);  \
+    c.val = vget_##_T##m1x3_##_T##m1(ret, 2);  \
+}\
+inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec##x##num& a, v_##_Tpvec##x##num& b, \
+                                v_##_Tpvec##x##num& c, v_##_Tpvec##x##num& d) \
+{ \
+    v##_Tpvec##m1x4_t ret = vlseg4e_v_##_T##m1x4(ptr, num);    \
+    a.val = vget_##_T##m1x4_##_T##m1(ret, 0);  \
+    b.val = vget_##_T##m1x4_##_T##m1(ret, 1);  \
+    c.val = vget_##_T##m1x4_##_T##m1(ret, 2);  \
+    d.val = vget_##_T##m1x4_##_T##m1(ret, 3);  \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    v##_Tpvec##m1x2_t ret;    \
+    ret = vset_##_T##m1x2(ret, 0, a.val);  \
+    ret = vset_##_T##m1x2(ret, 1, b.val);  \
+    vsseg2e_v_##_T##m1x2(ptr, ret, num);    \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, hal::StoreMode /*mode*/=hal::STORE_UNALIGNED) \
+{ \
+    v##_Tpvec##m1x3_t ret;    \
+    ret = vset_##_T##m1x3(ret, 0, a.val);  \
+    ret = vset_##_T##m1x3(ret, 1, b.val);  \
+    ret = vset_##_T##m1x3(ret, 2, c.val);  \
+    vsseg3e_v_##_T##m1x3(ptr, ret, num);    \
+} \
+inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec##x##num& a, const v_##_Tpvec##x##num& b, \
+                                const v_##_Tpvec##x##num& c, const v_##_Tpvec##x##num& d, \
+                                hal::StoreMode /*mode*/=hal::STORE_UNALIGNED ) \
+{ \
+    v##_Tpvec##m1x4_t ret;    \
+    ret = vset_##_T##m1x4(ret, 0, a.val);  \
+    ret = vset_##_T##m1x4(ret, 1, b.val);  \
+    ret = vset_##_T##m1x4(ret, 2, c.val);  \
+    ret = vset_##_T##m1x4(ret, 3, d.val);  \
+    vsseg4e_v_##_T##m1x4(ptr, ret, num);    \
+}
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float32, float, 4, f32)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float64, double, 2, f64)
+
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(uint64, unsigned long, 2, u64)
+OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(int64, long, 2, i64)
+
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
