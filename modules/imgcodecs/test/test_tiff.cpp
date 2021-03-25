@@ -358,6 +358,93 @@ TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr17275_default)
     EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
 }
 
+TEST(Imgcodecs_Tiff, count_multipage)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    {
+        const string filename = root + "readwrite/multipage.tif";
+        ASSERT_EQ(6, imcount(filename));
+    }
+    {
+        const string filename = root + "readwrite/test32FC3_raw.tiff";
+        ASSERT_EQ(1, imcount(filename));
+    }
+}
+
+TEST(Imgcodecs_Tiff, read_multipage_indexed)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> single_pages;
+    for (size_t i = 0; i < page_count; i++)
+    {
+        const Mat page = imread(root + page_files[i]);
+        single_pages.push_back(page);
+    }
+    ASSERT_EQ(page_count, single_pages.size());
+
+    {
+        // Edge cases
+        vector<Mat> multi_pages;
+        bool res = imreadmulti(filename, multi_pages, 0, 0);
+        // If we asked for 0 images and we successfully read 0 images should this be false ?
+        ASSERT_TRUE(res == false); 
+        ASSERT_EQ(0, multi_pages.size());
+        res = imreadmulti(filename, multi_pages, 0, 123123);
+        ASSERT_TRUE(res == true);
+        ASSERT_EQ(6, multi_pages.size());
+    }
+
+    {
+        // Read all
+        vector<Mat> multi_pages;
+        bool res = imreadmulti(filename, multi_pages, 0, 6);
+        ASSERT_TRUE(res == true);
+        ASSERT_EQ(page_count, multi_pages.size());
+        for (size_t i = 0; i < page_count; i++)
+        {
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[i], single_pages[i]);
+        }
+    }
+
+    {
+        // Read one by one
+        vector<Mat> multi_pages;
+        for (size_t i = 0; i < page_count; i++)
+        {
+            bool res = imreadmulti(filename, multi_pages, i, 1);
+            ASSERT_TRUE(res == true);
+            ASSERT_EQ(1, multi_pages.size());
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i]);
+            multi_pages.clear();
+        }
+    }
+
+    {
+        // Pairs of two
+        vector<Mat> multi_pages;
+        for (size_t i = 0; i < page_count/2; i++)
+        {
+            bool res = imreadmulti(filename, multi_pages, i*2, 2);
+            ASSERT_TRUE(res == true);
+            ASSERT_EQ(2, multi_pages.size());
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i * 2]) << i;
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[1], single_pages[i * 2 + 1]);
+            multi_pages.clear();
+        }
+    }
+}
+
+
 #endif
 
 }} // namespace
