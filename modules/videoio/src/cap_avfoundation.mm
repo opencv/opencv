@@ -29,9 +29,14 @@
  *
  */
 
+ #pragma clang diagnostic push
+ #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
+#include "cap_interface.hpp"
 #include <iostream>
+#include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/NSException.h>
 
@@ -176,7 +181,7 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
                 double fps, CvSize frame_size,
                 int is_color=1);
         ~CvVideoWriter_AVFoundation();
-        bool writeFrame(const IplImage* image);
+        bool writeFrame(const IplImage* image) CV_OVERRIDE;
         int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
     private:
         IplImage* argbimage;
@@ -198,28 +203,33 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter{
 /****************** Implementation of interface functions ********************/
 
 
-CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
-
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+{
+    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
-        return retval;
+        return makePtr<LegacyCapture>(retval);
     delete retval;
     return NULL;
-}
-
-CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
-
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
-        cvReleaseCapture(&retval);
-    return retval;
 
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
-        double fps, CvSize frame_size,
-        int is_color) {
-    return new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size,is_color);
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+{
+    CvCaptureCAM* retval = new CvCaptureCAM(index);
+    if (retval->didStart())
+        return cv::makePtr<cv::LegacyCapture>(retval);
+    delete retval;
+    return 0;
+}
+
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size &frameSize,
+                                                         const cv::VideoWriterParameters& params)
+{
+    CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename.c_str(), fourcc, fps, sz, isColor);
+    return cv::makePtr<cv::LegacyWriter>(wrt);
 }
 
 /********************** Implementation of Classes ****************************/
@@ -1246,16 +1256,25 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
         //exception;
     }
 
-    // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
+    // Three codec supported AVVideoCodecH264 AVVideoCodecJPEG AVVideoCodecTypeHEVC
     // On iPhone 3G H264 is not supported.
     if (fourcc == CV_FOURCC('J','P','E','G') || fourcc == CV_FOURCC('j','p','e','g') ||
-            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g') ){
+            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g')){
         codec = [AVVideoCodecJPEG copy]; // Use JPEG codec if specified, otherwise H264
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
+// Available since iOS 11
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+    }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
+            fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
+        if (@available(iOS 11, *)) {
+            codec = [AVVideoCodecTypeHEVC copy];
+        } else {
+            codec = [AVVideoCodecH264 copy];
+        }
+#endif
     }else{
         codec = [AVVideoCodecH264 copy]; // default canonical H264.
-
     }
 
     //NSLog(@"Path: %@", path);
@@ -1402,3 +1421,5 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
+
+#pragma clang diagnostic pop

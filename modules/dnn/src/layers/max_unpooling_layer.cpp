@@ -11,10 +11,14 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-#include <iostream>
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/max_unpooling.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -35,6 +39,7 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -123,6 +128,35 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::MaxUnpoolingConfiguration config;
+        auto& window_size = config.window_size;
+        window_size.resize(2);
+        window_size[0] = poolKernel.height;
+        window_size[1] = poolKernel.width;
+
+        auto& strides = config.strides;
+        strides.resize(2);
+        strides[0] = poolStride.height;
+        strides[1] = poolStride.width;
+
+        auto& pads_begin = config.pads_begin;
+        pads_begin.resize(2);
+        pads_begin[0] = poolPad.height;
+        pads_begin[1] = poolPad.width;
+
+        return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {

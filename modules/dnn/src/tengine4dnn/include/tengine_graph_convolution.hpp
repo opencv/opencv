@@ -26,17 +26,24 @@
 #define TENGINE_GRAPH_CONVOLUTION_HPP
 
 #define FLOAT_TO_REALSIZE (4)
+#ifdef HAVE_TENGINE
+
+#include "tengine_c_api.h"
 
 namespace cv
 {
 namespace dnn
 {
-bool tengine_forward(float *input_, int inch, int group, int in_h, int in_w,
+teng_graph_t  tengine_init(const char* name , float* input_, int inch, int group, int in_h, int in_w,
                         float *output_, int out_b, int outch, int out_h, int out_w,
                         float *kernel_,int kernel_s , int kernel_h, int kernel_w,
                         float *teg_bias, int stride_h,int stride_w,
                         int pad_h, int pad_w,  int dilation_h, int dilation_w,
-                        size_t wstep, const std::string padMode) ;
+                        size_t wstep, const std::string padMode , teng_graph_t& graph, int nstripes) ;
+
+bool tengine_forward(teng_graph_t& graph) ;
+bool tengine_release(teng_graph_t& graph) ;
 }
 }
+#endif
 #endif /* TENGINE_GRAPH_CONVOLUTION_HPP */

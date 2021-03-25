@@ -110,7 +110,7 @@ public:
         {
             for (int i = 0; i < numInps; i++)
             {
-                String inpfile = _tf(basename + ".input_" + (i + '0') + ".npy");
+                String inpfile = _tf(basename + cv::format(".input_%d.npy", i));
                 inps.push_back(blobFromNPY(inpfile));
             }
         }
@@ -124,7 +124,7 @@ public:
         {
             for (int i = 0; i < numOuts; i++)
             {
-                String outfile = _tf(basename + "_" + (i + '0') + ".npy");
+                String outfile = _tf(basename + cv::format("_%d.npy", i));
                 refs.push_back(blobFromNPY(outfile));
             }
         }
@@ -146,7 +146,7 @@ public:
         {
             for (int i = 0; i < numInps; i++)
             {
-                net.setInput(inps[i], inp_name + "_" + (i + '0'));
+                net.setInput(inps[i], inp_name + cv::format("_%d", i));
             }
         }
         else
@@ -189,6 +189,8 @@ TEST_P(Test_Caffe_layers, Convolution)
 
 TEST_P(Test_Caffe_layers, DeConvolution)
 {
+    if(target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testLayerUsingCaffeModels("layer_deconvolution", true, false);
 }
 
@@ -216,6 +218,9 @@ TEST_P(Test_Caffe_layers, Pooling_ave)
 
 TEST_P(Test_Caffe_layers, MVN)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is unsupported */
+
     testLayerUsingCaffeModels("layer_mvn");
 }
 
@@ -427,7 +432,13 @@ TEST_P(Test_Caffe_layers, Conv_Elu)
     net.setPreferableTarget(target);
     Mat out = net.forward();
 
-    normAssert(ref, out, "", default_l1, default_lInf);
+    double l1 = default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.0002;
+        lInf = 0.0005;
+    }
+    normAssert(ref, out, "", l1, lInf);
 }
 
 class Layer_LSTM_Test : public ::testing::Test
@@ -701,6 +712,11 @@ TEST_P(Test_Caffe_layers, ROIPooling_Accuracy)
 
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 2e-4;
+        lInf = 9e-4;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
@@ -712,6 +728,8 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* Proposal layer is unsupported */
 
     Net net = readNetFromCaffe(_tf("net_faster_rcnn_proposal.prototxt"));
 
@@ -950,6 +968,11 @@ TEST_P(Test_Caffe_layers, PriorBox_repeated)
 
     double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-5;
     double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-3 : 1e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 7e-5;
+        lInf = 0.0005;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
@@ -985,7 +1008,9 @@ TEST_P(Test_Caffe_layers, PriorBox_squares)
                                        0.25, 0.0, 1.0, 1.0,
                                        0.1f, 0.1f, 0.2f, 0.2f,
                                        0.1f, 0.1f, 0.2f, 0.2f);
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 2e-5 : 1e-5;
+    double l1 = 1e-5;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+        l1 = 2e-5;
     normAssert(out.reshape(1, 4), ref, "", l1);
 }
 
@@ -1341,6 +1366,11 @@ TEST_P(Test_DLDT_two_inputs, as_backend)
     // Output values are in range [0, 637.5].
     double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
     double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
+    if (targetId == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.06;
+        lInf = 0.3;
+    }
     normAssert(out, ref, "", l1, lInf);
 }
 
@@ -1658,8 +1688,17 @@ TEST_P(Layer_Test_ShuffleChannel, Accuracy)
     net.setPreferableTarget(targetId);
     Mat out = net.forward();
 
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 5e-2 : 1e-5;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 7e-2 : 1e-4;
+    double l1 = 1e-5, lInf = 1e-4;
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 5e-2;
+        lInf = 7e-2;
+    }
+    else if (targetId == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.06;
+        lInf = 0.07;
+    }
     for (int n = 0; n < inpShapeVec[0]; ++n)
     {
         for (int c = 0; c < inpShapeVec[1]; ++c)
@@ -1713,6 +1752,9 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0_truncate)
     bool weighted = get<0>(GetParam());
     int backendId = get<0>(get<1>(GetParam()));
     int targetId = get<1>(get<1>(GetParam()));
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     Net net;
     LayerParams lp;
@@ -1782,6 +1824,9 @@ TEST_P(Layer_Test_Eltwise_unequal, accuracy_input_0)
     lp.type = "Eltwise";
     lp.name = "testLayer";
     lp.set<std::string>("output_channels_mode", "input_0");
+
+    if (backendId == DNN_BACKEND_CUDA && weighted)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
     const int inpShapes[][4] = {{1, 4, 2, 2}, {1, 2, 2, 2}, {1, 3, 2, 2}};
     const int out_channels = inpShapes[0][1];
@@ -2203,7 +2248,7 @@ public:
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
     {
-        return dnnBackendsAndTargets(false, false, true, false); // OCV OpenCL + OCV CPU
+        return dnnBackendsAndTargets(false, false, true, false, true, false); // OCV OpenCL + OCV CPU + CUDA
     }
 };
 
@@ -2255,7 +2300,12 @@ TEST_P(ConvolutionActivationFusion, Accuracy)
                 expectedFusedLayers.push_back(activId);
         }
     }
-
+    else if (backendId == DNN_BACKEND_CUDA)
+    {
+        if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+            actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+                expectedFusedLayers.push_back(activId);
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationFusion, Combine(
@@ -2294,7 +2344,7 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
     std::string eltwiseOp = get<1>(GetParam());
     bool weightedEltwise = get<2>(GetParam());
     if (eltwiseOp != "sum" && weightedEltwise)
-            throw SkipTestException("weighted eltwise not supported");
+        throw SkipTestException("weighted eltwise not supported");
     LayerParams eltwiseParams;
     TestLayerFusion::makeDefaultTestEltwiseLayer(eltwiseParams, eltwiseOp, weightedEltwise);
 
@@ -2307,7 +2357,11 @@ TEST_P(ConvolutionEltwiseFusion, Accuracy)
 
     Backend backendId = get<0>(get<3>(GetParam()));
     Target targetId = get<1>(get<3>(GetParam()));
-    TestLayerFusion::test(input, net, backendId, targetId);
+
+    std::vector<int> expectedFusedLayers;
+    if (backendId == DNN_BACKEND_CUDA && eltwiseOp == "sum" && !weightedEltwise)
+        expectedFusedLayers.push_back(eltwiseId);
+    TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseFusion, Combine(
 /* bias */              testing::Bool(),
@@ -2386,7 +2440,16 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
             }
         }
     }
-
+    else if(backendId == DNN_BACKEND_CUDA)
+    {
+        if (eltwiseOp == "sum" && !weightedEltwise)
+        {
+            expectedFusedLayers.push_back(eltwiseId);
+            if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+                actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+                expectedFusedLayers.push_back(activId);
+        }
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionEltwiseActivationFusion, Combine(
@@ -2461,7 +2524,16 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
                 expectedFusedLayers.push_back(activId); // activation fused with convolution
         }
     }
-
+    else if(backendId == DNN_BACKEND_CUDA)
+    {
+        if (actType == "ReLU" || actType == "ReLU6" || actType == "TanH" || actType == "Swish" ||
+            actType == "Mish" || actType == "Sigmoid" || actType == "Power")
+        {
+                expectedFusedLayers.push_back(activId);
+                if (eltwiseOp == "sum" && !weightedEltwise)
+                    expectedFusedLayers.push_back(eltwiseId);
+        }
+    }
     TestLayerFusion::test(input, net, backendId, targetId, expectedFusedLayers);
 }
 INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Combine(

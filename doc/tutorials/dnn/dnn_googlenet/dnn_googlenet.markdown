@@ -1,7 +1,14 @@
 Load Caffe framework models  {#tutorial_dnn_googlenet}
 ===========================
 
+@tableofcontents
+
 @next_tutorial{tutorial_dnn_halide}
+
+|    |    |
+| -: | :- |
+| Original author | Vitaliy Lyudvichenko |
+| Compatibility | OpenCV >= 3.3 |
 
 Introduction
 ------------
@@ -15,7 +22,7 @@ We will demonstrate results of this example on the following picture.
 Source Code
 -----------
 
-We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/3.4/samples/dnn/classification.cpp).
+We will be using snippets from the example application, that can be downloaded [here](https://github.com/opencv/opencv/blob/master/samples/dnn/classification.cpp).
 
 @include dnn/classification.cpp
 
@@ -27,7 +34,7 @@ Explanation
    [bvlc_googlenet.caffemodel](http://dl.caffe.berkeleyvision.org/bvlc_googlenet.caffemodel)
 
    Also you need file with names of [ILSVRC2012](http://image-net.org/challenges/LSVRC/2012/browse-synsets) classes:
-   [classification_classes_ILSVRC2012.txt](https://github.com/opencv/opencv/blob/3.4/samples/data/dnn/classification_classes_ILSVRC2012.txt).
+   [classification_classes_ILSVRC2012.txt](https://github.com/opencv/opencv/blob/master/samples/data/dnn/classification_classes_ILSVRC2012.txt).
 
    Put these files into working dir of this program example.
 

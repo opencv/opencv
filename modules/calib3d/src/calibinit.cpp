@@ -527,7 +527,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         //image is binarised using a threshold dependent on the image histogram
         if (checkChessboardBinary(thresh_img_new, pattern_size) <= 0) //fall back to the old method
         {
-            if (checkChessboard(img, pattern_size) <= 0)
+            if (!checkChessboard(img, pattern_size))
             {
                 corners_.release();
                 return false;
@@ -1842,7 +1842,7 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
         if (boardIdx != parentIdx && (boardIdx < 0 || contour_child_counter[boardIdx] < contour_child_counter[parentIdx]))
             boardIdx = parentIdx;
 
-        contour_quads.push_back(QuadCountour(pt, parentIdx));
+        contour_quads.emplace_back(pt, parentIdx);
     }
 
     size_t total = contour_quads.size();
@@ -2178,21 +2178,13 @@ void drawChessboardCorners( InputOutputArray image, Size patternSize,
     }
 }
 
-bool findCirclesGrid(InputArray image, Size patternSize,
-                     OutputArray centers, int flags,
-                     const Ptr<FeatureDetector> &blobDetector,
-                     CirclesGridFinderParameters parameters)
-{
-    CirclesGridFinderParameters2 parameters2;
-    *((CirclesGridFinderParameters*)&parameters2) = parameters;
-    return cv::findCirclesGrid2(image, patternSize, centers, flags, blobDetector, parameters2);
-}
-
-bool findCirclesGrid2(InputArray _image, Size patternSize,
-                      OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
-                      CirclesGridFinderParameters2 parameters)
+bool findCirclesGrid( InputArray _image, Size patternSize,
+                          OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector,
+                          const CirclesGridFinderParameters& parameters_)
 {
     CV_INSTRUMENT_REGION();
+
+    CirclesGridFinderParameters parameters = parameters_; // parameters.gridType is amended below
 
     bool isAsymmetricGrid = (flags & CALIB_CB_ASYMMETRIC_GRID) ? true : false;
     bool isSymmetricGrid  = (flags & CALIB_CB_SYMMETRIC_GRID ) ? true : false;
@@ -2287,7 +2279,7 @@ bool findCirclesGrid2(InputArray _image, Size patternSize,
 bool findCirclesGrid(InputArray _image, Size patternSize,
                      OutputArray _centers, int flags, const Ptr<FeatureDetector> &blobDetector)
 {
-    return cv::findCirclesGrid2(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters2());
+    return cv::findCirclesGrid(_image, patternSize, _centers, flags, blobDetector, CirclesGridFinderParameters());
 }
 
 } // namespace

@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>opencv2</string>
+    <string>${FRAMEWORK_NAME}</string>
     <key>CFBundleName</key>
     <string>${OPENCV_APPLE_BUNDLE_NAME}</string>
     <key>CFBundleIdentifier</key>

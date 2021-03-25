@@ -100,7 +100,7 @@ TEST(Features2D_ORB, crash_5031)
     int edgeThreshold = 4;
     int firstLevel = 0;
     int WTA_K = 2;
-    int scoreType = cv::ORB::HARRIS_SCORE;
+    ORB::ScoreType scoreType = cv::ORB::HARRIS_SCORE;
     int patchSize = 47;
     int fastThreshold = 20;
 

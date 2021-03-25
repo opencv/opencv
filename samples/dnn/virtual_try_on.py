@@ -17,7 +17,7 @@ from common import findFile
 from human_parsing import parse_human
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL)
 
 parser = argparse.ArgumentParser(description='Use this script to run virtial try-on using CP-VTON',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -39,7 +39,8 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                             '%d: CPU target (by default), '
                             '%d: OpenCL, '
                             '%d: OpenCL fp16 (half-float precision), '
-                            '%d: VPU' % targets)
+                            '%d: NCS2 VPU, '
+                            '%d: HDDL VPU' % targets)
 args, _ = parser.parse_known_args()
 
 

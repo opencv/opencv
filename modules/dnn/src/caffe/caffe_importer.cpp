@@ -54,7 +54,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedField;
@@ -469,7 +469,7 @@ public:
             {
                 CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
                 type = "Resize";
-                String interp = layerParams.get<String>("type").toLowerCase();
+                String interp = toLowerCase(layerParams.get<String>("type"));
                 layerParams.set("interpolation", interp == "linear" ? "bilinear" : interp);
 
                 if (layerParams.has("factor"))
@@ -592,5 +592,5 @@ Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uc
 
 #endif //HAVE_PROTOBUF
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

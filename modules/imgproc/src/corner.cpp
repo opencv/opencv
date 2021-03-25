@@ -239,10 +239,6 @@ cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
                      int aperture_size, int op_type, double k=0.,
                      int borderType=BORDER_DEFAULT )
 {
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::cornerEigenValsVecs(src, eigenv, block_size, aperture_size, op_type, k, borderType))
-        return;
-#endif
 #if CV_TRY_AVX
     bool haveAvx = CV_CPU_HAS_SUPPORT_AVX;
 #endif

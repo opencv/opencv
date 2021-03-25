@@ -17,9 +17,17 @@ ocv_add_dispatched_file_force_all(test_intrin128 TEST SSE2 SSE3 SSSE3 SSE4_1 SSE
 ocv_add_dispatched_file_force_all(test_intrin256 TEST AVX2 AVX512_SKX)
 ocv_add_dispatched_file_force_all(test_intrin512 TEST AVX512_SKX)
 
+
+# parallel backends configuration
+set(PARALLEL_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building parallel plugin support")
+# TODO building plugins with OpenCV is not supported yet
+#set(PARALLEL_PLUGIN_LIST "" CACHE STRING "List of parallel backends to be compiled as plugins (tbb, openmp or special value 'all')")
+#string(REPLACE "," ";" PARALLEL_PLUGIN_LIST "${PARALLEL_PLUGIN_LIST}")  # support comma-separated list (,) too
+
+
 ocv_add_module(core
                OPTIONAL opencv_cudev
-               WRAP java python js)
+               WRAP java objc python js)
 
 set(extra_libs "")
 
@@ -36,6 +44,9 @@ if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
 endif()
 
 if(HAVE_CUDA)
+  if(NOT HAVE_opencv_cudev)
+    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  endif()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
 
@@ -55,10 +66,15 @@ file(GLOB_RECURSE module_opencl_hdrs
 source_group("Include\\Cuda Headers"         FILES ${lib_cuda_hdrs})
 source_group("Include\\Cuda Headers\\Detail" FILES ${lib_cuda_hdrs_detail})
 
+file(GLOB_RECURSE core_parallel_hdrs
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/parallel/*.h")
+ocv_source_group("Include" DIRBASE "${CMAKE_CURRENT_LIST_DIR}/include" FILES ${core_parallel_hdrs})
+
 source_group("Src" FILES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc")
 
 ocv_glob_module_sources(SOURCES "${OPENCV_MODULE_opencv_core_BINARY_DIR}/version_string.inc"
-                        HEADERS ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
+                        HEADERS ${core_parallel_hdrs} ${module_opencl_hdrs} ${lib_cuda_hdrs} ${lib_cuda_hdrs_detail})
 
 ocv_module_include_directories(${the_module} ${ZLIB_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIRS})
 if(ANDROID AND HAVE_CPUFEATURES)
@@ -76,6 +92,15 @@ if(HAVE_MALLOC_H)
 endif()
 if(HAVE_MEMALIGN)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_MEMALIGN=1")
+endif()
+if(HAVE_WIN32_ALIGNED_MALLOC)
+  ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/alloc.cpp "HAVE_WIN32_ALIGNED_MALLOC=1")
+endif()
+if(HAVE_VA_INTEL_OLD_HEADER)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "HAVE_VA_INTEL_OLD_HEADER")
+endif()
+if(OPENCV_LIBVA_LINK)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "OPENCV_LIBVA_LINK=1")
 endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
@@ -103,6 +128,14 @@ elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
 endif()
 
 
+if(PARALLEL_ENABLE_PLUGINS)
+  ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")
+  if(OPENCV_DEBUG_POSTFIX)
+    ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/parallel/parallel.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")
+  endif()
+endif()
+
+
 ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
@@ -114,6 +147,10 @@ ocv_target_link_libraries(${the_module} PRIVATE
 
 if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
+endif()
+
+if(HAVE_HPX)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()
 
 ocv_add_accuracy_tests()

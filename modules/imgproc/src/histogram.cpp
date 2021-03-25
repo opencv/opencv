@@ -1212,7 +1212,7 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%zu -D kercn=%d -D T=%s%s",
                           BINS, compunits, wgs, kercn,
                           kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
                           _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
@@ -3358,7 +3358,7 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
     int kercn = dev.isAMD() && use16 ? 16 : std::min(4, ocl::predictOptimalVectorWidth(_src));
 
     ocl::Kernel k1("calculate_histogram", ocl::imgproc::histogram_oclsrc,
-                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D kercn=%d -D T=%s%s",
+                   format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%zu -D kercn=%d -D T=%s%s",
                           BINS, compunits, wgs, kercn,
                           kercn == 4 ? "int" : ocl::typeToStr(CV_8UC(kercn)),
                           _src.isContinuous() ? " -D HAVE_SRC_CONT" : ""));
@@ -3491,6 +3491,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
         lutBody(heightRange);
 }
 
+#if 0
 // ----------------------------------------------------------------------
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
@@ -3642,5 +3643,6 @@ static void icvWriteHist( CvFileStorage* fs, const char* name,
 
 CvType hist_type( CV_TYPE_NAME_HIST, icvIsHist, (CvReleaseFunc)cvReleaseHist,
                   icvReadHist, icvWriteHist, (CvCloneFunc)icvCloneHist );
+#endif
 
 /* End of file. */

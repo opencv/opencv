@@ -53,7 +53,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
@@ -115,19 +115,19 @@ void CV_BaseHistTest::clear()
 }
 
 
-int CV_BaseHistTest::read_params( CvFileStorage* fs )
+int CV_BaseHistTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    test_case_count = cvReadInt( find_param( fs, "struct_count" ), test_case_count );
-    max_log_size = cvReadInt( find_param( fs, "max_log_size" ), max_log_size );
+    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
+    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
     max_log_size = cvtest::clipInt( max_log_size, 1, 20 );
-    img_max_log_size = cvReadInt( find_param( fs, "max_log_array_size" ), img_max_log_size );
+    read( find_param( fs, "max_log_array_size" ), img_max_log_size, img_max_log_size );
     img_max_log_size = cvtest::clipInt( img_max_log_size, 1, 9 );
 
-    max_cdims = cvReadInt( find_param( fs, "max_cdims" ), max_cdims );
+    read( find_param( fs, "max_cdims" ), max_cdims, max_cdims );
     max_cdims = cvtest::clipInt( max_cdims, 1, 6 );
 
     return 0;

@@ -347,9 +347,18 @@ TEST_P(Test_Darknet_nets, YoloVoc)
                                     1, 6,  0.667770f, 0.446555f, 0.453578f, 0.499986f, 0.519167f,  // a car
                                     1, 6,  0.844947f, 0.637058f, 0.460398f, 0.828508f, 0.66427f);  // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1e-2 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        scoreDiff = 1e-2;
+        iouDiff = 0.018;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.03;
+        iouDiff = 0.018;
+    }
 
     std::string config_file = "yolo-voc.cfg";
     std::string weights_file = "yolo-voc.weights";
@@ -386,8 +395,17 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
                                     1, 6,  0.651450f, 0.460526f, 0.458019f, 0.522527f, 0.5341f,    // a car
                                     1, 6,  0.928758f, 0.651024f, 0.463539f, 0.823784f, 0.654998f); // a car
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 8e-3 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : 3e-4;
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        scoreDiff = 8e-3;
+        iouDiff = 0.018;
+    }
+    else if(target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.008;
+        iouDiff = 0.02;
+    }
 
     std::string config_file = "tiny-yolo-voc.cfg";
     std::string weights_file = "tiny-yolo-voc.weights";
@@ -505,9 +523,17 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
-
+    double scoreDiff = 8e-5, iouDiff = 3e-4;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        scoreDiff = 0.006;
+        iouDiff = 0.042;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.04;
+        iouDiff = 0.03;
+    }
     std::string config_file = "yolov3.cfg";
     std::string weights_file = "yolov3.weights";
 
@@ -580,6 +606,11 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.008;
+        iouDiff = 0.03;
+    }
 
     std::string config_file = "yolov4.cfg";
     std::string weights_file = "yolov4.weights";
@@ -646,6 +677,8 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
     double scoreDiff = 0.01f;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.15 : 0.01f;
+    if (target == DNN_TARGET_CUDA_FP16)
+        iouDiff = 0.02;
 
     std::string config_file = "yolov4-tiny.cfg";
     std::string weights_file = "yolov4-tiny.weights";
@@ -756,8 +789,8 @@ TEST_P(Test_Darknet_layers, convolutional)
 
 TEST_P(Test_Darknet_layers, scale_channels)
 {
-    // TODO: test fails for batches due to a bug/missing feature in ScaleLayer
-    testDarknetLayer("scale_channels", false, false);
+    bool testBatches = backend == DNN_BACKEND_CUDA;
+    testDarknetLayer("scale_channels", false, testBatches);
 }
 
 TEST_P(Test_Darknet_layers, connected)

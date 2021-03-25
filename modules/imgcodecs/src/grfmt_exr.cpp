@@ -617,7 +617,45 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 type = FLOAT;
                 break;
             default:
-                throw std::runtime_error( "IMWRITE_EXR_TYPE is invalid or not supported" );
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_TYPE is invalid or not supported");
+            }
+        }
+        if ( params[i] == IMWRITE_EXR_COMPRESSION )
+        {
+            switch ( params[i + 1] )
+            {
+            case IMWRITE_EXR_COMPRESSION_NO:
+                header.compression() = NO_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_RLE:
+                header.compression() = RLE_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIPS:
+                header.compression() = ZIPS_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIP:
+                header.compression() = ZIP_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PIZ:
+                header.compression() = PIZ_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PXR24:
+                header.compression() = PXR24_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44:
+                header.compression() = B44_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44A:
+                header.compression() = B44A_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_DWAA:
+                header.compression() = DWAA_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_DWAB:
+                header.compression() = DWAB_COMPRESSION;
+                break;
+            default:
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
             }
         }
     }

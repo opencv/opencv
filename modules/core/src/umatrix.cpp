@@ -66,7 +66,7 @@ UMatData::UMatData(const MatAllocator* allocator)
     urefcount = refcount = mapcount = 0;
     data = origdata = 0;
     size = 0;
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
@@ -81,7 +81,7 @@ UMatData::~UMatData()
     data = origdata = 0;
     size = 0;
     bool isAsyncCleanup = !!(flags & UMatData::ASYNC_CLEANUP);
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
@@ -375,6 +375,65 @@ size_t UMat::total() const
 }
 
 
+UMat::UMat(UMat&& m)
+: flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
+  usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
+{
+    if (m.dims <= 2)  // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+}
+
+UMat& UMat::operator=(UMat&& m)
+{
+    if (this == &m)
+      return *this;
+    release();
+    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
+    allocator = m.allocator; usageFlags = m.usageFlags;
+    u = m.u;
+    offset = m.offset;
+    if (step.p != step.buf) // release self step/size
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+    if (m.dims <= 2) // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+    return *this;
+}
+
+
 MatAllocator* UMat::getStdAllocator()
 {
 #ifdef HAVE_OPENCL
@@ -482,7 +541,7 @@ void finalizeHdr(UMat& m)
 }
 
 
-UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
+UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
 {
     UMat hdr;
     if(!data)
@@ -593,13 +652,13 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
         }
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
+            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
+                u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -962,7 +1021,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
     CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
 }
 
-Mat UMat::getMat(int accessFlags) const
+Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)
         return Mat();
@@ -989,7 +1048,7 @@ Mat UMat::getMat(int accessFlags) const
     }
 }
 
-void* UMat::handle(int accessFlags) const
+void* UMat::handle(AccessFlag accessFlags) const
 {
     if( !u )
         return 0;
@@ -1001,7 +1060,7 @@ void* UMat::handle(int accessFlags) const
         u->currAllocator->unmap(u);
     }
 
-    if ((accessFlags & ACCESS_WRITE) != 0)
+    if (!!(accessFlags & ACCESS_WRITE))
         u->markHostCopyObsolete(true);
 
     return u->handle;

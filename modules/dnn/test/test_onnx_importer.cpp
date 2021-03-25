@@ -87,6 +87,9 @@ public:
 
 TEST_P(Test_ONNX_layers, InstanceNorm)
 {
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); /* MVN is not supported */
+
     if (target == DNN_TARGET_MYRIAD)
         testONNXModels("instancenorm", npy, 0, 0, false, false);
     else
@@ -117,6 +120,10 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
     String basename = "conv_variable_w";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -144,9 +151,10 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU &&
-        getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
 
     String basename = "conv_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
@@ -216,7 +224,8 @@ TEST_P(Test_ONNX_layers, Deconvolution)
     testONNXModels("two_deconvolution", npy, 0, 0, false, false);
     testONNXModels("deconvolution_group", npy, 0, 0, false, false);
     testONNXModels("deconvolution_output_shape", npy, 0, 0, false, false);
-    testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
+    if (target != DNN_TARGET_CUDA_FP16) // bug
+        testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D)
@@ -224,7 +233,11 @@ TEST_P(Test_ONNX_layers, Deconvolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
         throw SkipTestException("Only DLIE backend on CPU is supported");
     testONNXModels("deconv3d");
     testONNXModels("deconv3d_bias");
@@ -287,12 +300,17 @@ TEST_P(Test_ONNX_layers, Scale)
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    if (target != DNN_TARGET_CPU)
+    else if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
+
     testONNXModels("reduce_mean3d");
 }
 
@@ -351,11 +369,15 @@ TEST_P(Test_ONNX_layers, MaxPooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    if (target != DNN_TARGET_CPU)
+    else if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("max_pool3d", npy, 0, 0, false, false);
 }
@@ -365,11 +387,15 @@ TEST_P(Test_ONNX_layers, AvePooling3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    if (target != DNN_TARGET_CPU)
+    else if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("ave_pool3d");
 }
@@ -379,11 +405,15 @@ TEST_P(Test_ONNX_layers, PoolConv3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    if (target != DNN_TARGET_CPU)
+    else if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
     testONNXModels("pool_conv_3d");
 }
@@ -406,19 +436,11 @@ TEST_P(Test_ONNX_layers, BatchNormalization3D)
 
 TEST_P(Test_ONNX_layers, BatchNormalizationUnfused)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-#endif
     testONNXModels("frozenBatchNorm2d");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalizationSubgraph)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-#endif
     testONNXModels("batch_norm_subgraph");
 }
 
@@ -451,6 +473,8 @@ TEST_P(Test_ONNX_layers, MatMul)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
 
     testONNXModels("matmul_2d");
     testONNXModels("matmul_3d");
@@ -573,6 +597,7 @@ TEST_P(Test_ONNX_layers, Div)
 
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
@@ -666,6 +691,8 @@ TEST_P(Test_ONNX_layers, LinearWithConstant)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lin_with_constant");
 }
 
@@ -676,6 +703,8 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("matmul_with_two_inputs");
 }
 
@@ -706,6 +735,10 @@ TEST_P(Test_ONNX_layers, Conv1d_bias)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
     String basename = "conv1d_variable_w";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -726,11 +759,13 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
 
 TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN); // not supported
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-        if (target == DNN_TARGET_CPU && getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     }
     String basename = "conv1d_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
@@ -754,13 +789,6 @@ TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
 
 TEST_P(Test_ONNX_layers, GatherMultiOutput)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-#endif
-
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
@@ -857,7 +885,6 @@ TEST_P(Test_ONNX_layers, PoolConv1d)
 
 TEST_P(Test_ONNX_layers, ConvResizePool1d)
 {
-#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -865,12 +892,7 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-#if INF_ENGINE_VER_MAJOR_EQ(2021030000)
-        if (target == DNN_TARGET_OPENCL) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
-#endif
     }
-#endif
     testONNXModels("conv_resize_pool_1d");
 }
 
@@ -1052,8 +1074,17 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 #endif
 
     // output range: [-11; 8]
-    double l1 = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.017 : default_l1;
-    double lInf = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.14 : default_lInf;
+    double l1 =  default_l1, lInf = default_lInf;
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.017;
+        lInf = 0.14;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.018;
+        lInf = 0.16;
+    }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -1099,16 +1130,22 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     }
 
-    double l1 = default_l1;
-    double lInf = default_lInf;
+    double l1 = default_l1, lInf = default_lInf;
     // output range: [-3; 3]
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) {
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    {
         l1 = 0.009;
         lInf = 0.035;
     }
-    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_CPU) {
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_CPU)
+    {
         l1 = 4.6e-5;
         lInf = 1.9e-4;
+    }
+    else if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.008;
+        lInf = 0.04;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
 }
@@ -1187,11 +1224,15 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
+    if (backend == DNN_BACKEND_CUDA)
+    {
+        // ok
+    }
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);  // Only CPU on DLIE backend is supported
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+    else if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // Only CPU on DLIE backend is supported
-    if (target != DNN_TARGET_CPU)
+    else if (target != DNN_TARGET_CPU)
         throw SkipTestException("Only CPU is supported");
 
     String onnxmodel = findDataFile("dnn/resnet-34_kinetics.onnx", false);
@@ -1231,8 +1272,12 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     net.setPreferableTarget(target);
 
     // output range [-5, 11]
-    float l1 = 0.0013;
-    float lInf = 0.009;
+    float l1 = 0.0013, lInf = 0.009;
+    if (target == DNN_TARGET_CUDA_FP16)
+    {
+        l1 = 0.01;
+        lInf = 0.06;
+    }
 
     checkBackend(&input0, &ref0);
     net.setInput(input0);

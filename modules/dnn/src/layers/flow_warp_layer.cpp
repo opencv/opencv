@@ -17,7 +17,7 @@ public:
     FlowWarpLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        String fill_string = params.get<String>("FillParameter", "ZERO").toLowerCase();
+        String fill_string = toLowerCase(params.get<String>("FillParameter", "ZERO"));
         if (fill_string != "zero")
             CV_Error(Error::StsNotImplemented, "Only zero filling supported.");
         fill_value = 0;

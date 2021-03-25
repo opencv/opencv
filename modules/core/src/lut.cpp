@@ -384,21 +384,14 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     if (_src.dims() <= 2)
     {
         bool ok = false;
-        Ptr<ParallelLoopBody> body;
-
-        if (body == NULL || ok == false)
-        {
-            ok = false;
-            ParallelLoopBody* p = new LUTParallelBody(src, lut, dst, &ok);
-            body.reset(p);
-        }
-        if (body != NULL && ok)
+        LUTParallelBody body(src, lut, dst, &ok);
+        if (ok)
         {
             Range all(0, dst.rows);
-            if (dst.total()>>18)
-                parallel_for_(all, *body, (double)std::max((size_t)1, dst.total()>>16));
+            if (dst.total() >= (size_t)(1<<18))
+                parallel_for_(all, body, (double)std::max((size_t)1, dst.total()>>16));
             else
-                (*body)(all);
+                body(all);
             if (ok)
                 return;
         }

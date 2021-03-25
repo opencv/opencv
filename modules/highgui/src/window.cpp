@@ -62,8 +62,6 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
             cvSetModeWindow_W32(name,prop_value);
         #elif defined (HAVE_GTK)
             cvSetModeWindow_GTK(name,prop_value);
-        #elif defined (HAVE_CARBON)
-            cvSetModeWindow_CARBON(name,prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name,prop_value);
         #elif defined (WINRT)
@@ -94,6 +92,14 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
         #endif
     break;
 
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            cvSetPropVsync_W32(name, (prop_value != 0));
+        #else
+            // not implemented yet for other toolkits
+        #endif
+    break;
+
     default:;
     }
 }
@@ -114,8 +120,6 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetModeWindow_W32(name);
         #elif defined (HAVE_GTK)
             return cvGetModeWindow_GTK(name);
-        #elif defined (HAVE_CARBON)
-            return cvGetModeWindow_CARBON(name);
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name);
         #elif defined (WINRT)
@@ -186,6 +190,14 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         #endif
     break;
 
+    case cv::WND_PROP_VSYNC:
+        #if defined (HAVE_WIN32UI)
+            return cvGetPropVsync_W32(name);
+        #else
+            return -1;
+        #endif
+    break;
+
     default:
         return -1;
     }
@@ -202,8 +214,6 @@ cv::Rect cvGetWindowImageRect(const char* name)
         return cvGetWindowRect_W32(name);
     #elif defined (HAVE_GTK)
         return cvGetWindowRect_GTK(name);
-    #elif defined (HAVE_CARBON)
-        return cvGetWindowRect_CARBON(name);
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(name);
     #else
@@ -286,6 +296,18 @@ int cv::waitKey(int delay)
 #endif
     return (code != -1) ? (code & 0xff) : -1;
 }
+
+#if defined(HAVE_WIN32UI)
+// pollKey() implemented in window_w32.cpp
+#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
+// pollKey() fallback implementation
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    // fallback. please implement a proper polling function
+    return cvWaitKey(1);
+}
+#endif
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
@@ -608,7 +630,6 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #if   defined (HAVE_WIN32UI)  // see window_w32.cpp
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
-#elif defined (HAVE_CARBON)   // see window_carbon.cpp
 #elif defined (HAVE_QT)       // see window_QT.cpp
 #elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
@@ -624,14 +645,14 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 void cv::setWindowTitle(const String&, const String&)
 {
     CV_Error(Error::StsNotImplemented, "The function is not implemented. "
-        "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "
+        "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
         "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
 }
 
 #define CV_NO_GUI_ERROR(funcname) \
-    cv::errorNoReturn(cv::Error::StsError, \
+    cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
-    "Rebuild the library with Windows, GTK+ 2.x or Carbon support. "\
+    "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "\
     "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script", \
     funcname, __FILE__, __LINE__)
 
@@ -778,6 +799,10 @@ CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
     CV_NO_GUI_ERROR("cvCreateButton");
 }
 
+int cv::pollKey()
+{
+    CV_NO_GUI_ERROR("cv::pollKey()");
+}
 
 #endif
 

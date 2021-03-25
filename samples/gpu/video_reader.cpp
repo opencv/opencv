@@ -35,6 +35,8 @@ int main(int argc, const char* argv[])
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
 
+    int gpu_frame_count=0, cpu_frame_count=0;
+
     for (;;)
     {
         tm.reset(); tm.start();
@@ -42,14 +44,23 @@ int main(int argc, const char* argv[])
             break;
         tm.stop();
         cpu_times.push_back(tm.getTimeMilli());
+        cpu_frame_count++;
 
+        cv::imshow("CPU", frame);
+
+        if (cv::waitKey(3) > 0)
+            break;
+    }
+
+    for (;;)
+    {
         tm.reset(); tm.start();
         if (!d_reader->nextFrame(d_frame))
             break;
         tm.stop();
         gpu_times.push_back(tm.getTimeMilli());
+        gpu_frame_count++;
 
-        cv::imshow("CPU", frame);
         cv::imshow("GPU", d_frame);
 
         if (cv::waitKey(3) > 0)
@@ -66,8 +77,8 @@ int main(int argc, const char* argv[])
         double cpu_avg = std::accumulate(cpu_times.begin(), cpu_times.end(), 0.0) / cpu_times.size();
         double gpu_avg = std::accumulate(gpu_times.begin(), gpu_times.end(), 0.0) / gpu_times.size();
 
-        std::cout << "CPU : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << std::endl;
-        std::cout << "GPU : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << std::endl;
+        std::cout << "CPU : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << " Frames " << cpu_frame_count << std::endl;
+        std::cout << "GPU : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << " Frames " << gpu_frame_count << std::endl;
     }
 
     return 0;

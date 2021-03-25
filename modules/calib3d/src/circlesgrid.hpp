@@ -49,14 +49,12 @@
 #include <numeric>
 #include <map>
 
-#include "precomp.hpp"
-
 class CirclesGridClusterFinder
 {
     CirclesGridClusterFinder& operator=(const CirclesGridClusterFinder&);
     CirclesGridClusterFinder(const CirclesGridClusterFinder&);
 public:
-  CirclesGridClusterFinder(const cv::CirclesGridFinderParameters2 &parameters)
+  CirclesGridClusterFinder(const cv::CirclesGridFinderParameters &parameters)
   {
     isAsymmetricGrid = parameters.gridType == cv::CirclesGridFinderParameters::ASYMMETRIC_GRID;
     squareSize = parameters.squareSize;

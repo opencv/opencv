@@ -14,14 +14,17 @@ class persistence_test(NewOpenCVTests):
 
         # Writing ...
         expected = np.array([[[0, 1, 2, 3, 4]]])
+        expected_str = ("Hello", "World", "!")
         fs = cv.FileStorage(fname, cv.FILE_STORAGE_WRITE)
         fs.write("test", expected)
+        fs.write("strings", expected_str)
         fs.release()
 
         # Reading ...
         fs = cv.FileStorage(fname, cv.FILE_STORAGE_READ)
         root = fs.getFirstTopLevelNode()
         self.assertEqual(root.name(), "test")
+
         test = fs.getNode("test")
         self.assertEqual(test.empty(), False)
         self.assertEqual(test.name(), "test")
@@ -30,6 +33,12 @@ class persistence_test(NewOpenCVTests):
         actual = test.mat()
         self.assertEqual(actual.shape, expected.shape)
         self.assertEqual(np.array_equal(expected, actual), True)
+
+        strings = fs.getNode("strings")
+        self.assertEqual(strings.isSeq(), True)
+        self.assertEqual(strings.size(), len(expected_str))
+        self.assertEqual(all(strings.at(i).isString() for i in range(strings.size())), True)
+        self.assertSequenceEqual([strings.at(i).string() for i in range(strings.size())], expected_str)
         fs.release()
 
         os.remove(fname)

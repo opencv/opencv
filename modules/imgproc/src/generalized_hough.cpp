@@ -385,11 +385,7 @@ namespace
         const double thetaScale = levels_ / 360.0;
 
         r_table_.resize(levels_ + 1);
-#ifdef CV_CXX11
         std::for_each(r_table_.begin(), r_table_.end(), [](std::vector<Point>& e)->void { e.clear(); });
-#else
-        std::for_each(r_table_.begin(), r_table_.end(), std::mem_fun_ref(&std::vector<Point>::clear));
-#endif
 
         for (int y = 0; y < templSize_.height; ++y)
         {
@@ -696,12 +692,7 @@ namespace
         getContourPoints(edges, dx, dy, points);
 
         features.resize(levels_ + 1);
-#ifdef CV_CXX11
         std::for_each(features.begin(), features.end(), [=](std::vector<Feature>& e) { e.clear(); e.reserve(maxBufferSize_); });
-#else
-        std::for_each(features.begin(), features.end(), std::mem_fun_ref(&std::vector<Feature>::clear));
-        std::for_each(features.begin(), features.end(), std::bind2nd(std::mem_fun_ref(&std::vector<Feature>::reserve), maxBufferSize_));
-#endif
 
         for (size_t i = 0; i < points.size(); ++i)
         {

@@ -42,9 +42,11 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_vkcom.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -59,6 +61,12 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 #ifdef HAVE_TENGINE
 #include "../tengine4dnn/include/tengine_graph_convolution.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/convolution.hpp"
+#include "../cuda4dnn/primitives/transpose_convolution.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -170,6 +178,10 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        Ptr<BlankLayer> blank_layer = top.dynamicCast<BlankLayer>();
+        if (blank_layer)
+            return true;
+
         Mat w, b;
         top->getScaleShift(w, b);
         if (!w.empty() || !b.empty())
@@ -245,6 +257,18 @@ public:
     ocl4dnnFusedActiv_t activType;
     float power;
 #endif
+
+#ifdef HAVE_TENGINE
+    teng_graph_t tengine_graph;
+#endif
+
+#ifdef HAVE_CUDA
+    cuda4dnn::ConvolutionConfiguration::FusionMode cudaFusionMode;
+    cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
+    float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil;
+    float cuda_power_exp, cuda_power_scale, cuda_power_shift;
+#endif
+
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
 #ifdef HAVE_OPENCL
@@ -252,7 +276,24 @@ public:
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
         power = 0.f;
 #endif
+
+#ifdef HAVE_CUDA
+        cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
+        cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
+#endif
+#ifdef HAVE_TENGINE
+        tengine_graph=NULL;
+#endif
     }
+#ifdef HAVE_TENGINE
+    ~ConvolutionLayerImpl()
+    {
+        if(NULL != tengine_graph )
+        {
+            tengine_release(tengine_graph);
+        }
+    }
+#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -270,19 +311,27 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         size_t ksize = kernel_size.size();
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            /* only 1d, 2d and 3d convolutions supported */
+            if (ksize > 0 && ksize <= 3)
+                return true;
+
+            return false;
+        }
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            bool isArmTarget = preferableTarget == DNN_TARGET_CPU && isArmComputePlugin();
-            if (isArmTarget && blobs.empty())
-                return false;
             if (ksize == 1)
-                return isArmTarget;
-            if (ksize == 3)
-                return preferableTarget != DNN_TARGET_MYRIAD && !isArmTarget;
-            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || preferableTarget != DNN_TARGET_MYRIAD) && blobs.empty())
                 return false;
-            return (preferableTarget != DNN_TARGET_MYRIAD || dilation.width == dilation.height);
+            if (ksize == 3)
+                return preferableTarget == DNN_TARGET_CPU;
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || !isMyriad) && blobs.empty())
+                return false;
+            return (!isMyriad || dilation.width == dilation.height);
         }
 #endif
         if (backendId == DNN_BACKEND_OPENCV)
@@ -290,6 +339,10 @@ public:
 #ifdef HAVE_HALIDE
         if (backendId == DNN_BACKEND_HALIDE)
             return ksize == 2 && !blobs.empty();
+#endif
+#ifdef HAVE_VULKAN
+        if (backendId == DNN_BACKEND_VKCOM)
+            return ksize == 2;
 #endif
         return false;
     }
@@ -378,6 +431,13 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
+#ifdef HAVE_TENGINE
+        if(NULL != tengine_graph )
+        {
+            tengine_release(tengine_graph);
+            tengine_graph = NULL ;
+        }
+#endif
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
@@ -425,7 +485,106 @@ public:
             }
         }
 #endif
+
+#ifdef HAVE_CUDA
+        if (activ.empty())
+        {
+            /* setActivation was called with empty argument => reset all fusions */
+            cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
+            cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
+        }
+
+        if(IS_DNN_CUDA_TARGET(preferableTarget))
+        {
+            CV_Assert(cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE ||
+                      cudaFusionMode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM);
+
+            Ptr<ReLULayer> activ_relu = activ.dynamicCast<ReLULayer>();
+            if(!activ_relu.empty())
+            {
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::RELU;
+                cuda_relu_slope = activ_relu->negativeSlope;
+            }
+
+            Ptr<ReLU6Layer> activ_relu6 = activ.dynamicCast<ReLU6Layer>();
+            if(!activ_relu6.empty())
+            {
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::CLIPPED_RELU;
+                cuda_crelu_floor = activ_relu6->minValue;
+                cuda_crelu_ceil = activ_relu6->maxValue;
+            }
+
+            Ptr<PowerLayer> activ_power = activ.dynamicCast<PowerLayer>();
+            if (!activ_power.empty())
+            {
+                cuda_power_scale = activ_power->scale;
+                cuda_power_shift = activ_power->shift;
+                cuda_power_exp = activ_power->power;
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::POWER;
+            }
+
+            Ptr<TanHLayer> activ_tanh = activ.dynamicCast<TanHLayer>();
+            if(!activ_tanh.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::TANH;
+
+            Ptr<SigmoidLayer> activ_sigmoid = activ.dynamicCast<SigmoidLayer>();
+            if(!activ_sigmoid.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SIGMOID;
+
+            Ptr<SwishLayer> activ_swish = activ.dynamicCast<SwishLayer>();
+            if(!activ_swish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::SWISH;
+
+            Ptr<MishLayer> activ_mish = activ.dynamicCast<MishLayer>();
+            if(!activ_mish.empty())
+                cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::MISH;
+
+            if (cudaActType == cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY)
+            {
+                /* no activation fused */
+                activ.reset();
+            }
+            else
+            {
+                /* activation was fused */
+                if (cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE) /* no previous fusion */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ACTIVATION; /* now activation */
+                else if (cudaFusionMode == ConvolutionConfiguration::FusionMode::ELTWISE_SUM) /* previously eltwise was fused */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM_THEN_ACTIVATION; /* now activation on eltwise output */
+            }
+        }
+#endif
         return !activ.empty();
+    }
+
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    {
+#ifdef HAVE_CUDA
+        if(IS_DNN_CUDA_TARGET(preferableTarget))
+        {
+            Ptr<EltwiseLayer> eltwise = top.dynamicCast<EltwiseLayer>();
+            if (!eltwise.empty()) // && eltwise->op == EltwiseLayer::SUM && eltwise->coeffs.empty())
+            {
+                /* we also need to check that the eltwise input does not require shortcut mechanism
+                 * it's difficult to verify it here but we hope that `fuseLayers` has done the check already
+                 */
+                if (cudaFusionMode == ConvolutionConfiguration::FusionMode::NONE)
+                {
+                    /* no previous fusion */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ELTWISE_SUM; /* now eltwise */
+                    return true;
+                }
+                else if(cudaFusionMode == ConvolutionConfiguration::FusionMode::ACTIVATION)
+                {
+                    /* previously an activation was fused */
+                    cudaFusionMode = ConvolutionConfiguration::FusionMode::ACTIVATION_THEN_ELTWISE_SUM;
+                    return true;
+                }
+                return false;
+            }
+        }
+#endif
+        return BaseConvolutionLayerImpl::tryFuse(top);
     }
 
     void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
@@ -461,6 +620,71 @@ public:
                 biasvec[i] += b.at<float>(i);
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
+    }
+
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    {
+#ifdef HAVE_VULKAN
+        int out_channel = blobs[0].size[0];
+        bool has_bias = hasBias() || fusedBias;
+        int filter_size[2] = {kernel.height, kernel.width};
+        int pad_size[2] = {pad.height, pad.width};
+        int stride_size[2] = {stride.height, stride.width};
+        int dilation_size[2] = {dilation.height, dilation.width};
+        int activation = 0;
+        vkcom::Tensor input_tensor = VkComTensor(inputs[0]);
+        int in_channel = input_tensor.dimSize(1);
+        int group = in_channel / blobs[0].size[1];
+
+        // TODO: support group > 1
+        if (group != 1)
+            return Ptr<BackendNode>();
+
+        int padding_mode;
+        if (padMode.empty())
+        {
+            padding_mode = vkcom::kPaddingModeCaffe;
+        }
+        else if (padMode == "VALID")
+        {
+            padding_mode = vkcom::kPaddingModeValid;
+        }
+        else if (padMode == "SAME")
+        {
+            padding_mode = vkcom::kPaddingModeSame;
+        }
+        else
+            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
+
+        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConv(out_channel, has_bias,
+                    filter_size, pad_size,
+                    stride_size, dilation_size,
+                    activation, group,
+                    padding_mode));
+
+        std::vector<Ptr<BackendWrapper> > blobsWrapper;
+
+        if (fusedWeights)
+        {
+            Mat wm;
+            weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
+            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(wm)));
+        }
+        else
+        {
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(blobs[0])));
+        }
+
+        if (has_bias)
+        {
+            Mat biasesMat({out_channel}, CV_32F, &biasvec[0]);
+            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(biasesMat)));
+        }
+
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, blobsWrapper));
+#endif  // HAVE_VULKAN
+        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
@@ -581,7 +805,7 @@ public:
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
-        CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
+        CV_Assert(dims.size() == 4 || dims.size() == 5);
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         if (nodes.size() > 1)
             CV_Assert(ieWeights);  // dynamic_cast should not fail
@@ -619,7 +843,7 @@ public:
         else
         {
             auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                             ngraph::Shape{kernel_shape.size()}, std::vector<int64_t>(kernel_shape.begin(), kernel_shape.end()));
+                             ngraph::Shape{kernel_shape.size()}, kernel_shape.data());
             ieWeights  = std::make_shared<ngraph::op::v1::Reshape>(ieWeights, shape, true);
         }
 
@@ -654,7 +878,7 @@ public:
             if (nodes.size() == 3)
             {
                 auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                    ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
+                                    ngraph::Shape{shape.size()}, shape.data());
                 bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
             }
             else
@@ -1691,26 +1915,50 @@ public:
         }
 
 #ifdef HAVE_TENGINE
-        int inch = inputs[0].size[1]; 		// inch
-        int in_h = inputs[0].size[2]; 		// in_h
-        int in_w = inputs[0].size[3]; 		// in_w
+        bool tengine_ret = false; ;
 
-        int out_b = outputs[0].size[0];     // out batch size
-        int outch = outputs[0].size[1]; 	// outch
-        int out_h = outputs[0].size[2]; 	// out_h
-        int out_w = outputs[0].size[3]; 	// out_w
+        std::vector<Mat> teng_in, teng_out;
+        inputs_arr.getMatVector(teng_in);
+        outputs_arr.getMatVector(teng_out);
 
-        float *input_  = inputs[0].ptr<float>();
-        float *output_ = outputs[0].ptr<float>();
+        int inch = teng_in[0].size[1];    // inch
+        int in_h = teng_in[0].size[2];    // in_h
+        int in_w = teng_in[0].size[3];    // in_w
+
+        int out_b = teng_out[0].size[0];  // out batch size
+        int outch = teng_out[0].size[1];  // outch
+        int out_h = teng_out[0].size[2];  // out_h
+        int out_w = teng_out[0].size[3];  // out_w
+
+        float *input_  = teng_in[0].ptr<float>();
+        float *output_ = teng_out[0].ptr<float>();
         float *kernel_ = weightsMat.ptr<float>();
         float *teg_bias = &biasvec[0];
 
-        bool tengine_ret = tengine_forward(input_, inch, ngroups, in_h, in_w,
-                                    output_, out_b, outch, out_h, out_w,
-                                    kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                    teg_bias, stride.height, stride.width,
-                                    pad.height,  pad.width, dilation.height, dilation.width,
-                                    weightsMat.step1(), padMode);
+        int nstripes = std::max(getNumThreads(), 1);
+
+        /* tengine_init will run when first time. */
+        if(NULL == tengine_graph)
+        {
+            tengine_graph = tengine_init(name.c_str(), input_, inch, ngroups, in_h, in_w,
+                                         output_, out_b, outch, out_h, out_w,
+                                         kernel_, kernel_size.size(), kernel.height, kernel.width,
+                                         teg_bias, stride.height, stride.width,
+                                         pad.height,  pad.width, dilation.height, dilation.width,
+                                         weightsMat.step1(), padMode, tengine_graph, nstripes);
+            /*printf("Init(%s):  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%ld %d %d ), bias=%p ,"
+                   "stride(%d %d), pad(%d %d), dilation(%d %d) ,weightsMat=%ld, padMode=%s ,tengine_graph = %p \n",
+                   name.c_str(),input_, inch, ngroups, in_h, in_w,
+                   output_, out_b, outch, out_h, out_w,
+                   kernel_, kernel_size.size(), kernel.height, kernel.width,
+                   teg_bias, stride.height, stride.width,
+                   pad.height,  pad.width, dilation.height, dilation.width,
+                   weightsMat.step1(), padMode.c_str() ,tengine_graph);*/
+        }
+        if(NULL != tengine_graph)
+        {
+            tengine_ret = tengine_forward(tengine_graph);
+        }
         /* activation */
         if((true == tengine_ret) && activ )
         {
@@ -1732,6 +1980,90 @@ public:
         _MM_SET_DENORMALS_ZERO_MODE(dazMode);
 #endif
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
+
+        const auto output_feature_maps = blobs[0].size[0];
+        const auto input_feature_maps = input_shape[1];
+        const auto input_feature_maps_per_group = blobs[0].size[1];
+        const auto groups = input_feature_maps / input_feature_maps_per_group;
+
+        ConvolutionConfiguration config;
+
+        if (input_shape.size() == 3)
+        {
+            // Conv1D
+            // We add an extra dim for input and output tensors, because CuDNN doesn't support convolution with 3D tensors
+            input_shape.insert(std::end(input_shape) - 1, 1);
+            output_shape.insert(std::end(output_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            dilations.insert(std::begin(dilations), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
+        config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.dilations.assign(std::begin(dilations), std::end(dilations));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = ConvolutionConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by ConvolutionLayer");
+        }
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
+        config.groups = groups;
+
+        config.fusion_mode = cudaFusionMode;
+        config.activation_type = cudaActType;
+        config.relu_negative_slope = cuda_relu_slope;
+        config.crelu_floor = cuda_crelu_floor;
+        config.crelu_ceil = cuda_crelu_ceil;
+        config.power_exp = cuda_power_exp;
+        config.power_scale = cuda_power_scale;
+        config.power_shift = cuda_power_shift;
+
+        Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
+        Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
+        if (countNonZero(biasMat) == 0)
+            biasMat = Mat();
+
+        return make_cuda_node<cuda4dnn::ConvolutionOp>(
+            preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
@@ -1775,6 +2107,15 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            /* only deconvolution 2d and 3d supported */
+            if (kernel_size.size() == 2 || kernel_size.size() == 3)
+                return true;
+
+            return false;
+        }
+
 #ifdef HAVE_INF_ENGINE
         const int outGroupCn = blobs[0].size[1];  // Weights are in IOHW or IODHW layout
         const int group = numOutput / outGroupCn;
@@ -1830,7 +2171,8 @@ public:
 #endif  // HAVE_DNN_IE_NN_BUILDER_2019
 #endif  // HAVE_INF_ENGINE
         {
-            return kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE);
+            return backendId == DNN_BACKEND_CUDA ||
+            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
         }
     }
 
@@ -2359,6 +2701,67 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(inputs.size() == 1);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        CV_Assert(outputs.size() == 1);
+        auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
+        auto output_shape = output_wrapper->getShape();
+
+        const auto output_feature_maps = numOutput;
+        const auto output_feature_maps_per_group = blobs[0].size[1];
+        const auto groups = output_feature_maps / output_feature_maps_per_group;
+
+        TransposeConvolutionConfiguration config;
+        config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
+        config.dilations.assign(std::begin(dilations), std::end(dilations));
+        config.strides.assign(std::begin(strides), std::end(strides));
+
+        if (padMode.empty())
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::MANUAL;
+            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
+            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
+        }
+        else if (padMode == "VALID")
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::VALID;
+        }
+        else if (padMode == "SAME")
+        {
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::SAME;
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by DeconvolutionLayer");
+        }
+
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
+        config.groups = groups;
+
+        CV_Assert(blobs.size() >= 1);
+        Mat filtersMat = fusedWeights ? weightsMat.t() : blobs[0];
+
+        Mat biasMat = (hasBias() || fusedBias) ? biasesMat : Mat();
+        if (countNonZero(biasMat) == 0)
+            biasMat = Mat();
+
+        return make_cuda_node<cuda4dnn::TransposeConvolutionOp>(
+            preferableTarget, std::move(context->stream), std::move(context->cudnn_handle), config, filtersMat, biasMat);
+    }
+#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {

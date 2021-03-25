@@ -29,6 +29,7 @@
 
 #define MODULESTR "cv2"
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <numpy/ndarrayobject.h>
 
 #include "opencv2/opencv_modules.hpp"
@@ -41,6 +42,8 @@
 #include "opencv2/core/types_c.h"
 #include "pycompat.hpp"
 #include <map>
+
+#include <type_traits>  // std::enable_if
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
@@ -55,8 +58,8 @@ public:
     ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
 
 private:
-    ArgInfo(const ArgInfo&); // = delete
-    ArgInfo& operator=(const ArgInfo&); // = delete
+    ArgInfo(const ArgInfo&) = delete;
+    ArgInfo& operator=(const ArgInfo&) = delete;
 };
 
 template<typename T, class TEnable = void>  // TEnable is used for SFINAE checks
@@ -493,6 +496,7 @@ typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
 typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
+typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
 
 typedef std::vector<std::vector<char> > vector_vector_char;
@@ -521,7 +525,7 @@ public:
         return u;
     }
 
-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         if( data != 0 )
         {
@@ -550,7 +554,7 @@ public:
         return allocate(o, dims0, sizes, type, step);
     }
 
-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
         return stdAllocator->allocate(u, accessFlags, usageFlags);
     }
@@ -1000,6 +1004,32 @@ bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info)
     }
     return !CV_HAS_CONVERSION_ERROR(value);
 }
+
+// There is conflict between "size_t" and "unsigned int".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<unsigned int, T>::value && !std::is_same<unsigned int, size_t>::value >::type >
+{
+    static inline PyObject* from(const unsigned int& value)
+    {
+        return PyLong_FromUnsignedLong(value);
+    }
+
+    static inline bool to(PyObject* obj, unsigned int& value, const ArgInfo& info)
+    {
+        CV_UNUSED(info);
+        if(!obj || obj == Py_None)
+            return true;
+        if(PyInt_Check(obj))
+            value = (unsigned int)PyInt_AsLong(obj);
+        else if(PyLong_Check(obj))
+            value = (unsigned int)PyLong_AsLong(obj);
+        else
+            return false;
+        return value != (unsigned int)-1 || !PyErr_Occurred();
+    }
+};
 
 template<>
 PyObject* pyopencv_from(const uchar& value)
@@ -1528,8 +1558,13 @@ template<typename _Tp> struct pyopencvVecConverter
                     break;
                 }
             }
+            if (i != n)
+            {
+                failmsg("Can't convert vector element for '%s', index=%d", info.name, i);
+            }
             return i == n;
         }
+        failmsg("Can't convert object to vector for '%s', unsupported type", info.name);
         return false;
     }
 
@@ -1573,13 +1608,33 @@ template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj,
     return true;
 }
 
+template<> inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<bool>& value, const ArgInfo& info)
+{
+    if(!obj || obj == Py_None)
+       return true;
+    if (!PySequence_Check(obj))
+        return false;
+    size_t n = PySequence_Size(obj);
+    value.resize(n);
+    for(size_t i = 0; i < n; i++ )
+    {
+        SafeSeqItem item_wrap(obj, i);
+        bool elem{};
+        if(!pyopencv_to(item_wrap.item, elem, info))
+            return false;
+        value[i] = elem;
+    }
+    return true;
+}
+
 template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const std::vector<_Tp>& value)
 {
     int i, n = (int)value.size();
     PyObject* seq = PyList_New(n);
     for( i = 0; i < n; i++ )
     {
-        PyObject* item = pyopencv_from(value[i]);
+        _Tp elem = value[i];
+        PyObject* item = pyopencv_from(elem);
         if(!item)
             break;
         PyList_SetItem(seq, i, item);
@@ -1590,6 +1645,61 @@ template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const s
         return 0;
     }
     return seq;
+}
+
+template<> inline PyObject* pyopencv_from_generic_vec(const std::vector<bool>& value)
+{
+    int i, n = (int)value.size();
+    PyObject* seq = PyList_New(n);
+    for( i = 0; i < n; i++ )
+    {
+        bool elem = value[i];
+        PyObject* item = pyopencv_from(elem);
+        if(!item)
+            break;
+        PyList_SetItem(seq, i, item);
+    }
+    if( i < n )
+    {
+        Py_DECREF(seq);
+        return 0;
+    }
+    return seq;
+}
+
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I == sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>&, PyObject*) {  }
+
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I < sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
+{
+    PyObject* item = pyopencv_from(std::get<I>(cpp_tuple));
+
+    if (!item)
+        return;
+
+    PyTuple_SetItem(py_tuple, I, item);
+    convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
+}
+
+
+template<typename... Ts>
+PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
+{
+    size_t size = sizeof...(Ts);
+    PyObject* py_tuple = PyTuple_New(size);
+    convert_to_python_tuple(cpp_tuple, py_tuple);
+    size_t actual_size = PyTuple_Size(py_tuple);
+
+    if (actual_size < size)
+    {
+        Py_DECREF(py_tuple);
+        return NULL;
+    }
+
+    return py_tuple;
 }
 
 template<>
@@ -2062,7 +2172,6 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 
 
 #include "pyopencv_generated_enums.h"
-#include "pyopencv_custom_headers.h"
 
 #ifdef CVPY_DYNAMIC_INIT
 #define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE_DYNAMIC(NAME, STORAGE, SNAME)
@@ -2071,6 +2180,7 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #endif
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
+#include "pyopencv_custom_headers.h"
 
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
@@ -2086,6 +2196,12 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_DNN
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
+#endif
+#ifdef HAVE_OPENCV_GAPI
+  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
+  {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
+  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> ExtractArgsCallback"},
+  {"descr_of", CV_PY_FN_WITH_KW(pyopencv_cv_descr_of), "descr_of(...) -> ExtractMetaCallback"},
 #endif
   {NULL, NULL},
 };

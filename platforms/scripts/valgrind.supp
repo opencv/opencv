@@ -219,6 +219,13 @@
 }
 
 {
+   OpenCV-SingletonLogger
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv5utils7logging8internalL26getGlobalLoggingInitStructEv
+}
+
+{
    OpenCV-gtk_init
    Memcheck:Leak
    ...
@@ -270,4 +277,13 @@
    fun:_Znwm
    fun:_ZN16IlmThread_opencv10ThreadPoolC1Ej
    fun:_ZN16IlmThread_opencv10ThreadPool16globalThreadPoolEv
+}
+
+{
+   OpenCV-test-gapi-thread-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
 }

@@ -4,6 +4,14 @@ Introduction into Android Development {#tutorial_android_dev_intro}
 @prev_tutorial{tutorial_clojure_dev_intro}
 @next_tutorial{tutorial_O4A_SDK}
 
+|    |    |
+| -: | :- |
+| Original author | Vsevolod Glumov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
+
 
 This guide was designed to help you in learning Android development basics and setting up your
 working environment quickly. It was written with Windows 7 in mind, though it would work with Linux
@@ -34,31 +42,6 @@ key topis:
     lifecycle, that is an essential Android API class.
 -#  OpenCV development will certainly require some knowledge of the [Android
     Camera](http://developer.android.com/guide/topics/media/camera.html) specifics.
-
-Quick environment setup for Android development
------------------------------------------------
-
-If you are making a clean environment install, then you can try [Tegra Android Development
-Pack](https://developer.nvidia.com/tegra-android-development-pack) (**TADP**) released by
-**NVIDIA**.
-
-@note Starting the *version 2.0* the TADP package includes *OpenCV for Tegra* SDK that is a regular
-*OpenCV4Android SDK* extended with Tegra-specific stuff. When unpacked, TADP will cover all of the
-environment setup automatically and you can skip the rest of the guide.
-
-If you are a beginner in Android development then we also recommend you to start with TADP.
-
-@note *NVIDIA*'s Tegra Android Development Pack includes some special features for *NVIDIA*’s [Tegra
-platform](http://www.nvidia.com/object/tegra-3-processor.html)
-but its use is not limited to *Tegra* devices only. \* You need at least *1.6 Gb* free
-disk space for the install.
-
--   TADP will download Android SDK platforms and Android NDK from Google's server, so Internet
-    connection is required for the installation.
--   TADP may ask you to flash your development kit at the end of installation process. Just skip
-    this step if you have no [Tegra Development Kit](http://developer.nvidia.com/mobile/tegra-hardware-sales-inquiries).
--   (UNIX) TADP will ask you for *root* in the middle of installation, so you need to be a member of
-    *sudo* group.
 
 Manual environment setup for Android development
 ------------------------------------------------

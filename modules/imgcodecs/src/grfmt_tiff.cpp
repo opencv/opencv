@@ -273,7 +273,11 @@ bool TiffDecoder::readHeader()
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
             uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
-            CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+            if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
+            {
+                // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
+                bpp = 1;
+            }
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
 
             m_width = wdth;
@@ -407,8 +411,8 @@ static void fixOrientation(Mat &img, uint16 orientation, int dst_bpp)
 
 bool  TiffDecoder::readData( Mat& img )
 {
-    int type_ = img.type();
-    int depth = CV_MAT_DEPTH(type_);
+    int type = img.type();
+    int depth = CV_MAT_DEPTH(type);
 
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
@@ -423,14 +427,18 @@ bool  TiffDecoder::readData( Mat& img )
 
     bool color = img.channels() > 1;
 
-    CV_CheckType(type_, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckType(type, depth == CV_8U || depth == CV_16U || depth == CV_32F || depth == CV_64F, "");
 
     if (m_width && m_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
         uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
-        CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+        if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
+        {
+            // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
+            bpp = 1;
+        }
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16 img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));

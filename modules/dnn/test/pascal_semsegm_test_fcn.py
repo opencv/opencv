@@ -205,9 +205,9 @@ if __name__ == "__main__":
     parser.add_argument("--val_names", help="path to file with validation set image names, download it here: "
                         "https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/data/pascal/seg11valid.txt")
     parser.add_argument("--cls_file", help="path to file with colors for classes, download it here: "
-                        "https://github.com/opencv/opencv/blob/3.4/samples/data/dnn/pascal-classes.txt")
+                        "https://github.com/opencv/opencv/blob/master/samples/data/dnn/pascal-classes.txt")
     parser.add_argument("--prototxt", help="path to caffe prototxt, download it here: "
-                        "https://github.com/opencv/opencv/blob/3.4/samples/data/dnn/fcn8s-heavy-pascal.prototxt")
+                        "https://github.com/opencv/opencv/blob/master/samples/data/dnn/fcn8s-heavy-pascal.prototxt")
     parser.add_argument("--caffemodel", help="path to caffemodel file, download it here: "
                                              "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel")
     parser.add_argument("--log", help="path to logging file")

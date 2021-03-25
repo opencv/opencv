@@ -103,6 +103,19 @@ static const char* trackbar_text =
     #define WM_MOUSEHWHEEL 0x020E
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+static inline void mingw_strcpy_s(char *dest, size_t destsz, const char *src){
+    strcpy(dest, src);
+}
+
+static inline void mingw_strcat_s(char *dest, size_t destsz, const char *src){
+    strcat(dest, src);
+}
+
+#define strcpy_s mingw_strcpy_s
+#define strcat_s mingw_strcat_s
+#endif
+
 static void FillBitmapInfo( BITMAPINFO* bmi, int width, int height, int bpp, int origin )
 {
     assert( bmi && width >= 0 && height >= 0 && (bpp == 8 || bpp == 24 || bpp == 32));
@@ -581,6 +594,89 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
         errorMsg << "window(" << name << "): error reported by SetWindowPos(" << (topmost ? "HWND_TOPMOST" : "HWND_TOP") << "), error code:  " << GetLastError();
         CV_Error(Error::StsError, errorMsg.str().c_str());
     }
+}
+
+double cvGetPropVsync_W32(const char* name)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    // https://www.khronos.org/opengl/wiki/Swap_Interval
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_extensions_string.txt
+    // https://www.khronos.org/registry/OpenGL/extensions/EXT/WGL_EXT_swap_control.txt
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetExtensionsStringEXT
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        return -1; // Can't get WGL extensions string
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        return -1; // WGL extensions don't contain WGL_EXT_swap_control
+
+    typedef int (APIENTRY* PFNWGLGETSWAPINTERVALPROC)(void);
+    PFNWGLGETSWAPINTERVALPROC wglGetSwapInterval = 0;
+    wglGetSwapInterval = (PFNWGLGETSWAPINTERVALPROC)wglGetProcAddress("wglGetSwapIntervalEXT");
+    if (wglGetSwapInterval == NULL)
+        return -1; // wglGetProcAddress failed to get wglGetSwapIntervalEXT
+
+    return wglGetSwapInterval();
+#endif
+}
+
+void cvSetPropVsync_W32(const char* name, const bool enable_vsync)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    CV_UNUSED(enable_vsync);
+    CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
+#else
+    if (!name)
+        CV_Error(Error::StsNullPtr, "'name' argument must not be NULL");
+
+    CvWindow* window = icvFindWindowByName(name);
+    if (!window)
+        CV_Error_(Error::StsBadArg, ("there is no window named '%s'", name));
+
+    if (!wglMakeCurrent(window->dc, window->hGLRC))
+        CV_Error(Error::OpenGlApiCallError, "Can't Activate The GL Rendering Context");
+
+    typedef const char* (APIENTRY* PFNWGLGETEXTENSIONSSTRINGEXTPROC)(void);
+    PFNWGLGETEXTENSIONSSTRINGEXTPROC wglGetExtensionsString = NULL;
+    wglGetExtensionsString = (PFNWGLGETEXTENSIONSSTRINGEXTPROC)wglGetProcAddress("wglGetExtensionsStringEXT");
+    if (wglGetExtensionsString == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglGetExtensionsStringEXT");
+
+    const char* wgl_extensions = wglGetExtensionsString();
+    if (wgl_extensions == NULL)
+        CV_Error(Error::OpenGlApiCallError, "Can't get WGL extensions string");
+
+    if (strstr(wgl_extensions, "WGL_EXT_swap_control") == NULL)
+        CV_Error(Error::OpenGlApiCallError, "WGL extensions don't contain WGL_EXT_swap_control");
+
+    typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALPROC)(int);
+    PFNWGLSWAPINTERVALPROC wglSwapInterval = 0;
+    wglSwapInterval = (PFNWGLSWAPINTERVALPROC)wglGetProcAddress("wglSwapIntervalEXT");
+    if (wglSwapInterval == NULL)
+        CV_Error(Error::OpenGlApiCallError, "wglGetProcAddress failed to get wglSwapIntervalEXT");
+
+    wglSwapInterval(enable_vsync);
+#endif
 }
 
 void cv::setWindowTitle(const String& winname, const String& title)
@@ -1199,8 +1295,7 @@ cvShowImage( const char* name, const CvArr* arr )
     int channels = 0;
     void* dst_ptr = 0;
     const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
+    CvMat stub, *image;
     bool changed_size = false; // philipg
 
     if( !name )
@@ -1215,9 +1310,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     if( !window || !arr )
         EXIT; // keep silence here.
-
-    if( CV_IS_IMAGE_HDR( arr ))
-        origin = ((IplImage*)arr)->origin;
 
     CV_CALL( image = cvGetMat( arr, &stub ));
 
@@ -1254,9 +1346,12 @@ cvShowImage( const char* name, const CvArr* arr )
                                       DIB_RGB_COLORS, &dst_ptr, 0, 0));
     }
 
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3,
-                     dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
+    {
+        cv::Mat dst(size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4);
+        convertToShow(cv::cvarrToMat(image), dst, false);
+        CV_Assert(dst.data == (uchar*)dst_ptr);
+        cv::flip(dst, dst, 0);
+    }
 
     // only resize window if needed
     if (changed_size)
@@ -1267,86 +1362,6 @@ cvShowImage( const char* name, const CvArr* arr )
 
     __END__;
 }
-
-#if 0
-CV_IMPL void
-cvShowImageHWND(HWND w_hWnd, const CvArr* arr)
-{
-    CV_FUNCNAME( "cvShowImageHWND" );
-
-    __BEGIN__;
-
-    SIZE size = { 0, 0 };
-    int channels = 0;
-    void* dst_ptr = 0;
-    const int channels0 = 3;
-    int origin = 0;
-    CvMat stub, dst, *image;
-    bool changed_size = false;
-    BITMAPINFO tempbinfo;
-    HDC hdc = NULL;
-
-    if( !arr )
-        EXIT;
-    if( !w_hWnd )
-        EXIT;
-
-    hdc = GetDC(w_hWnd);
-
-    if( CV_IS_IMAGE_HDR( arr ) )
-        origin = ((IplImage*)arr)->origin;
-
-    CV_CALL( image = cvGetMat( arr, &stub ) );
-
-    if ( hdc )
-    {
-            //GetBitmapData
-            BITMAP bmp;
-            GdiFlush();
-            HGDIOBJ h = GetCurrentObject( hdc, OBJ_BITMAP );
-
-            if (h == NULL)
-            EXIT;
-            if (GetObject(h, sizeof(bmp), &bmp) == 0) //GetObject(): returns size of object, 0 if error
-            EXIT;
-
-            channels = bmp.bmBitsPixel/8;
-            dst_ptr = bmp.bmBits;
-     }
-
-    if( size.cx != image->width || size.cy != image->height || channels != channels0 )
-    {
-        changed_size = true;
-
-        uchar buffer[sizeof(BITMAPINFO) + 255*sizeof(RGBQUAD)];
-        BITMAPINFO* binfo = (BITMAPINFO*)buffer;
-
-        BOOL bDeleteObj = DeleteObject(GetCurrentObject(hdc, OBJ_BITMAP));
-                CV_Assert( FALSE != bDeleteObj );
-
-        size.cx = image->width;
-        size.cy = image->height;
-        channels = channels0;
-
-        FillBitmapInfo( binfo, size.cx, size.cy, channels*8, 1 );
-
-        SelectObject( hdc, CreateDIBSection( hdc, binfo, DIB_RGB_COLORS, &dst_ptr, 0, 0));
-    }
-
-    cvInitMatHeader( &dst, size.cy, size.cx, CV_8UC3, dst_ptr, (size.cx * channels + 3) & -4 );
-    cvConvertImage( image, &dst, origin == 0 ? CV_CVTIMG_FLIP : 0 );
-
-    // Image stretching to fit the window
-    RECT rect;
-    GetClientRect(w_hWnd, &rect);
-    StretchDIBits( hdc, 0, 0, rect.right, rect.bottom, 0, 0, image->width, image->height, dst_ptr, &tempbinfo, DIB_RGB_COLORS, SRCCOPY );
-
-    // ony resize window if needed
-    InvalidateRect(w_hWnd, 0, 0);
-
-    __END__;
-}
-#endif
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
@@ -2049,6 +2064,97 @@ static void showSaveDialog(CvWindow* window)
     }
 }
 
+/*
+ * message received. check if it belongs to our windows (frame, hwnd).
+ * returns true (and value in keyCode) if a key was pressed.
+ * otherwise returns false (indication to continue event loop).
+ */
+static bool handleMessage(MSG& message, int& keyCode)
+{
+    // whether we have to call translate and dispatch yet
+    // otherwise the message was handled specifically
+    bool is_processed = false;
+
+    for (CvWindow* window = hg_windows; window != 0 && is_processed == 0; window = window->next)
+    {
+        if (!(window->hwnd == message.hwnd || window->frame == message.hwnd))
+            continue;
+
+        is_processed = true;
+        switch (message.message)
+        {
+            case WM_DESTROY:
+            case WM_CHAR:
+                DispatchMessage(&message);
+                keyCode = (int)message.wParam;
+                return true;
+
+            case WM_SYSKEYDOWN:
+                if (message.wParam == VK_F10)
+                {
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+                break;
+
+            case WM_KEYDOWN:
+                TranslateMessage(&message);
+                if ((message.wParam >= VK_F1 && message.wParam <= VK_F24)      ||
+                    message.wParam == VK_HOME   || message.wParam == VK_END    ||
+                    message.wParam == VK_UP     || message.wParam == VK_DOWN   ||
+                    message.wParam == VK_LEFT   || message.wParam == VK_RIGHT  ||
+                    message.wParam == VK_INSERT || message.wParam == VK_DELETE ||
+                    message.wParam == VK_PRIOR  || message.wParam == VK_NEXT)
+                {
+                    DispatchMessage(&message);
+                    is_processed = true;
+                    keyCode = (int)(message.wParam << 16);
+                    return true;
+                }
+
+                // Intercept Ctrl+C for copy to clipboard
+                if ('C' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+
+                // Intercept Ctrl+S for "save as" dialog
+                if ('S' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                    showSaveDialog(window);
+
+            default:
+                DispatchMessage(&message);
+                is_processed = true;
+                break;
+        }
+    }
+
+    if (!is_processed)
+    {
+        TranslateMessage(&message);
+        DispatchMessage(&message);
+    }
+
+    return false; // no value to return, keep processing
+}
+
+/*
+ * process until queue is empty but don't wait.
+ */
+int cv::pollKey()
+{
+    CV_TRACE_FUNCTION();
+    for(;;)
+    {
+        MSG message;
+        if (PeekMessage(&message, 0, 0, 0, PM_REMOVE) == FALSE)
+            return -1;
+
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
+    }
+}
+
 CV_IMPL int
 cvWaitKey( int delay )
 {
@@ -2057,9 +2163,7 @@ cvWaitKey( int delay )
 
     for(;;)
     {
-        CvWindow* window;
         MSG message;
-        int is_processed = 0;
 
         if( (delay <= 0) && hg_windows)
             GetMessage(&message, 0, 0, 0);
@@ -2072,61 +2176,9 @@ cvWaitKey( int delay )
             continue;
         }
 
-        for( window = hg_windows; window != 0 && is_processed == 0; window = window->next )
-        {
-            if( window->hwnd == message.hwnd || window->frame == message.hwnd )
-            {
-                is_processed = 1;
-                switch(message.message)
-                {
-                case WM_DESTROY:
-                case WM_CHAR:
-                    DispatchMessage(&message);
-                    return (int)message.wParam;
-
-                case WM_SYSKEYDOWN:
-                    if( message.wParam == VK_F10 )
-                    {
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-                    break;
-
-                case WM_KEYDOWN:
-                    TranslateMessage(&message);
-                    if( (message.wParam >= VK_F1 && message.wParam <= VK_F24)       ||
-                        message.wParam == VK_HOME   || message.wParam == VK_END     ||
-                        message.wParam == VK_UP     || message.wParam == VK_DOWN    ||
-                        message.wParam == VK_LEFT   || message.wParam == VK_RIGHT   ||
-                        message.wParam == VK_INSERT || message.wParam == VK_DELETE  ||
-                        message.wParam == VK_PRIOR  || message.wParam == VK_NEXT )
-                    {
-                        DispatchMessage(&message);
-                        is_processed = 1;
-                        return (int)(message.wParam << 16);
-                    }
-
-                    // Intercept Ctrl+C for copy to clipboard
-                    if ('C' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        ::SendMessage(message.hwnd, WM_COPY, 0, 0);
-
-                    // Intercept Ctrl+S for "save as" dialog
-                    if ('S' == message.wParam && (::GetKeyState(VK_CONTROL)>>15))
-                        showSaveDialog(window);
-
-                default:
-                    DispatchMessage(&message);
-                    is_processed = 1;
-                    break;
-                }
-            }
-        }
-
-        if( !is_processed )
-        {
-            TranslateMessage(&message);
-            DispatchMessage(&message);
-        }
+        int keyCode = -1;
+        if (handleMessage(message, keyCode))
+            return keyCode;
     }
 }
 

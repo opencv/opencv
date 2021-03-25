@@ -1,8 +1,15 @@
 Laplace Operator {#tutorial_laplace_operator}
 ================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_sobel_derivatives}
 @next_tutorial{tutorial_canny_detector}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -55,19 +62,19 @@ Code
 
 @add_toggle_cpp
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Laplace_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java)
     @include samples/java/tutorial_code/ImgTrans/LaPlace/LaplaceDemo.java
 @end_toggle
 
 @add_toggle_python
 -#  The tutorial code's is shown lines below. You can also download it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/master/samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py)
     @include samples/python/tutorial_code/ImgTrans/LaPlace/laplace_demo.py
 @end_toggle
 

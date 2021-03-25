@@ -132,12 +132,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             default:
@@ -147,12 +147,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_BGR2Gray_8u_C3C1R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1), 2 );
+                    Size(width,1), 2 );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1), 3, 2 );
+                    Size(width,1), 3, 2 );
                 ret = true;
                 break;
             default:

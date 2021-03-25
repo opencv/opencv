@@ -10,6 +10,35 @@
 
 namespace cv {
 
+namespace hal {
+void cvt16f32f(const float16_t* src, float* dst, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(cvt16f32f, (src, dst, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+void cvt32f16f(const float* src, float16_t* dst, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(cvt32f16f, (src, dst, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+void addRNGBias32f(float* arr, const float* scaleBiasPairs, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(addRNGBias32f, (arr, scaleBiasPairs, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+void addRNGBias64f(double* arr, const double* scaleBiasPairs, int len)
+{
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(addRNGBias64f, (arr, scaleBiasPairs, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+} // namespace
+
+
 /* [TODO] Recover IPP calls
 #if defined(HAVE_IPP)
 #define DEF_CVT_FUNC_F(suffix, stype, dtype, ippFavor) \
@@ -112,19 +141,6 @@ BinaryFunc getConvertFunc(int sdepth, int ddepth)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-static BinaryFunc get_cvt32f16f()
-{
-    CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(get_cvt32f16f, (),
-        CV_CPU_DISPATCH_MODES_ALL);
-}
-static BinaryFunc get_cvt16f32f()
-{
-    CV_INSTRUMENT_REGION();
-    CV_CPU_DISPATCH(get_cvt16f32f, (),
-        CV_CPU_DISPATCH_MODES_ALL);
-}
-
 #ifdef HAVE_OPENCL
 static bool ocl_convertFp16( InputArray _src, OutputArray _dst, int sdepth, int ddepth )
 {
@@ -223,17 +239,17 @@ void convertFp16(InputArray _src, OutputArray _dst)
         if(_dst.fixedType())
         {
             ddepth = _dst.depth();
-            CV_Assert(ddepth == CV_16S /*|| ddepth == CV_16F*/);
+            CV_Assert(ddepth == CV_16S || ddepth == CV_16F);
             CV_Assert(_dst.channels() == _src.channels());
         }
         else
             ddepth =  CV_16S;
-        func = get_cvt32f16f();
+        func = getConvertFunc(CV_32F, CV_16F);
         break;
     case CV_16S:
-    //case CV_16F:
+    case CV_16F:
         ddepth = CV_32F;
-        func = get_cvt16f32f();
+        func = getConvertFunc(CV_16F, CV_32F);
         break;
     default:
         CV_Error(Error::StsUnsupportedFormat, "Unsupported input depth");

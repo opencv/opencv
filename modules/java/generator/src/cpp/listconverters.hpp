@@ -16,4 +16,11 @@ std::vector<cv::String> List_to_vector_String(JNIEnv* env, jobject list);
 
 void Copy_vector_String_to_List(JNIEnv* env, std::vector<cv::String>& vs, jobject list);
 
+
+jobject vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs);
+
+std::vector<std::string> List_to_vector_string(JNIEnv* env, jobject list);
+
+void Copy_vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs, jobject list);
+
 #endif	/* LISTCONVERTERS_HPP */

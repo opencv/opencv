@@ -29,11 +29,10 @@
 #define INF_ENGINE_RELEASE_2020_4 2020040000
 #define INF_ENGINE_RELEASE_2021_1 2021010000
 #define INF_ENGINE_RELEASE_2021_2 2021020000
-#define INF_ENGINE_RELEASE_2021_3 2021030000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2021.3 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_3
+#warning("IE version have not been provided via command-line. Using 2021.2 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_2
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -227,6 +226,7 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+
 class InfEngineExtension : public InferenceEngine::IExtension
 {
 public:
@@ -251,13 +251,11 @@ public:
 #endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 bool isMyriadX();
 
-bool isArmComputePlugin();
-
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 
 InferenceEngine::Core& getCore(const std::string& id);
 

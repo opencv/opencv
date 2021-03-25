@@ -4,6 +4,13 @@ Introduction to OpenCV Development with Clojure {#tutorial_clojure_dev_intro}
 @prev_tutorial{tutorial_java_eclipse}
 @next_tutorial{tutorial_android_dev_intro}
 
+|    |    |
+| -: | :- |
+| Original author | Mimmo Cosenza |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
 
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development.
@@ -306,7 +313,7 @@ Then you can start interacting with OpenCV by just referencing the fully qualifi
 classes.
 
 @note
-[Here](https://docs.opencv.org/3.4/javadoc/index.html) you can find the full OpenCV Java API.
+[Here](https://docs.opencv.org/master/javadoc/index.html) you can find the full OpenCV Java API.
 
 @code{.clojure}
 user=> (org.opencv.core.Point. 0 0)
@@ -587,4 +594,4 @@ the gap.
 
 Copyright © 2013 Giacomo (Mimmo) Cosenza aka Magomimmo
 
-Distributed under the BSD 3-clause License, the same of OpenCV.
+Distributed under the BSD 3-clause License.

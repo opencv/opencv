@@ -3207,23 +3207,11 @@ cvCheckTermCriteria( CvTermCriteria criteria, double default_eps,
 namespace cv
 {
 
-template<> void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const
-{ cvReleaseMat(&obj); }
-
-template<> void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const
-{ cvReleaseImage(&obj); }
-
-template<> void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const
-{ cvReleaseMatND(&obj); }
-
-template<> void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const
-{ cvReleaseSparseMat(&obj); }
-
-template<> void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const
-{ cvReleaseMemStorage(&obj); }
-
-template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const
-{ cvReleaseFileStorage(&obj); }
+void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const { cvReleaseMat(&obj); }
+void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const { cvReleaseImage(&obj); }
+void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const { cvReleaseMatND(&obj); }
+void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const { cvReleaseSparseMat(&obj); }
+void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const { cvReleaseMemStorage(&obj); }
 
 } // cv::
 
@@ -3232,41 +3220,33 @@ template<> void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) c
 CV_IMPL void
 cvRelease( void** struct_ptr )
 {
-    CvTypeInfo* info;
-
     if( !struct_ptr )
         CV_Error( CV_StsNullPtr, "NULL double pointer" );
 
     if( *struct_ptr )
     {
-        info = cvTypeOf( *struct_ptr );
-        if( !info )
+        if( CV_IS_MAT(*struct_ptr) )
+            cvReleaseMat((CvMat**)struct_ptr);
+        else if( CV_IS_IMAGE(*struct_ptr))
+            cvReleaseImage((IplImage**)struct_ptr);
+        else
             CV_Error( CV_StsError, "Unknown object type" );
-        if( !info->release )
-            CV_Error( CV_StsError, "release function pointer is NULL" );
-
-        info->release( struct_ptr );
-        *struct_ptr = 0;
     }
 }
 
-
 void* cvClone( const void* struct_ptr )
 {
-    void* struct_copy = 0;
-    CvTypeInfo* info;
-
+    void* ptr = 0;
     if( !struct_ptr )
         CV_Error( CV_StsNullPtr, "NULL structure pointer" );
 
-    info = cvTypeOf( struct_ptr );
-    if( !info )
+    if( CV_IS_MAT(struct_ptr) )
+        ptr = cvCloneMat((const CvMat*)struct_ptr);
+    else if( CV_IS_IMAGE(struct_ptr))
+        ptr = cvCloneImage((const IplImage*)struct_ptr);
+    else
         CV_Error( CV_StsError, "Unknown object type" );
-    if( !info->clone )
-        CV_Error( CV_StsError, "clone function pointer is NULL" );
-
-    struct_copy = info->clone( struct_ptr );
-    return struct_copy;
+    return ptr;
 }
 
 

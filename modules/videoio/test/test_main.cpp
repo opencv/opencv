@@ -4,6 +4,10 @@
 #include "test_precomp.hpp"
 #include <opencv2/core/utils/logger.hpp>
 
+#if defined(HAVE_HPX)
+    #include <hpx/hpx_main.hpp>
+#endif
+
 static
 void initTests()
 {

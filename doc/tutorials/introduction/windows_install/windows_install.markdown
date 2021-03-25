@@ -4,6 +4,13 @@ Installation in Windows {#tutorial_windows_install}
 @prev_tutorial{tutorial_linux_eclipse}
 @next_tutorial{tutorial_windows_visual_studio_opencv}
 
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
 
 The description here was tested on Windows 7 SP1. Nevertheless, it should also work on any other
 relatively modern version of Windows OS. If you encounter errors after following the steps described

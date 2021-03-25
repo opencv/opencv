@@ -92,11 +92,9 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     case CV_64F:
         scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
-#if CV_VERSION_MAJOR >= 4
     case CV_16F:
         scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
         break;
-#endif
     default:
         CV_Error(CV_StsUnsupportedFormat,"");
     }
@@ -120,7 +118,6 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
     for( size_t i = esz; i < blocksize*esz; i++ )
         scbuf[i] = scbuf[i - esz];
 }
-
 
 template<typename T> static void
 copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)

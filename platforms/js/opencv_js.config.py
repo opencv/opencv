@@ -1,17 +1,11 @@
 # Classes and methods whitelist
-
-core = {
-    '': [
-        'absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',
-        'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen',
-        'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude',
-        'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize',
-        'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed',
-        'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat',
-        'setLogLevel', 'getLogLevel',
-    ],
-    'Algorithm': [],
-}
+core = {'': ['absdiff', 'add', 'addWeighted', 'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'cartToPolar',\
+             'compare', 'convertScaleAbs', 'copyMakeBorder', 'countNonZero', 'determinant', 'dft', 'divide', 'eigen', \
+             'exp', 'flip', 'getOptimalDFTSize','gemm', 'hconcat', 'inRange', 'invert', 'kmeans', 'log', 'magnitude', \
+             'max', 'mean', 'meanStdDev', 'merge', 'min', 'minMaxLoc', 'mixChannels', 'multiply', 'norm', 'normalize', \
+             'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed', \
+             'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat'],
+        'Algorithm': []}
 
 imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP', 'HoughCircles', 'Scharr','Sobel', \
                 'adaptiveThreshold','approxPolyDP','arcLength','bilateralFilter','blur','boundingRect','boxFilter',\
@@ -24,8 +18,21 @@ imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP
                 'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
                 'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
                 'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
-                'fillPoly', 'fillConvexPoly'],
-           'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize']}
+                'fillPoly', 'fillConvexPoly', 'polylines',
+    ],
+    'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize'],
+    'segmentation_IntelligentScissorsMB': [
+        'IntelligentScissorsMB',
+        'setWeights',
+        'setGradientMagnitudeMaxLimit',
+        'setEdgeFeatureZeroCrossingParameters',
+        'setEdgeFeatureCannyParameters',
+        'applyImage',
+        'applyImageFeatures',
+        'buildMap',
+        'getContour'
+    ],
+}
 
 objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
@@ -55,8 +62,38 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
+photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobertson', \
+              'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
+              'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
+        'CalibrateCRF': ['process'],
+        'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
+                      'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
+        'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
+        'CalibrateRobertson' : ['getMaxIter', 'setMaxIter', 'getThreshold', 'setThreshold', 'getRadiance'],
+        'MergeExposures' : ['process'],
+        'MergeDebevec' : ['process'],
+        'MergeMertens' : ['process', 'getContrastWeight', 'setContrastWeight', 'getSaturationWeight', \
+                          'setSaturationWeight', 'getExposureWeight', 'setExposureWeight'],
+        'MergeRobertson' : ['process'],
+        'Tonemap' : ['process' , 'getGamma', 'setGamma'],
+        'TonemapDrago' : ['getSaturation', 'setSaturation', 'getBias', 'setBias', \
+                          'getSigmaColor', 'setSigmaColor', 'getSigmaSpace','setSigmaSpace'],
+        'TonemapMantiuk' : ['getScale', 'setScale', 'getSaturation', 'setSaturation'],
+        'TonemapReinhard' : ['getIntensity', 'setIntensity', 'getLightAdaptation', 'setLightAdaptation', \
+                             'getColorAdaptation', 'setColorAdaptation']
+        }
+
+aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseSingleMarkers', 'estimatePoseBoard', 'estimatePoseCharucoBoard', 'interpolateCornersCharuco', 'drawDetectedCornersCharuco'],
+        'aruco_Dictionary': ['get', 'drawMarker'],
+        'aruco_Board': ['create'],
+        'aruco_GridBoard': ['create', 'draw'],
+        'aruco_CharucoBoard': ['create', 'draw'],
+        'aruco_DetectorParameters': ['create']
+        }
+
 calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', \
                 'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', \
                 'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM']}
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])
+
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, calib3d])

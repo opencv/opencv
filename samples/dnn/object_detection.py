@@ -15,7 +15,7 @@ from tf_text_graph_ssd import createSSDGraph
 from tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
 backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL)
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
@@ -41,7 +41,8 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                          '%d: CPU target (by default), '
                          '%d: OpenCL, '
                          '%d: OpenCL fp16 (half-float precision), '
-                         '%d: VPU' % targets)
+                         '%d: NCS2 VPU, '
+                         '%d: HDDL VPU' % targets)
 parser.add_argument('--async', type=int, default=0,
                     dest='asyncN',
                     help='Number of asynchronous forwards at the same time. '

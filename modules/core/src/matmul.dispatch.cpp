@@ -1044,7 +1044,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
     k.args(src1arg, src1.cols, (int)src1.total(), dbsize, dbarg, src2arg);
 
     size_t globalsize = dbsize * wgs;
-    if (k.run(1, &globalsize, &wgs, false))
+    if (k.run(1, &globalsize, &wgs, true))
     {
         res = sum(db.getMat(ACCESS_READ))[0];
         return true;

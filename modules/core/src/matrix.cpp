@@ -7,7 +7,7 @@
 
 namespace cv {
 
-void MatAllocator::map(UMatData*, int) const
+void MatAllocator::map(UMatData*, AccessFlag) const
 {
 }
 
@@ -127,7 +127,7 @@ class StdMatAllocator CV_FINAL : public MatAllocator
 {
 public:
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+                       void* data0, size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -154,7 +154,7 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         if(!u) return false;
         return true;
@@ -599,6 +599,66 @@ size_t Mat::total(int startDim, int endDim) const
 }
 
 
+Mat::Mat(Mat&& m)
+    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
+      datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
+      u(m.u), size(&rows)
+{
+    if (m.dims <= 2)  // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_Assert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
+    m.allocator = NULL;
+    m.u = NULL;
+}
+
+
+Mat& Mat::operator=(Mat&& m)
+{
+    if (this == &m)
+      return *this;
+
+    release();
+    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
+    datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
+    u = m.u;
+    if (step.p != step.buf) // release self step/size
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+    if (m.dims <= 2) // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_Assert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
+    m.allocator = NULL;
+    m.u = NULL;
+    return *this;
+}
+
 
 void Mat::create(int d, const int* _sizes, int _type)
 {
@@ -642,14 +702,14 @@ void Mat::create(int d, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
         catch (...)
         {
             if (a == a0)
                 throw;
-            u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );

@@ -295,32 +295,7 @@ It is possible to alternate error processing by using redirectError().
 @param _line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
-CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
-
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic push
-#   pragma GCC diagnostic ignored "-Winvalid-noreturn"
-# endif
-#endif
-
-/** same as cv::error, but does not return */
-CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const char* _func, const char* _file, int _line)
-{
-    error(_code, _err, _func, _file, _line);
-#ifdef __GNUC__
-# if !defined __clang__ && !defined __APPLE__
-    // this suppresses this warning: "noreturn" function does return [enabled by default]
-    __builtin_trap();
-    // or use infinite loop: for (;;) {}
-# endif
-#endif
-}
-#ifdef __GNUC__
-# if defined __clang__ || defined __APPLE__
-#   pragma GCC diagnostic pop
-# endif
-#endif
+CV_EXPORTS CV_NORETURN void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
 #ifdef CV_STATIC_ANALYSIS
 
@@ -329,8 +304,6 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 #define CV_Error(code, msg) do { (void)(code); (void)(msg); abort(); } while (0)
 #define CV_Error_(code, args) do { (void)(code); (void)(cv::format args); abort(); } while (0)
 #define CV_Assert( expr ) do { if (!(expr)) abort(); } while (0)
-#define CV_ErrorNoReturn CV_Error
-#define CV_ErrorNoReturn_ CV_Error_
 
 #else // CV_STATIC_ANALYSIS
 
@@ -368,53 +341,31 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
 */
 #define CV_Assert( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
 
-//! @cond IGNORED
-#define CV__ErrorNoReturn( code, msg ) cv::errorNoReturn( code, msg, CV_Func, __FILE__, __LINE__ )
-#define CV__ErrorNoReturn_( code, args ) cv::errorNoReturn( code, cv::format args, CV_Func, __FILE__, __LINE__ )
-#ifdef __OPENCV_BUILD
-#undef CV_Error
-#define CV_Error CV__ErrorNoReturn
-#undef CV_Error_
-#define CV_Error_ CV__ErrorNoReturn_
-#undef CV_Assert
-#define CV_Assert( expr ) do { if(!!(expr)) ; else cv::errorNoReturn( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
-#else
-// backward compatibility
-#define CV_ErrorNoReturn CV__ErrorNoReturn
-#define CV_ErrorNoReturn_ CV__ErrorNoReturn_
-#endif
-//! @endcond
-
 #endif // CV_STATIC_ANALYSIS
 
 //! @cond IGNORED
-
-#if defined OPENCV_FORCE_MULTIARG_ASSERT_CHECK && defined CV_STATIC_ANALYSIS
-#warning "OPENCV_FORCE_MULTIARG_ASSERT_CHECK can't be used with CV_STATIC_ANALYSIS"
-#undef OPENCV_FORCE_MULTIARG_ASSERT_CHECK
+#if !defined(__OPENCV_BUILD)  // TODO: backward compatibility only
+#ifndef CV_ErrorNoReturn
+#define CV_ErrorNoReturn CV_Error
+#endif
+#ifndef CV_ErrorNoReturn_
+#define CV_ErrorNoReturn_ CV_Error_
+#endif
 #endif
 
-#ifdef OPENCV_FORCE_MULTIARG_ASSERT_CHECK
-#define CV_Assert_1( expr ) do { if(!!(expr)) ; else cv::error( cv::Error::StsAssert, #expr, CV_Func, __FILE__, __LINE__ ); } while(0)
-#else
 #define CV_Assert_1 CV_Assert
-#endif
-#define CV_Assert_2( expr1, expr2 ) CV_Assert_1(expr1); CV_Assert_1(expr2)
-#define CV_Assert_3( expr1, expr2, expr3 ) CV_Assert_2(expr1, expr2); CV_Assert_1(expr3)
-#define CV_Assert_4( expr1, expr2, expr3, expr4 ) CV_Assert_3(expr1, expr2, expr3); CV_Assert_1(expr4)
-#define CV_Assert_5( expr1, expr2, expr3, expr4, expr5 ) CV_Assert_4(expr1, expr2, expr3, expr4); CV_Assert_1(expr5)
-#define CV_Assert_6( expr1, expr2, expr3, expr4, expr5, expr6 ) CV_Assert_5(expr1, expr2, expr3, expr4, expr5); CV_Assert_1(expr6)
-#define CV_Assert_7( expr1, expr2, expr3, expr4, expr5, expr6, expr7 ) CV_Assert_6(expr1, expr2, expr3, expr4, expr5, expr6 ); CV_Assert_1(expr7)
-#define CV_Assert_8( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ) CV_Assert_7(expr1, expr2, expr3, expr4, expr5, expr6, expr7 ); CV_Assert_1(expr8)
-#define CV_Assert_9( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ) CV_Assert_8(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8 ); CV_Assert_1(expr9)
-#define CV_Assert_10( expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9, expr10 ) CV_Assert_9(expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8, expr9 ); CV_Assert_1(expr10)
+#define CV_Assert_2( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_1( __VA_ARGS__ ))
+#define CV_Assert_3( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_2( __VA_ARGS__ ))
+#define CV_Assert_4( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_3( __VA_ARGS__ ))
+#define CV_Assert_5( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_4( __VA_ARGS__ ))
+#define CV_Assert_6( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_5( __VA_ARGS__ ))
+#define CV_Assert_7( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_6( __VA_ARGS__ ))
+#define CV_Assert_8( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_7( __VA_ARGS__ ))
+#define CV_Assert_9( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_8( __VA_ARGS__ ))
+#define CV_Assert_10( expr, ... ) CV_Assert_1(expr); __CV_EXPAND(CV_Assert_9( __VA_ARGS__ ))
 
-#define CV_Assert_N(...) do { __CV_CAT(CV_Assert_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__); } while(0)
+#define CV_Assert_N(...) do { __CV_EXPAND(__CV_CAT(CV_Assert_, __CV_VA_NUM_ARGS(__VA_ARGS__)) (__VA_ARGS__)); } while(0)
 
-#ifdef OPENCV_FORCE_MULTIARG_ASSERT_CHECK
-#undef CV_Assert
-#define CV_Assert CV_Assert_N
-#endif
 //! @endcond
 
 #if defined _DEBUG || defined CV_STATIC_ANALYSIS
@@ -430,7 +381,7 @@ configurations while CV_DbgAssert is only retained in the Debug configuration.
  */
 struct CV_EXPORTS Hamming
 {
-    enum { normType = NORM_HAMMING };
+    static const NormTypes normType = NORM_HAMMING;
     typedef unsigned char ValueType;
     typedef int ResultType;
 
@@ -589,17 +540,12 @@ CV_EXPORTS_W float cubeRoot(float val);
 
 /** @overload
 
-cubeRoot with argument of `double` type calls `std::cbrt(double)` (C++11) or falls back on `pow()` for C++98 compilation mode.
+cubeRoot with argument of `double` type calls `std::cbrt(double)`
 */
 static inline
 double cubeRoot(double val)
 {
-#ifdef CV_CXX11
     return std::cbrt(val);
-#else
-    double v = pow(abs(val), 1/3.);  // pow doesn't support negative inputs with fractional exponents
-    return val >= 0 ? v : -v;
-#endif
 }
 
 /** @brief Calculates the angle of a 2D vector in degrees.
@@ -682,11 +628,7 @@ namespace cudev
 
 namespace ipp
 {
-#if OPENCV_ABI_COMPATIBILITY > 300
 CV_EXPORTS   unsigned long long getIppFeatures();
-#else
-CV_EXPORTS   int getIppFeatures();
-#endif
 CV_EXPORTS   void setIppStatus(int status, const char * const funcname = NULL, const char * const filename = NULL,
                              int line = 0);
 CV_EXPORTS   int getIppStatus();
@@ -699,9 +641,9 @@ CV_EXPORTS_W String getIppVersion();
 // but have internal accuracy differences which have too much direct or indirect impact on accuracy tests.
 CV_EXPORTS_W bool useIPP_NotExact();
 CV_EXPORTS_W void setUseIPP_NotExact(bool flag);
-#if OPENCV_ABI_COMPATIBILITY < 400
-CV_EXPORTS_W bool useIPP_NE();
-CV_EXPORTS_W void setUseIPP_NE(bool flag);
+#ifndef DISABLE_OPENCV_3_COMPATIBILITY
+static inline bool useIPP_NE() { return useIPP_NotExact(); }
+static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
 #endif
 
 } // ipp

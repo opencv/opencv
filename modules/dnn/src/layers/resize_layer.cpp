@@ -6,6 +6,7 @@
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include <opencv2/imgproc.hpp>
 
@@ -16,6 +17,11 @@
 #else
 #include <ngraph/op/experimental/layers/interpolate.hpp>
 #endif
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/resize.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv { namespace dnn {
@@ -65,6 +71,9 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+            return interpolation == "nearest" || interpolation == "bilinear";
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -219,6 +228,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
+
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
@@ -310,6 +320,29 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::InterpolationType itype;
+        if (interpolation == "nearest")
+            itype = InterpolationType::NEAREST_NEIGHBOUR;
+        else if (interpolation == "bilinear")
+            itype = InterpolationType::BILINEAR;
+        else
+            CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
+
+        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), itype, scaleHeight, scaleWidth);
+    }
+#endif
+
 
 protected:
     int outWidth, outHeight;

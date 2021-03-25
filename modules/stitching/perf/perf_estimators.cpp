@@ -28,13 +28,9 @@ PERF_TEST_P(bundleAdjuster, affine, testing::Combine(TEST_DETECTORS, AFFINE_FUNC
     string detector = get<0>(GetParam());
     string affine_fun = get<1>(GetParam());
 
-    Ptr<detail::FeaturesFinder> finder;
+    Ptr<Feature2D> finder = getFeatureFinder(detector);
     Ptr<detail::FeaturesMatcher> matcher;
     Ptr<detail::BundleAdjusterBase> bundle_adjuster;
-    if (detector == "surf")
-        finder = makePtr<detail::SurfFeaturesFinder>();
-    else if (detector == "orb")
-        finder = makePtr<detail::OrbFeaturesFinder>();
     if (affine_fun == "affinePartial")
     {
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false);
@@ -54,7 +50,7 @@ PERF_TEST_P(bundleAdjuster, affine, testing::Combine(TEST_DETECTORS, AFFINE_FUNC
     std::vector<detail::CameraParams> cameras;
     std::vector<detail::CameraParams> cameras2;
 
-    (*finder)(images, features);
+    computeImageFeatures(finder, images, features);
     (*matcher)(features, pairwise_matches);
     if (!(*estimator)(features, pairwise_matches, cameras))
         FAIL() << "estimation failed. this should never happen.";

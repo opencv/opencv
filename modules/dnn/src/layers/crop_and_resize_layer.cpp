@@ -8,6 +8,11 @@
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/crop_and_resize.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv { namespace dnn {
 
 class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
@@ -23,7 +28,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+        return backendId == DNN_BACKEND_OPENCV
+               || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
+               || backendId == DNN_BACKEND_CUDA
+        ;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -151,6 +159,18 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(roiPooling));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::CropAndResizeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
 
 private:
     int outWidth, outHeight;

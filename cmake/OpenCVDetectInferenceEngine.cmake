@@ -17,12 +17,6 @@
 # INF_ENGINE_TARGET - set to name of imported library target representing InferenceEngine
 #
 
-if(NOT HAVE_CXX11)
-    message(WARNING "DL Inference engine requires C++11. You can turn it on via ENABLE_CXX11=ON CMake flag.")
-    return()
-endif()
-
-# =======================
 
 macro(ocv_ie_find_extra_libraries find_prefix find_suffix)
   file(GLOB libraries "${INF_ENGINE_LIB_DIRS}/${find_prefix}inference_engine*${find_suffix}")

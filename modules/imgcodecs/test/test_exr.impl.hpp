@@ -6,6 +6,17 @@
 
 namespace opencv_test { namespace {
 
+size_t getFileSize(const string& filename)
+{
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    if (ifs.is_open())
+    {
+        ifs.seekg(0, std::ios::end);
+        return (size_t)ifs.tellg();
+    }
+    return 0;
+}
+
 TEST(Imgcodecs_EXR, readWrite_32FC1)
 { // Y channels
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -23,6 +34,8 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
     ASSERT_EQ(CV_32FC1,img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(396u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
@@ -106,6 +119,30 @@ TEST(Imgcodecs_EXR, readWrite_32FC3_half)
     ASSERT_EQ(CV_32FC3, img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC1.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_EXR_COMPRESSION);
+    params.push_back(IMWRITE_EXR_COMPRESSION_PIZ);
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(849u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());

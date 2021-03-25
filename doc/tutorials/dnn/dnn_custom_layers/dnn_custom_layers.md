@@ -1,6 +1,14 @@
 # Custom deep learning layers support {#tutorial_dnn_custom_layers}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_javascript}
+@next_tutorial{tutorial_dnn_OCR}
+
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.4.1 |
 
 ## Introduction
 Deep learning is a fast growing area. The new approaches to build neural networks
@@ -218,7 +226,7 @@ a centric one.
 @snippet dnn/edge_detection.py Register
 
 That's it! We've replaced an implemented OpenCV's layer to a custom one.
-You may find a full script in the [source code](https://github.com/opencv/opencv/tree/3.4/samples/dnn/edge_detection.py).
+You may find a full script in the [source code](https://github.com/opencv/opencv/tree/master/samples/dnn/edge_detection.py).
 
 <table border="0">
 <tr>

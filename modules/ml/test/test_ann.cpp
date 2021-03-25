@@ -117,7 +117,7 @@ TEST_P(ML_ANN_METHOD, Test)
 
     // train 1st stage
 
-    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP_ANNEAL::create();
+    Ptr<ml::ANN_MLP> xx = ml::ANN_MLP::create();
     Mat_<int> layerSizes(1, 4);
     layerSizes(0, 0) = tdata->getNVars();
     layerSizes(0, 1) = 30;
@@ -138,7 +138,7 @@ TEST_P(ML_ANN_METHOD, Test)
 
     // train 2nd stage
     Mat r_gold;
-    Ptr<ml::ANN_MLP> x = ml::ANN_MLP_ANNEAL::create();
+    Ptr<ml::ANN_MLP> x = ml::ANN_MLP::create();
     {
         const string weight_file = findDataFile(weight_name);
         FileStorage fs;

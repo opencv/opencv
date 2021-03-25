@@ -62,7 +62,7 @@ cameras.
 @note The coordinate system origin is implementation-dependent, but you can always normalize the
 rotations in respect to the first camera, for instance. :
  */
-class CV_EXPORTS Estimator
+class CV_EXPORTS_W Estimator
 {
 public:
     virtual ~Estimator() {}
@@ -74,10 +74,12 @@ public:
     @param cameras Estimated camera parameters
     @return True in case of success, false otherwise
      */
-    bool operator ()(const std::vector<ImageFeatures> &features,
-                     const std::vector<MatchesInfo> &pairwise_matches,
-                     std::vector<CameraParams> &cameras)
-        { return estimate(features, pairwise_matches, cameras); }
+    CV_WRAP_AS(apply) bool operator ()(const std::vector<ImageFeatures> &features,
+        const std::vector<MatchesInfo> &pairwise_matches,
+        CV_OUT CV_IN_OUT std::vector<CameraParams> &cameras)
+    {
+        return estimate(features, pairwise_matches, cameras);
+    }
 
 protected:
     /** @brief This method must implement camera parameters estimation logic in order to make the wrapper
@@ -90,15 +92,15 @@ protected:
      */
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
-                          std::vector<CameraParams> &cameras) = 0;
+                          CV_OUT std::vector<CameraParams> &cameras) = 0;
 };
 
 /** @brief Homography based rotation estimator.
  */
-class CV_EXPORTS HomographyBasedEstimator : public Estimator
+class CV_EXPORTS_W HomographyBasedEstimator : public Estimator
 {
 public:
-    HomographyBasedEstimator(bool is_focals_estimated = false)
+    CV_WRAP HomographyBasedEstimator(bool is_focals_estimated = false)
         : is_focals_estimated_(is_focals_estimated) {}
 
 private:
@@ -116,8 +118,10 @@ final transformation for each camera.
 
 @sa cv::detail::HomographyBasedEstimator
  */
-class CV_EXPORTS AffineBasedEstimator : public Estimator
+class CV_EXPORTS_W AffineBasedEstimator : public Estimator
 {
+public:
+    CV_WRAP AffineBasedEstimator(){}
 private:
     virtual bool estimate(const std::vector<ImageFeatures> &features,
                           const std::vector<MatchesInfo> &pairwise_matches,
@@ -126,21 +130,21 @@ private:
 
 /** @brief Base class for all camera parameters refinement methods.
  */
-class CV_EXPORTS BundleAdjusterBase : public Estimator
+class CV_EXPORTS_W BundleAdjusterBase : public Estimator
 {
 public:
-    const Mat refinementMask() const { return refinement_mask_.clone(); }
-    void setRefinementMask(const Mat &mask)
+    CV_WRAP const Mat refinementMask() const { return refinement_mask_.clone(); }
+    CV_WRAP void setRefinementMask(const Mat &mask)
     {
         CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));
         refinement_mask_ = mask.clone();
     }
 
-    double confThresh() const { return conf_thresh_; }
-    void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
+    CV_WRAP double confThresh() const { return conf_thresh_; }
+    CV_WRAP void setConfThresh(double conf_thresh) { conf_thresh_ = conf_thresh; }
 
-    TermCriteria termCriteria() { return term_criteria_; }
-    void setTermCriteria(const TermCriteria& term_criteria) { term_criteria_ = term_criteria; }
+    CV_WRAP TermCriteria termCriteria() { return term_criteria_; }
+    CV_WRAP void setTermCriteria(const TermCriteria& term_criteria) { term_criteria_ = term_criteria; }
 
 protected:
     /** @brief Construct a bundle adjuster base instance.
@@ -214,10 +218,10 @@ protected:
 
 /** @brief Stub bundle adjuster that does nothing.
  */
-class CV_EXPORTS NoBundleAdjuster : public BundleAdjusterBase
+class CV_EXPORTS_W NoBundleAdjuster : public BundleAdjusterBase
 {
 public:
-    NoBundleAdjuster() : BundleAdjusterBase(0, 0) {}
+    CV_WRAP NoBundleAdjuster() : BundleAdjusterBase(0, 0) {}
 
 private:
     bool estimate(const std::vector<ImageFeatures> &, const std::vector<MatchesInfo> &,
@@ -238,10 +242,10 @@ error squares
 It can estimate focal length, aspect ratio, principal point.
 You can affect only on them via the refinement mask.
  */
-class CV_EXPORTS BundleAdjusterReproj : public BundleAdjusterBase
+class CV_EXPORTS_W BundleAdjusterReproj : public BundleAdjusterBase
 {
 public:
-    BundleAdjusterReproj() : BundleAdjusterBase(7, 2) {}
+    CV_WRAP BundleAdjusterReproj() : BundleAdjusterBase(7, 2) {}
 
 private:
     void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
@@ -258,10 +262,10 @@ between the rays passing through the camera center and a feature. :
 
 It can estimate focal length. It ignores the refinement mask for now.
  */
-class CV_EXPORTS BundleAdjusterRay : public BundleAdjusterBase
+class CV_EXPORTS_W BundleAdjusterRay : public BundleAdjusterBase
 {
 public:
-    BundleAdjusterRay() : BundleAdjusterBase(4, 3) {}
+    CV_WRAP BundleAdjusterRay() : BundleAdjusterBase(4, 3) {}
 
 private:
     void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
@@ -282,10 +286,10 @@ It estimates all transformation parameters. Refinement mask is ignored.
 
 @sa AffineBasedEstimator AffineBestOf2NearestMatcher BundleAdjusterAffinePartial
  */
-class CV_EXPORTS BundleAdjusterAffine : public BundleAdjusterBase
+class CV_EXPORTS_W BundleAdjusterAffine : public BundleAdjusterBase
 {
 public:
-    BundleAdjusterAffine() : BundleAdjusterBase(6, 2) {}
+    CV_WRAP BundleAdjusterAffine() : BundleAdjusterBase(6, 2) {}
 
 private:
     void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
@@ -306,10 +310,10 @@ It estimates all transformation parameters. Refinement mask is ignored.
 
 @sa AffineBasedEstimator AffineBestOf2NearestMatcher BundleAdjusterAffine
  */
-class CV_EXPORTS BundleAdjusterAffinePartial : public BundleAdjusterBase
+class CV_EXPORTS_W BundleAdjusterAffinePartial : public BundleAdjusterBase
 {
 public:
-    BundleAdjusterAffinePartial() : BundleAdjusterBase(4, 2) {}
+    CV_WRAP BundleAdjusterAffinePartial() : BundleAdjusterBase(4, 2) {}
 
 private:
     void setUpInitialCameraParams(const std::vector<CameraParams> &cameras) CV_OVERRIDE;
@@ -324,25 +328,35 @@ private:
 enum WaveCorrectKind
 {
     WAVE_CORRECT_HORIZ,
-    WAVE_CORRECT_VERT
+    WAVE_CORRECT_VERT,
+    WAVE_CORRECT_AUTO
 };
+
+/** @brief Tries to detect the wave correction kind depending
+on whether a panorama spans horizontally or vertically
+
+@param rmats Camera rotation matrices.
+@return The correction kind to use for this panorama
+ */
+CV_EXPORTS
+WaveCorrectKind autoDetectWaveCorrectKind(const std::vector<Mat> &rmats);
 
 /** @brief Tries to make panorama more horizontal (or vertical).
 
 @param rmats Camera rotation matrices.
 @param kind Correction kind, see detail::WaveCorrectKind.
  */
-void CV_EXPORTS waveCorrect(std::vector<Mat> &rmats, WaveCorrectKind kind);
+void CV_EXPORTS_W waveCorrect(CV_IN_OUT std::vector<Mat> &rmats, WaveCorrectKind kind);
 
 
 //////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 
 // Returns matches graph representation in DOT language
-String CV_EXPORTS matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
+String CV_EXPORTS_W matchesGraphAsString(std::vector<String> &pathes, std::vector<MatchesInfo> &pairwise_matches,
                                             float conf_threshold);
 
-std::vector<int> CV_EXPORTS leaveBiggestComponent(
+CV_EXPORTS_W std::vector<int>  leaveBiggestComponent(
         std::vector<ImageFeatures> &features,
         std::vector<MatchesInfo> &pairwise_matches,
         float conf_threshold);

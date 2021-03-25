@@ -105,7 +105,8 @@ class Bindings(NewOpenCVTests):
             no_exception_msg = 'Overload resolution failed without any exception for: "{}"'.format(msg)
             wrong_exception_msg = 'Overload resolution failed with wrong exception type for: "{}"'.format(msg)
             with self.assertRaises((cv.error, Exception), msg=no_exception_msg) as cm:
-                cv.utils.testOverloadResolution(*args, **kwargs)
+                res = cv.utils.testOverloadResolution(*args, **kwargs)
+                self.fail("Unexpected result for {}: '{}'".format(msg, res))
             self.assertEqual(type(cm.exception), cv.error, wrong_exception_msg)
 
         test_overload_resolution('wrong second arg type (keyword arg)', 5, point=(1, 2, 3))

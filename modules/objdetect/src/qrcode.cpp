@@ -978,15 +978,6 @@ bool QRCodeDetector::detect(InputArray in, OutputArray points) const
     return true;
 }
 
-bool detectQRCode(InputArray in, vector<Point> &points, double eps_x, double eps_y)
-{
-    QRCodeDetector qrdetector;
-    qrdetector.setEpsX(eps_x);
-    qrdetector.setEpsY(eps_y);
-
-    return qrdetector.detect(in, points);
-}
-
 class QRDecode
 {
 public:
@@ -1146,7 +1137,7 @@ bool QRDecode::computeClosestPoints(const vector<Point> &result_integer_hull)
 {
     CV_TRACE_FUNCTION();
     double min_norm, max_norm = 0.0;
-    size_t idx_min;
+    size_t idx_min = (size_t)-1;
     for (size_t i = 0; i < original_points.size(); i++)
     {
         min_norm = std::numeric_limits<double>::max();
@@ -1168,6 +1159,7 @@ bool QRDecode::computeClosestPoints(const vector<Point> &result_integer_hull)
             max_norm = min_norm;
             unstable_pair = std::pair<size_t,Point>(i, closest_pnt);
         }
+        CV_Assert(idx_min != (size_t)-1);
         closest_points.push_back(std::pair<size_t,Point>(idx_min, closest_pnt));
     }
 
@@ -2482,22 +2474,8 @@ bool QRDecode::curvedDecodingProcess()
 #endif
 }
 
-bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode)
-{
-    QRCodeDetector qrcode;
-    decoded_info = qrcode.decode(in, points, straight_qrcode);
-    return !decoded_info.empty();
-}
-
-bool decodeCurvedQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode)
-{
-    QRCodeDetector qrcode;
-    decoded_info = qrcode.decodeCurved(in, points, straight_qrcode);
-    return !decoded_info.empty();
-}
-
-cv::String QRCodeDetector::decode(InputArray in, InputArray points,
-                                  OutputArray straight_qrcode)
+std::string QRCodeDetector::decode(InputArray in, InputArray points,
+                                   OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2555,9 +2533,9 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
     return ok ? decoded_info : std::string();
 }
 
-cv::String QRCodeDetector::detectAndDecode(InputArray in,
-                                           OutputArray points_,
-                                           OutputArray straight_qrcode)
+std::string QRCodeDetector::detectAndDecode(InputArray in,
+                                            OutputArray points_,
+                                            OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2578,9 +2556,9 @@ cv::String QRCodeDetector::detectAndDecode(InputArray in,
     return decoded_info;
 }
 
-cv::String QRCodeDetector::detectAndDecodeCurved(InputArray in,
-                                                 OutputArray points_,
-                                                 OutputArray straight_qrcode)
+std::string QRCodeDetector::detectAndDecodeCurved(InputArray in,
+                                                  OutputArray points_,
+                                                  OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2906,7 +2884,7 @@ public:
     static BWCounter checkOnePair(const Point2f& tl, const Point2f& tr, const Point2f& bl, const Point2f& br, const Mat& img)
     {
         BWCounter res;
-        LineIterator li1(img, tl, tr), li2(img, bl, br);
+        LineIterator li1(tl, tr), li2(bl, br);
         for (int i = 0; i < li1.count && i < li2.count; i++, li1++, li2++)
         {
             LineIterator it(img, li1.pos(), li2.pos());

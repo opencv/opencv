@@ -2,22 +2,22 @@
 #  Detect frameworks that may be used by 3rd-party libraries as well as OpenCV
 # ----------------------------------------------------------------------------
 
-# --- C= ---
-if(WITH_CSTRIPES AND NOT HAVE_TBB)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCStripes.cmake")
-else()
-  set(HAVE_CSTRIPES 0)
-endif()
+# --- HPX ---
+if(WITH_HPX)
+  find_package(HPX REQUIRED)
+  ocv_include_directories(${HPX_INCLUDE_DIRS})
+  set(HAVE_HPX TRUE)
+endif(WITH_HPX)
 
 # --- GCD ---
-if(APPLE AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+if(APPLE AND NOT HAVE_TBB)
   set(HAVE_GCD 1)
 else()
   set(HAVE_GCD 0)
 endif()
 
 # --- Concurrency ---
-if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
+if(MSVC AND NOT HAVE_TBB)
   set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
   file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
   try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")

@@ -1,3 +1,4 @@
+@cond CUDA_MODULES
 GPU-Accelerated Computer Vision (cuda module) {#tutorial_table_of_content_gpu}
 =============================================
 
@@ -24,3 +25,4 @@ run the OpenCV algorithms.
 
     This tutorial will show you how to wrap a GpuMat into a thrust iterator in order to be able to
     use the functions in the thrust library.
+@endcond

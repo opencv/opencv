@@ -13,6 +13,12 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
+if(ANDROID)
+  ocv_update(JNI_OUTPUT_PATH  "${OpenCV_BINARY_DIR}/jni/${ANDROID_NDK_ABI_NAME}")
+else()
+  ocv_update(JNI_OUTPUT_PATH  "${LIBRARY_OUTPUT_PATH}")
+endif()
+
 set(__type MODULE)
 if(BUILD_FAT_JAVA_LIB)
   set(__type SHARED) # samples link to libopencv_java
@@ -60,7 +66,7 @@ endif()
 set_target_properties(${the_module} PROPERTIES
     OUTPUT_NAME "${the_module}${OPENCV_JAVA_LIB_NAME_SUFFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
-    LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_PATH}
+    LIBRARY_OUTPUT_DIRECTORY ${JNI_OUTPUT_PATH}
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
     DEFINE_SYMBOL CVAPI_EXPORTS
     )
@@ -75,7 +81,7 @@ if(ANDROID)
 
   # force strip library after the build command
   # because samples and tests will make a copy of the library before install
-  if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+  if(NOT BUILD_WITH_DEBUG_INFO AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
     add_custom_command(TARGET ${the_module} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "$<TARGET_FILE:${the_module}>")
   endif()
 endif()

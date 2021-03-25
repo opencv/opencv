@@ -25,9 +25,6 @@
                 ["IPL_BORDER_WRAP",        3 ],
                 ["IPL_BORDER_REFLECT_101", 4 ],
                 ["IPL_BORDER_TRANSPARENT", 5 ]
-            ],
-            "public" : [
-                ["LINE_AA", 16], ["LINE_8", 8], ["LINE_4", 4]
             ]
         }
     },

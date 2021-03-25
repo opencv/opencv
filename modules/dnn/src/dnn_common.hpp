@@ -8,7 +8,7 @@
 #include <opencv2/dnn.hpp>
 
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 #define IS_DNN_OPENCL_TARGET(id) (id == DNN_TARGET_OPENCL || id == DNN_TARGET_OPENCL_FP16)
 Mutex& getInitializationMutex();
 void initializeLayerFactory();
@@ -28,7 +28,7 @@ struct NetImplBase
 
 }  // namespace detail
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }}  // namespace
 
 #endif  // __OPENCV_DNN_COMMON_HPP__

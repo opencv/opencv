@@ -151,7 +151,7 @@ public:
 
 private:
     const Mat mask;
-    MaskPredicate& operator=(const MaskPredicate&);
+    MaskPredicate& operator=(const MaskPredicate&) = delete;
 };
 
 void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask )

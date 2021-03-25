@@ -556,6 +556,9 @@ void InfEngineNgraphNet::init(Target targetId)
         case DNN_TARGET_MYRIAD:
             device_name = "MYRIAD";
             break;
+        case DNN_TARGET_HDDL:
+            device_name = "HDDL";
+            break;
         case DNN_TARGET_FPGA:
             device_name = "FPGA";
             break;
@@ -683,7 +686,7 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
 #endif
         }
         std::map<std::string, std::string> config;
-        if (device_name == "MYRIAD") {
+        if (device_name == "MYRIAD" || device_name == "HDDL") {
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
             config.emplace("MYRIAD_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
 #else

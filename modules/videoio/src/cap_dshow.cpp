@@ -96,6 +96,7 @@ Thanks to:
 #ifdef __MINGW32__
 // MinGW does not understand COM interfaces
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#define STRSAFE_NO_DEPRECATE
 #endif
 
 #include <tchar.h>
@@ -109,9 +110,9 @@ Thanks to:
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
 #define NO_DSHOW_STRSAFE
-#include "DShow.h"
+#include "dshow.h"
 #include "strmif.h"
-#include "Aviriff.h"
+#include "aviriff.h"
 #include "dvdmedia.h"
 #include "bdaiface.h"
 
@@ -2169,6 +2170,12 @@ void videoInput::setPhyCon(int id, int conn){
         case 4:
             VDList[id]->connection = PhysConn_Video_1394;
             break;
+        case 5:
+            VDList[id]->connection = PhysConn_Video_YRYBY;
+            break;
+        case 6:
+            VDList[id]->connection = PhysConn_Video_SerialDigital;
+            break;
         default:
             return; //if it is not these types don't set crossbar
         break;
@@ -2579,6 +2586,9 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     //width and height
     HEADER(pVih)->biWidth  = attemptWidth;
     HEADER(pVih)->biHeight = attemptHeight;
+    pVih->rcSource.top = pVih->rcSource.left = pVih->rcTarget.top =pVih->rcTarget.left=0;
+    pVih->rcSource.right = pVih->rcTarget.right= attemptWidth;
+    pVih->rcSource.bottom = pVih->rcTarget.bottom = attemptHeight;
 
     VD->pAmMediaType->formattype = FORMAT_VideoInfo;
     VD->pAmMediaType->majortype  = MEDIATYPE_Video;
@@ -3331,6 +3341,7 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_fourcc(-1)
     , m_widthSet(-1)
     , m_heightSet(-1)
+    , m_convertRGBSet(true)
 {
     CoInitialize(0);
     open(index);
@@ -3434,6 +3445,15 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
         break;
 
+    case CAP_PROP_CHANNEL:
+
+        if (cvFloor(propVal) < 0)
+            break;
+        g_VI.stopDevice(m_index);
+        g_VI.setupDevice(m_index,  cvFloor(propVal));
+        g_VI.setConvertRGB(m_index, m_convertRGBSet);
+        break;
+
     case CV_CAP_PROP_FPS:
     {
         int fps = cvRound(propVal);
@@ -3445,6 +3465,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.setupDevice(m_index, m_widthSet, m_heightSet);
             else
                 g_VI.setupDevice(m_index);
+            g_VI.setConvertRGB(m_index, m_convertRGBSet);
         }
         return g_VI.isDeviceSetup(m_index);
     }
@@ -3463,7 +3484,11 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
     case CV_CAP_PROP_CONVERT_RGB:
     {
-        return g_VI.setConvertRGB(m_index, cvRound(propVal) == 1);
+        const bool convertRgb = cvRound(propVal) == 1;
+        const bool success = g_VI.setConvertRGB(m_index, convertRgb);
+        if(success)
+            m_convertRGBSet = convertRgb;
+        return success;
     }
 
     }
@@ -3479,6 +3504,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.stopDevice(m_index);
                 g_VI.setIdealFramerate(m_index, fps);
                 g_VI.setupDeviceFourcc(m_index, m_width, m_height, m_fourcc);
+                g_VI.setConvertRGB(m_index, m_convertRGBSet);
             }
 
             bool success = g_VI.isDeviceSetup(m_index);
@@ -3584,7 +3610,14 @@ void VideoCapture_DShow::close()
         m_index = -1;
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
+    m_convertRGBSet = true;
 }
+
+Ptr<IVideoCapture> create_DShow_capture(int index)
+{
+    return makePtr<VideoCapture_DShow>(index);
+}
+
 
 }
 

@@ -293,7 +293,7 @@ and the remaining to \f$A\f$. It should contain 32- or 64-bit floating point num
 formulation above. It will contain 64-bit floating point numbers.
 @return One of cv::SolveLPResult
  */
-CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
+CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z);
 
 //! @}
 

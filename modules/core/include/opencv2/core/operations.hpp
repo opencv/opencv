@@ -51,6 +51,16 @@
 
 #include <cstdio>
 
+#if defined(__GNUC__) || defined(__clang__) // at least GCC 3.1+, clang 3.5+
+#  if defined(__MINGW_PRINTF_FORMAT)  // https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/.
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (__MINGW_PRINTF_FORMAT, string_idx, first_to_check)))
+#  else
+#    define CV_FORMAT_PRINTF(string_idx, first_to_check) __attribute__ ((format (printf, string_idx, first_to_check)))
+#  endif
+#else
+#  define CV_FORMAT_PRINTF(A, B)
+#endif
+
 //! @cond IGNORED
 
 namespace cv
@@ -405,13 +415,24 @@ template<typename _Tp> static inline _Tp randu()
 The function acts like sprintf but forms and returns an STL string. It can be used to form an error
 message in the Exception constructor.
 @param fmt printf-compatible formatting specifiers.
+
+**Note**:
+|Type|Specifier|
+|-|-|
+|`const char*`|`%s`|
+|`char`|`%c`|
+|`float` / `double`|`%f`,`%g`|
+|`int`, `long`, `long long`|`%d`, `%ld`, ``%lld`|
+|`unsigned`, `unsigned long`, `unsigned long long`|`%u`, `%lu`, `%llu`|
+|`uint64` -> `uintmax_t`, `int64` -> `intmax_t`|`%ju`, `%jd`|
+|`size_t`|`%zu`|
  */
-CV_EXPORTS String format( const char* fmt, ... );
+CV_EXPORTS String format( const char* fmt, ... ) CV_FORMAT_PRINTF(1, 2);
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
 static inline
-Ptr<Formatted> format(InputArray mtx, int fmt)
+Ptr<Formatted> format(InputArray mtx, Formatter::FormatType fmt)
 {
     return Formatter::get(fmt)->format(mtx.getMat());
 }

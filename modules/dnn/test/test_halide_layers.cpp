@@ -178,6 +178,9 @@ TEST_P(Deconvolution, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -429,7 +432,11 @@ TEST_P(FullyConnected, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0;
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        l1 = 0.015;
+    test(lp, input, backendId, targetId, false, true, l1);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
@@ -512,7 +519,7 @@ TEST_P(Test_Halide_layers, MaxPoolUnpool)
 ////////////////////////////////////////////////////////////////////////////////
 static const int kNumChannels = 3;
 
-void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
+void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId, double l1 = 0.0, double lInf = 0.0)
 {
     EXPECT_FALSE(lp.name.empty());
 
@@ -532,7 +539,7 @@ void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
 
     int sz[] = {1, kNumChannels, 10, 10};
     Mat input(4, &sz[0], CV_32F);
-    test(input, net, backendId, targetId);
+    test(input, net, backendId, targetId, false, true, l1, lInf);
 }
 
 typedef TestWithParam<tuple<bool, bool, float, tuple<Backend, Target> > > BatchNorm;

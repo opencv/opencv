@@ -230,14 +230,8 @@ public:
                 int branching = 32,
                 int iterations = 11,
                 flann_centers_init_t centers_init = CENTERS_RANDOM,
-                float cb_index = 0.2 );
-
-            KMeansIndexParams(
-                int branching,
-                int iterations,
-                flann_centers_init_t centers_init,
-                float cb_index,
-                int trees );
+                float cb_index = 0.2,
+                int trees = 1);
         };
         @endcode
         - **CompositeIndexParams** When using a parameters object of this type the index created
@@ -262,9 +256,9 @@ public:
         struct LshIndexParams : public IndexParams
         {
             LshIndexParams(
-                unsigned int table_number,
-                unsigned int key_size,
-                unsigned int multi_probe_level );
+                int table_number,
+                int key_size,
+                int multi_probe_level );
         };
         @endcode
         - **AutotunedIndexParams** When passing an object of this type the index created is

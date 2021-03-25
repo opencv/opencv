@@ -55,35 +55,37 @@ namespace detail {
 
 /** @brief Base class for a seam estimator.
  */
-class CV_EXPORTS SeamFinder
+class CV_EXPORTS_W SeamFinder
 {
 public:
-    virtual ~SeamFinder() {}
+    CV_WRAP  virtual ~SeamFinder() {}
+    enum { NO, VORONOI_SEAM, DP_SEAM };
     /** @brief Estimates seams.
 
     @param src Source images
     @param corners Source image top-left corners
     @param masks Source image masks to update
      */
-    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks) = 0;
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) = 0;
+    CV_WRAP static Ptr<SeamFinder> createDefault(int type);
 };
 
 /** @brief Stub seam estimator which does nothing.
  */
-class CV_EXPORTS NoSeamFinder : public SeamFinder
+class CV_EXPORTS_W NoSeamFinder : public SeamFinder
 {
 public:
-    void find(const std::vector<UMat>&, const std::vector<Point>&, std::vector<UMat>&) CV_OVERRIDE {}
+    CV_WRAP void find(const std::vector<UMat>&, const std::vector<Point>&, CV_IN_OUT std::vector<UMat>&) CV_OVERRIDE {}
 };
 
 /** @brief Base class for all pairwise seam estimators.
  */
-class CV_EXPORTS PairwiseSeamFinder : public SeamFinder
+class CV_EXPORTS_W PairwiseSeamFinder : public SeamFinder
 {
 public:
-    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks) CV_OVERRIDE;
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
 
 protected:
     void run();
@@ -103,11 +105,11 @@ protected:
 
 /** @brief Voronoi diagram-based seam estimator.
  */
-class CV_EXPORTS VoronoiSeamFinder : public PairwiseSeamFinder
+class CV_EXPORTS_W VoronoiSeamFinder : public PairwiseSeamFinder
 {
 public:
-    virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-                      std::vector<UMat> &masks) CV_OVERRIDE;
+    CV_WRAP virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
     virtual void find(const std::vector<Size> &size, const std::vector<Point> &corners,
                       std::vector<UMat> &masks);
 private:
@@ -115,15 +117,17 @@ private:
 };
 
 
-class CV_EXPORTS DpSeamFinder : public SeamFinder
+class CV_EXPORTS_W DpSeamFinder : public SeamFinder
 {
 public:
     enum CostFunction { COLOR, COLOR_GRAD };
 
     DpSeamFinder(CostFunction costFunc = COLOR);
+    CV_WRAP DpSeamFinder(String costFunc );
 
     CostFunction costFunction() const { return costFunc_; }
     void setCostFunction(CostFunction val) { costFunc_ = val; }
+    CV_WRAP void setCostFunction(String val);
 
     virtual void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
                       std::vector<UMat> &masks) CV_OVERRIDE;
@@ -233,15 +237,17 @@ public:
 
 /** @brief Minimum graph cut-based seam estimator. See details in @cite V03 .
  */
-class CV_EXPORTS GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
+class CV_EXPORTS_W GraphCutSeamFinder : public GraphCutSeamFinderBase, public SeamFinder
 {
 public:
     GraphCutSeamFinder(int cost_type = COST_COLOR_GRAD, float terminal_cost = 10000.f,
                        float bad_region_penalty = 1000.f);
+    CV_WRAP GraphCutSeamFinder(String cost_type,float terminal_cost = 10000.f,
+        float bad_region_penalty = 1000.f);
 
     ~GraphCutSeamFinder();
 
-    void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
+    CV_WRAP void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
               std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:

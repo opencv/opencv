@@ -1,8 +1,15 @@
 YOLO DNNs  {#tutorial_dnn_yolo}
 ===============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_android}
 @next_tutorial{tutorial_dnn_javascript}
+
+|    |    |
+| -: | :- |
+| Original author | Alessandro de Oliveira Faria |
+| Compatibility | OpenCV >= 3.3.1 |
 
 Introduction
 ------------
@@ -22,8 +29,8 @@ Source Code
 -----------
 
 Use a universal sample for object detection models written
-[in C++](https://github.com/opencv/opencv/blob/3.4/samples/dnn/object_detection.cpp) and
-[in Python](https://github.com/opencv/opencv/blob/3.4/samples/dnn/object_detection.py) languages
+[in C++](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.cpp) and
+[in Python](https://github.com/opencv/opencv/blob/master/samples/dnn/object_detection.py) languages
 
 Usage examples
 --------------

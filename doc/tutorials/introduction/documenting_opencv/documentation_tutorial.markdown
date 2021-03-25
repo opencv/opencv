@@ -4,6 +4,10 @@ Writing documentation for OpenCV {#tutorial_documentation}
 @prev_tutorial{tutorial_display_image}
 @next_tutorial{tutorial_transition_guide}
 
+|    |    |
+| -: | :- |
+| Original author | Maksim Shabunin |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 
@@ -663,20 +667,9 @@ Write the tutorial {#tutorial_documentation_steps_tutorial}
 6.  Add newly created tutorial to the corresponding table of contents. Just find
     <em>"table_of_content_*.markdown"</em> file with the needed table and place new record in it
     similar to existing ones.
-    @verbatim
--   @subpage tutorial_windows_visual_studio_image_watch
 
-    _Languages:_ C++, Java, Python
-
-    _Compatibility:_ \>= OpenCV 2.4
-
-    _Author:_ Wolf Kienzle
-
-    You will learn how to visualize OpenCV matrices and images within Visual Studio 2012.
-    @endverbatim
-    As you can see it is just a list item with special _subpage_ command which marks your page as a
-    child and places it into the existing pages hierarchy. Add compatibility information,
-    authors list and short description. Also note the list item indent, empty lines between
+    It is simply a list item with special _subpage_ command which marks your page as a
+    child and places it into the existing pages hierarchy. Also note the list item indent, empty lines between
     paragraphs and special _italic_ markers.
 
 7.  Generate doxygen documentation and verify results.
