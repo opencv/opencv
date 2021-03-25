@@ -646,17 +646,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
             if (inp_size == 1)
             {
-                if (layerParams.has("steps"))
-                {
-                    DictValue steps_dict = layerParams.get("steps");
-                    for (int i = 0; i < steps_dict.size(); ++i)
-                    {
-                        if (steps_dict.get<int>(i) != 1) {
-                            CV_Error(Error::StsNotImplemented,
-                                "Slice layer only supports steps = 1");
-                        }
-                    }
-                }
                 if (layerParams.has("axes")) {
                     DictValue axes = layerParams.get("axes");
                     for (int i = 1; i < axes.size(); ++i) {

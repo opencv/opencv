@@ -165,7 +165,7 @@ public:
                     if (shapesInitialized || inpShape[j] > 0)
                         outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
 
-                    if (! sliceSteps.empty() && sliceSteps[i][j] > 1)
+                    if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
                         outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
                 }
             }

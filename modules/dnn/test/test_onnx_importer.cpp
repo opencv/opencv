@@ -629,61 +629,21 @@ TEST_P(Test_ONNX_layers, Slice)
 
 TEST_P(Test_ONNX_layers, Slice_Steps_2DInput)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)
-    {
-        if (backend == DNN_BACKEND_OPENCV)
-            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_OPENCL : CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    }
-
     testONNXModels("slice_opset_11_steps_2d");
 }
 
 TEST_P(Test_ONNX_layers, Slice_Steps_3DInput)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)
-    {
-        if (backend == DNN_BACKEND_OPENCV)
-            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_OPENCL : CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    }
-
     testONNXModels("slice_opset_11_steps_3d");
 }
 
 TEST_P(Test_ONNX_layers, Slice_Steps_4DInput)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)
-    {
-        if (backend == DNN_BACKEND_OPENCV)
-            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_OPENCL : CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    }
-
     testONNXModels("slice_opset_11_steps_4d");
 }
 
 TEST_P(Test_ONNX_layers, Slice_Steps_5DInput)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-    }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_OPENCL)
-    {
-        if (backend == DNN_BACKEND_OPENCV)
-            applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_OPENCL : CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    }
-
     testONNXModels("slice_opset_11_steps_5d");
 }
 
