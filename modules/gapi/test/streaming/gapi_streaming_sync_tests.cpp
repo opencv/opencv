@@ -109,7 +109,7 @@ public:
                           : m_synced_frame_time;
         auto n_frames = p.end_time / frame_time;
         GAPI_Assert(n_frames > 0u);
-        return n_frames;
+        return (std::size_t)n_frames;
     }
 };
 
