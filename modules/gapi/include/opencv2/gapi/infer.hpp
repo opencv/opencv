@@ -636,38 +636,6 @@ infer2(const std::string& tag,
     return cv::GInferListOutputs{std::move(call)};
 }
 
-// NB: Functions defined below used for python.
-
-/// @private -- Exclude this function from OpenCV documentation
-GAPI_EXPORTS_W inline cv::GInferOutputs infer(const String& name, const cv::GInferInputs& inputs)
-{
-    return infer<Generic>(name, inputs);
-}
-
-/// @private -- Exclude this function from OpenCV documentation
-GAPI_EXPORTS_W inline GInferOutputs infer(const std::string& name,
-                                          const cv::GOpaque<cv::Rect>& roi,
-                                          const GInferInputs& inputs)
-{
-    return infer<Generic>(name, roi, inputs);
-}
-
-/// @private -- Exclude this function from OpenCV documentation
-GAPI_EXPORTS_W inline GInferListOutputs infer(const std::string& name,
-                                              const cv::GArray<cv::Rect>& rois,
-                                              const GInferInputs& inputs)
-{
-    return infer<Generic>(name, rois, inputs);
-}
-
-/// @private -- Exclude this function from OpenCV documentation
-GAPI_EXPORTS_W inline GInferListOutputs infer2(const std::string& name,
-                                               const cv::GMat in,
-                                               const GInferListInputs& inputs)
-{
-    return infer2<Generic>(name, in, inputs);
-}
-
 } // namespace gapi
 } // namespace cv
 
