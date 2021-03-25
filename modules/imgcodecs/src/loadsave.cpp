@@ -769,7 +769,8 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, size_t start, s
     return imreadmulti_(filename, flags, mats, start, count);
 }
 
-int imcount_(const String& filename)
+static
+size_t imcount_(const String& filename)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -811,7 +812,7 @@ int imcount_(const String& filename)
         return 0;
     }
 
-    int result = 1;
+    size_t result = 1;
 
 
     while (decoder->nextPage())
@@ -822,7 +823,7 @@ int imcount_(const String& filename)
     return result;
 }
 
-int imcount(const String& filename)
+size_t imcount(const String& filename)
 {
     CV_TRACE_FUNCTION();
 

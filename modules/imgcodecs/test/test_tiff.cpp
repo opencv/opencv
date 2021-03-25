@@ -363,11 +363,11 @@ TEST(Imgcodecs_Tiff, count_multipage)
     const string root = cvtest::TS::ptr()->get_data_path();
     {
         const string filename = root + "readwrite/multipage.tif";
-        ASSERT_EQ(6, imcount(filename));
+        ASSERT_EQ((size_t)6, imcount(filename));
     }
     {
         const string filename = root + "readwrite/test32FC3_raw.tiff";
-        ASSERT_EQ(1, imcount(filename));
+        ASSERT_EQ((size_t)1, imcount(filename));
     }
 }
 
@@ -397,11 +397,11 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
         vector<Mat> multi_pages;
         bool res = imreadmulti(filename, multi_pages, 0, 0);
         // If we asked for 0 images and we successfully read 0 images should this be false ?
-        ASSERT_TRUE(res == false); 
-        ASSERT_EQ(0, multi_pages.size());
+        ASSERT_TRUE(res == false);
+        ASSERT_EQ((size_t)0, multi_pages.size());
         res = imreadmulti(filename, multi_pages, 0, 123123);
         ASSERT_TRUE(res == true);
-        ASSERT_EQ(6, multi_pages.size());
+        ASSERT_EQ((size_t)6, multi_pages.size());
     }
 
     {
@@ -423,7 +423,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
         {
             bool res = imreadmulti(filename, multi_pages, i, 1);
             ASSERT_TRUE(res == true);
-            ASSERT_EQ(1, multi_pages.size());
+            ASSERT_EQ((size_t)1, multi_pages.size());
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i]);
             multi_pages.clear();
         }
@@ -436,7 +436,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
         {
             bool res = imreadmulti(filename, multi_pages, i*2, 2);
             ASSERT_TRUE(res == true);
-            ASSERT_EQ(2, multi_pages.size());
+            ASSERT_EQ((size_t)2, multi_pages.size());
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i * 2]) << i;
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[1], single_pages[i * 2 + 1]);
             multi_pages.clear();
