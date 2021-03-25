@@ -34,6 +34,7 @@ using GArray_Size    = cv::GArray<cv::Size>;
 using GArray_Rect    = cv::GArray<cv::Rect>;
 using GArray_Scalar  = cv::GArray<cv::Scalar>;
 using GArray_Mat     = cv::GArray<cv::Mat>;
+using GArray_GMat    = cv::GArray<cv::GMat>;
 
 // FIXME: Python wrapper generate code without namespace std,
 // so it cause error: "string wasn't declared"
@@ -58,7 +59,7 @@ bool pyopencv_to(PyObject* obj, GRunArgs& value, const ArgInfo& info)
     return pyopencv_to_generic_vec(obj, value, info);
 }
 
-template <>
+template<>
 PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
 {
     switch (o.getKind())
@@ -201,6 +202,7 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
 
     GProtoArgs args;
     Py_ssize_t size = PyTuple_Size(py_args);
+    args.reserve(size);
     for (int i = 0; i < size; ++i)
     {
         PyObject* item = PyTuple_GetItem(py_args, i);
@@ -318,12 +320,9 @@ static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
                     reinterpret_cast<pyopencv_gapi_wip_IStreamSource_t*>(item)->v;
                 return source;
             }
-            else
-            {
-                cv::Mat obj;
-                pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
-                return obj;
-            }
+            cv::Mat obj;
+            pyopencv_to_with_check(item, obj, "Failed to obtain cv::Mat");
+            return obj;
         }
         case cv::GShape::GSCALAR:
         {

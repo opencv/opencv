@@ -636,11 +636,6 @@ infer2(const std::string& tag,
     return cv::GInferListOutputs{std::move(call)};
 }
 
-GAPI_EXPORTS_W inline cv::GInferOutputs infer(const String& name, const cv::GInferInputs& inputs)
-{
-    return infer<Generic>(name, inputs);
-}
-
 } // namespace gapi
 } // namespace cv
 
