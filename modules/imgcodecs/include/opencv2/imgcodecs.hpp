@@ -231,8 +231,9 @@ CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& m
 
 The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
 @param filename Name of file to be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 */
-CV_EXPORTS_W size_t imcount(const String& filename);
+CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR);
 
 /** @brief Saves an image to a specified file.
 
