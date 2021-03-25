@@ -198,9 +198,6 @@ void cv::gimpl::GPlaidMLExecutable::run(std::vector<InObj>  &&input_objs,
     exec_->run();
 
     for (auto& it : output_objs) bindOutArg(it.first, it.second);
-
-    // FIXME:
-    // PlaidML backend haven't been updated with RMat support
 }
 
 void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &arg)
@@ -215,10 +212,12 @@ void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &
 
         switch (arg.index())
         {
-        case GRunArg::index_of<cv::Mat>() :
+        case GRunArg::index_of<cv::RMat>():
         {
-            auto& arg_mat = util::get<cv::Mat>(arg);
-            binder_->input(it->second).copy_from(arg_mat.data);
+            auto& rmat = cv::util::get<cv::RMat>(arg);
+            auto  view = rmat.access(cv::RMat::Access::R);
+            auto  mat  = cv::gimpl::asMat(view);
+            binder_->input(it->second).copy_from(mat.data);
         }
         break;
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
@@ -243,10 +242,12 @@ void cv::gimpl::GPlaidMLExecutable::bindOutArg(const RcDesc &rc, const GRunArgP 
 
         switch (arg.index())
         {
-        case GRunArgP::index_of<cv::Mat*>() :
+        case GRunArgP::index_of<cv::RMat*>() :
         {
-            auto& arg_mat = *util::get<cv::Mat*>(arg);
-            binder_->output(it->second).copy_into(arg_mat.data);
+            auto& rmat = *cv::util::get<cv::RMat*>(arg);
+            auto  view = rmat.access(cv::RMat::Access::W);
+            auto  mat  = cv::gimpl::asMat(view);
+            binder_->output(it->second).copy_into(mat.data);
         }
         break;
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
