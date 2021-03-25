@@ -10,11 +10,7 @@ endif(WITH_TBB)
 # --- IPP ---
 if(WITH_IPP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPP.cmake")
-  if (APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,ippJumpIndexForMergedLibs ${CMAKE_SHARED_LINKER_FLAGS}")
-  else()
-    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
-  endif()
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippcore.a ${CMAKE_SHARED_LINKER_FLAGS}")
   if(HAVE_IPP)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPPIW.cmake")
     if(HAVE_IPP_IW)
@@ -27,6 +23,8 @@ if(WITH_IPP)
     # Details: #10229
     if(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_1)
       set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippicv.a -Wl,--exclude-libs,libippiw.a ${CMAKE_SHARED_LINKER_FLAGS}")
+    elseif(ANDROID AND NOT OPENCV_SKIP_ANDROID_IPP_FIX_2)
+      set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bsymbolic ${CMAKE_SHARED_LINKER_FLAGS}")
     endif()
 
     if(OPENCV_FORCE_IPP_EXCLUDE_LIBS
