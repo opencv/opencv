@@ -780,6 +780,8 @@ size_t imcount_(const String& filename, int flags)
         decoder = GdalDecoder().newDecoder();
     }
     else {
+#else
+        CV_UNUSED(flags);
 #endif
         decoder = findDecoder(filename);
 #ifdef HAVE_GDAL
