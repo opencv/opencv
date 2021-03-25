@@ -444,6 +444,9 @@ public:
     {
         CV_TRACE_FUNCTION();
 
+        if (hasSteps)
+            return false;  // TODO not implemented yet: https://github.com/opencv/opencv/pull/19546
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -619,6 +622,9 @@ private:
         int end = sliceRanges[dim].end;
         int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
 
+        const bool is32F = inpMat.depth() == CV_32F;
+
+        // TODO optimization is required (for 2D tail case at least)
         for (int k = begin, j = 0; k < end; k += step, j++)
         {
             inpIdx[dim] = k;
@@ -627,7 +633,12 @@ private:
             if (dim + 1 < dimsNum)
                 getSliceRecursive(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
             else
-                outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
+            {
+                if (is32F)
+                    outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
+                else
+                    outputs.at<short>(outIdx.data()) = inpMat.at<short>(inpIdx.data());  // 16F emulation
+            }
         }
     }
 
