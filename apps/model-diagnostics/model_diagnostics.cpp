@@ -15,7 +15,9 @@ using namespace dnn;
 
 static void diagnosticsErrorCallback(const Exception& exc)
 {
-    fflush(stdout); fflush(stderr);
+    CV_UNUSED(exc);
+    fflush(stdout);
+    fflush(stderr);
 }
 
 std::string diagnosticKeys =

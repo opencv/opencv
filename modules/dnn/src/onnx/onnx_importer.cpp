@@ -328,6 +328,7 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
         }
         catch (const cv::Exception& e)
         {
+            CV_UNUSED(e);
             if (DNN_DIAGNOSTICS_RUN)
             {
                 CV_LOG_ERROR(NULL, "DNN/ONNX: Potential problem with processing attributes for node " << node_proto.name() << " Attribute " << attribute_name.c_str()
