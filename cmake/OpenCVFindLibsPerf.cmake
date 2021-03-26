@@ -10,7 +10,7 @@ endif(WITH_TBB)
 # --- IPP ---
 if(WITH_IPP)
   include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindIPP.cmake")
-  if(NOT WINDOWS AND NOT APPLE)
+  if(NOT WIN32 AND NOT APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,libippcore.a ${CMAKE_SHARED_LINKER_FLAGS}")
   endif()
   if(HAVE_IPP)
