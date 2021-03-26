@@ -98,7 +98,7 @@ std::string getDecoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     case VIDEO_ACCELERATION_ANY: return "d3d11va";
     case VIDEO_ACCELERATION_D3D11: return "d3d11va";
     case VIDEO_ACCELERATION_VAAPI: return "";
-    case VIDEO_ACCELERATION_MFX: return "qsv";
+    case VIDEO_ACCELERATION_MFX: return ""; // "qsv" fails if non-Intel D3D11 device
     }
     return "";
 #else
@@ -799,7 +799,6 @@ hw_copy_frame_to_umat(AVBufferRef* ctx, AVFrame* hw_frame, cv::OutputArray outpu
             VASurfaceID va_surface = hw_get_va_surface(hw_frame);
             if (va_display && va_surface != VA_INVALID_SURFACE) {
                 va_intel::convertFromVASurface(va_display, va_surface, {hw_frame->width, hw_frame->height}, output);
-                printf("@@@@@ convertFromVASurface\n");
                 return true;
             }
         }
@@ -850,7 +849,6 @@ hw_copy_umat_to_frame(AVBufferRef* ctx, cv::InputArray input, AVFrame* hw_frame)
             VASurfaceID va_surface = hw_get_va_surface(hw_frame);
             if (va_display != NULL && va_surface != VA_INVALID_SURFACE) {
                 va_intel::convertToVASurface(va_display, input, va_surface, {hw_frame->width, hw_frame->height});
-                printf("@@@@@ convertToVASurface\n");
                 return true;
             }
         }
