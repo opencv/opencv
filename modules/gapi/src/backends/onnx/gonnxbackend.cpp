@@ -86,7 +86,6 @@ struct TensorInfo {
 
     bool is_dynamic = false;
     bool is_grayscale = false;
-    bool is_postproc = false;
 
     struct MeanStdev {
         cv::Scalar mean;
