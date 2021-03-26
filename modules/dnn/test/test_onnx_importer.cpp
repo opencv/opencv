@@ -627,6 +627,26 @@ TEST_P(Test_ONNX_layers, Slice)
 #endif
 }
 
+TEST_P(Test_ONNX_layers, Slice_Steps_2DInput)
+{
+    testONNXModels("slice_opset_11_steps_2d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_3DInput)
+{
+    testONNXModels("slice_opset_11_steps_3d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_4DInput)
+{
+    testONNXModels("slice_opset_11_steps_4d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_5DInput)
+{
+    testONNXModels("slice_opset_11_steps_5d");
+}
+
 TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");
