@@ -397,6 +397,37 @@ inline void testBackgroundSubtractorStreaming(cv::GStreamingCompiled& gapiBackSu
     EXPECT_FALSE(gapiBackSub.running());
 }
 
+inline void initKalmanParams(const int type, const int dDim, const int mDim, const int cDim,
+                             cv::gapi::KalmanParams& kp)
+{
+    kp.state = Mat::zeros(dDim, 1, type);
+    cv::randu(kp.state, Scalar::all(0), Scalar::all(0.1));
+    kp.errorCov = Mat::eye(dDim, dDim, type);
+
+    kp.transitionMatrix = Mat::ones(dDim, dDim, type) * 2;
+    kp.processNoiseCov = Mat::eye(dDim, dDim, type) * (1e-5);
+    kp.measurementMatrix = Mat::eye(mDim, dDim, type) * 2;
+    kp.measurementNoiseCov = Mat::eye(mDim, mDim, type) * (1e-5);
+
+    if (cDim > 0)
+        kp.controlMatrix = Mat::eye(dDim, cDim, type) * (1e-3);
+}
+
+inline void initKalmanFilter(const cv::gapi::KalmanParams& kp, const bool control,
+                             cv::KalmanFilter& ocvKalman)
+{
+    kp.state.copyTo(ocvKalman.statePost);
+    kp.errorCov.copyTo(ocvKalman.errorCovPost);
+
+    kp.transitionMatrix.copyTo(ocvKalman.transitionMatrix);
+    kp.measurementMatrix.copyTo(ocvKalman.measurementMatrix);
+    kp.measurementNoiseCov.copyTo(ocvKalman.measurementNoiseCov);
+    kp.processNoiseCov.copyTo(ocvKalman.processNoiseCov);
+
+    if (control)
+        kp.controlMatrix.copyTo(ocvKalman.controlMatrix);
+}
+
 #else // !HAVE_OPENCV_VIDEO
 
 inline cv::GComputation runOCVnGAPIBuildOptFlowPyramid(TestFunctional&,

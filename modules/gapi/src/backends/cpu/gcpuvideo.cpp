@@ -117,15 +117,15 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilter, cv::gapi::video::GKalmanFilter, cv::KalmanF
                                                    kfParams.controlMatrix.cols, kfParams.transitionMatrix.type());
 
         // initial state
-        state->statePost = kfParams.state;
-        state->errorCovPost = kfParams.errorCov;
+        kfParams.state.copyTo(state->statePost);
+        kfParams.errorCov.copyTo(state->errorCovPost);
 
         // dynamic system initialization
-        state->controlMatrix = kfParams.controlMatrix;
-        state->measurementMatrix = kfParams.measurementMatrix;
-        state->transitionMatrix = kfParams.transitionMatrix;
-        state->processNoiseCov = kfParams.processNoiseCov;
-        state->measurementNoiseCov = kfParams.measurementNoiseCov;
+        kfParams.controlMatrix.copyTo(state->controlMatrix);
+        kfParams.measurementMatrix.copyTo(state->measurementMatrix);
+        kfParams.transitionMatrix.copyTo(state->transitionMatrix);
+        kfParams.processNoiseCov.copyTo(state->processNoiseCov);
+        kfParams.measurementNoiseCov.copyTo(state->measurementNoiseCov);
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,
@@ -151,14 +151,14 @@ GAPI_OCV_KERNEL_ST(GCPUKalmanFilterNoControl, cv::gapi::video::GKalmanFilterNoCo
         state = std::make_shared<cv::KalmanFilter>(kfParams.transitionMatrix.rows, kfParams.measurementMatrix.rows,
                                                    0, kfParams.transitionMatrix.type());
         // initial state
-        state->statePost = kfParams.state;
-        state->errorCovPost = kfParams.errorCov;
+        kfParams.state.copyTo(state->statePost);
+        kfParams.errorCov.copyTo(state->errorCovPost);
 
         // dynamic system initialization
-        state->measurementMatrix = kfParams.measurementMatrix;
-        state->transitionMatrix = kfParams.transitionMatrix;
-        state->processNoiseCov = kfParams.processNoiseCov;
-        state->measurementNoiseCov = kfParams.measurementNoiseCov;
+        kfParams.measurementMatrix.copyTo(state->measurementMatrix);
+        kfParams.transitionMatrix.copyTo(state->transitionMatrix);
+        kfParams.processNoiseCov.copyTo(state->processNoiseCov);
+        kfParams.measurementNoiseCov.copyTo(state->measurementNoiseCov);
     }
 
     static void run(const cv::Mat& measurements, bool haveMeasurement,

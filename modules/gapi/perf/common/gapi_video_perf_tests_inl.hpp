@@ -241,6 +241,156 @@ PERF_TEST_P_(BackgroundSubtractorPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+inline void generateInputKalman(const int mDim, const MatType2& type,
+                                const size_t testNumMeasurements, const bool receiveRandMeas,
+                                std::vector<bool>&    haveMeasurements,
+                                std::vector<cv::Mat>& measurements)
+{
+    cv::RNG& rng = cv::theRNG();
+    measurements.clear();
+    haveMeasurements = std::vector<bool>(testNumMeasurements, true);
+    for (size_t i = 0; i < testNumMeasurements; i++)
+    {
+        if (receiveRandMeas)
+        {
+            haveMeasurements[i] = rng(2u) == 1; // returns 0 or 1 - whether we have measurement
+                                                // at this iteration or not
+        } // if not - testing the slowest case in which we have measurements at every iteration
+
+        cv::Mat measurement = cv::Mat::zeros(mDim, 1, type);
+        if (haveMeasurements[i])
+        {
+            cv::randu(measurement, cv::Scalar::all(-1), cv::Scalar::all(1));
+        }
+        measurements.push_back(measurement.clone());
+    }
+}
+
+inline void generateInputKalman(const int mDim, const int cDim, const MatType2& type,
+                                const size_t testNumMeasurements, const bool receiveRandMeas,
+                                std::vector<bool>&    haveMeasurements,
+                                std::vector<cv::Mat>& measurements,
+                                std::vector<cv::Mat>& ctrls)
+{
+    generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements);
+    ctrls.clear();
+    cv::Mat ctrl(cDim, 1, type);
+    for (size_t i = 0; i < testNumMeasurements; i++)
+    {
+        cv::randu(ctrl, cv::Scalar::all(-1), cv::Scalar::all(1));
+        ctrls.push_back(ctrl.clone());
+    }
+}
+
+PERF_TEST_P_(KalmanFilterControlPerfTest, TestPerformance)
+{
+    MatType2 type = -1;
+    int dDim = -1, mDim = -1;
+    size_t testNumMeasurements = 0;
+    bool receiveRandMeas = true;
+    cv::GCompileArgs compileArgs;
+    std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
+
+    const int cDim = 2;
+    cv::gapi::KalmanParams kp;
+    initKalmanParams(type, dDim, mDim, cDim, kp);
+
+    // Generating input
+    std::vector<bool> haveMeasurements;
+    std::vector<cv::Mat> measurements, ctrls;
+    generateInputKalman(mDim, cDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements, ctrls);
+
+    // G-API graph declaration
+    cv::GMat m, ctrl;
+    cv::GOpaque<bool> have_m;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_m, ctrl, kp);
+    cv::GComputation c(cv::GIn(m, have_m, ctrl), cv::GOut(out));
+    auto cc = c.compile(
+        cv::descr_of(cv::gin(cv::Mat(mDim, 1, type), true, cv::Mat(cDim, 1, type))),
+        std::move(compileArgs));
+
+    cv::Mat gapiKState(dDim, 1, type);
+    TEST_CYCLE()
+    {
+        cc.prepareForNewStream();
+        for (size_t i = 0; i < testNumMeasurements; i++)
+        {
+            bool hvMeas = haveMeasurements[i];
+            cc(cv::gin(measurements[i], hvMeas, ctrls[i]), cv::gout(gapiKState));
+        }
+    }
+
+    // OpenCV reference KalmanFilter initialization
+    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
+    initKalmanFilter(kp, true, ocvKalman);
+
+    cv::Mat ocvKState(dDim, 1, type);
+    for (size_t i = 0; i < testNumMeasurements; i++)
+    {
+        ocvKState = ocvKalman.predict(ctrls[i]);
+        if (haveMeasurements[i])
+            ocvKState = ocvKalman.correct(measurements[i]);
+    }
+    // Validation
+    EXPECT_TRUE(AbsExact().to_compare_f()(gapiKState, ocvKState));
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(KalmanFilterNoControlPerfTest, TestPerformance)
+{
+    MatType2 type = -1;
+    int dDim = -1, mDim = -1;
+    size_t testNumMeasurements = 0;
+    bool receiveRandMeas = true;
+    cv::GCompileArgs compileArgs;
+    std::tie(type, dDim, mDim, testNumMeasurements, receiveRandMeas, compileArgs) = GetParam();
+
+    const int cDim = 0;
+    cv::gapi::KalmanParams kp;
+    initKalmanParams(type, dDim, mDim, cDim, kp);
+
+    // Generating input
+    std::vector<bool> haveMeasurements;
+    std::vector<cv::Mat> measurements;
+    generateInputKalman(mDim, type, testNumMeasurements, receiveRandMeas,
+                        haveMeasurements, measurements);
+
+    // G-API graph declaration
+    cv::GMat m;
+    cv::GOpaque<bool> have_m;
+    cv::GMat out = cv::gapi::KalmanFilter(m, have_m, kp);
+    cv::GComputation c(cv::GIn(m, have_m), cv::GOut(out));
+    auto cc = c.compile(cv::descr_of(cv::gin(cv::Mat(mDim, 1, type), true)),
+                        std::move(compileArgs));
+
+    cv::Mat gapiKState(dDim, 1, type);
+    TEST_CYCLE()
+    {
+        cc.prepareForNewStream();
+        for (size_t i = 0; i < testNumMeasurements; i++)
+        {
+            bool hvMeas = haveMeasurements[i];
+            cc(cv::gin(measurements[i], hvMeas), cv::gout(gapiKState));
+        }
+    }
+
+    // OpenCV reference KalmanFilter declaration
+    cv::KalmanFilter ocvKalman(dDim, mDim, cDim, type);
+    initKalmanFilter(kp, false, ocvKalman);
+
+    cv::Mat ocvKState(dDim, 1, type);
+    for (size_t i = 0; i < testNumMeasurements; i++)
+    {
+        ocvKState = ocvKalman.predict();
+        if (haveMeasurements[i])
+            ocvKState = ocvKalman.correct(measurements[i]);
+    }
+    // Validation
+    EXPECT_TRUE(AbsExact().to_compare_f()(gapiKState, ocvKState));
+    SANITY_CHECK_NOTHING();
+}
 #endif // HAVE_OPENCV_VIDEO
 
 } // opencv_test
