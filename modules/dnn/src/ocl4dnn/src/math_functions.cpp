@@ -112,14 +112,14 @@ ocl::Image2D ocl4dnnGEMMCopyBufferToImage(UMat buffer, int offset,
             global_copy[0] = padded_width;
             global_copy[1] = padded_height;
 
-            oclk_gemm_copy
+            bool res = oclk_gemm_copy
                 .args(
                     ocl::KernelArg::PtrReadOnly(buffer),
                     image, offset,
                     width, height,
                     ld)
                 .run(2, global_copy, NULL, false);
-            oclk_gemm_copy.run(2, global_copy, NULL, false);
+            CV_Assert(res);
         }
     }
 
