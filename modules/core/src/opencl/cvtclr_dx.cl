@@ -91,63 +91,50 @@ void YUV2BGR_NV12_8u(
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+    // each iteration computes 2*2=4 pixels
+    int x2 = x*2;
+    int y2 = y*2;
 
-    if (x + 1 < cols)
-    {
-        if (y + 1 < rows)
-        {
-            __global uchar* pDstRow1 = pBGR + mad24(y, bgrStep, mad24(x, NCHANNELS, 0));
-            __global uchar* pDstRow2 = pDstRow1 + bgrStep;
+    if (x2 + 1 < cols) {
+        if (y2 + 1 < rows) {
+            __global uchar *pDstRow1 = pBGR + mad24(y2, bgrStep, mad24(x2, NCHANNELS, 0));
+            __global uchar *pDstRow2 = pDstRow1 + bgrStep;
 
-            float4 Y1 = read_imagef(imgY, (int2)(x+0, y+0));
-            float4 Y2 = read_imagef(imgY, (int2)(x+1, y+0));
-            float4 Y3 = read_imagef(imgY, (int2)(x+0, y+1));
-            float4 Y4 = read_imagef(imgY, (int2)(x+1, y+1));
+            float4 Y1 = read_imagef(imgY, (int2)(x2 + 0, y2 + 0));
+            float4 Y2 = read_imagef(imgY, (int2)(x2 + 1, y2 + 0));
+            float4 Y3 = read_imagef(imgY, (int2)(x2 + 0, y2 + 1));
+            float4 Y4 = read_imagef(imgY, (int2)(x2 + 1, y2 + 1));
+            float4 Y = (float4)(Y1.x, Y2.x, Y3.x, Y4.x);
 
-            float4 UV = read_imagef(imgUV, (int2)(x/2, y/2)) - d2;
+            float4 UV = read_imagef(imgUV, (int2)(x, y)) - d2;
 
-            __constant float* coeffs = c_YUV2RGBCoeffs_420;
+            __constant float *coeffs = c_YUV2RGBCoeffs_420;
 
-            Y1 = max(0.f, Y1 - d1) * coeffs[0];
-            Y2 = max(0.f, Y2 - d1) * coeffs[0];
-            Y3 = max(0.f, Y3 - d1) * coeffs[0];
-            Y4 = max(0.f, Y4 - d1) * coeffs[0];
+            Y = max(0.f, Y - d1) * coeffs[0];
 
             float ruv = fma(coeffs[4], UV.y, 0.0f);
             float guv = fma(coeffs[3], UV.y, fma(coeffs[2], UV.x, 0.0f));
             float buv = fma(coeffs[1], UV.x, 0.0f);
 
-            float R1 = (Y1.x + ruv) * CV_8U_MAX;
-            float G1 = (Y1.x + guv) * CV_8U_MAX;
-            float B1 = (Y1.x + buv) * CV_8U_MAX;
+            float4 R = (Y + ruv) * CV_8U_MAX;
+            float4 G = (Y + guv) * CV_8U_MAX;
+            float4 B = (Y + buv) * CV_8U_MAX;
 
-            float R2 = (Y2.x + ruv) * CV_8U_MAX;
-            float G2 = (Y2.x + guv) * CV_8U_MAX;
-            float B2 = (Y2.x + buv) * CV_8U_MAX;
+            pDstRow1[0*NCHANNELS + 0] = convert_uchar_sat(B.x);
+            pDstRow1[0*NCHANNELS + 1] = convert_uchar_sat(G.x);
+            pDstRow1[0*NCHANNELS + 2] = convert_uchar_sat(R.x);
 
-            float R3 = (Y3.x + ruv) * CV_8U_MAX;
-            float G3 = (Y3.x + guv) * CV_8U_MAX;
-            float B3 = (Y3.x + buv) * CV_8U_MAX;
+            pDstRow1[1*NCHANNELS + 0] = convert_uchar_sat(B.y);
+            pDstRow1[1*NCHANNELS + 1] = convert_uchar_sat(G.y);
+            pDstRow1[1*NCHANNELS + 2] = convert_uchar_sat(R.y);
 
-            float R4 = (Y4.x + ruv) * CV_8U_MAX;
-            float G4 = (Y4.x + guv) * CV_8U_MAX;
-            float B4 = (Y4.x + buv) * CV_8U_MAX;
+            pDstRow2[0*NCHANNELS + 0] = convert_uchar_sat(B.z);
+            pDstRow2[0*NCHANNELS + 1] = convert_uchar_sat(G.z);
+            pDstRow2[0*NCHANNELS + 2] = convert_uchar_sat(R.z);
 
-            pDstRow1[0*NCHANNELS + 0] = convert_uchar_sat(B1);
-            pDstRow1[0*NCHANNELS + 1] = convert_uchar_sat(G1);
-            pDstRow1[0*NCHANNELS + 2] = convert_uchar_sat(R1);
-
-            pDstRow1[1*NCHANNELS + 0] = convert_uchar_sat(B2);
-            pDstRow1[1*NCHANNELS + 1] = convert_uchar_sat(G2);
-            pDstRow1[1*NCHANNELS + 2] = convert_uchar_sat(R2);
-
-            pDstRow2[0*NCHANNELS + 0] = convert_uchar_sat(B3);
-            pDstRow2[0*NCHANNELS + 1] = convert_uchar_sat(G3);
-            pDstRow2[0*NCHANNELS + 2] = convert_uchar_sat(R3);
-
-            pDstRow2[1*NCHANNELS + 0] = convert_uchar_sat(B4);
-            pDstRow2[1*NCHANNELS + 1] = convert_uchar_sat(G4);
-            pDstRow2[1*NCHANNELS + 2] = convert_uchar_sat(R4);
+            pDstRow2[1*NCHANNELS + 0] = convert_uchar_sat(B.w);
+            pDstRow2[1*NCHANNELS + 1] = convert_uchar_sat(G.w);
+            pDstRow2[1*NCHANNELS + 2] = convert_uchar_sat(R.w);
         }
     }
 }
@@ -172,12 +159,15 @@ void BGR2YUV_NV12_8u(
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
+    // each iteration computes 2*2=4 pixels
+    int x2 = x*2;
+    int y2 = y*2;
 
-    if (x < cols)
+    if (x2 + 1 < cols)
     {
-        if (y < rows)
+        if (y2 + 1 < rows)
         {
-            __global const uchar* pSrcRow1 = pBGR + mad24(y, bgrStep, mad24(x, NCHANNELS, 0));
+            __global const uchar* pSrcRow1 = pBGR + mad24(y2, bgrStep, mad24(x2, NCHANNELS, 0));
             __global const uchar* pSrcRow2 = pSrcRow1 + bgrStep;
 
             float4 src_pix1 = convert_float4(vload4(0, pSrcRow1 + 0*NCHANNELS)) * CV_8U_SCALE;
@@ -196,12 +186,12 @@ void BGR2YUV_NV12_8u(
             UV.x = fma(coeffs[3], src_pix1.z, fma(coeffs[4], src_pix1.y, fma(coeffs[5], src_pix1.x, d2)));
             UV.y = fma(coeffs[5], src_pix1.z, fma(coeffs[6], src_pix1.y, fma(coeffs[7], src_pix1.x, d2)));
 
-            write_imagef(imgY, (int2)(x+0, y+0), Y1);
-            write_imagef(imgY, (int2)(x+1, y+0), Y2);
-            write_imagef(imgY, (int2)(x+0, y+1), Y3);
-            write_imagef(imgY, (int2)(x+1, y+1), Y4);
+            write_imagef(imgY, (int2)(x2+0, y2+0), Y1);
+            write_imagef(imgY, (int2)(x2+1, y2+0), Y2);
+            write_imagef(imgY, (int2)(x2+0, y2+1), Y3);
+            write_imagef(imgY, (int2)(x2+1, y2+1), Y4);
 
-            write_imagef(imgUV, (int2)((x/2), (y/2)), UV);
+            write_imagef(imgUV, (int2)(x, y), UV);
         }
     }
 }

@@ -169,8 +169,17 @@ TEST_P(Test_Caffe_layers, Softmax)
 
 TEST_P(Test_Caffe_layers, LRN)
 {
-    testLayerUsingCaffeModels("layer_lrn_spatial");
-    testLayerUsingCaffeModels("layer_lrn_channels");
+    double l1 = 0.0, lInf = 0.0;
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    if (target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.01;
+        lInf = 0.01;
+    }
+    testLayerUsingCaffeModels("layer_lrn_spatial", false, true, l1, lInf);
+    testLayerUsingCaffeModels("layer_lrn_channels", false, true, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Convolution)
