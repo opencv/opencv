@@ -378,16 +378,61 @@ save_data_and_model("log_softmax", input, model)
 
 class Slice(nn.Module):
 
-    def __init__(self):
+    def __init__(self, custom_slice=None):
+        self.custom_slice=custom_slice
         super(Slice, self).__init__()
 
     def forward(self, x):
+        if self.custom_slice:
+           return x[self.custom_slice]
+
         return x[..., 1:-1, 0:3]
 
 input = Variable(torch.randn(1, 2, 4, 4))
 model = Slice()
 save_data_and_model("slice", input, model)
 save_data_and_model("slice_opset_11", input, model, version=11)
+
+input_2 = Variable(torch.randn(6, 6))
+custom_slice_list = [
+    slice(1, 3, 1),
+    slice(0, 3, 2)
+]
+model_2 = Slice(custom_slice=custom_slice_list)
+save_data_and_model("slice_opset_11_steps_2d", input_2, model_2, version=11)
+postprocess_model("models/slice_opset_11_steps_2d.onnx", [['height', 'width']])
+
+input_3 = Variable(torch.randn(3, 6, 6))
+custom_slice_list_3 = [
+    slice(None, None, 2),
+    slice(None, None, 2),
+    slice(None, None, 2)
+]
+model_3 = Slice(custom_slice=custom_slice_list_3)
+save_data_and_model("slice_opset_11_steps_3d", input_3, model_3, version=11)
+postprocess_model("models/slice_opset_11_steps_3d.onnx", [[3, 'height', 'width']])
+
+input_4 = Variable(torch.randn(1, 3, 6, 6))
+custom_slice_list_4 = [
+    slice(0, 5, None),
+    slice(None, None, None),
+    slice(1, None, 2),
+    slice(None, None, None)
+]
+model_4 = Slice(custom_slice=custom_slice_list_4)
+save_data_and_model("slice_opset_11_steps_4d", input_4, model_4, version=11)
+postprocess_model("models/slice_opset_11_steps_4d.onnx", [["batch_size", 3, 'height', 'width']])
+
+input_5 = Variable(torch.randn(1, 2, 3, 6, 6))
+custom_slice_list_5 = [
+    slice(None, None, None),
+    slice(None, None, None),
+    slice(0, None, 3),
+    slice(None, None, None),
+    slice(None, None, 2)
+]
+model_5 = Slice(custom_slice=custom_slice_list_5)
+save_data_and_model("slice_opset_11_steps_5d", input_5, model_5, version=11)
 
 class Eltwise(nn.Module):
 
