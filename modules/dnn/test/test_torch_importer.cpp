@@ -258,6 +258,14 @@ TEST_P(Test_Torch_layers, net_conv_gemm_lrn)
         l1 = 0.0042;
         lInf = 0.021;
     }
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    else if (target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.02;
+        lInf = 0.02;
+    }
     runTorchNet("net_conv_gemm_lrn", "", false, true, true, l1, lInf);
 }
 

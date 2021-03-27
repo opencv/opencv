@@ -258,7 +258,17 @@ TEST_P(LRN, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0, lInf = 0.0;
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    if (targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.01;
+        lInf = 0.01;
+    }
+    test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, LRN, Combine(
