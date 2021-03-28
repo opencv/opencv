@@ -579,6 +579,14 @@ inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 reduced = tf.reduce_sum(inp, axis=[2], keepdims=False)
 save(inp, reduced, 'sum_pool_by_axis')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_sum(inp, axis=-1)
+save(inp, out, 'reduce_sum_channel')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_sum(inp, axis=-1, keep_dims=True)
+save(inp, out, ('reduce_sum_channel', 'keep_dims'), is_gen_data=False)
+################################################################################
 inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 pool = tf.layers.average_pooling2d(inp, pool_size=1, strides=1, padding='SAME')
 l2norm = tf.nn.l2_normalize(pool, axis=-1)
