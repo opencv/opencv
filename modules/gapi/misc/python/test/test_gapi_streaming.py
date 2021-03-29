@@ -199,6 +199,5 @@ class test_gapi_streaming(NewOpenCVTests):
             if proc_num_frames == max_num_frames:
                 break;
 
-
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

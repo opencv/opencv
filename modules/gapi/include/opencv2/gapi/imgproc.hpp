@@ -1168,7 +1168,7 @@ Calculates the up-right bounding rectangle of a point set.
 
 @param src Input 2D point set, stored in std::vector<cv::Point2i>.
  */
-GAPI_EXPORTS GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
+GAPI_EXPORTS_W GOpaque<Rect> boundingRect(const GArray<Point2i>& src);
 
 /** @overload
 
