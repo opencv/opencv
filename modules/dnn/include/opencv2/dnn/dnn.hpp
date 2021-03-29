@@ -100,6 +100,18 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
     CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
 
+    /**
+     * @brief Enables detailed logging of the DNN model loading with CV DNN API.
+     * @param[in] isDiagnosticsMode Indicates whether diagnostic mode should be set.
+     *
+     * Diagnostic mode provides detailed logging of the model loading stage to explore
+     * potential problems (ex.: not implemented layer type).
+     *
+     * @note In diagnostic mode series of assertions will be skipped, it can lead to the
+     * expected application crash.
+     */
+    CV_EXPORTS void enableModelDiagnostics(bool isDiagnosticsMode);
+
     /** @brief This class provides all data needed to initialize layer.
      *
      * It includes dictionary with scalar params (which can be read by using Dict interface),

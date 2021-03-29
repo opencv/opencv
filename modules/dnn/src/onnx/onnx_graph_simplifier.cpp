@@ -10,10 +10,13 @@
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
 #include <queue>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+extern bool DNN_DIAGNOSTICS_RUN;
 
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
@@ -639,8 +642,17 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         }
     }
     else
-        CV_Error(Error::StsUnsupportedFormat, "Unsupported data type: " +
-                        opencv_onnx::TensorProto_DataType_Name(datatype));
+    {
+        std::string errorMsg = "Unsupported data type: " +
+                            opencv_onnx::TensorProto_DataType_Name(datatype);
+
+        if (!DNN_DIAGNOSTICS_RUN)
+        {
+            CV_Error(Error::StsUnsupportedFormat, errorMsg);
+        }
+        CV_LOG_ERROR(NULL, errorMsg);
+        return blob;
+    }
     if (tensor_proto.dims_size() == 0)
         blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
     return blob;
