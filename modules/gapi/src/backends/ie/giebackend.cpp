@@ -104,7 +104,7 @@ inline IE::Layout toIELayout(const std::size_t ndims) {
 inline IE::Precision toIE(int depth) {
     switch (depth) {
     case CV_8U:  return IE::Precision::U8;
-    case CV_32S:  return IE::Precision::I32;
+    case CV_32S: return IE::Precision::I32;
     case CV_32F: return IE::Precision::FP32;
     default:     GAPI_Assert(false && "Unsupported data type");
     }
@@ -114,7 +114,7 @@ inline int toCV(IE::Precision prec) {
     switch (prec) {
     case IE::Precision::U8:   return CV_8U;
     case IE::Precision::FP32: return CV_32F;
-    case IE::Precision::I32: return CV_32S;
+    case IE::Precision::I32:  return CV_32S;
     default:     GAPI_Assert(false && "Unsupported data type");
     }
     return -1;

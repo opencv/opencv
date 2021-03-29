@@ -90,11 +90,11 @@ int main(int argc, char *argv[]) {
     }
 
     // Prepare parameters first
-    const std::string input = cmd.get<std::string>("input");
+    const std::string input  = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
-    const auto model_path = cmd.get<std::string>("ssm");
-    const auto weights_path = GetWeightsPath(model_path);
-    const auto device = "CPU";
+    const auto model_path    = cmd.get<std::string>("ssm");
+    const auto weights_path  = GetWeightsPath(model_path);
+    const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
     const auto net = cv::gapi::ie::Params<SemSegmNet> {
         model_path, weights_path, device
