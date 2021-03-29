@@ -3,9 +3,8 @@ USAGE:
 ./model_diagnostics -m <onnx file location>
 **************************************************/
 #include <opencv2/dnn.hpp>
-#include "../../samples/dnn/common.hpp"
+#include <opencv2/core/utils/filesystem.hpp>
 
-#include <fstream>
 #include <iostream>
 
 
@@ -18,6 +17,15 @@ static void diagnosticsErrorCallback(const Exception& exc)
     CV_UNUSED(exc);
     fflush(stdout);
     fflush(stderr);
+}
+
+static std::string checkFileExists(const std::string& fileName)
+{
+    if (fileName.empty() || utils::fs::exists(fileName))
+        return fileName;
+
+    CV_Error(Error::StsObjectNotFound, "File " + fileName + " was not found! "
+         "Please, specify a full path to the file.");
 }
 
 std::string diagnosticKeys =
@@ -39,14 +47,14 @@ int main( int argc, const char** argv )
         return 0;
     }
 
-    String model = findFile(argParser.get<String>("model"));
-    String config = findFile(argParser.get<String>("config"));
-    String frameworkId = argParser.get<String>("framework");
+    std::string model = checkFileExists(argParser.get<std::string>("model"));
+    std::string config = checkFileExists(argParser.get<std::string>("config"));
+    std::string frameworkId = argParser.get<std::string>("framework");
 
     CV_Assert(!model.empty());
 
     enableModelDiagnostics(true);
-    cv::redirectError((cv::ErrorCallback)diagnosticsErrorCallback, NULL);
+    redirectError((ErrorCallback)diagnosticsErrorCallback, NULL);
 
     Net ocvNet = readNet(model, config, frameworkId);
 

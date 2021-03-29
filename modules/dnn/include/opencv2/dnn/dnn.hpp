@@ -106,6 +106,9 @@ CV__DNN_INLINE_NS_BEGIN
      *
      * Diagnostic mode provides detailed logging of the model loading stage to explore
      * potential problems (ex.: not implemented layer type).
+     *
+     * @note In diagnostic mode series of assertions will be skipped, it can lead to the
+     * expected application crash.
      */
     CV_EXPORTS void enableModelDiagnostics(bool isDiagnosticsMode);
 
