@@ -205,6 +205,7 @@ inline cv::Mat toCV(Ort::Value &v) {
     int* mt_ptr = mt.ptr<int>();
     std::transform(ptr, ptr + total, mt_ptr,
                    [](int64_t el) { return static_cast<int>(el); });
+    GAPI_Assert(mt.isContinuous());
     return mt;
 }
 
