@@ -2018,7 +2018,7 @@ TEST(TestSemSegmentationIE, Int32Support)
 
     // FIXME: Ideally it should be an image from disk
     // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
-     cv::Mat in_mat(cv::Size(2048, 1024), CV_8UC3);
+    cv::Mat in_mat(cv::Size(2048, 1024), CV_8UC3);
     cv::randu(in_mat, 0, 255);
     cv::Mat gapi_ssi;
 
