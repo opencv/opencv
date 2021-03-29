@@ -199,7 +199,7 @@ inline cv::Mat toCV(Ort::Value &v) {
                        type,
                        reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
     }
-    const int total = std::accumulate(shape.begin(), shape.end(), 0);
+    const int total = std::accumulate(shape.begin(), shape.end(), 1, std::multiplies<int>());
     cv::Mat mt(shape, CV_32S);
     int64_t* ptr = v.GetTensorMutableData<int64_t>();
     int* mt_ptr = mt.ptr<int>();

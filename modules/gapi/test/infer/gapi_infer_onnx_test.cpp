@@ -122,15 +122,15 @@ inline void toCHW(const cv::Mat& src, cv::Mat& dst) {
     cv::split(src, planes);
 }
 
-inline int toCV(const ONNXTensorElementDataType prec) {
+std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return -1;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return std::make_tuple(CV_8U, false);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return std::make_tuple(CV_32F, false);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return std::make_tuple(CV_32S, false);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return std::make_tuple(CV_32S, true);
     default: GAPI_Assert(false && "Unsupported data type");
     }
-    return -1;
+    return  std::make_tuple(-1, false);;
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -321,20 +321,20 @@ public:
                                   num_out);
         // Copy outputs
         GAPI_Assert(result.size() == num_out);
-        // outs.resize(num_out);
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
-            const auto type = toCV(info.GetElementType());
+            int type = -1;
+            bool is_converted = false;
+            std::tie(type, is_converted) = toCV(info.GetElementType());
             const std::vector<int> dims(shape.begin(), shape.end());
-            if (type != -1) {
-                outs.emplace_back(dims, type);
+            outs.emplace_back(dims, type);
+            if (!is_converted) {
                 cv::Mat(dims, type,
                         reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()))
                 .copyTo(outs.back());
             } else {
-                outs.emplace_back(dims, type);
-                const size_t total = std::accumulate(dims.begin(), dims.end(), 0);
+                const size_t total = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
                 const int64_t* ptr = result[i].GetTensorMutableData<int64_t>();
                 int* mt_ptr = outs.back().ptr<int>();
                 std::transform(ptr, ptr + total, mt_ptr,
