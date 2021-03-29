@@ -2025,14 +2025,14 @@ TEST(TestSemSegmentationIE, Int32Support)
     // Load & run IE network
     IE::Blob::Ptr ie_ssi;
     {
-        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
         setNetParameters(net);
         auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto infer_request = this_network.CreateInferRequest();
         infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
         infer_request.Infer();
-        ie_ssi    = infer_request.GetBlob("4296.1");
+        ie_ssi = infer_request.GetBlob("4296.1");
     }
 
     // Configure & run G-API
