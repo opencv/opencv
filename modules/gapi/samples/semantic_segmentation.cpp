@@ -35,7 +35,7 @@ const std::vector<cv::Vec3b> colors = {
 };
 
 namespace {
-std::string GetWeightsPath(const std::string &model_path) {
+std::string get_weights_path(const std::string &model_path) {
     const auto EXT_LEN = 4u;
     const auto sz = model_path.size();
     CV_Assert(sz > EXT_LEN);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     const std::string input  = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto model_path    = cmd.get<std::string>("ssm");
-    const auto weights_path  = GetWeightsPath(model_path);
+    const auto weights_path  = get_weights_path(model_path);
     const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
     const auto net = cv::gapi::ie::Params<SemSegmNet> {

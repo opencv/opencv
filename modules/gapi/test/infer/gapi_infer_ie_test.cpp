@@ -2005,53 +2005,6 @@ TEST_F(InferWithReshapeNV12, TestInferListYUV)
     // Validate
     validate();
 }
-
-#if INF_ENGINE_RELEASE >= 2020010000
-TEST(TestSemSegmentationIE, Int32Support)
-{
-    initDLDTDataPath();
-
-    cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile("intel/semantic-segmentation-adas-0001/FP32/semantic-segmentation-adas-0001.xml");
-    params.weights_path = findDataFile("intel/semantic-segmentation-adas-0001/FP32/semantic-segmentation-adas-0001.bin");
-    params.device_id = "CPU";
-
-    // FIXME: Ideally it should be an image from disk
-    // cv::Mat in_mat = cv::imread(findDataFile("grace_hopper_227.png"));
-    cv::Mat in_mat(cv::Size(2048, 1024), CV_8UC3);
-    cv::randu(in_mat, 0, 255);
-    cv::Mat gapi_ssi;
-
-    // Load & run IE network
-    IE::Blob::Ptr ie_ssi;
-    {
-        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
-        setNetParameters(net);
-        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
-        auto infer_request = this_network.CreateInferRequest();
-        infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat));
-        infer_request.Infer();
-        ie_ssi = infer_request.GetBlob("4296.1");
-    }
-
-    // Configure & run G-API
-    G_API_NET(SemSegm, <cv::GMat(cv::GMat)>, "test-semantic-segmentation");
-    cv::GMat in;
-    cv::GMat seg_img = cv::gapi::infer<SemSegm>(in);
-    cv::GComputation comp(cv::GIn(in), cv::GOut(seg_img));
-
-    auto pp = cv::gapi::ie::Params<SemSegm> {
-        params.model_path, params.weights_path, params.device_id
-    };
-    comp.apply(cv::gin(in_mat), cv::gout(gapi_ssi),
-               cv::compile_args(cv::gapi::networks(pp)));
-
-    // Validate with IE itself (avoid DNN module dependency here)
-    normAssert(cv::gapi::ie::util::to_ocv(ie_ssi), gapi_ssi, "Test semantic segmentation output");
-}
-#endif // INF_ENGINE_RELEASE >= 2020010000
-
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
