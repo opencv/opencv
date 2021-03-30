@@ -35,14 +35,14 @@ template<typename T> class GArray;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GArrayDesc
+struct GAPI_EXPORTS_W_SIMPLE GArrayDesc
 {
     // FIXME: Body
     // FIXME: Also implement proper operator== then
     bool operator== (const GArrayDesc&) const { return true; }
 };
 template<typename U> GArrayDesc descr_of(const std::vector<U> &) { return {};}
-static inline GArrayDesc empty_array_desc() {return {}; }
+GAPI_EXPORTS_W inline GArrayDesc empty_array_desc() {return {}; }
 /** @} */
 
 std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);

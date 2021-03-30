@@ -2185,7 +2185,6 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
-
 static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
@@ -2200,6 +2199,7 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_GAPI
   {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
   {"gapi_wip_kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"},
+  {"gapi_wip_op", CV_PY_FN_WITH_KW_(pyopencv_cv_gapi_op, 0), "kernels(...) -> retval\n"},
   {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
   {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> ExtractArgsCallback"},
   {"descr_of", CV_PY_FN_WITH_KW(pyopencv_cv_descr_of), "descr_of(...) -> ExtractMetaCallback"},
