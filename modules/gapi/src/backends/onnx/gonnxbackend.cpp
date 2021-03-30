@@ -202,7 +202,7 @@ inline cv::Mat toCV(Ort::Value &v) {
     cv::Mat mt(shape, CV_32S);
     GAPI_Assert(mt.isContinuous());
     cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
-                                   mt.ptr<int>(),
+                                   reinterpret_cast<int*>(mt.data),
                                    mt.total());
     return mt;
 }

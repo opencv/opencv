@@ -196,11 +196,9 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(I32, int);
 #undef HANDLE
         case IE::Precision::I64: {
-            const auto dims = blob->getTensorDesc().getDims();
-            const auto total = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
             cv::gimpl::convertInt64ToInt32(blob->buffer().as<int64_t*>(),
                                            reinterpret_cast<int*>(mat.data),
-                                           total);
+                                           mat.total());
             break;
         }
     default: GAPI_Assert(false && "Unsupported data type");
