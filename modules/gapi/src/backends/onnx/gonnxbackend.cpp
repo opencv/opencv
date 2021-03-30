@@ -165,18 +165,15 @@ inline int getIdxByName(const std::vector<cv::gimpl::onnx::TensorInfo>& info, co
     return std::distance(info.begin(), it);
 }
 
-std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
+inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return std::make_tuple(CV_8U, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return std::make_tuple(CV_32F, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return std::make_tuple(CV_32S, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
-        GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
-        return std::make_tuple(CV_32S, true);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
     }
-    default: GAPI_Assert(false && "Unsupported data type");
-    }
-    return std::make_tuple(-1, false);
+    return -1;
 }
 
 inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
@@ -188,23 +185,30 @@ inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
     return result;
 }
 
-inline cv::Mat toCV(Ort::Value &v) {
+inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
     const auto info = v.GetTensorTypeAndShapeInfo();
-    int type = -1;
-    bool is_converted = false;
-    std::tie(type, is_converted) = toCV(info.GetElementType());
+    const auto prec = info.GetElementType();
     const auto shape = toCV(info.GetShape());
-    if (!is_converted) {
-        return cv::Mat(shape,
-                       type,
-                       reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
+    mat = cv::Mat(shape, toCV(prec));
+    switch (prec) {
+#define HANDLE(E,T)                                          \
+        case E: std::copy_n(v.GetTensorMutableData<T>(),     \
+                            mat.total(),                     \
+                            reinterpret_cast<T*>(mat.data)); \
+            break;
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8, uint8_t);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, float);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32, int);
+#undef HANDLE
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+            GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+            cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
+                                           reinterpret_cast<int*>(mat.data),
+                                           mat.total());
+            break;
+        }
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
     }
-    cv::Mat mt(shape, CV_32S);
-    GAPI_Assert(mt.isContinuous());
-    cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
-                                   reinterpret_cast<int*>(mt.data),
-                                   mt.total());
-    return mt;
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -215,12 +219,13 @@ inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
     GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
-    const auto type = std::get<0>(toCV(ti.type));
+    // CNN input type
+    const auto type = toCV(ti.type);
     if (src.depth() == CV_32F) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F data");
+        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F input data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
@@ -234,7 +239,7 @@ inline void preprocess(const cv::Mat& src,
         dst = src;
     } else {
         // 8U input: full preprocessing path
-        GAPI_Assert(src.depth()   == CV_8U && "Only 8U data type is supported for preproc");
+        GAPI_Assert(src.depth() == CV_8U && "Only 8U data type is supported for preproc");
         GAPI_Assert((ti.dims.size() == 4u || ti.dims.size() == 3u)
                     && "Only NCHW/NHWC/CHW/HWC layouts are supported for preproc");
 
@@ -242,7 +247,7 @@ inline void preprocess(const cv::Mat& src,
         const int shift = with_batch ? 0 : 1;
 
         GAPI_Assert((type == CV_8U || type == CV_32F)
-                    && "Only 8U and 32F model input is supported for 8U data");
+                    && "Only 8U and 32F model input is supported for 8U input data");
 
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
@@ -362,7 +367,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "Unsupported data type");
+        GAPI_Assert(false && "ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -700,7 +705,7 @@ cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
         return params.out_metas.at(idx);
     }
     const auto ort_idx = getIdxByName(out_tensor_info, params.output_names[idx]);
-    return cv::GMatDesc(std::get<0>(toCV(out_tensor_info[ort_idx].type)),
+    return cv::GMatDesc(toCV(out_tensor_info[ort_idx].type),
                         toCV(out_tensor_info[ort_idx].dims));
 }
 
@@ -738,7 +743,7 @@ void ONNXCompiled::setOutput(int i, cv::Mat &m) {
 cv::Mat ONNXCompiled::allocOutput(int i) const {
     cv::Mat m;
     m.create(toCV(out_tensor_info[i].dims),
-             std::get<0>(toCV(out_tensor_info[i].type)));
+             toCV(out_tensor_info[i].type));
     return m;
 }
 
@@ -811,7 +816,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                                           ade::util::toRange(outputs))) {
             const auto &out_name   = std::get<0>(iter).name;
                   auto &out_tensor = std::get<1>(iter);
-            onnx_outputs[out_name] = toCV(out_tensor);
+            copyFromONNX(out_tensor, onnx_outputs[out_name]);
         }
 
         // Fill in G-API outputs
