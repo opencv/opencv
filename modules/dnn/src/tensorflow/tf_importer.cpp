@@ -2360,12 +2360,9 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
                         // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
                         LayerParams permLP;
                         int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                        permLP.set("order", DictValue::arrayInt<int*>(order, 4));
                         std::string permName = name + "/nchw";
-                        CV_Assert(layer_id.find(permName) == layer_id.end());
-                        int permId = dstNet.addLayer(permName, "Permute", permLP);
-                        layer_id[permName] = permId;
-                        connect(layer_id, dstNet, Pin(name), permId, 0);
+                        Pin inpId = Pin(name);
+                        addPermuteLayer(order, permName, inpId);
 
                         LayerParams squeezeLp;
                         std::string squeezeName = name + "/squeeze";
@@ -2375,6 +2372,38 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
                         int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                         layer_id[squeezeName] = squeezeId;
                         connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
+                    }
+                }
+                else if (axis == 1)
+                {
+                    int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                    Pin inpId = parsePin(layer.input(0));
+                    addPermuteLayer(order, name + "/nhwc", inpId);
+
+                    layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+                    layerParams.set("kernel_h", 1);
+                    layerParams.set("global_pooling_w", true);
+                    int id = dstNet.addLayer(name, "Pooling", layerParams);
+                    layer_id[name] = id;
+                    connect(layer_id, dstNet, inpId, id, 0);
+
+                    if (!keepDims)
+                    {
+                        LayerParams squeezeLp;
+                        std::string squeezeName = name + "/squeeze";
+                        CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                        int channel_id = 3; // TF NHWC layout
+                        squeezeLp.set("axis", channel_id - 1);
+                        squeezeLp.set("end_axis", channel_id);
+                        int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                        layer_id[squeezeName] = squeezeId;
+                        connect(layer_id, dstNet, Pin(name), squeezeId, 0);
+                    }
+                    else
+                    {
+                        int order[] = {0, 3, 1, 2};  // From NHWC to OpenCV's NCHW.
+                        Pin inpId = parsePin(name);
+                        addPermuteLayer(order, name + "/nchw", inpId);
                     }
                 }
             } else {
