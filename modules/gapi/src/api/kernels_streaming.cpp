@@ -78,3 +78,11 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
 cv::GMat cv::gapi::streaming::BGR(const cv::GFrame& in) {
     return cv::gapi::streaming::GBGR::on(in);
 }
+
+cv::GMat cv::gapi::streaming::Y(const cv::GFrame& in){
+    return cv::gapi::streaming::GY::on(in);
+}
+
+cv::GMat cv::gapi::streaming::UV(const cv::GFrame& in){
+    return cv::gapi::streaming::GUV::on(in);
+}

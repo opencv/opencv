@@ -727,6 +727,10 @@ TEST_P(Test_Darknet_layers, shortcut)
 
 TEST_P(Test_Darknet_layers, upsample)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     testDarknetLayer("upsample");
 }
 

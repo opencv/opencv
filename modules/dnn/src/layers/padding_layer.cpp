@@ -105,9 +105,10 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
-            return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
-                   (!isMyriad ||
-                    (dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0));
+            if (INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) && isMyriad)
+                return dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0;
+
+            return (dstRanges.size() <= 4 || !isArmComputePlugin());
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
