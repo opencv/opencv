@@ -176,7 +176,7 @@ std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
     }
     default: GAPI_Assert(false && "Unsupported data type");
     }
-    return  std::make_tuple(-1, false);;
+    return std::make_tuple(-1, false);
 }
 
 inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {

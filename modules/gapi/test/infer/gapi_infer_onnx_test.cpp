@@ -130,7 +130,7 @@ std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return std::make_tuple(CV_32S, true);
     default: GAPI_Assert(false && "Unsupported data type");
     }
-    return  std::make_tuple(-1, false);;
+    return std::make_tuple(-1, false);
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
