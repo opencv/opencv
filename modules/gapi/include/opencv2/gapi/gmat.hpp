@@ -73,25 +73,25 @@ class RMat;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GAPI_EXPORTS GMatDesc
+struct GAPI_EXPORTS_W_SIMPLE GMatDesc
 {
     // FIXME: Default initializers in C++14
-    int depth;
-    int chan;
-    cv::Size size; // NB.: no multi-dimensional cases covered yet
-    bool planar;
-    std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
+    GAPI_PROP int depth;
+    GAPI_PROP int chan;
+    GAPI_PROP cv::Size size; // NB.: no multi-dimensional cases covered yet
+    GAPI_PROP bool planar;
+    GAPI_PROP std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
 
-    GMatDesc(int d, int c, cv::Size s, bool p = false)
+    GAPI_WRAP GMatDesc(int d, int c, cv::Size s, bool p = false)
         : depth(d), chan(c), size(s), planar(p) {}
 
-    GMatDesc(int d, const std::vector<int> &dd)
+    GAPI_WRAP GMatDesc(int d, const std::vector<int> &dd)
         : depth(d), chan(-1), size{-1,-1}, planar(false), dims(dd) {}
 
-    GMatDesc(int d, std::vector<int> &&dd)
+    GAPI_WRAP GMatDesc(int d, std::vector<int> &&dd)
         : depth(d), chan(-1), size{-1,-1}, planar(false), dims(std::move(dd)) {}
 
-    GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
+    GAPI_WRAP GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {
@@ -155,7 +155,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc with specified data depth
     // and number of channels.
     // (all other fields are taken unchanged from this GMatDesc)
-    GMatDesc withType(int ddepth, int dchan) const
+    GAPI_WRAP GMatDesc withType(int ddepth, int dchan) const
     {
         GAPI_Assert(CV_MAT_CN(ddepth) == 1 || ddepth == -1);
         GMatDesc desc = withDepth(ddepth);

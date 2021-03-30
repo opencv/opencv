@@ -829,6 +829,7 @@ class CppHeaderParser(object):
                     ("GAPI_EXPORTS_W", "CV_EXPORTS_W"),
                     ("GAPI_EXPORTS_W_SIMPLE","CV_EXPORTS_W_SIMPLE"),
                     ("GAPI_WRAP", "CV_WRAP"),
+                    ("GAPI_PROP", "CV_PROP"),
                     ('defined(GAPI_STANDALONE)', '0'),
                 ])
 
