@@ -108,6 +108,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
 
     template <class T> __device__ T clamp(T value, T lower, T upper) { return min(max(value, lower), upper); }
 
+    template <class T> __device__ long lround(T value);
+    template <> inline __device__ long lround(double value) { return ::lround(value); }
+    template <> inline __device__ long lround(float value) { return lroundf(value); }
+
     template <class T> __device__ T round(T value);
     template <> inline __device__ double round(double value) { return ::round(value); }
     template <> inline __device__ float round(float value) { return roundf(value); }
