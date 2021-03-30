@@ -122,14 +122,42 @@ inline void toCHW(const cv::Mat& src, cv::Mat& dst) {
     cv::split(src, planes);
 }
 
-inline int toCV(const ONNXTensorElementDataType prec) {
+inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
     default: GAPI_Assert(false && "Unsupported data type");
     }
     return -1;
+}
+
+void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
+    const auto info = v.GetTensorTypeAndShapeInfo();
+    const auto prec = info.GetElementType();
+    const auto shape = info.GetShape();
+    const std::vector<int> dims(shape.begin(), shape.end());
+    mat.create(dims, toCV(prec));
+    switch (prec) {
+#define HANDLE(E,T)                                          \
+        case E: std::copy_n(v.GetTensorMutableData<T>(),     \
+                            mat.total(),                     \
+                            reinterpret_cast<T*>(mat.data)); \
+            break;
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8, uint8_t);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, float);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32, int);
+#undef HANDLE
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+            const auto o_ptr = v.GetTensorMutableData<int64_t>();
+            const auto g_ptr = reinterpret_cast<int*>(mat.data);
+            std::transform(o_ptr, o_ptr + mat.total(), g_ptr,
+                   [](int64_t el) { return static_cast<int>(el); });
+            break;
+        }
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    }
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -237,6 +265,26 @@ void remapSSDPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
     remapToIESSDOut({num_detections, detection_boxes, detection_scores, detection_classes}, ssd_output);
 }
 
+void remapRCNNPorts(const std::unordered_map<std::string, cv::Mat> &onnx,
+                          std::unordered_map<std::string, cv::Mat> &gapi) {
+    // Simple copy for outputs
+    const cv::Mat& in_boxes = onnx.at("6379");
+    const cv::Mat& in_labels = onnx.at("6381");
+    const cv::Mat& in_scores = onnx.at("6383");
+
+    GAPI_Assert(in_boxes.depth() == CV_32F);
+    GAPI_Assert(in_labels.depth() == CV_32S);
+    GAPI_Assert(in_scores.depth() == CV_32F);
+
+    cv::Mat& out_boxes = gapi.at("out1");
+    cv::Mat& out_labels = gapi.at("out2");
+    cv::Mat& out_scores = gapi.at("out3");
+
+    copyToOut<float>(in_boxes, out_boxes);
+    copyToOut<int>(in_labels, out_labels);
+    copyToOut<float>(in_scores, out_scores);
+}
+
 class ONNXtest : public ::testing::Test {
 public:
     std::string model_path;
@@ -250,7 +298,6 @@ public:
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         out_gapi.resize(1);
-        out_onnx.resize(1);
         // FIXME: It should be an image from own (gapi) directory in opencv extra
         in_mat1 = cv::imread(findDataFile("cv/dpm/cat.png"));
     }
@@ -301,14 +348,13 @@ public:
                                   num_out);
         // Copy outputs
         GAPI_Assert(result.size() == num_out);
-        outs.resize(num_out);
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
-            const auto type = info.GetElementType();
-            cv::Mat mt(std::vector<int>(shape.begin(), shape.end()), toCV(type),
-                       reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()));
-            mt.copyTo(outs[i]);
+            const auto type = toCV(info.GetElementType());
+            const std::vector<int> dims(shape.begin(), shape.end());
+            outs.emplace_back(dims, type);
+            copyFromONNX(result[i], outs.back());
         }
     }
     // One input/output overload
@@ -357,7 +403,7 @@ public:
     // Rois for InferList, InferList2
     const std::vector<cv::Rect> rois = {
         cv::Rect(cv::Point{ 0,   0}, cv::Size{80, 120}),
-        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360}),
+        cv::Rect(cv::Point{50, 100}, cv::Size{250, 360})
     };
 
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
@@ -426,6 +472,37 @@ public:
     }
 };
 
+class ONNXRCNN : public ONNXWithRemap {
+private:
+    const cv::Scalar rcnn_mean = { 102.9801, 115.9465, 122.7717 };
+    const float range_max = 1333;
+    const float range_min = 800;
+public:
+    void preprocess(const cv::Mat& src, cv::Mat& dst) {
+        cv::Mat rsz, cvt, chw, mn;
+        const auto get_ratio = [&](const int dim) -> float {
+                                   return ((dim > range_max) || (dim < range_min))
+                                              ? dim > range_max
+                                                  ? range_max / dim
+                                                  : range_min / dim
+                                              : 1.f;
+                               };
+        const auto ratio_h = get_ratio(src.rows);
+        const auto ratio_w = get_ratio(src.cols);
+        const auto new_h = static_cast<int>(ratio_h * src.rows);
+        const auto new_w = static_cast<int>(ratio_w * src.cols);
+        cv::resize(src, rsz, cv::Size(new_w, new_h));
+        rsz.convertTo(cvt, CV_32F, 1.f);
+        toCHW(cvt, chw);
+        mn = chw - rcnn_mean;
+        const int padded_h = std::ceil(new_h / 32.f) * 32;
+        const int padded_w = std::ceil(new_w / 32.f) * 32;
+        cv::Mat pad_im(cv::Size(padded_w, 3 * padded_h), CV_32F, 0.f);
+        pad_im(cv::Rect(0, 0, mn.cols, mn.rows)) += mn;
+        dst = pad_im.reshape(1, {3, padded_h, padded_w});
+    }
+};
+
 class ONNXYoloV3MultiInput : public ONNXWithRemap {
 public:
     std::vector<cv::Mat> ins;
@@ -459,7 +536,7 @@ TEST_F(ONNXClassificationTest, Infer)
     // ONNX_API code
     cv::Mat processed_mat;
     preprocess(in_mat1, processed_mat);
-    infer<float>(processed_mat, out_onnx.front());
+    infer<float>(processed_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
@@ -482,7 +559,7 @@ TEST_F(ONNXClassificationTest, InferTensor)
     cv::Mat tensor;
     preprocess(in_mat1, tensor);
     // ONNX_API code
-    infer<float>(tensor, out_onnx.front());
+    infer<float>(tensor, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
@@ -499,11 +576,11 @@ TEST_F(ONNXClassificationTest, InferTensor)
 TEST_F(ONNXClassificationTest, InferROI)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const auto ROI = rois.at(1);
+    const auto ROI = rois.at(0);
     // ONNX_API code
     cv::Mat roi_mat;
     preprocess(in_mat1(ROI), roi_mat);
-    infer<float>(roi_mat, out_onnx.front());
+    infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
@@ -524,11 +601,10 @@ TEST_F(ONNXClassificationTest, InferROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // ONNX_API code
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -550,11 +626,10 @@ TEST_F(ONNXClassificationTest, Infer2ROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     // ONNX_API code
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -582,7 +657,7 @@ TEST_F(ONNXWithRemap, InferDynamicInputTensor)
     toCHW(cvt, tensor);
     tensor = tensor.reshape(1, {1, 3, 416, 416});
     // ONNX_API code
-    infer<float>(tensor, out_onnx.front());
+    infer<float>(tensor, out_onnx);
     // G_API code
     G_API_NET(YoloNet, <cv::GMat(cv::GMat)>, "YoloNet");
     cv::GMat in;
@@ -604,7 +679,7 @@ TEST_F(ONNXGRayScaleTest, InferImage)
     // ONNX_API code
     cv::Mat prep_mat;
     preprocess(in_mat1, prep_mat);
-    infer<float>(prep_mat, out_onnx.front());
+    infer<float>(prep_mat, out_onnx);
     // G_API code
     G_API_NET(EmotionNet, <cv::GMat(cv::GMat)>, "emotion-ferplus");
     cv::GMat in;
@@ -650,7 +725,7 @@ TEST_F(ONNXMediaFrameTest, InferBGR)
     // ONNX_API code
     cv::Mat processed_mat;
     preprocess(in_mat1, processed_mat);
-    infer<float>(processed_mat, out_onnx.front());
+    infer<float>(processed_mat, out_onnx);
     // G_API code
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -676,7 +751,7 @@ TEST_F(ONNXMediaFrameTest, InferYUV)
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     cv::Mat processed_mat;
     preprocess(pp, processed_mat);
-    infer<float>(processed_mat, out_onnx.front());
+    infer<float>(processed_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -699,7 +774,7 @@ TEST_F(ONNXMediaFrameTest, InferROIBGR)
     // ONNX_API code
     cv::Mat roi_mat;
     preprocess(in_mat1(rois.front()), roi_mat);
-    infer<float>(roi_mat, out_onnx.front());
+    infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -725,7 +800,7 @@ TEST_F(ONNXMediaFrameTest, InferROIYUV)
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     cv::Mat roi_mat;
     preprocess(pp(rois.front()), roi_mat);
-    infer<float>(roi_mat, out_onnx.front());
+    infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
@@ -747,11 +822,10 @@ TEST_F(ONNXMediaFrameTest, InferListBGR)
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     // ONNX_API code
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -776,11 +850,10 @@ TEST_F(ONNXMediaFrameTest, InferListYUV)
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(pp(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -803,11 +876,10 @@ TEST_F(ONNXMediaFrameTest, InferList2BGR)
     useModel("classification/squeezenet/model/squeezenet1.0-9");
     const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
     // ONNX_API code
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(in_mat1(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -832,11 +904,10 @@ TEST_F(ONNXMediaFrameTest, InferList2YUV)
     // ONNX_API code
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
-    out_onnx.resize(rois.size());
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
         preprocess(pp(rois[i]), roi_mat);
-        infer<float>(roi_mat, out_onnx[i]);
+        infer<float>(roi_mat, out_onnx);
     }
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -912,6 +983,32 @@ TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
     cv::GComputation comp(cv::GIn(in1, in2), cv::GOut(out1, out2, out3));
     out_gapi.resize(num_out);
     comp.apply(cv::gin(ins[0], bad_shape),
+               cv::gout(out_gapi[0], out_gapi[1], out_gapi[2]),
+               cv::compile_args(cv::gapi::networks(net)));
+    // Validate
+    validate();
+}
+
+TEST_F(ONNXRCNN, ConversionInt64to32)
+{
+    useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
+    cv::Mat dst;
+    preprocess(in_mat1, dst);
+    // ONNX_API code
+    infer<float>(dst, out_onnx);
+    // G_API code
+    using FRCNNOUT = std::tuple<cv::GMat,cv::GMat,cv::GMat>;
+    G_API_NET(FasterRCNN, <FRCNNOUT(cv::GMat)>, "FasterRCNN");
+    auto net = cv::gapi::onnx::Params<FasterRCNN>{model_path}
+        .cfgOutputLayers({"out1", "out2", "out3"})
+        .cfgPostProc({cv::GMatDesc{CV_32F, {7,4}},
+                      cv::GMatDesc{CV_32S, {7}},
+                      cv::GMatDesc{CV_32F, {7}}}, remapRCNNPorts);
+    cv::GMat in, out1, out2, out3;
+    std::tie(out1, out2, out3) = cv::gapi::infer<FasterRCNN>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out1, out2, out3));
+    out_gapi.resize(num_out);
+    comp.apply(cv::gin(dst),
                cv::gout(out_gapi[0], out_gapi[1], out_gapi[2]),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
