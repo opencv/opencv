@@ -193,6 +193,7 @@ private:
 };
 
 namespace gapi {
+namespace wip {
 
 class GAPI_EXPORTS_W_SIMPLE GOutputs
 {
@@ -218,18 +219,19 @@ GOutputs op(const std::string& id, cv::GKernel::M outMeta, T&&... args)
     return op(id, outMeta, cv::GArgs{cv::GArg(std::forward<T>(args))... });
 }
 
+} // namespace wip
 } // namespace gapi
 } // namespace cv
 
-cv::gapi::GOutputs cv::gapi::op(const std::string& id,
-                                cv::GKernel::M outMeta,
-                                cv::GArgs&& args)
+cv::gapi::wip::GOutputs cv::gapi::wip::op(const std::string& id,
+                                          cv::GKernel::M outMeta,
+                                          cv::GArgs&& args)
 {
-    cv::gapi::GOutputs outputs{id, outMeta, std::move(args)};
+    cv::gapi::wip::GOutputs outputs{id, outMeta, std::move(args)};
     return outputs;
 }
 
-class cv::gapi::GOutputs::Priv
+class cv::gapi::wip::GOutputs::Priv
 {
 public:
     Priv(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&ins);
@@ -244,7 +246,7 @@ private:
     std::unique_ptr<cv::GCall> m_call;
 };
 
-cv::gapi::GOutputs::Priv::Priv(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&args)
+cv::gapi::wip::GOutputs::Priv::Priv(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&args)
 {
     cv::GKinds kinds;
     kinds.reserve(args.size());
@@ -255,7 +257,7 @@ cv::gapi::GOutputs::Priv::Priv(const std::string& id, cv::GKernel::M outMeta, cv
     m_call->setArgs(std::move(args));
 }
 
-cv::GMat cv::gapi::GOutputs::Priv::getGMat()
+cv::GMat cv::gapi::wip::GOutputs::Priv::getGMat()
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
     // ...so _empty_ constructor is passed here.
@@ -263,7 +265,7 @@ cv::GMat cv::gapi::GOutputs::Priv::getGMat()
     return m_call->yield(output++);
 }
 
-cv::GScalar cv::gapi::GOutputs::Priv::getGScalar()
+cv::GScalar cv::gapi::wip::GOutputs::Priv::getGScalar()
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GSCALAR);
     // ...so _empty_ constructor is passed here.
@@ -271,7 +273,7 @@ cv::GScalar cv::gapi::GOutputs::Priv::getGScalar()
     return m_call->yieldScalar(output++);
 }
 
-cv::GArrayT cv::gapi::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
+cv::GArrayT cv::gapi::wip::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GARRAY);
 #define HC(T, K)                                                                                \
@@ -283,7 +285,7 @@ cv::GArrayT cv::gapi::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
 #undef HC
 }
 
-cv::GOpaqueT cv::gapi::GOutputs::Priv::getGOpaque(cv::gapi::ArgType type)
+cv::GOpaqueT cv::gapi::wip::GOutputs::Priv::getGOpaque(cv::gapi::ArgType type)
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GOPAQUE);
 #define HC(T, K)                                                                                \
@@ -295,29 +297,29 @@ cv::GOpaqueT cv::gapi::GOutputs::Priv::getGOpaque(cv::gapi::ArgType type)
 #undef HC
 }
 
-cv::gapi::GOutputs::GOutputs(const std::string& id,
-                             cv::GKernel::M outMeta,
-                             cv::GArgs &&ins) :
-    m_priv(new cv::gapi::GOutputs::Priv(id, outMeta, std::move(ins)))
+cv::gapi::wip::GOutputs::GOutputs(const std::string& id,
+                                  cv::GKernel::M outMeta,
+                                  cv::GArgs &&ins) :
+    m_priv(new cv::gapi::wip::GOutputs::Priv(id, outMeta, std::move(ins)))
 {
 }
 
-cv::GMat cv::gapi::GOutputs::getGMat()
+cv::GMat cv::gapi::wip::GOutputs::getGMat()
 {
     return m_priv->getGMat();
 }
 
-cv::GScalar cv::gapi::GOutputs::getGScalar()
+cv::GScalar cv::gapi::wip::GOutputs::getGScalar()
 {
     return m_priv->getGScalar();
 }
 
-cv::GArrayT cv::gapi::GOutputs::getGArray(cv::gapi::ArgType type)
+cv::GArrayT cv::gapi::wip::GOutputs::getGArray(cv::gapi::ArgType type)
 {
     return m_priv->getGArray(type);
 }
 
-cv::GOpaqueT cv::gapi::GOutputs::getGOpaque(cv::gapi::ArgType type)
+cv::GOpaqueT cv::gapi::wip::GOutputs::getGOpaque(cv::gapi::ArgType type)
 {
     return m_priv->getGOpaque(type);
 }

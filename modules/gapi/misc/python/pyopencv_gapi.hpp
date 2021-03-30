@@ -693,7 +693,7 @@ static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
                                               outMeta,
                                               std::placeholders::_1,
                                               std::placeholders::_2);
-    return pyopencv_from(cv::gapi::op(id, outMetaWrapper, std::move(args)));
+    return pyopencv_from(cv::gapi::wip::op(id, outMetaWrapper, std::move(args)));
 }
 
 static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args, PyObject*)
