@@ -170,7 +170,8 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
-    default: GAPI_Assert(false && "Unsupported data type");
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -184,11 +185,30 @@ inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
     return result;
 }
 
-inline cv::Mat toCV(Ort::Value &v) {
-    auto info = v.GetTensorTypeAndShapeInfo();
-    return cv::Mat(toCV(info.GetShape()),
-                   toCV(info.GetElementType()),
-                   reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
+inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
+    const auto info = v.GetTensorTypeAndShapeInfo();
+    const auto prec = info.GetElementType();
+    const auto shape = toCV(info.GetShape());
+    mat.create(shape, toCV(prec));
+    switch (prec) {
+#define HANDLE(E,T)                                          \
+        case E: std::copy_n(v.GetTensorMutableData<T>(),     \
+                            mat.total(),                     \
+                            reinterpret_cast<T*>(mat.data)); \
+            break;
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8, uint8_t);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, float);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32, int);
+#undef HANDLE
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+            GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+            cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
+                                           reinterpret_cast<int*>(mat.data),
+                                           mat.total());
+            break;
+        }
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    }
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -199,12 +219,13 @@ inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
     GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
-
+    // CNN input type
+    const auto type = toCV(ti.type);
     if (src.depth() == CV_32F) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(toCV(ti.type) == CV_32F && "Only 32F model input is supported for 32F data");
+        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F input data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
@@ -218,16 +239,15 @@ inline void preprocess(const cv::Mat& src,
         dst = src;
     } else {
         // 8U input: full preprocessing path
-        GAPI_Assert(src.depth()   == CV_8U && "Only 8U data type is supported for preproc");
+        GAPI_Assert(src.depth() == CV_8U && "Only 8U data type is supported for preproc");
         GAPI_Assert((ti.dims.size() == 4u || ti.dims.size() == 3u)
                     && "Only NCHW/NHWC/CHW/HWC layouts are supported for preproc");
 
         const bool with_batch = ti.dims.size() == 4u ? true : false;
         const int shift = with_batch ? 0 : 1;
 
-        const auto ddepth = toCV(ti.type);
-        GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
-                    && "Only 8U and 32F model input is supported for 8U data");
+        GAPI_Assert((type == CV_8U || type == CV_32F)
+                    && "Only 8U and 32F model input is supported for 8U input data");
 
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
@@ -261,8 +281,8 @@ inline void preprocess(const cv::Mat& src,
 
         cv::Mat rsz, pp;
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
-        if (src.depth() == CV_8U && ddepth == CV_32F) {
-            rsz.convertTo(pp, ddepth, ti.normalize ? 1.f / 255 : 1.f);
+        if (src.depth() == CV_8U && type == CV_32F) {
+            rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -273,7 +293,7 @@ inline void preprocess(const cv::Mat& src,
 
         if (!is_hwc && new_c > 1) {
             // Convert to CHW
-            dst.create(cv::Size(new_w, new_h * new_c), ddepth);
+            dst.create(cv::Size(new_w, new_h * new_c), type);
             std::vector<cv::Mat> planes(new_c);
             for (int ch = 0; ch < new_c; ++ch) {
                 planes[ch] = dst.rowRange(ch * new_h, (ch + 1) * new_h);
@@ -347,7 +367,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "Unsupported data type");
+        GAPI_Assert(false && "ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -796,7 +816,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                                           ade::util::toRange(outputs))) {
             const auto &out_name   = std::get<0>(iter).name;
                   auto &out_tensor = std::get<1>(iter);
-            onnx_outputs[out_name] = toCV(out_tensor);
+            copyFromONNX(out_tensor, onnx_outputs[out_name]);
         }
 
         // Fill in G-API outputs
