@@ -3,6 +3,11 @@
 
 #ifdef HAVE_OPENCV_GAPI
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4503)  // "decorated name length exceeded"
+                                // on empty_meta(const cv::GMetaArgs&, const cv::GArgs&)
+#endif
+
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/python/python.hpp>
 
@@ -507,8 +512,98 @@ static cv::GRunArgs run_py_kernel(PyObject* kernel,
 
 // FIXME: Now it's impossible to obtain meta function from operation,
 // because kernel connects to operation only by id (string).
-static GMetaArgs empty_meta(const cv::GMetaArgs &, const cv::GArgs &) {
+static cv::GMetaArgs empty_meta(const cv::GMetaArgs &, const cv::GArgs &) {
     return {};
+}
+
+static GMetaArg get_meta_arg(PyObject* obj)
+{
+    if (PyObject_TypeCheck(obj,
+                reinterpret_cast<PyTypeObject*>(pyopencv_GMatDesc_TypePtr)))
+    {
+        return cv::GMetaArg{reinterpret_cast<pyopencv_GMatDesc_t*>(obj)->v};
+    }
+    else if (PyObject_TypeCheck(obj,
+                reinterpret_cast<PyTypeObject*>(pyopencv_GScalarDesc_TypePtr)))
+    {
+        return cv::GMetaArg{reinterpret_cast<pyopencv_GScalarDesc_t*>(obj)->v};
+    }
+    else if (PyObject_TypeCheck(obj,
+                reinterpret_cast<PyTypeObject*>(pyopencv_GArrayDesc_TypePtr)))
+    {
+        return cv::GMetaArg{reinterpret_cast<pyopencv_GArrayDesc_t*>(obj)->v};
+    }
+    else if (PyObject_TypeCheck(obj,
+                reinterpret_cast<PyTypeObject*>(pyopencv_GOpaqueDesc_TypePtr)))
+    {
+        return cv::GMetaArg{reinterpret_cast<pyopencv_GOpaqueDesc_t*>(obj)->v};
+    }
+    else
+    {
+        util::throw_error(std::logic_error("Unsupported output meta type"));
+    }
+}
+
+static cv::GMetaArgs get_meta_args(PyObject* tuple)
+{
+    size_t size = PyTuple_Size(tuple);
+
+    cv::GMetaArgs metas;
+    metas.reserve(size);
+    for (size_t i = 0; i < size; ++i)
+    {
+        metas.push_back(get_meta_arg(PyTuple_GetItem(tuple, i)));
+    }
+
+    return metas;
+}
+
+static GMetaArgs python_meta(PyObject* outMeta, const cv::GMetaArgs &meta, const cv::GArgs &gargs) {
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    cv::GMetaArgs out_metas;
+    try
+    {
+        PyObject* args = PyTuple_New(meta.size());
+        size_t idx = 0;
+        for (auto&& m : meta)
+        {
+            switch (m.index())
+            {
+                case cv::GMetaArg::index_of<cv::GMatDesc>():
+                    PyTuple_SetItem(args, idx, pyopencv_from(cv::util::get<cv::GMatDesc>(m)));
+                    break;
+                case cv::GMetaArg::index_of<cv::GScalarDesc>():
+                    PyTuple_SetItem(args, idx, pyopencv_from(cv::util::get<cv::GScalarDesc>(m)));
+                    break;
+                case cv::GMetaArg::index_of<cv::GArrayDesc>():
+                    PyTuple_SetItem(args, idx, pyopencv_from(cv::util::get<cv::GArrayDesc>(m)));
+                    break;
+                case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
+                    PyTuple_SetItem(args, idx, pyopencv_from(cv::util::get<cv::GOpaqueDesc>(m)));
+                    break;
+                case cv::GMetaArg::index_of<cv::util::monostate>():
+                    PyTuple_SetItem(args, idx, gargs[idx].get<PyObject*>());
+                    break;
+                case cv::GMetaArg::index_of<cv::GFrameDesc>():
+                    util::throw_error(std::logic_error("GFrame isn't supported for custom operation"));
+                    break;
+            }
+            ++idx;
+        }
+        PyObject* result = PyObject_CallObject(outMeta, args);
+        out_metas = PyTuple_Check(result) ? get_meta_args(result)
+                                          : cv::GMetaArgs{get_meta_arg(result)};
+    }
+    catch (...)
+    {
+        PyGILState_Release(gstate);
+        throw;
+    }
+    PyGILState_Release(gstate);
+
+    return out_metas;
 }
 
 static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObject*)
@@ -536,6 +631,69 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
         pkg.include(f);
     }
     return pyopencv_from(pkg);
+}
+
+static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
+{
+    using namespace cv;
+    Py_ssize_t size = PyTuple_Size(py_args);
+    std::string id;
+    if (!pyopencv_to(PyTuple_GetItem(py_args, 0), id, ArgInfo("id", false)))
+    {
+        PyErr_SetString(PyExc_TypeError, "Failed to obtain: operation id must be a string");
+        return NULL;
+    }
+    PyObject* outMeta = PyTuple_GetItem(py_args, 1);
+    Py_INCREF(outMeta);
+
+    cv::GArgs args;
+    for (int i = 2; i < size; i++)
+    {
+        PyObject* item = PyTuple_GetItem(py_args, i);
+        if (PyObject_TypeCheck(item,
+                    reinterpret_cast<PyTypeObject*>(pyopencv_GMat_TypePtr)))
+        {
+            args.emplace_back(reinterpret_cast<pyopencv_GMat_t*>(item)->v);
+        }
+        else if (PyObject_TypeCheck(item,
+                           reinterpret_cast<PyTypeObject*>(pyopencv_GScalar_TypePtr)))
+        {
+            args.emplace_back(reinterpret_cast<pyopencv_GScalar_t*>(item)->v);
+        }
+        else if (PyObject_TypeCheck(item,
+                           reinterpret_cast<PyTypeObject*>(pyopencv_GOpaqueT_TypePtr)))
+        {
+            auto&& arg = reinterpret_cast<pyopencv_GOpaqueT_t*>(item)->v.arg();
+#define HC(T, K) case cv::GOpaqueT::Storage:: index_of<cv::GOpaque<T>>(): \
+            args.emplace_back(cv::util::get<cv::GOpaque<T>>(arg));        \
+            break;                                                        \
+
+            SWITCH(arg.index(), GOPAQUE_TYPE_LIST_G, HC)
+#undef HC
+        }
+        else if (PyObject_TypeCheck(item,
+                           reinterpret_cast<PyTypeObject*>(pyopencv_GArrayT_TypePtr)))
+        {
+            auto&& arg = reinterpret_cast<pyopencv_GArrayT_t*>(item)->v.arg();
+#define HC(T, K) case cv::GArrayT::Storage:: index_of<cv::GArray<T>>(): \
+            args.emplace_back(cv::util::get<cv::GArray<T>>(arg));       \
+            break;                                                      \
+
+            SWITCH(arg.index(), GARRAY_TYPE_LIST_G, HC)
+#undef HC
+        }
+        else
+        {
+            Py_INCREF(item);
+            args.emplace_back(cv::GArg(item));
+        }
+    }
+
+    cv::GKernel::M outMetaWrapper = std::bind(python_meta,
+                                              outMeta,
+                                              std::placeholders::_1,
+                                              std::placeholders::_2);
+    return pyopencv_from(cv::gapi::op(id, outMetaWrapper, std::move(args)));
 }
 
 static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args, PyObject*)

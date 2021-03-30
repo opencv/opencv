@@ -33,14 +33,14 @@ template<typename T> class GOpaque;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GOpaqueDesc
+struct GAPI_EXPORTS_W_SIMPLE GOpaqueDesc
 {
     // FIXME: Body
     // FIXME: Also implement proper operator== then
     bool operator== (const GOpaqueDesc&) const { return true; }
 };
 template<typename U> GOpaqueDesc descr_of(const U &) { return {};}
-static inline GOpaqueDesc empty_gopaque_desc() {return {}; }
+GAPI_EXPORTS_W inline GOpaqueDesc empty_gopaque_desc() {return {}; }
 /** @} */
 
 std::ostream& operator<<(std::ostream& os, const cv::GOpaqueDesc &desc);

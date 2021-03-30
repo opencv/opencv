@@ -119,6 +119,7 @@ GARRAY_TYPE_LIST_G(DEFINE_TYPE_TRAITS, DEFINE_TYPE_TRAITS)
 class GAPI_EXPORTS_W_SIMPLE GOpaqueT
 {
 public:
+    GOpaqueT() = default;
     using Storage = cv::detail::MakeVariantType<cv::GOpaque, GOPAQUE_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
@@ -156,6 +157,7 @@ private:
 class GAPI_EXPORTS_W_SIMPLE GArrayT
 {
 public:
+    GArrayT() = default;
     using Storage = cv::detail::MakeVariantType<cv::GArray, GARRAY_TYPE_LIST_G(ID_, ID)>;
 
     template<typename T>
@@ -190,6 +192,134 @@ private:
     Storage m_arg;
 };
 
+namespace gapi {
+
+class GAPI_EXPORTS_W_SIMPLE GOutputs
+{
+public:
+    GOutputs() = default;
+    GOutputs(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&ins);
+
+    GAPI_WRAP cv::GMat     getGMat();
+    GAPI_WRAP cv::GScalar  getGScalar();
+    GAPI_WRAP cv::GArrayT  getGArray(cv::gapi::ArgType type);
+    GAPI_WRAP cv::GOpaqueT getGOpaque(cv::gapi::ArgType type);
+
+private:
+    class Priv;
+    std::shared_ptr<Priv> m_priv;
+};
+
+GOutputs op(const std::string& id, cv::GKernel::M outMeta, cv::GArgs&& args);
+
+template <typename... T>
+GOutputs op(const std::string& id, cv::GKernel::M outMeta, T&&... args)
+{
+    return op(id, outMeta, cv::GArgs{cv::GArg(std::forward<T>(args))... });
+}
+
+} // namespace gapi
 } // namespace cv
+
+cv::gapi::GOutputs cv::gapi::op(const std::string& id,
+                                cv::GKernel::M outMeta,
+                                cv::GArgs&& args)
+{
+    cv::gapi::GOutputs outputs{id, outMeta, std::move(args)};
+    return outputs;
+}
+
+class cv::gapi::GOutputs::Priv
+{
+public:
+    Priv(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&ins);
+
+    cv::GMat     getGMat();
+    cv::GScalar  getGScalar();
+    cv::GArrayT  getGArray(cv::gapi::ArgType);
+    cv::GOpaqueT getGOpaque(cv::gapi::ArgType);
+
+private:
+    int output = 0;
+    std::unique_ptr<cv::GCall> m_call;
+};
+
+cv::gapi::GOutputs::Priv::Priv(const std::string& id, cv::GKernel::M outMeta, cv::GArgs &&args)
+{
+    cv::GKinds kinds;
+    kinds.reserve(args.size());
+    std::transform(args.begin(), args.end(), std::back_inserter(kinds),
+            [](const cv::GArg& arg) { return arg.opaque_kind; });
+
+    m_call.reset(new cv::GCall{cv::GKernel{id, {}, outMeta, {}, std::move(kinds), {}}});
+    m_call->setArgs(std::move(args));
+}
+
+cv::GMat cv::gapi::GOutputs::Priv::getGMat()
+{
+    m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
+    // ...so _empty_ constructor is passed here.
+    m_call->kernel().outCtors.emplace_back(cv::util::monostate{});
+    return m_call->yield(output++);
+}
+
+cv::GScalar cv::gapi::GOutputs::Priv::getGScalar()
+{
+    m_call->kernel().outShapes.push_back(cv::GShape::GSCALAR);
+    // ...so _empty_ constructor is passed here.
+    m_call->kernel().outCtors.emplace_back(cv::util::monostate{});
+    return m_call->yieldScalar(output++);
+}
+
+cv::GArrayT cv::gapi::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
+{
+    m_call->kernel().outShapes.push_back(cv::GShape::GARRAY);
+#define HC(T, K)                                                                                \
+    case K:                                                                                     \
+        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GArray<T>>::get());  \
+        return cv::GArrayT(m_call->yieldArray<T>(output++));                                    \
+
+    SWITCH(type, GARRAY_TYPE_LIST_G, HC)
+#undef HC
+}
+
+cv::GOpaqueT cv::gapi::GOutputs::Priv::getGOpaque(cv::gapi::ArgType type)
+{
+    m_call->kernel().outShapes.push_back(cv::GShape::GOPAQUE);
+#define HC(T, K)                                                                                \
+    case K:                                                                                     \
+        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GOpaque<T>>::get()); \
+        return cv::GOpaqueT(m_call->yieldOpaque<T>(output++));                                  \
+
+    SWITCH(type, GOPAQUE_TYPE_LIST_G, HC)
+#undef HC
+}
+
+cv::gapi::GOutputs::GOutputs(const std::string& id,
+                             cv::GKernel::M outMeta,
+                             cv::GArgs &&ins) :
+    m_priv(new cv::gapi::GOutputs::Priv(id, outMeta, std::move(ins)))
+{
+}
+
+cv::GMat cv::gapi::GOutputs::getGMat()
+{
+    return m_priv->getGMat();
+}
+
+cv::GScalar cv::gapi::GOutputs::getGScalar()
+{
+    return m_priv->getGScalar();
+}
+
+cv::GArrayT cv::gapi::GOutputs::getGArray(cv::gapi::ArgType type)
+{
+    return m_priv->getGArray(type);
+}
+
+cv::GOpaqueT cv::gapi::GOutputs::getGOpaque(cv::gapi::ArgType type)
+{
+    return m_priv->getGOpaque(type);
+}
 
 #endif // OPENCV_GAPI_PYTHON_BRIDGE_HPP

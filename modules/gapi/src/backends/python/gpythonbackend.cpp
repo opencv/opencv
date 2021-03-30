@@ -74,7 +74,7 @@ class GPythonExecutable final: public cv::gimpl::GIslandExecutable
 
 public:
     GPythonExecutable(const ade::Graph                   &,
-                   const std::vector<ade::NodeHandle> &);
+                      const std::vector<ade::NodeHandle> &);
 
     const ade::Graph& m_g;
     cv::gimpl::GModel::ConstGraph m_gm;

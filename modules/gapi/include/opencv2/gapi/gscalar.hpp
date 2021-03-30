@@ -49,7 +49,7 @@ private:
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GScalarDesc
+struct GAPI_EXPORTS_W_SIMPLE GScalarDesc
 {
     // NB.: right now it is empty
 
@@ -64,9 +64,9 @@ struct GScalarDesc
     }
 };
 
-static inline GScalarDesc empty_scalar_desc() { return GScalarDesc(); }
+GAPI_EXPORTS_W inline GScalarDesc empty_scalar_desc() { return GScalarDesc(); }
 
-GAPI_EXPORTS GScalarDesc descr_of(const cv::Scalar            &scalar);
+GAPI_EXPORTS GScalarDesc descr_of(const cv::Scalar &scalar);
 
 std::ostream& operator<<(std::ostream& os, const cv::GScalarDesc &desc);
 
