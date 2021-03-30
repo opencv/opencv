@@ -3312,4 +3312,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 #endif
 }
 
+#if !defined(CV_DOXYGEN)
+#undef CV_SIMD256
+#undef CV_SIMD512
+#endif
+
 #endif
