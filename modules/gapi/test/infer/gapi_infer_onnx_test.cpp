@@ -122,15 +122,42 @@ inline void toCHW(const cv::Mat& src, cv::Mat& dst) {
     cv::split(src, planes);
 }
 
-std::tuple<int, bool> toCV(ONNXTensorElementDataType prec) {
+inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return std::make_tuple(CV_8U, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return std::make_tuple(CV_32F, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return std::make_tuple(CV_32S, false);
-    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return std::make_tuple(CV_32S, true);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
     default: GAPI_Assert(false && "Unsupported data type");
     }
-    return std::make_tuple(-1, false);
+    return -1;
+}
+
+void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
+    const auto info = v.GetTensorTypeAndShapeInfo();
+    const auto prec = info.GetElementType();
+    const auto shape = info.GetShape();
+    const std::vector<int> dims(shape.begin(), shape.end());
+    mat.create(dims, toCV(prec));
+    switch (prec) {
+#define HANDLE(E,T)                                          \
+        case E: std::copy_n(v.GetTensorMutableData<T>(),     \
+                            mat.total(),                     \
+                            reinterpret_cast<T*>(mat.data)); \
+            break;
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8, uint8_t);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, float);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32, int);
+#undef HANDLE
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+            const auto o_ptr = v.GetTensorMutableData<int64_t>();
+            const auto g_ptr = reinterpret_cast<int*>(mat.data);
+            std::transform(o_ptr, o_ptr + mat.total(), g_ptr,
+                   [](int64_t el) { return static_cast<int>(el); });
+            break;
+        }
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    }
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -324,21 +351,10 @@ public:
         for (size_t i = 0; i < num_out; ++i) {
             const auto info = result[i].GetTensorTypeAndShapeInfo();
             const auto shape = info.GetShape();
-            int type = -1;
-            bool is_converted = false;
-            std::tie(type, is_converted) = toCV(info.GetElementType());
+            const auto type = toCV(info.GetElementType());
             const std::vector<int> dims(shape.begin(), shape.end());
             outs.emplace_back(dims, type);
-            if (!is_converted) {
-                cv::Mat(dims, type,
-                        reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()))
-                .copyTo(outs.back());
-            } else {
-                const int64_t* ptr = result[i].GetTensorMutableData<int64_t>();
-                int* mt_ptr = outs.back().ptr<int>();
-                std::transform(ptr, ptr + outs.back().total(), mt_ptr,
-                               [](int64_t el) { return static_cast<int>(el); });
-            }
+            copyFromONNX(result[i], outs.back());
         }
     }
     // One input/output overload

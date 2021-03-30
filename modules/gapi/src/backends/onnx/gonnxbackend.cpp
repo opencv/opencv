@@ -189,7 +189,7 @@ inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
     const auto info = v.GetTensorTypeAndShapeInfo();
     const auto prec = info.GetElementType();
     const auto shape = toCV(info.GetShape());
-    mat = cv::Mat(shape, toCV(prec));
+    mat.create(shape, toCV(prec));
     switch (prec) {
 #define HANDLE(E,T)                                          \
         case E: std::copy_n(v.GetTensorMutableData<T>(),     \
