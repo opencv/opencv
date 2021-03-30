@@ -200,11 +200,10 @@ inline cv::Mat toCV(Ort::Value &v) {
                        reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
     }
     cv::Mat mt(shape, CV_32S);
-    const int64_t* ptr = v.GetTensorMutableData<int64_t>();
-    int* mt_ptr = mt.ptr<int>();
     GAPI_Assert(mt.isContinuous());
-    std::transform(ptr, ptr + mt.total(), mt_ptr,
-                   [](int64_t el) { return static_cast<int>(el); });
+    cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
+                                   mt.ptr<int>(),
+                                   mt.total());
     return mt;
 }
 

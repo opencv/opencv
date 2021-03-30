@@ -973,7 +973,7 @@ TEST_F(ONNXYoloV3MultiInput, InferBSConstInput)
     validate();
 }
 
-TEST_F(ONNXRCNN, InferRCNN64to32)
+TEST_F(ONNXRCNN, ConversionInt64to32)
 {
     useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
     cv::Mat dst;
