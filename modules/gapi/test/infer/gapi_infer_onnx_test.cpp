@@ -334,10 +334,9 @@ public:
                         reinterpret_cast<void*>(result[i].GetTensorMutableData<uint8_t*>()))
                 .copyTo(outs.back());
             } else {
-                const size_t total = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
                 const int64_t* ptr = result[i].GetTensorMutableData<int64_t>();
                 int* mt_ptr = outs.back().ptr<int>();
-                std::transform(ptr, ptr + total, mt_ptr,
+                std::transform(ptr, ptr + outs.back().total(), mt_ptr,
                                [](int64_t el) { return static_cast<int>(el); });
             }
         }
