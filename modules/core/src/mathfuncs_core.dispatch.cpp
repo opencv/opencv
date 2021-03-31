@@ -7,6 +7,10 @@
 #include "mathfuncs_core.simd.hpp"
 #include "mathfuncs_core.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
+
+#define IPP_DISABLE_MAGNITUDE_32F 1  // accuracy: https://github.com/opencv/opencv/issues/19506
+
+
 namespace cv { namespace hal {
 
 ///////////////////////////////////// ATAN2 ////////////////////////////////////
@@ -44,8 +48,25 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitude32f, cv_hal_magnitude32f, x, y, mag, len);
+
+#ifdef HAVE_IPP
+    bool allowIPP = true;
+#ifdef IPP_DISABLE_MAGNITUDE_32F
+    if (cv::ipp::getIppTopFeatures() & (
+#if IPP_VERSION_X100 >= 201700
+            ippCPUID_AVX512F |
+#endif
+            ippCPUID_AVX2)
+    )
+    {
+        allowIPP = (len & 7) == 0;
+    }
+#endif
+
     // SSE42 performance issues
-    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
+    CV_IPP_RUN((IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42) && allowIPP,
+        CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0);
+#endif
 
     CV_CPU_DISPATCH(magnitude32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
