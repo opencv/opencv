@@ -23,7 +23,7 @@ ocv_add_module(gapi
     REQUIRED
       opencv_imgproc
     OPTIONAL
-      opencv_video
+      opencv_video opencv_calib3d
     WRAP
       python
 )
@@ -76,6 +76,7 @@ set(gapi_srcs
     src/api/kernels_video.cpp
     src/api/kernels_nnparsers.cpp
     src/api/kernels_streaming.cpp
+    src/api/kernels_stereo.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -111,6 +112,7 @@ set(gapi_srcs
     src/backends/cpu/gcpubackend.cpp
     src/backends/cpu/gcpukernel.cpp
     src/backends/cpu/gcpuimgproc.cpp
+    src/backends/cpu/gcpustereo.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
     src/backends/cpu/gnnparsers.cpp
