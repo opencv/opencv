@@ -265,7 +265,12 @@ class ClassInfo(object):
 
             for m in decl[2]:
                 if m.startswith("="):
-                    self.wname = m[1:]
+                    wname = m[1:]
+                    npos = name.rfind('.')
+                    if npos >= 0:
+                        self.wname = normalize_class_name(name[:npos] + '.' + wname)
+                    else:
+                        self.wname = wname
                     customname = True
                 elif m == "/Map":
                     self.ismap = True
@@ -344,7 +349,8 @@ class ClassInfo(object):
         if self.constructor is not None:
             constructor_name = self.constructor.get_wrapper_name()
 
-        return "CVPY_TYPE({}, {}, {}, {}, {});\n".format(
+        return "CVPY_TYPE({}, {}, {}, {}, {}, {});\n".format(
+            self.wname,
             self.name,
             self.cname if self.issimple else "Ptr<{}>".format(self.cname),
             self.sname if self.issimple else "Ptr",
@@ -912,7 +918,7 @@ class PythonWrapperGenerator(object):
         if classes:
             classname = normalize_class_name('.'.join(namespace+classes))
             bareclassname = classes[-1]
-        namespace = '.'.join(namespace)
+        namespace_str = '.'.join(namespace)
 
         isconstructor = name == bareclassname
         is_static = False
@@ -937,23 +943,36 @@ class PythonWrapperGenerator(object):
         if is_static:
             # Add it as a method to the class
             func_map = self.classes[classname].methods
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace_str, is_static))
             func.add_variant(decl, isphantom)
 
             # Add it as global function
             g_name = "_".join(classes+[name])
-            func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
-            func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace, False))
+            w_classes = []
+            for i in range(0, len(classes)):
+                classes_i = classes[:i+1]
+                classname_i = normalize_class_name('.'.join(namespace+classes_i))
+                w_classname = self.classes[classname_i].wname
+                namespace_prefix = normalize_class_name('.'.join(namespace)) + '_'
+                if w_classname.startswith(namespace_prefix):
+                    w_classname = w_classname[len(namespace_prefix):]
+                w_classes.append(w_classname)
+            g_wname = "_".join(w_classes+[name])
+            func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
+            func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace_str, False))
             func.add_variant(decl, isphantom)
+            if g_wname != g_name:  # TODO OpenCV 5.0
+                wfunc = func_map.setdefault(g_wname, FuncInfo("", g_wname, cname, isconstructor, namespace_str, False))
+                wfunc.add_variant(decl, isphantom)
         else:
             if classname and not isconstructor:
                 if not isphantom:
                     cname = barename
                 func_map = self.classes[classname].methods
             else:
-                func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
+                func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
 
-            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace, is_static))
+            func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace_str, is_static))
             func.add_variant(decl, isphantom)
 
         if classname and isconstructor:
