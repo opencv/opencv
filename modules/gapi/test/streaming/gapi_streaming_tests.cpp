@@ -2061,22 +2061,10 @@ TEST_P(GAPI_Accessors_Meta_In_Streaming, AccuracyTest)
     EXPECT_TRUE(std::is_sorted(all_timestamps.begin(), all_timestamps.end()));
 }
 
-INSTANTIATE_TEST_CASE_P(BGRAccessorMeta, GAPI_Accessors_Meta_In_Streaming,
+INSTANTIATE_TEST_CASE_P(AccessorMeta, GAPI_Accessors_Meta_In_Streaming,
                         Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::NV12),
-                                Values(TestAccessType::Y)
-                        ));
-
-INSTANTIATE_TEST_CASE_P(YAccessorMeta, GAPI_Accessors_Meta_In_Streaming,
-                        Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::NV12),
-                                Values(TestAccessType::Y)
-                        ));
-
-INSTANTIATE_TEST_CASE_P(UVAccessorMeta, GAPI_Accessors_Meta_In_Streaming,
-                        Combine(Values("cv/video/768x576.avi"),
-                                Values(TestSourceType::NV12),
-                                Values(TestAccessType::UV)
+                                Values(TestSourceType::BGR, TestSourceType::NV12),
+                                Values(TestAccessType::BGR, TestAccessType::Y, TestAccessType::UV)
                         ));
 
 TEST(GAPI_Streaming, TestPythonAPI)

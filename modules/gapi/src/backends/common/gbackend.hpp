@@ -209,6 +209,12 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
 
 void GAPI_EXPORTS createMat(const cv::GMatDesc& desc, cv::Mat& mat);
 
+inline void convertInt64ToInt32(const int64_t* src, int* dst, size_t size)
+{
+    std::transform(src, src + size, dst,
+                   [](int64_t el) { return static_cast<int>(el); });
+}
+
 }} // cv::gimpl
 
 #endif // OPENCV_GAPI_GBACKEND_HPP

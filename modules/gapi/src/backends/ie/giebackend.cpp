@@ -106,7 +106,7 @@ inline IE::Precision toIE(int depth) {
     case CV_8U:  return IE::Precision::U8;
     case CV_32S: return IE::Precision::I32;
     case CV_32F: return IE::Precision::FP32;
-    default:     GAPI_Assert(false && "Unsupported data type");
+    default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return IE::Precision::UNSPECIFIED;
 }
@@ -115,7 +115,8 @@ inline int toCV(IE::Precision prec) {
     case IE::Precision::U8:   return CV_8U;
     case IE::Precision::FP32: return CV_32F;
     case IE::Precision::I32:  return CV_32S;
-    default:     GAPI_Assert(false && "Unsupported data type");
+    case IE::Precision::I64:  return CV_32S;
+    default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return -1;
 }
@@ -158,7 +159,7 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         HANDLE(32F, float);
         HANDLE(32S, int);
 #undef HANDLE
-    default: GAPI_Assert(false && "Unsupported data type");
+    default: GAPI_Assert(false && "IE. Unsupported data type");
     }
     return IE::Blob::Ptr{};
 }
@@ -194,7 +195,14 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(FP32, float);
         HANDLE(I32, int);
 #undef HANDLE
-    default: GAPI_Assert(false && "Unsupported data type");
+        case IE::Precision::I64: {
+            GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+            cv::gimpl::convertInt64ToInt32(blob->buffer().as<int64_t*>(),
+                                           reinterpret_cast<int*>(mat.data),
+                                           mat.total());
+            break;
+        }
+    default: GAPI_Assert(false && "IE. Unsupported data type");
     }
 }
 
