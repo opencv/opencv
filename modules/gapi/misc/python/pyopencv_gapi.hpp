@@ -791,5 +791,12 @@ struct PyOpenCV_Converter<cv::GOpaque<T>>
     }
 };
 
+
+// extend cv.gapi.wip. methods
+#define PYOPENCV_EXTRA_METHODS_GAPI_WIP \
+  {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \
+  {"op", CV_PY_FN_WITH_KW_(pyopencv_cv_gapi_op, 0), "kernels(...) -> retval\n"}, \
+
+
 #endif  // HAVE_OPENCV_GAPI
 #endif  // OPENCV_GAPI_PYOPENCV_GAPI_HPP
