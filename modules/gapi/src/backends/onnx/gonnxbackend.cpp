@@ -47,7 +47,7 @@ struct TensorInfo {
     explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
         : dims(info.GetShape())
         , type(info.GetElementType())
-        , is_dynamic(std::find(dims.begin(), dims.end(), -1) != dims.end()) {
+        , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
 
         // Double-check if the tensor is really dynamic
         // Allow N to be -1
@@ -158,7 +158,7 @@ inline std::vector<const char*> getCharNames(const std::vector<std::string>& nam
 
 inline int getIdxByName(const std::vector<cv::gimpl::onnx::TensorInfo>& info, const std::string& name) {
     // FIXME: Cache the ordering
-    const auto it = std::find_if(info.begin(), info.end(), [&](const cv::gimpl::onnx::TensorInfo &i) {
+    const auto it = ade::util::find_if(info, [&](const cv::gimpl::onnx::TensorInfo &i) {
             return i.name == name;
         });
     GAPI_Assert(it != info.end());
@@ -797,9 +797,12 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         // Hard path - run session & user-defined post-processing
         // NOTE: use another list of output names here
         std::vector<const char*> out_names;
-        for (auto &&ti : out_tensor_info) {
-            out_names.push_back(ti.name.c_str());
-        }
+        out_names.reserve(outs.size());
+        params.names_to_remap.empty()
+            ? ade::util::transform(out_tensor_info, std::back_inserter(out_names),
+                                   [] (const TensorInfo& ti) { return ti.name.c_str(); })
+            : ade::util::transform(params.names_to_remap, std::back_inserter(out_names),
+                                   [] (const std::string& ntr) { return ntr.c_str(); });
 
         auto outputs = this_session.Run(Ort::RunOptions{nullptr},
                                         in_run_names.data(),
@@ -812,18 +815,32 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
 
         GAPI_Assert(outputs.size() == out_names.size());
         // Fill in ONNX tensors
-        for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensor_info),
+        for (auto &&iter : ade::util::zip(ade::util::toRange(out_names),
                                           ade::util::toRange(outputs))) {
-            const auto &out_name   = std::get<0>(iter).name;
+            const auto &out_name   = std::get<0>(iter);
                   auto &out_tensor = std::get<1>(iter);
             copyFromONNX(out_tensor, onnx_outputs[out_name]);
         }
-
+        std::vector<uint8_t *> tracked_mat_ptrs;
         // Fill in G-API outputs
         for (auto &&it: ade::util::indexed(params.output_names)) {
             gapi_outputs[ade::util::value(it)] = outs[ade::util::index(it)];
+            tracked_mat_ptrs.push_back(outs[ade::util::index(it)].data);
         }
         params.custom_post_proc(onnx_outputs, gapi_outputs);
+        // Checking for possible data reallocation after remapping
+        GAPI_Assert(tracked_mat_ptrs.size() == params.output_names.size());
+        for (auto &&iter : ade::util::zip(ade::util::toRange(tracked_mat_ptrs),
+                                          ade::util::toRange(params.output_names))) {
+            const auto &original_data = std::get<0>(iter);
+            const auto &received_data = gapi_outputs.at(std::get<1>(iter)).data;
+            if (original_data != received_data) {
+                cv::util::throw_error
+                    (std::logic_error
+                     ("OpenCV kernel output parameter was reallocated after remapping of ONNX output. \n"
+                      "Incorrect logic in remapping function?"));
+            }
+        }
     }
 }
 
