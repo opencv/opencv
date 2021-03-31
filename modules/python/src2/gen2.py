@@ -47,7 +47,7 @@ gen_template_func_body = Template("""$code_decl
 gen_template_mappable = Template("""
     {
         ${mappable} _src;
-        if (pyopencv_to(src, _src, info))
+        if (pyopencv_to_safe(src, _src, info))
         {
             return cv_mappable_to(_src, dst);
         }
@@ -91,7 +91,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to(tmp, dst.$propname, ArgInfo("$propname", false));
+        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", false));
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -145,7 +145,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
 }
 """)
 
@@ -163,7 +163,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
-    return pyopencv_to(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
 }
 """)
 
@@ -281,7 +281,7 @@ class ClassInfo(object):
         code = "static bool pyopencv_to(PyObject* src, %s& dst, const ArgInfo& info)\n{\n    PyObject* tmp;\n    bool ok;\n" % (self.cname)
         code += "".join([gen_template_set_prop_from_map.substitute(propname=p.name,proptype=p.tp) for p in self.props])
         if self.base:
-            code += "\n    return pyopencv_to(src, (%s&)dst, info);\n}\n" % all_classes[self.base].cname
+            code += "\n    return pyopencv_to_safe(src, (%s&)dst, info);\n}\n" % all_classes[self.base].cname
         else:
             code += "\n    return true;\n}\n"
         return code
@@ -665,7 +665,7 @@ class FuncInfo(object):
                         if a.tp == 'char':
                             code_cvt_list.append("convert_to_char(pyobj_%s, &%s, %s)" % (a.name, a.name, a.crepr()))
                         else:
-                            code_cvt_list.append("pyopencv_to(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
+                            code_cvt_list.append("pyopencv_to_safe(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
 
                 all_cargs.append([arg_type_info, parse_name])
 
