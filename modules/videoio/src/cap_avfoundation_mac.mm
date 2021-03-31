@@ -99,7 +99,7 @@ public:
     virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
-
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
 
 private:
     AVCaptureSession            *mCaptureSession;
@@ -141,7 +141,7 @@ public:
     virtual double getProperty(int property_id) const;
     virtual bool setProperty(int property_id, double value);
     virtual int didStart();
-
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
 
 private:
     AVAsset                  *mAsset;
