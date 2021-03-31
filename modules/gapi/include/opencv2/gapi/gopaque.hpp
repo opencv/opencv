@@ -21,6 +21,9 @@
 #include <opencv2/gapi/util/type_traits.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
+#include <opencv2/gapi/gcommon.hpp>  // OpaqueKind
+#include <opencv2/gapi/garray.hpp>  // TypeHintBase
+
 namespace cv
 {
 // Forward declaration; GNode and GOrigin are an internal
