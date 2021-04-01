@@ -73,7 +73,7 @@ def add(g_in1, g_in2, dtype):
     def custom_add_meta(img_desc1, img_desc2, dtype):
         return img_desc1
 
-    return cv.gapi_wip_op('custom.add', custom_add_meta, g_in1, g_in2, dtype).getGMat()
+    return cv.gapi.wip.op('custom.add', custom_add_meta, g_in1, g_in2, dtype).getGMat()
 
 
 # Test multiple output mat
@@ -82,7 +82,7 @@ def split3(g_in):
         out_desc = img_desc.withType(img_desc.depth, 1)
         return out_desc, out_desc, out_desc
 
-    op = cv.gapi_wip_op('custom.split3', custom_split3_meta, g_in)
+    op = cv.gapi.wip.op('custom.split3', custom_split3_meta, g_in)
 
     ch1 = op.getGMat()
     ch2 = op.getGMat()
@@ -95,7 +95,7 @@ def mean(g_in):
     def custom_mean_meta(img_desc):
         return cv.empty_scalar_desc()
 
-    op = cv.gapi_wip_op('custom.mean', custom_mean_meta, g_in)
+    op = cv.gapi.wip.op('custom.mean', custom_mean_meta, g_in)
     return op.getGScalar()
 
 
@@ -104,7 +104,7 @@ def addC(g_in, g_sc, dtype):
     def custom_addC_meta(img_desc, sc_desc, dtype):
         return img_desc
 
-    op = cv.gapi_wip_op('custom.addC', custom_addC_meta, g_in, g_sc, dtype)
+    op = cv.gapi.wip.op('custom.addC', custom_addC_meta, g_in, g_sc, dtype)
     return op.getGMat()
 
 
@@ -113,7 +113,7 @@ def size(g_in):
     def custom_size_meta(img_desc):
         return cv.empty_gopaque_desc()
 
-    op = cv.gapi_wip_op('custom.size', custom_size_meta, g_in)
+    op = cv.gapi.wip.op('custom.size', custom_size_meta, g_in)
     return op.getGOpaque(cv.gapi.CV_SIZE)
 
 
@@ -122,7 +122,7 @@ def sizeR(g_rect):
     def custom_sizeR_meta(opaque_desc):
         return cv.empty_gopaque_desc()
 
-    op = cv.gapi_wip_op('custom.sizeR', custom_sizeR_meta, g_rect)
+    op = cv.gapi.wip.op('custom.sizeR', custom_sizeR_meta, g_rect)
     return op.getGOpaque(cv.gapi.CV_SIZE)
 
 
@@ -131,7 +131,7 @@ def boundingRect(g_array):
     def custom_boundingRect_meta(array_desc):
         return cv.empty_gopaque_desc()
 
-    op = cv.gapi_wip_op('custom.boundingRect', custom_boundingRect_meta, g_array)
+    op = cv.gapi.wip.op('custom.boundingRect', custom_boundingRect_meta, g_array)
     return op.getGOpaque(cv.gapi.CV_RECT)
 
 
@@ -143,7 +143,7 @@ def goodFeaturesToTrack(g_in, max_corners, quality_lvl,
                                         min_distance, mask, block_sz, use_harris_detector, k):
         return cv.empty_array_desc()
 
-    op = cv.gapi_wip_op('custom.goodFeaturesToTrack', custom_goodFeaturesToTrack_meta, g_in,
+    op = cv.gapi.wip.op('custom.goodFeaturesToTrack', custom_goodFeaturesToTrack_meta, g_in,
             max_corners, quality_lvl, min_distance, mask, block_sz, use_harris_detector, k)
     return op.getGArray(cv.gapi.CV_POINT2F)
 
@@ -185,7 +185,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(g_in, g_out)
 
-        pkg    = cv.gapi_wip_kernels((custom_mean, 'org.opencv.core.math.mean'))
+        pkg    = cv.gapi.wip.kernels((custom_mean, 'org.opencv.core.math.mean'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # Comparison
@@ -206,7 +206,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_out = cv.gapi.add(g_in1, g_in2)
         comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
-        pkg = cv.gapi_wip_kernels((custom_add, 'org.opencv.core.math.add'))
+        pkg = cv.gapi.wip.kernels((custom_add, 'org.opencv.core.math.add'))
         actual = comp.apply(cv.gin(in_mat1, in_mat2), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -224,7 +224,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = cv.gapi.streaming.size(g_in)
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_sz))
 
-        pkg = cv.gapi_wip_kernels((custom_size, 'org.opencv.streaming.size'))
+        pkg = cv.gapi.wip.kernels((custom_size, 'org.opencv.streaming.size'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -255,7 +255,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
                                             min_distance, mask, block_sz, use_harris_detector, k)
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
-        pkg = cv.gapi_wip_kernels((custom_goodFeaturesToTrack, 'org.opencv.imgproc.feature.goodFeaturesToTrack'))
+        pkg = cv.gapi.wip.kernels((custom_goodFeaturesToTrack, 'org.opencv.imgproc.feature.goodFeaturesToTrack'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # NB: OpenCV & G-API have different output types.
@@ -280,7 +280,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_out = cv.gapi.addC(g_in, g_sc)
         comp = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(g_out))
 
-        pkg = cv.gapi_wip_kernels((custom_addC, 'org.opencv.core.math.addC'))
+        pkg = cv.gapi.wip.kernels((custom_addC, 'org.opencv.core.math.addC'))
         actual = comp.apply(cv.gin(in_mat, sc), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -297,7 +297,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = cv.gapi.streaming.size(g_r)
         comp = cv.GComputation(cv.GIn(g_r), cv.GOut(g_sz))
 
-        pkg = cv.gapi_wip_kernels((custom_sizeR, 'org.opencv.streaming.sizeR'))
+        pkg = cv.gapi.wip.kernels((custom_sizeR, 'org.opencv.streaming.sizeR'))
         actual = comp.apply(cv.gin(roi), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -315,7 +315,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_br  = cv.gapi.boundingRect(g_pts)
         comp = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
 
-        pkg = cv.gapi_wip_kernels((custom_boundingRect, 'org.opencv.imgproc.shape.boundingRectVector32S'))
+        pkg = cv.gapi.wip.kernels((custom_boundingRect, 'org.opencv.imgproc.shape.boundingRectVector32S'))
         actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -340,7 +340,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_mean))
 
 
-        pkg = cv.gapi_wip_kernels((custom_add   , 'org.opencv.core.math.add'),
+        pkg = cv.gapi.wip.kernels((custom_add   , 'org.opencv.core.math.add'),
                          (custom_mean  , 'org.opencv.core.math.mean'),
                          (custom_split3, 'org.opencv.core.transform.split3'))
 
@@ -364,7 +364,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
-        pkg = cv.gapi_wip_kernels((custom_add, 'custom.add'))
+        pkg = cv.gapi.wip.kernels((custom_add, 'custom.add'))
         actual = comp.apply(cv.gin(in_mat1, in_mat2), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -384,7 +384,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_ch1, g_ch2, g_ch3))
 
-        pkg = cv.gapi_wip_kernels((custom_split3, 'custom.split3'))
+        pkg = cv.gapi.wip.kernels((custom_split3, 'custom.split3'))
         ch1, ch2, ch3 = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(in_ch1, ch1, cv.NORM_INF))
@@ -405,7 +405,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(g_in, g_out)
 
-        pkg    = cv.gapi_wip_kernels((custom_mean, 'custom.mean'))
+        pkg    = cv.gapi.wip.kernels((custom_mean, 'custom.mean'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # Comparison
@@ -426,7 +426,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_out = addC(g_in, g_sc, cv.CV_8UC1)
         comp  = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(g_out))
 
-        pkg = cv.gapi_wip_kernels((custom_addC, 'custom.addC'))
+        pkg = cv.gapi.wip.kernels((custom_addC, 'custom.addC'))
         actual = comp.apply(cv.gin(in_mat, sc), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -444,7 +444,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = size(g_in)
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_sz))
 
-        pkg = cv.gapi_wip_kernels((custom_size, 'custom.size'))
+        pkg = cv.gapi.wip.kernels((custom_size, 'custom.size'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -461,7 +461,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = sizeR(g_r)
         comp = cv.GComputation(cv.GIn(g_r), cv.GOut(g_sz))
 
-        pkg = cv.gapi_wip_kernels((custom_sizeR, 'custom.sizeR'))
+        pkg = cv.gapi.wip.kernels((custom_sizeR, 'custom.sizeR'))
         actual = comp.apply(cv.gin(roi), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -479,7 +479,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_br  = boundingRect(g_pts)
         comp = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
 
-        pkg = cv.gapi_wip_kernels((custom_boundingRect, 'custom.boundingRect'))
+        pkg = cv.gapi.wip.kernels((custom_boundingRect, 'custom.boundingRect'))
         actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -511,7 +511,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
                                     min_distance, mask, block_sz, use_harris_detector, k)
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
-        pkg = cv.gapi_wip_kernels((custom_goodFeaturesToTrack, 'custom.goodFeaturesToTrack'))
+        pkg = cv.gapi.wip.kernels((custom_goodFeaturesToTrack, 'custom.goodFeaturesToTrack'))
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # NB: OpenCV & G-API have different output types.
