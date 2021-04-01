@@ -5,7 +5,7 @@
 #ifndef __OPENCV_TRACKER_MIL_MODEL_HPP__
 #define __OPENCV_TRACKER_MIL_MODEL_HPP__
 
-#include "opencv2/video/detail/tracking.private.hpp"
+#include "opencv2/video/detail/tracking.detail.hpp"
 #include "tracker_mil_state.hpp"
 
 namespace cv {

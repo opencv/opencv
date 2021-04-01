@@ -1,3 +1,10 @@
+const isNodeJs = (typeof window) === 'undefined'? true : false;
+
+if(isNodeJs) {
+  var Base = require("./base");
+  global.getCvSize = Base.getCvSize;
+}
+
 var fillGradient = function(cv, img, delta=5) {
   let ch = img.channels();
   console.assert(!img.empty() && img.depth() == cv.CV_8U && ch <= 4);
@@ -56,8 +63,8 @@ var smoothBorder = function(cv, img, color, delta=5) {
 
 var cvtStr2cvSize = function(strSize) {
   let size;
-
   let cvSize = getCvSize();
+
   switch(strSize) {
     case "127,61": size = cvSize.szODD;break;
     case '320,240': size = cvSize.szQVGA;break;

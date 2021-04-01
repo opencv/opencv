@@ -143,10 +143,25 @@ macro(ipp_detect_version)
         list(APPEND IPP_LIBRARIES ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX})
       else ()
         add_library(ipp${name} STATIC IMPORTED)
+        set(_filename "${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}")
         set_target_properties(ipp${name} PROPERTIES
           IMPORTED_LINK_INTERFACE_LIBRARIES ""
-          IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${IPP_LIB_PREFIX}${IPP_PREFIX}${name}${IPP_SUFFIX}${IPP_LIB_SUFFIX}
+          IMPORTED_LOCATION ${IPP_LIBRARY_DIR}/${_filename}
         )
+        if("${name}" STREQUAL "core")  # https://github.com/opencv/opencv/pull/19681
+          if(OPENCV_FORCE_IPP_EXCLUDE_LIBS OR OPENCV_FORCE_IPP_EXCLUDE_LIBS_CORE
+              OR (UNIX AND NOT ANDROID AND NOT APPLE
+                  AND (CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+              )
+              AND NOT OPENCV_SKIP_IPP_EXCLUDE_LIBS_CORE
+          )
+            if(CMAKE_VERSION VERSION_LESS "3.13.0")
+              set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-libs,${_filename} ${CMAKE_SHARED_LINKER_FLAGS}")
+            else()
+              target_link_options(ipp${name} INTERFACE "LINKER:--exclude-libs,${_filename}")
+            endif()
+          endif()
+        endif()
         list(APPEND IPP_LIBRARIES ipp${name})
         if (NOT BUILD_SHARED_LIBS AND (HAVE_IPP_ICV OR ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;"))
           # CMake doesn't support "install(TARGETS ${IPP_PREFIX}${name} " command with imported targets

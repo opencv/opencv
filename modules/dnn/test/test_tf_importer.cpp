@@ -135,6 +135,16 @@ TEST_P(Test_TensorFlow_layers, reduce_sum)
     runTensorFlowNet("sum_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_sum_channel)
+{
+    runTensorFlowNet("reduce_sum_channel");
+}
+
+TEST_P(Test_TensorFlow_layers, reduce_sum_channel_keep_dims)
+{
+    runTensorFlowNet("reduce_sum_channel", false, 0.0, 0.0, false, "_keep_dims");
+}
+
 TEST_P(Test_TensorFlow_layers, conv_single_conv)
 {
     runTensorFlowNet("single_conv");
