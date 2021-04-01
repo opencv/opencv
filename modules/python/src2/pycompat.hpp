@@ -172,7 +172,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
 #endif
 
 
-#define CVPY_TYPE_DECLARE(NAME, STORAGE, SNAME) \
+#define CVPY_TYPE_DECLARE(WNAME, NAME, STORAGE, SNAME) \
     struct pyopencv_##NAME##_t \
     { \
         PyObject_HEAD \
@@ -181,7 +181,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyTypeObject pyopencv_##NAME##_TypeXXX = \
     { \
         CVPY_TYPE_HEAD \
-        MODULESTR"."#NAME, \
+        MODULESTR"."#WNAME, \
         sizeof(pyopencv_##NAME##_t), \
     }; \
     static PyTypeObject * pyopencv_##NAME##_TypePtr = &pyopencv_##NAME##_TypeXXX; \
@@ -208,12 +208,12 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##NAME##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "<"#NAME" %p>", self); \
+        sprintf(str, "<"#WNAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
 
-#define CVPY_TYPE_INIT_STATIC(NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
+#define CVPY_TYPE_INIT_STATIC(WNAME, NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
     { \
         pyopencv_##NAME##_TypePtr->tp_base = pyopencv_##BASE##_TypePtr; \
         pyopencv_##NAME##_TypePtr->tp_dealloc = pyopencv_##NAME##_dealloc; \
@@ -229,12 +229,12 @@ PyObject* pyopencv_from(const TYPE& src)                                        
             ERROR_HANDLER; \
         } \
         CVPY_TYPE_INCREF(pyopencv_##NAME##_TypePtr); \
-        PyModule_AddObject(m, #NAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
+        PyModule_AddObject(m, #WNAME, (PyObject *)pyopencv_##NAME##_TypePtr); \
     }
 
 //==================================================================================================
 
-#define CVPY_TYPE_DECLARE_DYNAMIC(NAME, STORAGE, SNAME) \
+#define CVPY_TYPE_DECLARE_DYNAMIC(WNAME, NAME, STORAGE, SNAME) \
     struct pyopencv_##NAME##_t \
     { \
         PyObject_HEAD \
@@ -264,7 +264,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##NAME##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "<"#NAME" %p>", self); \
+        sprintf(str, "<"#WNAME" %p>", self); \
         return PyString_FromString(str); \
     } \
     static PyType_Slot pyopencv_##NAME##_Slots[] =  \
@@ -280,14 +280,14 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     }; \
     static PyType_Spec pyopencv_##NAME##_Spec = \
     { \
-        MODULESTR"."#NAME, \
+        MODULESTR"."#WNAME, \
         sizeof(pyopencv_##NAME##_t), \
         0, \
         Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, \
         pyopencv_##NAME##_Slots  \
     };
 
-#define CVPY_TYPE_INIT_DYNAMIC(NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
+#define CVPY_TYPE_INIT_DYNAMIC(WNAME, NAME, ERROR_HANDLER, BASE, CONSTRUCTOR) \
     { \
         pyopencv_##NAME##_Slots[0].pfunc /*tp_dealloc*/ = (void*)pyopencv_##NAME##_dealloc; \
         pyopencv_##NAME##_Slots[1].pfunc /*tp_repr*/ = (void*)pyopencv_##NAME##_repr; \
@@ -302,7 +302,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         pyopencv_##NAME##_TypePtr = PyType_FromSpecWithBases(&pyopencv_##NAME##_Spec, bases); \
         if (!pyopencv_##NAME##_TypePtr) \
         { \
-            printf("Failed to init: " #NAME ", base (" #BASE ")" "\n"); \
+            printf("Failed to init: " #WNAME ", base (" #BASE ")" "\n"); \
             ERROR_HANDLER; \
         } \
         PyModule_AddObject(m, #NAME, (PyObject *)pyopencv_##NAME##_TypePtr); \

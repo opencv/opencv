@@ -627,7 +627,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
         (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
-        if( checkScalar(*psrc1, type2, kind1, kind2) )
+        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) &&
+            checkScalar(*psrc1, type2, kind1, kind2))
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
