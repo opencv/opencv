@@ -192,22 +192,19 @@ TEST(GArray, TestIntermediateOutput)
 TEST(GArray, TestGArrayGArrayKernelInput)
 {
     cv::GMat in;
-    cv::GArray<cv::GArray<cv::Point>> contours = cv::gapi::findContours(in, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+    auto contours = cv::gapi::findContours(in, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
     auto out = ThisTest::CountContours::on(contours);
-    cv::GComputation c(GIn(in), GOut(out
-                                    //  ,contours
-                                    ));
+    cv::GComputation c(GIn(in), GOut(out));
 
-    cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
+    // Create input - two filled rectangles
+    cv::Mat in_mat = cv::Mat::zeros(50, 50, CV_8UC1);
+    cv::rectangle(in_mat, cv::Point{5,5},   cv::Point{20,20}, 255, cv::FILLED);
+    cv::rectangle(in_mat, cv::Point{25,25}, cv::Point{40,40}, 255, cv::FILLED);
+
     size_t out_count;
-    // std::vector<std::vector<cv::Point>> out_conts;
+    c.apply(gin(in_mat), gout(out_count), cv::compile_args(cv::gapi::kernels<OCVCountContours>()));
 
-    c.apply(gin(in_mat), gout(out_count
-                            //  ,out_conts
-                             ), cv::compile_args(cv::gapi::kernels<OCVCountContours>()));
-
-    // EXPECT_EQ(1u,  out_conts.size());
-    EXPECT_EQ(1u,  out_count);
+    EXPECT_EQ(2u, out_count) << "Two contours must be found";
 }
 
 TEST(GArray, GArrayConstValInitialization)
