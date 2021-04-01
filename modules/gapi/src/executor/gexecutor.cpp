@@ -48,8 +48,11 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
         return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
     };
 
+    namespace r = ade::util::Range;
+
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-    for (auto&& nh : ade::util::filter(sorted.nodes(), is_slot)){
+
+    for (auto&& nh : r::filter(sorted.nodes(), is_slot)){
         const auto orig_data_nh
             = m_gim.metadata(nh).get<DataSlot>().original_data_node;
         // (1)
@@ -57,7 +60,6 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
         m_slots.emplace_back(DataDesc{nh, orig_data_nh});
     }
 
-    namespace r = ade::util::Range;
     for (auto&& nh : r::filter(sorted.nodes(), is_island)){
         std::vector<RcDesc> input_rcs;
         std::vector<RcDesc> output_rcs;
@@ -89,22 +91,29 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
 cv::gimpl::GTBBExecutor::GTBBExecutor(std::unique_ptr<ade::Graph> &&g_model)
     : GExecutor(std::move(g_model))
 {
+    using handle_t = ade::NodeHandle;
+    using handle_hasher_t = ade::HandleHasher<ade::Node>;
+
+    using node_handles_set_t = std::unordered_set<handle_t, handle_hasher_t>;
+
     using op_index_t = size_t;
-    std::unordered_map<ade::NodeHandle, op_index_t, ade::HandleHasher<ade::Node>> op_indexes;
-    std::unordered_map<op_index_t, std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>> op_dependees_node_handles;
+
+    std::unordered_map<handle_t, op_index_t, handle_hasher_t> op_indexes;
+    std::unordered_map<op_index_t, node_handles_set_t> op_dependant_node_handles;
 
     namespace r = ade::util::Range;
-    auto is_island = [&](ade::NodeHandle const& nh){
+
+    auto is_island = [&](handle_t const& nh){
         return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
     };
 
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
 
     for (auto&& indexed_nh : r::indexed(r::filter(sorted.nodes(), is_island))){
-        auto&& nh           = r::value(indexed_nh);
+        auto&& island_nh    = r::value(indexed_nh);
         const auto op_index = r::index(indexed_nh);
 
-        op_indexes[nh] = op_index;
+        op_indexes[island_nh] = op_index;
 
         //TODO: use async tasks for non CPU islands
         std::function<void()> body = [this, op_index](){
@@ -112,39 +121,62 @@ cv::gimpl::GTBBExecutor::GTBBExecutor(std::unique_ptr<ade::Graph> &&g_model)
         };
         tasks.emplace_back(std::move(body));
 
-        auto dependents_range = r::map(
-                r::filter(nh->inNodes(), [](ade::NodeHandle const& in_slot_nh){
-                    //count input data nodes what are result of other operation
-                    return ! in_slot_nh->inNodes().empty();
-                }),
-                [](ade::NodeHandle const& in_slot_nh){
-                    return in_slot_nh->inNodes().front();
-                }
-        );
+        auto island_dependencies_count = [&island_nh]() -> std::size_t{
+            //task dependencies count is equal to the number of input slot objects
+            //(as there is only one writer to the any slot object by definition)
 
-        //task dependencies is equal to the number of input slot objects (as there is only one writer to the any slot)
-        tasks.back().dependencies = std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>>{dependents_range.begin(), dependents_range.end()}.size();
+            //does the slot has producers (or it is passed from outside)?
+            auto slot_has_producer =  [](handle_t const& in_slot_nh){
+                return ! in_slot_nh->inNodes().empty();
+            };
+
+            auto slot_producer = [](handle_t const& in_slot_nh){
+                GAPI_Assert(in_slot_nh->inNodes().size() == 1 &&
+                        "By definition data slot has a single producer");
+                return in_slot_nh->inNodes().front();
+            };
+
+            //get producers of input data nodes what are result of other operations
+            auto dependencies_range = r::map(
+                    r::filter(island_nh->inNodes(), slot_has_producer),
+                    slot_producer
+            );
+            //need to remove duplicates from the range (as island can produce several data slots)
+            return node_handles_set_t{
+                dependencies_range.begin(), dependencies_range.end()
+            }.size();
+
+        };
+
+        auto dependent_islands_handles = [&island_nh]() -> node_handles_set_t {
+            //get the dependent node_handles to convert them into operation indexes later
+            node_handles_set_t dependent_node_handles;
+            for (auto&& out_slot_nh : island_nh->outNodes()){
+                auto dependent_islands = out_slot_nh->outNodes();
+                dependent_node_handles.insert(dependent_islands.begin(), dependent_islands.end());
+            }
+
+            return dependent_node_handles;
+        };
+
+        tasks.back().dependencies = island_dependencies_count();
         tasks.back().dependency_count = tasks.back().dependencies;
 
-        //get the dependent node_handles to convert them into operation indexes later
-        std::unordered_set<ade::NodeHandle, ade::HandleHasher<ade::Node>> dependent_node_handles;
-        for (auto&& out_slot_nh : nh->outNodes()){
-            auto dependent_islands = out_slot_nh->outNodes();
-            dependent_node_handles.insert(dependent_islands.begin(), dependent_islands.end());
-        }
-        op_dependees_node_handles[op_index] = std::move(dependent_node_handles);
+        op_dependant_node_handles.emplace(op_index ,dependent_islands_handles());
     }
 
     auto total_order_index = tasks.size();
 
     //fill the tasks graph : set priority indexes, number of dependencies, and dependent nodes sets
-
-    for (auto i : ade::util::Range::iota(tasks.size())){
+    for (auto i : r::iota(tasks.size())){
         tasks[i].total_order_index = --total_order_index;
 
-        auto dependents_range = ade::util::Range::map(ade::util::Range::toRange(op_dependees_node_handles.at(i)), [&](ade::NodeHandle const& nh)-> parallel::tile_node *{
-            return &tasks.at(op_indexes.at(nh));
-        });
+        auto dependents_range = r::map(
+                r::toRange(op_dependant_node_handles.at(i)),
+                [&](handle_t const& nh)-> parallel::tile_node *{
+                    return &tasks.at(op_indexes.at(nh));
+                }
+        );
         tasks[i].dependants.assign(dependents_range.begin(), dependents_range.end());
     }
 
@@ -164,7 +196,7 @@ cv::gimpl::GTBBExecutor::GTBBExecutor(std::unique_ptr<ade::Graph> &&g_model)
 }
 
 void cv::gimpl::GTBBExecutor::runImpl(){
-    tbb::concurrent_priority_queue<parallel::tile_node* , parallel::tile_node_indirect_priority_comparator> q {start_tasks.begin(), start_tasks.end()};
+    parallel::prio_items_queue_t q {start_tasks.begin(), start_tasks.end()};
     parallel::execute(q);
 }
 #endif //USE_GAPI_TBB_EXECUTOR
@@ -190,7 +222,7 @@ void bindInArgExec(Mag& mag, const RcDesc &rc, const GRunArg &arg)
         mag_rmat = util::get<cv::RMat>(arg); break;
     default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
     }
-    // FIXME: has to take extra care about meta here for this particuluar
+    // FIXME: has to take extra care about meta here for this particular
     // case, just because this function exists at all
     mag.meta<cv::RMat>()[rc.id] = arg.meta;
 }
@@ -471,6 +503,7 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         magazine::resetInternalData(m_res, data);
     }
 
+    // (5) and  (6)
     // Run the script
     runImpl();
     // (7)
@@ -484,7 +517,6 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
 void cv::gimpl::GExecutor::runImpl() {
     for (auto &op : m_ops)
     {
-        // (5) and  (6)
         run_op(op, m_res);
     }
 }

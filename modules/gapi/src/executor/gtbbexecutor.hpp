@@ -74,14 +74,19 @@ struct tile_node {
 
     util::variant<sync_task_body, async_task_body>  task_body;
 
-    // number of dependencies according to a dependency graph (i.e. number of "input" edges).
+    // Number of dependency nodes according to a graph
+    // (i.e. Number of unique predecessor nodes which needs to be run before this one.
     size_t                                          dependencies     = 0;
 
-    // number of unsatisfied dependencies. When drops to zero task is ready for execution.
+    // Number of yet unsatisfied dependencies. When drops to zero task is ready for execution.
     // Initially equal to "dependencies"
     atomic_copyable_wrapper<size_t>                 dependency_count = 0;
 
     std::vector<tile_node*>                         dependants;
+
+    void reset_dependecy_count(){
+        dependency_count = dependencies;
+    }
 
     tile_node(decltype(sync_task_body::body)&& f) : task_body(sync_task_body{std::move(f)}) {};
     tile_node(async_tag, decltype(async_task_body::body)&& f) : task_body(async_task_body{std::move(f)}) {};
