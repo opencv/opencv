@@ -32,6 +32,10 @@ G_TYPED_KERNEL(PointIncrement, <GPointArray(GMat, GPointArray)>, "test.point_inc
 {
     static GArrayDesc outMeta(const GMatDesc&, const GArrayDesc&) { return empty_array_desc(); }
 };
+G_TYPED_KERNEL(CountContours, <GOpaque<size_t>(GArray<GPointArray>)>, "test.array.array.in")
+{
+    static GOpaqueDesc outMeta(const GArrayDesc&) { return empty_gopaque_desc(); }
+};
 } // namespace ThisTest
 
 namespace
@@ -67,6 +71,14 @@ GAPI_OCV_KERNEL(OCVPointIncrement, ThisTest::PointIncrement)
     {
         for (const auto& el : in)
             out.emplace_back(el + Point(1,1));
+    }
+};
+
+GAPI_OCV_KERNEL(OCVCountContours, ThisTest::CountContours)
+{
+    static void run(const std::vector<std::vector<cv::Point>> &contours, size_t &out)
+    {
+        out = contours.size();
     }
 };
 
@@ -175,6 +187,24 @@ TEST(GArray, TestIntermediateOutput)
 
     EXPECT_EQ(10u, out_points.size());
     EXPECT_EQ(10,  out_count[0]);
+}
+
+TEST(GArray, TestGArrayGArrayKernelInput)
+{
+    cv::GMat in;
+    auto contours = cv::gapi::findContours(in, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+    auto out = ThisTest::CountContours::on(contours);
+    cv::GComputation c(GIn(in), GOut(out));
+
+    // Create input - two filled rectangles
+    cv::Mat in_mat = cv::Mat::zeros(50, 50, CV_8UC1);
+    cv::rectangle(in_mat, cv::Point{5,5},   cv::Point{20,20}, 255, cv::FILLED);
+    cv::rectangle(in_mat, cv::Point{25,25}, cv::Point{40,40}, 255, cv::FILLED);
+
+    size_t out_count = 0u;
+    c.apply(gin(in_mat), gout(out_count), cv::compile_args(cv::gapi::kernels<OCVCountContours>()));
+
+    EXPECT_EQ(2u, out_count) << "Two contours must be found";
 }
 
 TEST(GArray, GArrayConstValInitialization)
