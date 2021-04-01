@@ -1250,7 +1250,7 @@ public:
                                                              v20*vw20 + v21*vw21 + v22*vw22 + vbias;
                                             if (relu)
                                                 vout = v_select(vout > z, vout, vout*vrc);
-                                            vx_store(outptr + out_j, vout);
+                                            v_store(outptr + out_j, vout);
                                         }
                                     }
                                 #endif

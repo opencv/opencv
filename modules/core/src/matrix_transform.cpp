@@ -536,8 +536,8 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
             {
                 v_int32 t0 = vx_load((int*)(src0 + i));
                 v_int32 t1 = vx_load((int*)(src1 + i));
-                vx_store((int*)(dst0 + i), t1);
-                vx_store((int*)(dst1 + i), t0);
+                v_store((int*)(dst0 + i), t1);
+                v_store((int*)(dst1 + i), t0);
             }
         }
 #if CV_STRONG_ALIGNMENT
@@ -547,8 +547,8 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
             {
                 v_uint8 t0 = vx_load(src0 + i);
                 v_uint8 t1 = vx_load(src1 + i);
-                vx_store(dst0 + i, t1);
-                vx_store(dst1 + i, t0);
+                v_store(dst0 + i, t1);
+                v_store(dst1 + i, t0);
             }
         }
 #endif

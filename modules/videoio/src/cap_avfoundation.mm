@@ -95,13 +95,14 @@ class CvCaptureCAM : public CvCapture {
     public:
         CvCaptureCAM(int cameraNum = -1) ;
         ~CvCaptureCAM();
-        virtual bool grabFrame();
-        virtual IplImage* retrieveFrame(int);
-        virtual IplImage* queryFrame();
-        virtual double getProperty(int property_id) const;
-        virtual bool setProperty(int property_id, double value);
-        virtual int didStart();
+        bool grabFrame() CV_OVERRIDE;
+        IplImage* retrieveFrame(int) CV_OVERRIDE;
+        double getProperty(int property_id) const CV_OVERRIDE;
+        bool setProperty(int property_id, double value) CV_OVERRIDE;
+        int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
 
+        virtual IplImage* queryFrame();
+        virtual int didStart();
     private:
         AVCaptureSession            *mCaptureSession;
         AVCaptureDeviceInput        *mCaptureDeviceInput;
@@ -137,10 +138,12 @@ class CvCaptureFile : public CvCapture {
 public:
     CvCaptureFile(const char* filename) ;
     ~CvCaptureFile();
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id) const;
-    virtual bool setProperty(int property_id, double value);
+    bool grabFrame() CV_OVERRIDE;
+    IplImage* retrieveFrame(int) CV_OVERRIDE;
+    double getProperty(int property_id) const CV_OVERRIDE;
+    bool setProperty(int property_id, double value) CV_OVERRIDE;
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
+
     virtual int didStart();
 private:
     AVAsset                  *mAsset;
