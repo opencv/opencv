@@ -27,7 +27,7 @@ def main():
 
     if cmd_args.is_evaluate:
         from ...common.test_config import TestConfig
-        from ...common.accuracy_eval import PASCALDataFetch, normalize_imgs
+        from ...common.accuracy_eval import PASCALDataFetch
         from ...common.test.voc_segm_test import test_segm_models
 
         eval_params = TestConfig()
