@@ -201,7 +201,7 @@ TEST(GArray, TestGArrayGArrayKernelInput)
     cv::rectangle(in_mat, cv::Point{5,5},   cv::Point{20,20}, 255, cv::FILLED);
     cv::rectangle(in_mat, cv::Point{25,25}, cv::Point{40,40}, 255, cv::FILLED);
 
-    size_t out_count;
+    size_t out_count = 0u;
     c.apply(gin(in_mat), gout(out_count), cv::compile_args(cv::gapi::kernels<OCVCountContours>()));
 
     EXPECT_EQ(2u, out_count) << "Two contours must be found";
