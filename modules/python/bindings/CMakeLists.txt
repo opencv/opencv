@@ -26,9 +26,18 @@ foreach(m ${OPENCV_PYTHON_MODULES})
       list(APPEND opencv_hdrs "${hdr}")
     endif()
   endforeach()
+
+  # both wrapping and C++ implementation
+  file(GLOB hdr2 ${OPENCV_MODULE_${m}_LOCATION}/misc/python/python_*.hpp)
+  list(SORT hdr2)
+  list(APPEND opencv_hdrs ${hdr2})
+  list(APPEND opencv_userdef_hdrs ${hdr2})
+
   file(GLOB hdr ${OPENCV_MODULE_${m}_LOCATION}/misc/python/shadow*.hpp)
+  list(SORT hdr)
   list(APPEND opencv_hdrs ${hdr})
   file(GLOB userdef_hdrs ${OPENCV_MODULE_${m}_LOCATION}/misc/python/pyopencv*.hpp)
+  list(SORT userdef_hdrs)
   list(APPEND opencv_userdef_hdrs ${userdef_hdrs})
 endforeach(m)
 
