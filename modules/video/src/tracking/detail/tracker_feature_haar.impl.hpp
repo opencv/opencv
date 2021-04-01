@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../../precomp.hpp"
-#include "opencv2/video/detail/tracking.private.hpp"
-#include "opencv2/video/detail/tracking_feature.private.hpp"
+#include "opencv2/video/detail/tracking.detail.hpp"
+#include "tracking_feature.hpp"
 
 namespace cv {
 namespace detail {
