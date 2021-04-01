@@ -5,7 +5,7 @@
 #ifndef OPENCV_VIDEO_DETAIL_TRACKING_MIL_STATE_HPP
 #define OPENCV_VIDEO_DETAIL_TRACKING_MIL_STATE_HPP
 
-#include "opencv2/video/detail/tracking.private.hpp"
+#include "opencv2/video/detail/tracking.detail.hpp"
 #include "tracking_online_mil.hpp"
 
 namespace cv {
