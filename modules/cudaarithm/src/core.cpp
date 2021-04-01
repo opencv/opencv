@@ -163,7 +163,7 @@ void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& str
 
     _dst.create(src.size(), src.type());
     GpuMat dst = getOutputMat(_dst, src.size(), src.type(), stream);
-    bool isInplace = (src.data == dst.data) || (src.refcount == dst.refcount);
+    bool isInplace = (src.data == dst.data);
     bool isSizeOdd = (src.cols & 1) == 1 || (src.rows & 1) == 1;
     if (isInplace && isSizeOdd)
         CV_Error(Error::BadROISize, "In-place version of flip only accepts even width/height");
