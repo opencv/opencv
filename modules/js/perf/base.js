@@ -1,5 +1,10 @@
 if (typeof window === 'undefined') {
   var cv = require("../opencv");
+  if (cv instanceof Promise) {
+    loadOpenCV();
+  } else {
+    cv.onRuntimeInitialized = perf;
+  }
 }
 
 let gCvSize;
@@ -22,6 +27,10 @@ function getCvSize() {
   }
 
   return gCvSize;
+}
+
+async function loadOpenCV() {
+  cv = await cv;
 }
 
 if (typeof window === 'undefined') {
