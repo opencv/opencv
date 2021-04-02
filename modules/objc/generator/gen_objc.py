@@ -1609,7 +1609,7 @@ if __name__ == "__main__":
             with open(srcfiles_fname) as f:
                 srcfiles = [os.path.join(module_location, str(l).strip()) for l in f.readlines() if str(l).strip()]
         else:
-            re_bad = re.compile(r'(private|.inl.hpp$|_inl.hpp$|.details.hpp$|_winrt.hpp$|/cuda/|/legacy/)')
+            re_bad = re.compile(r'(private|.inl.hpp$|_inl.hpp$|.detail.hpp$|.details.hpp$|_winrt.hpp$|/cuda/|/legacy/)')
             # .h files before .hpp
             h_files = []
             hpp_files = []
