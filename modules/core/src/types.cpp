@@ -173,8 +173,8 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
 void RotatedRect::points(Point2f pt[]) const
 {
     double _angle = angle*CV_PI/180.;
-    float b = (float)cos(_angle)*0.5f;
-    float a = (float)sin(_angle)*0.5f;
+    double b = (double)cos(_angle)*0.5;
+    double a = (double)sin(_angle)*0.5;
 
     pt[0].x = center.x - a*size.height - b*size.width;
     pt[0].y = center.y + b*size.height - a*size.width;
