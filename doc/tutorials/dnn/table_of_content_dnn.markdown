@@ -20,4 +20,5 @@ In this section you will find the guides, which describe how to run classificati
 #### TensorFlow models with OpenCV
 In this section you will find the guides, which describe how to run classification, segmentation and detection TensorFlow DNN models with OpenCV.
 -   @subpage tf_cls_tutorial_dnn_conversion
+-   @subpage tf_det_tutorial_dnn_conversion
 -   @subpage tf_segm_tutorial_dnn_conversion
