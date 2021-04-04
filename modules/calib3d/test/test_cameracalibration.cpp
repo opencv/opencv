@@ -653,6 +653,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         //code = compare(rotMatrs[0].val, goodRotMatrs[0].val, 9*numImages, 0.05, "rotation matrices");
         for( i = 0; i < numImages; i++ )
         {
+            cv::transpose(rotMatrs[i], rotMatrs[i]);
             if( cv::norm(rotMatrs[i], goodRotMatrs[i], NORM_INF) > 0.05 )
             {
                 printf("rot mats for frame #%d are very different\n", i);
@@ -812,7 +813,6 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
     {
         Mat r9;
         cvtest::Rodrigues( rvecs[i], r9 );
-        cv::transpose(r9, r9);
         r9.convertTo(rotationMatrices[i], CV_64F);
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }
