@@ -468,6 +468,7 @@ public:
             case CV_CAP_PROP_EXPOSURE:
                 if (isOpened() && exposureRange.Supported()) {
                     exposureTime = (int64_t)value;
+                    LOGI("Setting CV_CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
                     return status == ACAMERA_OK;
                 }
@@ -475,6 +476,7 @@ public:
             case CV_CAP_PROP_ISO_SPEED:
                 if (isOpened() && sensitivityRange.Supported()) {
                     sensitivity = (int32_t)value;
+                    LOGI("Setting CV_CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
                     return status == ACAMERA_OK;
                 }
