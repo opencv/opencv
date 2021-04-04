@@ -812,7 +812,6 @@ void CV_CameraCalibrationTest_CPP::calibrate(Size imageSize,
     {
         Mat r9;
         cvtest::Rodrigues( rvecs[i], r9 );
-        cv::transpose(r9, r9);
         r9.convertTo(rotationMatrices[i], CV_64F);
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }
