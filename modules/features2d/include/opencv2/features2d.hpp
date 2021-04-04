@@ -141,11 +141,7 @@ public:
 
 /** @brief Abstract base class for 2D image feature detectors and descriptor extractors
 */
-#ifdef __EMSCRIPTEN__
 class CV_EXPORTS_W Feature2D : public Algorithm
-#else
-class CV_EXPORTS_W Feature2D : public virtual Algorithm
-#endif
 {
 public:
     virtual ~Feature2D();
