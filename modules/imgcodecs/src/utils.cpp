@@ -42,6 +42,10 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 
+#include <algorithm>
+#include <codecvt>
+#include <string>
+
 namespace cv {
 
 int validateToInt(size_t sz)
@@ -604,6 +608,32 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
     }
 
     return data;
+}
+
+FILE *fopen(const char *in, const char *mode)
+{
+    // fast path first
+    auto f = ::fopen(in, mode);
+#ifndef _WIN32
+    return f;
+#else
+    if (f)
+        return f;
+    // try unicode path assuming utf8 was passed
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    auto s = converter.from_bytes(in);
+    auto m = converter.from_bytes(mode);
+    if (s.size() >= 255)
+    {
+        // handle long paths (< 32KB)
+        s = L"\\\\?\\" + s;
+        std::replace(s.begin(), s.end(), L'/', L'\\');
+    }
+    auto err = _wfopen_s(&f, s.c_str(), m.c_str());
+    if (err)
+        return nullptr;
+    return f;
+#endif
 }
 
 }  // namespace
