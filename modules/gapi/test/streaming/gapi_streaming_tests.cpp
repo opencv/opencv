@@ -1108,22 +1108,20 @@ TEST(GAPI_Streaming, TestTwoVideosDifferentLength)
 {
     initTestDataPath();
     auto desc = cv::GMatDesc{CV_8U,3,{768,576}};
-    std::string path1, path2;
-    try {
-        path1 = findDataFile("cv/video/768x576.avi");
-        path2 = findDataFile("highgui/video/big_buck_bunny.avi");
-    } catch(...) {
-        throw SkipTestException("Video file can not be found");
-    }
+    auto path1 = findDataFile("cv/video/768x576.avi");
+    auto path2 = findDataFile("highgui/video/big_buck_bunny.avi");
 
     cv::GMat in1, in2;
     auto out = in1 + cv::gapi::resize(in2, desc.size);
 
     cv::GComputation cc(cv::GIn(in1, in2), cv::GOut(out));
     auto sc = cc.compileStreaming();
-
-    sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path1),
-                         gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path2)));
+    try {
+        sc.setSource(cv::gin(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path1),
+                             gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path2)));
+    } catch(...) {
+        throw SkipTestException("Video file can not be found");
+    }
     sc.start();
 
     cv::Mat out_mat;
