@@ -144,6 +144,10 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
          backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU &&
+        getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
     String basename = "conv_variable_wb";
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
@@ -183,9 +187,14 @@ TEST_P(Test_ONNX_layers, Convolution3D)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    if (target != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
     testONNXModels("conv3d");
+}
+
+TEST_P(Test_ONNX_layers, Convolution3D_bias)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2019010000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
     testONNXModels("conv3d_bias");
 }
 
@@ -257,6 +266,25 @@ TEST_P(Test_ONNX_layers, ReduceMean)
     testONNXModels("reduce_mean_axis2");
 }
 
+TEST_P(Test_ONNX_layers, ReduceSum)
+{
+    testONNXModels("reduce_sum");
+}
+
+TEST_P(Test_ONNX_layers, ReduceMax)
+{
+    testONNXModels("reduce_max");
+    testONNXModels("reduce_max_axis_0");
+    testONNXModels("reduce_max_axis_1");
+}
+
+TEST_P(Test_ONNX_layers, Scale)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("scale");
+}
+
 TEST_P(Test_ONNX_layers, ReduceMean3D)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target != DNN_TARGET_CPU)
@@ -276,6 +304,18 @@ TEST_P(Test_ONNX_layers, MaxPooling_Sigmoid)
 TEST_P(Test_ONNX_layers, Cast)
 {
     testONNXModels("cast");
+}
+
+TEST_P(Test_ONNX_layers, Power)
+{
+    testONNXModels("pow2", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Exp)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    testONNXModels("exp");
 }
 
 TEST_P(Test_ONNX_layers, Concatenation)
@@ -366,12 +406,25 @@ TEST_P(Test_ONNX_layers, BatchNormalization3D)
 
 TEST_P(Test_ONNX_layers, BatchNormalizationUnfused)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     testONNXModels("frozenBatchNorm2d");
 }
 
 TEST_P(Test_ONNX_layers, BatchNormalizationSubgraph)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     testONNXModels("batch_norm_subgraph");
+}
+
+TEST_P(Test_ONNX_layers, NormalizeFusionSubgraph)
+{
+    testONNXModels("normalize_fusion");
 }
 
 TEST_P(Test_ONNX_layers, Transpose)
@@ -404,10 +457,20 @@ TEST_P(Test_ONNX_layers, MatMul)
     testONNXModels("matmul_4d");
 }
 
+TEST_P(Test_ONNX_layers, MatMulAdd)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    testONNXModels("matmul_add");
+}
+
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand_batch");
     testONNXModels("expand_channels");
+    testONNXModels("expand_neg_batch");
 }
 
 TEST_P(Test_ONNX_layers, ExpandHW)
@@ -479,7 +542,12 @@ TEST_P(Test_ONNX_layers, Broadcast)
 
 TEST_P(Test_ONNX_layers, DynamicResize)
 {
-    testONNXModels("dynamic_resize", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_9", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_10", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_11", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_scale_9", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_scale_10", npy, 0, 0, false, true, 2);
+    testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, Div)
@@ -559,6 +627,26 @@ TEST_P(Test_ONNX_layers, Slice)
 #endif
 }
 
+TEST_P(Test_ONNX_layers, Slice_Steps_2DInput)
+{
+    testONNXModels("slice_opset_11_steps_2d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_3DInput)
+{
+    testONNXModels("slice_opset_11_steps_3d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_4DInput)
+{
+    testONNXModels("slice_opset_11_steps_4d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Steps_5DInput)
+{
+    testONNXModels("slice_opset_11_steps_5d");
+}
+
 TEST_P(Test_ONNX_layers, Softmax)
 {
     testONNXModels("softmax");
@@ -589,6 +677,221 @@ TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
     testONNXModels("ZeroPad2d");
+}
+
+TEST_P(Test_ONNX_layers, LinearWithConstant)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("lin_with_constant");
+}
+
+TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
+{
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
+    applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+    testONNXModels("matmul_with_two_inputs");
+}
+
+TEST_P(Test_ONNX_layers, ResizeOpset11_Torch1_6)
+{
+    testONNXModels("resize_opset11_torch1.6");
+}
+
+TEST_P(Test_ONNX_layers, Mish)
+{
+    testONNXModels("mish");
+}
+
+TEST_P(Test_ONNX_layers, CalculatePads)
+{
+    testONNXModels("calc_pads");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d)
+{
+    testONNXModels("conv1d");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_bias)
+{
+    testONNXModels("conv1d_bias");
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight)
+{
+    String basename = "conv1d_variable_w";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_layers, Conv1d_variable_weight_bias)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_CPU && getInferenceEngineCPUType() == CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    String basename = "conv1d_variable_wb";
+    Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
+    ASSERT_FALSE(net.empty());
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input = blobFromNPY(_tf("data/input_" + basename + "_0.npy"));
+    Mat weights = blobFromNPY(_tf("data/input_" + basename + "_1.npy"));
+    Mat bias = blobFromNPY(_tf("data/input_" + basename + "_2.npy"));
+    Mat ref = blobFromNPY(_tf("data/output_" + basename + ".npy"));
+
+    net.setInput(input, "0");
+    net.setInput(weights, "1");
+    net.setInput(bias, "bias");
+
+    Mat out = net.forward();
+    normAssert(ref, out, "", default_l1, default_lInf);
+}
+
+TEST_P(Test_ONNX_layers, GatherMultiOutput)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
+
+#if defined(INF_ENGINE_RELEASE)
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE);
+#endif
+
+    testONNXModels("gather_multi_output");
+}
+
+TEST_P(Test_ONNX_layers, DynamicAxes)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("squeeze_and_conv_dynamic_axes");
+    testONNXModels("unsqueeze_and_conv_dynamic_axes");
+    testONNXModels("gather_dynamic_axes");
+    testONNXModels("gather_scalar_dynamic_axes");
+    testONNXModels("slice_dynamic_axes");
+    testONNXModels("slice_opset_11_dynamic_axes");
+    testONNXModels("resize_opset11_torch1.6_dynamic_axes");
+    testONNXModels("average_pooling_dynamic_axes");
+    testONNXModels("maxpooling_sigmoid_dynamic_axes");
+}
+
+TEST_P(Test_ONNX_layers, MaxPool1d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("maxpooling_1d");
+}
+
+TEST_P(Test_ONNX_layers, MaxPoolSigmoid1d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("maxpooling_sigmoid_1d");
+}
+
+TEST_P(Test_ONNX_layers, MaxPool1d_Twise)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("two_maxpooling_1d");
+}
+
+TEST_P(Test_ONNX_layers, AvePool1d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("average_pooling_1d");
+}
+
+TEST_P(Test_ONNX_layers, PoolConv1d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+    testONNXModels("pool_conv_1d");
+}
+
+TEST_P(Test_ONNX_layers, ConvResizePool1d)
+{
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#if INF_ENGINE_VER_MAJOR_EQ(2021030000)
+        if (target == DNN_TARGET_OPENCL) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
+    }
+#endif
+    testONNXModels("conv_resize_pool_1d");
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());

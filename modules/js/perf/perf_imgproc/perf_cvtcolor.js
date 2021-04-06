@@ -11,21 +11,25 @@ if (isNodeJs) {
   var logElement = document.getElementById('log');
 }
 
-cv.onRuntimeInitialized = () => {
+function perf() {
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
     global.combine = HelpFunc.combine;
-    global.cvtStr2cvSize = HelpFunc.cvtStr2cvSize;
-    global.cvSize = Base.cvSize;
+    global.constructMode = HelpFunc.constructMode;
+    global.log = HelpFunc.log;
+    global.decodeParams2Case = HelpFunc.decodeParams2Case;
+    global.setBenchmarkSuite = HelpFunc.setBenchmarkSuite;
+    global.addKernelCase = HelpFunc.addKernelCase;
+    global.cvSize = Base.getCvSize();
   } else {
-    runButton.removeAttribute('disabled');
-    runButton.setAttribute('class', 'btn btn-primary');
-    runButton.innerHTML = 'Run';
+    enableButton();
+    cvSize = getCvSize();
   }
   let totalCaseNum, currentCaseId;
 
-  //extra color conversions supported implicitly
+  // extra color conversions supported implicitly
   {
     cv.CX_BGRA2HLS      = cv.COLOR_COLORCVT_MAX + cv.COLOR_BGR2HLS,
     cv.CX_BGRA2HLS_FULL = cv.COLOR_COLORCVT_MAX + cv.COLOR_BGR2HLS_FULL,
@@ -73,126 +77,77 @@ cv.onRuntimeInitialized = () => {
     cv.CX_YUV2RGBA      = cv.COLOR_COLORCVT_MAX + cv.COLOR_YUV2RGB
   };
 
-  const CvtMode = [
-    "COLOR_BGR2BGR555", "COLOR_BGR2BGR565", "COLOR_BGR2BGRA", "COLOR_BGR2GRAY",
-    "COLOR_BGR2HLS", "COLOR_BGR2HLS_FULL", "COLOR_BGR2HSV", "COLOR_BGR2HSV_FULL",
-    "COLOR_BGR2Lab", "COLOR_BGR2Luv", "COLOR_BGR2RGB", "COLOR_BGR2RGBA", "COLOR_BGR2XYZ",
-    "COLOR_BGR2YCrCb", "COLOR_BGR2YUV", "COLOR_BGR5552BGR", "COLOR_BGR5552BGRA",
-
-    "COLOR_BGR5552GRAY", "COLOR_BGR5552RGB", "COLOR_BGR5552RGBA", "COLOR_BGR5652BGR",
-    "COLOR_BGR5652BGRA", "COLOR_BGR5652GRAY", "COLOR_BGR5652RGB", "COLOR_BGR5652RGBA",
-
-    "COLOR_BGRA2BGR", "COLOR_BGRA2BGR555", "COLOR_BGRA2BGR565", "COLOR_BGRA2GRAY", "COLOR_BGRA2RGBA",
-    "CX_BGRA2HLS", "CX_BGRA2HLS_FULL", "CX_BGRA2HSV", "CX_BGRA2HSV_FULL",
-    "CX_BGRA2Lab", "CX_BGRA2Luv", "CX_BGRA2XYZ",
-    "CX_BGRA2YCrCb", "CX_BGRA2YUV",
-
-    "COLOR_GRAY2BGR", "COLOR_GRAY2BGR555", "COLOR_GRAY2BGR565", "COLOR_GRAY2BGRA",
-
-    "COLOR_HLS2BGR", "COLOR_HLS2BGR_FULL", "COLOR_HLS2RGB", "COLOR_HLS2RGB_FULL",
-    "CX_HLS2BGRA", "CX_HLS2BGRA_FULL", "CX_HLS2RGBA", "CX_HLS2RGBA_FULL",
-
-    "COLOR_HSV2BGR", "COLOR_HSV2BGR_FULL", "COLOR_HSV2RGB", "COLOR_HSV2RGB_FULL",
-    "CX_HSV2BGRA", "CX_HSV2BGRA_FULL", "CX_HSV2RGBA", "CX_HSV2RGBA_FULL",
-
-    "COLOR_Lab2BGR", "COLOR_Lab2LBGR", "COLOR_Lab2LRGB", "COLOR_Lab2RGB",
-    "CX_Lab2BGRA", "CX_Lab2LBGRA", "CX_Lab2LRGBA", "CX_Lab2RGBA",
-
-    "COLOR_LBGR2Lab", "COLOR_LBGR2Luv", "COLOR_LRGB2Lab", "COLOR_LRGB2Luv",
-    "CX_LBGRA2Lab", "CX_LBGRA2Luv", "CX_LRGBA2Lab", "CX_LRGBA2Luv",
-
-    "COLOR_Luv2BGR", "COLOR_Luv2LBGR", "COLOR_Luv2LRGB", "COLOR_Luv2RGB",
-    "CX_Luv2BGRA", "CX_Luv2LBGRA", "CX_Luv2LRGBA", "CX_Luv2RGBA",
-
-    "COLOR_RGB2BGR555", "COLOR_RGB2BGR565", "COLOR_RGB2GRAY",
-    "COLOR_RGB2HLS", "COLOR_RGB2HLS_FULL", "COLOR_RGB2HSV", "COLOR_RGB2HSV_FULL",
-    "COLOR_RGB2Lab", "COLOR_RGB2Luv", "COLOR_RGB2XYZ", "COLOR_RGB2YCrCb", "COLOR_RGB2YUV",
-
-    "COLOR_RGBA2BGR", "COLOR_RGBA2BGR555", "COLOR_RGBA2BGR565", "COLOR_RGBA2GRAY",
-    "CX_RGBA2HLS", "CX_RGBA2HLS_FULL", "CX_RGBA2HSV", "CX_RGBA2HSV_FULL",
-    "CX_RGBA2Lab", "CX_RGBA2Luv", "CX_RGBA2XYZ",
-    "CX_RGBA2YCrCb", "CX_RGBA2YUV",
-
-    "COLOR_XYZ2BGR", "COLOR_XYZ2RGB", "CX_XYZ2BGRA", "CX_XYZ2RGBA",
-
-    "COLOR_YCrCb2BGR", "COLOR_YCrCb2RGB", "CX_YCrCb2BGRA", "CX_YCrCb2RGBA",
-    "COLOR_YUV2BGR", "COLOR_YUV2RGB", "CX_YUV2BGRA", "CX_YUV2RGBA"
-  ];
-  const CvtModeSize = [cvSize.szODD, cvSize.szVGA, cvSize.sz1080p];
-  const combiCvtMode = combine(CvtModeSize, CvtMode);
-
   // didn't support 16u and 32f perf tests according to
   // https://github.com/opencv/opencv/commit/4e679e1cc5b075ec006b29a58b4fe117523fba1d
-  const CvtMode16U = [
-    "COLOR_BGR2BGRA", "COLOR_BGR2GRAY",
-    "COLOR_BGR2RGB", "COLOR_BGR2RGBA", "COLOR_BGR2XYZ",
-    "COLOR_BGR2YCrCb", "COLOR_BGR2YUV",
+  function constructCvtMode16U() {
+    let cvtMode16U = [];
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "BGR", ["BGRA", "GRAY", "RGB", "RGBA", "XYZ", "YCrCb", "YUV"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "BGRA", ["BGR", "GRAY", "RGBA"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("CX_", "BGRA", ["XYZ", "YCrCb", "YUV"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "GRAY", ["BGR", "BGRA"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "RGB", ["GRAY", "XYZ", "YCrCb", "YUV"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "RGBA", ["BGR", "GRAY"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("CX_", "RGBA", ["XYZ", "YCrCb", "YUV"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "XYZ", ["BGR", "RGB"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("CX_", "XYZ", ["BGRA", "RGBA"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "YCrCb", ["BGR", "RGB"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("CX_", "YCrCb", ["BGRA", "RGBA"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("COLOR_", "YUV", ["BGR", "RGB"]));
+    cvtMode16U = cvtMode16U.concat(constructMode("CX_", "YUV", ["BGRA", "RGBA"]));
 
-    "COLOR_BGRA2BGR", "COLOR_BGRA2GRAY", "COLOR_BGRA2RGBA",
-    "CX_BGRA2XYZ",
-    "CX_BGRA2YCrCb", "CX_BGRA2YUV",
+    return cvtMode16U;
+  }
 
-    "COLOR_GRAY2BGR", "COLOR_GRAY2BGRA",
+  const CvtMode16U = constructCvtMode16U();
 
-    "COLOR_RGB2GRAY",
-    "COLOR_RGB2XYZ", "COLOR_RGB2YCrCb", "COLOR_RGB2YUV",
-
-    "COLOR_RGBA2BGR", "COLOR_RGBA2GRAY",
-    "CX_RGBA2XYZ",
-    "CX_RGBA2YCrCb", "CX_RGBA2YUV",
-
-    "COLOR_XYZ2BGR", "COLOR_XYZ2RGB", "CX_XYZ2BGRA", "CX_XYZ2RGBA",
-
-    "COLOR_YCrCb2BGR", "COLOR_YCrCb2RGB", "CX_YCrCb2BGRA", "CX_YCrCb2RGBA",
-    "COLOR_YUV2BGR", "COLOR_YUV2RGB", "CX_YUV2BGRA", "CX_YUV2RGBA"
-  ];
   const CvtMode16USize = [cvSize.szODD, cvSize.szVGA, cvSize.sz1080p];
   const combiCvtMode16U = combine(CvtMode16USize, CvtMode16U);
 
-  const CvtMode32F = [
-    "COLOR_BGR2BGRA", "COLOR_BGR2GRAY",
-    "COLOR_BGR2HLS", "COLOR_BGR2HLS_FULL", "COLOR_BGR2HSV", "COLOR_BGR2HSV_FULL",
-    "COLOR_BGR2Lab", "COLOR_BGR2Luv", "COLOR_BGR2RGB", "COLOR_BGR2RGBA", "COLOR_BGR2XYZ",
-    "COLOR_BGR2YCrCb", "COLOR_BGR2YUV",
+  function constructCvtMode32F(source) {
+    let cvtMode32F = source;
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "BGR", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "BGRA", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "HLS", ["BGR", "BGR_FULL", "RGB", "RGB_FULL"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "HLS", ["BGRA", "BGRA_FULL", "RGBA", "RGBA_FULL"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "HSV", ["BGR", "BGR_FULL", "RGB", "RGB_FULL"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "HSV", ["BGRA", "BGRA_FULL", "RGBA", "RGBA_FULL"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "Lab", ["BGR", "LBGR", "RGB", "LRGB"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "Lab", ["BGRA", "LBGRA", "RGBA", "LRGBA"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "Luv", ["BGR", "LBGR", "RGB", "LRGB"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "Luv", ["BGRA", "LBGRA", "RGBA", "LRGBA"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "LBGR", ["Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "LBGRA", ["Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "LRGB", ["Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "LRGBA", ["Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("COLOR_", "RGB", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
+    cvtMode32F = cvtMode32F.concat(constructMode("CX_", "RGBA", ["HLS", "HLS_FULL", "HSV", "HSV_FULL", "Lab", "Luv"]));
 
-    "COLOR_BGRA2BGR", "COLOR_BGRA2GRAY", "COLOR_BGRA2RGBA",
-    "CX_BGRA2HLS", "CX_BGRA2HLS_FULL", "CX_BGRA2HSV", "CX_BGRA2HSV_FULL",
-    "CX_BGRA2Lab", "CX_BGRA2Luv", "CX_BGRA2XYZ",
-    "CX_BGRA2YCrCb", "CX_BGRA2YUV",
+    return cvtMode32F;
+  }
 
-    "COLOR_GRAY2BGR", "COLOR_GRAY2BGRA",
+  const CvtMode32F = constructCvtMode32F(CvtMode16U);
 
-    "COLOR_HLS2BGR", "COLOR_HLS2BGR_FULL", "COLOR_HLS2RGB", "COLOR_HLS2RGB_FULL",
-    "CX_HLS2BGRA", "CX_HLS2BGRA_FULL", "CX_HLS2RGBA", "CX_HLS2RGBA_FULL",
-
-    "COLOR_HSV2BGR", "COLOR_HSV2BGR_FULL", "COLOR_HSV2RGB", "COLOR_HSV2RGB_FULL",
-    "CX_HSV2BGRA", "CX_HSV2BGRA_FULL", "CX_HSV2RGBA", "CX_HSV2RGBA_FULL",
-
-    "COLOR_Lab2BGR", "COLOR_Lab2LBGR", "COLOR_Lab2LRGB", "COLOR_Lab2RGB",
-    "CX_Lab2BGRA", "CX_Lab2LBGRA", "CX_Lab2LRGBA", "CX_Lab2RGBA",
-
-    "COLOR_LBGR2Lab", "COLOR_LBGR2Luv", "COLOR_LRGB2Lab", "COLOR_LRGB2Luv",
-    "CX_LBGRA2Lab", "CX_LBGRA2Luv", "CX_LRGBA2Lab", "CX_LRGBA2Luv",
-
-    "COLOR_Luv2BGR", "COLOR_Luv2LBGR", "COLOR_Luv2LRGB", "COLOR_Luv2RGB",
-    "CX_Luv2BGRA", "CX_Luv2LBGRA", "CX_Luv2LRGBA", "CX_Luv2RGBA",
-
-    "COLOR_RGB2GRAY",
-    "COLOR_RGB2HLS", "COLOR_RGB2HLS_FULL", "COLOR_RGB2HSV", "COLOR_RGB2HSV_FULL",
-    "COLOR_RGB2Lab", "COLOR_RGB2Luv", "COLOR_RGB2XYZ", "COLOR_RGB2YCrCb", "COLOR_RGB2YUV",
-
-    "COLOR_RGBA2BGR", "COLOR_RGBA2GRAY",
-    "CX_RGBA2HLS", "CX_RGBA2HLS_FULL", "CX_RGBA2HSV", "CX_RGBA2HSV_FULL",
-    "CX_RGBA2Lab", "CX_RGBA2Luv", "CX_RGBA2XYZ",
-    "CX_RGBA2YCrCb", "CX_RGBA2YUV",
-
-    "COLOR_XYZ2BGR", "COLOR_XYZ2RGB", "CX_XYZ2BGRA", "CX_XYZ2RGBA",
-
-    "COLOR_YCrCb2BGR", "COLOR_YCrCb2RGB", "CX_YCrCb2BGRA", "CX_YCrCb2RGBA",
-    "COLOR_YUV2BGR", "COLOR_YUV2RGB", "CX_YUV2BGRA", "CX_YUV2RGBA"
-  ];
   const CvtMode32FSize = [cvSize.szODD, cvSize.szVGA, cvSize.sz1080p];
   const combiCvtMode32F = combine(CvtMode32FSize, CvtMode32F);
+
+  function constructeCvtMode(source) {
+    let cvtMode = source
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "BGR", ["BGR555", "BGR565"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "BGR555", ["BGR", "BGRA", "GRAY", "RGB", "RGBA"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "BGR565", ["BGR", "BGRA", "GRAY", "RGB", "RGBA"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "BGRA", ["BGR555", "BGR565"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "GRAY", ["BGR555", "BGR565"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "RGB", ["BGR555", "BGR565"]));
+    cvtMode = cvtMode.concat(constructMode("COLOR_", "RGBA", ["BGR555", "BGR565"]));
+
+    return cvtMode;
+  }
+
+  const CvtMode = constructeCvtMode(CvtMode32F);
+
+  const CvtModeSize = [cvSize.szODD, cvSize.szVGA, cvSize.sz1080p];
+  // combiCvtMode permute size and mode
+  const combiCvtMode = combine(CvtModeSize, CvtMode);
 
   const CvtModeBayer = [
     "COLOR_BayerBG2BGR", "COLOR_BayerBG2BGRA", "COLOR_BayerBG2BGR_VNG", "COLOR_BayerBG2GRAY",
@@ -357,7 +312,7 @@ cv.onRuntimeInitialized = () => {
     return [mat1Type, mat2Type];
   }
 
-  function addCvtColorCase(suite) {
+  function addCvtColorCase(suite, type) {
     suite.add('cvtColor', function() {
       cv.cvtColor(mat1, mat2, mode, 0);
       }, {
@@ -375,154 +330,22 @@ cv.onRuntimeInitialized = () => {
     });
   }
 
-  function addCvtModeCase(suite, combination) {
+  function addCvtModeCase(suite, combination, type) {
     totalCaseNum += combination.length;
     for(let i = 0; i < combination.length; ++i) {
       let size = combination[i][0];
       let mode = combination[i][1];
       let chPair = getConversionInfo(mode);
       let matType = getMatType(chPair);
-      let sizeArray = [size.width, size.height];
-
-      addCvtColorCase(suite);
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        size: sizeArray,
-        matType: matType,
-        mode: mode
-      };
-    };
-  }
-
-  function addCvtModeBayerCase(suite, combination) {
-    totalCaseNum += combination.length;
-    for(let i = 0; i < combination.length; ++i) {
-      let size = combination[i][0];
-      let mode = combination[i][1];
-      let chPair = getConversionInfo(mode);
-      let matType = getMatType(chPair);
-      let sizeArray = [size.width, size.height];
-
-      addCvtColorCase(suite);
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        size: sizeArray,
-        matType: matType,
-        mode: mode
-      };
-    };
-  }
-
-  function addCvtMode2Case(suite, combination) {
-    totalCaseNum += combination.length;
-    for(let i = 0; i < combination.length; ++i) {
-      let size = combination[i][0];
-      let mode = combination[i][1];
-      let chPair = getConversionInfo(mode);
-      let matType = getMatType(chPair);
-      let sizeArray = [size.width, size.height+size.height/2];
-
-      addCvtColorCase(suite);
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        size: sizeArray,
-        matType: matType,
-        mode: mode
-      };
-    };
-  }
-
-  function addCvtMode3Case(suite, combination) {
-    totalCaseNum += combination.length;
-    for(let i = 0; i < combination.length; ++i) {
-      let size = combination[i][0];
-      let mode = combination[i][1];
-      let chPair = getConversionInfo(mode);
-      let matType = getMatType(chPair);
-      let sizeArray = [size.width, size.height+size.height/2];
-
-      addCvtColorCase(suite);
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        size: sizeArray,
-        matType: matType,
-        mode: mode
-      };
-    };
-  }
-
-  function addEdgeAwareBayerModeCase(suite, combination) {
-    totalCaseNum += combination.length;
-    for(let i = 0; i < combination.length; ++i) {
-      let size = combination[i][0];
-      let mode = combination[i][1];
-      let chPair = getConversionInfo(mode);
-      let matType = getMatType(chPair);
-      let sizeArray = [size.width, size.height];
-
-      addCvtColorCase(suite);
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        size: sizeArray,
-        matType: matType,
-        mode: mode
-      };
-    };
-  }
-
-  function decodeParams2Case(suite, params) {
-    let sizeStr = (params.match(/[0-9]+/g) || []).slice(0, 2).toString();
-    let mode = (params.match(/CX\_[A-z]+2[A-z]+/) || params.match(/COLOR\_[A-z]+2[A-z]+/) || []).toString();
-    let size = cvtStr2cvSize(sizeStr);
-
-    // check if the params match and add case
-    for (let i = 0; i < combinations.length; ++i) {
-      let combination = combinations[i];
-      for (let j = 0; j < combination.length; ++j) {
-        if (size === combination[j][0] && mode === combination[j][1]) {
-          cvtFunc[i](suite, [combination[j]]);
-        }
+      let sizeArray;
+      if (type == 0) {
+        sizeArray = [size.width, size.height];
+      } else {
+        sizeArray = [size.width, size.height+size.height/2];
       }
-    }
-  }
-
-  function log(message) {
-    console.log(message);
-    if (!isNodeJs) {
-      logElement.innerHTML += `\n${'\t' + message}`;
-    }
-  }
-
-  function setBenchmarkSuite(suite) {
-    suite
-    // add listeners
-    .on('cycle', function(event) {
-      ++currentCaseId;
-      let params = event.target.params;
-      let mode = params.mode;
-      let size = params.size;
-      log(`=== ${event.target.name} ${currentCaseId} ===`);
-      log(`params: (${parseInt(size[0])}x${parseInt(size[1])}, ${mode})`);
-      log('elapsed time:' +String(event.target.times.elapsed*1000)+' ms');
-      log('mean time:' +String(event.target.stats.mean*1000)+' ms');
-      log('stddev time:' +String(event.target.stats.deviation*1000)+' ms');
-      log(String(event.target));
-    })
-    .on('error', function(event) { log(`test case ${event.target.name} failed`); })
-    .on('complete', function(event) {
-      log(`\n ###################################`)
-      log(`Finished testing ${event.currentTarget.length} cases \n`);
-      if (!isNodeJs) {
-        runButton.removeAttribute('disabled');
-        runButton.setAttribute('class', 'btn btn-primary');
-        runButton.innerHTML = 'Run';
-      }
-    });
+      let params = {size:sizeArray, matType: matType, mode: mode};
+      addKernelCase(suite, params, type, addCvtColorCase);
+    };
   }
 
   function genBenchmarkCase(paramsContent) {
@@ -531,23 +354,33 @@ cv.onRuntimeInitialized = () => {
     currentCaseId = 0;
     if (/\([0-9]+x[0-9]+,[\ ]*\w+\)/g.test(paramsContent.toString())) {
       let params = paramsContent.toString().match(/\([0-9]+x[0-9]+,[\ ]*\w+\)/g)[0];
-      decodeParams2Case(suite, params);
+      let paramObjs = [];
+      paramObjs.push({name:"mode", value:"", reg:["/CX\_[A-z]+2[A-z]+/", "/COLOR\_[A-z]+2[A-z]+/"], index:1});
+      paramObjs.push({name:"size", value:"", reg:[""], index:0});
+
+      let locationList = decodeParams2Case(params, paramObjs,combinations);
+      for (let i = 0; i < locationList.length; i++){
+        let first = locationList[i][0];
+        let second = locationList[i][1];
+        if (first < 2) {
+          addCvtModeCase(suite, [combinations[first][second]], 0);
+        } else {
+          addCvtModeCase(suite, [combinations[first][second]], 1);
+        }
+      }
     } else {
       log("no filter or getting invalid params, run all the cases");
-      addCvtModeCase(suite, combiCvtMode);
-      addCvtModeBayerCase(suite, combiCvtModeBayer);
-      addCvtMode2Case(suite, combiCvtMode2);
-      addCvtMode3Case(suite, combiCvtMode3);
+      addCvtModeCase(suite, combiCvtMode, 0);
+      addCvtModeCase(suite, combiCvtModeBayer, 0);
+      addCvtModeCase(suite, combiCvtMode2, 1);
+      addCvtModeCase(suite, combiCvtMode3, 1);
     }
-    setBenchmarkSuite(suite);
+    setBenchmarkSuite(suite, "cvtcolor", currentCaseId);
     log(`Running ${totalCaseNum} tests from CvtColor`);
     suite.run({ 'async': true }); // run the benchmark
   }
 
-
-
   // init
-  let cvtFunc = [addCvtModeCase, addCvtModeBayerCase, addCvtMode2Case, addCvtMode3Case];//, addEdgeAwareBayerModeCase];
   let combinations = [combiCvtMode, combiCvtModeBayer, combiCvtMode2, combiCvtMode3];//, combiEdgeAwareBayer];
 
   // set test filter params
@@ -563,10 +396,19 @@ cv.onRuntimeInitialized = () => {
       let paramsContent = paramsElement.value;
       genBenchmarkCase(paramsContent);
       if (totalCaseNum !== 0) {
-        runButton.setAttribute("disabled", "disabled");
-        runButton.setAttribute('class', 'btn btn-primary disabled');
-        runButton.innerHTML = "Running";
+        disableButton();
       }
     }
   }
 };
+
+async function main() {
+  if (cv instanceof Promise) {
+    cv = await cv;
+    perf();
+  } else {
+    cv.onRuntimeInitialized = perf;
+  }
+}
+
+main();

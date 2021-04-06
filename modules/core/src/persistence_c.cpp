@@ -1378,48 +1378,6 @@ cvTypeOf( const void* struct_ptr )
 }
 
 
-/* universal functions */
-CV_IMPL void
-cvRelease( void** struct_ptr )
-{
-    CvTypeInfo* info;
-
-    if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL double pointer" );
-
-    if( *struct_ptr )
-    {
-        info = cvTypeOf( *struct_ptr );
-        if( !info )
-            CV_Error( CV_StsError, "Unknown object type" );
-        if( !info->release )
-            CV_Error( CV_StsError, "release function pointer is NULL" );
-
-        info->release( struct_ptr );
-        *struct_ptr = 0;
-    }
-}
-
-
-void* cvClone( const void* struct_ptr )
-{
-    void* struct_copy = 0;
-    CvTypeInfo* info;
-
-    if( !struct_ptr )
-        CV_Error( CV_StsNullPtr, "NULL structure pointer" );
-
-    info = cvTypeOf( struct_ptr );
-    if( !info )
-        CV_Error( CV_StsError, "Unknown object type" );
-    if( !info->clone )
-        CV_Error( CV_StsError, "clone function pointer is NULL" );
-
-    struct_copy = info->clone( struct_ptr );
-    return struct_copy;
-}
-
-
 /* reads matrix, image, sequence, graph etc. */
 CV_IMPL void*
 cvRead( CvFileStorage* fs, CvFileNode* node, CvAttrList* list )

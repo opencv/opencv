@@ -750,9 +750,9 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
 
-    int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
-    AutoBuffer<int> _tabM(dsize.width*cn);
-    int* tabM = _tabM.data();
+    AutoBuffer<int> _tabM(dsize.width * cn), _tabL(cn * (PD_SZ + 2)),
+        _tabR(cn * (PD_SZ + 2));
+    int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
 
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&

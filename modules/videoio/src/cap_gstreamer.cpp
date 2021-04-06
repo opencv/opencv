@@ -924,6 +924,11 @@ bool GStreamerCapture::open(const String &filename_)
         gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), 1);
     }
 
+    if (!manualpipeline)
+    {
+        gst_base_sink_set_sync(GST_BASE_SINK(sink.get()), FALSE);
+    }
+
     //do not emit signals: all calls will be synchronous and blocking
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
@@ -1062,6 +1067,8 @@ double GStreamerCapture::getProperty(int propId) const
     switch(propId)
     {
     case CV_CAP_PROP_POS_MSEC:
+        CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_POS_MSEC property result may be unrealiable: "
+                                  "https://github.com/opencv/opencv/issues/19025");
         format = GST_FORMAT_TIME;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {

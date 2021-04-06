@@ -683,6 +683,8 @@ struct Hamming2
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
 #ifdef FLANN_PLATFORM_64_BIT
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
         const uint64_t* pb = reinterpret_cast<const uint64_t*>(b);
@@ -711,6 +713,8 @@ struct Hamming2
     template <typename Iterator1>
     ResultType operator()(const Iterator1 a, ZeroIterator<unsigned char> b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
         (void)b;
 #ifdef FLANN_PLATFORM_64_BIT
         const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
@@ -743,6 +747,157 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct DNAmmingLUT
+{
+    typedef False is_kdtree_distance;
+    typedef False is_vector_space_distance;
+
+    typedef unsigned char ElementType;
+    typedef int ResultType;
+    typedef ElementType CentersType;
+
+    /** this will count the bits in a ^ b
+     */
+    template<typename Iterator2>
+    ResultType operator()(const unsigned char* a, const Iterator2 b, size_t size) const
+    {
+        static const uchar popCountTable[] =
+        {
+            0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4
+        };
+        ResultType result = 0;
+        const unsigned char* b2 = reinterpret_cast<const unsigned char*> (b);
+        for (size_t i = 0; i < size; i++) {
+            result += popCountTable[a[i] ^ b2[i]];
+        }
+        return result;
+    }
+
+
+    ResultType operator()(const unsigned char* a, const ZeroIterator<unsigned char> b, size_t size) const
+    {
+        (void)b;
+        static const uchar popCountTable[] =
+        {
+            0, 1, 1, 1, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            1, 2, 2, 2, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4,
+            2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 2, 3, 3, 3, 3, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4
+        };
+        ResultType result = 0;
+        for (size_t i = 0; i < size; i++) {
+            result += popCountTable[a[i]];
+        }
+        return result;
+    }
+};
+
+
+template<typename T>
+struct DNAmming2
+{
+    typedef False is_kdtree_distance;
+    typedef False is_vector_space_distance;
+
+    typedef T ElementType;
+    typedef int ResultType;
+    typedef ElementType CentersType;
+
+    /** This is popcount_3() from:
+     * http://en.wikipedia.org/wiki/Hamming_weight */
+    unsigned int popcnt32(uint32_t n) const
+    {
+        n = ((n >> 1) | n) & 0x55555555;
+        n = (n & 0x33333333) + ((n >> 2) & 0x33333333);
+        return (((n + (n >> 4))& 0x0F0F0F0F)* 0x01010101) >> 24;
+    }
+
+#ifdef FLANN_PLATFORM_64_BIT
+    unsigned int popcnt64(uint64_t n) const
+    {
+        n = ((n >> 1) | n) & 0x5555555555555555;
+        n = (n & 0x3333333333333333) + ((n >> 2) & 0x3333333333333333);
+        return (((n + (n >> 4))& 0x0f0f0f0f0f0f0f0f)* 0x0101010101010101) >> 56;
+    }
+#endif
+
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
+#ifdef FLANN_PLATFORM_64_BIT
+        const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
+        const uint64_t* pb = reinterpret_cast<const uint64_t*>(b);
+        ResultType result = 0;
+        size /= long_word_size_;
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt64(*pa ^ *pb);
+            ++pa;
+            ++pb;
+        }
+#else
+        const uint32_t* pa = reinterpret_cast<const uint32_t*>(a);
+        const uint32_t* pb = reinterpret_cast<const uint32_t*>(b);
+        ResultType result = 0;
+        size /= long_word_size_;
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt32(*pa ^ *pb);
+            ++pa;
+            ++pb;
+        }
+#endif
+        return result;
+    }
+
+
+    template <typename Iterator1>
+    ResultType operator()(const Iterator1 a, ZeroIterator<unsigned char> b, size_t size, ResultType /*worst_dist*/ = -1) const
+    {
+        CV_DbgAssert(!(size % long_word_size_) && "vectors size must be multiple of long words size (i.e. 8)");
+
+        (void)b;
+#ifdef FLANN_PLATFORM_64_BIT
+        const uint64_t* pa = reinterpret_cast<const uint64_t*>(a);
+        ResultType result = 0;
+        size /= long_word_size_;
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt64(*pa);
+            ++pa;
+        }
+#else
+        const uint32_t* pa = reinterpret_cast<const uint32_t*>(a);
+        ResultType result = 0;
+        size /= long_word_size_;
+        for(size_t i = 0; i < size; ++i ) {
+            result += popcnt32(*pa);
+            ++pa;
+        }
+#endif
+        return result;
+    }
+
+private:
+#ifdef FLANN_PLATFORM_64_BIT
+    static const size_t long_word_size_= sizeof(uint64_t)/sizeof(unsigned char);
+#else
+    static const size_t long_word_size_= sizeof(uint32_t)/sizeof(unsigned char);
+#endif
+};
+
+
 
 template<class T>
 struct HistIntersectionDistance

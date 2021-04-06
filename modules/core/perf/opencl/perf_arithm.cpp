@@ -678,7 +678,12 @@ OCL_PERF_TEST_P(SqrtFixture, Sqrt, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::sqrt(src, dst);
 
-    if (CV_MAT_DEPTH(type) >= CV_32F)
+    // To square root 32 bit floats we use native_sqrt, which has implementation
+    // defined accuracy. We know intel devices have accurate native_sqrt, but
+    // otherwise stick to a relaxed sanity check. For types larger than 32 bits
+    // we can do the accuracy check for all devices as normal.
+    if (CV_MAT_DEPTH(type) > CV_32F || !ocl::useOpenCL() ||
+        ocl::Device::getDefault().isIntel())
         SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
     else
         SANITY_CHECK(dst, 1);

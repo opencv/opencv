@@ -128,10 +128,13 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 
-#if CV_VSX && defined __linux__
+#if (defined __ppc64__ || defined __PPC64__) && defined __linux__
 # include "sys/auxv.h"
 # ifndef AT_HWCAP2
 #   define AT_HWCAP2 26
+# endif
+# ifndef PPC_FEATURE2_ARCH_2_07
+#   define PPC_FEATURE2_ARCH_2_07 0x80000000
 # endif
 # ifndef PPC_FEATURE2_ARCH_3_00
 #   define PPC_FEATURE2_ARCH_3_00 0x00800000
@@ -587,14 +590,25 @@ struct HWFeatures
     #ifdef __mips_msa
         have[CV_CPU_MSA] = true;
     #endif
-    // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
-    have[CV_CPU_VSX] = (CV_VSX);
-    // TODO: Check VSX3 availability in runtime for other platforms
-    #if CV_VSX && defined __linux__
-        uint64 hwcap2 = getauxval(AT_HWCAP2);
-        have[CV_CPU_VSX3] = (hwcap2 & PPC_FEATURE2_ARCH_3_00);
+
+    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
+        unsigned int hwcap = getauxval(AT_HWCAP);
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            hwcap = getauxval(AT_HWCAP2);
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        have[CV_CPU_VSX3] = (CV_VSX3);
+        // TODO: AIX, FreeBSD
+        #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
+            have[CV_CPU_VSX] = true;
+        #endif
+        #if CV_VSX3 || defined __POWER9_VECTOR__
+            have[CV_CPU_VSX3] = true;
+        #endif
     #endif
 
         bool skip_baseline_check = false;
@@ -1924,7 +1938,7 @@ class ParseError
 {
     std::string bad_value;
 public:
-    ParseError(const std::string bad_value_) :bad_value(bad_value_) {}
+    ParseError(const std::string &bad_value_) :bad_value(bad_value_) {}
     std::string toString(const std::string &param) const
     {
         std::ostringstream out;
@@ -2429,6 +2443,13 @@ public:
             ippTopFeatures = ippCPUID_SSE42;
 
         pIppLibInfo = ippiGetLibVersion();
+
+        // workaround: https://github.com/opencv/opencv/issues/12959
+        std::string ippName(pIppLibInfo->Name ? pIppLibInfo->Name : "");
+        if (ippName.find("SSE4.2") != std::string::npos)
+        {
+            ippTopFeatures = ippCPUID_SSE42;
+        }
     }
 
 public:
@@ -2468,16 +2489,12 @@ int getIppFeatures()
 #endif
 }
 
-unsigned long long getIppTopFeatures();
-
+#ifdef HAVE_IPP
 unsigned long long getIppTopFeatures()
 {
-#ifdef HAVE_IPP
     return getIPPSingleton().ippTopFeatures;
-#else
-    return 0;
-#endif
 }
+#endif
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {

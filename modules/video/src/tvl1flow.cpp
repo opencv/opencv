@@ -102,6 +102,8 @@ public:
     }
     OpticalFlowDual_TVL1();
 
+    virtual String getDefaultName() const CV_OVERRIDE { return "DenseOpticalFlow.DualTVL1OpticalFlow"; }
+
     void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
     void collectGarbage() CV_OVERRIDE;
 

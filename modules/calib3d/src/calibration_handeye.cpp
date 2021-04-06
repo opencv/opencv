@@ -29,6 +29,7 @@ static Mat homogeneousInverse(const Mat& T)
 // q = sin(theta/2) * v
 // theta - rotation angle
 // v     - unit rotation axis, |v| = 1
+// Reference: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
 static Mat rot2quatMinimal(const Mat& R)
 {
     CV_Assert(R.type() == CV_64FC1 && R.rows >= 3 && R.cols >= 3);
@@ -44,7 +45,7 @@ static Mat rot2quatMinimal(const Mat& R)
         qx = (m21 - m12) / S;
         qy = (m02 - m20) / S;
         qz = (m10 - m01) / S;
-    } else if ((m00 > m11)&(m00 > m22)) {
+    } else if (m00 > m11 && m00 > m22) {
         double S = sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
         qx = 0.25 * S;
         qy = (m01 + m10) / S;
@@ -98,6 +99,7 @@ static Mat quatMinimal2rot(const Mat& q)
 //
 // q - 4x1 unit quaternion <qw, qx, qy, qz>
 // R - 3x3 rotation matrix
+// Reference: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
 static Mat rot2quat(const Mat& R)
 {
     CV_Assert(R.type() == CV_64FC1 && R.rows >= 3 && R.cols >= 3);
@@ -114,7 +116,7 @@ static Mat rot2quat(const Mat& R)
         qx = (m21 - m12) / S;
         qy = (m02 - m20) / S;
         qz = (m10 - m01) / S;
-    } else if ((m00 > m11)&(m00 > m22)) {
+    } else if (m00 > m11 && m00 > m22) {
         double S = sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
         qw = (m21 - m12) / S;
         qx = 0.25 * S;
@@ -572,7 +574,11 @@ static void calibrateHandEyeAndreff(const std::vector<Mat>& Hg, const std::vecto
     R = R.reshape(1, 2, newSize);
     //Eq 15
     double det = determinant(R);
-    R = pow(sign_double(det) / abs(det), 1.0/3.0) * R;
+    if (std::fabs(det) < FLT_EPSILON)
+    {
+        CV_Error(Error::StsNoConv, "calibrateHandEye() with CALIB_HAND_EYE_ANDREFF method: determinant(R) is null");
+    }
+    R = cubeRoot(static_cast<float>(sign_double(det) / abs(det))) * R;
 
     Mat w, u, vt;
     SVDecomp(R, w, u, vt);

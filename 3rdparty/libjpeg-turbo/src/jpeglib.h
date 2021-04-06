@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * Modified 2002-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2013-2014, 2016-2017, D. R. Commander.
+ * Copyright (C) 2009-2011, 2013-2014, 2016-2017, 2020, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -244,9 +244,9 @@ typedef enum {
 /* DCT/IDCT algorithm options. */
 
 typedef enum {
-  JDCT_ISLOW,             /* slow but accurate integer algorithm */
-  JDCT_IFAST,             /* faster, less accurate integer method */
-  JDCT_FLOAT              /* floating-point: accurate, fast on fast HW */
+  JDCT_ISLOW,             /* accurate integer method */
+  JDCT_IFAST,             /* less accurate integer method [legacy feature] */
+  JDCT_FLOAT              /* floating-point method [legacy feature] */
 } J_DCT_METHOD;
 
 #ifndef JDCT_DEFAULT            /* may be overridden in jconfig.h */

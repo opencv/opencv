@@ -11,6 +11,12 @@ Implementation of Tensorflow models parser
 
 #include "../precomp.hpp"
 
+#include <opencv2/core/utils/logger.defines.hpp>
+#include <opencv2/dnn/shape_utils.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
+#include <opencv2/core/utils/logger.hpp>
+
 #ifdef HAVE_PROTOBUF
 #include "tf_io.hpp"
 
@@ -93,7 +99,7 @@ void blobShapeFromTensor(const tensorflow::TensorProto &tensor, MatShape& shape)
                 shape[i] = (int)_shape.dim(i).size();
         }
         else
-            shape.resize(1, 1);  // Scalar.
+            shape.resize(1, 1);  // Scalar. // FIXIT: should be empty
     }
     else
     {
@@ -258,7 +264,7 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
-static int getDataLayout(const tensorflow::NodeDef& layer)
+static DataLayout getDataLayout(const tensorflow::NodeDef& layer)
 {
     if (hasLayerAttr(layer, "data_format"))
     {
@@ -280,11 +286,30 @@ static inline std::string getNodeName(const std::string& tensorName)
     return tensorName.substr(0, tensorName.rfind(':'));
 }
 
-static inline int getDataLayout(const std::string& layerName,
-                                const std::map<String, int>& data_layouts)
+static inline
+DataLayout getDataLayout(
+        const std::string& layerName,
+        const std::map<String, DataLayout>& data_layouts
+)
 {
-    std::map<String, int>::const_iterator it = data_layouts.find(getNodeName(layerName));
+    std::map<String, DataLayout>::const_iterator it = data_layouts.find(getNodeName(layerName));
     return it != data_layouts.end() ? it->second : DATA_LAYOUT_UNKNOWN;
+}
+
+static
+bool hasAllOnes(const Mat &inputs, int startPos, int endPos)
+{
+    CV_CheckLE(inputs.dims, 2, "");
+    CV_CheckGE(startPos, 0, "");
+    CV_CheckLE(startPos, endPos, "");
+    CV_CheckLT((size_t)endPos, inputs.total(), "");
+
+    for (int i = startPos; i < endPos; i++)
+    {
+        if (inputs.at<int>(i) != 1 && inputs.at<int>(i) != -1)
+            return false;
+    }
+    return true;
 }
 
 void setStrides(LayerParams &layerParams, const tensorflow::NodeDef &layer)
@@ -389,7 +414,7 @@ Pin parsePin(const std::string &name)
 {
     Pin pin(name);
 
-    size_t delimiter_pos = name.find_first_of(":");
+    size_t delimiter_pos = name.find_first_of(':');
     if (delimiter_pos != std::string::npos)
     {
         pin.name = name.substr(0, delimiter_pos);
@@ -439,15 +464,20 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
         net.mutable_node()->DeleteSubrange(layer_index, 1);
 }
 
-class TFImporter {
+class TFImporter
+{
 public:
-    TFImporter(const char *model, const char *config = NULL);
-    TFImporter(const char *dataModel, size_t lenModel,
+    TFImporter(Net& net, const char *model, const char *config = NULL);
+    TFImporter(Net& net, const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0);
+protected:
+    Net& dstNet;
+    void populateNet();
 
-    void populateNet(Net dstNet);
+    void parseNode(const tensorflow::NodeDef& layer);
 
-private:
+    DataLayout predictOutputDataLayout(const tensorflow::NodeDef& layer);
+
     void kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob);
 
     void connect(const std::map<String, int>& layers_name_id_map, Net& network, const Pin& outPin,
@@ -467,23 +497,56 @@ private:
 
     std::vector<String> netInputsNames;
     std::vector<MatShape> netInputShapes;
+
+    std::set<String> layers_to_ignore;
+    std::map<String, DataLayout> data_layouts;
+
+    // find all Const layers for params
+    std::map<String, int> value_id;
+    // A map with constant blobs which are shared between multiple layers.
+    std::map<String, Mat> sharedWeights;
+
+    std::map<String, int> layer_id;
+
+private:
+    void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId);
 };
 
-TFImporter::TFImporter(const char *model, const char *config)
+TFImporter::TFImporter(Net& net, const char *model, const char *config)
+    : dstNet(net)
 {
     if (model && model[0])
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing TensorFlow model from file: " << model);
         ReadTFNetParamsFromBinaryFileOrDie(model, &netBin);
+    }
     if (config && config[0])
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing TensorFlow config from file: " << config);
         ReadTFNetParamsFromTextFileOrDie(config, &netTxt);
+    }
+
+    populateNet();
 }
 
-TFImporter::TFImporter(const char *dataModel, size_t lenModel,
-                       const char *dataConfig, size_t lenConfig)
+TFImporter::TFImporter(
+        Net& net,
+        const char *dataModel, size_t lenModel,
+        const char *dataConfig, size_t lenConfig
+)
+    : dstNet(net)
 {
     if (dataModel != NULL && lenModel > 0)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing TensorFlow model from memory (" << lenModel << " bytes)");
         ReadTFNetParamsFromBinaryBufferOrDie(dataModel, lenModel, &netBin);
+    }
     if (dataConfig != NULL && lenConfig > 0)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: processing TensorFlow config from memory (" << lenConfig << " bytes)");
         ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
+    }
+    populateNet();
 }
 
 void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
@@ -612,84 +675,98 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
 static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& const_layers,
                           std::set<String>& layers_to_ignore)
 {
+    CV_LOG_DEBUG(NULL, "DNN/TF: addConstNodes(): handling " << net.node_size() << " nodes...");
     for (int li = 0; li < net.node_size(); li++)
     {
         const tensorflow::NodeDef &layer = net.node(li);
         String name = layer.name();
         String type = layer.op();
 
-        if (type == "Dequantize")
+        //CV_LOG_DEBUG(NULL, "DNN/TF: layer_id=" << li << " - '" << name << "' @ " << type);
+
+        try
         {
-            // Example of Dequantize node:
-            //   name: "conv2d_1/bias"
-            //   op: "Dequantize"
-            //   input: "conv2d_1/bias_quantized_const" (tensor of dtype DT_QUINT8)
-            //   input: "conv2d_1/bias_quantized_min"
-            //   input: "conv2d_1/bias_quantized_max"
-            //   attr { key: "T" value { type: DT_QUINT8 } }   (quantized type)
-            //   attr { key: "mode" value { s: "MIN_FIRST" } } (quantization technique)
-            CV_Assert(layer.input_size() == 3);
-            for (int i = 0; i < 3; ++i)
-                CV_Assert(const_layers.find(layer.input(i)) != const_layers.end());
-            CV_Assert(hasLayerAttr(layer, "mode") &&
-                      getLayerAttr(layer, "mode").s() == "MIN_FIRST");
+            if (type == "Dequantize")
+            {
+                // Example of Dequantize node:
+                //   name: "conv2d_1/bias"
+                //   op: "Dequantize"
+                //   input: "conv2d_1/bias_quantized_const" (tensor of dtype DT_QUINT8)
+                //   input: "conv2d_1/bias_quantized_min"
+                //   input: "conv2d_1/bias_quantized_max"
+                //   attr { key: "T" value { type: DT_QUINT8 } }   (quantized type)
+                //   attr { key: "mode" value { s: "MIN_FIRST" } } (quantization technique)
+                CV_CheckEQ(layer.input_size(), 3, "Dequantize: 3 inputs is supported only");
+                for (int i = 0; i < 3; ++i)
+                    CV_Assert(const_layers.find(layer.input(i)) != const_layers.end());
+                CV_Assert(hasLayerAttr(layer, "mode") &&
+                          getLayerAttr(layer, "mode").s() == "MIN_FIRST");
 
-            int tensorId = const_layers[layer.input(0)];
-            int minId = const_layers[layer.input(1)];
-            int maxId = const_layers[layer.input(2)];
+                int tensorId = const_layers[layer.input(0)];
+                int minId = const_layers[layer.input(1)];
+                int maxId = const_layers[layer.input(2)];
 
-            tensorflow::TensorProto* tensor = net.mutable_node(tensorId)
-                                                ->mutable_attr()->at("value")
-                                                 .mutable_tensor();
-            CV_Assert(tensor->dtype() == tensorflow::DT_QUINT8);
+                tensorflow::TensorProto* tensor = net.mutable_node(tensorId)
+                                                    ->mutable_attr()->at("value")
+                                                     .mutable_tensor();
+                CV_CheckEQ((int)tensor->dtype(), (int)tensorflow::DT_QUINT8, "");
 
-            Mat qMin = getTensorContent(net.node(minId).attr().at("value").tensor());
-            Mat qMax = getTensorContent(net.node(maxId).attr().at("value").tensor());
-            CV_Assert_N(qMin.total() == 1, qMin.type() == CV_32FC1,
-                        qMax.total() == 1, qMax.type() == CV_32FC1);
+                Mat qMin = getTensorContent(net.node(minId).attr().at("value").tensor());
+                Mat qMax = getTensorContent(net.node(maxId).attr().at("value").tensor());
+                CV_CheckEQ(qMin.total(), (size_t)1, "");
+                CV_CheckTypeEQ(qMin.type(), CV_32FC1, "");
+                CV_CheckEQ(qMax.total(), (size_t)1, "");
+                CV_CheckTypeEQ(qMax.type(), CV_32FC1, "");
 
-            Mat content = getTensorContent(*tensor);
+                Mat content = getTensorContent(*tensor);
 
-            float minVal = qMin.at<float>(0);
-            float rangeScale = (qMax.at<float>(0) - minVal) / 255;
-            CV_Assert(rangeScale >= 0);
-            content.convertTo(content, CV_32FC1, rangeScale,
-                              rangeScale * cvRound(minVal / rangeScale));
+                float minVal = qMin.at<float>(0);
+                float rangeScale = (qMax.at<float>(0) - minVal) / 255;
+                CV_Assert(rangeScale >= 0);
+                content.convertTo(content, CV_32FC1, rangeScale,
+                                  rangeScale * cvRound(minVal / rangeScale));
 
-            tensor->set_dtype(tensorflow::DT_FLOAT);
-            tensor->set_tensor_content(content.data, content.total() * content.elemSize1());
+                tensor->set_dtype(tensorflow::DT_FLOAT);
+                tensor->set_tensor_content(content.data, content.total() * content.elemSize1());
 
-            net.mutable_node(tensorId)->set_name(name);
-            CV_Assert(const_layers.insert(std::make_pair(name, tensorId)).second);
+                net.mutable_node(tensorId)->set_name(name);
+                CV_Assert(const_layers.insert(std::make_pair(name, tensorId)).second);
+                layers_to_ignore.insert(name);
+                continue;
+            }
+            else if (type != "Const")
+                continue;  // only Const parameters are supported
+
+            if (layer.attr().find("value") != layer.attr().end())
+            {
+                CV_Assert(const_layers.insert(std::make_pair(name, li)).second);
+            }
             layers_to_ignore.insert(name);
-            continue;
         }
-        else if (type != "Const")
-            continue;  // only Const parameters are supported
-
-        if (layer.attr().find("value") != layer.attr().end())
+        catch (const std::exception& e)
         {
-            CV_Assert(const_layers.insert(std::make_pair(name, li)).second);
+            CV_LOG_ERROR(NULL, "DNN/TF: Can't handle node='" << name << "'. Exception: " << e.what());
+            throw;
         }
-        layers_to_ignore.insert(name);
     }
+    CV_LOG_DEBUG(NULL, "DNN/TF: layers_to_ignore.size() = " << layers_to_ignore.size());
 }
 
 // If all inputs of specific layer have the same data layout we can say that
 // this layer's output has this data layout too. Returns DATA_LAYOUT_UNKNOWN otherwise.
-static int predictOutputDataLayout(const tensorflow::GraphDef& net,
-                                   const tensorflow::NodeDef& layer,
-                                   const std::map<String, int>& data_layouts)
+DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
 {
-    int layout = getDataLayout(layer);
+    DataLayout layout = getDataLayout(layer);
     if (layout != DATA_LAYOUT_UNKNOWN)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: predictOutputDataLayout(" << layer.name() << " @ " << layer.op() << ") => " << (int)layout << " (from attrs)");
         return layout;
+    }
 
     // Determine layout by layer's inputs
-    std::map<String, int>::const_iterator it;
     for (int i = 0, n = layer.input_size(); i < n; ++i)
     {
-        it = data_layouts.find(getNodeName(layer.input(i)));
+        std::map<String, DataLayout>::const_iterator it = data_layouts.find(getNodeName(layer.input(i)));
         if (it != data_layouts.end())
         {
             if (layout != DATA_LAYOUT_UNKNOWN)
@@ -703,71 +780,72 @@ static int predictOutputDataLayout(const tensorflow::GraphDef& net,
     }
 
     if (layout != DATA_LAYOUT_UNKNOWN)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: predictOutputDataLayout(" << layer.name() << " @ " << layer.op() << ") => " << (int)layout << " (from inputs)");
         return layout;
+    }
 
     // Determine layout by layer's consumers recursively.
-    it = data_layouts.find(layer.name());
+    std::map<String, DataLayout>::const_iterator it = data_layouts.find(layer.name());
     CV_Assert(it != data_layouts.end());
     return it->second;
 }
 
-void TFImporter::populateNet(Net dstNet)
+void TFImporter::populateNet()
 {
-    if (!netTxt.ByteSize())
-        removePhaseSwitches(netBin);
+    CV_Assert(netBin.ByteSize() || netTxt.ByteSize());
 
-    RemoveIdentityOps(netBin);
-    RemoveIdentityOps(netTxt);
+    CV_LOG_INFO(NULL, "DNN/TF: parsing model"
+        << (netBin.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netBin.versions().producer(), (int)netBin.versions().min_consumer()) : cv::String(" (N/A version info)"))
+        << ". Number of nodes = " << netBin.node_size()
+    );
 
-    if (!netTxt.ByteSize())
+    if (netTxt.ByteSize())
     {
-        simplifySubgraphs(netBin);
-        sortByExecutionOrder(netBin);
+        CV_LOG_INFO(NULL, "DNN/TF: parsing config"
+            << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
+            << ". Number of nodes = " << netTxt.node_size()
+        );
+
+        RemoveIdentityOps(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+        RemoveIdentityOps(netTxt);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(config) => " << netTxt.node_size() << " nodes");
+
+        sortByExecutionOrder(netTxt);
+        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(config) => " << netTxt.node_size() << " nodes");
     }
     else
     {
-        sortByExecutionOrder(netTxt);
-    }
+        removePhaseSwitches(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
 
-    std::set<String> layers_to_ignore;
+        RemoveIdentityOps(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+
+        simplifySubgraphs(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
+        sortByExecutionOrder(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
+    }
 
     tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
 
     int layersSize = net.node_size();
 
-    std::map<String, int> data_layouts;
     // Pre-fill data layouts where they are set explicitly.
     // Assuming that nodes are in topological order
-    for (int i = net.node_size() - 1; i >= 0; --i)
+    for (int i = layersSize - 1; i >= 0; --i)
     {
         const tensorflow::NodeDef& layer = net.node(i);
         std::string name = layer.name();
 
-        int layout = getDataLayout(layer);
-        std::map<String, int>::iterator it = data_layouts.find(name);
-        if (it != data_layouts.end())
-        {
-            if (layout != DATA_LAYOUT_UNKNOWN)
-            {
-                if (it->second == DATA_LAYOUT_UNKNOWN)
-                    it->second = layout;
-                else if (it->second != layout)
-                {
-                    it->second = DATA_LAYOUT_UNKNOWN;
-                    layout = DATA_LAYOUT_UNKNOWN;
-                }
-            }
-            else
-                layout = it->second;
-        }
-        else
-            data_layouts[name] = layout;
+        CV_LOG_DEBUG(NULL, "DNN/TF: node(" << i << " - '" << name << "') propagating layout...");
 
-        // Specify input layers to have the same data layout.
-        for (int j = 0; j < layer.input_size(); ++j)
+        try
         {
-            name = getNodeName(layer.input(j));
-            it = data_layouts.find(name);
+            DataLayout layout = getDataLayout(layer);
+            std::map<String, DataLayout>::iterator it = data_layouts.find(name);
             if (it != data_layouts.end())
             {
                 if (layout != DATA_LAYOUT_UNKNOWN)
@@ -775,38 +853,105 @@ void TFImporter::populateNet(Net dstNet)
                     if (it->second == DATA_LAYOUT_UNKNOWN)
                         it->second = layout;
                     else if (it->second != layout)
+                    {
                         it->second = DATA_LAYOUT_UNKNOWN;
+                        layout = DATA_LAYOUT_UNKNOWN;
+                    }
                 }
+                else
+                    layout = it->second;
             }
             else
                 data_layouts[name] = layout;
+
+            // Specify input layers to have the same data layout.
+            for (int j = 0; j < layer.input_size(); ++j)
+            {
+                name = getNodeName(layer.input(j));
+                it = data_layouts.find(name);
+                if (it != data_layouts.end())
+                {
+                    if (layout != DATA_LAYOUT_UNKNOWN)
+                    {
+                        if (it->second == DATA_LAYOUT_UNKNOWN)
+                            it->second = layout;
+                        else if (it->second != layout)
+                            it->second = DATA_LAYOUT_UNKNOWN;
+                    }
+                }
+                else
+                    data_layouts[name] = layout;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            CV_LOG_ERROR(NULL, "DNN/TF: Can't propagate layout for node='" << name << "'. Exception: " << e.what());
+            throw;
         }
     }
 
-    // find all Const layers for params
-    std::map<String, int> value_id;
-    // A map with constant blobs which are shared between multiple layers.
-    std::map<String, Mat> sharedWeights;
     addConstNodes(netBin, value_id, layers_to_ignore);
     addConstNodes(netTxt, value_id, layers_to_ignore);
 
-    std::map<String, int> layer_id;
 
     for (int li = 0; li < layersSize; li++)
     {
-        tensorflow::NodeDef layer = net.node(li);
-        String name = layer.name();
-        String type = layer.op();
+        const tensorflow::NodeDef& layer = net.node(li);
+
+        const std::string name = layer.name();
+        const std::string type = layer.op();
+        const int ninputs = layer.input_size();
+        CV_LOG_DEBUG(NULL, "DNN/TF: (" << li << "/" << layersSize << ") Parse layer " << name << " @ " << type << " with " << ninputs << " inputs");
+
+        parseNode(layer);
+    }
+
+    for (size_t i = 0; i < netInputsNames.size(); i++)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF: Model input: " << i << " - '" << netInputsNames[i] << "'");
+        CV_Assert(!netInputsNames[i].empty());
+    }
+    dstNet.setInputsNames(netInputsNames);
+    CV_LOG_DEBUG(NULL, "DNN/TF: ===================== Import completed =====================");
+}
+
+void TFImporter::addPermuteLayer(const int* order, const std::string& permName, Pin& inpId)
+{
+    LayerParams permLP;
+    permLP.set("order", DictValue::arrayInt<const int*>(order, 4));
+    CV_Assert(layer_id.find(permName) == layer_id.end());
+    int permId = dstNet.addLayer(permName, "Permute", permLP);
+    layer_id[permName] = permId;
+    connect(layer_id, dstNet, inpId, permId, 0);
+    inpId = Pin(permName);
+}
+
+void TFImporter::parseNode(const tensorflow::NodeDef& layer_)
+{
+    tensorflow::NodeDef layer = layer_;
+
+    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+
+    /*const*/ std::string name = layer.name();
+    /*const*/ std::string type = layer.op();
+    /*const*/ int num_inputs = layer.input_size();
+
+    try
+    {
         LayerParams layerParams;
 
-        if(layers_to_ignore.find(name) != layers_to_ignore.end())
-            continue;
+        if (layers_to_ignore.find(name) != layers_to_ignore.end())
+        {
+            CV_LOG_DEBUG(NULL, "DNN/TF:     ignored");
+            return;
+        }
 
-        int predictedLayout = predictOutputDataLayout(net, layer, data_layouts);
+        DataLayout predictedLayout = predictOutputDataLayout(layer);
         data_layouts[name] = predictedLayout;
 
         if (type == "Conv2D" || type == "SpaceToBatchND" || type == "DepthwiseConv2dNative" || type == "Pad" || type == "MirrorPad" || type == "Conv3D")
         {
+            CV_CheckGT(num_inputs, 0, "");
             // The first node of dilated convolution subgraph.
             // Extract input node, dilation rate and paddings.
             std::string input = layer.input(0);
@@ -824,7 +969,7 @@ void TFImporter::populateNet(Net dstNet)
                 // input: "input"
                 // input: "SpaceToBatchND/block_shape"
                 // input: "SpaceToBatchND/paddings"
-                CV_Assert(layer.input_size() == 3);
+                CV_CheckEQ(num_inputs, 3, "");
 
                 DictValue dilation = parseDims(getConstBlob(layer, value_id, 1));
                 CV_Assert(dilation.size() == 2);
@@ -839,10 +984,14 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("pad_w", paddings.at<float>(2));
 
                 CV_Assert(next_layers.size() == 1);
-                layer = net.node(next_layers[0].second);
                 layers_to_ignore.insert(next_layers[0].first);
+
+                // FIXIT don't override, rewrite this code
+                layer = net.node(next_layers[0].second);
                 name = layer.name();
                 type = layer.op();
+                num_inputs = layer.input_size();
+                CV_LOG_DEBUG(NULL, "DNN/TF:     switched to layer " << name << " @ " << type << ") with " << num_inputs << " inputs");
             }
             else if (type == "Pad" || type == "MirrorPad")
             {
@@ -876,7 +1025,7 @@ void TFImporter::populateNet(Net dstNet)
                     layer_id[name] = id;
 
                     connect(layer_id, dstNet, parsePin(input), id, 0);
-                    continue;
+                    return;
                 }
                 else
                 {
@@ -886,10 +1035,14 @@ void TFImporter::populateNet(Net dstNet)
                     layerParams.set("pad_h", paddings.at<int32_t>(4));
                     layerParams.set("pad_w", paddings.at<int32_t>(6));
 
-                    layer = net.node(next_layers[0].second);
                     layers_to_ignore.insert(next_layers[0].first);
+
+                    // FIXIT don't override, rewrite this code
+                    layer = net.node(next_layers[0].second);
                     name = layer.name();
                     type = layer.op();
+                    num_inputs = layer.input_size();
+                    CV_LOG_DEBUG(NULL, "DNN/TF:     switched to layer " << name << " @ " << type << ") with " << num_inputs << " inputs");
                 }
             }
 
@@ -1011,13 +1164,14 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "BiasAdd" || type == "Add" || type == "AddV2" || type == "Sub" || type=="AddN")
         {
+            CV_CheckGT(num_inputs, 0, "");
             bool haveConst = false;
-            for(int ii = 0; !haveConst && ii < layer.input_size(); ++ii)
+            for(int ii = 0; !haveConst && ii < num_inputs; ++ii)
             {
                 Pin input = parsePin(layer.input(ii));
                 haveConst = value_id.find(input.name) != value_id.end();
             }
-            CV_Assert(!haveConst || layer.input_size() == 2);
+            CV_Assert(!haveConst || num_inputs == 2);
 
             if (haveConst)
             {
@@ -1054,7 +1208,7 @@ void TFImporter::populateNet(Net dstNet)
                 int id = dstNet.addLayer(name, "Eltwise", layerParams);
                 layer_id[name] = id;
 
-                for (int ii = 0; ii < layer.input_size(); ii++)
+                for (int ii = 0; ii < num_inputs; ii++)
                 {
                     Pin inp = parsePin(layer.input(ii));
                     if (layer_id.find(inp.name) == layer_id.end())
@@ -1065,7 +1219,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "MatMul")
         {
-            CV_Assert(layer.input_size() == 2);
+            CV_CheckEQ(num_inputs, 2, "");
 
             // For the object detection networks, TensorFlow Object Detection API
             // predicts deltas for bounding boxes in yxYX (ymin, xmin, ymax, xmax)
@@ -1077,7 +1231,7 @@ void TFImporter::populateNet(Net dstNet)
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
 
-            StrIntVector next_layers = getNextLayers(net, name, "BiasAdd");
+            StrIntVector next_layers = getNextLayers(net, name, "BiasAdd");  // FIXIT Use layers fusion instead
             if (next_layers.empty())
             {
                 next_layers = getNextLayers(net, name, "Add");
@@ -1105,8 +1259,18 @@ void TFImporter::populateNet(Net dstNet)
 
             int kernel_blob_index = -1;
             const tensorflow::TensorProto& kernelTensor = getConstBlob(layer, value_id, -1, &kernel_blob_index);
-            blobFromTensor(kernelTensor, layerParams.blobs[0]);
-            releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
+            const String kernelTensorName = layer.input(kernel_blob_index);
+            std::map<String, Mat>::iterator sharedWeightsIt = sharedWeights.find(kernelTensorName);
+            if (sharedWeightsIt == sharedWeights.end())
+            {
+                blobFromTensor(kernelTensor, layerParams.blobs[0]);
+                releaseTensor(const_cast<tensorflow::TensorProto*>(&kernelTensor));
+                sharedWeights[kernelTensorName] = layerParams.blobs[0];
+            }
+            else
+            {
+                layerParams.blobs[0] = sharedWeightsIt->second;
+            }
 
             if (kernel_blob_index == 1) { // In this case output is computed by x*W formula - W should be transposed
                 Mat data = layerParams.blobs[0].t();
@@ -1135,44 +1299,57 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Reshape")
         {
+            CV_CheckGT(num_inputs, 0, "");
             Pin inpId = parsePin(layer.input(0));
-            int inpLayout = getDataLayout(layer.input(0), data_layouts);
+            DataLayout inpLayout = getDataLayout(layer.input(0), data_layouts);
             // There are two possible implementations: reshape an input using
             // predefined sizes or use a second input blob as a source of new shape.
             if (value_id.find(layer.input(1)) != value_id.end())
             {
                 Mat newShape = getTensorContent(getConstBlob(layer, value_id, 1));
-                if (newShape.total() == 4)
+                int newShapeSize = newShape.total();
+                bool hasSwap = false;
+                if (newShapeSize == 4 && hasAllOnes(newShape, 0, 2))
                 {
                     // NHWC->NCHW
                     std::swap(*newShape.ptr<int32_t>(0, 2), *newShape.ptr<int32_t>(0, 3));
                     std::swap(*newShape.ptr<int32_t>(0, 1), *newShape.ptr<int32_t>(0, 2));
+                    hasSwap = true;
                 }
                 if (inpLayout == DATA_LAYOUT_NHWC)
                 {
-                    if (newShape.total() != 4 || newShape.at<int>(1) == 1)
+                    if (newShapeSize >= 2 || newShape.at<int>(1) == 1)
                     {
-                        LayerParams permLP;
                         int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                        permLP.set("order", DictValue::arrayInt<int*>(order, 4));
-
-                        std::string permName = name + "/nchw";
-                        CV_Assert(layer_id.find(permName) == layer_id.end());
-                        int permId = dstNet.addLayer(permName, "Permute", permLP);
-                        layer_id[permName] = permId;
-                        connect(layer_id, dstNet, inpId, permId, 0);
-                        inpId = Pin(permName);
-                        inpLayout = DATA_LAYOUT_NCHW;
+                        addPermuteLayer(order, name + "/nhwc", inpId);
+                        if (newShapeSize < 4)
+                        {
+                            inpLayout = DATA_LAYOUT_NCHW;
+                        }
+                        else
+                        {
+                            inpLayout = DATA_LAYOUT_NHWC;
+                        }
                     }
                 }
-                layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShape.total()));
+                layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
 
                 int id = dstNet.addLayer(name, "Reshape", layerParams);
                 layer_id[name] = id;
 
                 // one input only
                 connect(layer_id, dstNet, inpId, id, 0);
-                data_layouts[name] = newShape.total() == 2 ? DATA_LAYOUT_PLANAR : inpLayout;
+                inpId = Pin(name);
+
+                if ((inpLayout == DATA_LAYOUT_NHWC || inpLayout == DATA_LAYOUT_UNKNOWN || inpLayout == DATA_LAYOUT_PLANAR) &&
+                    newShapeSize == 4 && !hasSwap)
+                {
+                    int order[] = {0, 3, 1, 2};  // Transform back to OpenCV's NCHW.
+                    addPermuteLayer(order, name + "/nchw", inpId);
+                    inpLayout = DATA_LAYOUT_NCHW;
+                }
+
+                data_layouts[name] = newShapeSize == 2 ? DATA_LAYOUT_PLANAR : inpLayout;
             }
             else
             {
@@ -1185,6 +1362,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Flatten" || type == "Squeeze")
         {
+            CV_CheckGT(num_inputs, 0, "");
             Pin inpId = parsePin(layer.input(0));
             int inpLayout = getDataLayout(layer.input(0), data_layouts);
             if (type == "Squeeze")
@@ -1231,6 +1409,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Transpose")
         {
+            CV_CheckGT(num_inputs, 0, "");
             Mat perm = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(perm.type() == CV_32SC1);
             int* permData = (int*)perm.data;
@@ -1304,6 +1483,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "LRN")
         {
+            CV_CheckGT(num_inputs, 0, "");
             if(hasLayerAttr(layer, "alpha")) {
                 layerParams.set("alpha", getLayerAttr(layer, "alpha").f());
             }
@@ -1322,11 +1502,12 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "LRN", layerParams);
             layer_id[name] = id;
 
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "Concat" || type == "ConcatV2")
         {
-            int axisId = (type == "Concat" ? 0 : layer.input_size() - 1);
+            CV_CheckGT(num_inputs, 0, "");
+            int axisId = (type == "Concat" ? 0 : num_inputs - 1);
             int axis = getConstBlob(layer, value_id, axisId).int_val().Get(0);
 
             if (getDataLayout(name, data_layouts) == DATA_LAYOUT_NHWC)
@@ -1337,7 +1518,7 @@ void TFImporter::populateNet(Net dstNet)
 
             // input(0) or input(n-1) is concat_dim
             int from = (type == "Concat" ? 1 : 0);
-            int to = (type == "Concat" ? layer.input_size() : layer.input_size() - 1);
+            int to = (type == "Concat" ? num_inputs : num_inputs - 1);
 
             for (int ii = from; ii < to; ii++)
             {
@@ -1370,6 +1551,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "MaxPool" || type == "MaxPool3D")
         {
+            CV_CheckGT(num_inputs, 0, "");
             layerParams.set("pool", "max");
 
             setKSize(layerParams, layer);
@@ -1381,10 +1563,11 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
 
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "AvgPool" || type == "AvgPool3D")
         {
+            CV_CheckGT(num_inputs, 0, "");
             layerParams.set("pool", "ave");
             layerParams.set("ave_pool_padded_area", false);
             setKSize(layerParams, layer);
@@ -1394,11 +1577,11 @@ void TFImporter::populateNet(Net dstNet)
             int id = dstNet.addLayer(name, "Pooling", layerParams);
             layer_id[name] = id;
 
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "MaxPoolGrad")
         {
-            CV_Assert(layer.input_size() == 3);
+            CV_CheckEQ(num_inputs, 3, "");
 
             layerParams.set("pool_k_h", 0);
             layerParams.set("pool_k_w", 0);
@@ -1457,7 +1640,7 @@ void TFImporter::populateNet(Net dstNet)
             // TODO: slicing input may be Const op
             // TODO: slicing kernels for convolutions - in current implementation it is impossible
             // TODO: add parsing num of slices parameter
-            CV_Assert(layer.input_size() == 2);
+            CV_CheckEQ(num_inputs, 2, "");
             // num_split
             // 1st blob is dims tensor
             int axis = getConstBlob(layer, value_id, 0).int_val().Get(0);
@@ -1480,7 +1663,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "input_node"
             // input: "Slice/begin"
             // input: "Slice/size"
-            CV_Assert(layer.input_size() == 3);
+            CV_CheckEQ(num_inputs, 3, "");
             Mat begins = getTensorContent(getConstBlob(layer, value_id, 1));
             Mat sizes = getTensorContent(getConstBlob(layer, value_id, 2));
             CV_Assert_N(!begins.empty(), !sizes.empty());
@@ -1505,7 +1688,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "StridedSlice")
         {
-            CV_Assert(layer.input_size() == 4);
+            CV_CheckEQ(num_inputs, 4, "");
             Mat begins = getTensorContent(getConstBlob(layer, value_id, 1));
             Mat ends = getTensorContent(getConstBlob(layer, value_id, 2));
             Mat strides = getTensorContent(getConstBlob(layer, value_id, 3));
@@ -1544,8 +1727,9 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Mul" || type == "RealDiv")
         {
+            CV_CheckGT(num_inputs, 0, "");
             int constId = -1;
-            for(int ii = 0; ii < layer.input_size(); ++ii)
+            for(int ii = 0; ii < num_inputs; ++ii)
             {
                 Pin input = parsePin(layer.input(ii));
                 if (value_id.find(input.name) != value_id.end())
@@ -1554,12 +1738,12 @@ void TFImporter::populateNet(Net dstNet)
                     break;
                 }
             }
-            CV_Assert((constId != -1) || (layer.input_size() == 2));
+            CV_Assert((constId != -1) || (num_inputs == 2));
 
             if (constId != -1)
             {
                 // Multiplication by constant.
-                CV_Assert(layer.input_size() == 2);
+                CV_CheckEQ(num_inputs, 2, "");
                 Mat scaleMat = getTensorContent(getConstBlob(layer, value_id));
                 CV_Assert(scaleMat.type() == CV_32FC1);
                 if (type == "RealDiv")
@@ -1642,8 +1826,9 @@ void TFImporter::populateNet(Net dstNet)
             {
                 // Check if all the inputs have the same shape.
                 bool equalInpShapes = true;
+                bool isShapeOnes = false;
                 MatShape outShape0;
-                for (int ii = 0; ii < layer.input_size() && !netInputShapes.empty(); ii++)
+                for (int ii = 0; ii < num_inputs && !netInputShapes.empty(); ii++)
                 {
                     Pin pin = parsePin(layer.input(ii));
                     int inpId = layer_id.find(pin.name)->second;
@@ -1662,12 +1847,14 @@ void TFImporter::populateNet(Net dstNet)
                     else if (outShape != outShape0)
                     {
                         equalInpShapes = false;
+                        isShapeOnes = isAllOnes(outShape, 2, outShape.size()) ||
+                                      isAllOnes(outShape0, 2, outShape0.size());
                         break;
                     }
                 }
 
                 int id;
-                if (equalInpShapes || netInputShapes.empty())
+                if (equalInpShapes || netInputShapes.empty() || (!equalInpShapes && isShapeOnes))
                 {
                     layerParams.set("operation", type == "RealDiv" ? "div" : "prod");
                     id = dstNet.addLayer(name, "Eltwise", layerParams);
@@ -1681,7 +1868,7 @@ void TFImporter::populateNet(Net dstNet)
 
                 layer_id[name] = id;
 
-                for (int ii = 0; ii < layer.input_size(); ii++)
+                for (int ii = 0; ii < num_inputs; ii++)
                 {
                     Pin inp = parsePin(layer.input(ii));
                     if (layer_id.find(inp.name) == layer_id.end())
@@ -1698,9 +1885,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "BatchNorm/beta"
             // input: "BatchNorm/moving_mean"
             // input: "BatchNorm/moving_variance"
-            if (layer.input_size() != 5)
-                CV_Error(Error::StsNotImplemented,
-                         "Expected gamma, beta, mean and std");
+            CV_CheckEQ(num_inputs, 5, "Expected gamma, beta, mean and std");
             Pin inpId = parsePin(layer.input(0));
 
             bool isTraining = hasLayerAttr(layer, "is_training") && getLayerAttr(layer, "is_training").b();
@@ -1768,9 +1953,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "conv2d_transpose/output_shape"
             // input: "weights"
             // input: "input"
-            if (layer.input_size() != 3)
-                CV_Error(Error::StsNotImplemented,
-                         "Expected output shape, weights and input nodes");
+            CV_CheckEQ(num_inputs, 3, "Expected output shape, weights and input nodes");
 
             layerParams.set("bias_term", false);
             layerParams.blobs.resize(1);
@@ -1845,8 +2028,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "lstm_block_wrapper/w_f_diag"
             // input: "lstm_block_wrapper/w_o_diag"
             // input: "lstm_block_wrapper/bias"
-            if (layer.input_size() != 9)
-                CV_Error(Error::StsNotImplemented, "Unexpected number of input nodes");
+            CV_CheckEQ(num_inputs, 9, "Unexpected number of input nodes");
 
             if (hasLayerAttr(layer, "forget_bias"))
                 layerParams.set("forget_bias", getLayerAttr(layer, "forget_bias").f());
@@ -1912,6 +2094,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "ResizeNearestNeighbor" || type == "ResizeBilinear" || type == "FusedResizeAndPadConv2D")
         {
+            CV_CheckGT(num_inputs, 0, "");
             std::string convWeights = "";
             if (type == "FusedResizeAndPadConv2D")
             {
@@ -1919,30 +2102,32 @@ void TFImporter::populateNet(Net dstNet)
                 // input: "decoder/ResizeBilinear/size"
                 // input: "decoder/decoder_conv0/Conv2D_dummy_paddings"
                 // input: "decoder/decoder_conv0/weights"
-                CV_CheckEQ(layer.input_size(), 4, "Number of input for FusedResizeAndPadConv2D");
+                CV_CheckEQ(num_inputs, 4, "Number of input for FusedResizeAndPadConv2D");
 
                 Mat paddings = getTensorContent(getConstBlob(layer, value_id, 2));
                 CV_CheckEQ(countNonZero(paddings), 0, "Unsupported mode");
 
                 convWeights = layer.input(3);
-                layer.mutable_input()->DeleteSubrange(2, 2);
+                layer.mutable_input()->DeleteSubrange(2, 2);  // FIXIT do NOT modify input model
+                num_inputs = layer.input_size();
                 name = name + "/resize";
 
                 if (hasLayerAttr(layer, "resize_align_corners"))
                 {
+                    // FIXIT do NOT modify input model
                     layer.mutable_attr()->insert(
                         ::google::protobuf::MapPair<std::string, tensorflow::AttrValue>("align_corners",
                                                                                         getLayerAttr(layer, "resize_align_corners")));
                 }
             }
-            if (layer.input_size() == 2)
+            if (num_inputs == 2)
             {
                 Mat outSize = getTensorContent(getConstBlob(layer, value_id, 1));
                 CV_CheckTypeEQ(outSize.type(), CV_32SC1, ""); CV_CheckEQ(outSize.total(), (size_t)2, "");
                 layerParams.set("height", outSize.at<int>(0, 0));
                 layerParams.set("width", outSize.at<int>(0, 1));
             }
-            else if (layer.input_size() == 3)
+            else if (num_inputs == 3)
             {
                 Mat factorHeight = getTensorContent(getConstBlob(layer, value_id, 1));
                 Mat factorWidth = getTensorContent(getConstBlob(layer, value_id, 2));
@@ -1952,7 +2137,7 @@ void TFImporter::populateNet(Net dstNet)
                 layerParams.set("zoom_factor_y", factorHeight.at<float>(0));
             }
             else
-                CV_Assert(layer.input_size() == 2 || layer.input_size() == 3);
+                CV_Check(num_inputs, num_inputs == 2 || num_inputs == 3, "");
 
             if (type == "ResizeNearestNeighbor")
                 layerParams.set("interpolation", "nearest");
@@ -1962,6 +2147,9 @@ void TFImporter::populateNet(Net dstNet)
             if (hasLayerAttr(layer, "align_corners"))
                 layerParams.set("align_corners", getLayerAttr(layer, "align_corners").b());
 
+            if (hasLayerAttr(layer, "half_pixel_centers"))
+                layerParams.set("half_pixel_centers", getLayerAttr(layer, "half_pixel_centers").b());
+
             int id = dstNet.addLayer(name, "Resize", layerParams);
             layer_id[name] = id;
 
@@ -1970,12 +2158,12 @@ void TFImporter::populateNet(Net dstNet)
             // Step back to add convolution
             if (type == "FusedResizeAndPadConv2D")
             {
-                tensorflow::NodeDef* conv = net.mutable_node(li);
-                conv->clear_input();
-                conv->add_input(name);
-                conv->add_input(convWeights);
-                conv->set_op("Conv2D");
-                li -= 1;
+                tensorflow::NodeDef conv = layer_;
+                conv.clear_input();
+                conv.add_input(name);
+                conv.add_input(convWeights);
+                conv.set_op("Conv2D");
+                parseNode(conv);
             }
         }
         else if (type == "L2Normalize")
@@ -1983,7 +2171,7 @@ void TFImporter::populateNet(Net dstNet)
             // op: "L2Normalize"
             // input: "input"
             // input: "reduction_indices" (axis)
-            CV_Assert(layer.input_size() == 2);
+            CV_CheckEQ(num_inputs, 2, "");
             Mat reductionIndices = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(reductionIndices.type() == CV_32SC1);
 
@@ -2008,6 +2196,7 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "PriorBox")
         {
+            CV_CheckEQ(num_inputs, 2, "");
             if (hasLayerAttr(layer, "min_size"))
                 layerParams.set("min_size", getLayerAttr(layer, "min_size").i());
             if (hasLayerAttr(layer, "max_size"))
@@ -2040,12 +2229,13 @@ void TFImporter::populateNet(Net dstNet)
         }
         else if (type == "Softmax")
         {
+            CV_CheckGT(num_inputs, 0, "");
             if (hasLayerAttr(layer, "axis"))
                 layerParams.set("axis", getLayerAttr(layer, "axis").i());
 
             int id = dstNet.addLayer(name, "Softmax", layerParams);
             layer_id[name] = id;
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else if (type == "CropAndResize")
         {
@@ -2053,7 +2243,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "input"
             // input: "boxes"
             // input: "sizes"
-            CV_Assert(layer.input_size() == 3);
+            CV_CheckEQ(num_inputs, 3, "");
 
             Mat cropSize = getTensorContent(getConstBlob(layer, value_id, 2));
             CV_CheckTypeEQ(cropSize.type(), CV_32SC1, ""); CV_CheckEQ(cropSize.total(), (size_t)2, "");
@@ -2067,7 +2257,7 @@ void TFImporter::populateNet(Net dstNet)
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
         }
-        else if (type == "Mean")
+        else if (type == "Mean" || type == "Sum")
         {
             // Computes the mean of elements across dimensions of a tensor.
             // If keepdims is false (default) reduces input_tensor along the dimensions given in axis,
@@ -2081,6 +2271,7 @@ void TFImporter::populateNet(Net dstNet)
             // determine out shape: NxCxHxW --Slice--> 1xCxHxW
             //                      out_shape = 1xCxHxW if keepDims else (1xCxHxW --Flatten--> CxHxW)
             // global pool: NxCxHxW --Flatten--> Nx(C*H*W) --Reshape--> 1x1xNx(C*H*W) --Pooling--> 1x1x1x(C*H*W) --Reshape--> out_shape
+            CV_CheckGT(num_inputs, 0, "");
 
             Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
             CV_Assert(indices.type() == CV_32SC1);
@@ -2116,7 +2307,7 @@ void TFImporter::populateNet(Net dstNet)
                 LayerParams avgLp;
                 std::string avgName = name + "/avg";
                 CV_Assert(layer_id.find(avgName) == layer_id.end());
-                avgLp.set("pool", "ave");
+                avgLp.set("pool", type == "Mean" ? "ave" : "sum");
                 // pooling kernel H x 1
                 avgLp.set("global_pooling_h", true);
                 avgLp.set("kernel_w", 1);
@@ -2153,11 +2344,73 @@ void TFImporter::populateNet(Net dstNet)
                 layer_id[name] = id;
                 connect(layer_id, dstNet, Pin(avgName), id, 0);
                 connect(layer_id, dstNet, Pin(layerShapeName), id, 1);
+            } else if (indices.total() == 1) {
+                int axis = toNCHW(indices.at<int>(0));
+                if (axis == 2 || axis == 3)
+                {
+                    layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+                    layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
+                    layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
+                    int id = dstNet.addLayer(name, "Pooling", layerParams);
+                    layer_id[name] = id;
+                    connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
+                    if (!keepDims)
+                    {
+                        // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
+                        LayerParams permLP;
+                        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                        std::string permName = name + "/nchw";
+                        Pin inpId = Pin(name);
+                        addPermuteLayer(order, permName, inpId);
+
+                        LayerParams squeezeLp;
+                        std::string squeezeName = name + "/squeeze";
+                        CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                        squeezeLp.set("axis", indices.at<int>(0));
+                        squeezeLp.set("end_axis", indices.at<int>(0) + 1);
+                        int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                        layer_id[squeezeName] = squeezeId;
+                        connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
+                    }
+                }
+                else if (axis == 1)
+                {
+                    int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+                    Pin inpId = parsePin(layer.input(0));
+                    addPermuteLayer(order, name + "/nhwc", inpId);
+
+                    layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+                    layerParams.set("kernel_h", 1);
+                    layerParams.set("global_pooling_w", true);
+                    int id = dstNet.addLayer(name, "Pooling", layerParams);
+                    layer_id[name] = id;
+                    connect(layer_id, dstNet, inpId, id, 0);
+
+                    if (!keepDims)
+                    {
+                        LayerParams squeezeLp;
+                        std::string squeezeName = name + "/squeeze";
+                        CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                        int channel_id = 3; // TF NHWC layout
+                        squeezeLp.set("axis", channel_id - 1);
+                        squeezeLp.set("end_axis", channel_id);
+                        int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
+                        layer_id[squeezeName] = squeezeId;
+                        connect(layer_id, dstNet, Pin(name), squeezeId, 0);
+                    }
+                    else
+                    {
+                        int order[] = {0, 3, 1, 2};  // From NHWC to OpenCV's NCHW.
+                        Pin inpId = parsePin(name);
+                        addPermuteLayer(order, name + "/nchw", inpId);
+                    }
+                }
             } else {
                 if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
-                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean operation.");
+                    CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean or reduce_sum operation.");
 
-                layerParams.set("pool", "ave");
+                layerParams.set("pool", type == "Mean" ? "ave" : "sum");
                 layerParams.set("global_pooling", true);
                 int id = dstNet.addLayer(name, "Pooling", layerParams);
                 layer_id[name] = id;
@@ -2182,6 +2435,7 @@ void TFImporter::populateNet(Net dstNet)
             // Example: given a list with "N" tensors of shape (C, H, W):
             // if axis == 0 then the output tensor will have the shape (N, C, H, W),
             // if axis == 1 then the output tensor will have the shape (C, N, H, W).
+            CV_CheckGT(num_inputs, 0, "");
             CV_Assert(hasLayerAttr(layer, "axis"));
             int dim = (int)getLayerAttr(layer, "axis").i();
             if (dim != 0)
@@ -2189,7 +2443,7 @@ void TFImporter::populateNet(Net dstNet)
 
             CV_Assert(hasLayerAttr(layer, "N"));
             int num = (int)getLayerAttr(layer, "N").i();
-            CV_Assert(layer.input_size() == num);
+            CV_CheckEQ(num_inputs, num, "");
             std::string base_name = name + "/reshape_";
             std::vector<int> reshape_ids;
             for (int i = 0; i < num; i++) {
@@ -2220,7 +2474,7 @@ void TFImporter::populateNet(Net dstNet)
             // input: "input"
             // input: "mix"
             // input: "max"
-            CV_Assert(layer.input_size() == 3);
+            CV_CheckEQ(num_inputs, 3, "");
 
             Mat minValue = getTensorContent(getConstBlob(layer, value_id, 1));
             Mat maxValue = getTensorContent(getConstBlob(layer, value_id, 2));
@@ -2235,10 +2489,21 @@ void TFImporter::populateNet(Net dstNet)
 
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
         }
+        else if (type == "LeakyRelu")
+        {
+            CV_CheckGT(num_inputs, 0, "");
+            CV_Assert(hasLayerAttr(layer, "alpha"));
+            layerParams.set("negative_slope", getLayerAttr(layer, "alpha").f());
+
+            int id = dstNet.addLayer(name, "ReLU", layerParams);
+            layer_id[name] = id;
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
+        }
         else if (type == "Abs" || type == "Tanh" || type == "Sigmoid" ||
-                 type == "Relu" || type == "Elu" ||
+                 type == "Relu" || type == "Elu" || type == "Exp" ||
                  type == "Identity" || type == "Relu6")
         {
+            CV_CheckGT(num_inputs, 0, "");
             std::string dnnType = type;
             if (type == "Abs") dnnType = "AbsVal";
             else if (type == "Tanh") dnnType = "TanH";
@@ -2248,7 +2513,7 @@ void TFImporter::populateNet(Net dstNet)
 
             int id = dstNet.addLayer(name, dnnType, layerParams);
             layer_id[name] = id;
-            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, layer.input_size());
+            connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
         }
         else
         {
@@ -2272,7 +2537,7 @@ void TFImporter::populateNet(Net dstNet)
 
             // All the Const input nodes are added to layer's blobs.
             std::vector<std::string> inputsNames;
-            for (int i = 0; i < layer.input_size(); ++i)
+            for (int i = 0; i < num_inputs; ++i)
             {
                 // Check if input is a Const node.
                 if (value_id.find(layer.input(i)) != value_id.end())
@@ -2292,7 +2557,11 @@ void TFImporter::populateNet(Net dstNet)
             }
         }
     }
-    dstNet.setInputsNames(netInputsNames);
+    catch (const std::exception& e)
+    {
+        CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "'. Exception: " << e.what());
+        throw;
+    }
 }
 
 } // namespace
@@ -2301,18 +2570,16 @@ void TFImporter::populateNet(Net dstNet)
 
 Net readNetFromTensorflow(const String &model, const String &config)
 {
-    TFImporter importer(model.c_str(), config.c_str());
     Net net;
-    importer.populateNet(net);
+    TFImporter importer(net, model.c_str(), config.c_str());
     return net;
 }
 
 Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
                           const char* bufferConfig, size_t lenConfig)
 {
-    TFImporter importer(bufferModel, lenModel, bufferConfig, lenConfig);
     Net net;
-    importer.populateNet(net);
+    TFImporter importer(net, bufferModel, lenModel, bufferConfig, lenConfig);
     return net;
 }
 

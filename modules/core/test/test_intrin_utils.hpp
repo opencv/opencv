@@ -1466,7 +1466,7 @@ template<typename R> struct TheTest
         R r1 = vx_load_expand((const cv::float16_t*)data.a.d);
         R r2(r1);
         EXPECT_EQ(1.0f, r1.get0());
-        vx_store(data_f32.a.d, r2);
+        v_store(data_f32.a.d, r2);
         EXPECT_EQ(-2.0f, data_f32.a.d[R::nlanes - 1]);
 
         out.a.clear();
@@ -1902,21 +1902,21 @@ void test_hal_intrin_float64()
 #endif
 }
 
-#if CV_FP16
 void test_hal_intrin_float16()
 {
     DUMP_ENTRY(v_float16);
 #if CV_FP16
     TheTest<v_float32>()
         .test_loadstore_fp16_f32()
-#endif
 #if CV_SIMD_FP16
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
 #endif
         ;
-}
+#else
+    std::cout << "SKIP: CV_FP16 is not available" << std::endl;
 #endif
+}
 
 /*#if defined(CV_CPU_DISPATCH_MODE_FP16) && CV_CPU_DISPATCH_MODE == FP16
 void test_hal_intrin_float16()

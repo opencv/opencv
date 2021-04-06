@@ -78,7 +78,7 @@ pixelpoints = np.transpose(np.nonzero(mask))
 Here, two methods, one using Numpy functions, next one using OpenCV function (last commented line)
 are given to do the same. Results are also same, but with a slight difference. Numpy gives
 coordinates in **(row, column)** format, while OpenCV gives coordinates in **(x,y)** format. So
-basically the answers will be interchanged. Note that, **row = x** and **column = y**.
+basically the answers will be interchanged. Note that, **row = y** and **column = x**.
 
 7. Maximum Value, Minimum Value and their locations
 ---------------------------------------------------

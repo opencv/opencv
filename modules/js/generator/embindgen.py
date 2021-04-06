@@ -104,8 +104,6 @@ def makeWhiteList(module_list):
     return wl
 
 white_list = None
-exec(open(os.environ["OPENCV_JS_WHITELIST"]).read())
-assert(white_list)
 
 # Features to be exported
 export_enums = False
@@ -121,6 +119,7 @@ type_dict = {
     'InputOutputArray': 'cv::Mat&',
     'InputArrayOfArrays': 'const std::vector<cv::Mat>&',
     'OutputArrayOfArrays': 'std::vector<cv::Mat>&',
+    'string': 'std::string',
     'String': 'std::string',
     'const String&':'const std::string&'
 }
@@ -464,8 +463,7 @@ class JSWrapperGenerator(object):
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
                 if key in ret_type:
-                    ret_type = ret_type.replace(key, type_dict[key])
-
+                    ret_type = re.sub('(^|[^\w])' + key + '($|[^\w])', type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
@@ -569,7 +567,7 @@ class JSWrapperGenerator(object):
                         # consider the default parameter variants
                         args_num = len(variant.args) - j
                         if args_num in class_info.constructor_arg_num:
-                            # FIXME: workaournd for constructor overload with same args number
+                            # FIXME: workaround for constructor overload with same args number
                             # e.g. DescriptorMatcher
                             continue
                         class_info.constructor_arg_num.add(args_num)
@@ -629,15 +627,16 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
-
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
             for key in type_dict:
                 if key in ret_type:
-                    ret_type = ret_type.replace(key, type_dict[key])
-
+                    # Replace types. Instead of ret_type.replace we use regular
+                    # expression to exclude false matches.
+                    # See https://github.com/opencv/opencv/issues/15514
+                    ret_type = re.sub('(^|[^\w])' + key + '($|[^\w])', type_dict[key], ret_type)
             if variant.constret and ret_type.startswith('const') == False:
                 ret_type = 'const ' + ret_type
             if variant.refret and ret_type.endswith('&') == False:
@@ -778,15 +777,13 @@ class JSWrapperGenerator(object):
                     self.bindings+=binding
 
         # generate code for the classes and their methods
-        class_list = list(self.classes.items())
-
-        for name, class_info in class_list:
+        for name, class_info in sorted(self.classes.items()):
             class_bindings = []
             if not name in white_list:
                 continue
 
             # Generate bindings for methods
-            for method_name, method in class_info.methods.items():
+            for method_name, method in sorted(class_info.methods.items()):
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
@@ -891,10 +888,10 @@ class JSWrapperGenerator(object):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 5:
         print("Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp>")
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>")
         print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
         exit(0)
 
@@ -908,5 +905,9 @@ if __name__ == "__main__":
     bindingsCpp = sys.argv[2]
     headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
+    whiteListFile = sys.argv[5]
+    exec(open(whiteListFile).read())
+    assert(white_list)
+
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)

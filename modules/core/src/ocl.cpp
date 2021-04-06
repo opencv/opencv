@@ -40,6 +40,11 @@
 //M*/
 
 #include "precomp.hpp"
+
+#ifndef HAVE_OPENCL
+#include "ocl_disabled.impl.hpp"
+#else // HAVE_OPENCL
+
 #include <list>
 #include <map>
 #include <deque>
@@ -106,23 +111,7 @@
 #include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 
-#ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
-#else
-#if defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable : 4100)
-    #pragma warning(disable : 4702)
-#elif defined(__clang__)
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wunused-parameter"
-#elif defined(__GNUC__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-// TODO FIXIT: This file can't be build without OPENCL
-#include "ocl_deprecated.hpp"
-#endif // HAVE_OPENCL
 
 #ifdef HAVE_OPENCL_SVM
 #include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
@@ -146,31 +135,6 @@ cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics()
 {
     return opencl_allocator_stats;
 }
-
-#ifndef HAVE_OPENCL
-#define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
-namespace {
-struct DummyImpl
-{
-    DummyImpl() { CV_OPENCL_NO_SUPPORT(); }
-    ~DummyImpl() { /* do not throw in desctructors */ }
-    IMPLEMENT_REFCOUNTABLE();
-};
-} // namespace
-
-// TODO Replace to empty body (without HAVE_OPENCL)
-#define CV_OCL_TRACE_CHECK_RESULT(status, message) /* nothing */
-#define CV_OCL_API_ERROR_MSG(check_result, msg) cv::String()
-#define CV_OCL_CHECK_RESULT(check_result, msg) (void)check_result
-#define CV_OCL_CHECK_(expr, check_result) expr; (void)check_result
-#define CV_OCL_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
-#define CV_OCL_DBG_CHECK_RESULT(check_result, msg) (void)check_result
-#define CV_OCL_DBG_CHECK_(expr, check_result) expr; (void)check_result
-#define CV_OCL_DBG_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
-
-static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = false;
-
-#else // HAVE_OPENCL
 
 #ifndef _DEBUG
 static bool isRaiseError()
@@ -270,7 +234,6 @@ static const String getBuildExtraOptions()
 static const bool CV_OPENCL_ENABLE_MEM_USE_HOST_PTR = utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
 static const size_t CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR", 4);
 
-#endif // HAVE_OPENCL
 
 struct UMat2D
 {
@@ -331,7 +294,7 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
     return ~crc;
 }
 
-#if defined HAVE_OPENCL && OPENCV_HAVE_FILESYSTEM_SUPPORT
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 struct OpenCLBinaryCacheConfigurator
 {
     cv::String cache_path_;
@@ -867,14 +830,12 @@ public:
 
 
 // true if we have initialized OpenCL subsystem with available platforms
-static bool g_isOpenCVActivated = false;
+static bool g_isOpenCLInitialized = false;
+static bool g_isOpenCLAvailable = false;
 
 bool haveOpenCL()
 {
     CV_TRACE_FUNCTION();
-#ifdef HAVE_OPENCL
-    static bool g_isOpenCLInitialized = false;
-    static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
@@ -893,7 +854,7 @@ bool haveOpenCL()
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
-            g_isOpenCVActivated = n > 0;
+            g_isOpenCLAvailable &= n > 0;
         }
         catch (...)
         {
@@ -902,9 +863,6 @@ bool haveOpenCL()
         g_isOpenCLInitialized = true;
     }
     return g_isOpenCLAvailable;
-#else
-    return false;
-#endif
 }
 
 bool useOpenCL()
@@ -924,14 +882,12 @@ bool useOpenCL()
     return data.useOpenCL > 0;
 }
 
-#ifdef HAVE_OPENCL
 bool isOpenCLActivated()
 {
-    if (!g_isOpenCVActivated)
+    if (!g_isOpenCLAvailable)
         return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
     return useOpenCL();
 }
-#endif
 
 void setUseOpenCL(bool flag)
 {
@@ -1158,7 +1114,7 @@ struct Platform::Impl
     bool initialized;
 };
 
-Platform::Platform()
+Platform::Platform() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1205,25 +1161,27 @@ Platform& Platform::getDefault()
 
 /////////////////////////////////////// Device ////////////////////////////////////////////
 
-// deviceVersion has format
+// Version has format:
 //   OpenCL<space><major_version.minor_version><space><vendor-specific information>
 // by specification
 //   http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clGetDeviceInfo.html
 //   http://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/clGetDeviceInfo.html
-static void parseDeviceVersion(const String &deviceVersion, int &major, int &minor)
+//   https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/clGetPlatformInfo.html
+//   https://www.khronos.org/registry/OpenCL/sdk/1.2/docs/man/xhtml/clGetPlatformInfo.html
+static void parseOpenCLVersion(const String &version, int &major, int &minor)
 {
     major = minor = 0;
-    if (10 >= deviceVersion.length())
+    if (10 >= version.length())
         return;
-    const char *pstr = deviceVersion.c_str();
+    const char *pstr = version.c_str();
     if (0 != strncmp(pstr, "OpenCL ", 7))
         return;
-    size_t ppos = deviceVersion.find('.', 7);
+    size_t ppos = version.find('.', 7);
     if (String::npos == ppos)
         return;
-    String temp = deviceVersion.substr(7, ppos - 7);
+    String temp = version.substr(7, ppos - 7);
     major = atoi(temp.c_str());
-    temp = deviceVersion.substr(ppos + 1);
+    temp = version.substr(ppos + 1);
     minor = atoi(temp.c_str());
 }
 
@@ -1246,7 +1204,7 @@ struct Device::Impl
         addressBits_ = getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS);
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
-        parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+        parseOpenCLVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
 
         size_t pos = 0;
         while (pos < extensions_.size())
@@ -1352,7 +1310,7 @@ struct Device::Impl
 };
 
 
-Device::Device()
+Device::Device() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1958,7 +1916,6 @@ static unsigned int getSVMCapabilitiesMask()
 } // namespace
 #endif
 
-#ifdef HAVE_OPENCL
 static size_t getProgramCountLimit()
 {
     static bool initialized = false;
@@ -1970,7 +1927,6 @@ static size_t getProgramCountLimit()
     }
     return count;
 }
-#endif
 
 struct Context::Impl
 {
@@ -2327,7 +2283,7 @@ struct Context::Impl
 };
 
 
-Context::Context()
+Context::Context() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2698,7 +2654,7 @@ struct Queue::Impl
     cv::ocl::Queue profiling_queue_;
 };
 
-Queue::Queue()
+Queue::Queue() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2778,7 +2734,7 @@ static cl_command_queue getQueue(const Queue& q)
 
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
-KernelArg::KernelArg()
+KernelArg::KernelArg() CV_NOEXCEPT
     : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
@@ -2800,7 +2756,7 @@ KernelArg KernelArg::Constant(const Mat& m)
 struct Kernel::Impl
 {
     Impl(const char* kname, const Program& prog) :
-        refcount(1), handle(NULL), isInProgress(false), nu(0)
+        refcount(1), handle(NULL), isInProgress(false), isAsyncRun(false), nu(0)
     {
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
@@ -2845,16 +2801,24 @@ struct Kernel::Impl
             haveTempSrcUMats = true;  // UMat is created on RAW memory (without proper lifetime management, even from Mat)
     }
 
-    void addImage(const Image2D& image)
+    /// Preserve image lifetime (while it is specified as Kernel argument)
+    void registerImageArgument(int arg, const Image2D& image)
     {
-        images.push_back(image);
+        CV_CheckGE(arg, 0, "");
+        CV_CheckLT(arg, (int)MAX_ARRS, "");
+        if (arg < (int)shadow_images.size() && shadow_images[arg].ptr() != image.ptr())  // TODO future: replace ptr => impl (more strong check)
+        {
+            CV_Check(arg, !isInProgress, "ocl::Kernel: clearing of pending Image2D arguments is not allowed");
+        }
+        shadow_images.reserve(MAX_ARRS);
+        shadow_images.resize(std::max(shadow_images.size(), (size_t)arg + 1));
+        shadow_images[arg] = image;
     }
 
     void finit(cl_event e)
     {
         CV_UNUSED(e);
         cleanupUMats();
-        images.clear();
         isInProgress = false;
         release();
     }
@@ -2877,8 +2841,9 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     bool isInProgress;
+    bool isAsyncRun;  // true if kernel was scheduled in async mode
     int nu;
-    std::list<Image2D> images;
+    std::vector<Image2D> shadow_images;
     bool haveTempDstUMats;
     bool haveTempSrcUMats;
 };
@@ -2911,7 +2876,7 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 namespace cv { namespace ocl {
 
-Kernel::Kernel()
+Kernel::Kernel() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2993,6 +2958,15 @@ bool Kernel::empty() const
     return ptr() == 0;
 }
 
+static cv::String dumpValue(size_t sz, const void* p)
+{
+    if (sz == 4)
+        return cv::format("%d / %uu / 0x%08x / %g", *(int*)p, *(int*)p, *(int*)p, *(float*)p);
+    if (sz == 8)
+        return cv::format("%lld / %lluu / 0x%16llx / %g", *(long long*)p, *(long long*)p, *(long long*)p, *(double*)p);
+    return cv::format("%p", p);
+}
+
 int Kernel::set(int i, const void* value, size_t sz)
 {
     if (!p || !p->handle)
@@ -3003,7 +2977,7 @@ int Kernel::set(int i, const void* value, size_t sz)
         p->cleanupUMats();
 
     cl_int retval = clSetKernelArg(p->handle, (cl_uint)i, sz, value);
-    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, value=%p)", p->name.c_str(), (int)i, (int)sz, (void*)value).c_str());
+    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, value=%s)", p->name.c_str(), (int)i, (int)sz, dumpValue(sz, value).c_str()).c_str());
     if (retval != CL_SUCCESS)
         return -1;
     return i+1;
@@ -3011,9 +2985,11 @@ int Kernel::set(int i, const void* value, size_t sz)
 
 int Kernel::set(int i, const Image2D& image2D)
 {
-    p->addImage(image2D);
     cl_mem h = (cl_mem)image2D.ptr();
-    return set(i, &h, sizeof(h));
+    int res = set(i, &h, sizeof(h));
+    if (res >= 0)
+        p->registerImageArgument(i, image2D);
+    return res;
 }
 
 int Kernel::set(int i, const UMat& m)
@@ -3156,13 +3132,45 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
+static bool isRaiseErrorOnReuseAsyncKernel()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR_REUSE_ASYNC_KERNEL", false);
+        initialized = true;
+    }
+    return value;
+}
+
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
-    if (!handle || isInProgress)
+    if (!handle)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel has zero handle: " << name);
         return false;
+    }
+
+    if (isAsyncRun)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel can't be reused in async mode: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
+    isAsyncRun = !sync;
+
+    if (isInProgress)
+    {
+        CV_LOG_ERROR(NULL, "Previous OpenCL kernel launch is not finished: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)
@@ -3458,7 +3466,7 @@ struct ProgramSource::Impl
 };
 
 
-ProgramSource::ProgramSource()
+ProgramSource::ProgramSource() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -3552,8 +3560,6 @@ internal::ProgramEntry::operator ProgramSource&() const
 
 
 /////////////////////////////////////////// Program /////////////////////////////////////////////
-
-#ifdef HAVE_OPENCL
 
 static
 cv::String joinBuildOptions(const cv::String& a, const cv::String& b)
@@ -3968,12 +3974,11 @@ struct Program::Impl
     String sourceName_;
 };
 
-#else // HAVE_OPENCL
-struct Program::Impl : public DummyImpl {};
-#endif // HAVE_OPENCL
 
-
-Program::Program() { p = 0; }
+Program::Program() CV_NOEXCEPT
+{
+    p = 0;
+}
 
 Program::Program(const ProgramSource& src,
         const String& buildflags, String& errmsg)
@@ -4014,7 +4019,6 @@ bool Program::create(const ProgramSource& src,
         p->release();
         p = NULL;
     }
-#ifdef HAVE_OPENCL
     p = new Impl(src, buildflags, errmsg);
     if(!p->handle)
     {
@@ -4022,18 +4026,11 @@ bool Program::create(const ProgramSource& src,
         p = 0;
     }
     return p != 0;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 void* Program::ptr() const
 {
-#ifdef HAVE_OPENCL
     return p ? p->handle : 0;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 #ifndef OPENCV_REMOVE_DEPRECATED_API
@@ -4056,44 +4053,30 @@ bool Program::write(String& bin) const
 
 String Program::getPrefix() const
 {
-#ifdef HAVE_OPENCL
     if(!p)
         return String();
     Context::Impl* ctx_ = Context::getDefault().getImpl();
     CV_Assert(ctx_);
     return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), p->buildflags.c_str());
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 String Program::getPrefix(const String& buildflags)
 {
-#ifdef HAVE_OPENCL
         Context::Impl* ctx_ = Context::getDefault().getImpl();
         CV_Assert(ctx_);
         return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), buildflags.c_str());
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
-#endif
+#endif // OPENCV_REMOVE_DEPRECATED_API
 
 void Program::getBinary(std::vector<char>& binary) const
 {
-#ifdef HAVE_OPENCL
     CV_Assert(p && "Empty program");
     p->getProgramBinary(binary);
-#else
-    binary.clear();
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 Program Context::Impl::getProg(const ProgramSource& src,
                                const String& buildflags, String& errmsg)
 {
-#ifdef HAVE_OPENCL
     size_t limit = getProgramCountLimit();
     const ProgramSource::Impl* src_ = src.getImpl();
     CV_Assert(src_);
@@ -4145,9 +4128,6 @@ Program Context::Impl::getProg(const ProgramSource& src,
         cacheList.push_front(key);
     }
     return prog;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 
@@ -4707,9 +4687,6 @@ public:
 
     bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const CV_OVERRIDE
     {
-#ifndef HAVE_OPENCL
-        return false;
-#else
         if(!u)
             return false;
 
@@ -4828,7 +4805,6 @@ public:
             u->markHostCopyObsolete(true);
         opencl_allocator_stats.onAllocate(u->size);
         return true;
-#endif  // HAVE_OPENCL
     }
 
     /*void sync(UMatData* u) const
@@ -5809,7 +5785,6 @@ public:
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
     static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
-    g_isOpenCVActivated = true;
     return g_allocator;
 }
 MatAllocator* getOpenCLAllocator()
@@ -6005,6 +5980,9 @@ struct PlatformInfo::Impl
         refcount = 1;
         handle = *(cl_platform_id*)id;
         getDevices(devices, handle);
+
+        version_ = getStrProp(CL_PLATFORM_VERSION);
+        parseOpenCLVersion(version_, versionMajor_, versionMinor_);
     }
 
     String getStrProp(cl_platform_info prop) const
@@ -6018,9 +5996,13 @@ struct PlatformInfo::Impl
     IMPLEMENT_REFCOUNTABLE();
     std::vector<cl_device_id> devices;
     cl_platform_id handle;
+
+    String version_;
+    int versionMajor_;
+    int versionMinor_;
 };
 
-PlatformInfo::PlatformInfo()
+PlatformInfo::PlatformInfo() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -6080,7 +6062,19 @@ String PlatformInfo::vendor() const
 
 String PlatformInfo::version() const
 {
-    return p ? p->getStrProp(CL_PLATFORM_VERSION) : String();
+    return p ? p->version_ : String();
+}
+
+int PlatformInfo::versionMajor() const
+{
+    CV_Assert(p);
+    return p->versionMajor_;
+}
+
+int PlatformInfo::versionMinor() const
+{
+    CV_Assert(p);
+    return p->versionMinor_;
 }
 
 static void getPlatforms(std::vector<cl_platform_id>& platforms)
@@ -6458,6 +6452,9 @@ struct Image2D::Impl
             CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
 
         cl_context context = (cl_context)Context::getDefault().ptr();
+        if (!context)
+            return false;
+
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
         cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
@@ -6572,7 +6569,7 @@ struct Image2D::Impl
     cl_mem handle;
 };
 
-Image2D::Image2D()
+Image2D::Image2D() CV_NOEXCEPT
 {
     p = NULL;
 }
@@ -6696,27 +6693,19 @@ struct Timer::Impl
 
     void start()
     {
-#ifdef HAVE_OPENCL
         CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
         timer.start();
-#endif
     }
 
     void stop()
     {
-#ifdef HAVE_OPENCL
         CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
         timer.stop();
-#endif
     }
 
     uint64 durationNS() const
     {
-#ifdef HAVE_OPENCL
         return (uint64)(timer.getTimeSec() * 1e9);
-#else
-        return 0;
-#endif
     }
 
     TickMeter timer;
@@ -6743,13 +6732,6 @@ uint64 Timer::durationNS() const
     return p->durationNS();
 }
 
-#ifndef HAVE_OPENCL
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#elif defined(__clang__)
-    #pragma clang diagnostic pop
-#elif defined(__GNUC__)
-    #pragma GCC diagnostic pop
-#endif
-#endif
 }} // namespace
+
+#endif // HAVE_OPENCL

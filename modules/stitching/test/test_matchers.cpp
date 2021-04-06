@@ -44,7 +44,7 @@
 
 namespace opencv_test { namespace {
 
-#ifdef HAVE_OPENCV_XFEATURES2D
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
@@ -74,7 +74,7 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     ASSERT_EQ(bad_count, 0);
 }
 
-#endif // HAVE_OPENCV_XFEATURES2D
+#endif // HAVE_OPENCV_XFEATURES2D && OPENCV_ENABLE_NONFREE
 
 TEST(ParallelFeaturesFinder, IsSameWithSerial)
 {

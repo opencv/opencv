@@ -116,7 +116,6 @@ public:
             CV_CheckEQ(inputs.size(), (size_t)2, "");
             numOutput = inputs[1].back();
             cAxis = inputs[0].size() - 1;
-            CV_CheckEQ(numOutput, inputs[0][cAxis - 1], "");
             int dims = inputs[0].size();
             CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
             CV_CheckGE(dims, 2, "");
@@ -130,7 +129,7 @@ public:
             CV_CheckEQ(blobs[0].dims, 2, "");
             numOutput = blobs[0].size[0];
             CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
-            cAxis = clamp(axis, inputs[0]);
+            cAxis = normalize_axis(axis, inputs[0]);
         }
 
         MatShape outShape(cAxis + 1);
@@ -242,16 +241,18 @@ public:
             #if CV_SIMD128
                     for( ; i <= nw - 4; i += 4, wptr += 4*wstep )
                     {
-                        v_float32x4 vs0 = v_setall_f32(0.f), vs1 = v_setall_f32(0.f);
-                        v_float32x4 vs2 = v_setall_f32(0.f), vs3 = v_setall_f32(0.f);
+                        v_float32x4 vs0 = v_setall_f32(0.f);
+                        v_float32x4 vs1 = v_setall_f32(0.f);
+                        v_float32x4 vs2 = v_setall_f32(0.f);
+                        v_float32x4 vs3 = v_setall_f32(0.f);
 
                         for( k = 0; k < vecsize; k += 4 )
                         {
                             v_float32x4 v = v_load_aligned(sptr + k);
-                            vs0 += v*v_load_aligned(wptr + k);
-                            vs1 += v*v_load_aligned(wptr + wstep + k);
-                            vs2 += v*v_load_aligned(wptr + wstep*2 + k);
-                            vs3 += v*v_load_aligned(wptr + wstep*3 + k);
+                            vs0 = v_fma(v, v_load_aligned(wptr + k), vs0);
+                            vs1 = v_fma(v, v_load_aligned(wptr + wstep + k), vs1);
+                            vs2 = v_fma(v, v_load_aligned(wptr + wstep*2 + k), vs2);
+                            vs3 = v_fma(v, v_load_aligned(wptr + wstep*3 + k), vs3);
                         }
 
                         v_float32x4 s = v_reduce_sum4(vs0, vs1, vs2, vs3);
@@ -351,7 +352,7 @@ public:
             return true;
         }
 
-        int axisCan = clamp(axis, inputs[0].dims);
+        int axisCan = normalize_axis(axis, inputs[0].dims);
         int numOutput = blobs[0].size[0];
         int innerSize = blobs[0].size[1];
         int outerSize = total(shape(inputs[0]), 0, axisCan);
@@ -472,7 +473,7 @@ public:
 
         if (!blobs.empty())
         {
-            int axisCan = clamp(axis, input[0].dims);
+            int axisCan = normalize_axis(axis, input[0].dims);
             int outerSize = input[0].total(0, axisCan);
 
             for (size_t i = 0; i < input.size(); i++)

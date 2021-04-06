@@ -243,7 +243,7 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
         __m128 p1 = _mm_unpackhi_ps(q01l, q01h);
 
         _mm_storeu_ps(arr + i, _mm_add_ps(_mm_mul_ps(_mm_loadu_ps(f), p0), p1));
-#elif defined __ARM_NEON && defined __aarch64__
+#elif CV_NEON && defined __aarch64__
         // handwritten NEON is required not for performance but for numerical stability!
         // 64bit gcc tends to use fmadd instead of separate multiply and add
         // use volatile to ensure to separate the multiply and add
@@ -278,7 +278,7 @@ static void randf_32f( float* arr, int len, uint64* state, const Vec2f* p, bool 
                 _mm_mul_ss(_mm_set_ss((float)(int)temp), _mm_set_ss(p[i][0])),
                 _mm_set_ss(p[i][1]))
                 );
-#elif defined __ARM_NEON && defined __aarch64__
+#elif CV_NEON && defined __aarch64__
         float32x2_t t = vadd_f32(vmul_f32(
                 vdup_n_f32((float)(int)temp), vdup_n_f32(p[i][0])),
                 vdup_n_f32(p[i][1]));
@@ -867,6 +867,9 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     func( dst, rng, iterFactor );
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL void
 cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar param2 )
 {
@@ -883,6 +886,9 @@ CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
     cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
     cv::randShuffle( dst, iter_factor, &rng );
 }
+
+#endif  // OPENCV_EXCLUDE_C_API
+
 
 // Mersenne Twister random number generator.
 // Inspired by http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c

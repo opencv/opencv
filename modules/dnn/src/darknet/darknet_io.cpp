@@ -222,6 +222,10 @@ namespace cv {
                     cv::dnn::LayerParams activation_param;
                     if (type == "relu")
                     {
+                        activation_param.type = "ReLU";
+                    }
+                    else if (type == "leaky")
+                    {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
@@ -236,6 +240,10 @@ namespace cv {
                     else if (type == "logistic")
                     {
                         activation_param.type = "Sigmoid";
+                    }
+                    else if (type == "tanh")
+                    {
+                        activation_param.type = "TanH";
                     }
                     else
                     {
@@ -550,6 +558,29 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setSAM(int from)
+                {
+                    cv::dnn::LayerParams eltwise_param;
+                    eltwise_param.name = "SAM-name";
+                    eltwise_param.type = "Eltwise";
+
+                    eltwise_param.set<std::string>("operation", "prod");
+                    eltwise_param.set<std::string>("output_channels_mode", "same");
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("sam_%d", layer_id);
+                    lp.layer_name = layer_name;
+                    lp.layer_type = eltwise_param.type;
+                    lp.layerParams = eltwise_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    lp.bottom_indexes.push_back(fused_layer_names.at(from));
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
                 void setUpsample(int scaleFactor)
                 {
                     cv::dnn::LayerParams param;
@@ -616,7 +647,7 @@ namespace cv {
                             // read section
                             read_net = false;
                             ++layers_counter;
-                            const size_t layer_type_size = line.find("]") - 1;
+                            const size_t layer_type_size = line.find(']') - 1;
                             CV_Assert(layer_type_size < line.size());
                             std::string layer_type = line.substr(1, layer_type_size);
                             net->layers_cfg[layers_counter]["layer_type"] = layer_type;
@@ -829,6 +860,14 @@ namespace cv {
                         from = from < 0 ? from + layers_counter : from;
                         setParams.setScaleChannels(from);
                     }
+                    else if (layer_type == "sam")
+                    {
+                        std::string bottom_layer = getParam<std::string>(layer_params, "from", "");
+                        CV_Assert(!bottom_layer.empty());
+                        int from = std::atoi(bottom_layer.c_str());
+                        from = from < 0 ? from + layers_counter : from;
+                        setParams.setSAM(from);
+                    }
                     else if (layer_type == "upsample")
                     {
                         int scaleFactor = getParam<int>(layer_params, "stride", 1);
@@ -862,24 +901,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if (activation == "leaky")
-                    {
-                        setParams.setActivation("relu");
-                    }
-                    else if (activation == "swish")
-                    {
-                        setParams.setActivation("swish");
-                    }
-                    else if (activation == "mish")
-                    {
-                        setParams.setActivation("mish");
-                    }
-                    else if (activation == "logistic")
-                    {
-                        setParams.setActivation("logistic");
-                    }
-                    else if (activation != "linear")
-                        CV_Error(cv::Error::StsParseError, "Unsupported activation: " + activation);
+                    if (activation != "linear")
+                        setParams.setActivation(activation);
 
                     net->out_channels_vec[layers_counter] = tensor_shape[0];
                 }
@@ -996,8 +1019,8 @@ namespace cv {
                     }
 
                     std::string activation = getParam<std::string>(layer_params, "activation", "linear");
-                    if(activation == "leaky" || activation == "swish" || activation == "mish" || activation == "logistic")
-                        ++cv_layers_counter;  // For ReLU, Swish, Mish, Sigmoid
+                    if (activation != "linear")
+                        ++cv_layers_counter;  // For ReLU, Swish, Mish, Sigmoid, etc
 
                     if(!darknet_layers_counter)
                         tensor_shape.resize(1);

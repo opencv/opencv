@@ -14,15 +14,16 @@
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
+#include <sstream>
 
 using namespace cv;
 
 static void print_help(char** argv)
 {
     printf("\nDemo stereo matching converting L and R images into disparity and point clouds\n");
-    printf("\nUsage: %s <left_image> <right_image> [--algorithm=bm|sgbm|hh|sgbm3way] [--blocksize=<block_size>]\n"
+    printf("\nUsage: %s <left_image> <right_image> [--algorithm=bm|sgbm|hh|hh4|sgbm3way] [--blocksize=<block_size>]\n"
            "[--max-disparity=<max_disparity>] [--scale=scale_factor>] [-i=<intrinsic_filename>] [-e=<extrinsic_filename>]\n"
-           "[--no-display] [-o=<disparity_image>] [-p=<point_cloud_file>]\n", argv[0]);
+           "[--no-display] [--color] [-o=<disparity_image>] [-p=<point_cloud_file>]\n", argv[0]);
 }
 
 static void saveXYZ(const char* filename, const Mat& mat)
@@ -50,16 +51,17 @@ int main(int argc, char** argv)
     std::string disparity_filename = "";
     std::string point_cloud_filename = "";
 
-    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2, STEREO_VAR=3, STEREO_3WAY=4 };
+    enum { STEREO_BM=0, STEREO_SGBM=1, STEREO_HH=2, STEREO_VAR=3, STEREO_3WAY=4, STEREO_HH4=5 };
     int alg = STEREO_SGBM;
     int SADWindowSize, numberOfDisparities;
     bool no_display;
+    bool color_display;
     float scale;
 
     Ptr<StereoBM> bm = StereoBM::create(16,9);
     Ptr<StereoSGBM> sgbm = StereoSGBM::create(0,16,3);
     cv::CommandLineParser parser(argc, argv,
-        "{@arg1||}{@arg2||}{help h||}{algorithm||}{max-disparity|0|}{blocksize|0|}{no-display||}{scale|1|}{i||}{e||}{o||}{p||}");
+        "{@arg1||}{@arg2||}{help h||}{algorithm||}{max-disparity|0|}{blocksize|0|}{no-display||}{color||}{scale|1|}{i||}{e||}{o||}{p||}");
     if(parser.has("help"))
     {
         print_help(argv);
@@ -74,12 +76,14 @@ int main(int argc, char** argv)
             _alg == "sgbm" ? STEREO_SGBM :
             _alg == "hh" ? STEREO_HH :
             _alg == "var" ? STEREO_VAR :
+            _alg == "hh4" ? STEREO_HH4 :
             _alg == "sgbm3way" ? STEREO_3WAY : -1;
     }
     numberOfDisparities = parser.get<int>("max-disparity");
     SADWindowSize = parser.get<int>("blocksize");
     scale = parser.get<float>("scale");
     no_display = parser.has("no-display");
+    color_display = parser.has("color");
     if( parser.has("i") )
         intrinsic_filename = parser.get<std::string>("i");
     if( parser.has("e") )
@@ -238,6 +242,8 @@ int main(int argc, char** argv)
         sgbm->setMode(StereoSGBM::MODE_HH);
     else if(alg==STEREO_SGBM)
         sgbm->setMode(StereoSGBM::MODE_SGBM);
+    else if(alg==STEREO_HH4)
+        sgbm->setMode(StereoSGBM::MODE_HH4);
     else if(alg==STEREO_3WAY)
         sgbm->setMode(StereoSGBM::MODE_SGBM_3WAY);
 
@@ -254,7 +260,7 @@ int main(int argc, char** argv)
         if (disp.type() == CV_16S)
             disparity_multiplier = 16.0f;
     }
-    else if( alg == STEREO_SGBM || alg == STEREO_HH || alg == STEREO_3WAY )
+    else if( alg == STEREO_SGBM || alg == STEREO_HH || alg == STEREO_HH4 || alg == STEREO_3WAY )
     {
         sgbm->compute(img1, img2, disp);
         if (disp.type() == CV_16S)
@@ -268,22 +274,13 @@ int main(int argc, char** argv)
         disp.convertTo(disp8, CV_8U, 255/(numberOfDisparities*16.));
     else
         disp.convertTo(disp8, CV_8U);
-    if( !no_display )
-    {
-        namedWindow("left", 1);
-        imshow("left", img1);
-        namedWindow("right", 1);
-        imshow("right", img2);
-        namedWindow("disparity", 0);
-        imshow("disparity", disp8);
-        printf("press any key to continue...");
-        fflush(stdout);
-        waitKey();
-        printf("\n");
-    }
+
+    Mat disp8_3c;
+    if (color_display)
+        cv::applyColorMap(disp8, disp8_3c, COLORMAP_TURBO);
 
     if(!disparity_filename.empty())
-        imwrite(disparity_filename, disp8);
+        imwrite(disparity_filename, color_display ? disp8_3c : disp8);
 
     if(!point_cloud_filename.empty())
     {
@@ -295,6 +292,36 @@ int main(int argc, char** argv)
         reprojectImageTo3D(floatDisp, xyz, Q, true);
         saveXYZ(point_cloud_filename.c_str(), xyz);
         printf("\n");
+    }
+
+    if( !no_display )
+    {
+        std::ostringstream oss;
+        oss << "disparity  " << (alg==STEREO_BM ? "bm" :
+                                 alg==STEREO_SGBM ? "sgbm" :
+                                 alg==STEREO_HH ? "hh" :
+                                 alg==STEREO_VAR ? "var" :
+                                 alg==STEREO_HH4 ? "hh4" :
+                                 alg==STEREO_3WAY ? "sgbm3way" : "");
+        oss << "  blocksize:" << (alg==STEREO_BM ? SADWindowSize : sgbmWinSize);
+        oss << "  max-disparity:" << numberOfDisparities;
+        std::string disp_name = oss.str();
+
+        namedWindow("left", cv::WINDOW_NORMAL);
+        imshow("left", img1);
+        namedWindow("right", cv::WINDOW_NORMAL);
+        imshow("right", img2);
+        namedWindow(disp_name, cv::WINDOW_AUTOSIZE);
+        imshow(disp_name, color_display ? disp8_3c : disp8);
+
+        printf("press ESC key or CTRL+C to close...");
+        fflush(stdout);
+        printf("\n");
+        while(1)
+        {
+            if(waitKey() == 27) //ESC (prevents closing on actions like taking screenshots)
+                break;
+        }
     }
 
     return 0;

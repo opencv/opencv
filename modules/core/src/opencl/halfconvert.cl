@@ -47,8 +47,17 @@
 #endif
 #endif
 
-__kernel void convertFp16(__global const uchar * srcptr, int src_step, int src_offset,
-                          __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols)
+__kernel void
+#ifdef FLOAT_TO_HALF
+    convertFp16_FP32_to_FP16
+#else
+    convertFp16_FP16_to_FP32
+#endif
+(
+    __global const uchar * srcptr, int src_step, int src_offset,
+    __global uchar * dstptr, int dst_step, int dst_offset,
+    int dst_rows, int dst_cols
+)
 {
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;

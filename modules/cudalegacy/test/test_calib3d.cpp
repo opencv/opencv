@@ -163,7 +163,7 @@ struct SolvePnPRansac : testing::TestWithParam<cv::cuda::DeviceInfo>
 
 CUDA_TEST_P(SolvePnPRansac, Accuracy)
 {
-    cv::Mat object = randomMat(cv::Size(5000, 1), CV_32FC3, 0, 100);
+    cv::Mat object = randomMat(cv::Size(5000, 1), CV_32FC3, -2000, 2000);
     cv::Mat camera_mat = randomMat(cv::Size(3, 3), CV_32F, 0.5, 1);
     camera_mat.at<float>(0, 1) = 0.f;
     camera_mat.at<float>(1, 0) = 0.f;
@@ -174,7 +174,7 @@ CUDA_TEST_P(SolvePnPRansac, Accuracy)
     cv::Mat rvec_gold;
     cv::Mat tvec_gold;
     rvec_gold = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
-    tvec_gold = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
+    tvec_gold = randomMat(cv::Size(3, 1), CV_32F, 0, 1000);
     cv::projectPoints(object, rvec_gold, tvec_gold, camera_mat, cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)), image_vec);
 
     cv::Mat rvec, tvec;
@@ -184,7 +184,7 @@ CUDA_TEST_P(SolvePnPRansac, Accuracy)
                             rvec, tvec, false, 200, 2.f, 100, &inliers);
 
     ASSERT_LE(cv::norm(rvec - rvec_gold), 1e-3);
-    ASSERT_LE(cv::norm(tvec - tvec_gold), 1e-3);
+    ASSERT_LE(cv::norm(tvec, tvec_gold, NORM_L2 | NORM_RELATIVE), 1e-3);
 }
 
 INSTANTIATE_TEST_CASE_P(CUDA_Calib3D, SolvePnPRansac, ALL_DEVICES);

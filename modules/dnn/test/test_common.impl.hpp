@@ -63,10 +63,10 @@ void normAssert(
         double l1 /*= 0.00001*/, double lInf /*= 0.0001*/)
 {
     double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
-    EXPECT_LE(normL1, l1) << comment;
+    EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
-    EXPECT_LE(normInf, lInf) << comment;
+    EXPECT_LE(normInf, lInf) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 }
 
 std::vector<cv::Rect2d> matToBoxes(const cv::Mat& m)
@@ -385,13 +385,13 @@ void initDNNTests()
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
 #endif
-        ""
+        CV_TEST_TAG_DNN_SKIP_IE_CPU
     );
-#endif
     registerGlobalSkipTag(
         // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
+#endif
 }
 
 } // namespace

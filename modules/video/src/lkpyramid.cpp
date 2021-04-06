@@ -867,6 +867,8 @@ namespace
                           OutputArray status,
                           OutputArray err = cv::noArray()) CV_OVERRIDE;
 
+        virtual String getDefaultName() const CV_OVERRIDE { return "SparseOpticalFlow.SparsePyrLKOpticalFlow"; }
+
     private:
 #ifdef HAVE_OPENCL
         bool checkParam()
@@ -936,7 +938,8 @@ namespace
             {
                 if (!lkSparse_run(prevPyr[level], nextPyr[level], prevPts,
                                   nextPts, status, err,
-                                  prevPts.cols, level))
+                                  static_cast<int>(prevPts.total()),
+                                  level))
                     return false;
             }
             return true;

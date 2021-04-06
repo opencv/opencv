@@ -64,8 +64,11 @@ public:
     SliceLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
+        hasSteps = false;
         axis = params.get<int>("axis", 1);
         num_split = params.get<int>("num_split", 0);
+        hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
+        shapesInitialized = !hasDynamicShapes;
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
@@ -110,6 +113,22 @@ public:
                     sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
                 }
             }
+
+            if (params.has("steps"))
+            {
+                const DictValue &steps = params.get("steps");
+                sliceSteps.resize(1);
+                sliceSteps[0].resize(steps.size());
+
+                for (int i = 0; i < steps.size(); ++i)
+                {
+                    int step = steps.get<int>(i);
+                    CV_Assert(step >= 1);
+                    if (step > 1)
+                        hasSteps = true;
+                    sliceSteps[0][i] = step;
+                }
+            }
         }
     }
 
@@ -118,11 +137,11 @@ public:
 #ifdef HAVE_DNN_IE_NN_BUILDER_2019
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
             return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2019R1) &&
-                sliceRanges.size() == 1 && sliceRanges[0].size() == 4;
+                sliceRanges.size() == 1 && sliceRanges[0].size() == 4 && !hasSteps;
 #endif
 #ifdef HAVE_DNN_NGRAPH
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return sliceRanges.size() == 1;
+            return sliceRanges.size() == 1 && !hasSteps;
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -143,7 +162,11 @@ public:
                 CV_Assert(sliceRanges[i].size() <= inpShape.size());
                 for (int j = 0; j < sliceRanges[i].size(); ++j)
                 {
-                    outputs[i][j] = clamp(sliceRanges[i][j], inpShape[j]).size();
+                    if (shapesInitialized || inpShape[j] > 0)
+                        outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
+
+                    if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
+                        outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
                 }
             }
         }
@@ -156,6 +179,12 @@ public:
             outputs.resize(splits, inpShape);
         }
         return false;
+    }
+
+    bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE
+    {
+        shapesInitialized = true;
+        return true;
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -172,6 +201,7 @@ public:
         const MatSize& inpShape = inputs[0].size;
 
         finalSliceRanges = sliceRanges;
+
         if (sliceRanges.empty())
         {
             // Divide input blob on equal parts by axis.
@@ -200,9 +230,12 @@ public:
             // Clamp.
             for (int j = 0; j < finalSliceRanges[i].size(); ++j)
             {
-                finalSliceRanges[i][j] = clamp(finalSliceRanges[i][j], inpShape[j]);
+                finalSliceRanges[i][j] = normalize_axis_range(finalSliceRanges[i][j], inpShape[j]);
             }
         }
+
+        if (!sliceSteps.empty() && sliceSteps[0].size() != inputs[0].dims)
+            sliceSteps[0].resize(inputs[0].dims, 1);
 
 #if 0
         std::cout << "DEBUG: DNN/Slice: " << outputs.size() << " inpShape=" << inpShape << std::endl;
@@ -411,6 +444,9 @@ public:
     {
         CV_TRACE_FUNCTION();
 
+        if (hasSteps)
+            return false;  // TODO not implemented yet: https://github.com/opencv/opencv/pull/19546
+
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
@@ -469,9 +505,24 @@ public:
 
         const Mat& inpMat = inputs[0];
         CV_Assert(outputs.size() == finalSliceRanges.size());
-        for (size_t i = 0; i < outputs.size(); i++)
+
+        if (!hasSteps)
         {
-            inpMat(finalSliceRanges[i]).copyTo(outputs[i]);
+            for (size_t i = 0; i < outputs.size(); i++)
+            {
+                inpMat(finalSliceRanges[i]).copyTo(outputs[i]);
+            }
+        }
+        else
+        {
+            int dimsNum = inpMat.dims;
+
+            for (size_t i = 0; i < outputs.size(); i++)
+            {
+                std::vector<int> inpIdx(dimsNum, 0);
+                std::vector<int> outIdx(dimsNum, 0);
+                getSliceRecursive(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+            }
         }
     }
 
@@ -561,9 +612,42 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+private:
+    void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
+                           const std::vector<Range> &sliceRanges,
+                           const std::vector<int> &sliceSteps, int dim, int dimsNum,
+                           Mat &outputs, std::vector<int> &outIdx)
+    {
+        int begin = sliceRanges[dim].start;
+        int end = sliceRanges[dim].end;
+        int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
+
+        const bool is32F = inpMat.depth() == CV_32F;
+
+        // TODO optimization is required (for 2D tail case at least)
+        for (int k = begin, j = 0; k < end; k += step, j++)
+        {
+            inpIdx[dim] = k;
+            outIdx[dim] = j;
+
+            if (dim + 1 < dimsNum)
+                getSliceRecursive(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
+            else
+            {
+                if (is32F)
+                    outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
+                else
+                    outputs.at<short>(outIdx.data()) = inpMat.at<short>(inpIdx.data());  // 16F emulation
+            }
+        }
+    }
+
 protected:
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
+    bool hasDynamicShapes;
+    bool shapesInitialized;
+    bool hasSteps;
 };
 
 class CropLayerImpl CV_FINAL : public SliceLayerImpl
@@ -590,7 +674,7 @@ public:
         CV_Assert(inputs.size() == 2);
 
         MatShape dstShape = inputs[0];
-        int start = clamp(axis, dstShape);
+        int start = normalize_axis(axis, dstShape);
         for (int i = start; i < dstShape.size(); i++)
         {
             dstShape[i] = inputs[1][i];
@@ -609,7 +693,7 @@ public:
         const Mat &inpSzBlob = inputs[1];
 
         int dims = inpBlob.dims;
-        int start_axis = clamp(axis, dims);
+        int start_axis = normalize_axis(axis, dims);
 
         std::vector<int> offset_final(dims, 0);
         if (offset.size() == 1)

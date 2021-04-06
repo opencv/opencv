@@ -282,8 +282,13 @@ CUDA_TEST_P(Flip, Accuracy)
 CUDA_TEST_P(Flip, AccuracyInplace)
 {
     cv::Mat src = randomMat(size, type);
-
+    bool isSizeOdd = ((size.width & 1) == 1) || ((size.height & 1) == 1);
     cv::cuda::GpuMat srcDst = loadMat(src, useRoi);
+    if(isSizeOdd)
+    {
+        EXPECT_THROW(cv::cuda::flip(srcDst, srcDst, flip_code), cv::Exception);
+        return;
+    }
     cv::cuda::flip(srcDst, srcDst, flip_code);
 
     cv::Mat dst_gold;

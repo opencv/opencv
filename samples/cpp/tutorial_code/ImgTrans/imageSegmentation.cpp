@@ -24,23 +24,16 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // Show source image
+    // Show the source image
     imshow("Source Image", src);
     //! [load_image]
 
     //! [black_bg]
     // Change the background from white to black, since that will help later to extract
     // better results during the use of Distance Transform
-    for ( int i = 0; i < src.rows; i++ ) {
-        for ( int j = 0; j < src.cols; j++ ) {
-            if ( src.at<Vec3b>(i, j) == Vec3b(255,255,255) )
-            {
-                src.at<Vec3b>(i, j)[0] = 0;
-                src.at<Vec3b>(i, j)[1] = 0;
-                src.at<Vec3b>(i, j)[2] = 0;
-            }
-        }
-    }
+    Mat mask;
+    inRange(src, Scalar(255, 255, 255), Scalar(255, 255, 255), mask);
+    src.setTo(Scalar(0, 0, 0), mask);
 
     // Show output image
     imshow("Black Background Image", src);
@@ -124,7 +117,9 @@ int main(int argc, char *argv[])
 
     // Draw the background marker
     circle(markers, Point(5,5), 3, Scalar(255), -1);
-    imshow("Markers", markers*10000);
+    Mat markers8u;
+    markers.convertTo(markers8u, CV_8U, 10);
+    imshow("Markers", markers8u);
     //! [seeds]
 
     //! [watershed]

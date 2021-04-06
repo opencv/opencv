@@ -320,6 +320,65 @@ CUDA_TEST_P(GpuMat_ConvertTo, WithScaling)
     }
 }
 
+CUDA_TEST_P(GpuMat_ConvertTo, InplaceWithOutScaling)
+{
+    cv::Mat src = randomMat(size, depth1);
+
+    if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::cuda::GpuMat d_srcDst = loadMat(src);
+            d_srcDst.convertTo(d_srcDst, depth2);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::cuda::GpuMat d_srcDst = loadMat(src, useRoi);
+        d_srcDst.convertTo(d_srcDst, depth2);
+
+        cv::Mat dst_gold;
+        src.convertTo(dst_gold, depth2);
+
+        EXPECT_MAT_NEAR(dst_gold, d_srcDst, depth2 < CV_32F ? 1.0 : 1e-4);
+    }
+}
+
+
+CUDA_TEST_P(GpuMat_ConvertTo, InplaceWithScaling)
+{
+    cv::Mat src = randomMat(size, depth1);
+    double a = randomDouble(0.0, 1.0);
+    double b = randomDouble(-10.0, 10.0);
+
+    if ((depth1 == CV_64F || depth2 == CV_64F) && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
+    {
+        try
+        {
+            cv::cuda::GpuMat d_srcDst = loadMat(src);
+            d_srcDst.convertTo(d_srcDst, depth2, a, b);
+        }
+        catch (const cv::Exception& e)
+        {
+            ASSERT_EQ(cv::Error::StsUnsupportedFormat, e.code);
+        }
+    }
+    else
+    {
+        cv::cuda::GpuMat d_srcDst = loadMat(src, useRoi);
+        d_srcDst.convertTo(d_srcDst, depth2, a, b);
+
+        cv::Mat dst_gold;
+        src.convertTo(dst_gold, depth2, a, b);
+
+        EXPECT_MAT_NEAR(dst_gold, d_srcDst, depth2 < CV_32F ? 1.0 : 1e-4);
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(CUDA, GpuMat_ConvertTo, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,

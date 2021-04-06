@@ -4,8 +4,6 @@
 
 #include "precomp.hpp"
 
-#include "lut.hpp"
-
 using namespace cv;
 using namespace cv::cuda;
 
@@ -14,6 +12,9 @@ using namespace cv::cuda;
 Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
 
 #else /* !defined (HAVE_CUDA) || defined (CUDA_DISABLER) */
+
+// lut.hpp includes cuda_runtime.h and can only be included when we have CUDA
+#include "lut.hpp"
 
 Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
 {

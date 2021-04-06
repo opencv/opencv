@@ -1622,7 +1622,7 @@ size_t CirclesGridFinder::getFirstCorner(std::vector<Point> &largeCornerIndices,
   int cornerIdx = 0;
   bool waitOutsider = true;
 
-  for(;;)
+  for (size_t i = 0; i < cornersCount * 2; ++i)
   {
     if (waitOutsider)
     {
@@ -1632,11 +1632,11 @@ size_t CirclesGridFinder::getFirstCorner(std::vector<Point> &largeCornerIndices,
     else
     {
       if (isInsider[(cornerIdx + 1) % cornersCount])
-        break;
+        return cornerIdx;
     }
 
     cornerIdx = (cornerIdx + 1) % cornersCount;
   }
 
-  return cornerIdx;
+  CV_Error(Error::StsNoConv, "isInsider array has the same values");
 }

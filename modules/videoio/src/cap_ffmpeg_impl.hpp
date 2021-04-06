@@ -61,6 +61,9 @@
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)  // was declared deprecated
+#endif
 
 #ifndef CV_UNUSED  // Required for standalone compilation mode (OpenCV defines this in base.hpp)
 #define CV_UNUSED(name) (void)name
@@ -149,6 +152,8 @@ extern "C" {
 #define AV_PIX_FMT_BGR24 PIX_FMT_BGR24
 #define AV_PIX_FMT_RGB24 PIX_FMT_RGB24
 #define AV_PIX_FMT_GRAY8 PIX_FMT_GRAY8
+#define AV_PIX_FMT_BGRA PIX_FMT_BGRA
+#define AV_PIX_FMT_RGBA PIX_FMT_RGBA
 #define AV_PIX_FMT_YUV422P PIX_FMT_YUV422P
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #define AV_PIX_FMT_YUV444P PIX_FMT_YUV444P
@@ -248,7 +253,7 @@ inline void get_monotonic_time(timespec *tv)
 
     t.QuadPart -= offset.QuadPart;
     microseconds = (double)t.QuadPart / frequencyToMicroseconds;
-    t.QuadPart = microseconds;
+    t.QuadPart = (LONGLONG)microseconds;
     tv->tv_sec = t.QuadPart / 1000000;
     tv->tv_nsec = (t.QuadPart % 1000000) * 1000;
 }
@@ -356,7 +361,7 @@ struct AVInterruptCallbackMetadata
 
 // https://github.com/opencv/opencv/pull/12693#issuecomment-426236731
 static
-inline const char* _opencv_avcodec_get_name(AVCodecID id)
+inline const char* _opencv_avcodec_get_name(CV_CODEC_ID id)
 {
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
     && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(53, 47, 100)
@@ -482,7 +487,6 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
-    void rotateFrame(cv::Mat &mat) const;
 
     void init();
 
@@ -721,16 +725,6 @@ struct ImplMutex::Impl
     int refcount;
 };
 
-#ifndef __GNUC__
-static int _interlockedExchangeAdd(int* addr, int delta)
-{
-#if defined _MSC_VER && _MSC_VER >= 1500
-    return (int)_InterlockedExchangeAdd((long volatile*)addr, delta);
-#else
-    return (int)InterlockedExchangeAdd((long volatile*)addr, delta);
-#endif
-}
-#endif // __GNUC__
 
 #elif defined __APPLE__
 
@@ -858,51 +852,70 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 
 class InternalFFMpegRegister
 {
-public:
-    InternalFFMpegRegister()
+    static void init_()
     {
-        AutoLock lock(_mutex);
+        static InternalFFMpegRegister instance;
+    }
+
+    static void initLogger_()
+    {
+    #ifndef NO_GETENV
+        char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
+        if (debug_option != NULL)
+        {
+            av_log_set_level(AV_LOG_VERBOSE);
+            av_log_set_callback(ffmpeg_log_callback);
+        }
+        else
+    #endif
+        {
+            av_log_set_level(AV_LOG_ERROR);
+        }
+    }
+
+public:
+    static void init()
+    {
         if (!_initialized)
         {
-    #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
-            avformat_network_init();
-    #endif
-
-            /* register all codecs, demux and protocols */
-            av_register_all();
-
-            /* register a callback function for synchronization */
-            av_lockmgr_register(&LockCallBack);
-
-#ifndef NO_GETENV
-            char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-            if (debug_option != NULL)
+            AutoLock lock(_mutex);
+            if (!_initialized)
             {
-                av_log_set_level(AV_LOG_VERBOSE);
-                av_log_set_callback(ffmpeg_log_callback);
+                init_();
             }
-            else
-#endif
-            {
-                av_log_set_level(AV_LOG_ERROR);
-            }
-
-            _initialized = true;
         }
+        initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
+    }
+
+    InternalFFMpegRegister()
+    {
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(53, 13, 0)
+        avformat_network_init();
+#endif
+
+        /* register all codecs, demux and protocols */
+        av_register_all();
+
+        /* register a callback function for synchronization */
+        av_lockmgr_register(&LockCallBack);
+
+        _initialized = true;
     }
 
     ~InternalFFMpegRegister()
     {
         _initialized = false;
         av_lockmgr_register(NULL);
+        av_log_set_callback(NULL);
     }
 };
 
-static InternalFFMpegRegister _init;
-
 bool CvCapture_FFMPEG::open( const char* _filename )
 {
+    InternalFFMpegRegister::init();
+
     AutoLock lock(_mutex);
+
     unsigned i;
     bool valid = false;
 
@@ -991,7 +1004,10 @@ bool CvCapture_FFMPEG::open( const char* _filename )
                 enc->skip_frame = AVDISCARD_DEFAULT;
             else if (strcmp(avdiscard_entry->value, "none") == 0)
                 enc->skip_frame = AVDISCARD_NONE;
-#if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 59, 100)
+            // NONINTRA flag was introduced with version bump at revision:
+            // https://github.com/FFmpeg/FFmpeg/commit/b152152df3b778d0a86dcda5d4f5d065b4175a7b
+            // This key is supported only for FFMPEG version
+#if LIBAVCODEC_VERSION_MICRO >= 100 && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 67, 100)
             else if (strcmp(avdiscard_entry->value, "nonintra") == 0)
                 enc->skip_frame = AVDISCARD_NONINTRA;
 #endif
@@ -1087,11 +1103,11 @@ bool CvCapture_FFMPEG::processRawPacket()
     {
         rawModeInitialized = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
-        AVCodecID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+        CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
 #elif LIBAVFORMAT_BUILD > 4628
-        AVCodecID eVideoCodec = video_st->codec->codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #else
-        AVCodecID eVideoCodec = video_st->codec.codec_id;
+        CV_CODEC_ID eVideoCodec = video_st->codec.codec_id;
 #endif
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
@@ -1394,7 +1410,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     if( !video_st ) return 0;
 
     double codec_tag = 0;
-    AVCodecID codec_id = AV_CODEC_ID_NONE;
+    CV_CODEC_ID codec_id = AV_CODEC_ID_NONE;
     const char* codec_fourcc = NULL;
 
     switch( property_id )
@@ -1412,9 +1428,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CV_FFMPEG_CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CV_FFMPEG_CAP_PROP_FRAME_WIDTH:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.height : frame.width);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
     case CV_FFMPEG_CAP_PROP_FRAME_HEIGHT:
-        return (double)((rotation_auto && rotation_angle%180) ? frame.width : frame.height);
+        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
     case CV_FFMPEG_CAP_PROP_FPS:
         return get_fps();
     case CV_FFMPEG_CAP_PROP_FOURCC:
@@ -1654,10 +1670,10 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CV_FFMPEG_CAP_PROP_ORIENTATION_AUTO:
 #if ((LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)) && \
      (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)))
-        rotation_auto = static_cast<bool>(value);
+        rotation_auto = value != 0 ? true : false;
         return true;
 #else
-        rotation_auto = 0;
+        rotation_auto = false;
         return false;
 #endif
         break;
@@ -1858,7 +1874,7 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54,25,0)
     // Set per-codec defaults
-    AVCodecID c_id = c->codec_id;
+    CV_CODEC_ID c_id = c->codec_id;
     avcodec_get_context_defaults3(c, codec);
     // avcodec_get_context_defaults3 erases codec_id for some reason
     c->codec_id = c_id;
@@ -1947,7 +1963,9 @@ static AVStream *icv_add_video_stream_FFMPEG(AVFormatContext *oc,
     // some formats want stream headers to be separate
     if(oc->oformat->flags & AVFMT_GLOBALHEADER)
     {
-#if LIBAVCODEC_BUILD > CALC_FFMPEG_VERSION(56, 35, 0)
+        // flags were renamed: https://github.com/libav/libav/commit/7c6eb0a1b7bf1aac7f033a7ec6d8cacc3b5c2615
+#if LIBAVCODEC_BUILD >= (LIBAVCODEC_VERSION_MICRO >= 100 \
+     ? CALC_FFMPEG_VERSION(56, 60, 100) : CALC_FFMPEG_VERSION(56, 35, 0))
         c->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 #else
         c->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -2090,7 +2108,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     // 2. (dataend - SIMD_SIZE) and (dataend + SIMD_SIZE) is from the same 4k page
     const int CV_STEP_ALIGNMENT = 32;
     const size_t CV_SIMD_SIZE = 32;
-    const size_t CV_PAGE_MASK = ~(4096 - 1);
+    const size_t CV_PAGE_MASK = ~(size_t)(4096 - 1);
     const unsigned char* dataend = data + ((size_t)height * step);
     if (step % CV_STEP_ALIGNMENT != 0 ||
         (((size_t)dataend - CV_SIMD_SIZE) & CV_PAGE_MASK) != (((size_t)dataend + CV_SIMD_SIZE) & CV_PAGE_MASK))
@@ -2289,6 +2307,10 @@ static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, bool is_color )
 {
+    InternalFFMpegRegister::init();
+
+    AutoLock lock(_mutex);
+
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     int err, codec_pix_fmt;
     double bitrate_scale = 1;
@@ -2563,7 +2585,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     int64_t lbit_rate = (int64_t)c->bit_rate;
-    lbit_rate += (bitrate / 2);
+    lbit_rate += (int64_t)(bitrate / 2);
     lbit_rate = std::min(lbit_rate, (int64_t)INT_MAX);
     c->bit_rate_tolerance = (int)lbit_rate;
     c->bit_rate = (int)lbit_rate;
@@ -2956,7 +2978,7 @@ bool OutputMediaStream_FFMPEG::open(const char* fileName, int width, int height,
     #endif
 
     c->codec_tag = MKTAG('H', '2', '6', '4');
-    c->bit_rate_tolerance = c->bit_rate;
+    c->bit_rate_tolerance = (int)(c->bit_rate);
 
     // open the output file, if needed
     if (!(fmt_->flags & AVFMT_NOFILE))

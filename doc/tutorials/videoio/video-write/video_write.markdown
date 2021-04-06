@@ -59,11 +59,11 @@ extension, its first version. A direct limitation of this is that you cannot sav
 larger than 2 GB. Furthermore you can only create and expand a single video track inside the
 container. No audio or other track editing support here. Nevertheless, any video codec present on
 your system might work. If you encounter some of these limitations you will need to look into more
-specialized video writing libraries such as *FFMpeg* or codecs as *HuffYUV*, *CorePNG* and *LCL*. As
+specialized video writing libraries such as *FFmpeg* or codecs as *HuffYUV*, *CorePNG* and *LCL*. As
 an alternative, create the video track with OpenCV and expand it with sound tracks or convert it to
 other formats by using video manipulation programs such as *VirtualDub* or *AviSynth*.
 
-The *VideoWriter* class
+The VideoWriter class
 -----------------------
 
 The content written here builds on the assumption you
@@ -109,7 +109,7 @@ const string NAME = source.substr(0, pAt) + argv[2][0] + ".avi";   // Form the n
     @code{.cpp}
     CV_FOURCC('P','I','M,'1') // this is an MPEG1 codec from the characters to integer
     @endcode
-    If you pass for this argument minus one than a window will pop up at runtime that contains all
+    If you pass for this argument minus one then a window will pop up at runtime that contains all
     the codec installed on your system and ask you to select the one to use:
 
     ![](images/videoCompressSelect.png)

@@ -258,23 +258,20 @@ softdouble getGaussianKernelFixedPoint_ED(CV_OUT std::vector<int64_t>& result, c
 }
 
 static void getGaussianKernel(int n, double sigma, int ktype, Mat& res) { res = getGaussianKernel(n, sigma, ktype); }
-template <typename T> static void getGaussianKernel(int n, double sigma, int, std::vector<T>& res);
-//{ res = getFixedpointGaussianKernel<T>(n, sigma); }
-
-template<> void getGaussianKernel<ufixedpoint16>(int n, double sigma, int, std::vector<ufixedpoint16>& res)
+template <typename FT> static void getGaussianKernel(int n, double sigma, int, std::vector<FT>& res)
 {
     std::vector<softdouble> res_sd;
     softdouble s0 = getGaussianKernelBitExact(res_sd, n, sigma);
     CV_UNUSED(s0);
 
     std::vector<int64_t> fixed_256;
-    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, 8);
+    softdouble approx_err = getGaussianKernelFixedPoint_ED(fixed_256, res_sd, FT::fixedShift);
     CV_UNUSED(approx_err);
 
     res.resize(n);
     for (int i = 0; i < n; i++)
     {
-        res[i] = ufixedpoint16::fromRaw((uint16_t)fixed_256[i]);
+        res[i] = FT::fromRaw((typename FT::raw_t)fixed_256[i]);
         //printf("%03d: %d\n", i, res[i].raw());
     }
 }
@@ -684,6 +681,43 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
             if (src.data == dst.data)
                 src = src.clone();
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
+                CV_CPU_DISPATCH_MODES_ALL);
+            return;
+        }
+    }
+    if(sdepth == CV_16U && ((borderType & BORDER_ISOLATED) || !_src.isSubmatrix()))
+    {
+        CV_LOG_INFO(NULL, "GaussianBlur: running bit-exact version...");
+
+        std::vector<ufixedpoint32> fkx, fky;
+        createGaussianKernels(fkx, fky, type, ksize, sigma1, sigma2);
+
+        static bool param_check_gaussian_blur_bitexact_kernels = utils::getConfigurationParameterBool("OPENCV_GAUSSIANBLUR_CHECK_BITEXACT_KERNELS", false);
+        if (param_check_gaussian_blur_bitexact_kernels && !validateGaussianBlurKernel(fkx))
+        {
+            CV_LOG_INFO(NULL, "GaussianBlur: bit-exact fx kernel can't be applied: ksize=" << ksize << " sigma=" << Size2d(sigma1, sigma2));
+        }
+        else if (param_check_gaussian_blur_bitexact_kernels && !validateGaussianBlurKernel(fky))
+        {
+            CV_LOG_INFO(NULL, "GaussianBlur: bit-exact fy kernel can't be applied: ksize=" << ksize << " sigma=" << Size2d(sigma1, sigma2));
+        }
+        else
+        {
+            // TODO: implement ocl_sepFilter2D_BitExact -- how to deal with bdepth?
+            // CV_OCL_RUN(useOpenCL,
+            //         ocl_sepFilter2D_BitExact(_src, _dst, sdepth,
+            //                 ksize,
+            //                 (const uint32_t*)&fkx[0], (const uint32_t*)&fky[0],
+            //                 Point(-1, -1), 0, borderType,
+            //                 16/*shift_bits*/)
+            // );
+
+            Mat src = _src.getMat();
+            Mat dst = _dst.getMat();
+
+            if (src.data == dst.data)
+                src = src.clone();
+            CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint32_t*)&fkx[0], (int)fkx.size(), (const uint32_t*)&fky[0], (int)fky.size(), borderType),
                 CV_CPU_DISPATCH_MODES_ALL);
             return;
         }

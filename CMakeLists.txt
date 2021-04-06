@@ -32,6 +32,11 @@ endif()
 #
 # Configure CMake policies
 #
+
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW)  # CMAKE_CXX_COMPILER_ID=AppleClang
+endif()
+
 if(POLICY CMP0026)
   cmake_policy(SET CMP0026 NEW)
 endif()
@@ -463,6 +468,7 @@ OCV_OPTION(BUILD_JAVA               "Enable Java support"                       
 # OpenCV installation options
 # ===================================================
 OCV_OPTION(INSTALL_CREATE_DISTRIB   "Change install rules to build the distribution package" OFF )
+OCV_OPTION(INSTALL_BIN_EXAMPLES     "Install prebuilt examples" WIN32 IF BUILD_EXAMPLES)
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
@@ -471,7 +477,7 @@ OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binar
 
 # OpenCV build options
 # ===================================================
-OCV_OPTION(ENABLE_CCACHE              "Use ccache"                                               (UNIX AND NOT IOS AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja")) )
+OCV_OPTION(ENABLE_CCACHE              "Use ccache"                                               (UNIX AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja" OR CMAKE_GENERATOR MATCHES "Xcode")) )
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  MSVC IF (MSVC OR (NOT IOS AND NOT CMAKE_CROSSCOMPILING) ) )
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CV_GCC )
@@ -480,7 +486,7 @@ OCV_OPTION(OPENCV_ENABLE_MEMORY_SANITIZER "Better support for memory/address san
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CV_GCC )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable compiler options for fast math optimizations on FP computations (not recommended)" OFF)
-if(NOT IOS)  # Use CPU_BASELINE instead
+if(NOT IOS AND CMAKE_CROSSCOMPILING)  # Use CPU_BASELINE instead
 OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS) )
 endif()
@@ -721,8 +727,15 @@ if(ENABLE_FLAKE8 AND PYTHON_DEFAULT_AVAILABLE)
     include("${CMAKE_CURRENT_LIST_DIR}/cmake/FindFlake8.cmake")
   endif()
   if(FLAKE8_FOUND)
+    list(APPEND OPENCV_FLAKE8_EXCLUDES ".git" "__pycache__" "config.py" "*.config.py" "config-*.py")
+    list(APPEND OPENCV_FLAKE8_EXCLUDES "svgfig.py")  # 3rdparty
+    if(NOT PYTHON3_VERSION_STRING VERSION_GREATER 3.6)
+      # Python 3.6+ (PEP 526): variable annotations (type hints)
+      list(APPEND OPENCV_FLAKE8_EXCLUDES "samples/dnn/dnn_model_runner/dnn_conversion/common/test/configs")
+    endif()
+    string(REPLACE ";" "," OPENCV_FLAKE8_EXCLUDES_STR "${OPENCV_FLAKE8_EXCLUDES}")
     add_custom_target(check_flake8
-        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='.git,__pycache__,*.config.py,svgfig.py'
+        COMMAND "${FLAKE8_EXECUTABLE}" . --count --select=E9,E901,E999,F821,F822,F823 --show-source --statistics --exclude='${OPENCV_FLAKE8_EXCLUDES_STR}'
         WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
         COMMENT "Running flake8"
     )
@@ -987,6 +1000,12 @@ if(COMMAND ocv_pylint_finalize)
   ocv_pylint_add_directory_recurse(${CMAKE_CURRENT_LIST_DIR}/samples/python/tutorial_code)
   ocv_pylint_finalize()
 endif()
+if(TARGET check_pylint)
+  message(STATUS "Registered 'check_pylint' target: using ${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}), checks: ${PYLINT_TOTAL_TARGETS}")
+endif()
+if(TARGET check_flake8)
+  message(STATUS "Registered 'check_flake8' target: using ${FLAKE8_EXECUTABLE} (ver: ${FLAKE8_VERSION})")
+endif()
 
 if(OPENCV_GENERATE_SETUPVARS)
   include(cmake/OpenCVGenSetupVars.cmake)
@@ -1045,7 +1064,9 @@ endif()
 if(CMAKE_GENERATOR MATCHES Xcode)
   status("    Xcode:"          ${XCODE_VERSION})
 endif()
-if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
+if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
+  status("    Configuration:"  ${CMAKE_CONFIGURATION_TYPES})
+else()
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
@@ -1618,12 +1639,6 @@ endif()
 
 status("")
 status("  Python (for build):"  PYTHON_DEFAULT_AVAILABLE THEN "${PYTHON_DEFAULT_EXECUTABLE}" ELSE NO)
-if(PYLINT_FOUND AND PYLINT_EXECUTABLE)
-  status("    Pylint:"  PYLINT_FOUND THEN "${PYLINT_EXECUTABLE} (ver: ${PYLINT_VERSION}, checks: ${PYLINT_TOTAL_TARGETS})" ELSE NO)
-endif()
-if(FLAKE8_FOUND AND FLAKE8_EXECUTABLE)
-  status("    Flake8:"  FLAKE8_FOUND THEN "${FLAKE8_EXECUTABLE} (ver: ${FLAKE8_VERSION})" ELSE NO)
-endif()
 
 # ========================== java ==========================
 if(BUILD_JAVA)
