@@ -44,6 +44,11 @@
 #include "fisheye.hpp"
 #include <limits>
 
+namespace cv { namespace
+{
+    void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows);
+}}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::projectPoints
 

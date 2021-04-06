@@ -428,7 +428,7 @@ void cv::super_fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K,
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::super_fisheye::stereoRectify
 
-void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
+void cv::super_fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
                                  InputArray _R, InputArray _tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2,
                                  OutputArray Q, int flags, const Size& newImageSize, double balance, double fov_scale)
 {
@@ -510,9 +510,9 @@ void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
 }
 
 
-void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+void cv::foo::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
                                  cv::InputArray _rvec,cv::InputArray _tvec,
-                                 const IntrinsicParams& param, cv::OutputArray jacobian)
+                                 const cv::internal::IntrinsicParams& param, cv::OutputArray jacobian)
 {
     CV_INSTRUMENT_REGION();
 
@@ -523,7 +523,7 @@ void cv::internal::projectPoints(cv::InputArray objectPoints, cv::OutputArray im
     super_fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);
 }
 
-cv::Mat cv::internal::NormalizePixels(const Mat& imagePoints, const IntrinsicParams& param)
+cv::Mat cv::foo::NormalizePixels(const Mat& imagePoints, const cv::internal::IntrinsicParams& param)
 {
     CV_INSTRUMENT_REGION();
 
