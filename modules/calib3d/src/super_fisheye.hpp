@@ -1,6 +1,7 @@
 #ifndef SUPER_FISHEYE_INTERNAL_H
 #define SUPER_FISHEYE_INTERNAL_H
 #include "precomp.hpp"
+#include "fisheye.hpp"
 
 namespace cv { namespace internal {
 
