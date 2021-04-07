@@ -2241,6 +2241,7 @@ final fundamental matrix. It can be set to something like 1-3, depending on the 
 point localization, image resolution, and the image noise.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
@@ -2251,6 +2252,12 @@ where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding 
 second images, respectively. The result of this function may be passed further to
 decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 InputArray cameraMatrix, int method,
+                                 double prob, double threshold,
+                                 int maxIters, OutputArray mask = noArray() );
+
+/** @overload */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  InputArray cameraMatrix, int method = RANSAC,
                                  double prob = 0.999, double threshold = 1.0,
@@ -2274,6 +2281,7 @@ point localization, image resolution, and the image noise.
 confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -2285,6 +2293,13 @@ f & 0 & x_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
  */
+CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
+                                 double focal, Point2d pp,
+                                 int method, double prob,
+                                 double threshold, int maxIters,
+                                 OutputArray mask = noArray() );
+
+/** @overload */
 CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
                                  double focal = 1.0, Point2d pp = Point2d(0, 0),
                                  int method = RANSAC, double prob = 0.999,
