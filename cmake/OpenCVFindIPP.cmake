@@ -151,7 +151,7 @@ macro(ipp_detect_version)
         if("${name}" STREQUAL "core")  # https://github.com/opencv/opencv/pull/19681
           if(OPENCV_FORCE_IPP_EXCLUDE_LIBS OR OPENCV_FORCE_IPP_EXCLUDE_LIBS_CORE
               OR (UNIX AND NOT ANDROID AND NOT APPLE
-                  AND (CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+                  AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|Intel"
               )
               AND NOT OPENCV_SKIP_IPP_EXCLUDE_LIBS_CORE
           )
