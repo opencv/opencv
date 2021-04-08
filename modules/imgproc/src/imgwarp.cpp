@@ -2190,7 +2190,7 @@ public:
                 int bw = std::min( bw0, dst.cols - x);
                 int bh = std::min( bh0, range.end - y);
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_16SC2, XY);
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )
@@ -2979,7 +2979,7 @@ public:
                 int bw = std::min( bw0, width - x);
                 int bh = std::min( bh0, range.end - y); // height
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_16SC2, XY);
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )
