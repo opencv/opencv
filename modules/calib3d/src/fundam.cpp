@@ -888,7 +888,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         if( (method & ~3) == FM_RANSAC && npoints >= 15 )
             result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence, maxIters)->run(m1, m2, F, _mask);
         else
-            result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
+            result = createLMeDSPointSetRegistrator(cb, 7, confidence, maxIters)->run(m1, m2, F, _mask);
     }
 
     if( result <= 0 )

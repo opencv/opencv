@@ -325,13 +325,19 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
 
         std::vector < Center > curCenters;
         findBlobs(grayscaleImage, binarizedImage, curCenters);
+        if(params.maxThreshold - params.minThreshold <= params.thresholdStep) {
+            // if the difference between min and max threshold is less than the threshold step
+            // we're only going to enter the loop once, so we need to add curCenters
+            // to ensure we still use minDistBetweenBlobs
+            centers.push_back(curCenters);
+        }
         std::vector < std::vector<Center> > newCenters;
         for (size_t i = 0; i < curCenters.size(); i++)
         {
             bool isNew = true;
             for (size_t j = 0; j < centers.size(); j++)
             {
-                double dist = norm(centers[j][ centers[j].size() / 2 ].location - curCenters[i].location);
+                double dist = norm(centers[j][centers[j].size() / 2 ].location - curCenters[i].location);
                 isNew = dist >= params.minDistBetweenBlobs && dist >= centers[j][ centers[j].size() / 2 ].radius && dist >= curCenters[i].radius;
                 if (!isNew)
                 {
