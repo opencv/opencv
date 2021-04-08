@@ -1585,6 +1585,146 @@ struct RGB2Lab_b
 
         i = 0;
 
+#if CV_NEON
+
+        // Define some scalar constants which we will make use of later
+        const int one_lsh_by_lab_shift_sub_one = (1 << ((lab_shift)-1));
+        const int one_lsh_by_lab_shift2_sub_one = (1 << ((lab_shift2)-1));
+        const int one_shift_lab_mul_128 = 128*(1 << lab_shift2);
+
+        // Helper function for looking up 4 lots of LabCbrtTab_b values at once, returning them as int32x4_t
+        auto LabCbrtTab_b_fnc = [](const int32x4_t& idxvec) -> int32x4_t
+        {
+            int CV_DECL_ALIGNED(32) elems[4] =
+            {
+                LabCbrtTab_b[vgetq_lane_s32(idxvec, 0)],
+                LabCbrtTab_b[vgetq_lane_s32(idxvec, 1)],
+                LabCbrtTab_b[vgetq_lane_s32(idxvec, 2)],
+                LabCbrtTab_b[vgetq_lane_s32(idxvec, 3)]
+            };
+            return vld1q_s32(elems);
+        };
+
+        // Convert 2 batches of 4 uint8_t RGBs, which are expanded to 2 batches of int32x4_t, then the resulting Lab is stored as uint8x8x3_t
+        // Hence we stride in 8s
+        for(; i <= n - 8; i += 8, src += scn*8, dst += 3*8 )
+        {
+            // Load two batches of src
+            // =======================
+            uint8x8_t vRi, vGi, vBi;
+            if(scn == 4)
+            {
+                uint8x8x4_t tab_idx = vld4_u8(src);
+                vRi = tab_idx.val[0];
+                vGi = tab_idx.val[1];
+                vBi = tab_idx.val[2];
+            }
+            else // scn == 3
+            {
+                uint8x8x3_t tab_idx = vld3_u8(src);
+                vRi = tab_idx.val[0];
+                vGi = tab_idx.val[1];
+                vBi = tab_idx.val[2];
+            }
+
+            // First batch
+            // ===========
+            // int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
+            int32x4_t vR0 = {tab[vget_lane_u8(vRi,0)], tab[vget_lane_u8(vRi,1)], tab[vget_lane_u8(vRi,2)], tab[vget_lane_u8(vRi,3)]};
+            int32x4_t vG0 = {tab[vget_lane_u8(vGi,0)], tab[vget_lane_u8(vGi,1)], tab[vget_lane_u8(vGi,2)], tab[vget_lane_u8(vGi,3)]};
+            int32x4_t vB0 = {tab[vget_lane_u8(vBi,0)], tab[vget_lane_u8(vBi,1)], tab[vget_lane_u8(vBi,2)], tab[vget_lane_u8(vBi,3)]};
+
+            // int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];
+            int32x4_t vfX0 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR0, C0);
+            vfX0 = vmlaq_n_s32(vfX0, vG0, C1);
+            vfX0 = vmlaq_n_s32(vfX0, vB0, C2);
+            vfX0 = vshlq_n_s32(vfX0, -lab_shift);
+            vfX0 = LabCbrtTab_b_fnc(vfX0);
+
+            // int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)];
+            int32x4_t vfY0 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR0, C3);
+            vfY0 = vmlaq_n_s32(vfY0, vG0, C4);
+            vfY0 = vmlaq_n_s32(vfY0, vB0, C5);
+            vfY0 = vshlq_n_s32(vfY0, -lab_shift);
+            vfY0 = LabCbrtTab_b_fnc(vfY0);
+
+            // int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];
+            int32x4_t vfZ0 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR0, C6);
+            vfZ0 = vmlaq_n_s32(vfZ0, vG0, C7);
+            vfZ0 = vmlaq_n_s32(vfZ0, vB0, C8);
+            vfZ0 = vshlq_n_s32(vfZ0, -lab_shift);
+            vfZ0 = LabCbrtTab_b_fnc(vfZ0);
+
+            // int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );
+            int32x4_t vL0 = vmlaq_n_s32(vdupq_n_s32(Lshift+one_lsh_by_lab_shift2_sub_one), vfY0, Lscale);
+            vL0 = vshlq_n_s32(vL0, -lab_shift2);
+
+            // int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );
+            int32x4_t va0 = vsubq_s32(vfX0, vfY0);
+            va0 = vmlaq_n_s32(vdupq_n_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one), va0, 500);
+            va0 = vshlq_n_s32(va0, -lab_shift2);
+
+            // int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );
+            int32x4_t vb0 = vsubq_s32(vfY0, vfZ0);
+            vb0 = vmlaq_n_s32(vdupq_n_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one), vb0, 200);
+            vb0 = vshlq_n_s32(vb0, -lab_shift2);
+
+            // Second batch
+            // ============
+            // int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
+            int32x4_t vR1 = {tab[vget_lane_u8(vRi,4)], tab[vget_lane_u8(vRi,5)], tab[vget_lane_u8(vRi,6)], tab[vget_lane_u8(vRi,7)]};
+            int32x4_t vG1 = {tab[vget_lane_u8(vGi,4)], tab[vget_lane_u8(vGi,5)], tab[vget_lane_u8(vGi,6)], tab[vget_lane_u8(vGi,7)]};
+            int32x4_t vB1 = {tab[vget_lane_u8(vBi,4)], tab[vget_lane_u8(vBi,5)], tab[vget_lane_u8(vBi,6)], tab[vget_lane_u8(vBi,7)]};
+
+            // int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];
+            int32x4_t vfX1 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR1, C0);
+            vfX1 = vmlaq_n_s32(vfX1, vG1, C1);
+            vfX1 = vmlaq_n_s32(vfX1, vB1, C2);
+            vfX1 = vshlq_n_s32(vfX1, -lab_shift);
+            vfX1 = LabCbrtTab_b_fnc(vfX1);
+
+            // int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)];
+            int32x4_t vfY1 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR1, C3);
+            vfY1 = vmlaq_n_s32(vfY1, vG1, C4);
+            vfY1 = vmlaq_n_s32(vfY1, vB1, C5);
+            vfY1 = vshlq_n_s32(vfY1, -lab_shift);
+            vfY1 = LabCbrtTab_b_fnc(vfY1);
+
+            // int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];
+            int32x4_t vfZ1 = vmlaq_n_s32(vdupq_n_s32(one_lsh_by_lab_shift_sub_one), vR1, C6);
+            vfZ1 = vmlaq_n_s32(vfZ1, vG1, C7);
+            vfZ1 = vmlaq_n_s32(vfZ1, vB1, C8);
+            vfZ1 = vshlq_n_s32(vfZ1, -lab_shift);
+            vfZ1 = LabCbrtTab_b_fnc(vfZ1);
+
+            // int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );
+            int32x4_t vL1 = vmlaq_n_s32(vdupq_n_s32(Lshift+one_lsh_by_lab_shift2_sub_one), vfY1, Lscale);
+            vL1 = vshlq_n_s32(vL1, -lab_shift2);
+
+            // int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );
+            int32x4_t va1 = vsubq_s32(vfX1, vfY1);
+            va1 = vmlaq_n_s32(vdupq_n_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one), va1, 500);
+            va1 = vshlq_n_s32(va1, -lab_shift2);
+
+            // int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );
+            int32x4_t vb1 = vsubq_s32(vfY1, vfZ1);
+            vb1 = vmlaq_n_s32(vdupq_n_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one), vb1, 200);
+            vb1 = vshlq_n_s32(vb1, -lab_shift2);
+
+            // Saturate, combine and store both batches
+            // ========================================
+            // dst[0] = saturate_cast<uchar>(L);
+            // dst[1] = saturate_cast<uchar>(a);
+            // dst[2] = saturate_cast<uchar>(b);
+            uint8x8x3_t vLab;
+            vLab.val[0] = vqmovn_u16(vcombine_u16(vqmovun_s32(vL0), vqmovun_s32(vL1)));
+            vLab.val[1] = vqmovn_u16(vcombine_u16(vqmovun_s32(va0), vqmovun_s32(va1)));
+            vLab.val[2] = vqmovn_u16(vcombine_u16(vqmovun_s32(vb0), vqmovun_s32(vb1)));
+            vst3_u8(dst, vLab);
+        }
+
+#endif
+
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
         const int xyzDescaleShift = 1 << (lab_shift - 1);
