@@ -11,17 +11,6 @@ ocv_define_module(3d opencv_imgproc opencv_features2d opencv_flann ${debug_modul
 )
 ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES})
 
-
-#TODO: remove this dependency
-find_package(Ceres QUIET)
-
-if(Ceres_FOUND)
-  ocv_target_compile_definitions(${the_module} PUBLIC CERES_FOUND)
-  ocv_target_link_libraries(${the_module} ${CERES_LIBRARIES})
-  if(Ceres_VERSION VERSION_LESS 2.0.0)
-    ocv_include_directories("${CERES_INCLUDE_DIRS}")
-  endif()
-  add_definitions(/DGLOG_NO_ABBREVIATED_SEVERITIES)  # avoid ERROR macro conflict in glog (ceres dependency)
-else()
-  message(STATUS "3d/rgbd: CERES support is disabled. Ceres Solver is Required for Posegraph optimization")
+if(NOT HAVE_EIGEN)
+  message(STATUS "3d: Eigen support is disabled. Eigen is Required for Posegraph optimization")
 endif()

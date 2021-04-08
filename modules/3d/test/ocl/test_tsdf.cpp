@@ -2,9 +2,13 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "perf_precomp.hpp"
+#include "../test_precomp.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 
-namespace opencv_test { namespace {
+#ifdef HAVE_OPENCL
+
+namespace opencv_test {
+namespace {
 
 using namespace cv;
 
@@ -240,7 +244,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z) )
+                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -270,118 +274,197 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
             }
         }, nstripes);
 }
-
 // ----------------------------
+
+static const bool display = false;
+static const bool parallelCheck = false;
 
 class Settings
 {
 public:
-    Ptr<kinfu::Params> _params;
+    Ptr<kinfu::Params> params;
     Ptr<kinfu::Volume> volume;
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 
-    Settings(bool useHashTSDF)
+    Settings(bool useHashTSDF, bool onlySemisphere)
     {
         if (useHashTSDF)
-            _params = kinfu::Params::hashTSDFParams(true);
+            params = kinfu::Params::hashTSDFParams(true);
         else
-            _params = kinfu::Params::coarseParams();
+            params = kinfu::Params::coarseParams();
 
-        volume = kinfu::makeVolume(_params->volumeType, _params->voxelSize, _params->volumePose.matrix,
-            _params->raycast_step_factor, _params->tsdf_trunc_dist, _params->tsdf_max_weight,
-            _params->truncateThreshold, _params->volumeDims);
+        volume = kinfu::makeVolume(params->volumeType, params->voxelSize, params->volumePose.matrix,
+            params->raycast_step_factor, params->tsdf_trunc_dist, params->tsdf_max_weight,
+            params->truncateThreshold, params->volumeDims);
 
-        scene = Scene::create(_params->frameSize, _params->intr, _params->depthFactor, true);
+        scene = Scene::create(params->frameSize, params->intr, params->depthFactor, onlySemisphere);
         poses = scene->getPoses();
     }
 };
 
-void displayImage(Mat depth, UMat _points, UMat _normals, float depthFactor, Vec3f lightPose)
+void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
 {
-    Mat  points, normals, image;
-    AccessFlag af = ACCESS_READ;
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
+    Mat image;
     patchNaNs(points);
-
     imshow("depth", depth * (1.f / depthFactor / 4.f));
     renderPointsNormals(points, normals, image, lightPose);
     imshow("render", image);
     waitKey(2000);
 }
 
-static const bool display = false;
-
-PERF_TEST(Perf_TSDF, integrate)
+void normalsCheck(Mat normals)
 {
-    Settings settings(false);
-    for (size_t i = 0; i < settings.poses.size(); i++)
+    Vec4f vector;
+    for (auto pvector = normals.begin<Vec4f>(); pvector < normals.end<Vec4f>(); pvector++)
     {
-        Matx44f pose = settings.poses[i].matrix;
-        Mat depth = settings.scene->depth(pose);
-        startTimer();
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
-        stopTimer();
-        depth.release();
+        vector = *pvector;
+        if (!cvIsNaN(vector[0]))
+        {
+            float length = vector[0] * vector[0] +
+                vector[1] * vector[1] +
+                vector[2] * vector[2];
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+        }
     }
-    SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(Perf_TSDF, raycast)
+int counterOfValid(Mat points)
 {
-    Settings settings(false);
-    for (size_t i = 0; i < settings.poses.size(); i++)
+    Vec4f* v;
+    int i, j;
+    int count = 0;
+    for (i = 0; i < points.rows; ++i)
     {
-        UMat _points, _normals;
-        Matx44f pose = settings.poses[i].matrix;
-        Mat depth = settings.scene->depth(pose);
+        v = (points.ptr<Vec4f>(i));
+        for (j = 0; j < points.cols; ++j)
+        {
+            if ((v[j])[0] != 0 ||
+                (v[j])[1] != 0 ||
+                (v[j])[2] != 0)
+            {
+                count++;
+            }
+        }
+    }
+    return count;
+}
 
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
-        startTimer();
-        settings.volume->raycast(pose, settings._params->intr, settings._params->frameSize, _points, _normals);
-        stopTimer();
+void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+{
+    auto normalCheck = [](Vec4f& vector, const int*)
+    {
+        if (!cvIsNaN(vector[0]))
+        {
+            float length = vector[0] * vector[0] +
+                vector[1] * vector[1] +
+                vector[2] * vector[2];
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+        }
+    };
+
+    Settings settings(isHashTSDF, false);
+
+    Mat depth = settings.scene->depth(settings.poses[0]);
+    UMat _points, _normals, _tmpnormals;
+    UMat _newPoints, _newNormals;
+    Mat  points, normals;
+    AccessFlag af = ACCESS_READ;
+
+    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
+
+    if (isRaycast)
+    {
+        settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
+    }
+    if (isFetchPointsNormals)
+    {
+        settings.volume->fetchPointsNormals(_points, _normals);
+    }
+    if (isFetchNormals)
+    {
+        settings.volume->fetchPointsNormals(_points, _tmpnormals);
+        settings.volume->fetchNormals(_points, _normals);
+    }
+
+    normals = _normals.getMat(af);
+    points = _points.getMat(af);
+
+    if (parallelCheck)
+        normals.forEach<Vec4f>(normalCheck);
+    else
+        normalsCheck(normals);
+
+    if (isRaycast && display)
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+
+    if (isRaycast)
+    {
+        settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
+        normals = _newNormals.getMat(af);
+        points = _newPoints.getMat(af);
+        normalsCheck(normals);
+
+        if (parallelCheck)
+            normals.forEach<Vec4f>(normalCheck);
+        else
+            normalsCheck(normals);
 
         if (display)
-            displayImage(depth, _points, _normals, settings._params->depthFactor, settings._params->lightPose);
+            displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
     }
-    SANITY_CHECK_NOTHING();
+
+    points.release(); normals.release();
 }
 
-PERF_TEST(Perf_HashTSDF, integrate)
+void valid_points_test(bool isHashTSDF)
 {
-    Settings settings(true);
+    Settings settings(isHashTSDF, true);
 
-    for (size_t i = 0; i < settings.poses.size(); i++)
-    {
-        Matx44f pose = settings.poses[i].matrix;
-        Mat depth = settings.scene->depth(pose);
-        startTimer();
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
-        stopTimer();
-        depth.release();
-    }
-    SANITY_CHECK_NOTHING();
+    Mat depth = settings.scene->depth(settings.poses[0]);
+    UMat _points, _normals, _newPoints, _newNormals;
+    AccessFlag af = ACCESS_READ;
+    Mat  points, normals;
+    int anfas, profile;
+
+    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
+    settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
+    normals = _normals.getMat(af);
+    points = _points.getMat(af);
+    patchNaNs(points);
+    anfas = counterOfValid(points);
+
+    if (display)
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+
+    settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
+    normals = _newNormals.getMat(af);
+    points = _newPoints.getMat(af);
+    patchNaNs(points);
+    profile = counterOfValid(points);
+
+    if (display)
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+
+    // TODO: why profile == 2*anfas ?
+    float percentValidity = float(anfas) / float(profile);
+
+    ASSERT_NE(profile, 0) << "There is no points in profile";
+    ASSERT_NE(anfas, 0) << "There is no points in anfas";
+    ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-PERF_TEST(Perf_HashTSDF, raycast)
-{
-    Settings settings(true);
-    for (size_t i = 0; i < settings.poses.size(); i++)
-    {
-        UMat _points, _normals;
-        Matx44f pose = settings.poses[i].matrix;
-        Mat depth = settings.scene->depth(pose);
+TEST(TSDF_GPU, raycast_normals) { normal_test(false, true, false, false); }
+TEST(TSDF_GPU, fetch_points_normals) { normal_test(false, false, true, false); }
+TEST(TSDF_GPU, fetch_normals) { normal_test(false, false, false, true); }
+TEST(TSDF_GPU, valid_points) { valid_points_test(false); }
 
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
-        startTimer();
-        settings.volume->raycast(pose, settings._params->intr, settings._params->frameSize, _points, _normals);
-        stopTimer();
+TEST(HashTSDF_GPU, raycast_normals) { normal_test(true, true, false, false); }
+TEST(HashTSDF_GPU, fetch_points_normals) { normal_test(true, false, true, false); }
+TEST(HashTSDF_GPU, fetch_normals) { normal_test(true, false, false, true); }
+TEST(HashTSDF_GPU, valid_points) { valid_points_test(true); }
 
-        if (display)
-            displayImage(depth, _points, _normals, settings._params->depthFactor, settings._params->lightPose);
-    }
-    SANITY_CHECK_NOTHING();
 }
+}  // namespace
 
-}} // namespace
+#endif

@@ -4,8 +4,7 @@
 
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
 
-typedef __INT8_TYPE__ int8_t;
-
+typedef char int8_t;
 typedef int8_t TsdfType;
 typedef uchar WeightType;
 
@@ -25,17 +24,6 @@ static inline TsdfType floatToTsdf(float num)
 static inline float tsdfToFloat(TsdfType num)
 {
     return ( (float) num ) / (-128);
-}
-
-__kernel void preCalculationPixNorm (__global float * pixNorms,
-                                     const __global float * xx,
-                                     const __global float * yy,
-                                     int width)
-{    
-    int i = get_global_id(0);
-    int j = get_global_id(1);
-    int idx = i*width + j;
-    pixNorms[idx] = sqrt(xx[j] * xx[j] + yy[i] * yy[i] + 1.0f);
 }
 
 __kernel void integrate(__global const char * depthptr,
@@ -85,7 +73,7 @@ __kernel void integrate(__global const char * depthptr,
     int volYidx = x*volDims.x + y*volDims.y;
 
     int startZ, endZ;
-    if(fabs(zStep.z) > 1e-5)
+    if(fabs(zStep.z) > 1e-5f)
     {
         int baseZ = convert_int(-basePt.z / zStep.z);
         if(zStep.z > 0)
@@ -162,7 +150,7 @@ __kernel void integrate(__global const char * depthptr,
         if(v == 0)
             continue;
 
-        int idx = projected.y * depth_rows + projected.x;
+        int idx = projected.y * depth_cols + projected.x;
         float pixNorm = pixNorms[idx];
         //float pixNorm = length(camPixVec);
 
@@ -239,8 +227,8 @@ inline float3 getNormalVoxel(float3 p, __global const struct TsdfVoxel* volumePt
 
         float vaz[8];
         for(int i = 0; i < 8; i++)
-            vaz[i] = tsdfToFloat(volumePtr[nco[i] + dim].tsdf -
-                                 volumePtr[nco[i] - dim].tsdf);
+            vaz[i] = tsdfToFloat(volumePtr[nco[i] + dim].tsdf) -
+                     tsdfToFloat(volumePtr[nco[i] - dim].tsdf);
 
         float8 vz = vload8(0, vaz);
 

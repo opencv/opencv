@@ -30,8 +30,13 @@ class CV_EXPORTS_W Volume
 
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
                            const kinfu::Intr& intrinsics, const int frameId = 0)               = 0;
+    virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
+                           const Matx44f& cameraPose, const kinfu::Intr& intrinsics,
+                           const Intr& rgb_intrinsics, const int frameId = 0)                  = 0;
     virtual void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics,
                          const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
+    virtual void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize,
+                         OutputArray points, OutputArray normals, OutputArray colors) const    = 0;
     virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const             = 0;
     virtual void reset()                                                                       = 0;
@@ -45,8 +50,9 @@ class CV_EXPORTS_W Volume
 
 enum class VolumeType
 {
-    TSDF     = 0,
-    HASHTSDF = 1
+    TSDF        = 0,
+    HASHTSDF    = 1,
+    COLOREDTSDF = 2
 };
 
 struct CV_EXPORTS_W VolumeParams

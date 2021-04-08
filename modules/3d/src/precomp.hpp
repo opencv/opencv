@@ -53,8 +53,11 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include <limits>
+#include <vector>
 #include <list>
 #include <set>
+#include <unordered_set>
 
 #define GET_OPTIMIZED(func) (func)
 

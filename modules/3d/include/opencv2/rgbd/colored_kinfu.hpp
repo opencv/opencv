@@ -4,15 +4,15 @@
 
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
 
-#ifndef __OPENCV_RGBD_KINFU_HPP__
-#define __OPENCV_RGBD_KINFU_HPP__
+#ifndef __OPENCV_RGBD_COLORED_KINFU_HPP__
+#define __OPENCV_RGBD_COLORED_KINFU_HPP__
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/affine.hpp"
 #include <opencv2/rgbd/volume.hpp>
 
 namespace cv {
-namespace kinfu {
+namespace colored_kinfu {
 //! @addtogroup kinect_fusion
 //! @{
 
@@ -75,7 +75,7 @@ struct CV_EXPORTS_W Params
     CV_WRAP static Ptr<Params> hashTSDFParams(bool isCoarse);
 
     /** @brief ColoredTSDF parameters
-      A set of parameters suitable for use with ColoredTSDFVolume
+      A set of parameters suitable for use with HashTSDFVolume
     */
     CV_WRAP static Ptr<Params> coloredTSDFParams(bool isCoarse);
 
@@ -83,6 +83,8 @@ struct CV_EXPORTS_W Params
     CV_PROP_RW Size frameSize;
 
     /** @brief rgb frame size in pixels */
+    CV_PROP_RW Size rgb_frameSize;
+
     CV_PROP_RW kinfu::VolumeType volumeType;
 
     /** @brief camera intrinsics */
@@ -90,6 +92,7 @@ struct CV_EXPORTS_W Params
 
     /** @brief rgb camera intrinsics */
     CV_PROP_RW Matx33f rgb_intr;
+
     /** @brief pre-scale per 1 meter for input values
 
     Typical values are:
@@ -189,11 +192,11 @@ struct CV_EXPORTS_W Params
 
   That's why you need to set the OPENCV_ENABLE_NONFREE option in CMake to use KinectFusion.
 */
-class CV_EXPORTS_W KinFu
+class CV_EXPORTS_W ColoredKinFu
 {
 public:
-    CV_WRAP static Ptr<KinFu> create(const Ptr<Params>& _params);
-    virtual ~KinFu();
+    CV_WRAP static Ptr<ColoredKinFu> create(const Ptr<Params>& _params);
+    virtual ~ColoredKinFu();
 
     /** @brief Get current parameters */
     virtual const Params& getParams() const = 0;
@@ -244,14 +247,12 @@ public:
     virtual const Affine3f getPose() const = 0;
 
     /** @brief Process next depth frame
+        @param depth input Mat of depth frame
+        @param rgb   input Mat of rgb (colored) frame
 
-      Integrates depth into voxel space with respect to its ICP-calculated pose.
-      Input image is converted to CV_32F internally if has another type.
-
-    @param depth one-channel image which size and depth scale is described in algorithm's parameters
-    @return true if succeeded to align new frame with current scene, false if opposite
+        @return true if succeeded to align new frame with current scene, false if opposite
     */
-    CV_WRAP virtual bool update(InputArray depth) = 0;
+    CV_WRAP virtual bool update(InputArray depth, InputArray rgb) = 0;
 };
 
 //! @}
