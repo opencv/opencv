@@ -675,7 +675,6 @@ TEST_P(videocapture_acceleration, read)
     VideoCaptureAPIs backend = get<1>(param);
     VideoAccelerationType va_type = get<2>(param);
     bool use_umat = get<3>(param);
-    int device_idx = -1;
     const int frameNum = 15;
 
     std::string filepath = cvtest::findDataFile("video/" + filename);
@@ -695,10 +694,12 @@ TEST_P(videocapture_acceleration, read)
 
 
     // HW reader
-    VideoCapture hw_reader(filepath, backend, {
-            CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type),
-            CAP_PROP_HW_DEVICE, device_idx
-    });
+    std::vector<int> params = { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
+    if (backend == CAP_FFMPEG && use_umat) {
+        params.push_back(CAP_PROP_HW_DEVICE_OPENCL);
+        params.push_back(0);
+    }
+    VideoCapture hw_reader(filepath, backend, params);
     if (!hw_reader.isOpened())
     {
         if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
@@ -819,7 +820,6 @@ TEST_P(videowriter_acceleration, write)
     std::string extension = get<0>(param).ext;
     double psnr_threshold = get<0>(param).PSNR;
     VideoAccelerationType va_type = get<1>(param);
-    int device_idx = -1;
     bool use_umat = get<2>(param);
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
@@ -834,16 +834,18 @@ TEST_P(videowriter_acceleration, write)
     // Write video
     VideoAccelerationType actual_va;
     {
+        std::vector<int> params = { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
+        if (backend == CAP_FFMPEG && use_umat) {
+            params.push_back(VIDEOWRITER_PROP_HW_DEVICE_OPENCL);
+            params.push_back(0);
+        }
         VideoWriter hw_writer(
             filename,
             backend,
             VideoWriter::fourcc(codecid[0], codecid[1], codecid[2], codecid[3]),
             fps,
             sz,
-            {
-                VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type),
-                VIDEOWRITER_PROP_HW_DEVICE, device_idx
-            }
+            params
         );
 
         if (!hw_writer.isOpened()) {

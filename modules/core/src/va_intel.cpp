@@ -535,7 +535,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
-    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
+    if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
         UMat u = src.getUMat();
 
@@ -638,7 +638,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
-    if (display == ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
+    if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
         UMat u = dst.getUMat();
 

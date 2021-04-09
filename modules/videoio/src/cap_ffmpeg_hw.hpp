@@ -56,7 +56,7 @@ using namespace cv;
 
 static AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_category)(const AVCodec *),
                               const char *disabled_codecs, AVPixelFormat *hw_pix_fmt);
-static AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname);
+static AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool force_opencl_init);
 static AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
 static AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 static VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type);
@@ -382,7 +382,7 @@ static AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
     if (!ctx || ocl_context.empty())
         return AV_HWDEVICE_TYPE_NONE;
 #ifdef HAVE_VA
-    VADisplay vadisplay_ocl = ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
+    VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VADisplay vadisplay_ctx = hw_get_va_display(ctx);
     if (vadisplay_ocl && vadisplay_ocl == vadisplay_ctx)
         return AV_HWDEVICE_TYPE_VAAPI;
@@ -467,7 +467,7 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
         return NULL;
     AVBufferRef* ctx = NULL;
 #ifdef HAVE_VA
-    VADisplay vadisplay_ocl = ocl_context.getContext().getProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
+    VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     if (vadisplay_ocl) {
         ctx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_VAAPI);
         if (ctx) {
@@ -479,7 +479,7 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
     }
 #endif
 #ifdef HAVE_D3D11
-    ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
+    ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
     if (d3d11device_ocl) {
         ctx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_D3D11VA);
         if (ctx) {
@@ -513,7 +513,7 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
 }
 
 static
-AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname) {
+AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool force_opencl_init) {
     if (AV_HWDEVICE_TYPE_NONE == hw_type)
         return NULL;
 
@@ -558,13 +558,18 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
             }
             CV_LOG_INFO(NULL, "FFMPEG: Created video acceleration context (av_hwdevice_ctx_create) for " << hw_child_name << " on device " << device_name);
             // if OpenCL context not created yet, create it with binding to video acceleration context
-            if (ocl::useOpenCL(false)) {
-                if (ocl_context.empty()) {
-                    hw_init_opencl(hw_device_ctx);
-                    ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
-                    if (!ocl_context.empty()) {
-                        CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << hw_child_name <<
-                            " video acceleration on OpenCL device: " << ocl_context.getDevice().name());
+            if (ocl::haveOpenCL()) {
+                if (ocl_context.empty() || force_opencl_init) {
+                    std::string ocl_device_name = std::string(hw_child_name) + " video acceleration on OpenCL device: "
+                                                  + ocl_context.getDevice().name();
+                    try {
+                        hw_init_opencl(hw_device_ctx);
+                        ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
+                        if (!ocl_context.empty()) {
+                            CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << ocl_device_name);
+                        }
+                    } catch (...) {
+                        CV_LOG_INFO(NULL, "FFMPEG: Exception creating OpenCL context with " << ocl_device_name);
                     }
                 }
                 else {

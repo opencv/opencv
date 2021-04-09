@@ -52,7 +52,7 @@ namespace cv { namespace ocl {
 //! @{
 
 CV_EXPORTS_W bool haveOpenCL();
-CV_EXPORTS_W bool useOpenCL(bool init = true); // TODO: can we change function signature?
+CV_EXPORTS_W bool useOpenCL();
 CV_EXPORTS_W bool haveAmdBlas();
 CV_EXPORTS_W bool haveAmdFft();
 CV_EXPORTS_W void setUseOpenCL(bool flag);
@@ -279,8 +279,12 @@ public:
     /** @returns cl_context value */
     void* ptr() const;
 
-    /** @returns Property specified on context creation */
-    void* getProperty(long propertyId) const;
+    /**
+     * @brief Get OpenCL context property specified on context creation
+     * @param propertyId Property id (CL_CONTEXT_* as defined in cl_context_properties type)
+     * @returns Property value if property was specified on clCreateContext, or NULL if context created without the property
+     */
+    void* getOpenCLContextProperty(long propertyId) const;
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
@@ -296,17 +300,17 @@ public:
 
     class CV_EXPORTS UserContext {
     public:
-        virtual ~UserContext() {};
+        virtual ~UserContext();
     };
     template <typename T>
-    void setUserContext(std::shared_ptr<T> userContext) {
+    inline void setUserContext(const std::shared_ptr<T>& userContext) {
         setUserContext(typeid(T), userContext);
     }
     template <typename T>
-    std::shared_ptr<T> getUserContext() {
+    inline std::shared_ptr<T> getUserContext() {
         return std::dynamic_pointer_cast<T>(getUserContext(typeid(T)));
     }
-    void setUserContext(std::type_index typeId, std::shared_ptr<UserContext> userContext);
+    void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext);
     std::shared_ptr<UserContext> getUserContext(std::type_index typeId);
 
     struct Impl;

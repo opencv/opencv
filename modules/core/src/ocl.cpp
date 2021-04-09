@@ -1186,11 +1186,9 @@ bool haveOpenCL()
     return g_isOpenCLAvailable;
 }
 
-bool useOpenCL(bool init)
+bool useOpenCL()
 {
     CoreTLSData& data = getCoreTlsData();
-    if (!init)
-        return data.useOpenCL != 0;
     if (data.useOpenCL < 0)
     {
         try
@@ -2704,7 +2702,7 @@ public:
 
     std::map<std::type_index, std::shared_ptr<UserContext>> userContextStorage;
     cv::Mutex userContextMutex;
-    void setUserContext(std::type_index typeId, std::shared_ptr<UserContext> userContext) {
+    void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext) {
         cv::AutoLock lock(userContextMutex);
         userContextStorage[typeId] = userContext;
     }
@@ -3035,7 +3033,8 @@ Context Context::create(const std::string& configuration)
     return ctx;
 }
 
-void* Context::getProperty(long propertyId) const {
+void* Context::getOpenCLContextProperty(long propertyId) const
+{
     if (p == NULL)
         return nullptr;
     ::size_t size = 0;
@@ -3113,12 +3112,18 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
-void Context::setUserContext(std::type_index typeId, std::shared_ptr<Context::UserContext> userContext) {
+Context::UserContext::~UserContext()
+{
+}
+
+void Context::setUserContext(std::type_index typeId, const std::shared_ptr<Context::UserContext>& userContext)
+{
     if (p)
         p->setUserContext(typeId, userContext);
 }
 
-std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId) {
+std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId)
+{
     if (p)
         return p->getUserContext(typeId);
     else
