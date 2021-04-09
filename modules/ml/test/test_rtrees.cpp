@@ -99,15 +99,10 @@ TEST(ML_RTrees, bug_12974_throw_exception_when_predict_different_feature_count)
 {
     // create a simple 2 feature dataset and train + save the model
     cv::Ptr<RTrees> model = RTrees::create();
-    Mat samples(2, 2, CV_32FC1);
-    samples.at<float>(0,0) = 0;
-    samples.at<float>(0,1) = 0;
-    samples.at<float>(1,0) = 1;
-    samples.at<float>(1,1) = 1;
-    Mat responses(2, 1, CV_32S);
-    responses.at<float>(0) = 0;
-    responses.at<float>(1) = 1;
-    cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
+    Mat samples(2, 2, CV_32F);
+    randu(samples, 0, 10);
+    Mat labels = (Mat_<int>(2,1) << 0,1);
+    cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, labels);
     model->train(trainData);
     // load the model and try to predict on a 1 feature sample
     Mat test(1, 1, CV_32FC1);
