@@ -130,8 +130,10 @@ void cv::super_fisheye::projectPoints(InputArray objectPoints, OutputArray image
         // Angle of the incoming ray:
         double theta = atan2(r, 1);
 
-        if(Y[2] <= 0)
-            theta += M_PI/2;
+        if(Y[2] > 0)
+            theta = atan2(r, 1);
+        else
+            theta = atan2(1, r) + M_PI/2;
 
         double theta2 = theta*theta, theta3 = theta2*theta, theta4 = theta2*theta2, theta5 = theta4*theta,
                 theta6 = theta3*theta3, theta7 = theta6*theta, theta8 = theta4*theta4, theta9 = theta8*theta;
@@ -510,7 +512,7 @@ void cv::super_fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray 
 }
 
 
-void cv::foo::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
+void cv::internal2::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
                                  cv::InputArray _rvec,cv::InputArray _tvec,
                                  const cv::internal::IntrinsicParams& param, cv::OutputArray jacobian)
 {
@@ -523,7 +525,7 @@ void cv::foo::projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePo
     super_fisheye::projectPoints(objectPoints, imagePoints, _rvec, _tvec, K, param.k, param.alpha, jacobian);
 }
 
-cv::Mat cv::foo::NormalizePixels(const Mat& imagePoints, const cv::internal::IntrinsicParams& param)
+cv::Mat cv::internal2::NormalizePixels(const Mat& imagePoints, const cv::internal::IntrinsicParams& param)
 {
     CV_INSTRUMENT_REGION();
 

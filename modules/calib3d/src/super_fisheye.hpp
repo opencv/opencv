@@ -3,7 +3,7 @@
 #include "precomp.hpp"
 #include "fisheye.hpp"
 
-namespace cv { namespace foo {
+namespace cv { namespace internal2 {
 
 void projectPoints(cv::InputArray objectPoints, cv::OutputArray imagePoints,
                    cv::InputArray _rvec,cv::InputArray _tvec,
