@@ -45,7 +45,7 @@
 #include <limits>
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::fisheye::projectPoints
+/// cv::super_fisheye::projectPoints
 
 void cv::super_fisheye::projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
                                 InputArray K, InputArray D, double alpha, OutputArray jacobian)
@@ -252,7 +252,7 @@ void cv::super_fisheye::projectPoints(InputArray objectPoints, OutputArray image
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::fisheye::undistortPoints
+/// cv::super_fisheye::undistortPoints
 
 void cv::super_fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
 {
