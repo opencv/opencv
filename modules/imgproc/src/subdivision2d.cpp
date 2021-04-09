@@ -100,16 +100,19 @@ Point2f Subdiv2D::getVertex(int vertex, CV_OUT int* firstEdge) const
 }
 
 
-Subdiv2D::Subdiv2D()
+Subdiv2D::Subdiv2D(bool _flag)
 {
+    flag = _flag;
     validGeometry = false;
     freeQEdge = 0;
     freePoint = 0;
     recentEdge = 0;
 }
 
-Subdiv2D::Subdiv2D(Rect rect)
+Subdiv2D::Subdiv2D(Rect rect, bool _flag)
 {
+    flag = _flag;
+
     validGeometry = false;
     freeQEdge = 0;
     freePoint = 0;
@@ -144,24 +147,36 @@ bool Subdiv2D::QuadEdge::isfree() const
 Subdiv2D::Vertex::Vertex()
 {
     firstEdge = 0;
-    type = -1;
+    type = PTTYPE_FREE;
 }
 
 Subdiv2D::Vertex::Vertex(Point2f _pt, bool _isvirtual, int _firstEdge)
 {
     firstEdge = _firstEdge;
-    type = (int)_isvirtual;
+    type = _isvirtual ? PTTYPE_VORONOI : PTTYPE_DELAUNAY;
+    pt = _pt;
+}
+
+Subdiv2D::Vertex::Vertex(Point2f _pt, int _type, int _firstEdge)
+{
+    firstEdge = _firstEdge;
+    type = _type;
     pt = _pt;
 }
 
 bool Subdiv2D::Vertex::isvirtual() const
 {
-    return type > 0;
+    return type == PTTYPE_VORONOI || type == PTTYPE_VORONOI_BOUNDING;
 }
 
 bool Subdiv2D::Vertex::isfree() const
 {
-    return type < 0;
+    return type == PTTYPE_FREE;
+}
+
+bool Subdiv2D::Vertex::isbounding() const
+{
+    return type == PTTYPE_DELAUNAY_BOUNDING || type == PTTYPE_VORONOI_BOUNDING;
 }
 
 void Subdiv2D::splice( int edgeA, int edgeB )
@@ -210,19 +225,173 @@ void Subdiv2D::swapEdges( int edge )
     splice(sedge, getEdge(b, NEXT_AROUND_LEFT));
 }
 
-static double triangleArea( Point2f a, Point2f b, Point2f c )
+static int counterClockwise(Point2f a, Point2f b, Point2f c)
 {
-    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
+    double cp = (b - a).cross(c - a);
+    return cp > FLT_EPSILON ? 1 : (cp < -FLT_EPSILON ? -1 : 0);
 }
+
+static bool parallel(Point2f u, Point2f v)
+{
+    return abs(u.cross(v)) < FLT_EPSILON;
+}
+
+static bool equal(Point2f a, Point2f b)
+{
+    return abs(a.x - b.x) < FLT_EPSILON && abs(a.y - b.y) < FLT_EPSILON;
+}
+
+// variable point of the form r * v + c, where r is an independent variable approaching +infinity
+struct Point2fEx
+{
+    Point2f c, v;
+
+    Point2fEx(Point2f c) : c(c), v(0.f, 0.f) { }
+    Point2fEx(Point2f c, Point2f v) : c(c), v(v) { }
+};
+
+static int counterClockwiseEx(Point2fEx a, Point2fEx b, Point2fEx c)
+{
+    const static Point2f o(0.f, 0.f);
+
+    if (!equal(a.v, o) && !equal(b.v, o) && !equal(c.v, o)) {
+        if (equal(a.c, o) && equal(b.c, o) && equal(c.c, o)) {
+            return counterClockwise(a.v, b.v, c.v);
+        }
+        CV_Error(CV_StsNotImplemented, "");
+    }
+
+    if (!equal(a.v, o) && !equal(b.v, o) && equal(c.v, o)) {
+        if (!parallel(a.v, b.v)) {
+            return counterClockwise(a.v, b.v, o);
+        } else {
+            if (equal(a.v, b.v)) {
+                return counterClockwise(o, a.v, b.c - a.c);
+            }
+            if (equal(a.c, b.c)) {
+                return counterClockwise(a.v, b.v, c.c - a.c);
+            }
+        }
+        CV_Error(CV_StsNotImplemented, "");
+    }
+
+    if (equal(a.v, o) && equal(b.v, o) && !equal(c.v, o)) {
+        return !parallel(b.c - a.c, c.v) ?
+               counterClockwise(o, b.c - a.c, c.v) : counterClockwise(a.c, b.c, c.c);
+    }
+
+    if (equal(a.v, o) && equal(b.v, o) && equal(c.v, o)) {
+        return counterClockwise(a.c, b.c, c.c);
+    }
+
+    return counterClockwiseEx(b, c, a);
+}
+
+static int rightOfEx(Point2fEx c, Point2fEx a, Point2fEx b)
+{
+    return counterClockwiseEx(c, b, a);
+}
+
+static int inCircle(Point2f a, Point2f b, Point2f c, Point2f d)
+{
+    const double eps = FLT_EPSILON * 0.125;
+
+    double val =
+            ((double)a.x * a.x + (double)a.y * a.y) * ( c - b ).cross( d - b );
+    val -=  ((double)b.x * b.x + (double)b.y * b.y) * ( c - a ).cross( d - a );
+    val +=  ((double)c.x * c.x + (double)c.y * c.y) * ( b - a ).cross( d - a );
+    val -=  ((double)d.x * d.x + (double)d.y * d.y) * ( b - a ).cross( c - a );
+
+    return val > eps ? 1 : val < -eps ? -1 : 0;
+}
+
+static double distance(Point2f a, Point2f b)
+{
+    return norm(b - a);
+}
+
+static int leftOf(Point2f c, Point2f a, Point2f b)
+{
+    return counterClockwise(c, a, b);
+}
+
+static int inCircleEx(Point2fEx a, Point2fEx b, Point2fEx c, Point2fEx d)
+{
+    const static Point2f o(0.f, 0.f);
+
+    CV_Assert(equal(a.v, o) || equal(b.v, o) || equal(c.v, o) || equal(d.v, o));
+
+    if (!equal(a.v, o) && !equal(b.v, o) && !equal(c.v, o) && equal(d.v, o)) {
+        CV_Assert(equal(a.c, o) && equal(b.c, o) && equal(c.c, o));
+
+        return counterClockwiseEx(a, b, c);
+    }
+
+    if (!equal(a.v, o) && equal(b.v, o) && !equal(c.v, o) && equal(d.v, o)) {
+        CV_Assert(equal(a.c, o) && equal(c.c, o));
+
+        if (!parallel(d.c - b.c, c.v - a.v)) {
+            return leftOf(d.c - b.c, o, c.v - a.v);
+        } else {
+            double od = distance(o, d.c);
+            double ob = distance(o, b.c);
+
+            if (abs(od - ob) < FLT_EPSILON) {
+                return 0;
+            } else {
+                return (od < ob && counterClockwiseEx(a, b, c) > 0) ||
+                       (od > ob && counterClockwiseEx(a, b, c) < 0) ? 1 : -1;
+            }
+        }
+    }
+
+    if (!equal(a.v, o) && !equal(b.v, o) && equal(c.v, o) && equal(d.v, o)) {
+        return -inCircleEx(a, c, b, d);
+    }
+
+    if (equal(a.v, o) && equal(b.v, o) && equal(c.v, o) && !equal(d.v, o)) {
+        CV_Assert(equal(d.c, o));
+
+        if (!parallel(b.c - a.c, c.c - b.c)) {
+            return -counterClockwise(a.c, b.c, c.c);
+        } else {
+            double ab = distance(a.c, b.c);
+            double ac = distance(a.c, c.c);
+            double bc = distance(b.c, c.c);
+
+            return ac + bc > ab ? leftOf(d.v, o, b.c - a.c) : leftOf(d.v, o, c.c - b.c);
+        }
+    }
+
+    if (equal(a.v, o) && equal(b.v, o) && equal(c.v, o) && equal(d.v, o)) {
+        return inCircle(a.c, b.c, c.c, d.c);
+    }
+
+    return -inCircleEx(b, c, d, a);
+}
+
+static int rightOf(Point2f c, Point2f a, Point2f b) {
+    return counterClockwise(c, b, a);
+}
+
+#define ORIGIN (Point2f(0.f, 0.f))
+#define FIRST_EDGE_1_ROTATED(vertex) (rotateEdge(vtx[vertex].firstEdge, 1))
+#define EDGE_MIDDLE(edge) ((vtx[edgeOrg(edge)].pt + vtx[edgeDst(edge)].pt) / 2.f)
+#define VTX_PT(vertex)                                                                       \
+        (vtx[vertex].isbounding() ?                                                              \
+                (vtx[vertex].isvirtual() ?                                                       \
+                        (Point2fEx(EDGE_MIDDLE(FIRST_EDGE_1_ROTATED(vertex)), vtx[vertex].pt)) : \
+                        (Point2fEx(ORIGIN, vtx[vertex].pt))) :                                   \
+                (vtx[vertex].pt))
+
 
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
 {
-    Point2f org, dst;
-    edgeOrg(edge, &org);
-    edgeDst(edge, &dst);
-    double cw_area = triangleArea( pt, dst, org );
-
-    return (cw_area > 0) - (cw_area < 0);
+    if (flag) {
+        return rightOfEx(pt, VTX_PT(edgeOrg(edge)), VTX_PT(edgeDst(edge)));
+    } else {
+        return rightOf(pt, vtx[edgeOrg(edge)].pt, vtx[edgeDst(edge)].pt);
+    }
 }
 
 int Subdiv2D::newEdge()
@@ -251,7 +420,7 @@ void Subdiv2D::deleteEdge(int edge)
     freeQEdge = edge;
 }
 
-int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
+int Subdiv2D::newPoint(Point2f pt, int type, int firstEdge)
 {
     if( freePoint == 0 )
     {
@@ -260,16 +429,21 @@ int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
     }
     int vidx = freePoint;
     freePoint = vtx[vidx].firstEdge;
-    vtx[vidx] = Vertex(pt, isvirtual, firstEdge);
+    vtx[vidx] = Vertex(pt, type, firstEdge);
 
     return vidx;
+}
+
+int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
+{
+    return newPoint(pt, isvirtual ? PTTYPE_VORONOI : PTTYPE_DELAUNAY, firstEdge);
 }
 
 void Subdiv2D::deletePoint(int vidx)
 {
     CV_DbgAssert( (size_t)vidx < vtx.size() );
     vtx[vidx].firstEdge = freePoint;
-    vtx[vidx].type = -1;
+    vtx[vidx].type = PTTYPE_FREE;
     freePoint = vidx;
 }
 
@@ -277,135 +451,48 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
 {
     CV_INSTRUMENT_REGION();
 
-    int vertex = 0;
-
-    int i, maxEdges = (int)(qedges.size() * 4);
-
-    if( qedges.size() < (size_t)4 )
-        CV_Error( CV_StsError, "Subdivision is empty" );
-
-    if( pt.x < topLeft.x || pt.y < topLeft.y || pt.x >= bottomRight.x || pt.y >= bottomRight.y )
-        CV_Error( CV_StsOutOfRange, "" );
-
     int edge = recentEdge;
     CV_Assert(edge > 0);
 
-    int location = PTLOC_ERROR;
-
-    int right_of_curr = isRightOf(pt, edge);
-    if( right_of_curr > 0 )
-    {
-        edge = symEdge(edge);
-        right_of_curr = -right_of_curr;
-    }
-
-    for( i = 0; i < maxEdges; i++ )
-    {
+    for (;;) {
         int onext_edge = nextEdge( edge );
         int dprev_edge = getEdge( edge, PREV_AROUND_DST );
 
-        int right_of_onext = isRightOf( pt, onext_edge );
-        int right_of_dprev = isRightOf( pt, dprev_edge );
-
-        if( right_of_dprev > 0 )
-        {
-            if( right_of_onext > 0 || (right_of_onext == 0 && right_of_curr == 0) )
-            {
-                location = PTLOC_INSIDE;
-                break;
-            }
-            else
-            {
-                right_of_curr = right_of_onext;
-                edge = onext_edge;
-            }
+        int right_of_curr, right_of_onext, right_of_dprev;
+        if (flag) {
+            right_of_curr = rightOfEx(pt, VTX_PT(edgeOrg(edge)), VTX_PT(edgeDst(edge)));
+            right_of_onext = rightOfEx(pt, VTX_PT(edgeOrg(onext_edge)), VTX_PT(edgeDst(onext_edge)));
+            right_of_dprev = rightOfEx(pt, VTX_PT(edgeOrg(dprev_edge)), VTX_PT(edgeDst(dprev_edge)));
+        } else {
+            right_of_curr = rightOf(pt, vtx[edgeOrg(edge)].pt, vtx[edgeDst(edge)].pt);
+            right_of_onext = rightOf(pt, vtx[edgeOrg(onext_edge)].pt, vtx[edgeDst(onext_edge)].pt);
+            right_of_dprev = rightOf(pt, vtx[edgeOrg(dprev_edge)].pt, vtx[edgeDst(dprev_edge)].pt);
         }
-        else
-        {
-            if( right_of_onext > 0 )
-            {
-                if( right_of_dprev == 0 && right_of_curr == 0 )
-                {
-                    location = PTLOC_INSIDE;
-                    break;
-                }
-                else
-                {
-                    right_of_curr = right_of_dprev;
-                    edge = dprev_edge;
-                }
-            }
-            else if( right_of_curr == 0 &&
-                    isRightOf( vtx[edgeDst(onext_edge)].pt, edge ) >= 0 )
-            {
-                edge = symEdge( edge );
-            }
-            else
-            {
-                right_of_curr = right_of_onext;
-                edge = onext_edge;
-            }
+
+        if (right_of_curr == 0 && (right_of_onext == 0 || right_of_dprev == 0)) {
+            recentEdge = edge;
+
+            _edge = 0;
+            _vertex = right_of_onext == 0 ? edgeOrg(edge) : edgeDst(edge);
+            return PTLOC_VERTEX;
+        }
+        else if (right_of_curr > 0) {
+            edge = symEdge(edge);
+        }
+        else if (right_of_onext <= 0) {
+            edge = onext_edge;
+        }
+        else if (right_of_dprev <= 0) {
+            edge = dprev_edge;
+        }
+        else {
+            recentEdge = edge;
+
+            _vertex = 0;
+            _edge = edge;
+            return right_of_curr == 0 ? PTLOC_ON_EDGE : PTLOC_INSIDE;
         }
     }
-
-    recentEdge = edge;
-
-    if( location == PTLOC_INSIDE )
-    {
-        Point2f org_pt, dst_pt;
-        edgeOrg(edge, &org_pt);
-        edgeDst(edge, &dst_pt);
-
-        double t1 = fabs( pt.x - org_pt.x );
-        t1 += fabs( pt.y - org_pt.y );
-        double t2 = fabs( pt.x - dst_pt.x );
-        t2 += fabs( pt.y - dst_pt.y );
-        double t3 = fabs( org_pt.x - dst_pt.x );
-        t3 += fabs( org_pt.y - dst_pt.y );
-
-        if( t1 < FLT_EPSILON )
-        {
-            location = PTLOC_VERTEX;
-            vertex = edgeOrg( edge );
-            edge = 0;
-        }
-        else if( t2 < FLT_EPSILON )
-        {
-            location = PTLOC_VERTEX;
-            vertex = edgeDst( edge );
-            edge = 0;
-        }
-        else if( (t1 < t3 || t2 < t3) &&
-                fabs( triangleArea( pt, org_pt, dst_pt )) < FLT_EPSILON )
-        {
-            location = PTLOC_ON_EDGE;
-            vertex = 0;
-        }
-    }
-
-    if( location == PTLOC_ERROR )
-    {
-        edge = 0;
-        vertex = 0;
-    }
-
-    _edge = edge;
-    _vertex = vertex;
-
-    return location;
-}
-
-
-inline int
-isPtInCircle3( Point2f pt, Point2f a, Point2f b, Point2f c)
-{
-    const double eps = FLT_EPSILON*0.125;
-    double val = ((double)a.x * a.x + (double)a.y * a.y) * triangleArea( b, c, pt );
-    val -= ((double)b.x * b.x + (double)b.y * b.y) * triangleArea( a, c, pt );
-    val += ((double)c.x * c.x + (double)c.y * c.y) * triangleArea( a, b, pt );
-    val -= ((double)pt.x * pt.x + (double)pt.y * pt.y) * triangleArea( a, b, c );
-
-    return val > eps ? 1 : val < -eps ? -1 : 0;
 }
 
 
@@ -416,12 +503,6 @@ int Subdiv2D::insert(Point2f pt)
     int curr_point = 0, curr_edge = 0, deleted_edge = 0;
     int location = locate( pt, curr_edge, curr_point );
 
-    if( location == PTLOC_ERROR )
-        CV_Error( CV_StsBadSize, "" );
-
-    if( location == PTLOC_OUTSIDE_RECT )
-        CV_Error( CV_StsOutOfRange, "" );
-
     if( location == PTLOC_VERTEX )
         return curr_point;
 
@@ -431,15 +512,11 @@ int Subdiv2D::insert(Point2f pt)
         recentEdge = curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
         deleteEdge(deleted_edge);
     }
-    else if( location == PTLOC_INSIDE )
-        ;
-    else
-        CV_Error_(CV_StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
 
     assert( curr_edge != 0 );
     validGeometry = false;
 
-    curr_point = newPoint(pt, false);
+    curr_point = newPoint(pt, PTTYPE_DELAUNAY);
     int base_edge = newEdge();
     int first_point = edgeOrg(curr_edge);
     setEdgePoints(base_edge, first_point, curr_point);
@@ -465,9 +542,16 @@ int Subdiv2D::insert(Point2f pt)
         curr_org = edgeOrg( curr_edge );
         curr_dst = edgeDst( curr_edge );
 
-        if( isRightOf( vtx[temp_dst].pt, curr_edge ) > 0 &&
-           isPtInCircle3( vtx[curr_org].pt, vtx[temp_dst].pt,
-                         vtx[curr_dst].pt, vtx[curr_point].pt ) < 0 )
+        bool swap;
+        if (flag) {
+            swap = rightOfEx(VTX_PT(temp_dst), VTX_PT(curr_org), VTX_PT(curr_org) ) > 0 &&
+                   inCircleEx(VTX_PT(curr_org), VTX_PT(temp_dst), VTX_PT(curr_dst), VTX_PT(curr_point) ) > 0;
+        } else {
+            swap = rightOf(vtx[temp_dst].pt, vtx[curr_org].pt, vtx[curr_dst].pt) &&
+                    inCircle(vtx[curr_org].pt, vtx[temp_dst].pt, vtx[curr_dst].pt, vtx[curr_point].pt);
+        }
+
+        if(swap)
         {
             swapEdges( curr_edge );
             curr_edge = getEdge( curr_edge, PREV_AROUND_ORG );
@@ -493,22 +577,29 @@ void Subdiv2D::initDelaunay( Rect rect )
 {
     CV_INSTRUMENT_REGION();
 
-    float big_coord = 3.f * MAX( rect.width, rect.height );
-    float rx = (float)rect.x;
-    float ry = (float)rect.y;
-
     vtx.clear();
     qedges.clear();
 
     recentEdge = 0;
     validGeometry = false;
 
-    topLeft = Point2f( rx, ry );
-    bottomRight = Point2f( rx + rect.width, ry + rect.height );
+    topLeft = Point2f( (float)rect.x, (float)rect.y + (float)rect.height );
+    bottomRight = Point2f( (float)rect.x + (float)rect.width, (float)rect.y );
 
-    Point2f ppA( rx + big_coord, ry );
-    Point2f ppB( rx, ry + big_coord );
-    Point2f ppC( rx - big_coord, ry - big_coord );
+    Point2f ppA, ppB, ppC;
+    if (flag) {
+        ppA = Point2f(1.f, 0.f);
+        ppB = Point2f(cos(2.f * (float) M_PI / 3.f), sin(2.f * (float) M_PI / 3.f));
+        ppC = Point2f(cos(4.f * (float) M_PI / 3.f), sin(4.f * (float) M_PI / 3.f));
+    } else {
+        float big_coord = 3.f * MAX( rect.width, rect.height );
+        float rx = (float)rect.x;
+        float ry = (float)rect.y;
+
+        ppA = Point2f( rx + big_coord, ry );
+        ppB = Point2f( rx, ry + big_coord );
+        ppC = Point2f( rx - big_coord, ry - big_coord );
+    }
 
     vtx.push_back(Vertex());
     qedges.push_back(QuadEdge());
@@ -516,9 +607,9 @@ void Subdiv2D::initDelaunay( Rect rect )
     freeQEdge = 0;
     freePoint = 0;
 
-    int pA = newPoint(ppA, false);
-    int pB = newPoint(ppB, false);
-    int pC = newPoint(ppC, false);
+    int pA = newPoint(ppA, PTTYPE_DELAUNAY_BOUNDING);
+    int pB = newPoint(ppB, PTTYPE_DELAUNAY_BOUNDING);
+    int pC = newPoint(ppC, PTTYPE_DELAUNAY_BOUNDING);
 
     int edge_AB = newEdge();
     int edge_BC = newEdge();
@@ -584,69 +675,60 @@ void Subdiv2D::calcVoronoi()
         return;
 
     clearVoronoi();
-    int i, total = (int)qedges.size();
 
     // loop through all quad-edges, except for the first 3 (#1, #2, #3 - 0 is reserved for "NULL" pointer)
-    for( i = 4; i < total; i++ )
-    {
-        QuadEdge& quadedge = qedges[i];
-
-        if( quadedge.isfree() )
+    for (int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge) {
+        if (qedges[quad_edge].isfree()) {
             continue;
-
-        int edge0 = (int)(i*4);
-        Point2f org0, dst0, org1, dst1;
-
-        if( !quadedge.pt[3] )
-        {
-            int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
-            int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
-
-            edgeOrg(edge0, &org0);
-            edgeDst(edge0, &dst0);
-            edgeOrg(edge1, &org1);
-            edgeDst(edge1, &dst1);
-
-            Point2f virt_point = computeVoronoiPoint(org0, dst0, org1, dst1);
-
-            if( fabs( virt_point.x ) < FLT_MAX * 0.5 &&
-               fabs( virt_point.y ) < FLT_MAX * 0.5 )
-            {
-                quadedge.pt[3] = qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
-                qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = newPoint(virt_point, true);
-            }
         }
 
-        if( !quadedge.pt[1] )
-        {
-            int edge1 = getEdge( edge0, NEXT_AROUND_RIGHT );
-            int edge2 = getEdge( edge1, NEXT_AROUND_RIGHT );
+        for (int i = 0, edge0 = quad_edge * 4; i < 2; ++i, edge0 = symEdge(edge0)) {
+            if (!qedges[edge0 >> 2].pt[3 - (edge0 & 2)]) {
+                int edge1 = getEdge( edge0, NEXT_AROUND_LEFT );
+                int edge2 = getEdge( edge1, NEXT_AROUND_LEFT );
 
-            edgeOrg(edge0, &org0);
-            edgeDst(edge0, &dst0);
-            edgeOrg(edge1, &org1);
-            edgeDst(edge1, &dst1);
+                Point2f org0, dst0, dst1;
+                int edge0_org = edgeOrg(edge0, &org0);
+                int edge0_dst = edgeDst(edge0, &dst0);
+                int edge1_dst = edgeDst(edge1, &dst1);
 
-            Point2f virt_point = computeVoronoiPoint(org0, dst0, org1, dst1);
+                int voronoi_point = 0;
 
-            if( fabs( virt_point.x ) < FLT_MAX * 0.5 &&
-               fabs( virt_point.y ) < FLT_MAX * 0.5 )
-            {
-                quadedge.pt[1] = qedges[edge1 >> 2].pt[1 + (edge1 & 2)] =
-                qedges[edge2 >> 2].pt[1 + (edge2 & 2)] = newPoint(virt_point, true);
+                if (!vtx[edge0_org].isbounding() && !vtx[edge0_dst].isbounding() && !vtx[edge1_dst].isbounding()) {
+                    voronoi_point = newPoint(computeVoronoiPoint(org0, dst0, dst0, dst1), PTTYPE_VORONOI,
+                                             rotateEdge(edge0, 3));
+                }
+
+                if (!vtx[edge0_org].isbounding() && !vtx[edge0_dst].isbounding() && vtx[edge1_dst].isbounding()) {
+                    if (flag) {
+                        Point2f normal(-(dst0 - org0).y, (dst0 - org0).x);
+                        voronoi_point = newPoint(normal / norm(normal), PTTYPE_VORONOI_BOUNDING,
+                                                 rotateEdge(edge0, 3));
+                    } else {
+                        voronoi_point = newPoint(computeVoronoiPoint(org0, dst0, dst0, dst1), PTTYPE_VORONOI_BOUNDING,
+                                                 rotateEdge(edge0, 3));
+                    }
+                }
+
+                if (!vtx[edge0_org].isbounding() && vtx[edge0_dst].isbounding() && vtx[edge1_dst].isbounding()) {
+                    if (flag) {
+                        Point2f normal((dst1 - dst0).y, -(dst1 - dst0).x);
+                        voronoi_point = newPoint(normal / norm(normal), PTTYPE_VORONOI_BOUNDING,
+                                                 rotateEdge(edge1, 3));
+                    } else {
+                        voronoi_point = newPoint(computeVoronoiPoint(org0, dst0, dst0, dst1), PTTYPE_VORONOI_BOUNDING,
+                                                 rotateEdge(edge1, 3));
+                    }
+                }
+
+                qedges[edge0 >> 2].pt[3 - (edge0 & 2)] =
+                qedges[edge1 >> 2].pt[3 - (edge1 & 2)] =
+                qedges[edge2 >> 2].pt[3 - (edge2 & 2)] = voronoi_point;
             }
         }
     }
 
     validGeometry = true;
-}
-
-
-static int
-isRightOf2( const Point2f& pt, const Point2f& org, const Point2f& diff )
-{
-    double cw_area = ((double)org.x - pt.x)*diff.y - ((double)org.y - pt.y)*diff.x;
-    return (cw_area > 0) - (cw_area < 0);
 }
 
 
@@ -657,62 +739,61 @@ int Subdiv2D::findNearest(Point2f pt, Point2f* nearestPt)
     if( !validGeometry )
         calcVoronoi();
 
-    int vertex = 0, edge = 0;
+    int vertex, edge;
     int loc = locate( pt, edge, vertex );
 
-    if( loc != PTLOC_ON_EDGE && loc != PTLOC_INSIDE )
+    if (loc == PTLOC_VERTEX) {
+        if (nearestPt) {
+            *nearestPt = vtx[vertex].pt;
+        }
         return vertex;
+    }
+    if (loc == PTLOC_ON_EDGE || loc == PTLOC_INSIDE) {
+        vertex = !vtx[edgeOrg(edge)].isbounding() ? edgeOrg(edge) : edgeDst(edge);
+    }
+    if (loc == PTLOC_INSIDE) {
+        int lnext_dst = edgeDst(getEdge(edge, NEXT_AROUND_LEFT));
+        vertex = !vtx[lnext_dst].isbounding() ? lnext_dst : vertex;
+    }
+    if (vtx[vertex].isbounding()) {
+        // empty subdivision
+        if (nearestPt) {
+            nearestPt = NULL;
+        }
+        return 0;
+    }
 
-    vertex = 0;
+    for (;;) {
+        CV_Assert(!vtx[vertex].isbounding());
 
-    Point2f start;
-    edgeOrg(edge, &start);
-    Point2f diff = pt - start;
+        int next_vertex = 0;
+        int first_edge = edge = rotateEdge(vtx[vertex].firstEdge, 1);
 
-    edge = rotateEdge(edge, 1);
-
-    int i, total = (int)vtx.size();
-
-    for( i = 0; i < total; i++ )
-    {
-        Point2f t;
-
-        for(;;)
-        {
-            CV_Assert( edgeDst(edge, &t) > 0 );
-            if( isRightOf2( t, start, diff ) >= 0 )
+        do {
+            bool outside;
+            if (flag) {
+                outside = rightOfEx(pt, VTX_PT(edgeOrg(edge)), VTX_PT(edgeDst(edge))) > 0;
+            } else {
+                outside = rightOf(pt, vtx[edgeOrg(edge)].pt, vtx[edgeDst(edge)].pt);
+            }
+            if (outside) {
+                next_vertex = edgeOrg(rotateEdge(edge, 1));
                 break;
+            }
 
             edge = getEdge( edge, NEXT_AROUND_LEFT );
-        }
+        } while (edge != first_edge);
 
-        for(;;)
-        {
-            CV_Assert( edgeOrg( edge, &t ) > 0 );
-
-            if( isRightOf2( t, start, diff ) < 0 )
-                break;
-
-            edge = getEdge( edge, PREV_AROUND_LEFT );
-        }
-
-        Point2f tempDiff;
-        edgeDst(edge, &tempDiff);
-        edgeOrg(edge, &t);
-        tempDiff -= t;
-
-        if( isRightOf2( pt, t, tempDiff ) >= 0 )
-        {
-            vertex = edgeOrg(rotateEdge( edge, 3 ));
+        if (!next_vertex) {
             break;
         }
 
-        edge = symEdge( edge );
+        vertex = next_vertex;
     }
 
-    if( nearestPt && vertex > 0 )
+    if (nearestPt) {
         *nearestPt = vtx[vertex].pt;
-
+    }
     return vertex;
 }
 
@@ -726,6 +807,11 @@ void Subdiv2D::getEdgeList(std::vector<Vec4f>& edgeList) const
             continue;
         if( qedges[i].pt[0] > 0 && qedges[i].pt[2] > 0 )
         {
+            if (flag) {
+                if (vtx[qedges[i].pt[0]].isbounding() || vtx[qedges[i].pt[2]].isbounding()) {
+                    continue;
+                }
+            }
             Point2f org = vtx[qedges[i].pt[0]].pt;
             Point2f dst = vtx[qedges[i].pt[2]].pt;
             edgeList.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
@@ -756,43 +842,138 @@ void Subdiv2D::getLeadingEdgeList(std::vector<int>& leadingEdgeList) const
 void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
 {
     triangleList.clear();
-    int i, total = (int)(qedges.size()*4);
-    std::vector<bool> edgemask(total, false);
-    Rect2f rect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+    std::vector<bool> edgemask(qedges.size() * 4, false);
 
-    for( i = 4; i < total; i += 2 )
-    {
-        if( edgemask[i] )
+    for( int quad_edge = 4; quad_edge < (int)qedges.size(); ++quad_edge ) {
+        if (qedges[quad_edge].isfree()) {
             continue;
-        Point2f a, b, c;
-        int edge_a = i;
-        edgeOrg(edge_a, &a);
-        if ( !rect.contains(a) )
-            continue;
-        int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
-        edgeOrg(edge_b, &b);
-        if ( !rect.contains(b) )
-            continue;
-        int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
-        edgeOrg(edge_c, &c);
-        if ( !rect.contains(c) )
-            continue;
-        edgemask[edge_a] = true;
-        edgemask[edge_b] = true;
-        edgemask[edge_c] = true;
-        triangleList.push_back(Vec6f(a.x, a.y, b.x, b.y, c.x, c.y));
+        }
+
+        for ( int i = 0, edge_a = quad_edge * 4; i < 2; ++i, edge_a = symEdge(edge_a) ) {
+            if( edgemask[edge_a] ) {
+                continue;
+            }
+            int edge_b = getEdge(edge_a, NEXT_AROUND_LEFT);
+            int edge_c = getEdge(edge_b, NEXT_AROUND_LEFT);
+            edgemask[edge_a] = edgemask[edge_b] = edgemask[edge_c] = true;
+            Point2f a, b, c;
+            if (    vtx[edgeOrg(edge_a, &a)].isbounding() ||
+                    vtx[edgeOrg(edge_b, &b)].isbounding() ||
+                    vtx[edgeOrg(edge_c, &c)].isbounding()) {
+                continue;
+            }
+            triangleList.push_back(Vec6f(a.x, a.y, b.x, b.y, c.x, c.y));
+        }
     }
 }
+
+static Point2f intersect(Point2f a, Point2f b, Point2f c, Point2f d)
+{
+    double a1 = b.y - a.y;
+    double b1 = a.x - b.x;
+    double c1 = a1 * a.x + b1 * a.y;
+
+    double a2 = d.y - c.y;
+    double b2 = c.x - d.x;
+    double c2 = a2 * c.x + b2 * c.y;
+
+    double det = a1 * b2 - a2 * b1;
+
+    if (det == 0) {
+        return Point2f(FLT_MAX, FLT_MAX);
+    }
+
+    return Point2f((float)((b2 * c1 - b1 * c2) / det), (float)((a1 * c2 - a2 * c1) / det));
+}
+
+static void cropEdgeEx(Point2fEx &edge_org, Point2fEx &edge_dst, Point2fEx boundary_org, Point2fEx boundary_dst)
+{
+    static const Point2f o(0.f, 0.f);
+
+    CV_Assert(boundary_org.v == o && boundary_dst.v == o);
+
+    int edge_org_right_of_boundary = rightOfEx(edge_org, boundary_org, boundary_dst);
+    int edge_dst_right_of_boundary = rightOfEx(edge_dst, boundary_org, boundary_dst);
+
+    int boundary_org_right_of_edge = rightOfEx(boundary_org, edge_org, edge_dst);
+    int boundary_dst_right_of_edge = rightOfEx(boundary_dst, edge_org, edge_dst);
+
+    if (    edge_org_right_of_boundary != edge_dst_right_of_boundary &&
+            boundary_org_right_of_edge != boundary_dst_right_of_edge) {
+
+        // either org_ideal == o || dst_ideal == o (or both)
+        Point2f x = intersect(
+                edge_org.v != o ? edge_dst.c + edge_org.v : edge_org.c,
+                edge_dst.v != o ? edge_org.c + edge_dst.v : edge_dst.c,
+                boundary_org.c, boundary_dst.c);
+
+        if (edge_org_right_of_boundary > 0) {
+            edge_org.c = x;
+            edge_org.v = o;
+        }
+        if (edge_dst_right_of_boundary > 0) {
+            edge_dst.c = x;
+            edge_dst.v = o;
+        }
+    }
+}
+
+static bool putIfAbsent(Point2f p, std::vector<Point2f> &v) {
+        for (size_t i = 0; i < v.size(); ++i) {
+            if (equal(p, v[i])) {
+                return false;
+            }
+        }
+        v.push_back(p);
+        return true;
+    }
+
+static void sortAround(Point2f o, std::vector<Point2f> &v, int l, int r)
+{
+    if (l >= r) {
+        return;
+    }
+
+    Point2f m = v[l];
+    int i = l - 1;
+    int j = r + 1;
+
+    while (i < j) {
+        do { i++; } while (leftOf(v[i], o, m) < 0);
+        do { j--; } while (leftOf(v[j], o, m) > 0);
+        if (i < j) {
+            std::swap(v[i], v[j]);
+        }
+    }
+
+    sortAround(o, v, l, j);
+    sortAround(o, v, j + 1, r);
+}
+
 
 void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
                                    CV_OUT std::vector<std::vector<Point2f> >& facetList,
                                    CV_OUT std::vector<Point2f>& facetCenters)
 {
+    static const Point2f o(0.f, 0.f);
+
+    const Point2f topRight(bottomRight.x, topLeft.y);
+    const Point2f bottomLeft(topLeft.x, bottomRight.y);
+
     calcVoronoi();
     facetList.clear();
     facetCenters.clear();
 
     std::vector<Point2f> buf;
+
+    // if there are multiple owners, the corner is already in the lists of edges of the owners
+    int bl_site, br_site, tr_site, tl_site;
+    if (flag) {
+        bl_site = findNearest(bottomLeft);
+        br_site = findNearest(bottomRight);
+        tr_site = findNearest(topRight);
+        tl_site = findNearest(topLeft);
+    }
 
     size_t i, total;
     if( idx.empty() )
@@ -804,7 +985,7 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
     {
         int k = idx.empty() ? (int)i : idx[i];
 
-        if( vtx[k].isfree() || vtx[k].isvirtual() )
+        if( vtx[k].isfree() || vtx[k].isvirtual() || vtx[k].isbounding() )
             continue;
         int edge = rotateEdge(vtx[k].firstEdge, 1), t = edge;
 
@@ -812,10 +993,69 @@ void Subdiv2D::getVoronoiFacetList(const std::vector<int>& idx,
         buf.clear();
         do
         {
-            buf.push_back(vtx[edgeOrg(t)].pt);
+            int edge_org = edgeOrg(t);
+            int edge_dst = edgeDst(t);
+
+            if (flag) {
+                Point2fEx org = VTX_PT(edge_org), dst = VTX_PT(edge_dst);
+
+                cropEdgeEx(org, dst, bottomLeft, bottomRight);
+                cropEdgeEx(org, dst, bottomRight, topRight);
+                cropEdgeEx(org, dst, topRight, topLeft);
+                cropEdgeEx(org, dst, topLeft, bottomLeft);
+
+                // edge is either inclusively inside or exclusively outside of rectangle
+                if (org.v == o) {
+                    if (    bottomLeft.x <= org.c.x && org.c.x <= topRight.x &&
+                            bottomLeft.y <= org.c.y && org.c.y <= topRight.y) {
+
+                        if (buf.empty() || !equal(buf.back(), org.c)) {
+                            buf.push_back(org.c);
+                        }
+                        if (buf.empty() || !equal(buf.back(), dst.c)) {
+                            buf.push_back(dst.c);
+                        }
+                    }
+                }
+            } else {
+                buf.push_back(vtx[edgeOrg(t)].pt);
+            }
+
             t = getEdge( t, NEXT_AROUND_LEFT );
         }
         while( t != edge );
+
+        if (flag) {
+            if (buf.size() > 1 && equal(buf.front(), buf.back())) {
+                buf.pop_back();
+            }
+
+            bool unsorted = false;
+
+            if (k == bl_site) {
+                unsorted |= putIfAbsent(bottomLeft, buf);
+            }
+            if (k == br_site) {
+                unsorted |= putIfAbsent(bottomRight, buf);
+            }
+            if (k == tr_site) {
+                unsorted |= putIfAbsent(topRight, buf);
+            }
+            if (k == tl_site) {
+                unsorted |= putIfAbsent(topLeft, buf);
+            }
+
+            if (unsorted) {
+                // always has non-empty interior
+                Point2f center(0.f, 0.f);
+                for (size_t j = 0; j < buf.size(); ++j) {
+                    center += buf[j];
+                }
+                center /= (float) buf.size();
+                sortAround(center, buf, 0, (int)buf.size() - 1);
+            }
+
+        }
 
         facetList.push_back(buf);
         facetCenters.push_back(vtx[k].pt);

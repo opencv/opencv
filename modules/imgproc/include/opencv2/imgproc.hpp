@@ -981,7 +981,7 @@ public:
     /** creates an empty Subdiv2D object.
     To create a new empty Delaunay subdivision you need to use the #initDelaunay function.
      */
-    CV_WRAP Subdiv2D();
+    CV_WRAP Subdiv2D(bool flag = true);
 
     /** @overload
 
@@ -991,7 +991,7 @@ public:
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
     error is raised.
      */
-    CV_WRAP Subdiv2D(Rect rect);
+    CV_WRAP Subdiv2D(Rect rect, bool flag = true);
 
     /** @brief Creates a new empty Delaunay subdivision
 
@@ -1167,7 +1167,7 @@ public:
 protected:
     int newEdge();
     void deleteEdge(int edge);
-    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0);
+    int newPoint(Point2f pt, bool isvirtual, int firstEdge = 0); // deprecated
     void deletePoint(int vtx);
     void setEdgePoints( int edge, int orgPt, int dstPt );
     void splice( int edgeA, int edgeB );
@@ -1177,13 +1177,26 @@ protected:
     void calcVoronoi();
     void clearVoronoi();
     void checkSubdiv() const;
+    int newPoint(Point2f pt, int type, int firstEdge = 0);
+    void getVoronoiFacetList(const std::vector<int>& idx,
+                          std::vector<std::vector<Vec4f> >& facetList, std::vector<int>& facetCenters);
+
+    enum {
+        PTTYPE_FREE = -1,
+        PTTYPE_DELAUNAY = 0,
+        PTTYPE_VORONOI = 1,
+        PTTYPE_DELAUNAY_BOUNDING = 2,
+        PTTYPE_VORONOI_BOUNDING = 3
+    };
 
     struct CV_EXPORTS Vertex
     {
         Vertex();
-        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0);
+        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0); // deprecated
         bool isvirtual() const;
         bool isfree() const;
+        Vertex(Point2f pt, int type, int firstEdge = 0);
+        bool isbounding() const;
 
         int firstEdge;
         int type;
@@ -1213,6 +1226,8 @@ protected:
     Point2f topLeft;
     //! Bottom right corner of the bounding rect
     Point2f bottomRight;
+
+    bool flag = true;
 };
 
 //! @} imgproc_subdiv2d
