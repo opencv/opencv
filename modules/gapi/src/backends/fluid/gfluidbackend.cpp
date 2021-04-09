@@ -232,7 +232,7 @@ void cv::gimpl::FluidAgent::reset()
 {
     m_producedLines = 0;
 
-    for (const auto& it : ade::util::indexed(in_views))
+    for (const auto it : ade::util::indexed(in_views))
     {
         auto& v = ade::util::value(it);
         if (v)
@@ -505,7 +505,7 @@ void cv::gimpl::FluidAgent::doWork()
 
     k.m_f(in_args, out_buffers);
 
-    for (const auto& it : ade::util::indexed(in_views))
+    for (const auto it : ade::util::indexed(in_views))
     {
         auto& in_view = ade::util::value(it);
 
@@ -517,7 +517,7 @@ void cv::gimpl::FluidAgent::doWork()
         };
     }
 
-    for (auto out_buf : out_buffers)
+    for (auto* out_buf : out_buffers)
     {
         out_buf->priv().writeDone();
         // FIXME WARNING: Scratch buffers rotated here too!
@@ -571,10 +571,10 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
     }
 
     // First, initialize rois for output nodes, add them to traversal stack
-    for (const auto& it : ade::util::indexed(proto.out_nhs))
+    for (const auto it : ade::util::indexed(proto.out_nhs))
     {
         const auto idx = ade::util::index(it);
-        const auto nh  = ade::util::value(it);
+        const auto& nh  = ade::util::value(it);
 
         const auto &d  = m_gm.metadata(nh).get<Data>();
 
@@ -927,7 +927,7 @@ std::size_t cv::gimpl::GFluidExecutable::total_buffers_size() const
 {
     GConstFluidModel fg(m_g);
     std::size_t total_size = 0;
-    for (const auto &i : ade::util::indexed(m_buffers))
+    for (const auto i : ade::util::indexed(m_buffers))
     {
         // Check that all internal and scratch buffers are allocated
         const auto  idx = ade::util::index(i);
@@ -1310,7 +1310,7 @@ void cv::gimpl::GFluidExecutable::run(std::vector<InObj>  &input_objs,
         agent->reset();
         // Pass input cv::Scalar's to agent argument
         const auto& op = m_gm.metadata(agent->op_handle).get<Op>();
-        for (const auto& it : ade::util::indexed(op.args))
+        for (const auto it : ade::util::indexed(op.args))
         {
             const auto& arg = ade::util::value(it);
             packArg(agent->in_args[ade::util::index(it)], arg);

@@ -35,14 +35,14 @@ template<typename T> class GArray;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GArrayDesc
+struct GAPI_EXPORTS_W_SIMPLE GArrayDesc
 {
     // FIXME: Body
     // FIXME: Also implement proper operator== then
     bool operator== (const GArrayDesc&) const { return true; }
 };
 template<typename U> GArrayDesc descr_of(const std::vector<U> &) { return {};}
-static inline GArrayDesc empty_array_desc() {return {}; }
+GAPI_EXPORTS_W inline GArrayDesc empty_array_desc() {return {}; }
 /** @} */
 
 std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);
@@ -246,12 +246,18 @@ namespace detail
 
     public:
         VectorRef() = default;
-        template<typename T> explicit VectorRef(const std::vector<T>& vec) :
-                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
-        template<typename T> explicit VectorRef(std::vector<T>& vec)       :
-                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
-        template<typename T> explicit VectorRef(std::vector<T>&& vec)      :
-                                            m_ref(new VectorRefT<T>(std::move(vec))), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(const std::vector<T>& vec)
+            : m_ref(new VectorRefT<T>(vec))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
+        template<typename T> explicit VectorRef(std::vector<T>& vec)
+            : m_ref(new VectorRefT<T>(vec))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
+        template<typename T> explicit VectorRef(std::vector<T>&& vec)
+            : m_ref(new VectorRefT<T>(std::move(vec)))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
 
         cv::detail::OpaqueKind getKind() const
         {
@@ -321,9 +327,10 @@ namespace detail
 #  define FLATTEN_NS cv
 #endif
     template<class T> struct flatten_g;
-    template<> struct flatten_g<cv::GMat>    { using type = FLATTEN_NS::Mat; };
-    template<> struct flatten_g<cv::GScalar> { using type = FLATTEN_NS::Scalar; };
-    template<class T> struct flatten_g       { using type = T; };
+    template<> struct flatten_g<cv::GMat>         { using type = FLATTEN_NS::Mat; };
+    template<> struct flatten_g<cv::GScalar>      { using type = FLATTEN_NS::Scalar; };
+    template<class T> struct flatten_g<GArray<T>> { using type = std::vector<T>; };
+    template<class T> struct flatten_g            { using type = T; };
 #undef FLATTEN_NS
     // FIXME: the above mainly duplicates "ProtoToParam" thing from gtyped.hpp
     // but I decided not to include gtyped here - probably worth moving that stuff
@@ -367,8 +374,6 @@ private:
 
     detail::GArrayU m_ref;
 };
-
-using GArrayP2f = GArray<cv::Point2f>;
 
 /** @} */
 

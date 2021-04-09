@@ -17,28 +17,18 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     void checkVersions()
     {
-        int cudart_version = 0;
-        CUDA4DNN_CHECK_CUDA(cudaRuntimeGetVersion(&cudart_version));
-        if (cudart_version != CUDART_VERSION)
+        // https://docs.nvidia.com/deeplearning/cudnn/developer-guide/index.html#programming-model
+        // cuDNN API Compatibility
+        // Beginning in cuDNN 7, the binary compatibility of a patch and minor releases is maintained as follows:
+        //     Any patch release x.y.z is forward or backward-compatible with applications built against another cuDNN patch release x.y.w (meaning, of the same major and minor version number, but having w!=z).
+        //     cuDNN minor releases beginning with cuDNN 7 are binary backward-compatible with applications built against the same or earlier patch release (meaning, an application built against cuDNN 7.x is binary compatible with cuDNN library 7.y, where y>=x).
+        //     Applications compiled with a cuDNN version 7.y are not guaranteed to work with 7.x release when y > x.
+        auto cudnn_bversion = cudnnGetVersion();
+        auto cudnn_major_bversion = cudnn_bversion / 1000, cudnn_minor_bversion = cudnn_bversion % 1000 / 100;
+        if (cudnn_major_bversion != CUDNN_MAJOR || cudnn_minor_bversion < CUDNN_MINOR)
         {
             std::ostringstream oss;
-            oss << "CUDART reports version " << cudart_version << " which does not match with the version " << CUDART_VERSION << " with which OpenCV was built";
-            CV_LOG_WARNING(NULL, oss.str().c_str());
-        }
-
-        auto cudnn_version = cudnnGetVersion();
-        if (cudnn_version != CUDNN_VERSION)
-        {
-            std::ostringstream oss;
-            oss << "cuDNN reports version " << cudnn_version << " which does not match with the version " << CUDNN_VERSION << " with which OpenCV was built";
-            CV_LOG_WARNING(NULL, oss.str().c_str());
-        }
-
-        auto cudnn_cudart_version = cudnnGetCudartVersion();
-        if (cudart_version != cudnn_cudart_version)
-        {
-            std::ostringstream oss;
-            oss << "CUDART version " << cudnn_cudart_version << " reported by cuDNN " << cudnn_version << " does not match with the version reported by CUDART " << cudart_version;
+            oss << "cuDNN reports version " << cudnn_major_bversion << "." << cudnn_minor_bversion << " which is not compatible with the version " << CUDNN_MAJOR << "." << CUDNN_MINOR << " with which OpenCV was built";
             CV_LOG_WARNING(NULL, oss.str().c_str());
         }
     }
@@ -57,9 +47,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     bool isDeviceCompatible()
     {
-        if (getDeviceCount() <= 0)
-            return false;
-
         int device_id = getDevice();
         if (device_id < 0)
             return false;
@@ -80,9 +67,6 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     bool doesDeviceSupportFP16()
     {
-        if (getDeviceCount() <= 0)
-            return false;
-
         int device_id = getDevice();
         if (device_id < 0)
             return false;

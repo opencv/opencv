@@ -201,7 +201,7 @@ void traceDown(cv::gimpl::GModel::Graph &g,
 
 // Streaming case: ensure the graph has proper isolation of the
 // desynchronized parts, set proper Edge metadata hints for
-// GStreamingExecutable
+// GStreamingIntrinExecutable
 void apply(cv::gimpl::GModel::Graph &g) {
     using namespace cv::gimpl;
 

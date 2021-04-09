@@ -576,7 +576,7 @@ def get_swift_type(ctype):
     return swift_type
 
 def build_swift_extension_decl(name, args, constructor, static, ret_type):
-    extension_decl = ("class " if static else "") + (("func " + name) if not constructor else "convenience init") + "("
+    extension_decl = "@nonobjc " + ("class " if static else "") + (("func " + name) if not constructor else "convenience init") + "("
     swift_args = []
     for a in args:
         if a.ctype not in type_dict:
@@ -1617,7 +1617,7 @@ if __name__ == "__main__":
             with open(srcfiles_fname) as f:
                 srcfiles = [os.path.join(module_location, str(l).strip()) for l in f.readlines() if str(l).strip()]
         else:
-            re_bad = re.compile(r'(private|.inl.hpp$|_inl.hpp$|.details.hpp$|_winrt.hpp$|/cuda/|/legacy/)')
+            re_bad = re.compile(r'(private|.inl.hpp$|_inl.hpp$|.detail.hpp$|.details.hpp$|_winrt.hpp$|/cuda/|/legacy/)')
             # .h files before .hpp
             h_files = []
             hpp_files = []

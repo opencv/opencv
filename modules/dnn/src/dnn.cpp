@@ -63,6 +63,7 @@
 #include <memory>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/dnn/layer_reg.private.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -92,6 +93,13 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
 static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
+
+bool DNN_DIAGNOSTICS_RUN = false;
+
+void enableModelDiagnostics(bool isDiagnosticsMode)
+{
+    DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
+}
 
 using std::vector;
 using std::map;
@@ -239,11 +247,10 @@ private:
 #endif
 
 #ifdef HAVE_CUDA
-        if (haveCUDA() && cuda4dnn::isDeviceCompatible())
+        if (haveCUDA())
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            if (cuda4dnn::doesDeviceSupportFP16())
-                backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
     }
@@ -1383,11 +1390,12 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL);
+#ifdef HAVE_INF_ENGINE
         if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
             preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             CV_Assert(
-                  preferableTarget == DNN_TARGET_CPU ||
+                  (preferableTarget == DNN_TARGET_CPU && (!isArmComputePlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
@@ -1395,6 +1403,7 @@ struct Net::Impl : public detail::NetImplBase
                   preferableTarget == DNN_TARGET_FPGA
             );
         }
+#endif
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
         CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
@@ -2099,8 +2108,8 @@ struct Net::Impl : public detail::NetImplBase
             return;
         }
 
-        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
-                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+        bool supportsCPUFallback = !isArmComputePlugin() && (preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU));
 
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
@@ -2363,6 +2372,9 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend == DNN_BACKEND_CUDA);
 
 #ifdef HAVE_CUDA
+        if (!cudaInfo) /* we need to check only once */
+            cuda4dnn::checkVersions();
+
         if (cuda4dnn::getDeviceCount() <= 0)
             CV_Error(Error::StsError, "No CUDA capable device found.");
 
@@ -2373,7 +2385,10 @@ struct Net::Impl : public detail::NetImplBase
             CV_Error(Error::GpuNotSupported, "OpenCV was not built to work with the selected device. Please check CUDA_ARCH_PTX or CUDA_ARCH_BIN in your build configuration.");
 
         if (preferableTarget == DNN_TARGET_CUDA_FP16 && !cuda4dnn::doesDeviceSupportFP16())
-            CV_Error(Error::StsError, "The selected CUDA device does not support FP16 operations.");
+        {
+            CV_LOG_WARNING(NULL, "The selected CUDA device does not support FP16 target; switching to FP32 target.");
+            preferableTarget = DNN_TARGET_CUDA;
+        }
 
         if (!cudaInfo)
         {
@@ -2384,7 +2399,6 @@ struct Net::Impl : public detail::NetImplBase
 
             auto d2h_stream = cuda4dnn::csl::Stream(true); // stream for background D2H data transfers
             cudaInfo = std::unique_ptr<CudaInfo_t>(new CudaInfo_t(std::move(context), std::move(d2h_stream)));
-            cuda4dnn::checkVersions();
         }
 
         cudaInfo->workspace = cuda4dnn::csl::Workspace(); // release workspace memory if any
@@ -2972,7 +2986,7 @@ struct Net::Impl : public detail::NetImplBase
                 // the concatenation optimization is applied with batch_size > 1.
                 // so, for now, we only apply this optimization in the most popular
                 // case batch_size == 1.
-                int axis = clamp(concatLayer->axis, output.dims);
+                int axis = normalize_axis(concatLayer->axis, output.dims);
                 if( output.total(0, axis) == 1 )
                 {
                     size_t i, ninputs = ld.inputBlobsId.size();
@@ -4461,7 +4475,7 @@ string Net::Impl::dump()
             prevNode = itBackend->second;
         }
     }
-    string colors[] = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151"};
+    std::vector<string> colors = {"#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff"};
     string backend;
     switch (prefBackend)
     {
@@ -4613,6 +4627,7 @@ string Net::Impl::dump()
             case DNN_TARGET_CUDA_FP16: out << "CUDA_FP16"; colorId = 6; break;
             // don't use default:
         }
+        CV_Assert(colorId < colors.size());
         out << "\\n";  // align center
         out << ((clusterIds.size() == 1)? "\" " : " }\" ");
         out << "fillcolor=\"" << colors[colorId] << "\" ";
@@ -5303,15 +5318,13 @@ static Mutex& getLayerFactoryMutex()
     return *instance;
 }
 
-typedef std::map<String, std::vector<LayerFactory::Constructor> > LayerFactory_Impl;
-
 static LayerFactory_Impl& getLayerFactoryImpl_()
 {
     static LayerFactory_Impl impl;
     return impl;
 }
 
-static LayerFactory_Impl& getLayerFactoryImpl()
+LayerFactory_Impl& getLayerFactoryImpl()
 {
     static LayerFactory_Impl* volatile instance = NULL;
     if (instance == NULL)

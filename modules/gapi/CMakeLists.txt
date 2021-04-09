@@ -23,7 +23,7 @@ ocv_add_module(gapi
     REQUIRED
       opencv_imgproc
     OPTIONAL
-      opencv_video
+      opencv_video opencv_stereo
     WRAP
       python
 )
@@ -36,10 +36,6 @@ if(MSVC)
     # Disable IE deprecated code warning C4996 for releases < 2021.1
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
   endif()
-endif()
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")  # don't add Clang here: issue should be investigated and fixed (workaround for Apple only)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wrange-loop-analysis)  # https://github.com/opencv/opencv/issues/18928
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -57,6 +53,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     )
 
 set(gapi_srcs
@@ -80,6 +77,7 @@ set(gapi_srcs
     src/api/kernels_video.cpp
     src/api/kernels_nnparsers.cpp
     src/api/kernels_streaming.cpp
+    src/api/kernels_stereo.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -107,6 +105,7 @@ set(gapi_srcs
 
     # Executor
     src/executor/gexecutor.cpp
+    src/executor/gtbbexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
 
@@ -114,6 +113,7 @@ set(gapi_srcs
     src/backends/cpu/gcpubackend.cpp
     src/backends/cpu/gcpukernel.cpp
     src/backends/cpu/gcpuimgproc.cpp
+    src/backends/cpu/gcpustereo.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
     src/backends/cpu/gnnparsers.cpp
@@ -156,8 +156,12 @@ set(gapi_srcs
     src/api/s11n.cpp
     src/backends/common/serialization.cpp
 
+    # Streaming backend
+    src/backends/streaming/gstreamingbackend.cpp
+
     # Python bridge
     src/backends/ie/bindings_ie.cpp
+    src/backends/python/gpythonbackend.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
@@ -194,6 +198,10 @@ ocv_add_accuracy_tests(${__test_extra_deps})
 if(TARGET opencv_test_gapi)
   target_include_directories(opencv_test_gapi PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src")
   target_link_libraries(opencv_test_gapi PRIVATE ade)
+endif()
+
+if(HAVE_TBB AND TARGET opencv_test_gapi)
+  ocv_target_link_libraries(opencv_test_gapi PRIVATE tbb)
 endif()
 
 if(HAVE_FREETYPE)

@@ -459,6 +459,20 @@ OPJ_BOOL opj_jp2_set_decoded_resolution_factor(opj_jp2_t *p_jp2,
         OPJ_UINT32 res_factor,
         opj_event_mgr_t * p_manager);
 
+/**
+ * Specify extra options for the encoder.
+ *
+ * @param  p_jp2        the jpeg2000 codec.
+ * @param  p_options    options
+ * @param  p_manager    the user event manager
+ *
+ * @see opj_encoder_set_extra_options() for more details.
+ */
+OPJ_BOOL opj_jp2_encoder_set_extra_options(
+    opj_jp2_t *p_jp2,
+    const char* const* p_options,
+    opj_event_mgr_t * p_manager);
+
 
 /* TODO MSD: clean these 3 functions */
 /**

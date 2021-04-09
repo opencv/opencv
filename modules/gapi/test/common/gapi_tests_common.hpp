@@ -58,7 +58,7 @@ namespace
         return o;
     }
 
-    inline void initTestDataPath()
+    inline bool initTestDataPathSilent()
     {
 #ifndef WINRT
         static bool initialized = false;
@@ -66,13 +66,30 @@ namespace
         {
             // Since G-API has no own test data (yet), it is taken from the common space
             const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-            GAPI_Assert(testDataPath != nullptr &&
-            "OPENCV_TEST_DATA_PATH environment variable is either not set or set incorrectly.");
-
-            cvtest::addDataSearchPath(testDataPath);
-            initialized = true;
+            if (testDataPath != nullptr) {
+                cvtest::addDataSearchPath(testDataPath);
+                initialized = true;
+            }
         }
+
+        return initialized;
 #endif // WINRT
+    }
+
+    inline void initTestDataPath()
+    {
+        bool initialized = initTestDataPathSilent();
+        GAPI_Assert(initialized &&
+            "OPENCV_TEST_DATA_PATH environment variable is either not set or set incorrectly.");
+    }
+
+    inline void initTestDataPathOrSkip()
+    {
+        bool initialized = initTestDataPathSilent();
+        if (!initialized)
+        {
+            throw cvtest::SkipTestException("Can't find test data");
+        }
     }
 
     template <typename T> inline void initPointRandU(cv::RNG &rng, cv::Point_<T>& pt)
@@ -324,7 +341,7 @@ public:
     }
 
     template <typename T>
-    inline void initPointRandU(cv::RNG& rng, T& pt)
+    inline void initPointRandU(cv::RNG& rng, T& pt) const
     { ::initPointRandU(rng, pt); }
 
 // Disable unreachable code warning for MSVS 2015
@@ -334,7 +351,7 @@ public:
 #endif
     // initialize std::vector<cv::Point_<T>>/std::vector<cv::Point3_<T>>
     template <typename T, template <typename> class Pt>
-    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_)
+    void initPointsVectorRandU(const int sz_in, std::vector<Pt<T>> &vec_) const
     {
         cv::RNG& rng = theRNG();
 
@@ -593,6 +610,8 @@ using compare_vec_f = std::function<bool(const cv::Vec<Elem, cn> &a, const cv::V
 template<typename T1, typename T2>
 struct CompareF
 {
+    CompareF() = default;
+
     using callable_t = std::function<bool(const T1& a, const T2& b)>;
     CompareF(callable_t&& cmp, std::string&& cmp_name) :
         _comparator(std::move(cmp)), _name(std::move(cmp_name)) {}
@@ -1172,6 +1191,28 @@ inline std::ostream& operator<<(std::ostream& os, DistanceTypes op)
         default: GAPI_Assert(false && "unknown DistanceTypes value");
     }
 #undef CASE
+    return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, KmeansFlags op)
+{
+    int op_(op);
+    switch (op_)
+    {
+    case KmeansFlags::KMEANS_RANDOM_CENTERS:
+        os << "KMEANS_RANDOM_CENTERS";
+        break;
+    case KmeansFlags::KMEANS_PP_CENTERS:
+        os << "KMEANS_PP_CENTERS";
+        break;
+    case KmeansFlags::KMEANS_RANDOM_CENTERS | KmeansFlags::KMEANS_USE_INITIAL_LABELS:
+        os << "KMEANS_RANDOM_CENTERS | KMEANS_USE_INITIAL_LABELS";
+        break;
+    case KmeansFlags::KMEANS_PP_CENTERS | KmeansFlags::KMEANS_USE_INITIAL_LABELS:
+        os << "KMEANS_PP_CENTERS | KMEANS_USE_INITIAL_LABELS";
+        break;
+    default: GAPI_Assert(false && "unknown KmeansFlags value");
+    }
     return os;
 }
 }  // namespace cv

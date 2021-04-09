@@ -1,7 +1,12 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+#include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types_c.h"
-#include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
 // glue
 
 CvMatND cvMatND(const cv::Mat& m)
@@ -342,3 +347,5 @@ cvSort( const CvArr* _src, CvArr* _dst, CvArr* _idx, int flags )
         CV_Assert( dst0.data == dst.data );
     }
 }
+
+#endif  // OPENCV_EXCLUDE_C_API

@@ -33,6 +33,17 @@ using namespace cv;
 #endif
 #endif
 
+#ifdef HAVE_VA
+#ifndef OPENCV_LIBVA_LINK
+#include "va_wrapper.impl.hpp"
+#else
+namespace cv { namespace detail {
+static void init_libva() { /* nothing */ }
+}}  // namespace
+#endif
+using namespace cv::detail;
+#endif
+
 namespace cv { namespace va_intel {
 
 #ifdef HAVE_VA_INTEL
@@ -54,6 +65,8 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
 #   ifdef HAVE_VA_INTEL
     contextInitialized = false;
     if (tryInterop)
@@ -176,7 +189,7 @@ static bool ocl_convert_nv12_to_bgr(cl_mem clImageY, cl_mem clImageUV, cl_mem cl
 
     k.args(clImageY, clImageUV, clBuffer, step, cols, rows);
 
-    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    size_t globalsize[] = { (size_t)cols/2, (size_t)rows/2 };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -189,7 +202,7 @@ static bool ocl_convert_bgr_to_nv12(cl_mem clBuffer, int step, int cols, int row
 
     k.args(clBuffer, step, cols, rows, clImageY, clImageUV);
 
-    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    size_t globalsize[] = { (size_t)cols/2, (size_t)rows/2 };
     return k.run(2, globalsize, 0, false);
 }
 #endif // HAVE_VA_INTEL
@@ -507,6 +520,8 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
     const int stype = CV_8UC3;
 
     int srcType = src.type();
@@ -611,6 +626,8 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+    init_libva();
+
     const int dtype = CV_8UC3;
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!

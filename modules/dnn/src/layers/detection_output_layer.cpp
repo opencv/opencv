@@ -138,6 +138,12 @@ public:
 
     typedef std::map<int, std::vector<util::NormalizedBBox> > LabelBBox;
 
+    inline int getNumOfTargetClasses() {
+        unsigned numBackground =
+            (_backgroundLabelId >= 0 && _backgroundLabelId < _numClasses) ? 1 : 0;
+        return (_numClasses - numBackground);
+    }
+
     bool getParameterDict(const LayerParams &params,
                           const std::string &parameterName,
                           DictValue& result)
@@ -590,12 +596,13 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+            int limit = (getNumOfTargetClasses() == 1) ? _keepTopK : std::numeric_limits<int>::max();
             if (_bboxesNormalized)
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_norm_box_overlap);
+                         indices[c], util::caffe_norm_box_overlap, limit);
             else
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_box_overlap);
+                         indices[c], util::caffe_box_overlap, limit);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)
@@ -617,8 +624,13 @@ public:
                 }
             }
             // Keep outputs k results per image.
-            std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
-                      util::SortScorePairDescend<std::pair<int, int> >);
+            if ((_keepTopK * 8) > scoreIndexPairs.size()) {
+                std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            } else {
+                std::partial_sort(scoreIndexPairs.begin(), scoreIndexPairs.begin() + _keepTopK, scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            }
             scoreIndexPairs.resize(_keepTopK);
 
             std::map<int, std::vector<int> > newIndices;
@@ -853,16 +865,16 @@ public:
         for (int i = 0; i < num; ++i, locData += numPredsPerClass * numLocClasses * 4)
         {
             LabelBBox& labelBBox = locPreds[i];
+            int start = shareLocation ? -1 : 0;
+            for (int c = 0; c < numLocClasses; ++c) {
+                labelBBox[start++].resize(numPredsPerClass);
+            }
             for (int p = 0; p < numPredsPerClass; ++p)
             {
                 int startIdx = p * numLocClasses * 4;
                 for (int c = 0; c < numLocClasses; ++c)
                 {
                     int label = shareLocation ? -1 : c;
-                    if (labelBBox.find(label) == labelBBox.end())
-                    {
-                        labelBBox[label].resize(numPredsPerClass);
-                    }
                     util::NormalizedBBox& bbox = labelBBox[label][p];
                     if (locPredTransposed)
                     {

@@ -58,6 +58,8 @@ struct ParamDesc {
     PostProc custom_post_proc;
 
     std::vector<bool> normalize;
+
+    std::vector<std::string> names_to_remap;
 };
 } // namespace detail
 
@@ -86,7 +88,7 @@ public:
     };
 
     // BEGIN(G-API's network parametrization API)
-    GBackend      backend() const { return cv::gapi::onnx::backend();  }
+    GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
     cv::util::any params()  const { return { desc }; }
     // END(G-API's network parametrization API)
@@ -115,10 +117,67 @@ public:
         return *this;
     }
 
-    Params<Net>& cfgPostProc(const std::vector<cv::GMatDesc> &outs,
+    /** @brief Configures graph output and sets the post processing function from user.
+
+    The function is used for the case of infer of networks with dynamic outputs.
+    Since these networks haven't known output parameters needs provide them for
+    construction of output of graph.
+    The function provides meta information of outputs and post processing function.
+    Post processing function is used for copy information from ONNX infer's result
+    to output of graph which is allocated by out meta information.
+
+    @param out_metas out meta information.
+    @param pp post processing function, which has two parameters. First is onnx
+    result, second is graph output. Both parameters is std::map that contain pair of
+    layer's name and cv::Mat.
+    @return reference to object of class Params.
+    */
+    Params<Net>& cfgPostProc(const std::vector<cv::GMatDesc> &out_metas,
                              const PostProc &pp) {
-        desc.out_metas = outs;
+        desc.out_metas        = out_metas;
         desc.custom_post_proc = pp;
+        return *this;
+    }
+
+    /** @overload
+    The function has rvalue parameters.
+    */
+    Params<Net>& cfgPostProc(std::vector<cv::GMatDesc> &&out_metas,
+                             PostProc &&pp) {
+        desc.out_metas        = std::move(out_metas);
+        desc.custom_post_proc = std::move(pp);
+        return *this;
+    }
+
+    /** @overload
+    The function has additional parameter names_to_remap. This parameter provides
+    information about output layers which will be used for infer and in post
+    processing function.
+
+    @param out_metas out meta information.
+    @param pp post processing function.
+    @param names_to_remap contains names of output layers. CNN's infer will be done on these layers.
+    Infer's result will be processed in post processing function using these names.
+    @return reference to object of class Params.
+    */
+    Params<Net>& cfgPostProc(const std::vector<cv::GMatDesc> &out_metas,
+                             const PostProc &pp,
+                             const std::vector<std::string> &names_to_remap) {
+        desc.out_metas        = out_metas;
+        desc.custom_post_proc = pp;
+        desc.names_to_remap   = names_to_remap;
+        return *this;
+    }
+
+    /** @overload
+    The function has rvalue parameters.
+    */
+    Params<Net>& cfgPostProc(std::vector<cv::GMatDesc> &&out_metas,
+                             PostProc &&pp,
+                             std::vector<std::string> &&names_to_remap) {
+        desc.out_metas        = std::move(out_metas);
+        desc.custom_post_proc = std::move(pp);
+        desc.names_to_remap   = std::move(names_to_remap);
         return *this;
     }
 

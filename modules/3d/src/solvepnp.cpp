@@ -334,18 +334,42 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
     opoints_inliers.resize(npoints1);
     ipoints_inliers.resize(npoints1);
-    result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
-                      distCoeffs, rvec, tvec, useExtrinsicGuess,
-                      (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    try
+    {
+        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+                          distCoeffs, rvec, tvec, useExtrinsicGuess,
+                          (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+    }
+    catch (const cv::Exception& e)
+    {
+        if (flags == SOLVEPNP_ITERATIVE &&
+            npoints1 == 5 &&
+            e.what() &&
+            std::string(e.what()).find("DLT algorithm needs at least 6 points") != std::string::npos
+        )
+        {
+            CV_LOG_INFO(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points "
+                "in the consensus set raised DLT 6 points exception, use result from MSS (Minimal Sample Sets) stage instead.");
+            rvec = _local_model.col(0);    // output rotation vector
+            tvec = _local_model.col(1);    // output translation vector
+            result = 1;
+        }
+        else
+        {
+            // raise other exceptions
+            throw;
+        }
+    }
 
-    if( result <= 0 )
+    if (result <= 0)
     {
         _rvec.assign(_local_model.col(0));    // output rotation vector
         _tvec.assign(_local_model.col(1));    // output translation vector
 
-        if( _inliers.needed() )
+        if (_inliers.needed())
             _inliers.release();
 
+        CV_LOG_DEBUG(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points in the consensus set failed. Return false");
         return false;
     }
     else

@@ -510,14 +510,6 @@ GAPI_OCV_KERNEL(GCPUCrop, cv::gapi::core::GCrop)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
-{
-    static void run(const cv::Mat& in, cv::Mat& out)
-    {
-        in.copyTo(out);
-    }
-};
-
 GAPI_OCV_KERNEL(GCPUConcatHor, cv::gapi::core::GConcatHor)
 {
     static void run(const cv::Mat& in1, const cv::Mat& in2, cv::Mat& out)
@@ -585,6 +577,63 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUKMeansND, cv::gapi::core::GKMeansND)
+{
+    static void run(const cv::Mat& data, const int K, const cv::Mat& inBestLabels,
+                    const cv::TermCriteria& criteria, const int attempts,
+                    const cv::KmeansFlags flags,
+                    double& compactness, cv::Mat& outBestLabels, cv::Mat& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            inBestLabels.copyTo(outBestLabels);
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeansNDNoInit, cv::gapi::core::GKMeansNDNoInit)
+{
+    static void run(const cv::Mat& data, const int K, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, cv::Mat& outBestLabels, cv::Mat& centers)
+    {
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeans2D, cv::gapi::core::GKMeans2D)
+{
+    static void run(const std::vector<cv::Point2f>& data, const int K,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, std::vector<int>& outBestLabels,
+                    std::vector<cv::Point2f>& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            outBestLabels = inBestLabels;
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeans3D, cv::gapi::core::GKMeans3D)
+{
+    static void run(const std::vector<cv::Point3f>& data, const int K,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, std::vector<int>& outBestLabels,
+                    std::vector<cv::Point3f>& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            outBestLabels = inBestLabels;
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
 {
     static void run(const cv::Mat&  in_ssd_result,
@@ -640,6 +689,14 @@ GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::streaming::GSizeR)
     {
         out.width  = in.width;
         out.height = in.height;
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUSizeMF, cv::gapi::streaming::GSizeMF)
+{
+    static void run(const cv::MediaFrame& in, cv::Size& out)
+    {
+        out = in.desc().size;
     }
 };
 
@@ -705,7 +762,6 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPURemap
          , GCPUFlip
          , GCPUCrop
-         , GCPUCopy
          , GCPUConcatHor
          , GCPUConcatVert
          , GCPULUT
@@ -714,11 +770,16 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUNormalize
          , GCPUWarpPerspective
          , GCPUWarpAffine
+         , GCPUKMeansND
+         , GCPUKMeansNDNoInit
+         , GCPUKMeans2D
+         , GCPUKMeans3D
          , GCPUParseSSDBL
          , GOCVParseSSD
          , GCPUParseYolo
          , GCPUSize
          , GCPUSizeR
-         >();
+         , GCPUSizeMF
+        >();
     return pkg;
 }

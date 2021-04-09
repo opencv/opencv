@@ -531,8 +531,14 @@ typedef struct opj_j2k_enc {
     OPJ_BYTE * m_header_tile_data;
 
     /* size of the encoded_data */
+
     OPJ_UINT32 m_header_tile_data_size;
 
+    /* whether to generate PLT markers */
+    OPJ_BOOL   m_PLT;
+
+    /* reserved bytes in m_encoded_tile_size for PLT markers */
+    OPJ_UINT32 m_reserved_bytes_for_PLT;
 
 } opj_j2k_enc_t;
 
@@ -577,15 +583,16 @@ typedef struct opj_j2k {
     /** the current tile coder/decoder **/
     struct opj_tcd *    m_tcd;
 
-    /** Number of threads to use */
-    int m_num_threads;
-
     /** Thread pool */
     opj_thread_pool_t* m_tp;
 
+    /** Image width coming from JP2 IHDR box. 0 from a pure codestream */
     OPJ_UINT32 ihdr_w;
+
+    /** Image height coming from JP2 IHDR box. 0 from a pure codestream */
     OPJ_UINT32 ihdr_h;
-    OPJ_UINT32 enumcs;
+
+    /** Set to 1 by the decoder initialization if OPJ_DPARAMETERS_DUMP_FLAG is set */
     unsigned int dump_state;
 }
 opj_j2k_t;
@@ -827,6 +834,19 @@ OPJ_BOOL opj_j2k_set_decoded_resolution_factor(opj_j2k_t *p_j2k,
         OPJ_UINT32 res_factor,
         opj_event_mgr_t * p_manager);
 
+/**
+ * Specify extra options for the encoder.
+ *
+ * @param  p_j2k        the jpeg2000 codec.
+ * @param  p_options    options
+ * @param  p_manager    the user event manager
+ *
+ * @see opj_encoder_set_extra_options() for more details.
+ */
+OPJ_BOOL opj_j2k_encoder_set_extra_options(
+    opj_j2k_t *p_j2k,
+    const char* const* p_options,
+    opj_event_mgr_t * p_manager);
 
 /**
  * Writes a tile.

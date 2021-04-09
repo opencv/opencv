@@ -2,6 +2,9 @@
     "class_ignore_list": [
         "FontFace"
     ],
+    "AdditionalImports" : {
+        "Imgproc" : [ "\"imgproc/bindings.hpp\"" ]
+    },
     "enum_ignore_list" : [
         "MorphShapes_c",
         "SmoothMethod_c"

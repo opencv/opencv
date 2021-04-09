@@ -111,7 +111,7 @@ _InputArray::_InputArray(const std::vector<_Tp>& vec)
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
@@ -169,7 +169,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 {
     _InputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_READ;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -191,7 +191,7 @@ inline bool _InputArray::isUMatVector() const  { return kind() == _InputArray::S
 inline bool _InputArray::isMatx() const { return kind() == _InputArray::MATX; }
 inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VECTOR ||
                                                    kind() == _InputArray::STD_BOOL_VECTOR ||
-                                                   kind() == _InputArray::STD_ARRAY; }
+                                                   (kind() == _InputArray::MATX && (sz.width <= 1 || sz.height <= 1)); }
 inline bool _InputArray::isGpuMat() const { return kind() == _InputArray::CUDA_GPU_MAT; }
 inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT; }
 
@@ -210,7 +210,7 @@ _OutputArray::_OutputArray(std::vector<_Tp>& vec)
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
@@ -242,7 +242,7 @@ _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
@@ -315,7 +315,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
 {
     _OutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -336,7 +336,7 @@ _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
@@ -368,7 +368,7 @@ _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
@@ -443,7 +443,7 @@ template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
 {
     _InputOutputArray v;
-    v.flags = FIXED_TYPE + FIXED_SIZE + STD_ARRAY + traits::Type<_Tp>::value + ACCESS_RW;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW;
     v.obj = (void*)arr.data();
     v.sz = Size(1, _Nm);
     return v;
@@ -1116,11 +1116,11 @@ void Mat::push_back(const std::vector<_Tp>& v)
 ///////////////////////////// MatSize ////////////////////////////
 
 inline
-MatSize::MatSize(int* _p)
+MatSize::MatSize(int* _p) CV_NOEXCEPT
     : p(_p) {}
 
 inline
-int MatSize::dims() const
+int MatSize::dims() const CV_NOEXCEPT
 {
     return (p - 1)[0];
 }
@@ -1153,13 +1153,13 @@ int& MatSize::operator[](int i)
 }
 
 inline
-MatSize::operator const int*() const
+MatSize::operator const int*() const CV_NOEXCEPT
 {
     return p;
 }
 
 inline
-bool MatSize::operator != (const MatSize& sz) const
+bool MatSize::operator != (const MatSize& sz) const CV_NOEXCEPT
 {
     return !(*this == sz);
 }
@@ -1169,25 +1169,25 @@ bool MatSize::operator != (const MatSize& sz) const
 ///////////////////////////// MatStep ////////////////////////////
 
 inline
-MatStep::MatStep()
+MatStep::MatStep() CV_NOEXCEPT
 {
     p = buf; p[0] = p[1] = 0;
 }
 
 inline
-MatStep::MatStep(size_t s)
+MatStep::MatStep(size_t s) CV_NOEXCEPT
 {
     p = buf; p[0] = s; p[1] = 0;
 }
 
 inline
-const size_t& MatStep::operator[](int i) const
+const size_t& MatStep::operator[](int i) const CV_NOEXCEPT
 {
     return p[i];
 }
 
 inline
-size_t& MatStep::operator[](int i)
+size_t& MatStep::operator[](int i) CV_NOEXCEPT
 {
     return p[i];
 }
@@ -1210,7 +1210,7 @@ inline MatStep& MatStep::operator = (size_t s)
 ////////////////////////////// Mat_<_Tp> ////////////////////////////
 
 template<typename _Tp> inline
-Mat_<_Tp>::Mat_()
+Mat_<_Tp>::Mat_() CV_NOEXCEPT
     : Mat()
 {
     flags = (flags & ~CV_MAT_TYPE_MASK) + traits::Type<_Tp>::value;

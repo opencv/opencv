@@ -235,9 +235,11 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
 vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
 {
     CV_TRACE_FUNCTION();
-
-    for (int coeff_epsilon = 1; coeff_epsilon < 10; coeff_epsilon++)
+    const double min_dist_between_points = 10.0;
+    const double max_ratio = 1.0;
+    for (int coeff_epsilon_i = 1; coeff_epsilon_i < 101; ++coeff_epsilon_i)
     {
+        const float coeff_epsilon = coeff_epsilon_i * 0.1f;
         vector<Point2f> point2f_result = extractVerticalLines(list_lines, eps_horizontal * coeff_epsilon);
         if (!point2f_result.empty())
         {
@@ -247,9 +249,23 @@ vector<Point2f> QRDetect::separateVerticalLines(const vector<Vec3d> &list_lines)
                     point2f_result, 3, labels,
                     TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
                     3, KMEANS_PP_CENTERS, centers);
-            if (compactness == 0)
+            double min_dist = std::numeric_limits<double>::max();
+            for (size_t i = 0; i < centers.size(); i++)
+            {
+                double dist = norm(centers[i] - centers[(i+1) % centers.size()]);
+                if (dist < min_dist)
+                {
+                    min_dist = dist;
+                }
+            }
+            if (min_dist < min_dist_between_points)
+            {
                 continue;
-            if (compactness > 0)
+            }
+            double mean_compactness = compactness / point2f_result.size();
+            double ratio = mean_compactness / min_dist;
+
+            if (ratio < max_ratio)
             {
                 return point2f_result;
             }
@@ -456,7 +472,6 @@ bool QRDetect::localization()
     vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
     if( list_lines_y.empty() ) { return false; }
 
-    vector<Point2f> centers;
     Mat labels;
     kmeans(list_lines_y, 3, labels,
            TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
@@ -464,7 +479,7 @@ bool QRDetect::localization()
 
     fixationPoints(localization_points);
 
-    bool suare_flag = false, local_points_flag = false;
+    bool square_flag = false, local_points_flag = false;
     double triangle_sides[3];
     double triangle_perim, square_area, img_square_area;
     if (localization_points.size() == 3)
@@ -482,14 +497,14 @@ bool QRDetect::localization()
 
         if (square_area > (img_square_area * 0.2))
         {
-            suare_flag = true;
+            square_flag = true;
         }
     }
     else
     {
         local_points_flag = true;
     }
-    if ((suare_flag || local_points_flag) && purpose == SHRINKING)
+    if ((square_flag || local_points_flag) && purpose == SHRINKING)
     {
         localization_points.clear();
         bin_barcode = resized_bin_barcode.clone();
@@ -1962,6 +1977,13 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
             }
         }
     }
+    for (int i = 0; i < NUM_SIDES; i++)
+    {
+        if (spline_lines[i].size() == 0)
+        {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -2469,12 +2491,13 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
     bool ok = qrdec.straightDecodingProcess();
 
     std::string decoded_info = qrdec.getDecodeInformation();
-
-    if (ok && straight_qrcode.needed())
+    if (!ok && straight_qrcode.needed())
     {
-        qrdec.getStraightBarcode().convertTo(straight_qrcode,
-                                             straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -2498,11 +2521,13 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
 
     std::string decoded_info = qrdec.getDecodeInformation();
 
-    if (ok && straight_qrcode.needed())
+    if (!ok && straight_qrcode.needed())
     {
-        qrdec.getStraightBarcode().convertTo(straight_qrcode,
-                                             straight_qrcode.fixedType() ?
-                                             straight_qrcode.type() : CV_32FC2);
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
 
     return ok ? decoded_info : std::string();
@@ -3593,18 +3618,18 @@ bool QRCodeDetector::decodeMulti(
             for_copy.push_back(straight_barcode[i]);
     }
     straight_barcode = for_copy;
-    vector<Mat> tmp_straight_qrcodes;
-    if (straight_qrcode.needed())
+    if (straight_qrcode.needed() && straight_barcode.size() == 0)
     {
+        straight_qrcode.release();
+    }
+    else if (straight_qrcode.needed())
+    {
+        straight_qrcode.create(Size((int)straight_barcode.size(), 1), CV_8UC1);
+        vector<Mat> tmp_straight_qrcodes(straight_barcode.size());
         for (size_t i = 0; i < straight_barcode.size(); i++)
         {
-            Mat tmp_straight_qrcode;
-            tmp_straight_qrcodes.push_back(tmp_straight_qrcode);
-            straight_barcode[i].convertTo(((OutputArray)tmp_straight_qrcodes[i]),
-                                             ((OutputArray)tmp_straight_qrcodes[i]).fixedType() ?
-                                             ((OutputArray)tmp_straight_qrcodes[i]).type() : CV_32FC2);
+            straight_barcode[i].convertTo(tmp_straight_qrcodes[i], CV_8UC1);
         }
-        straight_qrcode.createSameSize(tmp_straight_qrcodes, CV_32FC2);
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
     decoded_info.clear();

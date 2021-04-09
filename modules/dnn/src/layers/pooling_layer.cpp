@@ -71,12 +71,21 @@ using std::min;
 using namespace cv::dnn::ocl4dnn;
 #endif
 
+#ifdef HAVE_HALIDE
+#if 0  // size_t is not well supported in Halide operations
+typedef size_t HALIDE_DIFF_T;
+#else
+typedef int HALIDE_DIFF_T;
+#endif
+#endif
+
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/pooling.hpp"
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
+
 
 namespace cv
 {
@@ -169,13 +178,12 @@ public:
 
         if (inputs[0].dims == 3)
         {
-            //Pool1D
-            kernel_size.erase(kernel_size.begin() + 1);
-            strides.erase(strides.begin() + 1);
-            pads_begin.erase(pads_begin.begin() + 1);
-            pads_end.erase(pads_end.begin() + 1);
+            // Pool1D
+            kernel_size.assign(1, kernel_size[0]);
+            strides.assign(1, strides[0]);
+            pads_begin.assign(1, pads_begin[0]);
+            pads_end.assign(1, pads_end[0]);
         }
-
 
 #ifdef HAVE_OPENCL
         poolOp.release();
@@ -212,7 +220,9 @@ public:
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1;
+#ifdef HAVE_DNN_NGRAPH
+            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
+#endif
         }
         else if (backendId == DNN_BACKEND_OPENCV)
         {
@@ -383,6 +393,19 @@ public:
             return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
         }
 
+        if (input_shape.size() == 3)
+        {
+            // Pool1D
+            // We add an extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
+            input_shape.insert(std::end(input_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
+
         PoolingConfiguration config;
         if (type == MAX)
         {
@@ -440,9 +463,9 @@ public:
     {
         int padding_mode;
         vkcom::PoolType pool_type;
-        int filter_size[2] = {kernel.height, kernel.width};
-        int pad_size[2] = {pad.height, pad.width};
-        int stride_size[2] = {stride.height, stride.width};
+        int filter_size[2] = {static_cast<int>(kernel_size[0]), static_cast<int>(kernel_size[1])};
+        int pad_size[2] = {static_cast<int>(pads_begin[0]), static_cast<int>(pads_begin[1])};
+        int stride_size[2] = {static_cast<int>(strides[0]), static_cast<int>(strides[1])};
         pool_type = type == MAX ? vkcom::kPoolTypeMax:
                    (type == AVE ? vkcom::kPoolTypeAvg:
                             vkcom::kPoolTypeNum);
@@ -896,7 +919,7 @@ public:
                             if (max_elem!=last)
                             {
                                 dstData[x0] = *max_elem;
-                                if( compMaxIdx )
+                                if( compMaxIdx && dstMaskData )
                                 {
                                     dstMaskData[x0] = std::distance(first, max_elem);
                                 }
@@ -1097,12 +1120,12 @@ public:
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
         const int inWidth = inputBuffer.width();
         const int inHeight = inputBuffer.height();
-        const size_t kernelHeight = kernel_size[0];
-        const size_t kernelWidth = kernel_size[1];
-        const size_t strideHeight = strides[0];
-        const size_t strideWidth = strides[1];
-        const size_t paddingTop = pads_begin[0];
-        const size_t paddingLeft = pads_begin[1];
+        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
+        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
+        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
+        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
+        const HALIDE_DIFF_T paddingTop = (HALIDE_DIFF_T)pads_begin[0];
+        const HALIDE_DIFF_T paddingLeft = (HALIDE_DIFF_T)pads_begin[1];
 
         Halide::Var x("x"), y("y"), c("c"), n("n");
         Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
@@ -1148,10 +1171,10 @@ public:
         Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
 
         const int inW = inputBuffer.width(), inH = inputBuffer.height();
-        const size_t kernelHeight = kernel_size[0];
-        const size_t kernelWidth = kernel_size[1];
-        const size_t strideHeight = strides[0];
-        const size_t strideWidth = strides[1];
+        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
+        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
+        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
+        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
         if ((inW - kernelWidth) % strideWidth || (inH - kernelHeight) % strideHeight)
         {
             CV_Error(cv::Error::StsNotImplemented,

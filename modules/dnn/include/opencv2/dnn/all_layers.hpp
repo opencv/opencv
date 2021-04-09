@@ -364,6 +364,7 @@ CV__DNN_INLINE_NS_BEGIN
          * Inner vector has slice ranges for the first number of input dimensions.
          */
         std::vector<std::vector<Range> > sliceRanges;
+        std::vector<std::vector<int> > sliceSteps;
         int axis;
         int num_split;
 
@@ -497,6 +498,14 @@ CV__DNN_INLINE_NS_BEGIN
         float power, scale, shift;
 
         static Ptr<PowerLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS ExpLayer : public ActivationLayer
+    {
+    public:
+        float base, scale, shift;
+
+        static Ptr<ExpLayer> create(const LayerParams &params);
     };
 
     /* Layers used in semantic segmentation */

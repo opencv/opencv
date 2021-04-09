@@ -57,26 +57,6 @@ namespace cv
 *                                   logical operations                                   *
 \****************************************************************************************/
 
-void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t blocksize )
-{
-    int scn = (int)sc.total(), cn = CV_MAT_CN(buftype);
-    size_t esz = CV_ELEM_SIZE(buftype);
-    BinaryFunc cvtFn = getConvertFunc(sc.depth(), buftype);
-    CV_Assert(cvtFn);
-    cvtFn(sc.ptr(), 1, 0, 1, scbuf, 1, Size(std::min(cn, scn), 1), 0);
-    // unroll the scalar
-    if( scn < cn )
-    {
-        CV_Assert( scn == 1 );
-        size_t esz1 = CV_ELEM_SIZE1(buftype);
-        for( size_t i = esz1; i < esz; i++ )
-            scbuf[i] = scbuf[i - esz1];
-    }
-    for( size_t i = esz; i < blocksize*esz; i++ )
-        scbuf[i] = scbuf[i - esz];
-}
-
-
 enum { OCL_OP_ADD=0, OCL_OP_SUB=1, OCL_OP_RSUB=2, OCL_OP_ABSDIFF=3, OCL_OP_MUL=4,
        OCL_OP_MUL_SCALE=5, OCL_OP_DIV_SCALE=6, OCL_OP_RECIP_SCALE=7, OCL_OP_ADDW=8,
        OCL_OP_AND=9, OCL_OP_OR=10, OCL_OP_XOR=11, OCL_OP_NOT=12, OCL_OP_MIN=13, OCL_OP_MAX=14,
@@ -647,7 +627,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
         (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
-        if( checkScalar(*psrc1, type2, kind1, kind2) )
+        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) &&
+            checkScalar(*psrc1, type2, kind1, kind2))
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
@@ -1002,9 +983,7 @@ static BinaryFuncC* getRecipTab()
     return recipTab;
 }
 
-}
-
-void cv::multiply(InputArray src1, InputArray src2,
+void multiply(InputArray src1, InputArray src2,
                   OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
@@ -1013,7 +992,7 @@ void cv::multiply(InputArray src1, InputArray src2,
               true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
 }
 
-void cv::divide(InputArray src1, InputArray src2,
+void divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
@@ -1021,7 +1000,7 @@ void cv::divide(InputArray src1, InputArray src2,
     arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
 }
 
-void cv::divide(double scale, InputArray src2,
+void divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
     CV_INSTRUMENT_REGION();
@@ -1029,12 +1008,16 @@ void cv::divide(double scale, InputArray src2,
     arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
 }
 
+UMat UMat::mul(InputArray m, double scale) const
+{
+    UMat dst;
+    multiply(*this, m, dst, scale);
+    return dst;
+}
+
 /****************************************************************************************\
 *                                      addWeighted                                       *
 \****************************************************************************************/
-
-namespace cv
-{
 
 static BinaryFuncC* getAddWeightedTab()
 {
@@ -1849,6 +1832,9 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     }
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 /****************************************************************************************\
 *                                Earlier API: cvAdd etc.                                 *
 \****************************************************************************************/
@@ -2008,4 +1994,5 @@ cvCmpS( const void* srcarr1, double value, void* dstarr, int cmp_op )
     cv::compare( src1, value, dst, cmp_op );
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */

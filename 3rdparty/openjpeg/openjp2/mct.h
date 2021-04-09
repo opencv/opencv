@@ -85,8 +85,9 @@ Apply an irreversible multi-component transform to an image
 @param c2 Samples blue component
 @param n Number of samples for each component
 */
-void opj_mct_encode_real(OPJ_INT32* OPJ_RESTRICT c0, OPJ_INT32* OPJ_RESTRICT c1,
-                         OPJ_INT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
+void opj_mct_encode_real(OPJ_FLOAT32* OPJ_RESTRICT c0,
+                         OPJ_FLOAT32* OPJ_RESTRICT c1,
+                         OPJ_FLOAT32* OPJ_RESTRICT c2, OPJ_SIZE_T n);
 /**
 Apply an irreversible multi-component inverse transform to an image
 @param c0 Samples for luminance component

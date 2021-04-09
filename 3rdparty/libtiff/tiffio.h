@@ -261,8 +261,10 @@ typedef struct {
 #define LOGLUV_PUBLIC 1
 #endif
 
-#if !defined(__GNUC__) && !defined(__attribute__)
-#  define __attribute__(x) /*nothing*/
+#if defined(__GNUC__) || defined(__attribute__)
+#  define TIFF_ATTRIBUTE(x)    __attribute__(x)
+#else
+#  define TIFF_ATTRIBUTE(x) /*nothing*/
 #endif
 
 #if defined(c_plusplus) || defined(__cplusplus)
@@ -350,6 +352,7 @@ extern int TIFFVGetFieldDefaulted(TIFF* tif, uint32 tag, va_list ap);
 extern int TIFFReadDirectory(TIFF* tif);
 extern int TIFFReadCustomDirectory(TIFF* tif, toff_t diroff, const TIFFFieldArray* infoarray);
 extern int TIFFReadEXIFDirectory(TIFF* tif, toff_t diroff);
+extern int TIFFReadGPSDirectory(TIFF* tif, toff_t diroff);
 extern uint64 TIFFScanlineSize64(TIFF* tif);
 extern tmsize_t TIFFScanlineSize(TIFF* tif);
 extern uint64 TIFFRasterScanlineSize64(TIFF* tif);
@@ -400,6 +403,7 @@ extern void TIFFFreeDirectory(TIFF*);
 extern int TIFFCreateDirectory(TIFF*);
 extern int TIFFCreateCustomDirectory(TIFF*,const TIFFFieldArray*);
 extern int TIFFCreateEXIFDirectory(TIFF*);
+extern int TIFFCreateGPSDirectory(TIFF*);
 extern int TIFFLastDirectory(TIFF*);
 extern int TIFFSetDirectory(TIFF*, uint16);
 extern int TIFFSetSubDirectory(TIFF*, uint64);
@@ -411,6 +415,8 @@ extern int TIFFWriteDirectory(TIFF *);
 extern int TIFFWriteCustomDirectory(TIFF *, uint64 *);
 extern int TIFFCheckpointDirectory(TIFF *);
 extern int TIFFRewriteDirectory(TIFF *);
+extern int TIFFDeferStrileArrayWriting(TIFF *);
+extern int TIFFForceStrileArrayWriting(TIFF* );
 
 #if defined(c_plusplus) || defined(__cplusplus)
 extern void TIFFPrintDirectory(TIFF*, FILE*, long = 0);
@@ -448,10 +454,10 @@ extern TIFF* TIFFClientOpen(const char*, const char*,
 	    TIFFMapFileProc, TIFFUnmapFileProc);
 extern const char* TIFFFileName(TIFF*);
 extern const char* TIFFSetFileName(TIFF*, const char *);
-extern void TIFFError(const char*, const char*, ...) __attribute__((__format__ (__printf__,2,3)));
-extern void TIFFErrorExt(thandle_t, const char*, const char*, ...) __attribute__((__format__ (__printf__,3,4)));
-extern void TIFFWarning(const char*, const char*, ...) __attribute__((__format__ (__printf__,2,3)));
-extern void TIFFWarningExt(thandle_t, const char*, const char*, ...) __attribute__((__format__ (__printf__,3,4)));
+extern void TIFFError(const char*, const char*, ...) TIFF_ATTRIBUTE((__format__ (__printf__,2,3)));
+extern void TIFFErrorExt(thandle_t, const char*, const char*, ...) TIFF_ATTRIBUTE((__format__ (__printf__,3,4)));
+extern void TIFFWarning(const char*, const char*, ...) TIFF_ATTRIBUTE((__format__ (__printf__,2,3)));
+extern void TIFFWarningExt(thandle_t, const char*, const char*, ...) TIFF_ATTRIBUTE((__format__ (__printf__,3,4)));
 extern TIFFErrorHandler TIFFSetErrorHandler(TIFFErrorHandler);
 extern TIFFErrorHandlerExt TIFFSetErrorHandlerExt(TIFFErrorHandlerExt);
 extern TIFFErrorHandler TIFFSetWarningHandler(TIFFErrorHandler);
@@ -468,6 +474,9 @@ extern tmsize_t TIFFReadEncodedStrip(TIFF* tif, uint32 strip, void* buf, tmsize_
 extern tmsize_t TIFFReadRawStrip(TIFF* tif, uint32 strip, void* buf, tmsize_t size);  
 extern tmsize_t TIFFReadEncodedTile(TIFF* tif, uint32 tile, void* buf, tmsize_t size);  
 extern tmsize_t TIFFReadRawTile(TIFF* tif, uint32 tile, void* buf, tmsize_t size);  
+extern int      TIFFReadFromUserBuffer(TIFF* tif, uint32 strile,
+                                       void* inbuf, tmsize_t insize,
+                                       void* outbuf, tmsize_t outsize);
 extern tmsize_t TIFFWriteEncodedStrip(TIFF* tif, uint32 strip, void* data, tmsize_t cc);
 extern tmsize_t TIFFWriteRawStrip(TIFF* tif, uint32 strip, void* data, tmsize_t cc);  
 extern tmsize_t TIFFWriteEncodedTile(TIFF* tif, uint32 tile, void* data, tmsize_t cc);  
@@ -487,6 +496,11 @@ extern void TIFFSwabArrayOfFloat(float* fp, tmsize_t n);
 extern void TIFFSwabArrayOfDouble(double* dp, tmsize_t n);
 extern void TIFFReverseBits(uint8* cp, tmsize_t n);
 extern const unsigned char* TIFFGetBitRevTable(int);
+
+extern uint64 TIFFGetStrileOffset(TIFF *tif, uint32 strile);
+extern uint64 TIFFGetStrileByteCount(TIFF *tif, uint32 strile);
+extern uint64 TIFFGetStrileOffsetWithErr(TIFF *tif, uint32 strile, int *pbErr);
+extern uint64 TIFFGetStrileByteCountWithErr(TIFF *tif, uint32 strile, int *pbErr);
 
 #ifdef LOGLUV_PUBLIC
 #define U_NEU		0.210526316

@@ -28,10 +28,12 @@
 #define INF_ENGINE_RELEASE_2020_3 2020030000
 #define INF_ENGINE_RELEASE_2020_4 2020040000
 #define INF_ENGINE_RELEASE_2021_1 2021010000
+#define INF_ENGINE_RELEASE_2021_2 2021020000
+#define INF_ENGINE_RELEASE_2021_3 2021030000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2021.1 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_1
+#warning("IE version have not been provided via command-line. Using 2021.3 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_3
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -254,7 +256,10 @@ CV__DNN_INLINE_NS_BEGIN
 
 bool isMyriadX();
 
+bool isArmComputePlugin();
+
 CV__DNN_INLINE_NS_END
+
 
 InferenceEngine::Core& getCore(const std::string& id);
 

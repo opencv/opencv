@@ -13,8 +13,15 @@
 #include <ade/util/zip_range.hpp>
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/own/convert.hpp>
+#include <opencv2/gapi/gframe.hpp>
+#include <codecvt> // wstring_convert
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+#include "logger.hpp"
+
+namespace {
+struct ONNXCallContext;
+}
 
 namespace cv {
 namespace gimpl {
@@ -25,12 +32,35 @@ enum TensorPosition : int {
     OUTPUT
 };
 
+static std::string pdims(const std::vector<int64_t> &dims) {
+    std::stringstream ss;
+    auto it = dims.begin();
+    ss << *it++;
+    for (; it != dims.end(); ++it) {
+        ss << '/' << *it;
+    }
+    return ss.str();
+}
+
 struct TensorInfo {
     TensorInfo() = default;
     explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
         : dims(info.GetShape())
         , type(info.GetElementType())
-        , is_dynamic(std::find(dims.begin(), dims.end(), -1) != dims.end()) {
+        , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
+
+        // Double-check if the tensor is really dynamic
+        // Allow N to be -1
+        if (is_dynamic
+            && dims[0] == -1
+            && dims.size() > 1
+            && std::find(dims.begin() + 1, dims.end(), -1) == dims.end()) {
+
+            GAPI_LOG_WARNING(NULL, "Promoting N=-1 to N=1 for tensor " << pdims(dims));
+            dims[0] = 1;
+            is_dynamic = false;
+        }
+
         if (!is_dynamic) {
             size = std::accumulate(dims.begin(),
                                    dims.end(),
@@ -64,6 +94,8 @@ struct TensorInfo {
     cv::util::optional<MeanStdev> mstd;
 };
 
+using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
+
 class ONNXCompiled {
     // ONNX Resources
     // NOTE: Env must live with the session, otherwise segfaults.
@@ -74,6 +106,7 @@ class ONNXCompiled {
     std::vector<TensorInfo> in_tensor_info;
     std::vector<TensorInfo> out_tensor_info;
     bool is_dynamic = false;
+    bool is_postproc = false;
 
     // G-API <Net> description
     gapi::onnx::detail::ParamDesc params;
@@ -88,6 +121,7 @@ class ONNXCompiled {
     void Run(const std::vector<cv::Mat>& ins,
              const std::vector<cv::Mat>& outs);
 
+    std::vector<std::string> in_names_without_const;
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
 
@@ -98,9 +132,12 @@ public:
     std::size_t numInputs() const { return params.num_in; }
     std::size_t numOutputs() const { return params.num_out; }
     void setInput(int i, const cv::Mat &m);
-    void setOutput(int i, cv::Mat &m);
+    void setOutput(int idx, cv::Mat &m);
     cv::Mat allocOutput(int i) const;
-
+    // Gets exMat from input
+    void extractMat(ONNXCallContext &ctx, const size_t in_idx, Views &views);
+    // Extracted cv::Mat from input cv::Mat/cv::MediaFrame
+    cv::Mat exMat;
     // Run with the assigned inputs/outputs
     void run();
 };
@@ -121,7 +158,7 @@ inline std::vector<const char*> getCharNames(const std::vector<std::string>& nam
 
 inline int getIdxByName(const std::vector<cv::gimpl::onnx::TensorInfo>& info, const std::string& name) {
     // FIXME: Cache the ordering
-    const auto it = std::find_if(info.begin(), info.end(), [&](const cv::gimpl::onnx::TensorInfo &i) {
+    const auto it = ade::util::find_if(info, [&](const cv::gimpl::onnx::TensorInfo &i) {
             return i.name == name;
         });
     GAPI_Assert(it != info.end());
@@ -132,7 +169,9 @@ inline int toCV(ONNXTensorElementDataType prec) {
     switch (prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: return CV_8U;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
-    default: GAPI_Assert(false && "Unsupported data type");
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -146,11 +185,30 @@ inline std::vector<int> toCV(const std::vector<int64_t> &vsz) {
     return result;
 }
 
-inline cv::Mat toCV(Ort::Value &v) {
-    auto info = v.GetTensorTypeAndShapeInfo();
-    return cv::Mat(toCV(info.GetShape()),
-                   toCV(info.GetElementType()),
-                   reinterpret_cast<void*>(v.GetTensorMutableData<uint8_t*>()));
+inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
+    const auto info = v.GetTensorTypeAndShapeInfo();
+    const auto prec = info.GetElementType();
+    const auto shape = toCV(info.GetShape());
+    mat.create(shape, toCV(prec));
+    switch (prec) {
+#define HANDLE(E,T)                                          \
+        case E: std::copy_n(v.GetTensorMutableData<T>(),     \
+                            mat.total(),                     \
+                            reinterpret_cast<T*>(mat.data)); \
+            break;
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8, uint8_t);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT, float);
+        HANDLE(ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32, int);
+#undef HANDLE
+        case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: {
+            GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+            cv::gimpl::convertInt64ToInt32(v.GetTensorMutableData<int64_t>(),
+                                           reinterpret_cast<int*>(mat.data),
+                                           mat.total());
+            break;
+        }
+    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    }
 }
 
 inline std::vector<int64_t> toORT(const cv::MatSize &sz) {
@@ -161,12 +219,13 @@ inline void preprocess(const cv::Mat& src,
                        const cv::gimpl::onnx::TensorInfo& ti,
                              cv::Mat& dst) {
     GAPI_Assert(src.depth() == CV_32F || src.depth() == CV_8U);
-
+    // CNN input type
+    const auto type = toCV(ti.type);
     if (src.depth() == CV_32F) {
         // Just pass the tensor as-is.
         // No layout or dimension transformations done here!
         // TODO: This needs to be aligned across all NN backends.
-        GAPI_Assert(toCV(ti.type) == CV_32F && "Only 32F model input is supported for 32F data");
+        GAPI_Assert(type == CV_32F && "Only 32F model input is supported for 32F input data");
         const auto tensor_dims = toORT(src.size);
         if (tensor_dims.size() == ti.dims.size()) {
             for (size_t i = 0; i < ti.dims.size(); ++i) {
@@ -180,18 +239,21 @@ inline void preprocess(const cv::Mat& src,
         dst = src;
     } else {
         // 8U input: full preprocessing path
-        GAPI_Assert(src.depth()   == CV_8U && "Only 8U data type is supported for preproc");
-        GAPI_Assert(ti.dims.size() == 4u && "Only NCHW/NHWC layouts are supported for preproc");
+        GAPI_Assert(src.depth() == CV_8U && "Only 8U data type is supported for preproc");
+        GAPI_Assert((ti.dims.size() == 4u || ti.dims.size() == 3u)
+                    && "Only NCHW/NHWC/CHW/HWC layouts are supported for preproc");
 
-        const auto ddepth = toCV(ti.type);
-        GAPI_Assert((ddepth == CV_8U || ddepth == CV_32F)
-                    && "Only 8U and 32F model input is supported for 8U data");
+        const bool with_batch = ti.dims.size() == 4u ? true : false;
+        const int shift = with_batch ? 0 : 1;
+
+        GAPI_Assert((type == CV_8U || type == CV_32F)
+                    && "Only 8U and 32F model input is supported for 8U input data");
 
         // Assess the expected input layout
         const bool is_hwc = [&](int ch) {
-            if (ti.is_grayscale)       return false; // 1,1,h,w
-            else if (ti.dims[3] == ch) return true;  // _,_,_,c
-            else if (ti.dims[1] == ch) return false; // _,c,_,_
+            if (ti.is_grayscale)               return false; // 1,1,h,w
+            else if (ti.dims[3 - shift] == ch) return true;  // ?,_,_,c
+            else if (ti.dims[1 - shift] == ch) return false; // ?,c,_,_
             else cv::util::throw_error(std::logic_error("Couldn't identify input tensor layout"));
         } (src.channels());
 
@@ -212,15 +274,15 @@ inline void preprocess(const cv::Mat& src,
             new_w = src.cols;
         } else {
             // take h & w from the ONNX tensor info
-            new_h = ti.dims[is_hwc ? 1 : 2];
-            new_w = ti.dims[is_hwc ? 2 : 3];
+            new_h = ti.dims[(is_hwc ? 1 : 2) - shift];
+            new_w = ti.dims[(is_hwc ? 2 : 3) - shift];
         }
         GAPI_Assert(new_h != -1 && new_w != -1);
 
         cv::Mat rsz, pp;
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
-        if (src.depth() == CV_8U && ddepth == CV_32F) {
-            rsz.convertTo(pp, ddepth, ti.normalize ? 1.f / 255 : 1.f);
+        if (src.depth() == CV_8U && type == CV_32F) {
+            rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -231,7 +293,7 @@ inline void preprocess(const cv::Mat& src,
 
         if (!is_hwc && new_c > 1) {
             // Convert to CHW
-            dst.create(cv::Size(new_w, new_h * new_c), ddepth);
+            dst.create(cv::Size(new_w, new_h * new_c), type);
             std::vector<cv::Mat> planes(new_c);
             for (int ch = 0; ch < new_c; ++ch) {
                 planes[ch] = dst.rowRange(ch * new_h, (ch + 1) * new_h);
@@ -246,13 +308,37 @@ inline void preprocess(const cv::Mat& src,
         if (ti.is_dynamic) {
             // Reshape to input dimensions
             const std::vector<int> out_dims = is_hwc
-                ? std::vector<int>{1, new_h, new_w, new_c}
-                : std::vector<int>{1, new_c, new_h, new_w};
+                ? with_batch
+                    ? std::vector<int>{1, new_h, new_w, new_c}
+                    : std::vector<int>{new_h, new_w, new_c}
+                : with_batch
+                    ? std::vector<int>{1, new_c, new_h, new_w}
+                    : std::vector<int>{new_c, new_h, new_w};
             dst = dst.reshape(1, out_dims);
         } else {
             // Reshape to ONNX dimensions (no -1s there!)
             dst = dst.reshape(1, toCV(ti.dims));
         }
+    }
+}
+
+void preprocess(const cv::MediaFrame::View& view,
+                const cv::GFrameDesc& desc,
+                      cv::Mat& dst) {
+    // This overload constructs cv::Mat from cv::MediaFrame
+    switch (desc.fmt) {
+        case cv::MediaFormat::BGR: {
+            dst = cv::Mat(desc.size, CV_8UC3, view.ptr[0], view.stride[0]);
+            break;
+        }
+        case cv::MediaFormat::NV12: {
+            const auto y_plane  = cv::Mat(desc.size, CV_8UC1, view.ptr[0], view.stride[0]);
+            const auto uv_plane = cv::Mat(desc.size / 2, CV_8UC2, view.ptr[1], view.stride[1]);
+            cvtColorTwoPlane(y_plane, uv_plane, dst, cv::COLOR_YUV2BGR_NV12);
+            break;
+        }
+        default:
+            GAPI_Assert(false && "Unsupported media format for ONNX backend");
     }
 }
 
@@ -278,8 +364,10 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
         return createTensor<uint8_t>(memory_info, tensor_params, data);
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
         return createTensor<float>(memory_info, tensor_params, data);
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+        return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "Unsupported data type");
+        GAPI_Assert(false && "ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -297,7 +385,7 @@ struct ONNXUnit {
 struct ONNXCallContext {
     // Input parameters passed to an inference operation.
     std::vector<cv::GArg> args;
-
+    cv::GShapes in_shapes;
     //FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
     //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
     //once on enter for input and output arguments, and once before return for output arguments only
@@ -312,6 +400,11 @@ struct ONNXCallContext {
     const cv::Mat&   inMat(std::size_t input) {
         return inArg<cv::Mat>(input);
     }
+
+    const cv::MediaFrame& inFrame(std::size_t input) {
+        return inArg<cv::MediaFrame>(input);
+    }
+
     cv::Mat&         outMatR(std::size_t output) {
         return *cv::util::get<cv::Mat*>(results.at(output));
     }
@@ -403,7 +496,8 @@ cv::GArg cv::gimpl::onnx::GONNXExecutable::packArg(const cv::GArg &arg) {
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
                 && arg.kind != cv::detail::ArgKind::GSCALAR
                 && arg.kind != cv::detail::ArgKind::GARRAY
-                && arg.kind != cv::detail::ArgKind::GOPAQUE);
+                && arg.kind != cv::detail::ArgKind::GOPAQUE
+                && arg.kind != cv::detail::ArgKind::GFRAME);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF) {
         util::throw_error(std::logic_error("Inference supports G-types ONLY!"));
@@ -424,6 +518,8 @@ cv::GArg cv::gimpl::onnx::GONNXExecutable::packArg(const cv::GArg &arg) {
     // Note: .at() is intentional for GOpaque as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+
+    case GShape::GFRAME:   return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
 
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
@@ -451,8 +547,16 @@ void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
     context.args.reserve(op.args.size());
     using namespace std::placeholders;
     ade::util::transform(op.args,
-                          std::back_inserter(context.args),
-                          std::bind(&GONNXExecutable::packArg, this, _1));
+                         std::back_inserter(context.args),
+                         std::bind(&GONNXExecutable::packArg, this, _1));
+
+    // NB: Need to store inputs shape to recognize GFrame/GMat
+    context.in_shapes.reserve(op.args.size());
+    ade::util::transform(op.args,
+                         std::back_inserter(context.in_shapes),
+                         [](const cv::GArg& arg) {
+                             return arg.get<cv::gimpl::RcDesc>().shape;
+                         });
 
     // - Output parameters.
     for (const auto &out_it : ade::util::indexed(op.outs)) {
@@ -477,7 +581,6 @@ namespace onnx {
 
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
-
     // Validate input parameters before allocating any resources
     if (params.num_in > 1u && params.num_in != params.input_names.size()) {
         cv::util::throw_error(std::logic_error("Please specify input layer names for "
@@ -491,7 +594,13 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+#ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
+#else
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    std::wstring w_model_path = converter.from_bytes(params.model_path.data());
+    this_session = Ort::Session(this_env, w_model_path.data(), session_options);
+#endif
     this_memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
     in_tensor_info = getTensorInfo(INPUT);
@@ -507,6 +616,7 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
                                            "Please provide a custom post-processing function "
                                            "(.cfgPostProc) in network parameters"));
     }
+    is_postproc = (params.custom_post_proc != nullptr);
 
     // Update parameters based on session information
     if (params.num_in == 1u && params.input_names.empty()) {
@@ -517,8 +627,6 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
 
     // Validate what is supported currently
-    GAPI_Assert(params.const_inputs.empty()
-                && "Const inputs are not currently supported");
     GAPI_Assert(std::all_of(in_tensor_info.begin(),
                             in_tensor_info.end(),
                             [](const cv::gimpl::onnx::TensorInfo &p) {
@@ -545,6 +653,17 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
             const auto ort_idx = getIdxByName(in_tensor_info, params.input_names[idx]);
             in_tensor_info[ort_idx].normalize = params.normalize[idx];
         }
+    }
+
+    if (!params.const_inputs.empty()) {
+        // Form input names order without const input names
+        in_names_without_const.clear();
+        std::copy_if(params.input_names.begin(), params.input_names.end(),
+                     std::back_inserter(in_names_without_const),
+                     [&](const std::string& name) {
+                        const auto it = params.const_inputs.find(name);
+                        return it == params.const_inputs.end();
+                     });
     }
 
     // Pre-allocate vectors (not buffers) for runtime info
@@ -580,9 +699,9 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
 }
 
 cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
-    if (is_dynamic) {
+    if (is_dynamic || is_postproc) {
         GAPI_Assert(!params.out_metas.empty()
-                    && "Metadata must be specified if NN has dynamic inputs!");
+                    && "Metadata must be specified if NN has dynamic inputs or post-processing function is used!");
         return params.out_metas.at(idx);
     }
     const auto ort_idx = getIdxByName(out_tensor_info, params.output_names[idx]);
@@ -590,11 +709,30 @@ cv::GMatDesc ONNXCompiled::outMeta(int idx) const {
                         toCV(out_tensor_info[ort_idx].dims));
 }
 
-void ONNXCompiled::setInput(int i, const cv::Mat &m) {
-    const auto in_idx  = i;
+void ONNXCompiled::setInput(int in_idx, const cv::Mat &m) {
+    GAPI_Assert(!m.empty() && "Input data can't be empty!");
     const auto in_name = params.input_names[in_idx];
     const auto ort_idx = getIdxByName(in_tensor_info, in_name);
     preprocess(m, in_tensor_info[ort_idx], in_data[in_idx]);
+}
+
+void ONNXCompiled::extractMat(ONNXCallContext &ctx, const size_t in_idx, Views& views) {
+    switch (ctx.in_shapes[in_idx]) {
+        case cv::GShape::GFRAME: {
+            const cv::MediaFrame& frame = ctx.inFrame(in_idx);
+            views.emplace_back(new cv::MediaFrame::View(frame.access(cv::MediaFrame::Access::R)));
+            GAPI_Assert(views.size() <= numInputs());
+            preprocess(*views.back(), frame.desc(), exMat);
+            break;
+        }
+        case cv::GShape::GMAT: {
+            exMat = ctx.inMat(in_idx);
+            break;
+        }
+        default: {
+            GAPI_Assert("Unsupported input shape for ONNX backend");
+        }
+    }
 }
 
 void ONNXCompiled::setOutput(int i, cv::Mat &m) {
@@ -613,9 +751,12 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                        const std::vector<cv::Mat>& outs) {
     std::vector<Ort::Value> in_tensors, out_tensors;
 
-    auto in_run_names  = getCharNames(params.input_names);
-
-    for (const auto it : ade::util::indexed(params.input_names)) {
+    // Layer names order for run
+    auto input_names = (in_names_without_const.empty() && params.const_inputs.empty())
+                       ? params.input_names
+                       : in_names_without_const;
+    // Creates tensors for unique names that don't contain constant input
+    for (const auto it : ade::util::indexed(input_names)) {
         auto i         = ade::util::index(it);
         auto in_name   = ade::util::value(it);
         const auto idx = getIdxByName(in_tensor_info, in_name);
@@ -624,7 +765,19 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                                              ins[i]));
     }
 
-    if (!is_dynamic) {
+    for (auto &&c_in_pair : params.const_inputs) {
+        const auto idx = getIdxByName(in_tensor_info, c_in_pair.first);
+        in_tensors.emplace_back(createTensor(this_memory_info,
+                                             in_tensor_info[idx],
+                                             c_in_pair.second.first));
+        // Puts const input names in sequence for Run
+        // ONNXRuntime can match input tensors to CNN inputs by names
+        input_names.emplace_back(c_in_pair.first);
+    }
+    GAPI_Assert(input_names.size() == this_session.GetInputCount());
+
+    auto in_run_names  = getCharNames(input_names);
+    if (!is_dynamic && !is_postproc) {
         // Easy path - just run the session which is bound to G-API's
         // internal data
         for (auto i : ade::util::iota(params.output_names.size())) {
@@ -636,7 +789,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         this_session.Run(Ort::RunOptions{nullptr},
                          in_run_names.data(),
                          &in_tensors.front(),
-                         params.input_names.size(),
+                         input_names.size(),
                          out_run_names.data(),
                          &out_tensors.front(),
                          params.output_names.size());
@@ -644,14 +797,17 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
         // Hard path - run session & user-defined post-processing
         // NOTE: use another list of output names here
         std::vector<const char*> out_names;
-        for (auto &&ti : out_tensor_info) {
-            out_names.push_back(ti.name.c_str());
-        }
+        out_names.reserve(outs.size());
+        params.names_to_remap.empty()
+            ? ade::util::transform(out_tensor_info, std::back_inserter(out_names),
+                                   [] (const TensorInfo& ti) { return ti.name.c_str(); })
+            : ade::util::transform(params.names_to_remap, std::back_inserter(out_names),
+                                   [] (const std::string& ntr) { return ntr.c_str(); });
 
         auto outputs = this_session.Run(Ort::RunOptions{nullptr},
                                         in_run_names.data(),
                                         &in_tensors.front(),
-                                        params.input_names.size(),
+                                        input_names.size(),
                                         out_names.data(),
                                         out_names.size());
         std::unordered_map<std::string, cv::Mat> onnx_outputs;
@@ -659,23 +815,54 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
 
         GAPI_Assert(outputs.size() == out_names.size());
         // Fill in ONNX tensors
-        for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensor_info),
+        for (auto &&iter : ade::util::zip(ade::util::toRange(out_names),
                                           ade::util::toRange(outputs))) {
-            const auto &out_name   = std::get<0>(iter).name;
+            const auto &out_name   = std::get<0>(iter);
                   auto &out_tensor = std::get<1>(iter);
-            onnx_outputs[out_name] = toCV(out_tensor);
+            copyFromONNX(out_tensor, onnx_outputs[out_name]);
         }
-
+        std::vector<uint8_t *> tracked_mat_ptrs;
         // Fill in G-API outputs
         for (auto &&it: ade::util::indexed(params.output_names)) {
             gapi_outputs[ade::util::value(it)] = outs[ade::util::index(it)];
+            tracked_mat_ptrs.push_back(outs[ade::util::index(it)].data);
         }
         params.custom_post_proc(onnx_outputs, gapi_outputs);
+        // Checking for possible data reallocation after remapping
+        GAPI_Assert(tracked_mat_ptrs.size() == params.output_names.size());
+        for (auto &&iter : ade::util::zip(ade::util::toRange(tracked_mat_ptrs),
+                                          ade::util::toRange(params.output_names))) {
+            const auto &original_data = std::get<0>(iter);
+            const auto &received_data = gapi_outputs.at(std::get<1>(iter)).data;
+            if (original_data != received_data) {
+                cv::util::throw_error
+                    (std::logic_error
+                     ("OpenCV kernel output parameter was reallocated after remapping of ONNX output. \n"
+                      "Incorrect logic in remapping function?"));
+            }
+        }
     }
 }
 
 void ONNXCompiled::run() {
     Run(in_data, out_data);
+}
+
+static void checkInputMeta(const cv::GMetaArg mm) {
+    switch (mm.index()) {
+        case cv::GMetaArg::index_of<cv::GMatDesc>(): break;
+        case cv::GMetaArg::index_of<cv::GFrameDesc>(): {
+            const auto &meta = util::get<cv::GFrameDesc>(mm);
+            switch (meta.fmt) {
+                case cv::MediaFormat::NV12: break;
+                case cv::MediaFormat::BGR:  break;
+                default:
+                    GAPI_Assert(false && "Unsupported media format for ONNX backend");
+            } break;
+        } break;
+        default:
+            util::throw_error(std::runtime_error("Unsupported input meta for ONNX backend"));
+    }
 }
 
 struct Infer: public cv::detail::KernelTag {
@@ -695,8 +882,7 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.oc->numInputs() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
         for (auto &&mm : in_metas) {
-            GAPI_Assert(util::holds_alternative<cv::GMatDesc>(mm)
-                        && "Non-GMat inputs are not supported");
+            checkInputMeta(mm);
         }
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             result.emplace_back(uu.oc->outMeta(idx));
@@ -705,8 +891,10 @@ struct Infer: public cv::detail::KernelTag {
     }
 
     static void run(const ONNXUnit &uu, ONNXCallContext &ctx) {
+        Views views;
         for (auto &&idx : ade::util::iota(uu.oc->numInputs())) {
-            uu.oc->setInput(idx, ctx.inMat(idx));
+            uu.oc->extractMat(ctx, idx, views);
+            uu.oc->setInput(idx, uu.oc->exMat);
         }
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             uu.oc->setOutput(idx, ctx.outMatR(idx));
@@ -730,7 +918,7 @@ struct InferROI: public cv::detail::KernelTag {
         const auto &uu = gm.metadata(nh).get<ONNXUnit>();
         GAPI_Assert(1u == uu.oc->numInputs());
         GAPI_Assert(2u == in_metas.size());
-
+        checkInputMeta(in_metas.at(1));
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             result.emplace_back(uu.oc->outMeta(idx));
         }
@@ -738,12 +926,12 @@ struct InferROI: public cv::detail::KernelTag {
     }
 
     static void run(const ONNXUnit &uu, ONNXCallContext &ctx) {
+        Views views;
         // non-generic version for now, per the InferROI's definition
         GAPI_Assert(uu.oc->numInputs() == 1u);
         const auto& this_roi = ctx.inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
-        const auto  this_mat = ctx.inMat(1);
-
-        uu.oc->setInput(0, this_mat(this_roi));
+        uu.oc->extractMat(ctx, 1, views);
+        uu.oc->setInput(0, uu.oc->exMat(this_roi));
         for (auto &&idx : ade::util::iota(uu.oc->numOutputs())) {
             uu.oc->setOutput(idx, ctx.outMatR(idx));
         }
@@ -769,10 +957,8 @@ struct InferList: public cv::detail::KernelTag {
                     && "Known input layers count doesn't match input meta count");
 
         for (auto i : ade::util::iota(uu.oc->numInputs())) {
-            const auto & mm = in_metas[i + 1];
-
-            GAPI_Assert(util::holds_alternative<cv::GMatDesc>(mm)
-                        && "Non-GMat inputs are not supported");
+            const auto &mm = in_metas[i + 1];
+            checkInputMeta(mm);
         }
 
         // roi-list version is much easier at the moment.
@@ -784,19 +970,20 @@ struct InferList: public cv::detail::KernelTag {
     }
 
     static void run(const ONNXUnit &uu, ONNXCallContext &ctx) {
+        Views views;
         // non-generic version for now:
         // - assumes input 0 is always ROI list
         // - assumes all inputs/outputs are always Mats
         GAPI_Assert(uu.oc->numInputs() == 1); // roi list is not counted in net's inputs
 
         const auto& in_roi_vec = ctx.inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
-        const cv::Mat this_mat = ctx.inMat(1u);
 
         for (auto i : ade::util::iota(uu.oc->numOutputs())) {
             ctx.outVecR<cv::Mat>(i).clear();
         }
+        uu.oc->extractMat(ctx, 1, views);
         for (const auto &rc : in_roi_vec) {
-            uu.oc->setInput(0, this_mat(rc));
+            uu.oc->setInput(0, uu.oc->exMat(rc));
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());
             for (auto i : ade::util::iota(uu.oc->numOutputs())) {
                 out_mats[i] = uu.oc->allocOutput(i);
@@ -837,10 +1024,30 @@ struct InferList2: public cv::detail::KernelTag {
         // FIXME: this is filtering not done, actually! GArrayDesc has
         // no hint for type!
         const auto &mm_0   = in_metas[0u];
-        const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
-        GAPI_Assert(   !meta_0.isND()
-                    && !meta_0.planar
-                    && "Only images are supported as the 0th argument");
+        switch (in_metas[0u].index()) {
+            case cv::GMetaArg::index_of<cv::GMatDesc>(): {
+                const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
+                GAPI_Assert(   !meta_0.isND()
+                            && !meta_0.planar
+                            && "Only images are supported as the 0th argument");
+                break;
+            }
+            case cv::GMetaArg::index_of<cv::GFrameDesc>(): {
+                const auto &meta_0 = util::get<cv::GFrameDesc>(mm_0);
+                GAPI_Assert(   (meta_0.fmt == cv::MediaFormat::BGR)
+                            || (meta_0.fmt == cv::MediaFormat::NV12));
+                GAPI_Assert((meta_0.size.height !=0) && (meta_0.size.width !=0));
+                break;
+            }
+            default:
+                util::throw_error(std::runtime_error("Unsupported input meta for ONNX backend"));
+        }
+        if (util::holds_alternative<cv::GMatDesc>(mm_0)) {
+            const auto &meta_0 = util::get<cv::GMatDesc>(mm_0);
+            GAPI_Assert(   !meta_0.isND()
+                        && !meta_0.planar
+                        && "Only images are supported as the 0th argument");
+        }
         for (auto i : ade::util::iota(uu.oc->numInputs())) {
             const auto &mm = in_metas[i + 1];
             GAPI_Assert(util::holds_alternative<cv::GArrayDesc>(mm)
@@ -856,11 +1063,11 @@ struct InferList2: public cv::detail::KernelTag {
     }
 
     static void run(const ONNXUnit &uu, ONNXCallContext &ctx) {
+        Views views;
         GAPI_Assert(ctx.args.size() > 1u
                     && "This operation must have at least two arguments");
-
+        uu.oc->extractMat(ctx, 0, views);
         // Since we do a ROI list inference, always assume our input buffer is image
-        const cv::Mat mat_0  = ctx.inMat(0u);
         // Take the next argument, which must be vector (of any kind).
         // Use this only to obtain the ROI list size (sizes of all
         // other vectors must be equal to this one)
@@ -885,7 +1092,7 @@ struct InferList2: public cv::detail::KernelTag {
                 if (this_vec.holds<cv::Rect>()) {
                     // ROI case - create an ROI blob
                     const auto &vec = this_vec.rref<cv::Rect>();
-                    uu.oc->setInput(in_idx, mat_0(vec[list_idx]));
+                    uu.oc->setInput(in_idx, uu.oc->exMat(vec[list_idx]));
                 } else if (this_vec.holds<cv::Mat>()) {
                     // Mat case - create a regular blob
                     // FIXME: NOW Assume Mats are always BLOBS (not

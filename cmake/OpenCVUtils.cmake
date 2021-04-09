@@ -8,7 +8,20 @@ include(CMakeParseArguments)
 function(ocv_cmake_dump_vars)
   set(OPENCV_SUPPRESS_DEPRECATIONS 1)  # suppress deprecation warnings from variable_watch() guards
   get_cmake_property(__variableNames VARIABLES)
-  cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
+  cmake_parse_arguments(DUMP "FORCE" "TOFILE" "" ${ARGN})
+
+  # avoid generation of excessive logs with "--trace" or "--trace-expand" parameters
+  # Note: `-DCMAKE_TRACE_MODE=1` should be passed to CMake through command line. It is not a CMake buildin variable for now (2020-12)
+  #       Use `cmake . -UCMAKE_TRACE_MODE` to remove this variable from cache
+  if(CMAKE_TRACE_MODE AND NOT DUMP_FORCE)
+    if(DUMP_TOFILE)
+      file(WRITE ${CMAKE_BINARY_DIR}/${DUMP_TOFILE} "Skipped due to enabled CMAKE_TRACE_MODE")
+    else()
+      message(AUTHOR_WARNING "ocv_cmake_dump_vars() is skipped due to enabled CMAKE_TRACE_MODE")
+    endif()
+    return()
+  endif()
+
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
   string(TOLOWER "${regex}" regex_lower)
   set(__VARS "")
@@ -400,6 +413,24 @@ macro(ocv_clear_vars)
   endforeach()
 endmacro()
 
+
+# Clears passed variables with INTERNAL type from CMake cache
+macro(ocv_clear_internal_cache_vars)
+  foreach(_var ${ARGN})
+    get_property(_propertySet CACHE ${_var} PROPERTY TYPE SET)
+    if(_propertySet)
+      get_property(_type CACHE ${_var} PROPERTY TYPE)
+      if(_type STREQUAL "INTERNAL")
+        message("Cleaning INTERNAL cached variable: ${_var}")
+        unset(${_var} CACHE)
+      endif()
+    endif()
+  endforeach()
+  unset(_propertySet)
+  unset(_type)
+endmacro()
+
+
 set(OCV_COMPILER_FAIL_REGEX
     "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
     "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
@@ -533,7 +564,11 @@ macro(ocv_check_flag_support lang flag varname base_options)
   elseif("_${lang}_" MATCHES "_C_")
     set(_lang C)
   elseif("_${lang}_" MATCHES "_OBJCXX_")
-    set(_lang OBJCXX)
+    if(DEFINED CMAKE_OBJCXX_COMPILER)  # CMake 3.16+ and enable_language(OBJCXX) call are required
+      set(_lang OBJCXX)
+    else()
+      set(_lang CXX)
+    endif()
   else()
     set(_lang ${lang})
   endif()
@@ -542,7 +577,9 @@ macro(ocv_check_flag_support lang flag varname base_options)
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
   string(REGEX REPLACE " -|-|=| |\\.|," "_" ${varname} "${${varname}}")
 
-  ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
+  if(DEFINED CMAKE_${_lang}_COMPILER)
+    ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
+  endif()
 endmacro()
 
 macro(ocv_check_runtime_flag flag result)
@@ -1537,6 +1574,30 @@ function(ocv_add_library target)
   endif()
 
   _ocv_append_target_includes(${target})
+endfunction()
+
+
+function(ocv_add_external_target name inc link def)
+  if(BUILD_SHARED_LIBS)
+    set(imp IMPORTED)
+  endif()
+  add_library(ocv.3rdparty.${name} INTERFACE ${imp})
+  set_target_properties(ocv.3rdparty.${name} PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${inc}"
+    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${inc}"
+    INTERFACE_COMPILE_DEFINITIONS "${def}")
+  # When cmake version is greater than or equal to 3.11, INTERFACE_LINK_LIBRARIES no longer applies to interface library
+  # See https://github.com/opencv/opencv/pull/18658
+  if (CMAKE_VERSION VERSION_LESS 3.11)
+    set_target_properties(ocv.3rdparty.${name} PROPERTIES
+      INTERFACE_LINK_LIBRARIES "${link}")
+  else()
+    target_link_libraries(ocv.3rdparty.${name} INTERFACE ${link})
+  endif()
+  #
+  if(NOT BUILD_SHARED_LIBS)
+    install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
+  endif()
 endfunction()
 
 

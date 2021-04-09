@@ -126,8 +126,8 @@ public:
 
         const UMat& inp0 = inputs[0];
         UMat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         size_t num = total(shape(inp0.size), 0, startAxis);
         size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
@@ -211,8 +211,8 @@ public:
 
         const Mat& inp0 = inputs[0];
         Mat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();
@@ -334,8 +334,8 @@ public:
         if (!acrossSpatial) {
             axes_data.push_back(1);
         } else {
-            axes_data.resize(ieInpNode->get_shape().size());
-            std::iota(axes_data.begin(), axes_data.end(), 0);
+            axes_data.resize(ieInpNode->get_shape().size() - 1);
+            std::iota(axes_data.begin(), axes_data.end(), 1);
         }
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
         auto norm = std::make_shared<ngraph::op::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
@@ -344,19 +344,18 @@ public:
         std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
         shape[0] = blobs.empty() ? 1 : batch;
         shape[1] = numChannels;
-        std::shared_ptr<ngraph::op::Constant> weight;
-        if (blobs.empty())
+        if (!blobs.empty())
         {
-            std::vector<float> ones(numChannels, 1);
-            weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), ones.data());
-        }
-        else
-        {
-            weight = std::make_shared<ngraph::op::Constant>(
+            auto weight = std::make_shared<ngraph::op::Constant>(
                                       ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#else
+            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#endif
+            return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
         }
-        auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
-        return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(norm));
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -378,8 +377,8 @@ public:
 
         NormalizeConfiguration<float> config;
         config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
-        config.axis_start = clamp(startAxis, input_shape.size());
-        config.axis_end = clamp(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
+        config.axis_start = normalize_axis(startAxis, input_shape.size());
+        config.axis_end = normalize_axis(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
         config.norm = pnorm;
         config.eps = epsilon;
 

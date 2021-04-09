@@ -10,10 +10,13 @@
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
 #include <queue>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
+extern bool DNN_DIAGNOSTICS_RUN;
 
 // This wrapper can behave differently for fake input nodes and real graph nodes.
 class ONNXNodeWrapper : public ImportNodeWrapper
@@ -249,6 +252,40 @@ public:
     }
 };
 
+class NormalizeSubgraph4 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph4() : NormalizeSubgraphBase(1)
+    {
+        int input = addNodeToMatch("");
+        int mul = addNodeToMatch("Mul", input, input);
+        int sum = addNodeToMatch("ReduceSum", mul);
+        int eps = addNodeToMatch("");
+        int max = addNodeToMatch("Max", sum, eps);
+        int sqrt = addNodeToMatch("Sqrt", max);
+        int reciprocal = addNodeToMatch("Reciprocal", sqrt);
+        addNodeToMatch("Mul", input, reciprocal);
+        setFusedNode("Normalize", input);
+    }
+};
+
+class NormalizeSubgraph5 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph5() : NormalizeSubgraphBase(1)
+    {
+        int input = addNodeToMatch("");
+        int mul = addNodeToMatch("Mul", input, input);
+        int sum = addNodeToMatch("ReduceSum", mul);
+        int clip = addNodeToMatch("Clip", sum);
+        int sqrt = addNodeToMatch("Sqrt", clip);
+        int one = addNodeToMatch("Constant");
+        int div = addNodeToMatch("Div", one, sqrt);
+        addNodeToMatch("Mul", input, div);
+        setFusedNode("Normalize", input);
+    }
+};
+
 class GatherCastSubgraph : public Subgraph
 {
 public:
@@ -311,6 +348,19 @@ public:
         int where = addNodeToMatch("Where", condition, init, addNodeToMatch("Constant"));
         addNodeToMatch("Expand", input, where);
         setFusedNode("Expand", input, shape);
+    }
+};
+
+class MishSubgraph : public Subgraph
+{
+public:
+    MishSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int softplus = addNodeToMatch("Softplus", input);
+        int tanh = addNodeToMatch("Tanh", softplus);
+        addNodeToMatch("Mul", input, tanh);
+        setFusedNode("Mish", input);
     }
 };
 
@@ -512,6 +562,9 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
     subgraphs.push_back(makePtr<ExpandSubgraph>());
+    subgraphs.push_back(makePtr<MishSubgraph>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph4>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph5>());
 
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
@@ -589,8 +642,17 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
         }
     }
     else
-        CV_Error(Error::StsUnsupportedFormat, "Unsupported data type: " +
-                        opencv_onnx::TensorProto_DataType_Name(datatype));
+    {
+        std::string errorMsg = "Unsupported data type: " +
+                            opencv_onnx::TensorProto_DataType_Name(datatype);
+
+        if (!DNN_DIAGNOSTICS_RUN)
+        {
+            CV_Error(Error::StsUnsupportedFormat, errorMsg);
+        }
+        CV_LOG_ERROR(NULL, errorMsg);
+        return blob;
+    }
     if (tensor_proto.dims_size() == 0)
         blob.dims = 1;  // To force 1-dimensional cv::Mat for scalars.
     return blob;

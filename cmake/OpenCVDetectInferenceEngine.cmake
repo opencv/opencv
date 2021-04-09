@@ -62,7 +62,13 @@ function(add_custom_ie_build _inc _lib _lib_rel _lib_dbg _msg)
     if(find_prefix STREQUAL "_empty_")  # foreach doesn't iterate over empty elements
       set(find_prefix "")
     endif()
-    foreach(find_suffix ${CMAKE_FIND_LIBRARY_SUFFIXES})
+    if(NOT DEFINED INFERENCE_ENGINE_FIND_LIBRARY_SUFFIXES)  # allow custom override
+      set(INFERENCE_ENGINE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+      if(APPLE)
+        ocv_list_filterout(INFERENCE_ENGINE_FIND_LIBRARY_SUFFIXES "^.so$")  # skip plugins (can't be linked)
+      endif()
+    endif()
+    foreach(find_suffix ${INFERENCE_ENGINE_FIND_LIBRARY_SUFFIXES})
       ocv_ie_find_extra_libraries("${find_prefix}" "${find_suffix}")
     endforeach()
     if(NOT CMAKE_FIND_LIBRARY_SUFFIXES)
@@ -129,9 +135,9 @@ endif()
 
 if(INF_ENGINE_TARGET)
   if(NOT INF_ENGINE_RELEASE)
-    message(WARNING "InferenceEngine version has not been set, 2021.1 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    message(WARNING "InferenceEngine version has not been set, 2021.3 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
   endif()
-  set(INF_ENGINE_RELEASE "2021010000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
+  set(INF_ENGINE_RELEASE "2021030000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )

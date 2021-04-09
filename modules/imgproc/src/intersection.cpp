@@ -54,6 +54,12 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
     // L2 metric
     const float samePointEps = std::max(1e-16f, 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area()));
 
+    if (rect1.size.empty() || rect2.size.empty())
+    {
+        intersectingRegion.release();
+        return INTERSECT_NONE;
+    }
+
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];
 

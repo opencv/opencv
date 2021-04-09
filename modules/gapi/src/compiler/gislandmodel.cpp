@@ -18,7 +18,6 @@
 #include "compiler/gmodel.hpp"
 #include "compiler/gislandmodel.hpp"
 #include "compiler/gmodel.hpp"
-#include "backends/common/gbackend.hpp" // RMatAdapter
 
 #include "logger.hpp"    // GAPI_LOG
 
@@ -357,22 +356,7 @@ void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IO
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                                    ade::util::toRange(in_vector)))
     {
-        const cv::GRunArg& in_data_orig = std::get<1>(it);
-        cv::GRunArg in_data;
-        switch (in_data_orig.index())
-        {
-        case cv::GRunArg::index_of<cv::Mat>():
-            // FIXME: This whole construct is ugly, from
-            // its writing to a need in this in general
-            in_data = cv::GRunArg{ cv::make_rmat<cv::gimpl::RMatAdapter>(cv::util::get<cv::Mat>(in_data_orig))
-                                 , in_data_orig.meta
-                                 };
-            break;
-        default:
-            in_data = in_data_orig;
-            break;
-        }
-        in_objs.emplace_back(std::get<0>(it), std::move(in_data));
+        in_objs.emplace_back(std::get<0>(it), std::get<1>(it));
     }
     for (auto &&it: ade::util::indexed(ade::util::toRange(out_desc)))
     {

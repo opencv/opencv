@@ -50,7 +50,6 @@
 #endif
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/version.hpp"
 #include "opencv2/core/base.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/traits.hpp"
@@ -96,6 +95,10 @@
             @defgroup core_hal_intrin_impl Private implementation helpers
         @}
         @defgroup core_lowlevel_api Low-level API for external libraries / plugins
+    @}
+    @defgroup core_parallel Parallel Processing
+    @{
+        @defgroup core_parallel_backend Parallel backends API
     @}
 @}
  */

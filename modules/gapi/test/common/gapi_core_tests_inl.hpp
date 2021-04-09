@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_TESTS_INL_HPP
@@ -12,9 +12,10 @@
 #include <opencv2/gapi/infer/parsers.hpp>
 #include "gapi_core_tests.hpp"
 
+#include "gapi_core_tests_common.hpp"
+
 namespace opencv_test
 {
-
 TEST_P(MathOpTest, MatricesAccuracyTest)
 {
     // G-API code & corresponding OpenCV code ////////////////////////////////
@@ -1287,7 +1288,11 @@ TEST_P(PhaseTest, AccuracyTest)
     // Comparison //////////////////////////////////////////////////////////////
     // FIXME: use a comparison functor instead (after enabling OpenCL)
     {
+#if defined(__aarch64__) || defined(__arm__)
+        EXPECT_NEAR(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF), 4e-6);
+#else
         EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+#endif
     }
 }
 
@@ -1375,6 +1380,27 @@ TEST_P(NormalizeTest, Test)
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
         EXPECT_EQ(out_mat_gapi.size(), sz);
     }
+}
+
+TEST_P(KMeansNDTest, AccuracyTest)
+{
+    kmeansTestBody(in_mat1, sz, type, K, flags, getCompileArgs(), cmpF);
+}
+
+TEST_P(KMeans2DTest, AccuracyTest)
+{
+    const int amount = sz.height;
+    std::vector<cv::Point2f> in_vector{};
+    initPointsVectorRandU(amount, in_vector);
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
+}
+
+TEST_P(KMeans3DTest, AccuracyTest)
+{
+    const int amount = sz.height;
+    std::vector<cv::Point3f> in_vector{};
+    initPointsVectorRandU(amount, in_vector);
+    kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
 }
 
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
@@ -1707,6 +1733,39 @@ TEST_P(SizeRTest, ParseTest)
     auto out = cv::gapi::streaming::size(op_rect);
     cv::GComputation c(cv::GIn(op_rect), cv::GOut(out));
     c.apply(cv::gin(rect), cv::gout(out_sz), getCompileArgs());
+
+    EXPECT_EQ(out_sz, sz);
+}
+
+namespace {
+    class TestMediaBGR final : public cv::MediaFrame::IAdapter {
+        cv::Mat m_mat;
+
+    public:
+        explicit TestMediaBGR(cv::Mat m)
+            : m_mat(m) {
+        }
+        cv::GFrameDesc meta() const override {
+            return cv::GFrameDesc{ cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows) };
+        }
+        cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+            cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+            cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+            return cv::MediaFrame::View(std::move(pp), std::move(ss));
+        }
+    };
+};
+
+TEST_P(SizeMFTest, ParseTest)
+{
+    cv::Size out_sz;
+    cv::Mat bgr = cv::Mat::eye(sz.height, sz.width, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    cv::GFrame in;
+    auto out = cv::gapi::streaming::size(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+    c.apply(cv::gin(frame), cv::gout(out_sz), getCompileArgs());
 
     EXPECT_EQ(out_sz, sz);
 }

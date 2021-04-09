@@ -169,8 +169,17 @@ TEST_P(Test_Caffe_layers, Softmax)
 
 TEST_P(Test_Caffe_layers, LRN)
 {
-    testLayerUsingCaffeModels("layer_lrn_spatial");
-    testLayerUsingCaffeModels("layer_lrn_channels");
+    double l1 = 0.0, lInf = 0.0;
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    if (target == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.01;
+        lInf = 0.01;
+    }
+    testLayerUsingCaffeModels("layer_lrn_spatial", false, true, l1, lInf);
+    testLayerUsingCaffeModels("layer_lrn_channels", false, true, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Convolution)
@@ -1583,6 +1592,11 @@ TEST_P(Test_Caffe_layers, Interp)
 TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
 #endif
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
+
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 
@@ -2152,6 +2166,12 @@ public:
             randu(scales, -1.0f, 1.0f);
             activationParams.blobs.push_back(scales);
         }
+        else if (activationParams.type == "Exp")
+        {
+            activationParams.set("base", -1.0f);
+            activationParams.set("scale", 0.3f);
+            activationParams.set("shift", 0.6f);
+        }
     }
 
     static void makeDefaultTestEltwiseLayer(LayerParams& eltwiseParams, const std::string& op, bool withCoefficients)
@@ -2223,7 +2243,7 @@ public:
     static testing::internal::ParamGenerator<std::string> activationLayersList()
     {
         // TODO: automate list generation
-        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power");
+        return Values("ReLU", "ReLU6", "ChannelsPReLU", "TanH", "Swish", "Mish", "Sigmoid", "ELU", "AbsVal", "BNLL", "Power", "Exp");
     }
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()

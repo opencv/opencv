@@ -1,6 +1,6 @@
 name: arm64 build checks
 
-on: [pull_request]
+on: workflow_dispatch
 
 jobs:
   build:

@@ -101,6 +101,7 @@ public:
 
     const cv::Scalar& inVal(int input);
     cv::Scalar& outValR(int output); // FIXME: Avoid cv::Scalar s = ctx.outValR()
+    cv::MediaFrame& outFrame(int output);
     template<typename T> std::vector<T>& outVecR(int output) // FIXME: the same issue
     {
         return outVecRef(output).wref<T>();
@@ -189,6 +190,11 @@ template<> struct get_in<cv::GArray<cv::GScalar> >: public get_in<cv::GArray<cv:
 {
 };
 
+// FIXME(dm): GArray<vector<U>>/GArray<GArray<U>> conversion should be done more gracefully in the system
+template<typename U> struct get_in<cv::GArray<cv::GArray<U>> >: public get_in<cv::GArray<std::vector<U>> >
+{
+};
+
 //FIXME(dm): GOpaque<Mat>/GOpaque<GMat> conversion should be done more gracefully in the system
 template<> struct get_in<cv::GOpaque<cv::GMat> >: public get_in<cv::GOpaque<cv::Mat> >
 {
@@ -256,6 +262,13 @@ template<> struct get_out<cv::GScalar>
     static cv::Scalar& get(GCPUContext &ctx, int idx)
     {
         return ctx.outValR(idx);
+    }
+};
+template<> struct get_out<cv::GFrame>
+{
+    static cv::MediaFrame& get(GCPUContext &ctx, int idx)
+    {
+        return ctx.outFrame(idx);
     }
 };
 template<typename U> struct get_out<cv::GArray<U>>

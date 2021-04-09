@@ -97,6 +97,17 @@ void GAPI_EXPORTS render(cv::Mat& y_plane,
                          const Prims& prims,
                          cv::GCompileArgs&& args = {});
 
+/** @brief The function renders on the input media frame passed drawing primitivies
+
+@param frame input Media Frame :  @ref cv::MediaFrame.
+@param prims vector of drawing primitivies
+@param args graph compile time parameters
+*/
+void GAPI_EXPORTS render(cv::MediaFrame& frame,
+                         const Prims& prims,
+                         cv::GCompileArgs&& args = {});
+
+
 G_TYPED_KERNEL_M(GRenderNV12, <GMat2(cv::GMat,cv::GMat,cv::GArray<wip::draw::Prim>)>, "org.opencv.render.nv12")
 {
      static GMatDesc2 outMeta(GMatDesc y_plane, GMatDesc uv_plane, GArrayDesc)
@@ -111,6 +122,14 @@ G_TYPED_KERNEL(GRenderBGR, <cv::GMat(cv::GMat,cv::GArray<wip::draw::Prim>)>, "or
      {
          return bgr;
      }
+};
+
+G_TYPED_KERNEL(GRenderFrame, <cv::GFrame(cv::GFrame, cv::GArray<wip::draw::Prim>)>, "org.opencv.render.frame")
+{
+    static GFrameDesc outMeta(GFrameDesc desc, GArrayDesc)
+    {
+        return desc;
+    }
 };
 
 /** @brief Renders on 3 channels input
@@ -134,6 +153,17 @@ uv image must be 8-bit unsigned planar 2-channel image @ref CV_8UC2
 GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
                               const GMat& uv,
                               const GArray<Prim>& prims);
+
+/** @brief Renders Media Frame
+
+Output media frame frame cv::MediaFrame
+
+@param m_frame input image: cv::MediaFrame @ref cv::MediaFrame
+@param prims draw primitives
+*/
+GAPI_EXPORTS GFrame renderFrame(const GFrame& m_frame,
+                                const GArray<Prim>& prims);
+
 //! @} gapi_draw_api
 
 } // namespace draw

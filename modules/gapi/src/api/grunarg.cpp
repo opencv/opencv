@@ -31,3 +31,48 @@ cv::GRunArg& cv::GRunArg::operator= (cv::GRunArg &&arg) {
     meta = std::move(arg.meta);
     return *this;
 }
+
+// NB: Construct GRunArgsP based on passed info and store the memory in passed cv::GRunArgs.
+// Needed for python bridge, because in case python user doesn't pass output arguments to apply.
+void cv::detail::constructGraphOutputs(const cv::GTypesInfo &out_info,
+                                       cv::GRunArgs         &args,
+                                       cv::GRunArgsP        &outs)
+{
+    for (auto&& info : out_info)
+    {
+        switch (info.shape)
+        {
+            case cv::GShape::GMAT:
+            {
+                args.emplace_back(cv::Mat{});
+                outs.emplace_back(&cv::util::get<cv::Mat>(args.back()));
+                break;
+            }
+            case cv::GShape::GSCALAR:
+            {
+                args.emplace_back(cv::Scalar{});
+                outs.emplace_back(&cv::util::get<cv::Scalar>(args.back()));
+                break;
+            }
+            case cv::GShape::GARRAY:
+            {
+                cv::detail::VectorRef ref;
+                util::get<cv::detail::ConstructVec>(info.ctor)(ref);
+                args.emplace_back(ref);
+                outs.emplace_back(cv::util::get<cv::detail::VectorRef>(args.back()));
+                break;
+            }
+            case cv::GShape::GOPAQUE:
+            {
+                cv::detail::OpaqueRef ref;
+                util::get<cv::detail::ConstructOpaque>(info.ctor)(ref);
+                args.emplace_back(ref);
+                outs.emplace_back(ref);
+                break;
+            }
+
+            default:
+                util::throw_error(std::logic_error("Unsupported output shape for python"));
+        }
+    }
+}

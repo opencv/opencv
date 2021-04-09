@@ -52,7 +52,7 @@ respectively) by the same factor.
 
 The joint rotation-translation matrix \f$[R|t]\f$ is the matrix product of a projective
 transformation and a homogeneous transformation. The 3-by-4 projective transformation maps 3D points
-represented in camera coordinates to 2D poins in the image plane and represented in normalized
+represented in camera coordinates to 2D points in the image plane and represented in normalized
 camera coordinates \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$:
 
 \f[Z_c \begin{bmatrix}
@@ -484,13 +484,13 @@ CV_EXPORTS_W Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
 ( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
--   **CALIB_CB_ADAPTIVE_THRESH** Use adaptive thresholding to convert the image to black
+-   @ref CALIB_CB_ADAPTIVE_THRESH Use adaptive thresholding to convert the image to black
 and white, rather than a fixed threshold level (computed from the average image brightness).
--   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before
+-   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before
 applying fixed or adaptive thresholding.
--   **CALIB_CB_FILTER_QUADS** Use additional criteria (like contour area, perimeter,
+-   @ref CALIB_CB_FILTER_QUADS Use additional criteria (like contour area, perimeter,
 square-like shape) to filter out false quads extracted at the contour retrieval stage.
--   **CALIB_CB_FAST_CHECK** Run a fast check on the image that looks for chessboard corners,
+-   @ref CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners,
 and shortcut the call if none is found. This can drastically speed up the call in the
 degenerate condition when no chessboard is observed.
 
@@ -542,11 +542,11 @@ CV_EXPORTS_W bool checkChessboard(InputArray img, Size size);
 ( patternSize = cv::Size(points_per_row,points_per_colum) = cv::Size(columns,rows) ).
 @param corners Output array of detected corners.
 @param flags Various operation flags that can be zero or a combination of the following values:
--   **CALIB_CB_NORMALIZE_IMAGE** Normalize the image gamma with equalizeHist before detection.
--   **CALIB_CB_EXHAUSTIVE** Run an exhaustive search to improve detection rate.
--   **CALIB_CB_ACCURACY** Up sample input image to improve sub-pixel accuracy due to aliasing effects.
--   **CALIB_CB_LARGER** The detected pattern is allowed to be larger than patternSize (see description).
--   **CALIB_CB_MARKER** The detected pattern must have a marker (see description).
+-   @ref CALIB_CB_NORMALIZE_IMAGE Normalize the image gamma with equalizeHist before detection.
+-   @ref CALIB_CB_EXHAUSTIVE Run an exhaustive search to improve detection rate.
+-   @ref CALIB_CB_ACCURACY Up sample input image to improve sub-pixel accuracy due to aliasing effects.
+-   @ref CALIB_CB_LARGER The detected pattern is allowed to be larger than patternSize (see description).
+-   @ref CALIB_CB_MARKER The detected pattern must have a marker (see description).
 This should be used if an accurate camera calibration is required.
 @param meta Optional output arrray of detected corners (CV_8UC1 and size = cv::Size(columns,rows)).
 Each entry stands for one corner of the pattern and can have one of the following values:
@@ -565,7 +565,7 @@ Calibration" demonstrating that the returned sub-pixel positions are more
 accurate than the one returned by cornerSubPix allowing a precise camera
 calibration for demanding applications.
 
-In the case, the flags **CALIB_CB_LARGER** or **CALIB_CB_MARKER** are given,
+In the case, the flags @ref CALIB_CB_LARGER or @ref CALIB_CB_MARKER are given,
 the result can be recovered from the optional meta array. Both flags are
 helpful to use calibration patterns exceeding the field of view of the camera.
 These oversized patterns allow more accurate calibrations as corners can be
@@ -682,11 +682,12 @@ typedef CirclesGridFinderParameters CirclesGridFinderParameters2;
 ( patternSize = Size(points_per_row, points_per_colum) ).
 @param centers output array of detected centers.
 @param flags various operation flags that can be one of the following values:
--   **CALIB_CB_SYMMETRIC_GRID** uses symmetric pattern of circles.
--   **CALIB_CB_ASYMMETRIC_GRID** uses asymmetric pattern of circles.
--   **CALIB_CB_CLUSTERING** uses a special algorithm for grid detection. It is more robust to
+-   @ref CALIB_CB_SYMMETRIC_GRID uses symmetric pattern of circles.
+-   @ref CALIB_CB_ASYMMETRIC_GRID uses asymmetric pattern of circles.
+-   @ref CALIB_CB_CLUSTERING uses a special algorithm for grid detection. It is more robust to
 perspective distortions but much more sensitive to background clutter.
 @param blobDetector feature detector that finds blobs like dark circles on light background.
+                    If `blobDetector` is NULL then `image` represents Point2f array of candidates.
 @param parameters struct for finding circles in a grid pattern.
 
 The function attempts to determine whether the input image contains a grid of circles. If it is, the
@@ -697,7 +698,7 @@ row). Otherwise, if the function fails to find all the corners or reorder them, 
 Sample usage of detecting and drawing the centers of circles: :
 @code
     Size patternsize(7,7); //number of centers
-    Mat gray = ....; //source image
+    Mat gray = ...; //source image
     vector<Point2f> centers; //this will be filled by the detected centers
 
     bool patternfound = findCirclesGrid(gray, patternsize, centers);
@@ -736,8 +737,8 @@ respectively. In the old interface all the vectors of object points from differe
 concatenated together.
 @param imageSize Size of the image used only to initialize the camera intrinsic matrix.
 @param cameraMatrix Input/output 3x3 floating-point camera intrinsic matrix
-\f$\cameramatrix{A}\f$ . If CV\_CALIB\_USE\_INTRINSIC\_GUESS
-and/or CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
+\f$\cameramatrix{A}\f$ . If @ref CALIB_USE_INTRINSIC_GUESS
+and/or @ref CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param distCoeffs Input/output vector of distortion coefficients
 \f$\distcoeffs\f$.
@@ -760,40 +761,40 @@ parameters. Order of deviations values: \f$(R_0, T_0, \dotsc , R_{M - 1}, T_{M -
 the number of pattern views. \f$R_i, T_i\f$ are concatenated 1x3 vectors.
  @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   **CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
+-   @ref CALIB_USE_INTRINSIC_GUESS cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
 estimate extrinsic parameters. Use solvePnP instead.
--   **CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
+-   @ref CALIB_FIX_PRINCIPAL_POINT The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
-CALIB_USE_INTRINSIC_GUESS is set too.
--   **CALIB_FIX_ASPECT_RATIO** The functions consider only fy as a free parameter. The
+ @ref CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref CALIB_FIX_ASPECT_RATIO The functions consider only fy as a free parameter. The
 ratio fx/fy stays the same as in the input cameraMatrix . When
-CALIB_USE_INTRINSIC_GUESS is not set, the actual input values of fx and fy are
+ @ref CALIB_USE_INTRINSIC_GUESS is not set, the actual input values of fx and fy are
 ignored, only their ratio is computed and used further.
--   **CALIB_ZERO_TANGENT_DIST** Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
+-   @ref CALIB_ZERO_TANGENT_DIST Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
 to zeros and stay zero.
--   **CALIB_FIX_K1,...,CALIB_FIX_K6** The corresponding radial distortion
-coefficient is not changed during the optimization. If CALIB_USE_INTRINSIC_GUESS is
+-   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K6 The corresponding radial distortion
+coefficient is not changed during the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is
 set, the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CALIB_RATIONAL_MODEL** Coefficients k4, k5, and k6 are enabled. To provide the
+-   @ref CALIB_RATIONAL_MODEL Coefficients k4, k5, and k6 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the rational model and return 8 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
+-   @ref CALIB_THIN_PRISM_MODEL Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
-the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+-   @ref CALIB_FIX_S1_S2_S3_S4 The thin prism distortion coefficients are not changed during
+the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+-   @ref CALIB_TILTED_MODEL Coefficients tauX and tauY are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
-the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+-   @ref CALIB_FIX_TAUX_TAUY The coefficients of the tilted sensor model are not changed during
+the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
@@ -805,7 +806,7 @@ points and their corresponding 2D projections in each view must be specified. Th
 by using an object with known geometry and easily detectable feature points. Such an object is
 called a calibration rig or calibration pattern, and OpenCV has built-in support for a chessboard as
 a calibration rig (see @ref findChessboardCorners). Currently, initialization of intrinsic
-parameters (when CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
+parameters (when @ref CALIB_USE_INTRINSIC_GUESS is not set) is only implemented for planar calibration
 patterns (where Z-coordinates of the object points must be all zeros). 3D calibration rigs can also
 be used as long as initial cameraMatrix is provided.
 
@@ -988,39 +989,39 @@ second camera coordinate system.
 @param F Output fundamental matrix.
 @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   **CALIB_FIX_INTRINSIC** Fix cameraMatrix? and distCoeffs? so that only R, T, E, and F
+-   @ref CALIB_FIX_INTRINSIC Fix cameraMatrix? and distCoeffs? so that only R, T, E, and F
 matrices are estimated.
--   **CALIB_USE_INTRINSIC_GUESS** Optimize some or all of the intrinsic parameters
+-   @ref CALIB_USE_INTRINSIC_GUESS Optimize some or all of the intrinsic parameters
 according to the specified flags. Initial values are provided by the user.
--   **CALIB_USE_EXTRINSIC_GUESS** R and T contain valid initial values that are optimized further.
+-   @ref CALIB_USE_EXTRINSIC_GUESS R and T contain valid initial values that are optimized further.
 Otherwise R and T are initialized to the median value of the pattern views (each dimension separately).
--   **CALIB_FIX_PRINCIPAL_POINT** Fix the principal points during the optimization.
--   **CALIB_FIX_FOCAL_LENGTH** Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
--   **CALIB_FIX_ASPECT_RATIO** Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
+-   @ref CALIB_FIX_PRINCIPAL_POINT Fix the principal points during the optimization.
+-   @ref CALIB_FIX_FOCAL_LENGTH Fix \f$f^{(j)}_x\f$ and \f$f^{(j)}_y\f$ .
+-   @ref CALIB_FIX_ASPECT_RATIO Optimize \f$f^{(j)}_y\f$ . Fix the ratio \f$f^{(j)}_x/f^{(j)}_y\f$
 .
--   **CALIB_SAME_FOCAL_LENGTH** Enforce \f$f^{(0)}_x=f^{(1)}_x\f$ and \f$f^{(0)}_y=f^{(1)}_y\f$ .
--   **CALIB_ZERO_TANGENT_DIST** Set tangential distortion coefficients for each camera to
+-   @ref CALIB_SAME_FOCAL_LENGTH Enforce \f$f^{(0)}_x=f^{(1)}_x\f$ and \f$f^{(0)}_y=f^{(1)}_y\f$ .
+-   @ref CALIB_ZERO_TANGENT_DIST Set tangential distortion coefficients for each camera to
 zeros and fix there.
--   **CALIB_FIX_K1,...,CALIB_FIX_K6** Do not change the corresponding radial
-distortion coefficient during the optimization. If CALIB_USE_INTRINSIC_GUESS is set,
+-   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K6 Do not change the corresponding radial
+distortion coefficient during the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set,
 the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CALIB_RATIONAL_MODEL** Enable coefficients k4, k5, and k6. To provide the backward
+-   @ref CALIB_RATIONAL_MODEL Enable coefficients k4, k5, and k6. To provide the backward
 compatibility, this extra flag should be explicitly specified to make the calibration
 function use the rational model and return 8 coefficients. If the flag is not set, the
 function computes and returns only 5 distortion coefficients.
--   **CALIB_THIN_PRISM_MODEL** Coefficients s1, s2, s3 and s4 are enabled. To provide the
+-   @ref CALIB_THIN_PRISM_MODEL Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the thin prism model and return 12 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB_FIX_S1_S2_S3_S4** The thin prism distortion coefficients are not changed during
-the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+-   @ref CALIB_FIX_S1_S2_S3_S4 The thin prism distortion coefficients are not changed during
+the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
--   **CALIB_TILTED_MODEL** Coefficients tauX and tauY are enabled. To provide the
+-   @ref CALIB_TILTED_MODEL Coefficients tauX and tauY are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
 calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
 set, the function computes and returns only 5 distortion coefficients.
--   **CALIB_FIX_TAUX_TAUY** The coefficients of the tilted sensor model are not changed during
-the optimization. If CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
+-   @ref CALIB_FIX_TAUX_TAUY The coefficients of the tilted sensor model are not changed during
+the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 @param criteria Termination criteria for the iterative optimization algorithm.
 
@@ -1068,10 +1069,10 @@ Besides the stereo-related information, the function can also perform a full cal
 the two cameras. However, due to the high dimensionality of the parameter space and noise in the
 input data, the function can diverge from the correct solution. If the intrinsic parameters can be
 estimated with high accuracy for each of the cameras individually (for example, using
-calibrateCamera ), you are recommended to do so and then pass CALIB_FIX_INTRINSIC flag to the
+calibrateCamera ), you are recommended to do so and then pass @ref CALIB_FIX_INTRINSIC flag to the
 function along with the computed intrinsic parameters. Otherwise, if all the parameters are
 estimated at once, it makes sense to restrict some parameters, for example, pass
-CALIB_SAME_FOCAL_LENGTH and CALIB_ZERO_TANGENT_DIST flags, which is usually a
+ @ref CALIB_SAME_FOCAL_LENGTH and @ref CALIB_ZERO_TANGENT_DIST flags, which is usually a
 reasonable assumption.
 
 Similarly to calibrateCamera, the function minimizes the total re-projection error for all the
@@ -1409,7 +1410,9 @@ enum{
     CALIB_FIX_K3                = 1 << 6,
     CALIB_FIX_K4                = 1 << 7,
     CALIB_FIX_INTRINSIC         = 1 << 8,
-    CALIB_FIX_PRINCIPAL_POINT   = 1 << 9
+    CALIB_FIX_PRINCIPAL_POINT   = 1 << 9,
+    CALIB_ZERO_DISPARITY        = 1 << 10,
+    CALIB_FIX_FOCAL_LENGTH      = 1 << 11
 };
 
 /** @brief Projects points using fisheye model
@@ -1542,7 +1545,7 @@ objectPoints[i].size() for each i.
 @param image_size Size of the image used only to initialize the camera intrinsic matrix.
 @param K Output 3x3 floating-point camera intrinsic matrix
 \f$\cameramatrix{A}\f$ . If
-fisheye::CALIB_USE_INTRINSIC_GUESS/ is specified, some or all of fx, fy, cx, cy must be
+@ref fisheye::CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
 @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
@@ -1552,17 +1555,19 @@ space (in which object points are specified) to the world coordinate space, that
 position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   **fisheye::CALIB_USE_INTRINSIC_GUESS** cameraMatrix contains valid initial values of
+-   @ref fisheye::CALIB_USE_INTRINSIC_GUESS  cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
--   **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration
+-   @ref fisheye::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
--   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
--   **fisheye::CALIB_FIX_K1..fisheye::CALIB_FIX_K4** Selected distortion coefficients
+-   @ref fisheye::CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref fisheye::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref fisheye::CALIB_FIX_K1,..., @ref fisheye::CALIB_FIX_K4 Selected distortion coefficients
 are set to zeros and stay zero.
--   **fisheye::CALIB_FIX_PRINCIPAL_POINT** The principal point is not changed during the global
-optimization. It stays at the center or at a different location specified when CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref fisheye::CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref fisheye::CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
+optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */
 CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
@@ -1586,7 +1591,7 @@ camera.
 @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
 camera.
 @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
-@param flags Operation flags that may be zero or CALIB_ZERO_DISPARITY . If the flag is set,
+@param flags Operation flags that may be zero or @ref fisheye::CALIB_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
@@ -1612,7 +1617,7 @@ observed by the first camera.
 observed by the second camera.
 @param K1 Input/output first camera intrinsic matrix:
 \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-any of fisheye::CALIB_USE_INTRINSIC_GUESS , fisheye::CALIB_FIX_INTRINSIC are specified,
+any of @ref fisheye::CALIB_USE_INTRINSIC_GUESS , @ref fisheye::CALIB_FIX_INTRINSIC are specified,
 some or all of the matrix components must be initialized.
 @param D1 Input/output vector of distortion coefficients \f$\distcoeffsfisheye\f$ of 4 elements.
 @param K2 Input/output second camera intrinsic matrix. The parameter is similar to K1 .
@@ -1622,16 +1627,16 @@ similar to D1 .
 @param R Output rotation matrix between the 1st and the 2nd camera coordinate systems.
 @param T Output translation vector between the coordinate systems of the cameras.
 @param flags Different flags that may be zero or a combination of the following values:
--   **fisheye::CALIB_FIX_INTRINSIC** Fix K1, K2? and D1, D2? so that only R, T matrices
+-   @ref fisheye::CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
 are estimated.
--   **fisheye::CALIB_USE_INTRINSIC_GUESS** K1, K2 contains valid initial values of
+-   @ref fisheye::CALIB_USE_INTRINSIC_GUESS  K1, K2 contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center (imageSize is used), and focal distances are computed in a least-squares fashion.
--   **fisheye::CALIB_RECOMPUTE_EXTRINSIC** Extrinsic will be recomputed after each iteration
+-   @ref fisheye::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   **fisheye::CALIB_CHECK_COND** The functions will check validity of condition number.
--   **fisheye::CALIB_FIX_SKEW** Skew coefficient (alpha) is set to zero and stay zero.
--   **fisheye::CALIB_FIX_K1..4** Selected distortion coefficients are set to zeros and stay
+-   @ref fisheye::CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref fisheye::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref fisheye::CALIB_FIX_K1,..., @ref fisheye::CALIB_FIX_K4 Selected distortion coefficients are set to zeros and stay
 zero.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */

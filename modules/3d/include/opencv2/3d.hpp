@@ -51,7 +51,7 @@ respectively) by the same factor.
 
 The joint rotation-translation matrix \f$[R|t]\f$ is the matrix product of a projective
 transformation and a homogeneous transformation. The 3-by-4 projective transformation maps 3D points
-represented in camera coordinates to 2D poins in the image plane and represented in normalized
+represented in camera coordinates to 2D points in the image plane and represented in normalized
 camera coordinates \f$x' = X_c / Z_c\f$ and \f$y' = Y_c / Z_c\f$:
 
 \f[Z_c \begin{bmatrix}
@@ -538,15 +538,15 @@ or vector\<Point2f\> .
 a vector\<Point2f\> .
 @param method Method used to compute a homography matrix. The following methods are possible:
 -   **0** - a regular method using all the points, i.e., the least squares method
--   **RANSAC** - RANSAC-based robust method
--   **LMEDS** - Least-Median robust method
--   **RHO** - PROSAC-based robust method
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
+-   @ref RHO - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
 (used in the RANSAC and RHO methods only). That is, if
 \f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
 then the point \f$i\f$ is considered as an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
-@param mask Optional output mask set by a robust method ( RANSAC or LMEDS ). Note that the input
+@param mask Optional output mask set by a robust method ( RANSAC or LMeDS ). Note that the input
 mask values are ignored.
 @param maxIters The maximum number of RANSAC iterations.
 @param confidence Confidence level, between 0 and 1.
@@ -781,37 +781,37 @@ the model coordinate system to the camera coordinate system.
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param flags Method for solving a PnP problem:
--   **SOLVEPNP_ITERATIVE** Iterative method is based on a Levenberg-Marquardt optimization. In
+-   @ref SOLVEPNP_ITERATIVE Iterative method is based on a Levenberg-Marquardt optimization. In
 this case the function finds such a pose that minimizes reprojection error, that is the sum
 of squared distances between the observed projections imagePoints and the projected (using
 @ref projectPoints ) objectPoints .
--   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
+-   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
 "Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
 In this case the function requires exactly four object and image points.
--   **SOLVEPNP_AP3P** Method is based on the paper of T. Ke, S. Roumeliotis
+-   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke, S. Roumeliotis
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 In this case the function requires exactly four object and image points.
--   **SOLVEPNP_EPNP** Method has been introduced by F. Moreno-Noguer, V. Lepetit and P. Fua in the
+-   @ref SOLVEPNP_EPNP Method has been introduced by F. Moreno-Noguer, V. Lepetit and P. Fua in the
 paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation" (@cite lepetit2009epnp).
--   **SOLVEPNP_DLS** **Broken implementation. Using this flag will fallback to EPnP.** \n
+-   @ref SOLVEPNP_DLS **Broken implementation. Using this flag will fallback to EPnP.** \n
 Method is based on the paper of J. Hesch and S. Roumeliotis.
 "A Direct Least-Squares (DLS) Method for PnP" (@cite hesch2011direct).
--   **SOLVEPNP_UPNP** **Broken implementation. Using this flag will fallback to EPnP.** \n
+-   @ref SOLVEPNP_UPNP **Broken implementation. Using this flag will fallback to EPnP.** \n
 Method is based on the paper of A. Penate-Sanchez, J. Andrade-Cetto,
 F. Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
 Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
--   **SOLVEPNP_IPPE** Method is based on the paper of T. Collins and A. Bartoli.
+-   @ref SOLVEPNP_IPPE Method is based on the paper of T. Collins and A. Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method requires coplanar object points.
--   **SOLVEPNP_IPPE_SQUARE** Method is based on the paper of Toby Collins and Adrien Bartoli.
+-   @ref SOLVEPNP_IPPE_SQUARE Method is based on the paper of Toby Collins and Adrien Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method is suitable for marker pose estimation.
 It requires 4 coplanar object points defined in the following order:
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
   - point 3: [-squareLength / 2, -squareLength / 2, 0]
--   **SOLVEPNP_SQPNP** Method is based on the paper "A Consistently Fast and Globally Optimal Solution to the
+-   @ref SOLVEPNP_SQPNP Method is based on the paper "A Consistently Fast and Globally Optimal Solution to the
 Perspective-n-Point Problem" by G. Terzakis and M.Lourakis (@cite Terzakis20). It requires 3 or more points.
 
 
@@ -921,23 +921,23 @@ a 3D point expressed in the world frame into the camera frame:
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
+   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
        unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, **SOLVEPNP_EPNP** method will be used instead.
-   -   The minimum number of points is 4 in the general case. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
+       flags, @ref SOLVEPNP_EPNP method will be used instead.
+   -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
-   -   With **SOLVEPNP_ITERATIVE** method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
+   -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
        global solution to converge.
-   -   With **SOLVEPNP_IPPE** input points must be >= 4 and object points must be coplanar.
-   -   With **SOLVEPNP_IPPE_SQUARE** this is a special case suitable for marker pose estimation.
+   -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
+   -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
        Number of input points must be 4. Object points must be defined in the following order:
          - point 0: [-squareLength / 2,  squareLength / 2, 0]
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    -  With **SOLVEPNP_SQPNP** input points must be >= 3
+    -  With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
@@ -1015,9 +1015,9 @@ assumed.
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
--   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
+-   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
 "Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
--   **SOLVEPNP_AP3P** Method is based on the paper of T. Ke and S. Roumeliotis.
+-   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke and S. Roumeliotis.
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
 The function estimates the object pose given 3 object points, their corresponding image
@@ -1119,39 +1119,39 @@ the model coordinate system to the camera coordinate system.
 the provided rvec and tvec values as initial approximations of the rotation and translation
 vectors, respectively, and further optimizes them.
 @param flags Method for solving a PnP problem:
--   **SOLVEPNP_ITERATIVE** Iterative method is based on a Levenberg-Marquardt optimization. In
+-   @ref SOLVEPNP_ITERATIVE Iterative method is based on a Levenberg-Marquardt optimization. In
 this case the function finds such a pose that minimizes reprojection error, that is the sum
 of squared distances between the observed projections imagePoints and the projected (using
 projectPoints ) objectPoints .
--   **SOLVEPNP_P3P** Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
+-   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
 "Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
 In this case the function requires exactly four object and image points.
--   **SOLVEPNP_AP3P** Method is based on the paper of T. Ke, S. Roumeliotis
+-   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke, S. Roumeliotis
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 In this case the function requires exactly four object and image points.
--   **SOLVEPNP_EPNP** Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the
+-   @ref SOLVEPNP_EPNP Method has been introduced by F.Moreno-Noguer, V.Lepetit and P.Fua in the
 paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation" (@cite lepetit2009epnp).
--   **SOLVEPNP_DLS** **Broken implementation. Using this flag will fallback to EPnP.** \n
+-   @ref SOLVEPNP_DLS **Broken implementation. Using this flag will fallback to EPnP.** \n
 Method is based on the paper of Joel A. Hesch and Stergios I. Roumeliotis.
 "A Direct Least-Squares (DLS) Method for PnP" (@cite hesch2011direct).
--   **SOLVEPNP_UPNP** **Broken implementation. Using this flag will fallback to EPnP.** \n
+-   @ref SOLVEPNP_UPNP **Broken implementation. Using this flag will fallback to EPnP.** \n
 Method is based on the paper of A.Penate-Sanchez, J.Andrade-Cetto,
 F.Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
 Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
 assuming that both have the same value. Then the cameraMatrix is updated with the estimated
 focal length.
--   **SOLVEPNP_IPPE** Method is based on the paper of T. Collins and A. Bartoli.
+-   @ref SOLVEPNP_IPPE Method is based on the paper of T. Collins and A. Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method requires coplanar object points.
--   **SOLVEPNP_IPPE_SQUARE** Method is based on the paper of Toby Collins and Adrien Bartoli.
+-   @ref SOLVEPNP_IPPE_SQUARE Method is based on the paper of Toby Collins and Adrien Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method is suitable for marker pose estimation.
 It requires 4 coplanar object points defined in the following order:
   - point 0: [-squareLength / 2,  squareLength / 2, 0]
   - point 1: [ squareLength / 2,  squareLength / 2, 0]
   - point 2: [ squareLength / 2, -squareLength / 2, 0]
   - point 3: [-squareLength / 2, -squareLength / 2, 0]
-@param rvec Rotation vector used to initialize an iterative PnP refinement algorithm, when flag is SOLVEPNP_ITERATIVE
+@param rvec Rotation vector used to initialize an iterative PnP refinement algorithm, when flag is @ref SOLVEPNP_ITERATIVE
 and useExtrinsicGuess is set to true.
-@param tvec Translation vector used to initialize an iterative PnP refinement algorithm, when flag is SOLVEPNP_ITERATIVE
+@param tvec Translation vector used to initialize an iterative PnP refinement algorithm, when flag is @ref SOLVEPNP_ITERATIVE
 and useExtrinsicGuess is set to true.
 @param reprojectionError Optional vector of reprojection error, that is the RMS error
 (\f$ \text{RMSE} = \sqrt{\frac{\sum_{i}^{N} \left ( \hat{y_i} - y_i \right )^2}{N}} \f$) between the input image points
@@ -1263,17 +1263,17 @@ a 3D point expressed in the world frame into the camera frame:
         - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
         it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
         np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods **SOLVEPNP_DLS** and **SOLVEPNP_UPNP** cannot be used as the current implementations are
+   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
        unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, **SOLVEPNP_EPNP** method will be used instead.
-   -   The minimum number of points is 4 in the general case. In the case of **SOLVEPNP_P3P** and **SOLVEPNP_AP3P**
+       flags, @ref SOLVEPNP_EPNP method will be used instead.
+   -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
        methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
-   -   With **SOLVEPNP_ITERATIVE** method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
+   -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
        global solution to converge.
-   -   With **SOLVEPNP_IPPE** input points must be >= 4 and object points must be coplanar.
-   -   With **SOLVEPNP_IPPE_SQUARE** this is a special case suitable for marker pose estimation.
+   -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
+   -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
        Number of input points must be 4. Object points must be defined in the following order:
          - point 0: [-squareLength / 2,  squareLength / 2, 0]
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
@@ -1427,8 +1427,8 @@ same camera intrinsic matrix. If this assumption does not hold for your use case
 to normalized image coordinates, which are valid for the identity camera intrinsic matrix. When
 passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
--   **RANSAC** for the RANSAC algorithm.
--   **LMEDS** for the LMedS algorithm.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
@@ -1437,6 +1437,7 @@ final fundamental matrix. It can be set to something like 1-3, depending on the 
 point localization, image resolution, and the image noise.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
@@ -1447,10 +1448,22 @@ where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding 
 second images, respectively. The result of this function may be passed further to
 decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
-CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
-                                 InputArray cameraMatrix, int method = RANSAC,
-                                 double prob = 0.999, double threshold = 1.0,
-                                 OutputArray mask = noArray() );
+CV_EXPORTS_W
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    InputArray cameraMatrix, int method = RANSAC,
+    double prob = 0.999, double threshold = 1.0,
+    int maxIters = 1000, OutputArray mask = noArray()
+);
+
+/** @overload */
+CV_EXPORTS
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    InputArray cameraMatrix, int method,
+    double prob, double threshold,
+    OutputArray mask
+);  // TODO remove from OpenCV 5.0
 
 /** @overload
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
@@ -1460,8 +1473,8 @@ be floating-point (single or double precision).
 are feature points from cameras with same focal length and principal point.
 @param pp principal point of the camera.
 @param method Method for computing a fundamental matrix.
--   **RANSAC** for the RANSAC algorithm.
--   **LMEDS** for the LMedS algorithm.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
 line in pixels, beyond which the point is considered an outlier and is not used for computing the
 final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
@@ -1470,6 +1483,7 @@ point localization, image resolution, and the image noise.
 confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -1481,10 +1495,23 @@ f & 0 & x_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
  */
-CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
-                                 double focal = 1.0, Point2d pp = Point2d(0, 0),
-                                 int method = RANSAC, double prob = 0.999,
-                                 double threshold = 1.0, OutputArray mask = noArray() );
+CV_EXPORTS_W
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    double focal = 1.0, Point2d pp = Point2d(0, 0),
+    int method = RANSAC, double prob = 0.999,
+    double threshold = 1.0, int maxIters = 1000,
+    OutputArray mask = noArray()
+);
+
+/** @overload */
+CV_EXPORTS
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    double focal, Point2d pp,
+    int method, double prob,
+    double threshold, OutputArray mask
+);  // TODO remove from OpenCV 5.0
 
 /** @brief Calculates an essential matrix from the corresponding points in two images from potentially two different cameras.
 
@@ -1510,8 +1537,8 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param method Method for computing an essential matrix.
--   **RANSAC** for the RANSAC algorithm.
--   **LMEDS** for the LMedS algorithm.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
@@ -1900,8 +1927,8 @@ b_2\\
 @param to Second input 2D point set containing \f$(x,y)\f$.
 @param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
 @param method Robust method used to compute transformation. The following methods are possible:
--   cv::RANSAC - RANSAC-based robust method
--   cv::LMEDS - Least-Median robust method
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
 RANSAC is the default method.
 @param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
 a point as an inlier. Applies only to RANSAC.
@@ -1950,8 +1977,8 @@ two 2D point sets.
 @param to Second input 2D point set.
 @param inliers Output vector indicating which points are inliers.
 @param method Robust method used to compute transformation. The following methods are possible:
--   cv::RANSAC - RANSAC-based robust method
--   cv::LMEDS - Least-Median robust method
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
 RANSAC is the default method.
 @param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
 a point as an inlier. Applies only to RANSAC.

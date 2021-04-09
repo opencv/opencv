@@ -2741,6 +2741,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     }
 
     VIDEOINFOHEADER *pVih =  reinterpret_cast<VIDEOINFOHEADER*>(VD->pAmMediaType->pbFormat);
+    CV_Assert(pVih);
     int currentWidth    =  HEADER(pVih)->biWidth;
     int currentHeight    =  HEADER(pVih)->biHeight;
 
@@ -3341,6 +3342,7 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_fourcc(-1)
     , m_widthSet(-1)
     , m_heightSet(-1)
+    , m_convertRGBSet(true)
 {
     CoInitialize(0);
     open(index);
@@ -3450,6 +3452,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
             break;
         g_VI.stopDevice(m_index);
         g_VI.setupDevice(m_index,  cvFloor(propVal));
+        g_VI.setConvertRGB(m_index, m_convertRGBSet);
         break;
 
     case CV_CAP_PROP_FPS:
@@ -3463,6 +3466,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.setupDevice(m_index, m_widthSet, m_heightSet);
             else
                 g_VI.setupDevice(m_index);
+            g_VI.setConvertRGB(m_index, m_convertRGBSet);
         }
         return g_VI.isDeviceSetup(m_index);
     }
@@ -3481,7 +3485,11 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
     case CV_CAP_PROP_CONVERT_RGB:
     {
-        return g_VI.setConvertRGB(m_index, cvRound(propVal) == 1);
+        const bool convertRgb = cvRound(propVal) == 1;
+        const bool success = g_VI.setConvertRGB(m_index, convertRgb);
+        if(success)
+            m_convertRGBSet = convertRgb;
+        return success;
     }
 
     }
@@ -3497,6 +3505,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.stopDevice(m_index);
                 g_VI.setIdealFramerate(m_index, fps);
                 g_VI.setupDeviceFourcc(m_index, m_width, m_height, m_fourcc);
+                g_VI.setConvertRGB(m_index, m_convertRGBSet);
             }
 
             bool success = g_VI.isDeviceSetup(m_index);
@@ -3602,6 +3611,7 @@ void VideoCapture_DShow::close()
         m_index = -1;
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
+    m_convertRGBSet = true;
 }
 
 Ptr<IVideoCapture> create_DShow_capture(int index)

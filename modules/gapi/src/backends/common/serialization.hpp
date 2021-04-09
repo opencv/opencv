@@ -5,7 +5,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include <iostream>
 #include <fstream>
@@ -217,8 +217,10 @@ GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra);
+GAPI_EXPORTS void serialize(IOStream& os, const std::vector<std::string> &vs);
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is);
 GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is);
+GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is);
 
 } // namespace s11n
 } // namespace gapi

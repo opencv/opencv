@@ -25,15 +25,18 @@
 #include "logger.hpp"    // GAPI_LOG
 #include "api/gproto_priv.hpp" // is_dynamic, rewrap
 
-namespace
+static
+const std::vector<std::string>& getKnownIntrinsics()
 {
     // FIXME: This may be not the right design choice, but so far it works
-    const std::vector<std::string> known_intrinsics = {
+    static const std::vector<std::string> known_intrinsics = {
         cv::gapi::streaming::detail::GDesync::id()
     };
+    return known_intrinsics;
 }
 bool cv::gimpl::is_intrinsic(const std::string &s) {
     // FIXME: This search might be better in time once we start using string
+    const std::vector<std::string>& known_intrinsics = getKnownIntrinsics();
     return std::find(known_intrinsics.begin(),
                      known_intrinsics.end(),
                      s) != known_intrinsics.end();
@@ -94,7 +97,7 @@ namespace
 
         // Reconnect expanded kernels from graph data objects
         // to subgraph data objects, then drop that graph data objects
-        for (const auto& it : ade::util::zip(in_nhs, sorted_in_nhs))
+        for (const auto it : ade::util::zip(in_nhs, sorted_in_nhs))
         {
             const auto& subgr_in_nh = std::get<0>(it);
             const auto& comp_in_nh  = std::get<1>(it);
@@ -105,7 +108,7 @@ namespace
 
         gr.erase(nh);
 
-        for (const auto& it : ade::util::zip(out_nhs, sorted_out_nhs))
+        for (const auto it : ade::util::zip(out_nhs, sorted_out_nhs))
         {
             const auto& subgr_out_nh = std::get<0>(it);
             const auto& comp_out_nh  = std::get<1>(it);

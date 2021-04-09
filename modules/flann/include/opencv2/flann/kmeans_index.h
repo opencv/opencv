@@ -370,7 +370,7 @@ public:
             chooseCenters = &KMeansIndex::chooseCentersKMeanspp;
         }
         else {
-            throw FLANNException("Unknown algorithm for choosing initial centers.");
+            FLANN_THROW(cv::Error::StsBadArg, "Unknown algorithm for choosing initial centers.");
         }
         cb_index_ = 0.4f;
 
@@ -442,7 +442,7 @@ public:
     void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
-            throw FLANNException("Branching factor must be at least 2");
+            FLANN_THROW(cv::Error::StsError, "Branching factor must be at least 2");
         }
 
         free_indices();
@@ -559,7 +559,7 @@ public:
     {
         int numClusters = centers.rows;
         if (numClusters<1) {
-            throw FLANNException("Number of clusters must be at least 1");
+            FLANN_THROW(cv::Error::StsBadArg, "Number of clusters must be at least 1");
         }
 
         DistanceType variance;

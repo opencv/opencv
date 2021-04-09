@@ -17,6 +17,7 @@
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 /** \defgroup gapi_core G-API Core functionality
 @{
@@ -26,6 +27,7 @@
     @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
+
 namespace cv { namespace gapi {
 namespace core {
     using GMat2 = std::tuple<GMat,GMat>;
@@ -296,8 +298,8 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat, GScalar)>, "org.opencv.core.matrixop.absdiffC") {
-        static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
+    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat,GScalar)>, "org.opencv.core.matrixop.absdiffC") {
+        static GMatDesc outMeta(const GMatDesc& a, const GScalarDesc&) {
             return a;
         }
     };
@@ -450,12 +452,6 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in;
-        }
-    };
-
     G_TYPED_KERNEL(GConcatHor, <GMat(GMat, GMat)>, "org.opencv.imgproc.transform.concatHor") {
         static GMatDesc outMeta(GMatDesc l, GMatDesc r) {
             return l.withSizeDelta(+r.size.width, 0);
@@ -508,6 +504,77 @@ namespace core {
             return in.withType(in.depth, in.chan).withSize(dsize);
         }
     };
+
+    G_TYPED_KERNEL(
+        GKMeansND,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,GMat,TermCriteria,int,KmeansFlags)>,
+        "org.opencv.core.kmeansND") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const GMatDesc& bestLabels, const TermCriteria&, int,
+                KmeansFlags flags) {
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1)   // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
+            }
+            // kmeans sets these labels' sizes when no bestLabels given:
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount});
+            // kmeans always sets these centers' sizes:
+            GMatDesc centers   (CV_32F, 1, Size{dim, K});
+            if (flags & KMEANS_USE_INITIAL_LABELS)
+            {
+                GAPI_Assert(bestLabels.depth == CV_32S);
+                int labels_amount = detail::checkVector(bestLabels, 1u);
+                GAPI_Assert(labels_amount == amount);
+                out_labels = bestLabels;  // kmeans preserves bestLabels' sizes if given
+            }
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
+        }
+    };
+
+    G_TYPED_KERNEL(
+        GKMeansNDNoInit,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,TermCriteria,int,KmeansFlags)>,
+        "org.opencv.core.kmeansNDNoInit") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
+            GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1) // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
+            }
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount});
+            GMatDesc centers   (CV_32F, 1, Size{dim, K});
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
+        }
+    };
+
+    G_TYPED_KERNEL(GKMeans2D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+                               (GArray<Point2f>,int,GArray<int>,TermCriteria,int,KmeansFlags)>,
+                   "org.opencv.core.kmeans2D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const GArrayDesc&,const TermCriteria&,int,KmeansFlags) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GKMeans3D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+                               (GArray<Point3f>,int,GArray<int>,TermCriteria,int,KmeansFlags)>,
+                   "org.opencv.core.kmeans3D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const GArrayDesc&,const TermCriteria&,int,KmeansFlags) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
 } // namespace core
 
 namespace streaming {
@@ -521,6 +588,12 @@ G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.streaming.size") {
 
 G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.streaming.sizeR") {
     static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+
+G_TYPED_KERNEL(GSizeMF, <GOpaque<Size>(GFrame)>, "org.opencv.streaming.sizeMF") {
+    static GOpaqueDesc outMeta(const GFrameDesc&) {
         return empty_gopaque_desc();
     }
 };
@@ -572,7 +645,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa sub, addWeighted
 */
-GAPI_EXPORTS GMat addC(const GMat& src1, const GScalar& c, int ddepth = -1);
+GAPI_EXPORTS_W GMat addC(const GMat& src1, const GScalar& c, int ddepth = -1);
 //! @overload
 GAPI_EXPORTS GMat addC(const GScalar& c, const GMat& src1, int ddepth = -1);
 
@@ -1081,6 +1154,7 @@ GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GScalar& src2);
 
 
 /** @brief Inverts every bit of an array.
+
 The function bitwise_not calculates per-element bit-wise inversion of the input
 matrix:
 \f[\texttt{dst} (I) =  \neg \texttt{src} (I)\f]
@@ -1436,41 +1510,77 @@ Output image size will have the size dsize, the depth of output is the same as o
  */
 GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
 
-/** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
+/** @brief Creates one 4-channel matrix out of 4 single-channel ones.
 
 The function merges several matrices to make a single multi-channel matrix. That is, each
 element of the output matrix will be a concatenation of the elements of the input matrices, where
 elements of i-th input matrix are treated as mv[i].channels()-element vectors.
-Input matrix must be of @ref CV_8UC3 (@ref CV_8UC4) type.
+Output matrix must be of @ref CV_8UC4 type.
 
-The function split3/split4 does the reverse operation.
+The function split4 does the reverse operation.
 
-@note Function textual ID for merge3 is "org.opencv.core.transform.merge3"
-@note Function textual ID for merge4 is "org.opencv.core.transform.merge4"
+@note
+ - Function textual ID is "org.opencv.core.transform.merge4"
 
-@param src1 first input matrix to be merged
-@param src2 second input matrix to be merged
-@param src3 third input matrix to be merged
-@param src4 fourth input matrix to be merged
-@sa  split4, split3
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@param src4 fourth input @ref CV_8UC1 matrix to be merged.
+@sa merge3, split4, split3
 */
 GAPI_EXPORTS GMat merge4(const GMat& src1, const GMat& src2, const GMat& src3, const GMat& src4);
+
+/** @brief Creates one 3-channel matrix out of 3 single-channel ones.
+
+The function merges several matrices to make a single multi-channel matrix. That is, each
+element of the output matrix will be a concatenation of the elements of the input matrices, where
+elements of i-th input matrix are treated as mv[i].channels()-element vectors.
+Output matrix must be of @ref CV_8UC3 type.
+
+The function split3 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.merge3"
+
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@sa merge4, split4, split3
+*/
 GAPI_EXPORTS GMat merge3(const GMat& src1, const GMat& src2, const GMat& src3);
 
-/** @brief Divides a 3-channel (4-channel) matrix into 3(4) single-channel matrices.
+/** @brief Divides a 4-channel matrix into 4 single-channel matrices.
 
-The function splits a 3-channel (4-channel) matrix into 3(4) single-channel matrices:
+The function splits a 4-channel matrix into 4 single-channel matrices:
 \f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
 
-All output matrices must be in @ref CV_8UC1.
+All output matrices must be of @ref CV_8UC1 type.
 
-@note Function textual for split3 ID is "org.opencv.core.transform.split3"
-@note Function textual for split4 ID is "org.opencv.core.transform.split4"
+The function merge4 does the reverse operation.
 
-@param src input @ref CV_8UC4 (@ref CV_8UC3) matrix.
-@sa merge3, merge4
+@note
+ - Function textual ID is "org.opencv.core.transform.split4"
+
+@param src input @ref CV_8UC4 matrix.
+@sa split3, merge3, merge4
 */
 GAPI_EXPORTS std::tuple<GMat, GMat, GMat,GMat> split4(const GMat& src);
+
+/** @brief Divides a 3-channel matrix into 3 single-channel matrices.
+
+The function splits a 3-channel matrix into 3 single-channel matrices:
+\f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
+
+All output matrices must be of @ref CV_8UC1 type.
+
+The function merge3 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.split3"
+
+@param src input @ref CV_8UC3 matrix.
+@sa split4, merge3, merge4
+*/
 GAPI_EXPORTS_W std::tuple<GMat, GMat, GMat> split3(const GMat& src);
 
 /** @brief Applies a generic geometrical transformation to an image.
@@ -1488,7 +1598,9 @@ convert from floating to fixed-point representations of a map is that they can y
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
 Output image must be of the same size and depth as input one.
 
-@note Function textual ID is "org.opencv.core.transform.remap"
+@note
+ - Function textual ID is "org.opencv.core.transform.remap"
+ - Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
 
 @param src Source image.
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2,
@@ -1501,8 +1613,6 @@ and #INTER_LINEAR_EXACT are not supported by this function.
 borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
-@note
-Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 GAPI_EXPORTS GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
                       int interpolation, int borderMode = BORDER_CONSTANT,
@@ -1558,19 +1668,6 @@ Output matrix must be of the same depth as input one, size is specified by given
 @sa resize
 */
 GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
-
-/** @brief Copies a matrix.
-
-Copies an input array. Works as a regular Mat::clone but happens in-graph.
-Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
-in the streaming mode). Will be deprecated and removed in the future.
-
-@note Function textual ID is "org.opencv.core.transform.copy"
-
-@param src input matrix.
-@sa crop
-*/
-GAPI_EXPORTS GMat copy(const GMat& src);
 
 /** @brief Applies horizontal concatenation to given matrices.
 
@@ -1757,6 +1854,79 @@ GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, i
                              int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+/** @brief Finds centers of clusters and groups input samples around the clusters.
+
+The function kmeans implements a k-means algorithm that finds the centers of K clusters
+and groups the input samples around the clusters. As an output, \f$\texttt{bestLabels}_i\f$
+contains a 0-based cluster index for the \f$i^{th}\f$ sample.
+
+@note
+ - Function textual ID is "org.opencv.core.kmeansND"
+ - In case of an N-dimentional points' set given, input GMat can have the following traits:
+2 dimensions, a single row or column if there are N channels,
+or N columns if there is a single channel. Mat should have @ref CV_32F depth.
+ - Although, if GMat with height != 1, width != 1, channels != 1 given as data, n-dimensional
+samples are considered given in amount of A, where A = height, n = width * channels.
+ - In case of GMat given as data:
+     - the output labels are returned as 1-channel GMat with sizes
+width = 1, height = A, where A is samples amount, or width = bestLabels.width,
+height = bestLabels.height if bestLabels given;
+     - the cluster centers are returned as 1-channel GMat with sizes
+width = n, height = K, where n is samples' dimentionality and K is clusters' amount.
+ - As one of possible usages, if you want to control the initial labels for each attempt
+by yourself, you can utilize just the core of the function. To do that, set the number
+of attempts to 1, initialize labels each time using a custom algorithm, pass them with the
+( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
+
+@param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
+Function can take GArray<Point2f>, GArray<Point3f> for 2D and 3D cases or GMat for any
+dimentionality and channels.
+@param K Number of clusters to split the set by.
+@param bestLabels Optional input integer array that can store the supposed initial cluster indices
+for every sample. Used when ( flags = #KMEANS_USE_INITIAL_LABELS ) flag is set.
+@param criteria The algorithm termination criteria, that is, the maximum number of iterations
+and/or the desired accuracy. The accuracy is specified as criteria.epsilon. As soon as each of
+the cluster centers moves by less than criteria.epsilon on some iteration, the algorithm stops.
+@param attempts Flag to specify the number of times the algorithm is executed using different
+initial labellings. The algorithm returns the labels that yield the best compactness (see the first
+function return value).
+@param flags Flag that can take values of cv::KmeansFlags .
+
+@return
+ - Compactness measure that is computed as
+\f[\sum _i  \| \texttt{samples} _i -  \texttt{centers} _{ \texttt{labels} _i} \| ^2\f]
+after every attempt. The best (minimum) value is chosen and the corresponding labels and the
+compactness value are returned by the function.
+ - Integer array that stores the cluster indices for every sample.
+ - Array of the cluster centers.
+*/
+GAPI_EXPORTS std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const GMat& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+/** @overload
+@note
+ - Function textual ID is "org.opencv.core.kmeansNDNoInit"
+ - #KMEANS_USE_INITIAL_LABELS flag must not be set while using this overload.
+ */
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const TermCriteria& criteria, const int attempts,
+       const KmeansFlags flags);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans2D"
+ */
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans3D"
+ */
+GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+kmeans(const GArray<Point3f>& data, const int K, const GArray<int>& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
 namespace streaming {
 /** @brief Gets dimensions from Mat.
 
@@ -1765,7 +1935,7 @@ namespace streaming {
 @param src Input tensor
 @return Size (tensor dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+GAPI_EXPORTS_W GOpaque<Size> size(const GMat& src);
 
 /** @overload
 Gets dimensions from rectangle.
@@ -1775,7 +1945,16 @@ Gets dimensions from rectangle.
 @param r Input rectangle.
 @return Size (rectangle dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
+GAPI_EXPORTS_W GOpaque<Size> size(const GOpaque<Rect>& r);
+
+/** @brief Gets dimensions from MediaFrame.
+
+@note Function textual ID is "org.opencv.streaming.sizeMF"
+
+@param src Input frame
+@return Size (frame dimensions).
+*/
+GAPI_EXPORTS GOpaque<Size> size(const GFrame& src);
 } //namespace streaming
 } //namespace gapi
 } //namespace cv

@@ -18,8 +18,8 @@ ocv_warnings_disable(CMAKE_C_FLAGS
 #-----------------------------------------------------------------------------
 # OPENJPEG version number, useful for packaging and doxygen doc:
 set(OPENJPEG_VERSION_MAJOR 2)
-set(OPENJPEG_VERSION_MINOR 3)
-set(OPENJPEG_VERSION_BUILD 1)
+set(OPENJPEG_VERSION_MINOR 4)
+set(OPENJPEG_VERSION_BUILD 0)
 set(OPENJPEG_VERSION
   "${OPENJPEG_VERSION_MAJOR}.${OPENJPEG_VERSION_MINOR}.${OPENJPEG_VERSION_BUILD}")
 set(PACKAGE_VERSION
@@ -43,6 +43,7 @@ set(PACKAGE_VERSION
 #   2.2.0 |  7
 #   2.3.0 |  7
 #   2.3.1 |  7
+#   2.4.0 |  7
 # above is the recommendation by the OPJ team. If you really need to override this default,
 # you can specify your own OPENJPEG_SOVERSION at cmake configuration time:
 # cmake -DOPENJPEG_SOVERSION:STRING=42 /path/to/openjpeg

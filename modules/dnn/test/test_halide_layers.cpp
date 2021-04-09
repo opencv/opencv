@@ -258,7 +258,17 @@ TEST_P(LRN, Accuracy)
 
     int sz[] = {1, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
-    test(lp, input, backendId, targetId);
+
+    double l1 = 0.0, lInf = 0.0;
+    // The OpenCL kernels use the native_ math functions which have
+    // implementation defined accuracy, so we use relaxed thresholds. See
+    // https://github.com/opencv/opencv/issues/9821 for more details.
+    if (targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 0.01;
+        lInf = 0.01;
+    }
+    test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, LRN, Combine(
@@ -630,6 +640,31 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Power, Combine(
                                Vec3f(1.0f, 0.9f, 1.1f), Vec3f(1.0f, 1.1f, 0.9f),
                                Vec3f(1.1f, 0.9f, 1.0f), Vec3f(1.1f, 1.0f, 0.9f)),
                         dnnBackendsAndTargetsWithHalide()
+));
+
+typedef TestWithParam<tuple<Vec3f, tuple<Backend, Target> > > Exp;
+TEST_P(Exp, Accuracy)
+{
+    float base = get<0>(GetParam())[0];
+    float scale = get<0>(GetParam())[1];
+    float shift = get<0>(GetParam())[2];
+    Backend backendId = get<0>(get<1>(GetParam()));
+    Target targetId = get<1>(get<1>(GetParam()));
+
+    LayerParams lp;
+    lp.set("base", base);
+    lp.set("scale", scale);
+    lp.set("shift", shift);
+    lp.type = "Exp";
+    lp.name = "testLayer";
+    testInPlaceActivation(lp, backendId, targetId);
+}
+
+INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Exp, Combine(
+/*base, scale, shift*/ Values(Vec3f(0.9f, -1.0f, 1.1f), Vec3f(0.9f, 1.1f, -1.0f),
+                              Vec3f(-1.0f, 0.9f, 1.1f), Vec3f(-1.0f, 1.1f, 0.9f),
+                              Vec3f(1.1f, 0.9f, -1.0f), Vec3f(1.1f, -1.0f, 0.9f)),
+                       dnnBackendsAndTargetsWithHalide()
 ));
 
 TEST_P(Test_Halide_layers, ChannelsPReLU)

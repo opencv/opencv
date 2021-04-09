@@ -100,6 +100,18 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
     CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
 
+    /**
+     * @brief Enables detailed logging of the DNN model loading with CV DNN API.
+     * @param[in] isDiagnosticsMode Indicates whether diagnostic mode should be set.
+     *
+     * Diagnostic mode provides detailed logging of the model loading stage to explore
+     * potential problems (ex.: not implemented layer type).
+     *
+     * @note In diagnostic mode series of assertions will be skipped, it can lead to the
+     * expected application crash.
+     */
+    CV_EXPORTS void enableModelDiagnostics(bool isDiagnosticsMode);
+
     /** @brief This class provides all data needed to initialize layer.
      *
      * It includes dictionary with scalar params (which can be read by using Dict interface),
@@ -1216,7 +1228,7 @@ CV__DNN_INLINE_NS_BEGIN
       * KeypointsModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and returns the x and y coordinates of each detected keypoint
       */
-     class CV_EXPORTS_W KeypointsModel: public Model
+     class CV_EXPORTS_W_SIMPLE KeypointsModel: public Model
      {
      public:
          /**
@@ -1248,7 +1260,7 @@ CV__DNN_INLINE_NS_BEGIN
       * SegmentationModel creates net from file with trained weights and config,
       * sets preprocessing input, runs forward pass and returns the class prediction for each pixel.
       */
-     class CV_EXPORTS_W SegmentationModel: public Model
+     class CV_EXPORTS_W_SIMPLE SegmentationModel: public Model
      {
      public:
          /**
@@ -1296,6 +1308,23 @@ CV__DNN_INLINE_NS_BEGIN
           */
          CV_WRAP DetectionModel(const Net& network);
 
+         CV_DEPRECATED_EXTERNAL  // avoid using in C++ code (need to fix bindings first)
+         DetectionModel();
+
+         /**
+          * @brief nmsAcrossClasses defaults to false,
+          * such that when non max suppression is used during the detect() function, it will do so per-class.
+          * This function allows you to toggle this behaviour.
+          * @param[in] value The new value for nmsAcrossClasses
+          */
+         CV_WRAP DetectionModel& setNmsAcrossClasses(bool value);
+
+         /**
+          * @brief Getter for nmsAcrossClasses. This variable defaults to false,
+          * such that when non max suppression is used during the detect() function, it will do so only per-class
+          */
+         CV_WRAP bool getNmsAcrossClasses();
+
          /** @brief Given the @p input frame, create input blob, run net and return result detections.
           *  @param[in]  frame  The input image.
           *  @param[out] classIds Class indexes in result detection.
@@ -1308,6 +1337,255 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<float>& confidences, CV_OUT std::vector<Rect>& boxes,
                              float confThreshold = 0.5f, float nmsThreshold = 0.0f);
      };
+
+
+/** @brief This class represents high-level API for text recognition networks.
+ *
+ * TextRecognitionModel allows to set params for preprocessing input image.
+ * TextRecognitionModel creates net from file with trained weights and config,
+ * sets preprocessing input, runs forward pass and return recognition result.
+ * For TextRecognitionModel, CRNN-CTC is supported.
+ */
+class CV_EXPORTS_W_SIMPLE TextRecognitionModel : public Model
+{
+public:
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    TextRecognitionModel();
+
+    /**
+     * @brief Create Text Recognition model from deep learning network
+     * Call setDecodeType() and setVocabulary() after constructor to initialize the decoding method
+     * @param[in] network Net object
+     */
+    CV_WRAP TextRecognitionModel(const Net& network);
+
+    /**
+     * @brief Create text recognition model from network represented in one of the supported formats
+     * Call setDecodeType() and setVocabulary() after constructor to initialize the decoding method
+     * @param[in] model Binary file contains trained weights
+     * @param[in] config Text file contains network configuration
+     */
+    CV_WRAP inline
+    TextRecognitionModel(const std::string& model, const std::string& config = "")
+        : TextRecognitionModel(readNet(model, config)) { /* nothing */ }
+
+    /**
+     * @brief Set the decoding method of translating the network output into string
+     * @param[in] decodeType The decoding method of translating the network output into string: {'CTC-greedy': greedy decoding for the output of CTC-based methods}
+     */
+    CV_WRAP
+    TextRecognitionModel& setDecodeType(const std::string& decodeType);
+
+    /**
+     * @brief Get the decoding method
+     * @return the decoding method
+     */
+    CV_WRAP
+    const std::string& getDecodeType() const;
+
+    /**
+     * @brief Set the vocabulary for recognition.
+     * @param[in] vocabulary the associated vocabulary of the network.
+     */
+    CV_WRAP
+    TextRecognitionModel& setVocabulary(const std::vector<std::string>& vocabulary);
+
+    /**
+     * @brief Get the vocabulary for recognition.
+     * @return vocabulary the associated vocabulary
+     */
+    CV_WRAP
+    const std::vector<std::string>& getVocabulary() const;
+
+    /**
+     * @brief Given the @p input frame, create input blob, run net and return recognition result
+     * @param[in] frame The input image
+     * @return The text recognition result
+     */
+    CV_WRAP
+    std::string recognize(InputArray frame) const;
+
+    /**
+     * @brief Given the @p input frame, create input blob, run net and return recognition result
+     * @param[in] frame The input image
+     * @param[in] roiRects List of text detection regions of interest (cv::Rect, CV_32SC4). ROIs is be cropped as the network inputs
+     * @param[out] results A set of text recognition results.
+     */
+    CV_WRAP
+    void recognize(InputArray frame, InputArrayOfArrays roiRects, CV_OUT std::vector<std::string>& results) const;
+};
+
+
+/** @brief Base class for text detection networks
+ */
+class CV_EXPORTS_W_SIMPLE TextDetectionModel : public Model
+{
+protected:
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    TextDetectionModel();
+
+public:
+
+    /** @brief Performs detection
+     *
+     * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
+     *
+     * Each result is quadrangle's 4 points in this order:
+     * - bottom-left
+     * - top-left
+     * - top-right
+     * - bottom-right
+     *
+     * Use cv::getPerspectiveTransform function to retrive image region without perspective transformations.
+     *
+     * @note If DL model doesn't support that kind of output then result may be derived from detectTextRectangles() output.
+     *
+     * @param[in] frame The input image
+     * @param[out] detections array with detections' quadrangles (4 points per result)
+     * @param[out] confidences array with detection confidences
+     */
+    CV_WRAP
+    void detect(
+            InputArray frame,
+            CV_OUT std::vector< std::vector<Point> >& detections,
+            CV_OUT std::vector<float>& confidences
+    ) const;
+
+    /** @overload */
+    CV_WRAP
+    void detect(
+            InputArray frame,
+            CV_OUT std::vector< std::vector<Point> >& detections
+    ) const;
+
+    /** @brief Performs detection
+     *
+     * Given the input @p frame, prepare network input, run network inference, post-process network output and return result detections.
+     *
+     * Each result is rotated rectangle.
+     *
+     * @note Result may be inaccurate in case of strong perspective transformations.
+     *
+     * @param[in] frame the input image
+     * @param[out] detections array with detections' RotationRect results
+     * @param[out] confidences array with detection confidences
+     */
+    CV_WRAP
+    void detectTextRectangles(
+            InputArray frame,
+            CV_OUT std::vector<cv::RotatedRect>& detections,
+            CV_OUT std::vector<float>& confidences
+    ) const;
+
+    /** @overload */
+    CV_WRAP
+    void detectTextRectangles(
+            InputArray frame,
+            CV_OUT std::vector<cv::RotatedRect>& detections
+    ) const;
+};
+
+/** @brief This class represents high-level API for text detection DL networks compatible with EAST model.
+ *
+ * Configurable parameters:
+ * - (float) confThreshold - used to filter boxes by confidences, default: 0.5f
+ * - (float) nmsThreshold - used in non maximum suppression, default: 0.0f
+ */
+class CV_EXPORTS_W_SIMPLE TextDetectionModel_EAST : public TextDetectionModel
+{
+public:
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    TextDetectionModel_EAST();
+
+    /**
+     * @brief Create text detection algorithm from deep learning network
+     * @param[in] network Net object
+     */
+    CV_WRAP TextDetectionModel_EAST(const Net& network);
+
+    /**
+     * @brief Create text detection model from network represented in one of the supported formats.
+     * An order of @p model and @p config arguments does not matter.
+     * @param[in] model Binary file contains trained weights.
+     * @param[in] config Text file contains network configuration.
+     */
+    CV_WRAP inline
+    TextDetectionModel_EAST(const std::string& model, const std::string& config = "")
+        : TextDetectionModel_EAST(readNet(model, config)) { /* nothing */ }
+
+    /**
+     * @brief Set the detection confidence threshold
+     * @param[in] confThreshold A threshold used to filter boxes by confidences
+     */
+    CV_WRAP
+    TextDetectionModel_EAST& setConfidenceThreshold(float confThreshold);
+
+    /**
+     * @brief Get the detection confidence threshold
+     */
+    CV_WRAP
+    float getConfidenceThreshold() const;
+
+    /**
+     * @brief Set the detection NMS filter threshold
+     * @param[in] nmsThreshold A threshold used in non maximum suppression
+     */
+    CV_WRAP
+    TextDetectionModel_EAST& setNMSThreshold(float nmsThreshold);
+
+    /**
+     * @brief Get the detection confidence threshold
+     */
+    CV_WRAP
+    float getNMSThreshold() const;
+};
+
+/** @brief This class represents high-level API for text detection DL networks compatible with DB model.
+ *
+ * Related publications: @cite liao2020real
+ * Paper: https://arxiv.org/abs/1911.08947
+ * For more information about the hyper-parameters setting, please refer to https://github.com/MhLiao/DB
+ *
+ * Configurable parameters:
+ * - (float) binaryThreshold - The threshold of the binary map. It is usually set to 0.3.
+ * - (float) polygonThreshold - The threshold of text polygons. It is usually set to 0.5, 0.6, and 0.7. Default is 0.5f
+ * - (double) unclipRatio - The unclip ratio of the detected text region, which determines the output size. It is usually set to 2.0.
+ * - (int) maxCandidates - The max number of the output results.
+ */
+class CV_EXPORTS_W_SIMPLE TextDetectionModel_DB : public TextDetectionModel
+{
+public:
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    TextDetectionModel_DB();
+
+    /**
+     * @brief Create text detection algorithm from deep learning network.
+     * @param[in] network Net object.
+     */
+    CV_WRAP TextDetectionModel_DB(const Net& network);
+
+    /**
+     * @brief Create text detection model from network represented in one of the supported formats.
+     * An order of @p model and @p config arguments does not matter.
+     * @param[in] model Binary file contains trained weights.
+     * @param[in] config Text file contains network configuration.
+     */
+    CV_WRAP inline
+    TextDetectionModel_DB(const std::string& model, const std::string& config = "")
+        : TextDetectionModel_DB(readNet(model, config)) { /* nothing */ }
+
+    CV_WRAP TextDetectionModel_DB& setBinaryThreshold(float binaryThreshold);
+    CV_WRAP float getBinaryThreshold() const;
+
+    CV_WRAP TextDetectionModel_DB& setPolygonThreshold(float polygonThreshold);
+    CV_WRAP float getPolygonThreshold() const;
+
+    CV_WRAP TextDetectionModel_DB& setUnclipRatio(double unclipRatio);
+    CV_WRAP double getUnclipRatio() const;
+
+    CV_WRAP TextDetectionModel_DB& setMaxCandidates(int maxCandidates);
+    CV_WRAP int getMaxCandidates() const;
+};
 
 //! @}
 CV__DNN_INLINE_NS_END

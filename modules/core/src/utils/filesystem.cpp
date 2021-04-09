@@ -587,3 +587,8 @@ cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*c
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 }}} // namespace
+
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+#include "plugin_loader.impl.hpp"
+#endif

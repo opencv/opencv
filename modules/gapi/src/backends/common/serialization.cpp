@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include <set> // set
 #include <map> // map
@@ -71,7 +71,7 @@ void linkNodes(ade::Graph& g) {
     for (const auto& nh : g.nodes()) {
         if (gm.metadata(nh).get<cv::gimpl::NodeType>().t == cv::gimpl::NodeType::OP) {
             const auto& op = gm.metadata(nh).get<gimpl::Op>();
-            for (const auto& in : ade::util::indexed(op.args)) {
+            for (const auto in : ade::util::indexed(op.args)) {
                 const auto& arg = ade::util::value(in);
                 if (arg.kind == cv::detail::ArgKind::GOBJREF) {
                     const auto idx = ade::util::index(in);
@@ -82,9 +82,9 @@ void linkNodes(ade::Graph& g) {
                 }
             }
 
-            for (const auto& out : ade::util::indexed(op.outs)) {
-                const auto idx = ade::util::index(out);
-                const auto rc  = ade::util::value(out);
+            for (const auto out : ade::util::indexed(op.outs)) {
+                const auto  idx = ade::util::index(out);
+                const auto& rc  = ade::util::value(out);
                 const auto& out_nh = dataNodes.at(rc);
                 const auto& out_eh = g.link(nh, out_nh);
                 gm.metadata(out_eh).set(cv::gimpl::Output{idx});
@@ -906,6 +906,9 @@ GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma) {
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra) {
     os << ra;
 }
+GAPI_EXPORTS void serialize(IOStream& os, const std::vector<std::string> &vs) {
+    os << vs;
+}
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is) {
     GMetaArgs s;
     is >> s;
@@ -913,6 +916,11 @@ GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is) {
 }
 GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is) {
     GRunArgs s;
+    is >> s;
+    return s;
+}
+GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is) {
+    std::vector<std::string> s;
     is >> s;
     return s;
 }

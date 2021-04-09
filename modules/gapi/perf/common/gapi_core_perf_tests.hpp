@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_CORE_PERF_TESTS_HPP
@@ -73,6 +73,12 @@ namespace opencv_test
     class ConcatVertVecPerfTest : public TestPerfParams<tuple<cv::Size, MatType, cv::GCompileArgs>> {};
     class LUTPerfTest : public TestPerfParams<tuple<MatType, MatType, cv::Size, cv::GCompileArgs>> {};
     class ConvertToPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class KMeansNDPerfTest : public TestPerfParams<tuple<cv::Size, CompareMats, int,
+                                                         cv::KmeansFlags, cv::GCompileArgs>> {};
+    class KMeans2DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags,
+                                                         cv::GCompileArgs>> {};
+    class KMeans3DPerfTest : public TestPerfParams<tuple<int, int, cv::KmeansFlags,
+                                                         cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
     class ParseSSDBLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};

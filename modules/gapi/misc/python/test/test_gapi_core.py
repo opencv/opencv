@@ -13,7 +13,7 @@ pkgs = [
           ('cpu'    , cv.gapi.core.cpu.kernels()),
           ('fluid'  , cv.gapi.core.fluid.kernels())
           # ('plaidml', cv.gapi.core.plaidml.kernels())
-      ]
+       ]
 
 
 class gapi_core_test(NewOpenCVTests):
@@ -126,6 +126,64 @@ class gapi_core_test(NewOpenCVTests):
                              'Failed on ' + pkg_name + ' backend')
             self.assertEqual(expected_thresh, actual_thresh[0],
                              'Failed on ' + pkg_name + ' backend')
+
+    def test_kmeans(self):
+        # K-means params
+        count    = 100
+        sz       = (count, 2)
+        in_mat   = np.random.random(sz).astype(np.float32)
+        K        = 5
+        flags    = cv.KMEANS_RANDOM_CENTERS
+        attempts = 1;
+        criteria = (cv.TERM_CRITERIA_MAX_ITER + cv.TERM_CRITERIA_EPS, 30, 0)
+
+        # G-API
+        g_in = cv.GMat()
+        compactness, out_labels, centers = cv.gapi.kmeans(g_in, K, criteria, attempts, flags)
+        comp = cv.GComputation(cv.GIn(g_in), cv.GOut(compactness, out_labels, centers))
+
+        compact, labels, centers = comp.apply(cv.gin(in_mat))
+
+        # Assert
+        self.assertTrue(compact >= 0)
+        self.assertEqual(sz[0], labels.shape[0])
+        self.assertEqual(1, labels.shape[1])
+        self.assertTrue(labels.size != 0)
+        self.assertEqual(centers.shape[1], sz[1]);
+        self.assertEqual(centers.shape[0], K);
+        self.assertTrue(centers.size != 0);
+
+
+    def generate_random_points(self, sz):
+        arr = np.random.random(sz).astype(np.float32).T
+        return list(zip(arr[0], arr[1]))
+
+
+    def test_kmeans_2d(self):
+        # K-means 2D params
+        count     = 100
+        sz        = (count, 2)
+        amount    = sz[0]
+        K         = 5
+        flags     = cv.KMEANS_RANDOM_CENTERS
+        attempts  = 1;
+        criteria  = (cv.TERM_CRITERIA_MAX_ITER + cv.TERM_CRITERIA_EPS, 30, 0);
+        in_vector = self.generate_random_points(sz)
+        in_labels = []
+
+        # G-API
+        data        = cv.GArrayT(cv.gapi.CV_POINT2F)
+        best_labels = cv.GArrayT(cv.gapi.CV_INT)
+
+        compactness, out_labels, centers = cv.gapi.kmeans(data, K, best_labels, criteria, attempts, flags);
+        comp = cv.GComputation(cv.GIn(data, best_labels), cv.GOut(compactness, out_labels, centers));
+
+        compact, labels, centers = comp.apply(cv.gin(in_vector, in_labels));
+
+        # Assert
+        self.assertTrue(compact >= 0)
+        self.assertEqual(amount, len(labels))
+        self.assertEqual(K, len(centers))
 
 
 if __name__ == '__main__':

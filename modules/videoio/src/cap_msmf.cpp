@@ -24,6 +24,7 @@
 #include <mfobjects.h>
 #include <tchar.h>
 #include <strsafe.h>
+#include <codecvt>
 #include <mfreadwrite.h>
 #ifdef HAVE_MSMF_DXVA
 #include <d3d11.h>
@@ -45,6 +46,7 @@
 #pragma comment(lib, "mfuuid")
 #pragma comment(lib, "Strmiids")
 #pragma comment(lib, "Mfreadwrite")
+#pragma comment(lib, "dxgi")
 #ifdef HAVE_MSMF_DXVA
 #pragma comment(lib, "d3d11")
 // MFCreateDXGIDeviceManager() is available since Win8 only.
@@ -81,6 +83,8 @@ struct IMFAttributes;
 #define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
 #define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
 #define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
+
+using namespace cv;
 
 namespace
 {
@@ -314,7 +318,7 @@ class SourceReaderCB : public IMFSourceReaderCallback
 {
 public:
     SourceReaderCB() :
-        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0)
+        m_nRefCount(0), m_hEvent(CreateEvent(NULL, FALSE, FALSE, NULL)), m_bEOS(FALSE), m_hrStatus(S_OK), m_reader(NULL), m_dwStreamIndex(0), m_lastSampleTimestamp(0)
     {
     }
 
@@ -351,8 +355,6 @@ public:
 
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
     {
-        CV_UNUSED(llTimestamp);
-
         HRESULT hr = 0;
         cv::AutoLock lock(m_mutex);
 
@@ -365,6 +367,7 @@ public:
                 {
                     CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed)");
                 }
+                m_lastSampleTimestamp = llTimestamp;
                 m_lastSample = pSample;
             }
         }
@@ -444,6 +447,7 @@ public:
 
     IMFSourceReader *m_reader;
     DWORD m_dwStreamIndex;
+    LONGLONG m_lastSampleTimestamp;
     _ComPtr<IMFSample>  m_lastSample;
 };
 
@@ -576,8 +580,9 @@ public:
     } MSMFCapture_Mode;
     CvCapture_MSMF();
     virtual ~CvCapture_MSMF();
-    virtual bool open(int);
-    virtual bool open(const cv::String&);
+    bool configureHW(const cv::VideoCaptureParameters& params);
+    virtual bool open(int, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -597,15 +602,21 @@ protected:
     _ComPtr<IMFAttributes> getDefaultSourceConfig(UINT32 num = 10);
     bool initStream(DWORD streamID, const MediaType& mt);
 
+    bool openFinalize_(const VideoCaptureParameters* params);
+
     Media_Foundation& MF;
     cv::String filename;
     int camid;
     MSMFCapture_Mode captureMode;
+    VideoAccelerationType va_type;
+    int hwDeviceIndex;
 #ifdef HAVE_MSMF_DXVA
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
     _ComPtr<IMFSourceReader> videoFileSource;
+    _ComPtr<IMFSample> videoSample;
+    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
     DWORD dwStreamIndex;
     MediaType nativeFormat;
     MediaType captureFormat;
@@ -613,10 +624,8 @@ protected:
     bool convertFormat;
     MFTIME duration;
     LONGLONG frameStep;
-    _ComPtr<IMFSample> videoSample;
     LONGLONG sampleTime;
     bool isOpen;
-    _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
 };
 
 CvCapture_MSMF::CvCapture_MSMF():
@@ -624,18 +633,23 @@ CvCapture_MSMF::CvCapture_MSMF():
     filename(""),
     camid(-1),
     captureMode(MODE_SW),
+    va_type(VIDEO_ACCELERATION_NONE),
+    hwDeviceIndex(-1),
 #ifdef HAVE_MSMF_DXVA
     D3DDev(NULL),
     D3DMgr(NULL),
 #endif
     videoFileSource(NULL),
     videoSample(NULL),
+    readCallback(NULL),
+    dwStreamIndex(0),
     outputFormat(CV_CAP_MODE_BGR),
     convertFormat(true),
+    duration(0),
+    frameStep(0),
     sampleTime(0),
     isOpen(false)
 {
-    configureHW(true);
 }
 
 CvCapture_MSMF::~CvCapture_MSMF()
@@ -732,10 +746,19 @@ bool CvCapture_MSMF::configureHW(bool enable)
     close();
     if (enable)
     {
+        _ComPtr<IDXGIAdapter> pAdapter;
+        if (hwDeviceIndex >= 0) {
+            _ComPtr<IDXGIFactory2> pDXGIFactory;
+            if (FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory2), (void**)& pDXGIFactory)) ||
+                FAILED(pDXGIFactory->EnumAdapters(hwDeviceIndex, &pAdapter))) {
+                return false;
+            }
+        }
         D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0,
             D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0,
             D3D_FEATURE_LEVEL_9_3,  D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1 };
-        if (SUCCEEDED(D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+        D3D_DRIVER_TYPE driverType = pAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
+        if (SUCCEEDED(D3D11CreateDevice(pAdapter.Get(), driverType, NULL, D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
             levels, sizeof(levels) / sizeof(*levels), D3D11_SDK_VERSION, &D3DDev, NULL, NULL)))
         {
             // NOTE: Getting ready for multi-threaded operation
@@ -750,7 +773,23 @@ bool CvCapture_MSMF::configureHW(bool enable)
                     if (SUCCEEDED(D3DMgr->ResetDevice(D3DDev.Get(), mgrRToken)))
                     {
                         captureMode = MODE_HW;
-                        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
+                        if (hwDeviceIndex < 0)
+                            hwDeviceIndex = 0;
+                        // Log adapter description
+                        _ComPtr<IDXGIDevice> dxgiDevice;
+                        if (SUCCEEDED(D3DDev->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(&dxgiDevice)))) {
+                            _ComPtr<IDXGIAdapter> adapter;
+                            if (SUCCEEDED(dxgiDevice->GetAdapter(&adapter))) {
+                                DXGI_ADAPTER_DESC desc;
+                                if (SUCCEEDED(adapter->GetDesc(&desc))) {
+                                    std::wstring name(desc.Description);
+                                    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+                                    CV_LOG_INFO(NULL, "MSMF: Using D3D11 video acceleration on GPU device: " << conv.to_bytes(name));
+                                }
+                            }
+                        }
+                        // Reopen if needed
+                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
                     }
                     D3DMgr.Release();
                 }
@@ -766,11 +805,24 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Release();
         captureMode = MODE_SW;
-        return reopen ? (prevcam >= 0 ? open(prevcam) : open(prevfile.c_str())) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
     }
 #else
     return !enable;
 #endif
+}
+
+bool CvCapture_MSMF::configureHW(const VideoCaptureParameters& params)
+{
+    va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_ANY);
+    hwDeviceIndex = params.get<int>(CAP_PROP_HW_DEVICE, -1);
+#ifndef HAVE_MSMF_DXVA
+    if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+    {
+        CV_LOG_INFO(NULL, "VIDEOIO/MSMF: MSMF backend is build without DXVA acceleration support. Can't handle CAP_PROP_HW_ACCELERATION parameter: " << va_type);
+    }
+#endif
+    return configureHW(va_type == VIDEO_ACCELERATION_D3D11 || va_type == VIDEO_ACCELERATION_ANY);
 }
 
 bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
@@ -820,11 +872,17 @@ bool CvCapture_MSMF::configureOutput(MediaType newType, cv::uint32_t outFormat)
     return initStream(dwStreamIndex, newFormat);
 }
 
-bool CvCapture_MSMF::open(int index)
+bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
 {
     close();
     if (index < 0)
         return false;
+
+    if (params)
+    {
+        configureHW(*params);
+    }
+
     DeviceList devices;
     UINT32 count = devices.read();
     if (count == 0 || static_cast<UINT32>(index) > count)
@@ -850,14 +908,26 @@ bool CvCapture_MSMF::open(int index)
     {
         frameStep = captureFormat.getFrameStep();
     }
+
+    if (isOpen && !openFinalize_(params))
+    {
+        close();
+        return false;
+    }
+
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename)
+bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCaptureParameters* params)
 {
     close();
     if (_filename.empty())
         return false;
+
+    if (params)
+    {
+        configureHW(*params);
+    }
 
     // Set source reader parameters
     _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
@@ -884,7 +954,46 @@ bool CvCapture_MSMF::open(const cv::String& _filename)
         }
     }
 
+    if (isOpen && !openFinalize_(params))
+    {
+        close();
+        return false;
+    }
+
     return isOpen;
+}
+
+bool CvCapture_MSMF::openFinalize_(const VideoCaptureParameters* params)
+{
+    if (params)
+    {
+        std::vector<int> unused_params = params->getUnused();
+        for (int key : unused_params)
+        {
+            if (!setProperty(key, params->get<double>(key)))
+            {
+                CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: can't set property " << key);
+                return false;
+            }
+        }
+    }
+
+    VideoAccelerationType actual_va_type = (captureMode == MODE_HW) ? VIDEO_ACCELERATION_D3D11 : VIDEO_ACCELERATION_NONE;
+    if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+    {
+        if (va_type != actual_va_type)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Can't select requested video acceleration through CAP_PROP_HW_ACCELERATION: "
+                    << va_type << " (actual is " << actual_va_type << "). Bailout");
+            return false;
+        }
+    }
+    else
+    {
+        va_type = actual_va_type;
+    }
+
+    return true;
 }
 
 bool CvCapture_MSMF::grabFrame()
@@ -917,6 +1026,7 @@ bool CvCapture_MSMF::grabFrame()
             CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
             return false;
         }
+        sampleTime = reader->m_lastSampleTimestamp;
         return true;
     }
     else if (isOpen)
@@ -1150,7 +1260,11 @@ double CvCapture_MSMF::getProperty( int property_id ) const
         switch (property_id)
         {
         case CV_CAP_PROP_MODE:
-                return captureMode;
+            return captureMode;
+        case cv::CAP_PROP_HW_DEVICE:
+            return hwDeviceIndex;
+        case cv::CAP_PROP_HW_ACCELERATION:
+            return static_cast<double>(va_type);
         case CV_CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
         case CV_CAP_PROP_SAR_NUM:
@@ -1414,24 +1528,24 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     return false;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index )
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(index);
+        capture->open(index, &params);
         if (capture->isOpened())
             return capture;
     }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(filename);
+        capture->open(filename, &params);
         if (capture->isOpened())
             return capture;
     }
@@ -1450,17 +1564,20 @@ public:
     CvVideoWriter_MSMF();
     virtual ~CvVideoWriter_MSMF();
     virtual bool open(const cv::String& filename, int fourcc,
-                      double fps, cv::Size frameSize, bool isColor);
+                      double fps, cv::Size frameSize, const cv::VideoWriterParameters& params);
     virtual void close();
     virtual void write(cv::InputArray);
 
-    virtual double getProperty(int) const { return 0; }
+    virtual double getProperty(int) const override;
     virtual bool setProperty(int, double) { return false; }
     virtual bool isOpened() const { return initiated; }
 
     int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_MSMF; }
 private:
     Media_Foundation& MF;
+    VideoAccelerationType va_type;
+    int va_device;
+
     UINT32 videoWidth;
     UINT32 videoHeight;
     double fps;
@@ -1482,6 +1599,8 @@ private:
 
 CvVideoWriter_MSMF::CvVideoWriter_MSMF():
     MF(Media_Foundation::getInstance()),
+    va_type(VIDEO_ACCELERATION_NONE),
+    va_device(-1),
     videoWidth(0),
     videoHeight(0),
     fps(0),
@@ -1555,10 +1674,40 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 }
 
 bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
-                               double _fps, cv::Size _frameSize, bool /*isColor*/ )
+                               double _fps, cv::Size _frameSize, const cv::VideoWriterParameters& params)
 {
     if (initiated)
         close();
+
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
+    {
+        va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION);
+        if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: MSMF backend doesn't support writer acceleration support. Can't handle VIDEOWRITER_PROP_HW_ACCELERATION parameter. Bailout");
+            return false;
+        }
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_DEVICE))
+    {
+        va_device = params.get<int>(VIDEOWRITER_PROP_HW_DEVICE);
+        if (va_type == VIDEO_ACCELERATION_NONE && va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_type == VIDEO_ACCELERATION_ANY && va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+            return false;
+        }
+        if (va_device != -1)
+        {
+            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: VIDEOWRITER_PROP_HW_DEVICE is not supported. Specify -1 (auto) value. Bailout");
+            return false;
+        }
+    }
+
     videoWidth = _frameSize.width;
     videoHeight = _frameSize.height;
     fps = _fps;
@@ -1607,6 +1756,23 @@ bool CvVideoWriter_MSMF::open( const cv::String& filename, int fourcc,
                 initiated = true;
                 rtStart = 0;
                 MFFrameRateToAverageTimePerFrame((UINT32)(fps * 1000), 1000, &rtDuration);
+
+                VideoAccelerationType actual_va_type = VIDEO_ACCELERATION_NONE;
+                if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+                {
+                    if (va_type != actual_va_type)
+                    {
+                        CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: Can't select requested video acceleration through VIDEOWRITER_PROP_HW_ACCELERATION: "
+                                << va_type << " (actual is " << actual_va_type << "). Bailout");
+                        close();
+                        return false;
+                    }
+                }
+                else
+                {
+                    va_type = actual_va_type;
+                }
+
                 return true;
             }
         }
@@ -1662,6 +1828,20 @@ void CvVideoWriter_MSMF::write(cv::InputArray img)
     }
 }
 
+
+double CvVideoWriter_MSMF::getProperty(int propId) const
+{
+    if (propId == VIDEOWRITER_PROP_HW_ACCELERATION)
+    {
+        return static_cast<double>(va_type);
+    }
+    else if (propId == VIDEOWRITER_PROP_HW_DEVICE)
+    {
+        return static_cast<double>(va_device);
+    }
+    return 0;
+}
+
 cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filename, int fourcc,
                                                         double fps, const cv::Size& frameSize,
                                                         const VideoWriterParameters& params)
@@ -1669,8 +1849,7 @@ cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filen
     cv::Ptr<CvVideoWriter_MSMF> writer = cv::makePtr<CvVideoWriter_MSMF>();
     if (writer)
     {
-        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
-        writer->open(filename, fourcc, fps, frameSize, isColor);
+        writer->open(filename, fourcc, fps, frameSize, params);
         if (writer->isOpened())
             return writer;
     }
@@ -1679,7 +1858,20 @@ cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filen
 
 #if defined(BUILD_PLUGIN)
 
+#define NEW_PLUGIN
+
+#ifndef NEW_PLUGIN
+#define ABI_VERSION 0
+#define API_VERSION 0
 #include "plugin_api.hpp"
+#else
+#define CAPTURE_ABI_VERSION 1
+#define CAPTURE_API_VERSION 1
+#include "plugin_capture_api.hpp"
+#define WRITER_ABI_VERSION 1
+#define WRITER_API_VERSION 1
+#include "plugin_writer_api.hpp"
+#endif
 
 namespace cv {
 
@@ -1687,7 +1879,11 @@ typedef CvCapture_MSMF CaptureT;
 typedef CvVideoWriter_MSMF WriterT;
 
 static
-CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+CvResult CV_API_CALL cv_capture_open_with_params(
+    const char* filename, int camera_index,
+    int* params, unsigned n_params,
+    CV_OUT CvPluginCapture* handle
+)
 {
     if (!handle)
         return CV_ERROR_FAIL;
@@ -1697,24 +1893,36 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     CaptureT* cap = 0;
     try
     {
+        cv::VideoCaptureParameters parameters(params, n_params);
         cap = new CaptureT();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename));
+            res = cap->open(std::string(filename), &parameters);
         else
-            res = cap->open(camera_index);
+            res = cap->open(camera_index, &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;
             return CV_ERROR_OK;
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
     }
     if (cap)
         delete cap;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
+{
+    return cv_capture_open_with_params(filename, camera_index, NULL, 0, handle);
 }
 
 static
@@ -1741,8 +1949,14 @@ CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OU
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1757,8 +1971,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
         CaptureT* instance = (CaptureT*)handle;
         return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -1773,14 +1993,20 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
         CaptureT* instance = (CaptureT*)handle;
         return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
 
 static
-CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata)
+CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata)
 {
     if (!handle)
         return CV_ERROR_FAIL;
@@ -1789,35 +2015,62 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
         CaptureT* instance = (CaptureT*)handle;
         Mat img;
         if (instance->retrieveFrame(stream_idx, img))
+#ifndef NEW_PLUGIN
             return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
+#else
+            return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.type(), userdata);
+#endif
+        return CV_ERROR_FAIL;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
         return CV_ERROR_FAIL;
     }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
 
 static
-CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor, CV_OUT CvPluginWriter* handle)
+CvResult CV_API_CALL cv_writer_open_with_params(
+    const char* filename, int fourcc, double fps, int width, int height,
+    int* params, unsigned n_params,
+    CV_OUT CvPluginWriter* handle)
 {
     WriterT* wrt = 0;
     try
     {
+        VideoWriterParameters parameters(params, n_params);
         wrt = new WriterT();
         Size sz(width, height);
-        if (wrt && wrt->open(filename, fourcc, fps, sz, isColor != 0))
+        if (wrt && wrt->open(filename, fourcc, fps, sz, parameters))
         {
             *handle = (CvPluginWriter)wrt;
             return CV_ERROR_OK;
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
     }
     if (wrt)
         delete wrt;
     return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps, int width, int height, int isColor,
+    CV_OUT CvPluginWriter* handle)
+{
+    int params[2] = { VIDEOWRITER_PROP_IS_COLOR, isColor };
+    return cv_writer_open_with_params(filename, fourcc, fps, width, height, params, 1, handle);
 }
 
 static
@@ -1831,9 +2084,22 @@ CvResult CV_API_CALL cv_writer_release(CvPluginWriter handle)
 }
 
 static
-CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter /*handle*/, int /*prop*/, CV_OUT double* /*val*/)
+CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT double* val)
 {
-    return CV_ERROR_FAIL;
+    if (!handle)
+        return CV_ERROR_FAIL;
+    if (!val)
+        return CV_ERROR_FAIL;
+    try
+    {
+        WriterT* instance = (WriterT*)handle;
+        *val = instance->getProperty(prop);
+        return CV_ERROR_OK;
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
 }
 
 static
@@ -1856,42 +2122,109 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char*
         instance->write(img);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
 
-static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
+} // namespace
+
+#ifndef NEW_PLUGIN
+
+static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
 {
     {
         sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "Microsoft Media Foundation OpenCV Video I/O plugin"
     },
-    /*  1*/CAP_MSMF,
-    /*  2*/cv_capture_open,
-    /*  3*/cv_capture_release,
-    /*  4*/cv_capture_get_prop,
-    /*  5*/cv_capture_set_prop,
-    /*  6*/cv_capture_grab,
-    /*  7*/cv_capture_retrieve,
-    /*  8*/cv_writer_open,
-    /*  9*/cv_writer_release,
-    /* 10*/cv_writer_get_prop,
-    /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write
+    {
+        /*  1*/cv::CAP_MSMF,
+        /*  2*/cv::cv_capture_open,
+        /*  3*/cv::cv_capture_release,
+        /*  4*/cv::cv_capture_get_prop,
+        /*  5*/cv::cv_capture_set_prop,
+        /*  6*/cv::cv_capture_grab,
+        /*  7*/cv::cv_capture_retrieve,
+        /*  8*/cv::cv_writer_open,
+        /*  9*/cv::cv_writer_release,
+        /* 10*/cv::cv_writer_get_prop,
+        /* 11*/cv::cv_writer_set_prop,
+        /* 12*/cv::cv_writer_write
+    }
 };
-
-} // namespace
 
 const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
-    if (requested_abi_version != 0)
-        return NULL;
-    if (requested_api_version != 0)
-        return NULL;
-    return &cv::plugin_api_v0;
+    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
+        return &plugin_api;
+    return NULL;
 }
+
+#else  // NEW_PLUGIN
+
+static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
+{
+    {
+        sizeof(OpenCV_VideoIO_Capture_Plugin_API), CAPTURE_ABI_VERSION, CAPTURE_API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "Microsoft Media Foundation OpenCV Video I/O plugin"
+    },
+    {
+        /*  1*/cv::CAP_MSMF,
+        /*  2*/cv::cv_capture_open,
+        /*  3*/cv::cv_capture_release,
+        /*  4*/cv::cv_capture_get_prop,
+        /*  5*/cv::cv_capture_set_prop,
+        /*  6*/cv::cv_capture_grab,
+        /*  7*/cv::cv_capture_retrieve,
+    },
+    {
+        /*  8*/cv::cv_capture_open_with_params,
+    }
+};
+
+const OpenCV_VideoIO_Capture_Plugin_API* opencv_videoio_capture_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == CAPTURE_ABI_VERSION && requested_api_version <= CAPTURE_API_VERSION)
+        return &capture_plugin_api;
+    return NULL;
+}
+
+static const OpenCV_VideoIO_Writer_Plugin_API writer_plugin_api =
+{
+    {
+        sizeof(OpenCV_VideoIO_Writer_Plugin_API), WRITER_ABI_VERSION, WRITER_API_VERSION,
+        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
+        "Microsoft Media Foundation OpenCV Video I/O plugin"
+    },
+    {
+        /*  1*/cv::CAP_MSMF,
+        /*  2*/cv::cv_writer_open,
+        /*  3*/cv::cv_writer_release,
+        /*  4*/cv::cv_writer_get_prop,
+        /*  5*/cv::cv_writer_set_prop,
+        /*  6*/cv::cv_writer_write
+    },
+    {
+        /*  7*/cv::cv_writer_open_with_params
+    }
+};
+
+const OpenCV_VideoIO_Writer_Plugin_API* opencv_videoio_writer_plugin_init_v1(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
+{
+    if (requested_abi_version == WRITER_ABI_VERSION && requested_api_version <= WRITER_API_VERSION)
+        return &writer_plugin_api;
+    return NULL;
+}
+
+#endif  // NEW_PLUGIN
 
 #endif // BUILD_PLUGIN

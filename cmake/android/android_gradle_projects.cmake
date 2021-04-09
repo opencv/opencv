@@ -1,9 +1,16 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version (3.0+)")
+set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
+set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
+message(STATUS "Gradle version: ${GRADLE_VERSION}")
+
 set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
-set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
+if(ANDROID_NATIVE_API_LEVEL GREATER 21)
+  set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
+else()
+  set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
+endif()
 set(ANDROID_TARGET_SDK_VERSION "26" CACHE STRING "Android minSdkVersion")
 
 set(ANDROID_BUILD_BASE_DIR "${OpenCV_BINARY_DIR}/opencv_android" CACHE INTERNAL "")
@@ -38,9 +45,11 @@ set(ANDROID_ABI_FILTER "${ANDROID_INSTALL_ABI_FILTER}")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}" COMPONENT samples)
 
+configure_file("${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/gradle/wrapper/gradle-wrapper.properties.in" "${ANDROID_BUILD_BASE_DIR}/gradle/wrapper/gradle-wrapper.properties" @ONLY)
+install(FILES "${ANDROID_BUILD_BASE_DIR}/gradle/wrapper/gradle-wrapper.properties" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/gradle/wrapper" COMPONENT samples)
+
 set(GRADLE_WRAPPER_FILES
     "gradle/wrapper/gradle-wrapper.jar"
-    "gradle/wrapper/gradle-wrapper.properties"
     "gradlew.bat"
     "gradlew"
     "gradle.properties"

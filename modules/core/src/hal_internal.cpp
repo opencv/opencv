@@ -42,6 +42,7 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "hal_internal.hpp"
 
 #ifdef HAVE_LAPACK

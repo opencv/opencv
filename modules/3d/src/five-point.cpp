@@ -401,7 +401,8 @@ protected:
 
 // Input should be a vector of n 2D points or a Nx2 matrix
 Mat findEssentialMat( InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
-                              int method, double prob, double threshold, OutputArray _mask)
+                              int method, double prob, double threshold,
+                              int maxIters, OutputArray _mask)
 {
     CV_INSTRUMENT_REGION();
 
@@ -444,11 +445,27 @@ Mat findEssentialMat( InputArray _points1, InputArray _points2, InputArray _came
 
     Mat E;
     if( method == RANSAC )
-        createRANSACPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, threshold, prob)->run(points1, points2, E, _mask);
+        createRANSACPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, threshold, prob, maxIters)->run(points1, points2, E, _mask);
     else
-        createLMeDSPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, prob)->run(points1, points2, E, _mask);
+        createLMeDSPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, prob, maxIters)->run(points1, points2, E, _mask);
 
     return E;
+}
+
+Mat findEssentialMat( InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
+                              int method, double prob, double threshold,
+                              OutputArray _mask)
+{
+    return findEssentialMat(_points1, _points2, _cameraMatrix, method, prob, threshold, 1000, _mask);
+}
+
+Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Point2d pp,
+                              int method, double prob, double threshold, int maxIters, OutputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
+    return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, maxIters, _mask);
 }
 
 Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Point2d pp,
@@ -457,7 +474,7 @@ Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Po
     CV_INSTRUMENT_REGION();
 
     Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
-    return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, _mask);
+    return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, 1000, _mask);
 }
 
 Mat findEssentialMat( InputArray _points1, InputArray _points2,
