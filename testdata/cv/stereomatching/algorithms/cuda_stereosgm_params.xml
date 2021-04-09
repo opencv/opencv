@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<params>
+	<!-- caseName, datasetName, numDisp, mode -->
+	case_barn2_1 barn2 "64" "1"
+	case_barn2_3 barn2 "64" "3"
+	case_bull_1 bull "64" "1"
+	case_bull_3 bull "64" "3"
+	case_cones_1 cones "64" "1"
+	case_cones_3 cones "64" "3"
+	case_poster_1 poster "64" "1"
+	case_poster_3 poster "64" "3"
+	case_sawtooth_1 sawtooth "64" "1"
+	case_sawtooth_3 sawtooth "64" "3"
+	case_teddy_1 teddy "64" "1"
+	case_teddy_3 teddy "64" "3"
+	case_tsukuba_1 tsukuba "64" "1"
+	case_tsukuba_3 tsukuba "64" "3"
+	case_venus_1 venus "64" "1"
+	case_venus_3 venus "64" "3"
+</params>
+</opencv_storage>
