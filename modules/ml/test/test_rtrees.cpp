@@ -95,6 +95,25 @@ TEST(ML_RTrees, 11142_sample_weights_classification)
     EXPECT_GE(error_with_weights, error_without_weights);
 }
 
+TEST(ML_RTrees, bug_12974_throw_exception_when_predict_different_feature_count)
+{
+    int numFeatures = 5;
+    // create a 5 feature dataset and train the model
+    cv::Ptr<RTrees> model = RTrees::create();
+    Mat samples(10, numFeatures, CV_32F);
+    randu(samples, 0, 10);
+    Mat labels = (Mat_<int>(10,1) << 0,0,0,0,0,1,1,1,1,1);
+    cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, labels);
+    model->train(trainData);
+    // try to predict on data which have fewer features - this should throw an exception
+    for(int i = 1; i < numFeatures - 1; ++i) {
+        Mat test(1, i, CV_32FC1);
+        ASSERT_THROW(model->predict(test), Exception);
+    }
+    // try to predict on data which have more features - this should also throw an exception
+    Mat test(1, numFeatures + 1, CV_32FC1);
+    ASSERT_THROW(model->predict(test), Exception);
+}
 
 
 }} // namespace
