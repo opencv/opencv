@@ -63,6 +63,7 @@
 #include <memory>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/dnn/layer_reg.private.hpp>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -92,6 +93,13 @@ static int PARAM_DNN_BACKEND_DEFAULT = (int)utils::getConfigurationParameterSize
 static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF", false);
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
 static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
+
+bool DNN_DIAGNOSTICS_RUN = false;
+
+void enableModelDiagnostics(bool isDiagnosticsMode)
+{
+    DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
+}
 
 using std::vector;
 using std::map;
@@ -1382,11 +1390,12 @@ struct Net::Impl : public detail::NetImplBase
         CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
                   preferableTarget == DNN_TARGET_CPU ||
                   preferableTarget == DNN_TARGET_OPENCL);
+#ifdef HAVE_INF_ENGINE
         if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
             preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             CV_Assert(
-                  preferableTarget == DNN_TARGET_CPU ||
+                  (preferableTarget == DNN_TARGET_CPU && (!isArmComputePlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
                   preferableTarget == DNN_TARGET_OPENCL ||
                   preferableTarget == DNN_TARGET_OPENCL_FP16 ||
                   preferableTarget == DNN_TARGET_MYRIAD ||
@@ -1394,6 +1403,7 @@ struct Net::Impl : public detail::NetImplBase
                   preferableTarget == DNN_TARGET_FPGA
             );
         }
+#endif
         CV_Assert(preferableBackend != DNN_BACKEND_VKCOM ||
                   preferableTarget == DNN_TARGET_VULKAN);
         CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
@@ -2098,8 +2108,8 @@ struct Net::Impl : public detail::NetImplBase
             return;
         }
 
-        bool supportsCPUFallback = preferableTarget == DNN_TARGET_CPU ||
-                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU);
+        bool supportsCPUFallback = !isArmComputePlugin() && (preferableTarget == DNN_TARGET_CPU ||
+                                   BackendRegistry::checkIETarget(DNN_TARGET_CPU));
 
         // Build Inference Engine networks from sets of layers that support this
         // backend. Split a whole model on several Inference Engine networks if
@@ -5308,15 +5318,13 @@ static Mutex& getLayerFactoryMutex()
     return *instance;
 }
 
-typedef std::map<String, std::vector<LayerFactory::Constructor> > LayerFactory_Impl;
-
 static LayerFactory_Impl& getLayerFactoryImpl_()
 {
     static LayerFactory_Impl impl;
     return impl;
 }
 
-static LayerFactory_Impl& getLayerFactoryImpl()
+LayerFactory_Impl& getLayerFactoryImpl()
 {
     static LayerFactory_Impl* volatile instance = NULL;
     if (instance == NULL)

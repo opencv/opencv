@@ -460,8 +460,10 @@ public:
             std::vector<int64_t> mask(anchors, 1);
             region = std::make_shared<ngraph::op::RegionYolo>(tr_input, coords, classes, anchors, useSoftmax, mask, 1, 3, anchors_vec);
 
+            auto tr_shape = tr_input->get_shape();
             auto shape_as_inp = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                                                       ngraph::Shape{tr_input->get_shape().size()}, tr_input->get_shape().data());
+                                                                       ngraph::Shape{tr_shape.size()},
+                                                                       std::vector<int64_t>(tr_shape.begin(), tr_shape.end()));
 
             region = std::make_shared<ngraph::op::v1::Reshape>(region, shape_as_inp, true);
             new_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{4}, std::vector<int64_t>{0, 2, 3, 1});
@@ -607,7 +609,7 @@ public:
         result = std::make_shared<ngraph::op::Transpose>(result, tr_axes);
         if (b > 1)
         {
-            std::vector<size_t> sizes = {(size_t)b, result->get_shape()[0] / b, result->get_shape()[1]};
+            std::vector<int64_t> sizes{b, static_cast<int64_t>(result->get_shape()[0]) / b, static_cast<int64_t>(result->get_shape()[1])};
             auto shape_node = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{sizes.size()}, sizes.data());
             result = std::make_shared<ngraph::op::v1::Reshape>(result, shape_node, true);
         }

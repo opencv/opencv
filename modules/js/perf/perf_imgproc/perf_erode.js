@@ -17,7 +17,10 @@ function perf() {
     if (isNodeJs) {
       global.cv = cv;
       global.combine = HelpFunc.combine;
-      global.cvtStr2cvSize = HelpFunc.cvtStr2cvSize;
+      global.log = HelpFunc.log;
+      global.decodeParams2Case = HelpFunc.decodeParams2Case;
+      global.setBenchmarkSuite = HelpFunc.setBenchmarkSuite;
+      global.addKernelCase = HelpFunc.addKernelCase;
       global.cvSize = Base.getCvSize();
     } else {
       enableButton();

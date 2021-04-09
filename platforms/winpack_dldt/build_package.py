@@ -300,7 +300,9 @@ class BuilderDLDT:
 
             # build
             cmd = [self.cmake_path, '--build', '.', '--config', build_config, # '--target', 'install',
-                    '--', '/v:n', '/m:2', '/consoleloggerparameters:NoSummary'
+                    '--',
+                    # '/m:2' is removed, not properly supported by 2021.3
+                    '/v:n', '/consoleloggerparameters:NoSummary',
             ]
             execute(cmd, cwd=build_dir)
 
@@ -382,9 +384,18 @@ class Builder:
         )
 
         cmake_vars['INF_ENGINE_LIB_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/lib/intel64')
+        assert os.path.exists(cmake_vars['INF_ENGINE_LIB_DIRS:PATH']), cmake_vars['INF_ENGINE_LIB_DIRS:PATH']
         cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH'] = str(builderDLDT.sysrootdir / 'deployment_tools/inference_engine/include')
-        cmake_vars['ngraph_DIR:PATH'] = str(builderDLDT.sysrootdir / 'ngraph/cmake')
+        assert os.path.exists(cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']), cmake_vars['INF_ENGINE_INCLUDE_DIRS:PATH']
+
+        ngraph_DIR = str(builderDLDT.sysrootdir / 'ngraph/cmake')
+        if not os.path.exists(ngraph_DIR):
+            ngraph_DIR = str(builderDLDT.sysrootdir / 'ngraph/deployment_tools/ngraph/cmake')
+        assert os.path.exists(ngraph_DIR), ngraph_DIR
+        cmake_vars['ngraph_DIR:PATH'] = ngraph_DIR
+
         cmake_vars['TBB_DIR:PATH'] = str(builderDLDT.sysrootdir / 'tbb/cmake')
+        assert os.path.exists(cmake_vars['TBB_DIR:PATH']), cmake_vars['TBB_DIR:PATH']
 
         if self.config.build_debug:
             cmake_vars['CMAKE_BUILD_TYPE'] = 'Debug'
@@ -455,8 +466,8 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2021.2'
-    dldt_release = '2021020000'
+    dldt_src_commit = '2021.3'
+    dldt_release = '2021030000'
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
     build_subst_drive = os.environ.get('BUILD_SUBST_DRIVE', None)
@@ -514,8 +525,12 @@ def main():
         args.opencv_dir = os.path.abspath(args.opencv_dir)
 
     if not args.dldt_config:
-        if args.dldt_src_commit == 'releases/2020/4' or args.dldt_src_branch == 'releases/2020/4':
-            args.dldt_config = '2020.4'
+        if str(args.dldt_src_commit).startswith('releases/20'):  # releases/2020/4
+            args.dldt_config = str(args.dldt_src_commit)[len('releases/'):].replace('/', '.')
+            if not args.dldt_src_branch:
+                args.dldt_src_branch = args.dldt_src_commit
+        elif str(args.dldt_src_branch).startswith('releases/20'):  # releases/2020/4
+            args.dldt_config = str(args.dldt_src_branch)[len('releases/'):].replace('/', '.')
         else:
             args.dldt_config = args.dldt_src_commit
 

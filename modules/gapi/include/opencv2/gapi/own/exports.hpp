@@ -12,10 +12,12 @@
 #       include <opencv2/core/base.hpp>
 #       define GAPI_EXPORTS CV_EXPORTS
         /* special informative macros for wrapper generators */
+#       define GAPI_PROP CV_PROP
 #       define GAPI_WRAP CV_WRAP
 #       define GAPI_EXPORTS_W_SIMPLE CV_EXPORTS_W_SIMPLE
 #       define GAPI_EXPORTS_W CV_EXPORTS_W
 #   else
+#       define GAPI_PROP
 #       define GAPI_WRAP
 #       define GAPI_EXPORTS
 #       define GAPI_EXPORTS_W_SIMPLE

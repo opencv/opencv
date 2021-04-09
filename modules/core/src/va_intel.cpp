@@ -189,7 +189,7 @@ static bool ocl_convert_nv12_to_bgr(cl_mem clImageY, cl_mem clImageUV, cl_mem cl
 
     k.args(clImageY, clImageUV, clBuffer, step, cols, rows);
 
-    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    size_t globalsize[] = { (size_t)cols/2, (size_t)rows/2 };
     return k.run(2, globalsize, 0, false);
 }
 
@@ -202,7 +202,7 @@ static bool ocl_convert_bgr_to_nv12(cl_mem clBuffer, int step, int cols, int row
 
     k.args(clBuffer, step, cols, rows, clImageY, clImageUV);
 
-    size_t globalsize[] = { (size_t)cols, (size_t)rows };
+    size_t globalsize[] = { (size_t)cols/2, (size_t)rows/2 };
     return k.run(2, globalsize, 0, false);
 }
 #endif // HAVE_VA_INTEL

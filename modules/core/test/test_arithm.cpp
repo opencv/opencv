@@ -2456,4 +2456,16 @@ TEST(Core_MinMaxIdx, rows_overflow)
 }
 
 
+TEST(Core_Magnitude, regression_19506)
+{
+    for (int N = 1; N <= 64; ++N)
+    {
+        Mat a(1, N, CV_32FC1, Scalar::all(1e-20));
+        Mat res;
+        magnitude(a, a, res);
+        EXPECT_LE(cvtest::norm(res, NORM_L1), 1e-15) << N;
+    }
+}
+
+
 }} // namespace

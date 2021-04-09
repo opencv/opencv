@@ -47,6 +47,7 @@
 
 #define CV_HAS_CONVERSION_ERROR(x) (((x) == -1) && PyErr_Occurred())
 
+static PyObject* opencv_error = NULL;
 
 class ArgInfo
 {
@@ -69,13 +70,31 @@ struct PyOpenCV_Converter
     //static inline PyObject* from(const T& src);
 };
 
+// exception-safe pyopencv_to
+template<typename _Tp> static
+bool pyopencv_to_safe(PyObject* obj, _Tp& value, const ArgInfo& info)
+{
+    try
+    {
+        return pyopencv_to(obj, value, info);
+    }
+    catch (const std::exception &e)
+    {
+        PyErr_SetString(opencv_error, cv::format("Conversion error: %s, what: %s", info.name, e.what()).c_str());
+        return false;
+    }
+    catch (...)
+    {
+        PyErr_SetString(opencv_error, cv::format("Conversion error: %s", info.name).c_str());
+        return false;
+    }
+}
+
 template<typename T> static
 bool pyopencv_to(PyObject* obj, T& p, const ArgInfo& info) { return PyOpenCV_Converter<T>::to(obj, p, info); }
 
 template<typename T> static
 PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src); }
-
-static PyObject* opencv_error = NULL;
 
 static bool isPythonBindingsDebugEnabled()
 {
@@ -213,6 +232,11 @@ catch (const cv::Exception &e) \
 catch (const std::exception &e) \
 { \
     PyErr_SetString(opencv_error, e.what()); \
+    return 0; \
+} \
+catch (...) \
+{ \
+    PyErr_SetString(opencv_error, "Unknown C++ exception from OpenCV code"); \
     return 0; \
 }
 
@@ -2174,9 +2198,9 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_enums.h"
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE_DYNAMIC(NAME, STORAGE, SNAME)
+#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE_DYNAMIC(WNAME, NAME, STORAGE, SNAME)
 #else
-#define CVPY_TYPE(NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE(NAME, STORAGE, SNAME)
+#define CVPY_TYPE(WNAME, NAME, STORAGE, SNAME, _1, _2) CVPY_TYPE_DECLARE(WNAME, NAME, STORAGE, SNAME)
 #endif
 #include "pyopencv_generated_types.h"
 #undef CVPY_TYPE
@@ -2184,7 +2208,6 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
-
 
 static PyMethodDef special_methods[] = {
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
@@ -2266,10 +2289,10 @@ static bool init_body(PyObject * m)
 #undef CVPY_MODULE
 
 #ifdef CVPY_DYNAMIC_INIT
-#define CVPY_TYPE(NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_DYNAMIC(NAME, return false, BASE, CONSTRUCTOR)
+#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_DYNAMIC(WNAME, NAME, return false, BASE, CONSTRUCTOR)
     PyObject * pyopencv_NoBase_TypePtr = NULL;
 #else
-#define CVPY_TYPE(NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_STATIC(NAME, return false, BASE, CONSTRUCTOR)
+#define CVPY_TYPE(WNAME, NAME, _1, _2, BASE, CONSTRUCTOR) CVPY_TYPE_INIT_STATIC(WNAME, NAME, return false, BASE, CONSTRUCTOR)
     PyTypeObject * pyopencv_NoBase_TypePtr = NULL;
 #endif
     #include "pyopencv_generated_types.h"

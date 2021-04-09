@@ -104,8 +104,9 @@ inline IE::Layout toIELayout(const std::size_t ndims) {
 inline IE::Precision toIE(int depth) {
     switch (depth) {
     case CV_8U:  return IE::Precision::U8;
+    case CV_32S: return IE::Precision::I32;
     case CV_32F: return IE::Precision::FP32;
-    default:     GAPI_Assert(false && "Unsupported data type");
+    default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return IE::Precision::UNSPECIFIED;
 }
@@ -113,7 +114,9 @@ inline int toCV(IE::Precision prec) {
     switch (prec) {
     case IE::Precision::U8:   return CV_8U;
     case IE::Precision::FP32: return CV_32F;
-    default:     GAPI_Assert(false && "Unsupported data type");
+    case IE::Precision::I32:  return CV_32S;
+    case IE::Precision::I64:  return CV_32S;
+    default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return -1;
 }
@@ -132,7 +135,7 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         const size_t width    = mat.size().width;
 
         const size_t strideH  = mat.step1();
-        IE::BlockingDesc bdesc({1, channels, height, width} /* dims */,
+        IE::BlockingDesc bdesc({1, height, width, channels} /* blocking dims */,
                                {0, 2, 3, 1} /* order for NHWC   */,
                                0            /* offset           */,
                                {0, 0, 0, 0} /* offsets for dims */,
@@ -154,8 +157,9 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         case CV_##E: return IE::make_shared_blob<T>(tDesc, const_cast<T*>(mat.ptr<T>()))
         HANDLE(8U, uint8_t);
         HANDLE(32F, float);
+        HANDLE(32S, int);
 #undef HANDLE
-    default: GAPI_Assert(false && "Unsupported data type");
+    default: GAPI_Assert(false && "IE. Unsupported data type");
     }
     return IE::Blob::Ptr{};
 }
@@ -189,8 +193,16 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
             break;
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
+        HANDLE(I32, int);
 #undef HANDLE
-    default: GAPI_Assert(false && "Unsupported data type");
+        case IE::Precision::I64: {
+            GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+            cv::gimpl::convertInt64ToInt32(blob->buffer().as<int64_t*>(),
+                                           reinterpret_cast<int*>(mat.data),
+                                           mat.total());
+            break;
+        }
+    default: GAPI_Assert(false && "IE. Unsupported data type");
     }
 }
 

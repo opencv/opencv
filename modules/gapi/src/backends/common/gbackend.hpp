@@ -58,32 +58,51 @@ namespace gimpl {
     struct Data;
     struct RcDesc;
 
-    struct GAPI_EXPORTS RMatMediaAdapterBGR final: public cv::RMat::Adapter
+    struct GAPI_EXPORTS RMatMediaFrameAdapter final: public cv::RMat::Adapter
     {
-        explicit RMatMediaAdapterBGR(const cv::MediaFrame& frame) : m_frame(frame) { };
+        using MapDescF = std::function<cv::GMatDesc(const GFrameDesc&)>;
+        using MapDataF = std::function<cv::Mat(const GFrameDesc&, const cv::MediaFrame::View&)>;
+
+        RMatMediaFrameAdapter(const cv::MediaFrame& frame,
+                              const MapDescF& frameDescToMatDesc,
+                              const MapDataF& frameViewToMat) :
+            m_frame(frame),
+            m_frameDesc(frame.desc()),
+            m_frameDescToMatDesc(frameDescToMatDesc),
+            m_frameViewToMat(frameViewToMat)
+        { }
 
         virtual cv::RMat::View access(cv::RMat::Access a) override
         {
-            auto view = m_frame.access(a == cv::RMat::Access::W ? cv::MediaFrame::Access::W
-                                                                : cv::MediaFrame::Access::R);
-            auto ptr = reinterpret_cast<uchar*>(view.ptr[0]);
-            auto stride = view.stride[0];
+            auto rmatToFrameAccess = [](cv::RMat::Access rmatAccess) {
+                switch(rmatAccess) {
+                    case cv::RMat::Access::R:
+                        return cv::MediaFrame::Access::R;
+                    case cv::RMat::Access::W:
+                        return cv::MediaFrame::Access::W;
+                    default:
+                        cv::util::throw_error(std::logic_error("cv::RMat::Access::R or "
+                            "cv::RMat::Access::W can only be mapped to cv::MediaFrame::Access!"));
+                }
+            };
 
-            std::shared_ptr<cv::MediaFrame::View> view_ptr =
-                std::make_shared<cv::MediaFrame::View>(std::move(view));
-            auto callback = [view_ptr]() mutable { view_ptr.reset(); };
+            auto fv = m_frame.access(rmatToFrameAccess(a));
 
-            return cv::RMat::View(desc(), ptr, stride, callback);
+            auto fvHolder = std::make_shared<cv::MediaFrame::View>(std::move(fv));
+            auto callback = [fvHolder]() mutable { fvHolder.reset(); };
+
+            return asView(m_frameViewToMat(m_frame.desc(), *fvHolder), callback);
         }
 
         virtual cv::GMatDesc desc() const override
         {
-            const auto& desc = m_frame.desc();
-            GAPI_Assert(desc.fmt == cv::MediaFormat::BGR);
-            return cv::GMatDesc{CV_8U, 3, desc.size};
+            return m_frameDescToMatDesc(m_frameDesc);
         }
 
         cv::MediaFrame m_frame;
+        cv::GFrameDesc m_frameDesc;
+        MapDescF m_frameDescToMatDesc;
+        MapDataF m_frameViewToMat;
     };
 
 
@@ -189,6 +208,12 @@ inline cv::util::optional<T> getCompileArg(const cv::GCompileArgs &args)
 }
 
 void GAPI_EXPORTS createMat(const cv::GMatDesc& desc, cv::Mat& mat);
+
+inline void convertInt64ToInt32(const int64_t* src, int* dst, size_t size)
+{
+    std::transform(src, src + size, dst,
+                   [](int64_t el) { return static_cast<int>(el); });
+}
 
 }} // cv::gimpl
 
