@@ -163,7 +163,7 @@ protected:
 
         // One image.
         Mat image;
-        vector<KeyPoint> keypoints;
+        KeyPointCollection keypoints;
         Mat descriptors;
 
         try
@@ -190,7 +190,7 @@ protected:
 
         // Several images.
         vector<Mat> images;
-        vector<vector<KeyPoint> > keypointsCollection;
+        vector<KeyPointCollection > keypointsCollection;
         vector<Mat> descriptorsCollection;
         try
         {
@@ -222,7 +222,7 @@ protected:
                         : (DESCRIPTOR_DIR + "/" + name + "_keypoints.xml.gz"));
         FileStorage fs(keypoints_filename, FileStorage::READ);
 
-        vector<KeyPoint> keypoints;
+        KeyPointCollection keypoints;
         EXPECT_TRUE(fs.isOpened()) << "Keypoint testdata is missing. Re-computing and re-writing keypoints testdata...";
         if (!fs.isOpened())
         {
@@ -248,7 +248,7 @@ protected:
 
         if(!detector.empty())
         {
-            vector<KeyPoint> calcKeypoints;
+            KeyPointCollection calcKeypoints;
             detector->detect(img, calcKeypoints);
             // TODO validate received keypoints
             int diff = abs((int)calcKeypoints.size() - (int)keypoints.size());
@@ -399,7 +399,7 @@ TEST( Features2d_DescriptorExtractor, batch_ORB )
 {
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
-    vector<vector<KeyPoint> > keypoints;
+    vector<KeyPointCollection> keypoints;
     int i, n = 6;
     Ptr<ORB> orb = ORB::create();
 
@@ -427,7 +427,7 @@ TEST( Features2d_DescriptorExtractor, batch_SIFT )
 {
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
-    vector<vector<KeyPoint> > keypoints;
+    vector<KeyPointCollection > keypoints;
     int i, n = 6;
     Ptr<SIFT> sift = SIFT::create();
 
@@ -478,7 +478,7 @@ TEST_P(DescriptorImage, no_crash)
     Ptr<KAZE> kaze = KAZE::create();
     Ptr<BRISK> brisk = BRISK::create();
     size_t n = fnames.size();
-    vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     Mat descriptors;
     orb->setMaxFeatures(5000);
 

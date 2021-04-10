@@ -16,7 +16,7 @@ const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_
 #define Value(...) Values(String_FeatureDetector_DescriptorExtractor_Float_t(__VA_ARGS__))
 
 static
-void SetSuitableSIFTOctave(vector<KeyPoint>& keypoints,
+void SetSuitableSIFTOctave(KeyPointCollection& keypoints,
                              int firstOctave = -1, int nOctaveLayers = 3, double sigma = 1.6)
 {
     for (size_t i = 0; i < keypoints.size(); i++ )
@@ -36,7 +36,7 @@ void SetSuitableSIFTOctave(vector<KeyPoint>& keypoints,
 }
 
 static
-void rotateKeyPoints(const vector<KeyPoint>& src, const Mat& H, float angle, vector<KeyPoint>& dst)
+void rotateKeyPoints(const KeyPointCollection& src, const Mat& H, float angle, KeyPointCollection& dst)
 {
     // suppose that H is rotation given from rotateImage() and angle has value passed to rotateImage()
     vector<Point2f> srcCenters, dstCenters;
@@ -85,7 +85,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
     Mat mask0(image0.size(), CV_8UC1, Scalar(0));
     mask0(Rect(borderSize, borderSize, mask0.cols - 2*borderSize, mask0.rows - 2*borderSize)).setTo(Scalar(255));
 
-    vector<KeyPoint> keypoints0;
+    KeyPointCollection keypoints0;
     Mat descriptors0;
     featureDetector->detect(image0, keypoints0, mask0);
     std::cout << "Keypoints: " << keypoints0.size() << std::endl;
@@ -100,7 +100,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
     {
         Mat H = rotateImage(image0, mask0, static_cast<float>(angle), image1, mask1);
 
-        vector<KeyPoint> keypoints1;
+        KeyPointCollection keypoints1;
         rotateKeyPoints(keypoints0, H, static_cast<float>(angle), keypoints1);
         Mat descriptors1;
         descriptorExtractor->compute(image1, keypoints1, descriptors1);
@@ -135,7 +135,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
 
 TEST_P(DescriptorScaleInvariance, scale)
 {
-    vector<KeyPoint> keypoints0;
+    KeyPointCollection keypoints0;
     featureDetector->detect(image0, keypoints0);
     std::cout << "Keypoints: " << keypoints0.size() << std::endl;
     EXPECT_GE(keypoints0.size(), 15u);
@@ -150,7 +150,7 @@ TEST_P(DescriptorScaleInvariance, scale)
         Mat image1;
         resize(image0, image1, Size(), 1./scale, 1./scale, INTER_LINEAR_EXACT);
 
-        vector<KeyPoint> keypoints1;
+        KeyPointCollection keypoints1;
         scaleKeyPoints(keypoints0, keypoints1, 1.0f/scale);
         if (featureDetector->getDefaultName() == "Feature2D.SIFT")
         {

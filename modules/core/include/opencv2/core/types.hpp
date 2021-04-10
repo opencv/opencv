@@ -687,7 +687,9 @@ struct Type< Scalar_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }
 class CV_EXPORTS_W_SIMPLE KeyPointCollection {
 public:
     using KeyPoints = std::vector<KeyPoint>;
-
+    KeyPointCollection() { keypoints = std::vector<KeyPoint>(); }
+    KeyPointCollection(const int n) { keypoints = std::vector<KeyPoint>(1); }
+    KeyPointCollection(const int n, const KeyPoint& kp) { keypoints = std::vector<KeyPoint>(n, kp); }
 
     KeyPoints::iterator begin() { return keypoints.begin(); }
     KeyPoints::iterator end()   { return keypoints.end(); }

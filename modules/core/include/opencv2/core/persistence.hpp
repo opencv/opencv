@@ -826,7 +826,7 @@ namespace internal
     {
     public:
         VecWriterProxy( FileStorage* _fs ) : fs(_fs) {}
-        void operator()(const std::vector<_Tp>& vec) const
+        void operator()(KeyPointCollection vec) const
         {
             size_t count = vec.size();
             for (size_t i = 0; i < count; i++)
@@ -1098,7 +1098,7 @@ static inline void write(FileStorage& fs, const KeyPointCollection& vec)
     cv::internal::VecWriterProxy<KeyPoint, 0> w(&fs);
     w(vec);
 }
-static inline void write(FileStorage& fs, const std::vector<DMatch>& vec)
+static inline void write(FileStorage& fs, KeyPointCollection vec)
 {
     cv::internal::VecWriterProxy<DMatch, 0> w(&fs);
     w(vec);

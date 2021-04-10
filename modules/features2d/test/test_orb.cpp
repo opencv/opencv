@@ -64,7 +64,7 @@ TEST(Features2D_ORB, _1996)
     //image.setTo(Scalar(255,255,255), roi);
 
     int roiViolations = 0;
-    for(KeyPointCollection::const_iterator kp = keypoints.begin(); kp != keypoints.end(); ++kp)
+    for(std::vector<KeyPoint>::const_iterator kp = keypoints.begin(); kp != keypoints.end(); ++kp)
     {
         int x = cvRound(kp->pt.x);
         int y = cvRound(kp->pt.y);
@@ -106,7 +106,7 @@ TEST(Features2D_ORB, crash_5031)
 
     Ptr<ORB> orb = cv::ORB::create(nfeatures, orbScaleFactor, nlevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
 
-    std::vector<cv::KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     cv::Mat descriptors;
 
     cv::KeyPoint kp;
@@ -145,7 +145,7 @@ TEST(Features2D_ORB, enhancement_10555)
 {
     Ptr<SIFT> sift = SIFT::create();
     vector<KeyPointCollection> keypoints;
-    KeyPointCollection descriptors;
+    Mat descriptors;
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     sift->detect(image, keypoints);
     Ptr<ORB> orb = ORB::create();
