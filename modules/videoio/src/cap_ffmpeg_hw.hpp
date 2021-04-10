@@ -56,7 +56,7 @@ using namespace cv;
 
 static AVCodec *hw_find_codec(AVCodecID id, AVHWDeviceType hw_type, int (*check_category)(const AVCodec *),
                               const char *disabled_codecs, AVPixelFormat *hw_pix_fmt);
-static AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool force_opencl_init);
+static AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool use_opencl);
 static AVBufferRef* hw_create_frames(struct AVCodecContext* ctx, AVBufferRef *hw_device_ctx, int width, int height, AVPixelFormat hw_format);
 static AVPixelFormat hw_get_format_callback(struct AVCodecContext *ctx, const enum AVPixelFormat * fmt);
 static VideoAccelerationType hw_type_to_va_type(AVHWDeviceType hw_type);
@@ -513,7 +513,7 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
 }
 
 static
-AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool force_opencl_init) {
+AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::string& device_subname, bool use_opencl) {
     if (AV_HWDEVICE_TYPE_NONE == hw_type)
         return NULL;
 
@@ -559,7 +559,7 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
             CV_LOG_INFO(NULL, "FFMPEG: Created video acceleration context (av_hwdevice_ctx_create) for " << hw_child_name << " on device " << device_name);
             // if OpenCL context not created yet, create it with binding to video acceleration context
             if (ocl::haveOpenCL()) {
-                if (ocl_context.empty() || force_opencl_init) {
+                if (ocl_context.empty() || use_opencl) {
                     std::string ocl_device_name = std::string(hw_child_name) + " video acceleration on OpenCL device: "
                                                   + ocl_context.getDevice().name();
                     try {

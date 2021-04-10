@@ -538,7 +538,7 @@ struct CvCapture_FFMPEG
 #endif
     VideoAccelerationType va_type;
     int hw_device;
-    bool force_opencl_init;
+    int use_opencl;
 };
 
 void CvCapture_FFMPEG::init()
@@ -576,7 +576,7 @@ void CvCapture_FFMPEG::init()
     bsfc = NULL;
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
-    force_opencl_init = false;
+    use_opencl = 0;
 }
 
 
@@ -925,9 +925,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                 return false;
             }
         }
-        if (params.has(CAP_PROP_HW_DEVICE_OPENCL)) {
-            force_opencl_init = true;
-            params.get<int>(CAP_PROP_HW_DEVICE_OPENCL);
+        if (params.has(CAP_PROP_HW_ACCELERATION_USE_OPENCL)) {
+            use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
         }
         if (params.warnUnusedParameters())
         {
@@ -1058,7 +1057,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     if (codec) {
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
-                        enc->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), force_opencl_init);
+                        enc->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
                         if (!enc->hw_device_ctx)
                         {
                             CV_LOG_DEBUG(NULL, "FFMPEG: ... can't create H/W device: '" << accel_iter.hw_type_device_string() << "'");
@@ -1572,6 +1571,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return static_cast<double>(va_type);
     case CAP_PROP_HW_DEVICE:
         return static_cast<double>(hw_device);
+    case CAP_PROP_HW_ACCELERATION_USE_OPENCL:
+        return static_cast<double>(use_opencl);
 #endif  // USE_AV_HW_CODECS
     default:
         break;
@@ -1798,7 +1799,7 @@ struct CvVideoWriter_FFMPEG
     struct SwsContext *img_convert_ctx;
     VideoAccelerationType va_type;
     int               hw_device;
-    bool              force_opencl_init;
+    int               use_opencl;
 };
 
 static const char * icvFFMPEGErrStr(int err)
@@ -1861,7 +1862,7 @@ void CvVideoWriter_FFMPEG::init()
     frame_idx = 0;
     va_type = VIDEO_ACCELERATION_NONE;
     hw_device = -1;
-    force_opencl_init = false;
+    use_opencl = 0;
     ok = false;
 }
 
@@ -2283,6 +2284,10 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
     {
         return static_cast<double>(hw_device);
     }
+    else if (propId == VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL)
+    {
+        return static_cast<double>(use_opencl);
+    }
 #endif
     return 0;
 }
@@ -2436,9 +2441,8 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             return false;
         }
     }
-    if (params.has(VIDEOWRITER_PROP_HW_DEVICE_OPENCL)) {
-        force_opencl_init = true;
-        params.get<int>(VIDEOWRITER_PROP_HW_DEVICE_OPENCL);
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL)) {
+        use_opencl = params.get<int>(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL);
     }
 
     if (params.warnUnusedParameters())
@@ -2703,7 +2707,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             if (!codec)
                 continue;
 
-            hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), force_opencl_init);
+            hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
             if (!hw_device_ctx)
                 continue;
         }

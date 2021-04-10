@@ -696,8 +696,8 @@ TEST_P(videocapture_acceleration, read)
     // HW reader
     std::vector<int> params = { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
     if (backend == CAP_FFMPEG && use_umat) {
-        params.push_back(CAP_PROP_HW_DEVICE_OPENCL);
-        params.push_back(0);
+        params.push_back(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
+        params.push_back(1);
     }
     VideoCapture hw_reader(filepath, backend, params);
     if (!hw_reader.isOpened())
@@ -836,8 +836,8 @@ TEST_P(videowriter_acceleration, write)
     {
         std::vector<int> params = { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
         if (backend == CAP_FFMPEG && use_umat) {
-            params.push_back(VIDEOWRITER_PROP_HW_DEVICE_OPENCL);
-            params.push_back(0);
+            params.push_back(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL);
+            params.push_back(1);
         }
         VideoWriter hw_writer(
             filename,
