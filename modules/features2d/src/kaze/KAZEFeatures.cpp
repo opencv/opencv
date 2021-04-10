@@ -319,10 +319,10 @@ void KAZEFeatures::Determinant_Hessian(KeyPointCollection& kpts)
     // Delete the memory of the vector of keypoints vectors
     // In case we use the same kaze object for multiple images
     for (size_t i = 0; i < kpts_par_.size(); i++) {
-        vector<KeyPoint>().swap(kpts_par_[i]);
+        KeyPointCollection().swap(kpts_par_[i]);
     }
     kpts_par_.clear();
-    vector<KeyPoint> aux;
+    KeyPointCollection aux;
 
     // Allocate memory for the vector of vectors
     for (size_t i = 1; i < evolution_.size() - 1; i++) {
@@ -402,7 +402,7 @@ void KAZEFeatures::Do_Subpixel_Refinement(KeyPointCollection &kpts) {
     Mat b = Mat::zeros(3, 1, CV_32F);
     Mat dst = Mat::zeros(3, 1, CV_32F);
 
-    vector<KeyPoint> kpts_(kpts);
+    KeyPointCollection kpts_(kpts);
 
     for (size_t i = 0; i < kpts_.size(); i++) {
 

@@ -688,7 +688,7 @@ class CV_EXPORTS_W_SIMPLE KeyPointCollection {
 public:
     using KeyPoints = std::vector<KeyPoint>;
     KeyPointCollection() { keypoints = std::vector<KeyPoint>(); }
-    KeyPointCollection(const int n) { keypoints = std::vector<KeyPoint>(1); }
+    KeyPointCollection(const int n) { keypoints = std::vector<KeyPoint>(n); }
     KeyPointCollection(const int n, const KeyPoint& kp) { keypoints = std::vector<KeyPoint>(n, kp); }
 
     KeyPoints::iterator begin() { return keypoints.begin(); }
@@ -701,6 +701,7 @@ public:
     void push_back(const KeyPoint& kp) {  keypoints.push_back(kp); }
     void clear() { keypoints.clear(); }
     bool empty() const { return keypoints.empty(); }
+    void swap(KeyPointCollection& kp) { keypoints.swap(kp.keypoints); }
     size_t size() const { return keypoints.size(); }
     void resize(const size_t size) { keypoints.resize(size); }
     const KeyPoint& operator[] (const int index) const { return keypoints[index]; }

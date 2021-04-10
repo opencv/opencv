@@ -31,7 +31,7 @@ private:
     std::vector<TEvolution> evolution_;    ///< Vector of nonlinear diffusion evolution
 
     /// Vector of keypoint vectors for finding extrema in multiple threads
-    std::vector<std::vector<cv::KeyPoint> > kpts_par_;
+    std::vector<KeyPointCollection> kpts_par_;
 
     /// FED parameters
     int ncycles_;                  ///< Number of cycles

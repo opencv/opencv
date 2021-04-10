@@ -20,9 +20,9 @@ PARAM_TEST_CASE(Feature2DFixture, Ptr<Feature2D>, std::string)
 {
     std::string filename;
     Mat image, descriptors;
-    vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     UMat uimage, udescriptors;
-    vector<KeyPoint> ukeypoints;
+    KeyPointCollection ukeypoints;
     Ptr<Feature2D> feature;
 
     virtual void SetUp()
