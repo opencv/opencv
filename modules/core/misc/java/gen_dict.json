@@ -679,7 +679,7 @@
             "j_type": "MatOfKeyPoint",
             "jn_type": "long",
             "jni_type": "jlong",
-            "jni_var": "std::vector<KeyPoint> %(n)s",
+            "jni_var": "KeyPointCollection %(n)s",
             "suffix": "J",
             "v_type": "Mat",
             "j_import": "org.opencv.core.MatOfKeyPoint"
@@ -867,7 +867,7 @@
             "j_type": "List<MatOfKeyPoint>",
             "jn_type": "long",
             "jni_type": "jlong",
-            "jni_var": "std::vector< std::vector<KeyPoint> > %(n)s",
+            "jni_var": "std::vector< KeyPointCollection > %(n)s",
             "v_type": "vector_Mat",
             "j_import": "org.opencv.core.MatOfKeyPoint"
         },

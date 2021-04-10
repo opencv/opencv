@@ -349,10 +349,10 @@ namespace
                  int fastThreshold,
                  bool blurForDescriptor);
 
-        virtual void detectAndCompute(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints);
+        virtual void detectAndCompute(InputArray _image, InputArray _mask, KeyPointCollection& keypoints, OutputArray _descriptors, bool useProvidedKeypoints);
         virtual void detectAndComputeAsync(InputArray _image, InputArray _mask, OutputArray _keypoints, OutputArray _descriptors, bool useProvidedKeypoints, Stream& stream);
 
-        virtual void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
+        virtual void convert(InputArray _gpu_keypoints, KeyPointCollection& keypoints);
 
         virtual int descriptorSize() const { return kBytes; }
         virtual int descriptorType() const { return CV_8U; }
@@ -575,7 +575,7 @@ namespace
         return pow(scaleFactor, level - firstLevel);
     }
 
-    void ORB_Impl::detectAndCompute(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints, OutputArray _descriptors, bool useProvidedKeypoints)
+    void ORB_Impl::detectAndCompute(InputArray _image, InputArray _mask, KeyPointCollection& keypoints, OutputArray _descriptors, bool useProvidedKeypoints)
     {
         using namespace cv::cuda::device::orb;
         if (useProvidedKeypoints)
@@ -592,7 +592,7 @@ namespace
                 nLevels_ = std::max(nLevels_, level);
             }
             nLevels_ ++;
-            std::vector<std::vector<KeyPoint> > oKeypoints(nLevels_);
+            std::vector<KeyPointCollection > oKeypoints(nLevels_);
             for( j = 0; j < nkeypoints; j++ )
             {
                 level = keypoints[j].octave;
@@ -604,7 +604,7 @@ namespace
                 keyPointsCount_.resize(nLevels_);
                 int t;
                 for(t = 0; t < nLevels_; t++) {
-                    const std::vector<KeyPoint>& ks = oKeypoints[t];
+                    const KeyPointCollection& ks = oKeypoints[t];
                     if (!ks.empty()){
 
                         Mat h_keypoints(ROWS_COUNT, static_cast<int>(ks.size()), CV_32FC1);
@@ -865,7 +865,7 @@ namespace
         }
     }
 
-    void ORB_Impl::convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints)
+    void ORB_Impl::convert(InputArray _gpu_keypoints, KeyPointCollection& keypoints)
     {
         if (_gpu_keypoints.empty())
         {

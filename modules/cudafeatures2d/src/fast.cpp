@@ -67,10 +67,10 @@ namespace
     public:
         FAST_Impl(int threshold, bool nonmaxSuppression, int max_npoints);
 
-        virtual void detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask);
+        virtual void detect(InputArray _image, KeyPointCollection& keypoints, InputArray _mask);
         virtual void detectAsync(InputArray _image, OutputArray _keypoints, InputArray _mask, Stream& stream);
 
-        virtual void convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints);
+        virtual void convert(InputArray _gpu_keypoints, KeyPointCollection& keypoints);
 
         virtual void setThreshold(int threshold) { threshold_ = threshold; }
         virtual int getThreshold() const { return threshold_; }
@@ -97,7 +97,7 @@ namespace
     {
     }
 
-    void FAST_Impl::detect(InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask)
+    void FAST_Impl::detect(InputArray _image, KeyPointCollection& keypoints, InputArray _mask)
     {
         if (_image.empty())
         {
@@ -169,7 +169,7 @@ namespace
         cudaSafeCall( cudaFree(d_counter) );
     }
 
-    void FAST_Impl::convert(InputArray _gpu_keypoints, std::vector<KeyPoint>& keypoints)
+    void FAST_Impl::convert(InputArray _gpu_keypoints, KeyPointCollection& keypoints)
     {
         if (_gpu_keypoints.empty())
         {

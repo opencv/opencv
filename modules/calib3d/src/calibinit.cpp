@@ -2203,7 +2203,7 @@ bool findCirclesGrid2(InputArray _image, Size patternSize,
     std::vector<Point2f> points;
     if (blobDetector)
     {
-        std::vector<KeyPoint> keypoints;
+        KeyPointCollection keypoints;
         blobDetector->detect(_image, keypoints);
         for (size_t i = 0; i < keypoints.size(); i++)
         {

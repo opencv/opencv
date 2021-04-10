@@ -683,6 +683,31 @@ struct Type< Scalar_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 4) }
 } // namespace
 
 
+
+class CV_EXPORTS_W_SIMPLE KeyPointCollection {
+public:
+    using KeyPoints = std::vector<KeyPoint>;
+
+    KeyPoints::iterator begin() { return keypoints.begin(); }
+    KeyPoints::iterator end()   { return keypoints.end(); }
+    void push_back(KeyPoint& kp) {  keypoints.push_back(kp); }
+    void clear() { keypoints.clear(); }
+    bool empty() { return keypoints.empty(); }
+    size_t size() const { return keypoints.size(); }
+    void resize(const size_t size) { keypoints.resize(size); }
+    const KeyPoint& operator[] (const int index) const { return keypoints[index]; }
+    KeyPoint& operator[] (const int index) { return keypoints[index]; }
+    void insert(KeyPoints::iterator iterator,
+                KeyPoints::iterator iterator1,
+                KeyPoints::iterator iterator2) { keypoints.insert(iterator, iterator1, iterator2); }
+    void erase(KeyPoints::iterator first, KeyPoints::iterator last) {keypoints.erase(first, last); }
+    void erase(KeyPoints::iterator iterator) {keypoints.erase(iterator); }
+
+private:
+    KeyPoints keypoints;
+};
+
+
 /////////////////////////////// KeyPoint ////////////////////////////////
 
 /** @brief Data structure for salient point detectors.
@@ -732,7 +757,7 @@ public:
     @param keypointIndexes Array of indexes of keypoints to be converted to points. (Acts like a mask to
     convert only specified keypoints)
     */
-    CV_WRAP static void convert(const std::vector<KeyPoint>& keypoints,
+    CV_WRAP static void convert(const KeyPointCollection& keypoints,
                                 CV_OUT std::vector<Point2f>& points2f,
                                 const std::vector<int>& keypointIndexes=std::vector<int>());
     /** @overload
@@ -744,7 +769,7 @@ public:
     @param class_id object id
     */
     CV_WRAP static void convert(const std::vector<Point2f>& points2f,
-                                CV_OUT std::vector<KeyPoint>& keypoints,
+                                CV_OUT KeyPointCollection& keypoints,
                                 float size=1, float response=1, int octave=0, int class_id=-1);
 
     /**
@@ -784,7 +809,6 @@ public:
     typedef Vec<channel_type, channels> vec_type;
 };
 #endif
-
 
 //////////////////////////////// DMatch /////////////////////////////////
 

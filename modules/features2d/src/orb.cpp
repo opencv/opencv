@@ -129,7 +129,7 @@ ocl_computeOrbDescriptors(const UMat& imgbuf, const UMat& layerInfo,
  */
 static void
 HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
-                std::vector<KeyPoint>& pts, int blockSize, float harris_k)
+                KeyPointCollection& pts, int blockSize, float harris_k)
 {
     CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
 
@@ -174,7 +174,7 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
-                     std::vector<KeyPoint>& pts, const std::vector<int> & u_max, int half_k)
+                     KeyPointCollection& pts, const std::vector<int> & u_max, int half_k)
 {
     int step = (int)img.step1();
     size_t ptidx, ptsize = pts.size();
@@ -213,7 +213,7 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 
 static void
 computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo,
-                       const std::vector<float>& layerScale, std::vector<KeyPoint>& keypoints,
+                       const std::vector<float>& layerScale, KeyPointCollection& keypoints,
                        Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int wta_k )
 {
     int step = (int)imagePyramid.step;
@@ -696,7 +696,7 @@ public:
     int defaultNorm() const CV_OVERRIDE;
 
     // Compute the ORB_Impl features and descriptors on an image
-    void detectAndCompute( InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+    void detectAndCompute( InputArray image, InputArray mask, KeyPointCollection& keypoints,
                      OutputArray descriptors, bool useProvidedKeypoints=false ) CV_OVERRIDE;
 
 protected:
@@ -737,7 +737,7 @@ int ORB_Impl::defaultNorm() const
 }
 
 #ifdef HAVE_OPENCL
-static void uploadORBKeypoints(const std::vector<KeyPoint>& src, std::vector<Vec3i>& buf, OutputArray dst)
+static void uploadORBKeypoints(const KeyPointCollection& src, std::vector<Vec3i>& buf, OutputArray dst)
 {
     size_t i, n = src.size();
     buf.resize(std::max(buf.size(), n));
@@ -753,7 +753,7 @@ typedef union if32_t
 }
 if32_t;
 
-static void uploadORBKeypoints(const std::vector<KeyPoint>& src,
+static void uploadORBKeypoints(const KeyPointCollection& src,
                                const std::vector<float>& layerScale,
                                std::vector<Vec4i>& buf, OutputArray dst)
 {
@@ -782,7 +782,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              const std::vector<Rect>& layerInfo,
                              const UMat& ulayerInfo,
                              const std::vector<float>& layerScale,
-                             std::vector<KeyPoint>& allKeypoints,
+                             KeyPointCollection& allKeypoints,
                              int nfeatures, double scaleFactor,
                              int edgeThreshold, int patchSize, int scoreType,
                              bool useOCL, int fastThreshold  )
@@ -829,7 +829,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
     }
 
     allKeypoints.clear();
-    std::vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     std::vector<int> counters(nlevels);
     keypoints.reserve(nfeaturesPerLevel[0]*2);
 
@@ -896,7 +896,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 #endif
             HarrisResponses(imagePyramid, layerInfo, allKeypoints, 7, HARRIS_K);
 
-        std::vector<KeyPoint> newAllKeypoints;
+        KeyPointCollection newAllKeypoints;
         newAllKeypoints.reserve(nfeaturesPerLevel[0]*nlevels);
 
         int offset = 0;
@@ -963,7 +963,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
  * @param do_descriptors if true, also computes the descriptors
  */
 void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
-                                 std::vector<KeyPoint>& keypoints,
+                                 KeyPointCollection& keypoints,
                                  OutputArray _descriptors, bool useProvidedKeypoints )
 {
     CV_INSTRUMENT_REGION();
@@ -1126,7 +1126,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
         if( !sortedByLevel )
         {
-            std::vector<std::vector<KeyPoint> > allKeypoints(nLevels);
+            std::vector<KeyPointCollection > allKeypoints(nLevels);
             nkeypoints = (int)keypoints.size();
             for( i = 0; i < nkeypoints; i++ )
             {

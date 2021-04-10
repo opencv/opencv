@@ -722,7 +722,7 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value 
 CV_EXPORTS void write( FileStorage& fs, const String& name, const Mat& value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const SparseMat& value );
 #ifdef CV__LEGACY_PERSISTENCE
-CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& value);
+CV_EXPORTS void write( FileStorage& fs, const String& name, const KeyPointCollection& value);
 CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DMatch>& value);
 #endif
 
@@ -744,7 +744,7 @@ CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string
 CV_EXPORTS void read(const FileNode& node, Mat& mat, const Mat& default_mat = Mat() );
 CV_EXPORTS void read(const FileNode& node, SparseMat& mat, const SparseMat& default_mat = SparseMat() );
 #ifdef CV__LEGACY_PERSISTENCE
-CV_EXPORTS void read(const FileNode& node, std::vector<KeyPoint>& keypoints);
+CV_EXPORTS void read(const FileNode& node, KeyPointCollection& keypoints);
 CV_EXPORTS void read(const FileNode& node, std::vector<DMatch>& matches);
 #endif
 CV_EXPORTS void read(const FileNode& node, KeyPoint& value, const KeyPoint& default_value);
@@ -1093,7 +1093,7 @@ void write( FileStorage& fs, const String& name, const std::vector< std::vector<
 // Implementation is similar to templates instantiations
 static inline void write(FileStorage& fs, const KeyPoint& kpt) { write(fs, String(), kpt); }
 static inline void write(FileStorage& fs, const DMatch& m) { write(fs, String(), m); }
-static inline void write(FileStorage& fs, const std::vector<KeyPoint>& vec)
+static inline void write(FileStorage& fs, const KeyPointCollection& vec)
 {
     cv::internal::VecWriterProxy<KeyPoint, 0> w(&fs);
     w(vec);
@@ -1171,7 +1171,7 @@ void read( const FileNode& node, std::vector<_Tp>& vec, const std::vector<_Tp>& 
 }
 
 static inline
-void read( const FileNode& node, std::vector<KeyPoint>& vec, const std::vector<KeyPoint>& default_value )
+void read( const FileNode& node, KeyPointCollection& vec, const KeyPointCollection& default_value )
 {
     if(!node.node)
         vec = default_value;
@@ -1282,7 +1282,7 @@ void operator >> (const FileNode& n, KeyPoint& kpt)
 
 #ifdef CV__LEGACY_PERSISTENCE
 static inline
-void operator >> (const FileNode& n, std::vector<KeyPoint>& vec)
+void operator >> (const FileNode& n, KeyPointCollection& vec)
 {
     read(n, vec);
 }

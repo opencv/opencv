@@ -50,7 +50,7 @@ namespace cv
 
 #if (defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
-static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_5_8(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
 
     cv::Mat img;
@@ -813,7 +813,7 @@ static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
     }
 }
 
-static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_7_12d(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     cv::Mat img;
     if(!_img.getMat().isContinuous())
@@ -3258,7 +3258,7 @@ static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int t
 }
 
 
-static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_7_12s(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     cv::Mat img;
     if(!_img.getMat().isContinuous())
@@ -5339,7 +5339,7 @@ static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int t
     }
 }
 
-static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void OAST_9_16(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     cv::Mat img;
     if(!_img.getMat().isContinuous())
@@ -7446,7 +7446,7 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
 #else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
-static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, int agasttype)
+static void AGAST_ALL(InputArray _img, KeyPointCollection& keypoints, int threshold, int agasttype)
 {
     cv::Mat img;
     if(!_img.getMat().isContinuous())
@@ -7912,29 +7912,29 @@ static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
     }
 }
 
-static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_5_8(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     AGAST_ALL(_img, keypoints, threshold, AgastFeatureDetector::AGAST_5_8);
 }
 
-static void AGAST_7_12d(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_7_12d(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     AGAST_ALL(_img, keypoints, threshold, AgastFeatureDetector::AGAST_7_12d);
 }
 
-static void AGAST_7_12s(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void AGAST_7_12s(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     AGAST_ALL(_img, keypoints, threshold, AgastFeatureDetector::AGAST_7_12s);
 }
 
-static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
+static void OAST_9_16(InputArray _img, KeyPointCollection& keypoints, int threshold)
 {
     AGAST_ALL(_img, keypoints, threshold, AgastFeatureDetector::OAST_9_16);
 }
 
 #endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
-void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+void AGAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression)
 {
     CV_INSTRUMENT_REGION();
 
@@ -7948,7 +7948,7 @@ public:
     : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
     {}
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
+    void detect( InputArray _image, KeyPointCollection& keypoints, InputArray _mask ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 
@@ -8011,11 +8011,11 @@ Ptr<AgastFeatureDetector> AgastFeatureDetector::create( int threshold, bool nonm
     return makePtr<AgastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }
 
-void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+void AGAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     CV_INSTRUMENT_REGION();
 
-    std::vector<KeyPoint> kpts;
+    KeyPointCollection kpts;
 
     // detect
     switch(type) {
@@ -8039,7 +8039,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
     int pixel_[16];
     makeAgastOffsets(pixel_, (int)img.step, type);
 
-    std::vector<KeyPoint>::iterator kpt;
+    KeyPointCollection::iterator kpt;
     for(kpt = kpts.begin(); kpt != kpts.end(); ++kpt)
     {
         switch(type) {
@@ -8072,7 +8072,7 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        std::vector<KeyPoint>::const_iterator currCorner;
+        KeyPointCollection::const_iterator currCorner;
 
         currCorner = kpts.begin();
 

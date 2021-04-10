@@ -92,17 +92,17 @@ private:
   void Allocate_Memory_Evolution();
   void Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_layers);
   void Do_Subpixel_Refinement(std::vector<Mat>& keypoints_by_layers,
-    std::vector<KeyPoint>& kpts);
+    KeyPointCollection& kpts);
 
   /// Feature description methods
-  void Compute_Keypoints_Orientation(std::vector<cv::KeyPoint>& kpts) const;
+  void Compute_Keypoints_Orientation(KeyPointCollection& kpts) const;
 
 public:
   /// Constructor with input arguments
   AKAZEFeatures(const AKAZEOptions& options);
   void Create_Nonlinear_Scale_Space(InputArray img);
-  void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
-  void Compute_Descriptors(std::vector<cv::KeyPoint>& kpts, OutputArray desc);
+  void Feature_Detection(KeyPointCollection& kpts);
+  void Compute_Descriptors(KeyPointCollection& kpts, OutputArray desc);
 };
 
 /* ************************************************************************* */

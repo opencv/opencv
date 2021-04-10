@@ -88,7 +88,7 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
     }
 }
 
-void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
+void drawKeypoints( InputArray image, const KeyPointCollection& keypoints, InputOutputArray outImage,
                     const Scalar& _color, int flags )
 {
     CV_INSTRUMENT_REGION();
@@ -113,7 +113,7 @@ void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, In
     bool isRandColor = _color == Scalar::all(-1);
 
     CV_Assert( !outImage.empty() );
-    std::vector<KeyPoint>::const_iterator it = keypoints.begin(),
+    KeyPointCollection::const_iterator it = keypoints.begin(),
                                      end = keypoints.end();
     for( ; it != end; ++it )
     {
@@ -141,8 +141,8 @@ static void _prepareImage(InputArray src, const Mat& dst)
         CV_Error(Error::StsInternal, "");
 }
 
-static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyPoint>& keypoints1,
-                                         InputArray img2, const std::vector<KeyPoint>& keypoints2,
+static void _prepareImgAndDrawKeypoints( InputArray img1, const KeyPointCollection& keypoints1,
+                                         InputArray img2, const KeyPointCollection& keypoints2,
                                          InputOutputArray _outImg, Mat& outImg1, Mat& outImg2,
                                          const Scalar& singlePointColor, int flags )
 {
@@ -202,8 +202,8 @@ static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1
           color, 1, LINE_AA, draw_shift_bits );
 }
 
-void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
-                  InputArray img2, const std::vector<KeyPoint>& keypoints2,
+void drawMatches( InputArray img1, const KeyPointCollection& keypoints1,
+                  InputArray img2, const KeyPointCollection& keypoints2,
                   const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
                   const std::vector<char>& matchesMask, int flags )
@@ -231,8 +231,8 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
     }
 }
 
-void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
-                  InputArray img2, const std::vector<KeyPoint>& keypoints2,
+void drawMatches( InputArray img1, const KeyPointCollection& keypoints1,
+                  InputArray img2, const KeyPointCollection& keypoints2,
                   const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
                   const std::vector<std::vector<char> >& matchesMask, int flags )

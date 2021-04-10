@@ -70,15 +70,15 @@ public:
         return backend_->defaultNorm();
     }
 
-    void detectAndCompute(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+    void detectAndCompute(InputArray image, InputArray mask, KeyPointCollection& keypoints,
             OutputArray descriptors, bool useProvidedKeypoints=false) CV_OVERRIDE;
 
     void setViewParams(const std::vector<float>& tilts, const std::vector<float>& rolls) CV_OVERRIDE;
     void getViewParams(std::vector<float>& tilts, std::vector<float>& rolls) const CV_OVERRIDE;
 
 protected:
-    void splitKeypointsByView(const std::vector<KeyPoint>& keypoints_,
-            std::vector< std::vector<KeyPoint> >& keypointsByView) const;
+    void splitKeypointsByView(const KeyPointCollection& keypoints_,
+            std::vector< KeyPointCollection >& keypointsByView) const;
 
     const Ptr<Feature2D> backend_;
     int maxTilt_;
@@ -138,8 +138,8 @@ void AffineFeature_Impl::getViewParams(std::vector<float>& tilts,
     rolls = rolls_;
 }
 
-void AffineFeature_Impl::splitKeypointsByView(const std::vector<KeyPoint>& keypoints_,
-        std::vector< std::vector<KeyPoint> >& keypointsByView) const
+void AffineFeature_Impl::splitKeypointsByView(const KeyPointCollection& keypoints_,
+        std::vector< KeyPointCollection >& keypointsByView) const
 {
     for( size_t i = 0; i < keypoints_.size(); i++ )
     {
@@ -155,7 +155,7 @@ public:
     skewedDetectAndCompute(
         const std::vector<float>& _tilts,
         const std::vector<float>& _rolls,
-        std::vector< std::vector<KeyPoint> >& _keypointsCollection,
+        std::vector< KeyPointCollection >& _keypointsCollection,
         std::vector<Mat>& _descriptorCollection,
         const Mat& _image,
         const Mat& _mask,
@@ -186,11 +186,11 @@ public:
             affineSkew(tilts[a], rolls[a], warpedImage, warpedMask, pose);
             invertAffineTransform(pose, invPose);
 
-            std::vector<KeyPoint> wKeypoints;
+            KeyPointCollection wKeypoints;
             Mat wDescriptors;
             if( !do_keypoints )
             {
-                const std::vector<KeyPoint>& keypointsInView = keypointsCollection[a];
+                const KeyPointCollection& keypointsInView = keypointsCollection[a];
                 if( keypointsInView.size() == 0 ) // when there are no keypoints in this affine view
                     continue;
 
@@ -281,7 +281,7 @@ private:
 
     const std::vector<float>& tilts;
     const std::vector<float>& rolls;
-    std::vector< std::vector<KeyPoint> >& keypointsCollection;
+    std::vector< KeyPointCollection >& keypointsCollection;
     std::vector<Mat>& descriptorCollection;
     const Mat& image;
     const Mat& mask;
@@ -291,7 +291,7 @@ private:
 };
 
 void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
-        std::vector<KeyPoint>& keypoints,
+        KeyPointCollection& keypoints,
         OutputArray _descriptors,
         bool useProvidedKeypoints)
 {
@@ -305,7 +305,7 @@ void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     if( (!do_keypoints && !do_descriptors) || _image.empty() )
         return;
 
-    std::vector< std::vector<KeyPoint> > keypointsCollection(tilts_.size());
+    std::vector< KeyPointCollection > keypointsCollection(tilts_.size());
     std::vector< Mat > descriptorCollection(tilts_.size());
 
     if( do_keypoints )
@@ -319,7 +319,7 @@ void AffineFeature_Impl::detectAndCompute(InputArray _image, InputArray _mask,
     if( do_keypoints )
         for( size_t i = 0; i < keypointsCollection.size(); i++ )
         {
-            const std::vector<KeyPoint>& keys = keypointsCollection[i];
+            const KeyPointCollection& keys = keypointsCollection[i];
             keypoints.insert(keypoints.end(), keys.begin(), keys.end());
         }
 

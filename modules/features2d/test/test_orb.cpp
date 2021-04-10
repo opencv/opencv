@@ -56,7 +56,7 @@ TEST(Features2D_ORB, _1996)
     Point poly[] = {Point(100, 20), Point(300, 50), Point(400, 200), Point(10, 500)};
     fillConvexPoly(roi, poly, int(sizeof(poly) / sizeof(poly[0])), Scalar(255));
 
-    std::vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     fd->detect(image, keypoints, roi);
     Mat descriptors;
     de->compute(image, keypoints, descriptors);
@@ -64,7 +64,7 @@ TEST(Features2D_ORB, _1996)
     //image.setTo(Scalar(255,255,255), roi);
 
     int roiViolations = 0;
-    for(std::vector<KeyPoint>::const_iterator kp = keypoints.begin(); kp != keypoints.end(); ++kp)
+    for(KeyPointCollection::const_iterator kp = keypoints.begin(); kp != keypoints.end(); ++kp)
     {
         int x = cvRound(kp->pt.x);
         int y = cvRound(kp->pt.y);
@@ -134,11 +134,22 @@ TEST(Features2D_ORB, regression_16197)
     orbPtr->setPatchSize(8);
     orbPtr->setEdgeThreshold(8);
 
-    std::vector<KeyPoint> kps;
+    KeyPointCollection kps;
     Mat fv;
 
     // exception in debug mode, crash in release
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
+}
+
+TEST(Features2D_ORB, enhancement_10555)
+{
+    Ptr<SIFT> sift = SIFT::create();
+    vector<vector<KeyPoint> > keypoints;
+    std::vector<Mat> descriptors;
+    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
+    sift->detect(image, keypoints);
+    Ptr<ORB> orb = ORB::create();
+    orb -> compute(image, keypoints, descriptors);
 }
 
 

@@ -81,7 +81,7 @@ int main( int argc, char* argv[] )
     return -1;
 #endif
 
-    std::vector<KeyPoint> db_keypoints;
+    KeyPointCollection db_keypoints;
     Mat db_descriptors;
     std::vector<unsigned int> db_images_indice_range; //store the range of indices per image
     std::vector<int> db_indice_2_image_lut;           //match descriptor indice to its image
@@ -94,7 +94,7 @@ int main( int argc, char* argv[] )
         Mat tmp_img = imread( *itr, IMREAD_GRAYSCALE );
         if (!tmp_img.empty())
         {
-            std::vector<KeyPoint> kpts;
+            KeyPointCollection kpts;
             Mat descriptors;
             detector->detectAndCompute( tmp_img, noArray(), kpts, descriptors );
 
@@ -148,7 +148,7 @@ int main( int argc, char* argv[] )
         return 0;
 
     //-- Detect the keypoints and compute the descriptors for the query image
-    std::vector<KeyPoint> img_keypoints;
+    KeyPointCollection img_keypoints;
     Mat img_descriptors;
     detector->detectAndCompute( img, noArray(), img_keypoints, img_descriptors );
 

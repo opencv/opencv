@@ -57,7 +57,7 @@ Feature2D::~Feature2D() {}
  *              matrix with non-zero values in the region of interest.
  */
 void Feature2D::detect( InputArray image,
-                        std::vector<KeyPoint>& keypoints,
+                        KeyPointCollection& keypoints,
                         InputArray mask )
 {
     CV_INSTRUMENT_REGION();
@@ -72,7 +72,7 @@ void Feature2D::detect( InputArray image,
 
 
 void Feature2D::detect( InputArrayOfArrays _images,
-                        std::vector<std::vector<KeyPoint> >& keypoints,
+                        std::vector<KeyPointCollection>& keypoints,
                         InputArrayOfArrays _masks )
 {
     CV_INSTRUMENT_REGION();
@@ -103,7 +103,7 @@ void Feature2D::detect( InputArrayOfArrays _images,
  * descriptors  Copmputed descriptors. Row i is the descriptor for keypoint i.
  */
 void Feature2D::compute( InputArray image,
-                         std::vector<KeyPoint>& keypoints,
+                         KeyPointCollection& keypoints,
                          OutputArray descriptors )
 {
     CV_INSTRUMENT_REGION();
@@ -117,7 +117,7 @@ void Feature2D::compute( InputArray image,
 }
 
 void Feature2D::compute( InputArrayOfArrays _images,
-                         std::vector<std::vector<KeyPoint> >& keypoints,
+                         std::vector<KeyPointCollection>& keypoints,
                          OutputArrayOfArrays _descriptors )
 {
     CV_INSTRUMENT_REGION();
@@ -145,7 +145,7 @@ void Feature2D::compute( InputArrayOfArrays _images,
 
 /* Detects keypoints and computes the descriptors */
 void Feature2D::detectAndCompute( InputArray, InputArray,
-                                  std::vector<KeyPoint>&,
+                                  KeyPointCollection&,
                                   OutputArray,
                                   bool )
 {

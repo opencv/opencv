@@ -140,7 +140,7 @@ const Mat& BOWImgDescriptorExtractor::getVocabulary() const
     return vocabulary;
 }
 
-void BOWImgDescriptorExtractor::compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
+void BOWImgDescriptorExtractor::compute( InputArray image, KeyPointCollection& keypoints, OutputArray imgDescriptor,
                                          std::vector<std::vector<int> >* pointIdxsOfClusters, Mat* descriptors )
 {
     CV_INSTRUMENT_REGION();

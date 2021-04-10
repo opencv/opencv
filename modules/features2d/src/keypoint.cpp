@@ -66,7 +66,7 @@ struct KeypointResponseGreater
 };
 
 // takes keypoints and culls them by the response
-void KeyPointsFilter::retainBest(std::vector<KeyPoint>& keypoints, int n_points)
+void KeyPointsFilter::retainBest(KeyPointCollection& keypoints, int n_points)
 {
     //this is only necessary if the keypoints size is greater than the number of desired points.
     if( n_points >= 0 && keypoints.size() > (size_t)n_points )
@@ -102,7 +102,7 @@ struct RoiPredicate
     Rect r;
 };
 
-void KeyPointsFilter::runByImageBorder( std::vector<KeyPoint>& keypoints, Size imageSize, int borderSize )
+void KeyPointsFilter::runByImageBorder( KeyPointCollection& keypoints, Size imageSize, int borderSize )
 {
     if( borderSize > 0)
     {
@@ -130,7 +130,7 @@ struct SizePredicate
     float minSize, maxSize;
 };
 
-void KeyPointsFilter::runByKeypointSize( std::vector<KeyPoint>& keypoints, float minSize, float maxSize )
+void KeyPointsFilter::runByKeypointSize( KeyPointCollection& keypoints, float minSize, float maxSize )
 {
     CV_Assert( minSize >= 0 );
     CV_Assert( maxSize >= 0);
@@ -154,7 +154,7 @@ private:
     MaskPredicate& operator=(const MaskPredicate&);
 };
 
-void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask )
+void KeyPointsFilter::runByPixelsMask( KeyPointCollection& keypoints, const Mat& mask )
 {
     CV_INSTRUMENT_REGION();
 
@@ -166,7 +166,7 @@ void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const M
 
 struct KeyPoint_LessThan
 {
-    KeyPoint_LessThan(const std::vector<KeyPoint>& _kp) : kp(&_kp) {}
+    KeyPoint_LessThan(const KeyPointCollection& _kp) : kp(&_kp) {}
     bool operator()(int i, int j) const
     {
         const KeyPoint& kp1 = (*kp)[i];
@@ -188,10 +188,10 @@ struct KeyPoint_LessThan
 
         return i < j;
     }
-    const std::vector<KeyPoint>* kp;
+    const KeyPointCollection* kp;
 };
 
-void KeyPointsFilter::removeDuplicated( std::vector<KeyPoint>& keypoints )
+void KeyPointsFilter::removeDuplicated( KeyPointCollection& keypoints )
 {
     int i, j, n = (int)keypoints.size();
     std::vector<int> kpidx(n);
@@ -243,7 +243,7 @@ struct KeyPoint12_LessThan
     }
 };
 
-void KeyPointsFilter::removeDuplicatedSorted( std::vector<KeyPoint>& keypoints )
+void KeyPointsFilter::removeDuplicatedSorted( KeyPointCollection& keypoints )
 {
     int i, j, n = (int)keypoints.size();
 

@@ -145,7 +145,7 @@ void findScaleSpaceExtrema(
     double sigma,
     const std::vector<Mat>& gauss_pyr,
     const std::vector<Mat>& dog_pyr,
-    std::vector<KeyPoint>& kpts,
+    KeyPointCollection& kpts,
     const cv::Range& range);
 
 void calcSIFTDescriptor(
@@ -413,7 +413,7 @@ public:
         double _sigma,
         const std::vector<Mat>& _gauss_pyr,
         const std::vector<Mat>& _dog_pyr,
-        std::vector<KeyPoint>& kpts)
+        KeyPointCollection& kpts)
 
         : o(_o),
           i(_i),
@@ -521,7 +521,7 @@ private:
     double sigma;
     const std::vector<Mat>& gauss_pyr;
     const std::vector<Mat>& dog_pyr;
-    std::vector<KeyPoint>& kpts_;
+    KeyPointCollection& kpts_;
 };
 
 }  // namespace
@@ -540,7 +540,7 @@ void findScaleSpaceExtrema(
     double sigma,
     const std::vector<Mat>& gauss_pyr,
     const std::vector<Mat>& dog_pyr,
-    std::vector<KeyPoint>& kpts,
+    KeyPointCollection& kpts,
     const cv::Range& range)
 {
     CV_TRACE_FUNCTION();

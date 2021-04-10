@@ -24,7 +24,7 @@ int main( int argc, char* argv[] )
     //-- Step 1: Detect the keypoints using SURF Detector
     int minHessian = 400;
     Ptr<SURF> detector = SURF::create( minHessian );
-    std::vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     detector->detect( src, keypoints );
 
     //-- Draw keypoints

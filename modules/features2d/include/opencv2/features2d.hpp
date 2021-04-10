@@ -94,9 +94,9 @@ namespace cv
 //! @{
 
 // //! writes vector of keypoints to the file storage
-// CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
+// CV_EXPORTS void write(FileStorage& fs, const String& name, const KeyPointCollection& keypoints);
 // //! reads vector of keypoints from the specified file storage node
-// CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
+// CV_EXPORTS void read(const FileNode& node, CV_OUT KeyPointCollection& keypoints);
 
 /** @brief A class filters a vector of keypoints.
 
@@ -111,29 +111,29 @@ public:
     /*
      * Remove keypoints within borderPixels of an image edge.
      */
-    static void runByImageBorder( std::vector<KeyPoint>& keypoints, Size imageSize, int borderSize );
+    static void runByImageBorder( KeyPointCollection& keypoints, Size imageSize, int borderSize );
     /*
      * Remove keypoints of sizes out of range.
      */
-    static void runByKeypointSize( std::vector<KeyPoint>& keypoints, float minSize,
+    static void runByKeypointSize( KeyPointCollection& keypoints, float minSize,
                                    float maxSize=FLT_MAX );
     /*
      * Remove keypoints from some image by mask for pixels of this image.
      */
-    static void runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask );
+    static void runByPixelsMask( KeyPointCollection& keypoints, const Mat& mask );
     /*
      * Remove duplicated keypoints.
      */
-    static void removeDuplicated( std::vector<KeyPoint>& keypoints );
+    static void removeDuplicated( KeyPointCollection& keypoints );
     /*
      * Remove duplicated keypoints and sort the remaining keypoints
      */
-    static void removeDuplicatedSorted( std::vector<KeyPoint>& keypoints );
+    static void removeDuplicatedSorted( KeyPointCollection& keypoints );
 
     /*
      * Retain the specified number of the best keypoints (according to the response)
      */
-    static void retainBest( std::vector<KeyPoint>& keypoints, int npoints );
+    static void retainBest( KeyPointCollection& keypoints, int npoints );
 };
 
 
@@ -159,7 +159,7 @@ public:
     matrix with non-zero values in the region of interest.
      */
     CV_WRAP virtual void detect( InputArray image,
-                                 CV_OUT std::vector<KeyPoint>& keypoints,
+                                 CV_OUT KeyPointCollection& keypoints,
                                  InputArray mask=noArray() );
 
     /** @overload
@@ -170,7 +170,7 @@ public:
     masks[i] is a mask for images[i].
     */
     CV_WRAP virtual void detect( InputArrayOfArrays images,
-                         CV_OUT std::vector<std::vector<KeyPoint> >& keypoints,
+                         CV_OUT std::vector<KeyPointCollection >& keypoints,
                          InputArrayOfArrays masks=noArray() );
 
     /** @brief Computes the descriptors for a set of keypoints detected in an image (first variant) or image set
@@ -185,7 +185,7 @@ public:
     descriptor for keypoint j-th keypoint.
      */
     CV_WRAP virtual void compute( InputArray image,
-                                  CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints,
+                                  CV_OUT CV_IN_OUT KeyPointCollection& keypoints,
                                   OutputArray descriptors );
 
     /** @overload
@@ -199,12 +199,12 @@ public:
     descriptor for keypoint j-th keypoint.
     */
     CV_WRAP virtual void compute( InputArrayOfArrays images,
-                          CV_OUT CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints,
+                          CV_OUT CV_IN_OUT std::vector<KeyPointCollection >& keypoints,
                           OutputArrayOfArrays descriptors );
 
     /** Detects keypoints and computes the descriptors */
     CV_WRAP virtual void detectAndCompute( InputArray image, InputArray mask,
-                                           CV_OUT std::vector<KeyPoint>& keypoints,
+                                           CV_OUT KeyPointCollection& keypoints,
                                            OutputArray descriptors,
                                            bool useProvidedKeypoints=false );
 
@@ -517,7 +517,7 @@ public:
 };
 
 /** @overload */
-CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void FAST( InputArray image, CV_OUT KeyPointCollection& keypoints,
                       int threshold, bool nonmaxSuppression=true );
 
 /** @brief Detects corners using the FAST algorithm
@@ -538,7 +538,7 @@ Detects corners using the FAST algorithm by @cite Rosten06 .
 cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
 detection, use cv2.FAST.detect() method.
  */
-CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void FAST( InputArray image, CV_OUT KeyPointCollection& keypoints,
                       int threshold, bool nonmaxSuppression, int type );
 
 //! @} features2d_main
@@ -573,7 +573,7 @@ public:
 };
 
 /** @overload */
-CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void AGAST( InputArray image, CV_OUT KeyPointCollection& keypoints,
                       int threshold, bool nonmaxSuppression=true );
 
 /** @brief Detects corners using the AGAST algorithm
@@ -594,7 +594,7 @@ The perl script and examples of tree generation are placed in features2d/doc fol
 Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */
-CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
+CV_EXPORTS void AGAST( InputArray image, CV_OUT KeyPointCollection& keypoints,
                       int threshold, bool nonmaxSuppression, int type );
 //! @} features2d_main
 
@@ -1299,7 +1299,7 @@ For Python API, flags are modified as cv2.DRAW_MATCHES_FLAGS_DEFAULT,
 cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG,
 cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
  */
-CV_EXPORTS_W void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
+CV_EXPORTS_W void drawKeypoints( InputArray image, const KeyPointCollection& keypoints, InputOutputArray outImage,
                                const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 /** @brief Draws the found matches of keypoints from two images.
@@ -1324,15 +1324,15 @@ DrawMatchesFlags.
 This function draws matches of keypoints from two images in the output image. Match is a line
 connecting two keypoints (circles). See cv::DrawMatchesFlags.
  */
-CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
-                             InputArray img2, const std::vector<KeyPoint>& keypoints2,
+CV_EXPORTS_W void drawMatches( InputArray img1, const KeyPointCollection& keypoints1,
+                             InputArray img2, const KeyPointCollection& keypoints2,
                              const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
 
 /** @overload */
-CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
-                             InputArray img2, const std::vector<KeyPoint>& keypoints2,
+CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const KeyPointCollection& keypoints1,
+                             InputArray img2, const KeyPointCollection& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
@@ -1344,7 +1344,7 @@ CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vect
 \****************************************************************************************/
 
 CV_EXPORTS void evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                         std::vector<KeyPoint>* keypoints1, std::vector<KeyPoint>* keypoints2,
+                                         KeyPointCollection* keypoints1, KeyPointCollection* keypoints2,
                                          float& repeatability, int& correspCount,
                                          const Ptr<FeatureDetector>& fdetector=Ptr<FeatureDetector>() );
 
@@ -1483,7 +1483,7 @@ public:
     returned if it is non-zero.
     @param descriptors Descriptors of the image keypoints that are returned if they are non-zero.
      */
-    void compute( InputArray image, std::vector<KeyPoint>& keypoints, OutputArray imgDescriptor,
+    void compute( InputArray image, KeyPointCollection& keypoints, OutputArray imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
     /** @overload
     @param keypointDescriptors Computed descriptors to match with vocabulary.
@@ -1496,7 +1496,7 @@ public:
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
-    CV_WRAP_AS(compute) void compute2( const Mat& image, std::vector<KeyPoint>& keypoints, CV_OUT Mat& imgDescriptor )
+    CV_WRAP_AS(compute) void compute2( const Mat& image, KeyPointCollection& keypoints, CV_OUT Mat& imgDescriptor )
     { compute(image,keypoints,imgDescriptor); }
 
     /** @brief Returns an image descriptor size if the vocabulary is set. Otherwise, it returns 0.

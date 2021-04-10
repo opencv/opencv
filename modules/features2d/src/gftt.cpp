@@ -76,7 +76,7 @@ public:
     void setK(double k_) CV_OVERRIDE { k = k_; }
     double getK() const CV_OVERRIDE { return k; }
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
+    void detect( InputArray _image, KeyPointCollection& keypoints, InputArray _mask ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 

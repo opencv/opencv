@@ -63,7 +63,7 @@ struct CV_EXPORTS ImageFeatures
 {
     int img_idx;
     Size img_size;
-    std::vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     UMat descriptors;
 };
 

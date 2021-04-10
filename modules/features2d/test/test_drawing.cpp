@@ -34,7 +34,7 @@ TEST_P(Features2D_drawKeypoints, Accuracy)
     const int cn = CV_MAT_CN(GetParam());
     Mat inpImg(11, 11, GetParam(), Scalar(1, 1, 1, 255)), outImg;
 
-    std::vector<KeyPoint> keypoints(1, KeyPoint(5, 5, 1));
+    KeyPointCollection keypoints(1, KeyPoint(5, 5, 1));
     drawKeypoints(inpImg, keypoints, outImg, Scalar::all(255));
     ASSERT_EQ(outImg.channels(), (cn == 4) ? 4 : 3);
 
@@ -49,7 +49,7 @@ TEST_P(Features2D_drawMatches, Accuracy)
     Mat inpImg1(11, 11, get<0>(GetParam()), Scalar(1, 1, 1, 255));
     Mat inpImg2(11, 11, get<1>(GetParam()), Scalar(2, 2, 2, 255)), outImg2, outImg;
 
-    std::vector<KeyPoint> keypoints(1, KeyPoint(5, 5, 1));
+    KeyPointCollection keypoints(1, KeyPoint(5, 5, 1));
 
     // Get outImg2 using drawKeypoints assuming that it works correctly (see the test above).
     drawKeypoints(inpImg2, keypoints, outImg2, Scalar::all(255));

@@ -12,7 +12,7 @@ TEST(Features2d_BlobDetector, bug_6667)
     SimpleBlobDetector::Params params;
     params.minThreshold = 250;
     params.maxThreshold = 260;
-    std::vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
 
     Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
     detector->detect(image, keypoints);

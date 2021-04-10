@@ -511,7 +511,7 @@ typedef std::vector<Vec4i> vector_Vec4i;
 typedef std::vector<Rect> vector_Rect;
 typedef std::vector<Rect2d> vector_Rect2d;
 typedef std::vector<RotatedRect> vector_RotatedRect;
-typedef std::vector<KeyPoint> vector_KeyPoint;
+typedef KeyPointCollection vector_KeyPoint;
 typedef std::vector<Mat> vector_Mat;
 typedef std::vector<std::vector<Mat> > vector_vector_Mat;
 typedef std::vector<UMat> vector_UMat;
@@ -524,7 +524,7 @@ typedef std::vector<std::vector<Point> > vector_vector_Point;
 typedef std::vector<std::vector<Point2f> > vector_vector_Point2f;
 typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
-typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
+typedef std::vector<KeyPointCollection > vector_vector_KeyPoint;
 
 class NumpyAllocator : public MatAllocator
 {
@@ -1676,12 +1676,12 @@ template<> struct pyopencvVecConverter<UMat>
 
 template<> struct pyopencvVecConverter<KeyPoint>
 {
-    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo& info)
+    static bool to(PyObject* obj, KeyPointCollection& value, const ArgInfo& info)
     {
         return pyopencv_to_generic_vec(obj, value, info);
     }
 
-    static PyObject* from(const std::vector<KeyPoint>& value)
+    static PyObject* from(const KeyPointCollection& value)
     {
         return pyopencv_from_generic_vec(value);
     }

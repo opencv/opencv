@@ -671,7 +671,7 @@ Compute_Determinant_Hessian_Response(Pyramid &evolution) {
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of detected keypoints
  */
-void AKAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
+void AKAZEFeatures::Feature_Detection(KeyPointCollection& kpts)
 {
   CV_INSTRUMENT_REGION();
 
@@ -870,7 +870,7 @@ void AKAZEFeatures::Find_Scale_Space_Extrema(std::vector<Mat>& keypoints_by_laye
  * @param kpts Output vector of the final refined keypoints
  */
 void AKAZEFeatures::Do_Subpixel_Refinement(
-  std::vector<Mat>& keypoints_by_layers, std::vector<KeyPoint>& output_keypoints)
+  std::vector<Mat>& keypoints_by_layers, KeyPointCollection& output_keypoints)
 {
   CV_INSTRUMENT_REGION();
 
@@ -941,7 +941,7 @@ void AKAZEFeatures::Do_Subpixel_Refinement(
 class SURF_Descriptor_Upright_64_Invoker : public ParallelLoopBody
 {
 public:
-  SURF_Descriptor_Upright_64_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, const Pyramid& evolution)
+  SURF_Descriptor_Upright_64_Invoker(KeyPointCollection& kpts, Mat& desc, const Pyramid& evolution)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -959,7 +959,7 @@ public:
   void Get_SURF_Descriptor_Upright_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   const Pyramid*   evolution_;
 };
@@ -967,7 +967,7 @@ private:
 class SURF_Descriptor_64_Invoker : public ParallelLoopBody
 {
 public:
-  SURF_Descriptor_64_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, Pyramid& evolution)
+  SURF_Descriptor_64_Invoker(KeyPointCollection& kpts, Mat& desc, Pyramid& evolution)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -985,7 +985,7 @@ public:
   void Get_SURF_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
 };
@@ -993,7 +993,7 @@ private:
 class MSURF_Upright_Descriptor_64_Invoker : public ParallelLoopBody
 {
 public:
-  MSURF_Upright_Descriptor_64_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, Pyramid& evolution)
+  MSURF_Upright_Descriptor_64_Invoker(KeyPointCollection& kpts, Mat& desc, Pyramid& evolution)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -1011,7 +1011,7 @@ public:
   void Get_MSURF_Upright_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
 };
@@ -1019,7 +1019,7 @@ private:
 class MSURF_Descriptor_64_Invoker : public ParallelLoopBody
 {
 public:
-  MSURF_Descriptor_64_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, Pyramid& evolution)
+  MSURF_Descriptor_64_Invoker(KeyPointCollection& kpts, Mat& desc, Pyramid& evolution)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -1037,7 +1037,7 @@ public:
   void Get_MSURF_Descriptor_64(const KeyPoint& kpt, float* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
 };
@@ -1045,7 +1045,7 @@ private:
 class Upright_MLDB_Full_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-  Upright_MLDB_Full_Descriptor_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, Pyramid& evolution, AKAZEOptions& options)
+  Upright_MLDB_Full_Descriptor_Invoker(KeyPointCollection& kpts, Mat& desc, Pyramid& evolution, AKAZEOptions& options)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -1064,7 +1064,7 @@ public:
   void Get_Upright_MLDB_Full_Descriptor(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
   AKAZEOptions*              options_;
@@ -1073,7 +1073,7 @@ private:
 class Upright_MLDB_Descriptor_Subset_Invoker : public ParallelLoopBody
 {
 public:
-  Upright_MLDB_Descriptor_Subset_Invoker(std::vector<KeyPoint>& kpts,
+  Upright_MLDB_Descriptor_Subset_Invoker(KeyPointCollection& kpts,
                                          Mat& desc,
                                          Pyramid& evolution,
                                          AKAZEOptions& options,
@@ -1099,7 +1099,7 @@ public:
   void Get_Upright_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
   AKAZEOptions*              options_;
@@ -1111,7 +1111,7 @@ private:
 class MLDB_Full_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-  MLDB_Full_Descriptor_Invoker(std::vector<KeyPoint>& kpts, Mat& desc, Pyramid& evolution, AKAZEOptions& options)
+  MLDB_Full_Descriptor_Invoker(KeyPointCollection& kpts, Mat& desc, Pyramid& evolution, AKAZEOptions& options)
     : keypoints_(&kpts)
     , descriptors_(&desc)
     , evolution_(&evolution)
@@ -1134,7 +1134,7 @@ public:
                                int count, int& dpos) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
   AKAZEOptions*              options_;
@@ -1143,7 +1143,7 @@ private:
 class MLDB_Descriptor_Subset_Invoker : public ParallelLoopBody
 {
 public:
-  MLDB_Descriptor_Subset_Invoker(std::vector<KeyPoint>& kpts,
+  MLDB_Descriptor_Subset_Invoker(KeyPointCollection& kpts,
                                  Mat& desc,
                                  Pyramid& evolution,
                                  AKAZEOptions& options,
@@ -1169,7 +1169,7 @@ public:
   void Get_MLDB_Descriptor_Subset(const KeyPoint& kpt, unsigned char* desc, int desc_size) const;
 
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   Mat*                   descriptors_;
   Pyramid*   evolution_;
   AKAZEOptions*              options_;
@@ -1183,7 +1183,7 @@ private:
  * @param kpts Vector of detected keypoints
  * @param desc Matrix to store the descriptors
  */
-void AKAZEFeatures::Compute_Descriptors(std::vector<KeyPoint>& kpts, OutputArray descriptors)
+void AKAZEFeatures::Compute_Descriptors(KeyPointCollection& kpts, OutputArray descriptors)
 {
   CV_INSTRUMENT_REGION();
 
@@ -1442,7 +1442,7 @@ void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
 class ComputeKeypointOrientation : public ParallelLoopBody
 {
 public:
-  ComputeKeypointOrientation(std::vector<KeyPoint>& kpts,
+  ComputeKeypointOrientation(KeyPointCollection& kpts,
                              const Pyramid& evolution)
     : keypoints_(&kpts)
     , evolution_(&evolution)
@@ -1457,7 +1457,7 @@ public:
     }
   }
 private:
-  std::vector<KeyPoint>* keypoints_;
+  KeyPointCollection* keypoints_;
   const Pyramid* evolution_;
 };
 
@@ -1465,7 +1465,7 @@ private:
  * @brief This method computes the main orientation for a given keypoints
  * @param kpts Input keypoints
  */
-void AKAZEFeatures::Compute_Keypoints_Orientation(std::vector<KeyPoint>& kpts) const
+void AKAZEFeatures::Compute_Keypoints_Orientation(KeyPointCollection& kpts) const
 {
   CV_INSTRUMENT_REGION();
 

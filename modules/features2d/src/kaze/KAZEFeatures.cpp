@@ -180,7 +180,7 @@ void KAZEFeatures::Compute_Detector_Response(void)
  * @brief This method selects interesting keypoints through the nonlinear scale space
  * @param kpts Vector of keypoints
  */
-void KAZEFeatures::Feature_Detection(std::vector<KeyPoint>& kpts)
+void KAZEFeatures::Feature_Detection(KeyPointCollection& kpts)
 {
     kpts.clear();
         Compute_Detector_Response();
@@ -234,7 +234,7 @@ void KAZEFeatures::Compute_Multiscale_Derivatives(void)
 class FindExtremumKAZEInvoker : public ParallelLoopBody
 {
 public:
-    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<std::vector<KeyPoint> >& kpts_par,
+    explicit FindExtremumKAZEInvoker(std::vector<TEvolution>& ev, std::vector<KeyPointCollection >& kpts_par,
                                                                      const KAZEOptions& options) : evolution_(&ev), kpts_par_(&kpts_par), options_(options)
     {
     }
@@ -242,7 +242,7 @@ public:
     void operator()(const Range& range) const CV_OVERRIDE
     {
         std::vector<TEvolution>& evolution = *evolution_;
-        std::vector<std::vector<KeyPoint> >& kpts_par = *kpts_par_;
+        std::vector<KeyPointCollection >& kpts_par = *kpts_par_;
         for (int i = range.start; i < range.end; i++)
         {
             float value = 0.0;
@@ -297,7 +297,7 @@ public:
 
 private:
     std::vector<TEvolution>*  evolution_;
-    std::vector<std::vector<KeyPoint> >* kpts_par_;
+    std::vector<KeyPointCollection >* kpts_par_;
     KAZEOptions options_;
 };
 
@@ -308,7 +308,7 @@ private:
  * @param kpts Vector of keypoints
  * @note We compute features for each of the nonlinear scale space level in a different processing thread
  */
-void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
+void KAZEFeatures::Determinant_Hessian(KeyPointCollection& kpts)
 {
     int level = 0;
     float dist = 0.0, smax = 3.0;
@@ -392,7 +392,7 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
  * @brief This method performs subpixel refinement of the detected keypoints
  * @param kpts Vector of detected keypoints
  */
-void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
+void KAZEFeatures::Do_Subpixel_Refinement(KeyPointCollection &kpts) {
 
     int step = 1;
     int x = 0, y = 0;
@@ -489,7 +489,7 @@ void KAZEFeatures::Do_Subpixel_Refinement(std::vector<KeyPoint> &kpts) {
 class KAZE_Descriptor_Invoker : public ParallelLoopBody
 {
 public:
-        KAZE_Descriptor_Invoker(std::vector<KeyPoint> &kpts, Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
+        KAZE_Descriptor_Invoker(KeyPointCollection &kpts, Mat &desc, std::vector<TEvolution>& evolution, const KAZEOptions& options)
                 : kpts_(&kpts)
                 , desc_(&desc)
                 , evolution_(&evolution)
@@ -503,7 +503,7 @@ public:
 
     void operator() (const Range& range) const CV_OVERRIDE
     {
-        std::vector<KeyPoint> &kpts      = *kpts_;
+        KeyPointCollection &kpts      = *kpts_;
         Mat                   &desc      = *desc_;
         std::vector<TEvolution>   &evolution = *evolution_;
 
@@ -535,7 +535,7 @@ private:
     void Get_KAZE_Upright_Descriptor_128(const KeyPoint& kpt, float* desc) const;
     void Get_KAZE_Descriptor_128(const KeyPoint& kpt, float *desc) const;
 
-        std::vector<KeyPoint> * kpts_;
+        KeyPointCollection * kpts_;
         Mat                   * desc_;
         std::vector<TEvolution>   * evolution_;
         KAZEOptions                 options_;
@@ -547,7 +547,7 @@ private:
  * @param kpts Vector of keypoints
  * @param desc Matrix with the feature descriptors
  */
-void KAZEFeatures::Feature_Description(std::vector<KeyPoint> &kpts, Mat &desc)
+void KAZEFeatures::Feature_Description(KeyPointCollection &kpts, Mat &desc)
 {
     for(size_t i = 0; i < kpts.size(); i++)
     {

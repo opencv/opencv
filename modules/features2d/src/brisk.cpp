@@ -88,14 +88,14 @@ public:
         const std::vector<int> &indexChange=std::vector<int>());
 
     void detectAndCompute( InputArray image, InputArray mask,
-                     CV_OUT std::vector<KeyPoint>& keypoints,
+                     CV_OUT KeyPointCollection& keypoints,
                      OutputArray descriptors,
                      bool useProvidedKeypoints ) CV_OVERRIDE;
 
 protected:
 
-    void computeKeypointsNoOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints) const;
-    void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, std::vector<KeyPoint>& keypoints,
+    void computeKeypointsNoOrientation(InputArray image, InputArray mask, KeyPointCollection& keypoints) const;
+    void computeDescriptorsAndOrOrientation(InputArray image, InputArray mask, KeyPointCollection& keypoints,
                                        OutputArray descriptors, bool doDescriptors, bool doOrientation,
                                        bool useProvidedKeypoints) const;
 
@@ -236,7 +236,7 @@ public:
 
   // get Keypoints
   void
-  getKeypoints(const int _threshold, std::vector<cv::KeyPoint>& keypoints);
+  getKeypoints(const int _threshold, KeyPointCollection& keypoints);
 
 protected:
   // nonmax suppression:
@@ -657,7 +657,7 @@ RoiPredicate(const float minX, const float minY, const float maxX, const float m
 
 // computes the descriptor
 void
-BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, KeyPointCollection& keypoints,
                               OutputArray _descriptors, bool useProvidedKeypoints)
 {
   bool doOrientation=true;
@@ -670,7 +670,7 @@ BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, std::vector<K
 }
 
 void
-BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
+BRISK_Impl::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, KeyPointCollection& keypoints,
                                      OutputArray _descriptors, bool doDescriptors, bool doOrientation,
                                      bool useProvidedKeypoints) const
 {
@@ -854,7 +854,7 @@ BRISK_Impl::~BRISK_Impl()
 }
 
 void
-BRISK_Impl::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints) const
+BRISK_Impl::computeKeypointsNoOrientation(InputArray _image, InputArray _mask, KeyPointCollection& keypoints) const
 {
   Mat image = _image.getMat(), mask = _mask.getMat();
   if( image.type() != CV_8UC1 )
@@ -904,7 +904,7 @@ BriskScaleSpace::constructPyramid(const cv::Mat& image)
 }
 
 void
-BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& keypoints)
+BriskScaleSpace::getKeypoints(const int threshold_, KeyPointCollection& keypoints)
 {
   // make sure keypoints is empty
   keypoints.resize(0);
@@ -2143,7 +2143,7 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
 // Agast
 // wraps the agast class
 void
-BriskLayer::getAgastPoints(int threshold, std::vector<KeyPoint>& keypoints)
+BriskLayer::getAgastPoints(int threshold, KeyPointCollection& keypoints)
 {
   oast_9_16_->setThreshold(threshold);
   oast_9_16_->detect(img_, keypoints);

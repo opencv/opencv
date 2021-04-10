@@ -597,14 +597,14 @@ CV_EXPORTS void read(const FileNode& node, DMatch& value, const DMatch& default_
 }
 
 #ifdef CV__LEGACY_PERSISTENCE
-void write( FileStorage& fs, const String& name, const std::vector<KeyPoint>& vec)
+void write( FileStorage& fs, const String& name, const KeyPointCollection& vec)
 {
     // from template implementation
     cv::internal::WriteStructContext ws(fs, name, FileNode::SEQ);
     write(fs, vec);
 }
 
-void read(const FileNode& node, std::vector<KeyPoint>& keypoints)
+void read(const FileNode& node, KeyPointCollection& keypoints)
 {
     FileNode first_node = *(node.begin());
     if (first_node.isSeq())

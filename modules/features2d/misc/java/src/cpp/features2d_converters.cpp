@@ -8,7 +8,7 @@ using namespace cv;
 
 
 //vector_KeyPoint
-void Mat_to_vector_KeyPoint(Mat& mat, std::vector<KeyPoint>& v_kp)
+void Mat_to_vector_KeyPoint(Mat& mat, KeyPointCollection& v_kp)
 {
     v_kp.clear();
     CHECK_MAT(mat.type()==CV_32FC(7) && mat.cols==1);
@@ -22,7 +22,7 @@ void Mat_to_vector_KeyPoint(Mat& mat, std::vector<KeyPoint>& v_kp)
 }
 
 
-void vector_KeyPoint_to_Mat(std::vector<KeyPoint>& v_kp, Mat& mat)
+void vector_KeyPoint_to_Mat(KeyPointCollection& v_kp, Mat& mat)
 {
     int count = (int)v_kp.size();
     mat.create(count, 1, CV_32FC(7));
@@ -66,7 +66,7 @@ void Mat_to_vector_vector_KeyPoint(Mat& mat, std::vector< std::vector< KeyPoint 
     Mat_to_vector_Mat(mat, vm);
     for(size_t i=0; i<vm.size(); i++)
     {
-        std::vector<KeyPoint> vkp;
+        KeyPointCollection vkp;
         Mat_to_vector_KeyPoint(vm[i], vkp);
         vv_kp.push_back(vkp);
     }

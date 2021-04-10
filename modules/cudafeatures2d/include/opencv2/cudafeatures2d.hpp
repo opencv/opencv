@@ -414,7 +414,7 @@ public:
 
     /** Converts keypoints array from internal representation to standard vector. */
     virtual void convert(InputArray gpu_keypoints,
-                         std::vector<KeyPoint>& keypoints) = 0;
+                         KeyPointCollection& keypoints) = 0;
 };
 
 //

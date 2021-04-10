@@ -245,7 +245,7 @@ private:
     Ptr<IOutlierRejector> outlierRejector_;
 
     std::vector<uchar> status_;
-    std::vector<KeyPoint> keypointsPrev_;
+    KeyPointCollection keypointsPrev_;
     std::vector<Point2f> pointsPrev_, points_;
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };

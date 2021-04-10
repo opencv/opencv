@@ -102,14 +102,14 @@ public:
     //! finds the keypoints and computes descriptors for them using SIFT algorithm.
     //! Optionally it can compute descriptors for the user-provided keypoints
     void detectAndCompute(InputArray img, InputArray mask,
-                    std::vector<KeyPoint>& keypoints,
+                    KeyPointCollection& keypoints,
                     OutputArray descriptors,
                     bool useProvidedKeypoints = false) CV_OVERRIDE;
 
     void buildGaussianPyramid( const Mat& base, std::vector<Mat>& pyr, int nOctaves ) const;
     void buildDoGPyramid( const std::vector<Mat>& pyr, std::vector<Mat>& dogpyr ) const;
     void findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
-                               std::vector<KeyPoint>& keypoints ) const;
+                               KeyPointCollection& keypoints ) const;
 
 protected:
     CV_PROP_RW int nfeatures;
@@ -294,7 +294,7 @@ public:
         double _sigma,
         const std::vector<Mat>& _gauss_pyr,
         const std::vector<Mat>& _dog_pyr,
-        TLSData<std::vector<KeyPoint> > &_tls_kpts_struct)
+        TLSData<KeyPointCollection > &_tls_kpts_struct)
 
         : o(_o),
           i(_i),
@@ -313,7 +313,7 @@ public:
     {
         CV_TRACE_FUNCTION();
 
-        std::vector<KeyPoint>& kpts = tls_kpts_struct.getRef();
+        KeyPointCollection& kpts = tls_kpts_struct.getRef();
 
         CV_CPU_DISPATCH(findScaleSpaceExtrema, (o, i, threshold, idx, step, cols, nOctaveLayers, contrastThreshold, edgeThreshold, sigma, gauss_pyr, dog_pyr, kpts, range),
             CV_CPU_DISPATCH_MODES_ALL);
@@ -328,14 +328,14 @@ private:
     double sigma;
     const std::vector<Mat>& gauss_pyr;
     const std::vector<Mat>& dog_pyr;
-    TLSData<std::vector<KeyPoint> > &tls_kpts_struct;
+    TLSData<KeyPointCollection > &tls_kpts_struct;
 };
 
 //
 // Detects features at extrema in DoG scale space.  Bad features are discarded
 // based on contrast and ratio of principal curvatures.
 void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
-                                  std::vector<KeyPoint>& keypoints ) const
+                                  KeyPointCollection& keypoints ) const
 {
     CV_TRACE_FUNCTION();
 
@@ -343,7 +343,7 @@ void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const 
     const int threshold = cvFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
 
     keypoints.clear();
-    TLSDataAccumulator<std::vector<KeyPoint> > tls_kpts_struct;
+    TLSDataAccumulator<KeyPointCollection > tls_kpts_struct;
 
     for( int o = 0; o < nOctaves; o++ )
         for( int i = 1; i <= nOctaveLayers; i++ )
@@ -363,7 +363,7 @@ void SIFT_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const 
                     gauss_pyr, dog_pyr, tls_kpts_struct));
         }
 
-    std::vector<std::vector<KeyPoint>*> kpt_vecs;
+    std::vector<KeyPointCollection*> kpt_vecs;
     tls_kpts_struct.gather(kpt_vecs);
     for (size_t i = 0; i < kpt_vecs.size(); ++i) {
         keypoints.insert(keypoints.end(), kpt_vecs[i]->begin(), kpt_vecs[i]->end());
@@ -387,7 +387,7 @@ class calcDescriptorsComputer : public ParallelLoopBody
 {
 public:
     calcDescriptorsComputer(const std::vector<Mat>& _gpyr,
-                            const std::vector<KeyPoint>& _keypoints,
+                            const KeyPointCollection& _keypoints,
                             Mat& _descriptors,
                             int _nOctaveLayers,
                             int _firstOctave)
@@ -425,13 +425,13 @@ public:
     }
 private:
     const std::vector<Mat>& gpyr;
-    const std::vector<KeyPoint>& keypoints;
+    const KeyPointCollection& keypoints;
     Mat& descriptors;
     int nOctaveLayers;
     int firstOctave;
 };
 
-static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyPoint>& keypoints,
+static void calcDescriptors(const std::vector<Mat>& gpyr, const KeyPointCollection& keypoints,
                             Mat& descriptors, int nOctaveLayers, int firstOctave )
 {
     CV_TRACE_FUNCTION();
@@ -464,7 +464,7 @@ int SIFT_Impl::defaultNorm() const
 
 
 void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
-                      std::vector<KeyPoint>& keypoints,
+                      KeyPointCollection& keypoints,
                       OutputArray _descriptors,
                       bool useProvidedKeypoints)
 {

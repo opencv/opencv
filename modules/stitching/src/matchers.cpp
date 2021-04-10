@@ -536,7 +536,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
         features.keypoints.clear();
         features.descriptors.release();
 
-        std::vector<KeyPoint> points;
+        KeyPointCollection points;
         Mat _descriptors;
         UMat descriptors;
 
@@ -563,7 +563,7 @@ void OrbFeaturesFinder::find(InputArray image, ImageFeatures &features)
                 orb->detectAndCompute(gray_image_part, UMat(), points, descriptors);
 
                 features.keypoints.reserve(features.keypoints.size() + points.size());
-                for (std::vector<KeyPoint>::iterator kp = points.begin(); kp != points.end(); ++kp)
+                for (KeyPointCollection::iterator kp = points.begin(); kp != points.end(); ++kp)
                 {
                     kp->pt.x += xl;
                     kp->pt.y += yl;

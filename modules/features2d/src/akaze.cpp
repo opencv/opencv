@@ -163,7 +163,7 @@ namespace cv
         }
 
         void detectAndCompute(InputArray image, InputArray mask,
-                              std::vector<KeyPoint>& keypoints,
+                              KeyPointCollection& keypoints,
                               OutputArray descriptors,
                               bool useProvidedKeypoints) CV_OVERRIDE
         {

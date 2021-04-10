@@ -55,7 +55,7 @@ namespace cv
 {
 
 template<int patternSize>
-void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+void FAST_t(InputArray _img, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression)
 {
     Mat img = _img.getMat();
     const int K = patternSize/2, N = patternSize + K + 1;
@@ -298,7 +298,7 @@ struct cmp_pt
     bool operator ()(const pt& a, const pt& b) const { return a.y < b.y || (a.y == b.y && a.x < b.x); }
 };
 
-static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
+static bool ocl_FAST( InputArray _img, KeyPointCollection& keypoints,
                      int threshold, bool nonmax_suppression, int maxKeypoints )
 {
     UMat img = _img.getUMat();
@@ -375,7 +375,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 namespace ovx {
     template <> inline bool skipSmallImages<VX_KERNEL_FAST_CORNERS>(int w, int h) { return w*h < 800 * 600; }
 }
-static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
+static bool openvx_FAST(InputArray _img, KeyPointCollection& keypoints,
                         int _threshold, bool nonmaxSuppression, int type)
 {
     using namespace ivx;
@@ -436,7 +436,7 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
 #endif
 
-static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+static inline int hal_FAST(cv::Mat& src, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     if (threshold > 20)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -493,7 +493,7 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
     return CV_HAL_ERROR_OK;
 }
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+void FAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     CV_INSTRUMENT_REGION();
 
@@ -528,7 +528,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 }
 
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+void FAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool nonmax_suppression)
 {
     CV_INSTRUMENT_REGION();
 
@@ -543,7 +543,7 @@ public:
     : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
     {}
 
-    void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
+    void detect( InputArray _image, KeyPointCollection& keypoints, InputArray _mask ) CV_OVERRIDE
     {
         CV_INSTRUMENT_REGION();
 

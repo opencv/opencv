@@ -32,7 +32,7 @@ int main( int argc, char* argv[] )
     //-- Step 1: Detect the keypoints using SURF Detector, compute the descriptors
     int minHessian = 400;
     Ptr<SURF> detector = SURF::create( minHessian );
-    std::vector<KeyPoint> keypoints_object, keypoints_scene;
+    KeyPointCollection keypoints_object, keypoints_scene;
     Mat descriptors_object, descriptors_scene;
     detector->detectAndCompute( img_object, noArray(), keypoints_object, descriptors_object );
     detector->detectAndCompute( img_scene, noArray(), keypoints_scene, descriptors_scene );

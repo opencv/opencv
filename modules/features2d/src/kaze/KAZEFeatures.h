@@ -47,16 +47,16 @@ public:
     /// Public methods for KAZE interface
     void Allocate_Memory_Evolution(void);
     int Create_Nonlinear_Scale_Space(const cv::Mat& img);
-    void Feature_Detection(std::vector<cv::KeyPoint>& kpts);
-    void Feature_Description(std::vector<cv::KeyPoint>& kpts, cv::Mat& desc);
+    void Feature_Detection(KeyPointCollection& kpts);
+    void Feature_Description(KeyPointCollection& kpts, cv::Mat& desc);
     static void Compute_Main_Orientation(cv::KeyPoint& kpt, const std::vector<TEvolution>& evolution_, const KAZEOptions& options);
 
     /// Feature Detection Methods
     void Compute_KContrast(const cv::Mat& img, const float& kper);
     void Compute_Multiscale_Derivatives(void);
     void Compute_Detector_Response(void);
-    void Determinant_Hessian(std::vector<cv::KeyPoint>& kpts);
-    void Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts);
+    void Determinant_Hessian(KeyPointCollection& kpts);
+    void Do_Subpixel_Refinement(KeyPointCollection& kpts);
 };
 
 }

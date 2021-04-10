@@ -116,8 +116,8 @@ public:
     EllipticKeyPoint();
     EllipticKeyPoint( const Point2f& _center, const Scalar& _ellipse );
 
-    static void convert( const std::vector<KeyPoint>& src, std::vector<EllipticKeyPoint>& dst );
-    static void convert( const std::vector<EllipticKeyPoint>& src, std::vector<KeyPoint>& dst );
+    static void convert( const KeyPointCollection& src, std::vector<EllipticKeyPoint>& dst );
+    static void convert( const std::vector<EllipticKeyPoint>& src, KeyPointCollection& dst );
 
     static Mat_<double> getSecondMomentsMatrix( const Scalar& _ellipse );
     Mat_<double> getSecondMomentsMatrix() const;
@@ -177,7 +177,7 @@ void EllipticKeyPoint::calcProjection( const Mat_<double>& H, EllipticKeyPoint& 
     projection = EllipticKeyPoint( dstCenter, Scalar(dstM(0,0), dstM(0,1), dstM(1,1)) );
 }
 
-void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<EllipticKeyPoint>& dst )
+void EllipticKeyPoint::convert( const KeyPointCollection& src, std::vector<EllipticKeyPoint>& dst )
 {
     CV_INSTRUMENT_REGION();
 
@@ -194,7 +194,7 @@ void EllipticKeyPoint::convert( const std::vector<KeyPoint>& src, std::vector<El
     }
 }
 
-void EllipticKeyPoint::convert( const std::vector<EllipticKeyPoint>& src, std::vector<KeyPoint>& dst )
+void EllipticKeyPoint::convert( const std::vector<EllipticKeyPoint>& src, KeyPointCollection& dst )
 {
     CV_INSTRUMENT_REGION();
 
@@ -393,7 +393,7 @@ static void computeOneToOneMatchedOverlaps( const std::vector<EllipticKeyPoint>&
 }
 
 static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                                    const std::vector<KeyPoint>& _keypoints1, const std::vector<KeyPoint>& _keypoints2,
+                                    const KeyPointCollection& _keypoints1, const KeyPointCollection& _keypoints2,
                                     float& repeatability, int& correspondencesCount,
                                     Mat* thresholdedOverlapMask=0  )
 {
@@ -456,14 +456,14 @@ static void calculateRepeatability( const Mat& img1, const Mat& img2, const Mat&
 }
 
 void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
-                              std::vector<KeyPoint>* _keypoints1, std::vector<KeyPoint>* _keypoints2,
+                              KeyPointCollection* _keypoints1, KeyPointCollection* _keypoints2,
                               float& repeatability, int& correspCount,
                               const Ptr<FeatureDetector>& _fdetector )
 {
     CV_INSTRUMENT_REGION();
 
     Ptr<FeatureDetector> fdetector(_fdetector);
-    std::vector<KeyPoint> *keypoints1, *keypoints2, buf1, buf2;
+    KeyPointCollection *keypoints1, *keypoints2, buf1, buf2;
     keypoints1 = _keypoints1 != 0 ? _keypoints1 : &buf1;
     keypoints2 = _keypoints2 != 0 ? _keypoints2 : &buf2;
 

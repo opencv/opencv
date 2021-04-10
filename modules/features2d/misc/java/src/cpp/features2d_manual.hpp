@@ -18,10 +18,10 @@ namespace cv
 class CV_EXPORTS_AS(FeatureDetector) javaFeatureDetector
 {
 public:
-    CV_WRAP void detect( const Mat& image, CV_OUT std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
+    CV_WRAP void detect( const Mat& image, CV_OUT KeyPointCollection& keypoints, const Mat& mask=Mat() ) const
     { return wrapped->detect(image, keypoints, mask); }
 
-    CV_WRAP void detect( const std::vector<Mat>& images, CV_OUT std::vector<std::vector<KeyPoint> >& keypoints, const std::vector<Mat>& masks=std::vector<Mat>() ) const
+    CV_WRAP void detect( const std::vector<Mat>& images, CV_OUT std::vector<KeyPointCollection >& keypoints, const std::vector<Mat>& masks=std::vector<Mat>() ) const
     { return wrapped->detect(images, keypoints, masks); }
 
     CV_WRAP bool empty() const
@@ -191,10 +191,10 @@ private:
 class CV_EXPORTS_AS(DescriptorExtractor) javaDescriptorExtractor
 {
 public:
-    CV_WRAP void compute( const Mat& image, CV_IN_OUT std::vector<KeyPoint>& keypoints, Mat& descriptors ) const
+    CV_WRAP void compute( const Mat& image, CV_IN_OUT KeyPointCollection& keypoints, Mat& descriptors ) const
     { return wrapped->compute(image, keypoints, descriptors); }
 
-    CV_WRAP void compute( const std::vector<Mat>& images, CV_IN_OUT std::vector<std::vector<KeyPoint> >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const
+    CV_WRAP void compute( const std::vector<Mat>& images, CV_IN_OUT std::vector<KeyPointCollection >& keypoints, CV_OUT std::vector<Mat>& descriptors ) const
     { return wrapped->compute(images, keypoints, descriptors); }
 
     CV_WRAP int descriptorSize() const
@@ -305,8 +305,8 @@ enum
                                   // orientation will be drawn.
 };
 
-CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
-                             const Mat& img2, const std::vector<KeyPoint>& keypoints2,
+CV_EXPORTS_AS(drawMatches2) void drawMatches( const Mat& img1, const KeyPointCollection& keypoints1,
+                             const Mat& img2, const KeyPointCollection& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=0);
