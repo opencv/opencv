@@ -13,11 +13,11 @@ TEST(Features2d_AKAZE, detect_and_compute_split)
     rng.fill(testImg, RNG::UNIFORM, Scalar(0), Scalar(255), true);
 
     Ptr<Feature2D> ext = AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, 1, 1, KAZE::DIFF_PM_G2);
-    vector<KeyPoint> detAndCompKps;
+    KeyPointCollection detAndCompKps;
     Mat desc;
     ext->detectAndCompute(testImg, noArray(), detAndCompKps, desc);
 
-    vector<KeyPoint> detKps;
+    KeyPointCollection detKps;
     ext->detect(testImg, detKps);
 
     ASSERT_EQ(detKps.size(), detAndCompKps.size());
@@ -39,7 +39,7 @@ TEST(Features2d_AKAZE, uninitialized_and_nans)
     Mat b1 = imread(cvtest::TS::ptr()->get_data_path() + "../stitching/b1.png");
     ASSERT_FALSE(b1.empty());
 
-    vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     Mat desc;
     Ptr<Feature2D> akaze = AKAZE::create();
     akaze->detectAndCompute(b1, noArray(), keypoints, desc);

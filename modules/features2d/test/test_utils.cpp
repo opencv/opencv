@@ -19,8 +19,8 @@ TEST(Features2D_KeypointUtils, retainBest_issue_12594)
     const size_t NBEST  = 3u;
     const size_t ANSWER = 6u;
 
-    std::vector<cv::KeyPoint> sorted_cv(N);
-    std::vector<cv::KeyPoint> unsorted_cv(N);
+    KeyPointCollection sorted_cv(N);
+    KeyPointCollection unsorted_cv(N);
 
     for (size_t i = 0; i < N; ++i)
     {

@@ -73,8 +73,8 @@ void CV_AgastTest::run( int )
     cvtColor(image1, gray1, COLOR_BGR2GRAY);
     cvtColor(image2, gray2, COLOR_BGR2GRAY);
 
-    vector<KeyPoint> keypoints1;
-    vector<KeyPoint> keypoints2;
+    KeyPointCollection keypoints1;
+    KeyPointCollection keypoints2;
     AGAST(gray1, keypoints1, 30, true, type);
     AGAST(gray2, keypoints2, (type > 0 ? 30 : 20), true, type);
 

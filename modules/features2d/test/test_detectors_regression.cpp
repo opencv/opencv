@@ -59,7 +59,7 @@ public:
 
 protected:
     bool isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 );
-    void compareKeypointSets( const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints );
+    void compareKeypointSets( const KeyPointCollection& validKeypoints, const KeyPointCollection& calcKeypoints );
 
     void emptyDataTest();
     void regressionTest(); // TODO test of detect() with mask
@@ -74,7 +74,7 @@ void CV_FeatureDetectorTest::emptyDataTest()
 {
     // One image.
     Mat image;
-    vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     try
     {
         fdetector->detect( image, keypoints );
@@ -94,7 +94,7 @@ void CV_FeatureDetectorTest::emptyDataTest()
 
     // Several images.
     vector<Mat> images;
-    vector<vector<KeyPoint> > keypointCollection;
+    vector<KeyPointCollection> keypointCollection;
     try
     {
         fdetector->detect( images, keypointCollection );
@@ -122,7 +122,7 @@ bool CV_FeatureDetectorTest::isSimilarKeypoints( const KeyPoint& p1, const KeyPo
             p1.class_id == p2.class_id );
 }
 
-void CV_FeatureDetectorTest::compareKeypointSets( const vector<KeyPoint>& validKeypoints, const vector<KeyPoint>& calcKeypoints )
+void CV_FeatureDetectorTest::compareKeypointSets( const KeyPointCollection& validKeypoints, const KeyPointCollection& calcKeypoints )
 {
     const float maxCountRatioDif = 0.01f;
 
@@ -187,7 +187,7 @@ void CV_FeatureDetectorTest::regressionTest()
     FileStorage fs( resFilename, FileStorage::READ );
 
     // Compute keypoints.
-    vector<KeyPoint> calcKeypoints;
+    KeyPointCollection calcKeypoints;
     fdetector->detect( image, calcKeypoints );
 
     if( fs.isOpened() ) // Compare computed and valid keypoints.
@@ -195,7 +195,7 @@ void CV_FeatureDetectorTest::regressionTest()
         // TODO compare saved feature detector params with current ones
 
         // Read validation keypoints set.
-        vector<KeyPoint> validKeypoints;
+        KeyPointCollection validKeypoints;
         read( fs["keypoints"], validKeypoints );
         if( validKeypoints.empty() )
         {

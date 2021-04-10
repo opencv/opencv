@@ -85,7 +85,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     const float maxBadDescriptorRatio = 0.15f;
 
     // read keypoints
-    vector<KeyPoint> validKeypoints;
+    KeyPointCollection validKeypoints;
     Mat validDescriptors;
     FileStorage fs(xml, FileStorage::READ);
     ASSERT_TRUE(fs.isOpened()) << xml;
@@ -120,7 +120,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     fs.release();
 
     // calc and compare keypoints
-    vector<KeyPoint> calcKeypoints;
+    KeyPointCollection calcKeypoints;
     ext->detectAndCompute(gray, Mat(), calcKeypoints, noArray(), false);
 
     float countRatio = (float)validKeypoints.size() / (float)calcKeypoints.size();

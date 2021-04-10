@@ -73,8 +73,8 @@ void CV_BRISKTest::run( int )
 
   Ptr<FeatureDetector> detector = BRISK::create();
 
-  vector<KeyPoint> keypoints1;
-  vector<KeyPoint> keypoints2;
+  KeyPointCollection keypoints1;
+  KeyPointCollection keypoints2;
   detector->detect(image1, keypoints1);
   detector->detect(image2, keypoints2);
 

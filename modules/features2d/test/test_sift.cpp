@@ -14,7 +14,7 @@ TEST(Features2d_SIFT, descriptor_type)
     Mat gray;
     cvtColor(image, gray, COLOR_BGR2GRAY);
 
-    vector<KeyPoint> keypoints;
+    KeyPointCollection keypoints;
     Mat descriptorsFloat, descriptorsUchar;
     Ptr<SIFT> siftFloat = cv::SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
     siftFloat->detectAndCompute(gray, Mat(), keypoints, descriptorsFloat, false);

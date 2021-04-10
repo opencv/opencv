@@ -688,10 +688,11 @@ class CV_EXPORTS_W_SIMPLE KeyPointCollection {
 public:
     using KeyPoints = std::vector<KeyPoint>;
 
+
     KeyPoints::iterator begin() { return keypoints.begin(); }
     KeyPoints::iterator end()   { return keypoints.end(); }
-    KeyPoints::const_iterator begin() const {return keypoints.begin();}
-    KeyPoints::const_iterator end() const {return keypoints.end();}
+    KeyPoints::const_iterator begin() const { return keypoints.begin(); }
+    KeyPoints::const_iterator end() const { return keypoints.end(); }
     KeyPoint* data() { return keypoints.data(); }
     void reserve(const int n) { keypoints.reserve(n); }
     size_t capacity() const { return keypoints.capacity(); }

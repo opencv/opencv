@@ -72,7 +72,7 @@ protected:
             return;
         }
 
-        vector<KeyPoint> keypoints;
+        KeyPointCollection keypoints;
         detector->detect(image, keypoints);
 
         if(keypoints.empty())

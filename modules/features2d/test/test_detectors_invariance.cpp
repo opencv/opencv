@@ -16,8 +16,8 @@ const static std::string IMAGE_BIKES = "detectors_descriptors_evaluation/images_
 #define Value(...) Values(String_FeatureDetector_Float_Float_t(__VA_ARGS__))
 
 static
-void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
-                    const vector<KeyPoint>& keypoints1,
+void matchKeyPoints(const KeyPointCollection& keypoints0, const Mat& H,
+                    const KeyPointCollection& keypoints1,
                     vector<DMatch>& matches)
 {
     vector<Point2f> points0;
@@ -81,7 +81,7 @@ TEST_P(DetectorRotationInvariance, rotation)
     Mat mask0(image0.size(), CV_8UC1, Scalar(0));
     mask0(Rect(borderSize, borderSize, mask0.cols - 2*borderSize, mask0.rows - 2*borderSize)).setTo(Scalar(255));
 
-    vector<KeyPoint> keypoints0;
+    KeyPointCollection keypoints0;
     featureDetector->detect(image0, keypoints0, mask0);
     EXPECT_GE(keypoints0.size(), 15u);
 
@@ -90,7 +90,7 @@ TEST_P(DetectorRotationInvariance, rotation)
     {
         Mat H = rotateImage(image0, mask0, static_cast<float>(angle), image1, mask1);
 
-        vector<KeyPoint> keypoints1;
+        KeyPointCollection keypoints1;
         featureDetector->detect(image1, keypoints1, mask1);
 
         vector<DMatch> matches;
@@ -150,7 +150,7 @@ TEST_P(DetectorRotationInvariance, rotation)
 
 TEST_P(DetectorScaleInvariance, scale)
 {
-    vector<KeyPoint> keypoints0;
+    KeyPointCollection keypoints0;
     featureDetector->detect(image0, keypoints0);
     EXPECT_GE(keypoints0.size(),  15u);
 
@@ -160,7 +160,7 @@ TEST_P(DetectorScaleInvariance, scale)
         Mat image1;
         resize(image0, image1, Size(), 1./scale, 1./scale, INTER_LINEAR_EXACT);
 
-        vector<KeyPoint> keypoints1, osiKeypoints1; // osi - original size image
+        KeyPointCollection keypoints1, osiKeypoints1; // osi - original size image
         featureDetector->detect(image1, keypoints1);
         EXPECT_GE(keypoints1.size(), 15u);
         EXPECT_LE(keypoints1.size(), keypoints0.size()) << "Strange behavior of the detector. "

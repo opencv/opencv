@@ -144,8 +144,8 @@ TEST(Features2D_ORB, regression_16197)
 TEST(Features2D_ORB, enhancement_10555)
 {
     Ptr<SIFT> sift = SIFT::create();
-    vector<vector<KeyPoint> > keypoints;
-    std::vector<Mat> descriptors;
+    vector<KeyPointCollection> keypoints;
+    KeyPointCollection descriptors;
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     sift->detect(image, keypoints);
     Ptr<ORB> orb = ORB::create();

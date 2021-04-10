@@ -70,7 +70,7 @@ float calcIntersectRatio(const Point2f& p0, float r0, const Point2f& p1, float r
     return intersectArea / unionArea;
 }
 
-void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float scale)
+void scaleKeyPoints(const KeyPointCollection& src, KeyPointCollection& dst, float scale)
 {
     dst.resize(src.size());
     for (size_t i = 0; i < src.size(); i++) {
