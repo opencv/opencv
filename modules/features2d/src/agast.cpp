@@ -8039,7 +8039,7 @@ void AGAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool n
     int pixel_[16];
     makeAgastOffsets(pixel_, (int)img.step, type);
 
-    KeyPointCollection::iterator kpt;
+    std::vector<KeyPoint>::iterator kpt;
     for(kpt = kpts.begin(); kpt != kpts.end(); ++kpt)
     {
         switch(type) {
@@ -8072,7 +8072,7 @@ void AGAST(InputArray _img, KeyPointCollection& keypoints, int threshold, bool n
         size_t lastRowCorner_ind = 0, next_lastRowCorner_ind = 0;
 
         std::vector<int> nmsFlags;
-        KeyPointCollection::const_iterator currCorner;
+        std::vector<KeyPoint>::const_iterator currCorner;
 
         currCorner = kpts.begin();
 

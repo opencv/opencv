@@ -365,7 +365,7 @@ public:
     void detectRegions( InputArray image,
                         std::vector<std::vector<Point> >& msers,
                         std::vector<Rect>& bboxes ) CV_OVERRIDE;
-    void detect( InputArray _src, vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE;
+    void detect( InputArray _src, KeyPointCollection& keypoints, InputArray _mask ) CV_OVERRIDE;
 
     void preprocess1( const Mat& img, int* level_size )
     {
@@ -1072,7 +1072,7 @@ void MSER_Impl::detectRegions( InputArray _src, vector<vector<Point> >& msers, v
     }
 }
 
-void MSER_Impl::detect( InputArray _image, vector<KeyPoint>& keypoints, InputArray _mask )
+void MSER_Impl::detect( InputArray _image, KeyPointCollection& keypoints, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 

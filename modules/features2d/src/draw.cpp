@@ -113,7 +113,7 @@ void drawKeypoints( InputArray image, const KeyPointCollection& keypoints, Input
     bool isRandColor = _color == Scalar::all(-1);
 
     CV_Assert( !outImage.empty() );
-    KeyPointCollection::const_iterator it = keypoints.begin(),
+    std::vector<KeyPoint>::const_iterator it = keypoints.begin(),
                                      end = keypoints.end();
     for( ; it != end; ++it )
     {

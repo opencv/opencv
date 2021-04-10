@@ -167,7 +167,7 @@ public:
 
   // Agast without non-max suppression
   void
-  getAgastPoints(int threshold, std::vector<cv::KeyPoint>& keypoints);
+  getAgastPoints(int threshold, KeyPointCollection& keypoints);
 
   // get scores - attention, this is in layer coordinates, not scale=1 coordinates!
   inline int
@@ -912,7 +912,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, KeyPointCollection& keypoint
 
   // assign thresholds
   int safeThreshold_ = (int)(threshold_ * safetyFactor_);
-  std::vector<std::vector<cv::KeyPoint> > agastPoints;
+  std::vector<KeyPointCollection> agastPoints;
   agastPoints.resize(layers_);
 
   // go through the octaves and intra layers and calculate agast corner scores:

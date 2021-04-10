@@ -690,9 +690,14 @@ public:
 
     KeyPoints::iterator begin() { return keypoints.begin(); }
     KeyPoints::iterator end()   { return keypoints.end(); }
-    void push_back(KeyPoint& kp) {  keypoints.push_back(kp); }
+    KeyPoints::const_iterator begin() const {return keypoints.begin();}
+    KeyPoints::const_iterator end() const {return keypoints.end();}
+    KeyPoint* data() { return keypoints.data(); }
+    void reserve(const int n) { keypoints.reserve(n); }
+    size_t capacity() const { return keypoints.capacity(); }
+    void push_back(const KeyPoint& kp) {  keypoints.push_back(kp); }
     void clear() { keypoints.clear(); }
-    bool empty() { return keypoints.empty(); }
+    bool empty() const { return keypoints.empty(); }
     size_t size() const { return keypoints.size(); }
     void resize(const size_t size) { keypoints.resize(size); }
     const KeyPoint& operator[] (const int index) const { return keypoints[index]; }
@@ -700,6 +705,9 @@ public:
     void insert(KeyPoints::iterator iterator,
                 KeyPoints::iterator iterator1,
                 KeyPoints::iterator iterator2) { keypoints.insert(iterator, iterator1, iterator2); }
+    void insert(KeyPoints::iterator iterator,
+                KeyPoints::const_iterator iterator1,
+                KeyPoints::const_iterator iterator2) { keypoints.insert(iterator, iterator1, iterator2); }
     void erase(KeyPoints::iterator first, KeyPoints::iterator last) {keypoints.erase(first, last); }
     void erase(KeyPoints::iterator iterator) {keypoints.erase(iterator); }
 
