@@ -1181,7 +1181,7 @@ protected:
     struct CV_EXPORTS Vertex
     {
         Vertex();
-        Vertex(Point2f pt, bool _isvirtual, int _firstEdge=0);
+        Vertex(Point2f pt, bool isvirtual, int firstEdge=0);
         bool isvirtual() const;
         bool isfree() const;
 
@@ -1237,9 +1237,9 @@ public:
 
     ![image](pics/building_lsd.png)
 
-    @param _image A grayscale (CV_8UC1) input image. If only a roi needs to be selected, use:
+    @param image A grayscale (CV_8UC1) input image. If only a roi needs to be selected, use:
     `lsd_ptr-\>detect(image(roi), lines, ...); lines += Scalar(roi.x, roi.y, roi.x, roi.y);`
-    @param _lines A vector of Vec4i or Vec4f elements specifying the beginning and ending point of a line. Where
+    @param lines A vector of Vec4i or Vec4f elements specifying the beginning and ending point of a line. Where
     Vec4i/Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly
     oriented depending on the gradient.
     @param width Vector of widths of the regions, where the lines are found. E.g. Width of line.
@@ -1251,26 +1251,26 @@ public:
     - 1 corresponds to 0.1 mean false alarms
     This vector will be calculated only when the objects type is #LSD_REFINE_ADV.
     */
-    CV_WRAP virtual void detect(InputArray _image, OutputArray _lines,
+    CV_WRAP virtual void detect(InputArray image, OutputArray lines,
                         OutputArray width = noArray(), OutputArray prec = noArray(),
                         OutputArray nfa = noArray()) = 0;
 
     /** @brief Draws the line segments on a given image.
-    @param _image The image, where the lines will be drawn. Should be bigger or equal to the image,
+    @param image The image, where the lines will be drawn. Should be bigger or equal to the image,
     where the lines were found.
     @param lines A vector of the lines that needed to be drawn.
      */
-    CV_WRAP virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
+    CV_WRAP virtual void drawSegments(InputOutputArray image, InputArray lines) = 0;
 
     /** @brief Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
 
     @param size The size of the image, where lines1 and lines2 were found.
     @param lines1 The first group of lines that needs to be drawn. It is visualized in blue color.
     @param lines2 The second group of lines. They visualized in red color.
-    @param _image Optional image, where the lines will be drawn. The image should be color(3-channel)
+    @param image Optional image, where the lines will be drawn. The image should be color(3-channel)
     in order for lines1 and lines2 to be drawn in the above mentioned colors.
      */
-    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
+    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray image = noArray()) = 0;
 
     virtual ~LineSegmentDetector() { }
 };
@@ -1280,22 +1280,21 @@ public:
 The LineSegmentDetector algorithm is defined using the standard values. Only advanced users may want
 to edit those, as to tailor it for their own application.
 
-@param _refine The way found lines will be refined, see #LineSegmentDetectorModes
-@param _scale The scale of the image that will be used to find the lines. Range (0..1].
-@param _sigma_scale Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
-@param _quant Bound to the quantization error on the gradient norm.
-@param _ang_th Gradient angle tolerance in degrees.
-@param _log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement
-is chosen.
-@param _density_th Minimal density of aligned region points in the enclosing rectangle.
-@param _n_bins Number of bins in pseudo-ordering of gradient modulus.
+@param refine The way found lines will be refined, see #LineSegmentDetectorModes
+@param scale The scale of the image that will be used to find the lines. Range (0..1].
+@param sigma_scale Sigma for Gaussian filter. It is computed as sigma = sigma_scale/scale.
+@param quant Bound to the quantization error on the gradient norm.
+@param ang_th Gradient angle tolerance in degrees.
+@param log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement is chosen.
+@param density_th Minimal density of aligned region points in the enclosing rectangle.
+@param n_bins Number of bins in pseudo-ordering of gradient modulus.
 
 @note Implementation has been removed due original code license conflict
  */
 CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
-    int _refine = LSD_REFINE_STD, double _scale = 0.8,
-    double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
-    double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
+    int refine = LSD_REFINE_STD, double scale = 0.8,
+    double sigma_scale = 0.6, double quant = 2.0, double ang_th = 22.5,
+    double log_eps = 0, double density_th = 0.7, int n_bins = 1024);
 
 //! @} imgproc_feature
 
@@ -1494,7 +1493,7 @@ The unnormalized square box filter can be useful in computing local image statis
 variance and standard deviation around the neighborhood of a pixel.
 
 @param src input image
-@param dst output image of the same size and type as _src
+@param dst output image of the same size and type as src
 @param ddepth the output image depth (-1 to use src.depth())
 @param ksize kernel size
 @param anchor kernel anchor point. The default value of Point(-1, -1) denotes that the anchor is at the kernel
@@ -2036,8 +2035,8 @@ CV_EXPORTS_W void HoughLinesP( InputArray image, OutputArray lines,
 
 The function finds lines in a set of points using a modification of the Hough transform.
 @include snippets/imgproc_HoughLinesPointSet.cpp
-@param _point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
-@param _lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
+@param point Input vector of points. Each vector must be encoded as a Point vector \f$(x,y)\f$. Type must be CV_32FC2 or CV_32SC2.
+@param lines Output vector of found lines. Each vector is encoded as a vector<Vec3d> \f$(votes, rho, theta)\f$.
 The larger the value of 'votes', the higher the reliability of the Hough line.
 @param lines_max Max count of hough lines.
 @param threshold Accumulator threshold parameter. Only those lines are returned that get enough
@@ -2049,7 +2048,7 @@ votes ( \f$>\texttt{threshold}\f$ )
 @param max_theta Maximum angle value of the accumulator in radians.
 @param theta_step Angle resolution of the accumulator in radians.
  */
-CV_EXPORTS_W void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, int threshold,
+CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int lines_max, int threshold,
                                       double min_rho, double max_rho, double rho_step,
                                       double min_theta, double max_theta, double theta_step );
 
@@ -4163,9 +4162,9 @@ Examples of how intersectConvexConvex works
 
 /** @brief Finds intersection of two convex polygons
 
-@param _p1 First polygon
-@param _p2 Second polygon
-@param _p12 Output polygon describing the intersecting area
+@param p1 First polygon
+@param p2 Second polygon
+@param p12 Output polygon describing the intersecting area
 @param handleNested When true, an intersection is found if one of the polygons is fully enclosed in the other.
 When false, no intersection is found. If the polygons share a side or the vertex of one polygon lies on an edge
 of the other, they are not considered nested and an intersection will be found regardless of the value of handleNested.
@@ -4174,8 +4173,8 @@ of the other, they are not considered nested and an intersection will be found r
 
 @note intersectConvexConvex doesn't confirm that both polygons are convex and will return invalid results if they aren't.
  */
-CV_EXPORTS_W float intersectConvexConvex( InputArray _p1, InputArray _p2,
-                                          OutputArray _p12, bool handleNested = true );
+CV_EXPORTS_W float intersectConvexConvex( InputArray p1, InputArray p2,
+                                          OutputArray p12, bool handleNested = true );
 
 /** @example samples/cpp/fitellipse.cpp
 An example using the fitEllipse technique
