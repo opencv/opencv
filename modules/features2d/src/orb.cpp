@@ -860,7 +860,8 @@ static void computeKeyPoints(const Mat& imagePyramid,
             keypoints[i].octave = level;
             keypoints[i].size = patchSize*sf;
         }
-        allKeypoints.insert(keypoints.begin(), keypoints.end(), allKeypoints.end());
+
+        std::copy(keypoints.begin(), keypoints.end(), std::back_inserter(allKeypoints));
     }
 
     std::vector<Vec3i> ukeypoints_buf;
@@ -911,7 +912,8 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
             //cull to the final desired level, using the new Harris scores.
             KeyPointsFilter::retainBest(keypoints, featuresNum);
-            newAllKeypoints.insert(keypoints.begin(), keypoints.end(), allKeypoints.end());
+
+            std::copy(keypoints.begin(), keypoints.end(), std::back_inserter(newAllKeypoints));
         }
         std::swap(allKeypoints, newAllKeypoints);
     }
@@ -1134,7 +1136,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             }
             keypoints.clear();
             for( level = 0; level < nLevels; level++ )
-                keypoints.insert(allKeypoints[level].begin(), allKeypoints[level].end(),  keypoints.end());
+                std::copy(allKeypoints[level].begin(), allKeypoints[level].end(), std::back_inserter(keypoints));
         }
     }
 
