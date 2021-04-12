@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -25,6 +25,8 @@
 #include "backends/cpu/gcpubackend.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+
+#include "utils/itt.hpp"
 
 // FIXME: Is there a way to take a typed graph (our GModel),
 // and create a new typed graph _ATOP_ of that (by extending with a couple of
@@ -251,8 +253,13 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
             context.m_state = m_nodesToStates.at(op_info.nh);
         }
 
-        // Now trigger the executable unit
-        k.m_runF(context);
+        {
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(op_hndl, op.k.name.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(op_hndl);
+
+            // Now trigger the executable unit
+            k.m_runF(context);
+        }
 
         //As Kernels are forbidden to allocate memory for (Mat) outputs,
         //this code seems redundant, at least for Mats
