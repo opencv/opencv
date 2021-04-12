@@ -490,7 +490,7 @@ public:
 
     float predict( InputArray samples, OutputArray results, int flags ) const CV_OVERRIDE
     {
-        CV_Assert( samples.cols() == getVarCount() && samples.type() == CV_32F );
+        CV_CheckEQ(samples.cols(), getVarCount(), "");
         return impl.predict(samples, results, flags);
     }
 
