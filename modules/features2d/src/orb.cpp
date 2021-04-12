@@ -212,8 +212,7 @@ static void ICAngles(const Mat& img, const std::vector<Rect>& layerinfo,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void
-computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo,
-                       const std::vector<float>& layerScale, KeyPointCollection& keypoints,
+computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerInfo, KeyPointCollection& keypoints,
                        Mat& descriptors, const std::vector<Point>& _pattern, int dsize, int wta_k )
 {
     int step = (int)imagePyramid.step;
@@ -223,7 +222,7 @@ computeOrbDescriptors( const Mat& imagePyramid, const std::vector<Rect>& layerIn
     {
         const KeyPoint& kpt = keypoints[j];
         const Rect& layer = layerInfo[kpt.octave];
-        float scale = 1.f/layerScale[kpt.octave];
+        float scale = 1.f/keypoints.getScaleFactor(kpt);
         float angle = kpt.angle;
 
         angle *= (float)(CV_PI/180.f);
@@ -754,15 +753,14 @@ typedef union if32_t
 if32_t;
 
 static void uploadORBKeypoints(const KeyPointCollection& src,
-                               const std::vector<float>& layerScale,
                                std::vector<Vec4i>& buf, OutputArray dst)
 {
     size_t i, n = src.size();
     buf.resize(std::max(buf.size(), n));
     for( i = 0; i < n; i++ )
     {
-        int z = src[i].octave;
-        float scale = 1.f/layerScale[z];
+        float z = src.getScaleFactor(src[i]);
+        float scale = 1.f/z;
         if32_t angle;
         angle.f = src[i].angle;
         buf[i] = Vec4i(cvRound(src[i].pt.x*scale), cvRound(src[i].pt.y*scale), z, angle.i);
@@ -781,7 +779,6 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              const Mat& maskPyramid,
                              const std::vector<Rect>& layerInfo,
                              const UMat& ulayerInfo,
-                             const std::vector<float>& layerScale,
                              KeyPointCollection& allKeypoints,
                              int nfeatures, double scaleFactor,
                              int edgeThreshold, int patchSize, int scoreType,
@@ -830,6 +827,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
     allKeypoints.clear();
     KeyPointCollection keypoints;
+    keypoints.setScaleFactorCallable(allKeypoints.getScaleFactorCallable());
     std::vector<int> counters(nlevels);
     keypoints.reserve(nfeaturesPerLevel[0]*2);
 
@@ -854,9 +852,9 @@ static void computeKeyPoints(const Mat& imagePyramid,
         nkeypoints = (int)keypoints.size();
         counters[level] = nkeypoints;
 
-        float sf = layerScale[level];
         for( i = 0; i < nkeypoints; i++ )
         {
+            float sf = keypoints.getScaleFactor(keypoints[i]);
             keypoints[i].octave = level;
             keypoints[i].size = patchSize*sf;
         }
@@ -948,7 +946,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
 
     for( i = 0; i < nkeypoints; i++ )
     {
-        float scale = layerScale[allKeypoints[i].octave];
+        float scale = keypoints.getScaleFactor(allKeypoints[i]);
         allKeypoints[i].pt *= scale;
     }
 }
@@ -995,33 +993,21 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
     int i, level, nLevels = this->nlevels, nkeypoints = (int)keypoints.size();
     bool sortedByLevel = true;
+    keypoints.setScaleFactorCallable([&](const KeyPoint& kp){
+        return getScale(kp.octave, firstLevel, scaleFactor);
+    });
 
+    auto compareKeyPoints = [&](const KeyPoint& kp1, const KeyPoint& kp2) {return kp1.octave < kp2.octave; };
     if( !do_keypoints )
     {
         // if we have pre-computed keypoints, they may use more levels than it is set in parameters
-        // !!!TODO!!! implement more correct method, independent from the used keypoint detector.
-        // Namely, the detector should provide correct size of each keypoint. Based on the keypoint size
-        // and the algorithm used (i.e. BRIEF, running on 31x31 patches) we should compute the approximate
-        // scale-factor that we need to apply. Then we should cluster all the computed scale-factors and
-        // for each cluster compute the corresponding image.
-        //
-        // In short, ultimately the descriptor should
-        // ignore octave parameter and deal only with the keypoint size.
-        nLevels = 0;
-        for( i = 0; i < nkeypoints; i++ )
-        {
-            level = keypoints[i].octave;
-            CV_Assert(level >= 0);
-            if( i > 0 && level < keypoints[i-1].octave )
-                sortedByLevel = false;
-            nLevels = std::max(nLevels, level);
-        }
+        nLevels = std::max_element(keypoints.begin(), keypoints.end(), compareKeyPoints)->octave;
         nLevels++;
+        sortedByLevel = std::is_sorted(keypoints.begin(), keypoints.end(), compareKeyPoints);
     }
 
     std::vector<Rect> layerInfo(nLevels);
     std::vector<int> layerOfs(nLevels);
-    std::vector<float> layerScale(nLevels);
     Mat imagePyramid, maskPyramid;
     UMat uimagePyramid, ulayerInfo;
 
@@ -1036,7 +1022,6 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     for( level = 0; level < nLevels; level++ )
     {
         float scale = getScale(level, firstLevel, scaleFactor);
-        layerScale[level] = scale;
         float inv_scale = 1.0f / scale;
         Size sz(cvRound(image.cols * inv_scale), cvRound(image.rows * inv_scale));
         Size wholeSize(sz.width + border*2, sz.height + border*2);
@@ -1117,7 +1102,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
         // Get keypoints, those will be far enough from the border that no check will be required for the descriptor
         computeKeyPoints(imagePyramid, uimagePyramid, maskPyramid,
-                         layerInfo, ulayerInfo, layerScale, keypoints,
+                         layerInfo, ulayerInfo,keypoints,
                          nfeatures, scaleFactor, edgeThreshold, patchSize, scoreType, useOCL, fastThreshold);
     }
     else
@@ -1126,17 +1111,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 
         if( !sortedByLevel )
         {
-            std::vector<KeyPointCollection > allKeypoints(nLevels);
-            nkeypoints = (int)keypoints.size();
-            for( i = 0; i < nkeypoints; i++ )
-            {
-                level = keypoints[i].octave;
-                CV_Assert(0 <= level);
-                allKeypoints[level].push_back(keypoints[i]);
-            }
-            keypoints.clear();
-            for( level = 0; level < nLevels; level++ )
-                std::copy(allKeypoints[level].begin(), allKeypoints[level].end(), std::back_inserter(keypoints));
+            std::sort(keypoints.begin(), keypoints.end(), compareKeyPoints);
         }
     }
 
@@ -1190,7 +1165,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             std::vector<Vec4i> kptbuf;
             UMat ukeypoints, upattern;
             copyVectorToUMat(pattern, upattern);
-            uploadORBKeypoints(keypoints, layerScale, kptbuf, ukeypoints);
+            uploadORBKeypoints(keypoints, kptbuf, ukeypoints);
 
             UMat udescriptors = _descriptors.getUMat();
             useOCL = ocl_computeOrbDescriptors(uimagePyramid, ulayerInfo,
@@ -1206,7 +1181,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 #endif
         {
             Mat descriptors = _descriptors.getMat();
-            computeOrbDescriptors(imagePyramid, layerInfo, layerScale,
+            computeOrbDescriptors(imagePyramid, layerInfo,
                                   keypoints, descriptors, pattern, dsize, wta_k);
         }
     }

@@ -143,13 +143,21 @@ TEST(Features2D_ORB, regression_16197)
 
 TEST(Features2D_ORB, enhancement_10555)
 {
-    Ptr<SIFT> sift = SIFT::create();
-    vector<KeyPointCollection> keypoints;
-    Mat descriptors;
+    Ptr<FeatureDetector> fd = ORB::create(10000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+    Ptr<DescriptorExtractor> de = SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
+
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
-    sift->detect(image, keypoints);
-    Ptr<ORB> orb = ORB::create();
-    orb -> compute(image, keypoints, descriptors);
+    ASSERT_FALSE(image.empty());
+
+    Mat roi(image.size(), CV_8UC1, Scalar(0));
+
+    Point poly[] = {Point(100, 20), Point(300, 50), Point(400, 200), Point(10, 500)};
+    fillConvexPoly(roi, poly, int(sizeof(poly) / sizeof(poly[0])), Scalar(255));
+
+    KeyPointCollection keypoints;
+    fd->detect(image, keypoints, roi);
+    Mat descriptors;
+    de->compute(image, keypoints, descriptors);
 }
 
 

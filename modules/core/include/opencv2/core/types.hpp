@@ -52,6 +52,7 @@
 #include <cfloat>
 #include <vector>
 #include <limits>
+#include <functional>
 
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/cvstd.hpp"
@@ -688,9 +689,10 @@ class CV_EXPORTS_W_SIMPLE KeyPointCollection {
 public:
     using KeyPoints = std::vector<KeyPoint>;
     using value_type = KeyPoints::value_type;
+    using Lambda = std::function<float(const KeyPoint&)>;
     KeyPointCollection() { keypoints = std::vector<KeyPoint>(); }
-    KeyPointCollection(const int n) { keypoints = std::vector<KeyPoint>(n); }
     KeyPointCollection(const int n, const KeyPoint& kp) { keypoints = std::vector<KeyPoint>(n, kp); }
+    KeyPointCollection(const int n) { keypoints = std::vector<KeyPoint>(n); }
 
     KeyPoints::iterator begin() { return keypoints.begin(); }
     KeyPoints::iterator end()   { return keypoints.end(); }
@@ -714,10 +716,14 @@ public:
                 KeyPoints::const_iterator iterator1,
                 KeyPoints::const_iterator iterator2) { keypoints.insert(iterator, iterator1, iterator2); }
     void erase(KeyPoints::iterator first, KeyPoints::iterator last) {keypoints.erase(first, last); }
-    void erase(KeyPoints::iterator iterator) {keypoints.erase(iterator); }
+    void erase(KeyPoints::iterator iterator) { keypoints.erase(iterator); }
+    void setScaleFactorCallable(const Lambda& lambda){ scaleFactorCallable = lambda; }
+    const Lambda& getScaleFactorCallable() const { return scaleFactorCallable; }
+    float getScaleFactor(const KeyPoint& kp) const { return scaleFactorCallable(kp); }
 
 private:
     KeyPoints keypoints;
+    Lambda scaleFactorCallable;
 };
 
 
