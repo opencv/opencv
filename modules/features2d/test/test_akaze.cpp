@@ -44,5 +44,19 @@ TEST(Features2d_AKAZE, uninitialized_and_nans)
     Ptr<Feature2D> akaze = AKAZE::create();
     akaze->detectAndCompute(b1, noArray(), keypoints, desc);
 }
+TEST(Features2d_AKAZE, describe_with_different_detector)
+{
+    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
+    ASSERT_FALSE(image.empty());
+    Ptr<DescriptorExtractor> fd = SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
+    Ptr<FeatureDetector> de =
+            AKAZE::create(AKAZE::DESCRIPTOR_MLDB, 0, 3, 0.001f, 3, 1, KAZE::DIFF_PM_G2);
+    KeyPointCollection keypoints;
+    Mat desc;
+    fd->detect(image, keypoints);
+    Mat descriptors;
+    de->compute(image, keypoints, descriptors);
+}
+
 
 }} // namespace

@@ -808,7 +808,8 @@ public:
     CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
     CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
-    CV_PROP_RW int layer; //!< layer of the octave (0 if not applicable) >
+    CV_PROP_RW int layer; //!< layer of the octave (0 if not applicable). Primarily for SIFT >
+    CV_PROP_RW int level; //!< evolution level (0 if not applicable). Primarily for KAZE/AKAZE >
 };
 
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED

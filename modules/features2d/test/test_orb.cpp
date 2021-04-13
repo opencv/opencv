@@ -149,13 +149,8 @@ TEST(Features2D_ORB, enhancement_10555)
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     ASSERT_FALSE(image.empty());
 
-    Mat roi(image.size(), CV_8UC1, Scalar(0));
-
-    Point poly[] = {Point(100, 20), Point(300, 50), Point(400, 200), Point(10, 500)};
-    fillConvexPoly(roi, poly, int(sizeof(poly) / sizeof(poly[0])), Scalar(255));
-
     KeyPointCollection keypoints;
-    fd->detect(image, keypoints, roi);
+    fd->detect(image, keypoints);
     Mat descriptors;
     de->compute(image, keypoints, descriptors);
 }

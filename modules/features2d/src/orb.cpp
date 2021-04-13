@@ -991,7 +991,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     if( image.type() != CV_8UC1 )
         cvtColor(_image, image, COLOR_BGR2GRAY);
 
-    int i, level, nLevels = this->nlevels, nkeypoints = (int)keypoints.size();
+    int level, nLevels = this->nlevels, nkeypoints = (int)keypoints.size();
     bool sortedByLevel = true;
     keypoints.setScaleFactorCallable([&](const KeyPoint& kp){
         return getScale(kp.octave, firstLevel, scaleFactor);

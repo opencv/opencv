@@ -185,6 +185,8 @@ struct KeyPoint_LessThan
             return kp1.octave > kp2.octave;
         if( kp1.class_id != kp2.class_id )
             return kp1.class_id > kp2.class_id;
+        if( kp1.level != kp2.level)
+            return kp1.level > kp2.level;
 
         return i < j;
     }
@@ -239,7 +241,9 @@ struct KeyPoint12_LessThan
             return kp1.response > kp2.response;
         if( kp1.octave != kp2.octave )
             return kp1.octave > kp2.octave;
-        return kp1.class_id > kp2.class_id;
+        if( kp1.class_id > kp2.class_id )
+            return kp1.class_id > kp2.class_id;
+        return kp1.level > kp2.level;
     }
 };
 

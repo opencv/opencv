@@ -897,7 +897,7 @@ void AKAZEFeatures::Do_Subpixel_Refinement(
         kp.angle = -1;
         kp.response = ldet[j];
         kp.octave = e.octave;
-        kp.class_id = static_cast<int>(i);
+        kp.level = static_cast<int>(i);
 
         // Compute the gradient
         float Dx = 0.5f * (ldet[ y     *cols + x + 1] - ldet[ y     *cols + x - 1]);
@@ -1189,7 +1189,7 @@ void AKAZEFeatures::Compute_Descriptors(KeyPointCollection& kpts, OutputArray de
 
   for(size_t i = 0; i < kpts.size(); i++)
   {
-      CV_Assert(0 <= kpts[i].class_id && kpts[i].class_id < static_cast<int>(evolution_.size()));
+      CV_Assert(0 <= kpts[i].level && kpts[i].level < static_cast<int>(evolution_.size()));
   }
 
   // Allocate memory for the matrix with the descriptors
@@ -1362,7 +1362,7 @@ static inline
 void Compute_Main_Orientation(KeyPoint& kpt, const Pyramid& evolution)
 {
   // get the right evolution level for this keypoint
-  const MEvolution& e = evolution[kpt.class_id];
+  const MEvolution& e = evolution[kpt.level];
   // Get the information from the keypoint
   int scale = cvRound(0.5f * kpt.size / e.octave_ratio);
   int x0 = cvRound(kpt.pt.x / e.octave_ratio);
@@ -1507,7 +1507,7 @@ void MSURF_Upright_Descriptor_64_Invoker::Get_MSURF_Upright_Descriptor_64(const 
   // Get the information from the keypoint
   ratio = (float)(1 << kpt.octave);
   scale = cvRound(0.5f*kpt.size / ratio);
-  const int level = kpt.class_id;
+  const int level = kpt.level;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   yf = kpt.pt.y / ratio;
@@ -1641,7 +1641,7 @@ void MSURF_Descriptor_64_Invoker::Get_MSURF_Descriptor_64(const KeyPoint& kpt, f
   ratio = (float)(1 << kpt.octave);
   scale = cvRound(0.5f*kpt.size / ratio);
   angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
-  const int level = kpt.class_id;
+  const int level = kpt.level;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   yf = kpt.pt.y / ratio;
@@ -1762,7 +1762,7 @@ void Upright_MLDB_Full_Descriptor_Invoker::Get_Upright_MLDB_Full_Descriptor(cons
   // Get the information from the keypoint
   const float ratio = (float)(1 << kpt.octave);
   const int scale = cvRound(0.5f*kpt.size / ratio);
-  const int level = kpt.class_id;
+  const int level = kpt.level;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   const Mat Lt = evolution[level].Lt;
@@ -1979,7 +1979,7 @@ void MLDB_Full_Descriptor_Invoker::Get_MLDB_Full_Descriptor(const KeyPoint& kpt,
   for(int lvl = 0; lvl < 3; lvl++)
   {
       int val_count = (lvl + 2) * (lvl + 2);
-      MLDB_Fill_Values(values, sample_step[lvl], kpt.class_id, xf, yf, co, si, scale);
+      MLDB_Fill_Values(values, sample_step[lvl], kpt.level, xf, yf, co, si, scale);
       MLDB_Binary_Comparisons(values, desc, val_count, dpos);
   }
 
@@ -2007,7 +2007,7 @@ void MLDB_Descriptor_Subset_Invoker::Get_MLDB_Descriptor_Subset(const KeyPoint& 
   float ratio = (float)(1 << kpt.octave);
   int scale = cvRound(0.5f*kpt.size / ratio);
   float angle = kpt.angle * static_cast<float>(CV_PI / 180.f);
-  const int level = kpt.class_id;
+  const int level = kpt.level;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   const Mat Lt = evolution[level].Lt;
@@ -2115,7 +2115,7 @@ void Upright_MLDB_Descriptor_Subset_Invoker::Get_Upright_MLDB_Descriptor_Subset(
   // Get the information from the keypoint
   float ratio = (float)(1 << kpt.octave);
   int scale = cvRound(0.5f*kpt.size / ratio);
-  const int level = kpt.class_id;
+  const int level = kpt.level;
   const Mat Lx = evolution[level].Lx;
   const Mat Ly = evolution[level].Ly;
   const Mat Lt = evolution[level].Lt;
