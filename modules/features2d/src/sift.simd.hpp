@@ -566,13 +566,13 @@ void calcSIFTDescriptor(
     float bins_per_rad = n / 360.f;
     float exp_scale = -1.f/(d * d * 0.5f);
     float hist_width = SIFT_DESCR_SCL_FCTR * scl;
-    int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f);
+    int radius = cvRound(hist_width * 1.4142135623730951f * (d + 1) * 0.5f + 0.5f);
     // Clip the radius to the diagonal of the image to avoid autobuffer too large exception
     radius = std::min(radius, (int)std::sqrt(((double) img.cols)*img.cols + ((double) img.rows)*img.rows));
     cos_t /= hist_width;
     sin_t /= hist_width;
 
-    int i, j, k, len = (radius*2+1)*(radius*2+1), histlen = (d+2)*(d+2)*(n+2);
+    int len = (radius*2+1)*(radius*2+1), histlen = (d+2)*(d+2)*(n+2);
     int rows = img.rows, cols = img.cols;
 
     cv::utils::BufferArea area;
@@ -588,6 +588,7 @@ void calcSIFTDescriptor(
     area.commit();
     Mag = Y;
 
+    int i, j, k;
     for( i = 0; i < d+2; i++ )
     {
         for( j = 0; j < d+2; j++ )
