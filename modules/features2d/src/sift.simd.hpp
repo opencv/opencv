@@ -388,7 +388,7 @@ bool adjustLocalExtrema(
 
     kpt.pt.x = (c + xc) * (1 << octv);
     kpt.pt.y = (r + xr) * (1 << octv);
-    kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5)*255) << 16);
+    kpt.octave = octv + (cvRound((xi + 0.5)));
     kpt.size = sigma*powf(2.f, (layer + xi) / nOctaveLayers)*(1 << octv)*2;
     kpt.response = std::abs(contr);
 

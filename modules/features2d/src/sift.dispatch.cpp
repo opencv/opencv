@@ -147,7 +147,7 @@ static inline void
 unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 {
     octave = kpt.octave & 255;
-    layer = (kpt.octave >> 8) & 255;
+    layer = kpt.layer;
     octave = octave < 128 ? octave : (-128 | octave);
     scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
 }
@@ -527,7 +527,6 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
             {
                 KeyPoint& kpt = keypoints[i];
                 float scale = 1.f/(float)(1 << -firstOctave);
-                kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
                 kpt.pt *= scale;
                 kpt.size *= scale;
             }

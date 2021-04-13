@@ -141,5 +141,18 @@ TEST(Features2D_ORB, regression_16197)
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
+TEST(Features2D_ORB, enhancement_10555)
+{
+    Ptr<DescriptorExtractor> fd = SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
+    Ptr<FeatureDetector> de = ORB::create(10000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+
+    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
+    ASSERT_FALSE(image.empty());
+
+    std::vector<KeyPoint> keypoints;
+    fd->detect(image, keypoints);
+    Mat descriptors;
+    ASSERT_NO_THROW(de->compute(image, keypoints, descriptors));
+}
 
 }} // namespace

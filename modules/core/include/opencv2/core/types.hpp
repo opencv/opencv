@@ -720,8 +720,9 @@ public:
     @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
     @param _octave pyramid octave in which the keypoint has been detected
     @param _class_id object id
+    @param _layer the layer of the octave
      */
-    KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
+    KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1, int _layer=-1);
     /**
     @param x x-coordinate of the keypoint
     @param y y-coordinate of the keypoint
@@ -730,8 +731,9 @@ public:
     @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
     @param _octave pyramid octave in which the keypoint has been detected
     @param _class_id object id
+    @param _layer the layer of the octave
      */
-    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
+    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1, int _layer=-1);
 
     size_t hash() const;
 
@@ -776,6 +778,7 @@ public:
     CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
     CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
     CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
+    CV_PROP_RW int layer; //!< layer of the octave (-1 if not applicable)
 };
 
 #ifdef OPENCV_TRAITS_ENABLE_DEPRECATED
@@ -2425,15 +2428,15 @@ Scalar operator * (const Matx<double, 4, 4>& a, const Scalar& b)
 
 inline
 KeyPoint::KeyPoint()
-    : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
+    : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1), layer(-1) {}
 
 inline
-KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle, float _response, int _octave, int _class_id)
-    : pt(_pt), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id) {}
+KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle, float _response, int _octave, int _class_id, int _layer)
+    : pt(_pt), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id), layer(_layer) {}
 
 inline
-KeyPoint::KeyPoint(float x, float y, float _size, float _angle, float _response, int _octave, int _class_id)
-    : pt(x, y), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id) {}
+KeyPoint::KeyPoint(float x, float y, float _size, float _angle, float _response, int _octave, int _class_id, int _layer)
+    : pt(x, y), size(_size), angle(_angle), response(_response), octave(_octave), class_id(_class_id), layer(_layer) {}
 
 
 
