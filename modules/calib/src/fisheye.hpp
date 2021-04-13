@@ -56,6 +56,17 @@ double median(const Mat& row);
 
 Vec3d median3d(InputArray m);
 
+}
+
+namespace
+{
+    struct JacobianRow
+    {
+        Vec2d df, dc;
+        Vec4d dk;
+        Vec3d dom, dT;
+        double dalpha;
+    };
 }}
 
 #endif
