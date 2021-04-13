@@ -481,6 +481,7 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
 
     if( useProvidedKeypoints )
     {
+        firstOctave = 0;
         int maxOctave = INT_MIN;
         for( size_t i = 0; i < keypoints.size(); i++ )
         {
@@ -496,11 +497,9 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         CV_Assert( firstOctave >= -1 && actualNLayers <= nOctaveLayers );
         actualNOctaves = maxOctave - firstOctave + 1;
     }
-
     Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
     std::vector<Mat> gpyr;
     int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
-
     //double t, tf = getTickFrequency();
     //t = (double)getTickCount();
     buildGaussianPyramid(base, gpyr, nOctaves);
