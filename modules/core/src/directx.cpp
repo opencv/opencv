@@ -378,18 +378,8 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
 
-    size_t exts_len;
-    cv::AutoBuffer<char> extensions;
     for (int i = 0; i < (int)numPlatforms; i++)
     {
-        status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 0, NULL, &exts_len);
-        if (status != CL_SUCCESS)
-            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get length of CL_PLATFORM_EXTENSIONS");
-        extensions.resize(exts_len);
-        status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, exts_len, static_cast<void*>(extensions.data()), NULL);
-        if (status != CL_SUCCESS)
-            CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available CL_PLATFORM_EXTENSIONS");
-
         cl_platform_id platform = platforms[i];
         std::string platformName = PlatformInfo(&platform).name();
 
@@ -399,15 +389,12 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
         cl_context context = NULL;
 
 #ifdef HAVE_OPENCL_D3D11_NV
-        if (strstr(extensions.data(), "cl_nv_d3d11_sharing"))
-        {
+        // Get extension function "clGetDeviceIDsFromD3D11NV" (part of OpenCL extension "cl_nv_d3d11_sharing")
+        clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
+        if (clGetDeviceIDsFromD3D11NV) {
             // try with CL_PREFERRED_DEVICES_FOR_D3D11_NV
             do {
-                clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
-                if (!clGetDeviceIDsFromD3D11NV)
-                    break;
-
                 device = NULL;
                 numDevices = 0;
                 status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
@@ -436,11 +423,6 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             } while (0);
             // try with CL_ALL_DEVICES_FOR_D3D11_NV
             if (found < 0) do {
-                clGetDeviceIDsFromD3D11NV_fn clGetDeviceIDsFromD3D11NV = (clGetDeviceIDsFromD3D11NV_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11NV");
-                if (!clGetDeviceIDsFromD3D11NV)
-                    break;
-
                 device = NULL;
                 numDevices = 0;
                 status = clGetDeviceIDsFromD3D11NV(platforms[i], CL_D3D11_DEVICE_NV, pD3D11Device,
@@ -484,14 +466,13 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             }
         }
 #endif
-        if (strstr(extensions.data(), "cl_khr_d3d11_sharing"))
+        // Get extension function "clGetDeviceIDsFromD3D11KHR" (part of OpenCL extension "cl_khr_d3d11_sharing")
+        clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
+        if (clGetDeviceIDsFromD3D11KHR)
         {
             // try with CL_PREFERRED_DEVICES_FOR_D3D11_KHR
             do {
-                clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
-                if (!clGetDeviceIDsFromD3D11KHR)
-                    break;
 
                 device = NULL;
                 numDevices = 0;
@@ -522,11 +503,6 @@ Context& initializeContextFromD3D11Device(ID3D11Device* pD3D11Device)
             } while (0);
             // try with CL_ALL_DEVICES_FOR_D3D11_KHR
             if (found < 0) do {
-                clGetDeviceIDsFromD3D11KHR_fn clGetDeviceIDsFromD3D11KHR = (clGetDeviceIDsFromD3D11KHR_fn)
-                    clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D11KHR");
-                if (!clGetDeviceIDsFromD3D11KHR)
-                    break;
-
                 device = NULL;
                 numDevices = 0;
                 status = clGetDeviceIDsFromD3D11KHR(platforms[i], CL_D3D11_DEVICE_KHR, pD3D11Device,
@@ -606,13 +582,13 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
         cl_uint numDevices = 0;
         cl_context context = NULL;
 
+        clGetDeviceIDsFromD3D10KHR_fn clGetDeviceIDsFromD3D10KHR = (clGetDeviceIDsFromD3D10KHR_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D10KHR");
+        if (!clGetDeviceIDsFromD3D10KHR)
+            continue;
+
         // try with CL_PREFERRED_DEVICES_FOR_D3D10_KHR
         do {
-            clGetDeviceIDsFromD3D10KHR_fn clGetDeviceIDsFromD3D10KHR = (clGetDeviceIDsFromD3D10KHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D10KHR");
-            if (!clGetDeviceIDsFromD3D10KHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             status = clGetDeviceIDsFromD3D10KHR(platforms[i], CL_D3D10_DEVICE_KHR, pD3D10Device,
@@ -641,11 +617,6 @@ Context& initializeContextFromD3D10Device(ID3D10Device* pD3D10Device)
         // try with CL_ALL_DEVICES_FOR_D3D10_KHR
         if (found < 0) do
         {
-            clGetDeviceIDsFromD3D10KHR_fn clGetDeviceIDsFromD3D10KHR = (clGetDeviceIDsFromD3D10KHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromD3D10KHR");
-            if (!clGetDeviceIDsFromD3D10KHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             status = clGetDeviceIDsFromD3D10KHR(platforms[i], CL_D3D10_DEVICE_KHR, pD3D10Device,
@@ -723,13 +694,13 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
         cl_uint numDevices = 0;
         cl_context context = NULL;
 
+        clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
+        if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
+            continue;
+
         // try with CL_PREFERRED_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
         do {
-            clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
-            if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9EX_KHR;
@@ -759,11 +730,6 @@ Context& initializeContextFromDirect3DDevice9Ex(IDirect3DDevice9Ex* pDirect3DDev
         // try with CL_ALL_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
         if (found < 0) do
         {
-            clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
-            if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9EX_KHR;
@@ -842,13 +808,13 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
         cl_uint numDevices = 0;
         cl_context context = NULL;
 
+        clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
+            clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
+        if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
+            continue;
+
         // try with CL_PREFERRED_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
         do {
-            clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
-            if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9_KHR;
@@ -879,11 +845,6 @@ Context& initializeContextFromDirect3DDevice9(IDirect3DDevice9* pDirect3DDevice9
         // try with CL_ALL_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR
         if (found < 0) do
         {
-            clGetDeviceIDsFromDX9MediaAdapterKHR_fn clGetDeviceIDsFromDX9MediaAdapterKHR = (clGetDeviceIDsFromDX9MediaAdapterKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromDX9MediaAdapterKHR");
-            if (!clGetDeviceIDsFromDX9MediaAdapterKHR)
-                break;
-
             device = NULL;
             numDevices = 0;
             cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9_KHR;

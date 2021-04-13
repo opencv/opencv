@@ -388,7 +388,7 @@ static AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
         return AV_HWDEVICE_TYPE_VAAPI;
 #endif
 #ifdef HAVE_D3D11
-    ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
+    ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
     AVD3D11VADeviceContext* d3d11_device_ctx = hw_get_d3d11_device_ctx(ctx);
     if (d3d11_device_ctx && d3d11device_ocl && d3d11_device_ctx->device == d3d11device_ocl)
         return AV_HWDEVICE_TYPE_D3D11VA;
@@ -518,12 +518,18 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
         return NULL;
 
     // Try create media context on media device attached to OpenCL context
+    AVBufferRef* hw_device_ctx = NULL;
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
-    AVBufferRef* hw_device_ctx = hw_create_context_from_opencl(ocl_context, hw_type);
-    if (hw_device_ctx) {
-        if (hw_device >= 0)
-            CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: ignoring property HW_DEVICE as device context already created and attached to OpenCL context");
-        return hw_device_ctx;
+    try {
+        hw_device_ctx = hw_create_context_from_opencl(ocl_context, hw_type);
+        if (hw_device_ctx) {
+            if (hw_device >= 0)
+                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: ignoring property HW_DEVICE as device context already created and attached to OpenCL context");
+            return hw_device_ctx;
+        }
+    }
+    catch (...) {
+        CV_LOG_INFO(NULL, "FFMPEG: Exception creating Video Acceleration context using current OpenCL context");
     }
 
     // Create new media context. In QSV case, first create 'child' context.
@@ -560,16 +566,15 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
             // if OpenCL context not created yet, create it with binding to video acceleration context
             if (ocl::haveOpenCL()) {
                 if (ocl_context.empty() || use_opencl) {
-                    std::string ocl_device_name = std::string(hw_child_name) + " video acceleration on OpenCL device: "
-                                                  + ocl_context.getDevice().name();
                     try {
                         hw_init_opencl(hw_device_ctx);
                         ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
                         if (!ocl_context.empty()) {
-                            CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << ocl_device_name);
+                            CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << hw_child_name <<
+                                " video acceleration on OpenCL device: " << ocl_context.getDevice().name());
                         }
                     } catch (...) {
-                        CV_LOG_INFO(NULL, "FFMPEG: Exception creating OpenCL context with " << ocl_device_name);
+                        CV_LOG_INFO(NULL, "FFMPEG: Exception creating OpenCL context with " << hw_child_name << " video acceleration");
                     }
                 }
                 else {
