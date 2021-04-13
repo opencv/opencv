@@ -25,6 +25,9 @@
 #include <va/va_backend.h>
 #ifdef HAVE_VA_INTEL
 #include "opencv2/core/va_intel.hpp"
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 120
+#endif
 #ifdef HAVE_VA_INTEL_OLD_HEADER
 #include <CL/va_ext.h>
 #else
@@ -273,9 +276,10 @@ bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string
     return ret;
 }
 
-static
-int hw_find_qsv_surface_index(AVFrame* hw_frame) {
 #ifdef HAVE_MFX
+static
+int hw_find_qsv_surface_index(AVFrame* hw_frame)
+{
     if (AV_PIX_FMT_QSV != hw_frame->format)
         return -1;
     mfxFrameSurface1* surface = (mfxFrameSurface1*)hw_frame->data[3]; // As defined by AV_PIX_FMT_QSV
@@ -286,12 +290,14 @@ int hw_find_qsv_surface_index(AVFrame* hw_frame) {
             return i;
         }
     }
-#endif
     return -1;
 }
+#endif
 
 #ifdef HAVE_VA
-static VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx) {
+static
+VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx)
+{
     if (hw_device_ctx->type == AV_HWDEVICE_TYPE_QSV) { // we stored pointer to child context in 'user_opaque' field
         AVBufferRef* ctx = (AVBufferRef*)hw_device_ctx->user_opaque;
         hw_device_ctx = (AVHWDeviceContext*)ctx->data;
@@ -301,11 +307,15 @@ static VADisplay hw_get_va_display(AVHWDeviceContext* hw_device_ctx) {
     }
     return NULL;
 }
+#endif // HAVE_VA
 
-static VASurfaceID hw_get_va_surface(AVFrame* hw_frame) {
+#ifdef HAVE_VA_INTEL
+static
+VASurfaceID hw_get_va_surface(AVFrame* hw_frame) {
     if (AV_PIX_FMT_VAAPI == hw_frame->format) {
         return (VASurfaceID)(size_t)hw_frame->data[3]; // As defined by AV_PIX_FMT_VAAPI
     }
+#ifdef HAVE_MFX
     else if (AV_PIX_FMT_QSV == hw_frame->format) {
         int frame_idx = hw_find_qsv_surface_index(hw_frame);
         if (frame_idx >= 0) { // frame index is same in parent (QSV) and child (VAAPI) frame context
@@ -318,9 +328,10 @@ static VASurfaceID hw_get_va_surface(AVFrame* hw_frame) {
             }
         }
     }
+#endif // HAVE_MFX
     return VA_INVALID_SURFACE;
 }
-#endif // HAVE_VA
+#endif // HAVE_VA_INTEL
 
 #ifdef HAVE_D3D11
 static AVD3D11VADeviceContext* hw_get_d3d11_device_ctx(AVHWDeviceContext* hw_device_ctx) {
@@ -381,7 +392,7 @@ static AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrentRef();
     if (!ctx || ocl_context.empty())
         return AV_HWDEVICE_TYPE_NONE;
-#ifdef HAVE_VA
+#ifdef HAVE_VA_INTEL
     VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VADisplay vadisplay_ctx = hw_get_va_display(ctx);
     if (vadisplay_ocl && vadisplay_ocl == vadisplay_ctx)
@@ -466,7 +477,7 @@ static AVBufferRef* hw_create_context_from_opencl(ocl::OpenCLExecutionContext& o
     if (ocl_context.empty())
         return NULL;
     AVBufferRef* ctx = NULL;
-#ifdef HAVE_VA
+#ifdef HAVE_VA_INTEL
     VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     if (vadisplay_ocl) {
         ctx = av_hwdevice_ctx_alloc(AV_HWDEVICE_TYPE_VAAPI);
