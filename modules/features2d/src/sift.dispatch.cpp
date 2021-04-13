@@ -481,7 +481,7 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
 
     if( useProvidedKeypoints )
     {
-        firstOctave = 0;
+        firstOctave = keypoints.size() > 1 ? 0 : -1; // handle edge case if only a single keypoint is supplied
         int maxOctave = INT_MIN;
         for( size_t i = 0; i < keypoints.size(); i++ )
         {

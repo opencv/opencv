@@ -30,5 +30,22 @@ TEST(Features2d_SIFT, descriptor_type)
     ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
 }
 
+TEST(Features2d_SIFT, 177_octave_independence)
+{
+    Ptr<SIFT> sift = cv::SIFT::create(10, 5, 0.01, 10, 1.1, CV_32F);
+
+    Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
+    ASSERT_FALSE(image.empty());
+
+    vector<KeyPoint> keypoints;
+    sift->detect(image, keypoints);
+    Mat descriptorsAll, descriptorsOne;
+    vector<KeyPoint> oneKeypoint(keypoints.begin(), keypoints.begin()+1);
+    sift->compute(image, keypoints, descriptorsAll);
+    sift->compute(image, oneKeypoint, descriptorsOne);
+    // I should be able to provide all keypoints or one keypoint and get the same descriptor value
+    ASSERT_EQ(descriptorsAll.at<float>(0, 1), descriptorsOne.at<float>(0, 1));
+}
+
 
 }} // namespace
