@@ -1701,6 +1701,9 @@ void DTreesImpl::readParams( const FileNode& fn )
     /*int cat_var_count = (int)fn["cat_var_count"];
     int ord_var_count = (int)fn["ord_var_count"];*/
 
+    if (varAll <= 0)
+        CV_Error(Error::StsParseError, "The field \"var_all\" of DTree classifier is missing or non-positive");
+
     FileNode tparams_node = fn["training_params"];
 
     TreeParams params0 = TreeParams();
