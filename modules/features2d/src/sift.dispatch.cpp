@@ -527,7 +527,6 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
             {
                 KeyPoint& kpt = keypoints[i];
                 float scale = 1.f/(float)(1 << -firstOctave);
-                kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
                 kpt.pt *= scale;
                 kpt.size *= scale;
             }

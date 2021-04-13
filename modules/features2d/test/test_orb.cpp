@@ -143,8 +143,8 @@ TEST(Features2D_ORB, regression_16197)
 
 TEST(Features2D_ORB, enhancement_10555)
 {
-    Ptr<FeatureDetector> fd = ORB::create(10000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31, 20);
-    Ptr<DescriptorExtractor> de = SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
+    Ptr<DescriptorExtractor> fd = SIFT::create(0, 3, 0.04, 10, 1.6, CV_32F);
+    Ptr<FeatureDetector> de = ORB::create(10000, 1.2f, 8, 31, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     ASSERT_FALSE(image.empty());
