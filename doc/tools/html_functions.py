@@ -107,17 +107,10 @@ def add_signature_to_table(soup, table, signature, language, type):
     """ Add a signature to an html table"""
     row = soup.new_tag('tr')
     row.append(soup.new_tag('td', style='width: 20px;'))
-
-    if 'ret' in signature:
-        row.append(append(soup.new_tag('td'), signature['ret']))
-        row.append(append(soup.new_tag('td'), '='))
-    else:
-        row.append(soup.new_tag('td')) # return values
-        row.append(soup.new_tag('td')) # '='
-
     row.append(append(soup.new_tag('td'), signature['name'] + '('))
     row.append(append(soup.new_tag('td', **{'class': 'paramname'}), signature['arg']))
-    row.append(append(soup.new_tag('td'), ')'))
+    row.append(append(soup.new_tag('td'), ') -> '))
+    row.append(append(soup.new_tag('td'), signature['ret']))
     table.append(row)
 
 
