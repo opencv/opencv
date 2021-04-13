@@ -146,7 +146,7 @@ String SIFT::getDefaultName() const
 static inline void
 unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
 {
-    octave = kpt.octave & 255;
+    octave = kpt.octave;
     layer = kpt.layer;
     octave = octave < 128 ? octave : (-128 | octave);
     scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
