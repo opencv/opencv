@@ -41,24 +41,25 @@ TEST(Features2d_SIFT, 177_octave_independence)
     sift->detect(image, keypoints);
     Mat descriptorsAll, descriptorsSubset;
     vector<KeyPoint> subsetOfKeypoints;
-    map<int, KeyPoint> indexes_to_kps;
-    for(int i = 0; i < keypoints.size(); ++i) {
+    std::vector<int> rowsWithPositiveOctaves;
+    for(size_t i = 0; i < keypoints.size(); ++i) {
+        // extract keypoints with octave > -1
+        // note: we have to replicate some of the unpacking logic here
         int octave = keypoints[i].octave & 255;
         octave = octave < 128 ? octave : (-128 | octave);
         if(octave > -1) {
-            indexes_to_kps[i] = keypoints[i];
+            rowsWithPositiveOctaves.push_back(i);
             subsetOfKeypoints.push_back(keypoints[i]);
         }
     }
     sift->compute(image, keypoints, descriptorsAll);
     sift->compute(image, subsetOfKeypoints, descriptorsSubset);
     // we should be able to provide all keypoints or a subset of keypoints and get the same descriptors
-    for (pair<const int,KeyPoint>& x: indexes_to_kps) {
-        std::cout << descriptorsAll.row(x.first) << std::endl;
-        std::cout << descriptorsSubset.row(x.first) << std::endl;
-        for(int col = 0; col < descriptorsAll.cols; ++col) {
-            ASSERT_EQ(descriptorsAll.at<float>(x.first, col), descriptorsSubset.at<float>(x.first, col));
-        }
+    for (size_t i = 0; i < rowsWithPositiveOctaves.size(); ++i) {
+        std::cout << descriptorsAll.row(rowsWithPositiveOctaves[i]) << std::endl;
+        std::cout << descriptorsSubset.row(i) << std::endl;
+        Mat diff = descriptorsAll.row(rowsWithPositiveOctaves[i]) != descriptorsSubset.row(i);
+        ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
     }
 
 }
