@@ -39,12 +39,28 @@ TEST(Features2d_SIFT, 177_octave_independence)
 
     vector<KeyPoint> keypoints;
     sift->detect(image, keypoints);
-    Mat descriptorsAll, descriptorsOne;
-    vector<KeyPoint> oneKeypoint(keypoints.begin(), keypoints.begin()+1);
+    Mat descriptorsAll, descriptorsSubset;
+    vector<KeyPoint> subsetOfKeypoints;
+    map<int, KeyPoint> indexes_to_kps;
+    for(int i = 0; i < keypoints.size(); ++i) {
+        int octave = keypoints[i].octave & 255;
+        octave = octave < 128 ? octave : (-128 | octave);
+        if(octave > -1) {
+            indexes_to_kps[i] = keypoints[i];
+            subsetOfKeypoints.push_back(keypoints[i]);
+        }
+    }
     sift->compute(image, keypoints, descriptorsAll);
-    sift->compute(image, oneKeypoint, descriptorsOne);
-    // I should be able to provide all keypoints or one keypoint and get the same descriptor value
-    ASSERT_EQ(descriptorsAll.at<float>(0, 1), descriptorsOne.at<float>(0, 1));
+    sift->compute(image, subsetOfKeypoints, descriptorsSubset);
+    // we should be able to provide all keypoints or a subset of keypoints and get the same descriptors
+    for (pair<const int,KeyPoint>& x: indexes_to_kps) {
+        std::cout << descriptorsAll.row(x.first) << std::endl;
+        std::cout << descriptorsSubset.row(x.first) << std::endl;
+        for(int col = 0; col < descriptorsAll.cols; ++col) {
+            ASSERT_EQ(descriptorsAll.at<float>(x.first, col), descriptorsSubset.at<float>(x.first, col));
+        }
+    }
+
 }
 
 
