@@ -8,7 +8,7 @@
 #ifdef HAVE_OPENCL
 #include "opencv2/core/ocl.hpp"
 #endif
-#if defined(__OPENCV_BUILD) || defined(OPENCV_HAVE_CVCONFIG_H)  // TODO Properly detect and add D3D11 / LIBVA dependencies for standalone plugins
+#if defined(__OPENCV_BUILD) && !defined(BUILD_PLUGIN)  // TODO Properly detect and add D3D11 / LIBVA dependencies for standalone plugins
 #include "cvconfig.h"
 #endif
 #include <sstream>
@@ -579,6 +579,8 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
                     CV_LOG_INFO(NULL, "FFMPEG: Can't bind " << hw_child_name << " video acceleration context to already created OpenCL context");
                 }
             }
+#else
+            CV_UNUSED(use_opencl);
 #endif
             if (hw_type != child_type) {
                 AVBufferRef* derived_ctx = hw_create_derived_context(hw_type, hw_device_ctx);
