@@ -34,7 +34,7 @@ def bootstrap():
     import platform
     if DEBUG: print('OpenCV loader: os.name="{}"  platform.system()="{}"'.format(os.name, str(platform.system())))
 
-    LOADER_DIR=os.path.dirname(os.path.abspath(__file__))
+    LOADER_DIR = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
 
     PYTHON_EXTENSIONS_PATHS = []
     BINARIES_PATHS = []
