@@ -753,7 +753,7 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
-    cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR, total_faces[0]), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
 
     // MTCNN Proposal detection network
     std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
