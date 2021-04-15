@@ -703,38 +703,31 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> total_faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> faces_init(std::vector<custom::Face>{});
 
-    in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
-    in_transposed[0] = custom::Transpose::on(in_resized[0]);
-    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], "MTCNNProposal_" + std::to_string(level_size[0].width) + "x" + std::to_string(level_size[0].height));
-    cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[0], regressions[0], scales[0], tmcnnp_conf_thresh);
-    nms_p_faces[0] = custom::RunNMS::on(faces, 0.5f, false);
-    total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
-    //total_faces[0] = {};
-    for (int i = 1; i < PYRAMID_LEVELS; ++i)
+    for (int i = 0; i < PYRAMID_LEVELS; ++i)
     {
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height));
-        cv::GArray<custom::Face> faces1 = custom::BuildFaces::on(scores[i], regressions[i], scales[i], tmcnnp_conf_thresh);
-        nms_p_faces[i] = custom::RunNMS::on(faces1, 0.5f, false);
-        total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i-1], nms_p_faces[i]);
+        cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], tmcnnp_conf_thresh);
+        nms_p_faces[i] = custom::RunNMS::on(faces, 0.5f, false);
+        //total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i-1], nms_p_faces[i]);
     }
-    //cv::GArray<custom::Face> nms_p_faces_total = custom::MergePyramidOutputs::on(nms_p_faces[0],
-    //    nms_p_faces[1],
-    //    nms_p_faces[2],
-    //    nms_p_faces[3],
-    //    nms_p_faces[4],
-    //    nms_p_faces[5],
-    //    nms_p_faces[6],
-    //    nms_p_faces[7],
-    //    nms_p_faces[8],
-    //    nms_p_faces[9],
-    //    nms_p_faces[10],
-    //    nms_p_faces[11],
-    //    nms_p_faces[12]);
+    cv::GArray<custom::Face> nms_p_faces_total = custom::MergePyramidOutputs::on(nms_p_faces[0],
+        nms_p_faces[1],
+        nms_p_faces[2],
+        nms_p_faces[3],
+        nms_p_faces[4],
+        nms_p_faces[5],
+        nms_p_faces[6],
+        nms_p_faces[7],
+        nms_p_faces[8],
+        nms_p_faces[9],
+        nms_p_faces[10],
+        nms_p_faces[11],
+        nms_p_faces[12]);
     //Proposal post-processing
-    //cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(nms_p_faces_total, 0.7f, false);
-    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[PYRAMID_LEVELS-1], 0.7f, false);
+    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(nms_p_faces_total, 0.7f, false);
+    //cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[PYRAMID_LEVELS-1], 0.7f, false);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(nms07_p_faces_total, false);
     cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
 
