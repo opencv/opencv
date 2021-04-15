@@ -1520,6 +1520,9 @@ struct ThreadData
     size_t idx;               // Thread index in TLS storage. This is not OS thread ID!
 };
 
+
+static bool g_isTlsStorageInitialized = false;
+
 // Main TLS storage class
 class TlsStorage
 {
@@ -1529,6 +1532,7 @@ public:
     {
         tlsSlots.reserve(32);
         threads.reserve(32);
+        g_isTlsStorageInitialized = true;
     }
     ~TlsStorage()
     {
@@ -1747,6 +1751,13 @@ static void WINAPI opencv_fls_destructor(void* pData)
 } // namespace details
 using namespace details;
 
+void releaseTlsStorageThread()
+{
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
+    getTlsStorage().releaseThread();
+}
+
 TLSDataContainer::TLSDataContainer()
 {
     key_ = (int)getTlsStorage().reserveSlot(this); // Reserve key from TLS storage
@@ -1830,7 +1841,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
         {
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
-            cv::getTlsStorage().releaseThread();
+            releaseTlsStorageThread();
         }
     }
     return TRUE;
