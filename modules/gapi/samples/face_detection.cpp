@@ -761,7 +761,9 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
-    cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR, total_faces[0]), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    //cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR, total_faces[0]), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+
 
     // MTCNN Proposal detection network
     std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
@@ -841,11 +843,13 @@ int main(int argc, char* argv[])
 
     cv::Mat image;
     std::vector<custom::Face> out_faces;
-    std::vector<custom::Face> in_faces;
-    cv::GMetaArgs meta_args = { descr_of(gin(in_src)) }; 
-    meta_args.push_back(cv::GMetaArg(cv::empty_array_desc()));
-    auto graph_mtcnn_compiled = graph_mtcnn.compile(std::move(meta_args), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-    graph_mtcnn_compiled(gin(in_src, in_faces), gout(image, out_faces));
+    //std::vector<custom::Face> in_faces;
+    //cv::GMetaArgs meta_args = { descr_of(gin(in_src)) }; 
+    //meta_args.push_back(cv::GMetaArg(cv::empty_array_desc()));
+    auto graph_mtcnn_compiled = graph_mtcnn.compile(descr_of(gin(in_src)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
+    //graph_mtcnn_compiled(gin(in_src, in_faces), gout(image, out_faces));
+    graph_mtcnn_compiled(gin(in_src), gout(image, out_faces));
+
     //graph_mtcnn.apply(); 
     std::cout << "Final Faces Size " << out_faces.size() << std::endl;
 
