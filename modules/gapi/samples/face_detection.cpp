@@ -701,7 +701,7 @@ int main(int argc, char* argv[])
     //cv::GArray<custom::Face> faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> nms_p_faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> total_faces[PYRAMID_LEVELS+1];
-    total_faces[0] = {};
+    //total_faces[0] = {};
     for (int i = 0; i < PYRAMID_LEVELS; ++i)
     {
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
@@ -833,10 +833,12 @@ int main(int argc, char* argv[])
 
     cv::Mat image;
     std::vector<custom::Face> out_faces;
+    std::vector<custom::Face> in_faces;
     cv::GMetaArgs meta_args = { descr_of(gin(in_src)) }; 
     meta_args.push_back(cv::GMetaArg(cv::empty_array_desc()));
     auto graph_mtcnn_compiled = graph_mtcnn.compile(std::move(meta_args), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-    graph_mtcnn_compiled(gin(in_src), gout(image, out_faces));
+    graph_mtcnn_compiled(gin(in_src, in_faces), gout(image, out_faces));
+    //graph_mtcnn.apply(); 
     std::cout << "Final Faces Size " << out_faces.size() << std::endl;
 
     std::vector<rectPoints> data;
