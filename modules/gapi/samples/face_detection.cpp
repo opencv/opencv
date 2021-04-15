@@ -172,8 +172,6 @@ namespace custom {
             auto h = scores.size[2];
             auto size = w * h;
 
-            std::cout << "scores_data w "  << w <<  " scores_data h "  << h << std::endl;
-
 
             const float* scores_data = (float*)(scores.data);
             for(int i = 0; i < 200; i++)
@@ -183,23 +181,7 @@ namespace custom {
             std::cout << std::endl;
             scores_data += size;
 
-            //std::cout << "scores_data shifted by size  "  << size << std::endl;
-
-            //for(int i = 0; i < 200; i++)
-            //{
-            //    std::cout << scores_data[i] << " ";
-            //}
-
             const float* reg_data = (float*)(regressions.data);
-            //auto wr = regressions.size[3];
-            //auto hr = regressions.size[2];
-            //std::cout << "regressions_data w "  << wr <<  " regressions_data h "  << hr << std::endl;
-            //for(int i = 0; i < 200; i++)
-            //{
-            //    std::cout << reg_data[i] << " ";
-            //}
-            //std::cout << std::endl;
-
 
             std::vector<Face> boxes;
 
@@ -430,9 +412,6 @@ namespace custom {
                 float threshold,
                 std::vector<Face> &out_faces) {
                 out_faces = buildFaces(in_scores, in_regresssions, scaleFactor, threshold);
-                std::cout << "OCVBuildFaces!!! faces number " << out_faces.size() <<
-                             " scaleFactor " << scaleFactor <<
-                             " threshold " << threshold << std::endl;
             }
         };// GAPI_OCV_KERNEL(BuildFaces)
 
@@ -443,10 +422,6 @@ namespace custom {
                 std::vector<Face> &out_faces) {
                 std::vector<Face> in_faces_copy = in_faces;
                 out_faces = Face::runNMS(in_faces_copy, threshold, useMin);
-                std::cout << "OCVRunNMS!!! in_faces size " << in_faces.size() <<
-                    " out_faces size " << out_faces.size() <<
-                    " for threshold " << threshold <<
-                    " and useMin " << useMin << std::endl;
             }
         };// GAPI_OCV_KERNEL(RunNMS)
 
@@ -505,7 +480,6 @@ namespace custom {
                 if (!in_faces12.empty()) {
                     out_faces.insert(out_faces.end(), in_faces12.begin(), in_faces12.end());
                 }
-                std::cout << "OCVMergePyramidOutputs!!! output faces number " << out_faces.size() << std::endl;
             }
         };// GAPI_OCV_KERNEL(MergePyramidOutputs)
 
@@ -515,7 +489,6 @@ namespace custom {
                 std::vector<Face> &out_faces) {
                 out_faces = total_faces;
                 out_faces.insert(out_faces.end(), in_faces.begin(), in_faces.end());
-                std::cout << "OCVAccumulatePyramidOutputs!!! output faces number " << out_faces.size() << std::endl;
             }
         };// GAPI_OCV_KERNEL(MergePyramidOutputs)
 
@@ -529,8 +502,6 @@ namespace custom {
                 if (!in_faces_copy.empty()) {
                     out_faces.insert(out_faces.end(), in_faces_copy.begin(), in_faces_copy.end());
                 }
-                std::cout << "OCVApplyRegression!!! in_faces size " << in_faces.size() <<
-                    " out_faces size " << out_faces.size() << " and addOne " << addOne << std::endl;
             }
         };// GAPI_OCV_KERNEL(ApplyRegression)
 
@@ -543,8 +514,6 @@ namespace custom {
                 if (!in_faces_copy.empty()) {
                     out_faces.insert(out_faces.end(), in_faces_copy.begin(), in_faces_copy.end());
                 }
-                std::cout << "OCVBBoxesToSquares!!! input faces number " << in_faces.size() <<
-                    " output faces number " << out_faces.size() << std::endl;
             }
         };// GAPI_OCV_KERNEL(BBoxesToSquares)
 
@@ -559,8 +528,6 @@ namespace custom {
                     outs.push_back(tmp_rect);
                     //outs.push_back(f.bbox.getRect());
                 }
-                std::cout << "OCVR_O_NetPreProcGetROIs!!! input faces number " << in_faces.size() <<
-                    " output faces number " << outs.size() << std::endl;
             }
         };// GAPI_OCV_KERNEL(R_O_NetPreProcGetROIs)
 
@@ -572,19 +539,10 @@ namespace custom {
                 float threshold,
                 std::vector<Face> &out_faces) {
                 out_faces.clear();
-                std::cout << "OCVRNetPostProc!!! input scores number " << in_scores.size() <<
-                    " input regressions number " << in_regresssions.size() <<
-                    " input faces size " << in_faces.size() << std::endl;
                 for (unsigned int k = 0; k < in_faces.size(); ++k) {
                     const float* scores_data = (float*)in_scores[k].data;
                     const float* reg_data = (float*)in_regresssions[k].data;
-                    //std::cout << "OCVRNetPostProc!!! scores_data[0] " << scores_data[0] << " scores_data[1] " << scores_data[1] << std::endl;
-                    //std::cout << "OCVRNetPostProc!!! reg_data[0] " << reg_data[0] << " reg_data[1] " << reg_data[1] <<
-                    //    "reg_data[2] " << reg_data[2] << " reg_data[3] " << reg_data[3] << std::endl;
                     if (scores_data[1] >= threshold) {
-                        std::cout << "OCVRNetPostProc!!! scores_data[0] " << scores_data[0] << " scores_data[1] " << scores_data[1] << std::endl;
-                        std::cout << "OCVRNetPostProc!!! reg_data[0] " << reg_data[0] << " reg_data[1] " << reg_data[1] <<
-                                     "reg_data[2] " << reg_data[2] << " reg_data[3] " << reg_data[3] << std::endl;
                         Face info = in_faces[k];
                         info.score = scores_data[1];
                         for (int i = 0; i < 4; ++i) {
@@ -593,8 +551,6 @@ namespace custom {
                         out_faces.push_back(info);
                     }
                 }
-                std::cout << "OCVRNetPostProc!!! out faces number " << out_faces.size() <<
-                    " for threshold " << threshold << std::endl;
             }
         };// GAPI_OCV_KERNEL(RNetPostProc)
 
@@ -606,18 +562,11 @@ namespace custom {
                 float threshold,
                 std::vector<Face> &out_faces) {
                 out_faces.clear();
-                std::cout << "OCVONetPostProc!!! input scores number " << in_scores.size() <<
-                    " input regressions number " << in_regresssions.size() <<
-                    " input landmarks number " << in_landmarks.size() <<
-                    " input faces size " << in_faces.size() << std::endl;
                 for (unsigned int k = 0; k < in_faces.size(); ++k) {
                     const float* scores_data = (float*)in_scores[k].data;
                     const float* reg_data = (float*)in_regresssions[k].data;
                     const float* landmark_data = (float*)in_landmarks[k].data;
                     if (scores_data[1] >= threshold) {
-                       std::cout << "OCVONetPostProc!!! scores_data[0] " << scores_data[0] << " scores_data[1] " << scores_data[1] << std::endl;
-                       std::cout << "OCVONetPostProc!!! reg_data[0] " << reg_data[0] << " reg_data[1] " << reg_data[1] <<
-                                     " reg_data[2] " << reg_data[2] << " reg_data[3] " << reg_data[3] << std::endl;
 
                         Face info = in_faces[k];
                         info.score = scores_data[1];
@@ -636,7 +585,6 @@ namespace custom {
                         out_faces.push_back(info);
                     }
                 }
-                std::cout << "OCVONetPostProc!!! out faces number " << out_faces.size() << " for threshold " << threshold << std::endl;
             }
         };// GAPI_OCV_KERNEL(ONetPostProc)
 
@@ -647,9 +595,6 @@ namespace custom {
                 out_faces.clear();
                 if (!in_faces_copy.empty()) {
                     for (size_t i = 0; i < in_faces_copy.size(); ++i) {
-                        std::cout << "OCVSwapFaces!!! score " << in_faces_copy[i].score << std::endl;
-                        std::cout << "OCVSwapFaces!!! regression[0] " << in_faces_copy[i].regression[0] << " regression[1] " << in_faces_copy[i].regression[1] <<
-                            " regression[2] " << in_faces_copy[i].regression[2] << " regression[3] " << in_faces_copy[i].regression[3] << std::endl;
                         std::swap(in_faces_copy[i].bbox.x1, in_faces_copy[i].bbox.y1);
                         std::swap(in_faces_copy[i].bbox.x2, in_faces_copy[i].bbox.y2);
                         for (int p = 0; p < NUM_PTS; ++p) {
@@ -689,7 +634,6 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     for (auto& d : data) {
         //cv::rectangle(outImg, d.first, cv::Scalar(0, 0, 255));
         vis::bbox(outImg, d.first);
-        std::cout << "drawRectsAndPoints!!!  " << d.first.x << " " << d.first.y << "  " << d.first.x +d.first.width << " " << d.first.y + d.first.height << std::endl;
         auto pts = d.second;
         for (size_t i = 0; i < pts.size(); ++i) {
             cv::circle(outImg, pts[i], 3, cv::Scalar(0, 255, 255), 1);
@@ -703,7 +647,6 @@ static std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
     //auto id = "net" + sz;
-    std::cout << "run_mtcnn_p " << id << std::endl;
     auto outputs = cv::gapi::infer<cv::gapi::Generic>(id, inputs);
     auto regressions = outputs.at("conv4-2");
     auto scores = outputs.at("prob1");
@@ -791,7 +734,6 @@ int main(int argc, char* argv[])
     cv::GArray<cv::GMat> regressionsRNet, scoresRNet;
     cv::GMat in_originalRGB_transposed = custom::Transpose::on(in_originalRGB);
     std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_originalRGB_transposed);
-    //std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_originalRGB);
 
     //Refinement post-processing
     cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, tmcnnr_conf_thresh);
@@ -811,8 +753,6 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
     cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
-    //cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_rnet));
-    //cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_pnet));
 
     // MTCNN Proposal detection network
     std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
