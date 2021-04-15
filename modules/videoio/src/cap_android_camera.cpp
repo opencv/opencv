@@ -31,6 +31,13 @@ using namespace cv;
 #define COLOR_FormatYUV420Planar 19
 #define COLOR_FormatYUV420SemiPlanar 21
 
+#define FOURCC_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define FOURCC_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define FOURCC_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define FOURCC_NV21 CV_FOURCC_MACRO('N','V','2','1')
+#define FOURCC_YV12 CV_FOURCC_MACRO('Y','V','1','2')
+#define FOURCC_UNKNOWN  0xFFFFFFFF
+
 template <typename T> class RangeValue {
 public:
     T min, max;
@@ -180,7 +187,7 @@ class AndroidCameraCapture : public IVideoCapture
     bool sessionOutputAdded = false;
     bool targetAdded = false;
     // properties
-    bool convertToRgb = false;
+    uint32_t fourCC = FOURCC_UNKNOWN;
     bool settingWidth = false;
     bool settingHeight = false;
     int desiredWidth = 640;
@@ -303,10 +310,17 @@ public:
 
         if ( (uvPixelStride == 2) && (vPixel == uPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420SemiPlanar;
+            if (fourCC == FOURCC_UNKNOWN) {
+                fourCC = FOURCC_NV21;
+            }
         } else if ( (uvPixelStride == 1) && (vPixel = uPixel + uLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420Planar;
+            if (fourCC == FOURCC_UNKNOWN) {
+                fourCC = FOURCC_YV12;
+            }
         } else {
             colorFormat = COLOR_FormatUnknown;
+            fourCC = FOURCC_UNKNOWN;
             LOGE("Unsupported format");
             return false;
         }
@@ -324,9 +338,41 @@ public:
         }
         Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            cv::cvtColor(yuv, out, convertToRgb ? cv::COLOR_YUV2RGB_YV12 : cv::COLOR_YUV2BGR_YV12);
+            switch (fourCC) {
+                case FOURCC_BGR:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
+                    break;
+                case FOURCC_RGB:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2RGB_YV12);
+                    break;
+                case FOURCC_GRAY:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2GRAY_YV12);
+                    break;
+                case FOURCC_YV12:
+                    yuv.copyTo(out);
+                    break;
+                default:
+                    LOGE("Unexpected FOURCC value: %d", fourCC);
+                    break;
+            }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            cv::cvtColor(yuv, out, convertToRgb ? COLOR_YUV2RGB_NV21 : cv::COLOR_YUV2BGR_NV21);
+            switch (fourCC) {
+                case FOURCC_BGR:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_NV21);
+                    break;
+                case FOURCC_RGB:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2RGB_NV21);
+                    break;
+                case FOURCC_GRAY:
+                    cv::cvtColor(yuv, out, cv::COLOR_YUV2GRAY_NV21);
+                    break;
+                case FOURCC_NV21:
+                    yuv.copyTo(out);
+                    break;
+                default:
+                    LOGE("Unexpected FOURCC value: %d", fourCC);
+                    break;
+            }
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
             return false;
@@ -341,14 +387,14 @@ public:
                 return isOpened() ? frameWidth : desiredWidth;
             case CV_CAP_PROP_FRAME_HEIGHT:
                 return isOpened() ? frameHeight : desiredHeight;
-            case CV_CAP_PROP_CONVERT_RGB:
-                return convertToRgb ? 1 : 0;
             case CAP_PROP_AUTO_EXPOSURE:
                 return autoExposure ? 1 : 0;
             case CV_CAP_PROP_EXPOSURE:
                 return exposureTime;
             case CV_CAP_PROP_ISO_SPEED:
                 return sensitivity;
+            case CV_CAP_PROP_FOURCC:
+                return fourCC;
             default:
                 break;
         }
@@ -377,9 +423,40 @@ public:
                     settingHeight = false;
                 }
                 return true;
-            case CV_CAP_PROP_CONVERT_RGB:
-                convertToRgb = (value != 0);
-                return true;
+            case CV_CAP_PROP_FOURCC:
+                {
+                    uint32_t newFourCC = cvRound(value);
+                    if (fourCC == newFourCC) {
+                        return true;
+                    } else {
+                        switch (newFourCC) {
+                            case FOURCC_BGR:
+                            case FOURCC_RGB:
+                            case FOURCC_GRAY:
+                                fourCC = newFourCC;
+                                return true;
+                            case FOURCC_YV12:
+                                if (colorFormat == COLOR_FormatYUV420Planar) {
+                                    fourCC = newFourCC;
+                                    return true;
+                                } else {
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420SemiPlanar -> COLOR_FormatYUV420Planar");
+                                    return false;
+                                }
+                            case FOURCC_NV21:
+                                if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
+                                    fourCC = newFourCC;
+                                    return true;
+                                } else {
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420Planar -> COLOR_FormatYUV420SemiPlanar");
+                                    return false;
+                                }
+                            default:
+                                LOGE("Unsupported FOURCC value: %d\n", fourCC);
+                                return false;
+                        }
+                    }
+                }
             case CAP_PROP_AUTO_EXPOSURE:
                 autoExposure = (value != 0);
                 if (isOpened()) {
@@ -391,17 +468,19 @@ public:
             case CV_CAP_PROP_EXPOSURE:
                 if (isOpened() && exposureRange.Supported()) {
                     exposureTime = (int64_t)value;
+                    LOGI("Setting CV_CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
                     return status == ACAMERA_OK;
                 }
-                break;
+                return false;
             case CV_CAP_PROP_ISO_SPEED:
                 if (isOpened() && sensitivityRange.Supported()) {
                     sensitivity = (int32_t)value;
+                    LOGI("Setting CV_CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
                     return status == ACAMERA_OK;
                 }
-                break;
+                return false;
             default:
                 break;
         }
