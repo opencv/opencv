@@ -12,12 +12,22 @@
 #include <fstream>
 #include <sstream>
 
-#include <mfxcommon.h>
-#include <mfxstructures.h>
-#include <mfxvideo++.h>
-#include <mfxvp8.h>
-#include <mfxjpeg.h>
-#include <mfxplugin++.h>
+#ifdef HAVE_ONEVPL
+#  include <vpl/mfxcommon.h>
+#  include <vpl/mfxstructures.h>
+#  include <vpl/mfxvideo++.h>
+#  include <vpl/mfxvp8.h>
+#  include <vpl/mfxjpeg.h>
+#else
+#  include <mfxcommon.h>
+#  include <mfxstructures.h>
+#  include <mfxvideo++.h>
+#  include <mfxvp8.h>
+#  include <mfxjpeg.h>
+#  ifdef HAVE_MFX_PLUGIN
+#    include <mfxplugin++.h>
+#  endif
+#endif
 
 //                 //
 //  Debug helpers  //
@@ -93,8 +103,6 @@ inline std::string mfxStatusToString(mfxStatus s) {
     case MFX_ERR_UNDEFINED_BEHAVIOR: return "MFX_ERR_UNDEFINED_BEHAVIOR";
     case MFX_ERR_DEVICE_FAILED: return "MFX_ERR_DEVICE_FAILED";
     case MFX_ERR_MORE_BITSTREAM: return "MFX_ERR_MORE_BITSTREAM";
-    case MFX_ERR_INCOMPATIBLE_AUDIO_PARAM: return "MFX_ERR_INCOMPATIBLE_AUDIO_PARAM";
-    case MFX_ERR_INVALID_AUDIO_PARAM: return "MFX_ERR_INVALID_AUDIO_PARAM";
     case MFX_ERR_GPU_HANG: return "MFX_ERR_GPU_HANG";
     case MFX_ERR_REALLOC_SURFACE: return "MFX_ERR_REALLOC_SURFACE";
     case MFX_WRN_IN_EXECUTION: return "MFX_WRN_IN_EXECUTION";
@@ -105,8 +113,7 @@ inline std::string mfxStatusToString(mfxStatus s) {
     case MFX_WRN_VALUE_NOT_CHANGED: return "MFX_WRN_VALUE_NOT_CHANGED";
     case MFX_WRN_OUT_OF_RANGE: return "MFX_WRN_OUT_OF_RANGE";
     case MFX_WRN_FILTER_SKIPPED: return "MFX_WRN_FILTER_SKIPPED";
-    case MFX_WRN_INCOMPATIBLE_AUDIO_PARAM: return "MFX_WRN_INCOMPATIBLE_AUDIO_PARAM";
-    default: return "<Invalid mfxStatus>";
+    default: return "<Invalid or unknown mfxStatus>";
     }
 }
 
@@ -174,33 +181,45 @@ class Plugin
 public:
     static Plugin * loadEncoderPlugin(MFXVideoSession &session, mfxU32 codecId)
     {
+#ifdef HAVE_MFX_PLUGIN
         static const mfxPluginUID hevc_enc_uid = { 0x6f, 0xad, 0xc7, 0x91, 0xa0, 0xc2, 0xeb, 0x47, 0x9a, 0xb6, 0xdc, 0xd5, 0xea, 0x9d, 0xa3, 0x47 };
         if (codecId == MFX_CODEC_HEVC)
             return new Plugin(session, hevc_enc_uid);
+#else
+        CV_UNUSED(session); CV_UNUSED(codecId);
+#endif
         return 0;
     }
     static Plugin * loadDecoderPlugin(MFXVideoSession &session, mfxU32 codecId)
     {
+#ifdef HAVE_MFX_PLUGIN
         static const mfxPluginUID hevc_dec_uid = { 0x33, 0xa6, 0x1c, 0x0b, 0x4c, 0x27, 0x45, 0x4c, 0xa8, 0xd8, 0x5d, 0xde, 0x75, 0x7c, 0x6f, 0x8e };
         if (codecId == MFX_CODEC_HEVC)
             return new Plugin(session, hevc_dec_uid);
+#else
+        CV_UNUSED(session); CV_UNUSED(codecId);
+#endif
         return 0;
     }
     ~Plugin()
     {
+#ifdef HAVE_MFX_PLUGIN
         if (isGood())
             MFXVideoUSER_UnLoad(session, &uid);
+#endif
     }
     bool isGood() const { return res >= MFX_ERR_NONE; }
 private:
-    MFXVideoSession &session;
-    mfxPluginUID uid;
     mfxStatus res;
 private:
+#ifdef HAVE_MFX_PLUGIN
+    MFXVideoSession &session;
+    mfxPluginUID uid;
     Plugin(MFXVideoSession &_session, mfxPluginUID _uid) : session(_session), uid(_uid)
     {
         res = MFXVideoUSER_Load(session, &uid, 1);
     }
+#endif
     Plugin(const Plugin &);
     Plugin &operator=(const Plugin &);
 };
