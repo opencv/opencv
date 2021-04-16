@@ -269,33 +269,6 @@ namespace custom {
             <GMat2(cv::GMat)>,
             "sample.custom.mtcnn_proposal_28x16");
 
-/////////////////////
-        G_API_NET(MTCNNProposal_960x540,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_960x540");
-
-        G_API_NET(MTCNNProposal_480x270,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_480x270");
-
-        G_API_NET(MTCNNProposal_240x135,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_240x135");
-
-        G_API_NET(MTCNNProposal_120x67,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_120x67");
-
-        G_API_NET(MTCNNProposal_60x33,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_60x33");
-
-        G_API_NET(MTCNNProposal_30x16,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_30x16");
-
-/////////////////////
-
         G_API_NET(MTCNNRefinement,
             <GMat2(cv::GMat)>,
             "sample.custom.mtcnn_refinement");
@@ -605,7 +578,6 @@ inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv:
 }
 
 const int PYRAMID_LEVELS = 13;
-//const int PYRAMID_LEVELS = 6;
 
 int main(int argc, char* argv[])
 {
@@ -631,7 +603,6 @@ int main(int argc, char* argv[])
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
-#if 1
     cv::Size level_size[PYRAMID_LEVELS] =
     {
         {1777, 1000},  {1260, 709}, {893, 502}, {633, 356},
@@ -646,20 +617,6 @@ int main(int argc, char* argv[])
         0.041917209301724344f, 0.029719301394922563f, 0.021070984689000097f,
         0.014939328144501067f
     };
-#else
-    cv::Size level_size[PYRAMID_LEVELS] =
-    {
-        {960, 540},  {480, 270}, {240, 135}, {120, 67},
-        {60, 33}, {30, 16}
-    };
-
-    float scales[PYRAMID_LEVELS]
-    {
-        0.5f, 0.25f,  0.125f,
-        0.0625f, 0.03125f, 0.015625f
-    };
-#endif
-
 
     cv::GMat in_resized[PYRAMID_LEVELS];
     cv::GMat in_transposed[PYRAMID_LEVELS];
@@ -766,43 +723,6 @@ int main(int argc, char* argv[])
 
 
     std::cout << "Reading " << input_file_name << std::endl;
-#if 1
-    // Input image
-    auto in_original = cv::imread(input_file_name);
-    cv::Mat in_src;
-    if (in_original.cols != custom::IMAGE_WIDTH || in_original.rows != custom::IMAGE_HEIGHT)
-    {
-       cv::resize(in_original, in_src, cv::Size(custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT));
-    }
-    else
-    {
-        in_original.copyTo(in_src);
-    }
-
-    cv::Mat image;
-    std::vector<custom::Face> out_faces;
-    auto graph_mtcnn_compiled = graph_mtcnn.compile(descr_of(gin(in_src)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-    graph_mtcnn_compiled(gin(in_src), gout(image, out_faces));
-
-    std::cout << "Final Faces Size " << out_faces.size() << std::endl;
-
-    std::vector<rectPoints> data;
-    // show the image with faces in it
-    for (size_t i = 0; i < out_faces.size(); ++i) {
-        std::vector<cv::Point> pts;
-        for (int p = 0; p < NUM_PTS; ++p) {
-            pts.push_back(
-                cv::Point(out_faces[i].ptsCoords[2 * p], out_faces[i].ptsCoords[2 * p + 1]));
-        }
-
-        auto rect = out_faces[i].bbox.getRect();
-        auto d = std::make_pair(rect, pts);
-        data.push_back(d);
-    }
-    auto resultImg = drawRectsAndPoints(image, data);
-    cv::imshow("Out", resultImg);
-    cv::waitKey(-1);
-#else
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
@@ -837,12 +757,9 @@ int main(int argc, char* argv[])
             data.push_back(d);
         }
         // Visualize results on the frame
-        //for (auto&& rc : out_faces) vis::bbox(image, rc.bbox.getRect());
         auto resultImg = drawRectsAndPoints(image, data);
         tm.stop();
         const auto fps_str = std::to_string(frames / tm.getTimeSec()) + " FPS";
-        //cv::putText(image, fps_str, { 0,32 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0,255,0 }, 2);
-        //cv::imshow("Out", image);
         cv::putText(resultImg, fps_str, { 0,32 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0,255,0 }, 2);
         cv::imshow("Out", resultImg);
         cv::waitKey(1);
@@ -852,6 +769,5 @@ int main(int argc, char* argv[])
     tm.stop();
     std::cout << "Processed " << frames << " frames"
         << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
-#endif
     return 0;
 }
