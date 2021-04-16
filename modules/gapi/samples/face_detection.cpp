@@ -598,8 +598,10 @@ int main(int argc, char* argv[])
     const auto tmcnno_target_dev = cmd.get<std::string>("mtcnnod");
     const auto tmcnno_conf_thresh = cmd.get<double>("thro");
 
-
-    cv::GMat in_originalBGR;
+    // MTCNN input size
+    auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
+    cv::GMat in_original;
+    cv::GMat in_originalBGR = cv::gapi::resize(in_original, in_rsz);;
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
@@ -672,7 +674,7 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
-    cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
 
     // MTCNN Refinement detection network
     std::vector<size_t> reshape_dims_24x24 = { 1, 3, 24, 24 };
@@ -726,11 +728,8 @@ int main(int argc, char* argv[])
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
-    // Text recognition input size (also an input parameter to the graph)
-    auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
-
     // Set the pipeline source & start the pipeline
-    pipeline_mtcnn.setSource(cv::gin(in_src, in_rsz));
+    pipeline_mtcnn.setSource(cv::gin(in_src));
     pipeline_mtcnn.start();
 
     // Declare the output data & run the processing loop
