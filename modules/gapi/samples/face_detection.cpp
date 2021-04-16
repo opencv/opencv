@@ -561,13 +561,23 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
 }
 
 
-static std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
+static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
+    std::cout << "run_mtcnn_p " << id << std::endl;
     auto outputs = cv::gapi::infer<cv::gapi::Generic>(id, inputs);
     auto regressions = outputs.at("conv4-2");
     auto scores = outputs.at("prob1");
     return std::make_tuple(regressions, scores);
+}
+//+= (GNetPackage&, const GNetPackage)
+
+inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv::gapi::GNetPackage& rhs) {
+    lhs.networks.reserve(lhs.networks.size() + rhs.networks.size());
+    lhs.networks.insert(lhs.networks.end(), rhs.networks.begin(), rhs.networks.end());
+    //lhs.backends().reserve(lhs.backends().size() + rhs.backends().size());
+    //lhs.backends().insert(lhs.backends().end(), rhs.backends().begin(), rhs.backends().end());
+    return lhs;
 }
 
 const int PYRAMID_LEVELS = 13;
@@ -668,21 +678,6 @@ int main(int argc, char* argv[])
     //cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR, total_faces[0]), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
     cv::GComputation graph_mtcnn(cv::GIn(in_originalBGR), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
 
-
-    // MTCNN Proposal detection network
-    std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
-    for (int i = 0; i < PYRAMID_LEVELS; ++i)
-    {
-        std::string net_id = "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height);
-        std::cout << "mtcnnp_net " << net_id << std::endl;
-        std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
-        mtcnnp_net.push_back(cv::gapi::ie::Params<cv::gapi::Generic>{
-            net_id,                           // tag
-            tmcnnp_model_path,                // path to topology IR
-            weights_path(tmcnnp_model_path),  // path to weights
-            tmcnnp_target_dev,                // device specifier
-        }.cfgInputReshape({ {"data", reshape_dims} }));
-    }
     // MTCNN Refinement detection network
     std::vector<size_t> reshape_dims_24x24 = { 1, 3, 24, 24 };
     auto mtcnnr_net = cv::gapi::ie::Params<custom::MTCNNRefinement>{
@@ -699,22 +694,54 @@ int main(int argc, char* argv[])
         tmcnno_target_dev,                // device specifier
     }.cfgOutputLayers({ "conv6-2", "conv6-3", "prob1" }).cfgInputLayers({ "data" });
 
-    auto networks_mtcnn = cv::gapi::networks(
-        mtcnnp_net[0]
-        , mtcnnp_net[1]
-        , mtcnnp_net[2]
-        , mtcnnp_net[3]
-        , mtcnnp_net[4]
-        , mtcnnp_net[5]
-        , mtcnnp_net[6]
-        , mtcnnp_net[7]
-        , mtcnnp_net[8]
-        , mtcnnp_net[9]
-        , mtcnnp_net[10]
-        , mtcnnp_net[11]
-        , mtcnnp_net[12]
-        , mtcnnr_net
-        , mtcnno_net);
+    auto networks_mtcnn = cv::gapi::networks(mtcnnr_net, mtcnno_net);
+
+    // MTCNN Proposal detection network
+    //std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
+    //for (int i = 0; i < PYRAMID_LEVELS; ++i)
+    //{
+    //    std::string net_id = "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height);
+    //    std::cout << "mtcnnp_net " << net_id << std::endl;
+    //    std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
+    //    mtcnnp_net.push_back(cv::gapi::ie::Params<cv::gapi::Generic>{
+    //        net_id,                           // tag
+    //        tmcnnp_model_path,                // path to topology IR
+    //        weights_path(tmcnnp_model_path),  // path to weights
+    //        tmcnnp_target_dev,                // device specifier
+    //    }.cfgInputReshape({ {"data", reshape_dims} }));
+    //}
+
+    //std::vector<cv::gapi::ie::Params<cv::gapi::Generic>> mtcnnp_net;
+    for (int i = 0; i < PYRAMID_LEVELS; ++i)
+    {
+        std::string net_id = "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height);
+        std::cout << "mtcnnp_net " << net_id << std::endl;
+        std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
+        auto mtcnnp_net = cv::gapi::ie::Params<cv::gapi::Generic>{
+                    net_id,                           // tag
+                    tmcnnp_model_path,                // path to topology IR
+                    weights_path(tmcnnp_model_path),  // path to weights
+                    tmcnnp_target_dev,                // device specifier
+        }.cfgInputReshape({ {"data", reshape_dims} });
+        networks_mtcnn += cv::gapi::networks(mtcnnp_net);
+    }
+
+    //auto networks_mtcnn = cv::gapi::networks(
+    //    mtcnnp_net[0]
+    //    , mtcnnp_net[1]
+    //    , mtcnnp_net[2]
+    //    , mtcnnp_net[3]
+    //    , mtcnnp_net[4]
+    //    , mtcnnp_net[5]
+    //    , mtcnnp_net[6]
+    //    , mtcnnp_net[7]
+    //    , mtcnnp_net[8]
+    //    , mtcnnp_net[9]
+    //    , mtcnnp_net[10]
+    //    , mtcnnp_net[11]
+    //    , mtcnnp_net[12]
+    //    , mtcnnr_net
+    //    , mtcnno_net);
 
 
     auto kernels_mtcnn = cv::gapi::kernels< custom::OCVBuildFaces
