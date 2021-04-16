@@ -269,10 +269,36 @@ namespace custom {
             <GMat2(cv::GMat)>,
             "sample.custom.mtcnn_proposal_28x16");
 
+/////////////////////
+        G_API_NET(MTCNNProposal_960x540,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_960x540");
+
+        G_API_NET(MTCNNProposal_480x270,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_480x270");
+
+        G_API_NET(MTCNNProposal_240x135,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_240x135");
+
+        G_API_NET(MTCNNProposal_120x67,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_120x67");
+
+        G_API_NET(MTCNNProposal_60x33,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_60x33");
+
+        G_API_NET(MTCNNProposal_30x16,
+            <GMat2(cv::GMat)>,
+            "sample.custom.mtcnn_proposal_30x16");
+
+/////////////////////
+
         G_API_NET(MTCNNRefinement,
             <GMat2(cv::GMat)>,
             "sample.custom.mtcnn_refinement");
-
 
         G_API_NET(MTCNNOutput,
             <GMat3(cv::GMat)>,
@@ -579,6 +605,7 @@ inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv:
 }
 
 const int PYRAMID_LEVELS = 13;
+//const int PYRAMID_LEVELS = 6;
 
 int main(int argc, char* argv[])
 {
@@ -604,6 +631,7 @@ int main(int argc, char* argv[])
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
+#if 1
     cv::Size level_size[PYRAMID_LEVELS] =
     {
         {1777, 1000},  {1260, 709}, {893, 502}, {633, 356},
@@ -618,6 +646,20 @@ int main(int argc, char* argv[])
         0.041917209301724344f, 0.029719301394922563f, 0.021070984689000097f,
         0.014939328144501067f
     };
+#else
+    cv::Size level_size[PYRAMID_LEVELS] =
+    {
+        {960, 540},  {480, 270}, {240, 135}, {120, 67},
+        {60, 33}, {30, 16}
+    };
+
+    float scales[PYRAMID_LEVELS]
+    {
+        0.5f, 0.25f,  0.125f,
+        0.0625f, 0.03125f, 0.015625f
+    };
+#endif
+
 
     cv::GMat in_resized[PYRAMID_LEVELS];
     cv::GMat in_transposed[PYRAMID_LEVELS];
