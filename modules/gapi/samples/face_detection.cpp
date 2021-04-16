@@ -299,31 +299,9 @@ namespace custom {
             }
         };
 
-        G_API_OP(MergePyramidOutputs,
-            <GFaces(GFaces, GFaces, GFaces, GFaces, GFaces, GFaces,
-                    GFaces, GFaces, GFaces, GFaces, GFaces, GFaces, GFaces)>,
-            "sample.custom.mtcnn.merge_pyramid_outputs") {
-            static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&,
-                const cv::GArrayDesc&
-            ) {
-                return cv::empty_array_desc();
-            }
-        };
-
         G_API_OP(AccumulatePyramidOutputs,
             <GFaces(GFaces, GFaces)>,
-            "sample.custom.mtcnn.merge_pyramid_outputs") {
+            "sample.custom.mtcnn.accumulate_pyramid_outputs") {
             static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
                 const cv::GArrayDesc&
             ) {
@@ -425,64 +403,6 @@ namespace custom {
             }
         };// GAPI_OCV_KERNEL(RunNMS)
 
-
-        GAPI_OCV_KERNEL(OCVMergePyramidOutputs, MergePyramidOutputs) {
-            static void run(const std::vector<Face> &in_faces0,
-                const std::vector<Face> &in_faces1,
-                const std::vector<Face> &in_faces2,
-                const std::vector<Face> &in_faces3,
-                const std::vector<Face> &in_faces4,
-                const std::vector<Face> &in_faces5,
-                const std::vector<Face> &in_faces6,
-                const std::vector<Face> &in_faces7,
-                const std::vector<Face> &in_faces8,
-                const std::vector<Face> &in_faces9,
-                const std::vector<Face> &in_faces10,
-                const std::vector<Face> &in_faces11,
-                const std::vector<Face> &in_faces12,
-                std::vector<Face> &out_faces) {
-                if (!in_faces0.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces0.begin(), in_faces0.end());
-                }
-                if (!in_faces1.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces1.begin(), in_faces1.end());
-                }
-                if (!in_faces2.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces2.begin(), in_faces2.end());
-                }
-                if (!in_faces3.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces3.begin(), in_faces3.end());
-                }
-                if (!in_faces4.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces4.begin(), in_faces4.end());
-                }
-                if (!in_faces5.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces5.begin(), in_faces5.end());
-                }
-                if (!in_faces6.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces6.begin(), in_faces6.end());
-                }
-                if (!in_faces7.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces7.begin(), in_faces7.end());
-                }
-                if (!in_faces8.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces8.begin(), in_faces8.end());
-                }
-                if (!in_faces9.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces9.begin(), in_faces9.end());
-                }
-                if (!in_faces10.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces10.begin(), in_faces10.end());
-                }
-                if (!in_faces11.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces11.begin(), in_faces11.end());
-                }
-                if (!in_faces12.empty()) {
-                    out_faces.insert(out_faces.end(), in_faces12.begin(), in_faces12.end());
-                }
-            }
-        };// GAPI_OCV_KERNEL(MergePyramidOutputs)
-
         GAPI_OCV_KERNEL(OCVAccumulatePyramidOutputs, AccumulatePyramidOutputs) {
             static void run(const std::vector<Face> &total_faces,
                 const std::vector<Face> &in_faces,
@@ -490,7 +410,7 @@ namespace custom {
                 out_faces = total_faces;
                 out_faces.insert(out_faces.end(), in_faces.begin(), in_faces.end());
             }
-        };// GAPI_OCV_KERNEL(MergePyramidOutputs)
+        };// GAPI_OCV_KERNEL(AccumulatePyramidOutputs)
 
         GAPI_OCV_KERNEL(OCVApplyRegression, ApplyRegression) {
             static void run(const std::vector<Face> &in_faces,
@@ -526,7 +446,6 @@ namespace custom {
                     if (tmp_rect.x + tmp_rect.width >= TRANSPOSED_IMAGE_WIDTH) tmp_rect.width = TRANSPOSED_IMAGE_WIDTH - tmp_rect.x - 4;
                     if (tmp_rect.y + tmp_rect.height >= TRANSPOSED_IMAGE_HEIGHT) tmp_rect.height = TRANSPOSED_IMAGE_HEIGHT - tmp_rect.y - 4;
                     outs.push_back(tmp_rect);
-                    //outs.push_back(f.bbox.getRect());
                 }
             }
         };// GAPI_OCV_KERNEL(R_O_NetPreProcGetROIs)
@@ -632,7 +551,6 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     img.convertTo(outImg, CV_8UC3);
 
     for (auto& d : data) {
-        //cv::rectangle(outImg, d.first, cv::Scalar(0, 0, 255));
         vis::bbox(outImg, d.first);
         auto pts = d.second;
         for (size_t i = 0; i < pts.size(); ++i) {
@@ -646,7 +564,6 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
 static std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
-    //auto id = "net" + sz;
     auto outputs = cv::gapi::infer<cv::gapi::Generic>(id, inputs);
     auto regressions = outputs.at("conv4-2");
     auto scores = outputs.at("prob1");
@@ -698,36 +615,30 @@ int main(int argc, char* argv[])
     cv::GMat in_transposed[PYRAMID_LEVELS];
     cv::GMat regressions[PYRAMID_LEVELS];
     cv::GMat scores[PYRAMID_LEVELS];
-    //cv::GArray<custom::Face> faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> nms_p_faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> total_faces[PYRAMID_LEVELS];
     cv::GArray<custom::Face> faces_init(std::vector<custom::Face>{});
 
-    for (int i = 0; i < PYRAMID_LEVELS; ++i)
+    //The very first PNet pyramid layer to init total_faces[0]
+    in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
+    in_transposed[0] = custom::Transpose::on(in_resized[0]);
+    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], "MTCNNProposal_" + std::to_string(level_size[0].width) + "x" + std::to_string(level_size[0].height));
+    cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], scales[0], tmcnnp_conf_thresh);
+    nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5f, false);
+    total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
+    //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
+    for (int i = 1; i < PYRAMID_LEVELS; ++i)
     {
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height));
         cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], tmcnnp_conf_thresh);
         nms_p_faces[i] = custom::RunNMS::on(faces, 0.5f, false);
-        //total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i-1], nms_p_faces[i]);
+        total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i - 1], nms_p_faces[i]);
     }
-    cv::GArray<custom::Face> nms_p_faces_total = custom::MergePyramidOutputs::on(nms_p_faces[0],
-        nms_p_faces[1],
-        nms_p_faces[2],
-        nms_p_faces[3],
-        nms_p_faces[4],
-        nms_p_faces[5],
-        nms_p_faces[6],
-        nms_p_faces[7],
-        nms_p_faces[8],
-        nms_p_faces[9],
-        nms_p_faces[10],
-        nms_p_faces[11],
-        nms_p_faces[12]);
+
     //Proposal post-processing
-    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(nms_p_faces_total, 0.7f, false);
-    //cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[PYRAMID_LEVELS-1], 0.7f, false);
+    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[PYRAMID_LEVELS - 1], 0.7f, false);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(nms07_p_faces_total, false);
     cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
 
@@ -808,7 +719,7 @@ int main(int argc, char* argv[])
 
     auto kernels_mtcnn = cv::gapi::kernels< custom::OCVBuildFaces
         , custom::OCVRunNMS
-        , custom::OCVMergePyramidOutputs
+        , custom::OCVAccumulatePyramidOutputs
         , custom::OCVApplyRegression
         , custom::OCVBBoxesToSquares
         , custom::OCVR_O_NetPreProcGetROIs
@@ -836,14 +747,9 @@ int main(int argc, char* argv[])
 
     cv::Mat image;
     std::vector<custom::Face> out_faces;
-    //std::vector<custom::Face> in_faces;
-    //cv::GMetaArgs meta_args = { descr_of(gin(in_src)) }; 
-    //meta_args.push_back(cv::GMetaArg(cv::empty_array_desc()));
     auto graph_mtcnn_compiled = graph_mtcnn.compile(descr_of(gin(in_src)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-    //graph_mtcnn_compiled(gin(in_src, in_faces), gout(image, out_faces));
     graph_mtcnn_compiled(gin(in_src), gout(image, out_faces));
 
-    //graph_mtcnn.apply(); 
     std::cout << "Final Faces Size " << out_faces.size() << std::endl;
 
     std::vector<rectPoints> data;
@@ -861,8 +767,6 @@ int main(int argc, char* argv[])
     }
     auto resultImg = drawRectsAndPoints(image, data);
     cv::imshow("Out", resultImg);
-    //for (auto&& rc : out_faces) vis::bbox(image, rc.bbox.getRect());
-    //cv::imshow("Out", image);
     cv::waitKey(-1);
 #else
     // Input stream
