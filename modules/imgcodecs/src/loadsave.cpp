@@ -496,7 +496,7 @@ imread_( const String& filename, int flags, Mat& mat )
 
 
 static bool
-imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, size_t start, size_t count)
+imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int start, int count)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -515,6 +515,14 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, size_t s
     /// if no decoder was found, return nothing.
     if (!decoder) {
         return 0;
+    }
+
+    if (start < 0) {
+        return 0;
+    }
+
+    if (count < 0) {
+        count = std::numeric_limits<int>::max();
     }
 
     /// set the filename in the driver
@@ -640,11 +648,11 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats, 0, std::numeric_limits<size_t>::max());
+    return imreadmulti_(filename, flags, mats, 0, -1);
 }
 
 
-bool imreadmulti(const String& filename, std::vector<Mat>& mats, size_t start, size_t count, int flags)
+bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int count, int flags)
 {
     CV_TRACE_FUNCTION();
 

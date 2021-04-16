@@ -420,7 +420,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     {
         SCOPED_TRACE("Read one by one");
         vector<Mat> multi_pages;
-        for (size_t i = 0; i < page_count; i++)
+        for (int i = 0; i < page_count; i++)
         {
             bool res = imreadmulti(filename, multi_pages, i, 1);
             ASSERT_TRUE(res == true);
@@ -433,7 +433,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     {
         SCOPED_TRACE("Read multiple at a time");
         vector<Mat> multi_pages;
-        for (size_t i = 0; i < page_count/2; i++)
+        for (int i = 0; i < page_count/2; i++)
         {
             bool res = imreadmulti(filename, multi_pages, i*2, 2);
             ASSERT_TRUE(res == true);
