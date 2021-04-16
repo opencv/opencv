@@ -387,13 +387,14 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     vector<Mat> single_pages;
     for (size_t i = 0; i < page_count; i++)
     {
-        const Mat page = imread(root + page_files[i]);
+        // imread and imreadmulti have different default values for the flag
+        const Mat page = imread(root + page_files[i], IMREAD_ANYCOLOR);
         single_pages.push_back(page);
     }
     ASSERT_EQ(page_count, single_pages.size());
 
     {
-        // Edge cases
+        SCOPED_TRACE("Edge Cases");
         vector<Mat> multi_pages;
         bool res = imreadmulti(filename, multi_pages, 0, 0);
         // If we asked for 0 images and we successfully read 0 images should this be false ?
@@ -405,7 +406,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     }
 
     {
-        // Read all
+        SCOPED_TRACE("Read all with indices");
         vector<Mat> multi_pages;
         bool res = imreadmulti(filename, multi_pages, 0, 6);
         ASSERT_TRUE(res == true);
@@ -417,7 +418,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     }
 
     {
-        // Read one by one
+        SCOPED_TRACE("Read one by one");
         vector<Mat> multi_pages;
         for (size_t i = 0; i < page_count; i++)
         {
@@ -430,7 +431,7 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
     }
 
     {
-        // Pairs of two
+        SCOPED_TRACE("Read multiple at a time");
         vector<Mat> multi_pages;
         for (size_t i = 0; i < page_count/2; i++)
         {

@@ -495,111 +495,6 @@ imread_( const String& filename, int flags, Mat& mat )
 }
 
 
-/**
-* Read an image into memory and return the information
-*
-* @param[in] filename File to load
-* @param[in] flags Flags
-* @param[in] mats Reference to C++ vector<Mat> object to hold the images
-*
-*/
-static bool
-imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
-{
-    /// Search for the relevant decoder to handle the imagery
-    ImageDecoder decoder;
-
-#ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL){
-        decoder = GdalDecoder().newDecoder();
-    }
-    else{
-#endif
-        decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    /// if no decoder was found, return nothing.
-    if (!decoder){
-        return 0;
-    }
-
-    /// set the filename in the driver
-    decoder->setSource(filename);
-
-    // read the header to make sure it succeeds
-    try
-    {
-        // read the header to make sure it succeeds
-        if( !decoder->readHeader() )
-            return 0;
-    }
-    catch (const cv::Exception& e)
-    {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
-        return 0;
-    }
-    catch (...)
-    {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
-        return 0;
-    }
-
-    for (;;)
-    {
-        // grab the decoded type
-        int type = decoder->type();
-        if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
-        {
-            if ((flags & IMREAD_ANYDEPTH) == 0)
-                type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
-
-            if ((flags & CV_LOAD_IMAGE_COLOR) != 0 ||
-                ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
-            else
-                type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
-        }
-
-        // established the required input image size
-        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
-
-        // read the image data
-        Mat mat(size.height, size.width, type);
-        bool success = false;
-        try
-        {
-            if (decoder->readData(mat))
-                success = true;
-        }
-        catch (const cv::Exception& e)
-        {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
-        }
-        catch (...)
-        {
-            std::cerr << "imreadmulti_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
-        }
-        if (!success)
-            break;
-
-        // optionally rotate the data if EXIF' orientation flag says so
-        if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
-        {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
-        }
-
-        mats.push_back(mat);
-        if (!decoder->nextPage())
-        {
-            break;
-        }
-    }
-
-    return !mats.empty();
-}
-
 static bool
 imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, size_t start, size_t count)
 {
@@ -643,19 +538,18 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, size_t s
         return 0;
     }
 
-    size_t current = 0;
-    size_t end = start + count;
+    size_t current = start;
 
-    while (current < start)
+    while (current > 0)
     {
         if (!decoder->nextPage())
         {
             return false;
         }
-        ++current;
+        --current;
     }
 
-    while (current < end)
+    while (current < count)
     {
         // grab the decoded type
         int type = decoder->type();
@@ -746,22 +640,10 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats);
+    return imreadmulti_(filename, flags, mats, 0, std::numeric_limits<size_t>::max());
 }
 
 
-/**
-* Read parts of a multi-page image
-*
-*  This function merely calls the actual implementation above and returns itself.
-*
-* @param[in] filename File to load
-* @param[in] mats Reference to C++ vector<Mat> object to hold the images
-* @param[in] start Start index for the sequence to load
-* @param[in] count number of images to load
-* @param[in] flags Flags you wish to set.
-*
-*/
 bool imreadmulti(const String& filename, std::vector<Mat>& mats, size_t start, size_t count, int flags)
 {
     CV_TRACE_FUNCTION();
