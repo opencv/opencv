@@ -699,12 +699,6 @@ int main(int argc, char* argv[])
         std::string net_id = "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height);
         std::cout << "mtcnnp_net " << net_id << std::endl;
         std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
-        //auto mtcnnp_net = cv::gapi::ie::Params<cv::gapi::Generic>{
-        //            net_id,                           // tag
-        //            tmcnnp_model_path,                // path to topology IR
-        //            weights_path(tmcnnp_model_path),  // path to weights
-        //            tmcnnp_target_dev,                // device specifier
-        //}.cfgInputReshape({ {"data", reshape_dims} });
         cv::gapi::ie::Params<cv::gapi::Generic> mtcnnp_net{
                     net_id,                           // tag
                     tmcnnp_model_path,                // path to topology IR
@@ -712,7 +706,6 @@ int main(int argc, char* argv[])
                     tmcnnp_target_dev,                // device specifier
         };
         mtcnnp_net.cfgInputReshape({ {"data", reshape_dims} });
-
         networks_mtcnn += cv::gapi::networks(mtcnnp_net);
     }
 
