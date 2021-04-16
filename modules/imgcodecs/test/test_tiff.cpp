@@ -383,15 +383,15 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
         "readwrite/multipage_p5.tif",
         "readwrite/multipage_p6.tif"
     };
-    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+    const int page_count = sizeof(page_files) / sizeof(page_files[0]);
     vector<Mat> single_pages;
-    for (size_t i = 0; i < page_count; i++)
+    for (int i = 0; i < page_count; i++)
     {
         // imread and imreadmulti have different default values for the flag
         const Mat page = imread(root + page_files[i], IMREAD_ANYCOLOR);
         single_pages.push_back(page);
     }
-    ASSERT_EQ(page_count, single_pages.size());
+    ASSERT_EQ((size_t)page_count, single_pages.size());
 
     {
         SCOPED_TRACE("Edge Cases");
@@ -410,8 +410,8 @@ TEST(Imgcodecs_Tiff, read_multipage_indexed)
         vector<Mat> multi_pages;
         bool res = imreadmulti(filename, multi_pages, 0, 6);
         ASSERT_TRUE(res == true);
-        ASSERT_EQ(page_count, multi_pages.size());
-        for (size_t i = 0; i < page_count; i++)
+        ASSERT_EQ((size_t)page_count, multi_pages.size());
+        for (int i = 0; i < page_count; i++)
         {
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[i], single_pages[i]);
         }

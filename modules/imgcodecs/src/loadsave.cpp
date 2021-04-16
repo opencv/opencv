@@ -546,7 +546,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         return 0;
     }
 
-    size_t current = start;
+    int current = start;
 
     while (current > 0)
     {
