@@ -128,7 +128,7 @@ void cv::super_fisheye::projectPoints(InputArray objectPoints, OutputArray image
         double r = std::sqrt(r2);
 
         // Angle of the incoming ray:
-        double theta = atan2(r, 1);
+        double theta;
 
         if(Y[2] > 0)
             theta = atan2(r, 1);
