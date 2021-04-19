@@ -552,7 +552,7 @@ int calculate_scales(cv::Size input_size, std::vector<float> &out_scales, std::v
     while (minl >= 12)
     {
         float current_scale = pr_scale * pow(factor, factor_count);
-        cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
+        cv::Size current_size(std::ceil(input_size.width * current_scale), std::ceil(input_size.height * current_scale));
         std::cout << "current_scale " << current_scale << std::endl;
         std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
@@ -587,28 +587,13 @@ int main(int argc, char* argv[])
     const auto tmcnno_target_dev = cmd.get<std::string>("mtcnnod");
     const auto tmcnno_conf_thresh = cmd.get<double>("thro");
 
-    //Calculate scales, number of pyramid levels and sizes
-    //cv::Size level_size[MAX_PYRAMID_LEVELS] =
-    //{
-    //    {1777, 1000},  {1260, 709}, {893, 502}, {633, 356},
-    //    {449, 252}, {318, 179}, {225, 127}, {160, 90},
-    //    {113, 63}, {80, 45}, {57, 32}, {40, 22}, {28, 16}
-    //};
-    //float scales[MAX_PYRAMID_LEVELS]
-    //{
-    //    0.9259259259259259f, 0.6564814814814814f, 0.4654453703703703f,
-    //    0.3300007675925925f, 0.23397054422314809f, 0.165885115854212f,
-    //    0.1176125471406363f, 0.08338729592271113f, 0.059121592809202185f,
-    //    0.041917209301724344f, 0.029719301394922563f, 0.021070984689000097f,
-    //    0.014939328144501067f
-    //};
     std::vector<cv::Size> level_size;
     std::vector<float> scales;
     //MTCNN input size
     auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
     auto pyramid_levels = calculate_scales(in_rsz, scales, level_size);
-    CV_Assert(pyramid_levels > MAX_PYRAMID_LEVELS);
+    CV_Assert(pyramid_levels <= MAX_PYRAMID_LEVELS);
 
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
