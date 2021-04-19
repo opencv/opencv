@@ -684,6 +684,8 @@ Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char*
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(ENABLE_PLUGINS)
     return makePtr<impl::PluginBackendFactory>(id, baseName); //.staticCast<IBackendFactory>();
 #else
+    CV_UNUSED(id);
+    CV_UNUSED(baseName);
     return Ptr<IBackendFactory>();
 #endif
 }
