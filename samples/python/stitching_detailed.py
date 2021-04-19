@@ -342,7 +342,7 @@ def main():
         with open(args.save_graph, 'w') as fh:
             fh.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
 
-    indices = cv.detail.leaveBiggestComponent(features, p, 0.3)
+    indices = cv.detail.leaveBiggestComponent(features, p, conf_thresh)
     img_subset = []
     img_names_subset = []
     full_img_sizes_subset = []
