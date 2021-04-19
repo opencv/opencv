@@ -508,6 +508,7 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
 }
 
 //Infer helper function
+namespace {
 static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
@@ -525,7 +526,47 @@ inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv:
     return lhs;
 }
 
-const int PYRAMID_LEVELS = 13;
+int calculate_scales(cv::Size input_size, std::vector<float> &out_scales, std::vector<cv::Size> &out_sizes ) {
+    //calculate multi - scale and limit the maxinum side to 1000
+    //pr_scale: limit the maxinum side to 1000, < 1.0
+    float pr_scale = 1.0f;
+    int h = input_size.height;
+    int w = input_size.width;
+    if (std::min(w, h) > 1000)
+    {
+        pr_scale = 1000.0 / std::min(h, w);
+        w = w * pr_scale;
+        h = h * pr_scale;
+    }
+    else if (std::max(w, h) < 1000)
+    {
+        w = w * pr_scale;
+        h = h * pr_scale;
+    }
+    //multi - scale
+    out_scales.clear();
+    out_sizes.clear();
+    float factor = 0.709f;
+    int factor_count = 0;
+    int minl = std::min(h, w);
+    while (minl >= 12)
+    {
+        float current_scale = pr_scale * pow(factor, factor_count);
+        cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
+        std::cout << "current_scale " << current_scale << std::endl;
+        std::cout << "current_size " << current_size << std::endl;
+        out_scales.push_back(current_scale);
+        out_sizes.push_back(current_size);
+        minl *= factor;
+        factor_count += 1;
+    }
+    std::cout << "factor_count " << factor_count << std::endl;
+    return factor_count;
+}
+
+const int MAX_PYRAMID_LEVELS = 13;
+//////////////////////////////////////////////////////////////////////
+} // anonymous namespace
 
 int main(int argc, char* argv[])
 {
@@ -546,34 +587,40 @@ int main(int argc, char* argv[])
     const auto tmcnno_target_dev = cmd.get<std::string>("mtcnnod");
     const auto tmcnno_conf_thresh = cmd.get<double>("thro");
 
-    // MTCNN input size
+    //Calculate scales, number of pyramid levels and sizes
+    //cv::Size level_size[MAX_PYRAMID_LEVELS] =
+    //{
+    //    {1777, 1000},  {1260, 709}, {893, 502}, {633, 356},
+    //    {449, 252}, {318, 179}, {225, 127}, {160, 90},
+    //    {113, 63}, {80, 45}, {57, 32}, {40, 22}, {28, 16}
+    //};
+    //float scales[MAX_PYRAMID_LEVELS]
+    //{
+    //    0.9259259259259259f, 0.6564814814814814f, 0.4654453703703703f,
+    //    0.3300007675925925f, 0.23397054422314809f, 0.165885115854212f,
+    //    0.1176125471406363f, 0.08338729592271113f, 0.059121592809202185f,
+    //    0.041917209301724344f, 0.029719301394922563f, 0.021070984689000097f,
+    //    0.014939328144501067f
+    //};
+    std::vector<cv::Size> level_size;
+    std::vector<float> scales;
+    //MTCNN input size
     auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
+    //Calculate scales, number of pyramid levels and sizes for PNet pyramid
+    auto pyramid_levels = calculate_scales(in_rsz, scales, level_size);
+    CV_Assert(pyramid_levels > MAX_PYRAMID_LEVELS);
+
+    //Proposal part of MTCNN graph
+    //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
     cv::GMat in_originalBGR = cv::gapi::resize(in_original, in_rsz);;
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
-    //Proposal part of MTCNN graph
-    //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
-    cv::Size level_size[PYRAMID_LEVELS] =
-    {
-        {1777, 1000},  {1260, 709}, {893, 502}, {633, 356},
-        {449, 252}, {318, 179}, {225, 127}, {160, 90},
-        {113, 63}, {80, 45}, {57, 32}, {40, 22}, {28, 16}
-    };
-    float scales[PYRAMID_LEVELS]
-    {
-        0.9259259259259259f, 0.6564814814814814f, 0.4654453703703703f,
-        0.3300007675925925f, 0.23397054422314809f, 0.165885115854212f,
-        0.1176125471406363f, 0.08338729592271113f, 0.059121592809202185f,
-        0.041917209301724344f, 0.029719301394922563f, 0.021070984689000097f,
-        0.014939328144501067f
-    };
-
-    cv::GMat in_resized[PYRAMID_LEVELS];
-    cv::GMat in_transposed[PYRAMID_LEVELS];
-    cv::GMat regressions[PYRAMID_LEVELS];
-    cv::GMat scores[PYRAMID_LEVELS];
-    cv::GArray<custom::Face> nms_p_faces[PYRAMID_LEVELS];
-    cv::GArray<custom::Face> total_faces[PYRAMID_LEVELS];
+    cv::GMat in_resized[MAX_PYRAMID_LEVELS];
+    cv::GMat in_transposed[MAX_PYRAMID_LEVELS];
+    cv::GMat regressions[MAX_PYRAMID_LEVELS];
+    cv::GMat scores[MAX_PYRAMID_LEVELS];
+    cv::GArray<custom::Face> nms_p_faces[MAX_PYRAMID_LEVELS];
+    cv::GArray<custom::Face> total_faces[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> faces_init(std::vector<custom::Face>{});
 
     //The very first PNet pyramid layer to init total_faces[0]
@@ -584,7 +631,7 @@ int main(int argc, char* argv[])
     nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5f, false);
     total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
-    for (int i = 1; i < PYRAMID_LEVELS; ++i)
+    for (int i = 1; i < pyramid_levels; ++i)
     {
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
@@ -595,7 +642,7 @@ int main(int argc, char* argv[])
     }
 
     //Proposal post-processing
-    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[PYRAMID_LEVELS - 1], 0.7f, false);
+    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[pyramid_levels - 1], 0.7f, false);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(nms07_p_faces_total, false);
     cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
 
@@ -643,7 +690,7 @@ int main(int argc, char* argv[])
     auto networks_mtcnn = cv::gapi::networks(mtcnnr_net, mtcnno_net);
 
     // MTCNN Proposal detection network
-    for (int i = 0; i < PYRAMID_LEVELS; ++i)
+    for (int i = 0; i < pyramid_levels; ++i)
     {
         std::string net_id = "MTCNNProposal_" + std::to_string(level_size[i].width) + "x" + std::to_string(level_size[i].height);
         std::cout << "mtcnnp_net " << net_id << std::endl;
