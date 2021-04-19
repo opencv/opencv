@@ -526,10 +526,10 @@ inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv:
     return lhs;
 }
 
-int calculate_scales(cv::Size input_size, std::vector<float> &out_scales, std::vector<cv::Size> &out_sizes ) {
+int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::vector<cv::Size> &out_sizes ) {
     //calculate multi - scale and limit the maxinum side to 1000
     //pr_scale: limit the maxinum side to 1000, < 1.0
-    float pr_scale = 1.0f;
+    double pr_scale = 1.0;
     int h = input_size.height;
     int w = input_size.width;
     if (std::min(w, h) > 1000)
@@ -546,13 +546,13 @@ int calculate_scales(cv::Size input_size, std::vector<float> &out_scales, std::v
     //multi - scale
     out_scales.clear();
     out_sizes.clear();
-    float factor = 0.709f;
+    double factor = 0.709;
     int factor_count = 0;
     int minl = std::min(h, w);
     while (minl >= 12)
     {
-        float current_scale = pr_scale * pow(factor, factor_count);
-        cv::Size current_size(std::ceil(input_size.width * current_scale), std::ceil(input_size.height * current_scale));
+        double current_scale = pr_scale * std::pow(factor, factor_count);
+        cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
         std::cout << "current_scale " << current_scale << std::endl;
         std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
@@ -588,7 +588,7 @@ int main(int argc, char* argv[])
     const auto tmcnno_conf_thresh = cmd.get<double>("thro");
 
     std::vector<cv::Size> level_size;
-    std::vector<float> scales;
+    std::vector<double> scales;
     //MTCNN input size
     auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
