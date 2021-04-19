@@ -217,58 +217,6 @@ namespace custom {
         using GMats = cv::GArray<cv::GMat>;
         using GRects = cv::GArray<cv::Rect>;
 
-        G_API_NET(MTCNNProposal_1777x1000,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_1777x1000");
-
-        G_API_NET(MTCNNProposal_1260x709,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_1260x709");
-
-        G_API_NET(MTCNNProposal_893x502,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_893x502");
-
-        G_API_NET(MTCNNProposal_633x356,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_633x356");
-
-        G_API_NET(MTCNNProposal_449x252,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_449x252");
-
-        G_API_NET(MTCNNProposal_318x179,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_318x179");
-
-        G_API_NET(MTCNNProposal_225x127,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_225x127");
-
-        G_API_NET(MTCNNProposal_160x90,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_160x90");
-
-        G_API_NET(MTCNNProposal_113x63,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_113x63");
-
-        G_API_NET(MTCNNProposal_80x45,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_80x45");
-
-        G_API_NET(MTCNNProposal_57x32,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_57x32");
-
-        G_API_NET(MTCNNProposal_40x22,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_40x22");
-
-        G_API_NET(MTCNNProposal_28x16,
-            <GMat2(cv::GMat)>,
-            "sample.custom.mtcnn_proposal_28x16");
-
         G_API_NET(MTCNNRefinement,
             <GMat2(cv::GMat)>,
             "sample.custom.mtcnn_refinement");
