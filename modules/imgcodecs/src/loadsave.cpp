@@ -501,6 +501,8 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
 
+    CV_CheckGE(start, 0, "Start index cannont be < 0");
+
 #ifdef HAVE_GDAL
     if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         decoder = GdalDecoder().newDecoder();
@@ -514,10 +516,6 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
 
     /// if no decoder was found, return nothing.
     if (!decoder) {
-        return 0;
-    }
-
-    if (start < 0) {
         return 0;
     }
 
@@ -695,12 +693,12 @@ size_t imcount_(const String& filename, int flags)
     }
     catch (const cv::Exception& e)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        std::cerr << "imcount_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
         return 0;
     }
     catch (...)
     {
-        std::cerr << "imreadmulti_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        std::cerr << "imcount_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
         return 0;
     }
 
