@@ -175,11 +175,6 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
 
 
     const float* scores_data = (float*)(scores.data);
-    for(int i = 0; i < 200; i++)
-    {
-        std::cout << scores_data[i] << " ";
-    }
-    std::cout << std::endl;
     scores_data += size;
 
     const float* reg_data = (float*)(regressions.data);
@@ -509,7 +504,6 @@ namespace {
 static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
-    std::cout << "run_mtcnn_p " << id << std::endl;
     auto outputs = cv::gapi::infer<cv::gapi::Generic>(id, inputs);
     auto regressions = outputs.at("conv4-2");
     auto scores = outputs.at("prob1");
@@ -708,7 +702,6 @@ int main(int argc, char* argv[])
     for (int i = 0; i < pyramid_levels; ++i)
     {
         std::string net_id = get_pnet_level_name(level_size[i]);
-        std::cout << "mtcnnp_net " << net_id << std::endl;
         std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
         cv::gapi::ie::Params<cv::gapi::Generic> mtcnnp_net{
                     net_id,                           // tag
