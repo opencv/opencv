@@ -122,28 +122,28 @@ struct Face {
             indices.clear();
             for (size_t i = 1; i < tmpIndices.size(); ++i) {
                 int tmpIdx = tmpIndices[i];
-                float interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
-                float interY1 = std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1);
-                float interX2 = std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2);
-                float interY2 = std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2);
+                const float interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
+                const float interY1 = std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1);
+                const float interX2 = std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2);
+                const float interY2 = std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2);
 
-                float bboxWidth = std::max(0.f, (interX2 - interX1 + 1));
-                float bboxHeight = std::max(0.f, (interY2 - interY1 + 1));
+                const float bboxWidth = std::max(0.f, (interX2 - interX1 + 1));
+                const float bboxHeight = std::max(0.f, (interY2 - interY1 + 1));
 
-                float interArea = bboxWidth * bboxHeight;
+                const float interArea = bboxWidth * bboxHeight;
                 // TODO: compute outside the loop
-                float area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
+                const float area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
                     (faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
-                float area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
+                const float area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
                     (faces[tmpIdx].bbox.y2 - faces[tmpIdx].bbox.y1 + 1);
-                float o = 0.f;
+                float overlap = 0.f;
                 if (useMin) {
-                    o = interArea / std::min(area1, area2);
+                    overlap = interArea / std::min(area1, area2);
                 }
                 else {
-                    o = interArea / (area1 + area2 - interArea);
+                    overlap = interArea / (area1 + area2 - interArea);
                 }
-                if (o <= threshold) {
+                if (overlap <= threshold) {
                     indices.push_back(tmpIdx);
                 }
             }
@@ -204,11 +204,6 @@ using GMats = cv::GArray<cv::GMat>;
 using GRects = cv::GArray<cv::Rect>;
 using GSize = cv::GOpaque<cv::Size>;
 
-G_API_OP(Size, <GSize(cv::GMat)>, "custom.gapi.size") {
-    static cv::GOpaqueDesc outMeta(const cv::GMatDesc&) {
-        return cv::empty_gopaque_desc();
-    }
-};
 
 G_API_NET(MTCNNRefinement,
           <GMat2(cv::GMat)>,
@@ -315,12 +310,6 @@ G_API_OP(Transpose,
 };
 
 //Custom kernels implementation
-GAPI_OCV_KERNEL(OCVSize, Size) {
-       static void run(const cv::Mat & in, cv::Size & out) {
-        out = in.size();
-    }
-};
-
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
         const cv::Mat & in_regresssions,
@@ -624,7 +613,6 @@ int main(int argc, char* argv[])
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
-    //cv::GOpaque<cv::Size> in_sz = custom::Size::on(in_original); // FIXME
     cv::GOpaque<cv::Size> in_sz = cv::gapi::streaming::size(in_original);
     cv::GMat in_resized[MAX_PYRAMID_LEVELS];
     cv::GMat in_transposed[MAX_PYRAMID_LEVELS];
@@ -715,8 +703,7 @@ int main(int argc, char* argv[])
         networks_mtcnn += cv::gapi::networks(mtcnnp_net);
     }
 
-    auto kernels_mtcnn = cv::gapi::kernels< custom::OCVSize
-                                          , custom::OCVBuildFaces
+    auto kernels_mtcnn = cv::gapi::kernels< custom::OCVBuildFaces
                                           , custom::OCVRunNMS
                                           , custom::OCVAccumulatePyramidOutputs
                                           , custom::OCVApplyRegression
