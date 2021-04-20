@@ -159,10 +159,6 @@ struct Face {
 
 const float P_NET_WINDOW_SIZE = 12.f;
 const int P_NET_STRIDE = 2;
-const int IMAGE_WIDTH = 1920;
-const int IMAGE_HEIGHT = 1080;
-const int TRANSPOSED_IMAGE_WIDTH = 1080;
-const int TRANSPOSED_IMAGE_HEIGHT = 1920;
 
 std::vector<Face> buildFaces(const cv::Mat& scores,
     const cv::Mat& regressions,
@@ -633,7 +629,6 @@ int main(int argc, char* argv[])
     cap.open(input_file_name);
     if (!cap.isOpened())
         CV_Assert(false);
-    //auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
     auto in_rsz = cv::Size{ (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT) };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
     auto pyramid_levels = use_half_scale ? calculate_half_scales(in_rsz, scales, level_size) :
@@ -643,8 +638,6 @@ int main(int argc, char* argv[])
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
-    //cv::GMat in_originalBGR = cv::gapi::resize(in_original, in_rsz);
-    //cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
     cv::GOpaque<cv::Size> in_sz = custom::Size::on(in_original); // FIXME
     cv::GMat in_resized[MAX_PYRAMID_LEVELS];
@@ -701,7 +694,6 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
-    //cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
     cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_original), final_faces_onet));
 
     // MTCNN Refinement detection network
