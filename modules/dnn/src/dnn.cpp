@@ -4280,6 +4280,7 @@ void Net::setPreferableTarget(int targetId)
 
 void Net::setIECacheFolder(const std::string& path, dnn::Target targetId)
 {
+#ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_3)
     std::string deviceName;
     switch( targetId )
@@ -4309,6 +4310,7 @@ void Net::setIECacheFolder(const std::string& path, dnn::Target targetId)
             InferenceEngine::PluginConfigParams::KEY_CACHE_DIR, path,
         } }, deviceName);
 #endif
+#endif // HAVE_INF_ENGINE
 }
 
 void Net::setInputsNames(const std::vector<String> &inputBlobNames)
