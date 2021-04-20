@@ -212,6 +212,13 @@ using GMat2 = std::tuple<cv::GMat, cv::GMat>;
 using GMat3 = std::tuple<cv::GMat, cv::GMat, cv::GMat>;
 using GMats = cv::GArray<cv::GMat>;
 using GRects = cv::GArray<cv::Rect>;
+using GSize = cv::GOpaque<cv::Size>;
+
+G_API_OP(Size, <GSize(cv::GMat)>, "custom.gapi.size") {
+    static cv::GOpaqueDesc outMeta(const cv::GMatDesc&) {
+        return cv::empty_gopaque_desc();
+    }
+};
 
 G_API_NET(MTCNNRefinement,
     <GMat2(cv::GMat)>,
@@ -271,9 +278,10 @@ G_API_OP(BBoxesToSquares,
 };
 
 G_API_OP(R_O_NetPreProcGetROIs,
-    <GRects(GFaces)>,
+    <GRects(GFaces, GSize)>,
     "sample.custom.mtcnn.bboxes_r_o_net_preproc_get_rois") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc&
+        , const cv::GOpaqueDesc&
     ) {
         return cv::empty_array_desc();
     }
@@ -324,7 +332,13 @@ G_API_OP(Transpose,
         return out_desc;
     }
 };
+
 //Custom kernels implementation
+GAPI_OCV_KERNEL(OCVSize, Size) {
+    static void run(const cv::Mat & in, cv::Size & out) {
+        out = in.size();
+    }
+};
 
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
@@ -378,12 +392,14 @@ GAPI_OCV_KERNEL(OCVBBoxesToSquares, BBoxesToSquares) {
 
 GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
     static void run(const std::vector<Face> &in_faces,
+        const cv::Size & in_image_size,
         std::vector<cv::Rect> &outs) {
         outs.clear();
         for (auto& f : in_faces) {
             cv::Rect tmp_rect = f.bbox.getRect();
-            if (tmp_rect.x + tmp_rect.width >= TRANSPOSED_IMAGE_WIDTH) tmp_rect.width = TRANSPOSED_IMAGE_WIDTH - tmp_rect.x - 4;
-            if (tmp_rect.y + tmp_rect.height >= TRANSPOSED_IMAGE_HEIGHT) tmp_rect.height = TRANSPOSED_IMAGE_HEIGHT - tmp_rect.y - 4;
+            //Compare to transposed sizes width<->height
+            if (tmp_rect.x + tmp_rect.width >= in_image_size.height) tmp_rect.width = in_image_size.height - tmp_rect.x - 4;
+            if (tmp_rect.y + tmp_rect.height >= in_image_size.width) tmp_rect.height = in_image_size.width - tmp_rect.y - 4;
             outs.push_back(tmp_rect);
         }
     }
@@ -613,7 +629,12 @@ int main(int argc, char* argv[])
     std::vector<cv::Size> level_size;
     std::vector<double> scales;
     //MTCNN input size
-    auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
+    cv::VideoCapture cap;
+    cap.open(input_file_name);
+    if (!cap.isOpened())
+        CV_Assert(false);
+    //auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
+    auto in_rsz = cv::Size{ (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT) };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
     auto pyramid_levels = use_half_scale ? calculate_half_scales(in_rsz, scales, level_size) :
                                            calculate_scales(in_rsz, scales, level_size);
@@ -622,8 +643,10 @@ int main(int argc, char* argv[])
     //Proposal part of MTCNN graph
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
-    cv::GMat in_originalBGR = cv::gapi::resize(in_original, in_rsz);;
-    cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
+    //cv::GMat in_originalBGR = cv::gapi::resize(in_original, in_rsz);
+    //cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_originalBGR);
+    cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
+    cv::GOpaque<cv::Size> in_sz = custom::Size::on(in_original); // FIXME
     cv::GMat in_resized[MAX_PYRAMID_LEVELS];
     cv::GMat in_transposed[MAX_PYRAMID_LEVELS];
     cv::GMat regressions[MAX_PYRAMID_LEVELS];
@@ -656,7 +679,7 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
 
     //Refinement part of MTCNN graph
-    cv::GArray<cv::Rect> faces_roi_pnet = custom::R_O_NetPreProcGetROIs::on(final_faces_pnet);
+    cv::GArray<cv::Rect> faces_roi_pnet = custom::R_O_NetPreProcGetROIs::on(final_faces_pnet, in_sz);
     cv::GArray<cv::GMat> regressionsRNet, scoresRNet;
     cv::GMat in_originalRGB_transposed = custom::Transpose::on(in_originalRGB);
     std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_originalRGB_transposed);
@@ -668,7 +691,7 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> final_faces_rnet = custom::BBoxesToSquares::on(final_r_faces_for_bb2squares);
 
     //Output part of MTCNN graph
-    cv::GArray<cv::Rect> faces_roi_rnet = custom::R_O_NetPreProcGetROIs::on(final_faces_rnet);
+    cv::GArray<cv::Rect> faces_roi_rnet = custom::R_O_NetPreProcGetROIs::on(final_faces_rnet, in_sz);
     cv::GArray<cv::GMat> regressionsONet, scoresONet, landmarksONet;
     std::tie(regressionsONet, landmarksONet, scoresONet) = cv::gapi::infer<custom::MTCNNOutput>(faces_roi_rnet, in_originalRGB_transposed);
 
@@ -678,7 +701,8 @@ int main(int argc, char* argv[])
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
-    cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    //cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_originalBGR), final_faces_onet));
+    cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_original), final_faces_onet));
 
     // MTCNN Refinement detection network
     std::vector<size_t> reshape_dims_24x24 = { 1, 3, 24, 24 };
@@ -713,16 +737,17 @@ int main(int argc, char* argv[])
         networks_mtcnn += cv::gapi::networks(mtcnnp_net);
     }
 
-    auto kernels_mtcnn = cv::gapi::kernels< custom::OCVBuildFaces
-        , custom::OCVRunNMS
-        , custom::OCVAccumulatePyramidOutputs
-        , custom::OCVApplyRegression
-        , custom::OCVBBoxesToSquares
-        , custom::OCVR_O_NetPreProcGetROIs
-        , custom::OCVRNetPostProc
-        , custom::OCVONetPostProc
-        , custom::OCVSwapFaces
-        , custom::OCVTranspose
+    auto kernels_mtcnn = cv::gapi::kernels< custom::OCVSize
+                                          , custom::OCVBuildFaces
+                                          , custom::OCVRunNMS
+                                          , custom::OCVAccumulatePyramidOutputs
+                                          , custom::OCVApplyRegression
+                                          , custom::OCVBBoxesToSquares
+                                          , custom::OCVR_O_NetPreProcGetROIs
+                                          , custom::OCVRNetPostProc
+                                          , custom::OCVONetPostProc
+                                          , custom::OCVSwapFaces
+                                          , custom::OCVTranspose
     >();
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(cv::compile_args(networks_mtcnn, kernels_mtcnn));
 
