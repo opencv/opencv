@@ -16,10 +16,7 @@
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/gopaque.hpp>
-
-
 #include <opencv2/highgui.hpp>
-#include <opencv2/core/utility.hpp>
 
 const std::string about =
 "This is an OpenCV-based version of OMZ MTCNN Face Detection example";
@@ -105,7 +102,7 @@ struct Face {
     }
 
     static std::vector<Face> runNMS(std::vector<Face>& faces, float threshold,
-        bool useMin = false) {
+                                    bool useMin = false) {
         std::vector<Face> facesNMS;
         if (faces.empty()) {
             return facesNMS;
@@ -113,15 +110,13 @@ struct Face {
 
         std::sort(faces.begin(), faces.end(), [](const Face& f1, const Face& f2) {
             return f1.score > f2.score;
-            });
+        });
 
         std::vector<int> indices(faces.size());
-        for (size_t i = 0; i < indices.size(); ++i) {
-            indices[i] = i;
-        }
+        std::iota(indices.begin(), indices.end(), 0);
 
         while (indices.size() > 0) {
-            int idx = indices[0];
+            const int idx = indices[0];
             facesNMS.push_back(faces[idx]);
             std::vector<int> tmpIndices = indices;
             indices.clear();
@@ -169,11 +164,10 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
     auto h = scores.size[2];
     auto size = w * h;
 
-
-    const float* scores_data = (float*)(scores.data);
+    const float* scores_data = scores.ptr<float>();
     scores_data += size;
 
-    const float* reg_data = (float*)(regressions.data);
+    const float* reg_data = regressions.ptr<float>();
 
     std::vector<Face> boxes;
 
@@ -217,121 +211,112 @@ G_API_OP(Size, <GSize(cv::GMat)>, "custom.gapi.size") {
 };
 
 G_API_NET(MTCNNRefinement,
-    <GMat2(cv::GMat)>,
-    "sample.custom.mtcnn_refinement");
+          <GMat2(cv::GMat)>,
+          "sample.custom.mtcnn_refinement");
 
 G_API_NET(MTCNNOutput,
-    <GMat3(cv::GMat)>,
-    "sample.custom.mtcnn_output");
+          <GMat3(cv::GMat)>,
+          "sample.custom.mtcnn_output");
 
 using GFaces = cv::GArray<Face>;
 G_API_OP(BuildFaces,
-    <GFaces(cv::GMat, cv::GMat, float, float)>,
-    "sample.custom.mtcnn.build_faces") {
-    static cv::GArrayDesc outMeta(const cv::GMatDesc&,
-        const cv::GMatDesc&,
-        float,
-        float) {
-        return cv::empty_array_desc();
+         <GFaces(cv::GMat, cv::GMat, float, float)>,
+         "sample.custom.mtcnn.build_faces") {
+            static cv::GArrayDesc outMeta(const cv::GMatDesc&,
+            const cv::GMatDesc&,
+            float,
+            float) {
+            return cv::empty_array_desc();
     }
 };
 
 G_API_OP(RunNMS,
-    <GFaces(GFaces, float, bool)>,
-    "sample.custom.mtcnn.run_nms") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        float, bool) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces, float, bool)>,
+         "sample.custom.mtcnn.run_nms") {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
+         float, bool) {
+         return cv::empty_array_desc();
     }
 };
 
 G_API_OP(AccumulatePyramidOutputs,
-    <GFaces(GFaces, GFaces)>,
-    "sample.custom.mtcnn.accumulate_pyramid_outputs") {
+         <GFaces(GFaces, GFaces)>,
+         "sample.custom.mtcnn.accumulate_pyramid_outputs") {
     static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        const cv::GArrayDesc&
-    ) {
-        return cv::empty_array_desc();
+        const cv::GArrayDesc&) {
+          return cv::empty_array_desc();
     }
 };
 
 G_API_OP(ApplyRegression,
-    <GFaces(GFaces, bool)>,
-    "sample.custom.mtcnn.apply_regression") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        bool) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces, bool)>,
+         "sample.custom.mtcnn.apply_regression") {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&, bool) {
+         return cv::empty_array_desc();
     }
 };
 
 G_API_OP(BBoxesToSquares,
-    <GFaces(GFaces)>,
-    "sample.custom.mtcnn.bboxes_to_squares") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&
-    ) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces)>,
+         "sample.custom.mtcnn.bboxes_to_squares") {
+          static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
+          return cv::empty_array_desc();
     }
 };
 
 G_API_OP(R_O_NetPreProcGetROIs,
-    <GRects(GFaces, GSize)>,
-    "sample.custom.mtcnn.bboxes_r_o_net_preproc_get_rois") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&
-        , const cv::GOpaqueDesc&
-    ) {
-        return cv::empty_array_desc();
+         <GRects(GFaces, GSize)>,
+         "sample.custom.mtcnn.bboxes_r_o_net_preproc_get_rois") {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&, const cv::GOpaqueDesc&) {
+         return cv::empty_array_desc();
     }
 };
 
 
 G_API_OP(RNetPostProc,
-    <GFaces(GFaces, GMats, GMats, float)>,
-    "sample.custom.mtcnn.rnet_postproc") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        const cv::GArrayDesc&,
-        const cv::GArrayDesc&,
-        float
-    ) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces, GMats, GMats, float)>,
+         "sample.custom.mtcnn.rnet_postproc") {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
+         const cv::GArrayDesc&,
+         const cv::GArrayDesc&,
+         float) {
+         return cv::empty_array_desc();
     }
 };
 
 G_API_OP(ONetPostProc,
-    <GFaces(GFaces, GMats, GMats, GMats, float)>,
-    "sample.custom.mtcnn.onet_postproc") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        const cv::GArrayDesc&,
-        const cv::GArrayDesc&,
-        const cv::GArrayDesc&,
-        float
-    ) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces, GMats, GMats, GMats, float)>,
+         "sample.custom.mtcnn.onet_postproc") {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
+         const cv::GArrayDesc&,
+         const cv::GArrayDesc&,
+         const cv::GArrayDesc&,
+         float) {
+         return cv::empty_array_desc();
     }
 };
 
 G_API_OP(SwapFaces,
-    <GFaces(GFaces)>,
-    "sample.custom.mtcnn.swap_faces") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&
-    ) {
-        return cv::empty_array_desc();
+         <GFaces(GFaces)>,
+         "sample.custom.mtcnn.swap_faces") {
+          static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
+          return cv::empty_array_desc();
     }
 };
 
 G_API_OP(Transpose,
-    <cv::GMat(cv::GMat)>,
-    "sample.custom.mtcnn.transpose") {
-    static cv::GMatDesc outMeta(const cv::GMatDesc in
-    ) {
-        const cv::GMatDesc out_desc = { in.depth, in.chan, cv::Size(in.size.height,
+         <cv::GMat(cv::GMat)>,
+         "sample.custom.mtcnn.transpose") {
+          static cv::GMatDesc outMeta(const cv::GMatDesc in) {
+          const cv::GMatDesc out_desc = { in.depth, in.chan, cv::Size(in.size.height,
                                                              in.size.width) };
-        return out_desc;
+          return out_desc;
     }
 };
 
 //Custom kernels implementation
 GAPI_OCV_KERNEL(OCVSize, Size) {
-    static void run(const cv::Mat & in, cv::Size & out) {
+       static void run(const cv::Mat & in, cv::Size & out) {
         out = in.size();
     }
 };
@@ -639,7 +624,8 @@ int main(int argc, char* argv[])
     //Preprocessing BGR2RGB + transpose (NCWH is expected instead of NCHW)
     cv::GMat in_original;
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
-    cv::GOpaque<cv::Size> in_sz = custom::Size::on(in_original); // FIXME
+    //cv::GOpaque<cv::Size> in_sz = custom::Size::on(in_original); // FIXME
+    cv::GOpaque<cv::Size> in_sz = cv::gapi::streaming::size(in_original);
     cv::GMat in_resized[MAX_PYRAMID_LEVELS];
     cv::GMat in_transposed[MAX_PYRAMID_LEVELS];
     cv::GMat regressions[MAX_PYRAMID_LEVELS];
