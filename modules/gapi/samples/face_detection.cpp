@@ -575,7 +575,7 @@ int calculate_half_scales(cv::Size input_size, std::vector<double>& out_scales, 
     double factor = 0.5;
     int factor_count = 0;
     int minl = std::min(h, w);
-    while (minl >= 12)
+    while (minl >= 12*2)
     {
         double current_scale = pr_scale;
         cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
