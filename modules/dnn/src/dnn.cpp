@@ -4278,6 +4278,39 @@ void Net::setPreferableTarget(int targetId)
     }
 }
 
+void Net::setIECacheFolder(const std::string& path, dnn::Target targetId)
+{
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_3)
+    std::string deviceName;
+    switch( targetId )
+    {
+    case DNN_TARGET_MYRIAD:
+        deviceName = "MYRIAD";
+        break;
+    case DNN_TARGET_HDDL:
+        deviceName = "HDDL";
+        break;
+    case DNN_TARGET_FPGA:
+        deviceName = "FPGA";
+        break;
+    case DNN_TARGET_CPU:
+        deviceName = "CPU";
+        break;
+    case DNN_TARGET_OPENCL:
+    case DNN_TARGET_OPENCL_FP16:
+        deviceName = "GPU";
+        break;
+    default:
+        deviceName = {};
+    }
+
+    InferenceEngine::Core& ie = getCore(deviceName);
+    ie.SetConfig({ {
+            InferenceEngine::PluginConfigParams::KEY_CACHE_DIR, path,
+        } }, deviceName);
+#endif
+}
+
 void Net::setInputsNames(const std::vector<String> &inputBlobNames)
 {
     CV_TRACE_FUNCTION();

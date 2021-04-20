@@ -591,6 +591,13 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void setPreferableTarget(int targetId);
 
+        /**
+         * @brief Set folder where inference engine cache should be stored.
+         * @param[in] a valid folder.
+         * @note Requires OpenVino 2021.3 or newer
+         */
+        CV_WRAP void setIECacheFolder(const std::string& path, dnn::Target targetId);
+
         /** @brief Sets the new input value for the network
          *  @param blob        A new blob. Should have CV_32F or CV_8U depth.
          *  @param name        A name of input layer.
