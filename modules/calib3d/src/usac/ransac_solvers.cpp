@@ -408,10 +408,11 @@ int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp) {
 void saveMask (OutputArray mask, const std::vector<bool> &inliers_mask) {
     if (mask.needed()) {
         const int points_size = (int) inliers_mask.size();
-        mask.create(points_size, 1, CV_8U);
-        auto * maskptr = mask.getMat().ptr<uchar>();
+        Mat tmp_mask(points_size, 1, CV_8U);
+        auto * maskptr = tmp_mask.ptr<uchar>();
         for (int i = 0; i < points_size; i++)
             maskptr[i] = (uchar) inliers_mask[i];
+        tmp_mask.copyTo(mask);
     }
 }
 void setParameters (Ptr<Model> &params, EstimationMethod estimator, const UsacParams &usac_params,
