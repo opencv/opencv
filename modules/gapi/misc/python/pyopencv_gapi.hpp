@@ -496,6 +496,7 @@ static cv::GRunArgs run_py_kernel(PyObject* kernel,
         }
 
         PyObject* result = PyObject_CallObject(kernel, args);
+        std::cout << "result = " << result << std::endl;
 
         outs = out_info.size() == 1 ? cv::GRunArgs{extract_run_arg(out_info[0], result)}
                                     : extract_run_args(out_info, result);
@@ -611,26 +612,53 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
     using namespace cv;
     gapi::GKernelPackage pkg;
     Py_ssize_t size = PyTuple_Size(py_args);
-    for (int i = 0; i < size; ++i)
-    {
-        PyObject* pair   = PyTuple_GetItem(py_args, i);
-        PyObject* kernel = PyTuple_GetItem(pair, 0);
-
-        std::string id;
-        if (!pyopencv_to(PyTuple_GetItem(pair, 1), id, ArgInfo("id", false)))
-        {
-            PyErr_SetString(PyExc_TypeError, "Failed to obtain: kernel id must be a string");
-            return NULL;
-        }
-        Py_INCREF(kernel);
-        gapi::python::GPythonFunctor f(id.c_str(),
-                                       empty_meta,
-                                       std::bind(run_py_kernel,
-                                                 kernel,
-                                                 std::placeholders::_1));
-        pkg.include(f);
+    PyObject* user_op = PyTuple_GetItem(py_args, 0);
+    PyObject* id_obj = PyObject_GetAttrString(user_op, "id");
+    if (!id_obj) {
+        PyErr_SetString(PyExc_TypeError, "Kernel should contain id");
+        return NULL;
     }
+    std::string id;
+    if (!pyopencv_to(id_obj, id, ArgInfo("id", false)))
+    {
+        PyErr_SetString(PyExc_TypeError, "Failed to obtain string");
+        return NULL;
+    }
+    std::cout << "id = " << id << std::endl;
+
+    PyObject* outMeta = PyObject_GetAttrString(user_op, "outMeta");
+    Py_INCREF(outMeta);
+
+    PyObject* kernel  = PyObject_GetAttrString(user_op, "run");
+    Py_INCREF(kernel);
+
+    using namespace std::placeholders;
+    gapi::python::GPythonFunctor f(id.c_str(),
+                                   std::bind(python_meta  , outMeta, _1, _2),
+                                   std::bind(run_py_kernel, kernel , _1));
+    pkg.include(f);
     return pyopencv_from(pkg);
+
+    //for (int i = 0; i < size; ++i)
+    //{
+        //PyObject* pair   = PyTuple_GetItem(py_args, i);
+        //PyObject* kernel = PyTuple_GetItem(pair, 0);
+
+        //std::string id;
+        //if (!pyopencv_to(PyTuple_GetItem(pair, 1), id, ArgInfo("id", false)))
+        //{
+            //PyErr_SetString(PyExc_TypeError, "Failed to obtain: kernel id must be a string");
+            //return NULL;
+        //}
+        //Py_INCREF(kernel);
+        //gapi::python::GPythonFunctor f(id.c_str(),
+                                       //empty_meta,
+                                       //std::bind(run_py_kernel,
+                                                 //kernel,
+                                                 //std::placeholders::_1));
+        //pkg.include(f);
+    //}
+    //return pyopencv_from(pkg);
 }
 
 static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
