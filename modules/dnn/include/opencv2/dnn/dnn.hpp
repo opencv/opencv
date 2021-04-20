@@ -593,7 +593,8 @@ CV__DNN_INLINE_NS_BEGIN
 
         /**
          * @brief Set folder where inference engine cache should be stored.
-         * @param[in] a valid folder.
+         * @param[in] path a valid folder.
+         * @param[in] targetId target identifier.
          * @note Requires OpenVino 2021.3 or newer
          */
         CV_WRAP void setIECacheFolder(const std::string& path, dnn::Target targetId);
