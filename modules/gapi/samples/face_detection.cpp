@@ -35,6 +35,7 @@ const std::string keys =
 "{ thrp       | 0.6                       | MTCNN P confidence threshold}"
 "{ thrr       | 0.7                       | MTCNN R confidence threshold}"
 "{ thro       | 0.7                       | MTCNN O confidence threshold}"
+"{ half_scale | false                     | MTCNN P use half scale pyramid}"
 ;
 
 namespace {
@@ -613,13 +614,15 @@ int main(int argc, char* argv[])
     const auto tmcnno_model_path = cmd.get<std::string>("mtcnnom");
     const auto tmcnno_target_dev = cmd.get<std::string>("mtcnnod");
     const auto tmcnno_conf_thresh = cmd.get<double>("thro");
+    const auto use_half_scale = cmd.get<bool>("half_scale");
 
     std::vector<cv::Size> level_size;
     std::vector<double> scales;
     //MTCNN input size
     auto in_rsz = cv::Size{ custom::IMAGE_WIDTH, custom::IMAGE_HEIGHT };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
-    auto pyramid_levels = calculate_scales(in_rsz, scales, level_size);
+    auto pyramid_levels = use_half_scale ? calculate_half_scales(in_rsz, scales, level_size) :
+                                           calculate_scales(in_rsz, scales, level_size);
     CV_Assert(pyramid_levels <= MAX_PYRAMID_LEVELS);
 
     //Proposal part of MTCNN graph
