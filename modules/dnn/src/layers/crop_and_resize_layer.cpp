@@ -125,14 +125,15 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        std::vector<size_t> dims = rois->get_shape(), offsets(4, 0);
+        auto rois_shape = rois->get_shape();
+        std::vector<int64_t> dims(rois_shape.begin(), rois_shape.end()), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;
 
         auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{offsets.size()}, std::vector<int64_t>(offsets.begin(), offsets.end()));
+                                             ngraph::Shape{offsets.size()}, offsets.data());
         auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{dims.size()}, std::vector<int64_t>(dims.begin(), dims.end()));
+                                             ngraph::Shape{dims.size()}, dims.data());
         auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
                                         ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
         auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(rois,
