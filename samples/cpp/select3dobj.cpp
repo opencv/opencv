@@ -490,7 +490,7 @@ int main(int argc, char** argv)
     setMouseCallback("View", onMouse, 0);
     bool boardFound = false;
 
-    string indexFilename = format("%s_index.yml", outprefix.c_str());
+    string indexFilename = cv::format("%s_index.yml", outprefix.c_str());
 
     vector<string> capturedImgList;
     vector<Rect> roiList;
