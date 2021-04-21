@@ -78,9 +78,9 @@ struct BBox {
 
 struct Face {
     BBox bbox;
-    float score;
-    float regression[NUM_REGRESSIONS];
-    float ptsCoords[2 * NUM_PTS];
+    double score;
+    double regression[NUM_REGRESSIONS];
+    double ptsCoords[2 * NUM_PTS];
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
         for (size_t i = 0; i < faces.size(); ++i) {
@@ -213,21 +213,21 @@ G_API_NET(MTCNNOutput,
 
 using GFaces = cv::GArray<Face>;
 G_API_OP(BuildFaces,
-         <GFaces(cv::GMat, cv::GMat, float, float)>,
+         <GFaces(cv::GMat, cv::GMat, double, double)>,
          "sample.custom.mtcnn.build_faces") {
             static cv::GArrayDesc outMeta(const cv::GMatDesc&,
             const cv::GMatDesc&,
-            float,
-            float) {
+            double,
+            double) {
             return cv::empty_array_desc();
     }
 };
 
 G_API_OP(RunNMS,
-         <GFaces(GFaces, float, bool)>,
+         <GFaces(GFaces, double, bool)>,
          "sample.custom.mtcnn.run_nms") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-         float, bool) {
+         double, bool) {
          return cv::empty_array_desc();
     }
 };
@@ -267,24 +267,24 @@ G_API_OP(R_O_NetPreProcGetROIs,
 
 
 G_API_OP(RNetPostProc,
-         <GFaces(GFaces, GMats, GMats, float)>,
+         <GFaces(GFaces, GMats, GMats, double)>,
          "sample.custom.mtcnn.rnet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
          const cv::GArrayDesc&,
          const cv::GArrayDesc&,
-         float) {
+         double) {
          return cv::empty_array_desc();
     }
 };
 
 G_API_OP(ONetPostProc,
-         <GFaces(GFaces, GMats, GMats, GMats, float)>,
+         <GFaces(GFaces, GMats, GMats, GMats, double)>,
          "sample.custom.mtcnn.onet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
          const cv::GArrayDesc&,
          const cv::GArrayDesc&,
          const cv::GArrayDesc&,
-         float) {
+         double) {
          return cv::empty_array_desc();
     }
 };
@@ -553,7 +553,7 @@ int calculate_half_scales(const cv::Size &input_size, std::vector<double>& out_s
     double factor = 0.5;
     int factor_count = 0;
     double minl = std::min(h, w);
-    while (minl >= 12*2)
+    while (minl >= 12.0*2.0)
     {
         double current_scale = pr_scale;
         cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
@@ -694,7 +694,7 @@ int main(int argc, char* argv[])
         std::string net_id = get_pnet_level_name(level_size[i]);
         std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
         cv::gapi::ie::Params<cv::gapi::Generic> mtcnnp_net{
-                    net_id,                           // tag
+                    net_id,                      // tag
                     model_path_p,                // path to topology IR
                     weights_path(model_path_p),  // path to weights
                     target_dev_p,                // device specifier
@@ -741,7 +741,7 @@ int main(int argc, char* argv[])
             std::vector<cv::Point> pts;
             for (int p = 0; p < NUM_PTS; ++p) {
                 pts.push_back(
-                    cv::Point(out_face.ptsCoords[2 * p], out_face.ptsCoords[2 * p + 1]));
+                    cv::Point(static_cast<int>(out_face.ptsCoords[2 * p]), static_cast<int>(out_face.ptsCoords[2 * p + 1])));
             }
             auto rect = out_face.bbox.getRect();
             auto d = std::make_pair(rect, pts);
