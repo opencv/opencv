@@ -366,9 +366,7 @@ GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
         for (auto& f : in_faces) {
             cv::Rect tmp_rect = f.bbox.getRect();
             //Compare to transposed sizes width<->height
-            //if (tmp_rect.x + tmp_rect.width >= in_image_size.height) tmp_rect.width = in_image_size.height - tmp_rect.x - 4;
-            //if (tmp_rect.y + tmp_rect.height >= in_image_size.width) tmp_rect.height = in_image_size.width - tmp_rect.y - 4;
-            tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - 4, in_image_size.width - 4);
+            tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - tmp_rect.x - 4, in_image_size.width - tmp_rect.y - 4);
             outs.push_back(tmp_rect);
         }
     }
@@ -469,7 +467,6 @@ using rectPoints = std::pair<cv::Rect, std::vector<cv::Point>>;
 static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     const std::vector<rectPoints> data) {
     cv::Mat outImg;
-    //img.convertTo(outImg, CV_8UC3);
     img.copyTo(outImg);
 
     for (auto& d : data) {
