@@ -41,8 +41,8 @@ With G-API, we can define it as follows:
 
 It is important to understand that the new G-API based version of
 calcGST() will just produce a compute graph, in contrast to its
-original version, which actually calculates the values. This is a
-principal difference -- G-API based functions like this are used to
+the original version, which actually calculates the values. This is a
+the principal difference -- G-API based functions like this are used to
 construct graphs, not to process the actual data.
 
 Let's start implementing calcGST() with calculation of \f$J\f$
@@ -84,7 +84,7 @@ way trivially. Below is its full source code:
 
 After calcGST() is defined in G-API language, we can construct a graph
 based on it and finally run it -- pass input image and obtain
-result. Before we do it, let's have a look how original code looked
+result. Before we do it, let's have a look at how the original code looked
 like:
 
 @snippet cpp/tutorial_code/ImgProc/anisotropic_image_segmentation/anisotropic_image_segmentation.cpp main_extra
@@ -98,7 +98,7 @@ object, similar to C++11
 [std::function<>](https://en.cppreference.com/w/cpp/utility/functional/function).
 
 cv::GComputation class has a number of constructors which can be used
-to define a graph. Generally, user needs to pass graph boundaries
+to define a graph. Generally, the user needs to pass graph boundaries
 -- _input_ and _output_ objects, on which a GComputation is
 defined. Then G-API analyzes the call flow from _outputs_ to _inputs_
 and reconstructs the graph with operations in-between the specified
@@ -111,7 +111,7 @@ Note that this code slightly changes from the original one: forming up
 the resulting image is also a part of the pipeline (done with
 cv::gapi::addWeighted).
 
-Result of this G-API pipeline bit-exact matches the original one
+The result of this G-API pipeline bit-exact matches the original one
 (given the same input image):
 
 ![Segmentation result with G-API](pics/result.jpg)
@@ -134,18 +134,18 @@ memory profiling.
 
 G-API stands for "Graph API", but did you mention any graphs in the
 above example? It was one of the initial design goals -- G-API was
-designed with expressions in mind to make adoption and porting process
+designed with expressions in mind to make the adoption and porting process
 more straightforward. People _usually_ don't think in terms of
 _Nodes_ and _Edges_ when writing ordinary code, and so G-API, while
 being a Graph API, doesn't force its users to do that.
 
 However, a graph is still built implicitly when a cv::GComputation
-object is defined. It may be useful to inspect how the resulting graph
+the object is defined. It may be useful to inspect how the resulting graph
 looks like to check if it is generated correctly and if it really
-represents our alrogithm. It is also useful to learn the structure of
+represents our algorithm. It is also useful to learn the structure of
 the graph to see if it has any redundancies.
 
-G-API allows to dump generated graphs to `.dot` files which then
+G-API allows dumping generated graphs to `.dot` files which then
 could be visualized with [Graphviz](https://www.graphviz.org/), a
 popular open graph visualization software.
 
@@ -156,7 +156,7 @@ file name before running the application, e.g.:
 
     $ GRAPH_DUMP_PATH=segm.dot ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
 
-Now this file can be visualized with a `dot` command like this:
+Now, this file can be visualized with a `dot` command like this:
 
     $ dot segm.dot -Tpng -o segm.png
 
@@ -177,14 +177,14 @@ G-API's internal algorithm representation:
 3. Graph "begins" and "ends" with a _Data_ kind of nodes.
 4. A _Data_ node can have only a single writer and multiple readers.
 5. An _Operation_ node may have multiple inputs, though every input
-   must have an unique _port number_ (among inputs).
-6. An _Operation_ node may have multiple outputs, and every output
-   must have an unique _port number_ (among outputs).
+   must have a unique _port number_ (among inputs).
+6. An _Operation_ node may have multiple outputs and every output
+   must have a unique _port number_ (among outputs).
 
 ## Measuring memory footprint {#gapi_anisotropic_memory_ocv}
 
-Let's measure and compare memory footprint of the algorithm in its two
-versions: G-API-based and OpenCV-based. At the moment, G-API version
+Let's measure and compare the memory footprint of the algorithm in its two
+versions: G-API-based and OpenCV-based. At the moment, the G-API version
 is also OpenCV-based since it fallbacks to OpenCV functions inside.
 
 On GNU/Linux, application memory footprint can be profiled with
@@ -222,10 +222,10 @@ of the algorithm:
 
 We see that memory is allocated as the application
 executes, reaching its peak in the calcGST() function; then the
-footprint drops as calcGST() completes its execution and all temporary
+footprint drops as calcGST() complete its execution and all temporary
 buffers are freed. Massif reports us peak memory consumption of 7.6 MiB.
 
-Now let's have a look on the profile of G-API version:
+Now let's have a look at the profile of the G-API version:
 
 ![Memory profile: G-API port of Anisotropic Image Segmentation sample](pics/massif_export_gapi.png)
 
@@ -234,8 +234,8 @@ allocates all required memory at once and then the memory profile
 remains flat until the termination of the program. Massif reports us
 peak memory consumption of 11.4 MiB.
 
-A reader may ask a right question at this point -- is G-API that bad?
-What is the reason in using it than?
+A reader may ask the right question at this point -- is G-API that bad?
+What is the reason for using it then?
 
 Hopefully, it is not. The reason why we see here an increased memory
 consumption is because the default naive OpenCV-based backend is used to
@@ -244,9 +244,9 @@ and debugging algorithms before offload/further optimization.
 
 This backend doesn't utilize any complex memory management strategies yet
 since it is not its point at the moment. In the following chapter,
-we'll learn about Fluid backend and see how the same G-API code can
+we'll learn about the Fluid backend and see how the same G-API code can
 run in a completely different model (and the footprint shrunk to a
-number of kilobytes).
+a number of kilobytes).
 
 # Backends and kernels {#gapi_anisotropic_backends}
 
@@ -267,10 +267,10 @@ backends. In this context, _kernel_ is an implementation of an
 _operation_, which is defined on the top API level (see
 G_TYPED_KERNEL() macro).
 
-Backend is a thing which is aware of device & platform specifics, and
-which executes its kernels with keeping that specifics in mind. For
+Backend is a thing that is aware of device & platform specifics, and
+which executes its kernels with keeping those specifics in mind. For
 example, there may be [Halide](http://halide-lang.org/) backend which
-allows to write (implement) G-API operations in Halide language and
+allows writing (implement) G-API operations in Halide language and
 then generate functional Halide code for portions of G-API graph which
 map well there.
 
@@ -308,7 +308,7 @@ particular backend. In this example, we pass Fluid kernel packages to
 G-API to utilize appropriate Fluid functions in our graph.
 
 Kernel packages are combinable -- in the above example, we take "Core"
-and "ImgProc" Fluid kernel packages and combine it into a single
+and "ImgProc" Fluid kernel packages and combine them into a single
 one. See documentation reference on cv::gapi::combine.
 
 If no kernel packages are specified in options, G-API is using
@@ -336,22 +336,22 @@ terminate called after throwing an instance of 'std::logic_error'
 Aborted (core dumped)
 ```
 
-Fluid backend has a number of limitations in OpenCV 4.0 (see this
+The fluid backend has a number of limitations in OpenCV 4.0 (see this
 [wiki page](https://github.com/opencv/opencv/wiki/Graph-API) for a
 more up-to-date status). In particular, the Box filter used in this
 sample supports only static 3x3 kernel size.
 
 We can overcome this problem easily by avoiding G-API using Fluid
-version of Box filter kernel in this sample. It can be done by
+a version of Box filter kernel in this sample. It can be done by
 removing the appropriate kernel from the kernel package we've just
 created:
 
 @snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_hotfix
 
-Now this kernel package doesn't have _any_ implementation of Box
+Now, this kernel package doesn't have _any_ implementation of the Box
 filter kernel interface (specified as a template parameter). As
-described above, G-API will fall-back to OpenCV to run this kernel
-now. The resulting code with this change now looks like:
+described above, G-API will fall back to OpenCV to run this kernel
+now. The resulting code with this change now looks like this:
 
 @snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_pkg_proper
 
@@ -362,28 +362,28 @@ Fluid backend. Now it looks like this:
 
 Now the tool reports 4.7MiB -- and we just changed a few lines in our
 code, without modifying the graph itself! It is a ~2.4X improvement of
-the previous G-API result, and ~1.6X improvement of the original OpenCV
+the previous G-API result and ~1.6X improvement of the original OpenCV
 version.
 
 Let's also examine how the internal representation of the graph now
-looks like. Dumping the graph into `.dot` would result into a
+looks like. Dumping the graph into `.dot` would result in a
 visualization like this:
 
 ![Anisotropic image segmentation graph with OpenCV & Fluid kernels](pics/segm_fluid.gif)
 
 This graph doesn't differ structurally from its previous version (in
 terms of operations and data objects), though a changed layout (on the
-left side of the dump) is easily noticeable.
+the left side of the dump) is easily noticeable.
 
 The visualization reflects how G-API deals with mixed graphs, also
 called _heterogeneous_ graphs. The majority of operations in this
-graph are implemented with Fluid backend, but Box filters are executed
+graph are implemented with the Fluid backend, but Box filters are executed
 by the OpenCV backend. One can easily see that the graph is partitioned
 (with rectangles). G-API groups connected operations based on their
 affinity, forming _subgraphs_ (or _islands_ in G-API terminology), and
 our top-level graph becomes a composition of multiple smaller
 subgraphs. Every backend determines how its subgraph (island) is
-executed, so Fluid backend optimizes out memory where possible, and
+executed, so the Fluid backend optimizes out memory where possible, and
 six intermediate buffers accessed by OpenCV Box filters are allocated
 fully and can't be optimized out.
 
