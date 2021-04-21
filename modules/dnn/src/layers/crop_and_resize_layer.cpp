@@ -125,7 +125,8 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        std::vector<size_t> dims = rois->get_shape(), offsets(4, 0);
+        auto rois_shape = rois->get_shape();
+        std::vector<int64_t> dims(rois_shape.begin(), rois_shape.end()), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;
 
@@ -139,7 +140,7 @@ public:
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         // Reshape rois from 4D to 2D
-        std::vector<size_t> shapeData = {dims[2], 5};
+        std::vector<int64_t> shapeData = {dims[2], 5};
         auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shapeData.data());
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(slice, shape, true);
 
