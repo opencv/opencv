@@ -56,7 +56,7 @@ using namespace std;
 
 static string getTestCaseName(const string& picture_name, double minDist, double edgeThreshold, double accumThreshold, int minRadius, int maxRadius)
 {
-    string results_name = format("circles_%s_%.0f_%.0f_%.0f_%d_%d",
+    string results_name = cv::format("circles_%s_%.0f_%.0f_%.0f_%d_%d",
         picture_name.c_str(), minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
     string temp(results_name);
     size_t pos = temp.find_first_of("\\/.");

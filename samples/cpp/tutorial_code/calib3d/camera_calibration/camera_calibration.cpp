@@ -402,9 +402,9 @@ int main(int argc, char* argv[])
         if( mode == CAPTURING )
         {
             if(s.showUndistorsed)
-                msg = format( "%d/%d Undist", (int)imagePoints.size(), s.nrFrames );
+                msg = cv::format( "%d/%d Undist", (int)imagePoints.size(), s.nrFrames );
             else
-                msg = format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
+                msg = cv::format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
         }
 
         putText( view, msg, textOrigin, 1, 1, mode == CALIBRATED ?  GREEN : RED);
