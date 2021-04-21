@@ -61,15 +61,15 @@ struct BBox {
     float x2;
     float y2;
 
-    cv::Rect getRect() const { return cv::Rect(x1, y1, x2 - x1, y2 - y1); }
+    cv::Rect getRect() const { return cv::Rect(static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2 - x1), static_cast<int>(y2 - y1)); }
 
     BBox getSquare() const {
         BBox bbox;
         float bboxWidth = x2 - x1;
         float bboxHeight = y2 - y1;
         float side = std::max(bboxWidth, bboxHeight);
-        bbox.x1 = static_cast<int>(x1 + (bboxWidth - side) * 0.5f);
-        bbox.y1 = static_cast<int>(y1 + (bboxHeight - side) * 0.5f);
+        bbox.x1 = static_cast<int>(x1) + static_cast<int>((bboxWidth - side) * 0.5f);
+        bbox.y1 = static_cast<int>(y1) + static_cast<int>((bboxHeight - side) * 0.5f);
         bbox.x2 = static_cast<int>(bbox.x1 + side);
         bbox.y2 = static_cast<int>(bbox.y1 + side);
         return bbox;
@@ -157,8 +157,8 @@ const int P_NET_STRIDE = 2;
 
 std::vector<Face> buildFaces(const cv::Mat& scores,
     const cv::Mat& regressions,
-    const float scaleFactor,
-    const float threshold) {
+    const double scaleFactor,
+    const double threshold) {
 
     auto w = scores.size[3];
     auto h = scores.size[2];
@@ -313,8 +313,8 @@ G_API_OP(Transpose,
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
         const cv::Mat & in_regresssions,
-        float scaleFactor,
-        float threshold,
+        double scaleFactor,
+        double threshold,
         std::vector<Face> &out_faces) {
         out_faces = buildFaces(in_scores, in_regresssions, scaleFactor, threshold);
     }
@@ -322,7 +322,7 @@ GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
 
 GAPI_OCV_KERNEL(OCVRunNMS, RunNMS) {
     static void run(const std::vector<Face> &in_faces,
-        float threshold,
+        double threshold,
         bool useMin,
         std::vector<Face> &out_faces) {
         std::vector<Face> in_faces_copy = in_faces;
@@ -380,7 +380,7 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
     static void run(const std::vector<Face> &in_faces,
         const std::vector<cv::Mat> &in_scores,
         const std::vector<cv::Mat> &in_regresssions,
-        float threshold,
+        double threshold,
         std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
@@ -403,7 +403,7 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
         const std::vector<cv::Mat> &in_scores,
         const std::vector<cv::Mat> &in_regresssions,
         const std::vector<cv::Mat> &in_landmarks,
-        float threshold,
+        double threshold,
         std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
@@ -511,8 +511,8 @@ int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::
     //calculate multi - scale and limit the maxinum side to 1000
     //pr_scale: limit the maxinum side to 1000, < 1.0
     double pr_scale = 1.0;
-    int h = input_size.height;
-    int w = input_size.width;
+    double h = static_cast<double>(input_size.height);
+    double w = static_cast<double>(input_size.width);
     if (std::min(w, h) > 1000)
     {
         pr_scale = 1000.0 / std::min(h, w);
@@ -529,11 +529,12 @@ int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::
     out_sizes.clear();
     double factor = 0.709;
     int factor_count = 0;
-    int minl = std::min(h, w);
+    double minl = std::min(h, w);
     while (minl >= 12)
     {
         double current_scale = pr_scale * std::pow(factor, factor_count);
-        cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
+        cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
+                              static_cast<int>(static_cast<double>(input_size.height) * current_scale));
         std::cout << "current_scale " << current_scale << std::endl;
         std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
@@ -547,18 +548,19 @@ int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::
 
 int calculate_half_scales(cv::Size input_size, std::vector<double>& out_scales, std::vector<cv::Size>& out_sizes) {
     double pr_scale = 0.5;
-    int h = input_size.height;
-    int w = input_size.width;
+    double h = static_cast<double>(input_size.height);
+    double w = static_cast<double>(input_size.width);
     //multi - scale
     out_scales.clear();
     out_sizes.clear();
     double factor = 0.5;
     int factor_count = 0;
-    int minl = std::min(h, w);
+    double minl = std::min(h, w);
     while (minl >= 12*2)
     {
         double current_scale = pr_scale;
-        cv::Size current_size(input_size.width * current_scale, input_size.height * current_scale);
+        cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
+                              static_cast<int>(static_cast<double>(input_size.height) * current_scale));
         std::cout << "current_scale " << current_scale << std::endl;
         std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
@@ -603,7 +605,8 @@ int main(int argc, char* argv[])
     cap.open(input_file_name);
     if (!cap.isOpened())
         CV_Assert(false);
-    auto in_rsz = cv::Size{ (int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT) };
+    auto in_rsz = cv::Size{ static_cast<int>(cap.get(cv::CAP_PROP_FRAME_WIDTH)),
+                            static_cast<int>(cap.get(cv::CAP_PROP_FRAME_HEIGHT)) };
     //Calculate scales, number of pyramid levels and sizes for PNet pyramid
     auto pyramid_levels = use_half_scale ? calculate_half_scales(in_rsz, scales, level_size) :
                                            calculate_scales(in_rsz, scales, level_size);
@@ -627,7 +630,7 @@ int main(int argc, char* argv[])
     in_transposed[0] = custom::Transpose::on(in_resized[0]);
     std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], get_pnet_level_name(level_size[0]));
     cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], scales[0], tmcnnp_conf_thresh);
-    nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5f, false);
+    nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5, false);
     total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
@@ -636,12 +639,12 @@ int main(int argc, char* argv[])
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], get_pnet_level_name(level_size[i]));
         cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], tmcnnp_conf_thresh);
-        nms_p_faces[i] = custom::RunNMS::on(faces, 0.5f, false);
+        nms_p_faces[i] = custom::RunNMS::on(faces, 0.5, false);
         total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i - 1], nms_p_faces[i]);
     }
 
     //Proposal post-processing
-    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[pyramid_levels - 1], 0.7f, false);
+    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[pyramid_levels - 1], 0.7, false);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(nms07_p_faces_total, false);
     cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
 
@@ -653,7 +656,7 @@ int main(int argc, char* argv[])
 
     //Refinement post-processing
     cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, tmcnnr_conf_thresh);
-    cv::GArray<custom::Face> nms07_r_faces_total = custom::RunNMS::on(rnet_post_proc_faces, 0.7f, false);
+    cv::GArray<custom::Face> nms07_r_faces_total = custom::RunNMS::on(rnet_post_proc_faces, 0.7, false);
     cv::GArray<custom::Face> final_r_faces_for_bb2squares = custom::ApplyRegression::on(nms07_r_faces_total, true);
     cv::GArray<custom::Face> final_faces_rnet = custom::BBoxesToSquares::on(final_r_faces_for_bb2squares);
 
@@ -665,7 +668,7 @@ int main(int argc, char* argv[])
     //Output post-processing
     cv::GArray<custom::Face> onet_post_proc_faces = custom::ONetPostProc::on(final_faces_rnet, scoresONet, regressionsONet, landmarksONet, tmcnno_conf_thresh);
     cv::GArray<custom::Face> final_o_faces_for_nms07 = custom::ApplyRegression::on(onet_post_proc_faces, true);
-    cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
+    cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
     cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_original), final_faces_onet));
