@@ -56,22 +56,22 @@ namespace {
 #define NUM_PTS 5
 
 struct BBox {
-    float x1;
-    float y1;
-    float x2;
-    float y2;
+    double x1;
+    double y1;
+    double x2;
+    double y2;
 
     cv::Rect getRect() const { return cv::Rect(static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2 - x1), static_cast<int>(y2 - y1)); }
 
     BBox getSquare() const {
         BBox bbox;
-        float bboxWidth = x2 - x1;
-        float bboxHeight = y2 - y1;
-        float side = std::max(bboxWidth, bboxHeight);
-        bbox.x1 = static_cast<int>(x1) + static_cast<int>((bboxWidth - side) * 0.5f);
-        bbox.y1 = static_cast<int>(y1) + static_cast<int>((bboxHeight - side) * 0.5f);
-        bbox.x2 = static_cast<int>(bbox.x1 + side);
-        bbox.y2 = static_cast<int>(bbox.y1 + side);
+        double bboxWidth = x2 - x1;
+        double bboxHeight = y2 - y1;
+        double side = std::max(bboxWidth, bboxHeight);
+        bbox.x1 = static_cast<double>(x1) + (bboxWidth - side) * 0.5;
+        bbox.y1 = static_cast<double>(y1) + (bboxHeight - side) * 0.5;
+        bbox.x2 = bbox.x1 + side;
+        bbox.y2 = bbox.y1 + side;
         return bbox;
     }
 };
@@ -84,14 +84,14 @@ struct Face {
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
         for (size_t i = 0; i < faces.size(); ++i) {
-            float bboxWidth =
-                faces[i].bbox.x2 - faces[i].bbox.x1 + static_cast<float>(addOne);
-            float bboxHeight =
-                faces[i].bbox.y2 - faces[i].bbox.y1 + static_cast<float>(addOne);
-            faces[i].bbox.x1 = faces[i].bbox.x1 + faces[i].regression[1] * bboxWidth;
-            faces[i].bbox.y1 = faces[i].bbox.y1 + faces[i].regression[0] * bboxHeight;
-            faces[i].bbox.x2 = faces[i].bbox.x2 + faces[i].regression[3] * bboxWidth;
-            faces[i].bbox.y2 = faces[i].bbox.y2 + faces[i].regression[2] * bboxHeight;
+            double bboxWidth =
+                faces[i].bbox.x2 - faces[i].bbox.x1 + static_cast<double>(addOne);
+            double bboxHeight =
+                faces[i].bbox.y2 - faces[i].bbox.y1 + static_cast<double>(addOne);
+            faces[i].bbox.x1 = faces[i].bbox.x1 + static_cast<double>(faces[i].regression[1]) * bboxWidth;
+            faces[i].bbox.y1 = faces[i].bbox.y1 + static_cast<double>(faces[i].regression[0]) * bboxHeight;
+            faces[i].bbox.x2 = faces[i].bbox.x2 + static_cast<double>(faces[i].regression[3]) * bboxWidth;
+            faces[i].bbox.y2 = faces[i].bbox.y2 + static_cast<double>(faces[i].regression[2]) * bboxHeight;
         }
     }
 
@@ -101,7 +101,7 @@ struct Face {
         }
     }
 
-    static std::vector<Face> runNMS(std::vector<Face>& faces, float threshold,
+    static std::vector<Face> runNMS(std::vector<Face>& faces, double threshold,
                                     bool useMin = false) {
         std::vector<Face> facesNMS;
         if (faces.empty()) {
@@ -122,21 +122,21 @@ struct Face {
             indices.clear();
             for (size_t i = 1; i < tmpIndices.size(); ++i) {
                 int tmpIdx = tmpIndices[i];
-                const float interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
-                const float interY1 = std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1);
-                const float interX2 = std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2);
-                const float interY2 = std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2);
+                const double interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
+                const double interY1 = std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1);
+                const double interX2 = std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2);
+                const double interY2 = std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2);
 
-                const float bboxWidth = std::max(0.f, (interX2 - interX1 + 1));
-                const float bboxHeight = std::max(0.f, (interY2 - interY1 + 1));
+                const double bboxWidth = std::max(0.0, (interX2 - interX1 + 1));
+                const double bboxHeight = std::max(0.0, (interY2 - interY1 + 1));
 
-                const float interArea = bboxWidth * bboxHeight;
+                const double interArea = bboxWidth * bboxHeight;
                 // TODO: compute outside the loop
-                const float area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
+                const double area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
                     (faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
-                const float area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
+                const double area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
                     (faces[tmpIdx].bbox.y2 - faces[tmpIdx].bbox.y1 + 1);
-                float overlap = 0.f;
+                double overlap = 0.0;
                 if (useMin) {
                     overlap = interArea / std::min(area1, area2);
                 }
@@ -152,8 +152,8 @@ struct Face {
     }
 };
 
-const float P_NET_WINDOW_SIZE = 12.f;
-const int P_NET_STRIDE = 2;
+const double P_NET_WINDOW_SIZE = 12.0;
+const double P_NET_STRIDE = 2.0;
 
 std::vector<Face> buildFaces(const cv::Mat& scores,
     const cv::Mat& regressions,
@@ -179,12 +179,10 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
             Face faceInfo;
             BBox& faceBox = faceInfo.bbox;
 
-            faceBox.x1 = (float)(x * P_NET_STRIDE) / scaleFactor;
-            faceBox.y1 = (float)(y * P_NET_STRIDE) / scaleFactor;
-            faceBox.x2 =
-                (float)(x * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
-            faceBox.y2 =
-                (float)(y * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
+            faceBox.x1 = (static_cast<double>(x) * P_NET_STRIDE) / scaleFactor;
+            faceBox.y1 = (static_cast<double>(y) * P_NET_STRIDE) / scaleFactor;
+            faceBox.x2 = (static_cast<double>(x) * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
+            faceBox.y2 = (static_cast<double>(y) * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
             faceInfo.regression[0] = reg_data[i];
             faceInfo.regression[1] = reg_data[i + size];
             faceInfo.regression[2] = reg_data[i + 2 * size];
@@ -368,8 +366,9 @@ GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
         for (auto& f : in_faces) {
             cv::Rect tmp_rect = f.bbox.getRect();
             //Compare to transposed sizes width<->height
-            if (tmp_rect.x + tmp_rect.width >= in_image_size.height) tmp_rect.width = in_image_size.height - tmp_rect.x - 4;
-            if (tmp_rect.y + tmp_rect.height >= in_image_size.width) tmp_rect.height = in_image_size.width - tmp_rect.y - 4;
+            //if (tmp_rect.x + tmp_rect.width >= in_image_size.height) tmp_rect.width = in_image_size.height - tmp_rect.x - 4;
+            //if (tmp_rect.y + tmp_rect.height >= in_image_size.width) tmp_rect.height = in_image_size.width - tmp_rect.y - 4;
+            tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - 4, in_image_size.width - 4);
             outs.push_back(tmp_rect);
         }
     }
@@ -417,13 +416,13 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
                 for (int i = 0; i < 4; ++i) {
                     info.regression[i] = reg_data[i];
                 }
-                float w = info.bbox.x2 - info.bbox.x1 + 1.f;
-                float h = info.bbox.y2 - info.bbox.y1 + 1.f;
+                double w = info.bbox.x2 - info.bbox.x1 + 1.0;
+                double h = info.bbox.y2 - info.bbox.y1 + 1.0;
 
                 for (int p = 0; p < NUM_PTS; ++p) {
                     info.ptsCoords[2 * p] =
-                        info.bbox.x1 + landmark_data[NUM_PTS + p] * w - 1;
-                    info.ptsCoords[2 * p + 1] = info.bbox.y1 + landmark_data[p] * h - 1;
+                        info.bbox.x1 + static_cast<double>(landmark_data[NUM_PTS + p]) * w - 1;
+                    info.ptsCoords[2 * p + 1] = info.bbox.y1 + static_cast<double>(landmark_data[p]) * h - 1;
                 }
 
                 out_faces.push_back(info);
@@ -461,19 +460,17 @@ GAPI_OCV_KERNEL(OCVTranspose, Transpose) {
 
 namespace vis {
 namespace {
-    void bbox(cv::Mat& m, const cv::Rect& rc) {
-        cv::rectangle(m, rc, cv::Scalar{ 0,255,0 }, 2, cv::LINE_8, 0);
-    };
-
-} // anonymous namespace
-} // namespace vis
+void bbox(cv::Mat& m, const cv::Rect& rc) {
+    cv::rectangle(m, rc, cv::Scalar{ 0,255,0 }, 2, cv::LINE_8, 0);
+};
 
 using rectPoints = std::pair<cv::Rect, std::vector<cv::Point>>;
 
 static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     const std::vector<rectPoints> data) {
     cv::Mat outImg;
-    img.convertTo(outImg, CV_8UC3);
+    //img.convertTo(outImg, CV_8UC3);
+    img.copyTo(outImg);
 
     for (auto& d : data) {
         vis::bbox(outImg, d.first);
@@ -484,10 +481,13 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     }
     return outImg;
 }
+} // anonymous namespace
+} // namespace vis
+
 
 //Infer helper function
 namespace {
-static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat in, std::string id) {
+static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat &in, const std::string &id) {
     cv::GInferInputs inputs;
     inputs["data"] = in;
     auto outputs = cv::gapi::infer<cv::gapi::Generic>(id, inputs);
@@ -503,11 +503,11 @@ inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv:
     return lhs;
 }
 
-static inline std::string get_pnet_level_name(const cv::Size in_size) {
+static inline std::string get_pnet_level_name(const cv::Size &in_size) {
     return "MTCNNProposal_" + std::to_string(in_size.width) + "x" + std::to_string(in_size.height);
 }
 
-int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::vector<cv::Size> &out_sizes ) {
+int calculate_scales(const cv::Size &input_size, std::vector<double> &out_scales, std::vector<cv::Size> &out_sizes ) {
     //calculate multi - scale and limit the maxinum side to 1000
     //pr_scale: limit the maxinum side to 1000, < 1.0
     double pr_scale = 1.0;
@@ -546,7 +546,7 @@ int calculate_scales(cv::Size input_size, std::vector<double> &out_scales, std::
     return factor_count;
 }
 
-int calculate_half_scales(cv::Size input_size, std::vector<double>& out_scales, std::vector<cv::Size>& out_sizes) {
+int calculate_half_scales(const cv::Size &input_size, std::vector<double>& out_scales, std::vector<cv::Size>& out_sizes) {
     double pr_scale = 0.5;
     double h = static_cast<double>(input_size.height);
     double w = static_cast<double>(input_size.width);
@@ -587,15 +587,15 @@ int main(int argc, char* argv[])
         return 0;
     }
     const auto input_file_name = cmd.get<std::string>("input");
-    const auto tmcnnp_model_path = cmd.get<std::string>("mtcnnpm");
-    const auto tmcnnp_target_dev = cmd.get<std::string>("mtcnnpd");
-    const auto tmcnnp_conf_thresh = cmd.get<double>("thrp");
-    const auto tmcnnr_model_path = cmd.get<std::string>("mtcnnrm");
-    const auto tmcnnr_target_dev = cmd.get<std::string>("mtcnnrd");
-    const auto tmcnnr_conf_thresh = cmd.get<double>("thrr");
-    const auto tmcnno_model_path = cmd.get<std::string>("mtcnnom");
-    const auto tmcnno_target_dev = cmd.get<std::string>("mtcnnod");
-    const auto tmcnno_conf_thresh = cmd.get<double>("thro");
+    const auto model_path_p = cmd.get<std::string>("mtcnnpm");
+    const auto target_dev_p = cmd.get<std::string>("mtcnnpd");
+    const auto conf_thresh_p = cmd.get<double>("thrp");
+    const auto model_path_r = cmd.get<std::string>("mtcnnrm");
+    const auto target_dev_r = cmd.get<std::string>("mtcnnrd");
+    const auto conf_thresh_r = cmd.get<double>("thrr");
+    const auto model_path_o = cmd.get<std::string>("mtcnnom");
+    const auto target_dev_o = cmd.get<std::string>("mtcnnod");
+    const auto conf_thresh_o = cmd.get<double>("thro");
     const auto use_half_scale = cmd.get<bool>("half_scale");
 
     std::vector<cv::Size> level_size;
@@ -629,7 +629,7 @@ int main(int argc, char* argv[])
     in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
     in_transposed[0] = custom::Transpose::on(in_resized[0]);
     std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], get_pnet_level_name(level_size[0]));
-    cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], scales[0], tmcnnp_conf_thresh);
+    cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], scales[0], conf_thresh_p);
     nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5, false);
     total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
@@ -638,7 +638,7 @@ int main(int argc, char* argv[])
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], get_pnet_level_name(level_size[i]));
-        cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], tmcnnp_conf_thresh);
+        cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], conf_thresh_p);
         nms_p_faces[i] = custom::RunNMS::on(faces, 0.5, false);
         total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i - 1], nms_p_faces[i]);
     }
@@ -655,7 +655,7 @@ int main(int argc, char* argv[])
     std::tie(regressionsRNet, scoresRNet) = cv::gapi::infer<custom::MTCNNRefinement>(faces_roi_pnet, in_originalRGB_transposed);
 
     //Refinement post-processing
-    cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, tmcnnr_conf_thresh);
+    cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, conf_thresh_r);
     cv::GArray<custom::Face> nms07_r_faces_total = custom::RunNMS::on(rnet_post_proc_faces, 0.7, false);
     cv::GArray<custom::Face> final_r_faces_for_bb2squares = custom::ApplyRegression::on(nms07_r_faces_total, true);
     cv::GArray<custom::Face> final_faces_rnet = custom::BBoxesToSquares::on(final_r_faces_for_bb2squares);
@@ -666,7 +666,7 @@ int main(int argc, char* argv[])
     std::tie(regressionsONet, landmarksONet, scoresONet) = cv::gapi::infer<custom::MTCNNOutput>(faces_roi_rnet, in_originalRGB_transposed);
 
     //Output post-processing
-    cv::GArray<custom::Face> onet_post_proc_faces = custom::ONetPostProc::on(final_faces_rnet, scoresONet, regressionsONet, landmarksONet, tmcnno_conf_thresh);
+    cv::GArray<custom::Face> onet_post_proc_faces = custom::ONetPostProc::on(final_faces_rnet, scoresONet, regressionsONet, landmarksONet, conf_thresh_o);
     cv::GArray<custom::Face> final_o_faces_for_nms07 = custom::ApplyRegression::on(onet_post_proc_faces, true);
     cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
@@ -676,17 +676,17 @@ int main(int argc, char* argv[])
     // MTCNN Refinement detection network
     std::vector<size_t> reshape_dims_24x24 = { 1, 3, 24, 24 };
     auto mtcnnr_net = cv::gapi::ie::Params<custom::MTCNNRefinement>{
-        tmcnnr_model_path,                // path to topology IR
-        weights_path(tmcnnr_model_path),  // path to weights
-        tmcnnr_target_dev,                // device specifier
+        model_path_r,                // path to topology IR
+        weights_path(model_path_r),  // path to weights
+        target_dev_r,                // device specifier
     }.cfgOutputLayers({ "conv5-2", "prob1" }).cfgInputLayers({ "data" });
 
     // MTCNN Output detection network
     std::vector<size_t> reshape_dims_48x48 = { 1, 3, 48, 48 };
     auto mtcnno_net = cv::gapi::ie::Params<custom::MTCNNOutput>{
-        tmcnno_model_path,                // path to topology IR
-        weights_path(tmcnno_model_path),  // path to weights
-        tmcnno_target_dev,                // device specifier
+        model_path_o,                // path to topology IR
+        weights_path(model_path_o),  // path to weights
+        target_dev_o,                // device specifier
     }.cfgOutputLayers({ "conv6-2", "conv6-3", "prob1" }).cfgInputLayers({ "data" });
 
     auto networks_mtcnn = cv::gapi::networks(mtcnnr_net, mtcnno_net);
@@ -698,9 +698,9 @@ int main(int argc, char* argv[])
         std::vector<size_t> reshape_dims = { 1, 3, (size_t)level_size[i].width, (size_t)level_size[i].height };
         cv::gapi::ie::Params<cv::gapi::Generic> mtcnnp_net{
                     net_id,                           // tag
-                    tmcnnp_model_path,                // path to topology IR
-                    weights_path(tmcnnp_model_path),  // path to weights
-                    tmcnnp_target_dev,                // device specifier
+                    model_path_p,                // path to topology IR
+                    weights_path(model_path_p),  // path to weights
+                    target_dev_p,                // device specifier
         };
         mtcnnp_net.cfgInputReshape({ {"data", reshape_dims} });
         networks_mtcnn += cv::gapi::networks(mtcnnp_net);
@@ -738,7 +738,7 @@ int main(int argc, char* argv[])
     while (pipeline_mtcnn.pull(cv::gout(image, out_faces))) {
         frames++;
         std::cout << "Final Faces Size " << out_faces.size() << std::endl;
-        std::vector<rectPoints> data;
+        std::vector<vis::rectPoints> data;
         // show the image with faces in it
         for (auto& out_face : out_faces) {
             std::vector<cv::Point> pts;
@@ -751,7 +751,7 @@ int main(int argc, char* argv[])
             data.push_back(d);
         }
         // Visualize results on the frame
-        auto resultImg = drawRectsAndPoints(image, data);
+        auto resultImg = vis::drawRectsAndPoints(image, data);
         tm.stop();
         const auto fps_str = std::to_string(frames / tm.getTimeSec()) + " FPS";
         cv::putText(resultImg, fps_str, { 0,32 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0,255,0 }, 2);
