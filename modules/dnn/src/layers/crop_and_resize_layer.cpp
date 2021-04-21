@@ -130,16 +130,16 @@ public:
         dims[3] = 7;
 
         auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{offsets.size()}, offsets.data());
+                                             ngraph::Shape{offsets.size()}, std::vector<int64_t>(offsets.begin(), offsets.end()));
         auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{dims.size()}, dims.data());
+                                             ngraph::Shape{dims.size()}, std::vector<int64_t>(dims.begin(), dims.end()));
         auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
                                         ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
         auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(rois,
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         // Reshape rois from 4D to 2D
-        std::vector<size_t> shapeData = {dims[2], 5};
+        std::vector<int64_t> shapeData = {dims[2], 5};
         auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shapeData.data());
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(slice, shape, true);
 
