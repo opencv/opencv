@@ -140,7 +140,7 @@ public:
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         // Reshape rois from 4D to 2D
-        std::vector<int64_t> shapeData = {(int64_t)dims[2], 5};
+        std::vector<int64_t> shapeData = {dims[2], 5};
         auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shapeData.data());
         auto reshape = std::make_shared<ngraph::op::v1::Reshape>(slice, shape, true);
 
