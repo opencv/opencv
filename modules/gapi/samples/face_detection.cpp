@@ -61,7 +61,10 @@ struct BBox {
     double x2;
     double y2;
 
-    cv::Rect getRect() const { return cv::Rect(static_cast<int>(x1), static_cast<int>(y1), static_cast<int>(x2 - x1), static_cast<int>(y2 - y1)); }
+    cv::Rect getRect() const { return cv::Rect(static_cast<int>(x1),
+                                               static_cast<int>(y1),
+                                               static_cast<int>(x2 - x1),
+                                               static_cast<int>(y2 - y1)); }
 
     BBox getSquare() const {
         BBox bbox;
@@ -79,7 +82,8 @@ struct BBox {
 struct Face {
     BBox bbox;
     double score;
-    double regression[NUM_REGRESSIONS];
+    //double regression[NUM_REGRESSIONS];
+    std::array<double, NUM_REGRESSIONS> regression;
     double ptsCoords[2 * NUM_PTS];
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
@@ -384,9 +388,10 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
             if (scores_data[1] >= threshold) {
                 Face info = in_faces[k];
                 info.score = scores_data[1];
-                for (int i = 0; i < 4; ++i) {
-                    info.regression[i] = reg_data[i];
-                }
+                //for (int i = 0; i < NUM_REGRESSIONS; ++i) {
+                //    info.regression[i] = reg_data[i];
+                //}
+                std::copy_n(reg_data, NUM_REGRESSIONS, info.regression.begin());
                 out_faces.push_back(info);
             }
         }
