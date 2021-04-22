@@ -235,32 +235,32 @@ public:
         return *this;
     }
 
-    Params & cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
+    Params& cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
         desc.reshape_table = std::move(reshape_table);
         return *this;
     }
 
-    Params & cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>&reshape_table) {
+    Params& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>&reshape_table) {
         desc.reshape_table = reshape_table;
         return *this;
     }
 
-    Params & cfgInputReshape(std::string && layer_name, std::vector<size_t> && layer_dims) {
+    Params& cfgInputReshape(std::string && layer_name, std::vector<size_t> && layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
-    Params & cfgInputReshape(const std::string & layer_name, const std::vector<size_t>&layer_dims) {
+    Params& cfgInputReshape(const std::string & layer_name, const std::vector<size_t>&layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
-    Params & cfgInputReshape(std::unordered_set<std::string> && layer_names) {
+    Params& cfgInputReshape(std::unordered_set<std::string> && layer_names) {
         desc.layer_names_to_reshape = std::move(layer_names);
         return *this;
     }
 
-    Params & cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
+    Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
         return *this;
     }

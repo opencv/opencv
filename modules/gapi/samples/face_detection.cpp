@@ -120,6 +120,8 @@ struct Face {
             facesNMS.push_back(faces[idx]);
             std::vector<int> tmpIndices = indices;
             indices.clear();
+            const double area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
+                (faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
             for (size_t i = 1; i < tmpIndices.size(); ++i) {
                 int tmpIdx = tmpIndices[i];
                 const double interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
@@ -131,9 +133,6 @@ struct Face {
                 const double bboxHeight = std::max(0.0, (interY2 - interY1 + 1));
 
                 const double interArea = bboxWidth * bboxHeight;
-                // TODO: compute outside the loop
-                const double area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
-                    (faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
                 const double area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
                     (faces[tmpIdx].bbox.y2 - faces[tmpIdx].bbox.y1 + 1);
                 double overlap = 0.0;
@@ -156,9 +155,9 @@ const double P_NET_WINDOW_SIZE = 12.0;
 const double P_NET_STRIDE = 2.0;
 
 std::vector<Face> buildFaces(const cv::Mat& scores,
-    const cv::Mat& regressions,
-    const double scaleFactor,
-    const double threshold) {
+                             const cv::Mat& regressions,
+                             const double scaleFactor,
+                             const double threshold) {
 
     auto w = scores.size[3];
     auto h = scores.size[2];
@@ -202,7 +201,6 @@ using GMats = cv::GArray<cv::GMat>;
 using GRects = cv::GArray<cv::Rect>;
 using GSize = cv::GOpaque<cv::Size>;
 
-
 G_API_NET(MTCNNRefinement,
           <GMat2(cv::GMat)>,
           "sample.custom.mtcnn_refinement");
@@ -215,11 +213,11 @@ using GFaces = cv::GArray<Face>;
 G_API_OP(BuildFaces,
          <GFaces(cv::GMat, cv::GMat, double, double)>,
          "sample.custom.mtcnn.build_faces") {
-            static cv::GArrayDesc outMeta(const cv::GMatDesc&,
-            const cv::GMatDesc&,
-            double,
-            double) {
-            return cv::empty_array_desc();
+         static cv::GArrayDesc outMeta(const cv::GMatDesc&,
+                                        const cv::GMatDesc&,
+                                        double,
+                                        double) {
+              return cv::empty_array_desc();
     }
 };
 
@@ -227,17 +225,17 @@ G_API_OP(RunNMS,
          <GFaces(GFaces, double, bool)>,
          "sample.custom.mtcnn.run_nms") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-         double, bool) {
-         return cv::empty_array_desc();
+                                       double, bool) {
+             return cv::empty_array_desc();
     }
 };
 
 G_API_OP(AccumulatePyramidOutputs,
          <GFaces(GFaces, GFaces)>,
          "sample.custom.mtcnn.accumulate_pyramid_outputs") {
-    static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-        const cv::GArrayDesc&) {
-          return cv::empty_array_desc();
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
+                                       const cv::GArrayDesc&) {
+             return cv::empty_array_desc();
     }
 };
 
@@ -245,15 +243,15 @@ G_API_OP(ApplyRegression,
          <GFaces(GFaces, bool)>,
          "sample.custom.mtcnn.apply_regression") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&, bool) {
-         return cv::empty_array_desc();
+             return cv::empty_array_desc();
     }
 };
 
 G_API_OP(BBoxesToSquares,
          <GFaces(GFaces)>,
          "sample.custom.mtcnn.bboxes_to_squares") {
-          static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
-          return cv::empty_array_desc();
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
+              return cv::empty_array_desc();
     }
 };
 
@@ -261,7 +259,7 @@ G_API_OP(R_O_NetPreProcGetROIs,
          <GRects(GFaces, GSize)>,
          "sample.custom.mtcnn.bboxes_r_o_net_preproc_get_rois") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&, const cv::GOpaqueDesc&) {
-         return cv::empty_array_desc();
+              return cv::empty_array_desc();
     }
 };
 
@@ -270,10 +268,10 @@ G_API_OP(RNetPostProc,
          <GFaces(GFaces, GMats, GMats, double)>,
          "sample.custom.mtcnn.rnet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-         const cv::GArrayDesc&,
-         const cv::GArrayDesc&,
-         double) {
-         return cv::empty_array_desc();
+                                       const cv::GArrayDesc&,
+                                       const cv::GArrayDesc&,
+                                       double) {
+              return cv::empty_array_desc();
     }
 };
 
@@ -281,19 +279,19 @@ G_API_OP(ONetPostProc,
          <GFaces(GFaces, GMats, GMats, GMats, double)>,
          "sample.custom.mtcnn.onet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-         const cv::GArrayDesc&,
-         const cv::GArrayDesc&,
-         const cv::GArrayDesc&,
-         double) {
-         return cv::empty_array_desc();
+                                       const cv::GArrayDesc&,
+                                       const cv::GArrayDesc&,
+                                       const cv::GArrayDesc&,
+                                       double) {
+              return cv::empty_array_desc();
     }
 };
 
 G_API_OP(SwapFaces,
          <GFaces(GFaces)>,
          "sample.custom.mtcnn.swap_faces") {
-          static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
-          return cv::empty_array_desc();
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&) {
+              return cv::empty_array_desc();
     }
 };
 
@@ -301,46 +299,46 @@ G_API_OP(Transpose,
          <cv::GMat(cv::GMat)>,
          "sample.custom.mtcnn.transpose") {
           static cv::GMatDesc outMeta(const cv::GMatDesc in) {
-          const cv::GMatDesc out_desc = { in.depth, in.chan, cv::Size(in.size.height,
-                                                             in.size.width) };
-          return out_desc;
+               const cv::GMatDesc out_desc = { in.depth, in.chan, cv::Size(in.size.height,
+                                               in.size.width) };
+               return out_desc;
     }
 };
 
 //Custom kernels implementation
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
-        const cv::Mat & in_regresssions,
-        double scaleFactor,
-        double threshold,
-        std::vector<Face> &out_faces) {
+                    const cv::Mat & in_regresssions,
+                    double scaleFactor,
+                    double threshold,
+                    std::vector<Face> &out_faces) {
         out_faces = buildFaces(in_scores, in_regresssions, scaleFactor, threshold);
     }
 };// GAPI_OCV_KERNEL(BuildFaces)
 
 GAPI_OCV_KERNEL(OCVRunNMS, RunNMS) {
     static void run(const std::vector<Face> &in_faces,
-        double threshold,
-        bool useMin,
-        std::vector<Face> &out_faces) {
-        std::vector<Face> in_faces_copy = in_faces;
+                    double threshold,
+                    bool useMin,
+                    std::vector<Face> &out_faces) {
+                    std::vector<Face> in_faces_copy = in_faces;
         out_faces = Face::runNMS(in_faces_copy, threshold, useMin);
     }
 };// GAPI_OCV_KERNEL(RunNMS)
 
 GAPI_OCV_KERNEL(OCVAccumulatePyramidOutputs, AccumulatePyramidOutputs) {
     static void run(const std::vector<Face> &total_faces,
-        const std::vector<Face> &in_faces,
-        std::vector<Face> &out_faces) {
-        out_faces = total_faces;
+                    const std::vector<Face> &in_faces,
+                    std::vector<Face> &out_faces) {
+                    out_faces = total_faces;
         out_faces.insert(out_faces.end(), in_faces.begin(), in_faces.end());
     }
 };// GAPI_OCV_KERNEL(AccumulatePyramidOutputs)
 
 GAPI_OCV_KERNEL(OCVApplyRegression, ApplyRegression) {
     static void run(const std::vector<Face> &in_faces,
-        bool addOne,
-        std::vector<Face> &out_faces) {
+                    bool addOne,
+                    std::vector<Face> &out_faces) {
         std::vector<Face> in_faces_copy = in_faces;
         Face::applyRegression(in_faces_copy, addOne);
         out_faces.clear();
@@ -350,7 +348,7 @@ GAPI_OCV_KERNEL(OCVApplyRegression, ApplyRegression) {
 
 GAPI_OCV_KERNEL(OCVBBoxesToSquares, BBoxesToSquares) {
     static void run(const std::vector<Face> &in_faces,
-        std::vector<Face> &out_faces) {
+                    std::vector<Face> &out_faces) {
         std::vector<Face> in_faces_copy = in_faces;
         Face::bboxes2Squares(in_faces_copy);
         out_faces.clear();
@@ -360,11 +358,11 @@ GAPI_OCV_KERNEL(OCVBBoxesToSquares, BBoxesToSquares) {
 
 GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
     static void run(const std::vector<Face> &in_faces,
-        const cv::Size & in_image_size,
-        std::vector<cv::Rect> &outs) {
+                    const cv::Size & in_image_size,
+                    std::vector<cv::Rect> &outs) {
         outs.clear();
-        for (auto& f : in_faces) {
-            cv::Rect tmp_rect = f.bbox.getRect();
+        for (const auto& face : in_faces) {
+            cv::Rect tmp_rect = face.bbox.getRect();
             //Compare to transposed sizes width<->height
             tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - tmp_rect.x - 4, in_image_size.width - tmp_rect.y - 4);
             outs.push_back(tmp_rect);
@@ -375,14 +373,14 @@ GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
 
 GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
     static void run(const std::vector<Face> &in_faces,
-        const std::vector<cv::Mat> &in_scores,
-        const std::vector<cv::Mat> &in_regresssions,
-        double threshold,
-        std::vector<Face> &out_faces) {
+                    const std::vector<cv::Mat> &in_scores,
+                    const std::vector<cv::Mat> &in_regresssions,
+                    double threshold,
+                    std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
-            const float* scores_data = (float*)in_scores[k].data;
-            const float* reg_data = (float*)in_regresssions[k].data;
+            const float* scores_data = in_scores[k].ptr<float>();
+            const float* reg_data = in_regresssions[k].ptr<float>();
             if (scores_data[1] >= threshold) {
                 Face info = in_faces[k];
                 info.score = scores_data[1];
@@ -397,18 +395,17 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
 
 GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
     static void run(const std::vector<Face> &in_faces,
-        const std::vector<cv::Mat> &in_scores,
-        const std::vector<cv::Mat> &in_regresssions,
-        const std::vector<cv::Mat> &in_landmarks,
-        double threshold,
-        std::vector<Face> &out_faces) {
+                    const std::vector<cv::Mat> &in_scores,
+                    const std::vector<cv::Mat> &in_regresssions,
+                    const std::vector<cv::Mat> &in_landmarks,
+                    double threshold,
+                    std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
-            const float* scores_data = (float*)in_scores[k].data;
-            const float* reg_data = (float*)in_regresssions[k].data;
-            const float* landmark_data = (float*)in_landmarks[k].data;
+            const float* scores_data = in_scores[k].ptr<float>();
+            const float* reg_data = in_regresssions[k].ptr<float>();
+            const float* landmark_data = in_landmarks[k].ptr<float>();
             if (scores_data[1] >= threshold) {
-
                 Face info = in_faces[k];
                 info.score = scores_data[1];
                 for (int i = 0; i < 4; ++i) {
@@ -431,7 +428,7 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
 
 GAPI_OCV_KERNEL(OCVSwapFaces, SwapFaces) {
     static void run(const std::vector<Face> &in_faces,
-        std::vector<Face> &out_faces) {
+                    std::vector<Face> &out_faces) {
         std::vector<Face> in_faces_copy = in_faces;
         out_faces.clear();
         if (!in_faces_copy.empty()) {
@@ -449,7 +446,7 @@ GAPI_OCV_KERNEL(OCVSwapFaces, SwapFaces) {
 
 GAPI_OCV_KERNEL(OCVTranspose, Transpose) {
     static void run(const cv::Mat &in_mat,
-        cv::Mat &out_mat) {
+                    cv::Mat &out_mat) {
         cv::transpose(in_mat, out_mat);
     }
 };// GAPI_OCV_KERNEL(Transpose)
@@ -458,7 +455,7 @@ GAPI_OCV_KERNEL(OCVTranspose, Transpose) {
 
 namespace vis {
 namespace {
-void bbox(cv::Mat& m, const cv::Rect& rc) {
+void bbox(const cv::Mat& m, const cv::Rect& rc) {
     cv::rectangle(m, rc, cv::Scalar{ 0,255,0 }, 2, cv::LINE_8, 0);
 };
 
@@ -469,9 +466,9 @@ static cv::Mat drawRectsAndPoints(const cv::Mat& img,
     cv::Mat outImg;
     img.copyTo(outImg);
 
-    for (auto& d : data) {
-        vis::bbox(outImg, d.first);
-        auto pts = d.second;
+    for (const auto& el : data) {
+        vis::bbox(outImg, el.first);
+        auto pts = el.second;
         for (size_t i = 0; i < pts.size(); ++i) {
             cv::circle(outImg, pts[i], 3, cv::Scalar(0, 255, 255), 1);
         }
@@ -524,12 +521,12 @@ int calculate_scales(const cv::Size &input_size, std::vector<double> &out_scales
     //multi - scale
     out_scales.clear();
     out_sizes.clear();
-    double factor = 0.709;
+    const double factor = 0.709;
     int factor_count = 0;
     double minl = std::min(h, w);
     while (minl >= 12)
     {
-        double current_scale = pr_scale * std::pow(factor, factor_count);
+        const double current_scale = pr_scale * std::pow(factor, factor_count);
         cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
                               static_cast<int>(static_cast<double>(input_size.height) * current_scale));
         std::cout << "current_scale " << current_scale << std::endl;
@@ -545,17 +542,17 @@ int calculate_scales(const cv::Size &input_size, std::vector<double> &out_scales
 
 int calculate_half_scales(const cv::Size &input_size, std::vector<double>& out_scales, std::vector<cv::Size>& out_sizes) {
     double pr_scale = 0.5;
-    double h = static_cast<double>(input_size.height);
-    double w = static_cast<double>(input_size.width);
+    const double h = static_cast<double>(input_size.height);
+    const double w = static_cast<double>(input_size.width);
     //multi - scale
     out_scales.clear();
     out_sizes.clear();
-    double factor = 0.5;
+    const double factor = 0.5;
     int factor_count = 0;
     double minl = std::min(h, w);
     while (minl >= 12.0*2.0)
     {
-        double current_scale = pr_scale;
+        const double current_scale = pr_scale;
         cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
                               static_cast<int>(static_cast<double>(input_size.height) * current_scale));
         std::cout << "current_scale " << current_scale << std::endl;
@@ -569,7 +566,6 @@ int calculate_half_scales(const cv::Size &input_size, std::vector<double>& out_s
     std::cout << "factor_count " << factor_count << std::endl;
     return factor_count;
 }
-
 
 const int MAX_PYRAMID_LEVELS = 13;
 //////////////////////////////////////////////////////////////////////
@@ -671,7 +667,6 @@ int main(int argc, char* argv[])
     cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_original), final_faces_onet));
 
     // MTCNN Refinement detection network
-    std::vector<size_t> reshape_dims_24x24 = { 1, 3, 24, 24 };
     auto mtcnnr_net = cv::gapi::ie::Params<custom::MTCNNRefinement>{
         model_path_r,                // path to topology IR
         weights_path(model_path_r),  // path to weights
@@ -679,7 +674,6 @@ int main(int argc, char* argv[])
     }.cfgOutputLayers({ "conv5-2", "prob1" }).cfgInputLayers({ "data" });
 
     // MTCNN Output detection network
-    std::vector<size_t> reshape_dims_48x48 = { 1, 3, 48, 48 };
     auto mtcnno_net = cv::gapi::ie::Params<custom::MTCNNOutput>{
         model_path_o,                // path to topology IR
         weights_path(model_path_o),  // path to weights
@@ -737,7 +731,7 @@ int main(int argc, char* argv[])
         std::cout << "Final Faces Size " << out_faces.size() << std::endl;
         std::vector<vis::rectPoints> data;
         // show the image with faces in it
-        for (auto& out_face : out_faces) {
+        for (const auto& out_face : out_faces) {
             std::vector<cv::Point> pts;
             for (int p = 0; p < NUM_PTS; ++p) {
                 pts.push_back(
