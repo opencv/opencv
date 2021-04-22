@@ -766,8 +766,7 @@ void BestOf2NearestMatcher::match(const ImageFeatures &features1, const ImageFea
     // using Invariant Features"
     matches_info.confidence = matches_info.num_inliers / (8 + 0.3 * matches_info.matches.size());
 
-    // Set zero confidence to remove matches between too close images, as they don't provide
-    // additional information anyway. The threshold was set experimentally.
+    /* should we remove matches between too close images? */
     // matches_info.confidence = matches_info.confidence > 3. ? 0. : matches_info.confidence;
 
     // Check if we should try to refine motion
