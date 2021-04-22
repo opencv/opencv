@@ -86,26 +86,26 @@ struct Face {
     double ptsCoords[2 * NUM_PTS];
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
-        for (size_t i = 0; i < faces.size(); ++i) {
+        for (auto& face : faces) {
             double bboxWidth =
-                faces[i].bbox.x2 - faces[i].bbox.x1 + static_cast<double>(addOne);
+                face.bbox.x2 - face.bbox.x1 + static_cast<double>(addOne);
             double bboxHeight =
-                faces[i].bbox.y2 - faces[i].bbox.y1 + static_cast<double>(addOne);
-            faces[i].bbox.x1 = faces[i].bbox.x1 + static_cast<double>(faces[i].regression[1]) * bboxWidth;
-            faces[i].bbox.y1 = faces[i].bbox.y1 + static_cast<double>(faces[i].regression[0]) * bboxHeight;
-            faces[i].bbox.x2 = faces[i].bbox.x2 + static_cast<double>(faces[i].regression[3]) * bboxWidth;
-            faces[i].bbox.y2 = faces[i].bbox.y2 + static_cast<double>(faces[i].regression[2]) * bboxHeight;
+                face.bbox.y2 - face.bbox.y1 + static_cast<double>(addOne);
+            face.bbox.x1 = face.bbox.x1 + static_cast<double>(face.regression[1]) * bboxWidth;
+            face.bbox.y1 = face.bbox.y1 + static_cast<double>(face.regression[0]) * bboxHeight;
+            face.bbox.x2 = face.bbox.x2 + static_cast<double>(face.regression[3]) * bboxWidth;
+            face.bbox.y2 = face.bbox.y2 + static_cast<double>(face.regression[2]) * bboxHeight;
         }
     }
 
     static void bboxes2Squares(std::vector<Face>& faces) {
-        for (size_t i = 0; i < faces.size(); ++i) {
-            faces[i].bbox = faces[i].bbox.getSquare();
+        for (auto& face : faces) {
+            face.bbox = face.bbox.getSquare();
         }
     }
 
-    static std::vector<Face> runNMS(std::vector<Face>& faces, double threshold,
-                                    bool useMin = false) {
+    static std::vector<Face> runNMS(std::vector<Face>& faces, const double threshold,
+                                    const bool useMin = false) {
         std::vector<Face> facesNMS;
         if (faces.empty()) {
             return facesNMS;
@@ -141,8 +141,7 @@ struct Face {
                 double overlap = 0.0;
                 if (useMin) {
                     overlap = interArea / std::min(area1, area2);
-                }
-                else {
+                } else {
                     overlap = interArea / (area1 + area2 - interArea);
                 }
                 if (overlap <= threshold) {
@@ -564,8 +563,7 @@ const int MAX_PYRAMID_LEVELS = 13;
 //////////////////////////////////////////////////////////////////////
 } // anonymous namespace
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
     cmd.about(about);
     if (cmd.has("help")) {
@@ -702,7 +700,6 @@ int main(int argc, char* argv[])
                                           , custom::OCVTranspose
     >();
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(cv::compile_args(networks_mtcnn, kernels_mtcnn));
-
 
     std::cout << "Reading " << input_file_name << std::endl;
     // Input stream
