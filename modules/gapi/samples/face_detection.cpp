@@ -82,7 +82,6 @@ struct BBox {
 struct Face {
     BBox bbox;
     double score;
-    //double regression[NUM_REGRESSIONS];
     std::array<double, NUM_REGRESSIONS> regression;
     double ptsCoords[2 * NUM_PTS];
 
@@ -303,9 +302,7 @@ G_API_OP(Transpose,
          <cv::GMat(cv::GMat)>,
          "sample.custom.mtcnn.transpose") {
           static cv::GMatDesc outMeta(const cv::GMatDesc in) {
-               const cv::GMatDesc out_desc = { in.depth, in.chan, cv::Size(in.size.height,
-                                               in.size.width) };
-               return out_desc;
+               return in.withSize(cv::Size(in.size.height, in.size.width));
     }
 };
 
@@ -388,9 +385,6 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
             if (scores_data[1] >= threshold) {
                 Face info = in_faces[k];
                 info.score = scores_data[1];
-                //for (int i = 0; i < NUM_REGRESSIONS; ++i) {
-                //    info.regression[i] = reg_data[i];
-                //}
                 std::copy_n(reg_data, NUM_REGRESSIONS, info.regression.begin());
                 out_faces.push_back(info);
             }
@@ -534,14 +528,11 @@ int calculate_scales(const cv::Size &input_size, std::vector<double> &out_scales
         const double current_scale = pr_scale * std::pow(factor, factor_count);
         cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
                               static_cast<int>(static_cast<double>(input_size.height) * current_scale));
-        std::cout << "current_scale " << current_scale << std::endl;
-        std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
         out_sizes.push_back(current_size);
         minl *= factor;
         factor_count += 1;
     }
-    std::cout << "factor_count " << factor_count << std::endl;
     return factor_count;
 }
 
@@ -560,15 +551,12 @@ int calculate_half_scales(const cv::Size &input_size, std::vector<double>& out_s
         const double current_scale = pr_scale;
         cv::Size current_size(static_cast<int>(static_cast<double>(input_size.width) * current_scale),
                               static_cast<int>(static_cast<double>(input_size.height) * current_scale));
-        std::cout << "current_scale " << current_scale << std::endl;
-        std::cout << "current_size " << current_size << std::endl;
         out_scales.push_back(current_scale);
         out_sizes.push_back(current_size);
         minl *= factor;
         factor_count += 1;
         pr_scale *= 0.5;
     }
-    std::cout << "factor_count " << factor_count << std::endl;
     return factor_count;
 }
 
