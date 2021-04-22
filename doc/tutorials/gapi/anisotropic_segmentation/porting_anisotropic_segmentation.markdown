@@ -41,8 +41,8 @@ With G-API, we can define it as follows:
 
 It is important to understand that the new G-API based version of
 calcGST() will just produce a compute graph, in contrast to its
-the original version, which actually calculates the values. This is a
-the principal difference -- G-API based functions like this are used to
+its original version, which actually calculates the values. This is a
+a principal difference -- G-API based functions like this are used to
 construct graphs, not to process the actual data.
 
 Let's start implementing calcGST() with calculation of \f$J\f$
