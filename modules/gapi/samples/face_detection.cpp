@@ -215,8 +215,8 @@ G_API_OP(BuildFaces,
          "sample.custom.mtcnn.build_faces") {
          static cv::GArrayDesc outMeta(const cv::GMatDesc&,
                                        const cv::GMatDesc&,
-                                       double,
-                                       double) {
+                                       const double,
+                                       const double) {
               return cv::empty_array_desc();
     }
 };
@@ -225,7 +225,7 @@ G_API_OP(RunNMS,
          <GFaces(GFaces, double, bool)>,
          "sample.custom.mtcnn.run_nms") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-                                       double, bool) {
+                                       const double, const bool) {
              return cv::empty_array_desc();
     }
 };
@@ -242,7 +242,7 @@ G_API_OP(AccumulatePyramidOutputs,
 G_API_OP(ApplyRegression,
          <GFaces(GFaces, bool)>,
          "sample.custom.mtcnn.apply_regression") {
-         static cv::GArrayDesc outMeta(const cv::GArrayDesc&, bool) {
+         static cv::GArrayDesc outMeta(const cv::GArrayDesc&, const bool) {
              return cv::empty_array_desc();
     }
 };
@@ -270,7 +270,7 @@ G_API_OP(RNetPostProc,
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
-                                       double) {
+                                       const double) {
              return cv::empty_array_desc();
     }
 };
@@ -282,7 +282,7 @@ G_API_OP(ONetPostProc,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
-                                       double) {
+                                       const double) {
              return cv::empty_array_desc();
     }
 };
@@ -309,8 +309,8 @@ G_API_OP(Transpose,
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
                     const cv::Mat & in_regresssions,
-                    double scaleFactor,
-                    double threshold,
+                    const double scaleFactor,
+                    const double threshold,
                     std::vector<Face> &out_faces) {
         out_faces = buildFaces(in_scores, in_regresssions, scaleFactor, threshold);
     }
@@ -318,8 +318,8 @@ GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
 
 GAPI_OCV_KERNEL(OCVRunNMS, RunNMS) {
     static void run(const std::vector<Face> &in_faces,
-                    double threshold,
-                    bool useMin,
+                    const double threshold,
+                    const bool useMin,
                     std::vector<Face> &out_faces) {
                     std::vector<Face> in_faces_copy = in_faces;
         out_faces = Face::runNMS(in_faces_copy, threshold, useMin);
@@ -337,7 +337,7 @@ GAPI_OCV_KERNEL(OCVAccumulatePyramidOutputs, AccumulatePyramidOutputs) {
 
 GAPI_OCV_KERNEL(OCVApplyRegression, ApplyRegression) {
     static void run(const std::vector<Face> &in_faces,
-                    bool addOne,
+                    const bool addOne,
                     std::vector<Face> &out_faces) {
         std::vector<Face> in_faces_copy = in_faces;
         Face::applyRegression(in_faces_copy, addOne);
@@ -375,7 +375,7 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
     static void run(const std::vector<Face> &in_faces,
                     const std::vector<cv::Mat> &in_scores,
                     const std::vector<cv::Mat> &in_regresssions,
-                    double threshold,
+                    const double threshold,
                     std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
@@ -398,7 +398,7 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
                     const std::vector<cv::Mat> &in_scores,
                     const std::vector<cv::Mat> &in_regresssions,
                     const std::vector<cv::Mat> &in_landmarks,
-                    double threshold,
+                    const double threshold,
                     std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
