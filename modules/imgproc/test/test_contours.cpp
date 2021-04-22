@@ -485,6 +485,55 @@ TEST(Imgproc_FindContours, border)
     ASSERT_EQ(0, cvtest::norm(img, img_draw_contours, NORM_INF));
 }
 
+TEST(Imgproc_FindContours, regression_4363_shared_nbd)
+{
+    // Create specific test image
+    Mat1b img(12, 69, (const uchar&)0);
+
+    img(1, 1) = 1;
+
+    // Vertical rectangle with hole sharing the same NBD
+    for (int r = 1; r <= 10; ++r) {
+        for (int c = 3; c <= 5; ++c) {
+            img(r, c) = 1;
+        }
+    }
+    img(9, 4) = 0;
+
+    // 124 small CCs
+    for (int r = 1; r <= 7; r += 2) {
+        for (int c = 7; c <= 67; c += 2) {
+            img(r, c) = 1;
+        }
+    }
+
+    // Last CC
+    img(9, 7) = 1;
+
+    vector< vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours(img, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+
+    bool found = false;
+    size_t index = 0;
+    for (vector< vector<Point> >::const_iterator i = contours.begin(); i != contours.end(); ++i)
+    {
+        const vector<Point>& c = *i;
+        if (!c.empty() && c[0] == Point(7, 9))
+        {
+            found = true;
+            index = (size_t)(i - contours.begin());
+            break;
+        }
+    }
+    EXPECT_TRUE(found) << "Desired result: point (7,9) is a contour - Actual result: point (7,9) is not a contour";
+
+    if (found)
+    {
+        EXPECT_LT(hierarchy[index][3], 0) << "Desired result: (7,9) has no parent - Actual result: parent of (7,9) is another contour. index = " << index;
+    }
+}
+
 TEST(Imgproc_PointPolygonTest, regression_10222)
 {
     vector<Point> contour;
