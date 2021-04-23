@@ -495,25 +495,19 @@ imread_( const String& filename, int flags, Mat& mat )
 }
 
 
-/**
-* Read an image into memory and return the information
-*
-* @param[in] filename File to load
-* @param[in] flags Flags
-* @param[in] mats Reference to C++ vector<Mat> object to hold the images
-*
-*/
 static bool
-imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
+imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int start, int count)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
 
+    CV_CheckGE(start, 0, "Start index cannont be < 0");
+
 #ifdef HAVE_GDAL
-    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL){
+    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         decoder = GdalDecoder().newDecoder();
     }
-    else{
+    else {
 #endif
         decoder = findDecoder(filename);
 #ifdef HAVE_GDAL
@@ -521,8 +515,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
 #endif
 
     /// if no decoder was found, return nothing.
-    if (!decoder){
+    if (!decoder) {
         return 0;
+    }
+
+    if (count < 0) {
+        count = std::numeric_limits<int>::max();
     }
 
     /// set the filename in the driver
@@ -532,7 +530,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
     try
     {
         // read the header to make sure it succeeds
-        if( !decoder->readHeader() )
+        if (!decoder->readHeader())
             return 0;
     }
     catch (const cv::Exception& e)
@@ -546,11 +544,22 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         return 0;
     }
 
-    for (;;)
+    int current = start;
+
+    while (current > 0)
+    {
+        if (!decoder->nextPage())
+        {
+            return false;
+        }
+        --current;
+    }
+
+    while (current < count)
     {
         // grab the decoded type
         int type = decoder->type();
-        if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+        if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
         {
             if ((flags & IMREAD_ANYDEPTH) == 0)
                 type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
@@ -585,7 +594,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
             break;
 
         // optionally rotate the data if EXIF' orientation flag says so
-        if( (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
         {
             ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
         }
@@ -595,6 +604,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats)
         {
             break;
         }
+        ++current;
     }
 
     return !mats.empty();
@@ -636,8 +646,80 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats);
+    return imreadmulti_(filename, flags, mats, 0, -1);
 }
+
+
+bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int count, int flags)
+{
+    CV_TRACE_FUNCTION();
+
+    return imreadmulti_(filename, flags, mats, start, count);
+}
+
+static
+size_t imcount_(const String& filename, int flags)
+{
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+
+#ifdef HAVE_GDAL
+    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#else
+        CV_UNUSED(flags);
+#endif
+        decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    /// if no decoder was found, return nothing.
+    if (!decoder) {
+        return 0;
+    }
+
+    /// set the filename in the driver
+    decoder->setSource(filename);
+
+    // read the header to make sure it succeeds
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return 0;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imcount_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        return 0;
+    }
+    catch (...)
+    {
+        std::cerr << "imcount_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        return 0;
+    }
+
+    size_t result = 1;
+
+
+    while (decoder->nextPage())
+    {
+        ++result;
+    }
+
+    return result;
+}
+
+size_t imcount(const String& filename, int flags)
+{
+    CV_TRACE_FUNCTION();
+
+    return imcount_(filename, flags);
+}
+
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
                       const std::vector<int>& params, bool flipv )

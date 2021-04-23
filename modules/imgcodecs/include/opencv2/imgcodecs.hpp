@@ -215,6 +215,26 @@ The function imreadmulti loads a multi-page image from the specified file into a
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
+/** @brief Loads a of images of a multi-page image from a file.
+
+The function imreadmulti loads a specified range from a multi-page image from the specified file into a vector of Mat objects.
+@param filename Name of file to be loaded.
+@param start Start index of the image to load
+@param count Count number of images to load
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+@param mats A vector of Mat objects holding each page, if more than one.
+@sa cv::imread
+*/
+CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Returns the number of images inside the give file
+
+The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
+@param filename Name of file to be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR);
+
 /** @brief Saves an image to a specified file.
 
 The function imwrite saves the image to the specified file. The image format is chosen based on the
