@@ -695,14 +695,23 @@ TEST_P(videocapture_acceleration, read)
 
     // HW reader
     std::vector<int> params = { CAP_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
-    if (backend == CAP_FFMPEG && use_umat) {
+    if (use_umat)
+    {
+        if (backend != CAP_FFMPEG)
+            throw SkipTestException(cv::String("UMat/OpenCL mapping is not supported by current backend: ") + backend_name);
+        if (!cv::videoio_registry::isBackendBuiltIn(backend))
+            throw SkipTestException(cv::String("UMat/OpenCL mapping is not supported through plugins yet: ") + backend_name);
         params.push_back(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
         params.push_back(1);
     }
     VideoCapture hw_reader(filepath, backend, params);
     if (!hw_reader.isOpened())
     {
-        if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
+        if (use_umat)
+        {
+            throw SkipTestException(backend_name + " VideoCapture on " + filename + " not supported with HW acceleration + OpenCL/Umat mapping, skipping");
+        }
+        else if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
         {
             // ANY HW acceleration should have fallback to SW codecs
             VideoCapture sw_reader(filepath, backend, {
@@ -835,7 +844,11 @@ TEST_P(videowriter_acceleration, write)
     VideoAccelerationType actual_va;
     {
         std::vector<int> params = { VIDEOWRITER_PROP_HW_ACCELERATION, static_cast<int>(va_type) };
-        if (backend == CAP_FFMPEG && use_umat) {
+        if (use_umat) {
+            if (backend != CAP_FFMPEG)
+                throw SkipTestException(cv::String("UMat/OpenCL mapping is not supported by current backend: ") + backend_name);
+            if (!cv::videoio_registry::isBackendBuiltIn(backend))
+                throw SkipTestException(cv::String("UMat/OpenCL mapping is not supported through plugins yet: ") + backend_name);
             params.push_back(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL);
             params.push_back(1);
         }
@@ -848,8 +861,13 @@ TEST_P(videowriter_acceleration, write)
             params
         );
 
-        if (!hw_writer.isOpened()) {
-            if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
+        if (!hw_writer.isOpened())
+        {
+            if (use_umat)
+            {
+                throw SkipTestException(backend_name + " VideoWriter on " + filename + " not supported with HW acceleration + OpenCL/Umat mapping, skipping");
+            }
+            else if (va_type == VIDEO_ACCELERATION_ANY || va_type == VIDEO_ACCELERATION_NONE)
             {
                 // ANY HW acceleration should have fallback to SW codecs
                 {
