@@ -1,12 +1,18 @@
 set(VIDEOIO_PLUGIN_LIST "" CACHE STRING "List of videoio backends to be compiled as plugins (ffmpeg, gstreamer, mfx, msmf or special value 'all')")
-set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin support")
+set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building and using of videoio plugins")
 mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS)
 
 string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
-
-# Make virtual opencv_videoio_plugins target
-if(NOT TARGET opencv_videoio_plugins)
-  add_custom_target(opencv_videoio_plugins ALL)
+if(NOT VIDEOIO_ENABLE_PLUGINS)
+  if(VIDEOIO_PLUGIN_LIST)
+    message(WARNING "VideoIO: plugins are disabled through VIDEOIO_ENABLE_PLUGINS, so VIDEOIO_PLUGIN_LIST='${VIDEOIO_PLUGIN_LIST}' is ignored")
+    set(VIDEOIO_PLUGIN_LIST "")
+  endif()
+else()
+  # Make virtual opencv_videoio_plugins target
+  if(NOT TARGET opencv_videoio_plugins)
+    add_custom_target(opencv_videoio_plugins ALL)
+  endif()
 endif()
 
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
