@@ -27,6 +27,7 @@ class IBackendFactory
 public:
     virtual ~IBackendFactory() {}
     virtual Ptr<IBackend> getBackend() const = 0;
+    virtual bool isBuiltIn() const = 0;
 };
 
 //=============================================================================
@@ -47,6 +48,17 @@ Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFileWithParams createC
 Ptr<IBackendFactory> createPluginBackendFactory(VideoCaptureAPIs id, const char* baseName);
 
 void applyParametersFallback(const Ptr<IVideoCapture>& cap, const VideoCaptureParameters& params);
+
+std::string getCapturePluginVersion(
+    const Ptr<IBackendFactory>& backend_factory,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+);
+std::string getWriterPluginVersion(
+    const Ptr<IBackendFactory>& backend_factory,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+);
 
 } // namespace cv::
 
