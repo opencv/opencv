@@ -99,6 +99,8 @@ public:
     {
         return backend.staticCast<IBackend>();
     }
+
+    bool isBuiltIn() const CV_OVERRIDE { return true; }
 };
 
 
@@ -165,6 +167,8 @@ public:
     {
         return backend.staticCast<IBackend>();
     }
+
+    bool isBuiltIn() const CV_OVERRIDE { return true; }
 };
 
 

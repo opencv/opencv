@@ -403,6 +403,81 @@ bool hasBackend(VideoCaptureAPIs api)
     return false;
 }
 
+bool isBackendBuiltIn(VideoCaptureAPIs api)
+{
+    std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getEnabledBackends();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            return info.backendFactory->isBuiltIn();
+        }
+    }
+    return false;
+}
+
+std::string getCameraBackendPluginVersion(VideoCaptureAPIs api,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+)
+{
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByIndex();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            CV_Assert(!info.backendFactory->isBuiltIn());
+            return getCapturePluginVersion(info.backendFactory, version_ABI, version_API);
+        }
+    }
+    CV_Error(Error::StsError, "Unknown or wrong backend ID");
+}
+
+std::string getStreamBackendPluginVersion(VideoCaptureAPIs api,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+)
+{
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByFilename();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            CV_Assert(!info.backendFactory->isBuiltIn());
+            return getCapturePluginVersion(info.backendFactory, version_ABI, version_API);
+        }
+    }
+    CV_Error(Error::StsError, "Unknown or wrong backend ID");
+}
+
+
+/** @brief Returns description and ABI/API version of videoio plugin's writer interface */
+std::string getWriterBackendPluginVersion(VideoCaptureAPIs api,
+    CV_OUT int& version_ABI,
+    CV_OUT int& version_API
+)
+{
+    const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_Writer();
+    for (size_t i = 0; i < backends.size(); i++)
+    {
+        const VideoBackendInfo& info = backends[i];
+        if (api == info.id)
+        {
+            CV_Assert(!info.backendFactory.empty());
+            CV_Assert(!info.backendFactory->isBuiltIn());
+            return getWriterPluginVersion(info.backendFactory, version_ABI, version_API);
+        }
+    }
+    CV_Error(Error::StsError, "Unknown or wrong backend ID");
+}
+
+
 } // namespace registry
 
 } // namespace
