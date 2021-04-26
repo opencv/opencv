@@ -509,6 +509,8 @@ static cv::GRunArgs run_py_kernel(PyObject* kernel,
         }
 
         PyObject* result = PyObject_CallObject(kernel, args);
+        Py_DECREF(args);
+
         if (PyErr_Occurred()) {
             PyErr_PrintEx(0);
             PyErr_Clear();
@@ -615,6 +617,8 @@ static GMetaArgs run_py_meta(PyObject* outMeta, const cv::GMetaArgs &meta, const
         }
 
         PyObject* result = PyObject_CallObject(outMeta, args);
+        Py_DECREF(args);
+
         if (PyErr_Occurred()) {
             PyErr_PrintEx(0);
             PyErr_Clear();
