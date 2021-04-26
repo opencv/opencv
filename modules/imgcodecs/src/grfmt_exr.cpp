@@ -56,6 +56,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include <ImfFrameBuffer.h>
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
