@@ -6,92 +6,6 @@ import os
 
 from tests_common import NewOpenCVTests
 
-class garray:
-    class rect:
-        pass
-    class point2f:
-        pass
-
-class gopaque:
-    class size:
-        pass
-    class rect:
-        pass
-
-class gmat:
-    pass
-
-class gscalar:
-    pass
-
-def validate_type(argtype, actual):
-    switcher = {
-        gmat:    cv.GMat,
-        gscalar: cv.GScalar,
-        int:     int
-    }
-
-    expected = switcher.get(argtype, 'Invalid input type')
-    if expected != type(actual):
-        raise Exception('Invalid input type!')
-
-
-# NB: Top lvl decorator takes arguments
-def op(op_id, in_types, out_types):
-    # NB: Second lvl decorator takes class to decorate
-    def op_with_params(cls):
-        # NB: Decorated class
-        class decorated:
-            id = op_id
-
-            @staticmethod
-            def on(*args):
-                if len(args) != len(in_types):
-                    raise Exception('Invalid number of input elements!')
-
-                # for expected, actual in zip(in_types, args):
-                    # validate_type(expected, actual)
-
-                op = cv.gapi.wip.op(op_id, cls.outMeta, *args)
-
-                out_protos = []
-                for out_type in out_types:
-                    if out_type == gmat:
-                        out_protos.append(op.getGMat())
-                    if out_type == gscalar:
-                        out_protos.append(op.getGScalar())
-                    if out_type == gopaque.size:
-                        out_protos.append(op.getGOpaque(cv.gapi.CV_SIZE))
-                    if out_type == gopaque.rect:
-                        out_protos.append(op.getGOpaque(cv.gapi.CV_RECT))
-                    if out_type == garray.point2f:
-                        out_protos.append(op.getGArray(cv.gapi.CV_POINT2F))
-
-                return tuple(out_protos) if len(out_protos) != 1 else out_protos[0]
-
-            @staticmethod
-            def outMeta(*args):
-                return cls.outMeta(args)
-
-        return decorated
-    return op_with_params
-
-
-def kernel(op_cls):
-    # NB: Second lvl decorator takes class to decorate
-    def kernel_with_params(cls):
-        # NB: Decorated class
-        class decorated:
-            outMeta = op_cls.outMeta
-            id      = op_cls.id
-
-            @staticmethod
-            def run(*args):
-                return cls.run(*args)
-
-        return decorated
-    return kernel_with_params
-
 
 # Plaidml is an optional backend
 pkgs = [
@@ -102,7 +16,10 @@ pkgs = [
        ]
 
 
-@op('custom.add', in_types=[gmat, gmat, int], out_types=[gmat])
+# FIXME: It's imposible to use cv package in pyopencv_gapi.py
+cv.gapi.init()
+
+@cv.gapi.op('custom.add', in_types=[cv.GMat, cv.GMat, int], out_types=[cv.GMat])
 class GAdd:
     """ Operation which represents addition in G-API graph """
 
@@ -111,7 +28,7 @@ class GAdd:
         return desc1
 
 
-@kernel(GAdd)
+@cv.gapi.kernel(GAdd)
 class GAddImpl:
     """ Python kernel for GAdd operation """
 
@@ -120,7 +37,7 @@ class GAddImpl:
         return cv.add(img1, img2)
 
 
-@op('custom.split3', in_types=[gmat], out_types=[gmat, gmat, gmat])
+@cv.gapi.op('custom.split3', in_types=[cv.GMat], out_types=[cv.GMat, cv.GMat, cv.GMat])
 class GSplit3:
     """ Documentation """
 
@@ -130,7 +47,7 @@ class GSplit3:
         return out_desc, out_desc, out_desc
 
 
-@kernel(GSplit3)
+@cv.gapi.kernel(GSplit3)
 class GSplit3Impl:
     """ Documentation """
 
@@ -140,7 +57,7 @@ class GSplit3Impl:
         return tuple(cv.split(img))
 
 
-@op('custom.mean', in_types=[gmat], out_types=[gscalar])
+@cv.gapi.op('custom.mean', in_types=[cv.GMat], out_types=[cv.GScalar])
 class GMean:
     """ Documentation """
 
@@ -149,7 +66,7 @@ class GMean:
         return cv.empty_scalar_desc()
 
 
-@kernel(GMean)
+@cv.gapi.kernel(GMean)
 class GMeanImpl:
     """ Documentation """
 
@@ -159,7 +76,7 @@ class GMeanImpl:
         return cv.mean(img)
 
 
-@op('custom.addC', in_types=[gmat, gscalar, int], out_types=[gmat])
+@cv.gapi.op('custom.addC', in_types=[cv.GMat, cv.GScalar, int], out_types=[cv.GMat])
 class GAddC:
     """ Documentation """
 
@@ -168,7 +85,7 @@ class GAddC:
         return mat_desc
 
 
-@kernel(GAddC)
+@cv.gapi.kernel(GAddC)
 class GAddCImpl:
     """ Documentation """
 
@@ -180,7 +97,7 @@ class GAddCImpl:
         return img + np.array(sc, dtype=np.uint8)[:-1]
 
 
-@op('custom.size', in_types=[gmat], out_types=[gopaque.size])
+@cv.gapi.op('custom.size', in_types=[cv.GMat], out_types=[cv.GOpaque.Size])
 class GSize:
     """ Documentation """
 
@@ -189,7 +106,7 @@ class GSize:
         return cv.empty_gopaque_desc()
 
 
-@kernel(GSize)
+@cv.gapi.kernel(GSize)
 class GSizeImpl:
     """ Documentation """
 
@@ -199,16 +116,16 @@ class GSizeImpl:
         return img.shape[:2]
 
 
-@op('custom.sizeR', in_types=[garray.rect], out_types=[gopaque.size])
+@cv.gapi.op('custom.sizeR', in_types=[cv.GOpaque.Rect], out_types=[cv.GOpaque.Size])
 class GSizeR:
     """ Documentation """
 
     @staticmethod
-    def outMeta(arr_desc):
+    def outMeta(opaq_desc):
         return cv.empty_gopaque_desc()
 
 
-@kernel(GSizeR)
+@cv.gapi.kernel(GSizeR)
 class GSizeRImpl:
     """ Documentation """
 
@@ -218,7 +135,7 @@ class GSizeRImpl:
         return (rect[2], rect[3])
 
 
-@op('custom.boundingRect', in_types=[garray.rect], out_types=[gopaque.rect])
+@cv.gapi.op('custom.boundingRect', in_types=[cv.GArray.Point], out_types=[cv.GOpaque.Rect])
 class GBoundingRect:
     """ Documentation """
 
@@ -227,7 +144,7 @@ class GBoundingRect:
         return cv.empty_gopaque_desc()
 
 
-@kernel(GBoundingRect)
+@cv.gapi.kernel(GBoundingRect)
 class GBoundingRectImpl:
     """ Documentation """
 
@@ -238,29 +155,29 @@ class GBoundingRectImpl:
         return cv.boundingRect(np.array(array))
 
 
-@op('custom.goodFeaturesToTrack',
-    in_types=[gmat, int, float, float, np.array, int, bool, float],
-    out_types=[garray.point2f])
+@cv.gapi.op('custom.goodFeaturesToTrack',
+    in_types=[cv.GMat, int, float, float, int, bool, float],
+    out_types=[cv.GArray.Point2f])
 class GGoodFeatures:
     """ Documentation """
 
     @staticmethod
     def outMeta(desc, max_corners, quality_lvl,
-                min_distance, mask, block_sz,
+                min_distance, block_sz,
                 use_harris_detector, k):
         return cv.empty_array_desc()
 
 
-@kernel(GGoodFeatures)
+@cv.gapi.kernel(GGoodFeatures)
 class GGoodFeaturesImpl:
     """ Documentation """
 
     @staticmethod
     def run(img, max_corners, quality_lvl,
-            min_distance, mask, block_sz,
+            min_distance, block_sz,
             use_harris_detector, k):
         features = cv.goodFeaturesToTrack(img, max_corners, quality_lvl,
-                                          min_distance, mask=mask,
+                                          min_distance, mask=None,
                                           blockSize=block_sz,
                                           useHarrisDetector=use_harris_detector, k=k)
         # NB: The operation output is cv::GArray<cv::Pointf>, so it should be mapped
@@ -270,6 +187,18 @@ class GGoodFeaturesImpl:
         # tuples with size == n_features.
         features = list(map(tuple, features.reshape(features.shape[0], -1)))
         return features
+
+
+# To validate invalid cases
+def create_op(in_types, out_types):
+    @cv.gapi.op('custom.op', in_types=in_types, out_types=out_types)
+    class Op:
+        """ Custom operation for testing """
+
+        @staticmethod
+        def outMeta(desc):
+            raise Exception('Not implemented')
+    return Op
 
 
 class gapi_sample_pipelines(NewOpenCVTests):
@@ -382,7 +311,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         expected = (100, 150)
 
         # G-API
-        g_r  = cv.GOpaqueT(cv.gapi.CV_RECT)
+        g_r  = cv.GOpaque.Rect()
         g_sz = GSizeR.on(g_r)
         comp = cv.GComputation(cv.GIn(g_r), cv.GOut(g_sz))
 
@@ -400,9 +329,9 @@ class gapi_sample_pipelines(NewOpenCVTests):
         expected = cv.boundingRect(np.array(points))
 
         # G-API
-        g_pts = cv.GArrayT(cv.gapi.CV_POINT)
+        g_pts = cv.GArray.Point()
         g_br  = GBoundingRect.on(g_pts)
-        comp = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
+        comp  = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
 
         pkg = cv.gapi.wip.kernels(GBoundingRectImpl)
         actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
@@ -419,21 +348,20 @@ class gapi_sample_pipelines(NewOpenCVTests):
         # NB: goodFeaturesToTrack configuration
         max_corners         = 50
         quality_lvl         = 0.01
-        min_distance        = 10
+        min_distance        = 10.0
         block_sz            = 3
         use_harris_detector = True
         k                   = 0.04
-        mask                = None
 
         # OpenCV
         expected = cv.goodFeaturesToTrack(in_mat, max_corners, quality_lvl,
-                                          min_distance, mask=mask,
+                                          min_distance, mask=None,
                                           blockSize=block_sz, useHarrisDetector=use_harris_detector, k=k)
 
         # G-API
         g_in = cv.GMat()
         g_out = GGoodFeatures.on(g_in, max_corners, quality_lvl,
-                                 min_distance, mask, block_sz, use_harris_detector, k)
+                                 min_distance, block_sz, use_harris_detector, k)
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
         pkg = cv.gapi.wip.kernels(GGoodFeaturesImpl)
@@ -445,6 +373,289 @@ class gapi_sample_pipelines(NewOpenCVTests):
         # Comparison
         self.assertEqual(0.0, cv.norm(expected.flatten(),
                                       np.array(actual, dtype=np.float32).flatten(), cv.NORM_INF))
+
+
+    def test_invalid_op(self):
+        # NB: Empty input types list
+        with self.assertRaises(Exception): create_op(in_types=[], out_types=[cv.GMat])
+        # NB: Empty output types list
+        with self.assertRaises(Exception): create_op(in_types=[cv.GMat], out_types=[])
+
+        # Invalid output types
+        with self.assertRaises(Exception): create_op(in_types=[cv.GMat], out_types=[int])
+        with self.assertRaises(Exception): create_op(in_types=[cv.GMat], out_types=[cv.GMat, int])
+        with self.assertRaises(Exception): create_op(in_types=[cv.GMat], out_types=[str, cv.GScalar])
+
+
+    def test_invalid_op_input(self):
+        # NB: Check GMat/GScalar
+        with self.assertRaises(Exception): create_op([cv.GMat]   , [cv.GScalar]).on(cv.GScalar())
+        with self.assertRaises(Exception): create_op([cv.GScalar], [cv.GScalar]).on(cv.GMat())
+
+        # NB: Check GOpaque
+        op = create_op([cv.GOpaque.Rect], [cv.GMat])
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Bool())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Int())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Double())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Float())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.String())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Point())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Point2f())
+        with self.assertRaises(Exception): op.on(cv.GOpaque.Size())
+
+        # NB: Check GArray
+        op = create_op([cv.GArray.Rect], [cv.GMat])
+        with self.assertRaises(Exception): op.on(cv.GArray.Bool())
+        with self.assertRaises(Exception): op.on(cv.GArray.Int())
+        with self.assertRaises(Exception): op.on(cv.GArray.Double())
+        with self.assertRaises(Exception): op.on(cv.GArray.Float())
+        with self.assertRaises(Exception): op.on(cv.GArray.String())
+        with self.assertRaises(Exception): op.on(cv.GArray.Point())
+        with self.assertRaises(Exception): op.on(cv.GArray.Point2f())
+        with self.assertRaises(Exception): op.on(cv.GArray.Size())
+
+        # Check other possible invalid options
+        with self.assertRaises(Exception): op.on(cv.GMat())
+        with self.assertRaises(Exception): op.on(cv.GScalar())
+
+        with self.assertRaises(Exception): op.on(1)
+        with self.assertRaises(Exception): op.on('foo')
+        with self.assertRaises(Exception): op.on(False)
+
+        with self.assertRaises(Exception): create_op([cv.GMat, int], [cv.GMat]).on(cv.GMat(), 'foo')
+        with self.assertRaises(Exception): create_op([cv.GMat, int], [cv.GMat]).on(cv.GMat())
+
+
+    def test_stateful_kernel(self):
+        @cv.gapi.op('custom.sum', in_types=[cv.GArray.Int], out_types=[cv.GOpaque.Int])
+        class GSum:
+            @staticmethod
+            def outMeta(arr_desc):
+                return cv.empty_gopaque_desc()
+
+
+        @cv.gapi.kernel(GSum)
+        class GSumImpl:
+            last_result = 0
+
+            @staticmethod
+            def run(arr):
+                GSumImpl.last_result = sum(arr)
+                return GSumImpl.last_result
+
+
+        g_in  = cv.GArray.Int()
+        comp  = cv.GComputation(cv.GIn(g_in), cv.GOut(GSum.on(g_in)))
+
+        s = comp.apply(cv.gin([1, 2, 3, 4]), args=cv.compile_args(cv.gapi.wip.kernels(GSumImpl)))
+        self.assertEqual(10, s)
+
+        s = comp.apply(cv.gin([1, 2, 8, 7]), args=cv.compile_args(cv.gapi.wip.kernels(GSumImpl)))
+        self.assertEqual(18, s)
+
+        self.assertEqual(18, GSumImpl.last_result)
+
+
+    def test_opaq_with_custom_type(self):
+        @cv.gapi.op('custom.op', in_types=[cv.GOpaque.Any, cv.GOpaque.String], out_types=[cv.GOpaque.Any])
+        class GLookUp:
+            @staticmethod
+            def outMeta(opaq_desc0, opaq_desc1):
+                return cv.empty_gopaque_desc()
+
+        @cv.gapi.kernel(GLookUp)
+        class GLookUpImpl:
+            @staticmethod
+            def run(table, key):
+                return table[key]
+
+
+        g_table = cv.GOpaque.Any()
+        g_key   = cv.GOpaque.String()
+        g_out   = GLookUp.on(g_table, g_key)
+
+        comp = cv.GComputation(cv.GIn(g_table, g_key), cv.GOut(g_out))
+
+        table = {
+                    'int':   42,
+                    'str':   'hello, world!',
+                    'tuple': (42, 42)
+                }
+
+        out = comp.apply(cv.gin(table, 'int'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        self.assertEqual(42, out)
+
+        out = comp.apply(cv.gin(table, 'str'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        self.assertEqual('hello, world!', out)
+
+        out = comp.apply(cv.gin(table, 'tuple'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        self.assertEqual((42, 42), out)
+
+
+    def test_array_with_custom_type(self):
+        @cv.gapi.op('custom.op', in_types=[cv.GArray.Any, cv.GArray.Any], out_types=[cv.GArray.Any])
+        class GConcat:
+            @staticmethod
+            def outMeta(arr_desc0, arr_desc1):
+                return cv.empty_array_desc()
+
+        @cv.gapi.kernel(GConcat)
+        class GConcatImpl:
+            @staticmethod
+            def run(arr0, arr1):
+                return arr0 + arr1
+
+        g_arr0 = cv.GArray.Any()
+        g_arr1 = cv.GArray.Any()
+        g_out  = GConcat.on(g_arr0, g_arr1)
+
+        comp = cv.GComputation(cv.GIn(g_arr0, g_arr1), cv.GOut(g_out))
+
+        arr0 = [(2, 2), 2.0]
+        arr1 = [3,    'str']
+
+        out = comp.apply(cv.gin(arr0, arr1),
+                         args=cv.compile_args(cv.gapi.wip.kernels(GConcatImpl)))
+
+        self.assertEqual(arr0 + arr1, out)
+
+
+    def test_raise_in_kernel(self):
+        @cv.gapi.op('custom.op', in_types=[cv.GMat, cv.GMat], out_types=[cv.GMat])
+        class GAdd:
+            @staticmethod
+            def outMeta(desc0, desc1):
+                return desc0
+
+        @cv.gapi.kernel(GAdd)
+        class GAddImpl:
+            @staticmethod
+            def run(img0, img1):
+                raise 'Error'
+                return img0 + img1
+
+        g_in0 = cv.GMat()
+        g_in1 = cv.GMat()
+        g_out = GAdd.on(g_in0, g_in1)
+
+        comp = cv.GComputation(cv.GIn(g_in0, g_in1), cv.GOut(g_out))
+
+        img0 = np.array([1, 2, 3])
+        img1 = np.array([1, 2, 3])
+
+        with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
+                                                      args=cv.compile_args(
+                                                          cv.gapi.wip.kernels(GAddImpl)))
+
+
+    def test_raise_in_outMeta(self):
+        @cv.gapi.op('custom.op', in_types=[cv.GMat, cv.GMat], out_types=[cv.GMat])
+        class GAdd:
+            @staticmethod
+            def outMeta(desc0, desc1):
+                raise 'Error'
+                return desc0
+
+        @cv.gapi.kernel(GAdd)
+        class GAddImpl:
+            @staticmethod
+            def run(img0, img1):
+                return img0 + img1
+
+        g_in0 = cv.GMat()
+        g_in1 = cv.GMat()
+        g_out = GAdd.on(g_in0, g_in1)
+
+        comp = cv.GComputation(cv.GIn(g_in0, g_in1), cv.GOut(g_out))
+
+        img0 = np.array([1, 2, 3])
+        img1 = np.array([1, 2, 3])
+
+        with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
+                                                      args=cv.compile_args(
+                                                          cv.gapi.wip.kernels(GAddImpl)))
+
+
+    def test_invalid_outMeta(self):
+        @cv.gapi.op('custom.op', in_types=[cv.GMat, cv.GMat], out_types=[cv.GMat])
+        class GAdd:
+            @staticmethod
+            def outMeta(desc0, desc1):
+                # Invalid outMeta
+                return cv.empty_gopaque_desc()
+
+        @cv.gapi.kernel(GAdd)
+        class GAddImpl:
+            @staticmethod
+            def run(img0, img1):
+                return img0 + img1
+
+        g_in0 = cv.GMat()
+        g_in1 = cv.GMat()
+        g_out = GAdd.on(g_in0, g_in1)
+
+        comp = cv.GComputation(cv.GIn(g_in0, g_in1), cv.GOut(g_out))
+
+        img0 = np.array([1, 2, 3])
+        img1 = np.array([1, 2, 3])
+
+        # FIXME: Cause Bad variant access.
+        # Need to provide more descriptive error messsage.
+        with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
+                                                      args=cv.compile_args(
+                                                          cv.gapi.wip.kernels(GAddImpl)))
+
+    def test_pipeline_with_custom_kernels(self):
+        @cv.gapi.op('custom.resize', in_types=[cv.GMat, tuple], out_types=[cv.GMat])
+        class GResize:
+            @staticmethod
+            def outMeta(desc, size):
+                return desc.withSize(size)
+
+        @cv.gapi.kernel(GResize)
+        class GResizeImpl:
+            @staticmethod
+            def run(img, size):
+                return cv.resize(img, size)
+
+        @cv.gapi.op('custom.transpose', in_types=[cv.GMat, tuple], out_types=[cv.GMat])
+        class GTranspose:
+            @staticmethod
+            def outMeta(desc, order):
+                return desc
+
+        @cv.gapi.kernel(GTranspose)
+        class GTransposeImpl:
+            @staticmethod
+            def run(img, order):
+                return np.transpose(img, order)
+
+        img_path = self.find_file('cv/face/david2.jpg', [os.environ.get('OPENCV_TEST_DATA_PATH')])
+        img      = cv.imread(img_path)
+        size     = (32, 32)
+        order    = (1, 0, 2)
+
+        # Dummy pipeline just to validate this case:
+        # gapi -> custom -> custom -> gapi
+
+        # OpenCV
+        expected = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+        expected = cv.resize(expected, size)
+        expected = np.transpose(expected, order)
+        expected = cv.mean(expected)
+
+        # G-API
+        g_bgr        = cv.GMat()
+        g_rgb        = cv.gapi.BGR2RGB(g_bgr)
+        g_resized    = GResize.on(g_rgb, size)
+        g_transposed = GTranspose.on(g_resized, order)
+        g_mean       = cv.gapi.mean(g_transposed)
+
+        comp = cv.GComputation(cv.GIn(g_bgr), cv.GOut(g_mean))
+        actual = comp.apply(cv.gin(img), args=cv.compile_args(
+            cv.gapi.wip.kernels(GResizeImpl, GTransposeImpl)))
+
+        self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
 
 if __name__ == '__main__':

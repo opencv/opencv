@@ -24,30 +24,40 @@
             GAPI_Assert(false && "Unsupported type"); \
     }
 
+namespace cv {
+namespace detail {
+// NB: Holds PyObject*, but since this code is a part of libopencv_gapi.so,
+// we can use PyObject* directly, because it doesn't depend on Python C API lib.
+using PyObjectHolder = cv::util::any;
+}
+}
+
 #define GARRAY_TYPE_LIST_G(G, G2) \
-WRAP_ARGS(bool        ,  cv::gapi::ArgType::CV_BOOL,    G) \
-WRAP_ARGS(int         ,  cv::gapi::ArgType::CV_INT,     G) \
-WRAP_ARGS(double      ,  cv::gapi::ArgType::CV_DOUBLE,  G) \
-WRAP_ARGS(float       ,  cv::gapi::ArgType::CV_FLOAT,   G) \
-WRAP_ARGS(std::string ,  cv::gapi::ArgType::CV_STRING,  G) \
-WRAP_ARGS(cv::Point   ,  cv::gapi::ArgType::CV_POINT,   G) \
-WRAP_ARGS(cv::Point2f ,  cv::gapi::ArgType::CV_POINT2F, G) \
-WRAP_ARGS(cv::Size    ,  cv::gapi::ArgType::CV_SIZE,    G) \
-WRAP_ARGS(cv::Rect    ,  cv::gapi::ArgType::CV_RECT,    G) \
-WRAP_ARGS(cv::Scalar  ,  cv::gapi::ArgType::CV_SCALAR,  G) \
-WRAP_ARGS(cv::Mat     ,  cv::gapi::ArgType::CV_MAT,     G) \
-WRAP_ARGS(cv::GMat    ,  cv::gapi::ArgType::CV_GMAT,    G2)
+WRAP_ARGS(bool                      , cv::gapi::ArgType::CV_BOOL,    G) \
+WRAP_ARGS(int                       , cv::gapi::ArgType::CV_INT,     G) \
+WRAP_ARGS(double                    , cv::gapi::ArgType::CV_DOUBLE,  G) \
+WRAP_ARGS(float                     , cv::gapi::ArgType::CV_FLOAT,   G) \
+WRAP_ARGS(std::string               , cv::gapi::ArgType::CV_STRING,  G) \
+WRAP_ARGS(cv::Point                 , cv::gapi::ArgType::CV_POINT,   G) \
+WRAP_ARGS(cv::Point2f               , cv::gapi::ArgType::CV_POINT2F, G) \
+WRAP_ARGS(cv::Size                  , cv::gapi::ArgType::CV_SIZE,    G) \
+WRAP_ARGS(cv::Rect                  , cv::gapi::ArgType::CV_RECT,    G) \
+WRAP_ARGS(cv::Scalar                , cv::gapi::ArgType::CV_SCALAR,  G) \
+WRAP_ARGS(cv::Mat                   , cv::gapi::ArgType::CV_MAT,     G) \
+WRAP_ARGS(cv::detail::PyObjectHolder, cv::gapi::ArgType::CV_ANY,     G) \
+WRAP_ARGS(cv::GMat                  , cv::gapi::ArgType::CV_GMAT,    G2)
 
 #define GOPAQUE_TYPE_LIST_G(G, G2) \
-WRAP_ARGS(bool        ,  cv::gapi::ArgType::CV_BOOL,    G)  \
-WRAP_ARGS(int         ,  cv::gapi::ArgType::CV_INT,     G)  \
-WRAP_ARGS(double      ,  cv::gapi::ArgType::CV_DOUBLE,  G)  \
-WRAP_ARGS(float       ,  cv::gapi::ArgType::CV_FLOAT,   G)  \
-WRAP_ARGS(std::string ,  cv::gapi::ArgType::CV_STRING,  G)  \
-WRAP_ARGS(cv::Point   ,  cv::gapi::ArgType::CV_POINT,   G)  \
-WRAP_ARGS(cv::Point2f ,  cv::gapi::ArgType::CV_POINT2F, G)  \
-WRAP_ARGS(cv::Size    ,  cv::gapi::ArgType::CV_SIZE,    G)  \
-WRAP_ARGS(cv::Rect    ,  cv::gapi::ArgType::CV_RECT,    G2) \
+WRAP_ARGS(bool                      , cv::gapi::ArgType::CV_BOOL,    G)  \
+WRAP_ARGS(int                       , cv::gapi::ArgType::CV_INT,     G)  \
+WRAP_ARGS(double                    , cv::gapi::ArgType::CV_DOUBLE,  G)  \
+WRAP_ARGS(float                     , cv::gapi::ArgType::CV_FLOAT,   G)  \
+WRAP_ARGS(std::string               , cv::gapi::ArgType::CV_STRING,  G)  \
+WRAP_ARGS(cv::Point                 , cv::gapi::ArgType::CV_POINT,   G)  \
+WRAP_ARGS(cv::Point2f               , cv::gapi::ArgType::CV_POINT2F, G)  \
+WRAP_ARGS(cv::Size                  , cv::gapi::ArgType::CV_SIZE,    G)  \
+WRAP_ARGS(cv::detail::PyObjectHolder, cv::gapi::ArgType::CV_ANY,     G)  \
+WRAP_ARGS(cv::Rect                  , cv::gapi::ArgType::CV_RECT,    G2) \
 
 namespace cv {
 namespace gapi {
@@ -66,6 +76,7 @@ enum ArgType {
     CV_SCALAR,
     CV_MAT,
     CV_GMAT,
+    CV_ANY,
 };
 
 GAPI_EXPORTS_W inline cv::GInferOutputs infer(const String& name, const cv::GInferInputs& inputs)

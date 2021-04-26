@@ -68,6 +68,19 @@ bool pyopencv_to(PyObject* obj, GRunArgs& value, const ArgInfo& info)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, cv::detail::PyObjectHolder& value, const ArgInfo& info)
+{
+    value = obj;
+    return true;
+}
+
+template<>
+PyObject* pyopencv_from(const cv::detail::PyObjectHolder& v)
+{
+    return cv::util::any_cast<PyObject*>(v);
+}
+
+template<>
 PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
 {
     switch (o.getKind())
@@ -81,7 +94,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_POINT2F   : return pyopencv_from(o.rref<cv::Point2f>());
         case cv::detail::OpaqueKind::CV_SIZE      : return pyopencv_from(o.rref<cv::Size>());
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from(o.rref<cv::Rect>());
-        case cv::detail::OpaqueKind::CV_UNKNOWN   : break;
+        case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from(o.rref<cv::detail::PyObjectHolder>());
         case cv::detail::OpaqueKind::CV_UINT64    : break;
         case cv::detail::OpaqueKind::CV_SCALAR    : break;
         case cv::detail::OpaqueKind::CV_MAT       : break;
@@ -108,7 +121,7 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from_generic_vec(v.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_SCALAR    : return pyopencv_from_generic_vec(v.rref<cv::Scalar>());
         case cv::detail::OpaqueKind::CV_MAT       : return pyopencv_from_generic_vec(v.rref<cv::Mat>());
-        case cv::detail::OpaqueKind::CV_UNKNOWN   : break;
+        case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from_generic_vec(v.rref<cv::detail::PyObjectHolder>());
         case cv::detail::OpaqueKind::CV_UINT64    : break;
         case cv::detail::OpaqueKind::CV_DRAW_PRIM : break;
     }
@@ -270,7 +283,7 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(POINT2F, cv::Point2f);
         HANDLE_CASE(SIZE,    cv::Size);
         HANDLE_CASE(RECT,    cv::Rect);
-        UNSUPPORTED(UNKNOWN);
+        HANDLE_CASE(UNKNOWN, cv::detail::PyObjectHolder);
         UNSUPPORTED(UINT64);
         UNSUPPORTED(SCALAR);
         UNSUPPORTED(MAT);
@@ -303,7 +316,7 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(RECT,    cv::Rect);
         HANDLE_CASE(SCALAR,  cv::Scalar);
         HANDLE_CASE(MAT,     cv::Mat);
-        UNSUPPORTED(UNKNOWN);
+        HANDLE_CASE(UNKNOWN, cv::detail::PyObjectHolder);
         UNSUPPORTED(UINT64);
         UNSUPPORTED(DRAW_PRIM);
 #undef HANDLE_CASE
@@ -496,7 +509,14 @@ static cv::GRunArgs run_py_kernel(PyObject* kernel,
         }
 
         PyObject* result = PyObject_CallObject(kernel, args);
-        std::cout << "result = " << result << std::endl;
+        if (PyErr_Occurred()) {
+            PyErr_PrintEx(0);
+            PyErr_Clear();
+            throw std::logic_error("Python kernel failed with error!");
+        }
+
+        // NB: In fact it's impossible situation, becase errors were handled above.
+        GAPI_Assert(result && "Python kernel returned NULL!");
 
         outs = out_info.size() == 1 ? cv::GRunArgs{extract_run_arg(out_info[0], result)}
                                     : extract_run_args(out_info, result);
@@ -559,7 +579,7 @@ static cv::GMetaArgs get_meta_args(PyObject* tuple)
     return metas;
 }
 
-static GMetaArgs python_meta(PyObject* outMeta, const cv::GMetaArgs &meta, const cv::GArgs &gargs) {
+static GMetaArgs run_py_meta(PyObject* outMeta, const cv::GMetaArgs &meta, const cv::GArgs &gargs) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
@@ -593,9 +613,20 @@ static GMetaArgs python_meta(PyObject* outMeta, const cv::GMetaArgs &meta, const
             }
             ++idx;
         }
+
         PyObject* result = PyObject_CallObject(outMeta, args);
+        if (PyErr_Occurred()) {
+            PyErr_PrintEx(0);
+            PyErr_Clear();
+            throw std::logic_error("Python outMeta failed with error!");
+        }
+
+        // NB: In fact it's impossible situation, becase errors were handled above.
+        GAPI_Assert(result && "Python outMeta returned NULL!");
+
         out_metas = PyTuple_Check(result) ? get_meta_args(result)
                                           : cv::GMetaArgs{get_meta_arg(result)};
+
     }
     catch (...)
     {
@@ -612,53 +643,48 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
     using namespace cv;
     gapi::GKernelPackage pkg;
     Py_ssize_t size = PyTuple_Size(py_args);
-    PyObject* user_op = PyTuple_GetItem(py_args, 0);
-    PyObject* id_obj = PyObject_GetAttrString(user_op, "id");
-    if (!id_obj) {
-        PyErr_SetString(PyExc_TypeError, "Kernel should contain id");
-        return NULL;
-    }
-    std::string id;
-    if (!pyopencv_to(id_obj, id, ArgInfo("id", false)))
+
+    for (int i = 0; i < size; ++i)
     {
-        PyErr_SetString(PyExc_TypeError, "Failed to obtain string");
-        return NULL;
+        PyObject* user_kernel = PyTuple_GetItem(py_args, i);
+
+        PyObject* id_obj = PyObject_GetAttrString(user_kernel, "id");
+        if (!id_obj) {
+            PyErr_SetString(PyExc_TypeError,
+                    "Python kernel should contain id, please use cv.gapi.kernel to define kernel");
+            return NULL;
+        }
+
+        PyObject* outMeta = PyObject_GetAttrString(user_kernel, "outMeta");
+        if (!outMeta) {
+            PyErr_SetString(PyExc_TypeError,
+                    "Python kernel should contain outMeta, please use cv.gapi.kernel to define kernel");
+            return NULL;
+        }
+        Py_INCREF(outMeta);
+
+        PyObject* run  = PyObject_GetAttrString(user_kernel, "run");
+        if (!run) {
+            PyErr_SetString(PyExc_TypeError,
+                    "Python kernel should contain run, please use cv.gapi.kernel to define kernel");
+            return NULL;
+        }
+        Py_INCREF(run);
+
+        std::string id;
+        if (!pyopencv_to(id_obj, id, ArgInfo("id", false)))
+        {
+            PyErr_SetString(PyExc_TypeError, "Failed to obtain string");
+            return NULL;
+        }
+
+        using namespace std::placeholders;
+        gapi::python::GPythonFunctor f(id.c_str(),
+                std::bind(run_py_meta  , outMeta, _1, _2),
+                std::bind(run_py_kernel, run    , _1));
+        pkg.include(f);
     }
-    std::cout << "id = " << id << std::endl;
-
-    PyObject* outMeta = PyObject_GetAttrString(user_op, "outMeta");
-    Py_INCREF(outMeta);
-
-    PyObject* kernel  = PyObject_GetAttrString(user_op, "run");
-    Py_INCREF(kernel);
-
-    using namespace std::placeholders;
-    gapi::python::GPythonFunctor f(id.c_str(),
-                                   std::bind(python_meta  , outMeta, _1, _2),
-                                   std::bind(run_py_kernel, kernel , _1));
-    pkg.include(f);
     return pyopencv_from(pkg);
-
-    //for (int i = 0; i < size; ++i)
-    //{
-        //PyObject* pair   = PyTuple_GetItem(py_args, i);
-        //PyObject* kernel = PyTuple_GetItem(pair, 0);
-
-        //std::string id;
-        //if (!pyopencv_to(PyTuple_GetItem(pair, 1), id, ArgInfo("id", false)))
-        //{
-            //PyErr_SetString(PyExc_TypeError, "Failed to obtain: kernel id must be a string");
-            //return NULL;
-        //}
-        //Py_INCREF(kernel);
-        //gapi::python::GPythonFunctor f(id.c_str(),
-                                       //empty_meta,
-                                       //std::bind(run_py_kernel,
-                                                 //kernel,
-                                                 //std::placeholders::_1));
-        //pkg.include(f);
-    //}
-    //return pyopencv_from(pkg);
 }
 
 static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
@@ -717,7 +743,7 @@ static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
         }
     }
 
-    cv::GKernel::M outMetaWrapper = std::bind(python_meta,
+    cv::GKernel::M outMetaWrapper = std::bind(run_py_meta,
                                               outMeta,
                                               std::placeholders::_1,
                                               std::placeholders::_2);
