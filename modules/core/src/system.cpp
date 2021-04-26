@@ -1390,6 +1390,9 @@ public:
     static bool isDisposed() { return mark; }
 };
 
+// TlsAbstraction and TlsStorage are unsued when thread support is
+// disabled.
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 // TLS platform abstraction layer
 class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
 {
@@ -1419,7 +1422,7 @@ private:
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
-#endif
+#endif //_WIN32
 };
 
 template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
@@ -1777,20 +1780,28 @@ static void WINAPI opencv_fls_destructor(void* pData)
 }
 #endif // CV_USE_FLS
 #endif // _WIN32
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 
 } // namespace details
 using namespace details;
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 void releaseTlsStorageThread()
 {
     if (!g_isTlsStorageInitialized)
         return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread();
 }
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 
 TLSDataContainer::TLSDataContainer()
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     key_ = (int)getTlsStorage().reserveSlot(this); // Reserve key from TLS storage
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 TLSDataContainer::~TLSDataContainer()
@@ -1800,16 +1811,29 @@ TLSDataContainer::~TLSDataContainer()
 
 void TLSDataContainer::gatherData(std::vector<void*> &data) const
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     getTlsStorage().gather(key_, data);
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_UNUSED(data);
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::detachData(std::vector<void*> &data)
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     getTlsStorage().releaseSlot(key_, data, true);
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_UNUSED(data);
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::release()
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (key_ == -1)
         return;  // already released
     std::vector<void*> data; data.reserve(32);
@@ -1817,18 +1841,28 @@ void TLSDataContainer::release()
     key_ = -1;
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::cleanup()
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     std::vector<void*> data; data.reserve(32);
     getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void* TLSDataContainer::getData() const
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(key_ != -1 && "Can't fetch data from terminated TLS container.");
     void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
     if(!pData)
@@ -1846,6 +1880,10 @@ void* TLSDataContainer::getData() const
         }
     }
     return pData;
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_Error(cv::Error::StsNotImplemented,
+             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 static TLSData<CoreTLSData>& getCoreTlsDataTLS()
@@ -2517,7 +2555,8 @@ String getIppVersion()
 
 bool useIPP()
 {
-#ifdef HAVE_IPP
+    // CoreTLSData require threads to work.
+#if defined(HAVE_IPP) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
     CoreTLSData& data = getCoreTlsData();
     if (data.useIPP < 0)
     {

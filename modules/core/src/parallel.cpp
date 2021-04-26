@@ -72,7 +72,7 @@
     #endif
 #endif
 
-#if defined CV_CXX11
+#if defined CV_CXX11 && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
     #include <thread>
 #endif
 
@@ -519,6 +519,7 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
     }
 }
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 static
 void parallel_for_cb(int start, int end, void* data)
 {
@@ -526,9 +527,11 @@ void parallel_for_cb(int start, int end, void* data)
     const cv::ParallelLoopBody& body = *(const cv::ParallelLoopBody*)data;
     body(Range(start, end));
 }
+#endif
 
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     using namespace cv::parallel;
     if ((numThreads < 0 || numThreads > 1) && range.end - range.start > 1)
     {
@@ -604,7 +607,9 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
         return;
 #endif // CV_PARALLEL_FRAMEWORK
     }
-
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+    CV_UNUSED(nstripes);
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
     body(range);
 }
 
@@ -892,7 +897,7 @@ int getNumberOfCPUs_()
      * the minimum most value as it has high probablity of being right and safe.
      * Return 1 if we get 0 or not found on all methods.
     */
-#if defined CV_CXX11 \
+#if defined CV_CXX11 && !defined(OPENCV_DISABLE_THREAD_SUPPORT) \
     && !defined(__MINGW32__) /* not implemented (2020-03) */ \
 
     /*

@@ -14,15 +14,16 @@
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_DEBUG + 1
 #include <opencv2/core/utils/logger.hpp>
 
-
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 #ifdef CV_CXX11
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
 #endif
-
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 namespace cv {
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 /**
 Manages shared state of asynchronous result
 */
@@ -235,6 +236,7 @@ struct AsyncArray::Impl
 #endif
     }
 };
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 
 
 AsyncArray::AsyncArray() CV_NOEXCEPT
@@ -248,53 +250,96 @@ AsyncArray::~AsyncArray() CV_NOEXCEPT
 }
 
 AsyncArray::AsyncArray(const AsyncArray& o) CV_NOEXCEPT
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     : p(o.p)
+#endif
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (p)
         p->addrefFuture();
+#else
+    CV_UNUSED(o);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 AsyncArray& AsyncArray::operator=(const AsyncArray& o) CV_NOEXCEPT
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     Impl* newp = o.p;
     if (newp)
         newp->addrefFuture();
     release();
     p = newp;
     return *this;
+#else
+    CV_UNUSED(o);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void AsyncArray::release() CV_NOEXCEPT
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     Impl* impl = p;
     p = NULL;
     if (impl)
         impl->releaseFuture();
+#else
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 bool AsyncArray::get(OutputArray dst, int64 timeoutNs) const
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->get(dst, timeoutNs);
+#else
+    CV_UNUSED(dst);
+    CV_UNUSED(timeoutNs);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void AsyncArray::get(OutputArray dst) const
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     bool res = p->get(dst, -1);
     CV_Assert(res);
+#else
+    CV_UNUSED(dst);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 bool AsyncArray::wait_for(int64 timeoutNs) const
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->wait_for(timeoutNs);
+#else
+    CV_UNUSED(timeoutNs);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 bool AsyncArray::valid() const CV_NOEXCEPT
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (!p) return false;
     return p->valid();
+#else
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncArray is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 
@@ -303,7 +348,9 @@ bool AsyncArray::valid() const CV_NOEXCEPT
 //
 
 AsyncPromise::AsyncPromise() CV_NOEXCEPT
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     : p(new AsyncArray::Impl())
+#endif
 {
 }
 
@@ -313,53 +360,95 @@ AsyncPromise::~AsyncPromise() CV_NOEXCEPT
 }
 
 AsyncPromise::AsyncPromise(const AsyncPromise& o) CV_NOEXCEPT
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     : p(o.p)
+#endif
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (p)
         p->addrefPromise();
+#else
+    CV_UNUSED(o);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 AsyncPromise& AsyncPromise::operator=(const AsyncPromise& o) CV_NOEXCEPT
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     Impl* newp = o.p;
     if (newp)
         newp->addrefPromise();
     release();
     p = newp;
     return *this;
+#else
+    CV_UNUSED(o);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void AsyncPromise::release() CV_NOEXCEPT
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     Impl* impl = p;
     p = NULL;
     if (impl)
         impl->releasePromise();
+#else
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 AsyncArray AsyncPromise::getArrayResult()
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->getArrayResult();
+#else
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void AsyncPromise::setValue(InputArray value)
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->setValue(value);
+#else
+    CV_UNUSED(value);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void AsyncPromise::setException(const cv::Exception& exception)
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->setException(exception);
+#else
+    CV_UNUSED(exception);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 #if CV__EXCEPTION_PTR
 void AsyncPromise::setException(std::exception_ptr exception)
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(p);
     return p->setException(exception);
+#else
+    CV_UNUSED(exception);
+    CV_Error(cv::Error::StsNotImplemented,
+                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 #endif
 
