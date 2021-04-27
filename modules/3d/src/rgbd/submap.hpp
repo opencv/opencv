@@ -13,7 +13,7 @@
 
 #include "hash_tsdf.hpp"
 #include "opencv2/core/mat.inl.hpp"
-#include "pose_graph.hpp"
+#include "opencv2/rgbd/detail/pose_graph.hpp"
 
 namespace cv
 {
@@ -42,7 +42,7 @@ class Submap
 
     Submap(int _id, const VolumeParams& volumeParams, const cv::Affine3f& _pose = cv::Affine3f::Identity(),
            int _startFrameId = 0)
-        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId), volume(volumeParams)
+        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId), volume(makeHashTSDFVolume(volumeParams))
     {
         std::cout << "Created volume\n";
     }
@@ -53,10 +53,10 @@ class Submap
                          OutputArray points, OutputArray normals);
     virtual void updatePyrPointsNormals(const int pyramidLevels);
 
-    virtual int getTotalAllocatedBlocks() const { return int(volume.getTotalVolumeUnits()); };
+    virtual int getTotalAllocatedBlocks() const { return int(volume->getTotalVolumeUnits()); };
     virtual int getVisibleBlocks(int currFrameId) const
     {
-        return volume.getVisibleBlocks(currFrameId, FRAME_VISIBILITY_THRESHOLD);
+        return volume->getVisibleBlocks(currFrameId, FRAME_VISIBILITY_THRESHOLD);
     }
 
     float calcVisibilityRatio(int currFrameId) const
@@ -91,7 +91,7 @@ class Submap
     //! TODO: Add support for GPU arrays (UMat)
     std::vector<MatType> pyrPoints;
     std::vector<MatType> pyrNormals;
-    HashTSDFVolumeCPU volume;
+    std::shared_ptr<HashTSDFVolume> volume;
 };
 
 template<typename MatType>
@@ -100,14 +100,14 @@ void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::
                                 const int currFrameId)
 {
     CV_Assert(currFrameId >= startFrameId);
-    volume.integrate(_depth, depthFactor, cameraPose.matrix, intrinsics, currFrameId);
+    volume->integrate(_depth, depthFactor, cameraPose.matrix, intrinsics, currFrameId);
 }
 
 template<typename MatType>
 void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::kinfu::Intr& intrinsics, cv::Size frameSize,
                               OutputArray points, OutputArray normals)
 {
-    volume.raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
+    volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
 }
 
 template<typename MatType>
@@ -166,15 +166,15 @@ class SubmapManager
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
     bool updateMap(int _frameId, std::vector<MatType> _framePoints, std::vector<MatType> _frameNormals);
 
-    PoseGraph MapToPoseGraph();
-    void PoseGraphToMap(const PoseGraph& updatedPoseGraph);
+    Ptr<detail::PoseGraph> MapToPoseGraph();
+    void PoseGraphToMap(const Ptr<detail::PoseGraph>& updatedPoseGraph);
 
     VolumeParams volumeParams;
 
     std::vector<Ptr<SubmapT>> submapList;
     IdToActiveSubmaps activeSubmaps;
 
-    PoseGraph poseGraph;
+    Ptr<detail::PoseGraph> poseGraph;
 };
 
 template<typename MatType>
@@ -494,10 +494,9 @@ bool SubmapManager<MatType>::updateMap(int _frameId, std::vector<MatType> _frame
 }
 
 template<typename MatType>
-PoseGraph SubmapManager<MatType>::MapToPoseGraph()
+Ptr<detail::PoseGraph> SubmapManager<MatType>::MapToPoseGraph()
 {
-    PoseGraph localPoseGraph;
-
+    Ptr<detail::PoseGraph> localPoseGraph = detail::PoseGraph::create();
 
     for(const auto& currSubmap : submapList)
     {
@@ -507,34 +506,26 @@ PoseGraph SubmapManager<MatType>::MapToPoseGraph()
             // TODO: Handle case with duplicate constraints A -> B and B -> A
             /* Matx66f informationMatrix = Matx66f::eye() * (currConstraintPair.second.weight/10); */
             Matx66f informationMatrix = Matx66f::eye();
-            PoseGraphEdge currEdge(currSubmap->id, currConstraintPair.first, currConstraintPair.second.estimatedPose, informationMatrix);
-            localPoseGraph.addEdge(currEdge);
+            localPoseGraph->addEdge(currSubmap->id, currConstraintPair.first, currConstraintPair.second.estimatedPose, informationMatrix);
         }
     }
 
     for(const auto& currSubmap : submapList)
     {
-        PoseGraphNode currNode(currSubmap->id, currSubmap->pose);
-        if(currSubmap->id == 0)
-        {
-            currNode.setFixed();
-        }
-        localPoseGraph.addNode(currNode);
+        localPoseGraph->addNode(currSubmap->id, currSubmap->pose, (currSubmap->id == 0));
     }
-
-
 
     return localPoseGraph;
 }
 
 template <typename MatType>
-void SubmapManager<MatType>::PoseGraphToMap(const PoseGraph &updatedPoseGraph)
+void SubmapManager<MatType>::PoseGraphToMap(const Ptr<detail::PoseGraph>& updatedPoseGraph)
 {
     for(const auto& currSubmap : submapList)
     {
-        const PoseGraphNode& currNode = updatedPoseGraph.nodes.at(currSubmap->id);
-        if(!currNode.isPoseFixed())
-            currSubmap->pose = currNode.getPose();
+        Affine3d pose = updatedPoseGraph->getNodePose(currSubmap->id);
+        if(!updatedPoseGraph->isNodeFixed(currSubmap->id))
+            currSubmap->pose = pose;
         std::cout << "Current node: " << currSubmap->id << " Updated Pose: \n" << currSubmap->pose.matrix << std::endl;
     }
 }

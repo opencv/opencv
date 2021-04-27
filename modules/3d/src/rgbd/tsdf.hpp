@@ -17,15 +17,15 @@ namespace cv
 {
 namespace kinfu
 {
-// TODO: Optimization possible:
-// * TsdfType can be FP16
-// * WeightType can be uint16
 
 typedef int8_t TsdfType;
 typedef uchar WeightType;
 
 struct TsdfVoxel
 {
+    TsdfVoxel(TsdfType _tsdf, WeightType _weight) :
+        tsdf(_tsdf), weight(_weight)
+    { }
     TsdfType tsdf;
     WeightType weight;
 };
@@ -62,6 +62,10 @@ class TSDFVolumeCPU : public TSDFVolume
                            const kinfu::Intr& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals) const override;
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const kinfu::Intr&, const Intr&, const int) override
+        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void raycast(const Matx44f&, const kinfu::Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -97,6 +101,10 @@ class TSDFVolumeGPU : public TSDFVolume
                            const kinfu::Intr& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize,
                          OutputArray _points, OutputArray _normals) const override;
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const kinfu::Intr&, const Intr&, const int) override
+        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void raycast(const Matx44f&, const kinfu::Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
@@ -107,8 +115,7 @@ class TSDFVolumeGPU : public TSDFVolume
     UMat pixNorms;
     // See zFirstMemOrder arg of parent class constructor
     // for the array layout info
-    // Array elem is CV_32FC2, read as (float, int)
-    // TODO: optimization possible to (fp16, int16), see Voxel definition
+    // Array elem is CV_8UC2, read as (int8, uint8)
     UMat volume;
 };
 #endif

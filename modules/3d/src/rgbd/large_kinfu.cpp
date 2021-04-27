@@ -112,6 +112,7 @@ class LargeKinfuImpl : public LargeKinfu
 
     const Params& getParams() const CV_OVERRIDE;
 
+    void render(OutputArray image) const CV_OVERRIDE;
     void render(OutputArray image, const Matx44f& cameraPose) const CV_OVERRIDE;
 
     virtual void getCloud(OutputArray points, OutputArray normals) const CV_OVERRIDE;
@@ -208,6 +209,7 @@ bool LargeKinfuImpl<UMat>::update(InputArray _depth)
     }
 }
 
+
 template<typename MatType>
 bool LargeKinfuImpl<MatType>::updateT(const MatType& _depth)
 {
@@ -224,14 +226,14 @@ bool LargeKinfuImpl<MatType>::updateT(const MatType& _depth)
                        params.bilateral_sigma_depth, params.bilateral_sigma_spatial, params.bilateral_kernel_size,
                        params.truncateThreshold);
 
-    std::cout << "Current frameID: " << frameCounter << "\n";
+    CV_LOG_INFO(NULL, "Current frameID: " << frameCounter);
     for (const auto& it : submapMgr->activeSubmaps)
     {
         int currTrackingId = it.first;
         auto submapData = it.second;
         Ptr<Submap<MatType>> currTrackingSubmap = submapMgr->getSubmap(currTrackingId);
         Affine3f affine;
-        std::cout << "Current tracking ID: " << currTrackingId << std::endl;
+        CV_LOG_INFO(NULL, "Current tracking ID: " << currTrackingId);
 
         if(frameCounter == 0) //! Only one current tracking map
         {
@@ -248,7 +250,7 @@ bool LargeKinfuImpl<MatType>::updateT(const MatType& _depth)
             currTrackingSubmap->composeCameraPose(affine);
         else
         {
-            std::cout << "Tracking failed" << std::endl;
+            CV_LOG_INFO(NULL, "Tracking failed");
             continue;
         }
 
@@ -267,8 +269,8 @@ bool LargeKinfuImpl<MatType>::updateT(const MatType& _depth)
 
         currTrackingSubmap->updatePyrPointsNormals(params.pyramidLevels);
 
-        std::cout << "Submap: " << currTrackingId << " Total allocated blocks: " << currTrackingSubmap->getTotalAllocatedBlocks() << "\n";
-        std::cout << "Submap: " << currTrackingId << " Visible blocks: " << currTrackingSubmap->getVisibleBlocks(frameCounter) << "\n";
+        CV_LOG_INFO(NULL, "Submap: " << currTrackingId << " Total allocated blocks: " << currTrackingSubmap->getTotalAllocatedBlocks());
+        CV_LOG_INFO(NULL, "Submap: " << currTrackingId << " Visible blocks: " << currTrackingSubmap->getVisibleBlocks(frameCounter));
 
     }
     //4. Update map
@@ -277,17 +279,34 @@ bool LargeKinfuImpl<MatType>::updateT(const MatType& _depth)
     if(isMapUpdated)
     {
         // TODO: Convert constraints to posegraph
-        PoseGraph poseGraph = submapMgr->MapToPoseGraph();
-        std::cout << "Created posegraph\n";
-        Optimizer::optimize(poseGraph);
+        Ptr<kinfu::detail::PoseGraph> poseGraph = submapMgr->MapToPoseGraph();
+        CV_LOG_INFO(NULL, "Created posegraph");
+        int iters = poseGraph->optimize();
+        if (iters < 0)
+        {
+            CV_LOG_INFO(NULL, "Failed to perform pose graph optimization");
+            return false;
+        }
+
         submapMgr->PoseGraphToMap(poseGraph);
 
     }
-    std::cout << "Number of submaps: " << submapMgr->submapList.size() << "\n";
+    CV_LOG_INFO(NULL, "Number of submaps: " << submapMgr->submapList.size());
 
     frameCounter++;
     return true;
 }
+
+
+template<typename MatType>
+void LargeKinfuImpl<MatType>::render(OutputArray image) const
+{
+    CV_TRACE_FUNCTION();
+    auto currSubmap = submapMgr->getCurrentSubmap();
+    //! TODO: Can render be dependent on current submap
+    renderPointsNormals(currSubmap->pyrPoints[0], currSubmap->pyrNormals[0], image, params.lightPose);
+}
+
 
 template<typename MatType>
 void LargeKinfuImpl<MatType>::render(OutputArray image, const Matx44f& _cameraPose) const
@@ -295,42 +314,32 @@ void LargeKinfuImpl<MatType>::render(OutputArray image, const Matx44f& _cameraPo
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
-
     auto currSubmap = submapMgr->getCurrentSubmap();
-    const Affine3f id = Affine3f::Identity();
-    if ((cameraPose.rotation() == pose.rotation() && cameraPose.translation() == pose.translation()) ||
-        (cameraPose.rotation() == id.rotation() && cameraPose.translation() == id.translation()))
-    {
-        //! TODO: Can render be dependent on current submap
-        renderPointsNormals(currSubmap->pyrPoints[0], currSubmap->pyrNormals[0], image, params.lightPose);
-    }
-    else
-    {
-        MatType points, normals;
-        currSubmap->raycast(cameraPose, params.intr, params.frameSize, points, normals);
-        renderPointsNormals(points, normals, image, params.lightPose);
-    }
+    MatType points, normals;
+    currSubmap->raycast(cameraPose, params.intr, params.frameSize, points, normals);
+    renderPointsNormals(points, normals, image, params.lightPose);
 }
+
 
 template<typename MatType>
 void LargeKinfuImpl<MatType>::getCloud(OutputArray p, OutputArray n) const
 {
     auto currSubmap = submapMgr->getCurrentSubmap();
-    currSubmap->volume.fetchPointsNormals(p, n);
+    currSubmap->volume->fetchPointsNormals(p, n);
 }
 
 template<typename MatType>
 void LargeKinfuImpl<MatType>::getPoints(OutputArray points) const
 {
     auto currSubmap = submapMgr->getCurrentSubmap();
-    currSubmap->volume.fetchPointsNormals(points, noArray());
+    currSubmap->volume->fetchPointsNormals(points, noArray());
 }
 
 template<typename MatType>
 void LargeKinfuImpl<MatType>::getNormals(InputArray points, OutputArray normals) const
 {
     auto currSubmap = submapMgr->getCurrentSubmap();
-    currSubmap->volume.fetchNormals(points, normals);
+    currSubmap->volume->fetchNormals(points, normals);
 }
 
 // importing class

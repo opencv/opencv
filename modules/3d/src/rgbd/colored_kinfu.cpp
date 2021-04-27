@@ -8,10 +8,12 @@
 #include "fast_icp.hpp"
 #include "tsdf.hpp"
 #include "hash_tsdf.hpp"
+#include "colored_tsdf.hpp"
 #include "kinfu_frame.hpp"
 
 namespace cv {
-namespace kinfu {
+namespace colored_kinfu {
+using namespace kinfu;
 
 void Params::setInitialVolumePose(Matx33f R, Vec3f t)
 {
@@ -38,6 +40,15 @@ Ptr<Params> Params::defaultParams()
     p.intr = Matx33f(fx,  0, cx,
                       0, fy, cy,
                       0,  0,  1);
+
+    float rgb_fx, rgb_fy, rgb_cx, rgb_cy;
+    rgb_fx = 515.0f;
+    rgb_fy = 550.0f;
+    rgb_cx = 319.5f;
+    rgb_cy = 239.5f;
+    p.rgb_intr = Matx33f(rgb_fx,      0, rgb_cx,
+                              0, rgb_fy, rgb_cy,
+                              0,      0,      1);
 
     // 5000 for the 16-bit PNG files
     // 1 for the 32-bit float images in the ROS bag files
@@ -95,10 +106,11 @@ Ptr<Params> Params::coarseParams()
 
     return p;
 }
+
 Ptr<Params> Params::hashTSDFParams(bool isCoarse)
 {
     Ptr<Params> p;
-    if(isCoarse)
+    if (isCoarse)
         p = coarseParams();
     else
         p = defaultParams();
@@ -110,7 +122,7 @@ Ptr<Params> Params::hashTSDFParams(bool isCoarse)
 Ptr<Params> Params::coloredTSDFParams(bool isCoarse)
 {
     Ptr<Params> p;
-    if (isCoarse)
+    if(isCoarse)
         p = coarseParams();
     else
         p = defaultParams();
@@ -121,11 +133,11 @@ Ptr<Params> Params::coloredTSDFParams(bool isCoarse)
 
 // MatType should be Mat or UMat
 template< typename MatType>
-class KinFuImpl : public KinFu
+class ColoredKinFuImpl : public ColoredKinFu
 {
 public:
-    KinFuImpl(const Params& _params);
-    virtual ~KinFuImpl();
+    ColoredKinFuImpl(const Params& _params);
+    virtual ~ColoredKinFuImpl();
 
     const Params& getParams() const CV_OVERRIDE;
 
@@ -139,9 +151,9 @@ public:
 
     const Affine3f getPose() const CV_OVERRIDE;
 
-    bool update(InputArray depth) CV_OVERRIDE;
+    bool update(InputArray depth, InputArray rgb) CV_OVERRIDE;
 
-    bool updateT(const MatType& depth);
+    bool updateT(const MatType& depth, const MatType& rgb);
 
 private:
     Params params;
@@ -153,14 +165,15 @@ private:
     Matx44f pose;
     std::vector<MatType> pyrPoints;
     std::vector<MatType> pyrNormals;
+    std::vector<MatType> pyrColors;
 };
 
 
 template< typename MatType >
-KinFuImpl<MatType>::KinFuImpl(const Params &_params) :
+ColoredKinFuImpl<MatType>::ColoredKinFuImpl(const Params &_params) :
     params(_params),
     icp(makeICP(params.intr, params.icpIterations, params.icpAngleThresh, params.icpDistThresh)),
-    pyrPoints(), pyrNormals()
+    pyrPoints(), pyrNormals(), pyrColors()
 {
     volume = makeVolume(params.volumeType, params.voxelSize, params.volumePose.matrix, params.raycast_step_factor,
                         params.tsdf_trunc_dist, params.tsdf_max_weight, params.truncateThreshold, params.volumeDims);
@@ -168,7 +181,7 @@ KinFuImpl<MatType>::KinFuImpl(const Params &_params) :
 }
 
 template< typename MatType >
-void KinFuImpl<MatType >::reset()
+void ColoredKinFuImpl<MatType >::reset()
 {
     frameCounter = 0;
     pose = Affine3f::Identity().matrix;
@@ -176,84 +189,108 @@ void KinFuImpl<MatType >::reset()
 }
 
 template< typename MatType >
-KinFuImpl<MatType>::~KinFuImpl()
+ColoredKinFuImpl<MatType>::~ColoredKinFuImpl()
 { }
 
 template< typename MatType >
-const Params& KinFuImpl<MatType>::getParams() const
+const Params& ColoredKinFuImpl<MatType>::getParams() const
 {
     return params;
 }
 
 template< typename MatType >
-const Affine3f KinFuImpl<MatType>::getPose() const
+const Affine3f ColoredKinFuImpl<MatType>::getPose() const
 {
     return pose;
 }
 
 
 template<>
-bool KinFuImpl<Mat>::update(InputArray _depth)
+bool ColoredKinFuImpl<Mat>::update(InputArray _depth, InputArray _rgb)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
     Mat depth;
+    Mat rgb;
     if(_depth.isUMat())
     {
         _depth.copyTo(depth);
-        return updateT(depth);
+        _rgb.copyTo(rgb);
+        return updateT(depth, rgb);
     }
     else
     {
-        return updateT(_depth.getMat());
+        return updateT(_depth.getMat(), _rgb.getMat());
     }
 }
 
 
 template<>
-bool KinFuImpl<UMat>::update(InputArray _depth)
+bool ColoredKinFuImpl<UMat>::update(InputArray _depth, InputArray _rgb)
 {
     CV_Assert(!_depth.empty() && _depth.size() == params.frameSize);
 
     UMat depth;
+    UMat rgb;
     if(!_depth.isUMat())
     {
         _depth.copyTo(depth);
-        return updateT(depth);
+        _rgb.copyTo(rgb);
+        return updateT(depth, rgb);
     }
     else
     {
-        return updateT(_depth.getUMat());
+        return updateT(_depth.getUMat(), _rgb.getUMat());
     }
 }
 
 
 template< typename MatType >
-bool KinFuImpl<MatType>::updateT(const MatType& _depth)
+bool ColoredKinFuImpl<MatType>::updateT(const MatType& _depth, const MatType& _rgb)
 {
     CV_TRACE_FUNCTION();
 
     MatType depth;
+    MatType rgb;
+
     if(_depth.type() != DEPTH_TYPE)
         _depth.convertTo(depth, DEPTH_TYPE);
     else
         depth = _depth;
 
+    if (_rgb.type() != COLOR_TYPE)
+    {
+        cv::Mat rgb_tmp, rgbchannel[3], z;
+        std::vector<Mat> channels;
+        _rgb.convertTo(rgb_tmp, COLOR_TYPE);
+        cv::split(rgb_tmp, rgbchannel);
+        z = cv::Mat::zeros(rgbchannel[0].size(), CV_32F);
+        channels.push_back(rgbchannel[0]); channels.push_back(rgbchannel[1]);
+        channels.push_back(rgbchannel[2]); channels.push_back(z);
+        merge(channels, rgb);
+    }
+    else
+        rgb = _rgb;
 
-    std::vector<MatType> newPoints, newNormals;
-    makeFrameFromDepth(depth, newPoints, newNormals, params.intr,
+
+    std::vector<MatType> newPoints, newNormals, newColors;
+    makeColoredFrameFromDepth(depth, rgb,
+                       newPoints, newNormals, newColors,
+                       params.intr, params.rgb_intr,
                        params.pyramidLevels,
                        params.depthFactor,
                        params.bilateral_sigma_depth,
                        params.bilateral_sigma_spatial,
                        params.bilateral_kernel_size,
                        params.truncateThreshold);
+
     if(frameCounter == 0)
     {
         // use depth instead of distance
-        volume->integrate(depth, params.depthFactor, pose, params.intr);
+        volume->integrate(depth, rgb, params.depthFactor, pose, params.intr, params.rgb_intr);
         pyrPoints  = newPoints;
         pyrNormals = newNormals;
+        pyrColors  = newColors;
     }
     else
     {
@@ -270,11 +307,12 @@ bool KinFuImpl<MatType>::updateT(const MatType& _depth)
         if((rnorm + tnorm)/2 >= params.tsdf_min_camera_movement)
         {
             // use depth instead of distance
-            volume->integrate(depth, params.depthFactor, pose, params.intr);
+            volume->integrate(depth, rgb, params.depthFactor, pose, params.intr, params.rgb_intr);
         }
         MatType& points  = pyrPoints [0];
         MatType& normals = pyrNormals[0];
-        volume->raycast(pose, params.intr, params.frameSize, points, normals);
+        MatType& colors  = pyrColors [0];
+        volume->raycast(pose, params.intr, params.frameSize, points, normals, colors);
         buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals,
                                   params.pyramidLevels);
     }
@@ -285,44 +323,41 @@ bool KinFuImpl<MatType>::updateT(const MatType& _depth)
 
 
 template< typename MatType >
-void KinFuImpl<MatType>::render(OutputArray image, const Matx44f& _cameraPose) const
+void ColoredKinFuImpl<MatType>::render(OutputArray image) const
+{
+    CV_TRACE_FUNCTION();
+
+    renderPointsNormalsColors(pyrPoints[0], pyrNormals[0], pyrColors[0],image, params.lightPose);
+}
+
+template< typename MatType >
+void ColoredKinFuImpl<MatType>::render(OutputArray image, const Matx44f& _cameraPose) const
 {
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
-    Affine3f _pose(pose);
-
-    const Affine3f id = Affine3f::Identity();
-    if((cameraPose.rotation() == _pose.rotation() && cameraPose.translation() == _pose.translation()) ||
-       (cameraPose.rotation() == id.rotation()   && cameraPose.translation() == id.translation()))
-    {
-        renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose);
-    }
-    else
-    {
-        MatType points, normals;
-        volume->raycast(_cameraPose, params.intr, params.frameSize, points, normals);
-        renderPointsNormals(points, normals, image, params.lightPose);
-    }
+    MatType points, normals, colors;
+    volume->raycast(_cameraPose, params.intr, params.frameSize, points, normals, colors);
+    renderPointsNormalsColors(points, normals, colors, image, params.lightPose);
 }
 
 
 template< typename MatType >
-void KinFuImpl<MatType>::getCloud(OutputArray p, OutputArray n) const
+void ColoredKinFuImpl<MatType>::getCloud(OutputArray p, OutputArray n) const
 {
     volume->fetchPointsNormals(p, n);
 }
 
 
 template< typename MatType >
-void KinFuImpl<MatType>::getPoints(OutputArray points) const
+void ColoredKinFuImpl<MatType>::getPoints(OutputArray points) const
 {
     volume->fetchPointsNormals(points, noArray());
 }
 
 
 template< typename MatType >
-void KinFuImpl<MatType>::getNormals(InputArray points, OutputArray normals) const
+void ColoredKinFuImpl<MatType>::getNormals(InputArray points, OutputArray normals) const
 {
     volume->fetchNormals(points, normals);
 }
@@ -331,19 +366,15 @@ void KinFuImpl<MatType>::getNormals(InputArray points, OutputArray normals) cons
 
 #ifdef OPENCV_ENABLE_NONFREE
 
-Ptr<KinFu> KinFu::create(const Ptr<Params>& params)
+Ptr<ColoredKinFu> ColoredKinFu::create(const Ptr<Params>& params)
 {
     CV_Assert((int)params->icpIterations.size() == params->pyramidLevels);
     CV_Assert(params->intr(0,1) == 0 && params->intr(1,0) == 0 && params->intr(2,0) == 0 && params->intr(2,1) == 0 && params->intr(2,2) == 1);
-#ifdef HAVE_OPENCL
-    if(cv::ocl::useOpenCL())
-        return makePtr< KinFuImpl<UMat> >(*params);
-#endif
-        return makePtr< KinFuImpl<Mat> >(*params);
+    return makePtr< ColoredKinFuImpl<Mat> >(*params);
 }
 
 #else
-Ptr<KinFu> KinFu::create(const Ptr<Params>& /* params */)
+Ptr<ColoredKinFu> ColoredKinFu::create(const Ptr<Params>& /* params */)
 {
     CV_Error(Error::StsNotImplemented,
              "This algorithm is patented and is excluded in this configuration; "
@@ -351,7 +382,7 @@ Ptr<KinFu> KinFu::create(const Ptr<Params>& /* params */)
 }
 #endif
 
-KinFu::~KinFu() {}
+ColoredKinFu::~ColoredKinFu() {}
 
 } // namespace kinfu
 } // namespace cv

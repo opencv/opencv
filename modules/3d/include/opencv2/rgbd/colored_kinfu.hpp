@@ -207,11 +207,21 @@ public:
       Light pose is fixed in KinFu params.
 
         @param image resulting image
+    */
+
+    CV_WRAP virtual void render(OutputArray image) const = 0;
+
+    /** @brief Renders a volume into an image
+
+      Renders a 0-surface of TSDF using Phong shading into a CV_8UC4 Mat.
+      Light pose is fixed in KinFu params.
+
+        @param image resulting image
         @param cameraPose pose of camera to render from. If empty then render from current pose
         which is a last frame camera pose.
     */
 
-    CV_WRAP virtual void render(OutputArray image, const Matx44f& cameraPose = Matx44f::eye()) const = 0;
+    CV_WRAP virtual void render(OutputArray image, const Matx44f& cameraPose) const = 0;
 
     /** @brief Gets points and normals of current 3d mesh
 

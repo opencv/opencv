@@ -125,8 +125,8 @@ class CV_EXPORTS_W LargeKinfu
 
     virtual const Params& getParams() const = 0;
 
-    CV_WRAP virtual void render(OutputArray image,
-                                const Matx44f& cameraPose = Matx44f::eye()) const = 0;
+    CV_WRAP virtual void render(OutputArray image) const = 0;
+    CV_WRAP virtual void render(OutputArray image, const Matx44f& cameraPose) const = 0;
 
     CV_WRAP virtual void getCloud(OutputArray points, OutputArray normals) const = 0;
 

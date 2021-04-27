@@ -102,10 +102,7 @@ TsdfVoxel TSDFVolumeCPU::at(const Vec3i& volumeIdx) const
         (volumeIdx[1] >= volResolution.y || volumeIdx[1] < 0) ||
         (volumeIdx[2] >= volResolution.z || volumeIdx[2] < 0))
     {
-        TsdfVoxel dummy;
-        dummy.tsdf   = floatToTsdf(1.0f);
-        dummy.weight = 0;
-        return dummy;
+        return TsdfVoxel(floatToTsdf(1.f), 0);
     }
 
     const TsdfVoxel* volData = volume.ptr<TsdfVoxel>();
@@ -231,11 +228,11 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(const Point3f& _p) const
 
 inline v_float32x4 TSDFVolumeCPU::getNormalVoxel(const v_float32x4& p) const
 {
-    if(v_check_any((p < v_float32x4(1.f, 1.f, 1.f, 0.f)) +
-                   (p >= v_float32x4((float)(volResolution.x-2),
+    if(v_check_any (p < v_float32x4(1.f, 1.f, 1.f, 0.f)) ||
+       v_check_any (p >= v_float32x4((float)(volResolution.x-2),
                                      (float)(volResolution.y-2),
                                      (float)(volResolution.z-2), 1.f))
-                   ))
+                   )
         return nanv;
 
     v_int32x4 ip  = v_floor(p);
@@ -262,13 +259,13 @@ inline v_float32x4 TSDFVolumeCPU::getNormalVoxel(const v_float32x4& p) const
         const int dim = volDims[c];
         float& nv     = an[c];
 
-        TsdfType vx[8];
+        float vx[8];
         for(int i = 0; i < 8; i++)
-            vx[i] = volData[neighbourCoords[i] + coordBase + 1*dim].tsdf -
-                    volData[neighbourCoords[i] + coordBase - 1*dim].tsdf;
+            vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase + 1*dim].tsdf) -
+                    tsdfToFloat(volData[neighbourCoords[i] + coordBase - 1*dim].tsdf);
 
-        v_float32x4 v0246 = tsdfToFloat_INTR(v_int32x4(vx[0], vx[2], vx[4], vx[6]));
-        v_float32x4 v1357 = tsdfToFloat_INTR(v_int32x4(vx[1], vx[3], vx[5], vx[7]));
+        v_float32x4 v0246 (vx[0], vx[2], vx[4], vx[6]);
+        v_float32x4 v1357 (vx[1], vx[3], vx[5], vx[7]);
         v_float32x4 vxx = v0246 + v_setall_f32(tz)*(v1357 - v0246);
 
         v_float32x4 v00_10 = vxx;
@@ -315,9 +312,9 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(const Point3f& p) const
         float& nv = an[c];
 
         float vx[8];
-        for(int i = 0; i < 8; i++)
-            vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase + 1*dim].tsdf -
-                                volData[neighbourCoords[i] + coordBase - 1*dim].tsdf);
+        for (int i = 0; i < 8; i++)
+            vx[i] = tsdfToFloat(volData[neighbourCoords[i] + coordBase + 1 * dim].tsdf) -
+                    tsdfToFloat(volData[neighbourCoords[i] + coordBase - 1 * dim].tsdf);
 
         float v00 = vx[0] + tz*(vx[1] - vx[0]);
         float v01 = vx[2] + tz*(vx[3] - vx[2]);
@@ -419,8 +416,11 @@ struct RaycastInvoker : ParallelLoopBody
 
                 // near clipping plane
                 const float clip = 0.f;
-                float tmin       = max(v_reduce_max(minAx), clip);
-                float tmax       = v_reduce_min(maxAx);
+                float _minAx[4], _maxAx[4];
+                v_store(_minAx, minAx);
+                v_store(_maxAx, maxAx);
+                float tmin       = max( {_minAx[0], _minAx[1], _minAx[2], clip} );
+                float tmax       = min( {_maxAx[0], _maxAx[1], _maxAx[2]} );
 
                 // precautions against getting coordinates out of bounds
                 tmin = tmin + tstep;
@@ -687,7 +687,6 @@ struct FetchPointsNormalsInvoker : ParallelLoopBody
                                                    (y+shift.y)*vol.volDims[1] +
                                                    (z+shift.z)*vol.volDims[2]];
             float vd = tsdfToFloat(voxeld.tsdf);
-
             if(voxeld.weight != 0 && vd != 1.f)
             {
                 if((v0 > 0 && vd < 0) || (v0 < 0 && vd > 0))
@@ -761,6 +760,7 @@ void TSDFVolumeCPU::fetchPointsNormals(OutputArray _points, OutputArray _normals
         Range range(0, volResolution.x);
         const int nstripes = -1;
         parallel_for_(range, fi, nstripes);
+
         std::vector<ptype> points, normals;
         for(size_t i = 0; i < pVecs.size(); i++)
         {
@@ -833,48 +833,6 @@ void TSDFVolumeGPU::reset()
     volume.setTo(Scalar(0, 0));
 }
 
-static cv::UMat preCalculationPixNormGPU(int depth_rows, int depth_cols, Vec2f fxy, Vec2f cxy)
-{
-    Mat x(1, depth_cols, CV_32F);
-    Mat y(1, depth_rows, CV_32F);
-    Mat _pixNorm(1, depth_rows * depth_cols, CV_32F);
-
-    for (int i = 0; i < depth_cols; i++)
-        x.at<float>(0, i) = (i - cxy[0]) / fxy[0];
-    for (int i = 0; i < depth_rows; i++)
-        y.at<float>(0, i) = (i - cxy[1]) / fxy[1];
-
-    cv::String errorStr;
-    cv::String name = "preCalculationPixNorm";
-    ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
-    cv::String options = "-cl-mad-enable";
-    ocl::Kernel kk;
-    kk.create(name.c_str(), source, options, &errorStr);
-
-
-    if (kk.empty())
-        throw std::runtime_error("Failed to create kernel: " + errorStr);
-
-    AccessFlag af = ACCESS_READ;
-    UMat pixNorm = _pixNorm.getUMat(af);
-    UMat xx = x.getUMat(af);
-    UMat yy = y.getUMat(af);
-
-    kk.args(ocl::KernelArg::PtrReadWrite(pixNorm),
-        ocl::KernelArg::PtrReadOnly(xx),
-        ocl::KernelArg::PtrReadOnly(yy),
-        depth_cols);
-
-    size_t globalSize[2];
-    globalSize[0] = depth_rows;
-    globalSize[1] = depth_cols;
-
-    if (!kk.run(2, globalSize, NULL, true))
-        throw std::runtime_error("Failed to run kernel");
-
-    return pixNorm;
-}
-
 // use depth instead of distance (optimization)
 void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
                               const Matx44f& cameraPose, const Intr& intrinsics, const int frameId)
@@ -899,15 +857,13 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     float dfac = 1.f/depthFactor;
     Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
-    if (!(frameParams[0] == depth.rows && frameParams[1] == depth.cols &&
-        frameParams[2] == intrinsics.fx && frameParams[3] == intrinsics.fy &&
-        frameParams[4] == intrinsics.cx && frameParams[5] == intrinsics.cy))
+    Vec6f newParams((float)depth.rows, (float)depth.cols,
+        intrinsics.fx, intrinsics.fy,
+        intrinsics.cx, intrinsics.cy);
+    if (!(frameParams == newParams))
     {
-        frameParams[0] = (float)depth.rows; frameParams[1] = (float)depth.cols;
-        frameParams[2] = intrinsics.fx;     frameParams[3] = intrinsics.fy;
-        frameParams[4] = intrinsics.cx;     frameParams[5] = intrinsics.cy;
-
-        pixNorms = preCalculationPixNormGPU(depth.rows, depth.cols, fxy, cxy);
+        frameParams = newParams;
+        pixNorms = preCalculationPixNormGPU(depth, intrinsics);
     }
 
     // TODO: optimization possible

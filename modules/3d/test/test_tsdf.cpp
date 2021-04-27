@@ -4,7 +4,8 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace {
+namespace opencv_test {
+namespace {
 
 using namespace cv;
 
@@ -32,12 +33,13 @@ template<class Scene>
 struct RenderInvoker : ParallelLoopBody
 {
     RenderInvoker(Mat_<float>& _frame, Affine3f _pose,
-        Reprojector _reproj,
-        float _depthFactor) : ParallelLoopBody(),
+        Reprojector _reproj, float _depthFactor, bool _onlySemisphere)
+        : ParallelLoopBody(),
         frame(_frame),
         pose(_pose),
         reproj(_reproj),
-        depthFactor(_depthFactor)
+        depthFactor(_depthFactor),
+        onlySemisphere(_onlySemisphere)
     { }
 
     virtual void operator ()(const cv::Range& r) const
@@ -64,7 +66,7 @@ struct RenderInvoker : ParallelLoopBody
                 for (int step = 0; step < maxSteps && t < maxDepth; step++)
                 {
                     Point3f p = orig + dir * t;
-                    float d = Scene::map(p);
+                    float d = Scene::map(p, onlySemisphere);
                     if (d < 0.000001f)
                     {
                         float depth = std::sqrt(t * t * xyt);
@@ -83,12 +85,13 @@ struct RenderInvoker : ParallelLoopBody
     Affine3f pose;
     Reprojector reproj;
     float depthFactor;
+    bool onlySemisphere;
 };
 
 struct Scene
 {
     virtual ~Scene() {}
-    static Ptr<Scene> create(Size sz, Matx33f _intr, float _depthFactor);
+    static Ptr<Scene> create(Size sz, Matx33f _intr, float _depthFactor, bool onlySemisphere);
     virtual Mat depth(Affine3f pose) = 0;
     virtual std::vector<Affine3f> getPoses() = 0;
 };
@@ -97,39 +100,35 @@ struct SemisphereScene : Scene
 {
     const int framesPerCycle = 72;
     const float nCycles = 0.25f;
-    const Affine3f startPose = Affine3f(Vec3f(0.f, 0.f, 0.f), Vec3f(1.5f, 0.3f, -2.3f));
+    const Affine3f startPose = Affine3f(Vec3f(0.f, 0.f, 0.f), Vec3f(1.5f, 0.3f, -2.1f));
 
     Size frameSize;
     Matx33f intr;
     float depthFactor;
+    bool onlySemisphere;
 
-    SemisphereScene(Size sz, Matx33f _intr, float _depthFactor) :
-        frameSize(sz), intr(_intr), depthFactor(_depthFactor)
+    SemisphereScene(Size sz, Matx33f _intr, float _depthFactor, bool _onlySemisphere) :
+        frameSize(sz), intr(_intr), depthFactor(_depthFactor), onlySemisphere(_onlySemisphere)
     { }
 
-    static float map(Point3f p)
+    static float map(Point3f p, bool onlySemisphere)
     {
         float plane = p.y + 0.5f;
-
-        Point3f boxPose = p - Point3f(-0.0f, 0.3f, 0.5f);
-        float boxSize = 0.5f;
-        float roundness = 0.08f;
-        Point3f boxTmp;
-        boxTmp.x = max(abs(boxPose.x) - boxSize, 0.0f);
-        boxTmp.y = max(abs(boxPose.y) - boxSize, 0.0f);
-        boxTmp.z = max(abs(boxPose.z) - boxSize, 0.0f);
-        float roundBox = (float)cv::norm(boxTmp) - roundness;
-
-        Point3f spherePose = p - Point3f(-0.0f, 0.3f, 0.0f);
+        Point3f spherePose = p - Point3f(-0.0f, 0.3f, 1.1f);
         float sphereRadius = 0.5f;
         float sphere = (float)cv::norm(spherePose) - sphereRadius;
-        float sphereMinusBox = max(sphere, -roundBox);
+        float sphereMinusBox = sphere;
 
         float subSphereRadius = 0.05f;
         Point3f subSpherePose = p - Point3f(0.3f, -0.1f, -0.3f);
         float subSphere = (float)cv::norm(subSpherePose) - subSphereRadius;
 
-        float res = min({sphereMinusBox, subSphere, plane});
+        float res;
+        if (!onlySemisphere)
+            res = min({ sphereMinusBox, subSphere, plane });
+        else
+            res = sphereMinusBox;
+
         return res;
     }
 
@@ -139,7 +138,7 @@ struct SemisphereScene : Scene
         Reprojector reproj(intr);
 
         Range range(0, frame.rows);
-        parallel_for_(range, RenderInvoker<SemisphereScene>(frame, pose, reproj, depthFactor));
+        parallel_for_(range, RenderInvoker<SemisphereScene>(frame, pose, reproj, depthFactor, onlySemisphere));
 
         return std::move(frame);
     }
@@ -152,7 +151,7 @@ struct SemisphereScene : Scene
             float angle = (float)(CV_2PI * i / framesPerCycle);
             Affine3f pose;
             pose = pose.rotate(startPose.rotation());
-            pose = pose.rotate(Vec3f(0.f, -1.f, 0.f) * angle);
+            pose = pose.rotate(Vec3f(0.f, -0.5f, 0.f) * angle);
             pose = pose.translate(Vec3f(startPose.translation()[0] * sin(angle),
                 startPose.translation()[1],
                 startPose.translation()[2] * cos(angle)));
@@ -164,9 +163,9 @@ struct SemisphereScene : Scene
 
 };
 
-Ptr<Scene> Scene::create(Size sz, Matx33f _intr, float _depthFactor)
+Ptr<Scene> Scene::create(Size sz, Matx33f _intr, float _depthFactor, bool _onlySemisphere)
 {
-    return makePtr<SemisphereScene>(sz, _intr, _depthFactor);
+    return makePtr<SemisphereScene>(sz, _intr, _depthFactor, _onlySemisphere);
 }
 
 // this is a temporary solution
@@ -242,7 +241,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z) )
+                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -277,6 +276,40 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 static const bool display = false;
 static const bool parallelCheck = false;
 
+class Settings
+{
+public:
+    Ptr<kinfu::Params> params;
+    Ptr<kinfu::Volume> volume;
+    Ptr<Scene> scene;
+    std::vector<Affine3f> poses;
+
+    Settings(bool useHashTSDF, bool onlySemisphere)
+    {
+        if (useHashTSDF)
+            params = kinfu::Params::hashTSDFParams(true);
+        else
+            params = kinfu::Params::coarseParams();
+
+        volume = kinfu::makeVolume(params->volumeType, params->voxelSize, params->volumePose.matrix,
+            params->raycast_step_factor, params->tsdf_trunc_dist, params->tsdf_max_weight,
+            params->truncateThreshold, params->volumeDims);
+
+        scene = Scene::create(params->frameSize, params->intr, params->depthFactor, onlySemisphere);
+        poses = scene->getPoses();
+    }
+};
+
+void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
+{
+    Mat image;
+    patchNaNs(points);
+    imshow("depth", depth * (1.f / depthFactor / 4.f));
+    renderPointsNormals(points, normals, image, lightPose);
+    imshow("render", image);
+    waitKey(2000);
+}
+
 void normalsCheck(Mat normals)
 {
     Vec4f vector;
@@ -288,108 +321,9 @@ void normalsCheck(Mat normals)
             float length = vector[0] * vector[0] +
                 vector[1] * vector[1] +
                 vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f);
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
         }
     }
-}
-
-void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
-{
-    Ptr<kinfu::Params> _params;
-    if (isHashTSDF)
-        _params = kinfu::Params::hashTSDFParams(true);
-    else
-        _params = kinfu::Params::coarseParams();
-
-    Ptr<Scene> scene = Scene::create(_params->frameSize, _params->intr, _params->depthFactor);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    Mat depth = scene->depth(poses[0]);
-    UMat _points, _normals, _tmpnormals;
-    UMat _newPoints, _newNormals;
-    Mat  points,  normals;
-    Mat image;
-    AccessFlag af = ACCESS_READ;
-
-    auto normalCheck = [](Vec4f& vector, const int*)
-    {
-        if (!cvIsNaN(vector[0]))
-        {
-            float length = vector[0] * vector[0] +
-                vector[1] * vector[1] +
-                vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f);
-        }
-    };
-
-    Ptr<kinfu::Volume> volume = kinfu::makeVolume(_params->volumeType, _params->voxelSize, _params->volumePose.matrix,
-                                _params->raycast_step_factor, _params->tsdf_trunc_dist, _params->tsdf_max_weight,
-                                _params->truncateThreshold, _params->volumeDims);
-    volume->integrate(depth, _params->depthFactor, poses[0].matrix, _params->intr);
-
-    if (isRaycast)
-    {
-        volume->raycast(poses[0].matrix, _params->intr, _params->frameSize, _points, _normals);
-    }
-    if (isFetchPointsNormals)
-    {
-        volume->fetchPointsNormals(_points, _normals);
-    }
-    if (isFetchNormals)
-    {
-        volume->fetchPointsNormals(_points, _tmpnormals);
-        volume->fetchNormals(_points, _normals);
-    }
-
-    normals = _normals.getMat(af);
-
-    if (parallelCheck)
-    {
-        normals.forEach<Vec4f>(normalCheck);
-    }
-    else
-    {
-        normalsCheck(normals);
-    }
-
-    if (isRaycast && display)
-    {
-        imshow("depth", depth * (1.f / _params->depthFactor / 4.f));
-        points = _points.getMat(af);
-        renderPointsNormals(points, normals, image, _params->lightPose);
-        imshow("render", image);
-        waitKey(20000);
-    }
-
-    if (isRaycast)
-    {
-        volume->raycast(poses[17].matrix, _params->intr, _params->frameSize, _newPoints, _newNormals);
-
-        normals = _newNormals.getMat(af);
-        normalsCheck(normals);
-
-        if (parallelCheck)
-        {
-            normals.forEach<Vec4f>(normalCheck);
-        }
-        else
-        {
-            normalsCheck(normals);
-        }
-
-
-        if (display)
-        {
-            imshow("depth", depth * (1.f / _params->depthFactor / 4.f));
-            points = _newPoints.getMat(af);
-            renderPointsNormals(points, normals, image, _params->lightPose);
-            imshow("render", image);
-            waitKey(20000);
-        }
-
-    }
-
-    points.release(); normals.release();
 }
 
 int counterOfValid(Mat points)
@@ -413,101 +347,176 @@ int counterOfValid(Mat points)
     return count;
 }
 
-void valid_points_test(bool isHashTSDF)
+void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
 {
-    Ptr<kinfu::Params> _params;
-    if (isHashTSDF)
-        _params = kinfu::Params::hashTSDFParams(true);
-    else
-        _params = kinfu::Params::coarseParams();
+    auto normalCheck = [](Vec4f& vector, const int*)
+    {
+        if (!cvIsNaN(vector[0]))
+        {
+            float length = vector[0] * vector[0] +
+                vector[1] * vector[1] +
+                vector[2] * vector[2];
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+        }
+    };
 
-    Ptr<Scene> scene = Scene::create(_params->frameSize, _params->intr, _params->depthFactor);
-    std::vector<Affine3f> poses = scene->getPoses();
+    Settings settings(isHashTSDF, false);
 
-    Mat depth = scene->depth(poses[0]);
-    UMat _points, _normals;
+    Mat depth = settings.scene->depth(settings.poses[0]);
+    UMat _points, _normals, _tmpnormals;
     UMat _newPoints, _newNormals;
     Mat  points, normals;
-    Mat image;
-    int anfas, profile;
     AccessFlag af = ACCESS_READ;
 
-    Ptr<kinfu::Volume> volume = kinfu::makeVolume(_params->volumeType, _params->voxelSize, _params->volumePose.matrix,
-        _params->raycast_step_factor, _params->tsdf_trunc_dist, _params->tsdf_max_weight,
-        _params->truncateThreshold, _params->volumeDims);
-    volume->integrate(depth, _params->depthFactor, poses[0].matrix, _params->intr);
+    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
 
-    volume->raycast(poses[0].matrix, _params->intr, _params->frameSize, _points, _normals);
+    if (isRaycast)
+    {
+        settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
+    }
+    if (isFetchPointsNormals)
+    {
+        settings.volume->fetchPointsNormals(_points, _normals);
+    }
+    if (isFetchNormals)
+    {
+        settings.volume->fetchPointsNormals(_points, _tmpnormals);
+        settings.volume->fetchNormals(_points, _normals);
+    }
+
+    normals = _normals.getMat(af);
+    points = _points.getMat(af);
+
+    if (parallelCheck)
+        normals.forEach<Vec4f>(normalCheck);
+    else
+        normalsCheck(normals);
+
+    if (isRaycast && display)
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+
+    if (isRaycast)
+    {
+        settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
+        normals = _newNormals.getMat(af);
+        points = _newPoints.getMat(af);
+        normalsCheck(normals);
+
+        if (parallelCheck)
+            normals.forEach<Vec4f>(normalCheck);
+        else
+            normalsCheck(normals);
+
+        if (display)
+            displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+    }
+
+    points.release(); normals.release();
+}
+
+void valid_points_test(bool isHashTSDF)
+{
+    Settings settings(isHashTSDF, true);
+
+    Mat depth = settings.scene->depth(settings.poses[0]);
+    UMat _points, _normals, _newPoints, _newNormals;
+    AccessFlag af = ACCESS_READ;
+    Mat  points, normals;
+    int anfas, profile;
+
+    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
+    settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
     normals = _normals.getMat(af);
     points = _points.getMat(af);
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
-    {
-        imshow("depth", depth * (1.f / _params->depthFactor / 4.f));
-        renderPointsNormals(points, normals, image, _params->lightPose);
-        imshow("render", image);
-        waitKey(20000);
-    }
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
 
-    volume->raycast(poses[17].matrix, _params->intr, _params->frameSize, _newPoints, _newNormals);
-
+    settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-    {
-        imshow("depth", depth * (1.f / _params->depthFactor / 4.f));
-        renderPointsNormals(points, normals, image, _params->lightPose);
-        imshow("render", image);
-        waitKey(20000);
-    }
+        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
 
-    float percentValidity = float(profile) / float(anfas);
-    ASSERT_LT(0.5 - percentValidity, 0.3);
+    // TODO: why profile == 2*anfas ?
+    float percentValidity = float(anfas) / float(profile);
+
+    ASSERT_NE(profile, 0) << "There is no points in profile";
+    ASSERT_NE(anfas, 0) << "There is no points in anfas";
+    ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-TEST(TSDF, raycast_normals)
+#ifndef HAVE_OPENCL
+TEST(TSDF, raycast_normals) { normal_test(false, true, false, false); }
+TEST(TSDF, fetch_points_normals) { normal_test(false, false, true, false); }
+TEST(TSDF, fetch_normals) { normal_test(false, false, false, true); }
+TEST(TSDF, valid_points) { valid_points_test(false); }
+
+TEST(HashTSDF, raycast_normals) { normal_test(true, true, false, false); }
+TEST(HashTSDF, fetch_points_normals) { normal_test(true, false, true, false); }
+TEST(HashTSDF, fetch_normals) { normal_test(true, false, false, true); }
+TEST(HashTSDF, valid_points) { valid_points_test(true); }
+#else
+TEST(TSDF_CPU, raycast_normals)
 {
+    cv::ocl::setUseOpenCL(false);
     normal_test(false, true, false, false);
+    cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF, raycast_normals)
+TEST(TSDF_CPU, fetch_points_normals)
 {
-    normal_test(true, true, false, false);
-}
-
-TEST(TSDF, fetch_points_normals)
-{
+    cv::ocl::setUseOpenCL(false);
     normal_test(false, false, true, false);
+    cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF, fetch_points_normals)
+TEST(TSDF_CPU, fetch_normals)
 {
-    normal_test(true, false, true, false);
-}
-
-TEST(TSDF, fetch_normals)
-{
+    cv::ocl::setUseOpenCL(false);
     normal_test(false, false, false, true);
+    cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF, fetch_normals)
+TEST(TSDF_CPU, valid_points)
 {
-    normal_test(true, false, false, true);
-}
-
-TEST(TSDF, valid_points)
-{
+    cv::ocl::setUseOpenCL(false);
     valid_points_test(false);
+    cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF, valid_points)
+TEST(HashTSDF_CPU, raycast_normals)
 {
-    valid_points_test(true);
+    cv::ocl::setUseOpenCL(false);
+    normal_test(true, true, false, false);
+    cv::ocl::setUseOpenCL(true);
 }
 
-}}  // namespace
+TEST(HashTSDF_CPU, fetch_points_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test(true, false, true, false);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, fetch_normals)
+{
+    cv::ocl::setUseOpenCL(false);
+    normal_test(true, false, false, true);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(HashTSDF_CPU, valid_points)
+{
+    cv::ocl::setUseOpenCL(false);
+    valid_points_test(true);
+    cv::ocl::setUseOpenCL(true);
+}
+#endif
+}
+}  // namespace

@@ -504,7 +504,7 @@ void ICPImpl::getAb<Mat>(const Mat& oldPts, const Mat& oldNrm, const Mat& newPts
     const Normals np(newPts), nn(newNrm);
     GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
                          intrinsics.scale(level).makeProjector(),
-                         distanceThreshold*distanceThreshold, cos(angleThreshold));
+                         distanceThreshold*distanceThreshold, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
     parallel_for_(range, invoker, nstripes);
@@ -590,7 +590,7 @@ void ICPImpl::getAb<UMat>(const UMat& oldPts, const UMat& oldNrm, const UMat& ne
                                     sizeof(pose.matrix.val)),
            fxy.val, cxy.val,
            distanceThreshold*distanceThreshold,
-           cos(angleThreshold),
+           std::cos(angleThreshold),
            ocl::KernelArg::Local(lsz),
            ocl::KernelArg::WriteOnlyNoSize(groupedSumGpu)
            );

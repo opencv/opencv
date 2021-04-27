@@ -103,7 +103,19 @@ Ptr<Params> Params::hashTSDFParams(bool isCoarse)
     else
         p = defaultParams();
     p->volumeType = VolumeType::HASHTSDF;
-    p->truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
+    p->truncateThreshold = rgbd::Odometry::DEFAULT_MAX_DEPTH();
+    return p;
+}
+
+Ptr<Params> Params::coloredTSDFParams(bool isCoarse)
+{
+    Ptr<Params> p;
+    if (isCoarse)
+        p = coarseParams();
+    else
+        p = defaultParams();
+    p->volumeType = VolumeType::COLOREDTSDF;
+
     return p;
 }
 
@@ -117,6 +129,7 @@ public:
 
     const Params& getParams() const CV_OVERRIDE;
 
+    void render(OutputArray image) const CV_OVERRIDE;
     void render(OutputArray image, const Matx44f& cameraPose) const CV_OVERRIDE;
 
     virtual void getCloud(OutputArray points, OutputArray normals) const CV_OVERRIDE;
@@ -273,25 +286,23 @@ bool KinFuImpl<MatType>::updateT(const MatType& _depth)
 
 
 template< typename MatType >
+void KinFuImpl<MatType>::render(OutputArray image) const
+{
+    CV_TRACE_FUNCTION();
+
+    renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose);
+}
+
+
+template< typename MatType >
 void KinFuImpl<MatType>::render(OutputArray image, const Matx44f& _cameraPose) const
 {
     CV_TRACE_FUNCTION();
 
     Affine3f cameraPose(_cameraPose);
-    Affine3f _pose(pose);
-
-    const Affine3f id = Affine3f::Identity();
-    if((cameraPose.rotation() == _pose.rotation() && cameraPose.translation() == _pose.translation()) ||
-       (cameraPose.rotation() == id.rotation()   && cameraPose.translation() == id.translation()))
-    {
-        renderPointsNormals(pyrPoints[0], pyrNormals[0], image, params.lightPose);
-    }
-    else
-    {
-        MatType points, normals;
-        volume->raycast(_cameraPose, params.intr, params.frameSize, points, normals);
-        renderPointsNormals(points, normals, image, params.lightPose);
-    }
+    MatType points, normals;
+    volume->raycast(_cameraPose, params.intr, params.frameSize, points, normals);
+    renderPointsNormals(points, normals, image, params.lightPose);
 }
 
 
