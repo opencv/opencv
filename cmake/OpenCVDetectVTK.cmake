@@ -26,28 +26,33 @@ if(VTK_VERSION VERSION_LESS "5.8.0")
 endif()
 
 # Different Qt versions can't be linked together
-if(HAVE_QT5 AND VTK_VERSION VERSION_LESS "6.0.0")
+if((HAVE_QT5 OR HAVE_QT6) AND VTK_VERSION VERSION_LESS "6.0.0")
   if(VTK_USE_QT)
-    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5 and VTK ver.${VTK_VERSION} + Qt4")
+    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5/Qt6 and VTK ver.${VTK_VERSION} + Qt4")
   endif()
 endif()
 
 # Different Qt versions can't be linked together. VTK 6.0.0 doesn't provide a way to get Qt version it was linked with
-if(HAVE_QT5 AND VTK_VERSION VERSION_EQUAL "6.0.0" AND NOT DEFINED FORCE_VTK)
-  message(STATUS "VTK support is disabled. Possible incompatible combination: OpenCV+Qt5, and VTK ver.${VTK_VERSION} with Qt4")
+if((HAVE_QT5 OR HAVE_QT6) AND VTK_VERSION VERSION_EQUAL "6.0.0" AND NOT DEFINED FORCE_VTK)
+  message(STATUS "VTK support is disabled. Possible incompatible combination: OpenCV+Qt5/Qt6, and VTK ver.${VTK_VERSION} with Qt4")
   message(STATUS "If it is known that VTK was compiled without Qt4, please define '-DFORCE_VTK=TRUE' flag in CMake")
   return()
 endif()
 
 # Different Qt versions can't be linked together
 if(HAVE_QT AND VTK_VERSION VERSION_GREATER "6.0.0" AND NOT ${VTK_QT_VERSION} STREQUAL "")
-  if(HAVE_QT5 AND ${VTK_QT_VERSION} EQUAL "4")
-    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5 and VTK ver.${VTK_VERSION} + Qt4")
+  if((HAVE_QT5 OR HAVE_QT6) AND ${VTK_QT_VERSION} EQUAL "4")
+    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt5/Qt6 and VTK ver.${VTK_VERSION} + Qt4")
     return()
   endif()
 
   if(NOT HAVE_QT5 AND ${VTK_QT_VERSION} EQUAL "5")
     message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt4 and VTK ver.${VTK_VERSION} + Qt5")
+    return()
+  endif()
+
+  if(NOT HAVE_QT6 AND ${VTK_QT_VERSION} EQUAL "6")
+    message(STATUS "VTK support is disabled. Incompatible combination: OpenCV + Qt4 and VTK ver.${VTK_VERSION} + Qt6")
     return()
   endif()
 endif()
