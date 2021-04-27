@@ -41,7 +41,33 @@ file(GLOB highgui_ext_hdrs
 # Removing WinRT API headers by default
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
-if(HAVE_QT5)
+if(HAVE_QT6)
+  # "Automoc" doesn't work properly with opencv_world build, use QT6_WRAP_CPP() directly
+  #set(CMAKE_AUTOMOC ON)
+
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+  QT6_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
+  QT6_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
+  list(APPEND highgui_srcs
+       ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.cpp
+       ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h
+       ${_MOC_OUTFILES}
+       ${_RCC_OUTFILES})
+
+  foreach(dt6_dep Core Gui Widgets Test Concurrent)
+    add_definitions(${Qt6${dt6_dep}_DEFINITIONS})
+    include_directories(${Qt6${dt6_dep}_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt6${dt6_dep}_LIBRARIES})
+  endforeach()
+
+  if(HAVE_QT_OPENGL)
+    add_definitions(${Qt6OpenGL_DEFINITIONS})
+    include_directories(${Qt6OpenGL_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt6OpenGL_LIBRARIES})
+  endif()
+
+elseif(HAVE_QT5)
   # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
   #set(CMAKE_AUTOMOC ON)
 

@@ -64,6 +64,38 @@
 #endif
 
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+#define Qt_MiddleButton Qt::MiddleButton
+inline Qt::Orientation wheelEventOrientation(QWheelEvent *we) {
+    if (std::abs(we->angleDelta().x()) < std::abs(we->angleDelta().y()))
+        return Qt::Vertical;
+    else
+        return Qt::Horizontal;
+}
+inline int wheelEventDelta(QWheelEvent *we) {
+    if(wheelEventOrientation(we) == Qt::Vertical)
+        return we->angleDelta().y();
+    else
+        return we->angleDelta().x();
+}
+inline QPoint wheelEventPos(QWheelEvent *we) {
+    return we->position().toPoint();
+}
+#else
+#define Qt_MiddleButton Qt::MidButton
+inline Qt::Orientation wheelEventOrientation(QWheelEvent *we) {
+    return we->orientation();
+}
+inline int wheelEventDelta(QWheelEvent *we) {
+    return we->delta();
+}
+inline QPoint wheelEventPos(QWheelEvent *we) {
+    return we->pos();
+}
+
+#endif
+
+
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;
 static int parameterSystemC = 1;
@@ -1580,7 +1612,9 @@ CvWinProperties::CvWinProperties(QString name_paraWindow, QObject* /*parent*/)
     myLayout->setObjectName(QString::fromUtf8("boxLayout"));
     myLayout->setContentsMargins(0, 0, 0, 0);
     myLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myLayout->setMargin(0);
+#endif
     myLayout->setSizeConstraint(QLayout::SetFixedSize);
     setLayout(myLayout);
 
@@ -1958,7 +1992,9 @@ void CvWindow::createBarLayout()
     myBarLayout->setObjectName(QString::fromUtf8("barLayout"));
     myBarLayout->setContentsMargins(0, 0, 0, 0);
     myBarLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myBarLayout->setMargin(0);
+#endif
 }
 
 
@@ -1968,7 +2004,9 @@ void CvWindow::createGlobalLayout()
     myGlobalLayout->setObjectName(QString::fromUtf8("boxLayout"));
     myGlobalLayout->setContentsMargins(0, 0, 0, 0);
     myGlobalLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myGlobalLayout->setMargin(0);
+#endif
     setMinimumSize(1, 1);
 
     if (param_flags == CV_WINDOW_AUTOSIZE)
@@ -2206,7 +2244,7 @@ void CvWindow::icvLoadControlPanel()
             }
             if (t->type == type_CvButtonbar)
             {
-                int subsize = settings.beginReadArray(QString("buttonbar")+i);
+                int subsize = settings.beginReadArray(QString("buttonbar%1").arg(i));
 
                 if ( subsize == ((CvButtonbar*)t)->layout()->count() )
                     icvLoadButtonbar((CvButtonbar*)t,&settings);
@@ -2237,7 +2275,7 @@ void CvWindow::icvSaveControlPanel()
         }
         if (t->type == type_CvButtonbar)
         {
-            settings.beginWriteArray(QString("buttonbar")+i);
+            settings.beginWriteArray(QString("buttonbar%1").arg(i));
             icvSaveButtonbar((CvButtonbar*)t,&settings);
             settings.endArray();
         }
@@ -2397,14 +2435,14 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
         flags |= CV_EVENT_FLAG_LBUTTON;
     if(buttons & Qt::RightButton)
         flags |= CV_EVENT_FLAG_RBUTTON;
-    if(buttons & Qt::MidButton)
+    if(buttons & Qt_MiddleButton)
         flags |= CV_EVENT_FLAG_MBUTTON;
 
     if (cv_event == -1) {
         if (category == mouse_wheel) {
             QWheelEvent *we = (QWheelEvent *) evnt;
-            cv_event = ((we->orientation() == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
-            flags |= (we->delta() & 0xffff)<<16;
+            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+            flags |= (wheelEventDelta(we) & 0xffff)<<16;
             return;
         }
         switch(evnt->button())
@@ -2417,7 +2455,7 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
             cv_event = tableMouseButtons[category][1];
             flags |= CV_EVENT_FLAG_RBUTTON;
             break;
-        case Qt::MidButton:
+        case Qt_MiddleButton:
             cv_event = tableMouseButtons[category][2];
             flags |= CV_EVENT_FLAG_MBUTTON;
             break;
@@ -2772,7 +2810,7 @@ void DefaultViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
 
-    scaleView(evnt->delta() / 240.0, evnt->pos());
+    scaleView(wheelEventDelta(evnt) / 240.0, wheelEventPos(evnt));
     viewport()->update();
 
     QWidget::wheelEvent(evnt);
