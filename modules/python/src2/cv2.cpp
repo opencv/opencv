@@ -2380,14 +2380,6 @@ PyObject* PyInit_cv2()
     PyObject* m = PyModule_Create(&cv2_moduledef);
     if (!init_body(m))
         return NULL;
-
-    const char* filename = "/home/atalaman/workspace/opencv-python/modules/gapi/misc/python/package/gapi/init.py";
-    PyObject *obj = Py_BuildValue("s", filename);
-    FILE *file = _Py_fopen_obj(obj, "r+");
-    if(file != NULL) {
-        PyRun_SimpleFile(file, filename);
-    }
-
     return m;
 }
 

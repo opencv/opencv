@@ -1,17 +1,18 @@
-from cv2 import gapi
+__all__ = ['op', 'kernel']
+
 import sys
+import cv2 as cv
+from cv2 import gapi
 
 # NB: Register function in specific module
 def register(mname):
     def parameterized(func):
-        import sys
         sys.modules[mname].__dict__[func.__name__] = func
+        return func
     return parameterized
 
 
 def init():
-    import cv2 as cv
-
     @register('cv2')
     class GOpaque():
         # NB: Inheritance from c++ class cause segfault.
@@ -119,13 +120,11 @@ def init():
                 return cv.GArray(cv.gapi.CV_ANY)
 
 
-gapi.init = init
+init()
+
 
 # NB: Top lvl decorator takes arguments
-@register('cv2.gapi')
 def op(op_id, in_types, out_types):
-    # FIXME: Remove import after this code will be integrated properly
-    import cv2 as cv
 
     garray_types= {
             cv.GArray.Bool:    cv.gapi.CV_BOOL,
@@ -245,7 +244,6 @@ def op(op_id, in_types, out_types):
     return op_with_params
 
 
-@register('cv2.gapi')
 def kernel(op_cls):
     # NB: Second lvl decorator takes class to decorate
     def kernel_with_params(cls):

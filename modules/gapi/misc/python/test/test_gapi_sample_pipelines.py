@@ -16,9 +16,6 @@ pkgs = [
        ]
 
 
-# FIXME: It's imposible to use cv package in pyopencv_gapi.py
-cv.gapi.init()
-
 @cv.gapi.op('custom.add', in_types=[cv.GMat, cv.GMat, int], out_types=[cv.GMat])
 class GAdd:
     """ Operation which represents addition in G-API graph """
