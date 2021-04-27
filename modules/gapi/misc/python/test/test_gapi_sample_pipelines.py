@@ -218,7 +218,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
-        pkg = cv.gapi.wip.kernels(GAddImpl)
+        pkg = cv.gapi.kernels(GAddImpl)
         actual = comp.apply(cv.gin(in_mat1, in_mat2), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -238,7 +238,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_ch1, g_ch2, g_ch3))
 
-        pkg = cv.gapi.wip.kernels(GSplit3Impl)
+        pkg = cv.gapi.kernels(GSplit3Impl)
         ch1, ch2, ch3 = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(in_ch1, ch1, cv.NORM_INF))
@@ -259,7 +259,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(g_in, g_out)
 
-        pkg    = cv.gapi.wip.kernels(GMeanImpl)
+        pkg    = cv.gapi.kernels(GMeanImpl)
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # Comparison
@@ -280,7 +280,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_out = GAddC.on(g_in, g_sc, cv.CV_8UC1)
         comp  = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(g_out))
 
-        pkg = cv.gapi.wip.kernels(GAddCImpl)
+        pkg = cv.gapi.kernels(GAddCImpl)
         actual = comp.apply(cv.gin(in_mat, sc), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -298,7 +298,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = GSize.on(g_in)
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_sz))
 
-        pkg = cv.gapi.wip.kernels(GSizeImpl)
+        pkg = cv.gapi.kernels(GSizeImpl)
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -315,7 +315,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_sz = GSizeR.on(g_r)
         comp = cv.GComputation(cv.GIn(g_r), cv.GOut(g_sz))
 
-        pkg = cv.gapi.wip.kernels(GSizeRImpl)
+        pkg = cv.gapi.kernels(GSizeRImpl)
         actual = comp.apply(cv.gin(roi), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -333,7 +333,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_br  = GBoundingRect.on(g_pts)
         comp  = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
 
-        pkg = cv.gapi.wip.kernels(GBoundingRectImpl)
+        pkg = cv.gapi.kernels(GBoundingRectImpl)
         actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
 
         # cv.norm works with tuples ?
@@ -364,7 +364,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
                                  min_distance, block_sz, use_harris_detector, k)
 
         comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
-        pkg = cv.gapi.wip.kernels(GGoodFeaturesImpl)
+        pkg = cv.gapi.kernels(GGoodFeaturesImpl)
         actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
 
         # NB: OpenCV & G-API have different output types.
@@ -447,10 +447,10 @@ class gapi_sample_pipelines(NewOpenCVTests):
         g_in  = cv.GArray.Int()
         comp  = cv.GComputation(cv.GIn(g_in), cv.GOut(GSum.on(g_in)))
 
-        s = comp.apply(cv.gin([1, 2, 3, 4]), args=cv.compile_args(cv.gapi.wip.kernels(GSumImpl)))
+        s = comp.apply(cv.gin([1, 2, 3, 4]), args=cv.compile_args(cv.gapi.kernels(GSumImpl)))
         self.assertEqual(10, s)
 
-        s = comp.apply(cv.gin([1, 2, 8, 7]), args=cv.compile_args(cv.gapi.wip.kernels(GSumImpl)))
+        s = comp.apply(cv.gin([1, 2, 8, 7]), args=cv.compile_args(cv.gapi.kernels(GSumImpl)))
         self.assertEqual(18, s)
 
         self.assertEqual(18, GSumImpl.last_result)
@@ -482,13 +482,13 @@ class gapi_sample_pipelines(NewOpenCVTests):
                     'tuple': (42, 42)
                 }
 
-        out = comp.apply(cv.gin(table, 'int'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        out = comp.apply(cv.gin(table, 'int'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
         self.assertEqual(42, out)
 
-        out = comp.apply(cv.gin(table, 'str'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        out = comp.apply(cv.gin(table, 'str'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
         self.assertEqual('hello, world!', out)
 
-        out = comp.apply(cv.gin(table, 'tuple'), args=cv.compile_args(cv.gapi.wip.kernels(GLookUpImpl)))
+        out = comp.apply(cv.gin(table, 'tuple'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
         self.assertEqual((42, 42), out)
 
 
@@ -515,7 +515,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         arr1 = [3,    'str']
 
         out = comp.apply(cv.gin(arr0, arr1),
-                         args=cv.compile_args(cv.gapi.wip.kernels(GConcatImpl)))
+                         args=cv.compile_args(cv.gapi.kernels(GConcatImpl)))
 
         self.assertEqual(arr0 + arr1, out)
 
@@ -545,7 +545,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
                                                       args=cv.compile_args(
-                                                          cv.gapi.wip.kernels(GAddImpl)))
+                                                          cv.gapi.kernels(GAddImpl)))
 
 
     def test_raise_in_outMeta(self):
@@ -573,7 +573,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
                                                       args=cv.compile_args(
-                                                          cv.gapi.wip.kernels(GAddImpl)))
+                                                          cv.gapi.kernels(GAddImpl)))
 
 
     def test_invalid_outMeta(self):
@@ -603,7 +603,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
         # Need to provide more descriptive error messsage.
         with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
                                                       args=cv.compile_args(
-                                                          cv.gapi.wip.kernels(GAddImpl)))
+                                                          cv.gapi.kernels(GAddImpl)))
 
     def test_pipeline_with_custom_kernels(self):
         @cv.gapi.op('custom.resize', in_types=[cv.GMat, tuple], out_types=[cv.GMat])
@@ -653,7 +653,7 @@ class gapi_sample_pipelines(NewOpenCVTests):
 
         comp = cv.GComputation(cv.GIn(g_bgr), cv.GOut(g_mean))
         actual = comp.apply(cv.gin(img), args=cv.compile_args(
-            cv.gapi.wip.kernels(GResizeImpl, GTransposeImpl)))
+            cv.gapi.kernels(GResizeImpl, GTransposeImpl)))
 
         self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 

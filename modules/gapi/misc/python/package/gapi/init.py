@@ -218,7 +218,7 @@ def op(op_id, in_types, out_types):
                         raise Exception('{} invalid input type for argument {}.\nExpected: {}, Actual: {}'
                                 .format(cls.__name__, i, t.__name__, type(a).__name__))
 
-            op = gapi.wip.op(op_id, cls.outMeta, *args)
+            op = gapi.__op(op_id, cls.outMeta, *args)
 
             out_protos = []
             for i, out_type in enumerate(out_types):
