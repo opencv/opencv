@@ -323,17 +323,34 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
     Scalar meanTemplate, sdTemplate;
 
     int active_pixels = inputMask.empty() ? templateImage.size().area() : countNonZero(inputMask);
-
+    int type = templateImage.type();
     meanStdDev(templateImage, meanTemplate, sdTemplate, inputMask);
     Mat templateImage_zeromean = Mat::zeros(templateImage.size(), templateImage.type());
-    subtract(templateImage, meanTemplate, templateImage_zeromean, inputMask);
+    Mat templateMat = templateImage.getMat();
+    Mat inputMat = inputImage.getMat();
+
+    /*
+     * For unsigned ints, when the mean is computed and subtracted, any values less than the mean
+     * will be set to 0 (since there are no negatives values). This impacts the norm and dot product, which
+     * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
+     * we convert them to a signed ints for the subtraction step.
+     */
+    if(type == CV_8U) {
+        templateMat.convertTo(templateMat, CV_8S);
+        inputMat.convertTo(inputMat, CV_8S);
+    }
+    else if(type == CV_16U) {
+        templateMat.convertTo(templateMat, CV_16S);
+        inputMat.convertTo(inputMat, CV_16S);
+    }
+    subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
     double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
 
     Scalar meanInput, sdInput;
 
     Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
     meanStdDev(inputImage, meanInput, sdInput, inputMask);
-    subtract(inputImage, meanInput, inputImage_zeromean, inputMask);
+    subtract(inputMat, meanInput, inputImage_zeromean, inputMask);
     double inputImagenorm = std::sqrt(active_pixels*sdInput.val[0]*sdInput.val[0]);
 
     return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
