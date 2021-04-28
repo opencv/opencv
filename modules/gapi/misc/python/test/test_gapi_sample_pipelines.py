@@ -3,8 +3,14 @@
 import numpy as np
 import cv2 as cv
 import os
+import sys
+import unittest
 
 from tests_common import NewOpenCVTests
+
+
+if sys.version_info[:2] < (3, 0):
+    raise unittest.case.SkipTest('Python 2.x is not supported')
 
 
 # Plaidml is an optional backend

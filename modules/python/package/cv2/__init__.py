@@ -6,9 +6,6 @@ import sys
 
 __all__ = []
 
-# FIXIT
-sys.OpenCV_LOADER_DEBUG = True
-
 try:
     import numpy
     import numpy.core.multiarray
