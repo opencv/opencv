@@ -32,7 +32,8 @@ TEST(Features2d_SIFT, descriptor_type)
 
 TEST(Features2d_SIFT, 177_octave_independence)
 {
-    Ptr<SIFT> sift = cv::SIFT::create(10, 5, 0.01, 10, 1.1, CV_32F);
+    const int nfeatures = 20;
+    Ptr<SIFT> sift = cv::SIFT::create(nfeatures, 5, 0.01, 10, 1.1);
 
     Mat image = imread(string(cvtest::TS::ptr()->get_data_path()) + "shared/lena.png");
     ASSERT_FALSE(image.empty());
@@ -42,7 +43,7 @@ TEST(Features2d_SIFT, 177_octave_independence)
     Mat descriptorsAll, descriptorsSubset;
     vector<KeyPoint> subsetOfKeypoints;
     std::vector<int> rowsWithPositiveOctaves;
-    for(size_t i = 0; i < keypoints.size(); ++i) {
+    for(int i = 0; i < nfeatures; ++i) {
         // extract keypoints with octave > -1
         // note: we have to replicate some of the unpacking logic here
         int octave = keypoints[i].octave & 255;
@@ -55,7 +56,7 @@ TEST(Features2d_SIFT, 177_octave_independence)
     sift->compute(image, keypoints, descriptorsAll);
     sift->compute(image, subsetOfKeypoints, descriptorsSubset);
     // we should be able to provide all keypoints or a subset of keypoints and get the same descriptors
-    for (size_t i = 0; i < rowsWithPositiveOctaves.size(); ++i) {
+    for (int i = 0; i < descriptorsSubset.rows; ++i) {
         Mat diff = descriptorsAll.row(rowsWithPositiveOctaves[i]) != descriptorsSubset.row(i);
         ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
     }

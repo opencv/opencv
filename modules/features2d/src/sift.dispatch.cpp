@@ -490,7 +490,7 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
             maxOctave = std::max(maxOctave, octave);
             actualNLayers = std::max(actualNLayers, layer-2);
         }
-        CV_Assert( firstOctave >= -1 && actualNLayers <= nOctaveLayers );
+        CV_Assert( actualNLayers <= nOctaveLayers );
         actualNOctaves = maxOctave - firstOctave + 1;
     }
     Mat base = createInitialImage(image, true, (float)sigma);
@@ -514,16 +514,14 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
             KeyPointsFilter::retainBest(keypoints, nfeatures);
         //t = (double)getTickCount() - t;
         //printf("keypoint detection time: %g\n", t*1000./tf);
-
-        if( firstOctave < 0 )
-            for( size_t i = 0; i < keypoints.size(); i++ )
-            {
-                KeyPoint& kpt = keypoints[i];
-                float scale = 1.f/(float)(1 << -firstOctave);
-                kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
-                kpt.pt *= scale;
-                kpt.size *= scale;
-            }
+        float scale = 1.f/(float)(1 << -firstOctave);
+        for( size_t i = 0; i < keypoints.size(); i++ )
+        {
+            KeyPoint& kpt = keypoints[i];
+            kpt.octave = (kpt.octave & ~255) | ((kpt.octave + firstOctave) & 255);
+            kpt.pt *= scale;
+            kpt.size *= scale;
+        }
 
         if( !mask.empty() )
             KeyPointsFilter::runByPixelsMask( keypoints, mask );
