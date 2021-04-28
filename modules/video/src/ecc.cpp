@@ -333,15 +333,15 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
      * For unsigned ints, when the mean is computed and subtracted, any values less than the mean
      * will be set to 0 (since there are no negatives values). This impacts the norm and dot product, which
      * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
-     * we convert them to a signed ints for the subtraction step.
+     * we convert them to a signed ints with larger resolution for the subtraction step.
      */
     if(type == CV_8U) {
-        templateMat.convertTo(templateMat, CV_8S);
-        inputMat.convertTo(inputMat, CV_8S);
-    }
-    else if(type == CV_16U) {
         templateMat.convertTo(templateMat, CV_16S);
         inputMat.convertTo(inputMat, CV_16S);
+    }
+    else if(type == CV_16U) {
+        templateMat.convertTo(templateMat, CV_32S);
+        inputMat.convertTo(inputMat, CV_32S);
     }
     subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
     double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
