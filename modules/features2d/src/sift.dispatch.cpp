@@ -481,31 +481,24 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
 
     if( useProvidedKeypoints )
     {
-        firstOctave = 0;
         int maxOctave = INT_MIN;
         for( size_t i = 0; i < keypoints.size(); i++ )
         {
             int octave, layer;
             float scale;
             unpackOctave(keypoints[i], octave, layer, scale);
-            firstOctave = std::min(firstOctave, octave);
             maxOctave = std::max(maxOctave, octave);
             actualNLayers = std::max(actualNLayers, layer-2);
         }
-
-        firstOctave = std::min(firstOctave, 0);
         CV_Assert( firstOctave >= -1 && actualNLayers <= nOctaveLayers );
         actualNOctaves = maxOctave - firstOctave + 1;
     }
-
-    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
+    Mat base = createInitialImage(image, true, (float)sigma);
     std::vector<Mat> gpyr;
     int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
-
     //double t, tf = getTickFrequency();
     //t = (double)getTickCount();
     buildGaussianPyramid(base, gpyr, nOctaves);
-
     //t = (double)getTickCount() - t;
     //printf("pyramid construction time: %g\n", t*1000./tf);
 
