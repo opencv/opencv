@@ -577,6 +577,27 @@ template<typename R> struct TheTest
         return *this;
     }
 
+    TheTest & test_mul_hi()
+    {
+        // typedef typename V_RegTraits<R>::w_reg Rx2;
+        Data<R> dataA, dataB(32767);
+        R a = dataA, b = dataB;
+        // Rx2 c, d;
+
+        R c = v_mul_hi(a, b);
+
+        Data<R> resC = c;
+        const int n = R::nlanes / 2;
+        for (int i = 0; i < n; ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            EXPECT_EQ((typename R::lane_type)((dataA[i] * dataB[i]) >> 16), resC[i]);
+            // EXPECT_EQ((typename R::lane_type)dataA[i + n] * dataB[i + n], resD[i]);
+        }
+
+        return *this;
+    }
+
     TheTest & test_abs()
     {
         typedef typename V_RegTraits<R>::u_reg Ru;
@@ -1663,6 +1684,7 @@ void test_hal_intrin_uint16()
         .test_arithm_wrap()
         .test_mul()
         .test_mul_expand()
+        .test_mul_hi()
         .test_cmp()
         .test_shift<1>()
         .test_shift<8>()
@@ -1697,6 +1719,7 @@ void test_hal_intrin_int16()
         .test_arithm_wrap()
         .test_mul()
         .test_mul_expand()
+        .test_mul_hi()
         .test_cmp()
         .test_shift<1>()
         .test_shift<8>()
