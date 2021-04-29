@@ -336,12 +336,18 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
      * we convert them to a signed ints with larger resolution for the subtraction step.
      */
     if(type == CV_8U) {
-        templateMat.convertTo(templateMat, CV_16S);
-        inputMat.convertTo(inputMat, CV_16S);
+        Mat templateMatConverted, inputMatConverted;
+        templateMat.convertTo(templateMatConverted, CV_16S);
+        cv::swap(templateMat, templateMatConverted);
+        inputMat.convertTo(inputMatConverted, CV_16S);
+        cv::swap(inputMat, inputMatConverted);
     }
     else if(type == CV_16U) {
-        templateMat.convertTo(templateMat, CV_32S);
-        inputMat.convertTo(inputMat, CV_32S);
+        Mat templateMatConverted, inputMatConverted;
+        templateMat.convertTo(templateMatConverted, CV_32S);
+        cv::swap(templateMat, templateMatConverted);
+        inputMat.convertTo(inputMatConverted, CV_32S);
+        cv::swap(inputMat, inputMatConverted);
     }
     subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
     double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
