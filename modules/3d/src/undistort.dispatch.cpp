@@ -434,7 +434,7 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum U
             double fy1 = iR/std::sqrt(1 - y1*y1);
             *J = Vec4d(fx1*(kx*x + k), fx1*ky*x, fy1*kx*y, fy1*(ky*y + k));
         }
-        return Point2f((float)asin(x1), (float)asin(y1));
+        return Point2f((float)std::asin(x1), (float)std::asin(y1));
     }
     CV_Error(Error::StsBadArg, "Unknown projection type");
 }

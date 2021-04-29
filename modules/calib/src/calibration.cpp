@@ -217,8 +217,8 @@ static int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian=0 )
         }
         else
         {
-            double c = cos(theta);
-            double s = sin(theta);
+            double c = std::cos(theta);
+            double s = std::sin(theta);
             double c1 = 1. - c;
             double itheta = theta ? 1./theta : 0.;
 
@@ -284,7 +284,7 @@ static int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian=0 )
         s = std::sqrt((r.x*r.x + r.y*r.y + r.z*r.z)*0.25);
         c = (R(0, 0) + R(1, 1) + R(2, 2) - 1)*0.5;
         c = c > 1. ? 1. : c < -1. ? -1. : c;
-        theta = acos(c);
+        theta = std::acos(c);
 
         if( s < 1e-5 )
         {

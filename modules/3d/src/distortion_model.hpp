@@ -79,10 +79,10 @@ void computeTiltProjectionMatrix(FLOAT tauX,
     Matx<FLOAT, 3, 3>* dMatTiltdTauY = 0,
     Matx<FLOAT, 3, 3>* invMatTilt = 0)
 {
-    FLOAT cTauX = cos(tauX);
-    FLOAT sTauX = sin(tauX);
-    FLOAT cTauY = cos(tauY);
-    FLOAT sTauY = sin(tauY);
+    FLOAT cTauX = std::cos(tauX);
+    FLOAT sTauX = std::sin(tauX);
+    FLOAT cTauY = std::cos(tauY);
+    FLOAT sTauY = std::sin(tauY);
     Matx<FLOAT, 3, 3> matRotX = Matx<FLOAT, 3, 3>(1,0,0,0,cTauX,sTauX,0,-sTauX,cTauX);
     Matx<FLOAT, 3, 3> matRotY = Matx<FLOAT, 3, 3>(cTauY,0,-sTauY,0,1,0,sTauY,0,cTauY);
     Matx<FLOAT, 3, 3> matRotXY = matRotY * matRotX;
