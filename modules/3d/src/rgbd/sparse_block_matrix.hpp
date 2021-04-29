@@ -19,8 +19,6 @@
 
 namespace cv
 {
-namespace kinfu
-{
 /*!
  * \class BlockSparseMat
  * Naive implementation of Sparse Block Matrix
@@ -196,5 +194,4 @@ struct BlockSparseMat
     IDtoBlockValueMap ijValue;
 };
 
-}  // namespace kinfu
 }  // namespace cv

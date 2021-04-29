@@ -54,7 +54,7 @@ cv::UMat preCalculationPixNormGPU(const UMat& depth, const Intr& intrinsics)
 
     cv::String errorStr;
     cv::String name = "preCalculationPixNorm";
-    ocl::ProgramSource source = ocl::rgbd::tsdf_functions_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::tsdf_functions_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel kk;
     kk.create(name.c_str(), source, options, &errorStr);

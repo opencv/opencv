@@ -999,7 +999,7 @@ void HashTSDFVolumeGPU::integrateAllVolumeUnitsGPU(const UMat& depth, float dept
 
     String errorStr;
     String name = "integrateAllVolumeUnits";
-    ocl::ProgramSource source = ocl::rgbd::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -1219,7 +1219,7 @@ void HashTSDFVolumeGPU::markActive(const Matx44f& cameraPose, const Intr& intrin
     //! Mark volumes in the camera frustum as active
     String errorStr;
     String name = "markActive";
-    ocl::ProgramSource source = ocl::rgbd::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);
@@ -1574,7 +1574,7 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const kinfu::Intr& in
 
     String errorStr;
     String name = "raycast";
-    ocl::ProgramSource source = ocl::rgbd::hash_tsdf_oclsrc;
+    ocl::ProgramSource source = ocl::_3d::hash_tsdf_oclsrc;
     String options = "-cl-mad-enable";
     ocl::Kernel k;
     k.create(name.c_str(), source, options, &errorStr);

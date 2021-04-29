@@ -20,9 +20,9 @@ static Affine3d readAffine(std::istream& input)
 };
 
 // Rewritten from Ceres pose graph demo: https://ceres-solver.org/
-static Ptr<kinfu::detail::PoseGraph> readG2OFile(const std::string& g2oFileName)
+static Ptr<detail::PoseGraph> readG2OFile(const std::string& g2oFileName)
 {
-    Ptr<kinfu::detail::PoseGraph> pg = kinfu::detail::PoseGraph::create();
+    Ptr<detail::PoseGraph> pg = detail::PoseGraph::create();
 
     // for debugging purposes
     size_t minId = 0, maxId = 1 << 30;
@@ -105,7 +105,7 @@ TEST( PoseGraph, sphereG2O )
     // In IEEE Intl.Conf.on Robotics and Automation(ICRA), pages 4597 - 4604, 2015.
 
     std::string filename = cvtest::TS::ptr()->get_data_path() + "rgbd/sphere_bignoise_vertex3.g2o";
-    Ptr<kinfu::detail::PoseGraph> pg = readG2OFile(filename);
+    Ptr<detail::PoseGraph> pg = readG2OFile(filename);
 
 #ifdef HAVE_EIGEN
     // You may change logging level to view detailed optimization report

@@ -12,7 +12,6 @@
 
 namespace cv
 {
-
 //! @addtogroup rgbd
 //! @{
 

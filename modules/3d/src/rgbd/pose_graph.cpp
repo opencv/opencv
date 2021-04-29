@@ -100,8 +100,6 @@ cv::Matx<_Tp, m, n + k> concatHor(const cv::Matx<_Tp, m, n>& a, const cv::Matx<_
 
 namespace cv
 {
-namespace kinfu
-{
 namespace detail
 {
 
@@ -514,7 +512,7 @@ double PoseGraphImpl::calcEnergyNodes(const std::map<size_t, Node>& newNodes) co
         totalErr += err;
     }
     return totalErr * 0.5;
-};
+}
 
 
 #if defined(HAVE_EIGEN)
@@ -542,7 +540,7 @@ static inline double calcJacCostChange(const std::vector<double>& jtb,
     }
     double costChange = jdiag * 0.5;
     return costChange;
-};
+}
 
 
 // J := J * d_inv, d_inv = make_diag(di)
@@ -907,5 +905,4 @@ Ptr<detail::PoseGraph> detail::PoseGraph::create()
 PoseGraph::~PoseGraph() { }
 
 }  // namespace detail
-}  // namespace kinfu
 }  // namespace cv

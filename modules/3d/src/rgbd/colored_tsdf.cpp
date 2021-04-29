@@ -7,7 +7,7 @@
 #include "precomp.hpp"
 #include "colored_tsdf.hpp"
 #include "tsdf_functions.hpp"
-#include "opencl_kernels_rgbd.hpp"
+#include "opencl_kernels_3d.hpp"
 
 #define USE_INTERPOLATION_IN_GETNORMAL 1
 

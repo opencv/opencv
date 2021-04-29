@@ -13,6 +13,8 @@
 #include "rgbd/volume.hpp"
 #include "rgbd/intrinsics.hpp"
 
+#include "rgbd/detail/pose_graph.hpp"
+
 /**
   @defgroup _3d 3D vision functionality
 

@@ -28,7 +28,6 @@
 namespace cv
 {
 
-
 enum
 {
     RGBD_ODOMETRY = 1,
