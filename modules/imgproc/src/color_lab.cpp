@@ -1592,15 +1592,17 @@ struct RGB2Lab_b
         const int one_lsh_by_lab_shift2_sub_one = (1 << ((lab_shift2)-1));
         const int one_shift_lab_mul_128 = 128*(1 << lab_shift2);
 
-        // Convert 4 batches of 4 uint8_t RGBs, hence we stride in 16s
-        for(; i <= n - 16; i += 16, src += scn*16, dst += 3*16 )
+        // On each loop, we load nlanes of RGB/A v_uint8s and store nlanes of
+        // Lab v_uint8s
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes,
+                src += scn*v_uint8::nlanes, dst += 3*v_uint8::nlanes )
         {
             // Load 4 batches of 4 src
             // =======================
-            v_uint8x16 vRi, vGi, vBi;
+            v_uint8 vRi, vGi, vBi;
             if(scn == 4)
             {
-                v_uint8x16 vAi;
+                v_uint8 vAi;
                 v_load_deinterleave(src, vRi, vGi, vBi, vAi);
             }
             else // scn == 3
@@ -1609,49 +1611,51 @@ struct RGB2Lab_b
             }
 
 #define RGB2LAB_BATCH(n) \
-            v_int32x4 vR##n(tab[v_extract_n<4*n+0>(vRi)], tab[v_extract_n<4*n+1>(vRi)], \
-                            tab[v_extract_n<4*n+2>(vRi)], tab[v_extract_n<4*n+3>(vRi)]); \
-            v_int32x4 vG##n(tab[v_extract_n<4*n+0>(vGi)], tab[v_extract_n<4*n+1>(vGi)], \
-                            tab[v_extract_n<4*n+2>(vGi)], tab[v_extract_n<4*n+3>(vGi)]); \
-            v_int32x4 vB##n(tab[v_extract_n<4*n+0>(vBi)], tab[v_extract_n<4*n+1>(vBi)], \
-                            tab[v_extract_n<4*n+2>(vBi)], tab[v_extract_n<4*n+3>(vBi)]); \
+            v_int32 vR##n(tab[v_extract_n<4*n+0>(vRi)], tab[v_extract_n<4*n+1>(vRi)], \
+                          tab[v_extract_n<4*n+2>(vRi)], tab[v_extract_n<4*n+3>(vRi)]); \
+            v_int32 vG##n(tab[v_extract_n<4*n+0>(vGi)], tab[v_extract_n<4*n+1>(vGi)], \
+                          tab[v_extract_n<4*n+2>(vGi)], tab[v_extract_n<4*n+3>(vGi)]); \
+            v_int32 vB##n(tab[v_extract_n<4*n+0>(vBi)], tab[v_extract_n<4*n+1>(vBi)], \
+                          tab[v_extract_n<4*n+2>(vBi)], tab[v_extract_n<4*n+3>(vBi)]); \
             \
             /* int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];*/ \
-            v_int32x4 vfX##n = v_fma(vR##n, v_setall_s32(C0), v_setall_s32(one_lsh_by_lab_shift_sub_one)); \
+            v_int32 vfX##n = v_fma(vR##n, v_setall_s32(C0), v_setall_s32(one_lsh_by_lab_shift_sub_one)); \
             vfX##n = v_fma(vG##n, v_setall_s32(C1), vfX##n); \
             vfX##n = v_fma(vB##n, v_setall_s32(C2), vfX##n); \
             vfX##n = v_shr<lab_shift>(vfX##n); \
-            vfX##n = v_int32x4(LabCbrtTab_b[v_extract_n<0>(vfX##n)], LabCbrtTab_b[v_extract_n<1>(vfX##n)], \
-                               LabCbrtTab_b[v_extract_n<2>(vfX##n)], LabCbrtTab_b[v_extract_n<3>(vfX##n)]); \
+            vfX##n = v_int32(LabCbrtTab_b[v_extract_n<0>(vfX##n)], LabCbrtTab_b[v_extract_n<1>(vfX##n)], \
+                             LabCbrtTab_b[v_extract_n<2>(vfX##n)], LabCbrtTab_b[v_extract_n<3>(vfX##n)]); \
             \
             /* int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)]; */ \
-            v_int32x4 vfY##n = v_fma(vR##n, v_setall_s32(C3), v_setall_s32(one_lsh_by_lab_shift_sub_one)); \
+            v_int32 vfY##n = v_fma(vR##n, v_setall_s32(C3), v_setall_s32(one_lsh_by_lab_shift_sub_one)); \
             vfY##n = v_fma(vG##n, v_setall_s32(C4), vfY##n);\
             vfY##n = v_fma(vB##n, v_setall_s32(C5), vfY##n);\
             vfY##n = v_shr<lab_shift>(vfY##n);\
-            vfY##n = v_int32x4(LabCbrtTab_b[v_extract_n<0>(vfY##n)], LabCbrtTab_b[v_extract_n<1>(vfY##n)], \
-                               LabCbrtTab_b[v_extract_n<2>(vfY##n)], LabCbrtTab_b[v_extract_n<3>(vfY##n)]);\
+            vfY##n = v_int32(LabCbrtTab_b[v_extract_n<0>(vfY##n)], LabCbrtTab_b[v_extract_n<1>(vfY##n)], \
+                             LabCbrtTab_b[v_extract_n<2>(vfY##n)], LabCbrtTab_b[v_extract_n<3>(vfY##n)]);\
             \
             /* int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];*/ \
-            v_int32x4 vfZ##n = v_fma(vR##n, v_setall_s32(C6), v_setall_s32(one_lsh_by_lab_shift_sub_one));\
+            v_int32 vfZ##n = v_fma(vR##n, v_setall_s32(C6), v_setall_s32(one_lsh_by_lab_shift_sub_one));\
             vfZ##n = v_fma(vG##n, v_setall_s32(C7), vfZ##n);\
             vfZ##n = v_fma(vB##n, v_setall_s32(C8), vfZ##n);\
             vfZ##n = v_shr<lab_shift>(vfZ##n);\
-            vfZ##n = v_int32x4(LabCbrtTab_b[v_extract_n<0>(vfZ##n)], LabCbrtTab_b[v_extract_n<1>(vfZ##n)], \
-                               LabCbrtTab_b[v_extract_n<2>(vfZ##n)], LabCbrtTab_b[v_extract_n<3>(vfZ##n)]);\
+            vfZ##n = v_int32(LabCbrtTab_b[v_extract_n<0>(vfZ##n)], LabCbrtTab_b[v_extract_n<1>(vfZ##n)], \
+                             LabCbrtTab_b[v_extract_n<2>(vfZ##n)], LabCbrtTab_b[v_extract_n<3>(vfZ##n)]);\
             \
             /* int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );*/ \
-            v_int32x4 vL##n = v_fma(vfY##n, v_setall_s32(Lscale), v_setall_s32(Lshift+one_lsh_by_lab_shift2_sub_one));\
+            v_int32 vL##n = v_fma(vfY##n, v_setall_s32(Lscale), \
+                                  v_setall_s32(Lshift+one_lsh_by_lab_shift2_sub_one));\
             vL##n = v_shr<lab_shift2>(vL##n);\
             \
             /* int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );*/ \
-            v_int32x4 va##n = v_fma(vfX##n - vfY##n, v_setall_s32(500), v_setall_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one));\
+            v_int32 va##n = v_fma(vfX##n - vfY##n, v_setall_s32(500), \
+                                  v_setall_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one));\
             va##n = v_shr<lab_shift2>(va##n);\
             \
             /* int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );*/ \
-            v_int32x4 vb##n = v_fma(vfY##n - vfZ##n, v_setall_s32(200), v_setall_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one));\
+            v_int32 vb##n = v_fma(vfY##n - vfZ##n, v_setall_s32(200), \
+                                  v_setall_s32(one_shift_lab_mul_128+one_lsh_by_lab_shift2_sub_one));\
             vb##n = v_shr<lab_shift2>(vb##n);
-
 
             // Do 4 batches of 4 RGB2Labs
             RGB2LAB_BATCH(0)
@@ -1665,9 +1669,9 @@ struct RGB2Lab_b
             // dst[1] = saturate_cast<uchar>(a);
             // dst[2] = saturate_cast<uchar>(b);
             v_store_interleave(dst,
-                v_pack(v_pack_u(vL0,vL1),v_pack_u(vL2,vL3)),
-                v_pack(v_pack_u(va0,va1),v_pack_u(va2,va3)),
-                v_pack(v_pack_u(vb0,vb1),v_pack_u(vb2,vb3)));
+                v_pack(v_pack_u(vL0, vL1), v_pack_u(vL2, vL3)),
+                v_pack(v_pack_u(va0, va1), v_pack_u(va2, va3)),
+                v_pack(v_pack_u(vb0, vb1), v_pack_u(vb2, vb3)));
         }
 
 #endif
