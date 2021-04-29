@@ -2,7 +2,6 @@ __all__ = ['op', 'kernel']
 
 import sys
 import cv2 as cv
-from cv2 import gapi
 
 # NB: Register function in specific module
 def register(mname):
@@ -12,115 +11,111 @@ def register(mname):
     return parameterized
 
 
-def init():
-    @register('cv2')
-    class GOpaque():
-        # NB: Inheritance from c++ class cause segfault.
-        # So just aggregate cv.GOpaqueT instead of inheritance
-        def __new__(cls, argtype):
-            return cv.GOpaqueT(argtype)
+@register('cv2')
+class GOpaque():
+    # NB: Inheritance from c++ class cause segfault.
+    # So just aggregate cv.GOpaqueT instead of inheritance
+    def __new__(cls, argtype):
+        return cv.GOpaqueT(argtype)
 
-        class Bool():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_BOOL)
+    class Bool():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_BOOL)
 
-        class Int():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_INT)
+    class Int():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_INT)
 
-        class Double():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_DOUBLE)
+    class Double():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_DOUBLE)
 
-        class Float():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_FLOAT)
+    class Float():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_FLOAT)
 
-        class String():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_STRING)
+    class String():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_STRING)
 
-        class Point():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_POINT)
+    class Point():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_POINT)
 
-        class Point2f():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_POINT2F)
+    class Point2f():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_POINT2F)
 
-        class Size():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_SIZE)
+    class Size():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_SIZE)
 
-        class Rect():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_RECT)
+    class Rect():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_RECT)
 
-        class Any():
-            def __new__(self):
-                return cv.GOpaqueT(cv.gapi.CV_ANY)
+    class Any():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_ANY)
 
-    @register('cv2')
-    class GArray():
-        # NB: Inheritance from c++ class cause segfault.
-        # So just aggregate cv.GArrayT instead of inheritance
-        def __new__(cls, argtype):
-            return cv.GArrayT(argtype)
+@register('cv2')
+class GArray():
+    # NB: Inheritance from c++ class cause segfault.
+    # So just aggregate cv.GArrayT instead of inheritance
+    def __new__(cls, argtype):
+        return cv.GArrayT(argtype)
 
-        class Bool():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_BOOL)
+    class Bool():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_BOOL)
 
-        class Int():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_INT)
+    class Int():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_INT)
 
-        class Double():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_DOUBLE)
+    class Double():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_DOUBLE)
 
-        class Float():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_FLOAT)
+    class Float():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_FLOAT)
 
-        class String():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_STRING)
+    class String():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_STRING)
 
-        class Point():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_POINT)
+    class Point():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_POINT)
 
-        class Point2f():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_POINT2F)
+    class Point2f():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_POINT2F)
 
-        class Size():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_SIZE)
+    class Size():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_SIZE)
 
-        class Rect():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_RECT)
+    class Rect():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_RECT)
 
-        class Scalar():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_SCALAR)
+    class Scalar():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_SCALAR)
 
-        class Mat():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_MAT)
+    class Mat():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_MAT)
 
-        class GMat():
-            def __new__(self):
-                return cv.GArrayT(cv.gapi.CV_GMAT)
+    class GMat():
+        def __new__(self):
+            return cv.GArrayT(cv.gapi.CV_GMAT)
 
-        class Any():
-            def __new__(self):
-                return cv.GArray(cv.gapi.CV_ANY)
-
-
-init()
+    class Any():
+        def __new__(self):
+            return cv.GArray(cv.gapi.CV_ANY)
 
 
 # NB: Top lvl decorator takes arguments
@@ -217,7 +212,7 @@ def op(op_id, in_types, out_types):
                         raise Exception('{} invalid input type for argument {}.\nExpected: {}, Actual: {}'
                                 .format(cls.__name__, i, t.__name__, type(a).__name__))
 
-            op = gapi.__op(op_id, cls.outMeta, *args)
+            op = cv.gapi.__op(op_id, cls.outMeta, *args)
 
             out_protos = []
             for i, out_type in enumerate(out_types):
