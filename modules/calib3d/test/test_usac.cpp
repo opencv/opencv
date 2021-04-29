@@ -345,15 +345,16 @@ TEST(usac_P3P, accuracy) {
                    log(1 - pow(inl_ratio, 3 /* sample size */));
 
         for (auto flag : flags) {
-        	std::vector<int> inliers;
+            std::vector<int> inliers;
             cv::Mat rvec, tvec, mask, R, P;
             CV_Assert(cv::solvePnPRansac(obj_pts, img_pts, K1, cv::noArray(), rvec, tvec,
                     false, (int)max_iters, (float)thr, conf, inliers, flag));
             cv::Rodrigues(rvec, R);
             cv::hconcat(K1 * R, K1 * tvec, P);
-            mask = cv::Mat(pts_size, 1, CV_8U);
+            mask.create(pts_size, 1, CV_8U);
+            mask.setTo(Scalar::all(0));
             for (auto inl : inliers)
-            	mask.at<uchar>(inl) = true;
+                mask.at<uchar>(inl) = true;
             checkInliersMask(TestSolver ::PnP, inl_size, thr, img_pts, obj_pts, P, mask);
         }
     }
@@ -429,7 +430,7 @@ TEST(usac_testUsacParams, accuracy) {
     mask.create(pts_size, 1, CV_8U);
     mask.setTo(Scalar::all(0));
     for (auto inl : inliers)
-    	mask.at<uchar>(inl) = true;
+        mask.at<uchar>(inl) = true;
     checkInliersMask(TestSolver::PnP, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 
     // P6P
@@ -440,7 +441,7 @@ TEST(usac_testUsacParams, accuracy) {
     cv::Rodrigues(rvec, R); cv::hconcat(K_est * R, K_est * tvec, model);
     mask.setTo(Scalar::all(0));
     for (auto inl : inliers)
-    	mask.at<uchar>(inl) = true;
+        mask.at<uchar>(inl) = true;
     checkInliersMask(TestSolver::PnP, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 
     // Affine2D
