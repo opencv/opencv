@@ -10,8 +10,6 @@
 
 #include "rgbd/linemod.hpp"
 #include "rgbd/depth.hpp"
-#include "rgbd/kinfu.hpp"
-#include "rgbd/large_kinfu.hpp"
 #include "rgbd/volume.hpp"
 #include "rgbd/intrinsics.hpp"
 
