@@ -9,6 +9,7 @@
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
 #include "test_utils_tls.impl.hpp"
+#include "opencv2/core/utils/filesystem.private.hpp"
 
 namespace opencv_test { namespace {
 
@@ -336,7 +337,7 @@ TEST(Logger, DISABLED_message_if)
     }
 }
 
-
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 TEST(Samples, findFile)
 {
     cv::utils::logging::LogLevel prev = cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_VERBOSE);
@@ -353,6 +354,7 @@ TEST(Samples, findFile_missing)
     ASSERT_ANY_THROW(path = samples::findFile("non-existed.file", true));
     cv::utils::logging::setLogLevel(prev);
 }
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 template <typename T>
 inline bool buffers_overlap(T * first, size_t first_num, T * second, size_t second_num)

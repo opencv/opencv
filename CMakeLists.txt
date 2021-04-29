@@ -513,9 +513,14 @@ OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" 
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
+endif()
+
+if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
+  add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
 endif()
 
 set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
@@ -1124,6 +1129,10 @@ else()
 endif()
 status("    ccache:"                  OPENCV_COMPILER_IS_CCACHE THEN YES ELSE NO)
 status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
+
+if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
+  status("    Filesystem support is disabled")
+endif()
 
 # ========================== Dependencies ============================
 ocv_get_all_libs(deps_modules deps_extra deps_3rdparty)
