@@ -292,12 +292,12 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
                     denom += a_sum2.val[2] - (a_sum.val[2]*a_sum.val[2])/area;
                 }
                 denom = sqrt(MAX(denom,0))*b_denom;
-                if( fabs(value) < denom )
+                if( fabs(value) < denom || method == CV_TM_SQDIFF_NORMED)
                     value /= denom;
                 else if( fabs(value) < denom*1.125 )
                     value = value > 0 ? 1 : -1;
                 else
-                    value = method != CV_TM_SQDIFF_NORMED ? 0 : 1;
+                    value = 0;
             }
 
             ((float*)(result->data.ptr + result->step*i))[j] = (float)value;
@@ -424,5 +424,27 @@ TEST(Imgproc_MatchTemplate, bug_9597) {
         double minValue;
         cv::minMaxLoc(result, &minValue, NULL, NULL, NULL);
         ASSERT_GE(minValue, 0);
+}
+
+
+TEST(Imgproc_MatchTemplate, bug_15215) {
+        // simple example - a 2 x 2 template and 2 x 2 image, which just results in a matrix
+        // with one value
+        cv::Mat cvimg = (Mat_<float>(2, 2) << 5,1,2,8);
+        cv::Mat cvtmpl = (Mat_<float>(2, 2) << 1,5,7,1);
+        Mat delta = cvimg - cvtmpl;
+
+        // manually compute sqdiff norm
+        Scalar squaredDiff = delta.dot(delta);
+        double sqdiff = squaredDiff.val[0];
+        Scalar sumOfSquaredProduct = cv::sum(cvimg.mul(cvimg)) * cv::sum(cvtmpl.mul(cvtmpl));
+        double norm_ = cv::sqrt(sumOfSquaredProduct.val[0]);
+        double expectedResult = sqdiff / norm_;
+
+        // compute with matchTemplate
+        cv::Mat output;
+        cv::matchTemplate(cvimg, cvtmpl, output, CV_TM_SQDIFF_NORMED);
+        float actualResult = output.at<float>(0, 0);
+        ASSERT_FLOAT_EQ(actualResult, (float) expectedResult);
 }
 } // namespace
