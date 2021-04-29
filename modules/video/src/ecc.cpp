@@ -335,18 +335,12 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
      * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
      * we convert them to a signed ints with larger resolution for the subtraction step.
      */
-    if(type == CV_8U) {
+    if(type == CV_8U || type == CV_16U) {
+        int newType = type == CV_8U ? CV_16S : CV_32S;
         Mat templateMatConverted, inputMatConverted;
-        templateMat.convertTo(templateMatConverted, CV_16S);
+        templateMat.convertTo(templateMatConverted, newType);
         cv::swap(templateMat, templateMatConverted);
-        inputMat.convertTo(inputMatConverted, CV_16S);
-        cv::swap(inputMat, inputMatConverted);
-    }
-    else if(type == CV_16U) {
-        Mat templateMatConverted, inputMatConverted;
-        templateMat.convertTo(templateMatConverted, CV_32S);
-        cv::swap(templateMat, templateMatConverted);
-        inputMat.convertTo(inputMatConverted, CV_32S);
+        inputMat.convertTo(inputMatConverted, newType);
         cv::swap(inputMat, inputMatConverted);
     }
     subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
