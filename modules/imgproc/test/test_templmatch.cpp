@@ -429,11 +429,22 @@ TEST(Imgproc_MatchTemplate, bug_9597) {
 
 TEST(Imgproc_MatchTemplate, bug_15215) {
         // simple example - a 2 x 2 template and 2 x 2 image, which just results in a matrix
-        // with one value, and this value should be > 1.
+        // with one value
         cv::Mat cvimg = (Mat_<float>(2, 2) << 5,1,2,8);
         cv::Mat cvtmpl = (Mat_<float>(2, 2) << 1,5,7,1);
-        cv::Mat result;
-        cv::matchTemplate(cvimg, cvtmpl, result, CV_TM_SQDIFF_NORMED);
-        ASSERT_GT(result.at<float>(0, 0), 1);
+        Mat delta = cvimg - cvtmpl;
+
+        // manually compute sqdiff norm
+        Scalar squaredDiff = delta.dot(delta);
+        double sqdiff = squaredDiff.val[0];
+        Scalar sumOfSquaredProduct = cv::sum(cvimg.mul(cvimg)) * cv::sum(cvtmpl.mul(cvtmpl));
+        double norm = cv::sqrt(sumOfSquaredProduct.val[0]);
+        double expectedResult = sqdiff / norm;
+
+        // compute with matchTemplate
+        cv::Mat output;
+        cv::matchTemplate(cvimg, cvtmpl, output, CV_TM_SQDIFF_NORMED);
+        double actualResult = output.at<float>(0, 0);
+        ASSERT_FLOAT_EQ(actualResult, expectedResult);
 }
 } // namespace
