@@ -950,12 +950,12 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
                 else
                     t = std::sqrt(diff2)*templNorm;
 
-                if( fabs(num) < t )
+                if( fabs(num) < t || method == CV_TM_SQDIFF_NORMED)
                     num /= t;
                 else if( fabs(num) < t*1.125 )
                     num = num > 0 ? 1 : -1;
                 else
-                    num = method != CV_TM_SQDIFF_NORMED ? 0 : 1;
+                    num = 0;
             }
 
             rrow[j] = (float)num;
