@@ -2371,4 +2371,49 @@ TEST(Mat, ptrVecni_20044)
     EXPECT_EQ(int(6), *(ci));
 }
 
+TEST(Mat, reverse_iterator_19967)
+{
+    // empty iterator (#16855)
+    cv::Mat m_empty;
+    EXPECT_NO_THROW(m_empty.rbegin<uchar>());
+    EXPECT_NO_THROW(m_empty.rend<uchar>());
+    EXPECT_TRUE(m_empty.rbegin<uchar>() == m_empty.rend<uchar>());
+
+    // 1D test
+    std::vector<uchar> data{0, 1, 2, 3};
+    const std::vector<int> sizes_1d{4};
+    cv::Mat m_1d(sizes_1d, CV_8U, data.data());
+
+    auto mismatch_it_pair_1d = std::mismatch(data.rbegin(), data.rend(), m_1d.rbegin<uchar>());
+    EXPECT_EQ(mismatch_it_pair_1d.first, data.rend());  // expect no mismatch
+    EXPECT_EQ(mismatch_it_pair_1d.second, m_1d.rend<uchar>());
+
+    // 2D test
+    const std::vector<int> sizes_2d{2, 2};
+    cv::Mat m_2d(sizes_2d, CV_8U, data.data());
+
+    auto mismatch_it_pair_2d = std::mismatch(data.rbegin(), data.rend(), m_2d.rbegin<uchar>());
+    EXPECT_EQ(mismatch_it_pair_2d.first, data.rend());
+    EXPECT_EQ(mismatch_it_pair_2d.second, m_2d.rend<uchar>());
+
+    // 3D test
+    std::vector<uchar> data_3d{0, 1, 2, 3, 4, 5, 6, 7};
+    const std::vector<int> sizes_3d{2, 2, 2};
+    cv::Mat m_3d(sizes_3d, CV_8U, data_3d.data());
+
+    auto mismatch_it_pair_3d = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d.rbegin<uchar>());
+    EXPECT_EQ(mismatch_it_pair_3d.first, data_3d.rend());
+    EXPECT_EQ(mismatch_it_pair_3d.second, m_3d.rend<uchar>());
+
+    // const test
+    const cv::Mat m_1d_const(sizes_1d, CV_8U, data.data());
+
+    auto mismatch_it_pair_1d_const = std::mismatch(data.rbegin(), data.rend(), m_1d_const.rbegin<uchar>());
+    EXPECT_EQ(mismatch_it_pair_1d_const.first, data.rend());  // expect no mismatch
+    EXPECT_EQ(mismatch_it_pair_1d_const.second, m_1d_const.rend<uchar>());
+
+    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rend<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
+    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rbegin<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
+}
+
 }} // namespace
