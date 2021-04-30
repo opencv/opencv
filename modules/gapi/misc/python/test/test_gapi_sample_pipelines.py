@@ -25,7 +25,7 @@ try:
 
     @cv.gapi.op('custom.add', in_types=[cv.GMat, cv.GMat, int], out_types=[cv.GMat])
     class GAdd:
-        """ Operation which represents addition in G-API graph """
+        """Calculates sum of two matrices."""
 
         @staticmethod
         def outMeta(desc1, desc2, depth):
@@ -34,7 +34,7 @@ try:
 
     @cv.gapi.kernel(GAdd)
     class GAddImpl:
-        """ Python kernel for GAdd operation """
+        """Implementation for GAdd operation."""
 
         @staticmethod
         def run(img1, img2, dtype):
@@ -43,7 +43,7 @@ try:
 
     @cv.gapi.op('custom.split3', in_types=[cv.GMat], out_types=[cv.GMat, cv.GMat, cv.GMat])
     class GSplit3:
-        """ Documentation """
+        """Divides a 3-channel matrix into 3 single-channel matrices."""
 
         @staticmethod
         def outMeta(desc):
@@ -53,7 +53,7 @@ try:
 
     @cv.gapi.kernel(GSplit3)
     class GSplit3Impl:
-        """ Documentation """
+        """Implementation for GSplit3 operation."""
 
         @staticmethod
         def run(img):
@@ -63,7 +63,7 @@ try:
 
     @cv.gapi.op('custom.mean', in_types=[cv.GMat], out_types=[cv.GScalar])
     class GMean:
-        """ Documentation """
+        """Calculates the mean value M of matrix elements."""
 
         @staticmethod
         def outMeta(desc):
@@ -72,7 +72,7 @@ try:
 
     @cv.gapi.kernel(GMean)
     class GMeanImpl:
-        """ Documentation """
+        """Implementation for GMean operation."""
 
         @staticmethod
         def run(img):
@@ -82,7 +82,7 @@ try:
 
     @cv.gapi.op('custom.addC', in_types=[cv.GMat, cv.GScalar, int], out_types=[cv.GMat])
     class GAddC:
-        """ Documentation """
+        """Adds a given scalar value to each element of given matrix."""
 
         @staticmethod
         def outMeta(mat_desc, scalar_desc, dtype):
@@ -91,19 +91,19 @@ try:
 
     @cv.gapi.kernel(GAddC)
     class GAddCImpl:
-        """ Documentation """
+        """Implementation for GAddC operation."""
 
         @staticmethod
         def run(img, sc, dtype):
             # NB: dtype is just ignored in this implementation.
-            # More over from G-API kernel got scalar as tuples with 4 elements
+            # Moreover from G-API kernel got scalar as tuples with 4 elements
             # where the last element is equal to zero, just cut him for broadcasting.
             return img + np.array(sc, dtype=np.uint8)[:-1]
 
 
     @cv.gapi.op('custom.size', in_types=[cv.GMat], out_types=[cv.GOpaque.Size])
     class GSize:
-        """ Documentation """
+        """Gets dimensions from input matrix."""
 
         @staticmethod
         def outMeta(mat_desc):
@@ -112,7 +112,7 @@ try:
 
     @cv.gapi.kernel(GSize)
     class GSizeImpl:
-        """ Documentation """
+        """Implementation for GSize operation."""
 
         @staticmethod
         def run(img):
@@ -122,7 +122,7 @@ try:
 
     @cv.gapi.op('custom.sizeR', in_types=[cv.GOpaque.Rect], out_types=[cv.GOpaque.Size])
     class GSizeR:
-        """ Documentation """
+        """Gets dimensions from rectangle."""
 
         @staticmethod
         def outMeta(opaq_desc):
@@ -131,7 +131,7 @@ try:
 
     @cv.gapi.kernel(GSizeR)
     class GSizeRImpl:
-        """ Documentation """
+        """Implementation for GSizeR operation."""
 
         @staticmethod
         def run(rect):
@@ -141,7 +141,8 @@ try:
 
     @cv.gapi.op('custom.boundingRect', in_types=[cv.GArray.Point], out_types=[cv.GOpaque.Rect])
     class GBoundingRect:
-        """ Documentation """
+        """Calculates minimal up-right bounding rectangle for the specified
+           9 point set or non-zero pixels of gray-scale image."""
 
         @staticmethod
         def outMeta(arr_desc):
@@ -150,7 +151,7 @@ try:
 
     @cv.gapi.kernel(GBoundingRect)
     class GBoundingRectImpl:
-        """ Documentation """
+        """Implementation for GBoundingRect operation."""
 
         @staticmethod
         def run(array):
@@ -160,10 +161,11 @@ try:
 
 
     @cv.gapi.op('custom.goodFeaturesToTrack',
-        in_types=[cv.GMat, int, float, float, int, bool, float],
-        out_types=[cv.GArray.Point2f])
+                in_types=[cv.GMat, int, float, float, int, bool, float],
+                out_types=[cv.GArray.Point2f])
     class GGoodFeatures:
-        """ Documentation """
+        """Finds the most prominent corners in the image
+           or in the specified image region."""
 
         @staticmethod
         def outMeta(desc, max_corners, quality_lvl,
@@ -174,7 +176,7 @@ try:
 
     @cv.gapi.kernel(GGoodFeatures)
     class GGoodFeaturesImpl:
-        """ Documentation """
+        """Implementation for GGoodFeatures operation."""
 
         @staticmethod
         def run(img, max_corners, quality_lvl,
@@ -197,11 +199,11 @@ try:
     def create_op(in_types, out_types):
         @cv.gapi.op('custom.op', in_types=in_types, out_types=out_types)
         class Op:
-            """ Custom operation for testing """
+            """Custom operation for testing."""
 
             @staticmethod
             def outMeta(desc):
-                raise Exception('Not implemented')
+                raise NotImplementedError("outMeta isn't imlemented")
         return Op
 
 
@@ -535,7 +537,7 @@ try:
             class GAddImpl:
                 @staticmethod
                 def run(img0, img1):
-                    raise 'Error'
+                    raise Exception('Error')
                     return img0 + img1
 
             g_in0 = cv.GMat()
@@ -557,8 +559,7 @@ try:
             class GAdd:
                 @staticmethod
                 def outMeta(desc0, desc1):
-                    raise 'Error'
-                    return desc0
+                    raise NotImplementedError("outMeta ins't implemented")
 
             @cv.gapi.kernel(GAdd)
             class GAddImpl:

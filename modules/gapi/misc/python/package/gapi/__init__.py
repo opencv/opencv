@@ -169,17 +169,14 @@ def op(op_id, in_types, out_types):
 
     # NB: Second lvl decorator takes class to decorate
     def op_with_params(cls):
-        if len(in_types) == 0:
+        if not in_types:
             raise Exception('{} operation should have at least one input!'.format(cls.__name__))
 
-        if len(out_types) == 0:
+        if not out_types:
             raise Exception('{} operation should have at least one output!'.format(cls.__name__))
 
         for i, t in enumerate(out_types):
-            if (t != cv.GMat          and
-                t != cv.GScalar       and
-                t not in garray_types and
-                t not in gopaque_types):
+            if t not in [cv.GMat, cv.GScalar, *garray_types, *gopaque_types]:
                    raise Exception('{} unsupported output type: {} in possition: {}'
                            .format(cls.__name__, t.__name__, i))
 
@@ -230,12 +227,11 @@ def op(op_id, in_types, out_types):
 
             return tuple(out_protos) if len(out_protos) != 1 else out_protos[0]
 
-
         # NB: Extend operation class
         cls.id = op_id
         cls.on = staticmethod(on)
-
         return cls
+
     return op_with_params
 
 
