@@ -501,6 +501,18 @@ TEST(Video_ECC_Test_Compute, accuracy)
     EXPECT_NEAR(ecc, -0.5f, 1e-5f);
 }
 
+TEST(Video_ECC_Test_Compute, bug_14657)
+{
+    /*
+     * Simple test case - a 2 x 2 matrix with 10, 10, 10, 6. When the mean (36 / 4 = 9) is subtracted,
+     * it results in 1, 1, 1, 0 for the unsigned int case - compare to  1, 1, 1, -3 in the signed case.
+     * For this reason, when the same matrix was provided as the input and the template, we didn't get 1 as expected.
+     */
+    Mat img = (Mat_<uint8_t>(2, 2) << 10, 10, 10, 6);
+    EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
+}
+
+
 TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}
 TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(); }
 TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }
