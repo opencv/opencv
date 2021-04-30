@@ -20,6 +20,9 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/core/utils/filesystem.private.hpp"
+
 namespace cv { namespace dnn {
 
 #ifdef HAVE_DNN_NGRAPH
@@ -680,6 +683,23 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 ie.SetConfig({{
                     InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
                 }}, device_name);
+#endif
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_2)
+            if (device_name.find("GPU") == 0)
+            {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+                std::string cache_path = utils::fs::getCacheDirectory((std::string("dnn_ie_cache_") + device_name).c_str(), "OPENCV_DNN_IE_GPU_CACHE_DIR");
+#else
+                std::string cache_path = utils::getConfigurationParameterString("OPENCV_DNN_IE_GPU_CACHE_DIR", "");
+#endif
+                if (!cache_path.empty() && cache_path != "disabled")
+                {
+                    CV_LOG_INFO(NULL, "OpenCV/nGraph: using GPU kernels cache: " << cache_path);
+                    ie.SetConfig({{
+                        InferenceEngine::PluginConfigParams::KEY_CACHE_DIR, cache_path,
+                    }}, device_name);
+                }
+            }
 #endif
         }
         std::map<std::string, std::string> config;
