@@ -256,7 +256,7 @@ private:
     QPointer<QPushButton > label;
     CvTrackbarCallback callback;
     CvTrackbarCallback2 callback2;//look like it is use by python binding
-    int* dataSlider;
+    int* dataSlider;  // deprecated
     void* userdata;
 };
 
