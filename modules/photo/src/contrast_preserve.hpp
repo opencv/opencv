@@ -285,9 +285,9 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
                     add_vector(comb,idx,r,g,b);
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
-                            curIm.at<float>(i,j)=
+                            curIm.at<float>(i,j)=static_cast<float>(
                                 pow(rgb_channel[2].at<float>(i,j),r)*pow(rgb_channel[1].at<float>(i,j),g)*
-                                pow(rgb_channel[0].at<float>(i,j),b);
+                                pow(rgb_channel[0].at<float>(i,j),b));
                     vector <double> curGrad;
                     gradvector(curIm,curGrad);
                     add_to_vector_poly(polyGrad,curGrad,idx1);
