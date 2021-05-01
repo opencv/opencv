@@ -200,7 +200,7 @@ public:
             if( checked )
                 return;
             checked = true;
-            if( size < wp.p.minArea || size > wp.p.maxArea || var < 0.f || var > wp.p.maxVariation )
+            if( size < wp.p.minArea || size > wp.p.maxArea || var < wp.p.minDiversity || var > wp.p.maxVariation )
                 return;
             if( child_ )
             {
