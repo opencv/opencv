@@ -1101,6 +1101,7 @@ static bool ipp_sqrDistance(const Mat& src, const Mat& tpl, Mat& dst)
     buffer.allocate( bufSize );
 
     status = CV_INSTRUMENT_FUN_IPP(ippiSqrDistanceNorm, src.ptr(), (int)src.step, srcRoiSize, tpl.ptr(), (int)tpl.step, tplRoiSize, dst.ptr<Ipp32f>(), (int)dst.step, funCfg, buffer);
+    dst = cv::max(dst, 0); // handle edge case from rounding in variance computation which can result in negative values
     return status >= 0;
 }
 

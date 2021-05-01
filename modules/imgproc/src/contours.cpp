@@ -625,7 +625,8 @@ icvFetchContour( schar                  *ptr,
 
 /*
    trace contour until certain point is met.
-   returns 1 if met, 0 else.
+   returns 1 if met and this is the last contour
+   encountered by a raster scan reaching the point, 0 else.
 */
 static int
 icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
@@ -668,14 +669,39 @@ icvTraceContour( schar *ptr, int step, schar *stop_ptr, int is_hole )
                     break;
             }
 
-            if( i3 == stop_ptr || (i4 == i0 && i3 == i1) )
+            if (i3 == stop_ptr) {
+                if (!(*i3 & 0x80)) {
+                    /* it's the only contour */
+                    return 1;
+                }
+
+                /* check if this is the last contour */
+                /* encountered during a raster scan  */
+                schar *i5;
+                int t = s;
+                while (true)
+                {
+                    t = (t - 1) & 7;
+                    i5 = i3 + deltas[t];
+                    if (*i5 != 0)
+                        break;
+                    if (t == 0)
+                        return 1;
+                }
+            }
+
+            if( (i4 == i0 && i3 == i1) )
                 break;
 
             i3 = i4;
             s = (s + 4) & 7;
         }                       /* end of border following loop */
     }
-    return i3 == stop_ptr;
+    else {
+        return i3 == stop_ptr;
+    }
+
+    return 0;
 }
 
 
