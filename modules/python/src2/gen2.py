@@ -211,6 +211,7 @@ simple_argtype_mapping = {
     "double": ArgTypeInfo("double", FormatStrings.double, "0", True),
     "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
     "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
+    "Stream": ArgTypeInfo("Stream", FormatStrings.object, 'Stream::Null()', True),
 }
 
 
