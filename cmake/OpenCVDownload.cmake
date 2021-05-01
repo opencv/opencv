@@ -23,7 +23,7 @@ set(OPENCV_DOWNLOAD_LOG "${OpenCV_BINARY_DIR}/CMakeDownloadLog.txt")
 set(OPENCV_DOWNLOAD_WITH_CURL "${OpenCV_BINARY_DIR}/download_with_curl.sh")
 set(OPENCV_DOWNLOAD_WITH_WGET "${OpenCV_BINARY_DIR}/download_with_wget.sh")
 set(OPENCV_DOWNLOAD_TRIES_LIST 1 CACHE STRING "List of download tries") # a list
-set(OPENCV_DOWNLOAD_PARAMS INACTIVITY_TIMEOUT 60 TIMEOUT 600 CACHE STRING "Download parameters to be passed to file(DOWNLAOD ...)")
+set(OPENCV_DOWNLOAD_PARAMS INACTIVITY_TIMEOUT 60 TIMEOUT 600 CACHE STRING "Download parameters to be passed to file(DOWNLOAD ...)")
 mark_as_advanced(OPENCV_DOWNLOAD_TRIES_LIST OPENCV_DOWNLOAD_PARAMS)
 
 # Init download cache directory and log file and helper scripts
