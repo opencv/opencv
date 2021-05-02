@@ -99,6 +99,9 @@ public:
     void setPass2Only(bool f) CV_OVERRIDE { params.pass2Only = f; }
     bool getPass2Only() const CV_OVERRIDE { return params.pass2Only; }
 
+    void setMinDiversity(double minDiversity) CV_OVERRIDE { params.minDiversity = minDiversity; }
+    double getMinDiversity() const CV_OVERRIDE { return params.minDiversity; }
+
     enum { DIR_SHIFT = 29, NEXT_MASK = ((1<<DIR_SHIFT)-1)  };
 
     struct Pixel
