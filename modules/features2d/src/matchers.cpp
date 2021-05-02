@@ -727,6 +727,8 @@ Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
     return matcher;
 }
 
+void BFMatcher::setCrossCheck(bool crossCheck) { this->crossCheck = crossCheck; }
+
 #ifdef HAVE_OPENCL
 static bool ocl_match(InputArray query, InputArray _train, std::vector< std::vector<DMatch> > &matches, int dstType)
 {
