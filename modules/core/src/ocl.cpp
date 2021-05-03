@@ -2390,10 +2390,7 @@ protected:
             devices.clear();
         }
 
-        {
-            cv::AutoLock lock(userContextMutex);
-            userContextStorage.clear();
-        }
+        userContextStorage.clear();
 
         {
             cv::AutoLock lock(cv::getInitializationMutex());
@@ -3033,19 +3030,20 @@ Context Context::create(const std::string& configuration)
     return ctx;
 }
 
-void* Context::getOpenCLContextProperty(long propertyId) const
+void* Context::getOpenCLContextProperty(int propertyId) const
 {
     if (p == NULL)
         return nullptr;
     ::size_t size = 0;
-    if (CL_SUCCESS == clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, 0, NULL, &size)) {
-        std::vector<cl_context_properties> prop(size / sizeof(cl_context_properties));
-        if (CL_SUCCESS == clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, size, prop.data(), NULL)) {
-            for (size_t i = 0; i < prop.size(); i += 2) {
-                if (prop[i] == propertyId) {
-                    return (void *) prop[i + 1];
-                }
-            }
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, 0, NULL, &size));
+    std::vector<cl_context_properties> prop(size / sizeof(cl_context_properties), (cl_context_properties)0);
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, size, prop.data(), NULL));
+    for (size_t i = 0; i < prop.size(); i += 2)
+    {
+        if (prop[i] == (cl_context_properties)propertyId)
+        {
+            CV_LOG_DEBUG(NULL, "OpenCL: found context property=" << propertyId << ") => " << (void*)prop[i + 1]);
+            return (void*)prop[i + 1];
         }
     }
     return nullptr;
@@ -3118,16 +3116,14 @@ Context::UserContext::~UserContext()
 
 void Context::setUserContext(std::type_index typeId, const std::shared_ptr<Context::UserContext>& userContext)
 {
-    if (p)
-        p->setUserContext(typeId, userContext);
+    CV_Assert(p);
+    p->setUserContext(typeId, userContext);
 }
 
 std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId)
 {
-    if (p)
-        return p->getUserContext(typeId);
-    else
-        return nullptr;
+    CV_Assert(p);
+    return p->getUserContext(typeId);
 }
 
 static void get_platform_name(cl_platform_id id, String& name)

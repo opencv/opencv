@@ -172,7 +172,7 @@ Context& Context::getDefault(bool initialize)
 }
 void* Context::ptr() const { return NULL; }
 
-void* Context::getOpenCLContextProperty(long /*propertyId*/) const { OCL_NOT_AVAILABLE(); }
+void* Context::getOpenCLContextProperty(int /*propertyId*/) const { OCL_NOT_AVAILABLE(); }
 
 bool Context::useSVM() const { return false; }
 void Context::setUseSVM(bool enabled) { }

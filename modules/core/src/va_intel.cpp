@@ -7,6 +7,8 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 #ifdef HAVE_VA
 #  include <va/va.h>
 #else  // HAVE_VA
@@ -535,7 +537,16 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
-    if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
+    CV_LOG_IF_DEBUG(NULL, !interop,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
+        "OpenCL context should be created through initializeContextFromVA()");
+    void* context_display = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
+    CV_LOG_IF_INFO(NULL, interop && !context_display,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VA display, context re-creation is required");
+    bool isValidContextDisplay = (display == context_display);
+    CV_LOG_IF_INFO(NULL, interop && context_display && !isValidContextDisplay,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - VA display mismatch: " << context_display << "(context) vs " << (void*)display << "(surface)");
+    if (isValidContextDisplay && interop)
     {
         UMat u = src.getUMat();
 

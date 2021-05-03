@@ -284,7 +284,7 @@ public:
      * @param propertyId Property id (CL_CONTEXT_* as defined in cl_context_properties type)
      * @returns Property value if property was specified on clCreateContext, or NULL if context created without the property
      */
-    void* getOpenCLContextProperty(long propertyId) const;
+    void* getOpenCLContextProperty(int propertyId) const;
 
     bool useSVM() const;
     void setUseSVM(bool enabled);
