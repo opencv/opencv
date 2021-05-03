@@ -160,12 +160,22 @@ if(TARGET ocv.3rdparty.ffmpeg)
     if(TARGET ocv.3rdparty.ffmpeg.plugin_deps)
       ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.ffmpeg.plugin_deps)
     endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.mediasdk)
+    endif()
   else()
     list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
     if(TARGET ocv.3rdparty.ffmpeg.builtin_deps)
       list(APPEND tgts ocv.3rdparty.ffmpeg.builtin_deps)
+    endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      list(APPEND tgts ocv.3rdparty.mediasdk)
     endif()
   endif()
 endif()

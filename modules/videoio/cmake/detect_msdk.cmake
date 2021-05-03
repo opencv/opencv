@@ -1,7 +1,7 @@
 set(MFX_DEFS "")
 
 if(NOT HAVE_MFX)
-  find_package(VPL)
+  find_package(VPL QUIET)
   if(VPL_FOUND)
     set(MFX_INCLUDE_DIRS "")
     set(MFX_LIBRARIES "${VPL_IMPORTED_TARGETS}")
@@ -43,9 +43,6 @@ endif()
 
 if(NOT HAVE_MFX AND PKG_CONFIG_FOUND)
   ocv_check_modules(MFX mfx)
-  if(MFX_FOUND)
-    set(HAVE_MFX TRUE)
-  endif()
 endif()
 
 if(HAVE_MFX AND UNIX)

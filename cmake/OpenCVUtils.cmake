@@ -866,7 +866,9 @@ macro(ocv_check_modules define)
       foreach(flag ${${define}_LDFLAGS})
         if(flag MATCHES "^-L(.*)")
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
-        elseif(IS_ABSOLUTE "${flag}")
+        elseif(IS_ABSOLUTE "${flag}"
+            OR flag STREQUAL "-lstdc++"
+        )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
           set(_lib "${CMAKE_MATCH_1}")
