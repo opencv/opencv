@@ -276,23 +276,73 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 class Settings
 {
 public:
-    Ptr<kinfu::Params> _params;
-    Ptr<kinfu::Volume> volume;
+    float depthFactor;
+    Matx33f intr;
+    Size frameSize;
+    Vec3f lightPose;
+
+    Ptr<Volume> volume;
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 
     Settings(bool useHashTSDF)
     {
+        frameSize = Size(640, 480);
+
+        float fx, fy, cx, cy;
+        fx = fy = 525.f;
+        cx = frameSize.width / 2 - 0.5f;
+        cy = frameSize.height / 2 - 0.5f;
+        intr = Matx33f(fx,  0, cx,
+                        0, fy, cy,
+                        0,  0,  1);
+
+        // 5000 for the 16-bit PNG files
+        // 1 for the 32-bit float images in the ROS bag files
+        depthFactor = 5000;
+
+        Vec3i volumeDims = Vec3i::all(512); //number of voxels
+
+        float volSize = 3.f;
+        float voxelSize = volSize / 512.f; //meters
+
+        // default pose of volume cube
+        Affine3f volumePose = Affine3f().translate(Vec3f(-volSize / 2.f, -volSize / 2.f, 0.5f));
+        float tsdf_trunc_dist = 7 * voxelSize; // about 0.04f in meters
+        int tsdf_max_weight = 64;   //frames
+
+        float raycast_step_factor = 0.25f;  //in voxel sizes
+        // gradient delta factor is fixed at 1.0f and is not used
+        //p.gradient_delta_factor = 0.5f; //in voxel sizes
+
+        //p.lightPose = p.volume_pose.translation()/4; //meters
+        lightPose = Vec3f::all(0.f); //meters
+
+        // depth truncation is not used by default but can be useful in some scenes
+        float truncateThreshold = 0.f; //meters
+
+        VolumeType volumeType = VolumeType::TSDF;
+
         if (useHashTSDF)
-            _params = kinfu::Params::hashTSDFParams(true);
+        {
+            volumeType = VolumeType::HASHTSDF;
+            truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
+        }
         else
-            _params = kinfu::Params::coarseParams();
+        {
+            volSize = 3.f;
+            volumeDims = Vec3i::all(128); //number of voxels
+            voxelSize = volSize / 128.f;
+            tsdf_trunc_dist = 2 * voxelSize; // 0.04f in meters
 
-        volume = kinfu::makeVolume(_params->volumeType, _params->voxelSize, _params->volumePose.matrix,
-            _params->raycast_step_factor, _params->tsdf_trunc_dist, _params->tsdf_max_weight,
-            _params->truncateThreshold, _params->volumeDims);
+            raycast_step_factor = 0.75f;  //in voxel sizes
+        }
 
-        scene = Scene::create(_params->frameSize, _params->intr, _params->depthFactor, true);
+        volume = makeVolume(volumeType, voxelSize, volumePose.matrix,
+                            raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
+                            truncateThreshold, volumeDims);
+
+        scene = Scene::create(frameSize, intr, depthFactor, true);
         poses = scene->getPoses();
     }
 };
@@ -321,7 +371,7 @@ PERF_TEST(Perf_TSDF, integrate)
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
         startTimer();
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
+        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
         stopTimer();
         depth.release();
     }
@@ -337,13 +387,13 @@ PERF_TEST(Perf_TSDF, raycast)
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
 
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
+        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
         startTimer();
-        settings.volume->raycast(pose, settings._params->intr, settings._params->frameSize, _points, _normals);
+        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals);
         stopTimer();
 
         if (display)
-            displayImage(depth, _points, _normals, settings._params->depthFactor, settings._params->lightPose);
+            displayImage(depth, _points, _normals, settings.depthFactor, settings.lightPose);
     }
     SANITY_CHECK_NOTHING();
 }
@@ -357,7 +407,7 @@ PERF_TEST(Perf_HashTSDF, integrate)
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
         startTimer();
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
+        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
         stopTimer();
         depth.release();
     }
@@ -373,13 +423,13 @@ PERF_TEST(Perf_HashTSDF, raycast)
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
 
-        settings.volume->integrate(depth, settings._params->depthFactor, pose, settings._params->intr);
+        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
         startTimer();
-        settings.volume->raycast(pose, settings._params->intr, settings._params->frameSize, _points, _normals);
+        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals);
         stopTimer();
 
         if (display)
-            displayImage(depth, _points, _normals, settings._params->depthFactor, settings._params->lightPose);
+            displayImage(depth, _points, _normals, settings.depthFactor, settings.lightPose);
     }
     SANITY_CHECK_NOTHING();
 }

@@ -279,23 +279,73 @@ static const bool parallelCheck = false;
 class Settings
 {
 public:
-    Ptr<kinfu::Params> params;
-    Ptr<kinfu::Volume> volume;
+    float depthFactor;
+    Matx33f intr;
+    Size frameSize;
+    Vec3f lightPose;
+
+    Ptr<Volume> volume;
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 
     Settings(bool useHashTSDF, bool onlySemisphere)
     {
+        frameSize = Size(640, 480);
+
+        float fx, fy, cx, cy;
+        fx = fy = 525.f;
+        cx = frameSize.width / 2 - 0.5f;
+        cy = frameSize.height / 2 - 0.5f;
+        intr = Matx33f(fx,  0, cx,
+                        0, fy, cy,
+                        0,  0,  1);
+
+        // 5000 for the 16-bit PNG files
+        // 1 for the 32-bit float images in the ROS bag files
+        depthFactor = 5000;
+
+        Vec3i volumeDims = Vec3i::all(512); //number of voxels
+
+        float volSize = 3.f;
+        float voxelSize = volSize / 512.f; //meters
+
+        // default pose of volume cube
+        Affine3f volumePose = Affine3f().translate(Vec3f(-volSize / 2.f, -volSize / 2.f, 0.5f));
+        float tsdf_trunc_dist = 7 * voxelSize; // about 0.04f in meters
+        int tsdf_max_weight = 64;   //frames
+
+        float raycast_step_factor = 0.25f;  //in voxel sizes
+        // gradient delta factor is fixed at 1.0f and is not used
+        //p.gradient_delta_factor = 0.5f; //in voxel sizes
+
+        //p.lightPose = p.volume_pose.translation()/4; //meters
+        lightPose = Vec3f::all(0.f); //meters
+
+        // depth truncation is not used by default but can be useful in some scenes
+        float truncateThreshold = 0.f; //meters
+
+        VolumeType volumeType = VolumeType::TSDF;
+
         if (useHashTSDF)
-            params = kinfu::Params::hashTSDFParams(true);
+        {
+            volumeType = VolumeType::HASHTSDF;
+            truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
+        }
         else
-            params = kinfu::Params::coarseParams();
+        {
+            volSize = 3.f;
+            volumeDims = Vec3i::all(128); //number of voxels
+            voxelSize = volSize / 128.f;
+            tsdf_trunc_dist = 2 * voxelSize; // 0.04f in meters
 
-        volume = kinfu::makeVolume(params->volumeType, params->voxelSize, params->volumePose.matrix,
-            params->raycast_step_factor, params->tsdf_trunc_dist, params->tsdf_max_weight,
-            params->truncateThreshold, params->volumeDims);
+            raycast_step_factor = 0.75f;  //in voxel sizes
+        }
 
-        scene = Scene::create(params->frameSize, params->intr, params->depthFactor, onlySemisphere);
+        volume = makeVolume(volumeType, voxelSize, volumePose.matrix,
+            raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
+            truncateThreshold, volumeDims);
+
+        scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
         poses = scene->getPoses();
     }
 };
@@ -368,11 +418,11 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
-    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
+    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
     }
     if (isFetchPointsNormals)
     {
@@ -393,11 +443,11 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         normalsCheck(normals);
 
     if (isRaycast && display)
-        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
+        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
         normals = _newNormals.getMat(af);
         points = _newPoints.getMat(af);
         normalsCheck(normals);
@@ -408,7 +458,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
             normalsCheck(normals);
 
         if (display)
-            displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+            displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
     }
 
     points.release(); normals.release();
@@ -424,24 +474,24 @@ void valid_points_test(bool isHashTSDF)
     Mat  points, normals;
     int anfas, profile;
 
-    settings.volume->integrate(depth, settings.params->depthFactor, settings.poses[0].matrix, settings.params->intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.params->intr, settings.params->frameSize, _points, _normals);
+    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
     normals = _normals.getMat(af);
     points = _points.getMat(af);
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
-    settings.volume->raycast(settings.poses[17].matrix, settings.params->intr, settings.params->frameSize, _newPoints, _newNormals);
+    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.params->depthFactor, settings.params->lightPose);
+        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
