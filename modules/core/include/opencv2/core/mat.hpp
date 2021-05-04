@@ -2572,27 +2572,38 @@ public:
          - number of channels
      */
     int flags;
+
     //! the matrix dimensionality, >= 2
     int dims;
-    //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
-    int rows, cols;
+
+    //! number of rows in the matrix; -1 when the matrix has more than 2 dimensions
+    int rows;
+
+    //! number of columns in the matrix; -1 when the matrix has more than 2 dimensions
+    int cols;
 
     //! custom allocator
     MatAllocator* allocator;
-    UMatUsageFlags usageFlags; // usage flags for allocator
+
+    //! usage flags for allocator; recommend do not set directly, instead set during construct/create/getUMat
+    UMatUsageFlags usageFlags;
+
     //! and the standard allocator
     static MatAllocator* getStdAllocator();
 
     //! internal use method: updates the continuity flag
     void updateContinuityFlag();
 
-    // black-box container of UMat data
+    //! black-box container of UMat data
     UMatData* u;
 
-    // offset of the submatrix (or 0)
+    //! offset of the submatrix (or 0)
     size_t offset;
 
+    //! dimensional size of the matrix; accessible in various formats
     MatSize size;
+
+    //! number of bytes each matrix element/row/plane/dimension occupies
     MatStep step;
 
 protected:
