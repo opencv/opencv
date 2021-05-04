@@ -99,14 +99,14 @@ public:
 
     HashTSDFVolumeCPU(const VolumeParams& _volumeParams, bool zFirstMemOrder = true);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const kinfu::Intr&, const Intr&, const int) override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const kinfu::Intr& intrinsics,
-        const int frameId = 0) override;
-    void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize, OutputArray points,
-        OutputArray normals) const override;
-    void raycast(const Matx44f&, const kinfu::Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); }
+    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics,
+                   const int frameId = 0) override;
+    void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize, OutputArray points,
+                 OutputArray normals) const override;
+    void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); }
     void fetchNormals(InputArray points, OutputArray _normals) const override;
     void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
 
@@ -641,7 +641,7 @@ Point3f HashTSDFVolumeCPU::getNormalVoxel(const Point3f &point) const
     return nv < 0.0001f ? nan3 : normal / nv;
 }
 
-void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize,
+void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
                                 OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();
@@ -897,14 +897,14 @@ public:
 
     void markActive(const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const kinfu::Intr&, const Intr&, const int) override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const kinfu::Intr& intrinsics,
-        const int frameId = 0) override;
-    void raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize, OutputArray points,
-        OutputArray normals) const override;
-    void raycast(const Matx44f&, const kinfu::Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics,
+                   const int frameId = 0) override;
+    void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize, OutputArray points,
+                 OutputArray normals) const override;
+    void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     void fetchNormals(InputArray points, OutputArray _normals) const override;
     void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -1566,7 +1566,7 @@ Point3f HashTSDFVolumeGPU::getNormalVoxel(const Point3f& point) const
 }
 
 
-void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const kinfu::Intr& intrinsics, const Size& frameSize,
+void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
                                 OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();

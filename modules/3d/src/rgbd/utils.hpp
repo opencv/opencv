@@ -43,8 +43,6 @@ rescaleDepthTemplated<double>(const Mat& in, Mat& out)
 }
 
 
-namespace kinfu {
-
 // One place to turn intrinsics on and off
 #define USE_INTRINSICS CV_SIMD128
 
@@ -77,8 +75,6 @@ inline size_t roundDownPow2(size_t x)
     }
     return (size_t)(1ULL << (shift-1));
 }
-
-} // namespace kinfu
 
 } // namespace cv
 

@@ -10,8 +10,6 @@
 
 namespace cv {
 
-namespace kinfu {
-
 cv::Mat preCalculationPixNorm(Depth depth, const Intr& intrinsics)
 {
     int height = depth.rows;
@@ -159,7 +157,7 @@ void integrateVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, float depthFactor, const cv::Matx44f& cameraPose,
-    const cv::kinfu::Intr& intrinsics, InputArray _pixNorms, InputArray _volume)
+    const cv::Intr& intrinsics, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
 
@@ -422,7 +420,7 @@ void integrateRGBVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
     InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
-    const cv::kinfu::Intr& depth_intrinsics, const cv::kinfu::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume)
+    const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
 
@@ -719,5 +717,4 @@ void integrateRGBVolumeUnit(
     parallel_for_(integrateRange, IntegrateInvoker);
 }
 
-} // namespace kinfu
 } // namespace cv

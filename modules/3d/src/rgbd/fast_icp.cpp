@@ -26,7 +26,7 @@ ICP::ICP(const Intr _intrinsics, const std::vector<int>& _iterations, float _ang
 class ICPImpl : public ICP
 {
 public:
-    ICPImpl(const cv::kinfu::Intr _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
+    ICPImpl(const cv::Intr _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
 
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,
@@ -646,7 +646,7 @@ void ICPImpl::getAb<UMat>(const UMat& oldPts, const UMat& oldNrm, const UMat& ne
 ///
 
 
-cv::Ptr<ICP> makeICP(const cv::kinfu::Intr _intrinsics, const std::vector<int> &_iterations,
+cv::Ptr<ICP> makeICP(const cv::Intr _intrinsics, const std::vector<int> &_iterations,
                      float _angleThreshold, float _distanceThreshold)
 {
     return makePtr<ICPImpl>(_intrinsics, _iterations, _angleThreshold, _distanceThreshold);

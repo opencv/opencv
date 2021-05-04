@@ -9,8 +9,6 @@
 
 namespace cv
 {
-namespace kinfu
-{
 
 struct Intr
 {
@@ -75,7 +73,6 @@ struct Intr
     float fx, fy, cx, cy;
 };
 
-} // namespace rgbd
 } // namespace cv
 
 #endif

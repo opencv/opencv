@@ -15,8 +15,6 @@
 
 namespace cv
 {
-namespace kinfu
-{
 
 typedef int8_t TsdfType;
 typedef uchar WeightType;
@@ -56,6 +54,5 @@ Ptr<ColoredTSDFVolume> makeColoredTSDFVolume(float _voxelSize, Matx44f _pose, fl
                                float _truncDist, int _maxWeight, Point3i _resolution);
 Ptr<ColoredTSDFVolume> makeColoredTSDFVolume(const VolumeParams& _params);
 
-}  // namespace kinfu
 }  // namespace cv
 #endif

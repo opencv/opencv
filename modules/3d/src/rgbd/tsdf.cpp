@@ -11,8 +11,6 @@
 
 namespace cv {
 
-namespace kinfu {
-
 TSDFVolume::TSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
                        int _maxWeight, Point3i _resolution, bool zFirstMemOrder)
     : Volume(_voxelSize, _pose, _raycastStepFactor),
@@ -122,8 +120,8 @@ void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44
     Depth depth = _depth.getMat();
 
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        intrinsics.fx, intrinsics.fy,
-        intrinsics.cx, intrinsics.cy);
+                    intrinsics.fx, intrinsics.fy,
+                    intrinsics.cx, intrinsics.cy);
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
@@ -1148,5 +1146,4 @@ Ptr<TSDFVolume> makeTSDFVolume(const VolumeParams& _params)
 
 }
 
-} // namespace kinfu
 } // namespace cv

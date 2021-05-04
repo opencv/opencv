@@ -57,7 +57,6 @@ public:
          };
 };
 
-namespace kinfu {
 
 typedef cv::Vec4f ptype;
 inline cv::Vec3f fromPtype(const ptype& x)
@@ -98,6 +97,5 @@ void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
                                OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
                                int levels);
 
-} // namespace kinfu
 } // namespace cv
 #endif

@@ -11,7 +11,7 @@
 namespace cv {
 namespace kinfu {
 
-static void computePointsNormals(const cv::kinfu::Intr, float depthFactor, const Depth, Points, Normals );
+static void computePointsNormals(const cv::Intr, float depthFactor, const Depth, Points, Normals );
 void computePointsNormalsColors(const Intr, const Intr, float, const Depth, const Colors, Points, Normals, Colors);
 static Depth pyrDownBilateral(const Depth depth, float sigma);
 static void pyrDownPointsNormals(const Points p, const Normals n, Points& pdown, Normals& ndown);

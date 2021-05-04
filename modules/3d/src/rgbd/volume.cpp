@@ -13,8 +13,7 @@
 
 namespace cv
 {
-namespace kinfu
-{
+
 Ptr<VolumeParams> VolumeParams::defaultParams(VolumeType _volumeType)
 {
     VolumeParams params;
@@ -111,5 +110,4 @@ Ptr<Volume> makeVolume(VolumeType _volumeType, float _voxelSize, Matx44f _pose,
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-}  // namespace kinfu
 }  // namespace cv
