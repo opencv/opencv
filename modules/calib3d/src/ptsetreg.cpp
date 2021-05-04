@@ -264,12 +264,11 @@ class LMeDSPointSetRegistrator : public RANSACPointSetRegistrator
 {
 public:
     LMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb=Ptr<PointSetRegistrator::Callback>(),
-                              int _modelPoints=0, double _confidence=0.99, int _maxIters=1000)
-    : RANSACPointSetRegistrator(_cb, _modelPoints, 0, _confidence, _maxIters) {}
+                              int _modelPoints=0, double _confidence=0.99, int _maxIters=1000, double _outlierRatio = 0.45)
+    : RANSACPointSetRegistrator(_cb, _modelPoints, 0, _confidence, _maxIters) { outlierRatio = _outlierRatio; }
 
     bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
-        const double outlierRatio = 0.45;
         bool result = false;
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         Mat ms1, ms2, err, errf, model, bestModel, mask, mask0;
@@ -369,6 +368,8 @@ public:
 
         return result;
     }
+private:
+    double outlierRatio;
 
 };
 
@@ -382,10 +383,10 @@ Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegis
 
 
 Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
-                             int _modelPoints, double _confidence, int _maxIters)
+                             int _modelPoints, double _confidence, int _maxIters, double outlierRatio)
 {
     return Ptr<PointSetRegistrator>(
-        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters));
+        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters, outlierRatio));
 }
 
 
