@@ -13,8 +13,7 @@
 
 namespace cv
 {
-namespace kinfu
-{
+
 class HashTSDFVolume : public Volume
 {
    public:
@@ -46,6 +45,5 @@ Ptr<HashTSDFVolume> makeHashTSDFVolume(const VolumeParams& _volumeParams);
 Ptr<HashTSDFVolume> makeHashTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
     int _maxWeight, float truncateThreshold, int volumeUnitResolution = 16);
 
-}  // namespace kinfu
 }  // namespace cv
 #endif

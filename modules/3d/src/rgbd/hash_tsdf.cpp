@@ -22,8 +22,6 @@
 
 namespace cv
 {
-namespace kinfu
-{
 
 HashTSDFVolume::HashTSDFVolume(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor,
     float _truncDist, int _maxWeight, float _truncateThreshold,
@@ -1794,5 +1792,4 @@ Ptr<HashTSDFVolume> makeHashTSDFVolume(float _voxelSize, Matx44f _pose, float _r
         volumeUnitResolution);
 }
 
-}  // namespace kinfu
 }  // namespace cv

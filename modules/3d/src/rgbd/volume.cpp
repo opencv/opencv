@@ -82,11 +82,11 @@ Ptr<VolumeParams> VolumeParams::coarseParams(VolumeType _volumeType)
 Ptr<Volume> makeVolume(const VolumeParams& _volumeParams)
 {
     if(_volumeParams.type == VolumeType::TSDF)
-        return kinfu::makeTSDFVolume(_volumeParams);
+        return makeTSDFVolume(_volumeParams);
     else if(_volumeParams.type == VolumeType::HASHTSDF)
-        return kinfu::makeHashTSDFVolume(_volumeParams);
+        return makeHashTSDFVolume(_volumeParams);
     else if(_volumeParams.type == VolumeType::COLOREDTSDF)
-        return kinfu::makeColoredTSDFVolume(_volumeParams);
+        return makeColoredTSDFVolume(_volumeParams);
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 

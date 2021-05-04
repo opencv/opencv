@@ -13,8 +13,6 @@
 
 namespace cv {
 
-namespace kinfu {
-
 ColoredTSDFVolume::ColoredTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
                        int _maxWeight, Point3i _resolution, bool zFirstMemOrder)
     : Volume(_voxelSize, _pose, _raycastStepFactor),
@@ -1016,5 +1014,4 @@ Ptr<ColoredTSDFVolume> makeColoredTSDFVolume(const VolumeParams& _params)
                                   _params.tsdfTruncDist, _params.maxWeight, _params.resolution);
 }
 
-} // namespace kinfu
 } // namespace cv
