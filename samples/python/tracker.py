@@ -4,7 +4,7 @@
 Tracker demo
 
 USAGE:
-    tracker.py [<video_source>]
+    tracker.py [<video_source> <tracker_algorithm>]
 '''
 
 # Python 2/3 compatibility
@@ -19,13 +19,21 @@ from video import create_capture, presets
 
 class App(object):
 
-    def initializeTracker(self, image):
+    def initializeTracker(self, image, trackerAlgorithm):
         while True:
+            if trackerAlgorithm == 'mil':
+                tracker = cv.TrackerMIL_create()
+            elif trackerAlgorithm == 'goturn':
+                tracker = cv.TrackerGOTURN_create()
+            elif trackerAlgorithm == 'dasiamrpn':
+                tracker = cv.TrackerDaSiamRPN_create()
+            else:
+                sys.exit("Tracker is not recognized. Please use one of three available: mil, goturn, dasiamrpn.")
+
             print('==> Select object ROI for tracker ...')
             bbox = cv.selectROI('tracking', image)
             print('ROI: {}'.format(bbox))
 
-            tracker = cv.TrackerMIL_create()
             try:
                 tracker.init(image, bbox)
             except Exception as e:
@@ -38,6 +46,7 @@ class App(object):
 
     def run(self):
         videoPath = sys.argv[1] if len(sys.argv) >= 2 else 'vtest.avi'
+        trackerAlgorithm = sys.argv[2] if len(sys.argv) > 2 else 'mil'
         camera = create_capture(videoPath, presets['cube'])
         if not camera.isOpened():
             sys.exit("Can't open video stream: {}".format(videoPath))
@@ -48,7 +57,7 @@ class App(object):
         assert image is not None
 
         cv.namedWindow('tracking')
-        tracker = self.initializeTracker(image)
+        tracker = self.initializeTracker(image, trackerAlgorithm)
 
         print("==> Tracking is started. Press 'SPACE' to re-initialize tracker or 'ESC' for exit...")
 
