@@ -822,7 +822,7 @@ int estimateAffine3D(InputArray _from, InputArray _to,
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                      const int method, const double ransacReprojThreshold,
                      const size_t maxIters, const double confidence,
-                     const size_t refineIters)
+                     const size_t refineIters, const double outlierRatio)
 {
     Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
@@ -862,7 +862,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     if( method == RANSAC )
         result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters), outlierRatio)->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
@@ -896,7 +896,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
 Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,
                             const int method, const double ransacReprojThreshold,
                             const size_t maxIters, const double confidence,
-                            const size_t refineIters)
+                            const size_t refineIters, const double outlierRatio)
 {
     Mat from = _from.getMat(), to = _to.getMat();
     const int count = from.checkVector(2);
@@ -936,7 +936,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     if( method == RANSAC )
         result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters), outlierRatio)->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
