@@ -65,7 +65,9 @@ struct CV_EXPORTS_W VolumeParams
         Applicable only for TSDF Volume.
         HashTSDF volume only supports equal resolution in all three dimensions
     */
-    CV_PROP_RW Vec3i resolution;
+    CV_PROP_RW int resolutionX;
+    CV_PROP_RW int resolutionY;
+    CV_PROP_RW int resolutionZ;
 
     /** @brief Resolution of volumeUnit in voxel space
         Number of voxels in each dimension for volumeUnit
@@ -74,7 +76,19 @@ struct CV_EXPORTS_W VolumeParams
     CV_PROP_RW int unitResolution = {0};
 
     /** @brief Initial pose of the volume in meters */
-    Affine3f pose;
+    //Matx44f pose;
+    CV_PROP_RW double pose00;
+    CV_PROP_RW double pose01;
+    CV_PROP_RW double pose02;
+    CV_PROP_RW double pose03;
+    CV_PROP_RW double pose10;
+    CV_PROP_RW double pose11;
+    CV_PROP_RW double pose12;
+    CV_PROP_RW double pose13;
+    CV_PROP_RW double pose20;
+    CV_PROP_RW double pose21;
+    CV_PROP_RW double pose22;
+    CV_PROP_RW double pose23;
 
     /** @brief Length of voxels in meters */
     CV_PROP_RW float voxelSize;
@@ -112,10 +126,10 @@ struct CV_EXPORTS_W VolumeParams
 };
 
 
-Ptr<Volume> makeVolume(const VolumeParams& _volumeParams);
+CV_EXPORTS_W Ptr<Volume> makeVolume(const VolumeParams& _volumeParams);
 CV_EXPORTS_W Ptr<Volume> makeVolume(VolumeType _volumeType, float _voxelSize, Matx44f _pose,
                                     float _raycastStepFactor, float _truncDist, int _maxWeight,
-                                    float _truncateThreshold, Vec3i _resolution);
+                                    float _truncateThreshold, Point3i _resolution);
 
 }  // namespace cv
 #endif

@@ -9,7 +9,6 @@
 #include "opencl_kernels_3d.hpp"
 
 namespace cv {
-namespace kinfu {
 
 static void computePointsNormals(const cv::Intr, float depthFactor, const Depth, Points, Normals );
 void computePointsNormalsColors(const Intr, const Intr, float, const Depth, const Colors, Points, Normals, Colors);
@@ -944,5 +943,4 @@ void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
     }
 }
 
-} // namespace kinfu
 } // namespace cv

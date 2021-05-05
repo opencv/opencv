@@ -22,10 +22,17 @@ Ptr<VolumeParams> VolumeParams::defaultParams(VolumeType _volumeType)
     params.raycastStepFactor = 0.25f;
     params.unitResolution    = 0;  // unitResolution not used for TSDF
     float volumeSize         = 3.0f;
-    params.pose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
+    Matx44f pose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f)).matrix;
+    params.pose00 = pose(0, 0); params.pose01 = pose(0, 1); params.pose02 = pose(0, 2);
+    params.pose10 = pose(1, 0); params.pose11 = pose(1, 1); params.pose12 = pose(1, 2);
+    params.pose20 = pose(2, 0); params.pose21 = pose(2, 1); params.pose22 = pose(2, 2);
+    params.pose03 = pose(0, 3); params.pose13 = pose(1, 3); params.pose23 = pose(2, 3);
+
     if(params.type == VolumeType::TSDF)
     {
-        params.resolution          = Vec3i::all(512);
+        params.resolutionX = 512;
+        params.resolutionY = 512;
+        params.resolutionZ = 512;
         params.voxelSize           = volumeSize / 512.f;
         params.depthTruncThreshold = 0.f;  // depthTruncThreshold not required for TSDF
         params.tsdfTruncDist = 7 * params.voxelSize;  //! About 0.04f in meters
@@ -41,7 +48,9 @@ Ptr<VolumeParams> VolumeParams::defaultParams(VolumeType _volumeType)
     }
     else if (params.type == VolumeType::COLOREDTSDF)
     {
-        params.resolution = Vec3i::all(512);
+        params.resolutionX = 512;
+        params.resolutionY = 512;
+        params.resolutionZ = 512;
         params.voxelSize = volumeSize / 512.f;
         params.depthTruncThreshold = 0.f;  // depthTruncThreshold not required for TSDF
         params.tsdfTruncDist = 7 * params.voxelSize;  //! About 0.04f in meters
@@ -58,7 +67,9 @@ Ptr<VolumeParams> VolumeParams::coarseParams(VolumeType _volumeType)
     float volumeSize          = 3.0f;
     if(params->type == VolumeType::TSDF)
     {
-        params->resolution = Vec3i::all(128);
+        params->resolutionX = 128;
+        params->resolutionY = 128;
+        params->resolutionZ = 128;
         params->voxelSize  = volumeSize / 128.f;
         params->tsdfTruncDist = 2 * params->voxelSize;  //! About 0.04f in meters
         return params;
@@ -71,7 +82,9 @@ Ptr<VolumeParams> VolumeParams::coarseParams(VolumeType _volumeType)
     }
     else if (params->type == VolumeType::COLOREDTSDF)
     {
-        params->resolution = Vec3i::all(128);
+        params->resolutionX = 128;
+        params->resolutionY = 128;
+        params->resolutionZ = 128;
         params->voxelSize = volumeSize / 128.f;
         params->tsdfTruncDist = 2 * params->voxelSize;  //! About 0.04f in meters
         return params;
@@ -92,7 +105,7 @@ Ptr<Volume> makeVolume(const VolumeParams& _volumeParams)
 
 Ptr<Volume> makeVolume(VolumeType _volumeType, float _voxelSize, Matx44f _pose,
                        float _raycastStepFactor, float _truncDist, int _maxWeight,
-                       float _truncateThreshold, Vec3i _resolution)
+                       float _truncateThreshold, Point3i _resolution)
 {
     Point3i _presolution = _resolution;
     if (_volumeType == VolumeType::TSDF)

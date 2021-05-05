@@ -1010,8 +1010,13 @@ Ptr<ColoredTSDFVolume> makeColoredTSDFVolume(float _voxelSize, Matx44f _pose, fl
 
 Ptr<ColoredTSDFVolume> makeColoredTSDFVolume(const VolumeParams& _params)
 {
-    return makePtr<ColoredTSDFVolumeCPU>(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor,
-                                  _params.tsdfTruncDist, _params.maxWeight, _params.resolution);
+    Matx44f pose(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
+                 _params.pose10, _params.pose11, _params.pose12, _params.pose13,
+                 _params.pose20, _params.pose21, _params.pose22, _params.pose23,
+                 0, 0, 0, 0);
+    cv::Point3i resolution(_params.resolutionX, _params.resolutionY, _params.resolutionZ);
+    return makePtr<ColoredTSDFVolumeCPU>(_params.voxelSize, pose, _params.raycastStepFactor,
+                                         _params.tsdfTruncDist, _params.maxWeight, resolution);
 }
 
 } // namespace cv

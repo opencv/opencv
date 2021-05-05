@@ -1123,7 +1123,7 @@ void TSDFVolumeGPU::fetchPointsNormals(OutputArray points, OutputArray normals) 
 #endif
 
 Ptr<TSDFVolume> makeTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor,
-                                   float _truncDist, int _maxWeight, Point3i _resolution)
+                               float _truncDist, int _maxWeight, Point3i _resolution)
 {
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
@@ -1136,13 +1136,18 @@ Ptr<TSDFVolume> makeTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastSt
 
 Ptr<TSDFVolume> makeTSDFVolume(const VolumeParams& _params)
 {
+    Matx44f pose(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
+                 _params.pose10, _params.pose11, _params.pose12, _params.pose13,
+                 _params.pose20, _params.pose21, _params.pose22, _params.pose23,
+                 0, 0, 0, 0);
+    cv::Point3i resolution(_params.resolutionX, _params.resolutionY, _params.resolutionZ);
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
-        return makePtr<TSDFVolumeGPU>(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor,
-                                      _params.tsdfTruncDist, _params.maxWeight, _params.resolution);
+        return makePtr<TSDFVolumeGPU>(_params.voxelSize, pose, _params.raycastStepFactor,
+                                      _params.tsdfTruncDist, _params.maxWeight, resolution);
 #endif
-    return makePtr<TSDFVolumeCPU>(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor,
-                                  _params.tsdfTruncDist, _params.maxWeight, _params.resolution);
+    return makePtr<TSDFVolumeCPU>(_params.voxelSize, pose, _params.raycastStepFactor,
+                                  _params.tsdfTruncDist, _params.maxWeight, resolution);
 
 }
 

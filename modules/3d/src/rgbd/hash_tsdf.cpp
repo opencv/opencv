@@ -24,8 +24,8 @@ namespace cv
 {
 
 HashTSDFVolume::HashTSDFVolume(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor,
-    float _truncDist, int _maxWeight, float _truncateThreshold,
-    int _volumeUnitRes, bool _zFirstMemOrder)
+                               float _truncDist, int _maxWeight, float _truncateThreshold,
+                               int _volumeUnitRes, bool _zFirstMemOrder)
     : Volume(_voxelSize, _pose, _raycastStepFactor),
     maxWeight(_maxWeight),
     truncateThreshold(_truncateThreshold),
@@ -146,14 +146,19 @@ public:
 HashTSDFVolumeCPU::HashTSDFVolumeCPU(float _voxelSize, const Matx44f& _pose, float _raycastStepFactor, float _truncDist,
                                      int _maxWeight, float _truncateThreshold, int _volumeUnitRes, bool _zFirstMemOrder)
     :HashTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _truncateThreshold, _volumeUnitRes,
-           _zFirstMemOrder)
+                    _zFirstMemOrder)
 {
     reset();
 }
 
 HashTSDFVolumeCPU::HashTSDFVolumeCPU(const VolumeParams& _params, bool _zFirstMemOrder)
-    : HashTSDFVolumeCPU(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
-           _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
+    : HashTSDFVolumeCPU(_params.voxelSize,
+                        Matx44f(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
+                                _params.pose10, _params.pose11, _params.pose12, _params.pose13,
+                                _params.pose20, _params.pose21, _params.pose22, _params.pose23,
+                                0, 0, 0, 0),
+                        _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
+                        _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
 {
 }
 
@@ -961,8 +966,13 @@ HashTSDFVolumeGPU::HashTSDFVolumeGPU(float _voxelSize, const Matx44f& _pose, flo
 }
 
 HashTSDFVolumeGPU::HashTSDFVolumeGPU(const VolumeParams & _params, bool _zFirstMemOrder)
-    : HashTSDFVolumeGPU(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
-                     _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
+    : HashTSDFVolumeGPU(_params.voxelSize,
+                        Matx44f(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
+                                _params.pose10, _params.pose11, _params.pose12, _params.pose13,
+                                _params.pose20, _params.pose21, _params.pose22, _params.pose23,
+                                0, 0, 0, 0),
+                        _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
+                        _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
 {
 }
 
@@ -1770,13 +1780,17 @@ int HashTSDFVolumeGPU::getVisibleBlocks(int currFrameId, int frameThreshold) con
 //template<typename T>
 Ptr<HashTSDFVolume> makeHashTSDFVolume(const VolumeParams& _params)
 {
+    Matx44f pose(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
+                 _params.pose10, _params.pose11, _params.pose12, _params.pose13,
+                 _params.pose20, _params.pose21, _params.pose22, _params.pose23,
+                 0, 0, 0, 0);
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
-        return makePtr<HashTSDFVolumeGPU>(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
-            _params.depthTruncThreshold, _params.unitResolution);
+        return makePtr<HashTSDFVolumeGPU>(_params.voxelSize, pose, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
+                                          _params.depthTruncThreshold, _params.unitResolution);
 #endif
-    return makePtr<HashTSDFVolumeCPU>(_params.voxelSize, _params.pose.matrix, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
-        _params.depthTruncThreshold, _params.unitResolution);
+    return makePtr<HashTSDFVolumeCPU>(_params.voxelSize, pose, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
+                                      _params.depthTruncThreshold, _params.unitResolution);
 }
 
 //template<typename T>
