@@ -53,7 +53,7 @@
       <formatter type="xml"/>
 
       <batchtest fork="yes" todir="${test.dir}">
-        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*">
+        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*, **/QRCodeDetector*">
           <exclude name="**/*$*.class"/>
         </zipfileset>
       </batchtest>
