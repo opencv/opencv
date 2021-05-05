@@ -354,6 +354,20 @@ TEST(Variant, Get)
     EXPECT_THROW(util::get<int>(cv2), util::bad_variant_access);
 }
 
+TEST(Variant, GetIndexed)
+{
+    const TestVar cv(42);
+
+    // Test const& get()
+    EXPECT_EQ(42, util::get<0>(cv));
+    EXPECT_THROW(util::get<1>(cv), util::bad_variant_access);
+
+    // Test &get
+    TestVar cv2(std::string("42"));
+    EXPECT_EQ("42", util::get<1>(cv2));
+    EXPECT_THROW(util::get<0>(cv2), util::bad_variant_access);
+}
+
 TEST(Variant, GetWrite)
 {
     util::variant<int, std::string> v(42);
@@ -486,4 +500,96 @@ TEST(Variant, EXT_IndexOf)
     static_assert(6u == V::index_of<MyClass>(), "Index is incorrect");
 }
 
+namespace test_validation
+{
+struct MyType {
+	friend std::ostream& operator<<(std::ostream& out, const MyType& src)
+	{
+		return out << "MyType"; (void) src;
+	}
+};
+class MyClass {
+	friend std::ostream& operator<<(std::ostream& out, const MyClass& src)
+	{
+		return out << "MyClass"; (void) src;
+	}
+};
+	
+struct MyParamVisitor : cv::util::static_visitor<bool>
+{
+	MyParamVisitor(std::ostream &output) : out(output) {}
+
+	template<std::size_t Index, class Type>
+	bool visit(Type val, int check) 
+	{
+		bool result = false;
+		out << Index << ":" << val <<",";
+		if(std::is_same<Type, int>::value)
+		{
+			result = (*(reinterpret_cast<const int*>(&val)) == check);
+		}
+		return result;
+	}
+	/*
+	template<std::size_t Index>
+	bool visit(const MyType &val, int check)
+	{
+		(void)check;
+		out << Index << ":" << "MyType" <<",";
+	}
+	
+	template<std::size_t Index>
+	bool visit(const MyClass &val, int check)
+	{
+		out << Index << ":" << "MyClass" <<",";
+	}
+	*/
+	std::ostream &out;
+};
+	
+struct MyNoParamVisitor : cv::util::static_visitor<bool> {
+		
+	MyNoParamVisitor(std::ostream &output) : out(output) {}
+		
+	template<std::size_t Index, class Type>
+	bool visit(Type val) {
+		out << Index << ":" << val <<",";			
+		return true;
+	}
+	/*	
+	template<std::size_t Index>
+	void visit(const MyType &val, int check) {
+			out << Index << ":" << "MyType" <<",";
+		}
+		
+		template<std::size_t Index>
+		void visit(const MyClass &val, int check) {
+			out << Index << ":" << "MyClass" <<",";
+		}
+		*/
+		std::ostream &out;
+	};
+}
+
+TEST(Variant, Visitor)
+{
+	using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
+	V var{42};
+	{
+		std::stringstream ss;
+		test_validation::MyParamVisitor visitor(ss);
+	
+		EXPECT_TRUE(cv::util::apply_visitor(visitor, int{42}, var));
+		EXPECT_TRUE(ss.str() == "0:42,1:0.0,2:0,3:0.0,4:MyType,5:MyClass");
+	}
+	
+	{
+		std::stringstream ss;
+		test_validation::MyNoParamVisitor visitor(ss);
+	
+		cv::util::apply_visitor(visitor, var);
+		EXPECT_TRUE(ss.str() == "0:42,1:0.0,2:0,3:0.0,4:MyType,5:MyClass");
+	}
+}
+	
 } // namespace opencv_test
