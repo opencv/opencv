@@ -4005,5 +4005,11 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf(0.0), 0);
 }
 
+TEST(Core_FastMath, patchnan_feat_19587)
+{
+    Mat test = Mat::ones(2,2, CV_64F);
+    ASSERT_NO_THROW(patchNaNs(test));
+}
+
 }} // namespace
 /* End of file. */

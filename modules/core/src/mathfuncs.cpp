@@ -1574,7 +1574,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                      format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            CV_32F, rowsPerWI));
+                            _a.depth(), rowsPerWI));
     if (k.empty())
         return false;
 
@@ -1594,7 +1594,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _a.depth() == CV_32F );
+    CV_Assert( _a.depth() == CV_32F || _a.depth() == CV_64F);
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
                ocl_patchNaNs(_a, (float)_val))
