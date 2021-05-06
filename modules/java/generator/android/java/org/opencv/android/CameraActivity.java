@@ -1,7 +1,7 @@
 package org.opencv.android;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
+import android.support.v7.app.AppCompatActivity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -13,7 +13,7 @@ import java.util.List;
 
 import static android.Manifest.permission.CAMERA;
 
-public class CameraActivity extends Activity {
+public class CameraActivity extends AppCompatActivity {
 
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 200;
 
