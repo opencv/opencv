@@ -55,7 +55,7 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
     private Mat                  mMat0;
     private MatOfInt             mChannels[];
     private MatOfInt             mHistSize;
-    private int                  mHistSizeNum = 25;
+    private final int            mHistSizeNum = 25;
     private MatOfFloat           mRanges;
     private Scalar               mColorsRGB[];
     private Scalar               mColorsHue[];
@@ -67,7 +67,7 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
 
     public static int           viewMode = VIEW_MODE_RGBA;
 
-    private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
+    private final BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
             switch (status) {
@@ -97,7 +97,7 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
 
         setContentView(R.layout.image_manipulations_surface_view);
 
-        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.image_manipulations_activity_surface_view);
+        mOpenCvCameraView = findViewById(R.id.image_manipulations_activity_surface_view);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
