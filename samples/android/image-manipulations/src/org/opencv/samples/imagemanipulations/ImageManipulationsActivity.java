@@ -96,6 +96,7 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.image_manipulations_surface_view);
+        setActionBar(findViewById(R.id.toolbar));
 
         mOpenCvCameraView = findViewById(R.id.image_manipulations_activity_surface_view);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);

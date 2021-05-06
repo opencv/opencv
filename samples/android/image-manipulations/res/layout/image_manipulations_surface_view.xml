@@ -3,9 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
 
+    <Toolbar android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize" />
+
     <org.opencv.android.JavaCameraView
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:id="@+id/image_manipulations_activity_surface_view" />
 
 </LinearLayout>
