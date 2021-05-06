@@ -100,7 +100,7 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
 
         final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         if (toolbar != null) {
-            setActionBar();
+            setActionBar(toolbar);
         }
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.image_manipulations_activity_surface_view);
