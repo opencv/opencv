@@ -1,7 +1,7 @@
 import paddle
 import paddlehub as hub
 import paddlehub.vision.transforms as T
-import cv2
+import cv2 as cv
 import numpy as np
 
 
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     labels = open('./data/labels.txt').read().strip().split('\n')
     model = export_onnx_mobilenetv2(save_path)
 
-    # load mobilenetv2 use cv2.dnn
-    net = cv2.dnn.readNetFromONNX(save_path + '.onnx')
+    # load mobilenetv2 use cv.dnn
+    net = cv.dnn.readNetFromONNX(save_path + '.onnx')
     # read and preprocess image file
     im = preprocess(image_file)
     # inference
