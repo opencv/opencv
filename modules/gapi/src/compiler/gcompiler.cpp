@@ -178,96 +178,100 @@ namespace
 
 namespace validation
 {
-	class meta_matcher_visitor : cv::util::static_visitor<bool>
+    class meta_matcher_visitor : cv::util::static_visitor<bool, meta_matcher_visitor>
     {
-		struct meta_print_visitor : cv::util::static_visitor<bool> {
-			std::ostream& out;
-			
-			meta_print_visitor(std::ostream &output) :
-			out (output) {}
-			
-			template<std::size_t Index, class MetaT>
-			bool visit(const MetaT &) {
-				out << cv::detail::meta_to_string<MetaT>();
-				return true;
-			}
-			template<std::size_t Index>
-			bool visit(const cv::util::monostate &) {
-				out << "variant::monostate";
-				return true;
-			}
-		};
+        struct meta_print_visitor : cv::util::static_visitor<bool, meta_print_visitor> {
+            std::ostream& out;
 
-	protected:
-		std::ostream& out;
-		
-		template<class Descr>
-		bool check(const cv::GMetaArg &meta, std::ostream& out)
-		{
-			bool ret = cv::util::holds_alternative<Descr>(meta);
-			if (!ret)
-			{
-				out << "Expected: " << cv::detail::meta_to_string<Descr>() << ", got: ";
-				meta_print_visitor v{out};
-				cv::util::apply_visitor(v, meta); 
-				out << std::endl;
-			}
-			return ret;	
-		}
-		
-	public:
-		meta_matcher_visitor(std::ostream &output) :
-			out (output) {}
-		
-		template<std::size_t ProtoIndex, class ProtoType>
-		bool visit(const ProtoType &, const cv::GMetaArg &meta)
-		{
-			using Descr = typename cv::detail::ProtoToMeta<ProtoType>::type;
-			return check<Descr>(meta, out);
-		}
-		
-		// non API data types overloads
-		template<std::size_t ProtoIndex>
-		bool visit(const cv::GMatP &, const cv::GMetaArg &meta)
-		{
-			return check<cv::GMatDesc>(meta, out);
-		}
-		
-		template<std::size_t ProtoIndex>
-		bool visit(const cv::detail::GArrayU &, const cv::GMetaArg &meta)
-		{
-			return check<cv::GArrayDesc>(meta, out);
-		}
-		
-		template<std::size_t ProtoIndex>
-		bool visit(const cv::detail::GOpaqueU &, const cv::GMetaArg &meta)
-		{
-			return check<cv::GOpaqueDesc>(meta, out);
-		}
-	};
-	
-	struct meta_value_inspector_visitor : public meta_matcher_visitor
-	{
-		using result_type = bool;
-		using meta_matcher_visitor::meta_matcher_visitor;
-		using meta_matcher_visitor::visit;
-		
-		//FIXME: check cv::GMat at now
-		template<std::size_t ProtoIndex>
-		bool visit(const cv::GMat &proto, const cv::GMetaArg &meta)
-		{
-			bool valid = meta_matcher_visitor::visit<ProtoIndex, cv::GMat>(proto, meta);
-			if(valid)
-			{
-				if(cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
-				{
-					valid = false;
-					out << "empty cv::Mat is not allowed as compile argument";
-				}
-			}
-			return valid;
-		}
-	};
+            meta_print_visitor(std::ostream &output) :
+            out (output) {}
+
+            template<class MetaT>
+            bool visit(std::size_t, const MetaT &) {
+                out << cv::detail::meta_to_string<MetaT>();
+                return true;
+            }
+
+            bool visit (std::size_t, const cv::util::monostate &) {
+                out << "variant::monostate";
+                return true;
+            }
+        };
+
+    protected:
+        template<class Descr>
+        bool check(const cv::GMetaArg &meta, std::ostream& out)
+        {
+            bool ret = cv::util::holds_alternative<Descr>(meta);
+            if (!ret)
+            {
+                out << "Expected: " << cv::detail::meta_to_string<Descr>() << ", got: ";
+                meta_print_visitor v{out};
+                cv::util::visit(v, meta); 
+                out << std::endl;
+            }
+            return ret;	
+        }
+
+    public:
+        std::ostream& out;
+
+        meta_matcher_visitor(std::ostream &output) :
+            out (output) {}
+
+        template<class ProtoType>
+        bool visit (std::size_t, const ProtoType &, const cv::GMetaArg &meta)
+        {
+            using Descr = typename cv::detail::ProtoToMeta<ProtoType>::type;
+            return check<Descr>(meta, out);
+        }
+
+        // non API data types overloads
+        bool visit (std::size_t, const cv::GMatP &, const cv::GMetaArg &meta)
+        {
+            return check<cv::GMatDesc>(meta, out);
+        }
+
+        bool visit (std::size_t, const cv::detail::GArrayU &, const cv::GMetaArg &meta)
+        {
+            return check<cv::GArrayDesc>(meta, out);
+        }
+
+        bool visit (std::size_t, const cv::detail::GOpaqueU &, const cv::GMetaArg &meta)
+        {
+            return check<cv::GOpaqueDesc>(meta, out);
+        }
+    };
+
+    struct meta_value_inspector_visitor : cv::util::static_visitor<bool, meta_value_inspector_visitor>
+    {
+        meta_value_inspector_visitor(std::ostream &output) :
+            matcher_visitor (output) {}
+
+        //FIXME: check cv::GMat at now
+        bool visit(std::size_t index, const cv::GMat &proto, const cv::GMetaArg &meta)
+        {
+            bool valid = matcher_visitor.visit<cv::GMat>(index, proto, meta);
+            if(valid)
+            {
+                if(cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
+                {
+                    valid = false;
+                    matcher_visitor.out << "empty cv::Mat is not allowed as compile argument";
+                }
+            }
+            return valid;
+        }
+
+        // non checkable overloads
+        template<class ProtoType>
+        bool visit(std::size_t index, const ProtoType &proto, const cv::GMetaArg &meta)
+        {
+            return matcher_visitor.visit(index, proto, meta);
+        }
+        private:
+            meta_matcher_visitor matcher_visitor;
+    };
 }
 
 // GCompiler implementation ////////////////////////////////////////////////////

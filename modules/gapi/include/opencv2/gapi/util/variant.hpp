@@ -43,13 +43,13 @@ namespace util
         template< std::size_t I, class Unknown >
         struct type_list_element_helper<I, Unknown> {};
 
-		template<class Head >
+        template<class Head >
         struct type_list_element_helper<0, Head> { using type = Head;};
-        
+
         template<class First, class... Remaining >
         struct type_list_element_helper<0, First, Remaining...>
         {
-			using type = First;
+            using type = First;
         };
     }
 
@@ -59,13 +59,13 @@ namespace util
         static const constexpr std::size_t value = detail::type_list_index_helper<0, Target, Types...>::value;
     };
 
-	template<std::size_t Index, class... Types >
-	struct type_list_element
-	{
-		using type = typename detail::type_list_element_helper<Index, Types...>::type;
-	};
-	
-	class bad_variant_access: public std::exception
+    template<std::size_t Index, class... Types >
+    struct type_list_element
+    {
+        using type = typename detail::type_list_element_helper<Index, Types...>::type;
+    };
+
+    class bad_variant_access: public std::exception
     {
     public:
         virtual const char *what() const noexcept override
@@ -263,6 +263,37 @@ namespace util
     template<typename T, typename... Types>
     bool holds_alternative(const util::variant<Types...> &v) noexcept;
 
+
+    //Visitor
+    template<typename R, typename Impl>
+    struct static_visitor {
+        using result_type = R;
+
+        template<typename VariantValue, typename ...Args>
+        R operator() (std::size_t index, VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> visit(
+                        index,
+                        std::forward<VariantValue>(value),
+                        std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename Visitor, typename Variant, typename... VisitorArg>
+    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+                                        const Variant& var,
+                                        VisitorArg &&...arg);
+
+    template<typename Visitor, typename Variant>
+    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+                                        const Variant& var);
+
+    template <class T>
+    struct variant_size;
+
+    template <class... Types>
+    struct variant_size<util::variant<Types...>>
+        : std::integral_constant<std::size_t, sizeof...(Types)> { };
     // FIXME: T&&, const TT&& versions.
 
     // Implementation //////////////////////////////////////////////////////////
@@ -432,19 +463,19 @@ namespace util
     template<std::size_t Index, typename... Types>
     typename util::type_list_element<Index, Types...>::type& get(util::variant<Types...> &v)
     {
-		using ReturnType = typename util::type_list_element<Index, Types...>::type;
-		return const_cast<ReturnType&>(get<Index, Types...>(static_cast<const util::variant<Types...> &>(v)));
-	}
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return const_cast<ReturnType&>(get<Index, Types...>(static_cast<const util::variant<Types...> &>(v)));
+    }
 
     template<std::size_t Index, typename... Types>
     const typename util::type_list_element<Index, Types...>::type& get(const util::variant<Types...> &v)
     {
-		static_assert(Index < sizeof...(Types), 
-					  "`Index` it out of bound of `util::variant` type list");
-		using ReturnType = typename util::type_list_element<Index, Types...>::type;
-		return get<ReturnType>(v);
-	}
-    
+        static_assert(Index < sizeof...(Types),
+                      "`Index` it out of bound of `util::variant` type list");
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return get<ReturnType>(v);
+    }
+
     template<typename T, typename... Types>
     bool holds_alternative(const util::variant<Types...> &v) noexcept
     {
@@ -471,74 +502,71 @@ namespace util
     {
         return !(lhs == rhs);
     }
-    
-    //Visitor
-	template<typename T> 
-	struct static_visitor {
-		using result_type = T;
-	};
 
+namespace detail
+{
+    template<std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor,
+                                                     Variant& v,
+                                                     std::true_type processed,
+                                                     VisitorArgs&& ...args)
+    {
+        suppress_unused_warning(visitor);
+        std::array<bool, sizeof...(VisitorArgs)> dummy{(suppress_unused_warning(args),true)...};
+        suppress_unused_warning(dummy);
+        suppress_unused_warning(v);
+        suppress_unused_warning(processed);
+        return {};
+    }
 
-    template<std::size_t CurIndex, std::size_t ElemCount, 
-			 typename Visitor, typename Variant, typename... VisitorArgs>
-    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor, 
-													 Variant& v, 
-													 std::true_type processed,
-													 VisitorArgs&& ...args)
+    template<std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor,
+                                                     Variant&& v,
+                                                     std::false_type not_processed,
+                                                     VisitorArgs&& ...args)
     {
-		suppress_unused_warning(visitor);
-		std::array<bool, sizeof...(VisitorArgs)> dummy{(suppress_unused_warning(args),true)...};
-		suppress_unused_warning(dummy);
-		suppress_unused_warning(v);
-		suppress_unused_warning(processed);
-		return {};
-	}
-	
-    template<std::size_t CurIndex, std::size_t ElemCount, 
-			 typename Visitor, typename Variant, typename... VisitorArgs>
-    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor, 
-													 Variant&& v, 
-													 std::false_type not_processed,
-													 VisitorArgs&& ...args)
-    {
-		suppress_unused_warning(not_processed);
-		if(v.index() == CurIndex)
-		{
-			return visitor. template visit<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
-		}
-		
-		using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
-		return apply_visitor_impl<CurIndex +1, ElemCount>(
-								  std::forward<Visitor>(visitor),
-								  std::forward<Variant>(v),
-								  is_variant_processed_t{},
-								  std::forward<VisitorArgs>(args)...);    
-	}
-	
-    template<typename Visitor, typename VisitorArg, typename... Types>
-    typename Visitor::result_type apply_visitor(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
-												VisitorArg &&args,
-											    const util::variant<Types...>& var)
-    {
-		static_assert(sizeof...(Types) != 0, "utils::variant must contains one type at least ");
-		using is_variant_processed_t = std::false_type;
-		return apply_visitor_impl<0, sizeof...(Types), Visitor>(
-									std::forward<Visitor>(visitor), 
-									var, is_variant_processed_t{},
-									std::forward<VisitorArg>(args));
-	}
-	
-	template<typename Visitor, typename... Types>
-    typename Visitor::result_type apply_visitor(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
-											    const util::variant<Types...>& var)
-    {
-		static_assert(sizeof...(Types) != 0, "utils::variant must contains one type at least ");
-		using is_variant_processed_t = std::false_type;
-		return apply_visitor_impl<0, sizeof...(Types), Visitor>(
-									std::forward<Visitor>(visitor), 
-									var, is_variant_processed_t{});
-	}
+        suppress_unused_warning(not_processed);
+        if(v.index() == CurIndex)
+        {
+            return visitor. template operator() (CurIndex, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
 
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  std::forward<VisitorArgs>(args)...);
+    }
+} // namespace detail
+
+    template<typename Visitor, typename Variant, typename... VisitorArg>
+    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+                                        const Variant& var,
+                                        VisitorArg &&...args)
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+        return detail::apply_visitor_impl<0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{},
+                                    std::forward<VisitorArg>(args)...);
+    }
+
+    template<typename Visitor, typename Variant>
+    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+                                        const Variant& var)
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+        return detail::apply_visitor_impl<0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{});
+    }
 } // namespace util
 } // namespace cv
 

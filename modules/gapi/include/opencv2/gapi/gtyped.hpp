@@ -26,13 +26,13 @@ namespace detail
     constexpr const char* meta_to_string() noexcept;
     template<>
     constexpr const char* meta_to_string<cv::GMatDesc>() noexcept { return "GMatDesc"; }
-	template<>
+    template<>
     constexpr const char* meta_to_string<cv::GScalarDesc>() noexcept { return "GScalarDesc"; }
-	template<>
+    template<>
     constexpr const char* meta_to_string<cv::GArrayDesc>() noexcept { return "GArrayDesc"; }
-	template<>
+    template<>
     constexpr const char* meta_to_string<cv::GOpaqueDesc>() noexcept { return "GOpaqueDesc"; }
-	template<>
+    template<>
     constexpr const char* meta_to_string<cv::GFrameDesc>() noexcept { return "GFrameDesc";}
     
     template<typename T> struct ProtoToParam;
