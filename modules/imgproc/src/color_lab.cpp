@@ -1623,7 +1623,7 @@ struct RGB2Lab_b
                       LabCbrtTab_b[v_extract_n<2>(vfZ)], LabCbrtTab_b[v_extract_n<3>(vfZ)]);
 
         /* int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );*/
-         vL = v_fma(vfY, v_setall_s32(Lscale), v_setall_s32(Lshift+labDescaleShift));
+        vL = v_fma(vfY, v_setall_s32(Lscale), v_setall_s32(Lshift+labDescaleShift));
         vL = v_shr<lab_shift2>(vL);
 
         /* int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );*/
