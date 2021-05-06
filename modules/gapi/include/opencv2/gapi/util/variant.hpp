@@ -39,7 +39,10 @@ namespace util
         };
 
         template< std::size_t I, class First, class... Remaining >
-        struct type_list_element_helper: type_list_element_helper<I-1, Remaining...> { };
+        struct type_list_element_helper
+        {
+            using type = typename type_list_element_helper<I - 1, Remaining...>::type;
+        };
 
         template< std::size_t I, class Unknown >
         struct type_list_element_helper<I, Unknown> {};
