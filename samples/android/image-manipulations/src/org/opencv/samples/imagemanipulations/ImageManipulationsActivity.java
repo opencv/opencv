@@ -26,6 +26,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
+import android.widget.Toolbar;
 
 public class ImageManipulationsActivity extends CameraActivity implements CvCameraViewListener2 {
     private static final String  TAG                 = "OCVSample::Activity";
@@ -96,9 +97,13 @@ public class ImageManipulationsActivity extends CameraActivity implements CvCame
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.image_manipulations_surface_view);
-        setActionBar(findViewById(R.id.toolbar));
 
-        mOpenCvCameraView = findViewById(R.id.image_manipulations_activity_surface_view);
+        final Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            setActionBar();
+        }
+
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.image_manipulations_activity_surface_view);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
