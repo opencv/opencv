@@ -200,17 +200,17 @@ namespace validation
 
     protected:
         template<class Descr>
-        bool check(const cv::GMetaArg &meta, std::ostream& out)
+        bool check(const cv::GMetaArg &meta)
         {
             bool ret = cv::util::holds_alternative<Descr>(meta);
             if (!ret)
             {
                 out << "Expected: " << cv::detail::meta_to_string<Descr>() << ", got: ";
                 meta_print_visitor v{out};
-                cv::util::visit(v, meta); 
+                cv::util::visit(v, meta);
                 out << std::endl;
             }
-            return ret;	
+            return ret;
         }
 
     public:
@@ -222,24 +222,24 @@ namespace validation
         template<class ProtoType>
         bool visit (std::size_t, const ProtoType &, const cv::GMetaArg &meta)
         {
-            using Descr = typename cv::detail::ProtoToMeta<ProtoType>::type;
-            return check<Descr>(meta, out);
+            using Descr = typename cv::detail::MetaType<ProtoType>::type;
+            return check<Descr>(meta);
         }
 
         // non API data types overloads
         bool visit (std::size_t, const cv::GMatP &, const cv::GMetaArg &meta)
         {
-            return check<cv::GMatDesc>(meta, out);
+            return check<cv::GMatDesc>(meta);
         }
 
         bool visit (std::size_t, const cv::detail::GArrayU &, const cv::GMetaArg &meta)
         {
-            return check<cv::GArrayDesc>(meta, out);
+            return check<cv::GArrayDesc>(meta);
         }
 
         bool visit (std::size_t, const cv::detail::GOpaqueU &, const cv::GMetaArg &meta)
         {
-            return check<cv::GOpaqueDesc>(meta, out);
+            return check<cv::GOpaqueDesc>(meta);
         }
     };
 

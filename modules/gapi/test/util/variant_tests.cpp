@@ -522,13 +522,13 @@ struct MyParamVisitor : cv::util::static_visitor<bool, MyParamVisitor>
     MyParamVisitor(std::ostream &output) : out(output) {}
 
     template<class Type>
-    bool visit(std::size_t index, Type val, int check) 
+    bool visit(std::size_t index, Type val, int check)
     {
         bool result = false;
         out << index << ":" << val <<",";
         if(std::is_same<Type, int>::value)
         {
-            result = (*(reinterpret_cast<const int*>(&val)) == check);
+            result = !memcmp(&val, &check, sizeof(int));
         }
         return result;
     }
@@ -543,7 +543,7 @@ struct MyNoParamVisitor : cv::util::static_visitor<bool, MyNoParamVisitor>
     template<class Type>
     bool visit(std::size_t index, Type val)
     {
-        out << index << ":" << val <<",";			
+        out << index << ":" << val <<",";
         return true;
     }
     std::ostream &out;

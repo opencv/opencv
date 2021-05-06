@@ -531,7 +531,7 @@ namespace detail
         suppress_unused_warning(not_processed);
         if(v.index() == CurIndex)
         {
-            return visitor. template operator() (CurIndex, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+            return visitor.operator() (CurIndex, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
         using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;

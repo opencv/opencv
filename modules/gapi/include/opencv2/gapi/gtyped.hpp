@@ -22,19 +22,6 @@ namespace detail
 {
     // FIXME: How to prevent coolhackers from extending it by their own types?
     // FIXME: ...Should we care?
-    template<typename T>
-    constexpr const char* meta_to_string() noexcept;
-    template<>
-    constexpr const char* meta_to_string<cv::GMatDesc>() noexcept { return "GMatDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GScalarDesc>() noexcept { return "GScalarDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GArrayDesc>() noexcept { return "GArrayDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GOpaqueDesc>() noexcept { return "GOpaqueDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GFrameDesc>() noexcept { return "GFrameDesc";}
-    
     template<typename T> struct ProtoToParam;
     template<> struct ProtoToParam<cv::GMat>    { using type = cv::Mat; };
     template<> struct ProtoToParam<cv::GScalar> { using type = cv::Scalar; };
