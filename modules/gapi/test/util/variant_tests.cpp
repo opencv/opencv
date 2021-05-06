@@ -502,13 +502,15 @@ TEST(Variant, EXT_IndexOf)
 
 namespace test_validation
 {
-struct MyType {
+struct MyType
+{
 	friend std::ostream& operator<<(std::ostream& out, const MyType& src)
 	{
 		return out << "MyType"; (void) src;
 	}
 };
-class MyClass {
+class MyClass
+{
 	friend std::ostream& operator<<(std::ostream& out, const MyClass& src)
 	{
 		return out << "MyClass"; (void) src;
@@ -530,45 +532,22 @@ struct MyParamVisitor : cv::util::static_visitor<bool>
 		}
 		return result;
 	}
-	/*
-	template<std::size_t Index>
-	bool visit(const MyType &val, int check)
-	{
-		(void)check;
-		out << Index << ":" << "MyType" <<",";
-	}
-	
-	template<std::size_t Index>
-	bool visit(const MyClass &val, int check)
-	{
-		out << Index << ":" << "MyClass" <<",";
-	}
-	*/
+
 	std::ostream &out;
 };
 	
-struct MyNoParamVisitor : cv::util::static_visitor<bool> {
-		
+struct MyNoParamVisitor : cv::util::static_visitor<bool>
+{
 	MyNoParamVisitor(std::ostream &output) : out(output) {}
 		
 	template<std::size_t Index, class Type>
-	bool visit(Type val) {
+	bool visit(Type val)
+	{
 		out << Index << ":" << val <<",";			
 		return true;
 	}
-	/*	
-	template<std::size_t Index>
-	void visit(const MyType &val, int check) {
-			out << Index << ":" << "MyType" <<",";
-		}
-		
-		template<std::size_t Index>
-		void visit(const MyClass &val, int check) {
-			out << Index << ":" << "MyClass" <<",";
-		}
-		*/
-		std::ostream &out;
-	};
+	std::ostream &out;
+};
 }
 
 TEST(Variant, Visitor)
@@ -580,16 +559,34 @@ TEST(Variant, Visitor)
 		test_validation::MyParamVisitor visitor(ss);
 	
 		EXPECT_TRUE(cv::util::apply_visitor(visitor, int{42}, var));
-		EXPECT_TRUE(ss.str() == "0:42,1:0.0,2:0,3:0.0,4:MyType,5:MyClass");
+		EXPECT_EQ(ss.str(), std::string("0:42,"));
 	}
 	
-	{
-		std::stringstream ss;
-		test_validation::MyNoParamVisitor visitor(ss);
+	std::stringstream ss;
+	test_validation::MyNoParamVisitor visitor(ss);
 	
-		cv::util::apply_visitor(visitor, var);
-		EXPECT_TRUE(ss.str() == "0:42,1:0.0,2:0,3:0.0,4:MyType,5:MyClass");
-	}
+	cv::util::apply_visitor(visitor, var);
+	EXPECT_EQ(ss.str(), std::string("0:42,"));
+	
+	var = double{1.0};
+	EXPECT_TRUE(cv::util::apply_visitor(visitor, var));
+	EXPECT_EQ(ss.str(), std::string("0:42,1:1,"));
+	
+	var = char{'a'};
+	EXPECT_TRUE(cv::util::apply_visitor(visitor, var));
+	EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,"));
+	
+	var = float{6.0};
+	EXPECT_TRUE(cv::util::apply_visitor(visitor, var));
+	EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,"));
+
+	var = test_validation::MyType{};
+	EXPECT_TRUE(cv::util::apply_visitor(visitor, var));
+	EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,"));
+	
+	var = test_validation::MyClass{};
+	EXPECT_TRUE(cv::util::apply_visitor(visitor, var));
+	EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,5:MyClass,"));
 }
 	
 } // namespace opencv_test
