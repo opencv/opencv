@@ -575,6 +575,12 @@ namespace core {
             return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
         }
     };
+
+    G_TYPED_KERNEL(GTranspose, <GMat(GMat)>, "org.opencv.core.transpose") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in;
+        }
+    };
 } // namespace core
 
 namespace streaming {
@@ -1926,6 +1932,21 @@ kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
 GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
 kmeans(const GArray<Point3f>& data, const int K, const GArray<int>& bestLabels,
        const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+
+/** @brief Transposes a matrix.
+
+The function transposes the matrix:
+\f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
+
+@note
+ - Function textual ID is "org.opencv.core.transpose"
+ - No complex conjugation is done in case of a complex matrix. It should be done separately if needed.
+
+@param src input array.
+*/
+GAPI_EXPORTS GMat transpose(const GMat& src);
+
 
 namespace streaming {
 /** @brief Gets dimensions from Mat.
