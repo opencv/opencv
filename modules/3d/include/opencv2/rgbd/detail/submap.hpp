@@ -11,13 +11,12 @@
 #include <type_traits>
 #include <vector>
 
-#include "hash_tsdf.hpp"
 #include "opencv2/core/mat.inl.hpp"
 #include "opencv2/rgbd/detail/pose_graph.hpp"
 
 namespace cv
 {
-namespace kinfu
+namespace detail
 {
 template<typename MatType>
 class Submap
@@ -530,6 +529,6 @@ void SubmapManager<MatType>::PoseGraphToMap(const Ptr<detail::PoseGraph>& update
     }
 }
 
-}  // namespace kinfu
+}  // namespace detail
 }  // namespace cv
 #endif /* ifndef __OPENCV_RGBD_SUBMAP_HPP__ */
