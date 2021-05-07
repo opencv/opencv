@@ -9,6 +9,7 @@
 
 #include "precomp.hpp"
 #include "kinfu_frame.hpp"
+#include "intrinsics.hpp"
 
 namespace cv {
 namespace kinfu {

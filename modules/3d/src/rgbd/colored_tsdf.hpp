@@ -11,6 +11,7 @@
 #include <opencv2/rgbd/volume.hpp>
 
 #include "kinfu_frame.hpp"
+#include "intrinsics.hpp"
 #include "utils.hpp"
 
 namespace cv

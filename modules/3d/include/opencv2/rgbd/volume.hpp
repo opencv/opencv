@@ -8,7 +8,6 @@
 #ifndef __OPENCV_RGBD_VOLUME_H__
 #define __OPENCV_RGBD_VOLUME_H__
 
-#include "intrinsics.hpp"
 #include "opencv2/core/affine.hpp"
 
 namespace cv

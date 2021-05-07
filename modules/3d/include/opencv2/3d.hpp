@@ -11,9 +11,10 @@
 #include "rgbd/linemod.hpp"
 #include "rgbd/depth.hpp"
 #include "rgbd/volume.hpp"
-#include "rgbd/intrinsics.hpp"
 
 #include "rgbd/detail/pose_graph.hpp"
+#include "rgbd/detail/kinfu_frame.hpp"
+#include "rgbd/detail/submap.hpp"
 
 /**
   @defgroup _3d 3D vision functionality
