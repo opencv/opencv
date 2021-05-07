@@ -57,12 +57,12 @@ class TSDFVolumeCPU : public TSDFVolume
                   int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
 
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                           const Intr& intrinsics, const int frameId = 0) override;
-    virtual void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+                           const Matx33f& intrinsics, const int frameId = 0) override;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals) const override;
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    virtual void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -96,12 +96,12 @@ class TSDFVolumeGPU : public TSDFVolume
                   int _maxWeight, Point3i _resolution);
 
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                           const Intr& intrinsics, const int frameId = 0) override;
-    virtual void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+                           const Matx33f& intrinsics, const int frameId = 0) override;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray _points, OutputArray _normals) const override;
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    virtual void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;

@@ -98,13 +98,13 @@ public:
 
     HashTSDFVolumeCPU(const VolumeParams& _volumeParams, bool zFirstMemOrder = true);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); }
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics,
+    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
-    void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize, OutputArray points,
+    void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
                  OutputArray normals) const override;
-    void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); }
     void fetchNormals(InputArray points, OutputArray _normals) const override;
     void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -174,7 +174,7 @@ void HashTSDFVolumeCPU::reset()
     volumeUnits = VolumeUnitIndexes();
 }
 
-void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics, const int frameId)
+void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
 
@@ -184,6 +184,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
     //! Compute volumes to be allocated
     const int depthStride = volumeUnitDegree;
     const float invDepthFactor = 1.f / depthFactor;
+    const Intr intrinsics(_intrinsics);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
     const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
     const Point3f truncPt(truncDist, truncDist, truncDist);
@@ -296,8 +297,8 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
         });
 
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        intrinsics.fx, intrinsics.fy,
-        intrinsics.cx, intrinsics.cy);
+                    intrinsics.fx, intrinsics.fy,
+                    intrinsics.cx, intrinsics.cy);
     if ( !(frameParams==newParams) )
     {
         frameParams = newParams;
@@ -318,8 +319,8 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Ma
             {
                 //! The volume unit should already be added into the Volume from the allocator
                 integrateVolumeUnit(truncDist, voxelSize, maxWeight, volumeUnit.pose,
-                    Point3i(volumeUnitResolution, volumeUnitResolution, volumeUnitResolution), volStrides, depth,
-                    depthFactor, cameraPose, intrinsics, pixNorms, volUnitsData.row(volumeUnit.index));
+                                    Point3i(volumeUnitResolution, volumeUnitResolution, volumeUnitResolution), volStrides, depth,
+                                    depthFactor, cameraPose, intrinsics, pixNorms, volUnitsData.row(volumeUnit.index));
 
                 //! Ensure all active volumeUnits are set to inactive for next integration
                 volumeUnit.isActive = false;
@@ -645,7 +646,7 @@ Point3f HashTSDFVolumeCPU::getNormalVoxel(const Point3f &point) const
     return nv < 0.0001f ? nan3 : normal / nv;
 }
 
-void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
                                 OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();
@@ -663,6 +664,7 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& intrinsic
     const float tstep(volume.truncDist * volume.raycastStepFactor);
     const Affine3f cam2vol(volume.pose.inv() * Affine3f(cameraPose));
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * volume.pose);
+    const Intr intrinsics(_intrinsics);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
     const int nstripes = -1;
@@ -901,13 +903,13 @@ public:
 
     void markActive(const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Intr&, const Intr&, const int) override
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics,
+    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
-    void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize, OutputArray points,
+    void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
                  OutputArray normals) const override;
-    void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -1262,12 +1264,14 @@ void HashTSDFVolumeGPU::markActive(const Matx44f& cameraPose, const Intr& intrin
 }
 
 
-void HashTSDFVolumeGPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics, const int frameId)
+void HashTSDFVolumeGPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
     UMat depth = _depth.getUMat();
+
+    Intr intrinsics(_intrinsics);
 
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
@@ -1575,7 +1579,7 @@ Point3f HashTSDFVolumeGPU::getNormalVoxel(const Point3f& point) const
 }
 
 
-void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
                                 OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();
@@ -1597,6 +1601,7 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsic
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
 
+    Intr intrinsics(_intrinsics);
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
 

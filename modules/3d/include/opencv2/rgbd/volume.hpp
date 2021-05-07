@@ -26,13 +26,13 @@ class CV_EXPORTS_W Volume
     virtual ~Volume(){};
 
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                           const Intr& intrinsics, const int frameId = 0)               = 0;
+                           const Matx33f& intrinsics, const int frameId = 0)               = 0;
     virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
-                           const Matx44f& cameraPose, const Intr& intrinsics,
-                           const Intr& rgb_intrinsics, const int frameId = 0)                  = 0;
-    virtual void raycast(const Matx44f& cameraPose, const Intr& intrinsics,
+                           const Matx44f& cameraPose, const Matx33f& intrinsics,
+                           const Matx33f& rgb_intrinsics, const int frameId = 0)                  = 0;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
                          const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
-    virtual void raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals, OutputArray colors) const    = 0;
     virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const             = 0;
@@ -76,18 +76,18 @@ struct CV_EXPORTS_W VolumeParams
 
     /** @brief Initial pose of the volume in meters */
     //Matx44f pose;
-    CV_PROP_RW double pose00;
-    CV_PROP_RW double pose01;
-    CV_PROP_RW double pose02;
-    CV_PROP_RW double pose03;
-    CV_PROP_RW double pose10;
-    CV_PROP_RW double pose11;
-    CV_PROP_RW double pose12;
-    CV_PROP_RW double pose13;
-    CV_PROP_RW double pose20;
-    CV_PROP_RW double pose21;
-    CV_PROP_RW double pose22;
-    CV_PROP_RW double pose23;
+    CV_PROP_RW float pose00;
+    CV_PROP_RW float pose01;
+    CV_PROP_RW float pose02;
+    CV_PROP_RW float pose03;
+    CV_PROP_RW float pose10;
+    CV_PROP_RW float pose11;
+    CV_PROP_RW float pose12;
+    CV_PROP_RW float pose13;
+    CV_PROP_RW float pose20;
+    CV_PROP_RW float pose21;
+    CV_PROP_RW float pose22;
+    CV_PROP_RW float pose23;
 
     /** @brief Length of voxels in meters */
     CV_PROP_RW float voxelSize;

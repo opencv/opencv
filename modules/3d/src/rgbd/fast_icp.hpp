@@ -17,7 +17,7 @@ namespace kinfu {
 class ICP
 {
 public:
-    ICP(const cv::Intr _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
+    ICP(const cv::Matx33f _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
 
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,

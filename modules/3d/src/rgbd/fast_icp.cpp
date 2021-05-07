@@ -18,7 +18,7 @@ enum
     UTSIZE = 27
 };
 
-ICP::ICP(const Intr _intrinsics, const std::vector<int>& _iterations, float _angleThreshold, float _distanceThreshold) :
+ICP::ICP(const Matx33f _intrinsics, const std::vector<int>& _iterations, float _angleThreshold, float _distanceThreshold) :
     iterations(_iterations), angleThreshold(_angleThreshold), distanceThreshold(_distanceThreshold),
     intrinsics(_intrinsics)
 { }
@@ -26,7 +26,7 @@ ICP::ICP(const Intr _intrinsics, const std::vector<int>& _iterations, float _ang
 class ICPImpl : public ICP
 {
 public:
-    ICPImpl(const cv::Intr _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
+    ICPImpl(const cv::Matx33f _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold);
 
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,
@@ -50,7 +50,7 @@ private:
 
 };
 
-ICPImpl::ICPImpl(const Intr _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold) :
+ICPImpl::ICPImpl(const Matx33f _intrinsics, const std::vector<int> &_iterations, float _angleThreshold, float _distanceThreshold) :
     ICP(_intrinsics, _iterations, _angleThreshold, _distanceThreshold),
     groupedSumBuffers(_iterations.size())
 { }

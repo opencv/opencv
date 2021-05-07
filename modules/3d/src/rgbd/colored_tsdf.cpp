@@ -61,15 +61,15 @@ class ColoredTSDFVolumeCPU : public ColoredTSDFVolume
 public:
     // dimension in voxels, size in meters
     ColoredTSDFVolumeCPU(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor, float _truncDist,
-        int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
-    virtual void integrate(InputArray, float, const Matx44f&, const Intr&, const int) override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+                         int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
+    virtual void integrate(InputArray, float, const Matx44f&, const Matx33f&, const int) override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
     virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
-        const Intr& depth_intrinsics, const Intr& rgb_intrinsics, const int frameId = 0) override;
-    virtual void raycast(const Matx44f& cameraPose, const Intr& depth_intrinsics, const Size& frameSize,
-        OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(const Matx44f&, const Intr&, const Size&, OutputArray, OutputArray) const override
-        { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+                           const Matx33f& depth_intrinsics, const Matx33f& rgb_intrinsics, const int frameId = 0) override;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& depth_intrinsics, const Size& frameSize,
+                         OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray) const override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -154,7 +154,7 @@ RGBTsdfVoxel ColoredTSDFVolumeCPU::at(const Vec3i& volumeIdx) const
 
 // use depth instead of distance (optimization)
 void ColoredTSDFVolumeCPU::integrate(InputArray _depth, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
-                              const Intr& depth_intrinsics, const Intr& rgb_intrinsics, const int frameId)
+                                     const Matx33f& _depth_intrinsics, const Matx33f& _rgb_intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
@@ -162,9 +162,11 @@ void ColoredTSDFVolumeCPU::integrate(InputArray _depth, InputArray _rgb, float d
     CV_Assert(!_depth.empty());
     Depth depth = _depth.getMat();
     Colors rgb = _rgb.getMat();
+    Intr depth_intrinsics(_depth_intrinsics);
+    Intr rgb_intrinsics(_rgb_intrinsics);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        depth_intrinsics.fx, depth_intrinsics.fy,
-        depth_intrinsics.cx, depth_intrinsics.cy);
+                    depth_intrinsics.fx, depth_intrinsics.fy,
+                    depth_intrinsics.cx, depth_intrinsics.cy);
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
@@ -518,7 +520,7 @@ inline Point3f ColoredTSDFVolumeCPU::getColorVoxel(const Point3f& p) const
 struct ColorRaycastInvoker : ParallelLoopBody
 {
     ColorRaycastInvoker(Points& _points, Normals& _normals, Colors& _colors, const Matx44f& cameraPose,
-                  const Intr& depth_intrinsics, const ColoredTSDFVolumeCPU& _volume) :
+                        const Intr& depth_intrinsics, const ColoredTSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
@@ -809,8 +811,8 @@ struct ColorRaycastInvoker : ParallelLoopBody
 };
 
 
-void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& depth_intrinsics, const Size& frameSize,
-                            OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& depth_intrinsics, const Size& frameSize,
+                                   OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     CV_TRACE_FUNCTION();
 
@@ -823,7 +825,7 @@ void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& depth_
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
     Colors colors = _colors.getMat();
-    ColorRaycastInvoker ri(points, normals, colors, cameraPose, depth_intrinsics, *this);
+    ColorRaycastInvoker ri(points, normals, colors, cameraPose, Intr(depth_intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);
@@ -874,8 +876,8 @@ struct ColorFetchPointsNormalsInvoker : ParallelLoopBody
         if(limits)
         {
             const RGBTsdfVoxel& voxeld = volDataStart[(x+shift.x)*vol.volDims[0] +
-                                                   (y+shift.y)*vol.volDims[1] +
-                                                   (z+shift.z)*vol.volDims[2]];
+                                                      (y+shift.y)*vol.volDims[1] +
+                                                      (z+shift.z)*vol.volDims[2]];
             float vd = tsdfToFloat(voxeld.tsdf);
 
             if(voxeld.weight != 0 && vd != 1.f)

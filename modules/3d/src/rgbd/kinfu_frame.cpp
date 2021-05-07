@@ -781,7 +781,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 
 void makeFrameFromDepth(InputArray _depth,
                         OutputArray pyrPoints, OutputArray pyrNormals,
-                        const Intr intr, int levels, float depthFactor,
+                        const Matx33f _intr, int levels, float depthFactor,
                         float sigmaDepth, float sigmaSpatial, int kernelSize,
                         float truncateThreshold)
 {
@@ -789,6 +789,7 @@ void makeFrameFromDepth(InputArray _depth,
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
 
+    Intr intr(_intr);
     CV_OCL_RUN(_depth.isUMat() && pyrPoints.isUMatVector() && pyrNormals.isUMatVector(),
                ocl_makeFrameFromDepth(_depth.getUMat(), pyrPoints, pyrNormals,
                                       intr, levels, depthFactor,
@@ -840,20 +841,21 @@ void makeFrameFromDepth(InputArray _depth,
 }
 
 void makeColoredFrameFromDepth(InputArray _depth, InputArray _rgb,
-                        OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrColors,
-                        const Intr intr, const Intr rgb_intr, int levels, float depthFactor,
-                        float sigmaDepth, float sigmaSpatial, int kernelSize,
-                        float truncateThreshold)
+                               OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrColors,
+                               const Matx33f _intr, const Matx33f _rgb_intr, int levels, float depthFactor,
+                               float sigmaDepth, float sigmaSpatial, int kernelSize,
+                               float truncateThreshold)
 {
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
 
-
     int kp = pyrPoints.kind(), kn = pyrNormals.kind(), kc = pyrColors.kind();
     CV_Assert(kp == _InputArray::STD_ARRAY_MAT || kp == _InputArray::STD_VECTOR_MAT);
     CV_Assert(kn == _InputArray::STD_ARRAY_MAT || kn == _InputArray::STD_VECTOR_MAT);
     CV_Assert(kc == _InputArray::STD_ARRAY_MAT || kc == _InputArray::STD_VECTOR_MAT);
+
+    Intr intr(_intr), rgb_intr(_rgb_intr);
 
     Depth depth = _depth.getMat();
     Colors rgb  = _rgb.getMat();

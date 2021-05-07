@@ -111,7 +111,7 @@ TsdfVoxel TSDFVolumeCPU::at(const Vec3i& volumeIdx) const
 
 // use depth instead of distance (optimization)
 void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                              const Intr& intrinsics, const int frameId)
+                              const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
@@ -119,6 +119,7 @@ void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44
     CV_Assert(!_depth.empty());
     Depth depth = _depth.getMat();
 
+    Intr intrinsics(_intrinsics);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
                     intrinsics.fx, intrinsics.fy,
                     intrinsics.cx, intrinsics.cy);
@@ -618,7 +619,7 @@ struct RaycastInvoker : ParallelLoopBody
 };
 
 
-void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                             OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();
@@ -631,7 +632,7 @@ void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, c
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
 
-    RaycastInvoker ri(points, normals, cameraPose, intrinsics, *this);
+    RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);
@@ -833,7 +834,7 @@ void TSDFVolumeGPU::reset()
 
 // use depth instead of distance (optimization)
 void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
-                              const Matx44f& cameraPose, const Intr& intrinsics, const int frameId)
+                              const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
@@ -854,6 +855,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
     float dfac = 1.f/depthFactor;
     Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
+    Intr intrinsics(_intrinsics);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
         intrinsics.fx, intrinsics.fy,
@@ -889,7 +891,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
 }
 
 
-void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, const Size& frameSize,
+void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
                             OutputArray _points, OutputArray _normals) const
 {
     CV_TRACE_FUNCTION();
@@ -917,6 +919,7 @@ void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Intr& intrinsics, c
     Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
+    Intr intrinsics(_intrinsics);
     Intr::Reprojector r = intrinsics.makeReprojector();
     // We do subtract voxel size to minimize checks after
     // Note: origin of volume coordinate is placed
