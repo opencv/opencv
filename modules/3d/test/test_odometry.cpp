@@ -145,8 +145,8 @@ protected:
 
 bool CV_OdometryTest::readData(Mat& image, Mat& depth) const
 {
-    std::string imageFilename = ts->get_data_path() + "rgbd/rgb.png";
-    std::string depthFilename = ts->get_data_path() + "rgbd/depth.png";
+    std::string imageFilename = ts->get_data_path() + "/cv/rgbd/rgb.png";
+    std::string depthFilename = ts->get_data_path() + "/cv/rgbd/depth.png";
     
     image = imread(imageFilename,  0);
     depth = imread(depthFilename, -1);

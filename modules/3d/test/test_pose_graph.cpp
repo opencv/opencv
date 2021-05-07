@@ -104,7 +104,7 @@ TEST( PoseGraph, sphereG2O )
     // Initialization Techniques for 3D SLAM : a Survey on Rotation Estimation and its Use in Pose Graph Optimization.
     // In IEEE Intl.Conf.on Robotics and Automation(ICRA), pages 4597 - 4604, 2015.
 
-    std::string filename = cvtest::TS::ptr()->get_data_path() + "rgbd/sphere_bignoise_vertex3.g2o";
+    std::string filename = cvtest::TS::ptr()->get_data_path() + "/cv/rgbd/sphere_bignoise_vertex3.g2o";
     Ptr<detail::PoseGraph> pg = readG2OFile(filename);
 
 #ifdef HAVE_EIGEN
