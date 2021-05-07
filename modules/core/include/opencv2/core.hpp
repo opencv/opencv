@@ -791,7 +791,7 @@ number of channels as src and the depth =CV_MAT_DEPTH(dtype).
 @param mask optional operation mask.
 @sa norm, Mat::convertTo, SparseMat::convertTo
 */
-CV_EXPORTS_W void normalize( InputArray src, InputOutputArray dst, double alpha = 1, double beta = 0,
+CV_EXPORTS_W void normalize( InputArray src, OutputArray dst, double alpha = 1, double beta = 0,
                              int norm_type = NORM_L2, int dtype = -1, InputArray mask = noArray());
 
 /** @overload

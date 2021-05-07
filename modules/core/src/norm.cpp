@@ -1284,7 +1284,7 @@ double PSNR(InputArray _src1, InputArray _src2, double R)
 
 
 #ifdef HAVE_OPENCL
-static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, int dtype,
+static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, int dtype,
                            double scale, double delta )
 {
     UMat src = _src.getUMat();
@@ -1370,7 +1370,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 }  // ocl_normalize
 #endif  // HAVE_OPENCL
 
-void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
+void normalize(InputArray _src, OutputArray _dst, double a, double b,
                int norm_type, int rtype, InputArray _mask)
 {
     CV_INSTRUMENT_REGION();
