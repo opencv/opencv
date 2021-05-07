@@ -551,6 +551,14 @@ INSTANTIATE_TEST_CASE_P(KMeans3DInitTestCPU, KMeans3DTest,
                                 Values(cv::KMEANS_RANDOM_CENTERS | cv::KMEANS_USE_INITIAL_LABELS,
                                        cv::KMEANS_PP_CENTERS     | cv::KMEANS_USE_INITIAL_LABELS)));
 
+INSTANTIATE_TEST_CASE_P(TransposeTestCPU, TransposeTest,
+                        Combine(Values( CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1 ),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_CPU)));
+                                
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestCPU, BackendOutputAllocationTest,
