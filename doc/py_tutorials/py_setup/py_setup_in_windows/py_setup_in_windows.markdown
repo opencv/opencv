@@ -28,6 +28,8 @@ Installing OpenCV from prebuilt binaries
 -#  Download latest OpenCV release from [GitHub](https://github.com/opencv/opencv/releases) or
     [SourceForge site](https://sourceforge.net/projects/opencvlibrary/files/)
     and double-click to extract it.
+    
+-#  Setup `OPENCV_DIR` and `PATH` environment variables according to Windows installation guide @ref tutorial_windows_install
 
 -#  Goto **opencv/build/python/2.7** folder.
 
