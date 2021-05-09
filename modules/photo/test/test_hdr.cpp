@@ -262,6 +262,7 @@ TEST(Photo_CalibrateRobertson, bug_18180)
     calibrate->process(images, response, times);
     Mat response_no_nans = response.clone();
     patchNaNs(response_no_nans);
+    // since there should be no NaNs, original response vs. response with NaNs patched should be identical
     bool isEqual = (sum(response != response_no_nans) == Scalar(0,0,0));
     ASSERT_TRUE(isEqual);
 }
