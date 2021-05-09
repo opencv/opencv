@@ -803,6 +803,24 @@ normalization.
 */
 CV_EXPORTS void normalize( const SparseMat& src, SparseMat& dst, double alpha, int normType );
 
+
+/** @brief Normalizes the norm or value range of an array with an operational mask.
+
+@param src input array.
+@param dst output array of the same size as src .
+@param mask operation mask.
+@param alpha norm value to normalize to or the lower range boundary in case of the range
+normalization.
+@param beta upper range boundary in case of the range normalization; it is not used for the norm
+normalization.
+@param norm_type normalization type (see cv::NormTypes).
+@param dtype when negative, the output array has the same type as src; otherwise, it has the same
+number of channels as src and the depth =CV_MAT_DEPTH(dtype).
+@sa norm, Mat::convertTo, SparseMat::convertTo
+*/
+CV_EXPORTS_W void normalizeWithMask( InputArray src, InputOutputArray dst, InputArray _mask, double alpha = 1, double beta = 0,
+                                     int norm_type = NORM_L2, int dtype = -1);
+
 /** @brief Finds the global minimum and maximum in an array.
 
 The function cv::minMaxLoc finds the minimum and maximum element values and their positions. The

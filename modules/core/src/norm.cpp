@@ -1284,7 +1284,7 @@ double PSNR(InputArray _src1, InputArray _src2, double R)
 
 
 #ifdef HAVE_OPENCL
-static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, int dtype,
+static bool ocl_normalizeWithMask( InputArray _src, OutputArray _dst, InputArray _mask, int dtype,
                            double scale, double delta )
 {
     UMat src = _src.getUMat();
@@ -1371,7 +1371,13 @@ static bool ocl_normalize( InputArray _src, OutputArray _dst, InputArray _mask, 
 #endif  // HAVE_OPENCL
 
 void normalize(InputArray _src, OutputArray _dst, double a, double b,
-               int norm_type, int rtype, InputArray _mask)
+               int norm_type, int rtype)
+{
+    normalizeWithMask(_src, (InputOutputArray) _dst, noArray(), a, b, norm_type, rtype);
+}
+
+void normalizeWithMask(InputArray _src, InputOutputArray _dst, InputArray _mask, double a, double b,
+               int norm_type, int rtype)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1405,7 +1411,7 @@ void normalize(InputArray _src, OutputArray _dst, double a, double b,
         CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
 
     CV_OCL_RUN(_dst.isUMat(),
-               ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
+               ocl_normalizeWithMask(_src, _dst, _mask, rtype, scale, shift))
 
     Mat src = _src.getMat();
     if( _mask.empty() )
@@ -1417,5 +1423,8 @@ void normalize(InputArray _src, OutputArray _dst, double a, double b,
         temp.copyTo( _dst, _mask );
     }
 }
+
+
+
 
 }  // namespace
