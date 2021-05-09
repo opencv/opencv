@@ -249,4 +249,21 @@ TEST(Photo_CalibrateRobertson, regression)
     checkEqual(expected, response, 1e-1f, "CalibrateRobertson");
 }
 
+TEST(Photo_CalibrateRobertson, bug_18180)
+{
+    vector<Mat> images;
+    vector<cv::String> fn;
+    glob(string(cvtest::TS::ptr()->get_data_path()) + "hdr/exposures/bug_18180/*.jpg", fn, false);
+    for (size_t i=0; i<fn.size(); i++)
+        images.push_back(imread(fn[i]));
+    vector<float> times {15, 2.5, 0.25, 0.333333};
+    Mat response, expected;
+    Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson(2, 0.01);
+    calibrate->process(images, response, times);
+    Mat response_no_nans = response.clone();
+    patchNaNs(response_no_nans);
+    bool isEqual = (sum(response != response_no_nans) == Scalar(0,0,0));
+    ASSERT_TRUE(isEqual);
+}
+
 }} // namespace
