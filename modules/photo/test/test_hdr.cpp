@@ -254,8 +254,8 @@ TEST(Photo_CalibrateRobertson, bug_18180)
     vector<Mat> images;
     vector<cv::String> fn;
     glob(string(cvtest::TS::ptr()->get_data_path()) + "hdr/exposures/bug_18180/*.jpg", fn, false);
-    for (size_t i=0; i<fn.size(); i++)
-        images.push_back(imread(fn[i]));
+    for (auto & i : fn)
+        images.push_back(imread(i));
     vector<float> times {15, 2.5, 0.25, 0.333333};
     Mat response, expected;
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson(2, 0.01);
