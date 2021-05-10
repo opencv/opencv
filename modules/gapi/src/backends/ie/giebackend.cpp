@@ -530,10 +530,11 @@ public:
     explicit RequestPool(std::vector<InferenceEngine::InferRequest>&& requests);
 
     void execute(Task&& t);
-    void waitAndShutdown();
+    void waitAll();
 
 private:
     void callback(Task task, InferenceEngine::InferRequest& request, size_t id);
+    void setup();
 
     QueueClass<size_t>                         m_idle_ids;
     std::vector<InferenceEngine::InferRequest> m_requests;
@@ -542,10 +543,14 @@ private:
 // RequestPool implementation //////////////////////////////////////////////
 cv::gimpl::ie::RequestPool::RequestPool(std::vector<InferenceEngine::InferRequest>&& requests)
     : m_requests(std::move(requests)) {
-        for (size_t i = 0; i < m_requests.size(); ++i) {
-            m_idle_ids.push(i);
-        }
+        setup();
     }
+
+void cv::gimpl::ie::RequestPool::setup() {
+    for (size_t i = 0; i < m_requests.size(); ++i) {
+        m_idle_ids.push(i);
+    }
+}
 
 void cv::gimpl::ie::RequestPool::execute(cv::gimpl::ie::RequestPool::Task&& t) {
     size_t id = 0u;
@@ -566,12 +571,13 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
 }
 
 // NB: Not thread-safe.
-void cv::gimpl::ie::RequestPool::waitAndShutdown() {
+void cv::gimpl::ie::RequestPool::waitAll() {
     // NB: It will be blocked if at least one request is busy.
     for (size_t i = 0; i < m_requests.size(); ++i) {
         size_t id = 0u;
         m_idle_ids.pop(id);
     }
+    setup();
 }
 
 // GCPUExcecutable implementation //////////////////////////////////////////////
@@ -632,7 +638,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
         // (3) Wait until all passed task are done.
-        m_reqPool->waitAndShutdown();
+        m_reqPool->waitAll();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
@@ -671,7 +677,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // (5) In non-streaming mode need to wait until the all tasks are done
     // FIXME: Is there more graceful way to handle this case ?
     if (!m_gm.metadata().contains<Streaming>()) {
-        m_reqPool->waitAndShutdown();
+        m_reqPool->waitAll();
     }
 }
 

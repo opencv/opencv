@@ -375,6 +375,8 @@ cv::Mutex& getInitializationMutex();
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+CV_EXPORTS void releaseTlsStorageThread();
+
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
