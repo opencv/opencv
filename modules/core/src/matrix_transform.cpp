@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include <thread>
 
 namespace cv {
 
@@ -516,92 +517,119 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     }
 }
 
+class flipVertComputer : public ParallelLoopBody
+{
+public:
+    flipVertComputer(const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz, int stripe)
+        : src0_(src0), sstep_(sstep), dst0_(dst0), dstep_(dstep), size_(size), esz_(esz), stripe_(stripe) { }
+
+    void operator()( const cv::Range& range ) const
+    {
+        Size sz = size_;
+        const int halfHeight = (sz.height + 1) / 2;
+        const int begin = range.start * stripe_;
+        const int end = (begin + stripe_) > halfHeight ? halfHeight : (begin + stripe_) ;
+        const uchar* srcTop = src0_ + (begin * sstep_);
+        uchar* dstTop = dst0_ + (begin * dstep_);
+        const uchar* srcBottom = src0_ + ((sz.height - 1 - begin) * sstep_);
+        uchar* dstBottom = dst0_ + ((sz.height - 1 - begin) * dstep_);
+        sz.width *= (int)esz_;
+
+        for ( int y = begin; y < end; y++, srcTop += sstep_, srcBottom -= sstep_,
+                                           dstTop += dstep_, dstBottom -= dstep_)
+        {
+            int i = 0;
+#if CV_SIMD
+#if CV_STRONG_ALIGNMENT
+             if (isAligned<sizeof(int)>(srcTop, srcBottom, dstTop, dstBottom))
+#endif
+            {
+                for (; i <= sz.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+                {
+                    v_int32 t0 = vx_load((int*)(srcTop + i));
+                    v_int32 t1 = vx_load((int*)(srcBottom + i));
+                    v_store((int*)(dstTop + i), t1);
+                    v_store((int*)(dstBottom + i), t0);
+                }
+            }
+#if CV_STRONG_ALIGNMENT
+            else
+            {
+                for (; i <= sz.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+                {
+                    v_uint8 t0 = vx_load(srcTop + i);
+                    v_uint8 t1 = vx_load(srcBottom + i);
+                    v_store(dstTop + i, t1);
+                    v_store(dstBottom + i, t0);
+                }
+            }
+#endif
+#endif
+            if (isAligned<sizeof(int)>(srcTop, srcBottom, dstTop, dstBottom))
+            {
+                for( ; i <= sz.width - 16; i += 16 )
+                {
+                    int t0 = ((int*)(srcTop + i))[0];
+                    int t1 = ((int*)(srcBottom + i))[0];
+
+                    ((int*)(dstTop + i))[0] = t1;
+                    ((int*)(dstBottom + i))[0] = t0;
+
+                    t0 = ((int*)(srcTop + i))[1];
+                    t1 = ((int*)(srcBottom + i))[1];
+
+                    ((int*)(dstTop + i))[1] = t1;
+                    ((int*)(dstBottom + i))[1] = t0;
+
+                    t0 = ((int*)(srcTop + i))[2];
+                    t1 = ((int*)(srcBottom + i))[2];
+
+                    ((int*)(dstTop + i))[2] = t1;
+                    ((int*)(dstBottom + i))[2] = t0;
+
+                    t0 = ((int*)(srcTop + i))[3];
+                    t1 = ((int*)(srcBottom + i))[3];
+
+                    ((int*)(dstTop + i))[3] = t1;
+                    ((int*)(dstBottom + i))[3] = t0;
+                }
+
+                for( ; i <= sz.width - 4; i += 4 )
+                {
+                    int t0 = ((int*)(srcTop + i))[0];
+                    int t1 = ((int*)(srcBottom + i))[0];
+
+                    ((int*)(dstTop + i))[0] = t1;
+                    ((int*)(dstBottom + i))[0] = t0;
+                }
+            }
+
+            for( ; i < sz.width; i++ )
+            {
+                uchar t0 = srcTop[i];
+                uchar t1 = srcBottom[i];
+
+                dstTop[i] = t1;
+                dstBottom[i] = t0;
+            }
+        }
+    }
+private:
+    const uchar* src0_;
+    size_t sstep_;
+    uchar* dst0_;
+    size_t dstep_;
+    Size size_;
+    size_t esz_;
+    int stripe_;
+};
+
 static void
 flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz )
 {
-    const uchar* src1 = src0 + (size.height - 1)*sstep;
-    uchar* dst1 = dst0 + (size.height - 1)*dstep;
-    size.width *= (int)esz;
-
-    for( int y = 0; y < (size.height + 1)/2; y++, src0 += sstep, src1 -= sstep,
-                                                  dst0 += dstep, dst1 -= dstep )
-    {
-        int i = 0;
-#if CV_SIMD
-#if CV_STRONG_ALIGNMENT
-        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
-#endif
-        {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
-            {
-                v_int32 t0 = vx_load((int*)(src0 + i));
-                v_int32 t1 = vx_load((int*)(src1 + i));
-                v_store((int*)(dst0 + i), t1);
-                v_store((int*)(dst1 + i), t0);
-            }
-        }
-#if CV_STRONG_ALIGNMENT
-        else
-        {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
-            {
-                v_uint8 t0 = vx_load(src0 + i);
-                v_uint8 t1 = vx_load(src1 + i);
-                v_store(dst0 + i, t1);
-                v_store(dst1 + i, t0);
-            }
-        }
-#endif
-#endif
-
-        if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
-        {
-            for( ; i <= size.width - 16; i += 16 )
-            {
-                int t0 = ((int*)(src0 + i))[0];
-                int t1 = ((int*)(src1 + i))[0];
-
-                ((int*)(dst0 + i))[0] = t1;
-                ((int*)(dst1 + i))[0] = t0;
-
-                t0 = ((int*)(src0 + i))[1];
-                t1 = ((int*)(src1 + i))[1];
-
-                ((int*)(dst0 + i))[1] = t1;
-                ((int*)(dst1 + i))[1] = t0;
-
-                t0 = ((int*)(src0 + i))[2];
-                t1 = ((int*)(src1 + i))[2];
-
-                ((int*)(dst0 + i))[2] = t1;
-                ((int*)(dst1 + i))[2] = t0;
-
-                t0 = ((int*)(src0 + i))[3];
-                t1 = ((int*)(src1 + i))[3];
-
-                ((int*)(dst0 + i))[3] = t1;
-                ((int*)(dst1 + i))[3] = t0;
-            }
-
-            for( ; i <= size.width - 4; i += 4 )
-            {
-                int t0 = ((int*)(src0 + i))[0];
-                int t1 = ((int*)(src1 + i))[0];
-
-                ((int*)(dst0 + i))[0] = t1;
-                ((int*)(dst1 + i))[0] = t0;
-            }
-        }
-
-        for( ; i < size.width; i++ )
-        {
-            uchar t0 = src0[i];
-            uchar t1 = src1[i];
-
-            dst0[i] = t1;
-            dst1[i] = t0;
-        }
-    }
+    int nthreads = getNumberOfCPUs();
+    int stripe = (((size.height + 1) / 2) + nthreads - 1) / nthreads;
+    parallel_for_(Range(0, nthreads), flipVertComputer(src0, sstep, dst0, dstep, size, esz, stripe));
 }
 
 #ifdef HAVE_OPENCL
