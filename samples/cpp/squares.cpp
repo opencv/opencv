@@ -123,14 +123,14 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 
 int main(int argc, char** argv)
 {
-    static const char* names[] = { "pic1.png", "pic2.png", "pic3.png",
+    const char* names[] = { "pic1.png", "pic2.png", "pic3.png",
         "pic4.png", "pic5.png", "pic6.png", 0 };
     help(argv[0]);
 
     if( argc > 1)
     {
      names[0] =  argv[1];
-     names[1] =  "0";
+     names[1] =  0;
     }
 
     for( int i = 0; names[i] != 0; i++ )

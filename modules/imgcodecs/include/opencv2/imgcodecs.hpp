@@ -120,8 +120,8 @@ enum ImwriteEXRCompressionFlags {
        IMWRITE_EXR_COMPRESSION_PXR24 = 5, //!< lossy 24-bit float compression
        IMWRITE_EXR_COMPRESSION_B44   = 6, //!< lossy 4-by-4 pixel block compression, fixed compression rate
        IMWRITE_EXR_COMPRESSION_B44A  = 7, //!< lossy 4-by-4 pixel block compression, flat fields are compressed more
-       IMWRITE_EXR_COMPRESSION_DWAA  = 8, //!< lossy DCT based compression, in blocks of 32 scanlines. More efficient for partial buffer access.
-       IMWRITE_EXR_COMPRESSION_DWAB  = 9, //!< lossy DCT based compression, in blocks of 256 scanlines. More efficient space wise and faster to decode full frames than DWAA_COMPRESSION.
+       IMWRITE_EXR_COMPRESSION_DWAA  = 8, //!< lossy DCT based compression, in blocks of 32 scanlines. More efficient for partial buffer access. Supported since OpenEXR 2.2.0.
+       IMWRITE_EXR_COMPRESSION_DWAB  = 9, //!< lossy DCT based compression, in blocks of 256 scanlines. More efficient space wise and faster to decode full frames than DWAA_COMPRESSION. Supported since OpenEXR 2.2.0.
      };
 
 //! Imwrite PNG specific flags used to tune the compression algorithm.
@@ -214,6 +214,26 @@ The function imreadmulti loads a multi-page image from the specified file into a
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Loads a of images of a multi-page image from a file.
+
+The function imreadmulti loads a specified range from a multi-page image from the specified file into a vector of Mat objects.
+@param filename Name of file to be loaded.
+@param start Start index of the image to load
+@param count Count number of images to load
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+@param mats A vector of Mat objects holding each page, if more than one.
+@sa cv::imread
+*/
+CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Returns the number of images inside the give file
+
+The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
+@param filename Name of file to be loaded.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+*/
+CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR);
 
 /** @brief Saves an image to a specified file.
 
