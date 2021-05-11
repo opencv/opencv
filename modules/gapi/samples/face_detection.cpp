@@ -330,10 +330,6 @@ GAPI_OCV_KERNEL(OCVRunNMS, RunNMS) {
                     std::vector<Face> &out_faces) {
                     std::vector<Face> in_faces_copy = in_faces;
         out_faces = Face::runNMS(in_faces_copy, threshold, useMin);
-        std::cout << "OCVRunNMS!!! in_faces size " << in_faces.size() <<
-            " out_faces size " << out_faces.size() <<
-            " for threshold " << threshold <<
-            " and useMin " << useMin << std::endl;
     }
 };// GAPI_OCV_KERNEL(RunNMS)
 
@@ -716,57 +712,6 @@ int main(int argc, char* argv[]) {
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(cv::compile_args(networks_mtcnn, kernels_mtcnn));
 
     std::cout << "Reading " << input_file_name << std::endl;
-#if 0
-    // Input image
-    cv::TickMeter tm;
-    //static (comment out for video cap) 
-    auto in_orig = cv::imread(input_file_name);
-    // remove comment out for video cap
-    //cv::Mat in_orig;
-    //cap.read(in_orig);
-
-    cv::Mat in_src;
-    in_orig.copyTo(in_src);
-    auto graph_mtcnn_compiled = graph_mtcnn.compile(descr_of(gin(in_src)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-    tm.start();
-    int frames = 0;
-    std::vector<custom::Face> out_faces;
-    while (cv::waitKey(1) < 0) {
-        //while (cap.read(in_orig)) {
-        frames++;
-        std::cout << "Frame " << frames << std::endl;
-        tm.stop();
-        //auto in_orig1 = cv::imread(input_file_name);
-        //auto graph_mtcnn_compiled1 = graph_mtcnn.compile(descr_of(gin(in_orig)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
-        tm.start();
-        //graph_mtcnn_compiled1(gin(in_orig), gout(in_orig, out_faces));
-        graph_mtcnn_compiled(gin(in_orig), gout(in_orig, out_faces));
-        tm.stop();
-        std::cout << "Final Faces Size " << out_faces.size() << std::endl;
-        std::vector<vis::rectPoints> data;
-        // show the image with faces in it
-        for (size_t i = 0; i < out_faces.size(); ++i) {
-            std::vector<cv::Point> pts;
-            for (int p = 0; p < NUM_PTS; ++p) {
-                pts.push_back(
-                    cv::Point(out_faces[i].ptsCoords[2 * p], out_faces[i].ptsCoords[2 * p + 1]));
-            }
-
-            auto rect = out_faces[i].bbox.getRect();
-            auto d = std::make_pair(rect, pts);
-            data.push_back(d);
-        }
-        auto resultImg = vis::drawRectsAndPoints(in_orig, data);
-        const auto fps_str = std::to_string(frames / tm.getTimeSec()) + " FPS";
-        cv::putText(resultImg, fps_str, { 0,32 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0,255,0 }, 2);
-        cv::imshow("Out", resultImg);
-        // remove comment out for video cap
-        //cv::waitKey(1);
-        out_faces.clear();
-        tm.start();
-    }
-
-#else
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
@@ -809,6 +754,5 @@ int main(int argc, char* argv[]) {
     tm.stop();
     std::cout << "Processed " << frames << " frames"
         << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
-#endif
     return 0;
 }
