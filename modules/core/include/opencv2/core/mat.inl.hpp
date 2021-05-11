@@ -898,6 +898,33 @@ const _Tp* Mat::ptr(const int* idx) const
     return (const _Tp*)p;
 }
 
+template<int n> inline
+uchar* Mat::ptr(const Vec<int, n>& idx)
+{
+    return Mat::ptr(idx.val);
+}
+
+template<int n> inline
+const uchar* Mat::ptr(const Vec<int, n>& idx) const
+{
+    return Mat::ptr(idx.val);
+}
+
+template<typename _Tp, int n> inline
+_Tp* Mat::ptr(const Vec<int, n>& idx)
+{
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return Mat::ptr<_Tp>(idx.val);
+}
+
+template<typename _Tp, int n> inline
+const _Tp* Mat::ptr(const Vec<int, n>& idx) const
+{
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return Mat::ptr<_Tp>(idx.val);
+}
+
+
 template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1)
 {
