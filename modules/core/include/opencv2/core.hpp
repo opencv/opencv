@@ -1624,7 +1624,7 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
 /** @brief converts NaNs to the given number
-@param a input/output matrix (CV_32F type).
+@param a input/output matrix (CV_32F or CV_64F type).
 @param val value to convert the NaNs
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
