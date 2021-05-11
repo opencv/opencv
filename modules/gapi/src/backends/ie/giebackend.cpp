@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -59,6 +59,8 @@ template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
 #  include "executor/conc_queue.hpp"
 template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
 #endif // TBB
+
+#include "utils/itt.hpp"
 
 namespace IE = InferenceEngine;
 
@@ -757,6 +759,9 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest   &request,
                         std::shared_ptr<IECallContext>   ctx) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
+    GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
+
     for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
         auto& out_mat = ctx->outMatR(i);

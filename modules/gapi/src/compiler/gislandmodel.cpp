@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -10,6 +10,8 @@
 #include <sstream>
 #include <unordered_set>
 #include <unordered_map>
+#include <typeinfo> // typeid
+#include <cctype> // std::isdigit
 
 #include <ade/util/checked_cast.hpp>
 #include <ade/util/zip_range.hpp> // zip_range, indexed
@@ -333,6 +335,53 @@ ade::NodeHandle GIslandModel::producerOf(const ConstGraph &g, ade::NodeHandle &d
     // No appropriate data slot found - probably, the object has been
     // optimized out during fusion
     return ade::NodeHandle();
+}
+
+std::string GIslandModel::traceIslandName(const ade::NodeHandle& island_nh, const Graph& g) {
+    auto island_ptr = g.metadata(island_nh).get<FusedIsland>().object;
+    std::string island_name = island_ptr->name();
+
+    std::string backend_name = "";
+
+    auto& backend_impl = island_ptr->backend().priv();
+    std::string backend_impl_type_name = typeid(backend_impl).name();
+
+    // NOTE: Major part of already existing backends implementaion classes are called using
+    //       "*G[Name]BackendImpl*" pattern.
+    //       We are trying to match against this pattern and retrive just [Name] part.
+    //       If matching isn't successful, full mangled class name will be used.
+    //
+    //       To match we use following algorithm:
+    //           1) Find "BackendImpl" substring, if it doesn't exist, go to step 5.
+    //           2) Let from_pos be second character in a string.
+    //           3) Starting from from_pos, seek for "G" symbol in a string.
+    //              If it doesn't exist or exists after "BackendImpl" position, go to step 5.
+    //           4) Check that previous character before found "G" is digit, means that this is
+    //              part of characters number in a new word in a string (previous words may be
+    //              namespaces).
+    //              If it is so, match is found. Return name between found "G" and "BackendImpl".
+    //              If it isn't so, assign from_pos to found "G" position + 1 and loop to step 3.
+    //           5) Matching is not successful, return full class name.
+    bool matched = false;
+    bool stop = false;
+    auto to_pos = backend_impl_type_name.find("BackendImpl");
+    std::size_t from_pos = 0UL;
+    if (to_pos != std::string::npos) {
+        while (!matched  && !stop) {
+            from_pos = backend_impl_type_name.find("G", from_pos + 1);
+            stop = from_pos == std::string::npos || from_pos >= to_pos;
+            matched = !stop && std::isdigit(backend_impl_type_name[from_pos - 1]);
+        }
+    }
+
+    if (matched) {
+        backend_name = backend_impl_type_name.substr(from_pos + 1, to_pos - from_pos - 1);
+    }
+    else {
+        backend_name = backend_impl_type_name;
+    }
+
+    return island_name + "_" + backend_name;
 }
 
 void GIslandExecutable::run(GIslandExecutable::IInput &in, GIslandExecutable::IOutput &out)
