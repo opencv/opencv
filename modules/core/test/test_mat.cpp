@@ -2365,4 +2365,20 @@ TEST(Mat, regression_18473)
 }
 
 
+TEST(Mat, ptrVecni_20044)
+{
+    Mat_<int> m(3,4); m << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12;
+    Vec2i idx(1,1);
+
+    uchar *u = m.ptr(idx);
+    EXPECT_EQ(int(6), *(int*)(u));
+    const uchar *cu = m.ptr(idx);
+    EXPECT_EQ(int(6), *(int*)(cu));
+
+    int *i = m.ptr<int>(idx);
+    EXPECT_EQ(int(6), *(i));
+    const int *ci = m.ptr<int>(idx);
+    EXPECT_EQ(int(6), *(ci));
+}
+
 }} // namespace
