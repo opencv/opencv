@@ -1571,6 +1571,9 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
 static bool ocl_patchNaNs( InputOutputArray _a, float value )
 {
+    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    if(!doubleSupport && _a.depth() == CV_64F)
+        return false;
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
                      format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
@@ -1594,7 +1597,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert( _a.depth() == CV_32F || _a.depth() == CV_64F);
+    CV_CheckDepth(_a.depth(), _a.depth() == CV_32F || _a.depth() == CV_64F, "");
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
                ocl_patchNaNs(_a, (float)_val))
