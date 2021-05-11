@@ -2013,7 +2013,7 @@ public:
 
     /** @brief Same as begin() but for inverse traversal
      */
-    template<typename _Tp>   std::reverse_iterator<MatIterator_<_Tp>> rbegin();
+    template<typename _Tp> std::reverse_iterator<MatIterator_<_Tp>> rbegin();
     template<typename _Tp> std::reverse_iterator<MatConstIterator_<_Tp>> rbegin() const;
 
     /** @brief Returns the matrix iterator and sets it to the after-last matrix element.

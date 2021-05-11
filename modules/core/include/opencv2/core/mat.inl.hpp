@@ -1063,8 +1063,7 @@ std::reverse_iterator<MatIterator_<_Tp>> Mat::rbegin()
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
     MatIterator_<_Tp> it((Mat_<_Tp>*)this);
     it += total();
-    return  std::reverse_iterator<MatIterator_<_Tp>>(it);
-
+    return std::reverse_iterator<MatIterator_<_Tp>>(it);
 }
 
 template<typename _Tp> inline
