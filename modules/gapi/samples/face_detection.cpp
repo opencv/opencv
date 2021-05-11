@@ -56,45 +56,45 @@ namespace {
 #define NUM_PTS 5
 
 struct BBox {
-    double x1;
-    double y1;
-    double x2;
-    double y2;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
 
-    cv::Rect getRect() const { return cv::Rect(static_cast<int>(x1),
-                                               static_cast<int>(y1),
-                                               static_cast<int>(x2 - x1),
-                                               static_cast<int>(y2 - y1)); }
+    cv::Rect getRect() const { return cv::Rect((x1),
+                                               (y1),
+                                               (x2 - x1),
+                                               (y2 - y1)); }
 
     BBox getSquare() const {
         BBox bbox;
-        double bboxWidth = x2 - x1;
-        double bboxHeight = y2 - y1;
-        double side = std::max(bboxWidth, bboxHeight);
-        bbox.x1 = static_cast<double>(x1) + (bboxWidth - side) * 0.5;
-        bbox.y1 = static_cast<double>(y1) + (bboxHeight - side) * 0.5;
-        bbox.x2 = bbox.x1 + side;
-        bbox.y2 = bbox.y1 + side;
+        float bboxWidth = static_cast<float>(x2 - x1);
+        float bboxHeight = static_cast<float>(y2 - y1);
+        float side = std::max(bboxWidth, bboxHeight);
+        bbox.x1 = static_cast<int>(static_cast<float>(x1) + (bboxWidth - side) * 0.5f);
+        bbox.y1 = static_cast<int>(static_cast<float>(y1) + (bboxHeight - side) * 0.5f);
+        bbox.x2 = static_cast<int>(static_cast<float>(bbox.x1) + side);
+        bbox.y2 = static_cast<int>(static_cast<float>(bbox.y1) + side);
         return bbox;
     }
 };
 
 struct Face {
     BBox bbox;
-    double score;
-    std::array<double, NUM_REGRESSIONS> regression;
-    double ptsCoords[2 * NUM_PTS];
+    float score;
+    std::array<float, NUM_REGRESSIONS> regression;
+    float ptsCoords[2 * NUM_PTS];
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
         for (auto& face : faces) {
-            double bboxWidth =
-                face.bbox.x2 - face.bbox.x1 + static_cast<double>(addOne);
-            double bboxHeight =
-                face.bbox.y2 - face.bbox.y1 + static_cast<double>(addOne);
-            face.bbox.x1 = face.bbox.x1 + static_cast<double>(face.regression[1]) * bboxWidth;
-            face.bbox.y1 = face.bbox.y1 + static_cast<double>(face.regression[0]) * bboxHeight;
-            face.bbox.x2 = face.bbox.x2 + static_cast<double>(face.regression[3]) * bboxWidth;
-            face.bbox.y2 = face.bbox.y2 + static_cast<double>(face.regression[2]) * bboxHeight;
+            float bboxWidth =
+                face.bbox.x2 - face.bbox.x1 + static_cast<float>(addOne);
+            float bboxHeight =
+                face.bbox.y2 - face.bbox.y1 + static_cast<float>(addOne);
+            face.bbox.x1 = static_cast<int>(static_cast<float>(face.bbox.x1) + (face.regression[1] * bboxWidth));
+            face.bbox.y1 = static_cast<int>(static_cast<float>(face.bbox.y1) + (face.regression[0] * bboxHeight));
+            face.bbox.x2 = static_cast<int>(static_cast<float>(face.bbox.x2) + (face.regression[3] * bboxWidth));
+            face.bbox.y2 = static_cast<int>(static_cast<float>(face.bbox.y2) + (face.regression[2] * bboxHeight));
         }
     }
 
@@ -104,7 +104,7 @@ struct Face {
         }
     }
 
-    static std::vector<Face> runNMS(std::vector<Face>& faces, const double threshold,
+    static std::vector<Face> runNMS(std::vector<Face>& faces, const float threshold,
                                     const bool useMin = false) {
         std::vector<Face> facesNMS;
         if (faces.empty()) {
@@ -123,22 +123,22 @@ struct Face {
             facesNMS.push_back(faces[idx]);
             std::vector<int> tmpIndices = indices;
             indices.clear();
-            const double area1 = (faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
-                (faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
+            const float area1 = static_cast<float>(faces[idx].bbox.x2 - faces[idx].bbox.x1 + 1) *
+                static_cast<float>(faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
             for (size_t i = 1; i < tmpIndices.size(); ++i) {
                 int tmpIdx = tmpIndices[i];
-                const double interX1 = std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1);
-                const double interY1 = std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1);
-                const double interX2 = std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2);
-                const double interY2 = std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2);
+                const float interX1 = std::max(static_cast<float>(faces[idx].bbox.x1), static_cast<float>(faces[tmpIdx].bbox.x1));
+                const float interY1 = std::max(static_cast<float>(faces[idx].bbox.y1), static_cast<float>(faces[tmpIdx].bbox.y1));
+                const float interX2 = std::min(static_cast<float>(faces[idx].bbox.x2), static_cast<float>(faces[tmpIdx].bbox.x2));
+                const float interY2 = std::min(static_cast<float>(faces[idx].bbox.y2), static_cast<float>(faces[tmpIdx].bbox.y2));
 
-                const double bboxWidth = std::max(0.0, (interX2 - interX1 + 1));
-                const double bboxHeight = std::max(0.0, (interY2 - interY1 + 1));
+                const float bboxWidth = std::max(0.0f, (interX2 - interX1 + 1));
+                const float bboxHeight = std::max(0.0f, (interY2 - interY1 + 1));
 
-                const double interArea = bboxWidth * bboxHeight;
-                const double area2 = (faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
-                    (faces[tmpIdx].bbox.y2 - faces[tmpIdx].bbox.y1 + 1);
-                double overlap = 0.0;
+                const float interArea = bboxWidth * bboxHeight;
+                const float area2 = static_cast<float>(faces[tmpIdx].bbox.x2 - faces[tmpIdx].bbox.x1 + 1) *
+                    static_cast<float>(faces[tmpIdx].bbox.y2 - faces[tmpIdx].bbox.y1 + 1);
+                float overlap = 0.0;
                 if (useMin) {
                     overlap = interArea / std::min(area1, area2);
                 } else {
@@ -153,13 +153,12 @@ struct Face {
     }
 };
 
-const double P_NET_WINDOW_SIZE = 12.0;
-const double P_NET_STRIDE = 2.0;
+const float P_NET_WINDOW_SIZE = 12.0f;
 
 std::vector<Face> buildFaces(const cv::Mat& scores,
                              const cv::Mat& regressions,
-                             const double scaleFactor,
-                             const double threshold) {
+                             const float scaleFactor,
+                             const float threshold) {
 
     auto w = scores.size[3];
     auto h = scores.size[2];
@@ -169,6 +168,14 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
     scores_data += size;
 
     const float* reg_data = regressions.ptr<float>();
+
+    auto out_side = std::max(h, w);
+    auto in_side = 2 * out_side + 11;
+    float stride = 0.0f;
+    if (out_side != 1)
+    {
+        stride = static_cast<float>(in_side - 12) / static_cast<float>(out_side - 1);
+    }
 
     std::vector<Face> boxes;
 
@@ -180,10 +187,10 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
             Face faceInfo;
             BBox& faceBox = faceInfo.bbox;
 
-            faceBox.x1 = (static_cast<double>(x) * P_NET_STRIDE) / scaleFactor;
-            faceBox.y1 = (static_cast<double>(y) * P_NET_STRIDE) / scaleFactor;
-            faceBox.x2 = (static_cast<double>(x) * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
-            faceBox.y2 = (static_cast<double>(y) * P_NET_STRIDE + P_NET_WINDOW_SIZE - 1.f) / scaleFactor;
+            faceBox.x1 = std::max(0, static_cast<int>((static_cast<float>(x) * stride) / scaleFactor));
+            faceBox.y1 = std::max(0, static_cast<int>((static_cast<float>(y) * stride) / scaleFactor));
+            faceBox.x2 = static_cast<int>((static_cast<float>(x) * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
+            faceBox.y2 = static_cast<int>((static_cast<float>(y) * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
             faceInfo.regression[0] = reg_data[i];
             faceInfo.regression[1] = reg_data[i + size];
             faceInfo.regression[2] = reg_data[i + 2 * size];
@@ -213,21 +220,21 @@ G_API_NET(MTCNNOutput,
 
 using GFaces = cv::GArray<Face>;
 G_API_OP(BuildFaces,
-         <GFaces(cv::GMat, cv::GMat, double, double)>,
+         <GFaces(cv::GMat, cv::GMat, float, float)>,
          "sample.custom.mtcnn.build_faces") {
          static cv::GArrayDesc outMeta(const cv::GMatDesc&,
                                        const cv::GMatDesc&,
-                                       const double,
-                                       const double) {
+                                       const float,
+                                       const float) {
               return cv::empty_array_desc();
     }
 };
 
 G_API_OP(RunNMS,
-         <GFaces(GFaces, double, bool)>,
+         <GFaces(GFaces, float, bool)>,
          "sample.custom.mtcnn.run_nms") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
-                                       const double, const bool) {
+                                       const float, const bool) {
              return cv::empty_array_desc();
     }
 };
@@ -267,24 +274,24 @@ G_API_OP(R_O_NetPreProcGetROIs,
 
 
 G_API_OP(RNetPostProc,
-         <GFaces(GFaces, GMats, GMats, double)>,
+         <GFaces(GFaces, GMats, GMats, float)>,
          "sample.custom.mtcnn.rnet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
-                                       const double) {
+                                       const float) {
              return cv::empty_array_desc();
     }
 };
 
 G_API_OP(ONetPostProc,
-         <GFaces(GFaces, GMats, GMats, GMats, double)>,
+         <GFaces(GFaces, GMats, GMats, GMats, float)>,
          "sample.custom.mtcnn.onet_postproc") {
          static cv::GArrayDesc outMeta(const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
                                        const cv::GArrayDesc&,
-                                       const double) {
+                                       const float) {
              return cv::empty_array_desc();
     }
 };
@@ -309,8 +316,8 @@ G_API_OP(Transpose,
 GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
     static void run(const cv::Mat & in_scores,
                     const cv::Mat & in_regresssions,
-                    const double scaleFactor,
-                    const double threshold,
+                    const float scaleFactor,
+                    const float threshold,
                     std::vector<Face> &out_faces) {
         out_faces = buildFaces(in_scores, in_regresssions, scaleFactor, threshold);
     }
@@ -318,11 +325,15 @@ GAPI_OCV_KERNEL(OCVBuildFaces, BuildFaces) {
 
 GAPI_OCV_KERNEL(OCVRunNMS, RunNMS) {
     static void run(const std::vector<Face> &in_faces,
-                    const double threshold,
+                    const float threshold,
                     const bool useMin,
                     std::vector<Face> &out_faces) {
                     std::vector<Face> in_faces_copy = in_faces;
         out_faces = Face::runNMS(in_faces_copy, threshold, useMin);
+        std::cout << "OCVRunNMS!!! in_faces size " << in_faces.size() <<
+            " out_faces size " << out_faces.size() <<
+            " for threshold " << threshold <<
+            " and useMin " << useMin << std::endl;
     }
 };// GAPI_OCV_KERNEL(RunNMS)
 
@@ -375,7 +386,7 @@ GAPI_OCV_KERNEL(OCVRNetPostProc, RNetPostProc) {
     static void run(const std::vector<Face> &in_faces,
                     const std::vector<cv::Mat> &in_scores,
                     const std::vector<cv::Mat> &in_regresssions,
-                    const double threshold,
+                    const float threshold,
                     std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
@@ -396,7 +407,7 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
                     const std::vector<cv::Mat> &in_scores,
                     const std::vector<cv::Mat> &in_regresssions,
                     const std::vector<cv::Mat> &in_landmarks,
-                    const double threshold,
+                    const float threshold,
                     std::vector<Face> &out_faces) {
         out_faces.clear();
         for (unsigned int k = 0; k < in_faces.size(); ++k) {
@@ -409,13 +420,13 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
                 for (int i = 0; i < 4; ++i) {
                     info.regression[i] = reg_data[i];
                 }
-                double w = info.bbox.x2 - info.bbox.x1 + 1.0;
-                double h = info.bbox.y2 - info.bbox.y1 + 1.0;
+                float w = info.bbox.x2 - info.bbox.x1 + 1.0f;
+                float h = info.bbox.y2 - info.bbox.y1 + 1.0f;
 
                 for (int p = 0; p < NUM_PTS; ++p) {
                     info.ptsCoords[2 * p] =
-                        info.bbox.x1 + static_cast<double>(landmark_data[NUM_PTS + p]) * w - 1;
-                    info.ptsCoords[2 * p + 1] = info.bbox.y1 + static_cast<double>(landmark_data[p]) * h - 1;
+                        info.bbox.x1 + static_cast<float>(landmark_data[NUM_PTS + p]) * w - 1;
+                    info.ptsCoords[2 * p + 1] = info.bbox.y1 + static_cast<float>(landmark_data[p]) * h - 1;
                 }
 
                 out_faces.push_back(info);
@@ -454,6 +465,7 @@ GAPI_OCV_KERNEL(OCVTranspose, Transpose) {
 namespace vis {
 namespace {
 void bbox(const cv::Mat& m, const cv::Rect& rc) {
+    std::cout << "Final rectangle " << "x1 = " << rc.x << " y1 = " << rc.y << " x2 = " << rc.x + rc.width << " y2 = " << rc.y + rc.height << std::endl;
     cv::rectangle(m, rc, cv::Scalar{ 0,255,0 }, 2, cv::LINE_8, 0);
 };
 
@@ -573,13 +585,13 @@ int main(int argc, char* argv[]) {
     const auto input_file_name = cmd.get<std::string>("input");
     const auto model_path_p = cmd.get<std::string>("mtcnnpm");
     const auto target_dev_p = cmd.get<std::string>("mtcnnpd");
-    const auto conf_thresh_p = cmd.get<double>("thrp");
+    const auto conf_thresh_p = cmd.get<float>("thrp");
     const auto model_path_r = cmd.get<std::string>("mtcnnrm");
     const auto target_dev_r = cmd.get<std::string>("mtcnnrd");
-    const auto conf_thresh_r = cmd.get<double>("thrr");
+    const auto conf_thresh_r = cmd.get<float>("thrr");
     const auto model_path_o = cmd.get<std::string>("mtcnnom");
     const auto target_dev_o = cmd.get<std::string>("mtcnnod");
-    const auto conf_thresh_o = cmd.get<double>("thro");
+    const auto conf_thresh_o = cmd.get<float>("thro");
     const auto use_half_scale = cmd.get<bool>("half_scale");
 
     std::vector<cv::Size> level_size;
@@ -613,8 +625,10 @@ int main(int argc, char* argv[]) {
     in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
     in_transposed[0] = custom::Transpose::on(in_resized[0]);
     std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposed[0], get_pnet_level_name(level_size[0]));
-    cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], scales[0], conf_thresh_p);
-    nms_p_faces[0] = custom::RunNMS::on(faces0, 0.5, false);
+    cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], static_cast<float>(scales[0]), conf_thresh_p);
+    cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(faces0, true);
+    cv::GArray<custom::Face> final_faces_pnet0 = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
+    nms_p_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
     total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
@@ -622,15 +636,15 @@ int main(int argc, char* argv[]) {
         in_resized[i] = cv::gapi::resize(in_originalRGB, level_size[i]);
         in_transposed[i] = custom::Transpose::on(in_resized[i]);
         std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposed[i], get_pnet_level_name(level_size[i]));
-        cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], scales[i], conf_thresh_p);
-        nms_p_faces[i] = custom::RunNMS::on(faces, 0.5, false);
+        cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], static_cast<float>(scales[i]), conf_thresh_p);
+        cv::GArray<custom::Face> final_p_faces_for_bb2squares_i = custom::ApplyRegression::on(faces, true);
+        cv::GArray<custom::Face> final_faces_pnet_i = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares_i);
+        nms_p_faces[i] = custom::RunNMS::on(final_faces_pnet_i, 0.5f, false);
         total_faces[i] = custom::AccumulatePyramidOutputs::on(total_faces[i - 1], nms_p_faces[i]);
     }
 
     //Proposal post-processing
-    cv::GArray<custom::Face> nms07_p_faces_total = custom::RunNMS::on(total_faces[pyramid_levels - 1], 0.7, false);
-    cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(nms07_p_faces_total, false);
-    cv::GArray<custom::Face> final_faces_pnet = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
+    cv::GArray<custom::Face> final_faces_pnet = custom::RunNMS::on(total_faces[pyramid_levels - 1], 0.7f, true);
 
     //Refinement part of MTCNN graph
     cv::GArray<cv::Rect> faces_roi_pnet = custom::R_O_NetPreProcGetROIs::on(final_faces_pnet, in_sz);
@@ -640,7 +654,7 @@ int main(int argc, char* argv[]) {
 
     //Refinement post-processing
     cv::GArray<custom::Face> rnet_post_proc_faces = custom::RNetPostProc::on(final_faces_pnet, scoresRNet, regressionsRNet, conf_thresh_r);
-    cv::GArray<custom::Face> nms07_r_faces_total = custom::RunNMS::on(rnet_post_proc_faces, 0.7, false);
+    cv::GArray<custom::Face> nms07_r_faces_total = custom::RunNMS::on(rnet_post_proc_faces, 0.7f, false);
     cv::GArray<custom::Face> final_r_faces_for_bb2squares = custom::ApplyRegression::on(nms07_r_faces_total, true);
     cv::GArray<custom::Face> final_faces_rnet = custom::BBoxesToSquares::on(final_r_faces_for_bb2squares);
 
@@ -652,7 +666,7 @@ int main(int argc, char* argv[]) {
     //Output post-processing
     cv::GArray<custom::Face> onet_post_proc_faces = custom::ONetPostProc::on(final_faces_rnet, scoresONet, regressionsONet, landmarksONet, conf_thresh_o);
     cv::GArray<custom::Face> final_o_faces_for_nms07 = custom::ApplyRegression::on(onet_post_proc_faces, true);
-    cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7, true);
+    cv::GArray<custom::Face> nms07_o_faces_total = custom::RunNMS::on(final_o_faces_for_nms07, 0.7f, true);
     cv::GArray<custom::Face> final_faces_onet = custom::SwapFaces::on(nms07_o_faces_total);
 
     cv::GComputation graph_mtcnn(cv::GIn(in_original), cv::GOut(cv::gapi::copy(in_original), final_faces_onet));
@@ -702,6 +716,57 @@ int main(int argc, char* argv[]) {
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(cv::compile_args(networks_mtcnn, kernels_mtcnn));
 
     std::cout << "Reading " << input_file_name << std::endl;
+#if 0
+    // Input image
+    cv::TickMeter tm;
+    //static (comment out for video cap) 
+    auto in_orig = cv::imread(input_file_name);
+    // remove comment out for video cap
+    //cv::Mat in_orig;
+    //cap.read(in_orig);
+
+    cv::Mat in_src;
+    in_orig.copyTo(in_src);
+    auto graph_mtcnn_compiled = graph_mtcnn.compile(descr_of(gin(in_src)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
+    tm.start();
+    int frames = 0;
+    std::vector<custom::Face> out_faces;
+    while (cv::waitKey(1) < 0) {
+        //while (cap.read(in_orig)) {
+        frames++;
+        std::cout << "Frame " << frames << std::endl;
+        tm.stop();
+        //auto in_orig1 = cv::imread(input_file_name);
+        //auto graph_mtcnn_compiled1 = graph_mtcnn.compile(descr_of(gin(in_orig)), cv::compile_args(networks_mtcnn, kernels_mtcnn));
+        tm.start();
+        //graph_mtcnn_compiled1(gin(in_orig), gout(in_orig, out_faces));
+        graph_mtcnn_compiled(gin(in_orig), gout(in_orig, out_faces));
+        tm.stop();
+        std::cout << "Final Faces Size " << out_faces.size() << std::endl;
+        std::vector<vis::rectPoints> data;
+        // show the image with faces in it
+        for (size_t i = 0; i < out_faces.size(); ++i) {
+            std::vector<cv::Point> pts;
+            for (int p = 0; p < NUM_PTS; ++p) {
+                pts.push_back(
+                    cv::Point(out_faces[i].ptsCoords[2 * p], out_faces[i].ptsCoords[2 * p + 1]));
+            }
+
+            auto rect = out_faces[i].bbox.getRect();
+            auto d = std::make_pair(rect, pts);
+            data.push_back(d);
+        }
+        auto resultImg = vis::drawRectsAndPoints(in_orig, data);
+        const auto fps_str = std::to_string(frames / tm.getTimeSec()) + " FPS";
+        cv::putText(resultImg, fps_str, { 0,32 }, cv::FONT_HERSHEY_SIMPLEX, 1.0, { 0,255,0 }, 2);
+        cv::imshow("Out", resultImg);
+        // remove comment out for video cap
+        //cv::waitKey(1);
+        out_faces.clear();
+        tm.start();
+    }
+
+#else
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
@@ -744,5 +809,6 @@ int main(int argc, char* argv[]) {
     tm.stop();
     std::cout << "Processed " << frames << " frames"
         << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+#endif
     return 0;
 }
