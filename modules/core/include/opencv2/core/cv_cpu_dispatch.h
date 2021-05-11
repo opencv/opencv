@@ -146,6 +146,10 @@
 #  include <arm_neon.h>
 #endif
 
+#if defined(CV_CPU_COMPILE_DOTPROD)
+#  define CV_DOTPROD 1
+#endif
+
 #ifdef CV_CPU_COMPILE_VSX
 #  include <altivec.h>
 #  undef vector
@@ -331,6 +335,10 @@ struct VZeroUpperGuard {
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_DOTPROD
+#  define CV_DOTPROD 0
 #endif
 
 #ifndef CV_VSX

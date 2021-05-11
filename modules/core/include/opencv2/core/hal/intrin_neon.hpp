@@ -78,16 +78,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_NEON_AARCH64 0
 #endif
 
-// Check if dot product intrinsics are supported as indicated by the
-// Arm C Language Extensions (ACLE) [1].
-//
-// [1] https://developer.arm.com/documentation/101028/0012/13--Advanced-SIMD--Neon--intrinsics
-#if __ARM_FEATURE_DOTPROD
-#define CV_NEON_DOT 1
-#else
-#define CV_NEON_DOT 0
-#endif
-
 //////////// Utils ////////////
 
 #if CV_SIMD128_64F
@@ -544,11 +534,10 @@ OPENCV_HAL_IMPL_NEON_MUL_SAT(v_uint16x8, v_uint32x4)
 inline void v_mul_expand(const v_int8x16& a, const v_int8x16& b,
                          v_int16x8& c, v_int16x8& d)
 {
-#if CV_NEON_AARCH64
     c.val = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
+#if CV_NEON_AARCH64
     d.val = vmull_high_s8(a.val, b.val);
 #else // #if CV_NEON_AARCH64
-    c.val = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
     d.val = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
 #endif // #if CV_NEON_AARCH64
 }
@@ -556,11 +545,10 @@ inline void v_mul_expand(const v_int8x16& a, const v_int8x16& b,
 inline void v_mul_expand(const v_uint8x16& a, const v_uint8x16& b,
                          v_uint16x8& c, v_uint16x8& d)
 {
-#if CV_NEON_AARCH64
     c.val = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
+#if CV_NEON_AARCH64
     d.val = vmull_high_u8(a.val, b.val);
 #else // #if CV_NEON_AARCH64
-    c.val = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
     d.val = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
 #endif // #if CV_NEON_AARCH64
 }
@@ -568,11 +556,10 @@ inline void v_mul_expand(const v_uint8x16& a, const v_uint8x16& b,
 inline void v_mul_expand(const v_int16x8& a, const v_int16x8& b,
                          v_int32x4& c, v_int32x4& d)
 {
-#if CV_NEON_AARCH64
     c.val = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
+#if CV_NEON_AARCH64
     d.val = vmull_high_s16(a.val, b.val);
 #else // #if CV_NEON_AARCH64
-    c.val = vmull_s16(vget_low_s16(a.val), vget_low_s16(b.val));
     d.val = vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val));
 #endif // #if CV_NEON_AARCH64
 }
@@ -580,11 +567,10 @@ inline void v_mul_expand(const v_int16x8& a, const v_int16x8& b,
 inline void v_mul_expand(const v_uint16x8& a, const v_uint16x8& b,
                          v_uint32x4& c, v_uint32x4& d)
 {
-#if CV_NEON_AARCH64
     c.val = vmull_u16(vget_low_u16(a.val), vget_low_u16(b.val));
+#if CV_NEON_AARCH64
     d.val = vmull_high_u16(a.val, b.val);
 #else // #if CV_NEON_AARCH64
-    c.val = vmull_u16(vget_low_u16(a.val), vget_low_u16(b.val));
     d.val = vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val));
 #endif // #if CV_NEON_AARCH64
 }
@@ -592,11 +578,10 @@ inline void v_mul_expand(const v_uint16x8& a, const v_uint16x8& b,
 inline void v_mul_expand(const v_uint32x4& a, const v_uint32x4& b,
                          v_uint64x2& c, v_uint64x2& d)
 {
-#if CV_NEON_AARCH64
     c.val = vmull_u32(vget_low_u32(a.val), vget_low_u32(b.val));
+#if CV_NEON_AARCH64
     d.val = vmull_high_u32(a.val, b.val);
 #else // #if CV_NEON_AARCH64
-    c.val = vmull_u32(vget_low_u32(a.val), vget_low_u32(b.val));
     d.val = vmull_u32(vget_high_u32(a.val), vget_high_u32(b.val));
 #endif // #if CV_NEON_AARCH64
 }
@@ -605,14 +590,26 @@ inline v_int16x8 v_mul_hi(const v_int16x8& a, const v_int16x8& b)
 {
     return v_int16x8(vcombine_s16(
                                   vshrn_n_s32(vmull_s16( vget_low_s16(a.val),  vget_low_s16(b.val)), 16),
-                                  vshrn_n_s32(vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val)), 16)
+                                  vshrn_n_s32(
+#if CV_NEON_AARCH64
+                                    vmull_high_s16(a.val, b.val)
+#else // #if CV_NEON_AARCH64
+                                    vmull_s16(vget_high_s16(a.val), vget_high_s16(b.val))
+#endif // #if CV_NEON_AARCH64
+                                    , 16)
                                  ));
 }
 inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
 {
     return v_uint16x8(vcombine_u16(
                                    vshrn_n_u32(vmull_u16( vget_low_u16(a.val),  vget_low_u16(b.val)), 16),
-                                   vshrn_n_u32(vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val)), 16)
+                                   vshrn_n_u32(
+#if CV_NEON_AARCH64
+                                    vmull_high_u16(a.val, b.val)
+#else // #if CV_NEON_AARCH64
+                                    vmull_u16(vget_high_u16(a.val), vget_high_u16(b.val))
+#endif // #if CV_NEON_AARCH64
+                                    , 16)
                                   ));
 }
 
@@ -669,7 +666,7 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
 #else
     const uint8x16_t zero   = vreinterpretq_u8_u32(vdupq_n_u32(0));
@@ -692,7 +689,7 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
                                    const v_uint32x4& c)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand(a, b) + c;
@@ -701,7 +698,7 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
 #else
     int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
@@ -717,7 +714,7 @@ inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
                                   const v_int32x4& c)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_int32x4(vdotq_s32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand(a, b) + c;
@@ -834,7 +831,7 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
 #else
     uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
@@ -846,7 +843,7 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
 }
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand_fast(a, b) + c;
@@ -855,7 +852,7 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
 #else
     int16x8_t prod = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
@@ -865,7 +862,7 @@ inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 }
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
 {
-#if CV_NEON_DOT
+#if CV_DOTPROD
     return v_int32x4(vdotq_s32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand_fast(a, b) + c;
@@ -2007,6 +2004,29 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
 }
 #endif
 
+#if CV_NEON_AARCH64
+#define OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(_Tpvec, suffix) \
+inline void v_transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
+                         const v_##_Tpvec& a2, const v_##_Tpvec& a3, \
+                         v_##_Tpvec& b0, v_##_Tpvec& b1, \
+                         v_##_Tpvec& b2, v_##_Tpvec& b3) \
+{ \
+    /* -- Pass 1: 64b transpose */ \
+    _Tpvec##_t t0 = vtrn1q_##suffix##64(a0.val, a2.val); \
+    _Tpvec##_t t1 = vtrn1q_##suffix##64(a1.val, a3.val); \
+    _Tpvec##_t t2 = vtrn2q_##suffix##64(a0.val, a2.val); \
+    _Tpvec##_t t3 = vtrn2q_##suffix##64(a1.val, a3.val); \
+    /* -- Pass 2: 32b transpose */ \
+    b0.val = vtrn1q_##suffix##32(t0, t1); \
+    b1.val = vtrn2q_##suffix##32(t0, t1); \
+    b2.val = vtrn1q_##suffix##32(t2, t3); \
+    b3.val = vtrn2q_##suffix##32(t2, t3); \
+}
+
+OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(uint32x4, u)
+OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(int32x4, s)
+OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(float32x4, f)
+#else // #if CV_NEON_AARCH64
 #define OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(_Tpvec, suffix) \
 inline void v_transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
                          const v_##_Tpvec& a2, const v_##_Tpvec& a3, \
@@ -2032,6 +2052,7 @@ inline void v_transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
 OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(uint32x4, u32)
 OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(int32x4, s32)
 OPENCV_HAL_IMPL_NEON_TRANSPOSE4x4(float32x4, f32)
+#endif // #if CV_NEON_AARCH64
 
 #define OPENCV_HAL_IMPL_NEON_INTERLEAVED(_Tpvec, _Tp, suffix) \
 inline void v_load_deinterleave(const _Tp* ptr, v_##_Tpvec& a, v_##_Tpvec& b) \

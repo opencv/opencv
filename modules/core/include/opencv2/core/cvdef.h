@@ -282,6 +282,7 @@ namespace cv {
 #define CV_CPU_AVX_5124FMAPS    27
 
 #define CV_CPU_NEON             100
+#define CV_CPU_DOTPROD          101
 
 #define CV_CPU_MSA              150
 
@@ -334,6 +335,7 @@ enum CpuFeatures {
     CPU_AVX_5124FMAPS   = 27,
 
     CPU_NEON            = 100,
+    CPU_DOTPROD         = CV_CPU_DOTPROD,
 
     CPU_MSA             = 150,
 
