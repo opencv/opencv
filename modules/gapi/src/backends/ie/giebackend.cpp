@@ -1290,6 +1290,17 @@ namespace {
                                     , cv::gimpl::ie::InferList2
                                     >();
         }
+
+        virtual bool controlsMerge() const override {
+            return true;
+        }
+
+        virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &) const override {
+            return false;
+        }
     };
 }
 
