@@ -212,6 +212,8 @@ can be saved using this function, with these exceptions:
 should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
 - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
 
+If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
+
 If the format, depth or channel order is different, use
 Mat::convertTo and cv::cvtColor to convert it before saving. Or, use the universal FileStorage I/O
 functions to save the image to XML or YAML format.
