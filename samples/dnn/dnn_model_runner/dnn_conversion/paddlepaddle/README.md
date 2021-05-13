@@ -11,4 +11,3 @@ there are 3 part of this execution
 - 1. Export PaddlePaddle ResNet50 model to onnx format
 - 2. Use `cv2.dnn.readNetFromONNX` load model file
 - 3. Preprocess image file and do inference
-
