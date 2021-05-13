@@ -1754,9 +1754,21 @@ MatConstIterator_<_Tp> Mat_<_Tp>::begin() const
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rbegin() const
+{
+    return Mat::rbegin<_Tp>();
+}
+
+template<typename _Tp> inline
 MatConstIterator_<_Tp> Mat_<_Tp>::end() const
 {
     return Mat::end<_Tp>();
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rend() const
+{
+    return Mat::rend<_Tp>();
 }
 
 template<typename _Tp> inline
@@ -1766,9 +1778,21 @@ MatIterator_<_Tp> Mat_<_Tp>::begin()
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rbegin()
+{
+    return Mat::rbegin<_Tp>();
+}
+
+template<typename _Tp> inline
 MatIterator_<_Tp> Mat_<_Tp>::end()
 {
     return Mat::end<_Tp>();
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rend()
+{
+    return Mat::rend<_Tp>();
 }
 
 template<typename _Tp> template<typename Functor> inline

@@ -2382,30 +2382,52 @@ TEST(Mat, reverse_iterator_19967)
     // 1D test
     std::vector<uchar> data{0, 1, 2, 3};
     const std::vector<int> sizes_1d{4};
-    cv::Mat m_1d(sizes_1d, CV_8U, data.data());
 
+    //Base class
+    cv::Mat m_1d(sizes_1d, CV_8U, data.data());
     auto mismatch_it_pair_1d = std::mismatch(data.rbegin(), data.rend(), m_1d.rbegin<uchar>());
     EXPECT_EQ(mismatch_it_pair_1d.first, data.rend());  // expect no mismatch
     EXPECT_EQ(mismatch_it_pair_1d.second, m_1d.rend<uchar>());
 
+    //Templated derived class
+    cv::Mat_<uchar> m_1d_t(sizes_1d.size(), sizes_1d.data(), data.data());
+    auto mismatch_it_pair_1d_t = std::mismatch(data.rbegin(), data.rend(), m_1d_t.rbegin());
+    EXPECT_EQ(mismatch_it_pair_1d_t.first, data.rend());  // expect no mismatch
+    EXPECT_EQ(mismatch_it_pair_1d_t.second, m_1d_t.rend());
+
+
     // 2D test
     const std::vector<int> sizes_2d{2, 2};
-    cv::Mat m_2d(sizes_2d, CV_8U, data.data());
 
+    //Base class
+    cv::Mat m_2d(sizes_2d, CV_8U, data.data());
     auto mismatch_it_pair_2d = std::mismatch(data.rbegin(), data.rend(), m_2d.rbegin<uchar>());
     EXPECT_EQ(mismatch_it_pair_2d.first, data.rend());
     EXPECT_EQ(mismatch_it_pair_2d.second, m_2d.rend<uchar>());
 
+    //Templated derived class
+    cv::Mat_<uchar> m_2d_t(sizes_2d.size(),sizes_2d.data(), data.data());
+    auto mismatch_it_pair_2d_t = std::mismatch(data.rbegin(), data.rend(), m_2d_t.rbegin());
+    EXPECT_EQ(mismatch_it_pair_2d_t.first, data.rend());
+    EXPECT_EQ(mismatch_it_pair_2d_t.second, m_2d_t.rend());
+
     // 3D test
     std::vector<uchar> data_3d{0, 1, 2, 3, 4, 5, 6, 7};
     const std::vector<int> sizes_3d{2, 2, 2};
-    cv::Mat m_3d(sizes_3d, CV_8U, data_3d.data());
 
+    //Base class
+    cv::Mat m_3d(sizes_3d, CV_8U, data_3d.data());
     auto mismatch_it_pair_3d = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d.rbegin<uchar>());
     EXPECT_EQ(mismatch_it_pair_3d.first, data_3d.rend());
     EXPECT_EQ(mismatch_it_pair_3d.second, m_3d.rend<uchar>());
 
-    // const test
+    //Templated derived class
+    cv::Mat_<uchar> m_3d_t(sizes_3d.size(),sizes_3d.data(), data_3d.data());
+    auto mismatch_it_pair_3d_t = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d_t.rbegin());
+    EXPECT_EQ(mismatch_it_pair_3d_t.first, data_3d.rend());
+    EXPECT_EQ(mismatch_it_pair_3d_t.second, m_3d_t.rend());
+
+    // const test base class
     const cv::Mat m_1d_const(sizes_1d, CV_8U, data.data());
 
     auto mismatch_it_pair_1d_const = std::mismatch(data.rbegin(), data.rend(), m_1d_const.rbegin<uchar>());
@@ -2414,6 +2436,17 @@ TEST(Mat, reverse_iterator_19967)
 
     EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rend<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
     EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rbegin<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
+
+    // const test templated dervied class
+    const cv::Mat_<uchar> m_1d_const_t(sizes_1d.size(), sizes_1d.data(), data.data());
+
+    auto mismatch_it_pair_1d_const_t = std::mismatch(data.rbegin(), data.rend(), m_1d_const_t.rbegin());
+    EXPECT_EQ(mismatch_it_pair_1d_const_t.first, data.rend());  // expect no mismatch
+    EXPECT_EQ(mismatch_it_pair_1d_const_t.second, m_1d_const_t.rend());
+
+    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const_t.rend()), uchar>::value)) << "Constness of const iterator violated.";
+    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const_t.rbegin()), uchar>::value)) << "Constness of const iterator violated.";
+
 }
 
 }} // namespace
