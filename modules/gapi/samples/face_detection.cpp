@@ -61,10 +61,10 @@ struct BBox {
     int x2;
     int y2;
 
-    cv::Rect getRect() const { return cv::Rect((x1),
-                                               (y1),
-                                               (x2 - x1),
-                                               (y2 - y1)); }
+    cv::Rect getRect() const { return cv::Rect(x1,
+                                               y1,
+                                               x2 - x1,
+                                               y2 - y1); }
 
     BBox getSquare() const {
         BBox bbox;
@@ -83,7 +83,7 @@ struct Face {
     BBox bbox;
     float score;
     std::array<float, NUM_REGRESSIONS> regression;
-    float ptsCoords[2 * NUM_PTS];
+    std::array<float, 2 * NUM_PTS> ptsCoords;
 
     static void applyRegression(std::vector<Face>& faces, bool addOne = false) {
         for (auto& face : faces) {
@@ -174,23 +174,23 @@ std::vector<Face> buildFaces(const cv::Mat& scores,
     float stride = 0.0f;
     if (out_side != 1)
     {
-        stride = static_cast<float>(in_side - 12) / static_cast<float>(out_side - 1);
+        stride = static_cast<float>(in_side - P_NET_WINDOW_SIZE) / static_cast<float>(out_side - 1);
     }
 
     std::vector<Face> boxes;
 
     for (int i = 0; i < size; i++) {
         if (scores_data[i] >= (threshold)) {
-            int y = i / w;
-            int x = i - w * y;
+            float y = static_cast<float>(i / w);
+            float x = static_cast<float>(i - w * y);
 
             Face faceInfo;
             BBox& faceBox = faceInfo.bbox;
 
-            faceBox.x1 = std::max(0, static_cast<int>((static_cast<float>(x) * stride) / scaleFactor));
-            faceBox.y1 = std::max(0, static_cast<int>((static_cast<float>(y) * stride) / scaleFactor));
-            faceBox.x2 = static_cast<int>((static_cast<float>(x) * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
-            faceBox.y2 = static_cast<int>((static_cast<float>(y) * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
+            faceBox.x1 = std::max(0, static_cast<int>((x * stride) / scaleFactor));
+            faceBox.y1 = std::max(0, static_cast<int>((y * stride) / scaleFactor));
+            faceBox.x2 = static_cast<int>((x * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
+            faceBox.y2 = static_cast<int>((y * stride + P_NET_WINDOW_SIZE - 1.0f) / scaleFactor);
             faceInfo.regression[0] = reg_data[i];
             faceInfo.regression[1] = reg_data[i + size];
             faceInfo.regression[2] = reg_data[i + 2 * size];
@@ -413,13 +413,13 @@ GAPI_OCV_KERNEL(OCVONetPostProc, ONetPostProc) {
             if (scores_data[1] >= threshold) {
                 Face info = in_faces[k];
                 info.score = scores_data[1];
-                for (int i = 0; i < 4; ++i) {
+                for (size_t i = 0; i < 4; ++i) {
                     info.regression[i] = reg_data[i];
                 }
                 float w = info.bbox.x2 - info.bbox.x1 + 1.0f;
                 float h = info.bbox.y2 - info.bbox.y1 + 1.0f;
 
-                for (int p = 0; p < NUM_PTS; ++p) {
+                for (size_t p = 0; p < NUM_PTS; ++p) {
                     info.ptsCoords[2 * p] =
                         info.bbox.x1 + static_cast<float>(landmark_data[NUM_PTS + p]) * w - 1;
                     info.ptsCoords[2 * p + 1] = info.bbox.y1 + static_cast<float>(landmark_data[p]) * h - 1;
@@ -440,7 +440,7 @@ GAPI_OCV_KERNEL(OCVSwapFaces, SwapFaces) {
             for (size_t i = 0; i < in_faces_copy.size(); ++i) {
                 std::swap(in_faces_copy[i].bbox.x1, in_faces_copy[i].bbox.y1);
                 std::swap(in_faces_copy[i].bbox.x2, in_faces_copy[i].bbox.y2);
-                for (int p = 0; p < NUM_PTS; ++p) {
+                for (size_t p = 0; p < NUM_PTS; ++p) {
                     std::swap(in_faces_copy[i].ptsCoords[2 * p], in_faces_copy[i].ptsCoords[2 * p + 1]);
                 }
             }
@@ -461,7 +461,6 @@ GAPI_OCV_KERNEL(OCVTranspose, Transpose) {
 namespace vis {
 namespace {
 void bbox(const cv::Mat& m, const cv::Rect& rc) {
-    std::cout << "Final rectangle " << "x1 = " << rc.x << " y1 = " << rc.y << " x2 = " << rc.x + rc.width << " y2 = " << rc.y + rc.height << std::endl;
     cv::rectangle(m, rc, cv::Scalar{ 0,255,0 }, 2, cv::LINE_8, 0);
 };
 
@@ -733,7 +732,7 @@ int main(int argc, char* argv[]) {
         // show the image with faces in it
         for (const auto& out_face : out_faces) {
             std::vector<cv::Point> pts;
-            for (int p = 0; p < NUM_PTS; ++p) {
+            for (size_t p = 0; p < NUM_PTS; ++p) {
                 pts.push_back(
                     cv::Point(static_cast<int>(out_face.ptsCoords[2 * p]), static_cast<int>(out_face.ptsCoords[2 * p + 1])));
             }
