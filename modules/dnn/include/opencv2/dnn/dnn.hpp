@@ -713,7 +713,7 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
-         * in this case zero ticks count will be return for that skipped layers.
+         * in this case zero ticks count will be return for that skipped layers. Supported by DNN_BACKEND_OPENCV on DNN_TARGET_CPU only.
          * @param timings vector for tick timings for all layers.
          * @return overall ticks for model inference.
          */
