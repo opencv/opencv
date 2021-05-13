@@ -13,6 +13,7 @@
 #include <array>
 #include <tuple> // tuple, tuple_size
 #include <map>
+#include <functional>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
@@ -20,6 +21,13 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+#include <opencv2/gapi/media.hpp>   // MediaFrame
+
+// FIXME: forward declaration
+namespace InferenceEngine {
+    class ParamMap;
+    class TensorDesc;
+}
 
 namespace cv {
 namespace gapi {
@@ -74,6 +82,11 @@ namespace detail {
 
         // NB: Number of asyncrhonious infer requests
         size_t nireq;
+
+        using ParamMapCallbackT = std::function<InferenceEngine::ParamMap(const cv::MediaFrame&)>;
+        ParamMapCallbackT param_map_callback = nullptr_t;
+        using TDescCallbackT = std::function<InferenceEngine::TensorDesc(const cv::MediaFrame&)>;
+        ParamMapCallbackT tdesc_callback = nullptr_t;
     };
 } // namespace detail
 
@@ -89,6 +102,9 @@ struct PortCfg {
 };
 
 template<typename Net> class Params {
+protected:
+    using ParamMapCallbackT = std::function<InferenceEngine::ParamMap(const cv::MediaFrame&)>;
+    using TDescCallbackT = std::function<InferenceEngine::TensorDesc(const cv::MediaFrame&)>;
 public:
     Params(const std::string &model,
            const std::string &weights,
@@ -115,6 +131,23 @@ public:
               , {}
               , {}
               , 1u} {
+    };
+
+    Params(const std::string &model,
+           const std::string &device,
+           const ParamMapCallbackT& param_map_callback,
+           const TDescCallbackT& tdesc_callback)
+        : desc{ model, {}, device, {}, {}, {}
+              , std::tuple_size<typename Net::InArgs>::value  // num_in
+              , std::tuple_size<typename Net::OutArgs>::value // num_out
+              , detail::ParamDesc::Kind::Import
+              , false
+              , {}
+              , {}
+              , {}
+              , 1u
+              , param_map_callback
+              , tdesc_callback} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {

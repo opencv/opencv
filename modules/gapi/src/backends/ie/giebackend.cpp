@@ -832,6 +832,11 @@ struct Infer: public cv::detail::KernelTag {
     static cv::gapi::GBackend backend()  { return cv::gapi::ie::backend(); }
     static KImpl kernel()                { return KImpl{outMeta, run}; }
 
+    // FIXME: Is this the right place to put it?
+    //        Will it live long enough?
+    //        What about multithreading/async?
+    InferenceEngine::RemoteContext::Ptr rctx;
+
     static cv::GMetaArgs outMeta(const ade::Graph      &gr,
                                  const ade::NodeHandle &nh,
                                  const cv::GMetaArgs   &in_metas,
@@ -898,11 +903,21 @@ struct Infer: public cv::detail::KernelTag {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
-                            // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
-                            // and redirect our data producers to this memory
-                            // (A memory dialog comes to the picture again)
-                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            req.SetBlob(ctx->uu.params.input_names[i], this_blob);
+                            if (ctx->uu.params.param_map_callback != nullptr_t &&
+                                ctx->uu.params.tdesc_callback != nullptr_t) {
+                                GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
+                                                "Callback feature is supported for MediaFrame only");
+                                auto blobParams = ctx->uu.params.param_map_callback(ctx.inFrame(i));
+                                auto tdesc = ctx->uu.params.tdesc_callback(ctx.inFrame(i));
+                                IE::Blob::Ptr this_blob = rctx->CreateBlob(tdesc, blobParams);
+                                req.SetBlob(ctx->uu.params.input_names[i], this_blob);
+                            } else {
+                                // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
+                                // and redirect our data producers to this memory
+                                // (A memory dialog comes to the picture again)
+                                IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
+                                req.SetBlob(ctx->uu.params.input_names[i], this_blob);
+                            }
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
