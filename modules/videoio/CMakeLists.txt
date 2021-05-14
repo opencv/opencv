@@ -75,7 +75,7 @@ endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
-set(tgts)
+set(tgts "PRIVATE")
 
 if(TARGET ocv.3rdparty.mediasdk)
   if("mfx" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
@@ -157,10 +157,26 @@ if(TARGET ocv.3rdparty.ffmpeg)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
   elseif("ffmpeg" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_videoio_plugin("opencv_videoio_ffmpeg" ocv.3rdparty.ffmpeg "cap_ffmpeg.cpp")
+    if(TARGET ocv.3rdparty.ffmpeg.plugin_deps)
+      ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.ffmpeg.plugin_deps)
+    endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.mediasdk)
+    endif()
   else()
     list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
+    if(TARGET ocv.3rdparty.ffmpeg.builtin_deps)
+      list(APPEND tgts ocv.3rdparty.ffmpeg.builtin_deps)
+    endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      list(APPEND tgts ocv.3rdparty.mediasdk)
+    endif()
   endif()
 endif()
 
@@ -211,6 +227,21 @@ if(TARGET ocv.3rdparty.android_native_camera)
   list(APPEND videoio_srcs
     ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_camera.cpp)
   list(APPEND tgts ocv.3rdparty.android_native_camera)
+endif()
+
+if(tgts STREQUAL "PRIVATE")
+  set(tgts "")
+endif()
+
+# install used dependencies only
+if(NOT BUILD_SHARED_LIBS
+    AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+)
+  foreach(tgt in ${tgts})
+    if(tgt MATCHES "^ocv\.3rdparty\.")
+      install(TARGETS ${tgt} EXPORT OpenCVModules)
+    endif()
+  endforeach()
 endif()
 
 ocv_set_module_sources(HEADERS ${videoio_ext_hdrs} ${videoio_hdrs} SOURCES ${videoio_srcs})

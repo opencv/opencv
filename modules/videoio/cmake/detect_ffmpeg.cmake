@@ -99,6 +99,38 @@ if(HAVE_FFMPEG_WRAPPER)
   ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
 elseif(HAVE_FFMPEG)
   ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
+  set(__builtin_defines "")
+  set(__builtin_include_dirs "")
+  set(__builtin_libs "")
+  set(__plugin_defines "")
+  set(__plugin_include_dirs "")
+  set(__plugin_libs "")
+  if(HAVE_OPENCL)
+    set(__opencl_dirs "")
+    if(OPENCL_INCLUDE_DIRS)
+      set(__opencl_dirs "${OPENCL_INCLUDE_DIRS}")
+    elseif(OPENCL_INCLUDE_DIR)
+      set(__opencl_dirs "${OPENCL_INCLUDE_DIR}")
+    else()
+      set(__opencl_dirs "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2")
+    endif()
+    # extra dependencies for buildin code (OpenCL dir is required for extensions like cl_d3d11.h)
+    # buildin HAVE_OPENCL is already defined through cvconfig.h
+    list(APPEND __builtin_include_dirs "${__opencl_dirs}")
+
+    # extra dependencies for
+    list(APPEND __plugin_defines "HAVE_OPENCL")
+    list(APPEND __plugin_include_dirs "${__opencl_dirs}")
+  endif()
+
+  # TODO: libva, d3d11
+
+  if(__builtin_include_dirs OR __builtin_include_defines OR __builtin_include_libs)
+    ocv_add_external_target(ffmpeg.builtin_deps "${__builtin_include_dirs}" "${__builtin_include_libs}" "${__builtin_defines}")
+  endif()
+  if(VIDEOIO_ENABLE_PLUGINS AND __plugin_include_dirs OR __plugin_include_defines OR __plugin_include_libs)
+    ocv_add_external_target(ffmpeg.plugin_deps "${__plugin_include_dirs}" "${__plugin_include_libs}" "${__plugin_defines}")
+  endif()
 endif()
 
 set(HAVE_FFMPEG ${HAVE_FFMPEG} PARENT_SCOPE)

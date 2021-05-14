@@ -184,7 +184,8 @@ enum VideoCaptureProperties {
        CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
        CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
        CAP_PROP_HW_ACCELERATION=50, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in cv::VideoCapture constructor / .open() method. Default value is backend-specific.
-       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available)
+       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
+       CAP_PROP_HW_ACCELERATION_USE_OPENCL=52, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between HW accelerated decoder and cv::UMat.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -201,7 +202,8 @@ enum VideoWriterProperties {
                                    //!< will work with grayscale frames.
   VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
   VIDEOWRITER_PROP_HW_ACCELERATION = 6, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in VideoWriter constructor / .open() method. Default value is backend-specific.
-  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available)
+  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
+  VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL= 8, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between cv::UMat and HW accelerated encoder.
 #ifndef CV_DOXYGEN
   CV__VIDEOWRITER_PROP_LATEST
 #endif
