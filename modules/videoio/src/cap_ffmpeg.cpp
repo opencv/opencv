@@ -92,8 +92,17 @@ public:
         unsigned char* data = 0;
         int step=0, width=0, height=0, cn=0;
 
-        if (!ffmpegCapture ||
-           !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
+        if (!ffmpegCapture)
+            return false;
+
+        // if UMat, try GPU to GPU copy using OpenCL extensions
+        if (frame.isUMat()) {
+            if (ffmpegCapture->retrieveHWFrame(frame)) {
+                return true;
+            }
+        }
+
+        if (!icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
             return false;
 
         cv::Mat tmp(height, width, CV_MAKETYPE(CV_8U, cn), data, step);
@@ -175,6 +184,13 @@ public:
         if(!ffmpegWriter)
             return;
         CV_Assert(image.depth() == CV_8U);
+
+        // if UMat, try GPU to GPU copy using OpenCL extensions
+        if (image.isUMat()) {
+            if (ffmpegWriter->writeHWFrame(image)) {
+                return;
+            }
+        }
 
         icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
     }
