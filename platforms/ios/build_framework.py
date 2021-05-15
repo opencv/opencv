@@ -32,7 +32,7 @@ Adding --dynamic parameter will build {framework_name}.framework as App Store dy
 """
 
 from __future__ import print_function, unicode_literals
-import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing
+import glob, os, os.path, shutil, string, sys, argparse, traceback, multiprocessing, codecs, io
 from subprocess import check_call, check_output, CalledProcessError
 from distutils.dir_util import copy_tree
 
@@ -161,7 +161,15 @@ class Builder:
                 for root, dirs, files in os.walk(dirs[0]):
                     for file in files:
                         if file.endswith(".swift") and file.find("Test") == -1:
-                            shutil.copy(os.path.join(root, file), os.path.join(swift_sources_dir, file))
+                            with io.open(os.path.join(root, file), encoding="utf-8", errors="ignore") as file_in:
+                                body = file_in.read()
+                            if body.find("import Foundation") != -1:
+                                insert_pos = body.find("import Foundation") + len("import Foundation") + 1
+                                body = body[:insert_pos] + "import " + self.framework_name + "\n" + body[insert_pos:]
+                            else:
+                                body = "import " + self.framework_name + "\n\n" + body
+                            with codecs.open(os.path.join(swift_sources_dir, file), "w", "utf-8") as file_out:
+                                file_out.write(body)
 
     def build(self, outdir):
         try:
