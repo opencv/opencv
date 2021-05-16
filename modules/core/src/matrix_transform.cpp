@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include <thread>
 
 namespace cv {
 
@@ -520,22 +519,19 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 class flipVertComputer : public ParallelLoopBody
 {
 public:
-    flipVertComputer(const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz, int stripe)
-        : src0_(src0), sstep_(sstep), dst0_(dst0), dstep_(dstep), size_(size), esz_(esz), stripe_(stripe) { }
+    flipVertComputer(const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz)
+        : src0_(src0), sstep_(sstep), dst0_(dst0), dstep_(dstep), size_(size), esz_(esz) { }
 
     void operator()( const cv::Range& range ) const
     {
         Size sz = size_;
-        const int halfHeight = (sz.height + 1) / 2;
-        const int begin = range.start * stripe_;
-        const int end = (begin + stripe_) > halfHeight ? halfHeight : (begin + stripe_) ;
-        const uchar* srcTop = src0_ + (begin * sstep_);
-        uchar* dstTop = dst0_ + (begin * dstep_);
-        const uchar* srcBottom = src0_ + ((sz.height - 1 - begin) * sstep_);
-        uchar* dstBottom = dst0_ + ((sz.height - 1 - begin) * dstep_);
+        const uchar* srcTop = src0_ + (range.start * sstep_);
+        uchar* dstTop = dst0_ + (range.start * dstep_);
+        const uchar* srcBottom = src0_ + ((sz.height - 1 - range.start) * sstep_);
+        uchar* dstBottom = dst0_ + ((sz.height - 1 - range.start) * dstep_);
         sz.width *= (int)esz_;
 
-        for ( int y = begin; y < end; y++, srcTop += sstep_, srcBottom -= sstep_,
+        for ( int y = range.start; y < range.end; y++, srcTop += sstep_, srcBottom -= sstep_,
                                            dstTop += dstep_, dstBottom -= dstep_)
         {
             int i = 0;
@@ -616,20 +612,17 @@ public:
     }
 private:
     const uchar* src0_;
-    size_t sstep_;
+    const size_t sstep_;
     uchar* dst0_;
-    size_t dstep_;
-    Size size_;
-    size_t esz_;
-    int stripe_;
+    const size_t dstep_;
+    const Size size_;
+    const size_t esz_;
 };
 
 static void
 flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz )
 {
-    int nthreads = getNumberOfCPUs();
-    int stripe = (((size.height + 1) / 2) + nthreads - 1) / nthreads;
-    parallel_for_(Range(0, nthreads), flipVertComputer(src0, sstep, dst0, dstep, size, esz, stripe));
+    parallel_for_(Range(0, (size.height / 2)), flipVertComputer(src0, sstep, dst0, dstep, size, esz));
 }
 
 #ifdef HAVE_OPENCL
