@@ -84,9 +84,9 @@ namespace detail {
         size_t nireq;
 
         using ParamMapCallbackT = std::function<InferenceEngine::ParamMap(const cv::MediaFrame&)>;
-        ParamMapCallbackT param_map_callback = nullptr_t;
+        ParamMapCallbackT param_map_callback;
         using TDescCallbackT = std::function<InferenceEngine::TensorDesc(const cv::MediaFrame&)>;
-        ParamMapCallbackT tdesc_callback = nullptr_t;
+        ParamMapCallbackT tdesc_callback;
     };
 } // namespace detail
 
@@ -117,7 +117,9 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , nullptr
+              , nullptr} {
     };
 
     Params(const std::string &model,
@@ -130,7 +132,9 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , nullptr
+              , nullptr} {
     };
 
     Params(const std::string &model,
@@ -236,13 +240,17 @@ public:
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
+                nullptr, nullptr}, m_tag(tag) {
     };
 
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
+                nullptr, nullptr}, m_tag(tag) {
     };
 
     Params& pluginConfig(IEConfig&& cfg) {

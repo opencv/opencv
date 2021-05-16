@@ -903,8 +903,8 @@ struct Infer: public cv::detail::KernelTag {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
-                            if (ctx->uu.params.param_map_callback != nullptr_t &&
-                                ctx->uu.params.tdesc_callback != nullptr_t) {
+                            if (ctx->uu.params.param_map_callback != nullptr &&
+                                ctx->uu.params.tdesc_callback != nullptr) {
                                 GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
                                                 "Callback feature is supported for MediaFrame only");
                                 auto blobParams = ctx->uu.params.param_map_callback(ctx.inFrame(i));
