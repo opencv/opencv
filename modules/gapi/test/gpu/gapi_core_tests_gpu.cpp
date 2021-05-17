@@ -410,7 +410,6 @@ INSTANTIATE_TEST_CASE_P(TransposeTestGPU, TransposeTest,
                                 Values(-1),
                                 Values(CORE_GPU),
                                 Values(AbsExact().to_compare_obj())));
-                                
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestGPU, BackendOutputAllocationTest,
