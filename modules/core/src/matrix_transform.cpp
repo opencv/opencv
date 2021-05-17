@@ -368,152 +368,177 @@ template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const
 }
 #endif
 
+class flipHorizComputer : public ParallelLoopBody
+{
+public:
+    flipHorizComputer(const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size, size_t esz)
+        : src0_(src0), sstep_(sstep), dst0_(dst0), dstep_(dstep), size_(size), esz_(esz) {
+#if !CV_SIMD
+        limit_ = (int)(((size.width + 1)/2)*esz);
+        tab_.resize(size.width * esz);
+        for(int i = 0; i < size_.width; i++ )
+            for( size_t k = 0; k < esz_; k++ )
+                tab_[i*esz_ + k] = (int)((size_.width - i - 1)*esz_ + k);
+#endif
+    }
+
+    void operator()( const cv::Range& range ) const
+    {
+        const uchar* src = src0_ + (range.start * sstep_);
+        uchar* dst = dst0_ + (range.start * dstep_);
+        Size size(size_.width, range.size());
+#if CV_SIMD
+#if CV_STRONG_ALIGNMENT
+        size_t alignmentMark = ((size_t)src0_)|((size_t)dst0_)|sstep_|dstep_;
+#endif
+        if (esz_ == 2 * v_uint8x16::nlanes)
+        {
+            int end = (int)(size_.width*esz_);
+            int width = end/2;
+
+            for(int r = range.start; r < range.end; src += sstep_, dst += dstep_, r++)
+            {
+                for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+                {
+#if CV_SIMD256
+                    v_uint8x32 t0, t1;
+
+                    t0 = v256_load((uchar*)src + i);
+                    t1 = v256_load((uchar*)src + j);
+                    v_store(dst + j, t0);
+                    v_store(dst + i, t1);
+#else
+                    v_uint8x16 t0, t1, t2, t3;
+
+                    t0 = v_load((uchar*)src + i);
+                    t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                    t2 = v_load((uchar*)src + j);
+                    t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                    v_store(dst + j, t0);
+                    v_store(dst + j + v_uint8x16::nlanes, t1);
+                    v_store(dst + i, t2);
+                    v_store(dst + i + v_uint8x16::nlanes, t3);
+#endif
+                }
+            }
+        }
+        else if (esz_ == v_uint8x16::nlanes)
+        {
+            int end = (int)(size_.width*esz_);
+            int width = end/2;
+            for(int r = range.start; r < range.end; src += sstep_, dst += dstep_, r++)
+            {
+                for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+                {
+                    v_uint8x16 t0, t1;
+
+                    t0 = v_load((uchar*)src + i);
+                    t1 = v_load((uchar*)src + j);
+                    v_store(dst + j, t0);
+                    v_store(dst + i, t1);
+                }
+            }
+        }
+        else if (esz_ == 8
+#if CV_STRONG_ALIGNMENT
+                && isAligned<sizeof(uint64)>(alignmentMark)
+#endif
+        )
+        {
+            flipHoriz_single<v_uint64x2>(src, sstep_, dst, dstep_, size_, esz_);
+        }
+        else if (esz_ == 4
+#if CV_STRONG_ALIGNMENT
+                && isAligned<sizeof(unsigned)>(alignmentMark)
+#endif
+        )
+        {
+            flipHoriz_single<v_uint32x4>(src, sstep_, dst, dstep_, size, esz_);
+        }
+        else if (esz_ == 2
+#if CV_STRONG_ALIGNMENT
+                && isAligned<sizeof(ushort)>(alignmentMark)
+#endif
+        )
+        {
+            flipHoriz_single<v_uint16x8>(src, sstep_, dst, dstep_, size, esz_);
+        }
+        else if (esz_ == 1)
+        {
+            flipHoriz_single<v_uint8x16>(src, sstep_, dst, dstep_, size, esz_);
+        }
+        else if (esz_ == 24
+#if CV_STRONG_ALIGNMENT
+                && isAligned<sizeof(uint64_t)>(alignmentMark)
+#endif
+        )
+        {
+            int end = (int)(size_.width*esz_);
+            int width = (end + 1)/2;
+
+            for( ; size.height--; src += sstep_, dst += dstep_ )
+            {
+                for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+                {
+                    v_uint8x16 t0, t1;
+                    uint64_t t2, t3;
+
+                    t0 = v_load((uchar*)src + i);
+                    t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
+                    t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                    t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
+                    v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                    *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
+                    v_store(dst + i, t1);
+                    *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+                }
+            }
+        }
+#if !CV_STRONG_ALIGNMENT
+        else if (esz_ == 12)
+        {
+            flipHoriz_double<uint64_t,uint>(src, sstep_, dst, dstep_, size, esz_);
+        }
+        else if (esz_ == 6)
+        {
+            flipHoriz_double<uint,ushort>(src, sstep_, dst, dstep_, size, esz_);
+        }
+        else if (esz_ == 3)
+        {
+            flipHoriz_double<ushort,uchar>(src, sstep_, dst, dstep_, size, esz_);
+        }
+#endif
+        else
+#endif // CV_SIMD
+        {
+            const int* tab = tab_.data();
+            int i, j, r;
+            for(r = range.start; r < range.end; src += sstep_, dst += dstep_, r++)
+            {
+                for( i = 0; i < limit_; i++ )
+                {
+                    j = tab[i];
+                    uchar t0 = src[i], t1 = src[j];
+                    dst[i] = t1; dst[j] = t0;
+                }
+            }
+        }
+    }
+private:
+    const uchar* src0_;
+    const size_t sstep_;
+    uchar* dst0_;
+    const size_t dstep_;
+    const Size size_;
+    const size_t esz_;
+    AutoBuffer<int> tab_;
+    const int limit_;
+};
+
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-#if CV_SIMD
-#if CV_STRONG_ALIGNMENT
-    size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
-#endif
-    if (esz == 2 * v_uint8x16::nlanes)
-    {
-        int end = (int)(size.width*esz);
-        int width = end/2;
-
-        for( ; size.height--; src += sstep, dst += dstep )
-        {
-            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
-            {
-#if CV_SIMD256
-                v_uint8x32 t0, t1;
-
-                t0 = v256_load((uchar*)src + i);
-                t1 = v256_load((uchar*)src + j);
-                v_store(dst + j, t0);
-                v_store(dst + i, t1);
-#else
-                v_uint8x16 t0, t1, t2, t3;
-
-                t0 = v_load((uchar*)src + i);
-                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
-                t2 = v_load((uchar*)src + j);
-                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
-                v_store(dst + j, t0);
-                v_store(dst + j + v_uint8x16::nlanes, t1);
-                v_store(dst + i, t2);
-                v_store(dst + i + v_uint8x16::nlanes, t3);
-#endif
-            }
-        }
-    }
-    else if (esz == v_uint8x16::nlanes)
-    {
-        int end = (int)(size.width*esz);
-        int width = end/2;
-
-        for( ; size.height--; src += sstep, dst += dstep )
-        {
-            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
-            {
-                v_uint8x16 t0, t1;
-
-                t0 = v_load((uchar*)src + i);
-                t1 = v_load((uchar*)src + j);
-                v_store(dst + j, t0);
-                v_store(dst + i, t1);
-            }
-        }
-    }
-    else if (esz == 8
-#if CV_STRONG_ALIGNMENT
-            && isAligned<sizeof(uint64)>(alignmentMark)
-#endif
-    )
-    {
-        flipHoriz_single<v_uint64x2>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 4
-#if CV_STRONG_ALIGNMENT
-            && isAligned<sizeof(unsigned)>(alignmentMark)
-#endif
-    )
-    {
-        flipHoriz_single<v_uint32x4>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 2
-#if CV_STRONG_ALIGNMENT
-            && isAligned<sizeof(ushort)>(alignmentMark)
-#endif
-    )
-    {
-        flipHoriz_single<v_uint16x8>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 1)
-    {
-        flipHoriz_single<v_uint8x16>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 24
-#if CV_STRONG_ALIGNMENT
-            && isAligned<sizeof(uint64_t)>(alignmentMark)
-#endif
-    )
-    {
-        int end = (int)(size.width*esz);
-        int width = (end + 1)/2;
-
-        for( ; size.height--; src += sstep, dst += dstep )
-        {
-            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
-            {
-                v_uint8x16 t0, t1;
-                uint64_t t2, t3;
-
-                t0 = v_load((uchar*)src + i);
-                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
-                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
-                t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
-                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
-                *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
-                v_store(dst + i, t1);
-                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
-            }
-        }
-    }
-#if !CV_STRONG_ALIGNMENT
-    else if (esz == 12)
-    {
-        flipHoriz_double<uint64_t,uint>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 6)
-    {
-        flipHoriz_double<uint,ushort>(src, sstep, dst, dstep, size, esz);
-    }
-    else if (esz == 3)
-    {
-        flipHoriz_double<ushort,uchar>(src, sstep, dst, dstep, size, esz);
-    }
-#endif
-    else
-#endif // CV_SIMD
-    {
-        int i, j, limit = (int)(((size.width + 1)/2)*esz);
-        AutoBuffer<int> _tab(size.width*esz);
-        int* tab = _tab.data();
-
-        for( i = 0; i < size.width; i++ )
-            for( size_t k = 0; k < esz; k++ )
-                tab[i*esz + k] = (int)((size.width - i - 1)*esz + k);
-
-        for( ; size.height--; src += sstep, dst += dstep )
-        {
-            for( i = 0; i < limit; i++ )
-            {
-                j = tab[i];
-                uchar t0 = src[i], t1 = src[j];
-                dst[i] = t1; dst[j] = t0;
-            }
-        }
-    }
+    parallel_for_(Range(0, size.height), flipHorizComputer(src, sstep, dst, dstep, size, esz));
 }
 
 static void
