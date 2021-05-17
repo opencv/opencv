@@ -578,7 +578,7 @@ namespace core {
 
     G_TYPED_KERNEL(GTranspose, <GMat(GMat)>, "org.opencv.core.transpose") {
         static GMatDesc outMeta(GMatDesc in) {
-            return in;
+            return in.withSize({in.size.height, in.size.width});
         }
     };
 } // namespace core

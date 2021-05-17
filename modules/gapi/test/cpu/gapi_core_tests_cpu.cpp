@@ -557,7 +557,8 @@ INSTANTIATE_TEST_CASE_P(TransposeTestCPU, TransposeTest,
                                        cv::Size(640, 480),
                                        cv::Size(128, 128)),
                                 Values(-1),
-                                Values(CORE_CPU)));
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj())));
                                 
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
