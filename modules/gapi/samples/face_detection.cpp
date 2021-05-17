@@ -127,10 +127,10 @@ struct Face {
                 static_cast<float>(faces[idx].bbox.y2 - faces[idx].bbox.y1 + 1);
             for (size_t i = 1; i < tmpIndices.size(); ++i) {
                 int tmpIdx = tmpIndices[i];
-                const float interX1 = std::max(static_cast<float>(faces[idx].bbox.x1), static_cast<float>(faces[tmpIdx].bbox.x1));
-                const float interY1 = std::max(static_cast<float>(faces[idx].bbox.y1), static_cast<float>(faces[tmpIdx].bbox.y1));
-                const float interX2 = std::min(static_cast<float>(faces[idx].bbox.x2), static_cast<float>(faces[tmpIdx].bbox.x2));
-                const float interY2 = std::min(static_cast<float>(faces[idx].bbox.y2), static_cast<float>(faces[tmpIdx].bbox.y2));
+                const float interX1 = static_cast<float>(std::max(faces[idx].bbox.x1, faces[tmpIdx].bbox.x1));
+                const float interY1 = static_cast<float>(std::max(faces[idx].bbox.y1, faces[tmpIdx].bbox.y1));
+                const float interX2 = static_cast<float>(std::min(faces[idx].bbox.x2, faces[tmpIdx].bbox.x2));
+                const float interY2 = static_cast<float>(std::min(faces[idx].bbox.y2, faces[tmpIdx].bbox.y2));
 
                 const float bboxWidth = std::max(0.0f, (interX2 - interX1 + 1));
                 const float bboxHeight = std::max(0.0f, (interY2 - interY1 + 1));
