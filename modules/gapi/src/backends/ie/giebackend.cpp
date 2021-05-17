@@ -241,6 +241,12 @@ struct IEUnit {
             cv::util::throw_error(std::logic_error("Unsupported ParamDesc::Kind"));
         }
 
+        for (const auto& output : outputs) {
+            if (output.second->getPrecision() == IE::Precision::FP16) {
+                output.second->setPrecision(IE::Precision::FP32);
+            }
+        }
+
         // The practice shows that not all inputs and not all outputs
         // are mandatory to specify in IE model.
         // So what we're concerned here about is:
