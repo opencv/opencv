@@ -167,17 +167,15 @@ class SinglePolicy
 
 public:
     static base_any_policy* get_policy();
-
-private:
-    static typename choose_policy<T>::type policy;
 };
-
-template <typename T>
-typename choose_policy<T>::type SinglePolicy<T>::policy;
 
 /// This function will return a different policy for each type.
 template <typename T>
-inline base_any_policy* SinglePolicy<T>::get_policy() { return &policy; }
+inline base_any_policy* SinglePolicy<T>::get_policy()
+{
+    static typename choose_policy<T>::type policy;
+    return &policy;
+}
 
 } // namespace anyimpl
 
