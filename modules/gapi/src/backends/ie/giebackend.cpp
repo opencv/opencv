@@ -118,6 +118,7 @@ inline int toCV(IE::Precision prec) {
     case IE::Precision::FP32: return CV_32F;
     case IE::Precision::I32:  return CV_32S;
     case IE::Precision::I64:  return CV_32S;
+    case IE::Precision::FP16: return CV_16F;
     default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return -1;
@@ -196,6 +197,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
         HANDLE(I32, int);
+        HANDLE(FP16, cv::float16_t);
 #undef HANDLE
         case IE::Precision::I64: {
             GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
