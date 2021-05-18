@@ -532,7 +532,7 @@ private:
     const Size size_;
     const size_t esz_;
     AutoBuffer<int> tab_;
-    const int limit_;
+    int limit_;
 };
 
 static void
