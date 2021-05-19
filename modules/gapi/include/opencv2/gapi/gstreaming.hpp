@@ -371,6 +371,29 @@ protected:
 };
 /** @} */
 
+namespace gapi {
+/**
+ * @brief Ask G-API to set specific queue capacity for streaming execution.
+ *
+ * For streaming execution G-API has a special concurrent bounded queue to
+ * fetch next frame while current is being processed. This compilation argument
+ * specifies the capacity of this queue.
+ */
+struct queue_capacity
+{
+    size_t capacity;
+};
+/** @} */
+} // namespace gapi
+
+namespace detail
+{
+    template<> struct CompileArgTag<cv::gapi::queue_capacity>
+    {
+        static const char* tag() { return "gapi.queue_capacity"; }
+    };
+}
+
 }
 
 #endif // OPENCV_GAPI_GSTREAMING_COMPILED_HPP

@@ -447,7 +447,8 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
         .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
                           cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                          cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
+                          cv::compile_args(cv::gapi::use_only{getKernelPackage()},
+                                           cv::gapi::queue_capacity{1}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     testc.setSource(cv::gin(in_const,
