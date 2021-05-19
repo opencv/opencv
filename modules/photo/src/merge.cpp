@@ -342,9 +342,9 @@ public:
             LUT(images[i], response, im);
 
             result += times.at<float>((int)i) * w.mul(im);
-            wsum += times.at<float>((int)i) * times.at<float>((int)i) * w;
+            wsum += times.at<float>((int)i) * times.at<float>((int)i) * (w + DBL_EPSILON);
         }
-        result = result.mul(1 / (wsum + DBL_EPSILON));
+        result = result.mul(1 / wsum);
     }
 
     void process(InputArrayOfArrays src, OutputArray dst, InputArray times) CV_OVERRIDE

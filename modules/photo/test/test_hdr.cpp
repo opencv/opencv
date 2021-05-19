@@ -253,18 +253,18 @@ TEST(Photo_CalibrateRobertson, bug_18180)
 {
     vector<Mat> images;
     vector<cv::String> fn;
-    glob(string(cvtest::TS::ptr()->get_data_path()) + "hdr/exposures/bug_18180/*.jpg", fn, false);
-    for (auto & i : fn)
-        images.push_back(imread(i));
-    vector<float> times {15, 2.5, 0.25, 0.333333};
+    string test_path = cvtest::TS::ptr()->get_data_path() + "hdr/exposures/bug_18180/";
+    for(int i = 1; i <= 4; ++i)
+        images.push_back(imread(test_path + std::to_string(i) + ".jpg"));
+    vector<float> times {15.0f, 2.5f, 0.25f, 0.33f};
     Mat response, expected;
-    Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson(2, 0.01);
+    Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson(2, 0.01f);
     calibrate->process(images, response, times);
     Mat response_no_nans = response.clone();
     patchNaNs(response_no_nans);
+    std::cout << response << std::endl;
     // since there should be no NaNs, original response vs. response with NaNs patched should be identical
-    bool isEqual = (sum(response != response_no_nans) == Scalar(0,0,0));
-    ASSERT_TRUE(isEqual);
+    EXPECT_EQ(0.0, cv::norm(response, response_no_nans, NORM_L2));
 }
 
 }} // namespace
