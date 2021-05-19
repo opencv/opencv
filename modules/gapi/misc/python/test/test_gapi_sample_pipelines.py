@@ -559,7 +559,7 @@ try:
             class GAdd:
                 @staticmethod
                 def outMeta(desc0, desc1):
-                    raise NotImplementedError("outMeta ins't implemented")
+                    raise NotImplementedError("outMeta isn't implemented")
 
             @cv.gapi.kernel(GAdd)
             class GAddImpl:
