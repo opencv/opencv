@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_RGBD_INTRINSICS_HPP__
-#define __OPENCV_RGBD_INTRINSICS_HPP__
+#ifndef __OPENCV_3D_INTRINSICS_HPP__
+#define __OPENCV_3D_INTRINSICS_HPP__
 
 #include "opencv2/core/matx.hpp"
 

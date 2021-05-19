@@ -10,6 +10,7 @@
 #include <opencv2/core/affine.hpp>
 #include <type_traits>
 #include <vector>
+#include <unordered_map>
 
 #include "opencv2/core/mat.inl.hpp"
 #include "opencv2/rgbd/detail/pose_graph.hpp"
@@ -41,14 +42,18 @@ class Submap
 
     Submap(int _id, const VolumeParams& volumeParams, const cv::Affine3f& _pose = cv::Affine3f::Identity(),
            int _startFrameId = 0)
-        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId), volume(makeHashTSDFVolume(volumeParams))
+        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId)
     {
-        std::cout << "Created volume\n";
+        VolumeParams vp = volumeParams;
+        vp.type = VolumeType::HASHTSDF;
+        volume = makeVolume(vp);
+
+        CV_LOG_INFO(NULL, "Created volume");
     }
     virtual ~Submap() = default;
 
-    virtual void integrate(InputArray _depth, float depthFactor, const cv::kinfu::Intr& intrinsics, const int currframeId);
-    virtual void raycast(const cv::Affine3f& cameraPose, const cv::kinfu::Intr& intrinsics, cv::Size frameSize,
+    virtual void integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
+    virtual void raycast(const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                          OutputArray points, OutputArray normals);
     virtual void updatePyrPointsNormals(const int pyramidLevels);
 
@@ -90,12 +95,12 @@ class Submap
     //! TODO: Add support for GPU arrays (UMat)
     std::vector<MatType> pyrPoints;
     std::vector<MatType> pyrNormals;
-    std::shared_ptr<HashTSDFVolume> volume;
+    std::shared_ptr<Volume> volume;
 };
 
 template<typename MatType>
 
-void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::kinfu::Intr& intrinsics,
+void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics,
                                 const int currFrameId)
 {
     CV_Assert(currFrameId >= startFrameId);
@@ -103,7 +108,7 @@ void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::
 }
 
 template<typename MatType>
-void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::kinfu::Intr& intrinsics, cv::Size frameSize,
+void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                               OutputArray points, OutputArray normals)
 {
     volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
@@ -140,6 +145,7 @@ class SubmapManager
         std::vector<Affine3f> constraints;
         int trackingAttempts;
     };
+
     typedef Submap<MatType> SubmapT;
     typedef std::map<int, Ptr<SubmapT>> IdToSubmapPtr;
     typedef std::unordered_map<int, ActiveSubmapData> IdToActiveSubmaps;

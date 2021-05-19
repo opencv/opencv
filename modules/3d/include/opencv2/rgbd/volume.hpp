@@ -38,6 +38,10 @@ class CV_EXPORTS_W Volume
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const             = 0;
     virtual void reset()                                                                       = 0;
 
+    // Works for hash-based volumes only, otherwise returns 1
+    virtual int getVisibleBlocks(int /*currFrameId*/, int /*frameThreshold*/) const { return 1; }
+    virtual size_t getTotalVolumeUnits() const { return 1; }
+
    public:
     const float voxelSize;
     const float voxelSizeInv;

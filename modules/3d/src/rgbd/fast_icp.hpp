@@ -8,7 +8,6 @@
 #define __OPENCV_KINFU_FAST_ICP_H__
 
 #include "precomp.hpp"
-#include "kinfu_frame.hpp"
 #include "intrinsics.hpp"
 
 namespace cv {
