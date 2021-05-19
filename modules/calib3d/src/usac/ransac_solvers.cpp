@@ -539,22 +539,25 @@ Mat findEssentialMat (InputArray points1, InputArray points2, InputArray cameraM
 bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
        InputArray cameraMatrix, InputArray distCoeffs, OutputArray rvec, OutputArray tvec,
        bool /*useExtrinsicGuess*/, int max_iters, float thr, double conf,
-       OutputArray mask, int method) {
+       OutputArray inliers, int method) {
     Ptr<Model> params;
     setParameters(method, params, cameraMatrix.empty() ? EstimationMethod ::P6P : EstimationMethod ::P3P,
-            thr, max_iters, conf, mask.needed());
+            thr, max_iters, conf, inliers.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, imagePoints, objectPoints, params->getRandomGeneratorState(),
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
-        saveMask(mask, ransac_output->getInliersMask());
+        if (inliers.needed()) {
+            const auto &inliers_mask = ransac_output->getInliersMask();
+            Mat inliers_;
+            for (int i = 0; i < (int)inliers_mask.size(); i++)
+                if (inliers_mask[i])
+                    inliers_.push_back(i);
+            inliers_.copyTo(inliers);
+        }
         const Mat &model = ransac_output->getModel();
         model.col(0).copyTo(rvec);
         model.col(1).copyTo(tvec);
         return true;
-    }
-    if (mask.needed()){
-        mask.create(std::max(objectPoints.getMat().rows, objectPoints.getMat().cols), 1, CV_8U);
-        mask.setTo(Scalar::all(0));
     }
     return false;
 }
