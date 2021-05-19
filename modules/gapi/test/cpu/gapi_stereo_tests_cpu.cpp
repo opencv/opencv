@@ -32,8 +32,8 @@ INSTANTIATE_TEST_CASE_P(CPU_Tests, TestGAPIStereo,
                                        cv::gapi::StereoOutputFormat::DISPARITY_Q16_11_4),
                                 Values(16),
                                 Values(43),
-                                Values(10.),
-                                Values(100.),
+                                Values(63.5),
+                                Values(3.6),
                                 Values(AbsExact().to_compare_obj())));
 
 } // opencv_test
