@@ -2045,10 +2045,9 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
     std::tie(cmpF, sz_in, type, compile_args) = GetParam();
 
     initMatrixRandU(type, sz_in, type, false);
-    cv::Mat out_transpose_gapi, out_transpose_ocv;
 
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::transpose(in_mat1, out_transpose_ocv);
+    cv::transpose(in_mat1, out_mat_ocv);
 
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in;
@@ -2056,16 +2055,16 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
     cv::GComputation c(cv::GIn(in), cv::GOut(out));
 
     // Warm-up graph engine:
-    c.apply(cv::gin(in_mat1), cv::gout(out_transpose_gapi), std::move(compile_args));
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi), std::move(compile_args));
 
     TEST_CYCLE()
     {
-        c.apply(cv::gin(in_mat1), cv::gout(out_transpose_gapi));
+        c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi));
     }
 
     // Comparison ////////////////////////////////////////////////////////////
     {
-        EXPECT_TRUE(cmpF(out_transpose_gapi, out_transpose_ocv));
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
     }
 
     SANITY_CHECK_NOTHING();
