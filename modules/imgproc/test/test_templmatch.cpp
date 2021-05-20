@@ -436,15 +436,15 @@ TEST(Imgproc_MatchTemplate, bug_15215) {
 
         // manually compute sqdiff norm
         Scalar squaredDiff = delta.dot(delta);
-        double sqdiff = squaredDiff.val[0];
+        float sqdiff = squaredDiff.val[0];
         Scalar sumOfSquaredProduct = cv::sum(cvimg.mul(cvimg)) * cv::sum(cvtmpl.mul(cvtmpl));
-        double norm = cv::sqrt(sumOfSquaredProduct.val[0]);
-        double expectedResult = sqdiff / norm;
+        double norm_ = cv::sqrt(sumOfSquaredProduct.val[0]);
+        float expectedResult = sqdiff / (float) norm_;
 
         // compute with matchTemplate
         cv::Mat output;
         cv::matchTemplate(cvimg, cvtmpl, output, CV_TM_SQDIFF_NORMED);
-        double actualResult = output.at<float>(0, 0);
+        float actualResult = output.at<float>(0, 0);
         ASSERT_FLOAT_EQ(actualResult, expectedResult);
 }
 } // namespace
