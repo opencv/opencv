@@ -1288,10 +1288,8 @@ status("    ZLib:"   ZLIB_FOUND THEN "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRI
 if(WITH_JPEG OR HAVE_JPEG)
   if(NOT HAVE_JPEG)
     status("    JPEG:" NO)
-  elseif(BUILD_JPEG)
-    status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
   else()
-    status("    JPEG:" "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
+    status("    JPEG:" JPEG_FOUND THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})" ELSE "build (ver ${JPEG_LIBRARY})")
   endif()
 endif()
 
