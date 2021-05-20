@@ -2390,7 +2390,7 @@ TEST(Mat, reverse_iterator_19967)
     EXPECT_EQ(mismatch_it_pair_1d.second, m_1d.rend<uchar>());
 
     //Templated derived class
-    cv::Mat_<uchar> m_1d_t(sizes_1d.size(), sizes_1d.data(), data.data());
+    cv::Mat_<uchar> m_1d_t(static_cast<int>(sizes_1d.size()), sizes_1d.data(), data.data());
     auto mismatch_it_pair_1d_t = std::mismatch(data.rbegin(), data.rend(), m_1d_t.rbegin());
     EXPECT_EQ(mismatch_it_pair_1d_t.first, data.rend());  // expect no mismatch
     EXPECT_EQ(mismatch_it_pair_1d_t.second, m_1d_t.rend());
@@ -2406,7 +2406,7 @@ TEST(Mat, reverse_iterator_19967)
     EXPECT_EQ(mismatch_it_pair_2d.second, m_2d.rend<uchar>());
 
     //Templated derived class
-    cv::Mat_<uchar> m_2d_t(sizes_2d.size(),sizes_2d.data(), data.data());
+    cv::Mat_<uchar> m_2d_t(static_cast<int>(sizes_2d.size()),sizes_2d.data(), data.data());
     auto mismatch_it_pair_2d_t = std::mismatch(data.rbegin(), data.rend(), m_2d_t.rbegin());
     EXPECT_EQ(mismatch_it_pair_2d_t.first, data.rend());
     EXPECT_EQ(mismatch_it_pair_2d_t.second, m_2d_t.rend());
@@ -2422,7 +2422,7 @@ TEST(Mat, reverse_iterator_19967)
     EXPECT_EQ(mismatch_it_pair_3d.second, m_3d.rend<uchar>());
 
     //Templated derived class
-    cv::Mat_<uchar> m_3d_t(sizes_3d.size(),sizes_3d.data(), data_3d.data());
+    cv::Mat_<uchar> m_3d_t(static_cast<int>(sizes_3d.size()),sizes_3d.data(), data_3d.data());
     auto mismatch_it_pair_3d_t = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d_t.rbegin());
     EXPECT_EQ(mismatch_it_pair_3d_t.first, data_3d.rend());
     EXPECT_EQ(mismatch_it_pair_3d_t.second, m_3d_t.rend());
@@ -2438,7 +2438,7 @@ TEST(Mat, reverse_iterator_19967)
     EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rbegin<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
 
     // const test templated dervied class
-    const cv::Mat_<uchar> m_1d_const_t(sizes_1d.size(), sizes_1d.data(), data.data());
+    const cv::Mat_<uchar> m_1d_const_t(static_cast<int>(sizes_1d.size()), sizes_1d.data(), data.data());
 
     auto mismatch_it_pair_1d_const_t = std::mismatch(data.rbegin(), data.rend(), m_1d_const_t.rbegin());
     EXPECT_EQ(mismatch_it_pair_1d_const_t.first, data.rend());  // expect no mismatch
