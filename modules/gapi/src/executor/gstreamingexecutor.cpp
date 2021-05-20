@@ -1128,7 +1128,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
 
     // Very rough estimation to limit internal queue sizes if not specified by the user.
     // Pipeline depth is equal to number of its (pipeline) steps.
-    auto has_queue_capacity = cv::gapi::getCompileArg<cv::gapi::queue_capacity>(m_comp_args);
+    auto has_queue_capacity = cv::gapi::getCompileArg<cv::gapi::streaming::queue_capacity>(m_comp_args);
     const auto queue_capacity = has_queue_capacity ? has_queue_capacity->capacity :
             3*std::count_if
             (m_gim.nodes().begin(),

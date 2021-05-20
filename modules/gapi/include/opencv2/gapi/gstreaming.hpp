@@ -372,6 +372,7 @@ protected:
 /** @} */
 
 namespace gapi {
+namespace streaming {
 /**
  * @brief Ask G-API to set specific queue capacity for streaming execution.
  *
@@ -384,11 +385,12 @@ struct queue_capacity
     size_t capacity;
 };
 /** @} */
+} // namespace streaming
 } // namespace gapi
 
 namespace detail
 {
-    template<> struct CompileArgTag<cv::gapi::queue_capacity>
+    template<> struct CompileArgTag<cv::gapi::streaming::queue_capacity>
     {
         static const char* tag() { return "gapi.queue_capacity"; }
     };

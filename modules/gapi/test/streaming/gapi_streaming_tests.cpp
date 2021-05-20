@@ -447,8 +447,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     auto testc = cv::GComputation(cv::GIn(in, in2), cv::GOut(out))
         .compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size{256,256}},
                           cv::GMatDesc{CV_8U,3,cv::Size{768,576}},
-                          cv::compile_args(cv::gapi::use_only{getKernelPackage()},
-                                           cv::gapi::queue_capacity{1}));
+                          cv::compile_args(cv::gapi::use_only{getKernelPackage()}));
 
     cv::Mat in_const = cv::Mat::eye(cv::Size(256,256), CV_8UC3);
     testc.setSource(cv::gin(in_const,
@@ -458,6 +457,24 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoConstSource_NoHang)
     while (testc.pull(cv::gout(tmp))) test_frames++;
 
     EXPECT_EQ(ref_frames, test_frames);
+}
+
+TEST_P(GAPI_Streaming, SmokeTest_Queue_Capacity_1)
+{
+    auto cc = cv::GComputation([](){
+        cv::GMat in;
+        return cv::GComputation(in, cv::gapi::copy(in));
+    }).compileStreaming(cv::compile_args(cv::gapi::streaming::queue_capacity{1}));
+
+    auto path = findDataFile("cv/video/768x576.avi");
+    try {
+        cc.setSource(gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(path));
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    cv::Mat out_mat;
+    cc.start();
+    while (cc.pull(cv::gout(out_mat))) { };
 }
 
 TEST_P(GAPI_Streaming, SmokeTest_AutoMeta)
