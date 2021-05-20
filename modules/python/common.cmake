@@ -218,6 +218,28 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
   endif()
   configure_file("${PYTHON_SOURCE_DIR}/package/template/config-x.y.py.in" "${__python_loader_install_tmp_path}/cv2/${__target_config}" @ONLY)
   install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/" COMPONENT python)
+
+  # handle Python extra code
+  foreach(m ${OPENCV_MODULES_BUILD})
+    if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";python;" AND HAVE_${m}
+        AND EXISTS "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package"
+    )
+      set(__base "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package")
+      file(GLOB_RECURSE extra_py_files
+          RELATIVE "${__base}"
+          "${__base}/**/*.py"
+      )
+      if(extra_py_files)
+        list(SORT extra_py_files)
+        foreach(f ${extra_py_files})
+          configure_file("${__base}/${f}" "${__loader_path}/cv2/_extra_py_code/${f}" COPYONLY)
+          install(FILES "${__base}/${f}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/_extra_py_code/${f}" COMPONENT python)
+        endforeach()
+      else()
+        message(WARNING "Module ${m} has no .py files in misc/python/package")
+      endif()
+    endif()
+  endforeach(m)
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)

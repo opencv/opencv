@@ -1341,7 +1341,7 @@ Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2BGR
 */
-GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2RGB(const GMat& src);
 
 /** @brief Converts an image from RGB color space to gray-scaled.
 

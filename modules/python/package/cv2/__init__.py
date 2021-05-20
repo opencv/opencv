@@ -4,6 +4,8 @@ OpenCV Python binary extension loader
 import os
 import sys
 
+__all__ = []
+
 try:
     import numpy
     import numpy.core.multiarray
@@ -12,6 +14,14 @@ except ImportError:
     print('Install it via command:')
     print('    pip install numpy')
     raise
+
+
+py_code_loader = None
+if sys.version_info[:2] >= (3, 0):
+    try:
+        from . import _extra_py_code as py_code_loader
+    except:
+        pass
 
 # TODO
 # is_x64 = sys.maxsize > 2**32
@@ -96,6 +106,11 @@ def bootstrap():
         del sys.OpenCV_LOADER
     except:
         pass
+
+    if DEBUG: print('OpenCV loader: binary extension... OK')
+
+    if py_code_loader:
+        py_code_loader.init('cv2')
 
     if DEBUG: print('OpenCV loader: DONE')
 
