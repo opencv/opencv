@@ -1,0 +1,23 @@
+From d37e3d52797764b6d86d741de21789694d027bbb Mon Sep 17 00:00:00 2001
+From: Francesco Petrogalli <francesco.petrogalli@arm.com>
+Date: Fri, 21 May 2021 09:25:31 +0000
+Subject: [PATCH] Disable threads in openjpeg from the toolchain file.
+
+---
+ platforms/baremetal/aarch64.toolchain.cmake | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/platforms/baremetal/aarch64.toolchain.cmake b/platforms/baremetal/aarch64.toolchain.cmake
+index a5bc5e918e..f87da3236f 100644
+--- a/platforms/baremetal/aarch64.toolchain.cmake
++++ b/platforms/baremetal/aarch64.toolchain.cmake
+@@ -36,3 +36,6 @@ set(OPENCV_FORCE_3RDPARTY_BUILD ON)
+ set(WITH_JPEG OFF)
+ set(WITH_OPENEXR OFF)
+ set(WITH_TIFF OFF)
++
++# Turn off threads in openjpeg.
++set(OPJ_USE_THREAD OFF)
+-- 
+2.17.1
+

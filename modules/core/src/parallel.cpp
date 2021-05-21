@@ -205,6 +205,7 @@ namespace {
             rng = cv::theRNG();
 
 #ifdef OPENCV_TRACE
+            #error xxx
             traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
             traceRootContext = CV_TRACE_NS::details::getTraceManager().tls.get();
 #endif
@@ -484,6 +485,7 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 
 void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+
 #ifdef OPENCV_TRACE
     CV__TRACE_OPENCV_FUNCTION_NAME_("parallel_for", 0);
     CV_TRACE_ARG_VALUE(range_start, "range.start", (int64)range.start);

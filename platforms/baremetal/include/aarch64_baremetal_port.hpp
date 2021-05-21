@@ -23,4 +23,16 @@ namespace std {
 } //namespace std
 #endif // __cplusplus == 201103L
 
+
+extern "C" {
+
+    __attribute__((weak)) int posix_memalign(void **memptr, size_t alignment, size_t size) {
+    (void) memptr;
+    (void) alignment;
+    (void) size;
+    return 0;
+}
+
+} // extern "C"
+
 #endif

@@ -9165,6 +9165,7 @@ static bool IsPathSeparator(char c) {
 
 // Returns the current working directory, or "" if unsuccessful.
 FilePath FilePath::GetCurrentDir() {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 #if GTEST_OS_WINDOWS_MOBILE || GTEST_OS_WINDOWS_PHONE || GTEST_OS_WINDOWS_RT
   // Windows CE doesn't have a current directory, so we just return
   // something reasonable.
@@ -9183,6 +9184,9 @@ FilePath FilePath::GetCurrentDir() {
 # endif  // GTEST_OS_NACL
   return FilePath(result == NULL ? "" : cwd);
 #endif  // GTEST_OS_WINDOWS_MOBILE
+#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
+  return FilePath("");
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 // Returns a copy of the FilePath with the case-insensitive extension removed.
@@ -9391,6 +9395,7 @@ bool FilePath::CreateDirectoriesRecursively() const {
 // directory for any reason, including if the parent directory does not
 // exist. Not named "CreateDirectory" because that's a macro on Windows.
 bool FilePath::CreateFolder() const {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 #if GTEST_OS_WINDOWS_MOBILE
   FilePath removed_sep(this->RemoveTrailingPathSeparator());
   LPCWSTR unicode = String::AnsiToUtf16(removed_sep.c_str());
@@ -9406,6 +9411,9 @@ bool FilePath::CreateFolder() const {
     return this->DirectoryExists();  // An error is OK if the directory exists.
   }
   return true;  // No error.
+#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
+  return false;
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 // If input name has a trailing separator character, remove it and return the
