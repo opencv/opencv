@@ -380,8 +380,9 @@ namespace streaming {
  * fetch next frame while current is being processed. This compilation argument
  * specifies the capacity of this queue.
  */
-struct queue_capacity
+struct GAPI_EXPORTS queue_capacity
 {
+    queue_capacity(size_t cap = 1) : capacity(cap) { };
     size_t capacity;
 };
 /** @} */
@@ -390,10 +391,10 @@ struct queue_capacity
 
 namespace detail
 {
-    template<> struct CompileArgTag<cv::gapi::streaming::queue_capacity>
-    {
-        static const char* tag() { return "gapi.queue_capacity"; }
-    };
+template<> struct CompileArgTag<cv::gapi::streaming::queue_capacity>
+{
+    static const char* tag() { return "gapi.queue_capacity"; }
+};
 }
 
 }

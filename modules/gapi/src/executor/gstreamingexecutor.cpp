@@ -1136,6 +1136,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             [&](ade::NodeHandle nh) {
                 return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
             });
+    GAPI_Assert(queue_capacity != 0u);
 
     auto sync_policy = cv::gimpl::getCompileArg<cv::gapi::streaming::sync_policy>(m_comp_args)
                        .value_or(cv::gapi::streaming::sync_policy::dont_sync);
