@@ -8,6 +8,7 @@
 
 #include "precomp.hpp"
 #include "fast_icp.hpp"
+#include "opencv2/rgbd/detail/kinfu_frame.hpp"
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  define HAVE_EIGEN3_HERE
@@ -981,68 +982,245 @@ Ptr<DepthCleaner> DepthCleaner::create(int depth_in, int window_size_in, int met
   return makePtr<DepthCleaner>(depth_in, window_size_in, method_in);
 }
 
-RgbdFrame::RgbdFrame() : ID(-1)
-{}
-
-RgbdFrame::RgbdFrame(const Mat& image_in, const Mat& depth_in, const Mat& mask_in, const Mat& normals_in, int ID_in)
-    : ID(ID_in), image(image_in), depth(depth_in), mask(mask_in), normals(normals_in)
-{}
-
-RgbdFrame::~RgbdFrame()
-{}
-
-Ptr<RgbdFrame> RgbdFrame::create(const Mat& image_in, const Mat& depth_in, const Mat& mask_in, const Mat& normals_in, int ID_in) {
-  return makePtr<RgbdFrame>(image_in, depth_in, mask_in, normals_in, ID_in);
-}
-
-void RgbdFrame::release()
+template<typename TMat>
+struct OdometryFrameImpl : public OdometryFrame
 {
-    ID = -1;
-    image.release();
-    depth.release();
-    mask.release();
-    normals.release();
-}
+    OdometryFrameImpl() : OdometryFrame() { }
+    OdometryFrameImpl(InputArray _image, InputArray _depth, InputArray _mask = noArray(), InputArray _normals = noArray(), int _ID = -1);
+    virtual ~OdometryFrameImpl() { }
 
-OdometryFrame::OdometryFrame() : RgbdFrame()
-{}
+    virtual void release() CV_OVERRIDE
+    {
+        ID = -1;
+        image.release();
+        depth.release();
+        mask.release();
+        normals.release();
 
-OdometryFrame::OdometryFrame(const Mat& image_in, const Mat& depth_in, const Mat& mask_in, const Mat& normals_in, int ID_in)
-    : RgbdFrame(image_in, depth_in, mask_in, normals_in, ID_in)
-{}
+        releasePyramids();
+    }
 
-Ptr<OdometryFrame> OdometryFrame::create(const Mat& image_in, const Mat& depth_in, const Mat& mask_in, const Mat& normals_in, int ID_in) {
-  return makePtr<OdometryFrame>(image_in, depth_in, mask_in, normals_in, ID_in);
-}
+    virtual void releasePyramids() CV_OVERRIDE
+    {
+        pyramidImage.clear();
+        pyramidDepth.clear();
+        pyramidMask.clear();
 
-void OdometryFrame::release()
+        pyramidCloud.clear();
+
+        pyramid_dI_dx.clear();
+        pyramid_dI_dy.clear();
+        pyramidTexturedMask.clear();
+
+        pyramidNormals.clear();
+        pyramidNormalsMask.clear();
+    }
+
+    static inline TMat getTMat(InputArray m)
+    {
+        CV_Error(CV_StsBadArg, "Unsupported type");
+    }
+
+    virtual void setImage(InputArray  _image) CV_OVERRIDE
+    {
+        image = getTMat<TMat>(_image);
+    }
+    virtual void getImage(OutputArray _image) CV_OVERRIDE
+    {
+        _image.assign(image);
+    }
+    virtual void setDepth(InputArray  _depth) CV_OVERRIDE
+    {
+        depth = getTMat<TMat>(_depth);
+    }
+    virtual void getDepth(OutputArray _depth) CV_OVERRIDE
+    {
+        _depth.assign(depth);
+    }
+    virtual void setMask(InputArray  _mask) CV_OVERRIDE
+    {
+        mask = getTMat<TMat>(_mask);
+    }
+    virtual void getMask(OutputArray _mask) CV_OVERRIDE
+    {
+        _mask.assign(mask);
+    }
+    virtual void setNormals(InputArray  _normals) CV_OVERRIDE
+    {
+        normals = getTMat<TMat>(_normals);
+    }
+    virtual void getNormals(OutputArray _normals) CV_OVERRIDE
+    {
+        _normals.assign(normals);
+    }
+
+    virtual void setPyramidLevels(size_t _nLevels) CV_OVERRIDE
+    {
+        pyramidImage.resize(_nLevels, TMat());
+        pyramidDepth.resize(_nLevels, TMat());
+        pyramidMask.resize(_nLevels, TMat());
+
+        pyramidCloud.resize(_nLevels, TMat());
+
+        pyramid_dI_dx.resize(_nLevels, TMat());
+        pyramid_dI_dy.resize(_nLevels, TMat());
+        pyramidTexturedMask.resize(_nLevels, TMat());
+
+        pyramidNormals.resize(_nLevels, TMat());
+        pyramidNormalsMask.resize(_nLevels, TMat());
+    }
+
+    virtual size_t getPyramidLevels() CV_OVERRIDE
+    {
+        return pyramidImages.size();
+    }
+
+    virtual void setPyramidImage(InputArray  _pyrImage, size_t level) CV_OVERRIDE
+    {
+        pyramidImage[level] = getTMat(_pyrImage);
+    }
+    virtual void getPyramidImage(OutputArray _pyrImage, size_t level) CV_OVERRIDE
+    {
+        _pyrImage.assign(pyramidImage[level]);
+    }
+
+      virtual void setPyramidDepth(InputArray  _pyrDepth, size_t level) CV_OVERRIDE
+      {
+          pyramidDepth[level] = getTMat(_pyrDepth);
+      }
+      virtual void getPyramidDepth(OutputArray _pyrDepth, size_t level) CV_OVERRIDE
+      {
+          _pyrDepth.assign(pyramidDepth[level]);
+      }
+
+      virtual void setPyramidMask(InputArray  _pyrMask, size_t level) CV_OVERRIDE
+      {
+          pyramidMask[level] = getTMat(_pyrMask);
+      }
+      virtual void getPyramidMask(OutputArray _pyrMask, size_t level) CV_OVERRIDE
+      {
+          _pyrMask.assign(pyramidMask[level]);
+      }
+
+      virtual void setPyramidCloud(InputArray  _pyrCloud, size_t level) CV_OVERRIDE
+      {
+          pyramidCloud[level] = getTMat(_pyrCloud);
+      }
+      virtual void getPyramidCloud(OutputArray _pyrCloud, size_t level) CV_OVERRIDE
+      {
+          _pyrCloud.assign(pyramidCloud[level]);
+      }
+
+      virtual void setPyramid_dI_dx(InputArray  _pyr_dI_dx, size_t level) CV_OVERRIDE
+      {
+          pyramid_dI_dx[level] = getTMat(_pyr_dI_dx);
+      }
+      virtual void getPyramid_dI_dx(OutputArray _pyr_dI_dx, size_t level) CV_OVERRIDE
+      {
+          _pyr_dI_dx.assign(pyramid_dI_dx[level]);
+      }
+
+      virtual void setPyramid_dI_dy(InputArray  _pyr_dI_dy, size_t level) CV_OVERRIDE
+      {
+          pyramid_dI_dy[level] = getTMat(_pyr_dI_dy);
+      }
+      virtual void getPyramid_dI_dy(OutputArray _pyr_dI_dy, size_t level) CV_OVERRIDE
+      {
+          _pyr_dI_dy.assign(pyramid_dI_dy[level]);
+      }
+
+      virtual void setPyramidTexturedMask(InputArray  _pyrTexturedMask, size_t level) CV_OVERRIDE
+      {
+          pyramidTexturedMask[level] = getTMat(_pyrTexturedMask);
+      }
+      virtual void getPyramidTexturedMask(OutputArray _pyrTexturedMask, size_t level) CV_OVERRIDE
+      {
+          _pyrTexturedMask.assign(pyramidTexturedMask[level]);
+      }
+
+      virtual void setPyramidNormals(InputArray  _pyrNormals, size_t level) CV_OVERRIDE
+      {
+          pyramidNormals[level] = getTMat(_pyrNormals);
+      }
+      virtual void getPyramidNormals(OutputArray _pyrNormals, size_t level) CV_OVERRIDE
+      {
+          _pyrNormals.assign(pyramidNormals[level]);
+      }
+
+      virtual void setPyramidNormalsMask(InputArray  _pyrNormalsMask, size_t level) CV_OVERRIDE
+      {
+          pyramidNormalsMask[level] = getTMat(_pyrNormalsMask);
+      }
+     virtual void getPyramidNormalsMask(OutputArray _pyrNormalsMask, size_t level) CV_OVERRIDE
+     {
+         _pyrNormalsMask.assign(pyramidNormalsMask[level]);
+     }
+
+    TMat image;
+    TMat depth;
+    TMat mask;
+    TMat normals;
+
+    std::vector<TMat> pyramidImage;
+    std::vector<TMat> pyramidDepth;
+    std::vector<TMat> pyramidMask;
+
+    std::vector<TMat> pyramidCloud;
+
+    std::vector<TMat> pyramid_dI_dx;
+    std::vector<TMat> pyramid_dI_dy;
+    std::vector<TMat> pyramidTexturedMask;
+
+    std::vector<TMat> pyramidNormals;
+    std::vector<TMat> pyramidNormalsMask;
+};
+
+template<>
+OdometryFrameImpl<Mat>::OdometryFrameImpl(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID) :
+    OdometryFrame(),
+    image(_image.getMat()), depth(_depth.getMat()), mask(_mask.getMat()), normals(_normals.getMat())
 {
-    RgbdFrame::release();
-    releasePyramids();
+    ID = _ID;
 }
 
-void OdometryFrame::releasePyramids()
+template<>
+OdometryFrameImpl<UMat>::OdometryFrameImpl(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID) :
+    OdometryFrame(),
+    image(_image.getUMat()), depth(_depth.getUMat()), mask(_mask.getUMat()), normals(_normals.getUMat())
 {
-    pyramidImage.clear();
-    pyramidDepth.clear();
-    pyramidMask.clear();
-
-    pyramidCloud.clear();
-
-    pyramid_dI_dx.clear();
-    pyramid_dI_dy.clear();
-    pyramidTexturedMask.clear();
-
-    pyramidNormals.clear();
-    pyramidNormalsMask.clear();
+    ID = _ID;
 }
 
-bool Odometry::compute(const Mat& srcImage, const Mat& srcDepth, const Mat& srcMask,
-                       const Mat& dstImage, const Mat& dstDepth, const Mat& dstMask,
+template<>
+static inline Mat OdometryFrameImpl<Mat>::getTMat(InputArray m)
+{
+    return m.getMat();
+}
+
+template<>
+static inline UMat OdometryFrameImpl<UMat>::getTMat(InputArray m)
+{
+    return m.getUMat();
+}
+
+Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID)
+{
+    _InputArray::KindFlag kind = _image.kind() | _depth.kind() | _mask.kind() | _normals.kind();
+    if (kind & _InputArray::KindFlag::MAT)
+        return makePtr<OdometryFrameImpl<Mat>> (_image, _depth, _mask, _normals, _ID);
+    if (kind & _InputArray::KindFlag::UMAT)
+        return makePtr<OdometryFrameImpl<UMat>>(_image, _depth, _mask, _normals, _ID);
+    else
+        CV_Error(CV_StsBadArg, "This type is not supported");
+}
+
+
+bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask,
+                       InputArray dstImage, InputArray dstDepth, InputArray dstMask,
                        OutputArray Rt, const Mat& initRt) const
 {
-    Ptr<OdometryFrame> srcFrame(new OdometryFrame(srcImage, srcDepth, srcMask));
-    Ptr<OdometryFrame> dstFrame(new OdometryFrame(dstImage, dstDepth, dstMask));
+    Ptr<OdometryFrame> srcFrame(OdometryFrame::create(srcImage, srcDepth, srcMask));
+    Ptr<OdometryFrame> dstFrame(OdometryFrame::create(dstImage, dstDepth, dstMask));
 
     return compute(srcFrame, dstFrame, Rt, initRt);
 }
@@ -1464,7 +1642,7 @@ Ptr<FastICPOdometry> FastICPOdometry::create(const Mat& _cameraMatrix,
                                              const std::vector<int>& _iterCounts)
 {
     return makePtr<FastICPOdometry>(_cameraMatrix, _maxDistDiff, _angleThreshold,
-                                   _sigmaDepth, _sigmaSpatial, _kernelSize, _iterCounts);
+                                    _sigmaDepth, _sigmaSpatial, _kernelSize, _iterCounts);
 }
 
 Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
@@ -1491,8 +1669,8 @@ Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType
     Intr intr(cameraMatrix);
     float depthFactor = 1.f; // user should rescale depth manually
     float truncateThreshold = 0.f; // disabled
-    makeFrameFromDepth(frame->depth, frame->pyramidCloud, frame->pyramidNormals, intr, (int)iterCounts.total(),
-                       depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
+    detail::makeFrameFromDepth(frame->depth, frame->pyramidCloud, frame->pyramidNormals, intr, (int)iterCounts.total(),
+                               depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
 
     return frame->depth.size();
 }
@@ -1521,9 +1699,24 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
 
     // KinFu's ICP calculates transformation from new frame to old one (src to dst)
     Affine3f transform;
-    bool result = icp->estimateTransform(transform,
-                                         dstFrame->pyramidCloud, dstFrame->pyramidNormals,
-                                         srcFrame->pyramidCloud, srcFrame->pyramidNormals);
+    bool result;
+    auto srcOclFrame = srcFrame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto srcCpuFrame = srcFrame.dynamicCast<OdometryFrameImpl<Mat>>();
+    auto dstOclFrame = dstFrame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto dstCpuFrame = dstFrame.dynamicCast<OdometryFrameImpl<Mat>>();
+    bool useOcl = (srcOclFrame != nullptr) && (dstOclFrame != nullptr);
+    if (useOcl)
+    {
+        result = icp->estimateTransform(transform,
+                                        dstOclFrame->pyramidCloud, dstOclFrame->pyramidNormals,
+                                        srcOclFrame->pyramidCloud, srcOclFrame->pyramidNormals);
+    }
+    else
+    {
+        result = icp->estimateTransform(transform,
+                                        dstCpuFrame->pyramidCloud, dstCpuFrame->pyramidNormals,
+                                        srcCpuFrame->pyramidCloud, srcCpuFrame->pyramidNormals);
+    }
 
     Rt.create(Size(4, 4), CV_64FC1);
     Mat(Matx44d(transform.matrix)).copyTo(Rt.getMat());

@@ -453,31 +453,12 @@ namespace cv
     double sensor_error_a_, sensor_error_b_, sensor_error_c_;
   };
 
-  /** Object that contains a frame data.
-   */
-  struct CV_EXPORTS_W RgbdFrame
-  {
-      RgbdFrame();
-      RgbdFrame(const Mat& image, const Mat& depth, const Mat& mask=Mat(), const Mat& normals=Mat(), int ID=-1);
-      virtual ~RgbdFrame();
-
-      CV_WRAP static Ptr<RgbdFrame> create(const Mat& image=Mat(), const Mat& depth=Mat(), const Mat& mask=Mat(), const Mat& normals=Mat(), int ID=-1);
-
-      CV_WRAP virtual void
-      release();
-
-      CV_PROP int ID;
-      CV_PROP Mat image;
-      CV_PROP Mat depth;
-      CV_PROP Mat mask;
-      CV_PROP Mat normals;
-  };
 
   /** Object that contains a frame data that is possibly needed for the Odometry.
    * It's used for the efficiency (to pass precomputed/cached data of the frame that participates
    * in the Odometry processing several times).
    */
-  struct CV_EXPORTS_W OdometryFrame : public RgbdFrame
+  struct CV_EXPORTS_W OdometryFrame
   {
     /** These constants are used to set a type of cache which has to be prepared depending on the frame role:
      * srcFrame or dstFrame (see compute method of the Odometry class). For the srcFrame and dstFrame different cache data may be required,
@@ -491,29 +472,56 @@ namespace cv
       CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST
     };
 
-    OdometryFrame();
-    OdometryFrame(const Mat& image, const Mat& depth, const Mat& mask=Mat(), const Mat& normals=Mat(), int ID=-1);
+    OdometryFrame() : ID(-1) { }
+    virtual ~OdometryFrame() { }
 
-    CV_WRAP static Ptr<OdometryFrame> create(const Mat& image=Mat(), const Mat& depth=Mat(), const Mat& mask=Mat(), const Mat& normals=Mat(), int ID=-1);
+    CV_WRAP static Ptr<OdometryFrame> create(InputArray image = noArray(), InputArray depth = noArray(),
+                                             InputArray  mask = noArray(), InputArray normals = noArray(), int ID = -1);
 
-    CV_WRAP virtual void
-    release() CV_OVERRIDE;
+    CV_WRAP virtual void release() = 0;
 
-    CV_WRAP void
-    releasePyramids();
+    CV_WRAP virtual void releasePyramids() = 0;
 
-    CV_PROP std::vector<Mat> pyramidImage;
-    CV_PROP std::vector<Mat> pyramidDepth;
-    CV_PROP std::vector<Mat> pyramidMask;
+    CV_WRAP virtual void setImage(InputArray  _image) = 0;
+    CV_WRAP virtual void getImage(OutputArray _image) = 0;
+    CV_WRAP virtual void setDepth(InputArray  _depth) = 0;
+    CV_WRAP virtual void getDepth(OutputArray _depth) = 0;
+    CV_WRAP virtual void setMask(InputArray  _mask) = 0;
+    CV_WRAP virtual void getMask(OutputArray _mask) = 0;
+    CV_WRAP virtual void setNormals(InputArray  _normals) = 0;
+    CV_WRAP virtual void getNormals(OutputArray _normals) = 0;
 
-    CV_PROP std::vector<Mat> pyramidCloud;
+    CV_WRAP virtual void setPyramidLevels(size_t _nLevels) = 0;
+    CV_WRAP virtual size_t getPyramidLevels() = 0;
 
-    CV_PROP std::vector<Mat> pyramid_dI_dx;
-    CV_PROP std::vector<Mat> pyramid_dI_dy;
-    CV_PROP std::vector<Mat> pyramidTexturedMask;
+    CV_WRAP virtual void setPyramidImage(InputArray  _pyrImage, size_t level) = 0;
+    CV_WRAP virtual void getPyramidImage(OutputArray _pyrImage, size_t level) = 0;
 
-    CV_PROP std::vector<Mat> pyramidNormals;
-    CV_PROP std::vector<Mat> pyramidNormalsMask;
+    CV_WRAP virtual void setPyramidDepth(InputArray  _pyrDepth, size_t level) = 0;
+    CV_WRAP virtual void getPyramidDepth(OutputArray _pyrDepth, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramidMask(InputArray  _pyrMask, size_t level) = 0;
+    CV_WRAP virtual void getPyramidMask(OutputArray _pyrMask, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramidCloud(InputArray  _pyrCloud, size_t level) = 0;
+    CV_WRAP virtual void getPyramidCloud(OutputArray _pyrCloud, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramid_dI_dx(InputArray  _pyr_dI_dx, size_t level) = 0;
+    CV_WRAP virtual void getPyramid_dI_dx(OutputArray _pyr_dI_dx, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramid_dI_dy(InputArray  _pyr_dI_dy, size_t level) = 0;
+    CV_WRAP virtual void getPyramid_dI_dy(OutputArray _pyr_dI_dy, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramidTexturedMask(InputArray  _pyrTexturedMask, size_t level) = 0;
+    CV_WRAP virtual void getPyramidTexturedMask(OutputArray _pyrTexturedMask, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramidNormals(InputArray  _pyrNormals, size_t level) = 0;
+    CV_WRAP virtual void getPyramidNormals(OutputArray _pyrNormals, size_t level) = 0;
+
+    CV_WRAP virtual void setPyramidNormalsMask(InputArray  _pyrNormalsMask, size_t level) = 0;
+    CV_WRAP virtual void getPyramidNormalsMask(OutputArray _pyrNormalsMask, size_t level) = 0;
+
+    CV_PROP int ID;
   };
 
   /** Base class for computation of odometry.
@@ -578,8 +586,8 @@ namespace cv
      * @param initRt Initial transformation from the source frame to the destination one (optional)
      */
     CV_WRAP bool
-    compute(const Mat& srcImage, const Mat& srcDepth, const Mat& srcMask, const Mat& dstImage, const Mat& dstDepth,
-            const Mat& dstMask, OutputArray Rt, const Mat& initRt = Mat()) const;
+    compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+            InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const;
 
     /** One more method to compute a transformation from the source frame to the destination one.
      * It is designed to save on computing the frame data (image pyramids, normals, etc.).
