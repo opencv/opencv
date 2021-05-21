@@ -89,6 +89,9 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
 static void swap_columns(Mat_<double>& A,int col1,int col2);
 #define SWAP(type,a,b) {type tmp=(a);(a)=(b);(b)=tmp;}
 
+#define SOLVELP_EPS_ABS 1e-12
+#define SOLVELP_EPS_REL 0.8
+
 //return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
 int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     dprintf(("call to solveLP\n"));
@@ -141,9 +144,10 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     }
     //check constraints feasibility
     Mat prod = Constr(Rect(0, 0, Constr.cols - 1, Constr.rows)) * z;
-    Mat constr_check = (prod - 1e-12) > Constr.col(Constr.cols - 1);
-    double constr_check_sum = sum(constr_check)[0];
-    if (constr_check_sum != 0)
+    Mat constr_check = Constr.col(Constr.cols - 1) - prod;
+    double min_value = 0.0;
+    minMaxIdx(constr_check, &min_value);
+    if (min_value < -SOLVELP_EPS_ABS)
     {
         z.release();
         return SOLVELP_LOST;
@@ -268,9 +272,9 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         int e=-1,pos_ctr=0,min_var=INT_MAX;
         bool all_nonzero=true;
         for(pos_ptr=c.begin();pos_ptr!=c.end();pos_ptr++,pos_ctr++){
-            if ((*pos_ptr >= -1e-12) && (*pos_ptr <= 1e-12))
+            if (fabs(*pos_ptr) <= SOLVELP_EPS_REL * fabs(*pos_ptr) + SOLVELP_EPS_ABS)
+            {
                 *pos_ptr = 0.0;
-            if(*pos_ptr==0.0){
                 all_nonzero=false;
             }
             if(*pos_ptr>0.0){
@@ -296,10 +300,10 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         int row_it=0;
         MatIterator_<double> min_row_ptr=b.begin();
         for(MatIterator_<double> it=b.begin();it!=b.end();it+=b.cols,row_it++){
-            if ((it[b.cols-1] >= -1e-12) && (it[b.cols-1] <= 1e-12))
+            if (fabs(it[b.cols-1]) <= SOLVELP_EPS_REL * fabs(it[b.cols-1]) + SOLVELP_EPS_ABS)
                 it[b.cols-1] = 0.0;
 
-            if ((it[e] >= -1e-12) && (it[e] <= 1e-12))
+            if (fabs(it[e]) <= SOLVELP_EPS_REL * fabs(it[e]) + SOLVELP_EPS_ABS)
                 it[e] = 0.0;
 
             double myite=it[e];

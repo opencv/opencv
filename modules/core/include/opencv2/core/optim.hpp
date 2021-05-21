@@ -256,7 +256,7 @@ public:
 //! return codes for cv::solveLP() function
 enum SolveLPResult
 {
-    SOLVELP_LOST   = -3, //!< problem is feasible, but solver lost solution due to floating-point numbers representation error
+    SOLVELP_LOST   = -3, //!< problem is feasible, but solver lost solution due to floating-point arithmetic errors
     SOLVELP_UNBOUNDED    = -2, //!< problem is unbounded (target function can achieve arbitrary high values)
     SOLVELP_UNFEASIBLE    = -1, //!< problem is unfeasible (there are no points that satisfy all the constraints imposed)
     SOLVELP_SINGLE    = 0, //!< there is only one maximum for target function

@@ -42,6 +42,8 @@
 
 namespace opencv_test { namespace {
 
+#define SOLVELP_EPS 1e-12
+
 TEST(Core_LPSolver, regression_basic){
     cv::Mat A,B,z,etalon_z;
 
@@ -53,7 +55,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(3,1)<<8,4,0);
-    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), SOLVELP_EPS);
 #endif
 
 #if 1
@@ -64,7 +66,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(2,1)<<20,0);
-    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), SOLVELP_EPS);
 #endif
 
 #if 1
@@ -75,7 +77,7 @@ TEST(Core_LPSolver, regression_basic){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(2,1)<<1,0);
-    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), SOLVELP_EPS);
 #endif
 }
 
@@ -90,7 +92,7 @@ TEST(Core_LPSolver, regression_init_unfeasible){
     cv::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
     etalon_z=(cv::Mat_<double>(3,1)<<1250,1000,0);
-    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), SOLVELP_EPS);
 #endif
 }
 
@@ -120,7 +122,7 @@ TEST(Core_LPSolver, regression_multiple_solutions){
     printf("scalar %g\n",z.dot(A));
     std::cout<<"here z goes\n"<<z<<"\n";
     ASSERT_EQ(res,1);
-    ASSERT_LT(fabs(z.dot(A) - 1), DBL_EPSILON);
+    ASSERT_LT(fabs(z.dot(A) - 1), SOLVELP_EPS);
 #endif
 }
 
@@ -136,7 +138,7 @@ TEST(Core_LPSolver, regression_cycling){
     printf("res=%d\n",res);
     printf("scalar %g\n",z.dot(A));
     std::cout<<"here z goes\n"<<z<<"\n";
-    ASSERT_LT(fabs(z.dot(A) - 1), DBL_EPSILON);
+    ASSERT_LT(fabs(z.dot(A) - 1), SOLVELP_EPS);
     //ASSERT_EQ(res,1);
 #endif
 }
@@ -158,13 +160,12 @@ TEST(Core_LPSolver, issue_12343)
                                        3., 1., 2., 2., 3.,
                                        4., 4., 0., 1., 4.,
                                        4., 0., 4., 1., 4.);
-
-    Mat z;
-    int result = cv::solveLP(A,B,z);
-    EXPECT_EQ(result, 0);
-
-    Mat etalon_z = (cv::Mat_<double>(4, 1) << 16./37., 15./37., 0.0, 24./37.);
-    ASSERT_LT(cvtest::norm(z, etalon_z, cv::NORM_L1), 1e-12);
+    for (int i = 1; i < 1e5; i*=5)
+    {
+        Mat z;
+        int result = cv::solveLP(A,B*i,z);
+        EXPECT_TRUE(result != SOLVELP_LOST);
+    }
 }
 
 }} // namespace
