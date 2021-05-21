@@ -220,6 +220,15 @@ TEST(GaussianBlur_Bitexact, regression_15015)
     ASSERT_EQ(0.0, cvtest::norm(dst, src, NORM_INF));
 }
 
+TEST(GaussianBlur_Bitexact, overflow_20121)
+{
+    Mat src(100, 100, CV_16UC1, Scalar(65535));
+    Mat dst;
+    GaussianBlur(src, dst, cv::Size(9, 9), 0.0);
+    double min_val;
+    minMaxLoc(dst, &min_val);
+    ASSERT_EQ(cvRound(min_val), 65535);
+}
 
 static void checkGaussianBlur_8Uvs32F(const Mat& src8u, const Mat& src32f, int N, double sigma)
 {
