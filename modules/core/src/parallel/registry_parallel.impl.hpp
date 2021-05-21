@@ -6,17 +6,23 @@
 // Not a standalone header, part of parallel.cpp
 //
 
+#include "opencv2/core/utils/filesystem.private.hpp"  // OPENCV_HAVE_FILESYSTEM_SUPPORT
+
 namespace cv { namespace parallel {
 
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT && defined(PARALLEL_ENABLE_PLUGINS)
 #define DECLARE_DYNAMIC_BACKEND(name) \
 ParallelBackendInfo { \
     1000, name, createPluginParallelBackendFactory(name) \
-}
+},
+#else
+#define DECLARE_DYNAMIC_BACKEND(name) /* nothing */
+#endif
 
 #define DECLARE_STATIC_BACKEND(name, createBackendAPI) \
 ParallelBackendInfo { \
     1000, name, std::make_shared<cv::parallel::StaticBackendFactory>([=] () -> std::shared_ptr<cv::parallel::ParallelForAPI> { return createBackendAPI(); }) \
-}
+},
 
 static
 std::vector<ParallelBackendInfo>& getBuiltinParallelBackendsInfo()
@@ -24,14 +30,14 @@ std::vector<ParallelBackendInfo>& getBuiltinParallelBackendsInfo()
     static std::vector<ParallelBackendInfo> g_backends
     {
 #ifdef HAVE_TBB
-        DECLARE_STATIC_BACKEND("TBB", createParallelBackendTBB),
+        DECLARE_STATIC_BACKEND("TBB", createParallelBackendTBB)
 #elif defined(PARALLEL_ENABLE_PLUGINS)
-        DECLARE_DYNAMIC_BACKEND("ONETBB"),  // dedicated oneTBB plugin (interface >= 12000, binary incompatibe with TBB 2017-2020)
-        DECLARE_DYNAMIC_BACKEND("TBB"),     // generic TBB plugins
+        DECLARE_DYNAMIC_BACKEND("ONETBB")   // dedicated oneTBB plugin (interface >= 12000, binary incompatibe with TBB 2017-2020)
+        DECLARE_DYNAMIC_BACKEND("TBB")      // generic TBB plugins
 #endif
 
 #ifdef HAVE_OPENMP
-        DECLARE_STATIC_BACKEND("OPENMP", createParallelBackendOpenMP),
+        DECLARE_STATIC_BACKEND("OPENMP", createParallelBackendOpenMP)
 #elif defined(PARALLEL_ENABLE_PLUGINS)
         DECLARE_DYNAMIC_BACKEND("OPENMP")  // TODO Intel OpenMP?
 #endif

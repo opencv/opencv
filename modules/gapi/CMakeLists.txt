@@ -23,7 +23,7 @@ ocv_add_module(gapi
     REQUIRED
       opencv_imgproc
     OPTIONAL
-      opencv_video
+      opencv_video opencv_calib3d
     WRAP
       python
 )
@@ -53,6 +53,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     )
 
 set(gapi_srcs
@@ -76,6 +77,7 @@ set(gapi_srcs
     src/api/kernels_video.cpp
     src/api/kernels_nnparsers.cpp
     src/api/kernels_streaming.cpp
+    src/api/kernels_stereo.cpp
     src/api/render.cpp
     src/api/render_ocv.cpp
     src/api/ginfer.cpp
@@ -111,6 +113,7 @@ set(gapi_srcs
     src/backends/cpu/gcpubackend.cpp
     src/backends/cpu/gcpukernel.cpp
     src/backends/cpu/gcpuimgproc.cpp
+    src/backends/cpu/gcpustereo.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
     src/backends/cpu/gnnparsers.cpp
@@ -158,6 +161,10 @@ set(gapi_srcs
 
     # Python bridge
     src/backends/ie/bindings_ie.cpp
+    src/backends/python/gpythonbackend.cpp
+
+    # Utils (ITT tracing)
+    src/utils/itt.cpp
     )
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
@@ -174,11 +181,20 @@ ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
 ocv_create_module()
 
 ocv_target_link_libraries(${the_module} PRIVATE ade)
+
 if(OPENCV_GAPI_INF_ENGINE)
   ocv_target_link_libraries(${the_module} PRIVATE ${INF_ENGINE_TARGET})
 endif()
+
 if(HAVE_TBB)
   ocv_target_link_libraries(${the_module} PRIVATE tbb)
+endif()
+
+# TODO: Consider support of ITT in G-API standalone mode.
+if(CV_TRACE AND HAVE_ITT)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DOPENCV_WITH_ITT=1)
+  ocv_module_include_directories(${ITT_INCLUDE_DIRS})
+  ocv_target_link_libraries(${the_module} PRIVATE ${ITT_LIBRARIES})
 endif()
 
 set(__test_extra_deps "")

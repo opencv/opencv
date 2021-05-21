@@ -1721,8 +1721,8 @@ concatenated together.
 @param imageSize Size of the image used only to initialize the camera intrinsic matrix.
 @param cameraMatrix Input/output 3x3 floating-point camera intrinsic matrix
 \f$\cameramatrix{A}\f$ . If @ref CALIB_USE_INTRINSIC_GUESS
-and/or @ref CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
-initialized before calling the function.
+and/or @ref CALIB_FIX_ASPECT_RATIO, @ref CALIB_FIX_PRINCIPAL_POINT or @ref CALIB_FIX_FOCAL_LENGTH
+are specified, some or all of fx, fy, cx, cy must be initialized before calling the function.
 @param distCoeffs Input/output vector of distortion coefficients
 \f$\distcoeffs\f$.
 @param rvecs Output vector of rotation vectors (@ref Rodrigues ) estimated for each pattern view
@@ -1748,7 +1748,7 @@ the number of pattern views. \f$R_i, T_i\f$ are concatenated 1x3 vectors.
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
-estimate extrinsic parameters. Use solvePnP instead.
+estimate extrinsic parameters. Use @ref solvePnP instead.
 -   @ref CALIB_FIX_PRINCIPAL_POINT The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
  @ref CALIB_USE_INTRINSIC_GUESS is set too.
@@ -1758,24 +1758,23 @@ ratio fx/fy stays the same as in the input cameraMatrix . When
 ignored, only their ratio is computed and used further.
 -   @ref CALIB_ZERO_TANGENT_DIST Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
 to zeros and stay zero.
+-   @ref CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global optimization if
+ @ref CALIB_USE_INTRINSIC_GUESS is set.
 -   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K6 The corresponding radial distortion
 coefficient is not changed during the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is
 set, the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 -   @ref CALIB_RATIONAL_MODEL Coefficients k4, k5, and k6 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the rational model and return 8 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the rational model and return 8 coefficients or more.
 -   @ref CALIB_THIN_PRISM_MODEL Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the thin prism model and return 12 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the thin prism model and return 12 coefficients or more.
 -   @ref CALIB_FIX_S1_S2_S3_S4 The thin prism distortion coefficients are not changed during
 the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 -   @ref CALIB_TILTED_MODEL Coefficients tauX and tauY are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the tilted sensor model and return 14 coefficients.
 -   @ref CALIB_FIX_TAUX_TAUY The coefficients of the tilted sensor model are not changed during
 the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
@@ -1800,12 +1799,12 @@ The algorithm performs the following steps:
     zeros initially unless some of CALIB_FIX_K? are specified.
 
 -   Estimate the initial camera pose as if the intrinsic parameters have been already known. This is
-    done using solvePnP .
+    done using @ref solvePnP .
 
 -   Run the global Levenberg-Marquardt optimization algorithm to minimize the reprojection error,
     that is, the total sum of squared distances between the observed feature points imagePoints and
     the projected (using the current estimates for camera parameters and the poses) object points
-    objectPoints. See projectPoints for details.
+    objectPoints. See @ref projectPoints for details.
 
 @note
     If you use a non-square (i.e. non-N-by-N) grid and @ref findChessboardCorners for calibration,
@@ -2690,6 +2689,7 @@ final fundamental matrix. It can be set to something like 1-3, depending on the 
 point localization, image resolution, and the image noise.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function estimates essential matrix based on the five-point algorithm solver in @cite Nister03 .
 @cite SteweniusCFS is also a related. The epipolar geometry is described by the following equation:
@@ -2700,10 +2700,22 @@ where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding 
 second images, respectively. The result of this function may be passed further to
 decomposeEssentialMat or recoverPose to recover the relative pose between cameras.
  */
-CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
-                                 InputArray cameraMatrix, int method = RANSAC,
-                                 double prob = 0.999, double threshold = 1.0,
-                                 OutputArray mask = noArray() );
+CV_EXPORTS_W
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    InputArray cameraMatrix, int method = RANSAC,
+    double prob = 0.999, double threshold = 1.0,
+    int maxIters = 1000, OutputArray mask = noArray()
+);
+
+/** @overload */
+CV_EXPORTS
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    InputArray cameraMatrix, int method,
+    double prob, double threshold,
+    OutputArray mask
+);  // TODO remove from OpenCV 5.0
 
 /** @overload
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
@@ -2723,6 +2735,7 @@ point localization, image resolution, and the image noise.
 confidence (probability) that the estimated matrix is correct.
 @param mask Output array of N elements, every element of which is set to 0 for outliers and to 1
 for the other points. The array is computed only in the RANSAC and LMedS methods.
+@param maxIters The maximum number of robust method iterations.
 
 This function differs from the one above that it computes camera intrinsic matrix from focal length and
 principal point:
@@ -2734,10 +2747,23 @@ f & 0 & x_{pp}  \\
 0 & 0 & 1
 \end{bmatrix}\f]
  */
-CV_EXPORTS_W Mat findEssentialMat( InputArray points1, InputArray points2,
-                                 double focal = 1.0, Point2d pp = Point2d(0, 0),
-                                 int method = RANSAC, double prob = 0.999,
-                                 double threshold = 1.0, OutputArray mask = noArray() );
+CV_EXPORTS_W
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    double focal = 1.0, Point2d pp = Point2d(0, 0),
+    int method = RANSAC, double prob = 0.999,
+    double threshold = 1.0, int maxIters = 1000,
+    OutputArray mask = noArray()
+);
+
+/** @overload */
+CV_EXPORTS
+Mat findEssentialMat(
+    InputArray points1, InputArray points2,
+    double focal, Point2d pp,
+    int method, double prob,
+    double threshold, OutputArray mask
+);  // TODO remove from OpenCV 5.0
 
 /** @brief Calculates an essential matrix from the corresponding points in two images from potentially two different cameras.
 

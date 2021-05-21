@@ -52,10 +52,11 @@
 
   ### See also:
   - @ref videoio_overview
-  - Tutorials: @ref tutorial_table_of_content_videoio
+  - Tutorials: @ref tutorial_table_of_content_app
   @{
     @defgroup videoio_flags_base Flags for video I/O
     @defgroup videoio_flags_others Additional flags for video I/O API backends
+    @defgroup videoio_hwaccel Hardware-accelerated video decoding and encoding
     @defgroup videoio_c C API for video I/O
     @defgroup videoio_ios iOS glue for video I/O
     @defgroup videoio_winrt WinRT glue for video I/O
@@ -183,7 +184,8 @@ enum VideoCaptureProperties {
        CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
        CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
        CAP_PROP_HW_ACCELERATION=50, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in cv::VideoCapture constructor / .open() method. Default value is backend-specific.
-       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available)
+       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
+       CAP_PROP_HW_ACCELERATION_USE_OPENCL=52, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between HW accelerated decoder and cv::UMat.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
@@ -200,7 +202,8 @@ enum VideoWriterProperties {
                                    //!< will work with grayscale frames.
   VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
   VIDEOWRITER_PROP_HW_ACCELERATION = 6, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in VideoWriter constructor / .open() method. Default value is backend-specific.
-  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available)
+  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
+  VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL= 8, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between cv::UMat and HW accelerated encoder.
 #ifndef CV_DOXYGEN
   CV__VIDEOWRITER_PROP_LATEST
 #endif
@@ -210,6 +213,10 @@ enum VideoWriterProperties {
 
 //! @addtogroup videoio_flags_others
 //! @{
+
+/** @name Hardware acceleration support
+    @{
+*/
 
 /** @brief Video Acceleration type
  *
@@ -230,6 +237,8 @@ enum VideoAccelerationType
     VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
     VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
 };
+
+//! @} Hardware acceleration support
 
 /** @name IEEE 1394 drivers
     @{
@@ -521,8 +530,9 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
 
 //! @} XIMEA
 
-/** @name XIMEA Camera API
-*  @{
+
+/** @name ARAVIS Camera API
+    @{
 */
 
 //! Properties of cameras available through ARAVIS backend
@@ -532,7 +542,6 @@ enum { CAP_PROP_ARAVIS_AUTOTRIGGER                              = 600 //!< Autom
 //! @} ARAVIS
 
 /** @name AVFoundation framework for iOS
-    OS X Lion will have the same API
     @{
 */
 
@@ -543,6 +552,9 @@ enum { CAP_PROP_IOS_DEVICE_FOCUS        = 9001,
        CAP_PROP_IOS_DEVICE_WHITEBALANCE = 9004,
        CAP_PROP_IOS_DEVICE_TORCH        = 9005
      };
+
+//! @} AVFoundation framework for iOS
+
 
 /** @name Smartek Giganetix GigEVisionSDK
     @{
@@ -1089,8 +1101,10 @@ protected:
                                     Size frameSize, bool isColor = true);
 };
 
+//! @cond IGNORED
 template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
 template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
+//! @endcond IGNORED
 
 //! @} videoio
 

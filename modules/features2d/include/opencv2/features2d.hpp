@@ -61,24 +61,10 @@ easily switch between different algorithms solving the same problem. This sectio
 matching descriptors that are represented as vectors in a multidimensional space. All objects that
 implement vector descriptor matchers inherit the DescriptorMatcher interface.
 
-@note
-   -   An example explaining keypoint matching can be found at
-        opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
-    -   An example on descriptor matching evaluation can be found at
-        opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
-    -   An example on one to many image matching can be found at
-        opencv_source_code/samples/cpp/matching_to_many_images.cpp
-
     @defgroup features2d_draw Drawing Function of Keypoints and Matches
     @defgroup features2d_category Object Categorization
 
 This section describes approaches based on local 2D features and used to categorize objects.
-
-@note
-   -   A complete Bag-Of-Words sample can be found at
-        opencv_source_code/samples/cpp/bagofwords_classification.cpp
-    -   (Python) An example using the features2D framework to perform object categorization can be
-        found at opencv_source_code/samples/python/find_obj.py
 
     @defgroup feature2d_hal Hardware Acceleration Layer
     @{
@@ -90,7 +76,7 @@ This section describes approaches based on local 2D features and used to categor
 namespace cv
 {
 
-//! @addtogroup features2d
+//! @addtogroup features2d_main
 //! @{
 
 // //! writes vector of keypoints to the file storage
@@ -240,9 +226,6 @@ computing descriptors represented as vectors in a multidimensional space. All ob
 the vector descriptor extractors inherit the DescriptorExtractor interface.
  */
 typedef Feature2D DescriptorExtractor;
-
-//! @addtogroup features2d_main
-//! @{
 
 
 /** @brief Class for implementing the wrapper which makes detectors and extractors to be affine invariant,
@@ -481,8 +464,7 @@ article](http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions)).
 than union-find method; it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
 
 - the color image algorithm is taken from: @cite forssen2007maximally ; it should be much slower
-than grey image method ( 3~4 times ); the chi_table.h file is taken directly from paper's source
-code which is distributed under GPL.
+than grey image method ( 3~4 times )
 
 - (Python) A complete example showing the use of the %MSER detector can be found at samples/python/mser.py
 */
@@ -491,20 +473,20 @@ class CV_EXPORTS_W MSER : public Feature2D
 public:
     /** @brief Full constructor for %MSER detector
 
-    @param _delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
-    @param _min_area prune the area which smaller than minArea
-    @param _max_area prune the area which bigger than maxArea
-    @param _max_variation prune the area have similar size to its children
-    @param _min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
-    @param _max_evolution  for color image, the evolution steps
-    @param _area_threshold for color image, the area threshold to cause re-initialize
-    @param _min_margin for color image, ignore too small margin
-    @param _edge_blur_size for color image, the aperture size for edge blur
+    @param delta it compares \f$(size_{i}-size_{i-delta})/size_{i-delta}\f$
+    @param min_area prune the area which smaller than minArea
+    @param max_area prune the area which bigger than maxArea
+    @param max_variation prune the area have similar size to its children
+    @param min_diversity for color image, trace back to cut off mser with diversity less than min_diversity
+    @param max_evolution  for color image, the evolution steps
+    @param area_threshold for color image, the area threshold to cause re-initialize
+    @param min_margin for color image, ignore too small margin
+    @param edge_blur_size for color image, the aperture size for edge blur
      */
-    CV_WRAP static Ptr<MSER> create( int _delta=5, int _min_area=60, int _max_area=14400,
-          double _max_variation=0.25, double _min_diversity=.2,
-          int _max_evolution=200, double _area_threshold=1.01,
-          double _min_margin=0.003, int _edge_blur_size=5 );
+    CV_WRAP static Ptr<MSER> create( int delta=5, int min_area=60, int max_area=14400,
+          double max_variation=0.25, double min_diversity=.2,
+          int max_evolution=200, double area_threshold=1.01,
+          double min_margin=0.003, int edge_blur_size=5 );
 
     /** @brief Detect %MSER regions
 

@@ -73,25 +73,25 @@ class RMat;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GAPI_EXPORTS GMatDesc
+struct GAPI_EXPORTS_W_SIMPLE GMatDesc
 {
     // FIXME: Default initializers in C++14
-    int depth;
-    int chan;
-    cv::Size size; // NB.: no multi-dimensional cases covered yet
-    bool planar;
-    std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
+    GAPI_PROP int depth;
+    GAPI_PROP int chan;
+    GAPI_PROP cv::Size size; // NB.: no multi-dimensional cases covered yet
+    GAPI_PROP bool planar;
+    GAPI_PROP std::vector<int> dims; // FIXME: Maybe it's real questionable to have it here
 
-    GMatDesc(int d, int c, cv::Size s, bool p = false)
+    GAPI_WRAP GMatDesc(int d, int c, cv::Size s, bool p = false)
         : depth(d), chan(c), size(s), planar(p) {}
 
-    GMatDesc(int d, const std::vector<int> &dd)
+    GAPI_WRAP GMatDesc(int d, const std::vector<int> &dd)
         : depth(d), chan(-1), size{-1,-1}, planar(false), dims(dd) {}
 
-    GMatDesc(int d, std::vector<int> &&dd)
+    GAPI_WRAP GMatDesc(int d, std::vector<int> &&dd)
         : depth(d), chan(-1), size{-1,-1}, planar(false), dims(std::move(dd)) {}
 
-    GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
+    GAPI_WRAP GMatDesc() : GMatDesc(-1, -1, {-1,-1}) {}
 
     inline bool operator== (const GMatDesc &rhs) const
     {
@@ -120,7 +120,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc which differs in size by delta
     // (all other fields are taken unchanged from this GMatDesc)
     // FIXME: a better name?
-    GMatDesc withSizeDelta(cv::Size delta) const
+    GAPI_WRAP GMatDesc withSizeDelta(cv::Size delta) const
     {
         GMatDesc desc(*this);
         desc.size += delta;
@@ -130,12 +130,12 @@ struct GAPI_EXPORTS GMatDesc
     // (all other fields are taken unchanged from this GMatDesc)
     //
     // This is an overload.
-    GMatDesc withSizeDelta(int dx, int dy) const
+    GAPI_WRAP GMatDesc withSizeDelta(int dx, int dy) const
     {
         return withSizeDelta(cv::Size{dx,dy});
     }
 
-    GMatDesc withSize(cv::Size sz) const
+    GAPI_WRAP GMatDesc withSize(cv::Size sz) const
     {
         GMatDesc desc(*this);
         desc.size = sz;
@@ -144,7 +144,7 @@ struct GAPI_EXPORTS GMatDesc
 
     // Meta combinator: return a new GMatDesc with specified data depth.
     // (all other fields are taken unchanged from this GMatDesc)
-    GMatDesc withDepth(int ddepth) const
+    GAPI_WRAP GMatDesc withDepth(int ddepth) const
     {
         GAPI_Assert(CV_MAT_CN(ddepth) == 1 || ddepth == -1);
         GMatDesc desc(*this);
@@ -155,7 +155,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc with specified data depth
     // and number of channels.
     // (all other fields are taken unchanged from this GMatDesc)
-    GMatDesc withType(int ddepth, int dchan) const
+    GAPI_WRAP GMatDesc withType(int ddepth, int dchan) const
     {
         GAPI_Assert(CV_MAT_CN(ddepth) == 1 || ddepth == -1);
         GMatDesc desc = withDepth(ddepth);
@@ -166,7 +166,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc with planar flag set
     // (no size changes are performed, only channel interpretation is changed
     // (interleaved -> planar)
-    GMatDesc asPlanar() const
+    GAPI_WRAP GMatDesc asPlanar() const
     {
         GAPI_Assert(planar == false);
         GMatDesc desc(*this);
@@ -177,7 +177,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc
     // reinterpreting 1-channel input as planar image
     // (size height is divided by plane number)
-    GMatDesc asPlanar(int planes) const
+    GAPI_WRAP GMatDesc asPlanar(int planes) const
     {
         GAPI_Assert(planar == false);
         GAPI_Assert(chan == 1);
@@ -192,7 +192,7 @@ struct GAPI_EXPORTS GMatDesc
     // Meta combinator: return a new GMatDesc with planar flag set to false
     // (no size changes are performed, only channel interpretation is changed
     // (planar -> interleaved)
-    GMatDesc asInterleaved() const
+    GAPI_WRAP GMatDesc asInterleaved() const
     {
         GAPI_Assert(planar == true);
         GMatDesc desc(*this);

@@ -31,7 +31,7 @@ MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
 SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
-ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type="text/javascript"> addToggle(); </script>@endhtmlonly"
+ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type='text/javascript'> addToggle(); </script>@endhtmlonly"
 ALIASES               += add_toggle_cpp="@htmlonly[block] <div class='newInnerHTML' title='cpp' style='display: none;'>C++</div><div class='toggleable_div label_cpp' style='display: none;'>@endhtmlonly"
 ALIASES               += add_toggle_java="@htmlonly[block] <div class='newInnerHTML' title='java' style='display: none;'>Java</div><div class='toggleable_div label_java' style='display: none;'>@endhtmlonly"
 ALIASES               += add_toggle_python="@htmlonly[block] <div class='newInnerHTML' title='python' style='display: none;'>Python</div><div class='toggleable_div label_python' style='display: none;'>@endhtmlonly"
@@ -255,6 +255,12 @@ PREDEFINED             = __cplusplus=1 \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
                          CV_SSE2=1 \
+                         CV_SIMD128=1 \
+                         CV_SIMD256=1 \
+                         CV_SIMD512=1 \
+                         CV_SIMD128_64F=1 \
+                         CV_SIMD256_64F=1 \
+                         CV_SIMD512_64F=1 \
                          CV__DEBUG_NS_BEGIN= \
                          CV__DEBUG_NS_END= \
                          CV_DEPRECATED_EXTERNAL= \

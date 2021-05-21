@@ -235,6 +235,24 @@ Range normalize_axis_range(const Range& r, int axisSize)
     return clamped;
 }
 
+static inline
+bool isAllOnes(const MatShape &inputShape, int startPos, int endPos)
+{
+    CV_Assert(!inputShape.empty());
+
+    CV_CheckGE((int) inputShape.size(), startPos, "");
+    CV_CheckGE(startPos, 0, "");
+    CV_CheckLE(startPos, endPos, "");
+    CV_CheckLE((size_t)endPos, inputShape.size(), "");
+
+    for (size_t i = startPos; i < endPos; i++)
+    {
+        if (inputShape[i] != 1)
+            return false;
+    }
+    return true;
+}
+
 CV__DNN_INLINE_NS_END
 }
 }

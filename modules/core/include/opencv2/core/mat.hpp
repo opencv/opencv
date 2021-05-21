@@ -576,24 +576,24 @@ CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
 struct CV_EXPORTS MatSize
 {
-    explicit MatSize(int* _p);
-    int dims() const;
+    explicit MatSize(int* _p) CV_NOEXCEPT;
+    int dims() const CV_NOEXCEPT;
     Size operator()() const;
     const int& operator[](int i) const;
     int& operator[](int i);
-    operator const int*() const;  // TODO OpenCV 4.0: drop this
-    bool operator == (const MatSize& sz) const;
-    bool operator != (const MatSize& sz) const;
+    operator const int*() const CV_NOEXCEPT;  // TODO OpenCV 4.0: drop this
+    bool operator == (const MatSize& sz) const CV_NOEXCEPT;
+    bool operator != (const MatSize& sz) const CV_NOEXCEPT;
 
     int* p;
 };
 
 struct CV_EXPORTS MatStep
 {
-    MatStep();
-    explicit MatStep(size_t s);
-    const size_t& operator[](int i) const;
-    size_t& operator[](int i);
+    MatStep() CV_NOEXCEPT;
+    explicit MatStep(size_t s) CV_NOEXCEPT;
+    const size_t& operator[](int i) const CV_NOEXCEPT;
+    size_t& operator[](int i) CV_NOEXCEPT;
     operator size_t() const;
     MatStep& operator = (size_t s);
 
@@ -807,7 +807,7 @@ public:
     The constructed matrix can further be assigned to another matrix or matrix expression or can be
     allocated with Mat::create . In the former case, the old content is de-referenced.
      */
-    Mat();
+    Mat() CV_NOEXCEPT;
 
     /** @overload
     @param rows Number of rows in a 2D array.
@@ -2011,6 +2011,11 @@ public:
     template<typename _Tp> MatIterator_<_Tp> begin();
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
 
+    /** @brief Same as begin() but for inverse traversal
+     */
+    template<typename _Tp> std::reverse_iterator<MatIterator_<_Tp>> rbegin();
+    template<typename _Tp> std::reverse_iterator<MatConstIterator_<_Tp>> rbegin() const;
+
     /** @brief Returns the matrix iterator and sets it to the after-last matrix element.
 
     The methods return the matrix read-only or read-write iterators, set to the point following the last
@@ -2018,6 +2023,12 @@ public:
      */
     template<typename _Tp> MatIterator_<_Tp> end();
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
+
+    /** @brief Same as end() but for inverse traversal
+     */
+    template<typename _Tp> std::reverse_iterator< MatIterator_<_Tp>> rend();
+    template<typename _Tp> std::reverse_iterator< MatConstIterator_<_Tp>> rend() const;
+
 
     /** @brief Runs the given functor over all matrix elements in parallel.
 
@@ -2193,7 +2204,7 @@ public:
     typedef MatConstIterator_<_Tp> const_iterator;
 
     //! default constructor
-    Mat_();
+    Mat_() CV_NOEXCEPT;
     //! equivalent to Mat(_rows, _cols, DataType<_Tp>::type)
     Mat_(int _rows, int _cols);
     //! constructor that sets each matrix element to specified value
@@ -2249,6 +2260,12 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+
+    //reverse iterators
+    std::reverse_iterator<iterator> rbegin();
+    std::reverse_iterator<iterator> rend();
+    std::reverse_iterator<const_iterator> rbegin() const;
+    std::reverse_iterator<const_iterator> rend() const;
 
     //! template methods for for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)
@@ -2385,7 +2402,7 @@ class CV_EXPORTS UMat
 {
 public:
     //! default constructor
-    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(UMatUsageFlags usageFlags = USAGE_DEFAULT) CV_NOEXCEPT;
     //! constructs 2D matrix of the specified size and type
     // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
     UMat(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);

@@ -29,8 +29,9 @@ BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
 FEATURES_FIND_CHOICES = OrderedDict()
 try:
+    cv.xfeatures2d_SURF.create() # check if the function can be called
     FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
-except AttributeError:
+except (AttributeError, cv.error) as e:
     print("SURF not available")
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
@@ -78,7 +79,10 @@ WARP_CHOICES = (
     'transverseMercator',
 )
 
-WAVE_CORRECT_CHOICES = ('horiz', 'no', 'vert',)
+WAVE_CORRECT_CHOICES = OrderedDict()
+WAVE_CORRECT_CHOICES['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
+WAVE_CORRECT_CHOICES['no'] = None
+WAVE_CORRECT_CHOICES['vert'] = cv.detail.WAVE_CORRECT_VERT
 
 BLEND_CHOICES = ('multiband', 'feather', 'no',)
 
@@ -146,9 +150,9 @@ parser.add_argument(
     type=str, dest='ba_refine_mask'
 )
 parser.add_argument(
-    '--wave_correct', action='store', default=WAVE_CORRECT_CHOICES[0],
-    help="Perform wave effect correction. The default is '%s'" % WAVE_CORRECT_CHOICES[0],
-    choices=WAVE_CORRECT_CHOICES,
+    '--wave_correct', action='store', default=list(WAVE_CORRECT_CHOICES.keys())[0],
+    help="Perform wave effect correction. The default is '%s'" % list(WAVE_CORRECT_CHOICES.keys())[0],
+    choices=WAVE_CORRECT_CHOICES.keys(),
     type=str, dest='wave_correct'
 )
 parser.add_argument(
@@ -278,11 +282,7 @@ def main():
     compose_megapix = args.compose_megapix
     conf_thresh = args.conf_thresh
     ba_refine_mask = args.ba_refine_mask
-    wave_correct = args.wave_correct
-    if wave_correct == 'no':
-        do_wave_correct = False
-    else:
-        do_wave_correct = True
+    wave_correct = WAVE_CORRECT_CHOICES[args.wave_correct]
     if args.save_graph is None:
         save_graph = False
     else:
@@ -342,7 +342,7 @@ def main():
         with open(args.save_graph, 'w') as fh:
             fh.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
 
-    indices = cv.detail.leaveBiggestComponent(features, p, 0.3)
+    indices = cv.detail.leaveBiggestComponent(features, p, conf_thresh)
     img_subset = []
     img_names_subset = []
     full_img_sizes_subset = []
@@ -392,11 +392,11 @@ def main():
         warped_image_scale = focals[len(focals) // 2]
     else:
         warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
-    if do_wave_correct:
+    if wave_correct is not None:
         rmats = []
         for cam in cameras:
             rmats.append(np.copy(cam.R))
-        rmats = cv.detail.waveCorrect(rmats, cv.detail.WAVE_CORRECT_HORIZ)
+        rmats = cv.detail.waveCorrect(rmats, wave_correct)
         for idx, cam in enumerate(cameras):
             cam.R = rmats[idx]
     corners = []

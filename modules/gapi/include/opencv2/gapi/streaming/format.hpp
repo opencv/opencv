@@ -20,6 +20,19 @@ G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
     static GMatDesc outMeta(const GFrameDesc& in) { return GMatDesc{CV_8U, 3, in.size}; }
 };
 
+G_API_OP(GY, <GMat(GFrame)>, "org.opencv.streaming.Y") {
+    static GMatDesc outMeta(const GFrameDesc& frameDesc) {
+        return GMatDesc { CV_8U, 1, frameDesc.size , false };
+    }
+};
+
+G_API_OP(GUV, <GMat(GFrame)>, "org.opencv.streaming.UV") {
+    static GMatDesc outMeta(const GFrameDesc& frameDesc) {
+        return GMatDesc { CV_8U, 2, cv::Size(frameDesc.size.width / 2, frameDesc.size.height / 2),
+                          false };
+    }
+};
+
 /** @brief Gets bgr plane from input frame
 
 @note Function textual ID is "org.opencv.streaming.BGR"
@@ -29,6 +42,25 @@ G_API_OP(GBGR, <GMat(GFrame)>, "org.opencv.streaming.BGR")
 */
 GAPI_EXPORTS cv::GMat BGR(const cv::GFrame& in);
 
+/** @brief Extracts Y plane from media frame.
+
+Output image is 8-bit 1-channel image of @ref CV_8UC1.
+
+@note Function textual ID is "org.opencv.streaming.Y"
+
+@param frame input media frame.
+*/
+GAPI_EXPORTS GMat Y(const cv::GFrame& frame);
+
+/** @brief Extracts UV plane from media frame.
+
+Output image is 8-bit 2-channel image of @ref CV_8UC2.
+
+@note Function textual ID is "org.opencv.streaming.UV"
+
+@param frame input media frame.
+*/
+GAPI_EXPORTS GMat UV(const cv::GFrame& frame);
 } // namespace streaming
 
 //! @addtogroup gapi_transform

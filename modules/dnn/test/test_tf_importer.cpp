@@ -135,6 +135,16 @@ TEST_P(Test_TensorFlow_layers, reduce_sum)
     runTensorFlowNet("sum_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_sum_channel)
+{
+    runTensorFlowNet("reduce_sum_channel");
+}
+
+TEST_P(Test_TensorFlow_layers, reduce_sum_channel_keep_dims)
+{
+    runTensorFlowNet("reduce_sum_channel", false, 0.0, 0.0, false, "_keep_dims");
+}
+
 TEST_P(Test_TensorFlow_layers, conv_single_conv)
 {
     runTensorFlowNet("single_conv");
@@ -205,6 +215,17 @@ TEST_P(Test_TensorFlow_layers, eltwise)
     runTensorFlowNet("eltwise_sub");
 }
 
+TEST_P(Test_TensorFlow_layers, eltwise_add_vec)
+{
+    runTensorFlowNet("eltwise_add_vec");
+}
+
+TEST_P(Test_TensorFlow_layers, eltwise_mul_vec)
+{
+    runTensorFlowNet("eltwise_mul_vec");
+}
+
+
 TEST_P(Test_TensorFlow_layers, channel_broadcast)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -219,6 +240,12 @@ TEST_P(Test_TensorFlow_layers, pad_and_concat)
 
 TEST_P(Test_TensorFlow_layers, concat_axis_1)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     runTensorFlowNet("concat_axis_1");
 }
 
@@ -279,6 +306,10 @@ TEST_P(Test_TensorFlow_layers, batch_norm_10)
 }
 TEST_P(Test_TensorFlow_layers, batch_norm_11)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // nan
+#endif
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     runTensorFlowNet("mvn_batch_norm_1x1");
@@ -486,6 +517,11 @@ TEST_P(Test_TensorFlow_layers, reshape_layer)
 TEST_P(Test_TensorFlow_layers, reshape_nchw)
 {
     runTensorFlowNet("reshape_nchw");
+}
+
+TEST_P(Test_TensorFlow_layers, reshape_conv)
+{
+    runTensorFlowNet("reshape_conv");
 }
 
 TEST_P(Test_TensorFlow_layers, leaky_relu)
@@ -1083,12 +1119,20 @@ TEST_P(Test_TensorFlow_layers, keras_mobilenet_head)
 // TF case: align_corners=False, half_pixel_centers=False
 TEST_P(Test_TensorFlow_layers, resize_bilinear)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     runTensorFlowNet("resize_bilinear");
 }
 
 // TF case: align_corners=True, half_pixel_centers=False
 TEST_P(Test_TensorFlow_layers, resize_bilinear_align_corners)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
+#endif
     runTensorFlowNet("resize_bilinear",
                      false, 0.0, 0.0, false, // default parameters
                      "_align_corners");

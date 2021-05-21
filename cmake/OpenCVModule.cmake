@@ -879,7 +879,11 @@ endmacro()
 macro(_ocv_create_module)
 
   ocv_compiler_optimization_process_sources(OPENCV_MODULE_${the_module}_SOURCES OPENCV_MODULE_${the_module}_DEPS_EXT ${the_module})
-  set(OPENCV_MODULE_${the_module}_HEADERS ${OPENCV_MODULE_${the_module}_HEADERS} CACHE INTERNAL "List of header files for ${the_module}")
+  set(__module_headers ${OPENCV_MODULE_${the_module}_HEADERS})
+  if(__module_headers)
+    list(SORT __module_headers)  # fix headers order, useful for bindings
+  endif()
+  set(OPENCV_MODULE_${the_module}_HEADERS ${__module_headers} CACHE INTERNAL "List of header files for ${the_module}")
   set(OPENCV_MODULE_${the_module}_SOURCES ${OPENCV_MODULE_${the_module}_SOURCES} CACHE INTERNAL "List of source files for ${the_module}")
 
   # The condition we ought to be testing here is whether ocv_add_precompiled_headers will

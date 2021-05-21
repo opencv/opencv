@@ -2741,6 +2741,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     }
 
     VIDEOINFOHEADER *pVih =  reinterpret_cast<VIDEOINFOHEADER*>(VD->pAmMediaType->pbFormat);
+    CV_Assert(pVih);
     int currentWidth    =  HEADER(pVih)->biWidth;
     int currentHeight    =  HEADER(pVih)->biHeight;
 
