@@ -277,6 +277,8 @@ namespace cv { namespace cuda { namespace device
 
         __device__ float normAcc_SQDIFF(float num, float denum)
         {
+            if (::fabs(num) < denum * 1.125f)
+                return num > 0 ? 1 : -1;
             return num / denum;
         }
 
