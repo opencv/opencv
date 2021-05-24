@@ -78,6 +78,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_NEON_AARCH64 0
 #endif
 
+// TODO
+#define CV_NEON_DOT 0
+
 //////////// Utils ////////////
 
 #if CV_SIMD128_64F
@@ -666,7 +669,7 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
 #else
     const uint8x16_t zero   = vreinterpretq_u8_u32(vdupq_n_u32(0));
@@ -689,7 +692,7 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
                                    const v_uint32x4& c)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand(a, b) + c;
@@ -698,7 +701,7 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
 #else
     int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
@@ -714,7 +717,7 @@ inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
                                   const v_int32x4& c)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_int32x4(vdotq_s32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand(a, b) + c;
@@ -831,7 +834,7 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
 #else
     uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
@@ -843,7 +846,7 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
 }
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand_fast(a, b) + c;
@@ -852,7 +855,7 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
 #else
     int16x8_t prod = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
@@ -862,7 +865,7 @@ inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 }
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
 {
-#if CV_DOTPROD
+#if CV_NEON_DOT
     return v_int32x4(vdotq_s32(c.val, a.val, b.val));
 #else
     return v_dotprod_expand_fast(a, b) + c;
@@ -2012,10 +2015,18 @@ inline void v_transpose4x4(const v_##_Tpvec& a0, const v_##_Tpvec& a1, \
                          v_##_Tpvec& b2, v_##_Tpvec& b3) \
 { \
     /* -- Pass 1: 64b transpose */ \
-    _Tpvec##_t t0 = vtrn1q_##suffix##64(a0.val, a2.val); \
-    _Tpvec##_t t1 = vtrn1q_##suffix##64(a1.val, a3.val); \
-    _Tpvec##_t t2 = vtrn2q_##suffix##64(a0.val, a2.val); \
-    _Tpvec##_t t3 = vtrn2q_##suffix##64(a1.val, a3.val); \
+    _Tpvec##_t t0 = vreinterpretq_##suffix##32_##suffix##64( \
+                        vtrn1q_##suffix##64(vreinterpretq_##suffix##64_##suffix##32(a0.val), \
+                                            vreinterpretq_##suffix##64_##suffix##32(a2.val))); \
+    _Tpvec##_t t1 = vreinterpretq_##suffix##32_##suffix##64( \
+                        vtrn1q_##suffix##64(vreinterpretq_##suffix##64_##suffix##32(a1.val), \
+                                            vreinterpretq_##suffix##64_##suffix##32(a3.val))); \
+    _Tpvec##_t t2 = vreinterpretq_##suffix##32_##suffix##64( \
+                        vtrn2q_##suffix##64(vreinterpretq_##suffix##64_##suffix##32(a0.val), \
+                                            vreinterpretq_##suffix##64_##suffix##32(a2.val))); \
+    _Tpvec##_t t3 = vreinterpretq_##suffix##32_##suffix##64( \
+                        vtrn2q_##suffix##64(vreinterpretq_##suffix##64_##suffix##32(a1.val), \
+                                            vreinterpretq_##suffix##64_##suffix##32(a3.val))); \
     /* -- Pass 2: 32b transpose */ \
     b0.val = vtrn1q_##suffix##32(t0, t1); \
     b1.val = vtrn2q_##suffix##32(t0, t1); \

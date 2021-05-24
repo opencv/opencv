@@ -389,7 +389,6 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
-        g_hwFeatureNames[CPU_DOTPROD] = "DOTPROD";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -584,9 +583,6 @@ struct HWFeatures
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
     #endif
-    #endif
-    #if CV_DOTPROD
-        have[CV_CPU_DOTPROD] = true;
     #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
