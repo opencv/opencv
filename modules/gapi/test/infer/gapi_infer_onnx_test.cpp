@@ -35,6 +35,10 @@ public:
         cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
+    cv::util::any blobParams() const override {
+        GAPI_Assert(false && "Not implemented");
+        return {};
+    }
 };
 
 class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
@@ -54,6 +58,10 @@ public:
             m_y.step, m_uv.step, 0u, 0u
         };
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+    cv::util::any blobParams() const override {
+        GAPI_Assert(false && "Not implemented");
+        return {};
     }
 };
 struct ONNXInitPath {

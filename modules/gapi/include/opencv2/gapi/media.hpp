@@ -13,6 +13,7 @@
 #include <utility>    // forward<>()
 
 #include <opencv2/gapi/gframe.hpp>
+#include <opencv2/gapi/util/any.hpp>
 
 namespace cv {
 
@@ -29,6 +30,8 @@ public:
 
     View access(Access) const;
     cv::GFrameDesc desc() const;
+
+    cv::util::any blobParams() const;
 
     // Cast underlying MediaFrame adapter to the particular adapter type,
     // return nullptr if underlying type is different
@@ -78,6 +81,7 @@ public:
     virtual ~IAdapter() = 0;
     virtual cv::GFrameDesc meta() const = 0;
     virtual MediaFrame::View access(MediaFrame::Access) = 0;
+    virtual cv::util::any blobParams() const = 0;
 };
 
 } //namespace cv

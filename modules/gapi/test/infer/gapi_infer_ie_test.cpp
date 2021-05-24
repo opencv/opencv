@@ -56,6 +56,13 @@ public:
         cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
+    cv::util::any blobParams() const override {
+        return std::make_pair<InferenceEngine::TensorDesc,
+                              InferenceEngine::ParamMap>({},
+                                                         {{"HELLO", 42},
+                                                          {"COLOR_FORMAT",
+                                                           InferenceEngine::ColorFormat::NV12}});
+    }
 };
 
 class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
@@ -75,6 +82,10 @@ public:
             m_y.step, m_uv.step, 0u, 0u
         };
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+    cv::util::any blobParams() const override {
+        GAPI_Assert(false && "Not implemented");
+        return {};
     }
 };
 
@@ -2026,6 +2037,24 @@ TEST_F(ROIList, CallInferMultipleTimes)
     }
 
     validate();
+}
+
+TEST(IEFrameAdapter, blobParams)
+{
+    cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    cv::util::any any_params = frame.blobParams();
+    auto params = cv::util::any_cast<std::pair<InferenceEngine::TensorDesc,
+                                               InferenceEngine::ParamMap>>(any_params);
+
+    InferenceEngine::ParamMap pmap({{"HELLO", 42},
+                                    {"COLOR_FORMAT",
+                                     InferenceEngine::ColorFormat::NV12}});
+    InferenceEngine::TensorDesc tdesc;
+
+    EXPECT_EQ(tdesc, params.first);
+    EXPECT_EQ(pmap, params.second);
 }
 
 } // namespace opencv_test
