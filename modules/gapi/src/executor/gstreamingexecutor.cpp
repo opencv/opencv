@@ -1126,14 +1126,17 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     m_sink_queues   .resize(proto.out_nhs.size(), nullptr);
     m_sink_sync     .resize(proto.out_nhs.size(), -1);
 
-    // Very rough estimation to limit internal queue sizes.
+    // Very rough estimation to limit internal queue sizes if not specified by the user.
     // Pipeline depth is equal to number of its (pipeline) steps.
-    const auto queue_capacity = 3*std::count_if
-        (m_gim.nodes().begin(),
-         m_gim.nodes().end(),
-         [&](ade::NodeHandle nh) {
-            return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
-         });
+    auto has_queue_capacity = cv::gapi::getCompileArg<cv::gapi::streaming::queue_capacity>(m_comp_args);
+    const auto queue_capacity = has_queue_capacity ? has_queue_capacity->capacity :
+            3*std::count_if
+            (m_gim.nodes().begin(),
+            m_gim.nodes().end(),
+            [&](ade::NodeHandle nh) {
+                return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+            });
+    GAPI_Assert(queue_capacity != 0u);
 
     auto sync_policy = cv::gimpl::getCompileArg<cv::gapi::streaming::sync_policy>(m_comp_args)
                        .value_or(cv::gapi::streaming::sync_policy::dont_sync);

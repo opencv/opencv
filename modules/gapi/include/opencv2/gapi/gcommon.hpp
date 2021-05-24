@@ -195,6 +195,14 @@ private:
 
 using GCompileArgs = std::vector<GCompileArg>;
 
+inline cv::GCompileArgs& operator += (      cv::GCompileArgs &lhs,
+                                      const cv::GCompileArgs &rhs)
+{
+    lhs.reserve(lhs.size() + rhs.size());
+    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    return lhs;
+}
+
 /**
  * @brief Wraps a list of arguments (a parameter pack) into a vector of
  *        compilation arguments (cv::GCompileArg).
