@@ -1140,7 +1140,13 @@ inline v_float64x2 v_not_nan(const v_float64x2& a)
     vbool64_t mask = vmford_vv_f64m1_b64(a.val, a.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2((vfloat64m1_t)res);
-} 
+}
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+ 
 #define OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(_Tp, _T) \
 inline void v_transpose4x4(const v_##_Tp##32x4& a0, const v_##_Tp##32x4& a1, \
                          const v_##_Tp##32x4& a2, const v_##_Tp##32x4& a3, \
@@ -1162,6 +1168,9 @@ OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(uint, u32)
 OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(int, i32)
 OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(float, f32)
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #define OPENCV_HAL_IMPL_RISCVV_SHIFT_LEFT(_Tpvec, suffix, _T, num) \
 inline _Tpvec operator << (const _Tpvec& a, int n) \
@@ -1197,6 +1206,12 @@ OPENCV_HAL_IMPL_RISCVV_SHIFT_OP(int64, i64, 2, sra)
 #define VUP16(n) {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
 #define VUP2(n) {0, 1}
 #endif
+  
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif  
+  
 #define OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(_Tpvec, suffix, _T, num, num2, vmv, len) \
 template<int n> inline _Tpvec v_rotate_left(const _Tpvec& a) \
 {    \
@@ -1242,6 +1257,10 @@ OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_uint64x2, vuint64, u64, 2, 4, vmv_v_x, b64)
 OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_int64x2, vint64, i64, 2, 4, vmv_v_x, b64)
 OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float32x4, vfloat32, f32, 4, 8, vfmv_v_f, b32)
 OPENCV_HAL_IMPL_RISCVV_ROTATE_OP(v_float64x2, vfloat64, f64, 2, 4, vfmv_v_f, b64)
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 #define OPENCV_HAL_IMPL_RISCVV_LOADSTORE_OP(_Tpvec, _Tp, _Tp2, len, hnum, num) \
 inline _Tpvec v_load_halves(const _Tp* ptr0, const _Tp* ptr1) \
@@ -1558,6 +1577,11 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
     y = v_float64x2(tab[idx[0]+1], tab[idx[1]+1]);
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 #define OPENCV_HAL_IMPL_RISCVV_PACKS(_Tp, _Tp2, _T2, num2, _T1, num, intrin, shr, _Type) \
 inline v_##_Tp##x##num v_pack(const v_##_Tp2##x##num2& a, const v_##_Tp2##x##num2& b) \
 { \
@@ -1807,6 +1831,10 @@ v_popcount(const v_uint64x2& a)
 
     return v_uint64x2((unsigned long)vmv_x_s_u8m1_u8(res1, 8), (unsigned long)vmv_x_s_u8m1_u8(res2, 8));
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 inline v_uint64x2
 v_popcount(const v_int64x2& a)
@@ -2075,6 +2103,12 @@ inline v_int32x4 v_load_expand_q(const schar* ptr)
 #define HIGH_4  0x0000000300000002, 0x0000000700000006
 #define HIGH_8  0x0007000600050004, 0x000F000E000D000C
 #define HIGH_16 0x0F0E0D0C0B0A0908,  0x1F1E1D1C1B1A1918
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 #define OPENCV_HAL_IMPL_RISCVV_UNPACKS(_Tpvec, _Tp, _T, _UTp, _UT, num, num2, len, numh) \
 inline void v_zip(const v_##_Tpvec& a0, const v_##_Tpvec& a1, v_##_Tpvec& b0, v_##_Tpvec& b1) \
 { \
@@ -2114,6 +2148,10 @@ OPENCV_HAL_IMPL_RISCVV_UNPACKS(uint32x4, uint32, u32, uint32, u32, 4, 8, b32, 2)
 OPENCV_HAL_IMPL_RISCVV_UNPACKS(int32x4, int32, i32, uint32, u32, 4, 8, b32, 2)
 OPENCV_HAL_IMPL_RISCVV_UNPACKS(float32x4, float32, f32, uint32, u32, 4, 8, b32, 2)
 OPENCV_HAL_IMPL_RISCVV_UNPACKS(float64x2, float64, f64, uint64, u64, 2, 4, b64, 1)
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 inline v_uint8x16 v_reverse(const v_uint8x16 &a)
 {
@@ -2245,6 +2283,12 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
     __builtin_riscv_fsrm(0);
     return v_int32x4(val);
 }
+
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
 
 inline v_int32x4 v_round(const v_float64x2& a)
 {
@@ -2433,12 +2477,22 @@ OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(float64, double, 2, f64)
 OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(uint64, unsigned long, 2, u64)
 OPENCV_HAL_IMPL_RISCVV_INTERLEAVED_(int64, long, 2, i64)
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 inline v_float32x4 v_cvt_f32(const v_int32x4& a)
 {
     return v_float32x4(vfcvt_f_x_v_f32m1(a.val, 4));
 }
 
 #if CV_SIMD128_64F
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 inline v_float32x4 v_cvt_f32(const v_float64x2& a)
 {
     vfloat64m2_t _val;
@@ -2455,6 +2509,10 @@ inline v_float32x4 v_cvt_f32(const v_float64x2& a, const v_float64x2& b)
     vfloat32m1_t aval = vfncvt_f_f_v_f32m1(_val, 4);
     return v_float32x4(aval);
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 inline v_float64x2 v_cvt_f64(const v_int32x4& a)
 {
@@ -2576,6 +2634,11 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vget_f32m2_f32m1(v32, 0));
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+
 inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 {
     vfloat32m2_t v32;
@@ -2584,6 +2647,9 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     vse_v_f16m1((__fp16*)ptr, hv, 4);
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 inline void v_cleanup() {}
 
