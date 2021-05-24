@@ -374,15 +374,14 @@ protected:
 namespace gapi {
 namespace streaming {
 /**
- * @brief Ask G-API to set specific queue capacity for streaming execution.
+ * @brief Specify queue capacity for streaming execution.
  *
- * For streaming execution G-API has a special concurrent bounded queue to
- * fetch next frame while current is being processed. This compilation argument
- * specifies the capacity of this queue.
+ * In the streaming mode the pipeline steps are connected with queues
+ * and this compile argument controls every queue's size.
  */
 struct GAPI_EXPORTS queue_capacity
 {
-    queue_capacity(size_t cap = 1) : capacity(cap) { };
+    explicit queue_capacity(size_t cap = 1) : capacity(cap) { };
     size_t capacity;
 };
 /** @} */
