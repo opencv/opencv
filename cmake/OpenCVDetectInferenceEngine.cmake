@@ -134,10 +134,14 @@ endif()
 # Add more features to the target
 
 if(INF_ENGINE_TARGET)
+  if(InferenceEngine_VERSION VERSION_GREATER_EQUAL "2021.4")
+    math(EXPR INF_ENGINE_RELEASE "${InferenceEngine_VERSION_MAJOR} * 1000000 + ${InferenceEngine_VERSION_MINOR} * 10000 + ${InferenceEngine_VERSION_PATCH} * 100")
+  endif()
   if(NOT INF_ENGINE_RELEASE)
     message(WARNING "InferenceEngine version has not been set, 2021.3 will be used by default. Set INF_ENGINE_RELEASE variable if you experience build errors.")
+    set(INF_ENGINE_RELEASE "2021030000")
   endif()
-  set(INF_ENGINE_RELEASE "2021030000" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
+  set(INF_ENGINE_RELEASE "${INF_ENGINE_RELEASE}" CACHE STRING "Force IE version, should be in form YYYYAABBCC (e.g. 2020.1.0.2 -> 2020010002)")
   set_target_properties(${INF_ENGINE_TARGET} PROPERTIES
     INTERFACE_COMPILE_DEFINITIONS "HAVE_INF_ENGINE=1;INF_ENGINE_RELEASE=${INF_ENGINE_RELEASE}"
   )
