@@ -756,6 +756,28 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
     return pyopencv_from(pkg);
 }
 
+static PyObject* pyopencv_cv_gapi_networks(PyObject*, PyObject* py_args, PyObject*)
+{
+    using namespace cv;
+    gapi::GNetPackage pkg;
+    Py_ssize_t size = PyTuple_Size(py_args);
+    for (int i = 0; i < size; ++i)
+    {
+        PyObject* item = PyTuple_GetItem(py_args, i);
+        if (PyObject_TypeCheck(item,
+            reinterpret_cast<PyTypeObject*>(pyopencv_gapi_ie_PyParams_TypePtr)))
+        {
+            pkg += gapi::networks(reinterpret_cast<pyopencv_gapi_ie_PyParams_t*>(item)->v);
+        }
+        else
+        {
+            PyErr_SetString(PyExc_TypeError,
+                "Python net package should contain PyParams, please use cv.gapi.ie.params to define params");
+        }
+    }
+    return pyopencv_from(pkg);
+}
+
 static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
 {
     using namespace cv;
@@ -916,6 +938,7 @@ struct PyOpenCV_Converter<cv::GOpaque<T>>
 // extend cv.gapi methods
 #define PYOPENCV_EXTRA_METHODS_GAPI \
   {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \
+  {"networks", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_networks), "networks(...) -> GNetPackage"}, \
   {"__op", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_op), "__op(...) -> retval\n"},
 
 
