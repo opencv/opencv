@@ -582,7 +582,6 @@ template<typename R> struct TheTest
         // typedef typename V_RegTraits<R>::w_reg Rx2;
         Data<R> dataA, dataB(32767);
         R a = dataA, b = dataB;
-        // Rx2 c, d;
 
         R c = v_mul_hi(a, b);
 
@@ -592,7 +591,6 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((typename R::lane_type)((dataA[i] * dataB[i]) >> 16), resC[i]);
-            // EXPECT_EQ((typename R::lane_type)dataA[i + n] * dataB[i + n], resD[i]);
         }
 
         return *this;
