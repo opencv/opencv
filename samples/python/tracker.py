@@ -28,7 +28,7 @@ class App(object):
             elif trackerAlgorithm == 'dasiamrpn':
                 tracker = cv.TrackerDaSiamRPN_create()
             else:
-                sys.exit("Tracker is not recognized. Please use one of three available: mil, goturn, dasiamrpn.")
+                sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn.".format(trackerAlgorithm))
 
             print('==> Select object ROI for tracker ...')
             bbox = cv.selectROI('tracking', image)

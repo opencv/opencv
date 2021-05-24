@@ -25,9 +25,11 @@ TrackerDaSiamRPN::Params::Params()
     model = "dasiamrpn_model.onnx";
     kernel_cls1 = "dasiamrpn_kernel_cls1.onnx";
     kernel_r1 = "dasiamrpn_kernel_r1.onnx";
-    backend = 0; // temporarily by default
+    backend = 0;
     target = 0;
 }
+
+#ifdef HAVE_OPENCV_DNN
 
 template <typename T> static
 T sizeCal(const T& w, const T& h)
@@ -47,15 +49,12 @@ Mat sizeCal(const Mat& w, const Mat& h)
     return sz2;
 }
 
-#ifdef HAVE_OPENCV_DNN
-
 class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 {
 public:
     TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
         : params(parameters)
     {
-        // Load GOTURN architecture from *.prototxt and pretrained weights from *.caffemodel
 
         siamRPN = dnn::readNet(params.model);
         siamKernelCL1 = dnn::readNet(params.kernel_cls1);
@@ -75,6 +74,7 @@ public:
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     bool update(InputArray image, Rect& boundingBox) CV_OVERRIDE;
+    float getTrackingScore() CV_OVERRIDE;
 
     TrackerDaSiamRPN::Params params;
 
@@ -101,6 +101,7 @@ protected:
         Size imgSize = { 0, 0 };
         Rect2f targetBox = { 0, 0, 0, 0 };
         int scoreSize = (instanceSize - exemplarSize) / totalStride + 1;
+        float tracking_score;
 
         void update_scoreSize()
         {
@@ -115,7 +116,7 @@ protected:
     Mat generateAnchors();
     Mat getSubwindow(Mat& img, const Rect2f& targetBox, float originalSize, Scalar avgChans);
     void trackerInit(Mat img);
-    float trackerEval(Mat img);
+    void trackerEval(Mat img);
 };
 
 void TrackerDaSiamRPNImpl::init(InputArray image, const Rect& boundingBox)
@@ -180,7 +181,7 @@ bool TrackerDaSiamRPNImpl::update(InputArray image, Rect& boundingBox)
     return true;
 }
 
-float TrackerDaSiamRPNImpl::trackerEval(Mat img)
+void TrackerDaSiamRPNImpl::trackerEval(Mat img)
 {
     Rect2f targetBox = trackState.targetBox;
 
@@ -196,7 +197,7 @@ float TrackerDaSiamRPNImpl::trackerEval(Mat img)
 
     Mat xCrop = getSubwindow(img, targetBox, (float)cvRound(sx), trackState.avgChans);
 
-     Mat blob;
+    Mat blob;
     std::vector<Mat> outs;
     std::vector<String> outNames;
     Mat delta, score;
@@ -279,7 +280,12 @@ float TrackerDaSiamRPNImpl::trackerEval(Mat img)
     resBox.height = float(fmax(10., fmin(float(trackState.imgSize.height), resBox.height)));
 
     trackState.targetBox = resBox;
-    return score.at<float>(bestID);
+    trackState.tracking_score = score.at<float>(bestID);
+}
+
+float TrackerDaSiamRPNImpl::getTrackingScore()
+{
+    return trackState.tracking_score;
 }
 
 void TrackerDaSiamRPNImpl::softmax(const Mat& src, Mat& dst)
