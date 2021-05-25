@@ -589,7 +589,7 @@ int main(int argc, char* argv[]) {
     const auto target_dev_o = cmd.get<std::string>("mtcnnod");
     const auto conf_thresh_o = cmd.get<float>("thro");
     const auto use_half_scale = cmd.get<bool>("half_scale");
-    const auto streaming_queue_capacity = cmd.get<size_t>("queue_capacity");
+    const auto streaming_queue_capacity = cmd.get<unsigned int>("queue_capacity");
 
     std::vector<cv::Size> level_size;
     std::vector<double> scales;
