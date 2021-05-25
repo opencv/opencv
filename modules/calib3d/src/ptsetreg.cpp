@@ -900,6 +900,86 @@ int estimateAffine3D(InputArray _from, InputArray _to,
     return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, ransacThreshold, confidence)->run(dFrom, dTo, _out, _inliers);
 }
 
+Mat    estimateAffine3D(InputArray _from, InputArray _to,
+                        CV_OUT double* _scale, bool force_rotation)
+{
+    CV_INSTRUMENT_REGION();
+    Mat from = _from.getMat(), to = _to.getMat();
+    int count = from.checkVector(3);
+
+    CV_CheckGE(count, 3, "Umeyama algorithm needs at least 3 points for affine transformation estimation.");
+    CV_CheckEQ(to.checkVector(3), count, "Point sets need to have the same size");
+    from = from.reshape(1, count);
+    to = to.reshape(1, count);
+    if(from.type() != CV_64F)
+        from.convertTo(from, CV_64F);
+    if(to.type() != CV_64F)
+        to.convertTo(to, CV_64F);
+
+    const double one_over_n = 1./count;
+
+    const auto colwise_mean = [one_over_n](const Mat& m)
+    {
+        Mat my;
+        reduce(m, my, 0, REDUCE_SUM, CV_64F);
+        return my * one_over_n;
+    };
+
+    const auto demean = [count](const Mat& A, const Mat& mean)
+    {
+        Mat A_centered = Mat::zeros(count, 3, CV_64F);
+        for(int i = 0; i < count; i++)
+        {
+            A_centered.row(i) = A.row(i) - mean;
+        }
+        return A_centered;
+    };
+
+    Mat from_mean = colwise_mean(from);
+    Mat to_mean = colwise_mean(to);
+
+    Mat from_centered = demean(from, from_mean);
+    Mat to_centered = demean(to, to_mean);
+
+    Mat cov = to_centered.t() * from_centered * one_over_n;
+
+    Mat u,d,vt;
+    SVD::compute(cov, d, u, vt, SVD::MODIFY_A | SVD::FULL_UV);
+
+    CV_CheckGE(countNonZero(d), 2, "Points cannot be colinear");
+
+    Mat S = Mat::eye(3, 3, CV_64F);
+    // det(d) can only ever be >=0, so we can always use this here (compared to the original formula by Umeyama)
+    if (force_rotation && (determinant(u) * determinant(vt) < 0))
+    {
+        S.at<double>(2, 2) = -1;
+    }
+    Mat rmat = u*S*vt;
+
+    double scale = 1.0;
+    if (_scale)
+    {
+        double var_from = 0.;
+        scale = 0.;
+        for(int i = 0; i < 3; i++)
+        {
+            var_from += norm(from_centered.col(i), NORM_L2SQR);
+            scale += d.at<double>(i, 0) * S.at<double>(i, i);
+        }
+        double inverse_var = count / var_from;
+        scale *= inverse_var;
+        *_scale = scale;
+    }
+    Mat new_to = scale * rmat * from_mean.t();
+
+    Mat transform;
+    transform.create(3, 4, CV_64F);
+    Mat r_part(transform(Rect(0, 0, 3, 3)));
+    rmat.copyTo(r_part);
+    transform.col(3) = to_mean.t() - new_to;
+    return transform;
+}
+
 int estimateTranslation3D(InputArray _from, InputArray _to,
                           OutputArray _out, OutputArray _inliers,
                           double ransacThreshold, double confidence)

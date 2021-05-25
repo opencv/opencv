@@ -3172,6 +3172,33 @@ CV_EXPORTS_W  int estimateAffine3D(InputArray src, InputArray dst,
                                    OutputArray out, OutputArray inliers,
                                    double ransacThreshold = 3, double confidence = 0.99);
 
+/** @brief Computes an optimal affine transformation between two 3D point sets.
+
+It computes \f$R,s,t\f$ minimizing \f$\sum{i} dst_i - c \cdot R \cdot src_i \f$
+where \f$R\f$ is a 3x3 rotation matrix, \f$t\f$ is a 3x1 translation vector and \f$s\f$ is a
+scalar size value. This is an implementation of the algorithm by Umeyama \cite umeyama1991least .
+The estimated affine transform has a homogeneous scale which is a subclass of affine
+transformations with 7 degrees of freedom. The paired point sets need to comprise at least 3
+points each.
+
+@param src First input 3D point set.
+@param dst Second input 3D point set.
+@param scale If null is passed, the scale parameter c will be assumed to be 1.0.
+Else the pointed-to variable will be set to the optimal scale.
+@param force_rotation If true, the returned rotation will never be a reflection.
+This might be unwanted, e.g. when optimizing a transform between a right- and a
+left-handed coordinate system.
+@return 3D affine transformation matrix \f$3 \times 4\f$ of the form
+\f[T =
+\begin{bmatrix}
+R & t\\
+\end{bmatrix}
+\f]
+
+ */
+CV_EXPORTS_W   cv::Mat estimateAffine3D(InputArray src, InputArray dst,
+                                        CV_OUT double* scale = nullptr, bool force_rotation = true);
+
 /** @brief Computes an optimal translation between two 3D point sets.
  *
  * It computes
