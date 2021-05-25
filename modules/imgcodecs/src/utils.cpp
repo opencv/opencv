@@ -620,7 +620,7 @@ FILE *fopen(const char *in, const char *mode)
     if (f)
         return f;
     // try unicode path assuming utf8 was passed
-    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     auto s = converter.from_bytes(in);
     auto m = converter.from_bytes(mode);
     if (s.size() >= 255)
