@@ -542,6 +542,7 @@ struct TestWithParamsSpecific : public TestWithParamsBase<ParamsSpecific<Specifi
  * @param ...       list of names of user-defined parameters. if there are no parameters, the list
  *                  must be empty.
  */
+ //TODO: Consider to remove `Number` and use `std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value`
 #define GAPI_TEST_FIXTURE(Fixture, InitF, API, Number, ...) \
     struct Fixture : public TestWithParams API { \
         static_assert(Number == AllParams::specific_params_size, \

@@ -634,6 +634,15 @@ GAPI_OCV_KERNEL(GCPUKMeans3D, cv::gapi::core::GKMeans3D)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUTranspose, cv::gapi::core::GTranspose)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        cv::transpose(in, out);
+    }
+};
+
+
 GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
 {
     static void run(const cv::Mat&  in_ssd_result,
@@ -774,6 +783,7 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUKMeansNDNoInit
          , GCPUKMeans2D
          , GCPUKMeans3D
+         , GCPUTranspose
          , GCPUParseSSDBL
          , GOCVParseSSD
          , GCPUParseYolo
