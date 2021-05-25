@@ -53,6 +53,8 @@
 #include <opencv2/core/utils/tls.hpp>
 #include <opencv2/core/utils/instrumentation.hpp>
 
+#include <opencv2/core/utils/filesystem.private.hpp>
+
 namespace cv {
 
 static void _initSystem()
@@ -951,6 +953,7 @@ String format( const char* fmt, ... )
 
 String tempfile( const char* suffix )
 {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     String fname;
 #ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
@@ -1037,6 +1040,10 @@ String tempfile( const char* suffix )
             return fname + suffix;
     }
     return fname;
+#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
+    CV_UNUSED(suffix);
+    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 static ErrorCallback customErrorCallback = 0;

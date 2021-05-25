@@ -510,12 +510,17 @@ OCV_OPTION(CV_TRACE                   "Enable OpenCV code trace" ON)
 OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT ANDROID AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
+OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 
 if(ENABLE_IMPL_COLLECTION)
   add_definitions(-DCV_COLLECT_IMPL_DATA)
+endif()
+
+if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
+  add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
 endif()
 
 set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")
@@ -651,6 +656,8 @@ if(UNIX)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m pthread)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
+    elseif(QNXNTO)
+      # no need to link to system libs with QNX
     else()
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
     endif()
@@ -1125,6 +1132,10 @@ endif()
 status("    ccache:"                  OPENCV_COMPILER_IS_CCACHE THEN YES ELSE NO)
 status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
 
+if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
+  status("    Filesystem support is disabled")
+endif()
+
 # ========================== Dependencies ============================
 ocv_get_all_libs(deps_modules deps_extra deps_3rdparty)
 status("    Extra dependencies:" ${deps_extra})
@@ -1420,7 +1431,16 @@ if(WITH_LIBREALSENSE OR HAVE_LIBREALSENSE)
 endif()
 
 if(WITH_MFX OR HAVE_MFX)
-  status("    Intel Media SDK:" HAVE_MFX      THEN "YES (${MFX_LIBRARY})" ELSE NO)
+  if(HAVE_MFX)
+    if(MFX_LIBRARY)
+      set(__details " (${MFX_LIBRARY})")
+    elseif(MFX_LIBRARIES)
+      set(__details " (${MFX_LIBRARIES})")
+    else()
+      set(__details " (unknown)")
+    endif()
+  endif()
+  status("    Intel Media SDK:" HAVE_MFX      THEN "YES${__details}" ELSE NO)
 endif()
 
 if(WITH_GPHOTO2 OR HAVE_GPHOTO2)

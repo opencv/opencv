@@ -1490,7 +1490,7 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 
 @sa  warpAffine, warpPerspective, remap, resizeP
  */
-GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+GAPI_EXPORTS_W GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
 /** @brief Resizes a planar image.
 

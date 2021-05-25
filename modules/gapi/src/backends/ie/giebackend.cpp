@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -60,6 +60,8 @@ template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
 template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
 #endif // TBB
 
+#include "utils/itt.hpp"
+
 namespace IE = InferenceEngine;
 
 namespace {
@@ -116,6 +118,7 @@ inline int toCV(IE::Precision prec) {
     case IE::Precision::FP32: return CV_32F;
     case IE::Precision::I32:  return CV_32S;
     case IE::Precision::I64:  return CV_32S;
+    case IE::Precision::FP16: return CV_16F;
     default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return -1;
@@ -194,6 +197,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
         HANDLE(I32, int);
+        HANDLE(FP16, cv::float16_t);
 #undef HANDLE
         case IE::Precision::I64: {
             GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
@@ -757,6 +761,9 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest   &request,
                         std::shared_ptr<IECallContext>   ctx) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
+    GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
+
     for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
         auto& out_mat = ctx->outMatR(i);
@@ -1284,6 +1291,17 @@ namespace {
                                     , cv::gimpl::ie::InferList
                                     , cv::gimpl::ie::InferList2
                                     >();
+        }
+
+        virtual bool controlsMerge() const override {
+            return true;
+        }
+
+        virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &) const override {
+            return false;
         }
     };
 }
