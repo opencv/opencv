@@ -21,18 +21,19 @@
 const std::string about =
 "This is an OpenCV-based version of OMZ MTCNN Face Detection example";
 const std::string keys =
-"{ h help     |                           | Print this help message }"
-"{ input      |                           | Path to the input video file }"
-"{ mtcnnpm    | mtcnn-p.xml               | Path to OpenVINO MTCNN P (Proposal) detection model (.xml)}"
-"{ mtcnnpd    | CPU                       | Target device for the MTCNN P (e.g. CPU, GPU, VPU, ...) }"
-"{ mtcnnrm    | mtcnn-r.xml               | Path to OpenVINO MTCNN R (Refinement) detection model (.xml)}"
-"{ mtcnnrd    | CPU                       | Target device for the MTCNN R (e.g. CPU, GPU, VPU, ...) }"
-"{ mtcnnom    | mtcnn-o.xml               | Path to OpenVINO MTCNN O (Output) detection model (.xml)}"
-"{ mtcnnod    | CPU                       | Target device for the MTCNN O (e.g. CPU, GPU, VPU, ...) }"
-"{ thrp       | 0.6                       | MTCNN P confidence threshold}"
-"{ thrr       | 0.7                       | MTCNN R confidence threshold}"
-"{ thro       | 0.7                       | MTCNN O confidence threshold}"
-"{ half_scale | false                     | MTCNN P use half scale pyramid}"
+"{ h help           |                           | Print this help message }"
+"{ input            |                           | Path to the input video file }"
+"{ mtcnnpm          | mtcnn-p.xml               | Path to OpenVINO MTCNN P (Proposal) detection model (.xml)}"
+"{ mtcnnpd          | CPU                       | Target device for the MTCNN P (e.g. CPU, GPU, VPU, ...) }"
+"{ mtcnnrm          | mtcnn-r.xml               | Path to OpenVINO MTCNN R (Refinement) detection model (.xml)}"
+"{ mtcnnrd          | CPU                       | Target device for the MTCNN R (e.g. CPU, GPU, VPU, ...) }"
+"{ mtcnnom          | mtcnn-o.xml               | Path to OpenVINO MTCNN O (Output) detection model (.xml)}"
+"{ mtcnnod          | CPU                       | Target device for the MTCNN O (e.g. CPU, GPU, VPU, ...) }"
+"{ thrp             | 0.6                       | MTCNN P confidence threshold}"
+"{ thrr             | 0.7                       | MTCNN R confidence threshold}"
+"{ thro             | 0.7                       | MTCNN O confidence threshold}"
+"{ half_scale       | false                     | MTCNN P use half scale pyramid}"
+"{ queue_capacity   | 1                         | Streaming executor queue capacity. Calculated automaticaly if 0}"
 ;
 
 namespace {
@@ -588,6 +589,7 @@ int main(int argc, char* argv[]) {
     const auto target_dev_o = cmd.get<std::string>("mtcnnod");
     const auto conf_thresh_o = cmd.get<float>("thro");
     const auto use_half_scale = cmd.get<bool>("half_scale");
+    const auto streaming_queue_capacity = cmd.get<size_t>("queue_capacity");
 
     std::vector<cv::Size> level_size;
     std::vector<double> scales;
@@ -708,7 +710,10 @@ int main(int argc, char* argv[]) {
                                           , custom::OCVSwapFaces
                                           , custom::OCVTranspose
     >();
-    auto pipeline_mtcnn = graph_mtcnn.compileStreaming(cv::compile_args(networks_mtcnn, kernels_mtcnn));
+    auto mtcnn_args = cv::compile_args(networks_mtcnn, kernels_mtcnn);
+    if (streaming_queue_capacity != 0)
+        mtcnn_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
+    auto pipeline_mtcnn = graph_mtcnn.compileStreaming(std::move(mtcnn_args));
 
     std::cout << "Reading " << input_file_name << std::endl;
     // Input stream
