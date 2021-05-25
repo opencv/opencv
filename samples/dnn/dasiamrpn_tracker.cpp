@@ -58,9 +58,9 @@ int run(int argc, char** argv)
     try
     {
         TrackerDaSiamRPN::Params params;
-        params.model = net;
-        params.kernel_cls1 = kernel_cls1;
-        params.kernel_r1 = kernel_r1;
+        params.model = samples::findFile(net);
+        params.kernel_cls1 = samples::findFile(kernel_cls1);
+        params.kernel_r1 = samples::findFile(kernel_r1);
         params.backend = backend;
         params.target = target;
         tracker = TrackerDaSiamRPN::create(params);

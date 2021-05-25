@@ -98,9 +98,9 @@ TEST(DaSiamRPN, memory_usage)
 {
     cv::Rect roi(145, 70, 85, 85);
 
-    std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx");
-    std::string kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx");
-    std::string kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx");
+    std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
+    std::string kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
+    std::string kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
     cv::TrackerDaSiamRPN::Params params;
     params.model = model;
     params.kernel_r1 = kernel_r1;
