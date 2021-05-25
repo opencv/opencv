@@ -13,6 +13,7 @@
 #include <array>
 #include <tuple> // tuple, tuple_size
 #include <map>
+#include <memory>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
@@ -20,6 +21,10 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+
+namespace InferenceEngine {
+    class RemoteContext;
+}
 
 namespace cv {
 namespace gapi {
@@ -74,6 +79,9 @@ namespace detail {
 
         // NB: Number of asyncrhonious infer requests
         size_t nireq;
+
+        cv::util::any context_config;
+        std::shared_ptr<InferenceEngine::RemoteContext> rctx;
     };
 } // namespace detail
 
@@ -101,7 +109,9 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}
+              , nullptr} {
     };
 
     Params(const std::string &model,
@@ -114,7 +124,9 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}
+              , nullptr} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
@@ -147,6 +159,16 @@ public:
 
     Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
+        return *this;
+    }
+
+    Params& contextConfig(cv::util::any&& ctx_cfg) {
+        desc.context_config = std::move(ctx_cfg);
+        return *this;
+    }
+
+    Params& contextConfig(const cv::util::any& ctx_cfg) {
+        desc.context_config = ctx_cfg;
         return *this;
     }
 
@@ -203,13 +225,19 @@ public:
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
+                {}, nullptr},
+          m_tag(tag) {
     };
 
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
+                {}, nullptr},
+          m_tag(tag) {
     };
 
     Params& pluginConfig(IEConfig&& cfg) {
