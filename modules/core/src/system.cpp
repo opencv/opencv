@@ -395,6 +395,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
         g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+        g_hwFeatureNames[CPU_RISCVV] = "RISCVV";
 
         g_hwFeatureNames[CPU_AVX512_COMMON] = "AVX512-COMMON";
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
@@ -589,6 +590,9 @@ struct HWFeatures
     #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
+    #endif
+    #ifdef __riscv_vector
+        have[CV_CPU_RISCVV] = true;
     #endif
     #ifdef __mips_msa
         have[CV_CPU_MSA] = true;
