@@ -271,6 +271,8 @@ namespace cv {
 
 #define CV_CPU_MSA              150
 
+#define CV_CPU_RISCVV           170
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
 
@@ -324,6 +326,8 @@ enum CpuFeatures {
     CPU_NEON            = 100,
 
     CPU_MSA             = 150,
+
+    CPU_RISCVV          = 170,
 
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
