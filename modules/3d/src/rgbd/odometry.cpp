@@ -1232,13 +1232,11 @@ OdometryFrameImpl<UMat>::OdometryFrameImpl(InputArray _image, InputArray _depth,
 
 Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID)
 {
-    _InputArray::KindFlag kind = _image.kind() | _depth.kind() | _mask.kind() | _normals.kind();
-    if (kind & _InputArray::KindFlag::MAT)
-        return makePtr<OdometryFrameImpl<Mat>> (_image, _depth, _mask, _normals, _ID);
-    if (kind & _InputArray::KindFlag::UMAT)
+    bool useOcl = _image.isUMat() && _depth.isUMat() && _mask.isUMat() && _normals.isUMat();
+    if (useOcl)
         return makePtr<OdometryFrameImpl<UMat>>(_image, _depth, _mask, _normals, _ID);
     else
-        CV_Error(CV_StsBadArg, "This type is not supported");
+        return makePtr<OdometryFrameImpl<Mat>> (_image, _depth, _mask, _normals, _ID);
 }
 
 
@@ -1840,17 +1838,22 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
     auto dstOclFrame = dstFrame.dynamicCast<OdometryFrameImpl<UMat>>();
     auto dstCpuFrame = dstFrame.dynamicCast<OdometryFrameImpl<Mat>>();
     bool useOcl = (srcOclFrame != nullptr) && (dstOclFrame != nullptr);
+    bool useCpu = (srcCpuFrame != nullptr) && (dstCpuFrame != nullptr);
     if (useOcl)
     {
         result = icp->estimateTransform(transform,
                                         dstOclFrame->pyramidCloud, dstOclFrame->pyramidNormals,
                                         srcOclFrame->pyramidCloud, srcOclFrame->pyramidNormals);
     }
-    else
+    else if (useCpu)
     {
         result = icp->estimateTransform(transform,
                                         dstCpuFrame->pyramidCloud, dstCpuFrame->pyramidNormals,
                                         srcCpuFrame->pyramidCloud, srcCpuFrame->pyramidNormals);
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Incorrect OdometryFrame type");
     }
 
     Rt.create(Size(4, 4), CV_64FC1);
