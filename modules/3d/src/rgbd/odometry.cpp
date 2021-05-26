@@ -70,7 +70,7 @@ void buildPyramidCameraMatrix(const Mat& cameraMatrix, int levels, std::vector<M
 }
 
 static inline
-void checkImage(const Mat& image)
+void checkImage(InputArray image)
 {
     if(image.empty())
         CV_Error(Error::StsBadSize, "Image is empty.");
@@ -79,7 +79,7 @@ void checkImage(const Mat& image)
 }
 
 static inline
-void checkDepth(const Mat& depth, const Size& imageSize)
+void checkDepth(InputArray depth, const Size& imageSize)
 {
     if(depth.empty())
         CV_Error(Error::StsBadSize, "Depth is empty.");
@@ -90,7 +90,7 @@ void checkDepth(const Mat& depth, const Size& imageSize)
 }
 
 static inline
-void checkMask(const Mat& mask, const Size& imageSize)
+void checkMask(InputArray mask, const Size& imageSize)
 {
     if(!mask.empty())
     {
@@ -102,7 +102,7 @@ void checkMask(const Mat& mask, const Size& imageSize)
 }
 
 static inline
-void checkNormals(const Mat& normals, const Size& depthSize)
+void checkNormals(InputArray normals, const Size& depthSize)
 {
     if(normals.size() != depthSize)
         CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
@@ -111,83 +111,121 @@ void checkNormals(const Mat& normals, const Size& depthSize)
 }
 
 static
-void preparePyramidImage(const Mat& image, std::vector<Mat>& pyramidImage, size_t levelCount)
+void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount)
 {
     if(!pyramidImage.empty())
     {
-        if(pyramidImage.size() < levelCount)
+        int nLevels = pyramidImage.size(-1).width;
+        if(nLevels < levelCount)
             CV_Error(Error::StsBadSize, "Levels count of pyramidImage has to be equal or less than size of iterCounts.");
 
-        CV_Assert(pyramidImage[0].size() == image.size());
-        for(size_t i = 0; i < pyramidImage.size(); i++)
-            CV_Assert(pyramidImage[i].type() == image.type());
+        CV_Assert(pyramidImage.size(0) == image.size());
+        for(size_t i = 0; i < nLevels; i++)
+            CV_Assert(pyramidImage.type(i) == image.type());
     }
     else
         buildPyramid(image, pyramidImage, (int)levelCount - 1);
 }
 
 static
-void preparePyramidDepth(const Mat& depth, std::vector<Mat>& pyramidDepth, size_t levelCount)
+void preparePyramidDepth(InputArray depth, InputOutputArrayOfArrays pyramidDepth, size_t levelCount)
 {
     if(!pyramidDepth.empty())
     {
-        if(pyramidDepth.size() < levelCount)
+        int nLevels = pyramidDepth.size(-1).width;
+        if(nLevels < levelCount)
             CV_Error(Error::StsBadSize, "Levels count of pyramidDepth has to be equal or less than size of iterCounts.");
 
-        CV_Assert(pyramidDepth[0].size() == depth.size());
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
-            CV_Assert(pyramidDepth[i].type() == depth.type());
+        CV_Assert(pyramidDepth.size(0) == depth.size());
+        for(size_t i = 0; i < nLevels; i++)
+            CV_Assert(pyramidDepth.type(i) == depth.type());
     }
     else
         buildPyramid(depth, pyramidDepth, (int)levelCount - 1);
 }
 
+template<typename TMat>
+static TMat getTMat(InputArray, int);
+
+template<>
 static
-void preparePyramidMask(const Mat& mask, const std::vector<Mat>& pyramidDepth, float minDepth, float maxDepth,
-                        const std::vector<Mat>& pyramidNormal,
-                        std::vector<Mat>& pyramidMask)
+Mat getTMat<Mat>(InputArray a, int i)
+{
+    return a.getMat(i);
+}
+
+template<>
+static
+UMat getTMat<UMat>(InputArray a, int i)
+{
+    return a.getUMat(i);
+}
+
+template<typename TMat>
+static TMat& getTMatRef(InputOutputArray, int);
+
+template<>
+static
+Mat& getTMatRef<Mat>(InputOutputArray a, int i)
+{
+    return a.getMatRef(i);
+}
+
+template<>
+static
+UMat& getTMatRef<UMat>(InputOutputArray a, int i)
+{
+    return a.getUMatRef(i);
+}
+
+template<typename TMat>
+static
+void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth,
+                        InputArrayOfArrays pyramidNormal,
+                        InputOutputArrayOfArrays pyramidMask)
 {
     minDepth = std::max(0.f, minDepth);
 
+    int nLevels = pyramidDepth.size(-1).width;
     if(!pyramidMask.empty())
     {
-        if(pyramidMask.size() != pyramidDepth.size())
+        if(pyramidMask.size() != nLevels)
             CV_Error(Error::StsBadSize, "Levels count of pyramidMask has to be equal to size of pyramidDepth.");
 
-        for(size_t i = 0; i < pyramidMask.size(); i++)
+        for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            CV_Assert(pyramidMask[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidMask[i].type() == CV_8UC1);
+            CV_Assert(pyramidMask.size(i) == pyramidDepth.size(i));
+            CV_Assert(pyramidMask.type(i) == CV_8UC1);
         }
     }
     else
     {
-        Mat validMask;
+        TMat validMask;
         if(mask.empty())
-            validMask = Mat(pyramidDepth[0].size(), CV_8UC1, Scalar(255));
+            validMask = TMat(pyramidDepth.size(0), CV_8UC1, Scalar(255));
         else
-            validMask = mask.clone();
+            validMask = getTMat<TMat>(mask, -1).clone();
 
-        buildPyramid(validMask, pyramidMask, (int)pyramidDepth.size() - 1);
+        buildPyramid(validMask, pyramidMask, nLevels - 1);
 
-        for(size_t i = 0; i < pyramidMask.size(); i++)
+        for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            Mat levelDepth = pyramidDepth[i].clone();
+            TMat levelDepth = getTMat<TMat>(pyramidDepth, i).clone();
             patchNaNs(levelDepth, 0);
 
-            Mat& levelMask = pyramidMask[i];
+            TMat& levelMask = getTMatRef<TMat>(pyramidMask, i);
             levelMask &= (levelDepth > minDepth) & (levelDepth < maxDepth);
 
             if(!pyramidNormal.empty())
             {
-                CV_Assert(pyramidNormal[i].type() == CV_32FC3);
-                CV_Assert(pyramidNormal[i].size() == pyramidDepth[i].size());
-                Mat levelNormal = pyramidNormal[i].clone();
+                CV_Assert(pyramidNormal.type(i) == CV_32FC3);
+                CV_Assert(pyramidNormal.size(i) == pyramidDepth.size(i));
+                TMat levelNormal = getTMat(pyramidNormal, i).clone();
 
-                Mat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
+                TMat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
                 CV_Assert(validNormalMask.type() == CV_8UC3);
 
-                std::vector<Mat> channelMasks;
+                std::vector<TMat> channelMasks;
                 split(validNormalMask, channelMasks);
                 validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
 
@@ -197,68 +235,75 @@ void preparePyramidMask(const Mat& mask, const std::vector<Mat>& pyramidDepth, f
     }
 }
 
+template<typename TMat>
 static
-void preparePyramidCloud(const std::vector<Mat>& pyramidDepth, const Mat& cameraMatrix, std::vector<Mat>& pyramidCloud)
+void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Mat& cameraMatrix, InputOutputArrayOfArrays pyramidCloud)
 {
+    size_t depthSize = pyramidDepth.size(-1).width;
+    size_t cloudSize = pyramidCloud.size(-1).width;
     if(!pyramidCloud.empty())
     {
-        if(pyramidCloud.size() != pyramidDepth.size())
+        if(cloudSize != depthSize)
             CV_Error(Error::StsBadSize, "Incorrect size of pyramidCloud.");
 
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
+        for(size_t i = 0; i < depthSize; i++)
         {
-            CV_Assert(pyramidCloud[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidCloud[i].type() == CV_32FC3);
+            CV_Assert(pyramidCloud.size(i) == pyramidDepth.size(i));
+            CV_Assert(pyramidCloud.type(i) == CV_32FC3);
         }
     }
     else
     {
         std::vector<Mat> pyramidCameraMatrix;
-        buildPyramidCameraMatrix(cameraMatrix, (int)pyramidDepth.size(), pyramidCameraMatrix);
+        buildPyramidCameraMatrix(cameraMatrix, (int)depthSize, pyramidCameraMatrix);
 
-        pyramidCloud.resize(pyramidDepth.size());
-        for(size_t i = 0; i < pyramidDepth.size(); i++)
+        pyramidCloud.create(depthSize, 1, CV_32FC3, -1);
+        for(size_t i = 0; i < depthSize; i++)
         {
-            Mat cloud;
-            depthTo3d(pyramidDepth[i], pyramidCameraMatrix[i], cloud);
-            pyramidCloud[i] = cloud;
+            TMat cloud;
+            depthTo3d(getTMat<TMat>(pyramidDepth, i), pyramidCameraMatrix[i], cloud);
+            getTMatRef<TMat>(pyramidCloud, i) = cloud;
         }
     }
 }
 
+template<typename TMat>
 static
-void preparePyramidSobel(const std::vector<Mat>& pyramidImage, int dx, int dy, std::vector<Mat>& pyramidSobel)
+void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputOutputArrayOfArrays pyramidSobel)
 {
+    size_t imgLevels = pyramidImage.size(-1).width;
+    size_t sobelLvls = pyramidSobel.size(-1).width;
     if(!pyramidSobel.empty())
     {
-        if(pyramidSobel.size() != pyramidImage.size())
+        if(sobelLvls != imgLevels)
             CV_Error(Error::StsBadSize, "Incorrect size of pyramidSobel.");
 
-        for(size_t i = 0; i < pyramidSobel.size(); i++)
+        for(size_t i = 0; i < sobelLvls; i++)
         {
-            CV_Assert(pyramidSobel[i].size() == pyramidImage[i].size());
-            CV_Assert(pyramidSobel[i].type() == CV_16SC1);
+            CV_Assert(pyramidSobel.size(i) == pyramidImage.size(i));
+            CV_Assert(pyramidSobel.type(i) == CV_16SC1);
         }
     }
     else
     {
-        pyramidSobel.resize(pyramidImage.size());
-        for(size_t i = 0; i < pyramidImage.size(); i++)
+        pyramidSobel.create(imgLevels, 1, CV_16SC1, -1);
+        for(size_t i = 0; i < imgLevels; i++)
         {
-            Sobel(pyramidImage[i], pyramidSobel[i], CV_16S, dx, dy, sobelSize);
+            Sobel(getTMat<TMat>(pyramidImage, i), getTMatRef<TMat>(pyramidSobel, i), CV_16S, dx, dy, sobelSize);
         }
     }
 }
 
 static
-void randomSubsetOfMask(Mat& mask, float part)
+void randomSubsetOfMask(InputOutputArray _mask, float part)
 {
     const int minPointsCount = 1000; // minimum point count (we can process them fast)
-    const int nonzeros = countNonZero(mask);
-    const int needCount = std::max(minPointsCount, int(mask.total() * part));
+    const int nonzeros = countNonZero(_mask);
+    const int needCount = std::max(minPointsCount, int(_mask.total() * part));
     if(needCount < nonzeros)
     {
         RNG rng;
+        Mat mask = _mask.getMat();
         Mat subset(mask.size(), CV_8UC1, Scalar(0));
 
         int subsetSize = 0;
@@ -273,35 +318,40 @@ void randomSubsetOfMask(Mat& mask, float part)
                 subsetSize++;
             }
         }
-        mask = subset;
+        _mask.assign(subset);
     }
 }
 
 static
-void preparePyramidTexturedMask(const std::vector<Mat>& pyramid_dI_dx, const std::vector<Mat>& pyramid_dI_dy,
-                                const std::vector<float>& minGradMagnitudes, const std::vector<Mat>& pyramidMask, double maxPointsPart,
-                                std::vector<Mat>& pyramidTexturedMask)
+void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfArrays pyramid_dI_dy,
+                                InputArray minGradMagnitudes, InputArrayOfArrays pyramidMask, double maxPointsPart,
+                                InputOutputArrayOfArrays pyramidTexturedMask)
 {
+    size_t didxLevels = pyramid_dI_dx.size(-1).width;
+    size_t texLevels = pyramidTexturedMask.size(-1).width;
     if(!pyramidTexturedMask.empty())
     {
-        if(pyramidTexturedMask.size() != pyramid_dI_dx.size())
+        if(texLevels != didxLevels)
             CV_Error(Error::StsBadSize, "Incorrect size of pyramidTexturedMask.");
 
-        for(size_t i = 0; i < pyramidTexturedMask.size(); i++)
+        for(size_t i = 0; i < texLevels; i++)
         {
-            CV_Assert(pyramidTexturedMask[i].size() == pyramid_dI_dx[i].size());
-            CV_Assert(pyramidTexturedMask[i].type() == CV_8UC1);
+            CV_Assert(pyramidTexturedMask.size(i) == pyramid_dI_dx.size(i));
+            CV_Assert(pyramidTexturedMask.type(i) == CV_8UC1);
         }
     }
     else
     {
+        CV_Assert(minGradMagnitudes.type() == CV_32F);
+        Mat_<float> mgMags = minGradMagnitudes.getMat();
+
         const float sobelScale2_inv = 1.f / (float)(sobelScale * sobelScale);
-        pyramidTexturedMask.resize(pyramid_dI_dx.size());
-        for(size_t i = 0; i < pyramidTexturedMask.size(); i++)
+        pyramidTexturedMask.create(didxLevels, 1, CV_8UC1, -1);
+        for(size_t i = 0; i < didxLevels; i++)
         {
-            const float minScaledGradMagnitude2 = minGradMagnitudes[i] * minGradMagnitudes[i] * sobelScale2_inv;
-            const Mat& dIdx = pyramid_dI_dx[i];
-            const Mat& dIdy = pyramid_dI_dy[i];
+            const float minScaledGradMagnitude2 = mgMags(i) * mgMags(i) * sobelScale2_inv;
+            const Mat& dIdx = pyramid_dI_dx.getMat(i);
+            const Mat& dIdy = pyramid_dI_dy.getMat(i);
 
             Mat texturedMask(dIdx.size(), CV_8UC1, Scalar(0));
 
@@ -317,34 +367,37 @@ void preparePyramidTexturedMask(const std::vector<Mat>& pyramid_dI_dx, const std
                         texturedMask_row[x] = 255;
                 }
             }
-            pyramidTexturedMask[i] = texturedMask & pyramidMask[i];
+            Mat texMask = texturedMask & pyramidMask.getMat(i);
 
-            randomSubsetOfMask(pyramidTexturedMask[i], (float)maxPointsPart);
+            randomSubsetOfMask(texMask, (float)maxPointsPart);
+            pyramidTexturedMask.getMatRef(i) = texMask;
         }
     }
 }
 
 static
-void preparePyramidNormals(const Mat& normals, const std::vector<Mat>& pyramidDepth, std::vector<Mat>& pyramidNormals)
+void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, InputOutputArrayOfArrays pyramidNormals)
 {
+    size_t depthLevels = pyramidDepth.size(-1).width;
+    size_t normalsLevels = pyramidNormals.size(-1).width;
     if(!pyramidNormals.empty())
     {
-        if(pyramidNormals.size() != pyramidDepth.size())
+        if(normalsLevels != depthLevels)
             CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormals.");
 
-        for(size_t i = 0; i < pyramidNormals.size(); i++)
+        for(size_t i = 0; i < normalsLevels; i++)
         {
-            CV_Assert(pyramidNormals[i].size() == pyramidDepth[i].size());
-            CV_Assert(pyramidNormals[i].type() == CV_32FC3);
+            CV_Assert(pyramidNormals.size(i) == pyramidDepth.size(i));
+            CV_Assert(pyramidNormals.type(i) == CV_32FC3);
         }
     }
     else
     {
-        buildPyramid(normals, pyramidNormals, (int)pyramidDepth.size() - 1);
+        buildPyramid(normals, pyramidNormals, (int)depthLevels - 1);
         // renormalize normals
-        for(size_t i = 1; i < pyramidNormals.size(); i++)
+        for(size_t i = 1; i < depthLevels; i++)
         {
-            Mat& currNormals = pyramidNormals[i];
+            Mat& currNormals = pyramidNormals.getMatRef(i);
             for(int y = 0; y < currNormals.rows; y++)
             {
                 Point3f* normals_row = currNormals.ptr<Point3f>(y);
@@ -359,32 +412,35 @@ void preparePyramidNormals(const Mat& normals, const std::vector<Mat>& pyramidDe
 }
 
 static
-void preparePyramidNormalsMask(const std::vector<Mat>& pyramidNormals, const std::vector<Mat>& pyramidMask, double maxPointsPart,
-                               std::vector<Mat>& pyramidNormalsMask)
+void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask, double maxPointsPart,
+                               InputOutputArrayOfArrays /*std::vector<Mat>&*/ pyramidNormalsMask)
 {
+    size_t maskLevels = pyramidMask.size(-1).width;
+    size_t norMaskLevels = pyramidNormalsMask.size(-1).width;
     if(!pyramidNormalsMask.empty())
     {
-        if(pyramidNormalsMask.size() != pyramidMask.size())
+        if(norMaskLevels != maskLevels)
             CV_Error(Error::StsBadSize, "Incorrect size of pyramidNormalsMask.");
 
-        for(size_t i = 0; i < pyramidNormalsMask.size(); i++)
+        for(size_t i = 0; i < norMaskLevels; i++)
         {
-            CV_Assert(pyramidNormalsMask[i].size() == pyramidMask[i].size());
-            CV_Assert(pyramidNormalsMask[i].type() == pyramidMask[i].type());
+            CV_Assert(pyramidNormalsMask.size(i) == pyramidMask.size(i));
+            CV_Assert(pyramidNormalsMask.type(i) == pyramidMask.type(i));
         }
     }
     else
     {
-        pyramidNormalsMask.resize(pyramidMask.size());
-
-        for(size_t i = 0; i < pyramidNormalsMask.size(); i++)
+        pyramidNormalsMask.create(maskLevels, 1, CV_8U, -1);
+        for(size_t i = 0; i < maskLevels; i++)
         {
-            pyramidNormalsMask[i] = pyramidMask[i].clone();
-            Mat& normalsMask = pyramidNormalsMask[i];
+            Mat& normalsMask = pyramidNormalsMask.getMatRef(i);
+            normalsMask = pyramidMask.getMat(i).clone();
+
+            const Mat normals = pyramidNormals.getMat(i);
             for(int y = 0; y < normalsMask.rows; y++)
             {
-                const Vec3f *normals_row = pyramidNormals[i].ptr<Vec3f>(y);
-                uchar *normalsMask_row = pyramidNormalsMask[i].ptr<uchar>(y);
+                const Vec3f *normals_row = normals.ptr<Vec3f>(y);
+                uchar *normalsMask_row = normalsMask.ptr<uchar>(y);
                 for(int x = 0; x < normalsMask.cols; x++)
                 {
                     Vec3f n = normals_row[x];
@@ -940,7 +996,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
 template<class ImageElemType>
 static void
-warpFrameImpl(const Mat& image, const Mat& depth, const Mat& mask,
+warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
               const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
               OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
@@ -955,20 +1011,23 @@ warpFrameImpl(const Mat& image, const Mat& depth, const Mat& mask,
     projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
                 distCoeff, points2d);
 
-    _warpedImage.create(image.size(), image.type());
+    Mat image = _image.getMat();
+    Size sz = _image.size();
+    Mat mask = _mask.getMat();
+    _warpedImage.create(sz, image.type());
     Mat warpedImage = _warpedImage.getMat();
 
-    Mat zBuffer(image.size(), CV_32FC1, std::numeric_limits<float>::max());
-    const Rect rect = Rect(0, 0, image.cols, image.rows);
+    Mat zBuffer(sz, CV_32FC1, std::numeric_limits<float>::max());
+    const Rect rect = Rect(Point(), sz);
 
-    for (int y = 0; y < image.rows; y++)
+    for (int y = 0; y < sz.height; y++)
     {
         //const Point3f* cloud_row = cloud.ptr<Point3f>(y);
         const Point3f* transformedCloud_row = transformedCloud.ptr<Point3f>(y);
-        const Point2f* points2d_row = &points2d[y*image.cols];
+        const Point2f* points2d_row = &points2d[y*sz.width];
         const ImageElemType* image_row = image.ptr<ImageElemType>(y);
         const uchar* mask_row = mask.empty() ? 0 : mask.ptr<uchar>(y);
-        for (int x = 0; x < image.cols; x++)
+        for (int x = 0; x < sz.width; x++)
         {
             const float transformed_z = transformedCloud_row[x].z;
             const Point2i p2d = points2d_row[x];
@@ -1692,9 +1751,8 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
 }
 
 //
-
 void
-warpFrame(const Mat& image, const Mat& depth, const Mat& mask,
+warpFrame(InputArray image, InputArray depth, InputArray mask,
           const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
           OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
