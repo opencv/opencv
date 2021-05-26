@@ -40,7 +40,7 @@ namespace detail {
 * which is specific to ONNX models.
 */
 struct ParamDesc {
-    std::string model_path;
+    std::string model_path; //!< Path to model.
 
     // NB: nun_* may differ from topology's real input/output port numbers
     // (e.g. topology's partial execution)
