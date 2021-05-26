@@ -1726,14 +1726,19 @@ FastICPOdometry::FastICPOdometry(const Mat& _cameraMatrix,
                                  float _sigmaDepth,
                                  float _sigmaSpatial,
                                  int _kernelSize,
-                                 const std::vector<int>& _iterCounts) :
+                                 const std::vector<int>& _iterCounts,
+                                 float _depthFactor,
+                                 float _truncateThreshold
+                                ) :
     maxDistDiff(_maxDistDiff),
     angleThreshold(_angleThreshold),
     sigmaDepth(_sigmaDepth),
     sigmaSpatial(_sigmaSpatial),
     kernelSize(_kernelSize),
     iterCounts(Mat(_iterCounts).clone()),
-    cameraMatrix(_cameraMatrix)
+    cameraMatrix(_cameraMatrix),
+    depthFactor(_depthFactor),
+    truncateThreshold(_truncateThreshold)
 {
     if(iterCounts.empty())
         setDefaultIterCounts(iterCounts);

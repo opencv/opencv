@@ -1054,7 +1054,9 @@ namespace cv
                     float sigmaDepth = 0.04f,
                     float sigmaSpatial = 4.5f,
                     int kernelSize = 7,
-                    const std::vector<int>& iterCounts = std::vector<int>());
+                    const std::vector<int>& iterCounts = std::vector<int>(),
+                    float depthFactor = 1.f,
+                    float truncateThreshold = 0.f);
 
     CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix,
                                                float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
@@ -1114,6 +1116,22 @@ namespace cv
     {
         kernelSize = f;
     }
+    CV_WRAP float getDepthFactor() const
+    {
+        return depthFactor;
+    }
+    CV_WRAP void setDepthFactor(float _depthFactor)
+    {
+        depthFactor = _depthFactor;
+    }
+    CV_WRAP float getTruncateThreshold() const
+    {
+        return truncateThreshold;
+    }
+    CV_WRAP void setTruncateThreshold(float _truncateThreshold)
+    {
+        truncateThreshold = _truncateThreshold;
+    }
     CV_WRAP cv::Mat getIterationCounts() const
     {
         return iterCounts;
@@ -1159,6 +1177,10 @@ namespace cv
     Mat iterCounts;
 
     Mat cameraMatrix;
+
+    float depthFactor;
+
+    float truncateThreshold;
   };
 
   /** Warp the image: compute 3d points from the depth, transform them using given transformation,
