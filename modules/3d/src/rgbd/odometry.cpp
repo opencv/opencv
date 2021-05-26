@@ -832,8 +832,9 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     {
         const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
         const Mat& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
-        const Mat& srcLevelDepth = srcFrame->pyramidDepth[level];
-        const Mat& dstLevelDepth = dstFrame->pyramidDepth[level];
+        const Mat srcLevelDepth, dstLevelDepth;
+        srcFrame->getPyramidAt(srcLevelDepth, OdometryFrame::PYR_DEPTH, level);
+        dstFrame->getPyramidAt(dstLevelDepth, OdometryFrame::PYR_DEPTH, level);
 
         const double fx = levelCameraMatrix.at<double>(0,0);
         const double fy = levelCameraMatrix.at<double>(1,1);
@@ -847,24 +848,42 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
+            const Mat pyramidMask, pyramidTexturedMask, pyramidNormalsMask;
+            srcFrame->getPyramidAt(pyramidMask, OdometryFrame::PYR_MASK, level);
+            dstFrame->getPyramidAt(pyramidTexturedMask, OdometryFrame::PYR_TEXMASK, level);
+            dstFrame->getPyramidAt(pyramidNormalsMask, OdometryFrame::PYR_NORMMASK, level);
+
             if(method & RGBD_ODOMETRY)
+            {
                 computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidTexturedMask[level],
+                                srcLevelDepth, pyramidMask, dstLevelDepth, pyramidTexturedMask,
                                 maxDepthDiff, corresps_rgbd);
+            }
 
             if(method & ICP_ODOMETRY)
+            {
                 computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                                srcLevelDepth, srcFrame->pyramidMask[level], dstLevelDepth, dstFrame->pyramidNormalsMask[level],
+                                srcLevelDepth, pyramidMask, dstLevelDepth, pyramidNormalsMask,
                                 maxDepthDiff, corresps_icp);
+            }
 
             if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount)
                 break;
 
+            const Mat srcPyrImage, dstPyrImage, srcPyrCloud, dstPyrCloud;
+            srcFrame->getPyramidAt(srcPyrImage, OdometryFrame::PYR_IMAGE, level);
+            dstFrame->getPyramidAt(dstPyrImage, OdometryFrame::PYR_IMAGE, level);
+            srcFrame->getPyramidAt(srcPyrCloud, OdometryFrame::PYR_CLOUD, level);
+            dstFrame->getPyramidAt(dstPyrCloud, OdometryFrame::PYR_CLOUD, level);
+            const Mat dstPyrNormals, dstPyrIdx, dstPyrIdy;
+            dstFrame->getPyramidAt(dstPyrNormals, OdometryFrame::PYR_NORM, level);
+            dstFrame->getPyramidAt(dstPyrIdx, OdometryFrame::PYR_DIX, level);
+            dstFrame->getPyramidAt(dstPyrIdy, OdometryFrame::PYR_DIY, level);
+
             Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
             if(corresps_rgbd.rows >= minCorrespsCount)
             {
-                calcRgbdLsmMatrices(srcFrame->pyramidImage[level], srcFrame->pyramidCloud[level], resultRt,
-                                    dstFrame->pyramidImage[level], dstFrame->pyramid_dI_dx[level], dstFrame->pyramid_dI_dy[level],
+                calcRgbdLsmMatrices(srcPyrImage, srcPyrCloud, resultRt, dstPyrImage, dstPyrIdx, dstPyrIdy,
                                     corresps_rgbd, fx, fy, sobelScale,
                                     AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
 
@@ -873,8 +892,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
             if(corresps_icp.rows >= minCorrespsCount)
             {
-                calcICPLsmMatrices(srcFrame->pyramidCloud[level], resultRt,
-                                   dstFrame->pyramidCloud[level], dstFrame->pyramidNormals[level],
+                calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
                                    corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
                 AtA += AtA_icp;
                 AtB += AtB_icp;
@@ -1016,11 +1034,6 @@ struct OdometryFrameImpl : public OdometryFrame
         pyramidNormalsMask.clear();
     }
 
-    static inline TMat getTMat(InputArray m)
-    {
-        CV_Error(CV_StsBadArg, "Unsupported type");
-    }
-
     virtual void setImage(InputArray  _image) CV_OVERRIDE
     {
         image = getTMat<TMat>(_image);
@@ -1070,91 +1083,57 @@ struct OdometryFrameImpl : public OdometryFrame
         pyramidNormalsMask.resize(_nLevels, TMat());
     }
 
-    virtual size_t getPyramidLevels() CV_OVERRIDE
+    virtual size_t getPyramidLevels(int what = PYR_IMAGE) CV_OVERRIDE
     {
-        return pyramidImages.size();
+        switch (what)
+        {
+        case PYR_IMAGE: return pyramidImage.size();
+        case PYR_DEPTH: return pyramidDepth.size();
+        case PYR_MASK:  return pyramidMask.size();
+        case PYR_CLOUD: return pyramidCloud.size();
+        case PYR_DIX:   return pyramid_dI_dx.size();
+        case PYR_DIY:   return pyramid_dI_dy.size();
+        case PYR_TEXMASK:  return pyramidTexturedMask.size();
+        case PYR_NORM:  return pyramidNormals.size();
+        case PYR_NORMMASK: return pyramidNormalsMask.size();
+        default: return 0;
+        }
     }
 
-    virtual void setPyramidImage(InputArray  _pyrImage, size_t level) CV_OVERRIDE
+    virtual void setPyramidAt(InputArray  _pyrImage, int pyrType, size_t level) CV_OVERRIDE
     {
-        pyramidImage[level] = getTMat(_pyrImage);
+        TMat img = getTMat(_pyrImage);
+        switch (pyrType)
+        {
+        case PYR_IMAGE:    pyramidImage[level] = img;
+        case PYR_DEPTH:    pyramidDepth[level] = img;
+        case PYR_MASK:     pyramidMask[level] = img;
+        case PYR_CLOUD:    pyramidCloud[level] = img;
+        case PYR_DIX:      pyramid_dI_dx[level] = img;
+        case PYR_DIY:      pyramid_dI_dy[level] = img;
+        case PYR_TEXMASK:  pyramidTexturedMask[level] = img;
+        case PYR_NORM:     pyramidNormals[level] = img;
+        case PYR_NORMMASK: pyramidNormalsMask[level] = img;
+        }
     }
-    virtual void getPyramidImage(OutputArray _pyrImage, size_t level) CV_OVERRIDE
+
+    CV_WRAP virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) CV_OVERRIDE
     {
-        _pyrImage.assign(pyramidImage[level]);
+        TMat img;
+        switch (pyrType)
+        {
+        case PYR_IMAGE:    img = pyramidImage[level];
+        case PYR_DEPTH:    img = pyramidDepth[level];
+        case PYR_MASK:     img = pyramidMask[level];
+        case PYR_CLOUD:    img = pyramidCloud[level];
+        case PYR_DIX:      img = pyramid_dI_dx[level];
+        case PYR_DIY:      img = pyramid_dI_dy[level];
+        case PYR_TEXMASK:  img = pyramidTexturedMask[level];
+        case PYR_NORM:     img = pyramidNormals[level];
+        case PYR_NORMMASK: img = pyramidNormalsMask[level];
+        }
+        _pyrImage.assign(img);
     }
-
-      virtual void setPyramidDepth(InputArray  _pyrDepth, size_t level) CV_OVERRIDE
-      {
-          pyramidDepth[level] = getTMat(_pyrDepth);
-      }
-      virtual void getPyramidDepth(OutputArray _pyrDepth, size_t level) CV_OVERRIDE
-      {
-          _pyrDepth.assign(pyramidDepth[level]);
-      }
-
-      virtual void setPyramidMask(InputArray  _pyrMask, size_t level) CV_OVERRIDE
-      {
-          pyramidMask[level] = getTMat(_pyrMask);
-      }
-      virtual void getPyramidMask(OutputArray _pyrMask, size_t level) CV_OVERRIDE
-      {
-          _pyrMask.assign(pyramidMask[level]);
-      }
-
-      virtual void setPyramidCloud(InputArray  _pyrCloud, size_t level) CV_OVERRIDE
-      {
-          pyramidCloud[level] = getTMat(_pyrCloud);
-      }
-      virtual void getPyramidCloud(OutputArray _pyrCloud, size_t level) CV_OVERRIDE
-      {
-          _pyrCloud.assign(pyramidCloud[level]);
-      }
-
-      virtual void setPyramid_dI_dx(InputArray  _pyr_dI_dx, size_t level) CV_OVERRIDE
-      {
-          pyramid_dI_dx[level] = getTMat(_pyr_dI_dx);
-      }
-      virtual void getPyramid_dI_dx(OutputArray _pyr_dI_dx, size_t level) CV_OVERRIDE
-      {
-          _pyr_dI_dx.assign(pyramid_dI_dx[level]);
-      }
-
-      virtual void setPyramid_dI_dy(InputArray  _pyr_dI_dy, size_t level) CV_OVERRIDE
-      {
-          pyramid_dI_dy[level] = getTMat(_pyr_dI_dy);
-      }
-      virtual void getPyramid_dI_dy(OutputArray _pyr_dI_dy, size_t level) CV_OVERRIDE
-      {
-          _pyr_dI_dy.assign(pyramid_dI_dy[level]);
-      }
-
-      virtual void setPyramidTexturedMask(InputArray  _pyrTexturedMask, size_t level) CV_OVERRIDE
-      {
-          pyramidTexturedMask[level] = getTMat(_pyrTexturedMask);
-      }
-      virtual void getPyramidTexturedMask(OutputArray _pyrTexturedMask, size_t level) CV_OVERRIDE
-      {
-          _pyrTexturedMask.assign(pyramidTexturedMask[level]);
-      }
-
-      virtual void setPyramidNormals(InputArray  _pyrNormals, size_t level) CV_OVERRIDE
-      {
-          pyramidNormals[level] = getTMat(_pyrNormals);
-      }
-      virtual void getPyramidNormals(OutputArray _pyrNormals, size_t level) CV_OVERRIDE
-      {
-          _pyrNormals.assign(pyramidNormals[level]);
-      }
-
-      virtual void setPyramidNormalsMask(InputArray  _pyrNormalsMask, size_t level) CV_OVERRIDE
-      {
-          pyramidNormalsMask[level] = getTMat(_pyrNormalsMask);
-      }
-     virtual void getPyramidNormalsMask(OutputArray _pyrNormalsMask, size_t level) CV_OVERRIDE
-     {
-         _pyrNormalsMask.assign(pyramidNormalsMask[level]);
-     }
 
     TMat image;
     TMat depth;
@@ -1191,17 +1170,6 @@ OdometryFrameImpl<UMat>::OdometryFrameImpl(InputArray _image, InputArray _depth,
     ID = _ID;
 }
 
-template<>
-static inline Mat OdometryFrameImpl<Mat>::getTMat(InputArray m)
-{
-    return m.getMat();
-}
-
-template<>
-static inline UMat OdometryFrameImpl<UMat>::getTMat(InputArray m)
-{
-    return m.getUMat();
-}
 
 Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID)
 {

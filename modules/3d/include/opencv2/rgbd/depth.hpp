@@ -472,6 +472,22 @@ namespace cv
       CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST
     };
 
+    /** Indicates what pyramid size is to get using get/set methods:
+    * @param PYR_IMAGE The pyramid of RGB images
+    * @param PYR_DEPTH The pyramid of depth images
+    * @param PYR_MASK  The pyramid of masks
+    * @param PYR_CLOUD The pyramid of point clouds, produced from the pyramid of depths
+    * @param PYR_DIX   The pyramid of dI/dx derivative images
+    * @param PYR_DIY   The pyramid of dI/dy derivative images
+    * @param PYR_TEXMASK The pyramid of textured masks
+    * @param PYR_NORM  The pyramid of normals
+    * @param PYR_NORMMASK The pyramid of normals masks
+    */
+    enum
+    {
+        PYR_IMAGE, PYR_DEPTH, PYR_MASK, PYR_CLOUD, PYR_DIX, PYR_DIY, PYR_TEXMASK, PYR_NORM, PYR_NORMMASK
+    };
+
     OdometryFrame() : ID(-1) { }
     virtual ~OdometryFrame() { }
 
@@ -492,34 +508,10 @@ namespace cv
     CV_WRAP virtual void getNormals(OutputArray _normals) = 0;
 
     CV_WRAP virtual void setPyramidLevels(size_t _nLevels) = 0;
-    CV_WRAP virtual size_t getPyramidLevels() = 0;
+    CV_WRAP virtual size_t getPyramidLevels(int pyrType) = 0;
 
-    CV_WRAP virtual void setPyramidImage(InputArray  _pyrImage, size_t level) = 0;
-    CV_WRAP virtual void getPyramidImage(OutputArray _pyrImage, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidDepth(InputArray  _pyrDepth, size_t level) = 0;
-    CV_WRAP virtual void getPyramidDepth(OutputArray _pyrDepth, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidMask(InputArray  _pyrMask, size_t level) = 0;
-    CV_WRAP virtual void getPyramidMask(OutputArray _pyrMask, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidCloud(InputArray  _pyrCloud, size_t level) = 0;
-    CV_WRAP virtual void getPyramidCloud(OutputArray _pyrCloud, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramid_dI_dx(InputArray  _pyr_dI_dx, size_t level) = 0;
-    CV_WRAP virtual void getPyramid_dI_dx(OutputArray _pyr_dI_dx, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramid_dI_dy(InputArray  _pyr_dI_dy, size_t level) = 0;
-    CV_WRAP virtual void getPyramid_dI_dy(OutputArray _pyr_dI_dy, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidTexturedMask(InputArray  _pyrTexturedMask, size_t level) = 0;
-    CV_WRAP virtual void getPyramidTexturedMask(OutputArray _pyrTexturedMask, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidNormals(InputArray  _pyrNormals, size_t level) = 0;
-    CV_WRAP virtual void getPyramidNormals(OutputArray _pyrNormals, size_t level) = 0;
-
-    CV_WRAP virtual void setPyramidNormalsMask(InputArray  _pyrNormalsMask, size_t level) = 0;
-    CV_WRAP virtual void getPyramidNormalsMask(OutputArray _pyrNormalsMask, size_t level) = 0;
+    CV_WRAP virtual void setPyramidAt(InputArray  _pyrImage, int pyrType, size_t level) = 0;
+    CV_WRAP virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) = 0;
 
     CV_PROP int ID;
   };
