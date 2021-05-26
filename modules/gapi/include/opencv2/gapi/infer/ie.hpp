@@ -164,7 +164,7 @@ public:
 
     The function is used to associate data of graph outputs with output layers of
     CNN topology. If a CNN has only one output layer, there is no need to call it
-    as the layer is associated with ouput automatically but this doesn't prevent 
+    as the layer is associated with ouput automatically but this doesn't prevent
     you from doing it yourself. Count of names has to match to number of CNN
     outputs.
 
