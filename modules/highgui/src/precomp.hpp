@@ -42,10 +42,16 @@
 #ifndef __HIGHGUI_H_
 #define __HIGHGUI_H_
 
+#if defined(__OPENCV_BUILD) && defined(BUILD_PLUGIN)
+#undef __OPENCV_BUILD  // allow public API only
+#endif
+
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/core/utility.hpp"
+#if defined(__OPENCV_BUILD)
 #include "opencv2/core/private.hpp"
+#endif
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
@@ -168,5 +174,12 @@ inline void convertToShow(const cv::Mat &src, const CvMat* arr, bool toRGB = tru
     CV_Assert(dst.data == arr->data.ptr);
 }
 
+
+namespace cv {
+
+CV_EXPORTS Mutex& getWindowMutex();
+static inline Mutex& getInitializationMutex() { return getWindowMutex(); }
+
+}  // namespace
 
 #endif /* __HIGHGUI_H_ */
