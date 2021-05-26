@@ -1,9 +1,45 @@
 set(the_description "High-level GUI")
+
+set(ENABLE_PLUGINS_DEFAULT ON)
+if(EMSCRIPTEN OR IOS OR WINRT)
+  set(ENABLE_PLUGINS_DEFAULT OFF)
+endif()
+set(HIGHGUI_PLUGIN_LIST "" CACHE STRING "List of GUI backends to be compiled as plugins (gtk, gtk2/gtk3, qt, win32 or special value 'all')")
+set(HIGHGUI_ENABLE_PLUGINS "${ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building and using of GUI plugins")
+mark_as_advanced(HIGHGUI_PLUGIN_LIST HIGHGUI_ENABLE_PLUGINS)
+
+string(REPLACE "," ";" HIGHGUI_PLUGIN_LIST "${HIGHGUI_PLUGIN_LIST}")  # support comma-separated list (,) too
+if(NOT HIGHGUI_ENABLE_PLUGINS)
+  if(HIGHGUI_PLUGIN_LIST)
+    message(WARNING "HighGUI: plugins are disabled through HIGHGUI_ENABLE_PLUGINS, so HIGHGUI_PLUGIN_LIST='${HIGHGUI_PLUGIN_LIST}' is ignored")
+    set(HIGHGUI_PLUGIN_LIST "")
+  endif()
+else()
+  # Make virtual plugins target
+  if(NOT TARGET opencv_highgui_plugins)
+    add_custom_target(opencv_highgui_plugins ALL)
+  endif()
+endif()
+
 if(ANDROID)
   ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
 else()
   ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
 endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
+
+set(tgts "PRIVATE")
+
+set(highgui_hdrs
+    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
+    )
+
+set(highgui_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/backend.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
+    )
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -24,15 +60,6 @@ if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
 endif()
 
-set(highgui_hdrs
-    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
-    )
-
-set(highgui_srcs
-    ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
-    )
-
 file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
@@ -42,6 +69,8 @@ file(GLOB highgui_ext_hdrs
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
 if(HAVE_QT5)
+  add_definitions(-DHAVE_QT)
+
   # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
   #set(CMAKE_AUTOMOC ON)
 
@@ -62,13 +91,16 @@ if(HAVE_QT5)
   endforeach()
 
   if(HAVE_QT_OPENGL)
+    add_definitions(-DHAVE_QT_OPENGL)
     add_definitions(${Qt5OpenGL_DEFINITIONS})
     include_directories(${Qt5OpenGL_INCLUDE_DIRS})
     list(APPEND HIGHGUI_LIBRARIES ${Qt5OpenGL_LIBRARIES})
   endif()
 
 elseif(HAVE_QT)
-  if (HAVE_QT_OPENGL)
+  add_definitions(-DHAVE_QT)
+  if(HAVE_QT_OPENGL)
+    add_definitions(-DHAVE_QT_OPENGL)
     set(QT_USE_QTOPENGL TRUE)
   endif()
   include(${QT_USE_FILE})
@@ -121,11 +153,62 @@ elseif(HAVE_WIN32UI)
   if(OpenCV_ARCH STREQUAL "ARM64")
     list(APPEND HIGHGUI_LIBRARIES "comdlg32" "advapi32")
   endif()
-elseif(HAVE_GTK OR HAVE_GTK3)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
 elseif(HAVE_COCOA)
+  add_definitions(-DHAVE_COCOA)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
+endif()
+
+if(TARGET ocv.3rdparty.gtk3 OR TARGET ocv.3rdparty.gtk2)
+  if(TARGET ocv.3rdparty.gtk3 AND NOT WITH_GTK_2_X)
+    set(__gtk_dependency "ocv.3rdparty.gtk3")
+  else()
+    set(__gtk_dependency "ocv.3rdparty.gtk2")
+  endif()
+  if(
+    NOT HIGHGUI_PLUGIN_LIST STREQUAL "all"
+    AND NOT "gtk" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT "gtk2" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT "gtk3" IN_LIST HIGHGUI_PLUGIN_LIST
+  )
+    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
+    list(APPEND tgts ${__gtk_dependency})
+    if(TARGET ocv.3rdparty.gthread)
+      list(APPEND tgts ocv.3rdparty.gthread)
+    endif()
+    if(TARGET ocv.3rdparty.gtkglext
+        AND NOT OPENCV_GTK_DISABLE_GTKGLEXT
+    )
+      list(APPEND tgts ocv.3rdparty.gtkglext)
+    endif()
+  elseif("gtk" IN_LIST HIGHGUI_PLUGIN_LIST)
+    ocv_create_builtin_highgui_plugin(opencv_highgui_gtk ${__gtk_dependency} "window_gtk.cpp")
+    if(TARGET ocv.3rdparty.gthread)
+      ocv_target_link_libraries(opencv_highgui_gtk ocv.3rdparty.gthread)
+    endif()
+    if(TARGET ocv.3rdparty.gtkglext)
+      ocv_target_link_libraries(opencv_highgui_gtk ocv.3rdparty.gtkglext)
+    endif()
+  else()
+    if(TARGET ocv.3rdparty.gtk3 AND ("gtk3" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all"))
+      ocv_create_builtin_highgui_plugin(opencv_highgui_gtk3 ocv.3rdparty.gtk3 "window_gtk.cpp")
+      if(TARGET ocv.3rdparty.gthread)
+        ocv_target_link_libraries(opencv_highgui_gtk3 ocv.3rdparty.gthread)
+      endif()
+      if(TARGET ocv.3rdparty.gtkglext)
+        ocv_target_link_libraries(opencv_highgui_gtk3 ocv.3rdparty.gtkglext)
+      endif()
+    endif()
+    if(TARGET ocv.3rdparty.gtk2 AND ("gtk2" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all"))
+      ocv_create_builtin_highgui_plugin(opencv_highgui_gtk2 ocv.3rdparty.gtk2 "window_gtk.cpp")
+      if(TARGET ocv.3rdparty.gthread)
+        ocv_target_link_libraries(opencv_highgui_gtk2 ocv.3rdparty.gthread)
+      endif()
+      if(TARGET ocv.3rdparty.gtkglext)
+        ocv_target_link_libraries(opencv_highgui_gtk2 ocv.3rdparty.gtkglext)
+      endif()
+    endif()
+  endif()
 endif()
 
 if(TRUE)
@@ -136,6 +219,21 @@ if(TRUE)
 
   foreach(P ${HIGHGUI_LIBRARY_DIRS})
     link_directories(${P})
+  endforeach()
+endif()
+
+if(tgts STREQUAL "PRIVATE")
+  set(tgts "")
+endif()
+
+# install used dependencies only
+if(NOT BUILD_SHARED_LIBS
+    AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+)
+  foreach(tgt in ${tgts})
+    if(tgt MATCHES "^ocv\.3rdparty\.")
+      install(TARGETS ${tgt} EXPORT OpenCVModules)
+    endif()
   endforeach()
 endif()
 
@@ -162,5 +260,14 @@ if(NOT BUILD_opencv_world)
   ocv_highgui_configure_target()
 endif()
 
-ocv_add_accuracy_tests()
-ocv_add_perf_tests()
+ocv_add_accuracy_tests(${tgts})
+#ocv_add_perf_tests(${tgts})
+
+if(HIGHGUI_ENABLE_PLUGINS)
+  ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)
+  if(TARGET opencv_test_highgui)
+    ocv_target_compile_definitions(opencv_test_highgui PRIVATE ENABLE_PLUGINS)
+  endif()
+endif()
+
+ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})

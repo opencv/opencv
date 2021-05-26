@@ -1,3 +1,5 @@
+ocv_cmake_dump_vars("" TOFILE "CMakeVars2.txt")
+set(OCV_TEST_VAR 123)
 add_definitions(-D__OPENCV_BUILD=1)
 
 if(NOT OPENCV_MODULES_PATH)
