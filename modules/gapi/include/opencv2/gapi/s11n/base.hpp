@@ -10,9 +10,6 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/own/exports.hpp>
 
-/** \defgroup gapi_serialization G-API Serialization functionality
- */
-
 namespace cv {
 namespace gapi {
 namespace s11n {
