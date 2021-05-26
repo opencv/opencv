@@ -156,7 +156,7 @@ sift = cv.SIFT_create()
 kp, des = sift.detectAndCompute(gray,None)
 @endcode
 Here kp will be a list of keypoints and des is a numpy array of shape
-\f$Number\_of\_Keypoints \times 128\f$.
+\f$\text{(Number of Keypoints)} \times 128\f$.
 
 So we got keypoints, descriptors etc. Now we want to see how to match keypoints in different images.
 That we will learn in coming chapters.
