@@ -399,10 +399,10 @@ GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
 
 /** @overload
- This operator is used to serialize cv::::gapi::wip::IStreamSource::Ptr into IOStream object.
- @param os IOStream object to serialize and store cv::::gapi::wip::IStreamSource::Ptr.
- @param issptr cv::::gapi::wip::IStreamSource::Ptr to serialize.
- @return IOStream object with serialized cv::::gapi::wip::IStreamSource::Ptr inside.
+ This operator is used to serialize cv::gapi::wip::IStreamSource::Ptr into IOStream object.
+ @param os IOStream object to serialize and store cv::gapi::wip::IStreamSource::Ptr.
+ @param issptr cv::gapi::wip::IStreamSource::Ptr to serialize.
+ @return IOStream object with serialized cv::gapi::wip::IStreamSource::Ptr inside.
  @see serialize IOStream
  */
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &issptr);
