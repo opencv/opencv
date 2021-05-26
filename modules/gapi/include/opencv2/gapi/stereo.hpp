@@ -14,24 +14,24 @@
 namespace cv {
 namespace gapi {
 
-/*! Enum class specifies output format of stereo() function */
+/// Enum class specifies output format of stereo() function
 enum class StereoOutputFormat {
-    DEPTH_FLOAT16, /**< Floating poinf 16 bin value, CV_16FC1 */
-    DEPTH_FLOAT32, /**< Floating poinf 32 bin value, CV_32FC1 */
-    DISPARITY_FIXED16_11_5, /**< 16 bit signed. 1 bit for sign,
-                                 10 bits for integer,
-                                 5 bits for fractional */
-    DISPARITY_FIXED16_12_4, /**< 16 bit signed: 1 bit for sign,
-                                 11 bits for integer,
-                                 4 bits for fractional */
-    DEPTH_F16, /**< Floating poinf 16 bin value, CV_16FC1 */
-    DEPTH_F32, /**< Floating poinf 32 bin value, CV_32FC1 */
-    DISPARITY_Q16_10_5, /**< 16 bit signed. 1 bit for sign,
-                             10 bits for integer,
-                             5 bits for fractional */
-    DISPARITY_Q16_11_4  /**< 16 bit signed: 1 bit for sign,
-                             11 bits for integer,
-                             4 bits for fractional */
+    DEPTH_FLOAT16, ///< Floating poinf 16 bin value, CV_16FC1
+    DEPTH_FLOAT32, ///< Floating poinf 32 bin value, CV_32FC1
+    DISPARITY_FIXED16_11_5, ///< 16 bit signed. 1 bit for sign,
+                            ///< 10 bits for integer,
+                            ///< 5 bits for fractional
+    DISPARITY_FIXED16_12_4, ///< 16 bit signed: 1 bit for sign,
+                            ///< 11 bits for integer,
+                            ///< 4 bits for fractional
+    DEPTH_F16, ///< Floating poinf 16 bin value, CV_16FC1
+    DEPTH_F32, ///< Floating poinf 32 bin value, CV_32FC1
+    DISPARITY_Q16_10_5, ///< 16 bit signed. 1 bit for sign,
+                        ///< 10 bits for integer,
+                        ///< 5 bits for fractional
+    DISPARITY_Q16_11_4  ///< 16 bit signed: 1 bit for sign,
+                        ///< 11 bits for integer,
+                        ///< 4 bits for fractional
 };
 
 namespace calib3d {
@@ -65,7 +65,7 @@ G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.openc
 
 } // namespace calib3d
 
-/** @brief Compute disparity/depth map for the specified stereo-pair.
+/// @brief Compute disparity/depth map for the specified stereo-pair.
 The function compute disparity or depth map depending on passed StereoOutputFormat argument.
 
 @param left Left 8-bit single-channel image.
