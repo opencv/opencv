@@ -53,7 +53,7 @@ namespace detail {
 */
 struct ParamDesc {
     /*@{*/
-    std::string model_path; //!< Path to topology IR (.xml file)
+    std::string model_path; //!< Path to model.
     std::string weights_path; //!< Path to weights (.bin file).
     std::string device_id; //!< Device specifier.
 
