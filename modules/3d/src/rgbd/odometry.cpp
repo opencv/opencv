@@ -1330,56 +1330,78 @@ Ptr<RgbdOdometry> RgbdOdometry::create(const Mat& _cameraMatrix, float _minDepth
 
 Size RgbdOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 {
-    Odometry::prepareFrameCache(frame, cacheType);
+    // can be transformed into template argument in the future
+    typedef Mat TMat;
 
-    if(frame->image.empty())
+    Odometry::prepareFrameCache(frame, cacheType);
+    TMat image;
+    frame->getImage(image);
+    if(image.empty())
     {
-        if(!frame->pyramidImage.empty())
-            frame->image = frame->pyramidImage[0];
+        if (frame->getPyramidLevels(OdometryFrame::PYR_IMAGE) > 0)
+        {
+            TMat pyr0;
+            frame->getPyramidAt(pyr0, OdometryFrame::PYR_IMAGE, 0);
+            frame->setImage(pyr0);
+        }
         else
             CV_Error(Error::StsBadSize, "Image or pyramidImage have to be set.");
     }
-    checkImage(frame->image);
+    checkImage(image);
 
-    if(frame->depth.empty())
+    TMat depth;
+    frame->getDepth(depth);
+    if(depth.empty())
     {
-        if(!frame->pyramidDepth.empty())
-            frame->depth = frame->pyramidDepth[0];
-        else if(!frame->pyramidCloud.empty())
+        if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH) > 0)
         {
-            Mat cloud = frame->pyramidCloud[0];
-            std::vector<Mat> xyz;
+            TMat pyr0;
+            frame->getPyramidAt(pyr0, OdometryFrame::PYR_DEPTH, 0);
+            frame->setDepth(pyr0);
+        }
+        else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD) > 0)
+        {
+            TMat cloud;
+            frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
+            std::vector<TMat> xyz;
             split(cloud, xyz);
-            frame->depth = xyz[2];
+            frame->setDepth(xyz[2]);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
-    checkDepth(frame->depth, frame->image.size());
+    checkDepth(depth, image.size());
 
-    if(frame->mask.empty() && !frame->pyramidMask.empty())
-        frame->mask = frame->pyramidMask[0];
-    checkMask(frame->mask, frame->image.size());
+    TMat mask;
+    frame->getMask(mask);
+    if (mask.empty() && frame->getPyramidLevels(OdometryFrame::PYR_MASK) > 0)
+    {
+        TMat pyr0;
+        frame->getPyramidAt(pyr0, OdometryFrame::PYR_MASK, 0);
+        frame->setMask(pyr0);
+    }
+    checkMask(mask, image.size());
 
-    preparePyramidImage(frame->image, frame->pyramidImage, iterCounts.total());
+    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+    preparePyramidImage(image, tframe->pyramidImage, iterCounts.total());
 
-    preparePyramidDepth(frame->depth, frame->pyramidDepth, iterCounts.total());
+    preparePyramidDepth(depth, tframe->pyramidDepth, iterCounts.total());
 
-    preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-                       frame->pyramidNormals, frame->pyramidMask);
+    preparePyramidMask<TMat>(mask, tframe->pyramidDepth, (float)minDepth, (float)maxDepth,
+                             tframe->pyramidNormals, tframe->pyramidMask);
 
     if(cacheType & OdometryFrame::CACHE_SRC)
-        preparePyramidCloud(frame->pyramidDepth, cameraMatrix, frame->pyramidCloud);
+        preparePyramidCloud<TMat>(tframe->pyramidDepth, cameraMatrix, tframe->pyramidCloud);
 
     if(cacheType & OdometryFrame::CACHE_DST)
     {
-        preparePyramidSobel(frame->pyramidImage, 1, 0, frame->pyramid_dI_dx);
-        preparePyramidSobel(frame->pyramidImage, 0, 1, frame->pyramid_dI_dy);
-        preparePyramidTexturedMask(frame->pyramid_dI_dx, frame->pyramid_dI_dy, minGradientMagnitudes,
-                                   frame->pyramidMask, maxPointsPart, frame->pyramidTexturedMask);
+        preparePyramidSobel<TMat>(tframe->pyramidImage, 1, 0, tframe->pyramid_dI_dx);
+        preparePyramidSobel<TMat>(tframe->pyramidImage, 0, 1, tframe->pyramid_dI_dy);
+        preparePyramidTexturedMask(tframe->pyramid_dI_dx, tframe->pyramid_dI_dy, minGradientMagnitudes,
+                                   tframe->pyramidMask, maxPointsPart, tframe->pyramidTexturedMask);
     }
 
-    return frame->image.size();
+    return image.size();
 }
 
 void RgbdOdometry::checkParams() const
@@ -1424,68 +1446,93 @@ Ptr<ICPOdometry> ICPOdometry::create(const Mat& _cameraMatrix, float _minDepth, 
 
 Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 {
+    // can be transformed into template argument in the future
+    typedef Mat TMat;
+
     Odometry::prepareFrameCache(frame, cacheType);
 
-    if(frame->depth.empty())
+    TMat depth;
+    frame->getDepth(depth);
+    if(depth.empty())
     {
-        if(!frame->pyramidDepth.empty())
-            frame->depth = frame->pyramidDepth[0];
-        else if(!frame->pyramidCloud.empty())
+        if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
         {
-            Mat cloud = frame->pyramidCloud[0];
-            std::vector<Mat> xyz;
+            TMat pyr0;
+            frame->getPyramidAt(pyr0, OdometryFrame::PYR_DEPTH, 0);
+            frame->setDepth(pyr0);
+        }
+        else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
+        {
+            TMat cloud;
+            frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
+            std::vector<TMat> xyz;
             split(cloud, xyz);
-            frame->depth = xyz[2];
+            frame->setDepth(xyz[2]);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
-    checkDepth(frame->depth, frame->depth.size());
+    checkDepth(depth, depth.size());
 
-    if(frame->mask.empty() && !frame->pyramidMask.empty())
-        frame->mask = frame->pyramidMask[0];
-    checkMask(frame->mask, frame->depth.size());
+    TMat mask;
+    frame->getMask(mask);
+    if (mask.empty() && frame->getPyramidLevels(OdometryFrame::PYR_MASK))
+    {
+        Mat m0;
+        frame->getPyramidAt(m0, OdometryFrame::PYR_MASK, 0);
+        frame->setMask(m0);
+    }
+    checkMask(mask, depth.size());
 
-    preparePyramidDepth(frame->depth, frame->pyramidDepth, iterCounts.total());
+    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+    preparePyramidDepth(depth, tframe->pyramidDepth, iterCounts.total());
 
-    preparePyramidCloud(frame->pyramidDepth, cameraMatrix, frame->pyramidCloud);
+    preparePyramidCloud<TMat>(tframe->pyramidDepth, cameraMatrix, tframe->pyramidCloud);
 
     if(cacheType & OdometryFrame::CACHE_DST)
     {
-        if(frame->normals.empty())
+        TMat normals;
+        frame->getNormals(normals);
+        if(normals.empty())
         {
-            if(!frame->pyramidNormals.empty())
-                frame->normals = frame->pyramidNormals[0];
+            if (frame->getPyramidLevels(OdometryFrame::PYR_NORM))
+            {
+                TMat n0;
+                frame->getPyramidAt(n0, OdometryFrame::PYR_NORM, 0);
+                frame->setNormals(n0);
+            }
             else
             {
                 if(normalsComputer.empty() ||
-                   normalsComputer->getRows() != frame->depth.rows ||
-                   normalsComputer->getCols() != frame->depth.cols ||
+                   normalsComputer->getRows() != depth.rows ||
+                   normalsComputer->getCols() != depth.cols ||
                    norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
-                   normalsComputer = makePtr<RgbdNormals>(frame->depth.rows,
-                                                          frame->depth.cols,
-                                                          frame->depth.depth(),
+                   normalsComputer = makePtr<RgbdNormals>(depth.rows,
+                                                          depth.cols,
+                                                          depth.depth(),
                                                           cameraMatrix,
                                                           normalWinSize,
                                                           normalMethod);
-
-                (*normalsComputer)(frame->pyramidCloud[0], frame->normals);
+                TMat c0;
+                frame->getPyramidAt(c0, OdometryFrame::PYR_CLOUD, 0);
+                (*normalsComputer)(c0, normals);
+                frame->setNormals(normals);
             }
         }
-        checkNormals(frame->normals, frame->depth.size());
+        checkNormals(normals, depth.size());
 
-        preparePyramidNormals(frame->normals, frame->pyramidDepth, frame->pyramidNormals);
+        preparePyramidNormals(normals, tframe->pyramidDepth, tframe->pyramidNormals);
 
-        preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-                           frame->pyramidNormals, frame->pyramidMask);
+        preparePyramidMask<TMat>(mask, tframe->pyramidDepth, (float)minDepth, (float)maxDepth,
+                                 tframe->pyramidNormals, tframe->pyramidMask);
 
-        preparePyramidNormalsMask(frame->pyramidNormals, frame->pyramidMask, maxPointsPart, frame->pyramidNormalsMask);
+        preparePyramidNormalsMask(tframe->pyramidNormals, tframe->pyramidMask, maxPointsPart, tframe->pyramidNormalsMask);
     }
     else
-        preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-                           frame->pyramidNormals, frame->pyramidMask);
+        preparePyramidMask<TMat>(mask, tframe->pyramidDepth, (float)minDepth, (float)maxDepth,
+                                 tframe->pyramidNormals, tframe->pyramidMask);
 
-    return frame->depth.size();
+    return depth.size();
 }
 
 void ICPOdometry::checkParams() const
@@ -1536,83 +1583,115 @@ Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Mat& _cameraMatrix, float _mi
 
 Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 {
-    if(frame->image.empty())
+    // can be transformed into template argument in the future
+    typedef Mat TMat;
+
+    TMat image;
+    frame->getImage(image);
+    if(image.empty())
     {
-        if(!frame->pyramidImage.empty())
-            frame->image = frame->pyramidImage[0];
+        if (frame->getPyramidLevels(OdometryFrame::PYR_IMAGE))
+        {
+            TMat p0;
+            frame->getPyramidAt(p0, OdometryFrame::PYR_IMAGE, 0);
+            frame->setImage(p0);
+        }
         else
             CV_Error(Error::StsBadSize, "Image or pyramidImage have to be set.");
     }
-    checkImage(frame->image);
+    checkImage(image);
 
-    if(frame->depth.empty())
+    TMat depth;
+    frame->getDepth(depth);
+    if (depth.empty())
     {
-        if(!frame->pyramidDepth.empty())
-            frame->depth = frame->pyramidDepth[0];
-        else if(!frame->pyramidCloud.empty())
+        if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
         {
-            Mat cloud = frame->pyramidCloud[0];
-            std::vector<Mat> xyz;
+            TMat d0;
+            frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
+            frame->setDepth(d0);
+        }
+        else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
+        {
+            TMat cloud;
+            frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
+            std::vector<TMat> xyz;
             split(cloud, xyz);
-            frame->depth = xyz[2];
+            frame->setDepth(xyz[2]);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
-    checkDepth(frame->depth, frame->image.size());
+    checkDepth(depth, image.size());
 
-    if(frame->mask.empty() && !frame->pyramidMask.empty())
-        frame->mask = frame->pyramidMask[0];
-    checkMask(frame->mask, frame->image.size());
+    TMat mask;
+    frame->getMask(mask);
+    if(mask.empty() && frame->getPyramidLevels(OdometryFrame::PYR_MASK))
+    {
+        TMat m0;
+        frame->getPyramidAt(m0, OdometryFrame::PYR_MASK, 0);
+        frame->setMask(m0);
+    }
+    checkMask(mask, image.size());
 
-    preparePyramidImage(frame->image, frame->pyramidImage, iterCounts.total());
+    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+    preparePyramidImage(image, tframe->pyramidImage, iterCounts.total());
 
-    preparePyramidDepth(frame->depth, frame->pyramidDepth, iterCounts.total());
+    preparePyramidDepth(depth, tframe->pyramidDepth, iterCounts.total());
 
-    preparePyramidCloud(frame->pyramidDepth, cameraMatrix, frame->pyramidCloud);
+    preparePyramidCloud<TMat>(tframe->pyramidDepth, cameraMatrix, tframe->pyramidCloud);
 
     if(cacheType & OdometryFrame::CACHE_DST)
     {
-        if(frame->normals.empty())
+        TMat normals;
+        frame->getNormals(normals);
+        if (normals.empty())
         {
-            if(!frame->pyramidNormals.empty())
-                frame->normals = frame->pyramidNormals[0];
+            if (frame->getPyramidLevels(OdometryFrame::PYR_NORM))
+            {
+                TMat n0;
+                frame->getPyramidAt(n0, OdometryFrame::PYR_NORM, 0);
+                frame->setNormals(n0);
+            }
             else
             {
                 if(normalsComputer.empty() ||
-                   normalsComputer->getRows() != frame->depth.rows ||
-                   normalsComputer->getCols() != frame->depth.cols ||
+                   normalsComputer->getRows() != depth.rows ||
+                   normalsComputer->getCols() != depth.cols ||
                    norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
-                   normalsComputer = makePtr<RgbdNormals>(frame->depth.rows,
-                                                          frame->depth.cols,
-                                                          frame->depth.depth(),
+                   normalsComputer = makePtr<RgbdNormals>(depth.rows,
+                                                          depth.cols,
+                                                          depth.depth(),
                                                           cameraMatrix,
                                                           normalWinSize,
                                                           normalMethod);
 
-                (*normalsComputer)(frame->pyramidCloud[0], frame->normals);
+                TMat c0;
+                frame->getPyramidAt(c0, OdometryFrame::PYR_CLOUD, 0);
+                (*normalsComputer)(c0, normals);
+                frame->setNormals(normals);
             }
         }
-        checkNormals(frame->normals, frame->depth.size());
+        checkNormals(normals, depth.size());
 
-        preparePyramidNormals(frame->normals, frame->pyramidDepth, frame->pyramidNormals);
+        preparePyramidNormals(normals, tframe->pyramidDepth, tframe->pyramidNormals);
 
-        preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-                           frame->pyramidNormals, frame->pyramidMask);
+        preparePyramidMask<TMat>(mask, tframe->pyramidDepth, (float)minDepth, (float)maxDepth,
+                                 tframe->pyramidNormals, tframe->pyramidMask);
 
-        preparePyramidSobel(frame->pyramidImage, 1, 0, frame->pyramid_dI_dx);
-        preparePyramidSobel(frame->pyramidImage, 0, 1, frame->pyramid_dI_dy);
-        preparePyramidTexturedMask(frame->pyramid_dI_dx, frame->pyramid_dI_dy,
-                                   minGradientMagnitudes, frame->pyramidMask,
-                                   maxPointsPart, frame->pyramidTexturedMask);
+        preparePyramidSobel<TMat>(tframe->pyramidImage, 1, 0, tframe->pyramid_dI_dx);
+        preparePyramidSobel<TMat>(tframe->pyramidImage, 0, 1, tframe->pyramid_dI_dy);
+        preparePyramidTexturedMask(tframe->pyramid_dI_dx, tframe->pyramid_dI_dy,
+                                   minGradientMagnitudes, tframe->pyramidMask,
+                                   maxPointsPart, tframe->pyramidTexturedMask);
 
-        preparePyramidNormalsMask(frame->pyramidNormals, frame->pyramidMask, maxPointsPart, frame->pyramidNormalsMask);
+        preparePyramidNormalsMask(tframe->pyramidNormals, tframe->pyramidMask, maxPointsPart, tframe->pyramidNormalsMask);
     }
     else
-        preparePyramidMask(frame->mask, frame->pyramidDepth, (float)minDepth, (float)maxDepth,
-                           frame->pyramidNormals, frame->pyramidMask);
+        preparePyramidMask<TMat>(mask, tframe->pyramidDepth, (float)minDepth, (float)maxDepth,
+                                 tframe->pyramidNormals, tframe->pyramidMask);
 
-    return frame->image.size();
+    return image.size();
 }
 
 void RgbdICPOdometry::checkParams() const
@@ -1672,34 +1751,58 @@ Ptr<FastICPOdometry> FastICPOdometry::create(const Mat& _cameraMatrix,
                                     _sigmaDepth, _sigmaSpatial, _kernelSize, _iterCounts);
 }
 
-Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+template<typename TMat>
+Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const
 {
     Odometry::prepareFrameCache(frame, cacheType);
 
-    if(frame->depth.empty())
+    TMat depth;
+    frame->getDepth(depth);
+    if(depth.empty())
     {
-        if(!frame->pyramidDepth.empty())
-            frame->depth = frame->pyramidDepth[0];
-        else if(!frame->pyramidCloud.empty())
+        if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
         {
-            Mat cloud = frame->pyramidCloud[0];
-            std::vector<Mat> xyz;
+            TMat d0;
+            frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
+            frame->setDepth(d0);
+        }
+        else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
+        {
+            TMat cloud;
+            frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
+            std::vector<TMat> xyz;
             split(cloud, xyz);
-            frame->depth = xyz[2];
+            frame->setDepth(xyz[2]);
         }
         else
             CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
-    checkDepth(frame->depth, frame->depth.size());
+    checkDepth(depth, depth.size());
 
     // mask isn't used by FastICP
-    Intr intr(cameraMatrix);
-    float depthFactor = 1.f; // user should rescale depth manually
-    float truncateThreshold = 0.f; // disabled
-    detail::makeFrameFromDepth(frame->depth, frame->pyramidCloud, frame->pyramidNormals, intr, (int)iterCounts.total(),
+    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+    detail::makeFrameFromDepth(depth, tframe->pyramidCloud, tframe->pyramidNormals, cameraMatrix, (int)iterCounts.total(),
                                depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
 
-    return frame->depth.size();
+    return depth.size();
+}
+
+Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+{
+    auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();
+    if (oclFrame != nullptr)
+    {
+        return prepareFrameCacheT<UMat>(frame, cacheType);
+    }
+    else if (cpuFrame != nullptr)
+    {
+        return prepareFrameCacheT<Mat>(frame, cacheType);
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Incorrect OdometryFrame type");
+    }
 }
 
 void FastICPOdometry::checkParams() const

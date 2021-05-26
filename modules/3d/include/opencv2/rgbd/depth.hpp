@@ -1141,6 +1141,9 @@ namespace cv
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                 const Mat& initRt) const CV_OVERRIDE;
 
+    template<typename TMat>
+    Size prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const;
+
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     float maxDistDiff;
 
