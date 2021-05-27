@@ -658,29 +658,27 @@ TEST(Variant, StaticIndexedVisitor)
     V var{42};
     
     std::stringstream ss;
-    test_validation::MyNoParamStaticIndexedVisitor visitor(ss);
-
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor {ss}, var);
     EXPECT_EQ(ss.str(), std::string("0:42,"));
 
     var = double{1.0};
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor (ss), var);
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,"));
 
     var = char{'a'};
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor (ss), var);
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,"));
 
     var = float{6.0};
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor (ss), var);
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,"));
 
     var = test_validation::MyType{};
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor (ss), var);
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,"));
 
     var = test_validation::MyClass{};
-    cv::util::visit(visitor, var);
+    cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor (ss), var);
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,5:MyClass,"));
 }
 
@@ -690,7 +688,7 @@ TEST(Variant, LambdaVisitor)
     using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
     V var{42};
     {
-        cv::util::visit(cv::overload_lambdas<void>(
+        cv::util::visit(cv::overload_lambdas(
                 [](int value) {
                     EXPECT_EQ(value, 42);
                 },
