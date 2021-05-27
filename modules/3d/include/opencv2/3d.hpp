@@ -1938,6 +1938,7 @@ between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow dow
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
 @param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
 Passing 0 will disable refining, so the output matrix will be output of robust method.
+@param outlierRatio outlier ratio used to compute iterations. Applies only to LMeDS.
 
 @return Output 2D affine transformation matrix \f$2 \times 3\f$ or empty matrix if transformation
 could not be estimated. The returned matrix has the following form:
@@ -1964,7 +1965,7 @@ correctly only when there are more than 50% of inliers.
 CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
                                   int method = RANSAC, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
-                                  size_t refineIters = 10);
+                                  size_t refineIters = 10, double outlierRatio=0.45);
 
 
 CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray pts1, InputArray pts2, OutputArray inliers,
@@ -1988,6 +1989,7 @@ between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow dow
 significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
 @param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
 Passing 0 will disable refining, so the output matrix will be output of robust method.
+@param outlierRatio outlier ratio used to compute iterations. Applies only to LMeDS.
 
 @return Output 2D affine transformation (4 degrees of freedom) matrix \f$2 \times 3\f$ or
 empty matrix if transformation could not be estimated.
@@ -2016,7 +2018,7 @@ correctly only when there are more than 50% of inliers.
 CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
                                   int method = RANSAC, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
-                                  size_t refineIters = 10);
+                                  size_t refineIters = 10, double outlierRatio=0.45);
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.
