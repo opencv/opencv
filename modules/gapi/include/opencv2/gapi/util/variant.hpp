@@ -569,8 +569,11 @@ namespace detail
         // non-used params warning suppression
         constexpr size_t non_variadic_args_num = 4;
         std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
-                                    (visitor, true), (v, true), (processed, true),
-                                    (no_return, true), ((args),true)...};
+                                    (suppress_unused_warning(visitor), true),
+                                    (suppress_unused_warning(v), true),
+                                    (suppress_unused_warning(processed), true),
+                                    (suppress_unused_warning(no_return), true),
+                                    (suppress_unused_warning(args),true)...};
         suppress_unused_warning(dummy);
         return {};
     }
@@ -587,8 +590,11 @@ namespace detail
         // non-used params warning suppression
         constexpr size_t non_variadic_args_num = 4;
         std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
-                                    (visitor, true), (v, true), (processed, true),
-                                    (no_return, true), ((args),true)...};
+                                    (suppress_unused_warning(visitor), true),
+                                    (suppress_unused_warning(v), true),
+                                    (suppress_unused_warning(processed), true),
+                                    (suppress_unused_warning(no_return), true),
+                                    (suppress_unused_warning(args),true)...};
         suppress_unused_warning(dummy);
     }
 
@@ -596,11 +602,9 @@ namespace detail
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
     typename std::enable_if<!std::is_base_of<visitor_interface, Visitor>::value, ReturnType>::type
-         apply_visitor_impl(Visitor&& visitor,
-                                                     Variant&& v,
-                                                     std::false_type not_processed,
-                                                     std::integral_constant<bool, no_return_value> should_no_return,
-                                                     VisitorArgs&& ...args)
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
     {
         static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
                       "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
@@ -608,7 +612,6 @@ namespace detail
         suppress_unused_warning(not_processed);
         if(v.index() == CurIndex)
         {
-            // invoke Lambda 
             return visitor.operator()(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
@@ -625,11 +628,9 @@ namespace detail
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
     typename std::enable_if<std::is_base_of<visitor_interface, Visitor>::value, ReturnType>::type
-         apply_visitor_impl(Visitor&& visitor,
-                                                     Variant&& v,
-                                                     std::false_type not_processed,
-                                                     std::integral_constant<bool, no_return_value> should_no_return,
-                                                     VisitorArgs&& ...args)
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
     {
         static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
                       "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
@@ -652,9 +653,7 @@ namespace detail
 } // namespace detail
 
     template<typename Visitor, typename Variant, typename... VisitorArg>
-    auto visit(Visitor &visitor,
-                                        const Variant& var,
-                                        VisitorArg &&...args) -> decltype(visitor(get<0>(var))) /* deduct by 0 index */
+    auto visit(Visitor &visitor, const Variant& var, VisitorArg &&...args) -> decltype(visitor(get<0>(var)))
     {
         constexpr std::size_t varsize = util::variant_size<Variant>::value;
         static_assert(varsize != 0, "utils::variant must contains one type at least ");
@@ -670,7 +669,7 @@ namespace detail
     }
 
     template<typename Visitor, typename Variant>
-    auto visit(Visitor&& visitor, const Variant& var) -> decltype(visitor(get<0>(var))) /* deduct by 0 index */
+    auto visit(Visitor&& visitor, const Variant& var) -> decltype(visitor(get<0>(var)))
     {
         constexpr std::size_t varsize = util::variant_size<Variant>::value;
         static_assert(varsize != 0, "utils::variant must contains one type at least ");
