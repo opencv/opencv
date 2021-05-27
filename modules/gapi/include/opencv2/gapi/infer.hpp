@@ -531,7 +531,11 @@ typename Net::Result infer(Args&&... args) {
 }
 
 /**
- * @brief Special network type
+ * @brief Special network type.
+ *
+ * Unlike network type, which is defined by G_API_NET macro, this one
+ * doesn't fix number of network inputs and outputs on the compilation stage
+ * thus providing to user an opportunity to program them in runtime.
  */
 struct Generic { };
 

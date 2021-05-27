@@ -196,9 +196,24 @@ protected:
     detail::ParamDesc desc;
 };
 
+/*
+* @brief This structure provides functions for generic network type that
+* fill inference parameters.
+* @see struct Generic
+*/
 template<>
 class Params<cv::gapi::Generic> {
 public:
+    /** @brief Class constructor.
+
+    Constructs Params based on model information and sets default values for other
+    inference description parameters. Model is loaded and compiled with OpenVINO.
+
+    @param tag string tag of the network for which these parameters are intended.
+    @param model path to topology IR (.xml file).
+    @param weights path to weights (.bin file).
+    @param device device specifier.
+    */
     Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
@@ -206,22 +221,34 @@ public:
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u}, m_tag(tag) {
     };
 
+    /** @overload
+
+    This constructor for pre-compiled networks. Model is imported from pre-compiled
+    blob.
+
+    @param tag string tag of the network for which these parameters are intended.
+    @param model path to model.
+    @param device device specifier.
+    */
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
     };
 
-    Params& pluginConfig(IEConfig&& cfg) {
-        desc.config = std::move(cfg);
-        return *this;
-    }
-
+    /** @see Params::pluginConfig. */
     Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
         return *this;
     }
 
+    /** @overload */
+    Params& pluginConfig(IEConfig&& cfg) {
+        desc.config = std::move(cfg);
+        return *this;
+    }
+
+    /** @see Params::constInput. */
     Params& constInput(const std::string &layer_name,
                        const cv::Mat &data,
                        TraitAs hint = TraitAs::TENSOR) {
@@ -229,37 +256,44 @@ public:
         return *this;
     }
 
+    /** @see Params::cfgNumRequests. */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
         return *this;
     }
 
-    Params& cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
-        desc.reshape_table = std::move(reshape_table);
-        return *this;
-    }
-
+    /** @see Params::cfgInputReshape */
     Params& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>&reshape_table) {
         desc.reshape_table = reshape_table;
         return *this;
     }
 
+    /** @overload */
+    Params& cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
+        desc.reshape_table = std::move(reshape_table);
+        return *this;
+    }
+
+    /** @overload */
     Params& cfgInputReshape(std::string && layer_name, std::vector<size_t> && layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(const std::string & layer_name, const std::vector<size_t>&layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(std::unordered_set<std::string> && layer_names) {
         desc.layer_names_to_reshape = std::move(layer_names);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
         return *this;
