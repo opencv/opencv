@@ -269,7 +269,7 @@ namespace util
 
 
     //Visitor
-    template<typename R, typename Impl>
+    /*template<typename R, typename Impl>
     struct static_visitor {
         using result_type = R;
 
@@ -281,6 +281,52 @@ namespace util
                         std::forward<VariantValue>(value),
                         std::forward<Args>(args)...);
         }
+    };*/
+    struct visitor_interface {};
+    template<typename R, typename Impl>
+    struct static_visitor : public visitor_interface {
+        using result_type = R;
+
+        friend Impl;
+
+        template<std::size_t Index, typename VariantValue, typename ...Args>
+        R operator() (VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> visit(
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename R, typename Impl>
+    struct static_indexed_visitor : public visitor_interface  {
+        using result_type = R;
+
+        friend Impl;
+
+
+        template<std::size_t Index, typename VariantValue, typename ...Args>
+        R operator() (VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> template visit<Index, VariantValue, Args...>(
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    template<typename R, typename Impl>
+    struct dynamic_indexed_visitor : public visitor_interface  {
+        using result_type = R;
+
+        friend Impl;
+
+        template<std::size_t Index, typename VariantValue, typename ...Args>
+        R operator() (VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> visit(Index,
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
     };
 
     template<typename Visitor, typename Variant, typename... VisitorArg>
@@ -289,7 +335,7 @@ namespace util
                                         VisitorArg &&...arg);
 
     template<typename Visitor, typename Variant>
-    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+    typename Visitor::result_type visit(Visitor &&visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
                                         const Variant& var);
 
     template <class T>
@@ -509,67 +555,122 @@ namespace util
 
 namespace detail
 {
-    template<std::size_t CurIndex, std::size_t ElemCount,
+    // terminate recursion implementation for `non-void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor,
+    ReturnType apply_visitor_impl(Visitor&& visitor,
                                                      Variant& v,
                                                      std::true_type processed,
+                                                     std::false_type no_return,
                                                      VisitorArgs&& ...args)
     {
-        suppress_unused_warning(visitor);
-        std::array<bool, sizeof...(VisitorArgs)> dummy{(suppress_unused_warning(args),true)...};
+        // non-used params warning suppression
+        constexpr size_t non_variadic_args_num = 4;
+        std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
+                                    (visitor, true), (v, true), (processed, true),
+                                    (no_return, true), ((args),true)...};
         suppress_unused_warning(dummy);
-        suppress_unused_warning(v);
-        suppress_unused_warning(processed);
         return {};
     }
 
-    template<std::size_t CurIndex, std::size_t ElemCount,
+    // terminate recursion implementation for `void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    typename Visitor::result_type apply_visitor_impl(Visitor&& visitor,
+    void apply_visitor_impl(Visitor&& visitor,
+                                                     Variant& v,
+                                                     std::true_type processed,
+                                                     std::true_type no_return,
+                                                     VisitorArgs&& ...args)
+    {
+        // non-used params warning suppression
+        constexpr size_t non_variadic_args_num = 4;
+        std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
+                                    (visitor, true), (v, true), (processed, true),
+                                    (no_return, true), ((args),true)...};
+        suppress_unused_warning(dummy);
+    }
+
+    // Intermediate resursion processor for Lambda Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<!std::is_base_of<visitor_interface, Visitor>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor,
                                                      Variant&& v,
                                                      std::false_type not_processed,
+                                                     std::integral_constant<bool, no_return_value> should_no_return,
                                                      VisitorArgs&& ...args)
     {
         suppress_unused_warning(not_processed);
         if(v.index() == CurIndex)
         {
-            return visitor.operator() (CurIndex, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+            // invoke Lambda 
+            return visitor.operator()(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
         using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
-        return apply_visitor_impl<CurIndex +1, ElemCount>(
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
                                   std::forward<Visitor>(visitor),
                                   std::forward<Variant>(v),
                                   is_variant_processed_t{},
+                                  should_no_return,
+                                  std::forward<VisitorArgs>(args)...);
+    }
+
+    // Intermediate resursion processor for special case `visitor_interface` derived Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<visitor_interface, Visitor>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor,
+                                                     Variant&& v,
+                                                     std::false_type not_processed,
+                                                     std::integral_constant<bool, no_return_value> should_no_return,
+                                                     VisitorArgs&& ...args)
+    {
+        suppress_unused_warning(not_processed);
+        if(v.index() == CurIndex)
+        {
+            // invoke `visitor_interface` with additional `CurIndex` as template args
+            return visitor.operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
+
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  should_no_return,
                                   std::forward<VisitorArgs>(args)...);
     }
 } // namespace detail
 
     template<typename Visitor, typename Variant, typename... VisitorArg>
-    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+    typename Visitor::result_type visit(Visitor &visitor,
                                         const Variant& var,
                                         VisitorArg &&...args)
     {
         constexpr std::size_t varsize = util::variant_size<Variant>::value;
         static_assert(varsize != 0, "utils::variant must contains one type at least ");
         using is_variant_processed_t = std::false_type;
-        return detail::apply_visitor_impl<0, varsize, Visitor>(
+        using return_t = std::is_same<Visitor::result_type, void>;
+        return detail::apply_visitor_impl<Visitor::result_type, 0, varsize, Visitor>(
                                     std::forward<Visitor>(visitor),
                                     var, is_variant_processed_t{},
+                                    return_t{},
                                     std::forward<VisitorArg>(args)...);
     }
 
     template<typename Visitor, typename Variant>
-    typename Visitor::result_type visit(Visitor &visitor, //FIXME: Visitor && -> forbiddeby by Microsoft Visual Studio 2019
+    typename Visitor::result_type visit(Visitor&& visitor,
                                         const Variant& var)
     {
         constexpr std::size_t varsize = util::variant_size<Variant>::value;
         static_assert(varsize != 0, "utils::variant must contains one type at least ");
         using is_variant_processed_t = std::false_type;
-        return detail::apply_visitor_impl<0, varsize, Visitor>(
+        using return_t = std::is_same<Visitor::result_type, void>;
+        return detail::apply_visitor_impl<Visitor::result_type, 0, varsize, Visitor>(
                                     std::forward<Visitor>(visitor),
-                                    var, is_variant_processed_t{});
+                                    var, is_variant_processed_t{},
+                                    return_t{});
     }
 } // namespace util
 } // namespace cv

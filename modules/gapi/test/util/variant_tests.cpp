@@ -517,9 +517,9 @@ class MyClass
     }
 };
 
-struct MyParamVisitor : cv::util::static_visitor<bool, MyParamVisitor>
+struct MyParamDynamicVisitor : cv::util::dynamic_indexed_visitor<bool, MyParamDynamicVisitor>
 {
-    MyParamVisitor(std::ostream &output) : out(output) {}
+    MyParamDynamicVisitor(std::ostream &output) : out(output) {}
 
     template<class Type>
     bool visit(std::size_t index, Type val, int check)
@@ -536,9 +536,9 @@ struct MyParamVisitor : cv::util::static_visitor<bool, MyParamVisitor>
     std::ostream &out;
 };
 
-struct MyNoParamVisitor : cv::util::static_visitor<bool, MyNoParamVisitor>
+struct MyNoParamDynamicVisitor : cv::util::dynamic_indexed_visitor<bool, MyNoParamDynamicVisitor>
 {
-    MyNoParamVisitor(std::ostream &output) : out(output) {}
+    MyNoParamDynamicVisitor(std::ostream &output) : out(output) {}
 
     template<class Type>
     bool visit(std::size_t index, Type val)
@@ -548,22 +548,54 @@ struct MyNoParamVisitor : cv::util::static_visitor<bool, MyNoParamVisitor>
     }
     std::ostream &out;
 };
+
+
+struct MyNoParamStaticVisitor : cv::util::static_visitor<void, MyNoParamStaticVisitor>
+{
+    MyNoParamStaticVisitor(std::ostream &output) : out(output) {}
+
+    template<class Type>
+    void visit(Type val)
+    {
+        out << val << ",";
+    }
+
+    std::ostream &out;
+};
+
+
+struct MyNoParamStaticIndexedVisitor : cv::util::static_indexed_visitor<void, MyNoParamStaticIndexedVisitor>
+{
+    MyNoParamStaticIndexedVisitor(std::ostream &output) : out(output) {}
+
+    template<std::size_t Index, class Type>
+    void visit(Type val)
+    {
+        using clear_type = typename std::decay<Type>::type;
+        using expected_type = typename std::conditional<Index == 0, int, clear_type>::type;
+        static_assert(std::is_same<expected_type, clear_type>::value, "Firt Index must depict `int` type");
+
+        out << Index << ":" << val <<",";
+    }
+
+    std::ostream &out;
+};
 }
 
-TEST(Variant, Visitor)
+TEST(Variant, DynamicVisitor)
 {
     using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
     V var{42};
     {
         std::stringstream ss;
-        test_validation::MyParamVisitor visitor(ss);
+        test_validation::MyParamDynamicVisitor visitor(ss);
 
         EXPECT_TRUE(cv::util::visit(visitor, var, int{42}));
         EXPECT_EQ(ss.str(), std::string("0:42,"));
     }
 
     std::stringstream ss;
-    test_validation::MyNoParamVisitor visitor(ss);
+    test_validation::MyNoParamDynamicVisitor visitor(ss);
 
     cv::util::visit(visitor, var);
     EXPECT_EQ(ss.str(), std::string("0:42,"));
@@ -587,5 +619,96 @@ TEST(Variant, Visitor)
     var = test_validation::MyClass{};
     EXPECT_TRUE(cv::util::visit(visitor, var));
     EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,5:MyClass,"));
+}
+
+TEST(Variant, StaticVisitor)
+{
+    using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
+    V var{42};
+    std::stringstream ss;
+    test_validation::MyNoParamStaticVisitor visitor(ss);
+
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,"));
+
+    var = double{1.0};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,1,"));
+
+    var = char{'a'};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,1,a,"));
+
+    var = float{6.0};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,1,a,6,"));
+
+    var = test_validation::MyType{};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,1,a,6,MyType,"));
+
+    var = test_validation::MyClass{};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("42,1,a,6,MyType,MyClass,"));
+}
+
+TEST(Variant, StaticIndexedVisitor)
+{
+    using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
+    V var{42};
+    
+    std::stringstream ss;
+    test_validation::MyNoParamStaticIndexedVisitor visitor(ss);
+
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,"));
+
+    var = double{1.0};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,1:1,"));
+
+    var = char{'a'};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,"));
+
+    var = float{6.0};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,"));
+
+    var = test_validation::MyType{};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,"));
+
+    var = test_validation::MyClass{};
+    cv::util::visit(visitor, var);
+    EXPECT_EQ(ss.str(), std::string("0:42,1:1,2:a,3:6,4:MyType,5:MyClass,"));
+}
+
+
+TEST(Variant, LambdaVisitor)
+{
+    using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
+    V var{42};
+    {
+        cv::util::visit(cv::overload_lambdas<void>(
+                [](int value) {
+                    EXPECT_EQ(value, 42);
+                },
+                [](double) {
+                    EXPECT_TRUE(false);
+                },
+                [](char) {
+                    EXPECT_TRUE(false);
+                },
+                [](float) {
+                    EXPECT_TRUE(false);
+                },
+                [](test_validation::MyType) {
+                    EXPECT_TRUE(false);
+                },
+                [](test_validation::MyClass) {
+                    EXPECT_TRUE(false);
+                }), var);
+    }
 }
 } // namespace opencv_test

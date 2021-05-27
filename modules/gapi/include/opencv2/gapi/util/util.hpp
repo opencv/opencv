@@ -117,6 +117,43 @@ namespace detail
         static type get(std::tuple<Objs...>&& objs) { return std::forward<std::tuple<Objs...>>(objs); }
     };
 } // namespace detail
+
+
+template<typename ...L>
+struct overload_lamba_set;
+
+template<typename R, typename L1>
+struct overload_lamba_set<R, L1> : public L1
+{
+    using result_type = R;
+    overload_lamba_set(L1&& lambda) : L1(std::move(lambda)) {}
+    overload_lamba_set(const L1& lambda) : L1(lambda) {}
+
+    using L1::operator();
+};
+
+template<typename R, typename L1, typename ...L>
+struct overload_lamba_set<R, L1, L...> : public L1, public overload_lamba_set<R, L...>
+{
+    using result_type = R;
+    using base_type = overload_lamba_set<R, L...>;
+    overload_lamba_set(L1 &&lambda1, L&& ...lambdas):
+        L1(std::move(lambda1)),
+        base_type(std::forward<L>(lambdas)...) {}
+
+    overload_lamba_set(const L1 &lambda1, L&& ...lambdas):
+        L1(lambda1),
+        base_type(std::forward<L>(lambdas)...) {}
+
+    using L1::operator();
+    using base_type::operator();
+};
+
+template<typename R, typename... L>
+overload_lamba_set<R, L...> overload_lambdas(L&& ...lambdas)
+{
+    return overload_lamba_set<R, L...>(std::forward<L>(lambdas)...);
+}
 } // namespace cv
 
 // \endcond

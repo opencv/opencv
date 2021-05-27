@@ -178,9 +178,9 @@ namespace
 
 namespace validation
 {
-    class meta_matcher_visitor : cv::util::static_visitor<bool, meta_matcher_visitor>
+    class meta_matcher_visitor : cv::util::dynamic_indexed_visitor<bool, meta_matcher_visitor>
     {
-        struct meta_print_visitor : cv::util::static_visitor<bool, meta_print_visitor> {
+        struct meta_print_visitor : cv::util::dynamic_indexed_visitor<bool, meta_print_visitor> {
             std::ostream& out;
 
             meta_print_visitor(std::ostream &output) :
@@ -243,7 +243,7 @@ namespace validation
         }
     };
 
-    struct meta_value_inspector_visitor : cv::util::static_visitor<bool, meta_value_inspector_visitor>
+    struct meta_value_inspector_visitor : cv::util::dynamic_indexed_visitor<bool, meta_value_inspector_visitor>
     {
         meta_value_inspector_visitor(std::ostream &output) :
             matcher_visitor (output) {}
