@@ -48,11 +48,11 @@ struct ParamDesc {
     std::size_t num_out; //!< How many outputs are defined in the operation
 
     // NB: Here order follows the `Net` API
-    std::vector<std::string> input_names; //!< Names of input CNN layers.
-    std::vector<std::string> output_names; //!< Names of output CNN layers.
+    std::vector<std::string> input_names; //!< Names of input network layers.
+    std::vector<std::string> output_names; //!< Names of output network layers.
 
     using ConstInput = std::pair<cv::Mat, TraitAs>;
-    std::unordered_map<std::string, ConstInput> const_inputs; //!< Map with pair of name of CNN layer and ConstInput which will be associated with this.
+    std::unordered_map<std::string, ConstInput> const_inputs; //!< Map with pair of name of network layer and ConstInput which will be associated with this.
 
     std::vector<cv::Scalar> mean; //!< Mean values for preprocessing.
     std::vector<cv::Scalar> stdev; //!< Standard deviation values for preprocessing.
@@ -93,7 +93,7 @@ public:
     Constructs Params based on model information and sets default values for other
     inference description parameters.
 
-    @param model path to model (.onnx file).
+    @param model Path to model (.onnx file).
     */
     Params(const std::string &model) {
         desc.model_path = model;
@@ -101,17 +101,17 @@ public:
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
     };
 
-    /** @brief Specifies sequence of CNN input layers names for inference.
+    /** @brief Specifies sequence of network input layers names for inference.
 
     The function is used to associate data of graph inputs with input layers of
-    CNN topology. Number of names has to match the number of CNN inputs. If a CNN
+    network topology. Number of names has to match the number of network inputs. If a network
     has only one input layer, there is no need to call it as the layer is
     associated with input automatically but this doesn't prevent you from
-    doing it yourself. Count of names has to match to number of CNN inputs.
+    doing it yourself. Count of names has to match to number of network inputs.
 
     @param layer_names std::array<std::string, N> where N is the number of inputs
     as defined in the @ref G_API_NET. Contains names of input layers.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &layer_names) {
         desc.input_names.assign(layer_names.begin(), layer_names.end());
@@ -121,15 +121,15 @@ public:
     /** @brief Specifies sequence of output layers names for inference.
 
      The function is used to associate data of graph outputs with output layers of
-    CNN topology. If a CNN has only one output layer, there is no need to call it
+    network topology. If a network has only one output layer, there is no need to call it
     as the layer is associated with ouput automatically but this doesn't prevent
-    you from doing it yourself. Count of names has to match to number of CNN
+    you from doing it yourself. Count of names has to match to number of network
     outputs or you can set your own output but for this case you have to
     additionally use @ref cfgPostProc function.
 
     @param layer_names std::array<std::string, N> where N is the number of outputs
     as defined in the @ref G_API_NET. Contains names of output layers.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgOutputLayers(const typename PortCfg<Net>::Out &layer_names) {
         desc.output_names.assign(layer_names.begin(), layer_names.end());
@@ -140,12 +140,12 @@ public:
 
     The function is used to set constant input. This input has to be
     a prepared tensor since preprocessing is disabled for this case. You should
-    provide name of CNN layer which will receive provided data.
+    provide name of network layer which will receive provided data.
 
-    @param layer_name name of CNN layer.
-    @param data cv::Mat that contains data which will be associated with CNN layer.
-    @param hint type of input (TENSOR).
-    @return reference to object of class Params.
+    @param layer_name Name of network layer.
+    @param data cv::Mat that contains data which will be associated with network layer.
+    @param hint Type of input (TENSOR).
+    @return the reference on modified object.
     */
     Params<Net>& constInput(const std::string &layer_name,
                             const cv::Mat &data,
@@ -163,7 +163,7 @@ public:
     as defined in the @ref G_API_NET. Contains mean values.
     @param s std::array<cv::Scalar, N> where N is the number of inputs
     as defined in the @ref G_API_NET. Contains standard deviation values.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgMeanStd(const typename PortCfg<Net>::NormCoefs &m,
                             const typename PortCfg<Net>::NormCoefs &s) {
@@ -180,11 +180,11 @@ public:
     So you have to provide @ref PostProc function that gets information from inference
     result and fill output which is constructed by dimensions from out_metas.
 
-    @param out_metas out meta information about your output (type, dimension).
-    @param remap_function post processing function, which has two parameters. First is onnx
+    @param out_metas Out meta information about your output (type, dimension).
+    @param remap_function Post processing function, which has two parameters. First is onnx
     result, second is graph output. Both parameters is std::map that contain pair of
     layer's name and cv::Mat.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgPostProc(const std::vector<cv::GMatDesc> &out_metas,
                              const PostProc &remap_function) {
@@ -194,13 +194,13 @@ public:
     }
 
     /** @overload
-    Function with an rvalue parameters.
+    Function with a rvalue parameters.
 
     @param out_metas rvalue out meta information about your output (type, dimension).
     @param remap_function rvalue post processing function, which has two parameters. First is onnx
     result, second is graph output. Both parameters is std::map that contain pair of
     layer's name and cv::Mat.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgPostProc(std::vector<cv::GMatDesc> &&out_metas,
                              PostProc &&remap_function) {
@@ -214,12 +214,12 @@ public:
     information about output layers which will be used for inference and post
     processing function.
 
-    @param out_metas out meta information.
-    @param remap_function post processing function.
-    @param names_to_remap names of output layers. CNN's inference will
+    @param out_metas Out meta information.
+    @param remap_function Post processing function.
+    @param names_to_remap Names of output layers. network's inference will
     be done on these layers. Inference's result will be processed in post processing
     function using these names.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgPostProc(const std::vector<cv::GMatDesc> &out_metas,
                              const PostProc &remap_function,
@@ -231,14 +231,14 @@ public:
     }
 
     /** @overload
-    Function with an rvalue parameters and additional parameter names_to_remap.
+    Function with a rvalue parameters and additional parameter names_to_remap.
 
     @param out_metas rvalue out meta information.
     @param remap_function rvalue post processing function.
-    @param names_to_remap rvalue names of output layers. CNN's inference will
+    @param names_to_remap rvalue names of output layers. network's inference will
     be done on these layers. Inference's result will be processed in post processing
     function using these names.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgPostProc(std::vector<cv::GMatDesc> &&out_metas,
                              PostProc &&remap_function,
@@ -256,7 +256,7 @@ public:
     @param normalizations std::array<cv::Scalar, N> where N is the number of inputs
     as defined in the @ref G_API_NET. Сontains bool values that enabled or disabled
     normalize of input data.
-    @return reference to object of class Params.
+    @return the reference on modified object.
     */
     Params<Net>& cfgNormalize(const typename PortCfg<Net>::Normalize &normalizations) {
         desc.normalize.assign(normalizations.begin(), normalizations.end());
