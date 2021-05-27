@@ -638,7 +638,7 @@ namespace detail
         if(v.index() == CurIndex)
         {
             // invoke `visitor_interface` with additional `CurIndex` as template args
-            return visitor.operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+            return visitor.template operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
         using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
