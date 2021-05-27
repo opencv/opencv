@@ -288,7 +288,7 @@ namespace util
     template<typename R, typename Impl>
     struct static_visitor : public detail::visitor_interface,
                             public detail::visitor_return_type_deduction_helper<R> {
-                     
+
         using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
         using detail::visitor_return_type_deduction_helper<R>::operator();
         friend Impl;
@@ -659,8 +659,10 @@ namespace detail
         constexpr std::size_t varsize = util::variant_size<Variant>::value;
         static_assert(varsize != 0, "utils::variant must contains one type at least ");
         using is_variant_processed_t = std::false_type;
-        using return_t = std::is_same<Visitor::return_type, void>;
-        return detail::apply_visitor_impl<Visitor::return_type, 0, varsize, Visitor>(
+
+        using ReturnType = decltype(visitor(get<0>(var)));
+        using return_t = std::is_same<ReturnType, void>;
+        return detail::apply_visitor_impl<ReturnType, 0, varsize, Visitor>(
                                     std::forward<Visitor>(visitor),
                                     var, is_variant_processed_t{},
                                     return_t{},
