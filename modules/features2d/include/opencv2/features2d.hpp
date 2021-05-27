@@ -524,6 +524,9 @@ public:
     CV_WRAP virtual void setMaxArea(int maxArea) = 0;
     CV_WRAP virtual int getMaxArea() const = 0;
 
+    CV_WRAP virtual void setMinDiversity(double minDiversity) = 0;
+    CV_WRAP virtual double getMinDiversity() const = 0;
+
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;

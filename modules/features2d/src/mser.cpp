@@ -96,6 +96,9 @@ public:
     void setMaxArea(int maxArea) CV_OVERRIDE { params.maxArea = maxArea; }
     int getMaxArea() const CV_OVERRIDE { return params.maxArea; }
 
+    void setMinDiversity(double minDiversity) CV_OVERRIDE { params.minDiversity = minDiversity; }
+    double getMinDiversity() const CV_OVERRIDE { return params.minDiversity; }
+
     void setPass2Only(bool f) CV_OVERRIDE { params.pass2Only = f; }
     bool getPass2Only() const CV_OVERRIDE { return params.pass2Only; }
 
@@ -200,7 +203,7 @@ public:
             if( checked )
                 return;
             checked = true;
-            if( size < wp.p.minArea || size > wp.p.maxArea || var < 0.f || var > wp.p.maxVariation )
+            if( size < wp.p.minArea || size > wp.p.maxArea || var < wp.p.minDiversity || var > wp.p.maxVariation )
                 return;
             if( child_ )
             {

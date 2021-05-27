@@ -119,6 +119,7 @@ TEST(Features2d_MSER, cases)
 
         mserExtractor->setMinArea(kMinArea);
         mserExtractor->setMaxArea(kMaxArea);
+        mserExtractor->setMinDiversity(0);
 
         if( invert )
             bitwise_not(src, src);
@@ -170,6 +171,7 @@ TEST(Features2d_MSER, history_update_regression)
         {
             Ptr<MSER> mser = MSER::create(1, minArea, (int)(tstImages[j].cols * tstImages[j].rows * 0.2));
             mser->setPass2Only(true);
+            mser->setMinDiversity(0);
             vector<vector<Point> > mserContours;
             vector<Rect> boxRects;
             mser->detectRegions(tstImages[j], mserContours, boxRects);
@@ -177,6 +179,30 @@ TEST(Features2d_MSER, history_update_regression)
             previous_size = mserContours.size();
         }
     }
+}
+
+
+TEST(Features2d_MSER, bug_5630)
+{
+    String dataPath = cvtest::TS::ptr()->get_data_path() + "mser/";
+    Mat img = imread(dataPath + "mser_test.png", IMREAD_GRAYSCALE);
+    Ptr<MSER> mser = MSER::create(1, 1);
+    vector<vector<Point> > mserContours;
+    vector<Rect> boxRects;
+
+    // set min diversity and run detection
+    mser->setMinDiversity(0.1);
+    mser->detectRegions(img, mserContours, boxRects);
+    size_t originalNumberOfContours = mserContours.size();
+
+    // increase min diversity and run detection again
+    mser->setMinDiversity(0.2);
+    mser->detectRegions(img, mserContours, boxRects);
+    size_t newNumberOfContours = mserContours.size();
+
+    // there should be fewer regions detected with a higher min diversity
+    ASSERT_LT(newNumberOfContours, originalNumberOfContours);
+
 }
 
 }} // namespace
