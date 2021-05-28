@@ -629,7 +629,7 @@ namespace detail
     {
         return visitor.template operator()<CurIndex>(v, std::forward<VisitorArgs>(args)... );
     }
-    
+
     // Intermediate resursion processor for special case `visitor_interface` derived Visitors
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
