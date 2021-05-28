@@ -68,8 +68,8 @@ G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.openc
 /** @brief Computes disparity/depth map for the specified stereo-pair.
 The function compute disparity or depth map depending on passed StereoOutputFormat argument.
 
-@param left 8-bit single-channel image from left camera.
-@param right 8-bit single-channel image from right camera.
+@param left 8-bit single-channel image from left source.
+@param right 8-bit single-channel image from right source.
 @param of enum to specified output kind: depth or disparity and corresponding type
 */
 GAPI_EXPORTS GMat stereo(const GMat& left,
