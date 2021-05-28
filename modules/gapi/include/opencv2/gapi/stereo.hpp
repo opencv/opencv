@@ -14,22 +14,22 @@
 namespace cv {
 namespace gapi {
 
-/// Enum class specifies output format of stereo() function
+/// The enum specified format of result that you get from @ref stereo.
 enum class StereoOutputFormat {
-    DEPTH_FLOAT16, ///< Floating poinf 16 bit value, CV_16FC1
-    DEPTH_FLOAT32, ///< Floating poinf 32 bit value, CV_32FC1
-    DISPARITY_FIXED16_11_5, ///< 16 bit signed. 1 bit for sign,
+    DEPTH_FLOAT16, ///< Floating point 16 bit value, CV_16FC1
+    DEPTH_FLOAT32, ///< Floating point 32 bit value, CV_32FC1
+    DISPARITY_FIXED16_11_5, ///< 16 bit signed. First bit for sign,
                             ///< 10 bits for integer,
                             ///< 5 bits for fractional
-    DISPARITY_FIXED16_12_4, ///< 16 bit signed: 1 bit for sign,
+    DISPARITY_FIXED16_12_4, ///< 16 bit signed: first bit for sign,
                             ///< 11 bits for integer,
                             ///< 4 bits for fractional
-    DEPTH_F16, ///< Floating poinf 16 bit value, CV_16FC1
-    DEPTH_F32, ///< Floating poinf 32 bit value, CV_32FC1
-    DISPARITY_Q16_10_5, ///< 16 bit signed. 1 bit for sign,
+    DEPTH_F16, ///< Floating point 16 bit value, CV_16FC1
+    DEPTH_F32, ///< Floating point 32 bit value, CV_32FC1
+    DISPARITY_Q16_10_5, ///< 16 bit signed. first bit for sign,
                         ///< 10 bits for integer,
                         ///< 5 bits for fractional
-    DISPARITY_Q16_11_4  ///< 16 bit signed: 1 bit for sign,
+    DISPARITY_Q16_11_4  ///< 16 bit signed: first bit for sign,
                         ///< 11 bits for integer,
                         ///< 4 bits for fractional
 };
