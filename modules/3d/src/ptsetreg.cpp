@@ -270,7 +270,6 @@ public:
 
     bool run(InputArray _m1, InputArray _m2, OutputArray _model, OutputArray _mask) const CV_OVERRIDE
     {
-        const double outlierRatio = 0.45;
         bool result = false;
         Mat m1 = _m1.getMat(), m2 = _m2.getMat();
         Mat ms1, ms2, err, errf, model, bestModel, mask, mask0;
@@ -385,10 +384,10 @@ Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegis
 
 
 Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegistrator::Callback>& _cb,
-                             int _modelPoints, double _confidence, int _maxIters)
+                             int _modelPoints, double _confidence, int _maxIters, double outlierRatio)
 {
     return Ptr<PointSetRegistrator>(
-        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters));
+        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters, outlierRatio));
 }
 
 
@@ -928,7 +927,7 @@ int estimateTranslation3D(InputArray _from, InputArray _to,
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
                      const int method, const double ransacReprojThreshold,
                      const size_t maxIters, const double confidence,
-                     const size_t refineIters)
+                     const size_t refineIters, const double outlierRatio)
 {
 
     if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
@@ -973,7 +972,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
     if( method == RANSAC )
         result = createRANSACPointSetRegistrator(cb, 3, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+        result = createLMeDSPointSetRegistrator(cb, 3, confidence, static_cast<int>(maxIters), outlierRatio)->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
@@ -1019,7 +1018,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray inliers,
 Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inliers,
                             const int method, const double ransacReprojThreshold,
                             const size_t maxIters, const double confidence,
-                            const size_t refineIters)
+                            const size_t refineIters, const double outlierRatio)
 {
     Mat from = _from.getMat(), to = _to.getMat();
     const int count = from.checkVector(2);
@@ -1059,7 +1058,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     if( method == RANSAC )
         result = createRANSACPointSetRegistrator(cb, 2, ransacReprojThreshold, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
     else if( method == LMEDS )
-        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters))->run(from, to, H, inliers);
+        result = createLMeDSPointSetRegistrator(cb, 2, confidence, static_cast<int>(maxIters), outlierRatio)->run(from, to, H, inliers);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
