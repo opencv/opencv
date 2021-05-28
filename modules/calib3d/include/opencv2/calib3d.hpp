@@ -3711,6 +3711,77 @@ void initUndistortRectifyMap(InputArray cameraMatrix, InputArray distCoeffs,
                              InputArray R, InputArray newCameraMatrix,
                              Size size, int m1type, OutputArray map1, OutputArray map2);
 
+/** @brief Computes the projection and inverse-rectification transformation map. In essense, this is the inverse of
+#initUndistortRectifyMap to accomodate stereo-rectification of projectors ('inverse-cameras') in projector-camera pairs.
+
+The function computes the joint projection and inverse rectification transformation and represents the
+result in the form of maps for #remap. The projected image looks like a distorted version of the original which,
+once projected by a projector, should visually match the original. In case of a monocular camera, newCameraMatrix
+is usually equal to cameraMatrix, or it can be computed by
+#getOptimalNewCameraMatrix for a better control over scaling. In case of a projector-camera pair,
+newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
+
+The projector is oriented differently in the coordinate space, according to R. In case of projector-camera pairs,
+this helps align the projector (in the same manner as #initUndistortRectifyMap for the camera) to create a stereo-rectified pair. This
+allows epipolar lines on both images to become horizontal and have the same y-coordinate (in case of a horizontally aligned projector-camera pair).
+
+The function builds the maps for the inverse mapping algorithm that is used by #remap. That
+is, for each pixel \f$(u, v)\f$ in the destination (projected and inverse-rectified) image, the function
+computes the corresponding coordinates in the source image (that is, in the original digital image). The following process is applied:
+
+\f[
+\begin{array}{l}
+\text{newCameraMatrix}\\
+x  \leftarrow (u - {c'}_x)/{f'}_x  \\
+y  \leftarrow (v - {c'}_y)/{f'}_y  \\
+
+\\\text{Undistortion}
+\\\scriptsize{\textit{though equation shown is for radial undistortion, function implements cv::undistortPoints()}}\\
+r^2  \leftarrow x^2 + y^2 \\
+\theta \leftarrow \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}\\
+x' \leftarrow \frac{x}{\theta} \\
+y'  \leftarrow \frac{y}{\theta} \\
+
+\\\text{Rectification}\\
+{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
+x''  \leftarrow X/W  \\
+y''  \leftarrow Y/W  \\
+
+\\\text{cameraMatrix}\\
+map_x(u,v)  \leftarrow x'' f_x + c_x  \\
+map_y(u,v)  \leftarrow y'' f_y + c_y
+\end{array}
+\f]
+where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+are the distortion coefficients vector distCoeffs.
+
+In case of a stereo-rectified projector-camera pair, this function is called for the projector while #initUndistortRectifyMap is called for the camera head.
+This is done after #stereoRectify, which in turn is called after #stereoCalibrate. If the projector-camera pair
+is not calibrated, it is still possible to compute the rectification transformations directly from
+the fundamental matrix using #stereoRectifyUncalibrated. For the projector and camera, the function computes
+homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
+space. R can be computed from H as
+\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
+where cameraMatrix can be chosen arbitrarily.
+
+@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
+of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
+@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2,
+computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
+is assumed.
+@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
+@param size Undistorted image size.
+@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
+@param map1 The first output map for #remap.
+@param map2 The second output map for #remap.
+ */
+CV_EXPORTS_W
+void initInverseRectificationMap( InputArray cameraMatrix, InputArray distCoeffs,
+                           InputArray R, InputArray newCameraMatrix,
+                           Size size, int m1type, OutputArray map1, OutputArray map2 );
+
 //! initializes maps for #remap for wide-angle
 CV_EXPORTS
 float initWideAngleProjMap(InputArray cameraMatrix, InputArray distCoeffs,

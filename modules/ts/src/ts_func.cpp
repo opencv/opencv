@@ -2881,6 +2881,86 @@ void initUndistortMap( const Mat& _a0, const Mat& _k0, const Mat& _R0, const Mat
     _mapy.convertTo(__mapy, map_type);
 }
 
+void initInverseRectificationMap( const Mat& _a0, const Mat& _k0, const Mat& _R0, const Mat& _new_cam0, Size sz, Mat& __mapx, Mat& __mapy, int map_type )
+{
+    Mat _mapx(sz, CV_32F), _mapy(sz, CV_32F);
+
+    double a[9], k[5]={0,0,0,0,0}, iR[9]={1, 0, 0, 0, 1, 0, 0, 0, 1}, a1[9];
+    Mat _a(3, 3, CV_64F, a), _a1(3, 3, CV_64F, a1);
+    Mat _k(_k0.rows,_k0.cols, CV_MAKETYPE(CV_64F,_k0.channels()),k);
+    Mat _iR(3, 3, CV_64F, iR);
+    double fx, fy, cx, cy, ifx, ify, cxn, cyn;
+
+    // Camera matrix
+    CV_Assert(_a0.size() == Size(3, 3));
+    _a0.convertTo(_a, CV_64F);
+    if( !_new_cam0.empty() )
+    {
+        CV_Assert(_new_cam0.size() == Size(3, 3));
+        _new_cam0.convertTo(_a1, CV_64F);
+    }
+    else
+    {
+        _a.copyTo(_a1);
+    }
+
+    // Distortion
+    CV_Assert(_k0.empty() ||
+              _k0.size() == Size(5, 1) ||
+              _k0.size() == Size(1, 5) ||
+              _k0.size() == Size(4, 1) ||
+              _k0.size() == Size(1, 4));
+    if( !_k0.empty() )
+        _k0.convertTo(_k, CV_64F);
+
+    // Rotation
+    if( !_R0.empty() )
+    {
+        CV_Assert(_R0.size() == Size(3, 3));
+        Mat tmp;
+        _R0.convertTo(_iR, CV_64F);
+        //invert(tmp, _iR, DECOMP_LU);
+    }
+
+    // Copy camera matrix
+    fx = a[0]; fy = a[4]; cx = a[2]; cy = a[5];
+
+    // Copy new camera matrix
+    ifx = a1[0]; ify = a1[4]; cxn = a1[2]; cyn = a1[5];
+
+    // Undistort
+    for( int v = 0; v < sz.height; v++ )
+    {
+        for( int u = 0; u < sz.width; u++ )
+        {
+            // Convert from image to pin-hole coordinates
+            double x = (u - cx)/fx;
+            double y = (v - cy)/fy;
+
+            // Undistort
+            double x2 = x*x, y2 = y*y;
+            double r2 = x2 + y2;
+            double cdist = 1./(1 + (k[0] + (k[1] + k[4]*r2)*r2)*r2); // (1 + (k[5] + (k[6] + k[7]*r2)*r2)*r2) == 1 as K[5-7]=0;
+            double x_ = x*cdist - k[2]*2*x*y + k[3]*(r2 + 2*x2);
+            double y_ = y*cdist - k[3]*2*x*y + k[2]*(r2 + 2*y2);
+
+            // Rectify
+            double X = iR[0]*x_ + iR[1]*y_ + iR[2];
+            double Y = iR[3]*x_ + iR[4]*y_ + iR[5];
+            double Z = iR[6]*x_ + iR[7]*y_ + iR[8];
+            double x__ = X/Z;
+            double y__ = Y/Z;
+
+            // Convert from pin-hole to image coordinates
+            _mapy.at<float>(v, u) = (float)(y__*ify + cyn);
+            _mapx.at<float>(v, u) = (float)(x__*ifx + cxn);
+        }
+    }
+
+    _mapx.convertTo(__mapx, map_type);
+    _mapy.convertTo(__mapy, map_type);
+}
+
 std::ostream& operator << (std::ostream& out, const MatInfo& m)
 {
     if( !m.m || m.m->empty() )
