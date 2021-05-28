@@ -606,6 +606,7 @@ namespace detail
                                   std::forward<VisitorArgs>(args)...);
     }
 
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
     template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
     typename std::enable_if<std::is_base_of<static_visitor<ReturnType,Visitor>, Visitor>::value, ReturnType>::type
     invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
@@ -613,14 +614,15 @@ namespace detail
         return static_cast<static_visitor<ReturnType,Visitor>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
     }
 
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
     template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
     typename std::enable_if<std::is_base_of<static_indexed_visitor<ReturnType, Visitor>, Visitor>::value, ReturnType>::type
     invoke_class_visitor(static_indexed_visitor<ReturnType, Visitor>& visitor, Value&& v,  VisitorArgs&&...args)
     {
         return static_cast<static_indexed_visitor<ReturnType,Visitor>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
     }
-    
-    // Intermediate resursion processor for special case `visitor_interface` derived Visitors
+
+    // Intermediate recursion processor for special case `visitor_interface` derived Visitors
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
     typename std::enable_if<std::is_base_of<visitor_interface, Visitor>::value, ReturnType>::type
