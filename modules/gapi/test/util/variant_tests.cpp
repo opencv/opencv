@@ -517,7 +517,7 @@ class MyClass
     }
 };
 
-struct MyParamDynamicVisitor : cv::util::dynamic_indexed_visitor<bool, MyParamDynamicVisitor>
+struct MyParamDynamicVisitor : cv::util::static_indexed_visitor<bool, MyParamDynamicVisitor>
 {
     MyParamDynamicVisitor(std::ostream &output) : out(output) {}
 
@@ -536,7 +536,7 @@ struct MyParamDynamicVisitor : cv::util::dynamic_indexed_visitor<bool, MyParamDy
     std::ostream &out;
 };
 
-struct MyNoParamDynamicVisitor : cv::util::dynamic_indexed_visitor<bool, MyNoParamDynamicVisitor>
+struct MyNoParamDynamicVisitor : cv::util::static_indexed_visitor<bool, MyNoParamDynamicVisitor>
 {
     MyNoParamDynamicVisitor(std::ostream &output) : out(output) {}
 
@@ -568,13 +568,9 @@ struct MyNoParamStaticIndexedVisitor : cv::util::static_indexed_visitor<void, My
 {
     MyNoParamStaticIndexedVisitor(std::ostream &output) : out(output) {}
 
-    template<std::size_t Index, class Type>
-    void visit(Type val)
+    template<class Type>
+    void visit(std::size_t Index, Type val)
     {
-        using clear_type = typename std::decay<Type>::type;
-        using expected_type = typename std::conditional<Index == 0, int, clear_type>::type;
-        static_assert(std::is_same<expected_type, clear_type>::value, "Firt Index must depict `int` type");
-
         out << Index << ":" << val <<",";
     }
 

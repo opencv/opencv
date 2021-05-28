@@ -293,29 +293,11 @@ namespace util
         using detail::visitor_return_type_deduction_helper<R>::operator();
         friend Impl;
 
-        template<std::size_t Index, typename VariantValue, typename ...Args>
-        return_type operator() (VariantValue&& value, Args&& ...args)
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t index, VariantValue&& value, Args&& ...args)
         {
+            suppress_unused_warning(index);
             return static_cast<Impl*>(this)-> visit(
-                                                std::forward<VariantValue>(value),
-                                                std::forward<Args>(args)...);
-        }
-    };
-
-    // Special purpose `static_indexed_visitor` can receive additional arguments
-    // And make forwarding current variant index as non-typed template argument to its `Impl`
-    template<typename R, typename Impl>
-    struct static_indexed_visitor : public detail::visitor_interface,
-                                    public detail::visitor_return_type_deduction_helper<R> {
-
-        using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
-        using detail::visitor_return_type_deduction_helper<R>::operator();
-        friend Impl;
-
-        template<std::size_t Index, typename VariantValue, typename ...Args>
-        return_type operator() (VariantValue&& value, Args&& ...args)
-        {
-            return static_cast<Impl*>(this)-> template visit<Index, VariantValue, Args...>(
                                                 std::forward<VariantValue>(value),
                                                 std::forward<Args>(args)...);
         }
@@ -324,15 +306,15 @@ namespace util
     // Special purpose `static_indexed_visitor` can receive additional arguments
     // And make forwarding current variant index as runtime function argument to its `Impl`
     template<typename R, typename Impl>
-    struct dynamic_indexed_visitor : public detail::visitor_interface,
-                                     public detail::visitor_return_type_deduction_helper<R> {
+    struct static_indexed_visitor : public detail::visitor_interface,
+                                    public detail::visitor_return_type_deduction_helper<R> {
 
         using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
         using detail::visitor_return_type_deduction_helper<R>::operator();
         friend Impl;
 
-        template<std::size_t Index, typename VariantValue, typename ...Args>
-        return_type operator() (VariantValue&& value, Args&& ...args)
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t Index, VariantValue&& value, Args&& ...args)
         {
             return static_cast<Impl*>(this)-> visit(Index,
                                                 std::forward<VariantValue>(value),
@@ -625,11 +607,19 @@ namespace detail
     }
 
     template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
-    ReturnType invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    typename std::enable_if<std::is_base_of<static_visitor<ReturnType,Visitor>, Visitor>::value, ReturnType>::type
+    invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
     {
-        return visitor.template operator()<CurIndex>(v, std::forward<VisitorArgs>(args)... );
+        return static_cast<static_visitor<ReturnType,Visitor>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
     }
 
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<static_indexed_visitor<ReturnType, Visitor>, Visitor>::value, ReturnType>::type
+    invoke_class_visitor(static_indexed_visitor<ReturnType, Visitor>& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return static_cast<static_indexed_visitor<ReturnType,Visitor>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
+    }
+    
     // Intermediate resursion processor for special case `visitor_interface` derived Visitors
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
