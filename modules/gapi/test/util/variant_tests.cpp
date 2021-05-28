@@ -656,7 +656,7 @@ TEST(Variant, StaticIndexedVisitor)
 {
     using V = cv::util::variant<int, double, char, float, test_validation::MyType, test_validation::MyClass>;
     V var{42};
-    
+
     std::stringstream ss;
     cv::util::visit(test_validation::MyNoParamStaticIndexedVisitor {ss}, var);
     EXPECT_EQ(ss.str(), std::string("0:42,"));

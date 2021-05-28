@@ -624,6 +624,12 @@ namespace detail
                                   std::forward<VisitorArgs>(args)...);
     }
 
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    ReturnType invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return visitor.template operator()<CurIndex>(v, std::forward<VisitorArgs>(args)... );
+    }
+    
     // Intermediate resursion processor for special case `visitor_interface` derived Visitors
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
@@ -638,8 +644,9 @@ namespace detail
         suppress_unused_warning(not_processed);
         if(v.index() == CurIndex)
         {
+            return invoke_class_visitor<CurIndex, ReturnType>(visitor, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
             // invoke `visitor_interface` with additional `CurIndex` as template args
-            return visitor.template operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+            //return visitor.template operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
         using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
