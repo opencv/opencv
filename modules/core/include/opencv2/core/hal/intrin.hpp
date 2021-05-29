@@ -668,10 +668,10 @@ namespace CV__SIMD_NAMESPACE {
 
     // backward compatibility
     template<typename _Tp, typename _Tvec> static inline
-    void vx_store(_Tp* dst, const _Tvec& v) { return v_store(dst, v); }
+    void vx_store(_Tp* dst, const _Tvec& v) { v_store(dst, v); }
     // backward compatibility
     template<typename _Tp, typename _Tvec> static inline
-    void vx_store_aligned(_Tp* dst, const _Tvec& v) { return v_store_aligned(dst, v); }
+    void vx_store_aligned(_Tp* dst, const _Tvec& v) { v_store_aligned(dst, v); }
 
 //! @endcond
 
