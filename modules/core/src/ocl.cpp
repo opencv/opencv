@@ -3482,7 +3482,6 @@ struct Kernel::Impl
     void registerImageArgument(int arg, const Image2D& image)
     {
         CV_CheckGE(arg, 0, "");
-        CV_CheckLT(arg, (int)MAX_ARRS, "");
         if (arg < (int)shadow_images.size() && shadow_images[arg].ptr() != image.ptr())  // TODO future: replace ptr => impl (more strong check)
         {
             CV_Check(arg, !isInProgress, "ocl::Kernel: clearing of pending Image2D arguments is not allowed");

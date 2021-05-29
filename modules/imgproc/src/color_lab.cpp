@@ -1536,6 +1536,8 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
 #endif // CV_SIMD
 
 
+
+
 struct RGB2Lab_b
 {
     typedef uchar channel_type;
@@ -1571,6 +1573,69 @@ struct RGB2Lab_b
         }
     }
 
+#if CV_NEON
+    template <int n>
+    inline void rgb2lab_batch(const ushort* tab,
+                              const v_uint8 vRi, const v_uint8 vGi, const v_uint8 vBi,
+                              v_int32& vL, v_int32& va, v_int32& vb) const
+    {
+        // Define some scalar constants which we will make use of later
+        const int Lscale = (116*255+50)/100;
+        const int Lshift = -((16*255*(1 << lab_shift2) + 50)/100);
+        const int xyzDescaleShift = (1 << (lab_shift - 1));
+        const int labDescaleShift = (1 << (lab_shift2 - 1));
+        const int abShift = 128*(1 << lab_shift2);
+
+        const int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
+                  C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
+                  C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
+
+        // int R = tab[src[0]], G = tab[src[1]], B = tab[src[2]];
+        v_int32 vR(tab[v_extract_n<4*n+0>(vRi)], tab[v_extract_n<4*n+1>(vRi)],
+                   tab[v_extract_n<4*n+2>(vRi)], tab[v_extract_n<4*n+3>(vRi)]);
+        v_int32 vG(tab[v_extract_n<4*n+0>(vGi)], tab[v_extract_n<4*n+1>(vGi)],
+                   tab[v_extract_n<4*n+2>(vGi)], tab[v_extract_n<4*n+3>(vGi)]);
+        v_int32 vB(tab[v_extract_n<4*n+0>(vBi)], tab[v_extract_n<4*n+1>(vBi)],
+                   tab[v_extract_n<4*n+2>(vBi)], tab[v_extract_n<4*n+3>(vBi)]);
+
+        /* int fX = LabCbrtTab_b[CV_DESCALE(R*C0 + G*C1 + B*C2, lab_shift)];*/
+        v_int32 vfX = v_fma(vR, v_setall_s32(C0), v_setall_s32(xyzDescaleShift));
+        vfX = v_fma(vG, v_setall_s32(C1), vfX);
+        vfX = v_fma(vB, v_setall_s32(C2), vfX);
+        vfX = v_shr<lab_shift>(vfX);
+        vfX = v_int32(LabCbrtTab_b[v_extract_n<0>(vfX)], LabCbrtTab_b[v_extract_n<1>(vfX)],
+                      LabCbrtTab_b[v_extract_n<2>(vfX)], LabCbrtTab_b[v_extract_n<3>(vfX)]);
+
+        /* int fY = LabCbrtTab_b[CV_DESCALE(R*C3 + G*C4 + B*C5, lab_shift)]; */
+        v_int32 vfY = v_fma(vR, v_setall_s32(C3), v_setall_s32(xyzDescaleShift));
+        vfY = v_fma(vG, v_setall_s32(C4), vfY);
+        vfY = v_fma(vB, v_setall_s32(C5), vfY);
+        vfY = v_shr<lab_shift>(vfY);
+        vfY = v_int32(LabCbrtTab_b[v_extract_n<0>(vfY)], LabCbrtTab_b[v_extract_n<1>(vfY)],
+                      LabCbrtTab_b[v_extract_n<2>(vfY)], LabCbrtTab_b[v_extract_n<3>(vfY)]);
+
+        /* int fZ = LabCbrtTab_b[CV_DESCALE(R*C6 + G*C7 + B*C8, lab_shift)];*/
+        v_int32 vfZ = v_fma(vR, v_setall_s32(C6), v_setall_s32(xyzDescaleShift));
+        vfZ = v_fma(vG, v_setall_s32(C7), vfZ);
+        vfZ = v_fma(vB, v_setall_s32(C8), vfZ);
+        vfZ = v_shr<lab_shift>(vfZ);
+        vfZ = v_int32(LabCbrtTab_b[v_extract_n<0>(vfZ)], LabCbrtTab_b[v_extract_n<1>(vfZ)],
+                      LabCbrtTab_b[v_extract_n<2>(vfZ)], LabCbrtTab_b[v_extract_n<3>(vfZ)]);
+
+        /* int L = CV_DESCALE( Lscale*fY + Lshift, lab_shift2 );*/
+        vL = v_fma(vfY, v_setall_s32(Lscale), v_setall_s32(Lshift+labDescaleShift));
+        vL = v_shr<lab_shift2>(vL);
+
+        /* int a = CV_DESCALE( 500*(fX - fY) + 128*(1 << lab_shift2), lab_shift2 );*/
+        va = v_fma(vfX - vfY, v_setall_s32(500), v_setall_s32(abShift+labDescaleShift));
+        va = v_shr<lab_shift2>(va);
+
+        /* int b = CV_DESCALE( 200*(fY - fZ) + 128*(1 << lab_shift2), lab_shift2 );*/
+        vb = v_fma(vfY - vfZ, v_setall_s32(200), v_setall_s32(abShift+labDescaleShift));
+        vb = v_shr<lab_shift2>(vb);
+    }
+#endif // CV_NEON
+
     void operator()(const uchar* src, uchar* dst, int n) const
     {
         CV_INSTRUMENT_REGION();
@@ -1584,6 +1649,45 @@ struct RGB2Lab_b
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
         i = 0;
+
+#if CV_NEON
+        // On each loop, we load nlanes of RGB/A v_uint8s and store nlanes of
+        // Lab v_uint8s
+        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes,
+                src += scn*v_uint8::nlanes, dst += 3*v_uint8::nlanes )
+        {
+            // Load 4 batches of 4 src
+            v_uint8 vRi, vGi, vBi;
+            if(scn == 4)
+            {
+                v_uint8 vAi;
+                v_load_deinterleave(src, vRi, vGi, vBi, vAi);
+            }
+            else // scn == 3
+            {
+                v_load_deinterleave(src, vRi, vGi, vBi);
+            }
+
+            // Do 4 batches of 4 RGB2Labs
+            v_int32 vL0, va0, vb0;
+            rgb2lab_batch<0>(tab, vRi, vGi, vBi, vL0, va0, vb0);
+            v_int32 vL1, va1, vb1;
+            rgb2lab_batch<1>(tab, vRi, vGi, vBi, vL1, va1, vb1);
+            v_int32 vL2, va2, vb2;
+            rgb2lab_batch<2>(tab, vRi, vGi, vBi, vL2, va2, vb2);
+            v_int32 vL3, va3, vb3;
+            rgb2lab_batch<3>(tab, vRi, vGi, vBi, vL3, va3, vb3);
+
+            // Saturate, combine and store all batches
+            // dst[0] = saturate_cast<uchar>(L);
+            // dst[1] = saturate_cast<uchar>(a);
+            // dst[2] = saturate_cast<uchar>(b);
+            v_store_interleave(dst,
+                v_pack(v_pack_u(vL0, vL1), v_pack_u(vL2, vL3)),
+                v_pack(v_pack_u(va0, va1), v_pack_u(va2, va3)),
+                v_pack(v_pack_u(vb0, vb1), v_pack_u(vb2, vb3)));
+        }
+#endif // CV_NEON
 
 #if CV_SIMD
         const int vsize = v_uint8::nlanes;
