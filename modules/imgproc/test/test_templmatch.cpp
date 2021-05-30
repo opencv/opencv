@@ -439,12 +439,12 @@ TEST(Imgproc_MatchTemplate, bug_15215) {
         double sqdiff = squaredDiff.val[0];
         Scalar sumOfSquaredProduct = cv::sum(cvimg.mul(cvimg)) * cv::sum(cvtmpl.mul(cvtmpl));
         double norm_ = cv::sqrt(sumOfSquaredProduct.val[0]);
-        double expectedResult = sqdiff / (float) norm_;
+        double expectedResult = sqdiff / norm_;
 
         // compute with matchTemplate
         cv::Mat output;
         cv::matchTemplate(cvimg, cvtmpl, output, CV_TM_SQDIFF_NORMED);
-        double actualResult = output.at<float>(0, 0);
-        ASSERT_FLOAT_EQ(actualResult, expectedResult);
+        float actualResult = output.at<float>(0, 0);
+        ASSERT_FLOAT_EQ(actualResult, (float) expectedResult);
 }
 } // namespace
