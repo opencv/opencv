@@ -49,9 +49,6 @@ public:
         cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
-    cv::util::any blobParams() const override {
-        return std::make_pair<std::string, int>("hello", 42);
-    }
 };
 
 class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
@@ -71,10 +68,6 @@ public:
             m_y.step, m_uv.step, 0u, 0u
         };
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
-    }
-    cv::util::any blobParams() const override {
-        GAPI_Assert(false && "Not implemented");
-        return {};
     }
 };
 } // anonymous namespace
@@ -185,11 +178,7 @@ TEST(MediaFrame, blobParams) {
     cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
     cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
 
-    cv::util::any any_params = frame.blobParams();
-    auto params = cv::util::any_cast<std::pair<std::string, int>>(any_params);
-
-    EXPECT_EQ("hello", params.first);
-    EXPECT_EQ(42, params.second);
+    EXPECT_NO_THROW(frame.blobParams());
 }
 
 } // namespace opencv_test
