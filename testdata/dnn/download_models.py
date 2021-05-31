@@ -854,6 +854,21 @@ models = [
         downloader=GDrive('1j4UTqVE4EGaUFiK7a5I_CYX7twO9c5br'),
         sha='49776d262993c387542f84d9cd16566840404f26',
         filename='gsoc2016-goturn/goturn.caffemodel'),
+    Model(
+        name='DaSiamRPM Tracker network (ONNX)',
+        url='https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=1',
+        sha='91b774fce7df4c0e4918469f0f482d9a27d0e2d4',
+        filename='onnx/models/dasiamrpn_model.onnx'),
+    Model(
+        name='DaSiamRPM Tracker kernel_r1 (ONNX)',
+        url='https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=1',
+        sha='bb64620a54348657133eb28be2d3a2a8c76b84b3',
+        filename='onnx/models/dasiamrpn_kernel_r1.onnx'),
+    Model(
+        name='DaSiamRPM Tracker kernel_cls1 (ONNX)',
+        url='https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=1',
+        sha='e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f',
+        filename='onnx/models/dasiamrpn_kernel_cls1.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
