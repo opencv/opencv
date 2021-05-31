@@ -17,8 +17,10 @@
 namespace cv {
 namespace gapi {
 
-//! @addtogroup gapi_serialization
-//! @{
+/**
+* \addtogroup gapi_serialization
+* @{
+*/
 
 namespace detail {
     /// @private -- Exclude this function from OpenCV documentation
@@ -42,96 +44,66 @@ namespace detail {
     cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &p);
 } // namespace detail
 
-/** @overload
- This function allows to serialize GComputation.
- @param c GComputation to serialize.
- @return serialized vector of bytes.
+/** @brief This function allows to serialize GComputation.
+ *
+ * Check different overloads for more examples.
+ * @param c GComputation to serialize.
+ * @return serialized vector of bytes.
  */
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
 
 /** @brief Generic function for deserializing different types.
- See different overloads for more examples.
- @param p vector of bytes to deserialize specified object from.
- @return specified deserialized type.
+ *
+ * Check different overloads for more examples.
+ * @param p vector of bytes to deserialize specified object from.
+ * @return deserialized object with specified type.
  */
 template<typename T> static inline
 T deserialize(const std::vector<char> &p);
 
-/** @overload
- This function allows to serialize GCompileArgs.
- @param ca GCompileArgs to serialize.
- @return serialized vector of bytes.
- */
+//! @overload
 GAPI_EXPORTS std::vector<char> serialize(const cv::GCompileArgs& ca);
 
-/** @overload
- This function allows to serialize GMetaArgs.
- @param ma GMetaArgs to serialize.
- @return serialized vector of bytes.
- */
+//! @overload
 GAPI_EXPORTS std::vector<char> serialize(const cv::GMetaArgs& ma);
 
-/** @overload
- This function allows to serialize GRunArgs.
- @param ra GRunArgs to serialize.
- @return serialized vector of bytes.
- */
+//! @overload
 GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs& ra);
 
-/** @overload
- This function allows to serialize std::vector<std::string>.
- @param vs std::vector<std::string> to serialize.
- @return serialized vector of bytes.
- */
+//! @overload
 GAPI_EXPORTS std::vector<char> serialize(const std::vector<std::string>& vs);
 
-/** @overload
- This function is used to deserialize GComputation.
- @param p vector of bytes to deserialize GComputation object from.
- @return GComputation object.
- */
+//! @overload
 template<> inline
 cv::GComputation deserialize(const std::vector<char> &p) {
     return detail::getGraph(p);
 }
 
-/** @overload
- This function is used to deserialize GMetaArgs.
- @param p vector of bytes to deserialize GMetaArgs object from.
- @return GMetaArgs object.
- */
+//! @overload
 template<> inline
 cv::GMetaArgs deserialize(const std::vector<char> &p) {
     return detail::getMetaArgs(p);
 }
 
-/** @overload
- This function is used to deserialize GRunArgs.
- @param p vector of bytes to deserialize GRunArgs object from.
- @return GRunArgs object.
- */
+//! @overload
 template<> inline
 cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
 }
 
-/** @overload
- This function is used to deserialize std::vector<std::string>.
- @param p vector of bytes to deserialize std::vector<std::string> from.
- @return deserialized std::vector<std::string>.
- */
+//! @overload
 template<> inline
 std::vector<std::string> deserialize(const std::vector<char> &p) {
     return detail::getVectorOfStrings(p);
 }
 
-/** @overload
- This function is used to deserialize GCompileArgs which
- types were specified in the template.
- @note To be used properly all GCompileArgs types must be de serializable ( @see S11N ).
- @param p vector of bytes to deserialize GCompileArgs object from.
- @return GCompileArgs object.
- @see GCompileArgs
+/** @brief This function is used to deserialize GCompileArgs which
+ * types were specified in the template.
+ *
+ * @note To be used properly all GCompileArgs types must be de serializable.
+ * @param p vector of bytes to deserialize GCompileArgs object from.
+ * @return GCompileArgs object.
+ * @see GCompileArgs S11N
  */
 template<typename T, typename... Types> inline
 typename std::enable_if<std::is_same<T, GCompileArgs>::value, GCompileArgs>::
@@ -139,14 +111,14 @@ type deserialize(const std::vector<char> &p) {
     return detail::getCompileArgs<Types...>(p);
 }
 
-/** @overload
- This function is used to deserialize GRunArgs including RMat objects.
- RMat adapter type is specified in the template.
- @note To be used properly specified adapter type must overload its serialize() and
- desialize() methods.
- @param p vector of bytes to deserialize GRunArgs object from.
- @return GRunArgs including RMat objects.
- @see RMat
+/** @brief This function is used to deserialize GRunArgs including RMat objects.
+ *
+ * RMat adapter type is specified in the template.
+ * @note To be used properly specified adapter type must overload its serialize() and
+ * desialize() methods.
+ * @param p vector of bytes to deserialize GRunArgs object from.
+ * @return GRunArgs including RMat objects.
+ * @see RMat
  */
 template<typename T, typename RMatAdapterType> inline
 typename std::enable_if<std::is_same<T, GRunArgs>::value, GRunArgs>::
@@ -224,271 +196,125 @@ GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
 
 // OpenCV types ////////////////////////////////////////////////////////////////
 
-/** @overload
- This operator is used to serialize cv::Point into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Point.
- @param pt cv::Point to serialize.
- @return IOStream object with serialized cv::Point inside.
- @see serialize IOStream
+/** @brief This operator is used to serialize cv::Point into IOStream object.
+ *
+ * For instance, it can be used when overloading serialization routines for
+ * RMat's adapter or types inside GCompileArgs.
+ *
+ * Check overloads for more examples.
+ * @param os IOStream object to serialize and store cv::Point.
+ * @param pt cv::Point to serialize.
+ * @return IOStream object with serialized cv::Point inside.
+ * @see serialize IOStream
  */
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point &pt);
-/** @overload
- This operator is used to deserialize cv::Point from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Point from.
- @param pt reference to cv::Point to deserialize into.
- @return IIStream object with deserialized and extracted cv::Point from.
- @see deserialize IIStream
+/** @brief This operator is used to deserialize cv::Point from IIStream object.
+ *
+ * For instance, it can be used when overloading deserialization routines for
+ * RMat's adapter or types inside GCompileArgs.
+ *
+ * Check overloads for more examples.
+ * @param is IIStream object to deserialize cv::Point from.
+ * @param pt reference to cv::Point to deserialize into.
+ * @return IIStream object with deserialized and extracted cv::Point from.
+ * @see deserialize IIStream
  */
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point &pt);
 
-/** @overload
- This operator is used to serialize cv::Point2f into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Point2f.
- @param pt cv::Point2f to serialize.
- @return IOStream object with serialized cv::Point2f inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point2f &pt);
-/** @overload
- This operator is used to deserialize cv::Point2f from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Point2f from.
- @param pt reference to cv::Point2f to deserialize into.
- @return IIStream object with deserialized and extracted cv::Point2f from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point2f &pt);
 
-/** @overload
- This operator is used to serialize cv::Size into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Size.
- @param sz cv::Size to serialize.
- @return IOStream object with serialized cv::Size inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Size &sz);
-/** @overload
- This operator is used to deserialize cv::Size from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Size from.
- @param sz reference to cv::Size to deserialize into.
- @return IIStream object with deserialized and extracted cv::Size from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Size &sz);
 
-/** @overload
- This operator is used to serialize cv::Rect into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Rect.
- @param rc cv::Rect to serialize.
- @return IOStream object with serialized cv::Rect inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Rect &rc);
-/** @overload
- This operator is used to deserialize cv::Rect from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Rect from.
- @param rc reference to cv::Rect to deserialize into.
- @return IIStream object with deserialized and extracted cv::Rect from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Rect &rc);
 
-/** @overload
- This operator is used to serialize cv::Scalar into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Scalar.
- @param s cv::Scalar to serialize.
- @return IOStream object with serialized cv::Scalar inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Scalar &s);
-/** @overload
- This operator is used to deserialize cv::Scalar from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Scalar from.
- @param s reference to cv::Scalar to deserialize into.
- @return IIStream object with deserialized and extracted cv::Scalar from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Scalar &s);
 
-/** @overload
- This operator is used to serialize cv::Mat into IOStream object.
-
- For instance, it can be used when overloading serialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param os IOStream object to serialize and store cv::Mat.
- @param m cv::Mat to serialize.
- @return IOStream object with serialized cv::Mat inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Mat &m);
-/** @overload
- This operator is used to deserialize cv::Mat from IIStream object.
-
- For instance, it can be used when overloading deserialization routines for
- RMat's adapter or types inside GCompileArgs.
- @param is IIStream object to deserialize cv::Mat from.
- @param m reference to cv::Mat to deserialize into.
- @return IIStream object with deserialized and extracted cv::Mat from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Mat &m);
 
 // FIXME: for GRunArgs serailization
 #if !defined(GAPI_STANDALONE)
-/** @overload
- This operator is used to serialize cv::UMat into IOStream object.
- @param os IOStream object to serialize and store cv::UMat.
- @param um cv::UMat to serialize.
- @return IOStream object with serialized cv::UMat inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat & um);
-/** @overload
- This operator is used to deserialize cv::UMat from IIStream object.
- @param is IIStream object to deserialize cv::UMat from.
- @param um reference to cv::UMat to deserialize into.
- @return IIStream object with deserialized and extracted cv::UMat from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat & um);
 #endif // !defined(GAPI_STANDALONE)
 
-/** @overload
- This operator is used to serialize cv::RMat into IOStream object.
-
- It actually serializes the adapter, so the adapter type need to implement
- its serialize() method properly.
- @param os IOStream object to serialize and store cv::RMat.
- @param r cv::RMat to serialize.
- @return IOStream object with serialized cv::RMat inside.
- @see serialize RMat IOStream
+/** @brief This operator is used to serialize cv::RMat into IOStream object.
+ *
+ * It actually serializes the adapter, so the adapter type need to implement
+ * its serialize() method properly.
+ * @param os IOStream object to serialize and store cv::RMat.
+ * @param r cv::RMat to serialize.
+ * @return IOStream object with serialized cv::RMat inside.
+ * @see serialize RMat IOStream
  */
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::RMat &r);
-/** @overload
- This operator is used to deserialize cv::RMat from IIStream object.
-
- It actually deserializes the adapter, so the adapter type need to implement
- its deserialize() method properly.
- @param is IIStream object to deserialize cv::RMat from.
- @param r reference to cv::RMat to deserialize into.
- @return IIStream object with deserialized and extracted cv::RMat from.
- @see deserialize RMat IIStream
+/** @brief This operator is used to deserialize cv::RMat from IIStream object.
+ *
+ * It actually deserializes the adapter, so the adapter type need to implement
+ * its deserialize() method properly.
+ * @param is IIStream object to deserialize cv::RMat from.
+ * @param r reference to cv::RMat to deserialize into.
+ * @return IIStream object with deserialized and extracted cv::RMat from.
+ * @see deserialize RMat IIStream
  */
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::RMat &r);
 
-/** @overload
- This operator is used to serialize cv::gapi::wip::IStreamSource::Ptr into IOStream object.
- @param os IOStream object to serialize and store cv::gapi::wip::IStreamSource::Ptr.
- @param issptr cv::gapi::wip::IStreamSource::Ptr to serialize.
- @return IOStream object with serialized cv::gapi::wip::IStreamSource::Ptr inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &issptr);
-/** @overload
- This operator is used to deserialize cv::gapi::wip::IStreamSource::Ptr from IIStream object.
- @param is IIStream object to deserialize cv::gapi::wip::IStreamSource::Ptr from.
- @param issptr reference to cv::gapi::wip::IStreamSource::Ptr to deserialize into.
- @return IIStream object with deserialized and extracted cv::gapi::wip::IStreamSource::Ptr from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &issptr);
 
-/** @overload
- This operator is used to serialize cv::detail::VectorRef into IOStream object.
- @param os IOStream object to serialize and store cv::detail::VectorRef.
- @param vr cv::detail::VectorRef to serialize.
- @return IOStream object with serialized cv::detail::VectorRef inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &vr);
-/** @overload
- This operator is used to deserialize cv::detail::VectorRef from IIStream object.
- @param is IIStream object to deserialize cv::detail::VectorRef from.
- @param vr reference to cv::detail::VectorRef to deserialize into.
- @return IIStream object with deserialized and extracted cv::detail::VectorRef from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &vr);
 
-/** @overload
- This operator is used to serialize cv::detail::OpaqueRef  into IOStream object.
- @param os IOStream object to serialize and store cv::detail::OpaqueRef .
- @param opr cv::detail::OpaqueRef  to serialize.
- @return IOStream object with serialized cv::detail::OpaqueRef  inside.
- @see serialize IOStream
- */
+//! @overload
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &opr);
-/** @overload
- This operator is used to deserialize cv::detail::OpaqueRef from IIStream object.
- @param is IIStream object to deserialize cv::detail::OpaqueRef from.
- @param opr reference to cv::detail::OpaqueRef to deserialize into.
- @return IIStream object with deserialized and extracted cv::detail::OpaqueRef from.
- @see deserialize IIStream
- */
+//! @overload
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &opr);
 
-/** @overload
- This operator is used to serialize cv::MediaFrame into IOStream object.
-
- It actually serializes the adapter, so the adapter type need to implement
- its serialization mechanism.
- @note Currently serialization of cv::MediaFrame is not supported.
- @param os IOStream object to serialize and store cv::MediaFrame.
- @param mf cv::MediaFrame to serialize.
- @return IOStream object with serialized cv::MediaFrame inside.
- @see serialize MediaFrame IOStream
+/** @brief This operator is used to serialize cv::MediaFrame into IOStream object.
+ *
+ * It actually serializes the adapter, so the adapter type need to implement
+ * its serialization mechanism.
+ * @note Currently serialization of cv::MediaFrame is not supported.
+ * @param os IOStream object to serialize and store cv::MediaFrame.
+ * @param mf cv::MediaFrame to serialize.
+ * @return IOStream object with serialized cv::MediaFrame inside.
+ * @see serialize MediaFrame IOStream
  */
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::MediaFrame &mf);
-/** @overload
- This operator is used to deserialize cv::MediaFrame from IIStream object.
-
- It actually deserializes the adapter, so the adapter type need to implement
- its deserialization mechanism.
- @note Currently deserialization of cv::MediaFrame is not supported.
- @param is IIStream object to deserialize cv::MediaFrame from.
- @param mf reference to cv::MediaFrame to deserialize into.
- @return IIStream object with deserialized and extracted cv::MediaFrame from.
- @see deserialize MediaFrame IIStream
+/** @brief This operator is used to deserialize cv::MediaFrame from IIStream object.
+ *
+ * It actually deserializes the adapter, so the adapter type need to implement
+ * its deserialization mechanism.
+ * @note Currently deserialization of cv::MediaFrame is not supported.
+ * @param is IIStream object to deserialize cv::MediaFrame from.
+ * @param mf reference to cv::MediaFrame to deserialize into.
+ * @return IIStream object with deserialized and extracted cv::MediaFrame from.
+ * @see deserialize MediaFrame IIStream
  */
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::MediaFrame &mf);
 
 // Generic STL types ////////////////////////////////////////////////////////////////
-/** @overload
- This operator is used to serialize std::map<K, V> into IOStream object.
- @param os IOStream object to serialize and store std::map<K, V>.
- @param m std::map<K, V> to serialize.
- @return IOStream object with serialized std::map<K, V> inside.
- @see serialize IOStream
- */
+//! @overload
 template<typename K, typename V>
 IOStream& operator<< (IOStream& os, const std::map<K, V> &m) {
     const uint32_t sz = static_cast<uint32_t>(m.size());
@@ -496,13 +322,7 @@ IOStream& operator<< (IOStream& os, const std::map<K, V> &m) {
     for (const auto& it : m) os << it.first << it.second;
     return os;
 }
-/** @overload
- This operator is used to deserialize std::map<K, V> from IIStream object.
- @param is IIStream object to deserialize std::map<K, V> from.
- @param m reference to std::map<K, V> to deserialize into.
- @return IIStream object with extracted std::map<K, V> from.
- @see deserialize IIStream
- */
+//! @overload
 template<typename K, typename V>
 IIStream& operator>> (IIStream& is, std::map<K, V> &m) {
     m.clear();
@@ -517,13 +337,7 @@ IIStream& operator>> (IIStream& is, std::map<K, V> &m) {
     return is;
 }
 
-/** @overload
- This operator is used to serialize std::unordered_map<K, V> into IOStream object.
- @param os IOStream object to serialize and store std::unordered_map<K, V>.
- @param m std::unordered_map<K, V> to serialize.
- @return IOStream object with serialized std::unordered_map<K, V> inside.
- @see serialize IOStream
- */
+//! @overload
 template<typename K, typename V>
 IOStream& operator<< (IOStream& os, const std::unordered_map<K, V> &m) {
     const uint32_t sz = static_cast<uint32_t>(m.size());
@@ -531,13 +345,7 @@ IOStream& operator<< (IOStream& os, const std::unordered_map<K, V> &m) {
     for (auto &&it : m) os << it.first << it.second;
     return os;
 }
-/** @overload
- This operator is used to deserialize std::unordered_map<K, V> from IIStream object.
- @param is IIStream object to deserialize std::unordered_map<K, V> from.
- @param m reference to std::unordered_map<K, V> to deserialize into.
- @return IIStream object with extracted std::unordered_map<K, V> from.
- @see deserialize IIStream
- */
+//! @overload
 template<typename K, typename V>
 IIStream& operator>> (IIStream& is, std::unordered_map<K, V> &m) {
     m.clear();
@@ -552,13 +360,7 @@ IIStream& operator>> (IIStream& is, std::unordered_map<K, V> &m) {
     return is;
 }
 
-/** @overload
- This operator is used to serialize std::vector<T> into IOStream object.
- @param os IOStream object to serialize and store std::vector<T>.
- @param ts std::vector<T> to serialize.
- @return IOStream object with serialized std::vector<T> inside.
- @see serialize IOStream
- */
+//! @overload
 template<typename T>
 IOStream& operator<< (IOStream& os, const std::vector<T> &ts) {
     const uint32_t sz = static_cast<uint32_t>(ts.size());
@@ -566,13 +368,7 @@ IOStream& operator<< (IOStream& os, const std::vector<T> &ts) {
     for (auto &&v : ts) os << v;
     return os;
 }
-/** @overload
- This operator is used to deserialize std::vector<T> from IIStream object.
- @param is IIStream object to deserialize std::vector<T> from.
- @param ts reference to std::vector<T> to deserialize into.
- @return IIStream object with extracted std::vector<T> from.
- @see deserialize IIStream
- */
+//! @overload
 template<typename T>
 IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     uint32_t sz = 0u;
@@ -621,25 +417,13 @@ IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
 }
 } // namespace detail
 
-/** @overload
- This operator is used to serialize cv::util::variant<Ts...> into IOStream object.
- @param os IOStream object to serialize and store cv::util::variant<Ts...>.
- @param v cv::util::variant<Ts...> to serialize.
- @return IOStream object with serialized cv::util::variant<Ts...> inside.
- @see serialize IOStream
- */
+//! @overload
 template<typename... Ts>
 IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
     os << static_cast<uint32_t>(v.index());
     return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
 }
-/** @overload
- This operator is used to deserialize cv::util::variant<Ts...> from IIStream object.
- @param is IIStream object to deserialize cv::util::variant<Ts...> from.
- @param v reference to cv::util::variant<Ts...> to deserialize into.
- @return IIStream object with extracted cv::util::variant<Ts...> from.
- @see deserialize IIStream
- */
+//! @overload
 template<typename... Ts>
 IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
     int idx = -1;
@@ -757,7 +541,7 @@ cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &p) {
     return args;
 }
 } // namespace detail
-//! @} gapi_serialization
+/** @} */
 
 } // namespace gapi
 } // namespace cv
