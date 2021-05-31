@@ -372,6 +372,7 @@ namespace gapi
 {
     // Prework: model "Device" API before it gets to G-API headers.
     // FIXME: Don't mix with internal Backends class!
+    /// @private
     class GAPI_EXPORTS GBackend
     {
     public:
@@ -412,6 +413,7 @@ namespace std
 
 namespace cv {
 namespace gapi {
+    /// @private
     class GFunctor
     {
     public:
