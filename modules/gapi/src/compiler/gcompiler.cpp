@@ -317,14 +317,24 @@ void cv::gimpl::GCompiler::validateInputMeta()
                      "got " + std::to_string(m_metas.size()) + " meta arguments)"));
     }
 
-    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto) {
+    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream& tracer) {
         switch (proto.index())
         {
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
-            return util::holds_alternative<cv::GMatDesc>(meta);
-
+        {
+            bool is_valid = util::holds_alternative<cv::GMatDesc>(meta);
+            if (is_valid)
+            {
+                if(cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
+                {
+                    is_valid = false;
+                    tracer << "empty cv::Mat is not allowed as compile argument";
+                }
+            }
+            return is_valid;
+        }
         case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GFrameDesc>(meta);
 
@@ -348,12 +358,16 @@ void cv::gimpl::GCompiler::validateInputMeta()
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
-        if (!meta_matches(meta, proto))
+        std::stringstream ss;
+        if (!meta_matches(meta, proto, ss))
         {
             const auto index  = ade::util::index(meta_arg_idx);
+
+            const std::string& reason_descr = ss.str();
             util::throw_error(std::logic_error
-                        ("GComputation object type / metadata descriptor mismatch "
-                         "(argument " + std::to_string(index) + ")"));
+                        ("GComputation object type / metadata validation error "
+                         "(argument " + std::to_string(index) + ")" +
+                         (reason_descr.empty() ? "" : std::string("Reason: ") + reason_descr)));
             // FIXME: report what we've got and what we've expected
         }
     }

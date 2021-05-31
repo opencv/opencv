@@ -37,6 +37,18 @@ namespace
         {
         }
     };
+
+    struct GCompiledValidateMetaEmpty: public ::testing::Test
+    {
+        cv::GMat in;
+        cv::GScalar scale;
+        cv::GComputation m_ucc;
+
+        GCompiledValidateMetaEmpty() : m_ucc(cv::GIn(in, scale),
+                                               cv::GOut(DemoCC(in, scale)))
+        {
+        }
+    };
 } // anonymous namespace
 
 TEST_F(GCompiledValidateMetaTyped, ValidMeta)
@@ -170,4 +182,10 @@ TEST_F(GCompiledValidateMetaUntyped, InvalidMetaNumber)
     EXPECT_THROW(f(cv::gin(in1, sc), cv::gout(out1, out2)), std::logic_error);
 }
 
+TEST_F(GCompiledValidateMetaEmpty, InvalidMatMeta)
+{
+    EXPECT_THROW(m_ucc.compile(cv::empty_gmat_desc(),
+                               cv::empty_scalar_desc()),
+                 std::logic_error);
+}
 } // namespace opencv_test

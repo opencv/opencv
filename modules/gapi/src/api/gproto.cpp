@@ -14,6 +14,7 @@
 
 #include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"
+#include "logger.hpp"
 
 // FIXME: it should be a visitor!
 // FIXME: Reimplement with traits?
@@ -218,7 +219,9 @@ void cv::validate_input_arg(const GRunArg& arg)
     case GRunArg::index_of<cv::Mat>():
     {
         const auto desc = cv::descr_of(util::get<cv::Mat>(arg));
-        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of Mat!"); break;
+        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of Mat!");
+        GAPI_Assert(empty_gmat_desc() != desc && "empty cv::Mat is not allowed as input argument");
+        break;
     }
     default:
         // No extra handling
@@ -228,9 +231,13 @@ void cv::validate_input_arg(const GRunArg& arg)
 
 void cv::validate_input_args(const GRunArgs& args)
 {
+    GAPI_LOG_DEBUG(nullptr, "Total count: " << args.size());
+    size_t index = 0;
     for (const auto& arg : args)
     {
+        GAPI_LOG_DEBUG(nullptr, "Process index: " << index);
         validate_input_arg(arg);
+        index ++;
     }
 }
 
