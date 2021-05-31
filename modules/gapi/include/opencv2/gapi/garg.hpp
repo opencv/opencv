@@ -235,42 +235,50 @@ inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
 
 namespace gapi
 {
-//! @addtogroup gapi_serialization
-//! @{
+    /**
+     * \addtogroup gapi_serialization
+     * @{
+     *
+     * @brief G-API classes for constructed and compiled graphs.
+     */
     /** @brief Binds deserialized output GRunArgs to GRunArgsP which can be used by GCompiled.
-     Example:
-     @code{.cpp}
-     cv::GCompiled compd;
-     auto graph = cv::gapi::deserialize<cv::GComputation>(bytes);
-     this_graph = cv::util::make_optional(graph);
-
-     compd = this_graph->compile();
-     auto in_args  = cv::gapi::deserialize<cv::GRunArgs>(bytes_in);
-     auto out_args = cv::gapi::deserialize<cv::GRunArgs>(bytes_out);
-     this_compd(std::move(in_args), cv::gapi::bind(out_args));
-     @endcode
-     @param results deserialized GRunArgs.
-     @return converted to GRunArgsP arguments.
-     @see deserialize
+     *
+     * Example:
+     * @code{.cpp}
+     * cv::GCompiled compd;
+     * auto graph = cv::gapi::deserialize<cv::GComputation>(bytes);
+     * this_graph = cv::util::make_optional(graph);
+     *
+     * compd = this_graph->compile();
+     * auto in_args  = cv::gapi::deserialize<cv::GRunArgs>(bytes_in);
+     * auto out_args = cv::gapi::deserialize<cv::GRunArgs>(bytes_out);
+     * this_compd(std::move(in_args), cv::gapi::bind(out_args));
+     * @endcode
+     *
+     * @param results deserialized GRunArgs.
+     * @return converted to GRunArgsP arguments.
+     * @see deserialize
      */
     GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &results);
-    /** @brief Binds GRunArgsP during graph execution to GRunArgs which can be serialized.
-     Example:
-     @code{.cpp}
-     std::vector<OutObj> output_objs;
-     cv::GRunArgs out_args(output_objs.size());
-     for (auto &&out : output_objs) {
-         const auto &idx = m_out_map.at(out.first);
-         out_args[idx] = cv::gapi::bind(out.second);
-     }
-     const auto sargsout = cv::gapi::serialize(out_args);
-     @endcode
-     @param out GRunArgsP available during graph execution.
-     @return converted to serializable GRunArgs arguments.
-     @see serialize
+    /** @brief Binds output GRunArgsP during graph execution to GRunArgs which can be serialized.
+     *
+     * Example:
+     * @code{.cpp}
+     * std::vector<OutObj> output_objs;
+     * cv::GRunArgs out_args(output_objs.size());
+     * for (auto &&out : output_objs) {
+     *     const auto &idx = m_out_map.at(out.first);
+     *     out_args[idx] = cv::gapi::bind(out.second);
+     * }
+     * const auto sargsout = cv::gapi::serialize(out_args);
+     * @endcode
+     *
+     * @param out output GRunArgsP available during graph execution.
+     * @return converted to serializable output GRunArgs arguments.
+     * @see serialize
      */
     GAPI_EXPORTS cv::GRunArg   bind(cv::GRunArgP &out);     // FIXME: think more about it
-//! @} gapi_serialization
+/** @} */
 }
 
 template<typename... Ts> inline GRunArgs gin(const Ts&... args)

@@ -52,6 +52,7 @@ struct S11N: public NotImplemented {
     }
 };
 
+/// @private -- Exclude this struct from OpenCV documentation
 template<typename T> struct has_S11N_spec {
     static constexpr bool value = !std::is_base_of<NotImplemented,
                                         S11N<typename std::decay<T>::type>>::value;
