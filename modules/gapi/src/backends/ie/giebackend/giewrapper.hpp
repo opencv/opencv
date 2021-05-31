@@ -61,7 +61,6 @@ GAPI_EXPORTS inline IE::ExecutableNetwork loadNetwork(      IE::Core&       core
 GAPI_EXPORTS inline IE::ExecutableNetwork importNetwork(      IE::Core& core,
                                                         const GIEParam& params) {
     if (params.rctx != nullptr) {
-        GAPI_Assert(params.model_path.find(".blob") != std::string::npos);
         std::filebuf blobFile;
         if (!blobFile.open(params.model_path, std::ios::in | std::ios::binary))
         {

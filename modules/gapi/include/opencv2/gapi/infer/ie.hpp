@@ -80,7 +80,9 @@ namespace detail {
         // NB: Number of asyncrhonious infer requests
         size_t nireq;
 
+        // NB: A config to setup the RemoteContext below
         cv::util::any context_config;
+        // NB: Is utilized by the IE backend as alternative to operate with blobs
         std::shared_ptr<InferenceEngine::RemoteContext> rctx;
     };
 } // namespace detail

@@ -224,13 +224,11 @@ struct IEUnit {
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
-        InferenceEngine::ParamMap ctx_params;
-        try {
-            ctx_params = cv::util::any_cast<InferenceEngine::ParamMap>(params.context_config);
+        InferenceEngine::ParamMap* ctx_params =
+                            cv::util::any_cast<InferenceEngine::ParamMap*>(params.context_config);
+        if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
-            params.rctx = ie_core.CreateContext(params.device_id, ctx_params);
-        } catch (...) {
-            // Do nothing here
+            params.rctx = ie_core.CreateContext(params.device_id, *ctx_params);
         }
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
@@ -490,7 +488,32 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
+inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
+    GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
+                        "Callback feature is supported for MediaFrame only");
+
+    cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
+    auto ie_core = cv::gimpl::ie::wrap::getCore();
+
+    using ParamType = std::pair<InferenceEngine::TensorDesc,
+                                InferenceEngine::ParamMap>*;
+
+    ParamType blob_params = cv::util::any_cast<ParamType>(any_blob_params);
+    if (blob_params == nullptr) {
+        GAPI_Assert(false && "Incorrect type of blobParams: "
+                              "expected std::pair<InferenceEngine::TensorDesc,"
+                                                 "InferenceEngine::ParamMap>");
+    }
+
+    return ctx.uu.params.rctx->CreateBlob(blob_params->first,
+                                          blob_params->second);
+}
+
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
+    if (ctx.uu.params.rctx != nullptr) {
+        return extractRemoteBlob(ctx, i);
+    }
+
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             const auto& frame = ctx.inFrame(i);
@@ -909,34 +932,11 @@ struct Infer: public cv::detail::KernelTag {
                         // non-generic version for now:
                         // - assumes all inputs/outputs are always Mats
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
-                            if (ctx->uu.params.rctx != nullptr) {
-                                GAPI_Assert(ctx->inShape(i) == cv::GShape::GFRAME &&
-                                                "Callback feature is supported for MediaFrame only");
-                                cv::util::any any_blob_params = ctx->inFrame(i).blobParams();
-                                auto ie_core = cv::gimpl::ie::wrap::getCore();
-
-                                std::pair<InferenceEngine::TensorDesc,
-                                          InferenceEngine::ParamMap> blob_params;
-
-                                try {
-                                    blob_params = cv::util::any_cast<std::pair<InferenceEngine::TensorDesc,
-                                                                               InferenceEngine::ParamMap>>(any_blob_params);
-                                } catch (...) {
-                                    GAPI_Assert(false && "Incorrect type of blobParams: "
-                                                          "expected std::pair<InferenceEngine::TensorDesc,"
-                                                                             "InferenceEngine::ParamMap>");
-                                }
-
-                                IE::Blob::Ptr this_blob = ctx->uu.params.rctx->CreateBlob(blob_params.first,
-                                                                                          blob_params.second);
-                                req.SetBlob(ctx->uu.params.input_names[i], this_blob);
-                            } else {
-                                // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
-                                // and redirect our data producers to this memory
-                                // (A memory dialog comes to the picture again)
-                                IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                                req.SetBlob(ctx->uu.params.input_names[i], this_blob);
-                            }
+                            // TODO: Ideally we shouldn't do SetBlob() but GetBlob() instead,
+                            // and redirect our data producers to this memory
+                            // (A memory dialog comes to the picture again)
+                            IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
+                            req.SetBlob(ctx->uu.params.input_names[i], this_blob);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
@@ -1091,30 +1091,7 @@ struct InferList: public cv::detail::KernelTag {
             return;
         }
 
-        IE::Blob::Ptr this_blob = nullptr;
-
-        if (ctx->uu.params.rctx != nullptr) {
-            GAPI_Assert(ctx->inShape(1) == cv::GShape::GFRAME &&
-                            "Callback feature is supported for MediaFrame only");
-            cv::util::any any_blob_params = ctx->inFrame(1).blobParams();
-            auto ie_core = cv::gimpl::ie::wrap::getCore();
-
-            std::pair<InferenceEngine::TensorDesc,
-                      InferenceEngine::ParamMap> blob_params;
-            try {
-                blob_params = cv::util::any_cast<std::pair<InferenceEngine::TensorDesc,
-                                                           InferenceEngine::ParamMap>>(any_blob_params);
-            } catch (...) {
-                GAPI_Assert(false && "Incorrect type of blobParams: "
-                                      "expected std::pair<InferenceEngine::TensorDesc,"
-                                                         "InferenceEngine::ParamMap>");
-            }
-
-            this_blob = ctx->uu.params.rctx->CreateBlob(blob_params.first,
-                                                        blob_params.second);
-        } else {
-            this_blob = extractBlob(*ctx, 1);
-        }
+        IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
