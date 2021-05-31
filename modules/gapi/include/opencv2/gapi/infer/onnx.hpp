@@ -20,6 +20,10 @@
 
 namespace cv {
 namespace gapi {
+
+/**
+ * @brief This namespace contains G-API ONNX Runtime backend functions, structures, and symbols.
+ */
 namespace onnx {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();

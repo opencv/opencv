@@ -21,6 +21,11 @@ enum class StereoOutputFormat {
     DISPARITY_FIXED16_12_4
 };
 
+
+/**
+ * @brief This namespace contains G-API Operation Types for Stereo and
+ * related functionality.
+ */
 namespace calib3d {
 
 G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.opencv.stereo") {
