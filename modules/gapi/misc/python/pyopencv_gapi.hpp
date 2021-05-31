@@ -764,15 +764,10 @@ static PyObject* pyopencv_cv_gapi_networks(PyObject*, PyObject* py_args, PyObjec
     for (int i = 0; i < size; ++i)
     {
         PyObject* item = PyTuple_GetItem(py_args, i);
-        if (PyObject_TypeCheck(item,
-            reinterpret_cast<PyTypeObject*>(pyopencv_gapi_ie_PyParams_TypePtr)))
+        auto params = reinterpret_cast<pyopencv_gapi_ie_PyParams_t*>(item)->v;
+        if (pyopencv_to(item, params, ArgInfo("PyParams", false)))
         {
-            pkg += gapi::networks(reinterpret_cast<pyopencv_gapi_ie_PyParams_t*>(item)->v);
-        }
-        else
-        {
-            PyErr_SetString(PyExc_TypeError,
-                "Python net package should contain PyParams, please use cv.gapi.ie.params to define params");
+            pkg += gapi::networks(params);
         }
     }
     return pyopencv_from(pkg);
