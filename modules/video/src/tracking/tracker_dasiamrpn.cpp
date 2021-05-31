@@ -25,8 +25,13 @@ TrackerDaSiamRPN::Params::Params()
     model = "dasiamrpn_model.onnx";
     kernel_cls1 = "dasiamrpn_kernel_cls1.onnx";
     kernel_r1 = "dasiamrpn_kernel_r1.onnx";
-    backend = 0;
-    target = 0;
+#ifdef HAVE_OPENCV_DNN
+    backend = dnn::DNN_BACKEND_DEFAULT;
+    target = dnn::DNN_TARGET_CPU;
+#else
+    backend = -1;  // invalid value
+    target = -1;  // invalid value
+#endif
 }
 
 #ifdef HAVE_OPENCV_DNN
