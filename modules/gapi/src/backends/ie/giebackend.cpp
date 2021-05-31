@@ -225,7 +225,7 @@ struct IEUnit {
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
         InferenceEngine::ParamMap* ctx_params =
-                            cv::util::any_cast<InferenceEngine::ParamMap*>(params.context_config);
+                            cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
         if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
             params.rctx = ie_core.CreateContext(params.device_id, *ctx_params);
@@ -496,9 +496,9 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
     auto ie_core = cv::gimpl::ie::wrap::getCore();
 
     using ParamType = std::pair<InferenceEngine::TensorDesc,
-                                InferenceEngine::ParamMap>*;
+                                InferenceEngine::ParamMap>;
 
-    ParamType blob_params = cv::util::any_cast<ParamType>(any_blob_params);
+    ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
     if (blob_params == nullptr) {
         GAPI_Assert(false && "Incorrect type of blobParams: "
                               "expected std::pair<InferenceEngine::TensorDesc,"
