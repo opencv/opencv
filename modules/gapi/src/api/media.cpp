@@ -47,5 +47,10 @@ cv::MediaFrame::View::~View() {
     }
 }
 
+cv::util::any cv::MediaFrame::IAdapter::blobParams() const
+{
+    return {};
+}
+
 cv::MediaFrame::IAdapter::~IAdapter() {
 }

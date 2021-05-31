@@ -31,6 +31,8 @@ public:
     View access(Access) const;
     cv::GFrameDesc desc() const;
 
+    // FIXME: design a better solution
+    // Should be used only if the actual adapter provides implementation
     cv::util::any blobParams() const;
 
     // Cast underlying MediaFrame adapter to the particular adapter type,
@@ -81,7 +83,9 @@ public:
     virtual ~IAdapter() = 0;
     virtual cv::GFrameDesc meta() const = 0;
     virtual MediaFrame::View access(MediaFrame::Access) = 0;
-    virtual cv::util::any blobParams() const = 0;
+    // FIXME: design a better solution
+    // The default implementation does nothing
+    virtual cv::util::any blobParams() const;
 };
 
 } //namespace cv
