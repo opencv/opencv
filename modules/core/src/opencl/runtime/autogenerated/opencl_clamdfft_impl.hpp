@@ -160,7 +160,7 @@ namespace {
 openclamdfft_fn5(OPENCLAMDFFT_FN_clAmdFftBakePlan, clAmdFftStatus, (clAmdFftPlanHandle p1, cl_uint p2, cl_command_queue* p3, void (CL_CALLBACK*p4) (clAmdFftPlanHandle plHandle, void* user_data), void* p5))
 clAmdFftStatus (*clAmdFftBakePlan)(clAmdFftPlanHandle, cl_uint, cl_command_queue*, void (CL_CALLBACK*) (clAmdFftPlanHandle plHandle, void* user_data), void*) =
         OPENCLAMDFFT_FN_clAmdFftBakePlan_switch_fn;
-static const struct DynamicFnEntry clAmdFftBakePlan_definition = { "clAmdFftBakePlan", (void**)&clAmdFftBakePlan};
+static const struct DynamicFnEntry clAmdFftBakePlan_definition = { "clfftBakePlan", (void**)&clAmdFftBakePlan};
 
 //openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftCopyPlan, clAmdFftStatus, (clAmdFftPlanHandle* p1, cl_context p2, clAmdFftPlanHandle p3))
 //clAmdFftStatus (*clAmdFftCopyPlan)(clAmdFftPlanHandle*, cl_context, clAmdFftPlanHandle) =
@@ -170,17 +170,17 @@ static const struct DynamicFnEntry clAmdFftBakePlan_definition = { "clAmdFftBake
 openclamdfft_fn4(OPENCLAMDFFT_FN_clAmdFftCreateDefaultPlan, clAmdFftStatus, (clAmdFftPlanHandle* p1, cl_context p2, const clAmdFftDim p3, const size_t* p4))
 clAmdFftStatus (*clAmdFftCreateDefaultPlan)(clAmdFftPlanHandle*, cl_context, const clAmdFftDim, const size_t*) =
         OPENCLAMDFFT_FN_clAmdFftCreateDefaultPlan_switch_fn;
-static const struct DynamicFnEntry clAmdFftCreateDefaultPlan_definition = { "clAmdFftCreateDefaultPlan", (void**)&clAmdFftCreateDefaultPlan};
+static const struct DynamicFnEntry clAmdFftCreateDefaultPlan_definition = { "clfftCreateDefaultPlan", (void**)&clAmdFftCreateDefaultPlan};
 
 openclamdfft_fn1(OPENCLAMDFFT_FN_clAmdFftDestroyPlan, clAmdFftStatus, (clAmdFftPlanHandle* p1))
 clAmdFftStatus (*clAmdFftDestroyPlan)(clAmdFftPlanHandle*) =
         OPENCLAMDFFT_FN_clAmdFftDestroyPlan_switch_fn;
-static const struct DynamicFnEntry clAmdFftDestroyPlan_definition = { "clAmdFftDestroyPlan", (void**)&clAmdFftDestroyPlan};
+static const struct DynamicFnEntry clAmdFftDestroyPlan_definition = { "clfftDestroyPlan", (void**)&clAmdFftDestroyPlan};
 
 openclamdfft_fn10(OPENCLAMDFFT_FN_clAmdFftEnqueueTransform, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftDirection p2, cl_uint p3, cl_command_queue* p4, cl_uint p5, const cl_event* p6, cl_event* p7, cl_mem* p8, cl_mem* p9, cl_mem p10))
 clAmdFftStatus (*clAmdFftEnqueueTransform)(clAmdFftPlanHandle, clAmdFftDirection, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*, cl_mem*, cl_mem*, cl_mem) =
         OPENCLAMDFFT_FN_clAmdFftEnqueueTransform_switch_fn;
-static const struct DynamicFnEntry clAmdFftEnqueueTransform_definition = { "clAmdFftEnqueueTransform", (void**)&clAmdFftEnqueueTransform};
+static const struct DynamicFnEntry clAmdFftEnqueueTransform_definition = { "clfftEnqueueTransform", (void**)&clAmdFftEnqueueTransform};
 
 //openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftGetLayout, clAmdFftStatus, (const clAmdFftPlanHandle p1, clAmdFftLayout* p2, clAmdFftLayout* p3))
 //clAmdFftStatus (*clAmdFftGetLayout)(const clAmdFftPlanHandle, clAmdFftLayout*, clAmdFftLayout*) =
@@ -245,22 +245,22 @@ static const struct DynamicFnEntry clAmdFftEnqueueTransform_definition = { "clAm
 openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftGetTmpBufSize, clAmdFftStatus, (const clAmdFftPlanHandle p1, size_t* p2))
 clAmdFftStatus (*clAmdFftGetTmpBufSize)(const clAmdFftPlanHandle, size_t*) =
         OPENCLAMDFFT_FN_clAmdFftGetTmpBufSize_switch_fn;
-static const struct DynamicFnEntry clAmdFftGetTmpBufSize_definition = { "clAmdFftGetTmpBufSize", (void**)&clAmdFftGetTmpBufSize};
+static const struct DynamicFnEntry clAmdFftGetTmpBufSize_definition = { "clfftGetTmpBufSize", (void**)&clAmdFftGetTmpBufSize};
 
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftGetVersion, clAmdFftStatus, (cl_uint* p1, cl_uint* p2, cl_uint* p3))
 clAmdFftStatus (*clAmdFftGetVersion)(cl_uint*, cl_uint*, cl_uint*) =
         OPENCLAMDFFT_FN_clAmdFftGetVersion_switch_fn;
-static const struct DynamicFnEntry clAmdFftGetVersion_definition = { "clAmdFftGetVersion", (void**)&clAmdFftGetVersion};
+static const struct DynamicFnEntry clAmdFftGetVersion_definition = { "clfftGetVersion", (void**)&clAmdFftGetVersion};
 
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetLayout, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftLayout p2, clAmdFftLayout p3))
 clAmdFftStatus (*clAmdFftSetLayout)(clAmdFftPlanHandle, clAmdFftLayout, clAmdFftLayout) =
         OPENCLAMDFFT_FN_clAmdFftSetLayout_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetLayout_definition = { "clAmdFftSetLayout", (void**)&clAmdFftSetLayout};
+static const struct DynamicFnEntry clAmdFftSetLayout_definition = { "clfftSetLayout", (void**)&clAmdFftSetLayout};
 
 openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftSetPlanBatchSize, clAmdFftStatus, (clAmdFftPlanHandle p1, size_t p2))
 clAmdFftStatus (*clAmdFftSetPlanBatchSize)(clAmdFftPlanHandle, size_t) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanBatchSize_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanBatchSize_definition = { "clAmdFftSetPlanBatchSize", (void**)&clAmdFftSetPlanBatchSize};
+static const struct DynamicFnEntry clAmdFftSetPlanBatchSize_definition = { "clfftSetPlanBatchSize", (void**)&clAmdFftSetPlanBatchSize};
 
 //openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftSetPlanDim, clAmdFftStatus, (clAmdFftPlanHandle p1, const clAmdFftDim p2))
 //clAmdFftStatus (*clAmdFftSetPlanDim)(clAmdFftPlanHandle, const clAmdFftDim) =
@@ -270,12 +270,12 @@ static const struct DynamicFnEntry clAmdFftSetPlanBatchSize_definition = { "clAm
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetPlanDistance, clAmdFftStatus, (clAmdFftPlanHandle p1, size_t p2, size_t p3))
 clAmdFftStatus (*clAmdFftSetPlanDistance)(clAmdFftPlanHandle, size_t, size_t) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanDistance_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanDistance_definition = { "clAmdFftSetPlanDistance", (void**)&clAmdFftSetPlanDistance};
+static const struct DynamicFnEntry clAmdFftSetPlanDistance_definition = { "clfftSetPlanDistance", (void**)&clAmdFftSetPlanDistance};
 
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetPlanInStride, clAmdFftStatus, (clAmdFftPlanHandle p1, const clAmdFftDim p2, size_t* p3))
 clAmdFftStatus (*clAmdFftSetPlanInStride)(clAmdFftPlanHandle, const clAmdFftDim, size_t*) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanInStride_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanInStride_definition = { "clAmdFftSetPlanInStride", (void**)&clAmdFftSetPlanInStride};
+static const struct DynamicFnEntry clAmdFftSetPlanInStride_definition = { "clfftSetPlanInStride", (void**)&clAmdFftSetPlanInStride};
 
 //openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetPlanLength, clAmdFftStatus, (clAmdFftPlanHandle p1, const clAmdFftDim p2, const size_t* p3))
 //clAmdFftStatus (*clAmdFftSetPlanLength)(clAmdFftPlanHandle, const clAmdFftDim, const size_t*) =
@@ -285,17 +285,17 @@ static const struct DynamicFnEntry clAmdFftSetPlanInStride_definition = { "clAmd
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetPlanOutStride, clAmdFftStatus, (clAmdFftPlanHandle p1, const clAmdFftDim p2, size_t* p3))
 clAmdFftStatus (*clAmdFftSetPlanOutStride)(clAmdFftPlanHandle, const clAmdFftDim, size_t*) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanOutStride_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanOutStride_definition = { "clAmdFftSetPlanOutStride", (void**)&clAmdFftSetPlanOutStride};
+static const struct DynamicFnEntry clAmdFftSetPlanOutStride_definition = { "clfftSetPlanOutStride", (void**)&clAmdFftSetPlanOutStride};
 
 openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftPrecision p2))
 clAmdFftStatus (*clAmdFftSetPlanPrecision)(clAmdFftPlanHandle, clAmdFftPrecision) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanPrecision_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanPrecision_definition = { "clAmdFftSetPlanPrecision", (void**)&clAmdFftSetPlanPrecision};
+static const struct DynamicFnEntry clAmdFftSetPlanPrecision_definition = { "clfftSetPlanPrecision", (void**)&clAmdFftSetPlanPrecision};
 
 openclamdfft_fn3(OPENCLAMDFFT_FN_clAmdFftSetPlanScale, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftDirection p2, cl_float p3))
 clAmdFftStatus (*clAmdFftSetPlanScale)(clAmdFftPlanHandle, clAmdFftDirection, cl_float) =
         OPENCLAMDFFT_FN_clAmdFftSetPlanScale_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetPlanScale_definition = { "clAmdFftSetPlanScale", (void**)&clAmdFftSetPlanScale};
+static const struct DynamicFnEntry clAmdFftSetPlanScale_definition = { "clfftSetPlanScale", (void**)&clAmdFftSetPlanScale};
 
 //openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftSetPlanTransposeResult, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftResultTransposed p2))
 //clAmdFftStatus (*clAmdFftSetPlanTransposeResult)(clAmdFftPlanHandle, clAmdFftResultTransposed) =
@@ -305,17 +305,17 @@ static const struct DynamicFnEntry clAmdFftSetPlanScale_definition = { "clAmdFft
 openclamdfft_fn2(OPENCLAMDFFT_FN_clAmdFftSetResultLocation, clAmdFftStatus, (clAmdFftPlanHandle p1, clAmdFftResultLocation p2))
 clAmdFftStatus (*clAmdFftSetResultLocation)(clAmdFftPlanHandle, clAmdFftResultLocation) =
         OPENCLAMDFFT_FN_clAmdFftSetResultLocation_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetResultLocation_definition = { "clAmdFftSetResultLocation", (void**)&clAmdFftSetResultLocation};
+static const struct DynamicFnEntry clAmdFftSetResultLocation_definition = { "clfftSetResultLocation", (void**)&clAmdFftSetResultLocation};
 
 openclamdfft_fn1(OPENCLAMDFFT_FN_clAmdFftSetup, clAmdFftStatus, (const clAmdFftSetupData* p1))
 clAmdFftStatus (*clAmdFftSetup)(const clAmdFftSetupData*) =
         OPENCLAMDFFT_FN_clAmdFftSetup_switch_fn;
-static const struct DynamicFnEntry clAmdFftSetup_definition = { "clAmdFftSetup", (void**)&clAmdFftSetup};
+static const struct DynamicFnEntry clAmdFftSetup_definition = { "clfftSetup", (void**)&clAmdFftSetup};
 
 openclamdfft_fn0(OPENCLAMDFFT_FN_clAmdFftTeardown, clAmdFftStatus, ())
 clAmdFftStatus (*clAmdFftTeardown)() =
         OPENCLAMDFFT_FN_clAmdFftTeardown_switch_fn;
-static const struct DynamicFnEntry clAmdFftTeardown_definition = { "clAmdFftTeardown", (void**)&clAmdFftTeardown};
+static const struct DynamicFnEntry clAmdFftTeardown_definition = { "clfftTeardown", (void**)&clAmdFftTeardown};
 
 
 // generated by parser_clamdfft.py

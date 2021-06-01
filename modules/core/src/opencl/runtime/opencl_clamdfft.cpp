@@ -54,10 +54,10 @@
         static HMODULE opencl_module = NULL;
         if (!opencl_module)
         {
-            opencl_module = GetModuleHandleA("clAmdFft.Runtime.dll");
+            opencl_module = GetModuleHandleA("clFFT.dll");
             if (!opencl_module)
             {
-                opencl_module = LoadLibraryA("clAmdFft.Runtime.dll");
+                opencl_module = LoadLibraryA("clFFT.dll");
                 if (!opencl_module)
                     return NULL;
             }
@@ -76,7 +76,7 @@
         static void* h = NULL;
         if (!h)
         {
-            h = dlopen("libclAmdFft.Runtime.so", RTLD_LAZY | RTLD_GLOBAL);
+            h = dlopen("libclFFT.so", RTLD_LAZY | RTLD_GLOBAL);
             if (!h)
                 return NULL;
         }

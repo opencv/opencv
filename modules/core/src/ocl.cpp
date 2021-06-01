@@ -1330,7 +1330,7 @@ public:
     {
         try
         {
-//            clAmdFftTeardown();
+            clAmdFftTeardown();
         }
         catch (...) { }
     }

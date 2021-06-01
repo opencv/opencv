@@ -338,7 +338,7 @@ namespace {
 openclamdblas_fn22(OPENCLAMDBLAS_FN_clAmdBlasCgemmEx, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, clAmdBlasTranspose p3, size_t p4, size_t p5, size_t p6, FloatComplex p7, const cl_mem p8, size_t p9, size_t p10, const cl_mem p11, size_t p12, size_t p13, FloatComplex p14, cl_mem p15, size_t p16, size_t p17, cl_uint p18, cl_command_queue* p19, cl_uint p20, const cl_event* p21, cl_event* p22))
 clAmdBlasStatus (*clAmdBlasCgemmEx)(clAmdBlasOrder, clAmdBlasTranspose, clAmdBlasTranspose, size_t, size_t, size_t, FloatComplex, const cl_mem, size_t, size_t, const cl_mem, size_t, size_t, FloatComplex, cl_mem, size_t, size_t, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
         OPENCLAMDBLAS_FN_clAmdBlasCgemmEx_switch_fn;
-static const struct DynamicFnEntry clAmdBlasCgemmEx_definition = { "clAmdBlasCgemmEx", (void**)&clAmdBlasCgemmEx};
+static const struct DynamicFnEntry clAmdBlasCgemmEx_definition = { "clblasCgemmEx", (void**)&clAmdBlasCgemmEx};
 
 //openclamdblas_fn19(OPENCLAMDBLAS_FN_clAmdBlasCgemv, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, size_t p3, size_t p4, FloatComplex p5, const cl_mem p6, size_t p7, const cl_mem p8, size_t p9, int p10, FloatComplex p11, cl_mem p12, size_t p13, int p14, cl_uint p15, cl_command_queue* p16, cl_uint p17, const cl_event* p18, cl_event* p19))
 //clAmdBlasStatus (*clAmdBlasCgemv)(clAmdBlasOrder, clAmdBlasTranspose, size_t, size_t, FloatComplex, const cl_mem, size_t, const cl_mem, size_t, int, FloatComplex, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
@@ -543,7 +543,7 @@ static const struct DynamicFnEntry clAmdBlasCgemmEx_definition = { "clAmdBlasCge
 openclamdblas_fn22(OPENCLAMDBLAS_FN_clAmdBlasDgemmEx, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, clAmdBlasTranspose p3, size_t p4, size_t p5, size_t p6, cl_double p7, const cl_mem p8, size_t p9, size_t p10, const cl_mem p11, size_t p12, size_t p13, cl_double p14, cl_mem p15, size_t p16, size_t p17, cl_uint p18, cl_command_queue* p19, cl_uint p20, const cl_event* p21, cl_event* p22))
 clAmdBlasStatus (*clAmdBlasDgemmEx)(clAmdBlasOrder, clAmdBlasTranspose, clAmdBlasTranspose, size_t, size_t, size_t, cl_double, const cl_mem, size_t, size_t, const cl_mem, size_t, size_t, cl_double, cl_mem, size_t, size_t, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
         OPENCLAMDBLAS_FN_clAmdBlasDgemmEx_switch_fn;
-static const struct DynamicFnEntry clAmdBlasDgemmEx_definition = { "clAmdBlasDgemmEx", (void**)&clAmdBlasDgemmEx};
+static const struct DynamicFnEntry clAmdBlasDgemmEx_definition = { "clblasDgemmEx", (void**)&clAmdBlasDgemmEx};
 
 //openclamdblas_fn19(OPENCLAMDBLAS_FN_clAmdBlasDgemv, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, size_t p3, size_t p4, cl_double p5, const cl_mem p6, size_t p7, const cl_mem p8, size_t p9, int p10, cl_double p11, cl_mem p12, size_t p13, int p14, cl_uint p15, cl_command_queue* p16, cl_uint p17, const cl_event* p18, cl_event* p19))
 //clAmdBlasStatus (*clAmdBlasDgemv)(clAmdBlasOrder, clAmdBlasTranspose, size_t, size_t, cl_double, const cl_mem, size_t, const cl_mem, size_t, int, cl_double, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
@@ -763,7 +763,7 @@ static const struct DynamicFnEntry clAmdBlasDgemmEx_definition = { "clAmdBlasDge
 openclamdblas_fn0(OPENCLAMDBLAS_FN_clAmdBlasSetup, clAmdBlasStatus, ())
 clAmdBlasStatus (*clAmdBlasSetup)() =
         OPENCLAMDBLAS_FN_clAmdBlasSetup_switch_fn;
-static const struct DynamicFnEntry clAmdBlasSetup_definition = { "clAmdBlasSetup", (void**)&clAmdBlasSetup};
+static const struct DynamicFnEntry clAmdBlasSetup_definition = { "clblasSetup", (void**)&clAmdBlasSetup};
 
 //openclamdblas_fn22(OPENCLAMDBLAS_FN_clAmdBlasSgbmv, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, size_t p3, size_t p4, size_t p5, size_t p6, cl_float p7, const cl_mem p8, size_t p9, size_t p10, const cl_mem p11, size_t p12, int p13, cl_float p14, cl_mem p15, size_t p16, int p17, cl_uint p18, cl_command_queue* p19, cl_uint p20, const cl_event* p21, cl_event* p22))
 //clAmdBlasStatus (*clAmdBlasSgbmv)(clAmdBlasOrder, clAmdBlasTranspose, size_t, size_t, size_t, size_t, cl_float, const cl_mem, size_t, size_t, const cl_mem, size_t, int, cl_float, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
@@ -778,7 +778,7 @@ static const struct DynamicFnEntry clAmdBlasSetup_definition = { "clAmdBlasSetup
 openclamdblas_fn22(OPENCLAMDBLAS_FN_clAmdBlasSgemmEx, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, clAmdBlasTranspose p3, size_t p4, size_t p5, size_t p6, cl_float p7, const cl_mem p8, size_t p9, size_t p10, const cl_mem p11, size_t p12, size_t p13, cl_float p14, cl_mem p15, size_t p16, size_t p17, cl_uint p18, cl_command_queue* p19, cl_uint p20, const cl_event* p21, cl_event* p22))
 clAmdBlasStatus (*clAmdBlasSgemmEx)(clAmdBlasOrder, clAmdBlasTranspose, clAmdBlasTranspose, size_t, size_t, size_t, cl_float, const cl_mem, size_t, size_t, const cl_mem, size_t, size_t, cl_float, cl_mem, size_t, size_t, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
         OPENCLAMDBLAS_FN_clAmdBlasSgemmEx_switch_fn;
-static const struct DynamicFnEntry clAmdBlasSgemmEx_definition = { "clAmdBlasSgemmEx", (void**)&clAmdBlasSgemmEx};
+static const struct DynamicFnEntry clAmdBlasSgemmEx_definition = { "clblasSgemmEx", (void**)&clAmdBlasSgemmEx};
 
 //openclamdblas_fn19(OPENCLAMDBLAS_FN_clAmdBlasSgemv, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, size_t p3, size_t p4, cl_float p5, const cl_mem p6, size_t p7, const cl_mem p8, size_t p9, int p10, cl_float p11, cl_mem p12, size_t p13, int p14, cl_uint p15, cl_command_queue* p16, cl_uint p17, const cl_event* p18, cl_event* p19))
 //clAmdBlasStatus (*clAmdBlasSgemv)(clAmdBlasOrder, clAmdBlasTranspose, size_t, size_t, cl_float, const cl_mem, size_t, const cl_mem, size_t, int, cl_float, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
@@ -948,7 +948,7 @@ static const struct DynamicFnEntry clAmdBlasSgemmEx_definition = { "clAmdBlasSge
 openclamdblas_fn0(OPENCLAMDBLAS_FN_clAmdBlasTeardown, void, ())
 void (*clAmdBlasTeardown)() =
         OPENCLAMDBLAS_FN_clAmdBlasTeardown_switch_fn;
-static const struct DynamicFnEntry clAmdBlasTeardown_definition = { "clAmdBlasTeardown", (void**)&clAmdBlasTeardown};
+static const struct DynamicFnEntry clAmdBlasTeardown_definition = { "clblasTeardown", (void**)&clAmdBlasTeardown};
 
 //openclamdblas_fn13(OPENCLAMDBLAS_FN_clAmdBlasZaxpy, clAmdBlasStatus, (size_t p1, cl_double2 p2, const cl_mem p3, size_t p4, int p5, cl_mem p6, size_t p7, int p8, cl_uint p9, cl_command_queue* p10, cl_uint p11, const cl_event* p12, cl_event* p13))
 //clAmdBlasStatus (*clAmdBlasZaxpy)(size_t, cl_double2, const cl_mem, size_t, int, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
@@ -993,7 +993,7 @@ static const struct DynamicFnEntry clAmdBlasTeardown_definition = { "clAmdBlasTe
 openclamdblas_fn22(OPENCLAMDBLAS_FN_clAmdBlasZgemmEx, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, clAmdBlasTranspose p3, size_t p4, size_t p5, size_t p6, DoubleComplex p7, const cl_mem p8, size_t p9, size_t p10, const cl_mem p11, size_t p12, size_t p13, DoubleComplex p14, cl_mem p15, size_t p16, size_t p17, cl_uint p18, cl_command_queue* p19, cl_uint p20, const cl_event* p21, cl_event* p22))
 clAmdBlasStatus (*clAmdBlasZgemmEx)(clAmdBlasOrder, clAmdBlasTranspose, clAmdBlasTranspose, size_t, size_t, size_t, DoubleComplex, const cl_mem, size_t, size_t, const cl_mem, size_t, size_t, DoubleComplex, cl_mem, size_t, size_t, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =
         OPENCLAMDBLAS_FN_clAmdBlasZgemmEx_switch_fn;
-static const struct DynamicFnEntry clAmdBlasZgemmEx_definition = { "clAmdBlasZgemmEx", (void**)&clAmdBlasZgemmEx};
+static const struct DynamicFnEntry clAmdBlasZgemmEx_definition = { "clblasZgemmEx", (void**)&clAmdBlasZgemmEx};
 
 //openclamdblas_fn19(OPENCLAMDBLAS_FN_clAmdBlasZgemv, clAmdBlasStatus, (clAmdBlasOrder p1, clAmdBlasTranspose p2, size_t p3, size_t p4, DoubleComplex p5, const cl_mem p6, size_t p7, const cl_mem p8, size_t p9, int p10, DoubleComplex p11, cl_mem p12, size_t p13, int p14, cl_uint p15, cl_command_queue* p16, cl_uint p17, const cl_event* p18, cl_event* p19))
 //clAmdBlasStatus (*clAmdBlasZgemv)(clAmdBlasOrder, clAmdBlasTranspose, size_t, size_t, DoubleComplex, const cl_mem, size_t, const cl_mem, size_t, int, DoubleComplex, cl_mem, size_t, int, cl_uint, cl_command_queue*, cl_uint, const cl_event*, cl_event*) =

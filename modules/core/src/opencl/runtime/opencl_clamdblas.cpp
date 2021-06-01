@@ -54,10 +54,10 @@
         static HMODULE opencl_module = NULL;
         if (!opencl_module)
         {
-            opencl_module = GetModuleHandleA("clAmdBlas.dll");
+            opencl_module = GetModuleHandleA("clBLAS.dll");
             if (!opencl_module)
             {
-                opencl_module = LoadLibraryA("clAmdBlas.dll");
+                opencl_module = LoadLibraryA("clBLAS.dll");
                 if (!opencl_module)
                     return NULL;
             }
@@ -76,7 +76,7 @@
         static void* h = NULL;
         if (!h)
         {
-            h = dlopen("libclAmdBlas.so", RTLD_LAZY | RTLD_GLOBAL);
+            h = dlopen("libclBLAS.so", RTLD_LAZY | RTLD_GLOBAL);
             if (!h)
                 return NULL;
         }
