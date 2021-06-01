@@ -700,7 +700,7 @@ int main(int argc, char* argv[]) {
         mtcnn_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(std::move(mtcnn_args));
 
-    std::cout << "Reading  " << input_file_name << std::endl;
+    std::cout << "Reading " << input_file_name << std::endl;
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
