@@ -128,7 +128,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2016, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this
@@ -157,19 +157,6 @@ software".
 We specifically permit and encourage the use of this software as the basis of
 commercial products, provided that all warranty or liability claims are
 assumed by the product vendor.
-
-
-The IJG distribution formerly included code to read and write GIF files.
-To avoid entanglement with the Unisys LZW patent (now expired), GIF reading
-support has been removed altogether, and the GIF writer has been simplified
-to produce "uncompressed GIFs".  This technique does not use the LZW
-algorithm; the resulting GIF files are larger than usual, but are readable
-by all standard GIF decoders.
-
-We are required to state that
-    "The Graphics Interchange Format(c) is the Copyright property of
-    CompuServe Incorporated.  GIF(sm) is a Service Mark property of
-    CompuServe Incorporated."
 
 
 REFERENCES

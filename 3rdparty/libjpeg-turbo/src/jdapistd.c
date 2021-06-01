@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2010, 2015-2018, 2020, D. R. Commander.
+ * Copyright (C) 2010, 2015-2020, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -319,6 +319,8 @@ read_and_discard_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
 {
   JDIMENSION n;
   my_master_ptr master = (my_master_ptr)cinfo->master;
+  JSAMPLE dummy_sample[1] = { 0 };
+  JSAMPROW dummy_row = dummy_sample;
   JSAMPARRAY scanlines = NULL;
   void (*color_convert) (j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                          JDIMENSION input_row, JSAMPARRAY output_buf,
@@ -329,6 +331,10 @@ read_and_discard_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
   if (cinfo->cconvert && cinfo->cconvert->color_convert) {
     color_convert = cinfo->cconvert->color_convert;
     cinfo->cconvert->color_convert = noop_convert;
+    /* This just prevents UBSan from complaining about adding 0 to a NULL
+     * pointer.  The pointer isn't actually used.
+     */
+    scanlines = &dummy_row;
   }
 
   if (cinfo->cquantize && cinfo->cquantize->color_quantize) {
@@ -532,6 +538,8 @@ jpeg_skip_scanlines(j_decompress_ptr cinfo, JDIMENSION num_lines)
          * decoded coefficients.  This is ~5% faster for large subsets, but
          * it's tough to tell a difference for smaller images.
          */
+        if (!cinfo->entropy->insufficient_data)
+          cinfo->master->last_good_iMCU_row = cinfo->input_iMCU_row;
         (*cinfo->entropy->decode_mcu) (cinfo, NULL);
       }
     }
