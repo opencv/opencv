@@ -37,24 +37,6 @@ namespace util
             static_assert(std::is_same<Target, First>::value, "Type not found");
             static const constexpr std::size_t value = I;
         };
-
-        template< std::size_t I, class First, class... Remaining >
-        struct type_list_element_helper
-        {
-            using type = typename type_list_element_helper<I - 1, Remaining...>::type;
-        };
-
-        template< std::size_t I, class Unknown >
-        struct type_list_element_helper<I, Unknown> {};
-
-        template<class Head >
-        struct type_list_element_helper<0, Head> { using type = Head;};
-
-        template<class First, class... Remaining >
-        struct type_list_element_helper<0, First, Remaining...>
-        {
-            using type = First;
-        };
     }
 
     template<typename Target, typename... Types>
@@ -66,7 +48,7 @@ namespace util
     template<std::size_t Index, class... Types >
     struct type_list_element
     {
-        using type = typename detail::type_list_element_helper<Index, Types...>::type;
+        using type = typename std::tuple_element<Index, std::tuple<Types...> >::type;
     };
 
     class bad_variant_access: public std::exception
@@ -592,7 +574,7 @@ namespace detail
                       "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
                       " must return the same type");
         suppress_unused_warning(not_processed);
-        if(v.index() == CurIndex)
+        if (v.index() == CurIndex)
         {
             return visitor.operator()(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
@@ -634,11 +616,9 @@ namespace detail
                       "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
                       " must return the same type");
         suppress_unused_warning(not_processed);
-        if(v.index() == CurIndex)
+        if (v.index() == CurIndex)
         {
             return invoke_class_visitor<CurIndex, ReturnType>(visitor, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
-            // invoke `visitor_interface` with additional `CurIndex` as template args
-            //return visitor.template operator()<CurIndex>(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
         }
 
         using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
