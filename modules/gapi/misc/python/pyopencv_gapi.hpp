@@ -763,8 +763,8 @@ static PyObject* pyopencv_cv_gapi_networks(PyObject*, PyObject* py_args, PyObjec
     Py_ssize_t size = PyTuple_Size(py_args);
     for (int i = 0; i < size; ++i)
     {
+        gapi_ie_PyParams params;
         PyObject* item = PyTuple_GetItem(py_args, i);
-        auto params = reinterpret_cast<pyopencv_gapi_ie_PyParams_t*>(item)->v;
         if (pyopencv_to(item, params, ArgInfo("PyParams", false)))
         {
             pkg += gapi::networks(params);
