@@ -26,14 +26,10 @@ enum class StereoOutputFormat {
     DISPARITY_FIXED16_12_4, ///< 16 bit signed: first bit for sign,
                             ///< 11 bits for integer part,
                             ///< 4 bits for fractional part.
-    DEPTH_F16, ///< Floating point 16 bit value, CV_16FC1
-    DEPTH_F32, ///< Floating point 32 bit value, CV_32FC1
-    DISPARITY_Q16_10_5, ///< 16 bit signed: first bit for sign,
-                        ///< 10 bits for integer part,
-                        ///< 5 bits for fractional part.
-    DISPARITY_Q16_11_4  ///< 16 bit signed: first bit for sign,
-                        ///< 11 bits for integer part,
-                        ///< 4 bits for fractional part.
+    DEPTH_16F = DEPTH_FLOAT16, ///< Same as DEPTH_FLOAT16
+    DEPTH_32F = DEPTH_FLOAT32, ///< Same as DEPTH_FLOAT32
+    DISPARITY_16Q_10_5 = DISPARITY_FIXED16_11_5, ///< Same as DISPARITY_FIXED16_11_5
+    DISPARITY_16Q_11_4 = DISPARITY_FIXED16_12_4 ///< Same as DISPARITY_FIXED16_12_4
 };
 
 namespace calib3d {
@@ -47,16 +43,12 @@ G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.openc
         GAPI_Assert(right.depth == CV_8U);
 
         switch(of) {
-            case StereoOutputFormat::DEPTH_F16:
             case StereoOutputFormat::DEPTH_FLOAT16:
                 return left.withDepth(CV_16FC1);
-            case StereoOutputFormat::DEPTH_F32:
             case StereoOutputFormat::DEPTH_FLOAT32:
                 return left.withDepth(CV_32FC1);
-            case StereoOutputFormat::DISPARITY_Q16_10_5:
             case StereoOutputFormat::DISPARITY_FIXED16_11_5:
 
-            case StereoOutputFormat::DISPARITY_Q16_11_4:
             case StereoOutputFormat::DISPARITY_FIXED16_12_4:
                 return left.withDepth(CV_16SC1);
             default:
@@ -68,10 +60,10 @@ G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.openc
 } // namespace calib3d
 
 /** @brief Computes disparity/depth map for the specified stereo-pair.
-The function compute disparity or depth map depending on passed StereoOutputFormat argument.
+The function computes disparity or depth map depending on passed StereoOutputFormat argument.
 
-@param left 8-bit single-channel image of @ref CV_8UC1 type from left source.
-@param right 8-bit single-channel image of @ref CV_8UC1 type from right source.
+@param left 8-bit single-channel left image of @ref CV_8UC1 type.
+@param right 8-bit single-channel left image of @ref CV_8UC1 type.
 @param of enum to specified output kind: depth or disparity and corresponding type
 */
 GAPI_EXPORTS GMat stereo(const GMat& left,

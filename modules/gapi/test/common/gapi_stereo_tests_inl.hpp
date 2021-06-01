@@ -22,11 +22,8 @@ TEST_P(TestGAPIStereo, DisparityDepthTest)
 {
     using format = cv::gapi::StereoOutputFormat;
     switch(oF) {
-        case format::DEPTH_F16:
         case format::DEPTH_FLOAT16: dtype = CV_16FC1; break;
-        case format::DEPTH_F32:
         case format::DEPTH_FLOAT32: dtype = CV_32FC1; break;
-        case format::DISPARITY_Q16_11_4:
         case format::DISPARITY_FIXED16_12_4: dtype = CV_16SC1; break;
         default: GAPI_Assert(false && "Unsupported format in test");
     }
@@ -52,18 +49,15 @@ TEST_P(TestGAPIStereo, DisparityDepthTest)
 
     static const int DISPARITY_SHIFT_16S = 4;
     switch(oF) {
-        case format::DEPTH_F16:
         case format::DEPTH_FLOAT16:
             out_mat_ocv.convertTo(out_mat_ocv, CV_32FC1, 1./(1 << DISPARITY_SHIFT_16S), 0);
             out_mat_ocv = (focus * baseline) / out_mat_ocv;
             out_mat_ocv.convertTo(out_mat_ocv, CV_16FC1);
             break;
-        case format::DEPTH_F32:
         case format::DEPTH_FLOAT32:
             out_mat_ocv.convertTo(out_mat_ocv, CV_32FC1, 1./(1 << DISPARITY_SHIFT_16S), 0);
             out_mat_ocv = (focus * baseline) / out_mat_ocv;
             break;
-        case format::DISPARITY_Q16_11_4:
         case format::DISPARITY_FIXED16_12_4:
             break;
         default:

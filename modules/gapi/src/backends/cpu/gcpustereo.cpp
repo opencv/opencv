@@ -53,19 +53,15 @@ GAPI_OCV_KERNEL_ST(GCPUStereo, cv::gapi::calib3d::GStereo, StereoSetup)
                     cv::Mat& out_mat,
                     const StereoSetup &stereoSetup) {
         switch(oF){
-            case cv::gapi::StereoOutputFormat::DEPTH_F16:
             case cv::gapi::StereoOutputFormat::DEPTH_FLOAT16:
                 calcDepth(left, right, stereoSetup).convertTo(out_mat, CV_16FC1);
                 break;
-            case cv::gapi::StereoOutputFormat::DEPTH_F32:
             case cv::gapi::StereoOutputFormat::DEPTH_FLOAT32:
                 calcDepth(left, right, stereoSetup).copyTo(out_mat);
                 break;
-            case cv::gapi::StereoOutputFormat::DISPARITY_Q16_11_4:
             case cv::gapi::StereoOutputFormat::DISPARITY_FIXED16_12_4:
                 stereoSetup.stereoBM->compute(left, right, out_mat);
                 break;
-            case cv::gapi::StereoOutputFormat::DISPARITY_Q16_10_5:
             case cv::gapi::StereoOutputFormat::DISPARITY_FIXED16_11_5:
                 GAPI_Assert(false && "This case may be supported in future.");
             default:
