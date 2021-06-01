@@ -198,7 +198,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     //change between fullscreen or not.
     case CV_WND_PROP_FULLSCREEN:
 
-        if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
+        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
