@@ -496,13 +496,6 @@ static inline std::tuple<cv::GMat, cv::GMat> run_mtcnn_p(cv::GMat &in, const std
     return std::make_tuple(regressions, scores);
 }
 
-//Operator fot PNet network package creation in the loop
-inline cv::gapi::GNetPackage& operator += (cv::gapi::GNetPackage& lhs, const cv::gapi::GNetPackage& rhs) {
-    lhs.networks.reserve(lhs.networks.size() + rhs.networks.size());
-    lhs.networks.insert(lhs.networks.end(), rhs.networks.begin(), rhs.networks.end());
-    return lhs;
-}
-
 static inline std::string get_pnet_level_name(const cv::Size &in_size) {
     return "MTCNNProposal_" + std::to_string(in_size.width) + "x" + std::to_string(in_size.height);
 }

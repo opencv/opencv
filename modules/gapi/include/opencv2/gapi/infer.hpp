@@ -693,6 +693,14 @@ template<typename... Args>
 cv::gapi::GNetPackage networks(Args&&... args) {
     return cv::gapi::GNetPackage({ cv::detail::strip(args)... });
 }
+
+inline cv::gapi::GNetPackage& operator += (      cv::gapi::GNetPackage& lhs,
+                                           const cv::gapi::GNetPackage& rhs) {
+    lhs.networks.reserve(lhs.networks.size() + rhs.networks.size());
+    lhs.networks.insert(lhs.networks.end(), rhs.networks.begin(), rhs.networks.end());
+    return lhs;
+}
+
 } // namespace gapi
 } // namespace cv
 
