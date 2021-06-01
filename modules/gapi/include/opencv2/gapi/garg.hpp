@@ -239,7 +239,7 @@ namespace gapi
      * \addtogroup gapi_serialization
      * @{
      *
-     * @brief G-API classes for constructed and compiled graphs.
+     * @brief G-API functions and classes for serialization and deserialization.
      */
     /** @brief Binds deserialized output GRunArgs to GRunArgsP which can be used by GCompiled.
      *

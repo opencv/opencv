@@ -52,15 +52,6 @@ namespace detail {
  */
 GAPI_EXPORTS std::vector<char> serialize(const cv::GComputation &c);
 
-/** @brief Generic function for deserializing different types.
- *
- * Check different overloads for more examples.
- * @param p vector of bytes to deserialize specified object from.
- * @return deserialized object with specified type.
- */
-template<typename T> static inline
-T deserialize(const std::vector<char> &p);
-
 //! @overload
 GAPI_EXPORTS std::vector<char> serialize(const cv::GCompileArgs& ca);
 
@@ -73,25 +64,38 @@ GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs& ra);
 //! @overload
 GAPI_EXPORTS std::vector<char> serialize(const std::vector<std::string>& vs);
 
-//! @overload
+/** @brief Generic function for deserializing different types.
+ *
+ * Check different overloads for more examples.
+ * @param p vector of bytes to deserialize object with specified type from.
+ * @return deserialized object with specified type.
+ */
+template<typename T> static inline
+T deserialize(const std::vector<char> &p);
+
+/** @overload
+ */
 template<> inline
 cv::GComputation deserialize(const std::vector<char> &p) {
     return detail::getGraph(p);
 }
 
-//! @overload
+/** @overload
+ */
 template<> inline
 cv::GMetaArgs deserialize(const std::vector<char> &p) {
     return detail::getMetaArgs(p);
 }
 
-//! @overload
+/** @overload
+ */
 template<> inline
 cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
 }
 
-//! @overload
+/** @overload
+ */
 template<> inline
 std::vector<std::string> deserialize(const std::vector<char> &p) {
     return detail::getVectorOfStrings(p);
@@ -103,7 +107,7 @@ std::vector<std::string> deserialize(const std::vector<char> &p) {
  * @note To be used properly all GCompileArgs types must be de serializable.
  * @param p vector of bytes to deserialize GCompileArgs object from.
  * @return GCompileArgs object.
- * @see GCompileArgs S11N
+ * @see GCompileArgs
  */
 template<typename T, typename... Types> inline
 typename std::enable_if<std::is_same<T, GCompileArgs>::value, GCompileArgs>::
@@ -139,8 +143,8 @@ namespace s11n {
  *
  * This sctructure can be inherited and further extended with additional types.
  *
- * For example, it is utilized in S11N as input parameter in serialize() method.
- * @see S11N
+ * For example, it is utilized in cv::gapi::s11n::detail::S11N as input parameter
+ * in serialize() method.
  */
 struct GAPI_EXPORTS IOStream {
     virtual ~IOStream() = default;
@@ -165,8 +169,8 @@ struct GAPI_EXPORTS IOStream {
  *
  * This sctructure can be inherited and further extended with additional types.
  *
- * For example, it is utilized in S11N as input parameter in deserialize() method.
- * @see S11N
+ * For example, it is utilized in cv::gapi::s11n::detail::S11N as input parameter
+ * in deserialize() method.
  */
 struct GAPI_EXPORTS IIStream {
     virtual ~IIStream() = default;
