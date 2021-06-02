@@ -531,11 +531,11 @@ typename Net::Result infer(Args&&... args) {
 }
 
 /**
- * @brief Special network type.
+ * @brief Generic network type: input and output layers are configured dynamically at runtime
  *
- * Unlike network type, which is defined by G_API_NET macro, this one
- * doesn't fix number of network inputs and outputs on the compilation stage
- * thus providing to user an opportunity to program them in runtime.
+ * Unlike the network types defined with G_API_NET macro, this one
+ * doesn't fix number of network inputs and outputs at the compilation stage
+ * thus providing user with an opportunity to program them in runtime.
  */
 struct Generic { };
 

@@ -207,12 +207,12 @@ public:
     /** @brief Class constructor.
 
     Constructs Params based on model information and sets default values for other
-    inference description parameters. Model is loaded and compiled with OpenVINO.
+    inference description parameters. Model is loaded and compiled using OpenVINO Toolkit.
 
     @param tag string tag of the network for which these parameters are intended.
     @param model path to topology IR (.xml file).
     @param weights path to weights (.bin file).
-    @param device device specifier.
+    @param device target device to use.
     */
     Params(const std::string &tag,
            const std::string &model,
@@ -228,7 +228,7 @@ public:
 
     @param tag string tag of the network for which these parameters are intended.
     @param model path to model.
-    @param device device specifier.
+    @param device target device to use.
     */
     Params(const std::string &tag,
            const std::string &model,
@@ -236,7 +236,7 @@ public:
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
     };
 
-    /** @see Params::pluginConfig. */
+    /** @see ie::Params::pluginConfig. */
     Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
         return *this;
@@ -248,7 +248,7 @@ public:
         return *this;
     }
 
-    /** @see Params::constInput. */
+    /** @see ie::Params::constInput. */
     Params& constInput(const std::string &layer_name,
                        const cv::Mat &data,
                        TraitAs hint = TraitAs::TENSOR) {
@@ -256,14 +256,14 @@ public:
         return *this;
     }
 
-    /** @see Params::cfgNumRequests. */
+    /** @see ie::Params::cfgNumRequests. */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
         return *this;
     }
 
-    /** @see Params::cfgInputReshape */
+    /** @see ie::Params::cfgInputReshape */
     Params& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>&reshape_table) {
         desc.reshape_table = reshape_table;
         return *this;
