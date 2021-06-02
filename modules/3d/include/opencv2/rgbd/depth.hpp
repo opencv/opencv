@@ -468,12 +468,10 @@ namespace cv
      * @param CACHE_ALL The cache data for both srcFrame and dstFrame roles will be computed.
      * @param CACHE_DEPTH The frame will be generated from depth image
      * @param CACHE_PTS The frame will be built from point cloud
-     * @param CACHE_RGB The frame will be generated from both depth and RGB images
      */
     enum
     {
-      CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST,
-      CACHE_DEPTH = 4, CACHE_PTS = 8, CACHE_RGB = 16
+      CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST
     };
 
     /** Indicates what pyramid size is to get using get/set methods:
@@ -1061,8 +1059,7 @@ namespace cv
                     int kernelSize = 7,
                     const std::vector<int>& iterCounts = std::vector<int>(),
                     float depthFactor = 1.f,
-                    float truncateThreshold = 0.f,
-                    const Mat& rgbCameraMatrix = Mat());
+                    float truncateThreshold = 0.f);
 
     CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix,
                                                float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
@@ -1072,8 +1069,7 @@ namespace cv
                                                int kernelSize = 7,
                                                const std::vector<int>& iterCounts = std::vector<int>(),
                                                float depthFactor = 1.f,
-                                               float truncateThreshold = 0.f,
-                                               const Mat& rgbCameraMatrix = Mat());
+                                               float truncateThreshold = 0.f);
 
     CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const CV_OVERRIDE;
 
@@ -1186,7 +1182,6 @@ namespace cv
     Mat iterCounts;
 
     Mat cameraMatrix;
-    Mat rgbCameraMatrix;
 
     float depthFactor;
 

@@ -20,11 +20,6 @@ CV_EXPORTS_W void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, Ou
                                      const Matx33f intr, int levels, float depthFactor,
                                      float sigmaDepth, float sigmaSpatial, int kernelSize,
                                      float truncateThreshold);
-CV_EXPORTS_W void makeColoredFrameFromDepth(InputArray _depth, InputArray _rgb,
-                                            OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrColors,
-                                            const Matx33f intr, const Matx33f rgb_intr, int levels, float depthFactor,
-                                            float sigmaDepth, float sigmaSpatial, int kernelSize,
-                                            float truncateThreshold);
 CV_EXPORTS_W void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
                                             OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
                                             int levels);
