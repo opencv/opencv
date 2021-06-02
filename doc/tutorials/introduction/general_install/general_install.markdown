@@ -105,7 +105,7 @@ cmake --build <build-directory> <build-options>
 make
 ```
 
-## Step 3: Install {#tutorial_general_install_sources_4}
+## (optional) Step 3: Install {#tutorial_general_install_sources_4}
 
 During installation procedure build results and other files from build directory will be copied to the install location. Default installation location is `/usr/local` on UNIX and `C:/Program Files` on Windows. This location can be changed at the configuration step by setting `CMAKE_INSTALL_PREFIX` option. To perform installation run the following command:
 ```
@@ -117,3 +117,32 @@ This step is optional, OpenCV can be used directly from the build directory.
 
 @note
 If the installation root location is a protected system directory, so the installation process must be run with superuser or administrator privileges (e.g. `sudo cmake ...`).
+
+
+## (optional) Step 4: Build plugins {#tutorial_general_install_plugins_4}
+
+It is possible to decouple some of OpenCV dependencies and make them optional by extracting parts of the code into dynamically-loaded plugins. It helps to produce adaptive binary distributions which can work on systems with less dependencies and extend functionality just by installing missing libraries. For now modules _core_, _videoio_ and _highgui_ support this mechanism for some of their dependencies. In some cases it is possible to build plugins together with OpenCV by setting options like `VIDEOIO_PLUGIN_LIST` or `HIGHGUI_PLUGIN_LIST`, more options related to this scenario can be found in the @ref tutorial_config_reference. In other cases plugins should be built separately in their own build procedure and this section describes such standalone build process.
+
+@note It is recommended to use compiler, configuration and build options which are compatible to the one used for OpenCV build, otherwise resulting library can refuse to load or cause other runtime problems. Note that some functionality can be limited or work slower when backends are loaded dynamically due to extra barrier between OpenCV and corresponding third-party library.
+
+Build procedure is similar to the main OpenCV build, but you have to use special CMake projects located in corresponding subdirectories, these folders can also contain reference scripts and Docker images. It is important to use `opencv_<module>_<backend>` name prefix for plugins so that loader is able to find them. Each supported prefix can be used to load only one library, however multiple candidates can be probed for a single prefix. For example, you can have _libopencv_videoio_ffmpeg_3.so_ and _libopencv_videoio_ffmpeg_4.so_ plugins and the first one which can be loaded successfully will occupy internal slot and stop probing process. Possible prefixes and project locations are presented in the table below:
+
+| module | backends | location |
+| ------ | -------- | -------- |
+| core | parallel_tbb, parallel_onetbb, parallel_openmp | _opencv/modules/core/misc/plugins_ |
+| highgui | gtk, gtk2, gtk3 | _opencv/modules/highgui/misc/plugins_ |
+| videoio | ffmpeg, gstreamer, intel_mfx, msmf | _opencv/modules/videoio/misc_ |
+
+Example:
+```.sh
+# set-up environment for TBB detection, for example:
+#   export TBB_DIR=<dir-with-tbb-cmake-config>
+cmake -G<generator> \
+    -DOPENCV_PLUGIN_NAME=opencv_core_tbb_<suffix> \
+    -DOPENCV_PLUGIN_DESTINATION=<dest-folder> \
+    -DCMAKE_BUILD_TYPE=<config> \
+    <opencv>/modules/core/misc/plugins/parallel_tbb
+cmake --build . --config <config>
+```
+
+@note On Windows plugins must be linked with existing OpenCV build. Set `OpenCV_DIR` environment or CMake variable to the directory with _OpenCVConfig.cmake_ file, it can be OpenCV build directory or some path in the location where you performed installation.
