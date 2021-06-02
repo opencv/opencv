@@ -489,7 +489,8 @@ namespace cv
     */
     enum
     {
-        PYR_IMAGE, PYR_DEPTH, PYR_MASK, PYR_CLOUD, PYR_DIX, PYR_DIY, PYR_TEXMASK, PYR_NORM, PYR_NORMMASK
+        PYR_IMAGE = 0, PYR_DEPTH = 1, PYR_MASK = 2, PYR_CLOUD = 3, PYR_DIX = 4, PYR_DIY = 5, PYR_TEXMASK = 6, PYR_NORM = 7, PYR_NORMMASK = 8,
+        N_PYRAMIDS
     };
 
     OdometryFrame() : ID(-1) { }
