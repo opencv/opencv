@@ -10,7 +10,6 @@
 #include "utils.hpp"
 
 namespace cv {
-namespace detail {
 
 static void computePointsNormals(const cv::Intr, float depthFactor, const Depth, Points, Normals );
 void computePointsNormalsColors(const Intr, const Intr, float, const Depth, const Colors, Points, Normals, Colors);
@@ -628,6 +627,7 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
 
 #endif
 
+namespace detail {
 
 void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
 {
@@ -682,6 +682,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
     parallel_for_(range, ri, nstripes);
 }
 
+} // namespace detail
 
 void makeFrameFromDepth(InputArray _depth,
                         OutputArray pyrPoints, OutputArray pyrNormals,
@@ -790,5 +791,4 @@ void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
     }
 }
 
-} // namespace detail
 } // namespace cv

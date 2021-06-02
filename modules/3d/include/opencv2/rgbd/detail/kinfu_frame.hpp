@@ -15,16 +15,6 @@ namespace detail {
 CV_EXPORTS_W void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose);
 CV_EXPORTS_W void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose);
 
-//TODO: no dependencies outside already, can be removed from public interface to internal one
-CV_EXPORTS_W void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
-                                     const Matx33f intr, int levels, float depthFactor,
-                                     float sigmaDepth, float sigmaSpatial, int kernelSize,
-                                     float truncateThreshold);
-CV_EXPORTS_W void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
-                                            OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
-                                            int levels);
-//TODO: up to this
-
 } // namespace detail
 } // namespace cv
 #endif

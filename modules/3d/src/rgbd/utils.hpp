@@ -146,6 +146,14 @@ typedef Points Colors;
 
 typedef cv::Mat_< depthType > Depth;
 
+void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
+                        const Matx33f intr, int levels, float depthFactor,
+                        float sigmaDepth, float sigmaSpatial, int kernelSize,
+                        float truncateThreshold);
+void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
+                               OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
+                               int levels);
+
 } // namespace cv
 
 
