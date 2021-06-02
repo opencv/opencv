@@ -12,6 +12,11 @@ def register(mname):
 
 
 @register('cv2')
+def compile_args(*args):
+    return list(map(cv.GCompileArg, args))
+
+
+@register('cv2')
 class GOpaque():
     # NB: Inheritance from c++ class cause segfault.
     # So just aggregate cv.GOpaqueT instead of inheritance
