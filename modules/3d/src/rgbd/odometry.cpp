@@ -115,13 +115,13 @@ void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage
 {
     if(!pyramidImage.empty())
     {
-        int nLevels = pyramidImage.size(-1).width;
+        size_t nLevels = pyramidImage.size(-1).width;
         if(nLevels < levelCount)
             CV_Error(Error::StsBadSize, "Levels count of pyramidImage has to be equal or less than size of iterCounts.");
 
         CV_Assert(pyramidImage.size(0) == image.size());
         for(size_t i = 0; i < nLevels; i++)
-            CV_Assert(pyramidImage.type(i) == image.type());
+            CV_Assert(pyramidImage.type((int)i) == image.type());
     }
     else
         buildPyramid(image, pyramidImage, (int)levelCount - 1);
@@ -132,51 +132,48 @@ void preparePyramidDepth(InputArray depth, InputOutputArrayOfArrays pyramidDepth
 {
     if(!pyramidDepth.empty())
     {
-        int nLevels = pyramidDepth.size(-1).width;
+        size_t nLevels = pyramidDepth.size(-1).width;
         if(nLevels < levelCount)
             CV_Error(Error::StsBadSize, "Levels count of pyramidDepth has to be equal or less than size of iterCounts.");
 
         CV_Assert(pyramidDepth.size(0) == depth.size());
         for(size_t i = 0; i < nLevels; i++)
-            CV_Assert(pyramidDepth.type(i) == depth.type());
+            CV_Assert(pyramidDepth.type((int)i) == depth.type());
     }
     else
         buildPyramid(depth, pyramidDepth, (int)levelCount - 1);
 }
 
 template<typename TMat>
-static TMat getTMat(InputArray, int);
+static TMat getTMat(InputArray, int = -1);
 
 template<>
-static
 Mat getTMat<Mat>(InputArray a, int i)
 {
     return a.getMat(i);
 }
 
 template<>
-static
 UMat getTMat<UMat>(InputArray a, int i)
 {
     return a.getUMat(i);
 }
 
 template<typename TMat>
-static TMat& getTMatRef(InputOutputArray, int);
+static TMat& getTMatRef(InputOutputArray, int = -1);
 
 template<>
-static
 Mat& getTMatRef<Mat>(InputOutputArray a, int i)
 {
     return a.getMatRef(i);
 }
 
-template<>
-static
-UMat& getTMatRef<UMat>(InputOutputArray a, int i)
-{
-    return a.getUMatRef(i);
-}
+//TODO: uncomment it when it's in use
+//template<>
+//UMat& getTMatRef<UMat>(InputOutputArray a, int i)
+//{
+//    return a.getUMatRef(i);
+//}
 
 template<typename TMat>
 static
@@ -189,13 +186,13 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
     int nLevels = pyramidDepth.size(-1).width;
     if(!pyramidMask.empty())
     {
-        if(pyramidMask.size() != nLevels)
+        if(pyramidMask.size(-1).width != nLevels)
             CV_Error(Error::StsBadSize, "Levels count of pyramidMask has to be equal to size of pyramidDepth.");
 
         for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            CV_Assert(pyramidMask.size(i) == pyramidDepth.size(i));
-            CV_Assert(pyramidMask.type(i) == CV_8UC1);
+            CV_Assert(pyramidMask.size((int)i) == pyramidDepth.size((int)i));
+            CV_Assert(pyramidMask.type((int)i) == CV_8UC1);
         }
     }
     else
@@ -210,17 +207,17 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
 
         for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            TMat levelDepth = getTMat<TMat>(pyramidDepth, i).clone();
+            TMat levelDepth = getTMat<TMat>(pyramidDepth, (int)i).clone();
             patchNaNs(levelDepth, 0);
 
-            TMat& levelMask = getTMatRef<TMat>(pyramidMask, i);
+            TMat& levelMask = getTMatRef<TMat>(pyramidMask, (int)i);
             levelMask &= (levelDepth > minDepth) & (levelDepth < maxDepth);
 
             if(!pyramidNormal.empty())
             {
-                CV_Assert(pyramidNormal.type(i) == CV_32FC3);
-                CV_Assert(pyramidNormal.size(i) == pyramidDepth.size(i));
-                TMat levelNormal = getTMat(pyramidNormal, i).clone();
+                CV_Assert(pyramidNormal.type((int)i) == CV_32FC3);
+                CV_Assert(pyramidNormal.size((int)i) == pyramidDepth.size((int)i));
+                TMat levelNormal = getTMat<TMat>(pyramidNormal, (int)i).clone();
 
                 TMat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
                 CV_Assert(validNormalMask.type() == CV_8UC3);
@@ -248,8 +245,8 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Mat& cameraMatri
 
         for(size_t i = 0; i < depthSize; i++)
         {
-            CV_Assert(pyramidCloud.size(i) == pyramidDepth.size(i));
-            CV_Assert(pyramidCloud.type(i) == CV_32FC3);
+            CV_Assert(pyramidCloud.size((int)i) == pyramidDepth.size((int)i));
+            CV_Assert(pyramidCloud.type((int)i) == CV_32FC3);
         }
     }
     else
@@ -257,12 +254,12 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Mat& cameraMatri
         std::vector<Mat> pyramidCameraMatrix;
         buildPyramidCameraMatrix(cameraMatrix, (int)depthSize, pyramidCameraMatrix);
 
-        pyramidCloud.create(depthSize, 1, CV_32FC3, -1);
+        pyramidCloud.create((int)depthSize, 1, CV_32FC3, -1);
         for(size_t i = 0; i < depthSize; i++)
         {
             TMat cloud;
-            depthTo3d(getTMat<TMat>(pyramidDepth, i), pyramidCameraMatrix[i], cloud);
-            getTMatRef<TMat>(pyramidCloud, i) = cloud;
+            depthTo3d(getTMat<TMat>(pyramidDepth, (int)i), pyramidCameraMatrix[i], cloud);
+            getTMatRef<TMat>(pyramidCloud, (int)i) = cloud;
         }
     }
 }
@@ -280,16 +277,16 @@ void preparePyramidSobel(InputArrayOfArrays pyramidImage, int dx, int dy, InputO
 
         for(size_t i = 0; i < sobelLvls; i++)
         {
-            CV_Assert(pyramidSobel.size(i) == pyramidImage.size(i));
-            CV_Assert(pyramidSobel.type(i) == CV_16SC1);
+            CV_Assert(pyramidSobel.size((int)i) == pyramidImage.size((int)i));
+            CV_Assert(pyramidSobel.type((int)i) == CV_16SC1);
         }
     }
     else
     {
-        pyramidSobel.create(imgLevels, 1, CV_16SC1, -1);
+        pyramidSobel.create((int)imgLevels, 1, CV_16SC1, -1);
         for(size_t i = 0; i < imgLevels; i++)
         {
-            Sobel(getTMat<TMat>(pyramidImage, i), getTMatRef<TMat>(pyramidSobel, i), CV_16S, dx, dy, sobelSize);
+            Sobel(getTMat<TMat>(pyramidImage, (int)i), getTMatRef<TMat>(pyramidSobel, (int)i), CV_16S, dx, dy, sobelSize);
         }
     }
 }
@@ -336,8 +333,8 @@ void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfAr
 
         for(size_t i = 0; i < texLevels; i++)
         {
-            CV_Assert(pyramidTexturedMask.size(i) == pyramid_dI_dx.size(i));
-            CV_Assert(pyramidTexturedMask.type(i) == CV_8UC1);
+            CV_Assert(pyramidTexturedMask.size((int)i) == pyramid_dI_dx.size((int)i));
+            CV_Assert(pyramidTexturedMask.type((int)i) == CV_8UC1);
         }
     }
     else
@@ -346,12 +343,12 @@ void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfAr
         Mat_<float> mgMags = minGradMagnitudes.getMat();
 
         const float sobelScale2_inv = 1.f / (float)(sobelScale * sobelScale);
-        pyramidTexturedMask.create(didxLevels, 1, CV_8UC1, -1);
+        pyramidTexturedMask.create((int)didxLevels, 1, CV_8UC1, -1);
         for(size_t i = 0; i < didxLevels; i++)
         {
-            const float minScaledGradMagnitude2 = mgMags(i) * mgMags(i) * sobelScale2_inv;
-            const Mat& dIdx = pyramid_dI_dx.getMat(i);
-            const Mat& dIdy = pyramid_dI_dy.getMat(i);
+            const float minScaledGradMagnitude2 = mgMags((int)i) * mgMags((int)i) * sobelScale2_inv;
+            const Mat& dIdx = pyramid_dI_dx.getMat((int)i);
+            const Mat& dIdy = pyramid_dI_dy.getMat((int)i);
 
             Mat texturedMask(dIdx.size(), CV_8UC1, Scalar(0));
 
@@ -367,10 +364,10 @@ void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfAr
                         texturedMask_row[x] = 255;
                 }
             }
-            Mat texMask = texturedMask & pyramidMask.getMat(i);
+            Mat texMask = texturedMask & pyramidMask.getMat((int)i);
 
             randomSubsetOfMask(texMask, (float)maxPointsPart);
-            pyramidTexturedMask.getMatRef(i) = texMask;
+            pyramidTexturedMask.getMatRef((int)i) = texMask;
         }
     }
 }
@@ -387,8 +384,8 @@ void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, 
 
         for(size_t i = 0; i < normalsLevels; i++)
         {
-            CV_Assert(pyramidNormals.size(i) == pyramidDepth.size(i));
-            CV_Assert(pyramidNormals.type(i) == CV_32FC3);
+            CV_Assert(pyramidNormals.size((int)i) == pyramidDepth.size((int)i));
+            CV_Assert(pyramidNormals.type((int)i) == CV_32FC3);
         }
     }
     else
@@ -397,7 +394,7 @@ void preparePyramidNormals(InputArray normals, InputArrayOfArrays pyramidDepth, 
         // renormalize normals
         for(size_t i = 1; i < depthLevels; i++)
         {
-            Mat& currNormals = pyramidNormals.getMatRef(i);
+            Mat& currNormals = pyramidNormals.getMatRef((int)i);
             for(int y = 0; y < currNormals.rows; y++)
             {
                 Point3f* normals_row = currNormals.ptr<Point3f>(y);
@@ -424,19 +421,19 @@ void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask
 
         for(size_t i = 0; i < norMaskLevels; i++)
         {
-            CV_Assert(pyramidNormalsMask.size(i) == pyramidMask.size(i));
-            CV_Assert(pyramidNormalsMask.type(i) == pyramidMask.type(i));
+            CV_Assert(pyramidNormalsMask.size((int)i) == pyramidMask.size((int)i));
+            CV_Assert(pyramidNormalsMask.type((int)i) == pyramidMask.type((int)i));
         }
     }
     else
     {
-        pyramidNormalsMask.create(maskLevels, 1, CV_8U, -1);
+        pyramidNormalsMask.create((int)maskLevels, 1, CV_8U, -1);
         for(size_t i = 0; i < maskLevels; i++)
         {
-            Mat& normalsMask = pyramidNormalsMask.getMatRef(i);
-            normalsMask = pyramidMask.getMat(i).clone();
+            Mat& normalsMask = pyramidNormalsMask.getMatRef((int)i);
+            normalsMask = pyramidMask.getMat((int)i).clone();
 
-            const Mat normals = pyramidNormals.getMat(i);
+            const Mat normals = pyramidNormals.getMat((int)i);
             for(int y = 0; y < normalsMask.rows; y++)
             {
                 const Vec3f *normals_row = normals.ptr<Vec3f>(y);
@@ -904,13 +901,13 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-            const Mat pyramidMask, pyramidTexturedMask, pyramidNormalsMask;
+            const Mat pyramidMask, pyramidTexturedMask;
             srcFrame->getPyramidAt(pyramidMask, OdometryFrame::PYR_MASK, level);
-            dstFrame->getPyramidAt(pyramidTexturedMask, OdometryFrame::PYR_TEXMASK, level);
-            dstFrame->getPyramidAt(pyramidNormalsMask, OdometryFrame::PYR_NORMMASK, level);
 
             if(method & RGBD_ODOMETRY)
             {
+                const Mat pyramidTexturedMask;
+                dstFrame->getPyramidAt(pyramidTexturedMask, OdometryFrame::PYR_TEXMASK, level);
                 computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                                 srcLevelDepth, pyramidMask, dstLevelDepth, pyramidTexturedMask,
                                 maxDepthDiff, corresps_rgbd);
@@ -918,6 +915,8 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
             if(method & ICP_ODOMETRY)
             {
+                const Mat pyramidNormalsMask;
+                dstFrame->getPyramidAt(pyramidNormalsMask, OdometryFrame::PYR_NORMMASK, level);
                 computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                                 srcLevelDepth, pyramidMask, dstLevelDepth, pyramidNormalsMask,
                                 maxDepthDiff, corresps_icp);
@@ -926,19 +925,18 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount)
                 break;
 
-            const Mat srcPyrImage, dstPyrImage, srcPyrCloud, dstPyrCloud;
-            srcFrame->getPyramidAt(srcPyrImage, OdometryFrame::PYR_IMAGE, level);
-            dstFrame->getPyramidAt(dstPyrImage, OdometryFrame::PYR_IMAGE, level);
+            const Mat srcPyrCloud;
             srcFrame->getPyramidAt(srcPyrCloud, OdometryFrame::PYR_CLOUD, level);
-            dstFrame->getPyramidAt(dstPyrCloud, OdometryFrame::PYR_CLOUD, level);
-            const Mat dstPyrNormals, dstPyrIdx, dstPyrIdy;
-            dstFrame->getPyramidAt(dstPyrNormals, OdometryFrame::PYR_NORM, level);
-            dstFrame->getPyramidAt(dstPyrIdx, OdometryFrame::PYR_DIX, level);
-            dstFrame->getPyramidAt(dstPyrIdy, OdometryFrame::PYR_DIY, level);
+
 
             Mat AtA(transformDim, transformDim, CV_64FC1, Scalar(0)), AtB(transformDim, 1, CV_64FC1, Scalar(0));
             if(corresps_rgbd.rows >= minCorrespsCount)
             {
+                const Mat srcPyrImage, dstPyrImage, dstPyrIdx, dstPyrIdy;
+                srcFrame->getPyramidAt(srcPyrImage, OdometryFrame::PYR_IMAGE, level);
+                dstFrame->getPyramidAt(dstPyrImage, OdometryFrame::PYR_IMAGE, level);
+                dstFrame->getPyramidAt(dstPyrIdx, OdometryFrame::PYR_DIX, level);
+                dstFrame->getPyramidAt(dstPyrIdy, OdometryFrame::PYR_DIY, level);
                 calcRgbdLsmMatrices(srcPyrImage, srcPyrCloud, resultRt, dstPyrImage, dstPyrIdx, dstPyrIdy,
                                     corresps_rgbd, fx, fy, sobelScale,
                                     AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
@@ -948,6 +946,9 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
             if(corresps_icp.rows >= minCorrespsCount)
             {
+                const Mat dstPyrCloud, dstPyrNormals;
+                dstFrame->getPyramidAt(dstPyrCloud, OdometryFrame::PYR_CLOUD, level);
+                dstFrame->getPyramidAt(dstPyrNormals, OdometryFrame::PYR_NORM, level);
                 calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
                                    corresps_icp, AtA_icp, AtB_icp, icpEquationFuncPtr, transformDim);
                 AtA += AtA_icp;
@@ -1000,7 +1001,7 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
               const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
               OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
-    CV_Assert(image.size() == depth.size());
+    CV_Assert(_image.size() == depth.size());
 
     Mat cloud;
     depthTo3d(depth, cameraMatrix, cloud);
@@ -1161,18 +1162,18 @@ struct OdometryFrameImpl : public OdometryFrame
 
     virtual void setPyramidAt(InputArray  _pyrImage, int pyrType, size_t level) CV_OVERRIDE
     {
-        TMat img = getTMat(_pyrImage);
+        TMat img = getTMat<TMat>(_pyrImage);
         switch (pyrType)
         {
-        case PYR_IMAGE:    pyramidImage[level] = img;
-        case PYR_DEPTH:    pyramidDepth[level] = img;
-        case PYR_MASK:     pyramidMask[level] = img;
-        case PYR_CLOUD:    pyramidCloud[level] = img;
-        case PYR_DIX:      pyramid_dI_dx[level] = img;
-        case PYR_DIY:      pyramid_dI_dy[level] = img;
-        case PYR_TEXMASK:  pyramidTexturedMask[level] = img;
-        case PYR_NORM:     pyramidNormals[level] = img;
-        case PYR_NORMMASK: pyramidNormalsMask[level] = img;
+        case PYR_IMAGE:    pyramidImage[level] = img; break;
+        case PYR_DEPTH:    pyramidDepth[level] = img; break;
+        case PYR_MASK:     pyramidMask[level] = img; break;
+        case PYR_CLOUD:    pyramidCloud[level] = img; break;
+        case PYR_DIX:      pyramid_dI_dx[level] = img; break;
+        case PYR_DIY:      pyramid_dI_dy[level] = img; break;
+        case PYR_TEXMASK:  pyramidTexturedMask[level] = img; break;
+        case PYR_NORM:     pyramidNormals[level] = img; break;
+        case PYR_NORMMASK: pyramidNormalsMask[level] = img; break;
         }
     }
 
@@ -1181,15 +1182,15 @@ struct OdometryFrameImpl : public OdometryFrame
         TMat img;
         switch (pyrType)
         {
-        case PYR_IMAGE:    img = pyramidImage[level];
-        case PYR_DEPTH:    img = pyramidDepth[level];
-        case PYR_MASK:     img = pyramidMask[level];
-        case PYR_CLOUD:    img = pyramidCloud[level];
-        case PYR_DIX:      img = pyramid_dI_dx[level];
-        case PYR_DIY:      img = pyramid_dI_dy[level];
-        case PYR_TEXMASK:  img = pyramidTexturedMask[level];
-        case PYR_NORM:     img = pyramidNormals[level];
-        case PYR_NORMMASK: img = pyramidNormalsMask[level];
+        case PYR_IMAGE:    img = pyramidImage[level]; break;
+        case PYR_DEPTH:    img = pyramidDepth[level]; break;
+        case PYR_MASK:     img = pyramidMask[level]; break;
+        case PYR_CLOUD:    img = pyramidCloud[level]; break;
+        case PYR_DIX:      img = pyramid_dI_dx[level]; break;
+        case PYR_DIY:      img = pyramid_dI_dy[level]; break;
+        case PYR_TEXMASK:  img = pyramidTexturedMask[level]; break;
+        case PYR_NORM:     img = pyramidNormals[level]; break;
+        case PYR_NORMMASK: img = pyramidNormalsMask[level]; break;
         }
         _pyrImage.assign(img);
     }
