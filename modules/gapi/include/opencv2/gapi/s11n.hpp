@@ -73,7 +73,7 @@ T deserialize(const std::vector<char> &p);
 /** @brief This function allows to deserialize GComputation.
  *
  * Check different overloads for more examples.
- * @param  serialized vector of bytes.
+ * @param p serialized vector of bytes.
  * @return deserialized GComputation object.
  */
 template<> inline
@@ -84,7 +84,7 @@ cv::GComputation deserialize(const std::vector<char> &p) {
 /** @brief This function allows to deserialize GMetaArgs.
  *
  * Check different overloads for more examples.
- * @param  serialized vector of bytes.
+ * @param p serialized vector of bytes.
  * @return deserialized GMetaArgs object.
  */
 template<> inline
@@ -95,7 +95,7 @@ cv::GMetaArgs deserialize(const std::vector<char> &p) {
 /** @brief This function allows to deserialize GRunArgs.
  *
  * Check different overloads for more examples.
- * @param  serialized vector of bytes.
+ * @param p serialized vector of bytes.
  * @return deserialized GRunArgs object.
  */
 template<> inline
