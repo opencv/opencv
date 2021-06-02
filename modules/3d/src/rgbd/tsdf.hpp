@@ -9,8 +9,6 @@
 #define __OPENCV_KINFU_TSDF_H__
 
 #include <opencv2/rgbd/volume.hpp>
-
-#include "kinfu_frame.hpp"
 #include "utils.hpp"
 
 namespace cv

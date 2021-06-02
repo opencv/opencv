@@ -10,7 +10,6 @@
 #include <limits>
 #include <vector>
 
-#include "kinfu_frame.hpp"
 #include "intrinsics.hpp"
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/utility.hpp"
