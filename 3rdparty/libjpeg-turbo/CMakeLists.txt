@@ -3,10 +3,10 @@ project(${JPEG_LIBRARY} C)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter -Wsign-compare -Wshorten-64-to-32 -Wimplicit-fallthrough)
 
 set(VERSION_MAJOR 2)
-set(VERSION_MINOR 0)
-set(VERSION_REVISION 6)
+set(VERSION_MINOR 1)
+set(VERSION_REVISION 0)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_REVISION})
-set(LIBJPEG_TURBO_VERSION_NUMBER 2000006)
+set(LIBJPEG_TURBO_VERSION_NUMBER 2001000)
 
 string(TIMESTAMP BUILD "opencv-${OPENCV_VERSION}-libjpeg-turbo")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -46,7 +46,6 @@ if(UNIX)
   ocv_update(HAVE_UNSIGNED_SHORT 1)
   # undef INCOMPLETE_TYPES_BROKEN
   ocv_update(RIGHT_SHIFT_IS_UNSIGNED 0)
-  ocv_update(__CHAR_UNSIGNED__ 0)
 endif()
 
 

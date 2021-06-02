@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 1997-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015-2016, D. R. Commander.
+ * Copyright (C) 2015-2016, 2019, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -158,6 +158,9 @@ struct jpeg_decomp_master {
   JDIMENSION first_MCU_col[MAX_COMPONENTS];
   JDIMENSION last_MCU_col[MAX_COMPONENTS];
   boolean jinit_upsampler_no_alloc;
+
+  /* Last iMCU row that was successfully decoded */
+  JDIMENSION last_good_iMCU_row;
 };
 
 /* Input control module */
