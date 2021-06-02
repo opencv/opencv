@@ -1727,7 +1727,8 @@ FastICPOdometry::FastICPOdometry(const Mat& _cameraMatrix,
                                  int _kernelSize,
                                  const std::vector<int>& _iterCounts,
                                  float _depthFactor,
-                                 float _truncateThreshold
+                                 float _truncateThreshold,
+                                 const Mat& _rgbCameraMatrix
                                 ) :
     maxDistDiff(_maxDistDiff),
     angleThreshold(_angleThreshold),
@@ -1737,7 +1738,8 @@ FastICPOdometry::FastICPOdometry(const Mat& _cameraMatrix,
     iterCounts(Mat(_iterCounts).clone()),
     cameraMatrix(_cameraMatrix),
     depthFactor(_depthFactor),
-    truncateThreshold(_truncateThreshold)
+    truncateThreshold(_truncateThreshold),
+    rgbCameraMatrix(_rgbCameraMatrix)
 {
     if(iterCounts.empty())
         setDefaultIterCounts(iterCounts);
@@ -1749,10 +1751,14 @@ Ptr<FastICPOdometry> FastICPOdometry::create(const Mat& _cameraMatrix,
                                              float _sigmaDepth,
                                              float _sigmaSpatial,
                                              int _kernelSize,
-                                             const std::vector<int>& _iterCounts)
+                                             const std::vector<int>& _iterCounts,
+                                             float _depthFactor,
+                                             float _truncateThreshold,
+                                             const Mat& _rgbCameraMatrix)
 {
     return makePtr<FastICPOdometry>(_cameraMatrix, _maxDistDiff, _angleThreshold,
-                                    _sigmaDepth, _sigmaSpatial, _kernelSize, _iterCounts);
+                                    _sigmaDepth, _sigmaSpatial, _kernelSize, _iterCounts,
+                                    _depthFactor, _truncateThreshold, _rgbCameraMatrix);
 }
 
 template<typename TMat>
@@ -1760,35 +1766,73 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheTyp
 {
     Odometry::prepareFrameCache(frame, cacheType);
 
-    TMat depth;
-    frame->getDepth(depth);
-    if(depth.empty())
+    //TODO: fix it later
+    if (cacheType == OdometryFrame::CACHE_DEPTH)
     {
-        if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
+        TMat depth;
+        frame->getDepth(depth);
+        if(depth.empty())
         {
-            TMat d0;
-            frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
-            frame->setDepth(d0);
+            if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
+            {
+                TMat d0;
+                frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
+                frame->setDepth(d0);
+            }
+            else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
+            {
+                TMat cloud;
+                frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
+                std::vector<TMat> xyz;
+                split(cloud, xyz);
+                frame->setDepth(xyz[2]);
+            }
+            else
+                CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
         }
-        else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
-        {
-            TMat cloud;
-            frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
-            std::vector<TMat> xyz;
-            split(cloud, xyz);
-            frame->setDepth(xyz[2]);
-        }
-        else
-            CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
+        checkDepth(depth, depth.size());
+
+        // mask isn't used by FastICP
+        auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+        detail::makeFrameFromDepth(depth, tframe->pyramidCloud, tframe->pyramidNormals, cameraMatrix, (int)iterCounts.total(),
+                                   depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
+
+        return depth.size();
     }
-    checkDepth(depth, depth.size());
+    else if (cacheType == OdometryFrame::CACHE_PTS)
+    {
+        TMat points, normals;
+        frame->getPyramidAt(points, OdometryFrame::PYR_CLOUD, 0);
+        frame->getPyramidAt(normals, OdometryFrame::PYR_NORM, 0);
+        std::vector<TMat> pyrPoints, pyrNormals;
+        // in, in, out, out
+        size_t nLevels = iterCounts.total();
+        detail::buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, (int)nLevels);
+        for (size_t i = 1; i < nLevels; i++)
+        {
+            frame->setPyramidAt(pyrPoints [i], OdometryFrame::PYR_CLOUD, i);
+            frame->setPyramidAt(pyrNormals[i], OdometryFrame::PYR_NORM,  i);
+        }
 
-    // mask isn't used by FastICP
-    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    detail::makeFrameFromDepth(depth, tframe->pyramidCloud, tframe->pyramidNormals, cameraMatrix, (int)iterCounts.total(),
-                               depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
+        return points.size();
+    }
+    else if (cacheType == OdometryFrame::CACHE_RGB)
+    {
+        TMat depth, rgb;
+        frame->getDepth(depth);
+        frame->getImage(rgb);
 
-    return depth.size();
+        //TODO: check depth, rgb and pyramid filling
+
+        auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+        detail::makeColoredFrameFromDepth(depth, rgb, tframe->pyramidCloud, tframe->pyramidNormals, tframe->pyramidImage,
+                                          cameraMatrix, rgbCameraMatrix, (int)iterCounts.total(),
+                                          depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
+
+        return depth.size();
+    }
+
+    return Size();
 }
 
 Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
