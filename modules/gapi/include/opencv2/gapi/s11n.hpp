@@ -64,44 +64,55 @@ GAPI_EXPORTS std::vector<char> serialize(const cv::GRunArgs& ra);
 //! @overload
 GAPI_EXPORTS std::vector<char> serialize(const std::vector<std::string>& vs);
 
-/** @brief Generic function for deserializing different types.
- *
- * Check different overloads for more examples.
- * @param p vector of bytes to deserialize object with specified type from.
- * @return deserialized object with specified type.
+/**
+ * @private
  */
 template<typename T> static inline
 T deserialize(const std::vector<char> &p);
 
-/** @overload
+/** @brief This function allows to deserialize GComputation.
+ *
+ * Check different overloads for more examples.
+ * @param  serialized vector of bytes.
+ * @return deserialized GComputation object.
  */
 template<> inline
 cv::GComputation deserialize(const std::vector<char> &p) {
     return detail::getGraph(p);
 }
 
-/** @overload
+/** @brief This function allows to deserialize GMetaArgs.
+ *
+ * Check different overloads for more examples.
+ * @param  serialized vector of bytes.
+ * @return deserialized GMetaArgs object.
  */
 template<> inline
 cv::GMetaArgs deserialize(const std::vector<char> &p) {
     return detail::getMetaArgs(p);
 }
 
-/** @overload
+/** @brief This function allows to deserialize GRunArgs.
+ *
+ * Check different overloads for more examples.
+ * @param  serialized vector of bytes.
+ * @return deserialized GRunArgs object.
  */
 template<> inline
 cv::GRunArgs deserialize(const std::vector<char> &p) {
     return detail::getRunArgs(p);
 }
 
-/** @overload
+/**
+ * @private
  */
 template<> inline
 std::vector<std::string> deserialize(const std::vector<char> &p) {
     return detail::getVectorOfStrings(p);
 }
 
-/** @brief This function is used to deserialize GCompileArgs which
+/**
+ * @brief This function is used to deserialize GCompileArgs which
  * types were specified in the template.
  *
  * @note To be used properly all GCompileArgs types must be de serializable.
@@ -115,7 +126,8 @@ type deserialize(const std::vector<char> &p) {
     return detail::getCompileArgs<Types...>(p);
 }
 
-/** @brief This function is used to deserialize GRunArgs including RMat objects.
+/**
+ * @brief This function is used to deserialize GRunArgs including RMat objects.
  *
  * RMat adapter type is specified in the template.
  * @note To be used properly specified adapter type must overload its serialize() and
