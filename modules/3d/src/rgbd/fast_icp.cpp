@@ -650,7 +650,7 @@ void ICPImpl::getAb<UMat>(const UMat& oldPts, const UMat& oldNrm, const UMat& ne
 cv::Ptr<ICP> makeICP(const cv::Intr _intrinsics, const std::vector<int> &_iterations,
                      float _angleThreshold, float _distanceThreshold)
 {
-    return makePtr<ICPImpl>(_intrinsics, _iterations, _angleThreshold, _distanceThreshold);
+    return makePtr<ICPImpl>(_intrinsics.getMat(), _iterations, _angleThreshold, _distanceThreshold);
 }
 
 } // namespace kinfu

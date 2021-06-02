@@ -12,20 +12,23 @@
 namespace cv {
 namespace detail {
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose);
-void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose);
-void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
-                        const Matx33f intr, int levels, float depthFactor,
-                        float sigmaDepth, float sigmaSpatial, int kernelSize,
-                        float truncateThreshold);
-void makeColoredFrameFromDepth(InputArray _depth, InputArray _rgb,
-                        OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrColors,
-                        const Matx33f intr, const Matx33f rgb_intr, int levels, float depthFactor,
-                        float sigmaDepth, float sigmaSpatial, int kernelSize,
-                        float truncateThreshold);
-void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
-                               OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
-                               int levels);
+CV_EXPORTS_W void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Affine3f lightPose);
+CV_EXPORTS_W void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose);
+
+//TODO: no dependencies outside already, can be removed from public interface to internal one
+CV_EXPORTS_W void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
+                                     const Matx33f intr, int levels, float depthFactor,
+                                     float sigmaDepth, float sigmaSpatial, int kernelSize,
+                                     float truncateThreshold);
+CV_EXPORTS_W void makeColoredFrameFromDepth(InputArray _depth, InputArray _rgb,
+                                            OutputArray pyrPoints, OutputArray pyrNormals, OutputArray pyrColors,
+                                            const Matx33f intr, const Matx33f rgb_intr, int levels, float depthFactor,
+                                            float sigmaDepth, float sigmaSpatial, int kernelSize,
+                                            float truncateThreshold);
+CV_EXPORTS_W void buildPyramidPointsNormals(InputArray _points, InputArray _normals,
+                                            OutputArrayOfArrays pyrPoints, OutputArrayOfArrays pyrNormals,
+                                            int levels);
+//TODO: up to this
 
 } // namespace detail
 } // namespace cv

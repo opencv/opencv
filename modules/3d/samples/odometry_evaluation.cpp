@@ -141,8 +141,8 @@ int main(int argc, char** argv)
         cameraMatrix.at<float>(1,2) = cy;
     }
 
-    Ptr<OdometryFrame> frame_prev = Ptr<OdometryFrame>(new OdometryFrame()),
-                           frame_curr = Ptr<OdometryFrame>(new OdometryFrame());
+    Ptr<OdometryFrame> frame_prev = OdometryFrame::create(),
+                       frame_curr = OdometryFrame::create();
     Ptr<Odometry> odometry = Odometry::create(string(argv[3]) + "Odometry");
     if(odometry.empty())
     {
@@ -204,8 +204,8 @@ int main(int argc, char** argv)
         {
             Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            frame_curr->image = gray;
-            frame_curr->depth = depth;
+            frame_curr->setImage(gray);
+            frame_curr->setDepth(depth);
             
             Mat Rt;
             if(!Rts.empty())

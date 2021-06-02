@@ -54,8 +54,7 @@ class Submap
 
     virtual void integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
     virtual void raycast(const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
-                         OutputArray points, OutputArray normals);
-    virtual void updatePyrPointsNormals(const int pyramidLevels);
+                         OutputArray points = noArray(), OutputArray normals = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume->getTotalVolumeUnits()); };
     virtual int getVisibleBlocks(int currFrameId) const
@@ -93,8 +92,8 @@ class Submap
     static constexpr int FRAME_VISIBILITY_THRESHOLD = 5;
 
     //! TODO: Add support for GPU arrays (UMat)
-    std::vector<MatType> pyrPoints;
-    std::vector<MatType> pyrNormals;
+    Ptr<OdometryFrame> frame;
+
     std::shared_ptr<Volume> volume;
 };
 
@@ -111,17 +110,19 @@ template<typename MatType>
 void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
                               OutputArray points, OutputArray normals)
 {
-    volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
+    if (!points.needed() && !normals.needed())
+    {
+        MatType pts, nrm;
+        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
+        frame->setPyramidAt(pts,  OdometryFrame::PYR_CLOUD, 0);
+        frame->setPyramidAt(nrm, OdometryFrame::PYR_NORM,  0);
+    }
+    else
+    {
+        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
+    }
 }
 
-template<typename MatType>
-void Submap<MatType>::updatePyrPointsNormals(const int pyramidLevels)
-{
-    MatType& points  = pyrPoints[0];
-    MatType& normals = pyrNormals[0];
-
-    buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, pyramidLevels);
-}
 
 /**
  * @brief: Manages all the created submaps for a particular scene
@@ -169,7 +170,7 @@ class SubmapManager
     Ptr<SubmapT> getCurrentSubmap(void) const;
 
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
-    bool updateMap(int _frameId, std::vector<MatType> _framePoints, std::vector<MatType> _frameNormals);
+    bool updateMap(int _frameId, Ptr<OdometryFrame> _frame);
 
     Ptr<detail::PoseGraph> MapToPoseGraph();
     void PoseGraphToMap(const Ptr<detail::PoseGraph>& updatedPoseGraph);
@@ -388,7 +389,7 @@ bool SubmapManager<MatType>::shouldChangeCurrSubmap(int _frameId, int toSubmapId
 }
 
 template<typename MatType>
-bool SubmapManager<MatType>::updateMap(int _frameId, std::vector<MatType> _framePoints, std::vector<MatType> _frameNormals)
+bool SubmapManager<MatType>::updateMap(int _frameId, Ptr<OdometryFrame> _frame)
 {
     bool mapUpdated = false;
     int changedCurrentMapId = -1;
@@ -475,8 +476,7 @@ bool SubmapManager<MatType>::updateMap(int _frameId, std::vector<MatType> _frame
         Affine3f newSubmapPose        = currActiveSubmap->pose * currActiveSubmap->cameraPose;
         int submapId                  = createNewSubmap(false, _frameId, newSubmapPose);
         auto newSubmap                = getSubmap(submapId);
-        newSubmap->pyrPoints          = _framePoints;
-        newSubmap->pyrNormals         = _frameNormals;
+        newSubmap->frame              = _frame;
     }
 
     // Debugging only
