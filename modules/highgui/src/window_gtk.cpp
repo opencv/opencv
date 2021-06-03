@@ -1921,8 +1921,8 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         GdkEventMotion* event_motion = (GdkEventMotion*)event;
 
         cv_event = CV_EVENT_MOUSEMOVE;
-        pt32f.x = cvRound(event_motion->x);
-        pt32f.y = cvRound(event_motion->y);
+        pt32f.x = cvFloor(event_motion->x);
+        pt32f.y = cvFloor(event_motion->y);
         state = event_motion->state;
     }
     else if( event->type == GDK_BUTTON_PRESS ||
@@ -1930,8 +1930,8 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
              event->type == GDK_2BUTTON_PRESS )
     {
         GdkEventButton* event_button = (GdkEventButton*)event;
-        pt32f.x = cvRound(event_button->x);
-        pt32f.y = cvRound(event_button->y);
+        pt32f.x = cvFloor(event_button->x);
+        pt32f.y = cvFloor(event_button->y);
 
 
         if( event_button->type == GDK_BUTTON_PRESS )
@@ -2008,8 +2008,8 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             pt = cvPointFrom32f( pt32f );
         }
 
-//        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
-//           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
+        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
+           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
         {
             flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |

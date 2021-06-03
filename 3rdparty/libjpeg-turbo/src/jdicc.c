@@ -38,18 +38,18 @@ marker_is_icc(jpeg_saved_marker_ptr marker)
     marker->marker == ICC_MARKER &&
     marker->data_length >= ICC_OVERHEAD_LEN &&
     /* verify the identifying string */
-    GETJOCTET(marker->data[0]) == 0x49 &&
-    GETJOCTET(marker->data[1]) == 0x43 &&
-    GETJOCTET(marker->data[2]) == 0x43 &&
-    GETJOCTET(marker->data[3]) == 0x5F &&
-    GETJOCTET(marker->data[4]) == 0x50 &&
-    GETJOCTET(marker->data[5]) == 0x52 &&
-    GETJOCTET(marker->data[6]) == 0x4F &&
-    GETJOCTET(marker->data[7]) == 0x46 &&
-    GETJOCTET(marker->data[8]) == 0x49 &&
-    GETJOCTET(marker->data[9]) == 0x4C &&
-    GETJOCTET(marker->data[10]) == 0x45 &&
-    GETJOCTET(marker->data[11]) == 0x0;
+    marker->data[0] == 0x49 &&
+    marker->data[1] == 0x43 &&
+    marker->data[2] == 0x43 &&
+    marker->data[3] == 0x5F &&
+    marker->data[4] == 0x50 &&
+    marker->data[5] == 0x52 &&
+    marker->data[6] == 0x4F &&
+    marker->data[7] == 0x46 &&
+    marker->data[8] == 0x49 &&
+    marker->data[9] == 0x4C &&
+    marker->data[10] == 0x45 &&
+    marker->data[11] == 0x0;
 }
 
 
@@ -102,12 +102,12 @@ jpeg_read_icc_profile(j_decompress_ptr cinfo, JOCTET **icc_data_ptr,
   for (marker = cinfo->marker_list; marker != NULL; marker = marker->next) {
     if (marker_is_icc(marker)) {
       if (num_markers == 0)
-        num_markers = GETJOCTET(marker->data[13]);
-      else if (num_markers != GETJOCTET(marker->data[13])) {
+        num_markers = marker->data[13];
+      else if (num_markers != marker->data[13]) {
         WARNMS(cinfo, JWRN_BOGUS_ICC);  /* inconsistent num_markers fields */
         return FALSE;
       }
-      seq_no = GETJOCTET(marker->data[12]);
+      seq_no = marker->data[12];
       if (seq_no <= 0 || seq_no > num_markers) {
         WARNMS(cinfo, JWRN_BOGUS_ICC);  /* bogus sequence number */
         return FALSE;
@@ -154,7 +154,7 @@ jpeg_read_icc_profile(j_decompress_ptr cinfo, JOCTET **icc_data_ptr,
       JOCTET FAR *src_ptr;
       JOCTET *dst_ptr;
       unsigned int length;
-      seq_no = GETJOCTET(marker->data[12]);
+      seq_no = marker->data[12];
       dst_ptr = icc_data + data_offset[seq_no];
       src_ptr = marker->data + ICC_OVERHEAD_LEN;
       length = data_length[seq_no];
