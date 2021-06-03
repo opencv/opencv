@@ -83,9 +83,6 @@ namespace{
 #if !defined(GAPI_STANDALONE)
 cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
-    if (mat.empty())
-        return empty_gmat_desc();
-
     const auto mat_dims = mat.size.dims();
 
     if (mat_dims == 2)

@@ -12,7 +12,7 @@
 #include <vector>
 #include <ostream>
 
-#include <opencv2/gapi/util/variant.hpp>
+#include <opencv2/gapi/util/optional.hpp>
 
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
@@ -154,6 +154,8 @@ bool GAPI_EXPORTS can_describe(const GMetaArg&  meta,  const GRunArgP& argp);
 void GAPI_EXPORTS validate_input_arg(const GRunArg& arg);
 void GAPI_EXPORTS validate_input_args(const GRunArgs& args);
 
+bool validate_input_meta_arg(const GMetaArg& meta, std::ostream* tracer = nullptr);
+bool validate_input_meta(const GMatDesc& meta, std::ostream* tracer = nullptr);
 } // namespace cv
 
 #endif // OPENCV_GAPI_GPROTO_HPP

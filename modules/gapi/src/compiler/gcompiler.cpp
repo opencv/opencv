@@ -317,24 +317,15 @@ void cv::gimpl::GCompiler::validateInputMeta()
                      "got " + std::to_string(m_metas.size()) + " meta arguments)"));
     }
 
-    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream& tracer) {
+    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream* tracer) {
         switch (proto.index())
         {
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
         {
-            if (!util::holds_alternative<cv::GMatDesc>(meta))
-            {
-                return false;
-            }
-
-            if (cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
-            {
-                tracer << "empty cv::Mat is not allowed as graph input argument";
-                return false;
-            }
-            return true;
+            return util::holds_alternative<cv::GMatDesc>(meta)
+                   && cv::validate_input_meta(cv::util::get<cv::GMatDesc>(meta), tracer);
         }
         case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GFrameDesc>(meta);
@@ -360,7 +351,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
         std::stringstream ss;
-        if (!meta_matches(meta, proto, ss))
+        if (!meta_matches(meta, proto, &ss))
         {
             const auto index  = ade::util::index(meta_arg_idx);
 
@@ -368,7 +359,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata validation error "
                          "(argument " + std::to_string(index) + ")" +
-                         (reason_descr.empty() ? "" : std::string("Reason: ") + reason_descr)));
+                         (reason_descr.empty() ? "" : std::string(". Reason: ") + reason_descr)));
             // FIXME: report what we've got and what we've expected
         }
     }
