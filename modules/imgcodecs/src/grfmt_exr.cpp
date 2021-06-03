@@ -158,6 +158,10 @@ bool  ExrDecoder::readHeader()
     else
     {
         m_green = channels.findChannel( "Y" );
+        if( !m_green )
+        {
+            m_green = channels.findChannel( "Z" ); // Distance of the front of a sample from the viewer
+        }
         if( m_green )
         {
             m_ischroma = true;
