@@ -328,7 +328,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
             {
                 return false;
             }
-            
+
             if (cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
             {
                 tracer << "empty cv::Mat is not allowed as graph input argument";

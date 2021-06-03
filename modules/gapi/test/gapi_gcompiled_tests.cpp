@@ -56,7 +56,7 @@ namespace
                 out = 42;
             }
         };
-    
+
         GCompiledValidateMetaEmpty() : m_ucc(cv::GIn(in),
                                              cv::GOut(GReturn42::on(in)))
         {
