@@ -324,16 +324,17 @@ void cv::gimpl::GCompiler::validateInputMeta()
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
         {
-            bool is_valid = util::holds_alternative<cv::GMatDesc>(meta);
-            if (is_valid)
+            if (!util::holds_alternative<cv::GMatDesc>(meta))
             {
-                if(cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
-                {
-                    is_valid = false;
-                    tracer << "empty cv::Mat is not allowed as compile argument";
-                }
+                return false;
             }
-            return is_valid;
+            
+            if (cv::empty_gmat_desc() == cv::util::get<cv::GMatDesc>(meta))
+            {
+                tracer << "empty cv::Mat is not allowed as graph input argument";
+                return false;
+            }
+            return true;
         }
         case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GFrameDesc>(meta);
@@ -363,7 +364,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         {
             const auto index  = ade::util::index(meta_arg_idx);
 
-            const std::string& reason_descr = ss.str();
+            std::string reason_descr = ss.str();
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata validation error "
                          "(argument " + std::to_string(index) + ")" +
