@@ -120,6 +120,12 @@ void HOGDescriptor::setSVMDetector(InputArray _svmDetector)
     _svmDetector.getMat().convertTo(svmDetector, CV_32F);
     CV_Assert(checkDetectorSize());
 
+    if (_svmDetector.empty())
+    {
+        oclSvmDetector = UMat();
+        return;
+    }
+
     Mat detector_reordered(1, (int)svmDetector.size(), CV_32FC1);
 
     size_t block_hist_size = getBlockHistogramSize(blockSize, cellSize, nbins);

@@ -479,7 +479,7 @@ color_quantize(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
     for (col = width; col > 0; col--) {
       pixcode = 0;
       for (ci = 0; ci < nc; ci++) {
-        pixcode += GETJSAMPLE(colorindex[ci][GETJSAMPLE(*ptrin++)]);
+        pixcode += colorindex[ci][*ptrin++];
       }
       *ptrout++ = (JSAMPLE)pixcode;
     }
@@ -506,9 +506,9 @@ color_quantize3(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
     ptrin = input_buf[row];
     ptrout = output_buf[row];
     for (col = width; col > 0; col--) {
-      pixcode  = GETJSAMPLE(colorindex0[GETJSAMPLE(*ptrin++)]);
-      pixcode += GETJSAMPLE(colorindex1[GETJSAMPLE(*ptrin++)]);
-      pixcode += GETJSAMPLE(colorindex2[GETJSAMPLE(*ptrin++)]);
+      pixcode  = colorindex0[*ptrin++];
+      pixcode += colorindex1[*ptrin++];
+      pixcode += colorindex2[*ptrin++];
       *ptrout++ = (JSAMPLE)pixcode;
     }
   }
@@ -552,7 +552,7 @@ quantize_ord_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
          * required amount of padding.
          */
         *output_ptr +=
-          colorindex_ci[GETJSAMPLE(*input_ptr) + dither[col_index]];
+          colorindex_ci[*input_ptr + dither[col_index]];
         input_ptr += nc;
         output_ptr++;
         col_index = (col_index + 1) & ODITHER_MASK;
@@ -595,12 +595,9 @@ quantize3_ord_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
     col_index = 0;
 
     for (col = width; col > 0; col--) {
-      pixcode  =
-        GETJSAMPLE(colorindex0[GETJSAMPLE(*input_ptr++) + dither0[col_index]]);
-      pixcode +=
-        GETJSAMPLE(colorindex1[GETJSAMPLE(*input_ptr++) + dither1[col_index]]);
-      pixcode +=
-        GETJSAMPLE(colorindex2[GETJSAMPLE(*input_ptr++) + dither2[col_index]]);
+      pixcode  = colorindex0[(*input_ptr++) + dither0[col_index]];
+      pixcode += colorindex1[(*input_ptr++) + dither1[col_index]];
+      pixcode += colorindex2[(*input_ptr++) + dither2[col_index]];
       *output_ptr++ = (JSAMPLE)pixcode;
       col_index = (col_index + 1) & ODITHER_MASK;
     }
@@ -677,15 +674,15 @@ quantize_fs_dither(j_decompress_ptr cinfo, JSAMPARRAY input_buf,
          * The maximum error is +- MAXJSAMPLE; this sets the required size
          * of the range_limit array.
          */
-        cur += GETJSAMPLE(*input_ptr);
-        cur = GETJSAMPLE(range_limit[cur]);
+        cur += *input_ptr;
+        cur = range_limit[cur];
         /* Select output value, accumulate into output code for this pixel */
-        pixcode = GETJSAMPLE(colorindex_ci[cur]);
+        pixcode = colorindex_ci[cur];
         *output_ptr += (JSAMPLE)pixcode;
         /* Compute actual representation error at this pixel */
         /* Note: we can do this even though we don't have the final */
         /* pixel code, because the colormap is orthogonal. */
-        cur -= GETJSAMPLE(colormap_ci[pixcode]);
+        cur -= colormap_ci[pixcode];
         /* Compute error fractions to be propagated to adjacent pixels.
          * Add these into the running sums, and simultaneously shift the
          * next-line error sums left by 1 column.

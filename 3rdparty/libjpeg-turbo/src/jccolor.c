@@ -392,11 +392,11 @@ cmyk_ycck_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf,
     outptr3 = output_buf[3][output_row];
     output_row++;
     for (col = 0; col < num_cols; col++) {
-      r = MAXJSAMPLE - GETJSAMPLE(inptr[0]);
-      g = MAXJSAMPLE - GETJSAMPLE(inptr[1]);
-      b = MAXJSAMPLE - GETJSAMPLE(inptr[2]);
+      r = MAXJSAMPLE - inptr[0];
+      g = MAXJSAMPLE - inptr[1];
+      b = MAXJSAMPLE - inptr[2];
       /* K passes through as-is */
-      outptr3[col] = inptr[3];  /* don't need GETJSAMPLE here */
+      outptr3[col] = inptr[3];
       inptr += 4;
       /* If the inputs are 0..MAXJSAMPLE, the outputs of these equations
        * must be too; we do not need an explicit range-limiting operation.
@@ -438,7 +438,7 @@ grayscale_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf,
     outptr = output_buf[0][output_row];
     output_row++;
     for (col = 0; col < num_cols; col++) {
-      outptr[col] = inptr[0];   /* don't need GETJSAMPLE() here */
+      outptr[col] = inptr[0];
       inptr += instride;
     }
   }
@@ -497,7 +497,7 @@ null_convert(j_compress_ptr cinfo, JSAMPARRAY input_buf, JSAMPIMAGE output_buf,
         inptr = *input_buf;
         outptr = output_buf[ci][output_row];
         for (col = 0; col < num_cols; col++) {
-          outptr[col] = inptr[ci]; /* don't need GETJSAMPLE() here */
+          outptr[col] = inptr[ci];
           inptr += nc;
         }
       }

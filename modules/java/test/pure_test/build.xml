@@ -6,6 +6,7 @@
 
   <property name="opencv.test.package" value="*"/>
   <property name="opencv.test.class" value="*"/>
+  <property name="opencv.test.exclude" value=""/>
 
   <path id="master-classpath">
     <fileset dir="lib">
@@ -53,7 +54,7 @@
       <formatter type="xml"/>
 
       <batchtest fork="yes" todir="${test.dir}">
-        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*">
+        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*, ${opencv.test.exclude}">
           <exclude name="**/*$*.class"/>
         </zipfileset>
       </batchtest>
