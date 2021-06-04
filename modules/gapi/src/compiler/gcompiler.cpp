@@ -18,6 +18,7 @@
 #include <ade/passes/check_cycles.hpp>
 
 #include "api/gcomputation_priv.hpp"
+#include "api/gmeta_check.hpp"
 #include "api/gnode_priv.hpp"   // FIXME: why it is here?
 #include "api/gproto_priv.hpp"  // FIXME: why it is here?
 #include "api/gcall_priv.hpp"   // FIXME: why it is here?

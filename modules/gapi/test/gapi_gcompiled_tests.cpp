@@ -44,7 +44,7 @@ namespace
         cv::GScalar scale;
         cv::GComputation m_ucc;
 
-        G_TYPED_KERNEL(GReturn42, <cv::GOpaque<int>(cv::GMat)>, "org.opencv.test.return_42")
+        G_API_OP(GReturn42, <cv::GOpaque<int>(cv::GMat)>, "org.opencv.test.return_42")
         {
             static GOpaqueDesc outMeta(cv::GMatDesc /* in */) { return cv::empty_gopaque_desc(); }
         };

@@ -12,6 +12,7 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gproto.hpp>
 
+#include "api/gmeta_check.hpp"
 #include "api/gorigin.hpp"
 #include "api/gproto_priv.hpp"
 #include "logger.hpp"
@@ -214,8 +215,7 @@ void cv::validate_input_arg(const GRunArg& arg)
     {
         const auto desc = cv::descr_of(util::get<cv::UMat>(arg));
         GAPI_Assert(validate_input_meta(desc) &&
-                    "incorrect description of cv::UMat! "
-                    "Dimensions, channel and depth must be positive");
+                    "incorrect description of cv::UMat!");
         break;
     }
 #endif //  !defined(GAPI_STANDALONE)
@@ -223,8 +223,7 @@ void cv::validate_input_arg(const GRunArg& arg)
     {
         const auto desc = cv::descr_of(util::get<cv::Mat>(arg));
         GAPI_Assert(validate_input_meta(desc) &&
-                    "incorrect discription of Mat! "
-                    "Dimensions, channel and depth must be positive");
+                    "incorrect discription of Mat!");
         break;
     }
     default:
@@ -243,57 +242,6 @@ void cv::validate_input_args(const GRunArgs& args)
         validate_input_arg(arg);
         index ++;
     }
-}
-
-bool cv::validate_input_meta_arg(const GMetaArg& meta, std::ostream* tracer)
-{
-    switch (meta.index())
-    {
-        case GMetaArg::index_of<cv::GMatDesc>():
-        {
-            return cv::validate_input_meta(cv::util::get<cv::GMatDesc>(meta), tracer);
-        }
-        default:
-            break;
-    }
-    return true;
-}
-
-bool cv::validate_input_meta(const cv::GMatDesc& meta, std::ostream* tracer)
-{
-    if (meta.dims.empty())
-    {
-        if (!(meta.size.height > 0 && meta.size.width > 0))
-        {
-            if (tracer)
-            {
-                *tracer << "Image format is invalid. Size must contain positive values, got width: "
-                        << meta.size.width << ", height: " << meta.size.height;
-            }
-            return false;
-        }
-
-        if (!(meta.chan > 0))
-        {
-            if (tracer)
-            {
-                *tracer << "Image format is invalid. Channel mustn't be negative value, got channel: "
-                        << meta.chan;
-            }
-            return false;
-        }
-    }
-
-    if (!(meta.depth >= 0))
-    {
-        if (tracer)
-        {
-            *tracer << "Image format is invalid. Depth must be positive value, got depth: "
-                    << meta.depth;
-        }
-        return false;
-    }
-    return true;
 }
 
 namespace cv {
