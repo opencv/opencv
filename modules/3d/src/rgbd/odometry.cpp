@@ -8,7 +8,7 @@
 
 #include "precomp.hpp"
 #include "fast_icp.hpp"
-#include "opencv2/rgbd/detail/kinfu_frame.hpp"
+#include "utils.hpp"
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  define HAVE_EIGEN3_HERE
@@ -901,7 +901,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
 
-            const Mat pyramidMask, pyramidTexturedMask;
+            const Mat pyramidMask;
             srcFrame->getPyramidAt(pyramidMask, OdometryFrame::PYR_MASK, level);
 
             if(method & RGBD_ODOMETRY)
