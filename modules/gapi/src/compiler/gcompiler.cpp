@@ -318,15 +318,30 @@ void cv::gimpl::GCompiler::validateInputMeta()
                      "got " + std::to_string(m_metas.size()) + " meta arguments)"));
     }
 
-    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream* tracer) {
+    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream& tracer) {
         switch (proto.index())
         {
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
         {
-            return util::holds_alternative<cv::GMatDesc>(meta)
-                   && cv::validate_input_meta(cv::util::get<cv::GMatDesc>(meta), tracer);
+            // check actual type
+            if (!util::holds_alternative<cv::GMatDesc>(meta))
+            {
+                return false;
+            }
+
+            // check meta-data on validity
+            try
+            {
+                cv::validate_input_meta(cv::util::get<cv::GMatDesc>(meta)); //may throw
+            }
+            catch (const std::exception& ex)
+            {
+                tracer << ex.what();
+                return false;
+            }
+            return true;
         }
         case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GFrameDesc>(meta);
@@ -352,9 +367,9 @@ void cv::gimpl::GCompiler::validateInputMeta()
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
         std::stringstream ss;
-        if (!meta_matches(meta, proto, &ss))
+        if (!meta_matches(meta, proto, ss))
         {
-            const auto index  = ade::util::index(meta_arg_idx);
+            const auto index = ade::util::index(meta_arg_idx);
 
             std::string reason_descr = ss.str();
             util::throw_error(std::logic_error

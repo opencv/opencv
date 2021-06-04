@@ -8,14 +8,12 @@
 #ifndef OPENCV_GAPI_GMETA_CHECK_HPP
 #define OPENCV_GAPI_GMETA_CHECK_HPP
 
-#include <ostream>
-
 #include <opencv2/gapi/gmetaarg.hpp>
 
 namespace cv
 {
-bool validate_input_meta_arg(const GMetaArg& meta, std::ostream* tracer = nullptr);
-bool validate_input_meta(const GMatDesc& meta, std::ostream* tracer = nullptr);
+void validate_input_meta_arg(const GMetaArg& meta);
+void validate_input_meta(const GMatDesc& meta);
 }
 
 #endif //OPENCV_GAPI_GMETA_CHECK_HPP

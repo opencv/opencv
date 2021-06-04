@@ -214,16 +214,14 @@ void cv::validate_input_arg(const GRunArg& arg)
     case GRunArg::index_of<cv::UMat>():
     {
         const auto desc = cv::descr_of(util::get<cv::UMat>(arg));
-        GAPI_Assert(validate_input_meta(desc) &&
-                    "incorrect description of cv::UMat!");
+        validate_input_meta(desc); //may throw
         break;
     }
 #endif //  !defined(GAPI_STANDALONE)
     case GRunArg::index_of<cv::Mat>():
     {
         const auto desc = cv::descr_of(util::get<cv::Mat>(arg));
-        GAPI_Assert(validate_input_meta(desc) &&
-                    "incorrect discription of Mat!");
+        validate_input_meta(desc); //may throw
         break;
     }
     default:

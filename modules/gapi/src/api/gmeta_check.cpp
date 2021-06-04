@@ -5,58 +5,48 @@
 // Copyright (C) 2021 Intel Corporation
 
 #include "precomp.hpp"
+
+#include <opencv2/gapi/util/throw.hpp>
 #include "api/gmeta_check.hpp"
 
 namespace cv
 {
-bool validate_input_meta_arg(const GMetaArg& meta, std::ostream* tracer)
+void validate_input_meta_arg(const GMetaArg& meta)
 {
     switch (meta.index())
     {
         case GMetaArg::index_of<GMatDesc>():
         {
-            return validate_input_meta(util::get<GMatDesc>(meta), tracer);
+            validate_input_meta(util::get<GMatDesc>(meta));
         }
         default:
             break;
     }
-    return true;
 }
 
-bool validate_input_meta(const GMatDesc& meta, std::ostream* tracer)
+void validate_input_meta(const GMatDesc& meta)
 {
     if (meta.dims.empty())
     {
         if (!(meta.size.height > 0 && meta.size.width > 0))
         {
-            if (tracer)
-            {
-                *tracer << "Image format is invalid. Size must contain positive values, got width: "
-                        << meta.size.width << ", height: " << meta.size.height;
-            }
-            return false;
+            util::throw_error(std::logic_error(std::string("Image format is invalid. Size must contain positive values, got width: ") +
+                                               std::to_string(meta.size.width ) + (", height: ") +
+                                               std::to_string(meta.size.height)));
         }
 
         if (!(meta.chan > 0))
         {
-            if (tracer)
-            {
-                *tracer << "Image format is invalid. Channel mustn't be negative value, got channel: "
-                        << meta.chan;
-            }
-            return false;
+            util::throw_error(std::logic_error(std::string("Image format is invalid. Channel mustn't be negative value, got channel: ") +
+                                               std::to_string(meta.chan)));
         }
     }
 
     if (!(meta.depth >= 0))
     {
-        if (tracer)
-        {
-            *tracer << "Image format is invalid. Depth must be positive value, got depth: "
-                    << meta.depth;
-        }
-        return false;
+        util::throw_error(std::logic_error(std::string("Image format is invalid. Depth must be positive value, got depth: ") +
+                                           std::to_string(meta.depth)));
     }
-    return true;
+    // All checks are ok
 }
 }
