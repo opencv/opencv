@@ -1660,7 +1660,9 @@ FastICPOdometry::FastICPOdometry() :
     angleThreshold((float)(30. * CV_PI / 180.)),
     sigmaDepth(0.04f),
     sigmaSpatial(4.5f),
-    kernelSize(7)
+    kernelSize(7),
+    depthFactor(1.f),
+    truncateThreshold(0.f)
 {
     setDefaultIterCounts(iterCounts);
 }
@@ -1709,20 +1711,30 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheTyp
 {
     Odometry::prepareFrameCache(frame, cacheType);
 
-    //TODO: fix it later
-    if (cacheType == OdometryFrame::CACHE_DEPTH)
+    TMat depth;
+    frame->getDepth(depth);
+    if (depth.empty())
     {
-        TMat depth;
-        frame->getDepth(depth);
-        if(depth.empty())
+        if (frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
         {
-            if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
+            if (frame->getPyramidLevels(OdometryFrame::PYR_NORM))
             {
-                TMat d0;
-                frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
-                frame->setDepth(d0);
+                TMat points, normals;
+                frame->getPyramidAt(points, OdometryFrame::PYR_CLOUD, 0);
+                frame->getPyramidAt(normals, OdometryFrame::PYR_NORM, 0);
+                std::vector<TMat> pyrPoints, pyrNormals;
+                // in, in, out, out
+                size_t nLevels = iterCounts.total();
+                buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, (int)nLevels);
+                for (size_t i = 1; i < nLevels; i++)
+                {
+                    frame->setPyramidAt(pyrPoints [i], OdometryFrame::PYR_CLOUD, i);
+                    frame->setPyramidAt(pyrNormals[i], OdometryFrame::PYR_NORM,  i);
+                }
+
+                return points.size();
             }
-            else if(frame->getPyramidLevels(OdometryFrame::PYR_CLOUD))
+            else
             {
                 TMat cloud;
                 frame->getPyramidAt(cloud, OdometryFrame::PYR_CLOUD, 0);
@@ -1730,37 +1742,25 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheTyp
                 split(cloud, xyz);
                 frame->setDepth(xyz[2]);
             }
-            else
-                CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
         }
-        checkDepth(depth, depth.size());
-
-        // mask isn't used by FastICP
-        auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-        makeFrameFromDepth(depth, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], cameraMatrix, (int)iterCounts.total(),
-                           depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
-
-        return depth.size();
-    }
-    else if (cacheType == OdometryFrame::CACHE_PTS)
-    {
-        TMat points, normals;
-        frame->getPyramidAt(points, OdometryFrame::PYR_CLOUD, 0);
-        frame->getPyramidAt(normals, OdometryFrame::PYR_NORM, 0);
-        std::vector<TMat> pyrPoints, pyrNormals;
-        // in, in, out, out
-        size_t nLevels = iterCounts.total();
-        buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, (int)nLevels);
-        for (size_t i = 1; i < nLevels; i++)
+        else if (frame->getPyramidLevels(OdometryFrame::PYR_DEPTH))
         {
-            frame->setPyramidAt(pyrPoints [i], OdometryFrame::PYR_CLOUD, i);
-            frame->setPyramidAt(pyrNormals[i], OdometryFrame::PYR_NORM,  i);
+            TMat d0;
+            frame->getPyramidAt(d0, OdometryFrame::PYR_DEPTH, 0);
+            frame->setDepth(d0);
         }
-
-        return points.size();
+        else
+            CV_Error(Error::StsBadSize, "Depth or pyramidDepth or pyramidCloud have to be set.");
     }
+    frame->getDepth(depth);
+    checkDepth(depth, depth.size());
 
-    return Size();
+    // mask isn't used by FastICP
+    auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
+    makeFrameFromDepth(depth, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], cameraMatrix, (int)iterCounts.total(),
+                       depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
+
+    return depth.size();
 }
 
 Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
