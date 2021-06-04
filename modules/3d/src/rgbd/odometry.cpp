@@ -1177,8 +1177,12 @@ OdometryFrameImpl<UMat>::OdometryFrameImpl(InputArray _image, InputArray _depth,
 
 Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, InputArray _mask, InputArray _normals, int _ID)
 {
-    bool useOcl = _image.isUMat() && _depth.isUMat() && _mask.isUMat() && _normals.isUMat();
-    if (useOcl)
+    bool allEmpty = _image.empty() && _depth.empty() && _mask.empty() && _normals.empty();
+    bool useOcl = (_image.isUMat() || _image.empty()) &&
+                  (_depth.isUMat() || _depth.empty()) &&
+                  (_mask.isUMat()  || _mask.empty()) &&
+                  (_normals.isUMat() || _normals.empty());
+    if (useOcl && !allEmpty)
         return makePtr<OdometryFrameImpl<UMat>>(_image, _depth, _mask, _normals, _ID);
     else
         return makePtr<OdometryFrameImpl<Mat>> (_image, _depth, _mask, _normals, _ID);
