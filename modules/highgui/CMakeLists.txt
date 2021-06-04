@@ -1,26 +1,5 @@
 set(the_description "High-level GUI")
 
-set(ENABLE_PLUGINS_DEFAULT ON)
-if(EMSCRIPTEN OR IOS OR WINRT)
-  set(ENABLE_PLUGINS_DEFAULT OFF)
-endif()
-set(HIGHGUI_PLUGIN_LIST "" CACHE STRING "List of GUI backends to be compiled as plugins (gtk, gtk2/gtk3, qt, win32 or special value 'all')")
-set(HIGHGUI_ENABLE_PLUGINS "${ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building and using of GUI plugins")
-mark_as_advanced(HIGHGUI_PLUGIN_LIST HIGHGUI_ENABLE_PLUGINS)
-
-string(REPLACE "," ";" HIGHGUI_PLUGIN_LIST "${HIGHGUI_PLUGIN_LIST}")  # support comma-separated list (,) too
-if(NOT HIGHGUI_ENABLE_PLUGINS)
-  if(HIGHGUI_PLUGIN_LIST)
-    message(WARNING "HighGUI: plugins are disabled through HIGHGUI_ENABLE_PLUGINS, so HIGHGUI_PLUGIN_LIST='${HIGHGUI_PLUGIN_LIST}' is ignored")
-    set(HIGHGUI_PLUGIN_LIST "")
-  endif()
-else()
-  # Make virtual plugins target
-  if(NOT TARGET opencv_highgui_plugins)
-    add_custom_target(opencv_highgui_plugins ALL)
-  endif()
-endif()
-
 if(ANDROID)
   ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
 else()
@@ -68,7 +47,10 @@ file(GLOB highgui_ext_hdrs
 # Removing WinRT API headers by default
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
+set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
+
 if(HAVE_QT5)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "QT5")
   add_definitions(-DHAVE_QT)
 
   # "Automoc" doesn't work properly with opencv_world build, use QT5_WRAP_CPP() directly
@@ -96,8 +78,8 @@ if(HAVE_QT5)
     include_directories(${Qt5OpenGL_INCLUDE_DIRS})
     list(APPEND HIGHGUI_LIBRARIES ${Qt5OpenGL_LIBRARIES})
   endif()
-
 elseif(HAVE_QT)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "QT4")
   add_definitions(-DHAVE_QT)
   if(HAVE_QT_OPENGL)
     add_definitions(-DHAVE_QT_OPENGL)
@@ -115,6 +97,7 @@ elseif(HAVE_QT)
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
 elseif(WINRT)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WINRT")
   if(NOT WINRT_8_0)
     # Dependencies used by the implementation referenced
     # below are not available on WinRT 8.0.
@@ -149,11 +132,13 @@ elseif(WINRT)
     message(STATUS "  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
   endif()
 elseif(HAVE_WIN32UI)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WIN32UI")
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
   if(OpenCV_ARCH STREQUAL "ARM64")
     list(APPEND HIGHGUI_LIBRARIES "comdlg32" "advapi32")
   endif()
 elseif(HAVE_COCOA)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "COCOA")
   add_definitions(-DHAVE_COCOA)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
@@ -170,16 +155,31 @@ if(TARGET ocv.3rdparty.gtk3 OR TARGET ocv.3rdparty.gtk2)
     AND NOT "gtk" IN_LIST HIGHGUI_PLUGIN_LIST
     AND NOT "gtk2" IN_LIST HIGHGUI_PLUGIN_LIST
     AND NOT "gtk3" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT OPENCV_HIGHGUI_BUILTIN_BACKEND
   )
+    if(__gtk_dependency STREQUAL "ocv.3rdparty.gtk3")
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK3")
+    elseif(__gtk_dependency STREQUAL "ocv.3rdparty.gtk2")
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK2")
+    else()
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK")
+    endif()
     list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
     list(APPEND tgts ${__gtk_dependency})
     if(TARGET ocv.3rdparty.gthread)
       list(APPEND tgts ocv.3rdparty.gthread)
     endif()
     if(TARGET ocv.3rdparty.gtkglext
+        AND __gtk_dependency STREQUAL "ocv.3rdparty.gtk2"
         AND NOT OPENCV_GTK_DISABLE_GTKGLEXT
     )
       list(APPEND tgts ocv.3rdparty.gtkglext)
+      if(TARGET ocv.3rdparty.gtk_opengl
+          AND __gtk_dependency STREQUAL "ocv.3rdparty.gtk2"
+          AND NOT OPENCV_GTK_DISABLE_OPENGL
+      )
+        list(APPEND tgts ocv.3rdparty.gtk_opengl)
+      endif()
     endif()
   elseif("gtk" IN_LIST HIGHGUI_PLUGIN_LIST)
     ocv_create_builtin_highgui_plugin(opencv_highgui_gtk ${__gtk_dependency} "window_gtk.cpp")
@@ -210,6 +210,11 @@ if(TARGET ocv.3rdparty.gtk3 OR TARGET ocv.3rdparty.gtk2)
     endif()
   endif()
 endif()
+
+if(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "NONE")
+endif()
+message(STATUS "highgui: using builtin backend: ${OPENCV_HIGHGUI_BUILTIN_BACKEND}")  # FIXIT: propagate to root CMake
 
 if(TRUE)
   # these variables are set by 'ocv_append_build_options(HIGHGUI ...)'
@@ -271,3 +276,10 @@ if(HIGHGUI_ENABLE_PLUGINS)
 endif()
 
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
+
+# generate module configuration
+set(CONFIG_STR "// Auto-generated file
+#define OPENCV_HIGHGUI_BUILTIN_BACKEND_STR \"${OPENCV_HIGHGUI_BUILTIN_BACKEND}\"
+")
+
+ocv_update_file("${CMAKE_CURRENT_BINARY_DIR}/opencv_highgui_config.hpp" "${CONFIG_STR}")
