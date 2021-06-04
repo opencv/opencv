@@ -113,10 +113,6 @@
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
-#ifdef HAVE_DIRECTX
-#include "directx.hpp"
-#endif
-
 #ifdef HAVE_OPENCL_SVM
 #include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
 #include "opencv2/core/opencl/runtime/opencl_svm_hsa_extension.hpp"
@@ -2367,9 +2363,6 @@ protected:
         , contextId(CV_XADD(&g_contextId, 1))
         , configuration(configuration_)
         , handle(0)
-#ifdef HAVE_DIRECTX
-        , p_directx_impl(0)
-#endif
 #ifdef HAVE_OPENCL_SVM
         , svmInitialized(false)
 #endif
@@ -2395,10 +2388,9 @@ protected:
                 handle = NULL;
             }
             devices.clear();
-#ifdef HAVE_DIRECTX
-            directx::internal::deleteDirectXImpl(&p_directx_impl);
-#endif
         }
+
+        userContextStorage.clear();
 
         {
             cv::AutoLock lock(cv::getInitializationMutex());
@@ -2705,18 +2697,20 @@ public:
         return *bufferPoolHostPtr_.get();
     }
 
-#ifdef HAVE_DIRECTX
-    directx::internal::OpenCLDirectXImpl* p_directx_impl;
-
-    directx::internal::OpenCLDirectXImpl* getDirectXImpl()
-    {
-        if (!p_directx_impl)
-        {
-            p_directx_impl = directx::internal::createDirectXImpl();
-        }
-        return p_directx_impl;
+    std::map<std::type_index, std::shared_ptr<UserContext>> userContextStorage;
+    cv::Mutex userContextMutex;
+    void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext) {
+        cv::AutoLock lock(userContextMutex);
+        userContextStorage[typeId] = userContext;
     }
-#endif
+    std::shared_ptr<UserContext> getUserContext(std::type_index typeId) {
+        cv::AutoLock lock(userContextMutex);
+        auto it = userContextStorage.find(typeId);
+        if (it != userContextStorage.end())
+            return it->second;
+        else
+            return nullptr;
+    }
 
 #ifdef HAVE_OPENCL_SVM
     bool svmInitialized;
@@ -3036,6 +3030,25 @@ Context Context::create(const std::string& configuration)
     return ctx;
 }
 
+void* Context::getOpenCLContextProperty(int propertyId) const
+{
+    if (p == NULL)
+        return nullptr;
+    ::size_t size = 0;
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, 0, NULL, &size));
+    std::vector<cl_context_properties> prop(size / sizeof(cl_context_properties), (cl_context_properties)0);
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, size, prop.data(), NULL));
+    for (size_t i = 0; i < prop.size(); i += 2)
+    {
+        if (prop[i] == (cl_context_properties)propertyId)
+        {
+            CV_LOG_DEBUG(NULL, "OpenCL: found context property=" << propertyId << ") => " << (void*)prop[i + 1]);
+            return (void*)prop[i + 1];
+        }
+    }
+    return nullptr;
+}
+
 #ifdef HAVE_OPENCL_SVM
 bool Context::useSVM() const
 {
@@ -3097,6 +3110,21 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
+Context::UserContext::~UserContext()
+{
+}
+
+void Context::setUserContext(std::type_index typeId, const std::shared_ptr<Context::UserContext>& userContext)
+{
+    CV_Assert(p);
+    p->setUserContext(typeId, userContext);
+}
+
+std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId)
+{
+    CV_Assert(p);
+    return p->getUserContext(typeId);
+}
 
 static void get_platform_name(cl_platform_id id, String& name)
 {
@@ -3454,7 +3482,6 @@ struct Kernel::Impl
     void registerImageArgument(int arg, const Image2D& image)
     {
         CV_CheckGE(arg, 0, "");
-        CV_CheckLT(arg, (int)MAX_ARRS, "");
         if (arg < (int)shadow_images.size() && shadow_images[arg].ptr() != image.ptr())  // TODO future: replace ptr => impl (more strong check)
         {
             CV_Check(arg, !isInProgress, "ocl::Kernel: clearing of pending Image2D arguments is not allowed");
@@ -7504,16 +7531,5 @@ uint64 Timer::durationNS() const
 }
 
 }} // namespace
-
-#ifdef HAVE_DIRECTX
-namespace cv { namespace directx { namespace internal {
-OpenCLDirectXImpl* getDirectXImpl(ocl::Context& ctx)
-{
-    ocl::Context::Impl* i = ctx.getImpl();
-    CV_Assert(i);
-    return i->getDirectXImpl();
-}
-}}} // namespace cv::directx::internal
-#endif
 
 #endif // HAVE_OPENCL

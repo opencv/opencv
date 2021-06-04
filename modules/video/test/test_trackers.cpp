@@ -94,4 +94,36 @@ TEST(GOTURN, memory_usage)
     }
 }
 
+TEST(DaSiamRPN, memory_usage)
+{
+    cv::Rect roi(145, 70, 85, 85);
+
+    std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
+    std::string kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
+    std::string kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
+    cv::TrackerDaSiamRPN::Params params;
+    params.model = model;
+    params.kernel_r1 = kernel_r1;
+    params.kernel_cls1 = kernel_cls1;
+    cv::Ptr<Tracker> tracker = TrackerDaSiamRPN::create(params);
+
+    string inputVideo = cvtest::findDataFile("tracking/david/data/david.webm");
+    cv::VideoCapture video(inputVideo);
+    ASSERT_TRUE(video.isOpened()) << inputVideo;
+
+    cv::Mat frame;
+    video >> frame;
+    ASSERT_FALSE(frame.empty()) << inputVideo;
+    tracker->init(frame, roi);
+    string ground_truth_bb;
+    for (int nframes = 0; nframes < 15; ++nframes)
+    {
+        std::cout << "Frame: " << nframes << std::endl;
+        video >> frame;
+        bool res = tracker->update(frame, roi);
+        ASSERT_TRUE(res);
+        std::cout << "Predicted ROI: " << roi << std::endl;
+    }
+}
+
 }}  // namespace opencv_test::

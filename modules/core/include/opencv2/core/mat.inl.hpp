@@ -863,6 +863,33 @@ const _Tp* Mat::ptr(const int* idx) const
     return (const _Tp*)p;
 }
 
+template<int n> inline
+uchar* Mat::ptr(const Vec<int, n>& idx)
+{
+    return Mat::ptr(idx.val);
+}
+
+template<int n> inline
+const uchar* Mat::ptr(const Vec<int, n>& idx) const
+{
+    return Mat::ptr(idx.val);
+}
+
+template<typename _Tp, int n> inline
+_Tp* Mat::ptr(const Vec<int, n>& idx)
+{
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return Mat::ptr<_Tp>(idx.val);
+}
+
+template<typename _Tp, int n> inline
+const _Tp* Mat::ptr(const Vec<int, n>& idx) const
+{
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return Mat::ptr<_Tp>(idx.val);
+}
+
+
 template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1)
 {
@@ -989,6 +1016,17 @@ MatConstIterator_<_Tp> Mat::begin() const
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat::rbegin() const
+{
+    if (empty())
+        return std::reverse_iterator<MatConstIterator_<_Tp>>();
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    MatConstIterator_<_Tp> it((const Mat_<_Tp>*)this);
+    it += total();
+    return std::reverse_iterator<MatConstIterator_<_Tp>> (it);
+}
+
+template<typename _Tp> inline
 MatConstIterator_<_Tp> Mat::end() const
 {
     if (empty())
@@ -997,6 +1035,15 @@ MatConstIterator_<_Tp> Mat::end() const
     MatConstIterator_<_Tp> it((const Mat_<_Tp>*)this);
     it += total();
     return it;
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat::rend() const
+{
+    if (empty())
+        return std::reverse_iterator<MatConstIterator_<_Tp>>();
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return std::reverse_iterator<MatConstIterator_<_Tp>>((const Mat_<_Tp>*)this);
 }
 
 template<typename _Tp> inline
@@ -1009,6 +1056,17 @@ MatIterator_<_Tp> Mat::begin()
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat::rbegin()
+{
+    if (empty())
+        return std::reverse_iterator<MatIterator_<_Tp>>();
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    MatIterator_<_Tp> it((Mat_<_Tp>*)this);
+    it += total();
+    return std::reverse_iterator<MatIterator_<_Tp>>(it);
+}
+
+template<typename _Tp> inline
 MatIterator_<_Tp> Mat::end()
 {
     if (empty())
@@ -1017,6 +1075,15 @@ MatIterator_<_Tp> Mat::end()
     MatIterator_<_Tp> it((Mat_<_Tp>*)this);
     it += total();
     return it;
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat::rend()
+{
+    if (empty())
+        return std::reverse_iterator<MatIterator_<_Tp>>();
+    CV_DbgAssert( elemSize() == sizeof(_Tp) );
+    return std::reverse_iterator<MatIterator_<_Tp>>(MatIterator_<_Tp>((Mat_<_Tp>*)this));
 }
 
 template<typename _Tp, typename Functor> inline
@@ -1687,9 +1754,21 @@ MatConstIterator_<_Tp> Mat_<_Tp>::begin() const
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rbegin() const
+{
+    return Mat::rbegin<_Tp>();
+}
+
+template<typename _Tp> inline
 MatConstIterator_<_Tp> Mat_<_Tp>::end() const
 {
     return Mat::end<_Tp>();
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatConstIterator_<_Tp>> Mat_<_Tp>::rend() const
+{
+    return Mat::rend<_Tp>();
 }
 
 template<typename _Tp> inline
@@ -1699,9 +1778,21 @@ MatIterator_<_Tp> Mat_<_Tp>::begin()
 }
 
 template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rbegin()
+{
+    return Mat::rbegin<_Tp>();
+}
+
+template<typename _Tp> inline
 MatIterator_<_Tp> Mat_<_Tp>::end()
 {
     return Mat::end<_Tp>();
+}
+
+template<typename _Tp> inline
+std::reverse_iterator<MatIterator_<_Tp>> Mat_<_Tp>::rend()
+{
+    return Mat::rend<_Tp>();
 }
 
 template<typename _Tp> template<typename Functor> inline

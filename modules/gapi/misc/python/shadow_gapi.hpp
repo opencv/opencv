@@ -58,7 +58,6 @@ namespace cv
 
    namespace gapi
    {
-       GAPI_EXPORTS_W gapi::GNetPackage networks(const cv::gapi::ie::PyParams& params);
        namespace wip
        {
            class GAPI_EXPORTS_W IStreamSource { };

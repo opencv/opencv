@@ -396,13 +396,14 @@ There are multiple less popular frameworks which can be used to read and write v
 
 ### videoio plugins
 
-Some _videoio_ backends can be built as plugins thus breaking strict dependency on third-party libraries and making them optional at runtime. Following options can be used to control this mechanism:
+Since version 4.1.0 some _videoio_ backends can be built as plugins thus breaking strict dependency on third-party libraries and making them optional at runtime. Following options can be used to control this mechanism:
 
 | Option | Default | Description |
 | --------| ------ | ------- |
 | `VIDEOIO_ENABLE_PLUGINS` | _ON_ | Enable or disable plugins completely. |
 | `VIDEOIO_PLUGIN_LIST` | _empty_ | Comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _ffmpeg_, _gstreamer_, _msmf_, _mfx_ and _all_. |
-| `VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK` | _ON_ | Enable strict runtime version check to only allow plugins built with the same version of OpenCV. |
+
+Check @ref tutorial_general_install for standalone plugins build instructions.
 
 
 ## Parallel processing {#tutorial_config_reference_func_core}
@@ -419,6 +420,17 @@ Some of OpenCV algorithms can use multithreading to accelerate processing. OpenC
 | HPX | `WITH_HPX` | _OFF_ | Multiple | [High Performance ParallelX](https://en.wikipedia.org/wiki/HPX) is an experimental backend which is more suitable for multiprocessor environments. |
 
 @note OpenCV can download and build TBB library from GitHub, this functionality can be enabled with the `BUILD_TBB` option.
+
+
+### Threading plugins
+
+Since version 4.5.2 OpenCV supports dynamically loaded threading backends. At this moment only separate compilation process is supported: first you have to build OpenCV with some _default_ parallel backend (e.g. pthreads), then build each plugin and copy resulting binaries to the _lib_ or _bin_ folder.
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| PARALLEL_ENABLE_PLUGINS | ON | Enable plugin support, if this option is disabled OpenCV will not try to load anything |
+
+Check @ref tutorial_general_install for standalone plugins build instructions.
 
 
 ## GUI backends (highgui module) {#tutorial_config_reference_highgui}
@@ -440,6 +452,18 @@ OpenCV relies on various GUI libraries for window drawing.
 `WITH_OPENGL` (default: _OFF_)
 
 OpenGL integration can be used to draw HW-accelerated windows with following backends: GTK, WIN32 and Qt. And enables basic interoperability with OpenGL, see @ref core_opengl and @ref highgui_opengl for details.
+
+
+### highgui plugins
+
+Since OpenCV 4.5.3 GTK backend can be build as a dynamically loaded plugin. Following options can be used to control this mechanism:
+
+| Option | Default | Description |
+| --------| ------ | ------- |
+| `HIGHGUI_ENABLE_PLUGINS` | _ON_ | Enable or disable plugins completely. |
+| `HIGHGUI_PLUGIN_LIST` | _empty_ | Comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _gtk_, _gtk2_, _gtk3_, and _all_. |
+
+Check @ref tutorial_general_install for standalone plugins build instructions.
 
 
 ## Deep learning neural networks inference backends and options (dnn module) {#tutorial_config_reference_dnn}

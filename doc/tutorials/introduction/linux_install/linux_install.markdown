@@ -108,7 +108,7 @@ CMake package files will be located in the build root:
 ## Install
 
 @warning
-Installation process only copies files to predefined locations and do minor patching. Library installed using this method is not integrated into the system package registry and can not be uninstalled automatically. We do not recommend system-wide installation to regular users due to possible conflicts with system packages.
+The installation process only copies files to predefined locations and does minor patching. Installing using this method does not integrate opencv into the system package registry and thus, for example, opencv can not be uninstalled automatically. We do not recommend system-wide installation to regular users due to possible conflicts with system packages.
 
 By default OpenCV will be installed to the `/usr/local` directory, all files will be copied to following locations:
 * `/usr/local/bin` - executable files

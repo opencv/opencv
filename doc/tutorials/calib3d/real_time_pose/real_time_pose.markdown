@@ -87,7 +87,7 @@ The tutorial consists of two main programs:
 
     The application starts up extracting the ORB features and descriptors from the input image and
     then uses the mesh along with the [Möller–Trumbore intersection
-    algorithm](http://http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm/)
+    algorithm](http://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm/)
     to compute the 3D coordinates of the found features. Finally, the 3D points and the descriptors
     are stored in different lists in a file with YAML format which each row is a different point. The
     technical background on how to store the files can be found in the @ref tutorial_file_input_output_with_xml_yml

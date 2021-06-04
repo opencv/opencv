@@ -154,6 +154,8 @@ GAPI_TEST_FIXTURE(WarpAffineTest, initMatrixRandU,
 GAPI_TEST_FIXTURE(KMeansNDTest, initMatrixRandU, FIXTURE_API(CompareMats, int, cv::KmeansFlags), 3, cmpF, K, flags)
 GAPI_TEST_FIXTURE(KMeans2DTest, initNothing,     FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
 GAPI_TEST_FIXTURE(KMeans3DTest, initNothing,     FIXTURE_API(int, cv::KmeansFlags), 2, K, flags)
+GAPI_TEST_FIXTURE(TransposeTest, initMatrixRandU, FIXTURE_API(CompareMats), 1, cmpF)
+
 
 GAPI_TEST_EXT_BASE_FIXTURE(ParseSSDBLTest, ParserSSDTest, initNothing,
     FIXTURE_API(float, int), 2, confidence_threshold, filter_label)

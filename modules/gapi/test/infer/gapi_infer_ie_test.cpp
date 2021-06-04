@@ -2005,6 +2005,29 @@ TEST_F(InferWithReshapeNV12, TestInferListYUV)
     // Validate
     validate();
 }
+
+TEST_F(ROIList, CallInferMultipleTimes)
+{
+    cv::GArray<cv::Rect> rr;
+    cv::GMat in;
+    cv::GArray<cv::GMat> age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(rr, in);
+    cv::GComputation comp(cv::GIn(in, rr), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    auto cc = comp.compile(cv::descr_of(cv::gin(m_in_mat, m_roi_list)),
+                           cv::compile_args(cv::gapi::networks(pp)));
+
+    for (int i = 0; i < 10; ++i) {
+        cc(cv::gin(m_in_mat, m_roi_list), cv::gout(m_out_gapi_ages, m_out_gapi_genders));
+    }
+
+    validate();
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE

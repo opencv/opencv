@@ -738,8 +738,8 @@ concatenated together.
 @param imageSize Size of the image used only to initialize the camera intrinsic matrix.
 @param cameraMatrix Input/output 3x3 floating-point camera intrinsic matrix
 \f$\cameramatrix{A}\f$ . If @ref CALIB_USE_INTRINSIC_GUESS
-and/or @ref CALIB_FIX_ASPECT_RATIO are specified, some or all of fx, fy, cx, cy must be
-initialized before calling the function.
+and/or @ref CALIB_FIX_ASPECT_RATIO, @ref CALIB_FIX_PRINCIPAL_POINT or @ref CALIB_FIX_FOCAL_LENGTH
+are specified, some or all of fx, fy, cx, cy must be initialized before calling the function.
 @param distCoeffs Input/output vector of distortion coefficients
 \f$\distcoeffs\f$.
 @param rvecs Output vector of rotation vectors (@ref Rodrigues ) estimated for each pattern view
@@ -765,7 +765,7 @@ the number of pattern views. \f$R_i, T_i\f$ are concatenated 1x3 vectors.
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
 Note, that if intrinsic parameters are known, there is no need to use this function just to
-estimate extrinsic parameters. Use solvePnP instead.
+estimate extrinsic parameters. Use @ref solvePnP instead.
 -   @ref CALIB_FIX_PRINCIPAL_POINT The principal point is not changed during the global
 optimization. It stays at the center or at a different location specified when
  @ref CALIB_USE_INTRINSIC_GUESS is set too.
@@ -775,24 +775,23 @@ ratio fx/fy stays the same as in the input cameraMatrix . When
 ignored, only their ratio is computed and used further.
 -   @ref CALIB_ZERO_TANGENT_DIST Tangential distortion coefficients \f$(p_1, p_2)\f$ are set
 to zeros and stay zero.
+-   @ref CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global optimization if
+ @ref CALIB_USE_INTRINSIC_GUESS is set.
 -   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K6 The corresponding radial distortion
 coefficient is not changed during the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is
 set, the coefficient from the supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 -   @ref CALIB_RATIONAL_MODEL Coefficients k4, k5, and k6 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the rational model and return 8 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the rational model and return 8 coefficients or more.
 -   @ref CALIB_THIN_PRISM_MODEL Coefficients s1, s2, s3 and s4 are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the thin prism model and return 12 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the thin prism model and return 12 coefficients or more.
 -   @ref CALIB_FIX_S1_S2_S3_S4 The thin prism distortion coefficients are not changed during
 the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
 -   @ref CALIB_TILTED_MODEL Coefficients tauX and tauY are enabled. To provide the
 backward compatibility, this extra flag should be explicitly specified to make the
-calibration function use the tilted sensor model and return 14 coefficients. If the flag is not
-set, the function computes and returns only 5 distortion coefficients.
+calibration function use the tilted sensor model and return 14 coefficients.
 -   @ref CALIB_FIX_TAUX_TAUY The coefficients of the tilted sensor model are not changed during
 the optimization. If @ref CALIB_USE_INTRINSIC_GUESS is set, the coefficient from the
 supplied distCoeffs matrix is used. Otherwise, it is set to 0.
@@ -817,12 +816,12 @@ The algorithm performs the following steps:
     zeros initially unless some of CALIB_FIX_K? are specified.
 
 -   Estimate the initial camera pose as if the intrinsic parameters have been already known. This is
-    done using solvePnP .
+    done using @ref solvePnP .
 
 -   Run the global Levenberg-Marquardt optimization algorithm to minimize the reprojection error,
     that is, the total sum of squared distances between the observed feature points imagePoints and
     the projected (using the current estimates for camera parameters and the poses) object points
-    objectPoints. See projectPoints for details.
+    objectPoints. See @ref projectPoints for details.
 
 @note
     If you use a non-square (i.e. non-N-by-N) grid and @ref findChessboardCorners for calibration,
