@@ -242,3 +242,350 @@ public extension Mat {
         return __get(indices as [NSNumber]) as! [Double]
     }
 }
+
+public protocol Atable {
+    static func getAt(m: Mat, indices:[Int32]) -> Self
+    static func putAt(m: Mat, indices:[Int32], v: Self)
+    static func getAt2c(m: Mat, indices:[Int32]) -> (Self, Self)
+    static func putAt2c(m: Mat, indices:[Int32], v: (Self, Self))
+    static func getAt3c(m: Mat, indices:[Int32]) -> (Self, Self, Self)
+    static func putAt3c(m: Mat, indices:[Int32], v: (Self, Self, Self))
+    static func getAt4c(m: Mat, indices:[Int32]) -> (Self, Self, Self, Self)
+    static func putAt4c(m: Mat, indices:[Int32], v: (Self, Self, Self, Self))
+}
+
+public class MatAt<N: Atable> {
+
+    init(mat: Mat, indices: [Int32]) {
+        self.mat = mat
+        self.indices = indices
+    }
+
+    private let mat: Mat
+    private let indices: [Int32]
+    var v: N {
+        get {
+            return N.getAt(m: mat, indices: indices)
+        }
+        set(value) {
+            N.putAt(m: mat, indices: indices, v: value)
+        }
+    }
+    var v2c: (N, N) {
+        get {
+            return N.getAt2c(m: mat, indices: indices)
+        }
+        set(value) {
+            N.putAt2c(m: mat, indices: indices, v: value)
+        }
+    }
+    var v3c: (N, N, N) {
+        get {
+            return N.getAt3c(m: mat, indices: indices)
+        }
+        set(value) {
+            N.putAt3c(m: mat, indices: indices, v: value)
+        }
+    }
+    var v4c: (N, N, N, N) {
+        get {
+            return N.getAt4c(m: mat, indices: indices)
+        }
+        set(value) {
+            N.putAt4c(m: mat, indices: indices, v: value)
+        }
+    }
+}
+
+extension UInt8: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> UInt8 {
+        var tmp = [Int8](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return UInt8(bitPattern: tmp[0])
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: UInt8) {
+        let tmp = [Int8(bitPattern: v)]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (UInt8, UInt8) {
+        var tmp = [Int8](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]))
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (UInt8, UInt8)) {
+        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1)]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (UInt8, UInt8, UInt8) {
+        var tmp = [Int8](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]), UInt8(bitPattern: tmp[2]))
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (UInt8, UInt8, UInt8)) {
+        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1), Int8(bitPattern: v.2)]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (UInt8, UInt8, UInt8, UInt8) {
+        var tmp = [Int8](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]), UInt8(bitPattern: tmp[2]), UInt8(bitPattern: tmp[3]))
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (UInt8, UInt8, UInt8, UInt8)) {
+        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1), Int8(bitPattern: v.2), Int8(bitPattern: v.3)]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension Int8: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> Int8 {
+        var tmp = [Int8](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: Int8) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (Int8, Int8) {
+        var tmp = [Int8](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (Int8, Int8)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (Int8, Int8, Int8) {
+        var tmp = [Int8](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (Int8, Int8, Int8)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (Int8, Int8, Int8, Int8) {
+        var tmp = [Int8](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (Int8, Int8, Int8, Int8)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension Double: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> Double {
+        var tmp = [Double](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: Double) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (Double, Double) {
+        var tmp = [Double](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (Double, Double)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (Double, Double, Double) {
+        var tmp = [Double](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (Double, Double, Double)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (Double, Double, Double, Double) {
+        var tmp = [Double](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (Double, Double, Double, Double)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension Float: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> Float {
+        var tmp = [Float](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: Float) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (Float, Float) {
+        var tmp = [Float](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (Float, Float)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (Float, Float, Float) {
+        var tmp = [Float](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (Float, Float, Float)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (Float, Float, Float, Float) {
+        var tmp = [Float](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (Float, Float, Float, Float)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension Int32: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> Int32 {
+        var tmp = [Int32](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: Int32) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (Int32, Int32) {
+        var tmp = [Int32](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (Int32, Int32)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (Int32, Int32, Int32) {
+        var tmp = [Int32](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (Int32, Int32, Int32)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (Int32, Int32, Int32, Int32) {
+        var tmp = [Int32](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (Int32, Int32, Int32, Int32)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension Int16: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> Int16 {
+        var tmp = [Int16](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: Int16) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (Int16, Int16) {
+        var tmp = [Int16](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (Int16, Int16)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (Int16, Int16, Int16) {
+        var tmp = [Int16](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (Int16, Int16, Int16)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (Int16, Int16, Int16, Int16) {
+        var tmp = [Int16](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (Int16, Int16, Int16, Int16)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+/***
+ *  Example use:
+ *
+ *  let elemantVal: UInt8 = mat.at(row: 50, col: 50).v
+ *  mat.at(row: 50, col: 50).v = 245
+ *
+ */
+public extension Mat {
+    func at<N: Atable>(row: Int32, col: Int32) -> MatAt<N> {
+        return MatAt(mat: self, indices: [row, col])
+    }
+
+    func at<N: Atable>(indices:[Int32]) -> MatAt<N> {
+        return MatAt(mat: self, indices: indices)
+    }
+}
