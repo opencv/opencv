@@ -89,6 +89,7 @@
 //
 
 apply plugin: 'com.android.library'
+@KOTLIN_PLUGIN_DECLARATION@
 
 def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
