@@ -1142,7 +1142,7 @@ Ptr<TSDFVolume> makeTSDFVolume(const VolumeParams& _params)
     Matx44f pose(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
                  _params.pose10, _params.pose11, _params.pose12, _params.pose13,
                  _params.pose20, _params.pose21, _params.pose22, _params.pose23,
-                 0, 0, 0, 0);
+                 0, 0, 0, 1);
     cv::Point3i resolution(_params.resolutionX, _params.resolutionY, _params.resolutionZ);
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())

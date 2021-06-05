@@ -113,8 +113,10 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f
     if (!points.needed() && !normals.needed())
     {
         MatType pts, nrm;
+        frame->getPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
+        frame->getPyramidAt(nrm, OdometryFrame::PYR_NORM, 0);
         volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
-        frame->setPyramidAt(pts,  OdometryFrame::PYR_CLOUD, 0);
+        frame->setPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
         frame->setPyramidAt(nrm, OdometryFrame::PYR_NORM,  0);
     }
     else
