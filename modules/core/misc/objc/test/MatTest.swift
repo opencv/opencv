@@ -1143,4 +1143,28 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(5, bufferOut[63*80 + 63])
     }
 
+    func testMatAt() {
+        let uc1 = Mat(rows: 2, cols: 3, type: CvType.CV_8U)
+        try! uc1.put(row: 0, col: 0, data: [1, 2, 3, 4, 5, 6] as [Int8])
+        XCTAssertEqual(UInt8(1), uc1.at(row: 0, col: 0).v)
+        XCTAssertEqual(UInt8(2), uc1.at(row: 0, col: 1).v)
+        XCTAssertEqual(UInt8(3), uc1.at(row: 0, col: 2).v)
+        XCTAssertEqual(UInt8(4), uc1.at(row: 1, col: 0).v)
+        XCTAssertEqual(UInt8(5), uc1.at(row: 1, col: 1).v)
+        XCTAssertEqual(UInt8(6), uc1.at(row: 1, col: 2).v)
+        uc1.at(row: 0, col: 0).v = UInt8(7)
+        uc1.at(row: 0, col: 1).v = UInt8(8)
+        uc1.at(row: 0, col: 2).v = UInt8(9)
+        uc1.at(row: 1, col: 0).v = UInt8(10)
+        uc1.at(row: 1, col: 1).v = UInt8(11)
+        uc1.at(row: 1, col: 2).v = UInt8(12)
+        var data = [Int8](repeating: 0, count: 6)
+        try! uc1.get(row: 0, col: 0, data: &data)
+        XCTAssertEqual(data, [7, 8, 9, 10, 11, 12] as [Int8])
+        let (b, g, r): T3<UInt8>  = rgbLena.at(row: 0, col: 0).v3c
+        XCTAssertEqual(b, UInt8(128))
+        XCTAssertEqual(g, UInt8(138))
+        XCTAssertEqual(r, UInt8(225))
+    }
+
 }

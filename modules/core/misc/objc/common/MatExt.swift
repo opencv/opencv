@@ -33,6 +33,10 @@ func throwIncompatibleBufferSize(count: Int, channels: Int32) throws {
     )
 }
 
+public typealias T2<T> = (T, T)
+public typealias T3<T> = (T, T, T)
+public typealias T4<T> = (T, T, T, T)
+
 public extension Mat {
 
     convenience init(rows:Int32, cols:Int32, type:Int32, data:[Int8]) {
@@ -263,7 +267,7 @@ public class MatAt<N: Atable> {
 
     private let mat: Mat
     private let indices: [Int32]
-    var v: N {
+    public var v: N {
         get {
             return N.getAt(m: mat, indices: indices)
         }
@@ -271,7 +275,7 @@ public class MatAt<N: Atable> {
             N.putAt(m: mat, indices: indices, v: value)
         }
     }
-    var v2c: (N, N) {
+    public var v2c: (N, N) {
         get {
             return N.getAt2c(m: mat, indices: indices)
         }
@@ -279,7 +283,7 @@ public class MatAt<N: Atable> {
             N.putAt2c(m: mat, indices: indices, v: value)
         }
     }
-    var v3c: (N, N, N) {
+    public var v3c: (N, N, N) {
         get {
             return N.getAt3c(m: mat, indices: indices)
         }
@@ -287,7 +291,7 @@ public class MatAt<N: Atable> {
             N.putAt3c(m: mat, indices: indices, v: value)
         }
     }
-    var v4c: (N, N, N, N) {
+    public var v4c: (N, N, N, N) {
         get {
             return N.getAt4c(m: mat, indices: indices)
         }
