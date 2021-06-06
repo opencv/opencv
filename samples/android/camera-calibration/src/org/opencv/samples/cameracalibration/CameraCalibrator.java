@@ -33,6 +33,7 @@ public class CameraCalibrator {
     private double mRms;
     private double mSquareSize = 0.0181;
     private Size mImageSize;
+    private boolean isPatterAssymCircle = true;
 
     public CameraCalibrator(int width, int height) {
         mImageSize = new Size(width, height);
@@ -83,13 +84,25 @@ public class CameraCalibrator {
         final int cn = 3;
         float[] positions = new float[mCornersSize * cn];
 
-        for (int i = 0; i < mPatternSize.height; i++) {
-            for (int j = 0; j < mPatternSize.width * cn; j += cn) {
-                positions[(int) (i * mPatternSize.width * cn + j + 0)] =
-                        (2 * (j / cn) + i % 2) * (float) mSquareSize;
-                positions[(int) (i * mPatternSize.width * cn + j + 1)] =
-                        i * (float) mSquareSize;
-                positions[(int) (i * mPatternSize.width * cn + j + 2)] = 0;
+        if (isPatterAssymCircle) {
+            for (int i = 0; i < mPatternSize.height; i++) {
+                for (int j = 0; j < mPatternSize.width * cn; j += cn) {
+                    positions[(int) (i * mPatternSize.width * cn + j + 0)] =
+                            (2 * (j / cn) + i % 2) * (float) mSquareSize;
+                    positions[(int) (i * mPatternSize.width * cn + j + 1)] =
+                            i * (float) mSquareSize;
+                    positions[(int) (i * mPatternSize.width * cn + j + 2)] = 0;
+                }
+            }
+        } else {
+            for (int i = 0; i < mPatternSize.height; i++) {
+                for (int j = 0; j < mPatternSize.width * cn; j += cn) {
+                    positions[(int) (i * mPatternSize.width * cn + j + 0)] =
+                            (j / cn) * (float) mSquareSize;
+                    positions[(int) (i * mPatternSize.width * cn + j + 1)] =
+                            i * (float) mSquareSize;
+                    positions[(int) (i * mPatternSize.width * cn + j + 2)] = 0;
+                }
             }
         }
         corners.create(mCornersSize, 1, CvType.CV_32FC3);
@@ -123,8 +136,15 @@ public class CameraCalibrator {
     }
 
     private void findPattern(Mat grayFrame) {
-        mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
-                mCorners, Calib3d.CALIB_CB_ASYMMETRIC_GRID);
+        if (isPatterAssymCircle) {
+                mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
+                        mCorners, Calib3d.CALIB_CB_ASYMMETRIC_GRID);
+        } else {
+            mPatternWasFound = Calib3d.findChessboardCorners(grayFrame, mPatternSize,
+                    mCorners, Calib3d.CALIB_CB_ADAPTIVE_THRESH |
+                            Calib3d.CALIB_CB_FAST_CHECK |
+                            Calib3d.CALIB_CB_NORMALIZE_IMAGE);
+        }
     }
 
     public void addCorners() {
