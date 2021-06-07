@@ -162,6 +162,7 @@ public:
             const BackendInfo& info = enabledBackends[i];
             os << info.name << '(' << info.priority << ')';
         }
+        os << " + BUILTIN(" OPENCV_HIGHGUI_BUILTIN_BACKEND_STR ")";
         return os.str();
     }
 
