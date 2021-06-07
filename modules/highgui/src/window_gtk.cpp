@@ -45,6 +45,14 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
+
+#if (GTK_MAJOR_VERSION == 3) && defined(HAVE_OPENGL)
+  #undef HAVE_OPENGL  // no support with GTK3
+#endif
+#if defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
+  #undef HAVE_OPENGL  // gtkglext is required
+#endif
+
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stdio.h>
@@ -1187,7 +1195,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
     if (window->useGl)
-        cvSetOpenGlContext(name);
+        cvSetOpenGlContext(name.c_str());
 #endif
 
     return window_ptr;
@@ -1205,7 +1213,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
@@ -1225,7 +1233,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if (!window)
         return;
 
@@ -1239,7 +1247,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if( !window )
         return;
 
