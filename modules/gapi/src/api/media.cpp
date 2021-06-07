@@ -49,6 +49,7 @@ cv::MediaFrame::View::~View() {
 
 cv::util::any cv::MediaFrame::IAdapter::blobParams() const
 {
+    // Does nothing by default
     return {};
 }
 
