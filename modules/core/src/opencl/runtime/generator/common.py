@@ -116,7 +116,7 @@ def readFunctionFilter(fns, fileName):
 
 def outputToString(f):
     def wrapped(*args, **kwargs):
-        from cStringIO import StringIO
+        from io import StringIO
         old_stdout = sys.stdout
         sys.stdout = str_stdout = StringIO()
         res = f(*args, **kwargs)
