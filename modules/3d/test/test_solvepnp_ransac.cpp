@@ -1960,6 +1960,7 @@ TEST(Calib3d_SolvePnPRansac, minPoints)
 
 TEST(Calib3d_SolvePnPRansac, inputShape)
 {
+    double eps = 2e-6;
     //https://github.com/opencv/opencv/issues/14423
     Mat matK = Mat::eye(3,3,CV_64FC1);
     Mat distCoeff = Mat::zeros(1,5,CV_64FC1);
@@ -1987,8 +1988,8 @@ TEST(Calib3d_SolvePnPRansac, inputShape)
         Mat rvec, Tvec;
         solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
 
-        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
-        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), eps);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), eps);
     }
     {
         //1xN 3-channel
@@ -2012,8 +2013,8 @@ TEST(Calib3d_SolvePnPRansac, inputShape)
         Mat rvec, Tvec;
         solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
 
-        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
-        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), eps);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), eps);
     }
     {
         //Nx1 3-channel
@@ -2037,8 +2038,8 @@ TEST(Calib3d_SolvePnPRansac, inputShape)
         Mat rvec, Tvec;
         solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
 
-        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
-        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), eps);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), eps);
     }
     {
         //vector<Point3f>
@@ -2056,8 +2057,8 @@ TEST(Calib3d_SolvePnPRansac, inputShape)
         Mat rvec, Tvec;
         solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
 
-        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
-        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), eps);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), eps);
     }
     {
         //vector<Point3d>
@@ -2075,8 +2076,8 @@ TEST(Calib3d_SolvePnPRansac, inputShape)
         Mat rvec, Tvec;
         solvePnPRansac(keypoints13D, keypoints22D, matK, distCoeff, rvec, Tvec);
 
-        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-6);
-        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-6);
+        EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), eps);
+        EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), eps);
     }
 }
 

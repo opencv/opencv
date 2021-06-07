@@ -1863,6 +1863,22 @@ void _OutputArray::setTo(const _InputArray& arr, const _InputArray & mask) const
         CV_Error(Error::StsNotImplemented, "");
 }
 
+void _OutputArray::setZero() const
+{
+    _InputArray::KindFlag k = kind();
+
+    if( k == NONE )
+        ;
+    else if (k == MAT || k == MATX || k == STD_VECTOR)
+    {
+        Mat m = getMat();
+        m.setZero();
+    }
+    else
+    {
+        setTo(Scalar::all(0), noArray());
+    }
+}
 
 void _OutputArray::assign(const UMat& u) const
 {
