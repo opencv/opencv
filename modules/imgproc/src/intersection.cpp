@@ -47,7 +47,7 @@
 namespace cv
 {
 
-int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
+static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
 
@@ -317,19 +317,22 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
 
     std::vector <Point2f> intersection; intersection.reserve(24);
 
-    const auto ret = _rotatedRectangleIntersection(shiftedRect1, shiftedRect2, intersection);
+    const int ret = _rotatedRectangleIntersection(shiftedRect1, shiftedRect2, intersection);
 
     // If return is not None, the intersection Points are shifted back to the original position
     // and copied to the interesectingRegion
     if (ret != INTERSECT_NONE)
     {
-        for (auto &point : intersection)
+        for (size_t i = 0; i < intersection.size(); ++i)
         {
-            point.x += averageCenter.x;
-            point.y += averageCenter.y;
+            intersection[i] += averageCenter;
         }
 
         Mat(intersection).copyTo(intersectingRegion);
+    }
+    else
+    {
+        intersectingRegion.release();
     }
 
     return ret;
