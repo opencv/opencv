@@ -108,8 +108,8 @@
 #define CV_OPENCL_SVM_TRACE_ERROR_P(...)
 #endif
 
-#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
@@ -1254,11 +1254,13 @@ public:
 
     ~AmdBlasHelper()
     {
-        try
+        // Do not tear down clBLAS.
+        // The user application may still use clBLAS even after OpenCV is unloaded.
+        /*try
         {
-            clAmdBlasTeardown();
+            clblasTeardown();
         }
-        catch (...) { }
+        catch (...) { }*/
     }
 
 protected:
@@ -1274,7 +1276,7 @@ protected:
                 {
                     try
                     {
-                        g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                        g_isAmdBlasAvailable = clblasSetup() == clblasSuccess;
                     }
                     catch (...)
                     {
@@ -1328,11 +1330,13 @@ public:
 
     ~AmdFftHelper()
     {
-        try
+        // Do not tear down clFFT.
+        // The user application may still use clFFT even after OpenCV is unloaded.
+        /*try
         {
-//            clAmdFftTeardown();
+            clfftTeardown();
         }
-        catch (...) { }
+        catch (...) { }*/
     }
 
 protected:
@@ -1349,10 +1353,10 @@ protected:
                     try
                     {
                         cl_uint major, minor, patch;
-                        CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+                        CV_Assert(clfftInitSetupData(&setupData) == CLFFT_SUCCESS);
 
                         // it throws exception in case AmdFft binaries are not found
-                        CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
+                        CV_Assert(clfftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
                         g_isAmdFftAvailable = true;
                     }
                     catch (const Exception &)
@@ -1369,12 +1373,12 @@ protected:
     }
 
 private:
-    static clAmdFftSetupData setupData;
+    static clfftSetupData setupData;
     static bool g_isAmdFftInitialized;
     static bool g_isAmdFftAvailable;
 };
 
-clAmdFftSetupData AmdFftHelper::setupData;
+clfftSetupData AmdFftHelper::setupData;
 bool AmdFftHelper::g_isAmdFftAvailable = false;
 bool AmdFftHelper::g_isAmdFftInitialized = false;
 
