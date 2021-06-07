@@ -222,13 +222,15 @@ struct IEUnit {
     IE::ExecutableNetwork this_network;
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
+    InferenceEngine::RemoteContext::Ptr rctx;
+
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
         InferenceEngine::ParamMap* ctx_params =
                             cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
         if (ctx_params != nullptr) {
             auto ie_core = cv::gimpl::ie::wrap::getCore();
-            params.rctx = ie_core.CreateContext(params.device_id, *ctx_params);
+            rctx = ie_core.CreateContext(params.device_id, *ctx_params);
         }
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
@@ -505,12 +507,12 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
                                                  "InferenceEngine::ParamMap>");
     }
 
-    return ctx.uu.params.rctx->CreateBlob(blob_params->first,
+    return ctx.uu.rctx->CreateBlob(blob_params->first,
                                           blob_params->second);
 }
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
-    if (ctx.uu.params.rctx != nullptr) {
+    if (ctx.uu.rctx != nullptr) {
         return extractRemoteBlob(ctx, i);
     }
 

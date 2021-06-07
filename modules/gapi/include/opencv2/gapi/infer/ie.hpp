@@ -22,10 +22,6 @@
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
 
-namespace InferenceEngine {
-    class RemoteContext;
-}
-
 namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
@@ -80,10 +76,8 @@ namespace detail {
         // NB: Number of asyncrhonious infer requests
         size_t nireq;
 
-        // NB: A config to setup the RemoteContext below
+        // NB: An optional config to setup RemoteContext for IE
         cv::util::any context_config;
-        // NB: Is utilized by the IE backend as alternative to operate with blobs
-        std::shared_ptr<InferenceEngine::RemoteContext> rctx;
     };
 } // namespace detail
 
@@ -112,8 +106,7 @@ public:
               , {}
               , {}
               , 1u
-              , {}
-              , nullptr} {
+              , {}} {
     };
 
     Params(const std::string &model,
@@ -127,8 +120,7 @@ public:
               , {}
               , {}
               , 1u
-              , {}
-              , nullptr} {
+              , {}} {
     };
 
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
@@ -164,12 +156,12 @@ public:
         return *this;
     }
 
-    Params& contextConfig(cv::util::any&& ctx_cfg) {
+    Params& cfgContextConfig(cv::util::any&& ctx_cfg) {
         desc.context_config = std::move(ctx_cfg);
         return *this;
     }
 
-    Params& contextConfig(const cv::util::any& ctx_cfg) {
+    Params& cfgContextConfig(const cv::util::any& ctx_cfg) {
         desc.context_config = ctx_cfg;
         return *this;
     }
@@ -229,7 +221,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, nullptr},
+                {}},
           m_tag(tag) {
     };
 
@@ -238,7 +230,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, nullptr},
+                {}},
           m_tag(tag) {
     };
 

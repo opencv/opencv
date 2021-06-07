@@ -51,16 +51,18 @@ GAPI_EXPORTS IE::Core getCore();
 GAPI_EXPORTS IE::Core getPlugin(const GIEParam& params);
 GAPI_EXPORTS inline IE::ExecutableNetwork loadNetwork(      IE::Core&       core,
                                                       const IE::CNNNetwork& net,
-                                                      const GIEParam& params) {
-    if (params.rctx != nullptr) {
-        return core.LoadNetwork(net, params.rctx);
+                                                      const GIEParam& params,
+                                                      IE::RemoteContext::Ptr rctx = nullptr) {
+    if (rctx != nullptr) {
+        return core.LoadNetwork(net, rctx);
     } else {
         return core.LoadNetwork(net, params.device_id);
     }
 }
 GAPI_EXPORTS inline IE::ExecutableNetwork importNetwork(      IE::Core& core,
-                                                        const GIEParam& params) {
-    if (params.rctx != nullptr) {
+                                                        const GIEParam& params,
+                                                        IE::RemoteContext::Ptr rctx = nullptr) {
+    if (rctx != nullptr) {
         std::filebuf blobFile;
         if (!blobFile.open(params.model_path, std::ios::in | std::ios::binary))
         {
@@ -68,7 +70,7 @@ GAPI_EXPORTS inline IE::ExecutableNetwork importNetwork(      IE::Core& core,
             throw std::runtime_error("Could not open file");
         }
         std::istream graphBlob(&blobFile);
-        return core.ImportNetwork(graphBlob, params.rctx);
+        return core.ImportNetwork(graphBlob, rctx);
     } else {
         return core.ImportNetwork(params.model_path, params.device_id, {});
     }
