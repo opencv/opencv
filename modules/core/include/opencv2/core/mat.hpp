@@ -370,6 +370,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    void setZero() const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -1258,6 +1259,10 @@ public:
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels
      */
     Mat& setTo(InputArray value, InputArray mask=noArray());
+
+    /** @brief Sets all the array elements to 0.
+     */
+    Mat& setZero();
 
     /** @brief Changes the shape and/or the number of channels of a 2D matrix without copying the data.
 

@@ -842,7 +842,7 @@ CV_EXPORTS_AS(calibrateCameraExtended) double calibrateCamera( InputArrayOfArray
                                      OutputArray stdDeviationsExtrinsics,
                                      OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON) );
 
 /** @overload */
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
@@ -850,7 +850,7 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON) );
 
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
@@ -919,7 +919,7 @@ CV_EXPORTS_AS(calibrateCameraROExtended) double calibrateCameraRO( InputArrayOfA
                                      OutputArray stdDeviationsObjPoints,
                                      OutputArray perViewErrors,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON) );
 
 /** @overload */
 CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
@@ -928,7 +928,7 @@ CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray newObjPoints,
                                      int flags = 0, TermCriteria criteria = TermCriteria(
-                                        TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+                                        TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON) );
 
 /** @brief Computes useful camera characteristics from the camera intrinsic matrix.
 
@@ -1084,7 +1084,7 @@ CV_EXPORTS_AS(stereoCalibrateExtended) double stereoCalibrate( InputArrayOfArray
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, InputOutputArray R,InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
 /// @overload
 CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
@@ -1093,7 +1093,7 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = CALIB_FIX_INTRINSIC,
-                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

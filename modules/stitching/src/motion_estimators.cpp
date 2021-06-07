@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/cvdef.h"
 
 using namespace cv;
@@ -253,44 +252,17 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
         total_num_matches_ += static_cast<int>(pairwise_matches[edges_[i].first * num_images_ +
                                                                 edges_[i].second].num_inliers);
 
-    CvLevMarq solver(num_images_ * num_params_per_cam_,
-                     total_num_matches_ * num_errs_per_measurement_,
-                     cvTermCriteria(term_criteria_));
-
-    Mat err, jac;
-    CvMat matParams = cvMat(cam_params_);
-    cvCopy(&matParams, solver.param);
-
-    int iter = 0;
-    for(;;)
-    {
-        const CvMat* _param = 0;
-        CvMat* _jac = 0;
-        CvMat* _err = 0;
-
-        bool proceed = solver.update(_param, _jac, _err);
-
-        cvCopy(_param, &matParams);
-
-        if (!proceed || !_err)
-            break;
-
-        if (_jac)
+    int nerrs = total_num_matches_ * num_errs_per_measurement_;
+    LMSolver::run(cam_params_, Mat(), nerrs, term_criteria_, DECOMP_SVD,
+        [&](Mat& param, Mat* err, Mat* jac)
         {
-            calcJacobian(jac);
-            CvMat tmp = cvMat(jac);
-            cvCopy(&tmp, _jac);
-        }
-
-        if (_err)
-        {
-            calcError(err);
-            LOG_CHAT(".");
-            iter++;
-            CvMat tmp = cvMat(err);
-            cvCopy(&tmp, _err);
-        }
-    }
+            param.copyTo(cam_params_);
+            if (jac)
+                calcJacobian(*jac);
+            if (err)
+                calcError(*err);
+            return true;
+        });
 
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));

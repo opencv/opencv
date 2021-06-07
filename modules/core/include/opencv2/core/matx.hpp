@@ -58,6 +58,8 @@
 namespace cv
 {
 
+class CV_EXPORTS _OutputArray;
+
 //! @addtogroup core_basic
 //! @{
 
@@ -214,6 +216,10 @@ public:
     Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_DivOp);
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
+
+    //! copy & convert
+    void copyTo(const _OutputArray& dst) const;
+    void convertTo(const _OutputArray& dst, int type, double scale=1., double shift=0.) const;
 
     _Tp val[m*n]; //< matrix elements
 };
@@ -969,8 +975,6 @@ Matx<_Tp, m, n> MatxCommaInitializer<_Tp, m, n>::operator *() const
     CV_DbgAssert( idx == n*m );
     return *dst;
 }
-
-
 
 /////////////////////////////////// Vec Implementation ///////////////////////////////////
 

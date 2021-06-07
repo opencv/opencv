@@ -522,6 +522,14 @@ public:
     */
     static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters);
     static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
+
+    static int run(InputOutputArray param, InputArray mask,
+                   int nerrs, const TermCriteria& termcrit, int solveMethod,
+                   std::function<bool (Mat& param, Mat* err, Mat* J)> callb);
+    static int runAlt(InputOutputArray param, InputArray mask,
+                      const TermCriteria& termcrit, int solveMethod, bool LtoR,
+                      std::function<bool (Mat& param, Mat* JtErr,
+                                          Mat* JtJ, double* errnorm)> callb);
 };
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
@@ -745,7 +753,17 @@ CV_EXPORTS_W void projectPoints( InputArray objectPoints,
                                  InputArray cameraMatrix, InputArray distCoeffs,
                                  OutputArray imagePoints,
                                  OutputArray jacobian = noArray(),
-                                 double aspectRatio = 0 );
+                                 double aspectRatio = 0);
+
+/** @overload */
+CV_EXPORTS_AS(projectPointsSepJ) void projectPoints(
+                    InputArray objectPoints,
+                    InputArray rvec, InputArray tvec,
+                    InputArray cameraMatrix, InputArray distCoeffs,
+                    OutputArray imagePoints, OutputArray dpdr,
+                    OutputArray dpdt, OutputArray dpdf=noArray(),
+                    OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
+                    OutputArray dpdo=noArray(), double aspectRatio=0.);
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
 An example program about homography from the camera displacement
@@ -1988,13 +2006,13 @@ correctly only when there are more than 50% of inliers.
 
 @sa estimateAffinePartial2D, getAffineTransform
 */
-CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+CV_EXPORTS_W Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
                                   int method = RANSAC, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
 
-CV_EXPORTS_W cv::Mat estimateAffine2D(InputArray pts1, InputArray pts2, OutputArray inliers,
+CV_EXPORTS_W Mat estimateAffine2D(InputArray pts1, InputArray pts2, OutputArray inliers,
                      const UsacParams &params);
 
 /** @brief Computes an optimal limited affine transformation with 4 degrees of freedom between
@@ -2355,46 +2373,6 @@ void undistortPoints(InputArray src, OutputArray dst,
                      InputArray cameraMatrix, InputArray distCoeffs,
                      InputArray R = noArray(), InputArray P = noArray(),
                      TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-// the old-style Levenberg-Marquardt solver; to be removed soon
-class CV_EXPORTS CvLevMarq
-{
-public:
-    CvLevMarq();
-    CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria=
-               cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
-               bool completeSymmFlag=false );
-    ~CvLevMarq();
-    void init( int nparams, int nerrs, CvTermCriteria criteria=
-               cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
-               bool completeSymmFlag=false );
-    bool update( const CvMat*& param, CvMat*& J, CvMat*& err );
-    bool updateAlt( const CvMat*& param, CvMat*& JtJ, CvMat*& JtErr, double*& errNorm );
-
-    void clear();
-    void step();
-    enum { DONE=0, STARTED=1, CALC_J=2, CHECK_ERR=3 };
-
-    cv::Ptr<CvMat> mask;
-    cv::Ptr<CvMat> prevParam;
-    cv::Ptr<CvMat> param;
-    cv::Ptr<CvMat> J;
-    cv::Ptr<CvMat> err;
-    cv::Ptr<CvMat> JtJ;
-    cv::Ptr<CvMat> JtJN;
-    cv::Ptr<CvMat> JtErr;
-    cv::Ptr<CvMat> JtJV;
-    cv::Ptr<CvMat> JtJW;
-    double prevErrNorm, errNorm;
-    int lambdaLg10;
-    CvTermCriteria criteria;
-    int state;
-    int iters;
-    bool completeSymmFlag;
-    int solveMethod;
-};
 
 //! @} _3d
 } //end namespace cv

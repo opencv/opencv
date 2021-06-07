@@ -76,133 +76,53 @@
 
 namespace cv {
 
+static void subMatrix(const Mat& src, Mat& dst,
+                      const Mat& mask)
+{
+    CV_Assert(src.type() == CV_64F && dst.type() == CV_64F);
+    int m = src.rows, n = src.cols;
+    int i1 = 0, j1 = 0;
+    for(int i = 0; i < m; i++)
+    {
+        if(mask.at<uchar>(i))
+        {
+            const double* srcptr = src.ptr<double>(i);
+            double* dstptr = dst.ptr<double>(i1++);
+
+            for(int j = j1 = 0; j < n; j++)
+            {
+                if(n < m || mask.at<uchar>(j))
+                    dstptr[j1++] = srcptr[j];
+            }
+        }
+    }
+}
+
 class LMSolverImpl CV_FINAL : public LMSolver
 {
 public:
     LMSolverImpl(const Ptr<LMSolver::Callback>& _cb, int _maxIters, double _eps = FLT_EPSILON)
-        : cb(_cb), epsx(_eps), epsf(_eps), maxIters(_maxIters)
+        : cb(_cb), eps(_eps), maxIters(_maxIters)
     {
-        printInterval = 0;
     }
 
-    int run(InputOutputArray _param0) const CV_OVERRIDE
+    int run(InputOutputArray param0) const CV_OVERRIDE
     {
-        Mat param0 = _param0.getMat(), x, xd, r, rd, J, A, Ap, v, temp_d, d;
-        int ptype = param0.type();
-
-        CV_Assert( (param0.cols == 1 || param0.rows == 1) && (ptype == CV_32F || ptype == CV_64F));
-        CV_Assert( cb );
-
-        int lx = param0.rows + param0.cols - 1;
-        param0.convertTo(x, CV_64F);
-
-        if( x.cols != 1 )
-            transpose(x, x);
-
-        if( !cb->compute(x, r, J) )
-            return -1;
-        double S = norm(r, NORM_L2SQR);
-        int nfJ = 2;
-
-        mulTransposed(J, A, true);
-        gemm(J, r, 1, noArray(), 0, v, GEMM_1_T);
-
-        Mat D = A.diag().clone();
-
-        const double Rlo = 0.25, Rhi = 0.75;
-        double lambda = 1, lc = 0.75;
-        int i, iter = 0;
-
-        if( printInterval != 0 )
-        {
-            printf("************************************************************************************\n");
-            printf("\titr\tnfJ\t\tSUM(r^2)\t\tx\t\tdx\t\tl\t\tlc\n");
-            printf("************************************************************************************\n");
-        }
-
-        for( ;; )
-        {
-            CV_Assert( A.type() == CV_64F && A.rows == lx );
-            A.copyTo(Ap);
-            for( i = 0; i < lx; i++ )
-                Ap.at<double>(i, i) += lambda*D.at<double>(i);
-            solve(Ap, v, d, DECOMP_EIG);
-            subtract(x, d, xd);
-            if( !cb->compute(xd, rd, noArray()) )
-                return -1;
-            nfJ++;
-            double Sd = norm(rd, NORM_L2SQR);
-            gemm(A, d, -1, v, 2, temp_d);
-            double dS = d.dot(temp_d);
-            double R = (S - Sd)/(fabs(dS) > DBL_EPSILON ? dS : 1);
-
-            if( R > Rhi )
+        return LMSolver::run(param0, noArray(), 0,
+            TermCriteria(TermCriteria::COUNT | TermCriteria::EPS, maxIters, eps), DECOMP_SVD,
+            [&](Mat& param, Mat* err, Mat* J)->bool
             {
-                lambda *= 0.5;
-                if( lambda < lc )
-                    lambda = 0;
-            }
-            else if( R < Rlo )
-            {
-                // find new nu if R too low
-                double t = d.dot(v);
-                double nu = (Sd - S)/(fabs(t) > DBL_EPSILON ? t : 1) + 2;
-                nu = std::min(std::max(nu, 2.), 10.);
-                if( lambda == 0 )
-                {
-                    invert(A, Ap, DECOMP_EIG);
-                    double maxval = DBL_EPSILON;
-                    for( i = 0; i < lx; i++ )
-                        maxval = std::max(maxval, std::abs(Ap.at<double>(i,i)));
-                    lambda = lc = 1./maxval;
-                    nu *= 0.5;
-                }
-                lambda *= nu;
-            }
-
-            if( Sd < S )
-            {
-                nfJ++;
-                S = Sd;
-                std::swap(x, xd);
-                if( !cb->compute(x, r, J) )
-                    return -1;
-                mulTransposed(J, A, true);
-                gemm(J, r, 1, noArray(), 0, v, GEMM_1_T);
-            }
-
-            iter++;
-            bool proceed = iter < maxIters && norm(d, NORM_INF) >= epsx && norm(r, NORM_INF) >= epsf;
-
-            if( printInterval != 0 && (iter % printInterval == 0 || iter == 1 || !proceed) )
-            {
-                printf("%c%10d %10d %15.4e %16.4e %17.4e %16.4e %17.4e\n",
-                       (proceed ? ' ' : '*'), iter, nfJ, S, x.at<double>(0), d.at<double>(0), lambda, lc);
-            }
-
-            if(!proceed)
-                break;
-        }
-
-        if( param0.size != x.size )
-            transpose(x, x);
-
-        x.convertTo(param0, ptype);
-        if( iter == maxIters )
-            iter = -iter;
-
-        return iter;
+                return cb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
+                                   J ? _OutputArray(*J) : _OutputArray());
+            });
     }
 
     void setMaxIters(int iters) CV_OVERRIDE { CV_Assert(iters > 0); maxIters = iters; }
     int getMaxIters() const CV_OVERRIDE { return maxIters; }
 
     Ptr<LMSolver::Callback> cb;
-
-    double epsx;
-    double epsf;
+    double eps;
     int maxIters;
-    int printInterval;
 };
 
 
@@ -214,6 +134,169 @@ Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
 Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
 {
     return makePtr<LMSolverImpl>(cb, maxIters, eps);
+}
+
+static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
+                        int nerrs, const TermCriteria& termcrit,
+                        int solveMethod, bool LtoR,
+                        std::function<bool (Mat&, Mat*, Mat*)>* cb,
+                        std::function<bool (Mat&, Mat*, Mat*, double*)>* cb_alt)
+{
+    int lambdaLg10 = -3;
+    Mat mask = _mask.getMat();
+    Mat param0 = _param0.getMat();
+    Mat x, xd, r, rd, J, A, Ap, v, temp_d, d, Am, vm, dm;
+    int ptype = param0.type();
+    int maxIters = termcrit.type & TermCriteria::COUNT ? termcrit.maxCount : 1000;
+    double epsx = termcrit.type & TermCriteria::EPS ? termcrit.epsilon : 0, epsf = epsx;
+
+    CV_Assert( (param0.cols == 1 || param0.rows == 1) && (ptype == CV_32F || ptype == CV_64F));
+    CV_Assert( cb || cb_alt );
+
+    int lx = param0.rows + param0.cols - 1;
+    param0.convertTo(x, CV_64F);
+    d.create(lx, 1, CV_64F);
+
+    CV_Assert(!mask.data ||
+              (mask.depth() == CV_8U &&
+               (mask.cols == 1 || mask.rows == 1) &&
+               (mask.rows + mask.cols - 1 == lx)));
+    int lxm = mask.data ? countNonZero(mask) : lx;
+    if (lxm < lx) {
+        Am.create(lxm, lxm, CV_64F);
+        vm.create(lxm, 1, CV_64F);
+    }
+
+    if( x.cols != 1 )
+        transpose(x, x);
+
+    A.create(lx, lx, CV_64F);
+    v.create(lx, 1, CV_64F);
+
+    if (nerrs > 0) {
+        J.create(nerrs, lx, CV_64F);
+        r.create(nerrs, 1, CV_64F);
+        rd.create(nerrs, 1, CV_64F);
+    }
+
+    double S = 0;
+    int nfJ = 1;
+    if (cb_alt) {
+        if( !(*cb_alt)(x, &v, &A, &S) )
+            return -1;
+        completeSymm(A, LtoR);
+    } else {
+        if( !(*cb)(x, &r, &J) )
+            return -1;
+        S = norm(r, NORM_L2SQR);
+        mulTransposed(J, A, true);
+        gemm(J, r, 1, noArray(), 0, v, GEMM_1_T);
+    }
+
+    int i, iter = 0;
+
+    for( ;; )
+    {
+        CV_Assert( A.type() == CV_64F && A.rows == lx );
+        A.copyTo(Ap);
+        double lambda = exp(lambdaLg10*log(10.));
+        for( i = 0; i < lx; i++ )
+            Ap.at<double>(i, i) *= (1 + lambda);
+        if (lxm < lx) {
+            // remove masked-out rows & cols from JtJ and JtErr
+            subMatrix(Ap, Am, mask);
+            subMatrix(v, vm, mask);
+            solve(Am, vm, dm, solveMethod);
+            int j = 0;
+            // 'unpack' the param delta
+            for(i = j = 0; i < lx; i++)
+                d.at<double>(i) = mask.at<uchar>(i) != 0 ? dm.at<double>(j++) : 0.;
+        } else {
+            solve(Ap, v, d, solveMethod);
+        }
+        subtract(x, d, xd);
+
+        double Sd = 0.;
+
+        if (cb_alt) {
+            if( !(*cb_alt)(xd, 0, 0, &Sd) )
+                return -1;
+        } else {
+            if( !(*cb)(xd, &rd, 0) )
+                return -1;
+            Sd = norm(rd, NORM_L2SQR);
+        }
+
+        nfJ++;
+        if( Sd < S )
+        {
+            nfJ++;
+            S = Sd;
+            lambdaLg10 = MAX(lambdaLg10-1, -16);
+            iter++;
+            std::swap(x, xd);
+            if (cb_alt) {
+                v.setZero();
+                A.setZero();
+                Sd = 0.;
+                if( !(*cb_alt)(x, &v, &A, &Sd) )
+                    return -1;
+                completeSymm(A, LtoR);
+            } else {
+                r.setZero();
+                J.setZero();
+                if( !(*cb)(x, &r, &J) )
+                    return -1;
+                mulTransposed(J, A, true);
+                gemm(J, r, 1, noArray(), 0, v, GEMM_1_T);
+            }
+        } else {
+            iter += lambdaLg10 == 16;
+            lambdaLg10 = MIN(lambdaLg10+1, 16);
+        }
+
+        bool proceed = iter < maxIters && norm(d, NORM_INF) >= epsx && S >= epsf*epsf;
+
+        /*if(lxm < lx)
+        {
+            printf("lambda=%g. delta:", lambda);
+            int j;
+            for(i = j = 0; i < lx; i++) {
+                double delta = d.at<double>(i);
+                j += delta != 0;
+                if(j < 10)
+                    printf(" %.2g", delta);
+            }
+            printf("\n");
+            printf("%c %d %d, err=%g, param[0]=%g, d[0]=%g, lg10(lambda)=%d\n",
+                   (proceed ? ' ' : '*'), iter, nfJ, S, x.at<double>(0), d.at<double>(0), lambdaLg10);
+        }*/
+        if(!proceed)
+            break;
+    }
+
+    if( param0.size() != x.size() )
+        transpose(x, x);
+
+    x.convertTo(param0, ptype);
+    if( iter == maxIters )
+        iter = -iter;
+
+    return iter;
+}
+
+int LMSolver::run(InputOutputArray param, InputArray mask, int nerrs,
+                  const TermCriteria& termcrit, int solveMethod,
+                  std::function<bool (Mat&, Mat*, Mat*)> cb)
+{
+    return LMSolver_run(param, mask, nerrs, termcrit, solveMethod, true, &cb, 0);
+}
+
+int LMSolver::runAlt(InputOutputArray param, InputArray mask,
+                     const TermCriteria& termcrit, int solveMethod, bool LtoR,
+                     std::function<bool (Mat&, Mat*, Mat*, double*)> cb_alt)
+{
+    return LMSolver_run(param, mask, 0, termcrit, solveMethod, LtoR, 0, &cb_alt);
 }
 
 }
