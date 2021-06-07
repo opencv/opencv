@@ -222,7 +222,7 @@ struct IEUnit {
     IE::ExecutableNetwork this_network;
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
-    InferenceEngine::RemoteContext::Ptr rctx;
+    InferenceEngine::RemoteContext::Ptr rctx = nullptr;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -240,7 +240,7 @@ struct IEUnit {
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
             this_plugin.SetConfig(params.config);
-            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params);
+            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params, rctx);
             // FIXME: ICNNetwork returns InputsDataMap/OutputsDataMap,
             // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
             inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
@@ -288,7 +288,8 @@ struct IEUnit {
             // for loadNetwork they can be obtained by using readNetwork
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
             non_const_this->this_plugin.SetConfig(params.config);
-            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
+            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
+                                                                            net, params, rctx);
         }
 
         return {params, this_plugin, this_network};
