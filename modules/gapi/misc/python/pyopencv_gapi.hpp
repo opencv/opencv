@@ -366,11 +366,11 @@ static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
 
 static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::OpaqueKind kind)
 {
-#define HANDLE_CASE(T, O) case cv::detail::OpaqueKind::CV_##T:  \
-{                                                               \
-    O obj{};                                                    \
-    pyopencv_to_with_check(from, obj, "Failed to obtain " # O); \
-    return cv::detail::OpaqueRef{std::move(obj)};               \
+#define HANDLE_CASE(T, O, ...) case cv::detail::OpaqueKind::CV_##T:  \
+{                                                                    \
+    O obj{__VA_ARGS__};                                              \
+    pyopencv_to_with_check(from, obj, "Failed to obtain " # O);      \
+    return cv::detail::OpaqueRef{std::move(obj)};                    \
 }
 #define UNSUPPORTED(T) case cv::detail::OpaqueKind::CV_##T: break
     switch (kind)
@@ -380,10 +380,10 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(DOUBLE,  double);
         HANDLE_CASE(FLOAT,   float);
         HANDLE_CASE(STRING,  std::string);
-        HANDLE_CASE(POINT,   cv::Point);
-        HANDLE_CASE(POINT2F, cv::Point2f);
-        HANDLE_CASE(SIZE,    cv::Size);
-        HANDLE_CASE(RECT,    cv::Rect);
+        HANDLE_CASE(POINT,   cv::Point  , -1, -1);
+        HANDLE_CASE(POINT2F, cv::Point2f, -1.f, -1.f);
+        HANDLE_CASE(SIZE,    cv::Size   , -1, -1);
+        HANDLE_CASE(RECT,    cv::Rect   , -1, -1, -1, -1);
         HANDLE_CASE(UNKNOWN, cv::GArg);
         UNSUPPORTED(UINT64);
         UNSUPPORTED(SCALAR);
