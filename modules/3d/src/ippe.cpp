@@ -170,7 +170,8 @@ void PoseSolver::solveCanonicalForm(InputArray _canonicalObjPoints, InputArray _
     computeTranslation(_canonicalObjPoints, _normalizedInputPoints, Rb, tb);
 }
 
-void PoseSolver::solveSquare(InputArray _objectPoints, InputArray _imagePoints, OutputArray _rvec1, OutputArray _tvec1,
+void PoseSolver::solveSquare(InputArray _objectPoints, InputArray _imagePoints,
+                             OutputArray _rvec1, OutputArray _tvec1,
                              float& err1, OutputArray _rvec2, OutputArray _tvec2, float& err2)
 {
     //allocate outputs:
