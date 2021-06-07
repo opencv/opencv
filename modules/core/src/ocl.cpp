@@ -108,8 +108,8 @@
 #define CV_OPENCL_SVM_TRACE_ERROR_P(...)
 #endif
 
-#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
 
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 
