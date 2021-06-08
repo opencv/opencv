@@ -56,6 +56,15 @@ public:
         cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
+    cv::util::any blobParams() const override {
+        return std::make_pair<InferenceEngine::TensorDesc,
+                              InferenceEngine::ParamMap>({IE::Precision::U8,
+                                                          {1, 3, 300, 300},
+                                                          IE::Layout::NCHW},
+                                                         {{"HELLO", 42},
+                                                          {"COLOR_FORMAT",
+                                                           InferenceEngine::ColorFormat::NV12}});
+    }
 };
 
 class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
@@ -2026,6 +2035,21 @@ TEST_F(ROIList, CallInferMultipleTimes)
     }
 
     validate();
+}
+
+TEST(IEFrameAdapter, blobParams)
+{
+    cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    auto expected = std::make_pair(IE::TensorDesc{IE::Precision::U8, {1, 3, 300, 300},
+                                                  IE::Layout::NCHW},
+                                   IE::ParamMap{{"HELLO", 42}, {"COLOR_FORMAT",
+                                                                IE::ColorFormat::NV12}});
+
+    auto actual = cv::util::any_cast<decltype(expected)>(frame.blobParams());
+
+    EXPECT_EQ(expected, actual);
 }
 
 } // namespace opencv_test
