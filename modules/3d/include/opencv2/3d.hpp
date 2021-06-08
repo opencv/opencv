@@ -2374,6 +2374,151 @@ void undistortPoints(InputArray src, OutputArray dst,
                      InputArray R = noArray(), InputArray P = noArray(),
                      TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 
+
+/** @brief Octree for 3D vision.
+ *
+ * In 3D vision filed, the Octree is used to process and accelerate the pointcloud data. The class Octree represents
+ * the Octree data structure. Each Octree will have a fixed depth. The depth of Octree refers to the distance from
+ * the root node to the leaf node.All OctreeNodes will not exceed this depth.Increasing the depth will increase
+ * the amount of calculation exponentially. And the small number of depth refers low resolution of Octree.
+ * Each node contains 8 children, which are used to divide the space cube into eight parts. Each octree node represents
+ * a cube. And these eight children will have a fixed order, the order is described as follows:
+ *
+ * For illustration, assume,
+ *
+ * rootNode: origin == (0, 0, 0), size == 2
+ *
+ * Then,
+ *
+ * children[0]: origin == (0, 0, 0), size == 1
+ *
+ * children[1]: origin == (1, 0, 0), size == 1, along X-axis next to child 0
+ *
+ * children[2]: origin == (0, 1, 0), size == 1, along Y-axis next to child 0
+ *
+ * children[3]: origin == (1, 1, 0), size == 1, in X-Y plane
+ *
+ * children[4]: origin == (0, 0, 1), size == 1, along Z-axis next to child 0
+ *
+ * children[5]: origin == (1, 0, 1), size == 1, in X-Z plane
+ *
+ * children[6]: origin == (0, 1, 1), size == 1, in Y-Z plane
+ *
+ * children[7]: origin == (1, 1, 1), size == 1, furthest from child 0
+ */
+
+class CV_EXPORTS Octree {
+
+public:
+
+    //! Default constructor.
+    Octree();
+
+    /** @overload
+    * @brief Create an empty Octree and set the maximum depth.
+    *
+    * @param maxDepth The max depth of the Octree. The maxDepth > -1.
+    */
+    explicit Octree(int maxDepth);
+
+    /** @overload
+    * @brief Create an Octree from the PointCloud data with the specific max depth.
+    *
+    * @param pointCloud Point cloud data.
+    * @param maxDepth The max depth of the Octree.
+    */
+    Octree(const std::vector<Point3f> &pointCloud, int maxDepth);
+
+    /** @overload
+    * @brief Create an empty Octree.
+    *
+    * @param maxDepth Max depth.
+    * @param size Initial Cube size.
+    * @param origin Initial center coordinate.
+    */
+    Octree(int maxDepth, double size, const Point3f& origin);
+
+    //! Default destructor
+    ~Octree();
+
+    /** @brief Insert a point data to a OctreeNode.
+    *
+    * @param point The point data in Point3f format.
+    */
+    void insertPoint(const Point3f& point);
+
+    /** @brief Read point cloud data and create OctreeNode.
+    *
+    * This function is only called when the octree is being created.
+    * @param pointCloud PointCloud data.
+    * @param maxDepth The max depth of the Octree.
+    * @return Returns whether the creation is successful.
+    */
+    bool create(const std::vector<Point3f> &pointCloud, int maxDepth = -1);
+
+    /** @brief Determine whether the point is within the space range of the specific cube.
+     *
+     * @param point The point coordinates.
+     * @return If point is in bound, return ture. Otherwise, false.
+     */
+    bool isPointInBound(const Point3f& point) const;
+
+    //! Set MaxDepth for Octree.
+    void setMaxDepth(int maxDepth);
+
+    //! Set Box Size for Octree.
+    void setSize(double size);
+
+    //! Set Origin coordinates for Octree.
+    void setOrigin(const Point3f& origin);
+
+    //! returns true if the rootnode is NULL.
+    bool empty() const;
+
+    /** @brief Reset all octree parameter.
+    *
+    *  Clear all the nodes of the octree and initialize the parameters.
+    */
+    void clear();
+
+    /** @brief Delete a given point from the Octree.
+    *
+    * Delete the corresponding element from the pointList in the corresponding leaf node. If the leaf node
+    * does not contain other points after deletion, this node will be deleted. In the same way,
+    * its parent node may also be deleted if its last child is deleted.
+    * @param point The point coordinates.
+    * @return return ture if the point is deleted successfully.
+    */
+    bool deletePoint(const Point3f& point);
+
+    /** @brief Radius Nearest Neighbor Search in Octree
+    *
+    * Search all points that are less than or equal to radius.
+    * And return the number of searched points.
+    * @param query Query point.
+    * @param radius Retrieved radius value.
+    * @param pointSet Point output. Contains searched points, and output vector is not in order.
+    * @param squareDistSet Dist output. Contains searched squared distance, and output vector is not in order.
+    * @return the number of searched points.
+    */
+    int radiusNNSearch(const Point3f& query, float radius, std::vector<Point3f> &pointSet, std::vector<float> &squareDistSet) const;
+
+    /** @brief K Nearest Neighbor Search in Octree.
+    *
+    * Find the K nearest neighbors to the query point.
+    * @param query Query point.
+    * @param K
+    * @param pointSet Point output. Contains K points, arranged in order of distance from near to far.
+    * @param squareDistSet Dist output. Contains K squared distance, arranged in order of distance from near to far.
+    */
+    void KNNSearch(const Point3f& query, const int K, std::vector<Point3f> &pointSet, std::vector<float> &squareDistSet) const;
+
+protected:
+    struct Impl;
+    Ptr<Impl> p;
+
+};
+
 //! @} _3d
 } //end namespace cv
 
