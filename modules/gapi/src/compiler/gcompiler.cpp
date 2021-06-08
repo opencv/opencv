@@ -18,7 +18,6 @@
 #include <ade/passes/check_cycles.hpp>
 
 #include "api/gcomputation_priv.hpp"
-#include "api/gmeta_check.hpp"
 #include "api/gnode_priv.hpp"   // FIXME: why it is here?
 #include "api/gproto_priv.hpp"  // FIXME: why it is here?
 #include "api/gcall_priv.hpp"   // FIXME: why it is here?
@@ -318,31 +317,14 @@ void cv::gimpl::GCompiler::validateInputMeta()
                      "got " + std::to_string(m_metas.size()) + " meta arguments)"));
     }
 
-    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto, std::ostream& tracer) {
+    const auto meta_matches = [](const GMetaArg &meta, const GProtoArg &proto) {
         switch (proto.index())
         {
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
-        {
-            // check actual type
-            if (!util::holds_alternative<cv::GMatDesc>(meta))
-            {
-                return false;
-            }
+            return util::holds_alternative<cv::GMatDesc>(meta);
 
-            // check meta-data on validity
-            try
-            {
-                cv::validate_input_meta(cv::util::get<cv::GMatDesc>(meta)); //may throw
-            }
-            catch (const std::exception& ex)
-            {
-                tracer << ex.what();
-                return false;
-            }
-            return true;
-        }
         case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GFrameDesc>(meta);
 
@@ -366,17 +348,28 @@ void cv::gimpl::GCompiler::validateInputMeta()
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
-        std::stringstream ss;
-        if (!meta_matches(meta, proto, ss))
+        // check types validity
+        if (!meta_matches(meta, proto))
         {
             const auto index = ade::util::index(meta_arg_idx);
-
-            std::string reason_descr = ss.str();
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata validation error "
-                         "(argument " + std::to_string(index) + ")" +
-                         (reason_descr.empty() ? "" : std::string(". Reason: ") + reason_descr)));
+                         "(argument " + std::to_string(index) + ")"));
             // FIXME: report what we've got and what we've expected
+        }
+
+        // check value consistency
+        try
+        {
+            gimpl::proto::validate_input_meta_arg(meta); //may throw
+        }
+        catch(const std::exception& ex)
+        {
+            const auto index = ade::util::index(meta_arg_idx);
+            util::throw_error(std::logic_error
+                        ("GComputation metadata incorrect value "
+                         "(argument " + std::to_string(index) + "), error: " +
+                         ex.what()));
         }
     }
     // All checks are ok
