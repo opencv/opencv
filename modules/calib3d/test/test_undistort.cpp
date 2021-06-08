@@ -719,11 +719,206 @@ double CV_InitUndistortRectifyMapTest::get_success_error_level( int /*test_case_
     return 8;
 }
 
+//------------------------------------------------------
+
+class CV_InitInverseRectificationMapTest : public cvtest::ArrayTest
+{
+public:
+    CV_InitInverseRectificationMapTest();
+protected:
+    int prepare_test_case (int test_case_idx);
+    void prepare_to_validation( int test_case_idx );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
+    double get_success_error_level( int test_case_idx, int i, int j );
+    void run_func();
+
+private:
+    static const int MAX_X = 1024;
+    static const int MAX_Y = 1024;
+    bool zero_new_cam;
+    bool zero_distortion;
+    bool zero_R;
+
+    cv::Size img_size;
+    int map_type;
+};
+
+CV_InitInverseRectificationMapTest::CV_InitInverseRectificationMapTest()
+{
+    test_array[INPUT].push_back(NULL); // camera matrix
+    test_array[INPUT].push_back(NULL); // distortion coeffs
+    test_array[INPUT].push_back(NULL); // R matrix
+    test_array[INPUT].push_back(NULL); // new camera matrix
+    test_array[OUTPUT].push_back(NULL); // inverse rectified mapx
+    test_array[OUTPUT].push_back(NULL); // inverse rectified mapy
+    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[REF_OUTPUT].push_back(NULL);
+
+    zero_distortion = zero_new_cam = zero_R = false;
+    map_type = 0;
+}
+
+void CV_InitInverseRectificationMapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+{
+    cvtest::ArrayTest::get_test_array_types_and_sizes(test_case_idx,sizes,types);
+    RNG& rng = ts->get_rng();
+    //rng.next();
+
+    map_type = CV_32F;
+    types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = map_type;
+
+    img_size.width = cvtest::randInt(rng) % MAX_X + 1;
+    img_size.height = cvtest::randInt(rng) % MAX_Y + 1;
+
+    types[INPUT][0] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][1] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][2] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][3] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+
+    sizes[OUTPUT][0] = sizes[OUTPUT][1] = sizes[REF_OUTPUT][0] = sizes[REF_OUTPUT][1] = img_size;
+    sizes[INPUT][0] = sizes[INPUT][2] = sizes[INPUT][3] = cvSize(3,3);
+
+    Size dsize;
+
+    if (cvtest::randInt(rng)%2)
+    {
+        if (cvtest::randInt(rng)%2)
+        {
+            dsize = Size(1,4);
+        }
+        else
+        {
+            dsize = Size(1,5);
+        }
+    }
+    else
+    {
+        if (cvtest::randInt(rng)%2)
+        {
+            dsize = Size(4,1);
+        }
+        else
+        {
+            dsize = Size(5,1);
+        }
+    }
+    sizes[INPUT][1] = dsize;
+}
+
+
+int CV_InitInverseRectificationMapTest::prepare_test_case(int test_case_idx)
+{
+    RNG& rng = ts->get_rng();
+    int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
+
+    if (code <= 0)
+        return code;
+
+    int dist_size = test_mat[INPUT][1].cols > test_mat[INPUT][1].rows ? test_mat[INPUT][1].cols : test_mat[INPUT][1].rows;
+    double cam[9] = {0,0,0,0,0,0,0,0,1};
+    vector<double> dist(dist_size);
+    vector<double> new_cam(test_mat[INPUT][3].cols * test_mat[INPUT][3].rows);
+
+    Mat _camera(3,3,CV_64F,cam);
+    Mat _distort(test_mat[INPUT][1].size(),CV_64F,&dist[0]);
+    Mat _new_cam(test_mat[INPUT][3].size(),CV_64F,&new_cam[0]);
+
+    //Generating camera matrix
+    double sz = MAX(img_size.width,img_size.height);
+    double aspect_ratio = cvtest::randReal(rng)*0.6 + 0.7;
+    cam[2] = (img_size.width - 1)*0.5 + cvtest::randReal(rng)*10 - 5;
+    cam[5] = (img_size.height - 1)*0.5 + cvtest::randReal(rng)*10 - 5;
+    cam[0] = sz/(0.9 - cvtest::randReal(rng)*0.6);
+    cam[4] = aspect_ratio*cam[0];
+
+    //Generating distortion coeffs
+    dist[0] = cvtest::randReal(rng)*0.06 - 0.03;
+    dist[1] = cvtest::randReal(rng)*0.06 - 0.03;
+    if( dist[0]*dist[1] > 0 )
+        dist[1] = -dist[1];
+    if( cvtest::randInt(rng)%4 != 0 )
+    {
+        dist[2] = cvtest::randReal(rng)*0.004 - 0.002;
+        dist[3] = cvtest::randReal(rng)*0.004 - 0.002;
+        if (dist_size > 4)
+            dist[4] = cvtest::randReal(rng)*0.004 - 0.002;
+    }
+    else
+    {
+        dist[2] = dist[3] = 0;
+        if (dist_size > 4)
+            dist[4] = 0;
+    }
+
+    //Generating new camera matrix
+    _new_cam = Scalar::all(0);
+    new_cam[8] = 1;
+
+    // If P == K
+    //new_cam[0] = cam[0];
+    //new_cam[4] = cam[4];
+    //new_cam[2] = cam[2];
+    //new_cam[5] = cam[5];
+
+    // If P != K
+    new_cam[0] = cam[0] + (cvtest::randReal(rng) - (double)0.5)*0.2*cam[0]; //10%
+    new_cam[4] = cam[4] + (cvtest::randReal(rng) - (double)0.5)*0.2*cam[4]; //10%
+    new_cam[2] = cam[2] + (cvtest::randReal(rng) - (double)0.5)*0.3*img_size.width; //15%
+    new_cam[5] = cam[5] + (cvtest::randReal(rng) - (double)0.5)*0.3*img_size.height; //15%
+
+    //Generating R matrix
+    Mat _rot(3,3,CV_64F);
+    Mat rotation(1,3,CV_64F);
+    rotation.at<double>(0) = CV_PI/8*(cvtest::randReal(rng) - (double)0.5); // phi
+    rotation.at<double>(1) = CV_PI/8*(cvtest::randReal(rng) - (double)0.5); // ksi
+    rotation.at<double>(2) = CV_PI/3*(cvtest::randReal(rng) - (double)0.5); //khi
+    cvtest::Rodrigues(rotation, _rot);
+
+    //cvSetIdentity(_rot);
+    //copying data
+    cvtest::convert( _camera, test_mat[INPUT][0], test_mat[INPUT][0].type());
+    cvtest::convert( _distort, test_mat[INPUT][1], test_mat[INPUT][1].type());
+    cvtest::convert( _rot, test_mat[INPUT][2], test_mat[INPUT][2].type());
+    cvtest::convert( _new_cam, test_mat[INPUT][3], test_mat[INPUT][3].type());
+
+    zero_distortion = (cvtest::randInt(rng)%2) == 0 ? false : true;
+    zero_new_cam = (cvtest::randInt(rng)%2) == 0 ? false : true;
+    zero_R = (cvtest::randInt(rng)%2) == 0 ? false : true;
+
+    return code;
+}
+
+void CV_InitInverseRectificationMapTest::prepare_to_validation(int/* test_case_idx*/)
+{
+    cvtest::initInverseRectificationMap(test_mat[INPUT][0],
+                             zero_distortion ? cv::Mat() : test_mat[INPUT][1],
+                             zero_R ? cv::Mat() : test_mat[INPUT][2],
+                             zero_new_cam ? test_mat[INPUT][0] : test_mat[INPUT][3],
+                             img_size, test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][1],
+                             test_mat[REF_OUTPUT][0].type());
+}
+
+void CV_InitInverseRectificationMapTest::run_func()
+{
+    cv::Mat camera_mat = test_mat[INPUT][0];
+    cv::Mat dist = zero_distortion ? cv::Mat() : test_mat[INPUT][1];
+    cv::Mat R = zero_R ? cv::Mat() : test_mat[INPUT][2];
+    cv::Mat new_cam = zero_new_cam ? cv::Mat() : test_mat[INPUT][3];
+    cv::Mat& mapx = test_mat[OUTPUT][0], &mapy = test_mat[OUTPUT][1];
+    cv::initInverseRectificationMap(camera_mat,dist,R,new_cam,img_size,map_type,mapx,mapy);
+}
+
+double CV_InitInverseRectificationMapTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
+{
+    return 8;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Calib3d_DefaultNewCameraMatrix, accuracy) { CV_DefaultNewCameraMatrixTest test; test.safe_run(); }
 TEST(Calib3d_UndistortPoints, accuracy) { CV_UndistortPointsTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortRectifyMap, accuracy) { CV_InitUndistortRectifyMapTest test; test.safe_run(); }
+TEST(Calib3d_InitInverseRectificationMap, accuracy) { CV_InitInverseRectificationMapTest test; test.safe_run(); }
 
 ////////////////////////////// undistort /////////////////////////////////
 
