@@ -1771,16 +1771,18 @@ static gboolean icvOnClose( GtkWidget* widget, GdkEvent* /*event*/, gpointer use
 static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_data )
 {
     // TODO move this logic to CvImageWidget
+    // TODO add try-catch wrappers into all callbacks
     CvWindow* window = (CvWindow*)user_data;
+    if (!window || !widget ||
+        window->signature != CV_WINDOW_MAGIC_VAL ||
+        window->widget != widget ||
+        !window->on_mouse)
+        return FALSE;
+
     CvPoint2D32f pt32f = {-1., -1.};
     CvPoint pt = {-1,-1};
     int cv_event = -1, state = 0, flags = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
-
-    if( window->signature != CV_WINDOW_MAGIC_VAL ||
-        window->widget != widget || !window->widget ||
-        !window->on_mouse /*|| !image_widget->original_image*/)
-        return FALSE;
 
     if( event->type == GDK_MOTION_NOTIFY )
     {
@@ -1874,8 +1876,10 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             pt = cvPointFrom32f( pt32f );
         }
 
-        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
-           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
+        if (!image_widget->original_image/*OpenGL*/ || (
+               (unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
+               (unsigned)pt.y < (unsigned)(image_widget->original_image->height)
+            ))
         {
             flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
