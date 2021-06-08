@@ -26,6 +26,11 @@ cv::MediaFrame::View cv::MediaFrame::access(Access code) const {
     return m->adapter->access(code);
 }
 
+cv::util::any cv::MediaFrame::blobParams() const
+{
+    return m->adapter->blobParams();
+}
+
 cv::MediaFrame::IAdapter* cv::MediaFrame::getAdapter() const {
     return m->adapter.get();
 }
@@ -40,6 +45,12 @@ cv::MediaFrame::View::~View() {
     if (m_cb) {
         m_cb();
     }
+}
+
+cv::util::any cv::MediaFrame::IAdapter::blobParams() const
+{
+    // Does nothing by default
+    return {};
 }
 
 cv::MediaFrame::IAdapter::~IAdapter() {
