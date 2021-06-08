@@ -2,6 +2,17 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
+set(KOTLIN_PLUGIN_VERSION "1.4.10" CACHE STRING "Kotlin Plugin version")
+message(STATUS "kotlin Plugin version: ${KOTLIN_GRADLE_PLUGIN_VERSION}")
+
+if(BUILD_KOTLIN_EXTENSIONS)
+  set(KOTLIN_PLUGIN_DECLARATION "apply plugin: 'kotlin-android'" CACHE STRING "Kotlin Plugin version")
+  set(KOTLIN_STD_LIB "implementation 'org.jetbrains.kotlin:kotlin-stdlib:${KOTLIN_PLUGIN_VERSION}'" CACHE STRING "Kotlin Standard Library dependency")
+else()
+  set(KOTLIN_PLUGIN_DECLARATION "" CACHE STRING "Kotlin Plugin version")
+  set(KOTLIN_STD_LIB "" CACHE STRING "Kotlin Standard Library dependency")
+endif()
+
 set(GRADLE_VERSION "5.6.4" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
