@@ -353,7 +353,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         {
             const auto index = ade::util::index(meta_arg_idx);
             util::throw_error(std::logic_error
-                        ("GComputation object type / metadata validation error "
+                        ("GComputation object type / metadata descriptor mismatch "
                          "(argument " + std::to_string(index) + ")"));
             // FIXME: report what we've got and what we've expected
         }
