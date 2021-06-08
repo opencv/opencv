@@ -47,37 +47,29 @@ enum class TraitAs: int
 using IEConfig = std::map<std::string, std::string>;
 
 namespace detail {
-/**
-* @brief This structure contains description of inference parameters
-* which is specific to OpenVINO models.
-*/
 struct ParamDesc {
-    /*@{*/
-    std::string model_path; //!< Path to model.
-    std::string weights_path; //!< Path to weights (.bin file).
-    std::string device_id; //!< Device specifier.
+    std::string model_path;
+    std::string weights_path;
+    std::string device_id;
 
-    // NB: Here order follows the `Net` API
-    std::vector<std::string> input_names; //!< Names of input network layers.
-    std::vector<std::string> output_names; //!< Names of output network layers.
+    std::vector<std::string> input_names;
+    std::vector<std::string> output_names;
 
     using ConstInput = std::pair<cv::Mat, TraitAs>;
-    std::unordered_map<std::string, ConstInput> const_inputs; //!< Map with pair of name of network layer and ConstInput which will be associated with this.
+    std::unordered_map<std::string, ConstInput> const_inputs;
 
-    // NB: nun_* may differ from topology's real input/output port numbers
-    // (e.g. topology's partial execution)
-    std::size_t num_in;  //!< The number of network inputs.
-    std::size_t num_out; //!< The number of network outputs.
+    std::size_t num_in;
+    std::size_t num_out;
 
-    enum class Kind { Load, Import };
-    Kind kind; //!< What kind of model will be used: standard or pre-compiled.
-    bool is_generic; //!< Enable generic version of inference.
-    IEConfig config; //!< OpenVINO plugin configuration.
+    enum class Kind {Load, Import};
+    Kind kind;
+    bool is_generic;
+    IEConfig config;
 
-    std::map<std::string, std::vector<std::size_t>> reshape_table; //!< Map of pairs: name of corresponding data and its dimension.
-    std::unordered_set<std::string> layer_names_to_reshape; //!< Set of names of network layers that will be used for network reshape.
+    std::map<std::string, std::vector<std::size_t>> reshape_table;
+    std::unordered_set<std::string> layer_names_to_reshape;
 
-    size_t nireq; //!< Number of asynchronous infer requests.
+    size_t nireq;
 };
 } // namespace detail
 
@@ -238,7 +230,7 @@ public:
     /** @brief Specifies new input shapes for the network inputs.
 
     The function is used to set new input shapes for network. You can specify
-    new dimensions for one or some or all of network input layers. network will be
+    new dimensions for one or some or all of Network input layers. network will be
     reshaped based on this information and your inputs will be preprocessed for
     new input sizes. Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1networkNetwork.html
     for additional information.
@@ -251,20 +243,13 @@ public:
         return *this;
     }
 
-    /** @overload
-    Function with a rvalue parameters.
-
-    @param reshape_table rvalue map of pairs: name of corresponding data and its
-    dimension.
-    @return the reference on modified object.
-    */
+    /** @overload */
     Params<Net>& cfgInputReshape(std::map<std::string, std::vector<std::size_t>>&& reshape_table) {
         desc.reshape_table = std::move(reshape_table);
         return *this;
     }
 
     /** @overload
-    Function for one input layer.
 
     @param layer_name Name of layer.
     @param layer_dims New dimensions for this layer.
@@ -275,20 +260,13 @@ public:
         return *this;
     }
 
-    /** @overload
-    Function with a rvalue parameters for one input layer.
-
-    @param layer_name rvalue name of layer.
-    @param layer_dims rvalue new dimensions for this layer.
-    @return the reference on modified object.
-    */
+    /** @overload */
     Params<Net>& cfgInputReshape(std::string&& layer_name, std::vector<size_t>&& layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
     /** @overload
-    Function for reshape by image size.
 
     The function is used to set names of layers that will be used for network reshape.
     Dimensions will be constructed automatically by current network input and height and
@@ -303,7 +281,6 @@ public:
     }
 
     /** @overload
-    Function with a rvalue parameters for reshape by image size.
 
     @param layer_names rvalue set of the selected layers will be reshaped automatically
     its input image size.
