@@ -251,14 +251,14 @@ void TrackerDaSiamRPNImpl::trackerEval(Mat img)
     pscore = penalty.mul(score);
     pscore = pscore * (1.0 - trackState.windowInfluence) + trackState.windows * trackState.windowInfluence;
 
-    int bestID[] = { 0 };
+    int bestID[2] = { 0, 0 };
     // Find the index of best score.
     minMaxIdx(pscore.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 }), 0, 0, 0, bestID);
     delta = delta.reshape(0, { 4, trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
     penalty = penalty.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 });
     score = score.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 });
 
-    int index[] = { 0, bestID[0] };
+    int index[2] = { 0, bestID[0] };
     Rect2f resBox = { 0, 0, 0, 0 };
 
     resBox.x = delta.at<float>(index) / scaleZ;
@@ -311,7 +311,7 @@ void TrackerDaSiamRPNImpl::softmax(const Mat& src, Mat& dst)
 void TrackerDaSiamRPNImpl::elementMax(Mat& src)
 {
     int* p = src.size.p;
-    int index[] = { 0, 0, 0, 0 };
+    int index[4] = { 0, 0, 0, 0 };
     for (int n = 0; n < *p; n++)
     {
         for (int k = 0; k < *(p + 1); k++)
@@ -365,8 +365,8 @@ Mat TrackerDaSiamRPNImpl::generateAnchors()
         baseAnchors.push_back(anchor);
     }
 
-    int anchorIndex[] = { 0, 0, 0, 0 };
-    const int sizes[] = { 4, (int)ratios.size(), scoreSize, scoreSize };
+    int anchorIndex[4] = { 0, 0, 0, 0 };
+    const int sizes[4] = { 4, (int)ratios.size(), scoreSize, scoreSize };
     Mat anchors(4, sizes, CV_32F);
 
     for (auto i = 0; i < scoreSize; i++)
