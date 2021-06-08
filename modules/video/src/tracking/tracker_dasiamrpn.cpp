@@ -251,7 +251,7 @@ void TrackerDaSiamRPNImpl::trackerEval(Mat img)
     pscore = penalty.mul(score);
     pscore = pscore * (1.0 - trackState.windowInfluence) + trackState.windows * trackState.windowInfluence;
 
-    int bestID[] = { 0 };
+    int bestID[] = { 0, 0 };
     // Find the index of best score.
     minMaxIdx(pscore.reshape(0, { trackState.anchorNum * trackState.scoreSize * trackState.scoreSize, 1 }), 0, 0, 0, bestID);
     delta = delta.reshape(0, { 4, trackState.anchorNum * trackState.scoreSize * trackState.scoreSize });
