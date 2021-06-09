@@ -16,7 +16,7 @@ PERF_TEST(Undistort, InitUndistortMap)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(Undistort, InitInverseRectificationMap)
+PERF_TEST(Undistort, DISABLED_InitInverseRectificationMap)
 {
     Size size_w_h(512 + 3, 512);
     Mat k(3, 3, CV_32FC1);

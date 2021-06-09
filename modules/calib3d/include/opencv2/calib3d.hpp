@@ -3780,7 +3780,7 @@ is assumed.
 CV_EXPORTS_W
 void initInverseRectificationMap( InputArray cameraMatrix, InputArray distCoeffs,
                            InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
+                           const Size& size, int m1type, OutputArray map1, OutputArray map2 );
 
 //! initializes maps for #remap for wide-angle
 CV_EXPORTS
