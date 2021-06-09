@@ -364,7 +364,8 @@ GAPI_OCV_KERNEL(OCVR_O_NetPreProcGetROIs, R_O_NetPreProcGetROIs) {
         for (const auto& face : in_faces) {
             cv::Rect tmp_rect = face.bbox.getRect();
             //Compare to transposed sizes width<->height
-            tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - tmp_rect.x - 4, in_image_size.width - tmp_rect.y - 4);
+            tmp_rect &= cv::Rect(tmp_rect.x, tmp_rect.y, in_image_size.height - tmp_rect.x, in_image_size.width - tmp_rect.y) &
+                        cv::Rect(0, 0, in_image_size.height, in_image_size.width);
             outs.push_back(tmp_rect);
         }
     }
