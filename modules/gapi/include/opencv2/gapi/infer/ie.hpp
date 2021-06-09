@@ -29,7 +29,7 @@ namespace ie {
 GAPI_EXPORTS cv::gapi::GBackend backend();
 
 /**
- * Specify how G-API and IE should trait input data
+ * Specifies how G-API and IE should trait input data
  *
  * In OpenCV, the same cv::Mat is used to represent both
  * image and tensor data. Sometimes those are hardly distinguishable,
@@ -85,18 +85,19 @@ struct PortCfg {
 };
 
 /**
- * @brief This structure provides functions that fill inference parameters.
+ * @brief This structure provides functions
+ * that fill inference parameters for "OpenVINO Toolkit" model.
  */
 template<typename Net> class Params {
 public:
     /** @brief Class constructor.
 
-    Constructs Params based on model information and sets default values for other
-    inference description parameters. Model is loaded and compiled with OpenVINO.
+    Constructs Params based on model information and specifies default values for other
+    inference description parameters. Model is loaded and compiled using "OpenVINO Toolkit".
 
     @param model Path to topology IR (.xml file).
     @param weights Path to weights (.bin file).
-    @param device Name of device.
+    @param device target device to use.
     */
     Params(const std::string &model,
            const std::string &weights,
@@ -113,11 +114,11 @@ public:
     };
 
     /** @overload
-    This constructor for pre-compiled networks. Model is imported from pre-compiled
-    blob.
+    Use this constructor to work with pre-compiled network.
+    Model is imported from a pre-compiled blob.
 
     @param model Path to model.
-    @param device Name of device.
+    @param device target device to use.
     */
     Params(const std::string &model,
            const std::string &device)
@@ -134,15 +135,13 @@ public:
 
     /** @brief Specifies sequence of network input layers names for inference.
 
-    The function is used to associate data of graph inputs with input layers of
-    network topology. Number of names has to match the number of network inputs. If a network
-    has only one input layer, there is no need to call it as the layer is
-    associated with input automatically but this doesn't prevent you from
-    doing it yourself. Count of names has to match to number of network inputs.
+    The function is used to associate cv::gapi::infer<> inputs with the model inputs.
+    Number of names has to match the number of network inputs as defined in G_API_NET().
+    In case a network has only single input layer, there is no need to specify name manually.
 
     @param layer_names std::array<std::string, N> where N is the number of inputs
     as defined in the @ref G_API_NET. Contains names of input layers.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &layer_names) {
         desc.input_names.clear();
@@ -152,17 +151,15 @@ public:
         return *this;
     }
 
-    /** @brief Sets sequence of network output layers names for inference.
+    /** @brief Specifies sequence of network output layers names for inference.
 
-    The function is used to associate data of graph outputs with output layers of
-    network topology. If a network has only one output layer, there is no need to call it
-    as the layer is associated with ouput automatically but this doesn't prevent
-    you from doing it yourself. Count of names has to match to number of network
-    outputs.
+    The function is used to associate cv::gapi::infer<> outputs with the model outputs.
+    Number of names has to match the number of network outputs as defined in G_API_NET().
+    In case a network has only single output layer, there is no need to specify name manually.
 
     @param layer_names std::array<std::string, N> where N is the number of outputs
     as defined in the @ref G_API_NET. Contains names of output layers.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgOutputLayers(const typename PortCfg<Net>::Out &layer_names) {
         desc.output_names.clear();
@@ -175,14 +172,13 @@ public:
     /** @brief Specifies a constant input.
 
     The function is used to set a constant input. This input has to be
-    a preprocessed tensor if its type is TENSOR. You should provide name of network layer
-    which will receive provided data. For example, this can be useful for
-    specifying size of image tensor defined in Faster-Rnetwork.
+    a preprocessed tensor if its type is TENSOR. Need to provide name of the
+    network layer which will receive provided data.
 
     @param layer_name Name of network layer.
     @param data cv::Mat that contains data which will be associated with network layer.
-    @param hint Type of input (IMAGE or TENSOR).
-    @return the reference on modified object.
+    @param hint Input type @sa cv::gapi::ie::TraitAs.
+    @return reference to this parameter structure.
     */
     Params<Net>& constInput(const std::string &layer_name,
                             const cv::Mat &data,
@@ -191,14 +187,14 @@ public:
         return *this;
     }
 
-    /** @brief Sets OpenVINO plugin configuration.
+    /** @brief Specifies OpenVINO plugin configuration.
 
     The function is used to set configuration for OpenVINO plugin. Some parameters
     can be different for each plugin. Please follow https://docs.openvinotoolkit.org/latest/index.html
     to check information about specific plugin.
 
     @param cfg Map of pairs: (config parameter name, config parameter value).
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
        Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
@@ -209,7 +205,7 @@ public:
     Function with a rvalue parameter.
 
     @param cfg rvalue map of pairs: (config parameter name, config parameter value).
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params& pluginConfig(IEConfig&& cfg) {
         desc.config = std::move(cfg);
@@ -219,7 +215,7 @@ public:
     /** @brief Specifies number of asynchronous inference requests.
 
     @param nireq Number of inference asynchronous requests.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
@@ -229,14 +225,12 @@ public:
 
     /** @brief Specifies new input shapes for the network inputs.
 
-    The function is used to set new input shapes for network. You can specify
-    new dimensions for one or some or all of Network input layers. network will be
-    reshaped based on this information and your inputs will be preprocessed for
-    new input sizes. Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1networkNetwork.html
+    The function is used to specify new input shapes for the network inputs.
+    Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1networkNetwork.html
     for additional information.
 
     @param reshape_table Map of pairs: name of corresponding data and its dimension.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>& reshape_table) {
         desc.reshape_table = reshape_table;
@@ -253,7 +247,7 @@ public:
 
     @param layer_name Name of layer.
     @param layer_dims New dimensions for this layer.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgInputReshape(const std::string& layer_name, const std::vector<size_t>& layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
@@ -268,12 +262,8 @@ public:
 
     /** @overload
 
-    The function is used to set names of layers that will be used for network reshape.
-    Dimensions will be constructed automatically by current network input and height and
-    width of image.
-
     @param layer_names set of names of network layers that will be used for network reshape.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgInputReshape(const std::unordered_set<std::string>& layer_names) {
         desc.layer_names_to_reshape = layer_names;
@@ -284,7 +274,7 @@ public:
 
     @param layer_names rvalue set of the selected layers will be reshaped automatically
     its input image size.
-    @return the reference on modified object.
+    @return reference to this parameter structure.
     */
     Params<Net>& cfgInputReshape(std::unordered_set<std::string>&& layer_names) {
         desc.layer_names_to_reshape = std::move(layer_names);
