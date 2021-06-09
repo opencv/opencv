@@ -281,5 +281,10 @@ ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
 set(CONFIG_STR "// Auto-generated file
 #define OPENCV_HIGHGUI_BUILTIN_BACKEND_STR \"${OPENCV_HIGHGUI_BUILTIN_BACKEND}\"
 ")
+if(OPENCV_HIGHGUI_BUILTIN_BACKEND STREQUAL "NONE")
+set(CONFIG_STR "${CONFIG_STR}
+#define OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND 1
+")
+endif()
 
 ocv_update_file("${CMAKE_CURRENT_BINARY_DIR}/opencv_highgui_config.hpp" "${CONFIG_STR}")
