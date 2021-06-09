@@ -179,6 +179,14 @@ static void cleanupTrackbarCallbacksWithData_()
 
 using namespace cv::impl;
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+static void deprecateNotFoundNoOpBehavior()
+{
+    CV_LOG_ONCE_WARNING(NULL, "This no-op behavior is deprecated. Future versions of OpenCV will trigger exception in this case");
+}
+#define CV_NOT_FOUND_DEPRECATION deprecateNotFoundNoOpBehavior()
+#endif
+
 CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
 {
     CV_TRACE_FUNCTION();
@@ -193,6 +201,19 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     switch(prop_id)
     {
     //change between fullscreen or not.
@@ -249,6 +270,7 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     default:;
     }
+#endif
 }
 
 /* return -1 if error */
@@ -268,6 +290,19 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return -1;
+#else
     switch(prop_id)
     {
     case CV_WND_PROP_FULLSCREEN:
@@ -361,13 +396,13 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     default:
         return -1;
     }
+#endif
 }
 
 cv::Rect cvGetWindowImageRect(const char* name)
 {
     CV_TRACE_FUNCTION();
-    if (!name)
-        return cv::Rect(-1, -1, -1, -1);
+    CV_Assert(name);
 
     {
         auto window = findWindow_(name);
@@ -376,6 +411,20 @@ cv::Rect cvGetWindowImageRect(const char* name)
             return window->getImageRect();
         }
     }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return Rect(-1, -1, -1, -1);
+#else
 
     #if defined (HAVE_QT)
         return cvGetWindowRect_QT(name);
@@ -386,8 +435,10 @@ cv::Rect cvGetWindowImageRect(const char* name)
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(name);
     #else
-        return cv::Rect(-1, -1, -1, -1);
+        return Rect(-1, -1, -1, -1);
     #endif
+
+#endif
 }
 
 cv::Rect cv::getWindowImageRect(const String& winname)
@@ -483,7 +534,21 @@ void cv::resizeWindow( const String& winname, int width, int height )
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvResizeWindow( winname.c_str(), width, height );
+#endif
 }
 
 void cv::resizeWindow(const String& winname, const cv::Size& size)
@@ -504,7 +569,21 @@ void cv::moveWindow( const String& winname, int x, int y )
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvMoveWindow( winname.c_str(), x, y );
+#endif
 }
 
 void cv::setWindowProperty(const String& winname, int prop_id, double prop_value)
@@ -616,8 +695,22 @@ int cv::createTrackbar(const String& trackbarName, const String& winName,
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return 0;
+#else
     return cvCreateTrackbar2(trackbarName.c_str(), winName.c_str(),
                              value, count, callback, userdata);
+#endif
 }
 
 void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value )
@@ -635,7 +728,21 @@ void cv::setTrackbarPos( const String& trackbarName, const String& winName, int 
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
+#endif
 }
 
 void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
@@ -655,7 +762,21 @@ void cv::setTrackbarMax(const String& trackbarName, const String& winName, int m
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+#endif
 }
 
 void cv::setTrackbarMin(const String& trackbarName, const String& winName, int minval)
@@ -675,7 +796,21 @@ void cv::setTrackbarMin(const String& trackbarName, const String& winName, int m
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
+#endif
 }
 
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
@@ -693,7 +828,21 @@ int cv::getTrackbarPos( const String& trackbarName, const String& winName )
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return -1;
+#else
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
+#endif
 }
 
 void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void* param)
@@ -709,7 +858,21 @@ void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void
         }
     }
 
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << windowName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
+#endif
 }
 
 int cv::getMouseWheelDelta( int flags )
