@@ -19,17 +19,19 @@ namespace gapi {
  */
 enum class StereoOutputFormat {
     DEPTH_FLOAT16, ///< Floating point 16 bit value, CV_16FC1.
-                   ///< This variant is deprecated.
+                   ///< This identifier is deprecated, use DEPTH_16F instead.
     DEPTH_FLOAT32, ///< Floating point 32 bit value, CV_32FC1
-                   ///< This variant is deprecated.
+                   ///< This identifier is deprecated, use DEPTH_16F instead.
     DISPARITY_FIXED16_11_5, ///< 16 bit signed: first bit for sign,
                             ///< 10 bits for integer part,
                             ///< 5 bits for fractional part.
-                            ///< This variant is deprecated.
+                            ///< This identifier is deprecated,
+                            ///< use DISPARITY_16Q_10_5 instead.
     DISPARITY_FIXED16_12_4, ///< 16 bit signed: first bit for sign,
                             ///< 11 bits for integer part,
                             ///< 4 bits for fractional part.
-                            ///< This variant is deprecated.
+                            ///< This identifier is deprecated,
+                            ///< use DISPARITY_16Q_11_4 instead.
     DEPTH_16F = DEPTH_FLOAT16, ///< Same as DEPTH_FLOAT16
     DEPTH_32F = DEPTH_FLOAT32, ///< Same as DEPTH_FLOAT32
     DISPARITY_16Q_10_5 = DISPARITY_FIXED16_11_5, ///< Same as DISPARITY_FIXED16_11_5
