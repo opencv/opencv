@@ -3772,15 +3772,15 @@ of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion 
 computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
 is assumed.
 @param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
-@param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
+@param size Distorted image size.
+@param m1type Type of the first output map. Can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
 @param map1 The first output map for #remap.
 @param map2 The second output map for #remap.
  */
 CV_EXPORTS_W
 void initInverseRectificationMap( InputArray cameraMatrix, InputArray distCoeffs,
                            InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
+                           const Size& size, int m1type, OutputArray map1, OutputArray map2 );
 
 //! initializes maps for #remap for wide-angle
 CV_EXPORTS

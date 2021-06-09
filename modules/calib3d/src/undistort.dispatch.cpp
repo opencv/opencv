@@ -166,7 +166,7 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
 
 void initInverseRectificationMap( InputArray _cameraMatrix, InputArray _distCoeffs,
                               InputArray _matR, InputArray _newCameraMatrix,
-                              Size size, int m1type, OutputArray _map1, OutputArray _map2 )
+                              const Size& size, int m1type, OutputArray _map1, OutputArray _map2 )
 {
     // Parameters
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
@@ -208,24 +208,22 @@ void initInverseRectificationMap( InputArray _cameraMatrix, InputArray _distCoef
     CV_Assert( Size(3,3) == R.size() );
 
     // Init distortion vector
-    if( !distCoeffs.empty() )
+    if( !distCoeffs.empty() ){
         distCoeffs = Mat_<double>(distCoeffs);
-    else
-    {
-        distCoeffs.create(14, 1, CV_64F);
-        distCoeffs = 0.;
+
+        // Fix distortion vector orientation
+        if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() ) {
+            distCoeffs = distCoeffs.t();
+        }
     }
 
     // Validate distortion vector size
-    CV_Assert( distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
-               distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
-               distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1) ||
-               distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1) ||
-               distCoeffs.size() == Size(1, 14) || distCoeffs.size() == Size(14, 1));
-
-    // Fix distortion vector orientation
-    if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() )
-        distCoeffs = distCoeffs.t();
+    CV_Assert(  distCoeffs.empty() || // Empty allows cv::undistortPoints to skip distortion
+                distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
+                distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
+                distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1) ||
+                distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1) ||
+                distCoeffs.size() == Size(1, 14) || distCoeffs.size() == Size(14, 1));
 
     // Create objectPoints
     std::vector<cv::Point2i> p2i_objPoints;
