@@ -222,22 +222,28 @@ void cv::gimpl::proto::validate_input_meta(const cv::GMatDesc& meta)
     {
         if (!(meta.size.height > 0 && meta.size.width > 0))
         {
-            cv::util::throw_error(std::logic_error(std::string("Image format is invalid. Size must contain positive values, got width: ") +
-                                                   std::to_string(meta.size.width ) + (", height: ") +
-                                                   std::to_string(meta.size.height)));
+            cv::util::throw_error
+                (std::logic_error(
+                 "Image format is invalid. Size must contain positive values"
+                 ", got width: " + std::to_string(meta.size.width ) +
+                 (", height: ") + std::to_string(meta.size.height)));
         }
 
         if (!(meta.chan > 0))
         {
-            cv::util::throw_error(std::logic_error(std::string("Image format is invalid. Channel mustn't be negative value, got channel: ") +
-                                                   std::to_string(meta.chan)));
+            cv::util::throw_error
+                (std::logic_error(
+                 "Image format is invalid. Channel mustn't be negative value, got channel: " +
+                 std::to_string(meta.chan)));
         }
     }
 
     if (!(meta.depth >= 0))
     {
-        cv::util::throw_error(std::logic_error(std::string("Image format is invalid. Depth must be positive value, got depth: ") +
-                                               std::to_string(meta.depth)));
+        cv::util::throw_error
+            (std::logic_error(
+             "Image format is invalid. Depth must be positive value, got depth: " +
+             std::to_string(meta.depth)));
     }
     // All checks are ok
 }

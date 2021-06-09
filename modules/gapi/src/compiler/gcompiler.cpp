@@ -343,15 +343,18 @@ void cv::gimpl::GCompiler::validateInputMeta()
         return false; // should never happen
     };
 
+    GAPI_LOG_DEBUG(nullptr, "Total count: " << m_metas.size());
     for (const auto meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
     {
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
+        const auto index = ade::util::index(meta_arg_idx);
+        GAPI_LOG_DEBUG(nullptr, "Process index: " << index);
+
         // check types validity
         if (!meta_matches(meta, proto))
         {
-            const auto index = ade::util::index(meta_arg_idx);
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata descriptor mismatch "
                          "(argument " + std::to_string(index) + ")"));
@@ -359,18 +362,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
         }
 
         // check value consistency
-        try
-        {
-            gimpl::proto::validate_input_meta_arg(meta); //may throw
-        }
-        catch(const std::exception& ex)
-        {
-            const auto index = ade::util::index(meta_arg_idx);
-            util::throw_error(std::logic_error
-                        ("GComputation metadata incorrect value "
-                         "(argument " + std::to_string(index) + "), error: " +
-                         ex.what()));
-        }
+        gimpl::proto::validate_input_meta_arg(meta); //may throw
     }
     // All checks are ok
 }
