@@ -968,7 +968,7 @@ void CV_InitInverseRectificationMapTest::prepare_to_validation(int/* test_case_i
         }
     }
 
-    // Convert 
+    // Convert
     _mapx.convertTo(test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].type());
     _mapy.convertTo(test_mat[REF_OUTPUT][1], test_mat[REF_OUTPUT][0].type());
 }

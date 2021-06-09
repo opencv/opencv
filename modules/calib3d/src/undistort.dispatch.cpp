@@ -210,7 +210,7 @@ void initInverseRectificationMap( InputArray _cameraMatrix, InputArray _distCoef
     // Init distortion vector
     if( !distCoeffs.empty() ){
         distCoeffs = Mat_<double>(distCoeffs);
-        
+
         // Fix distortion vector orientation
         if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() ) {
             distCoeffs = distCoeffs.t();
