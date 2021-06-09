@@ -2331,6 +2331,11 @@ public:
 class GTKBackendUI : public UIBackend
 {
 public:
+    GTKBackendUI()
+    {
+        // NB: avoid static initialization order fiasco
+        (void)getGTKWindows();
+    }
     ~GTKBackendUI() CV_OVERRIDE
     {
         destroyAllWindows();
