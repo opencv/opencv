@@ -25,8 +25,8 @@ struct GAPI_EXPORTS StereoInitParam {
 
     int numDisparities = 0;
     int blockSize = 21;
-    double baseline = 70.;
-    double focus = 1000.;
+    double baseline = 63.5;
+    double focus = 3.6;
 };
 
 } // namespace cpu
