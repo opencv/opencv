@@ -1339,6 +1339,27 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     expectNoFallbacksFromIE(net);
 }
 
+TEST_P(Test_ONNX_nets, QuantStatic)
+{
+    if (backend != DNN_BACKEND_OPENCV || target != DNN_TARGET_CPU)
+        throw SkipTestException("Only the default backend; CPU target is supported");
+    
+    String onnxmodel = findDataFile("dnn/model_quant_static.onnx", true);
+    Net net = readNetFromONNX(onnxmodel);
+    ASSERT_FALSE(net.empty());
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+    std::cout << net.dump() << "\n";
+    int shape[] = {1, 3, 16, 16};
+    Mat input(4, shape, CV_32F);
+    RNG& rng = theRNG();
+    rng.fill(input, RNG::UNIFORM, 0, 255);
+    net.setInput(input);
+    Mat output = net.forward();
+    //std::cout << output << std::endl;
+    ASSERT_EQ(output.size(), Size(128, 1));
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

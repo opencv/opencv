@@ -82,12 +82,12 @@ public:
         axis = params.get<int>("axis", 1);
         if (!blobs.empty())
         {
-            CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
+            CV_Assert(1 <= blobs.size());
             int numOutput = params.get<int>("num_output");
             int innerSize = (int)blobs[0].total() / numOutput;
 
             CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
-            CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
+            CV_Assert(!bias || (blobs.size() >= 2 && (size_t)numOutput == blobs[1].total()));
 
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;

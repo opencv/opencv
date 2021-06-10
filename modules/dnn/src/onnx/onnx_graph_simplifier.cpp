@@ -641,6 +641,22 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
             convertInt64ToInt32(src, dst, blob.total());
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT8 ||
+             datatype == opencv_onnx::TensorProto_DataType_UINT8)
+    {
+        int depth = datatype == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S : CV_8U;
+        if (!tensor_proto.int32_data().empty())
+        {
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+            Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, depth);
+        }
+        else
+        {
+            // [TODO] shall we use a conversion here as well?
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            Mat(sizes, depth, val).copyTo(blob);
+        }
+    }
     else
     {
         std::string errorMsg = "Unsupported data type: " +

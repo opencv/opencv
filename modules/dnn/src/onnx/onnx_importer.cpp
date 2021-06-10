@@ -580,7 +580,10 @@ const std::set<String>& ONNXImporter::getSupportedTypes()
         "Dropout",
         "Identity",
         "Crop",
-        "Normalize"
+        "Normalize",
+        "QuantizeLinear",
+        "DequantizeLinear",
+        "QLinearConv"
     };
     return layerTypes;
 }
@@ -1286,6 +1289,99 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             }
             layerParams.set("axis", firstInpDims - secondInpDims + 1);
         }
+        else if (layer_type == "QLinearMatMul")
+        {
+            int ninputs = node_proto.input_size();
+            CV_Assert(ninputs == 8);
+            layerParams.type = "InnerProduct";
+            layerParams.set("bias_term", true);
+            MatShape shape0 = outShapes[node_proto.input(0)];
+            int firstInpDims = shape0.size();
+            
+            std::vector<Mat> blobs;
+            // let's count it from zero for easier code comprehension
+            for (int j = 0; j < ninputs; j++) {
+                if (constBlobs.find(node_proto.input(j)) != constBlobs.end())
+                    blobs.push_back(getBlob(node_proto, j));
+                else
+                    blobs.push_back(Mat());
+            }
+            
+            CV_Assert(blobs[0].empty());
+            CV_Assert(!blobs[3].empty());
+            Mat blob = getBlob(node_proto, 3);
+            int secondInpDims = blob.dims;
+            CV_Assert(shape0.size() == 2);
+            int inpN = blob.rows;
+            int outN = blob.cols;
+            layerParams.set("num_output", outN);
+            layerParams.set("axis", firstInpDims - secondInpDims + 1);
+            
+            float scale_val[] = {1.f, 1.f, 1.f};
+            int zp_val[] = {0, 0, 0};
+            for(int k = 0; k < 3; k++) {
+                int idx = k == 0 ? 1 : k == 1 ? 4 : 6;
+                Mat scale = blobs[idx], zp = blobs[idx+1];
+                int sc_total = (int)scale.total();
+                if (!scale.empty()) {
+                    if(!((sc_total == 1 || (k == 1 && sc_total == outN)) && scale.type() == CV_32F))
+                        CV_Error(CV_StsError,
+                                 "only scalar floating-point x_scale/y_scale is supported in QLinearConv; "
+                                 "w_scale could be scalar or contain as many elements as the number of output channels");
+                    scale_val[k] = sc_total == 1 ? *scale.ptr<float>() : 0.f;
+                }
+                int zp_type = zp.type();
+                int zp_total = (int)zp.total();
+                if (!zp.empty()) {
+                    if(!((zp_total == 1 || (k == 1 && zp_total == outN)) && (zp_type == CV_8U || zp_type == CV_8S)))
+                        CV_Error(CV_StsError,
+                                "only scalar INT8/UINT8 x_zeropoint/w_zeropoint/y_zeropoint is supported in QLinearConv; "
+                                "w_zeropoint could be scalar or contain as many elements as the number of output channels");
+                    zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
+                }
+            }
+            
+            // the formula:
+            //   (((a - a_zeropoint)*a_scale) * (b - b_zeropoint)*b_scale))/y_scale + y_zeropoint
+            // is assumed
+            
+            float a_sc = scale_val[0], y_sc = scale_val[2];
+            int a_zp = zp_val[0], y_zp = zp_val[2];
+            double ay_sc = (double)a_sc/y_sc;
+            Mat a_zp_mat = Mat(1, outN, CV_32F, Scalar::all(-a_zp));
+            Mat B = blobs[3];
+            Mat Bf(B.dims, B.size.p, CV_32F), B_scale = blobs[4], B_zp = blobs[5];
+            int b_sc_total = (int)B_scale.total();
+            int b_zp_total = (int)B_zp.total();
+            int b_zp_type = B_zp.type();
+            CV_Assert(B.isContinuous());
+            
+            Mat bias = Mat(outN, 1, CV_32F, Scalar::all(y_zp));
+            
+            for(int i = 0; i < outN; i++) {
+                Mat subB = B.row(i);
+                Mat subBf = Bf.row(i);
+                double b_scale = ay_sc*(B_scale.ptr<float>()[b_sc_total > 1 ? i : 0]);
+                int b_idx = b_zp_total == 1 ? 0 : i;
+                int b_zp = !B_zp.data ? 0 :
+                           b_zp_type == CV_8U ? (int)(B_zp.ptr<uint8_t>()[b_idx]) :
+                                                (int)(B_zp.ptr<int8_t>()[b_idx]);
+                subB.convertTo(subBf, CV_32F, b_scale, -b_zp*b_scale);
+            }
+            Mat Bf_t = Bf.t();
+            gemm(Bf_t, Mat(inpN, 1, CV_32F, Scalar::all(-a_zp)), 1, bias, 1, bias);
+            layerParams.blobs.push_back(Bf_t);
+            layerParams.blobs.push_back(bias);
+            layerParams.blobs.push_back(B.t());
+            layerParams.blobs.push_back(B_scale);
+            layerParams.blobs.push_back(B_zp);
+            
+            layerParams.set("orig_layer_type", layer_type);
+            layerParams.set("a_scale", a_sc);
+            layerParams.set("a_zeropoint", a_zp);
+            layerParams.set("y_scale", y_sc);
+            layerParams.set("y_zeropoint", y_zp);
+        }
         else if (layer_type == "Mul" || layer_type == "Div")
         {
             CV_Assert(node_proto.input_size() == 2);
@@ -1422,6 +1518,93 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             }
             int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
             layerParams.set("num_output", outCn);
+        }
+        else if (layer_type == "QLinearConv")
+        {
+            int ninputs = node_proto.input_size();
+            CV_Assert(ninputs >= 8);
+            layerParams.type = "Convolution";
+            std::vector<Mat> blobs;
+            // let's count it from zero for easier code comprehension
+            for (int j = 0; j < ninputs; j++) {
+                if (constBlobs.find(node_proto.input(j)) != constBlobs.end())
+                    blobs.push_back(getBlob(node_proto, j));
+                else
+                    blobs.push_back(Mat());
+            }
+            Mat W = blobs[3];
+            CV_Assert(W.type() == CV_8U || W.type() == CV_8S);
+            
+            int outCn = W.size[0];
+            Mat bias = blobs.size() > 8 ? blobs[8] : Mat();
+            float scale_val[] = {1.f, 1.f, 1.f};
+            int zp_val[] = {0, 0, 0};
+            for(int k = 0; k < 3; k++) {
+                int idx = k == 0 ? 1 : k == 1 ? 4 : 6;
+                Mat scale = blobs[idx], zp = blobs[idx+1];
+                int sc_total = (int)scale.total();
+                if (!scale.empty()) {
+                    if(!((sc_total == 1 || (k == 1 && sc_total == outCn)) && scale.type() == CV_32F))
+                        CV_Error(CV_StsError,
+                                 "only scalar floating-point x_scale/y_scale is supported in QLinearConv; "
+                                 "w_scale could be scalar or contain as many elements as the number of output channels");
+                    scale_val[k] = sc_total == 1 ? *scale.ptr<float>() : 0.f;
+                }
+                int zp_type = zp.type();
+                int zp_total = (int)zp.total();
+                if (!zp.empty()) {
+                    if(!((zp_total == 1 || (k == 1 && zp_total == outCn)) && (zp_type == CV_8U || zp_type == CV_8S)))
+                        CV_Error(CV_StsError,
+                                "only scalar INT8/UINT8 x_zeropoint/w_zeropoint/y_zeropoint is supported in QLinearConv; "
+                                "w_zeropoint could be scalar or contain as many elements as the number of output channels");
+                    zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
+                }
+            }
+            // the formula:
+            //   (conv((x - x_zeropoint)*x_scale, (W - w_zeropoint)*w_scale) + bias*x_scale*w_scale)/y_scale + y_zeropoint
+            // is assumed
+            float x_sc = scale_val[0], y_sc = scale_val[2];
+            int x_zp = zp_val[0], y_zp = zp_val[2];
+            double xy_sc = (double)x_sc/y_sc;
+            Mat Wf(W.dims, W.size.p, CV_32F), W_scale = blobs[4], W_zp = blobs[5];
+            int w_sc_total = (int)W_scale.total();
+            int w_zp_total = (int)W_zp.total();
+            int w_zp_type = W_zp.type();
+            CV_Assert(W.isContinuous());
+            
+            if(bias.empty()) {
+                bias = Mat::zeros(outCn, 1, CV_32S);
+            } else {
+                CV_Assert(bias.isContinuous() && (int)bias.total() == outCn);
+            }
+            
+            Mat Bf(bias.size(), CV_32F);
+            
+            for(int i = 0; i < outCn; i++) {
+                Mat subW(W.dims-1, W.size.p+1, W.type(), W.ptr(i));
+                Mat subWf(Wf.dims-1, Wf.size.p+1, Wf.type(), Wf.ptr(i));
+                double w_scale = xy_sc*(W_scale.ptr<float>()[w_sc_total > 1 ? i : 0]);
+                int w_idx = w_zp_total == 1 ? 0 : i;
+                int w_zp = !W_zp.data ? 0 :
+                           w_zp_type == CV_8U ? (int)(W_zp.ptr<uint8_t>()[w_idx]) :
+                                                (int)(W_zp.ptr<int8_t>()[w_idx]);
+                subW.convertTo(subWf, CV_32F, w_scale, -w_zp*w_scale);
+                int bval = bias.ptr<int>()[i];
+                Bf.ptr<float>()[i] = (float)(bval*w_scale + y_zp);
+            }
+            layerParams.blobs.push_back(Wf);
+            layerParams.blobs.push_back(Bf);
+            layerParams.blobs.push_back(W);
+            layerParams.blobs.push_back(W_scale);
+            layerParams.blobs.push_back(W_zp);
+            layerParams.blobs.push_back(bias);
+            
+            layerParams.set("num_output", outCn);
+            layerParams.set("orig_layer_type", layer_type);
+            layerParams.set("x_scale", x_sc);
+            layerParams.set("x_zeropoint", x_zp);
+            layerParams.set("y_scale", y_sc);
+            layerParams.set("y_zeropoint", y_zp);
         }
         else if (layer_type == "ConvTranspose")
         {
@@ -2072,6 +2255,50 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
                 node_proto.set_input(2, constParams.name);
             }
+        }
+        else if (layer_type == "QuantizeLinear")
+        {
+            int ninputs = node_proto.input_size();
+            if (ninputs != 2 && ninputs != 3)
+                CV_Error(Error::StsNotImplemented,
+                         "Expected input, scale and zero_offset");
+            if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+            {
+                Mat y_scale = getBlob(node_proto, 1);
+                layerParams.blobs.push_back(y_scale);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "'yscale' is missing in 'QuantizeLinear' layer");
+            }
+            if (ninputs == 3 && constBlobs.find(node_proto.input(2)) != constBlobs.end())
+            {
+                Mat y_zero_point = getBlob(node_proto, 2);
+                layerParams.blobs.push_back(y_zero_point);
+            }
+            layerParams.type = layer_type;
+        }
+        else if (layer_type == "DequantizeLinear")
+        {
+            int ninputs = node_proto.input_size();
+            if (ninputs != 2 && ninputs != 3)
+                CV_Error(Error::StsNotImplemented,
+                         "Expected input, scale and zero_offset");
+            if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+            {
+                Mat x_scale = getBlob(node_proto, 1);
+                layerParams.blobs.push_back(x_scale);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "'xscale' is missing in 'DequantizeLinear' layer");
+            }
+            if (ninputs == 3 && constBlobs.find(node_proto.input(2)) != constBlobs.end())
+            {
+                Mat x_zero_point = getBlob(node_proto, 2);
+                layerParams.blobs.push_back(x_zero_point);
+            }
+            layerParams.type = layer_type;
         }
         else
         {
