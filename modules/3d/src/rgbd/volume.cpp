@@ -23,10 +23,7 @@ Ptr<VolumeParams> VolumeParams::defaultParams(VolumeType _volumeType)
     params.unitResolution    = 0;  // unitResolution not used for TSDF
     float volumeSize         = 3.0f;
     Matx44f pose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f)).matrix;
-    params.pose00 = pose(0, 0); params.pose01 = pose(0, 1); params.pose02 = pose(0, 2);
-    params.pose10 = pose(1, 0); params.pose11 = pose(1, 1); params.pose12 = pose(1, 2);
-    params.pose20 = pose(2, 0); params.pose21 = pose(2, 1); params.pose22 = pose(2, 2);
-    params.pose03 = pose(0, 3); params.pose13 = pose(1, 3); params.pose23 = pose(2, 3);
+    params.pose = Mat(pose);
 
     if(params.type == VolumeType::TSDF)
     {

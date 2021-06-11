@@ -153,10 +153,7 @@ HashTSDFVolumeCPU::HashTSDFVolumeCPU(float _voxelSize, const Matx44f& _pose, flo
 
 HashTSDFVolumeCPU::HashTSDFVolumeCPU(const VolumeParams& _params, bool _zFirstMemOrder)
     : HashTSDFVolumeCPU(_params.voxelSize,
-                        Matx44f(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
-                                _params.pose10, _params.pose11, _params.pose12, _params.pose13,
-                                _params.pose20, _params.pose21, _params.pose22, _params.pose23,
-                                0, 0, 0, 0),
+                        Matx44f(_params.pose),
                         _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
                         _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
 {
@@ -969,10 +966,7 @@ HashTSDFVolumeGPU::HashTSDFVolumeGPU(float _voxelSize, const Matx44f& _pose, flo
 
 HashTSDFVolumeGPU::HashTSDFVolumeGPU(const VolumeParams & _params, bool _zFirstMemOrder)
     : HashTSDFVolumeGPU(_params.voxelSize,
-                        Matx44f(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
-                                _params.pose10, _params.pose11, _params.pose12, _params.pose13,
-                                _params.pose20, _params.pose21, _params.pose22, _params.pose23,
-                                0, 0, 0, 0),
+                        Matx44f(_params.pose),
                         _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,
                         _params.depthTruncThreshold, _params.unitResolution, _zFirstMemOrder)
 {
@@ -1785,10 +1779,10 @@ int HashTSDFVolumeGPU::getVisibleBlocks(int currFrameId, int frameThreshold) con
 //template<typename T>
 Ptr<HashTSDFVolume> makeHashTSDFVolume(const VolumeParams& _params)
 {
-    Matx44f pose(_params.pose00, _params.pose01, _params.pose02, _params.pose03,
-                 _params.pose10, _params.pose11, _params.pose12, _params.pose13,
-                 _params.pose20, _params.pose21, _params.pose22, _params.pose23,
-                 0, 0, 0, 1);
+    Mat pm = _params.pose;
+    CV_Assert(pm.size() == Size(4, 4));
+    CV_Assert(pm.type() == CV_32F);
+    Matx44f pose = pm;
 #ifdef HAVE_OPENCL
     if (ocl::useOpenCL())
         return makePtr<HashTSDFVolumeGPU>(_params.voxelSize, pose, _params.raycastStepFactor, _params.tsdfTruncDist, _params.maxWeight,

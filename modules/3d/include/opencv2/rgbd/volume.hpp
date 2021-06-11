@@ -78,20 +78,8 @@ struct CV_EXPORTS_W VolumeParams
     */
     CV_PROP_RW int unitResolution = {0};
 
-    /** @brief Initial pose of the volume in meters */
-    //Matx44f pose;
-    CV_PROP_RW float pose00;
-    CV_PROP_RW float pose01;
-    CV_PROP_RW float pose02;
-    CV_PROP_RW float pose03;
-    CV_PROP_RW float pose10;
-    CV_PROP_RW float pose11;
-    CV_PROP_RW float pose12;
-    CV_PROP_RW float pose13;
-    CV_PROP_RW float pose20;
-    CV_PROP_RW float pose21;
-    CV_PROP_RW float pose22;
-    CV_PROP_RW float pose23;
+    /** @brief Initial pose of the volume in meters, should be 4x4 float or double matrix */
+    CV_PROP_RW Mat pose;
 
     /** @brief Length of voxels in meters */
     CV_PROP_RW float voxelSize;
