@@ -8,7 +8,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/types_c.h"
 
-#include "rgbd/linemod.hpp"
 #include "rgbd/depth.hpp"
 #include "rgbd/volume.hpp"
 
