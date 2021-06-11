@@ -53,6 +53,8 @@
 #include <opencv2/core/utils/tls.hpp>
 #include <opencv2/core/utils/instrumentation.hpp>
 
+#include <opencv2/core/utils/filesystem.private.hpp>
+
 namespace cv {
 
 static void _initSystem()
@@ -393,6 +395,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
         g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+        g_hwFeatureNames[CPU_RISCVV] = "RISCVV";
 
         g_hwFeatureNames[CPU_AVX512_COMMON] = "AVX512-COMMON";
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
@@ -587,6 +590,9 @@ struct HWFeatures
     #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
+    #endif
+    #ifdef __riscv_vector
+        have[CV_CPU_RISCVV] = true;
     #endif
     #ifdef __mips_msa
         have[CV_CPU_MSA] = true;
@@ -947,6 +953,7 @@ String format( const char* fmt, ... )
 
 String tempfile( const char* suffix )
 {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     String fname;
 #ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
@@ -1033,6 +1040,10 @@ String tempfile( const char* suffix )
             return fname + suffix;
     }
     return fname;
+#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
+    CV_UNUSED(suffix);
+    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 static ErrorCallback customErrorCallback = 0;
@@ -1468,6 +1479,9 @@ struct ThreadData
     size_t idx;               // Thread index in TLS storage. This is not OS thread ID!
 };
 
+
+static bool g_isTlsStorageInitialized = false;
+
 // Main TLS storage class
 class TlsStorage
 {
@@ -1477,6 +1491,7 @@ public:
     {
         tlsSlots.reserve(32);
         threads.reserve(32);
+        g_isTlsStorageInitialized = true;
     }
     ~TlsStorage()
     {
@@ -1681,12 +1696,31 @@ static TlsStorage &getTlsStorage()
 #ifndef _WIN32  // pthread key destructor
 static void opencv_tls_destructor(void* pData)
 {
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread(pData);
 }
 #else // _WIN32
 #ifdef CV_USE_FLS
 static void WINAPI opencv_fls_destructor(void* pData)
 {
+    // Empiric detection of ExitProcess call
+    DWORD code = STILL_ACTIVE/*259*/;
+    BOOL res = GetExitCodeProcess(GetCurrentProcess(), &code);
+    if (res && code != STILL_ACTIVE)
+    {
+        // Looks like we are in ExitProcess() call
+        // This is FLS specific only because their callback is called before DllMain.
+        // TLS doesn't have similar problem, DllMain() is called first which mark __termination properly.
+        // Note: this workaround conflicts with ExitProcess() steps order described in documentation, however it works:
+        // 3. ... called with DLL_PROCESS_DETACH
+        // 7. The termination status of the process changes from STILL_ACTIVE to the exit value of the process.
+        // (ref: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess)
+        cv::__termination = true;
+    }
+
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread(pData);
 }
 #endif // CV_USE_FLS
@@ -1694,6 +1728,13 @@ static void WINAPI opencv_fls_destructor(void* pData)
 
 } // namespace details
 using namespace details;
+
+void releaseTlsStorageThread()
+{
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
+    getTlsStorage().releaseThread();
+}
 
 TLSDataContainer::TLSDataContainer()
 {
@@ -1778,7 +1819,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
         {
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
-            cv::getTlsStorage().releaseThread();
+            releaseTlsStorageThread();
         }
     }
     return TRUE;

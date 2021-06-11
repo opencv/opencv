@@ -35,6 +35,7 @@ class mser_test(NewOpenCVTests):
         kDelta = 5
         mserExtractor = cv.MSER_create()
         mserExtractor.setDelta(kDelta)
+        mserExtractor.setMinDiversity(0)
         np.random.seed(10)
 
         for _i in range(100):

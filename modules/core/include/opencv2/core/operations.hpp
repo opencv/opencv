@@ -247,7 +247,17 @@ Matx<_Tp, n, l> Matx<_Tp, m, n>::solve(const Matx<_Tp, m, l>& rhs, int method) c
     return ok ? x : Matx<_Tp, n, l>::zeros();
 }
 
+template<typename _Tp, int m, int n> inline
+void Matx<_Tp, m, n>::copyTo(OutputArray dst) const
+{
+    Mat(*this, false).copyTo(dst);
+}
 
+template<typename _Tp, int m, int n> inline
+void Matx<_Tp, m, n>::convertTo(OutputArray dst, int type, double scale, double shift) const
+{
+    Mat(*this, false).convertTo(dst, type, scale, shift);
+}
 
 ////////////////////////// Augmenting algebraic & logical operations //////////////////////////
 

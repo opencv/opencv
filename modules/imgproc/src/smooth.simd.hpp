@@ -1236,8 +1236,12 @@ void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, 
         v_mul_expand(vx_load(src + pre_shift * cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + pre_shift))), v_res0, v_res1);
         for (int j = 0; j < pre_shift; j ++)
         {
+            v_uint16 v_weight = vx_setall_u16((uint16_t) *((uint32_t*)(m + j)));
             v_uint32 v_add0, v_add1;
-            v_mul_expand(vx_load(src + j * cn) + vx_load(src + (n - 1 - j)*cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + j))), v_add0, v_add1);
+            v_mul_expand(vx_load(src + j * cn), v_weight, v_add0, v_add1);
+            v_res0 += v_add0;
+            v_res1 += v_add1;
+            v_mul_expand(vx_load(src + (n - 1 - j)*cn), v_weight, v_add0, v_add1);
             v_res0 += v_add0;
             v_res1 += v_add1;
         }

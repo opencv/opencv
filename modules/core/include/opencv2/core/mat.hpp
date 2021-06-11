@@ -370,6 +370,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    void setZero() const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -1259,6 +1260,10 @@ public:
      */
     Mat& setTo(InputArray value, InputArray mask=noArray());
 
+    /** @brief Sets all the array elements to 0.
+     */
+    Mat& setZero();
+
     /** @brief Changes the shape and/or the number of channels of a 2D matrix without copying the data.
 
     The method makes a new matrix header for \*this elements. The new matrix may have a different size
@@ -2011,6 +2016,11 @@ public:
     template<typename _Tp> MatIterator_<_Tp> begin();
     template<typename _Tp> MatConstIterator_<_Tp> begin() const;
 
+    /** @brief Same as begin() but for inverse traversal
+     */
+    template<typename _Tp> std::reverse_iterator<MatIterator_<_Tp>> rbegin();
+    template<typename _Tp> std::reverse_iterator<MatConstIterator_<_Tp>> rbegin() const;
+
     /** @brief Returns the matrix iterator and sets it to the after-last matrix element.
 
     The methods return the matrix read-only or read-write iterators, set to the point following the last
@@ -2018,6 +2028,12 @@ public:
      */
     template<typename _Tp> MatIterator_<_Tp> end();
     template<typename _Tp> MatConstIterator_<_Tp> end() const;
+
+    /** @brief Same as end() but for inverse traversal
+     */
+    template<typename _Tp> std::reverse_iterator< MatIterator_<_Tp>> rend();
+    template<typename _Tp> std::reverse_iterator< MatConstIterator_<_Tp>> rend() const;
+
 
     /** @brief Runs the given functor over all matrix elements in parallel.
 
@@ -2249,6 +2265,12 @@ public:
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
+
+    //reverse iterators
+    std::reverse_iterator<iterator> rbegin();
+    std::reverse_iterator<iterator> rend();
+    std::reverse_iterator<const_iterator> rbegin() const;
+    std::reverse_iterator<const_iterator> rend() const;
 
     //! template methods for for operation over all matrix elements.
     // the operations take care of skipping gaps in the end of rows (if any)

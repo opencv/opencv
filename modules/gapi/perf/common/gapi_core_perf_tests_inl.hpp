@@ -2036,6 +2036,42 @@ PERF_TEST_P_(KMeans3DPerfTest, TestPerformance)
 
 //------------------------------------------------------------------------------
 
+PERF_TEST_P_(TransposePerfTest, TestPerformance)
+{
+    compare_f cmpF;
+    cv::Size sz_in;
+    MatType type = -1;
+    cv::GCompileArgs compile_args;
+    std::tie(cmpF, sz_in, type, compile_args) = GetParam();
+
+    initMatrixRandU(type, sz_in, type, false);
+
+    // OpenCV code ///////////////////////////////////////////////////////////
+    cv::transpose(in_mat1, out_mat_ocv);
+
+    // G-API code ////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::transpose(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Warm-up graph engine:
+    c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi), std::move(compile_args));
+
+    TEST_CYCLE()
+    {
+        c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
 PERF_TEST_P_(ResizePerfTest, TestPerformance)
 {
     compare_f cmpF = get<0>(GetParam());

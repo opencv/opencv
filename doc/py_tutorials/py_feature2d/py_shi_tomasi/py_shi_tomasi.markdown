@@ -20,7 +20,7 @@ Harris Corner Detector. The scoring function in Harris Corner Detector was given
 
 Instead of this, Shi-Tomasi proposed:
 
-\f[R = min(\lambda_1, \lambda_2)\f]
+\f[R = \min(\lambda_1, \lambda_2)\f]
 
 If it is a greater than a threshold value, it is considered as a corner. If we plot it in
 \f$\lambda_1 - \lambda_2\f$ space as we did in Harris Corner Detector, we get an image as below:
@@ -28,7 +28,7 @@ If it is a greater than a threshold value, it is considered as a corner. If we p
 ![image](images/shitomasi_space.png)
 
 From the figure, you can see that only when \f$\lambda_1\f$ and \f$\lambda_2\f$ are above a minimum value,
-\f$\lambda_{min}\f$, it is considered as a corner(green region).
+\f$\lambda_{\min}\f$, it is considered as a corner(green region).
 
 Code
 ----

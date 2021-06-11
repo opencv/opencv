@@ -28,9 +28,6 @@
 /* Clp support */
 #cmakedefine HAVE_CLP
 
-/* Cocoa API */
-#cmakedefine HAVE_COCOA
-
 /* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
 
@@ -55,12 +52,6 @@
 
 /* Geospatial Data Abstraction Library */
 #cmakedefine HAVE_GDAL
-
-/* GTK+ 2.0 Thread support */
-#cmakedefine HAVE_GTHREAD
-
-/* GTK+ 2.x toolkit */
-#cmakedefine HAVE_GTK
 
 /* Halide support */
 #cmakedefine HAVE_HALIDE
@@ -120,12 +111,6 @@
 
 /* parallel_for with pthreads */
 #cmakedefine HAVE_PTHREADS_PF
-
-/* Qt support */
-#cmakedefine HAVE_QT
-
-/* Qt OpenGL support */
-#cmakedefine HAVE_QT_OPENGL
 
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB

@@ -271,7 +271,7 @@ void CvWindow::createSlider(cv::String name, int* val, int count, CvTrackbarCall
         // Image control is loaded. See callback implementation in CvWindow ctor.
         slider->Width = sliderDefaultWidth;
     }
-    slider->Value = *val;
+    slider->Value = val ? *val : 0;
     slider->Maximum = count;
     slider->Visibility = Windows::UI::Xaml::Visibility::Visible;
     slider->Margin = Windows::UI::Xaml::ThicknessHelper::FromLengths(10, 10, 10, 0);

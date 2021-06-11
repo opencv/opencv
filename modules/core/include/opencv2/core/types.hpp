@@ -714,24 +714,24 @@ public:
     //! the default constructor
     CV_WRAP KeyPoint();
     /**
-    @param _pt x & y coordinates of the keypoint
-    @param _size keypoint diameter
-    @param _angle keypoint orientation
-    @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
-    @param _octave pyramid octave in which the keypoint has been detected
-    @param _class_id object id
+    @param pt x & y coordinates of the keypoint
+    @param size keypoint diameter
+    @param angle keypoint orientation
+    @param response keypoint detector response on the keypoint (that is, strength of the keypoint)
+    @param octave pyramid octave in which the keypoint has been detected
+    @param class_id object id
      */
-    KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
+    KeyPoint(Point2f pt, float size, float angle=-1, float response=0, int octave=0, int class_id=-1);
     /**
     @param x x-coordinate of the keypoint
     @param y y-coordinate of the keypoint
-    @param _size keypoint diameter
-    @param _angle keypoint orientation
-    @param _response keypoint detector response on the keypoint (that is, strength of the keypoint)
-    @param _octave pyramid octave in which the keypoint has been detected
-    @param _class_id object id
+    @param size keypoint diameter
+    @param angle keypoint orientation
+    @param response keypoint detector response on the keypoint (that is, strength of the keypoint)
+    @param octave pyramid octave in which the keypoint has been detected
+    @param class_id object id
      */
-    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1);
+    CV_WRAP KeyPoint(float x, float y, float size, float angle=-1, float response=0, int octave=0, int class_id=-1);
 
     size_t hash() const;
 
@@ -870,6 +870,7 @@ public:
     @param epsilon The desired accuracy or change in parameters at which the iterative algorithm stops.
     */
     TermCriteria(int type, int maxCount, double epsilon);
+    TermCriteria(int maxCount, double epsilon);
 
     inline bool isValid() const
     {
@@ -2468,6 +2469,26 @@ TermCriteria::TermCriteria()
 inline
 TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
     : type(_type), maxCount(_maxCount), epsilon(_epsilon) {}
+
+inline TermCriteria::TermCriteria(int _maxCount, double _epsilon)
+{
+    type = 0;
+    if (_maxCount > 0)
+    {
+        maxCount = _maxCount;
+        type = COUNT;
+    }
+    else
+        maxCount = INT_MAX-1;
+
+    if (_epsilon > 0)
+    {
+        epsilon = _epsilon;
+        type |= EPS;
+    }
+    else
+        epsilon = DBL_EPSILON;
+}
 
 //! @endcond
 

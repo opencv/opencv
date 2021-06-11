@@ -2,14 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include "gtbbexecutor.hpp"
 
 #if defined(HAVE_TBB) && (TBB_INTERFACE_VERSION < 12000)
 // TODO: TBB task API has been deprecated and removed in 12000
 
-#include "gapi_itt.hpp"
+#include "utils/itt.hpp"
 
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/copy_through_move.hpp>
@@ -29,10 +29,6 @@
 #define LOG_WARNING(tag, ...) GAPI_LOG_WARNING(tag, __VA_ARGS__)
 #define LOG_DEBUG(tag, ...)   GAPI_LOG_DEBUG(tag, __VA_ARGS__)
 
-
-#ifdef OPENCV_WITH_ITT
-const __itt_domain* cv::gimpl::parallel::gapi_itt_domain = __itt_domain_create("GAPI Context");
-#endif
 
 namespace cv { namespace gimpl { namespace parallel {
 
@@ -82,18 +78,9 @@ void spawn_no_assert(tbb::task* root, body_t const& body) {
    tbb::task::spawn(* allocate_task(root, body));
 }
 
-#ifdef OPENCV_WITH_ITT
-namespace {
-    static __itt_string_handle* ittTbbAddReadyBlocksToQueue   = __itt_string_handle_create("add ready blocks to queue");
-    static __itt_string_handle* ittTbbSpawnReadyBlocks        = __itt_string_handle_create("spawn ready blocks");
-    static __itt_string_handle* ittTbbEnqueueSpawnReadyBlocks = __itt_string_handle_create("enqueueing a spawn of ready blocks");
-    static __itt_string_handle* ittTbbUnlockMasterThread      = __itt_string_handle_create("Unlocking master thread");
-}
-#endif // OPENCV_WITH_ITT
-
-
 template<typename body_t>
 void batch_spawn(size_t count, tbb::task* root, body_t const& body, bool do_assert_graph_is_running = true) {
+   GAPI_ITT_STATIC_LOCAL_HANDLE(ittTbbSpawnReadyBlocks, "spawn ready blocks");
    GAPI_ITT_AUTO_TRACE_GUARD(ittTbbSpawnReadyBlocks);
    if (do_assert_graph_is_running) {
        assert_graph_is_running(root);
@@ -143,6 +130,7 @@ void inline wake_master(async_tasks_t& async_tasks, wake_tbb_master wake_master)
 
     if ((active_async_tasks == 0) || (wake_master == wake_tbb_master::YES)) {
         // Was the last async task or asked to wake TBB master up(e.g. there are new TBB tasks to execute)
+        GAPI_ITT_STATIC_LOCAL_HANDLE(ittTbbUnlockMasterThread, "Unlocking master thread");
         GAPI_ITT_AUTO_TRACE_GUARD(ittTbbUnlockMasterThread);
         // While decrement of async_tasks_t::count is atomic, it might occur after the waiting
         // thread has read its value but _before_ it actually starts waiting on the condition variable.
@@ -228,6 +216,7 @@ inline tile_node*  pop(prio_items_queue_t& q) {
 namespace graph {
     // Returns : number of items actually pushed into the q
     std::size_t inline push_ready_dependants(prio_items_queue_t& q, tile_node* node) {
+        GAPI_ITT_STATIC_LOCAL_HANDLE(ittTbbAddReadyBlocksToQueue, "add ready blocks to queue");
         GAPI_ITT_AUTO_TRACE_GUARD(ittTbbAddReadyBlocksToQueue);
         std::size_t ready_items = 0;
         // enable dependent tasks
@@ -330,6 +319,7 @@ namespace graph {
                     if (ready_items > 0) {
                         auto master_was_active = is_tbb_work_present::NO;
                         {
+                            GAPI_ITT_STATIC_LOCAL_HANDLE(ittTbbEnqueueSpawnReadyBlocks, "enqueueing a spawn of ready blocks");
                             GAPI_ITT_AUTO_TRACE_GUARD(ittTbbEnqueueSpawnReadyBlocks);
                             // Force master thread (one that does wait_for_all()) to (actively) wait for enqueued tasks
                             // and unlock it right after all dependent tasks are spawned.

@@ -1,3 +1,16 @@
+set(MFX_DEFS "")
+
+if(NOT HAVE_MFX)
+  find_package(VPL QUIET)
+  if(VPL_FOUND)
+    set(MFX_INCLUDE_DIRS "")
+    set(MFX_LIBRARIES "${VPL_IMPORTED_TARGETS}")
+    set(HAVE_MFX TRUE)
+    list(APPEND MFX_DEFS "HAVE_ONEVPL")
+  endif()
+endif()
+
+
 if(NOT HAVE_MFX)
   set(paths "${MFX_HOME}" ENV "MFX_HOME" ENV "INTELMEDIASDKROOT")
   if(MSVC)
@@ -24,7 +37,12 @@ if(NOT HAVE_MFX)
     set(HAVE_MFX TRUE)
     set(MFX_INCLUDE_DIRS "${MFX_INCLUDE}")
     set(MFX_LIBRARIES "${MFX_LIBRARY}")
+    list(APPEND MFX_DEFS "HAVE_MFX_PLUGIN")
   endif()
+endif()
+
+if(NOT HAVE_MFX AND PKG_CONFIG_FOUND)
+  ocv_check_modules(MFX mfx)
 endif()
 
 if(HAVE_MFX AND UNIX)
@@ -49,7 +67,8 @@ if(HAVE_MFX AND UNIX)
 endif()
 
 if(HAVE_MFX)
-  ocv_add_external_target(mediasdk "${MFX_INCLUDE_DIRS}" "${MFX_LIBRARIES}" "HAVE_MFX")
+  list(APPEND MFX_DEFS "HAVE_MFX")
+  ocv_add_external_target(mediasdk "${MFX_INCLUDE_DIRS}" "${MFX_LIBRARIES}" "${MFX_DEFS}")
 endif()
 
 set(HAVE_MFX ${HAVE_MFX} PARENT_SCOPE)
