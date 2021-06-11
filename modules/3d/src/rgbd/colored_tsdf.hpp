@@ -8,10 +8,7 @@
 #ifndef __OPENCV_KINFU_COLORED_TSDF_H__
 #define __OPENCV_KINFU_COLORED_TSDF_H__
 
-#include <opencv2/rgbd/volume.hpp>
-
-#include "intrinsics.hpp"
-#include "utils.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {

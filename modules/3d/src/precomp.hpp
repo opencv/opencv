@@ -46,6 +46,15 @@
 
 #include "opencv2/core/private.hpp"
 
+#include "opencv2/core/affine.hpp"
+#include "opencv2/core/base.hpp"
+#include "opencv2/core/cvstd.hpp"
+#include "opencv2/core/matx.hpp"
+#include "opencv2/core/quaternion.hpp"
+#include "opencv2/core/types.hpp"
+#include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/utils/trace.hpp"
+
 #include "opencv2/3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
@@ -53,11 +62,27 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include <atomic>
+#include <functional>
 #include <limits>
 #include <vector>
 #include <list>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
+
+#include "rgbd/utils.hpp"
+#include "rgbd/intrinsics.hpp"
+#include "rgbd/depth_to_3d.hpp"
+#include "rgbd/sparse_block_matrix.hpp"
+#include "rgbd/colored_tsdf.hpp"
+#include "rgbd/fast_icp.hpp"
+#include "rgbd/hash_tsdf.hpp"
+#include "rgbd/tsdf.hpp"
+#include "rgbd/tsdf_functions.hpp"
+
+
+#include "opencl_kernels_3d.hpp"
 
 #define GET_OPTIMIZED(func) (func)
 

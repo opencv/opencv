@@ -7,10 +7,7 @@
 #ifndef __OPENCV_TSDF_FUNCTIONS_H__
 #define __OPENCV_TSDF_FUNCTIONS_H__
 
-#include <opencv2/rgbd/volume.hpp>
-#include "intrinsics.hpp"
-#include "tsdf.hpp"
-#include "colored_tsdf.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {

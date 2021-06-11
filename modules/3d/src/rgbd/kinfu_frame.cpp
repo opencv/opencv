@@ -5,9 +5,6 @@
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
 
 #include "precomp.hpp"
-#include "opencl_kernels_3d.hpp"
-#include "intrinsics.hpp"
-#include "utils.hpp"
 
 namespace cv {
 
@@ -43,12 +40,6 @@ inline float specPow<1>(float x)
     return x;
 }
 
-inline void colorFix(Point3f& c)
-{
-    if (c.x > 255) c.x = 255;
-    if (c.y > 255) c.y = 255;
-    if (c.z > 255) c.z = 255;
-}
 
 struct RenderInvoker : ParallelLoopBody
 {

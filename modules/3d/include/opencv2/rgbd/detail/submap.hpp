@@ -10,6 +10,7 @@
 #include <opencv2/core/affine.hpp>
 #include <type_traits>
 #include <vector>
+#include <map>
 #include <unordered_map>
 
 #include "opencv2/core/mat.inl.hpp"

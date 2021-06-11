@@ -5,11 +5,7 @@
 #ifndef __OPENCV_HASH_TSDF_H__
 #define __OPENCV_HASH_TSDF_H__
 
-#include <opencv2/rgbd/volume.hpp>
-#include <unordered_map>
-#include <unordered_set>
-
-#include "tsdf_functions.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {

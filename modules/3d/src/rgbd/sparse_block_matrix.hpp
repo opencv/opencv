@@ -2,12 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include <iostream>
-#include <unordered_map>
-
-#include "opencv2/core/base.hpp"
-#include "opencv2/core/types.hpp"
-#include "opencv2/core/utils/logger.hpp"
+#include "precomp.hpp"
 
 #if defined(HAVE_EIGEN)
 #include <Eigen/Core>

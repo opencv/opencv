@@ -5,9 +5,6 @@
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
 
 #include "precomp.hpp"
-//#include "tsdf.hpp"
-#include "tsdf_functions.hpp"
-#include "opencl_kernels_3d.hpp"
 
 namespace cv {
 

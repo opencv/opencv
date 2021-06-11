@@ -2,14 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include <opencv2/rgbd/volume.hpp>
-
-#include "hash_tsdf.hpp"
-#include "opencv2/core/base.hpp"
 #include "precomp.hpp"
-#include "tsdf.hpp"
-#include "hash_tsdf.hpp"
-#include "colored_tsdf.hpp"
 
 namespace cv
 {

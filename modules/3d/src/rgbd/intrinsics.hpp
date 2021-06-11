@@ -5,7 +5,7 @@
 #ifndef __OPENCV_3D_INTRINSICS_HPP__
 #define __OPENCV_3D_INTRINSICS_HPP__
 
-#include "opencv2/core/matx.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {

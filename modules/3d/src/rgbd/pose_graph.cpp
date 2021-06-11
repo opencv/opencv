@@ -4,8 +4,6 @@
 
 #include "precomp.hpp"
 
-#include "sparse_block_matrix.hpp"
-
 // matrix form of conjugation
 static const cv::Matx44d M_Conj{ 1,  0,  0,  0,
                                  0, -1,  0,  0,

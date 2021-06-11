@@ -5,8 +5,7 @@
 #ifndef OPENCV_RGBD_POSE_GRAPH_HPP
 #define OPENCV_RGBD_POSE_GRAPH_HPP
 
-#include "opencv2/core/affine.hpp"
-#include "opencv2/core/quaternion.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {
