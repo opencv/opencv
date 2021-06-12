@@ -1297,7 +1297,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             layerParams.set("bias_term", true);
             MatShape shape0 = outShapes[node_proto.input(0)];
             int firstInpDims = shape0.size();
-            
+
             std::vector<Mat> blobs;
             // let's count it from zero for easier code comprehension
             for (int j = 0; j < ninputs; j++) {
@@ -1306,7 +1306,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 else
                     blobs.push_back(Mat());
             }
-            
+
             CV_Assert(blobs[0].empty());
             CV_Assert(!blobs[3].empty());
             Mat blob = getBlob(node_proto, 3);
@@ -1316,7 +1316,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             int outN = blob.cols;
             layerParams.set("num_output", outN);
             layerParams.set("axis", firstInpDims - secondInpDims + 1);
-            
+
             float scale_val[] = {1.f, 1.f, 1.f};
             int zp_val[] = {0, 0, 0};
             for(int k = 0; k < 3; k++) {
@@ -1340,11 +1340,11 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
                 }
             }
-            
+
             // the formula:
             //   (((a - a_zeropoint)*a_scale) * (b - b_zeropoint)*b_scale))/y_scale + y_zeropoint
             // is assumed
-            
+
             float a_sc = scale_val[0], y_sc = scale_val[2];
             int a_zp = zp_val[0], y_zp = zp_val[2];
             double ay_sc = (double)a_sc/y_sc;
@@ -1355,9 +1355,9 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             int b_zp_total = (int)B_zp.total();
             int b_zp_type = B_zp.type();
             CV_Assert(B.isContinuous());
-            
+
             Mat bias = Mat(outN, 1, CV_32F, Scalar::all(y_zp));
-            
+
             for(int i = 0; i < outN; i++) {
                 Mat subB = B.row(i);
                 Mat subBf = Bf.row(i);
@@ -1375,7 +1375,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             layerParams.blobs.push_back(B.t());
             layerParams.blobs.push_back(B_scale);
             layerParams.blobs.push_back(B_zp);
-            
+
             layerParams.set("orig_layer_type", layer_type);
             layerParams.set("a_scale", a_sc);
             layerParams.set("a_zeropoint", a_zp);
@@ -1387,7 +1387,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             int ninputs = node_proto.input_size();
             CV_Assert(ninputs == 7 || ninputs == 8);
             layerParams.type = "QLinearAdd";
-            
+
             std::vector<Mat> blobs;
             // let's count it from zero for easier code comprehension
             for (int j = 0; j < ninputs; j++) {
@@ -1398,12 +1398,12 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             }
             if(blobs.size() == 7)
                 blobs.push_back(Mat());
-            
+
             CV_Assert(blobs[0].empty());
             CV_Assert(!blobs[3].empty());
             Mat B = getBlob(node_proto, 3);
             CV_Assert(B.type() == CV_8U || B.type() == CV_8S);
-            
+
             float scale_val[] = {1.f, 1.f, 1.f};
             int zp_val[] = {0, 0, 0};
             for(int k = 0; k < 3; k++) {
@@ -1425,7 +1425,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                     zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
                 }
             }
-            
+
             // the formula:
             //   (((a - a_zeropoint)*a_scale) + (b - b_zeropoint)*b_scale))/c_scale + c_zeropoint
             // is assumed
@@ -1589,7 +1589,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             }
             Mat W = blobs[3];
             CV_Assert(W.type() == CV_8U || W.type() == CV_8S);
-            
+
             int outCn = W.size[0];
             Mat bias = blobs.size() > 8 ? blobs[8] : Mat();
             float scale_val[] = {1.f, 1.f, 1.f};
@@ -1626,15 +1626,15 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             int w_zp_total = (int)W_zp.total();
             int w_zp_type = W_zp.type();
             CV_Assert(W.isContinuous());
-            
+
             if(bias.empty()) {
                 bias = Mat::zeros(outCn, 1, CV_32S);
             } else {
                 CV_Assert(bias.isContinuous() && (int)bias.total() == outCn);
             }
-            
+
             Mat Bf(bias.size(), CV_32F);
-            
+
             for(int i = 0; i < outCn; i++) {
                 Mat subW(W.dims-1, W.size.p+1, W.type(), W.ptr(i));
                 Mat subWf(Wf.dims-1, Wf.size.p+1, Wf.type(), Wf.ptr(i));
@@ -1653,14 +1653,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             layerParams.blobs.push_back(W_scale);
             layerParams.blobs.push_back(W_zp);
             layerParams.blobs.push_back(bias);
-            
+
             layerParams.set("num_output", outCn);
             layerParams.set("orig_layer_type", layer_type);
             layerParams.set("x_scale", x_sc);
             layerParams.set("x_zeropoint", x_zp);
             layerParams.set("y_scale", y_sc);
             layerParams.set("y_zeropoint", y_zp);
-            
+
             if(x_zp != 0)
                 CV_Error(CV_StsError, "only 'x_zeropoint==0' case is now supported");
         }

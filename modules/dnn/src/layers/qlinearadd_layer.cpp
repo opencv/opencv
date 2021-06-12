@@ -28,15 +28,15 @@ public:
     QLinearAddLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        
+
         a_scale = params.get<float>("a_scale", 1.f);
         b_scale = params.get<float>("b_scale", 1.f);
         c_scale = params.get<float>("c_scale", 1.f);
-        
+
         a_zeropoint = params.get<int>("a_zeropoint", 0);
         b_zeropoint = params.get<int>("b_zeropoint", 0);
         c_zeropoint = params.get<int>("c_zeropoint", 0);
-        
+
         params.blobs[0].convertTo(bias, CV_32F, b_scale, -b_zeropoint*b_scale);
         outDepth = CV_32F; // should be changed to CV_8S (or CV_8U) eventually
     }
@@ -79,29 +79,29 @@ public:
         int bdepth = bias.depth();
         int idepth = inpBlob.depth();
         int odepth = outBlob.depth();
-        
+
         bool isContinuous = inpBlob.isContinuous() && outBlob.isContinuous() && bias.isContinuous();
-        
+
         CV_Assert(idepth == CV_32F || idepth == CV_8U || idepth == CV_8S);
         CV_Assert(odepth == CV_32F);
         CV_Assert(bdepth == CV_32F);
-        
+
         int ndims = inpBlob.dims;
-        
-        CV_Assert(ndims >= 2 && ndims <= 4 && ndims == bias.dims || ndims == bias.dims+1);
+
+        CV_Assert(ndims >= 2 && ndims <= 4 && (ndims == bias.dims || ndims == bias.dims+1));
         int W = inpBlob.size.p[ndims-1];
         int H = inpBlob.size.p[ndims-2];
         int C = ndims > 2 ? inpBlob.size.p[ndims-3] : 1;
         int N = ndims > 3 ? inpBlob.size.p[ndims-4] : 1;
-        
+
         float a_sc = a_scale, ic_scale = 1.f/c_scale;
         float a_zp = (float)a_zeropoint, c_zp = (float)c_zeropoint;
-        
+
         if (isContinuous) {
             W *= H;
             H = 1;
         }
-        
+
         for(int n = 0; n < N; n++)
         {
             for(int c = 0; c < C; c++)
@@ -114,7 +114,7 @@ public:
                 const float* biasptr = bias.ptr<float>();
                 size_t ostep = outBlob.step.p[0]/sizeof(outptr[0]);
                 size_t bstep = bias.step.p[1]/sizeof(biasptr[0]);
-                
+
                 if(idepth == CV_8U) {
                     const uint8_t* inptr =
                         ndims == 2 ? inpBlob.ptr<uint8_t>() :

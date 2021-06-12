@@ -706,7 +706,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         float a_scale, b_scale, c_scale;
         int a_zeropoint, b_zeropoint, c_zeropoint;
-        
+
         static Ptr<QLinearAddLayer> create(const LayerParams& params);
     };
 

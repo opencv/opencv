@@ -28,7 +28,7 @@ public:
     QuantizeLinearLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        
+
         axis = params.get<int>("axis", -1);
         scale = !params.blobs.empty() ? params.blobs[0] : Mat();
         zeroPoint = params.blobs.size() > 1 ? params.blobs[1] : Mat::zeros(1, 1, CV_8U);
@@ -70,37 +70,37 @@ public:
         Mat &inpBlob = inputs[0];
         Mat &outBlob = outputs[0];
         bool isContinuous = inpBlob.isContinuous() && outBlob.isContinuous();
-        
+
         int odepth = outBlob.depth();
         CV_Assert(inpBlob.depth() == CV_32F && (odepth == CV_32F));
         int ndims = inpBlob.dims;
-        
+
         CV_Assert(ndims >= 2 && ndims <= 4);
         int W = inpBlob.size.p[ndims-1];
         int H = inpBlob.size.p[ndims-2];
         int C = ndims > 2 ? inpBlob.size.p[ndims-3] : 1;
         int N = ndims > 3 ? inpBlob.size.p[ndims-4] : 1;
-        
+
         CV_Assert(axis == ndims - 3 || axis == -1);
-        
+
         int stotal = (int)scale.total();
         CV_Assert(!scale.empty() && scale.isContinuous() &&
                   scale.type() == CV_32FC1 &&
-                  stotal == 1 || stotal == C);
+                  (stotal == 1 || stotal == C));
         int ztype = zeroPoint.type();
         int ztotal = (int)zeroPoint.total();
         CV_Assert(zeroPoint.empty() ||
                   ((ztype == CV_8U || ztype == CV_8S) &&
-                   ztotal == 1 || ztotal == C));
-         
+                   (ztotal == 1 || ztotal == C)));
+
         const float* sptr = scale.ptr<float>();
         const uint8_t* zptr = zeroPoint.ptr<uint8_t>();
-        
+
         if(isContinuous) {
             W *= H;
             H = 1;
         }
-        
+
         for(int n = 0; n < N; n++)
         {
             for(int c = 0; c < C; c++)
@@ -164,7 +164,7 @@ public:
     DequantizeLinearLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        
+
         axis = params.get<int>("axis", -1);
         scale = !params.blobs.empty() ? params.blobs[0] : Mat();
         zeroPoint = params.blobs.size() > 1 ? params.blobs[1] : Mat::zeros(1, 1, CV_8U);
@@ -206,38 +206,38 @@ public:
         Mat &outBlob = outputs[0];
         int idepth = inpBlob.depth();
         int odepth = outBlob.depth();
-        
+
         bool isContinuous = inpBlob.isContinuous() && outBlob.isContinuous();
-        
+
         CV_Assert((idepth == CV_8U || idepth == CV_8S || idepth == CV_32F) &&
                   (odepth == CV_32F));
         int ndims = inpBlob.dims;
-        
+
         CV_Assert(ndims >= 2 && ndims <= 4);
         int W = inpBlob.size.p[ndims-1];
         int H = inpBlob.size.p[ndims-2];
         int C = ndims > 2 ? inpBlob.size.p[ndims-3] : 1;
         int N = ndims > 3 ? inpBlob.size.p[ndims-4] : 1;
-        
+
         CV_Assert(axis == ndims - 3 || axis == -1);
         int stotal = (int)scale.total();
         CV_Assert(!scale.empty() && scale.isContinuous() &&
                   scale.type() == CV_32FC1 &&
-                  stotal == 1 || stotal == C);
+                  (stotal == 1 || stotal == C));
         int ztype = zeroPoint.type();
         int ztotal = (int)zeroPoint.total();
         CV_Assert(zeroPoint.empty() ||
                   ((ztype == CV_8U || ztype == CV_8S) &&
-                   ztotal == 1 || ztotal == C));
-        
+                   (ztotal == 1 || ztotal == C)));
+
         const float* sptr = scale.ptr<float>();
         const uint8_t* zptr = zeroPoint.ptr<uint8_t>();
-        
+
         if(isContinuous) {
             W *= H;
             H = 1;
         }
-        
+
         for(int n = 0; n < N; n++)
         {
             for(int c = 0; c < C; c++)
@@ -253,7 +253,7 @@ public:
                         (float)((const int8_t*)zptr)[zidx];
                 size_t istep = inpBlob.step.p[ndims-2];
                 size_t ostep = outBlob.step.p[ndims-2]/sizeof(outptr[0]);
-                
+
                 if (idepth == CV_8U)
                 {
                     const uint8_t* inptr =
