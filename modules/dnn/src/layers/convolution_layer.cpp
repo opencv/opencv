@@ -117,7 +117,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
-                  (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
+                  (!inputs.empty() && blobs.size() >= 1));
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
@@ -246,6 +246,7 @@ class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 public:
     enum { VEC_ALIGN = 8, DFT_TYPE = CV_32F };
     Mat weightsMat;
+    int xzeroPoint;
     std::vector<float> biasvec;
     std::vector<float> reluslope;
     Ptr<ActivationLayer> activ;
@@ -271,6 +272,8 @@ public:
 
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
+        xzeroPoint = params.get<int>("x_zeropoint", 0);
+        CV_Assert(xzeroPoint == 0);
 #ifdef HAVE_OPENCL
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;

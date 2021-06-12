@@ -1326,7 +1326,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 if (!scale.empty()) {
                     if(!((sc_total == 1 || (k == 1 && sc_total == outN)) && scale.type() == CV_32F))
                         CV_Error(CV_StsError,
-                                 "only scalar floating-point x_scale/y_scale is supported in QLinearConv; "
+                                 "only scalar floating-point x_scale/y_scale is supported in QLinearMatMul; "
                                  "w_scale could be scalar or contain as many elements as the number of output channels");
                     scale_val[k] = sc_total == 1 ? *scale.ptr<float>() : 0.f;
                 }
@@ -1335,7 +1335,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 if (!zp.empty()) {
                     if(!((zp_total == 1 || (k == 1 && zp_total == outN)) && (zp_type == CV_8U || zp_type == CV_8S)))
                         CV_Error(CV_StsError,
-                                "only scalar INT8/UINT8 x_zeropoint/w_zeropoint/y_zeropoint is supported in QLinearConv; "
+                                "only scalar INT8/UINT8 x_zeropoint/w_zeropoint/y_zeropoint is supported in QLinearMatMul; "
                                 "w_zeropoint could be scalar or contain as many elements as the number of output channels");
                     zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
                 }
@@ -1381,6 +1381,61 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             layerParams.set("a_zeropoint", a_zp);
             layerParams.set("y_scale", y_sc);
             layerParams.set("y_zeropoint", y_zp);
+        }
+        else if (layer_type == "QLinearAdd")
+        {
+            int ninputs = node_proto.input_size();
+            CV_Assert(ninputs == 7 || ninputs == 8);
+            layerParams.type = "QLinearAdd";
+            
+            std::vector<Mat> blobs;
+            // let's count it from zero for easier code comprehension
+            for (int j = 0; j < ninputs; j++) {
+                if (constBlobs.find(node_proto.input(j)) != constBlobs.end())
+                    blobs.push_back(getBlob(node_proto, j));
+                else
+                    blobs.push_back(Mat());
+            }
+            if(blobs.size() == 7)
+                blobs.push_back(Mat());
+            
+            CV_Assert(blobs[0].empty());
+            CV_Assert(!blobs[3].empty());
+            Mat B = getBlob(node_proto, 3);
+            CV_Assert(B.type() == CV_8U || B.type() == CV_8S);
+            
+            float scale_val[] = {1.f, 1.f, 1.f};
+            int zp_val[] = {0, 0, 0};
+            for(int k = 0; k < 3; k++) {
+                int idx = k == 0 ? 1 : k == 1 ? 4 : 6;
+                Mat scale = blobs[idx], zp = blobs[idx+1];
+                int sc_total = (int)scale.total();
+                if (!scale.empty()) {
+                    if(!(sc_total == 1 && scale.type() == CV_32F))
+                        CV_Error(CV_StsError,
+                                 "only scalar floating-point a_scale/b_scale/c_scale is supported in QLinearAdd");
+                    scale_val[k] = *scale.ptr<float>();
+                }
+                int zp_type = zp.type();
+                int zp_total = (int)zp.total();
+                if (!zp.empty()) {
+                    if(!(zp_total == 1 && (zp_type == CV_8U || zp_type == CV_8S)))
+                        CV_Error(CV_StsError,
+                                "only scalar INT8/UINT8 a_zeropoint/b_zeropoint/c_zeropoint is supported in QLinearAdd");
+                    zp_val[k] = zp_type == CV_8U ? (int)*zp.ptr<uint8_t>() : (int)*zp.ptr<int8_t>();
+                }
+            }
+            
+            // the formula:
+            //   (((a - a_zeropoint)*a_scale) + (b - b_zeropoint)*b_scale))/c_scale + c_zeropoint
+            // is assumed
+            layerParams.blobs.push_back(B);
+            layerParams.set("a_scale", scale_val[0]);
+            layerParams.set("b_scale", scale_val[1]);
+            layerParams.set("c_scale", scale_val[2]);
+            layerParams.set("a_zeropoint", zp_val[0]);
+            layerParams.set("b_zeropoint", zp_val[1]);
+            layerParams.set("c_zeropoint", zp_val[2]);
         }
         else if (layer_type == "Mul" || layer_type == "Div")
         {
@@ -1605,6 +1660,9 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             layerParams.set("x_zeropoint", x_zp);
             layerParams.set("y_scale", y_sc);
             layerParams.set("y_zeropoint", y_zp);
+            
+            if(x_zp != 0)
+                CV_Error(CV_StsError, "only 'x_zeropoint==0' case is now supported");
         }
         else if (layer_type == "ConvTranspose")
         {

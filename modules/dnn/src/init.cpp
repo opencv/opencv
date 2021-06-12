@@ -141,6 +141,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
     CV_DNN_REGISTER_LAYER_CLASS(QuantizeLinear, QuantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DequantizeLinear, DequantizeLinearLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(QLinearAdd, QLinearAddLayer);
 }
 
 CV__DNN_INLINE_NS_END
