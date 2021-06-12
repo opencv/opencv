@@ -863,4 +863,6 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 
 } // cv
 
+#include "highgui/viz3d.hpp"
+
 #endif

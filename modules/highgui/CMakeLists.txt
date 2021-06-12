@@ -68,6 +68,18 @@ file(GLOB highgui_ext_hdrs
 # Removing WinRT API headers by default
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
+if(HAVE_GLFW)
+  add_definitions(-DHAVE_GLFW)
+  include_directories("${glfw3_DIR}/../../../include")
+  link_directories("${glfw3_DIR}/../../../lib")
+  list(APPEND HIGHGUI_LIBRARIES glfw3)
+endif()
+
+list(APPEND highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/viz3d.hpp")
+file(GLOB highgui_viz3d_srcs "${CMAKE_CURRENT_LIST_DIR}/src/viz3d/*.cpp")
+file(GLOB highgui_viz3d_hdrs "${CMAKE_CURRENT_LIST_DIR}/src/viz3d/*.hpp")
+list(APPEND highgui_srcs "${highgui_viz3d_srcs}" "${highgui_viz3d_hdrs}")
+
 if(HAVE_QT5)
   add_definitions(-DHAVE_QT)
 

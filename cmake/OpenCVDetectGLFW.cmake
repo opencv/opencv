@@ -1,0 +1,6 @@
+if(NOT GLFW_FOUND)
+  find_package(glfw3 QUIET)
+  if(glfw3_DIR)
+      set(HAVE_GLFW TRUE)
+  endif()
+endif()  

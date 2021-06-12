@@ -246,6 +246,9 @@ OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
 OCV_OPTION(WITH_VTK "Include VTK library support (and build opencv_viz module eiher)" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING
   VERIFY HAVE_VTK)
+OCV_OPTION(WITH_GLFW "Include GLFW support" ON
+  VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT WINRT AND NOT CMAKE_CROSSCOMPILING
+  VERIFY HAVE_GLFW)
 OCV_OPTION(WITH_CUDA "Include NVidia Cuda Runtime support" OFF
   VISIBLE_IF NOT IOS AND NOT WINRT
   VERIFY HAVE_CUDA)
@@ -804,6 +807,10 @@ if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
 endif()
 
+if(WITH_GLFW)
+  include(cmake/OpenCVDetectGLFW.cmake)
+endif()
+
 if(WITH_OPENVX)
   include(cmake/FindOpenVX.cmake)
 endif()
@@ -1285,6 +1292,10 @@ endif()
 
 if(WITH_VTK OR HAVE_VTK)
   status("    VTK support:" HAVE_VTK THEN "YES (ver ${VTK_VERSION})" ELSE NO)
+endif()
+
+if(WITH_GLFW OR HAVE_GLFW)
+  status("    GLFW support:" HAVE_GLFW THEN "YES" ELSE NO)
 endif()
 
 if(WITH_UNIFONT OR HAVE_UNIFONT)
