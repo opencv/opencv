@@ -26,11 +26,14 @@ INSTANTIATE_TEST_CASE_P(CPU_Tests, TestGAPIStereo,
                                 Values(STEREO_CPU),
                                 Values(cv::gapi::StereoOutputFormat::DEPTH_FLOAT16,
                                        cv::gapi::StereoOutputFormat::DEPTH_FLOAT32,
-                                       cv::gapi::StereoOutputFormat::DISPARITY_FIXED16_12_4),
+                                       cv::gapi::StereoOutputFormat::DISPARITY_FIXED16_12_4,
+                                       cv::gapi::StereoOutputFormat::DEPTH_16F,
+                                       cv::gapi::StereoOutputFormat::DEPTH_32F,
+                                       cv::gapi::StereoOutputFormat::DISPARITY_16Q_11_4),
                                 Values(16),
                                 Values(43),
-                                Values(10.),
-                                Values(100.),
+                                Values(63.5),
+                                Values(3.6),
                                 Values(AbsExact().to_compare_obj())));
 
 } // opencv_test

@@ -462,7 +462,7 @@ enum RobotWorldHandEyeCalibrationMethod
 
 @param objectPoints Vector of vectors of the calibration pattern points in the calibration pattern
 coordinate space. In the old interface all the per-view vectors are concatenated. See
-calibrateCamera for details.
+#calibrateCamera for details.
 @param imagePoints Vector of vectors of the projections of the calibration pattern points. In the
 old interface all the per-view vectors are concatenated.
 @param imageSize Image size in pixels used to initialize the principal point.
@@ -556,7 +556,7 @@ Each entry stands for one corner of the pattern and can have one of the followin
 -   3 = left-top corner of a black cell with a white marker dot
 -   4 = left-top corner of a white cell with a black marker dot (pattern origin in case of markers otherwise first corner)
 
-The function is analog to findchessboardCorners but uses a localized radon
+The function is analog to #findChessboardCorners but uses a localized radon
 transformation approximated by box filters being more robust to all sort of
 noise, faster on larger images and is able to directly return the sub-pixel
 position of the internal chessboard corners. The Method is based on the paper
@@ -606,7 +606,7 @@ and should be below ~3.0 pixels.
 
 @param image Gray image used to find chessboard corners
 @param patternSize Size of a found chessboard pattern
-@param corners Corners found by findChessboardCorners(SB)
+@param corners Corners found by #findChessboardCornersSB
 @param rise_distance Rise distance 0.8 means 10% ... 90% of the final signal strength
 @param vertical By default edge responses for horizontal lines are calculated
 @param sharpness Optional output array with a sharpness value for calculated edge responses (see description)
@@ -634,9 +634,9 @@ CV_EXPORTS_W bool find4QuadCornerSubpix( InputArray img, InputOutputArray corner
 @param image Destination image. It must be an 8-bit color image.
 @param patternSize Number of inner corners per a chessboard row and column
 (patternSize = cv::Size(points_per_row,points_per_column)).
-@param corners Array of detected corners, the output of findChessboardCorners.
+@param corners Array of detected corners, the output of #findChessboardCorners.
 @param patternWasFound Parameter indicating whether the complete board was found or not. The
-return value of findChessboardCorners should be passed here.
+return value of #findChessboardCorners should be passed here.
 
 The function draws individual chessboard corners detected either as red circles if the board was not
 found, or as colored corners connected with lines if the board was found.
@@ -854,21 +854,21 @@ CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,
 
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
 
-This function is an extension of calibrateCamera() with the method of releasing object which was
+This function is an extension of #calibrateCamera with the method of releasing object which was
 proposed in @cite strobl2011iccv. In many common cases with inaccurate, unmeasured, roughly planar
 targets (calibration plates), this method can dramatically improve the precision of the estimated
 camera parameters. Both the object-releasing method and standard method are supported by this
 function. Use the parameter **iFixedPoint** for method selection. In the internal implementation,
-calibrateCamera() is a wrapper for this function.
+#calibrateCamera is a wrapper for this function.
 
 @param objectPoints Vector of vectors of calibration pattern points in the calibration pattern
-coordinate space. See calibrateCamera() for details. If the method of releasing object to be used,
+coordinate space. See #calibrateCamera for details. If the method of releasing object to be used,
 the identical calibration board must be used in each view and it must be fully visible, and all
 objectPoints[i] must be the same and all points should be roughly close to a plane. **The calibration
 target has to be rigid, or at least static if the camera (rather than the calibration target) is
 shifted for grabbing images.**
 @param imagePoints Vector of vectors of the projections of calibration pattern points. See
-calibrateCamera() for details.
+#calibrateCamera for details.
 @param imageSize Size of the image used only to initialize the intrinsic camera matrix.
 @param iFixedPoint The index of the 3D object point in objectPoints[0] to be fixed. It also acts as
 a switch for calibration method selection. If object-releasing method to be used, pass in the
@@ -878,9 +878,9 @@ board grid is recommended to be fixed when object-releasing method being utilize
 \cite strobl2011iccv, two other points are also fixed. In this implementation, objectPoints[0].front
 and objectPoints[0].back.z are used. With object-releasing method, accurate rvecs, tvecs and
 newObjPoints are only possible if coordinates of these three fixed points are accurate enough.
-@param cameraMatrix Output 3x3 floating-point camera matrix. See calibrateCamera() for details.
-@param distCoeffs Output vector of distortion coefficients. See calibrateCamera() for details.
-@param rvecs Output vector of rotation vectors estimated for each pattern view. See calibrateCamera()
+@param cameraMatrix Output 3x3 floating-point camera matrix. See #calibrateCamera for details.
+@param distCoeffs Output vector of distortion coefficients. See #calibrateCamera for details.
+@param rvecs Output vector of rotation vectors estimated for each pattern view. See #calibrateCamera
 for details.
 @param tvecs Output vector of translation vectors estimated for each pattern view.
 @param newObjPoints The updated output vector of calibration pattern points. The coordinates might
@@ -888,15 +888,15 @@ be scaled based on three fixed points. The returned coordinates are accurate onl
 mentioned three fixed points are accurate. If not needed, noArray() can be passed in. This parameter
 is ignored with standard calibration method.
 @param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic parameters.
-See calibrateCamera() for details.
+See #calibrateCamera for details.
 @param stdDeviationsExtrinsics Output vector of standard deviations estimated for extrinsic parameters.
-See calibrateCamera() for details.
+See #calibrateCamera for details.
 @param stdDeviationsObjPoints Output vector of standard deviations estimated for refined coordinates
 of calibration pattern points. It has the same size and order as objectPoints[0] vector. This
 parameter is ignored with standard calibration method.
  @param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of some predefined values. See
-calibrateCamera() for details. If the method of releasing object is used, the calibration time may
+#calibrateCamera for details. If the method of releasing object is used, the calibration time may
 be much longer. CALIB_USE_QR or CALIB_USE_LU could be used for faster calibration with potentially
 less precise and less stable in some rare cases.
 @param criteria Termination criteria for the iterative optimization algorithm.
@@ -905,7 +905,7 @@ less precise and less stable in some rare cases.
 
 The function estimates the intrinsic camera parameters and extrinsic parameters for each of the
 views. The algorithm is based on @cite Zhang2000, @cite BouguetMCT and @cite strobl2011iccv. See
-calibrateCamera() for other detailed explanations.
+#calibrateCamera for other detailed explanations.
 @sa
    calibrateCamera, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate, undistort
  */
@@ -932,8 +932,8 @@ CV_EXPORTS_W double calibrateCameraRO( InputArrayOfArrays objectPoints,
 
 /** @brief Computes useful camera characteristics from the camera intrinsic matrix.
 
-@param cameraMatrix Input camera intrinsic matrix that can be estimated by calibrateCamera or
-stereoCalibrate .
+@param cameraMatrix Input camera intrinsic matrix that can be estimated by #calibrateCamera or
+#stereoCalibrate .
 @param imageSize Input image size in pixels.
 @param apertureWidth Physical width in mm of the sensor.
 @param apertureHeight Physical height in mm of the sensor.
@@ -1068,13 +1068,13 @@ Besides the stereo-related information, the function can also perform a full cal
 the two cameras. However, due to the high dimensionality of the parameter space and noise in the
 input data, the function can diverge from the correct solution. If the intrinsic parameters can be
 estimated with high accuracy for each of the cameras individually (for example, using
-calibrateCamera ), you are recommended to do so and then pass @ref CALIB_FIX_INTRINSIC flag to the
+#calibrateCamera ), you are recommended to do so and then pass @ref CALIB_FIX_INTRINSIC flag to the
 function along with the computed intrinsic parameters. Otherwise, if all the parameters are
 estimated at once, it makes sense to restrict some parameters, for example, pass
  @ref CALIB_SAME_FOCAL_LENGTH and @ref CALIB_ZERO_TANGENT_DIST flags, which is usually a
 reasonable assumption.
 
-Similarly to calibrateCamera, the function minimizes the total re-projection error for all the
+Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
 points in all the available views from both cameras. The function returns the final value of the
 re-projection error.
  */

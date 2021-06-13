@@ -1,5 +1,5 @@
 # --- GTK ---
-ocv_clear_vars(HAVE_GTK HAVE_GTK3 HAVE_GTHREAD HAVE_GTKGLEXT)
+ocv_clear_vars(HAVE_GTK HAVE_GTK2 HAVE_GTK3 HAVE_GTHREAD HAVE_GTKGLEXT)
 if(WITH_GTK)
   if(NOT WITH_GTK_2_X)
     ocv_check_modules(GTK3 gtk+-3.0)
@@ -32,7 +32,7 @@ if(WITH_GTK)
     set(HAVE_GTHREAD "${HAVE_GTHREAD}" PARENT_SCOPE) # informational
     set(GTHREAD_VERSION "${GTHREAD_VERSION}" PARENT_SCOPE) # informational
   endif()
-  if(WITH_OPENGL AND NOT HAVE_GTK3)
+  if((WITH_OPENGL OR HAVE_OPENGL) AND HAVE_GTK2)
     ocv_check_modules(GTKGLEXT gtkglext-1.0)
     if(HAVE_GTKGLEXT)
       ocv_add_external_target(gtkglext "${GTKGLEXT_INCLUDE_DIRS}" "${GTKGLEXT_LIBRARIES}" "HAVE_GTKGLEXT")
@@ -42,6 +42,15 @@ if(WITH_GTK)
   endif()
 elseif(HAVE_GTK)
   ocv_add_external_target(gtk "${GTK_INCLUDE_DIRS}" "${GTK_LIBRARIES}" "${GTK_DEFINES};HAVE_GTK")
+endif()
+
+if(WITH_OPENGL AND HAVE_GTKGLEXT)
+  find_package(OpenGL QUIET)
+  if(OPENGL_FOUND)
+    set(HAVE_OPENGL TRUE)
+    #set(HAVE_OPENGL ${HAVE_OPENGL} PARENT_SCOPE)
+    ocv_add_external_target(gtk_opengl "${OPENGL_INCLUDE_DIRS}" "${OPENGL_LIBRARIES}" "HAVE_OPENGL")
+  endif()
 endif()
 
 set(HAVE_GTK ${HAVE_GTK} PARENT_SCOPE)

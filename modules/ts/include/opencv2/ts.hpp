@@ -326,6 +326,7 @@ Mat calcSobelKernel2D( int dx, int dy, int apertureSize, int origin=0 );
 Mat calcLaplaceKernel2D( int aperture_size );
 
 void initUndistortMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
+void initInverseRectificationMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
 
 void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());

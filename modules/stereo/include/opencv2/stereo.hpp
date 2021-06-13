@@ -61,7 +61,7 @@ pixels from the original images from the cameras are retained in the rectified i
 image pixels are lost). Any intermediate value yields an intermediate result between
 those two extreme cases.
 @param newImageSize New image resolution after rectification. The same size should be passed to
-initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
+#initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
 is passed (default), it is set to the original imageSize . Setting it to a larger value can help you
 preserve details in the original image, especially when there is a big radial distortion.
 @param validPixROI1 Optional output rectangles inside the rectified images where all the pixels
@@ -73,7 +73,7 @@ are valid. If alpha=0 , the ROIs cover the whole images. Otherwise, they are lik
 
 The function computes the rotation matrices for each camera that (virtually) make both camera image
 planes the same plane. Consequently, this makes all the epipolar lines parallel and thus simplifies
-the dense stereo correspondence problem. The function takes the matrices computed by stereoCalibrate
+the dense stereo correspondence problem. The function takes the matrices computed by #stereoCalibrate
 as input. As output, it provides two rotation matrices and also two projection matrices in the new
 coordinates. The function distinguishes the following two cases:
 
@@ -117,7 +117,7 @@ coordinates. The function distinguishes the following two cases:
     @ref STEREO_ZERO_DISPARITY is set.
 
 As you can see, the first three columns of P1 and P2 will effectively be the new "rectified" camera
-matrices. The matrices, together with R1 and R2 , can then be passed to initUndistortRectifyMap to
+matrices. The matrices, together with R1 and R2 , can then be passed to #initUndistortRectifyMap to
 initialize the rectification map for each camera.
 
 See below the screenshot from the stereo_calib.cpp sample. Some red horizontal lines pass through
@@ -140,9 +140,9 @@ CV_EXPORTS_W void stereoRectify( InputArray cameraMatrix1, InputArray distCoeffs
 
 @param points1 Array of feature points in the first image.
 @param points2 The corresponding points in the second image. The same formats as in
-findFundamentalMat are supported.
+#findFundamentalMat are supported.
 @param F Input fundamental matrix. It can be computed from the same set of point pairs using
-findFundamentalMat .
+#findFundamentalMat .
 @param imgSize Size of the image.
 @param H1 Output rectification homography matrix for the first image.
 @param H2 Output rectification homography matrix for the second image.
@@ -153,7 +153,7 @@ rejected prior to computing the homographies. Otherwise, all the points are cons
 
 The function computes the rectification transformations without knowing intrinsic parameters of the
 cameras and their relative position in the space, which explains the suffix "uncalibrated". Another
-related difference from stereoRectify is that the function outputs not the rectification
+related difference from #stereoRectify is that the function outputs not the rectification
 transformations in the object (3D) space, but the planar perspective transformations encoded by the
 homography matrices H1 and H2 . The function implements the algorithm @cite Hartley99 .
 
@@ -162,8 +162,8 @@ homography matrices H1 and H2 . The function implements the algorithm @cite Hart
     depends on the epipolar geometry. Therefore, if the camera lenses have a significant distortion,
     it would be better to correct it before computing the fundamental matrix and calling this
     function. For example, distortion coefficients can be estimated for each head of stereo camera
-    separately by using calibrateCamera . Then, the images can be corrected using undistort , or
-    just the point coordinates can be corrected with undistortPoints .
+    separately by using #calibrateCamera . Then, the images can be corrected using #undistort , or
+    just the point coordinates can be corrected with #undistortPoints .
  */
 CV_EXPORTS_W bool stereoRectifyUncalibrated( InputArray points1, InputArray points2,
                                              InputArray F, Size imgSize,
@@ -378,7 +378,7 @@ CV_EXPORTS_W void filterSpeckles( InputOutputArray img, double newVal,
                                   int maxSpeckleSize, double maxDiff,
                                   InputOutputArray buf = noArray() );
 
-//! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by cv::stereoRectify())
+//! computes valid disparity ROI from the valid ROIs of the rectified images (that are returned by #stereoRectify)
 CV_EXPORTS_W Rect getValidDisparityROI( Rect roi1, Rect roi2,
                                         int minDisparity, int numberOfDisparities,
                                         int blockSize );

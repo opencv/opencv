@@ -78,8 +78,20 @@ def bootstrap():
     if DEBUG: print('OpenCV loader: PYTHON_EXTENSIONS_PATHS={}'.format(str(l_vars['PYTHON_EXTENSIONS_PATHS'])))
     if DEBUG: print('OpenCV loader: BINARIES_PATHS={}'.format(str(l_vars['BINARIES_PATHS'])))
 
+    applySysPathWorkaround = False
+    if hasattr(sys, 'OpenCV_REPLACE_SYS_PATH_0'):
+        applySysPathWorkaround = True
+    else:
+        try:
+            BASE_DIR = os.path.dirname(LOADER_DIR)
+            if sys.path[0] == BASE_DIR or os.path.realpath(sys.path[0]) == BASE_DIR:
+                applySysPathWorkaround = True
+        except:
+            if DEBUG: print('OpenCV loader: exception during checking workaround for sys.path[0]')
+            pass  # applySysPathWorkaround is False
+
     for p in reversed(l_vars['PYTHON_EXTENSIONS_PATHS']):
-        sys.path.insert(1, p)
+        sys.path.insert(1 if not applySysPathWorkaround else 0, p)
 
     if os.name == 'nt':
         if sys.version_info[:2] >= (3, 8):  # https://github.com/python/cpython/pull/12302
