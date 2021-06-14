@@ -46,6 +46,7 @@
 #include <deque>
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "opencv2/core/private_iw.hpp"
 
 namespace cv
 {
