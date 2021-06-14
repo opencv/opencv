@@ -45,6 +45,14 @@
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
+
+#if (GTK_MAJOR_VERSION == 3) && defined(HAVE_OPENGL)
+  #undef HAVE_OPENGL  // no support with GTK3
+#endif
+#if defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
+  #undef HAVE_OPENGL  // gtkglext is required
+#endif
+
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stdio.h>
@@ -1187,7 +1195,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
     if (window->useGl)
-        cvSetOpenGlContext(name);
+        cvSetOpenGlContext(name.c_str());
 #endif
 
     return window_ptr;
@@ -1205,7 +1213,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
@@ -1225,7 +1233,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if (!window)
         return;
 
@@ -1239,7 +1247,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
 
     CV_LOCK_MUTEX();
 
-    CvWindow* window = icvFindWindowByName(name);
+    auto window = icvFindWindowByName(name);
     if( !window )
         return;
 
@@ -1905,16 +1913,18 @@ static gboolean icvOnClose( GtkWidget* widget, GdkEvent* /*event*/, gpointer use
 static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_data )
 {
     // TODO move this logic to CvImageWidget
+    // TODO add try-catch wrappers into all callbacks
     CvWindow* window = (CvWindow*)user_data;
+    if (!window || !widget ||
+        window->signature != CV_WINDOW_MAGIC_VAL ||
+        window->widget != widget ||
+        !window->on_mouse)
+        return FALSE;
+
     CvPoint2D32f pt32f = {-1., -1.};
     CvPoint pt = {-1,-1};
     int cv_event = -1, state = 0, flags = 0;
     CvImageWidget * image_widget = CV_IMAGE_WIDGET( widget );
-
-    if( window->signature != CV_WINDOW_MAGIC_VAL ||
-        window->widget != widget || !window->widget ||
-        !window->on_mouse /*|| !image_widget->original_image*/)
-        return FALSE;
 
     if( event->type == GDK_MOTION_NOTIFY )
     {
@@ -2008,8 +2018,10 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
             pt = cvPointFrom32f( pt32f );
         }
 
-        if((unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
-           (unsigned)pt.y < (unsigned)(image_widget->original_image->height) )
+        if (!image_widget->original_image/*OpenGL*/ || (
+               (unsigned)pt.x < (unsigned)(image_widget->original_image->width) &&
+               (unsigned)pt.y < (unsigned)(image_widget->original_image->height)
+            ))
         {
             flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
@@ -2319,6 +2331,11 @@ public:
 class GTKBackendUI : public UIBackend
 {
 public:
+    GTKBackendUI()
+    {
+        // NB: avoid static initialization order fiasco
+        (void)getGTKWindows();
+    }
     ~GTKBackendUI() CV_OVERRIDE
     {
         destroyAllWindows();

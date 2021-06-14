@@ -369,6 +369,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             shape.erase(std::begin(shape) + axis);
         }
 
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
+        }
+
         /** @brief unsqueezes the tensor
          *
          * adds a axis of unit size at the requested before the specified axis
@@ -663,6 +683,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             axis = clamp_axis(axis, rank());
             CV_Assert(axis >= 0 && axis < rank());
             shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
         }
 
         /** @brief unsqueezes the tensor
@@ -1008,6 +1048,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             axis = clamp_axis(axis, rank());
             CV_Assert(axis >= 0 && axis < rank());
             shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
         }
 
         /** @brief unsqueezes the tensor

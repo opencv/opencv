@@ -4,7 +4,7 @@
 
 @CLAMDBLAS_REMAP_ORIGIN@
 
-#include <clAmdBlas.h>
+#include <clBLAS.h>
 
 @CLAMDBLAS_REMAP_DYNAMIC@
 

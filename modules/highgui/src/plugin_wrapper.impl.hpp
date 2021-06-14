@@ -232,8 +232,12 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     return results;
 }
 
+// NB: require loading of imgcodecs module
+static void* g_imwrite = (void*)imwrite;
+
 void PluginUIBackendFactory::loadPlugin()
 {
+    CV_Assert(g_imwrite);
     for (const FileSystemPath_t& plugin : getPluginCandidates(baseName_))
     {
         auto lib = std::make_shared<cv::plugin::impl::DynamicLib>(plugin);

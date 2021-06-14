@@ -29,7 +29,7 @@ class GAPI_EXPORTS GCompiler
     cv::gapi::GKernelPackage m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
-    // Patters built from transformations
+    // Patterns built from transformations
     std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;
 
 

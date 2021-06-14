@@ -103,7 +103,7 @@ std::shared_ptr<UIBackend> createUIBackend()
     }
     if (name.empty())
     {
-        CV_LOG_DEBUG(NULL, "UI: fallback on builtin code");
+        CV_LOG_DEBUG(NULL, "UI: fallback on builtin code: " OPENCV_HIGHGUI_BUILTIN_BACKEND_STR);
     }
     else
     {
