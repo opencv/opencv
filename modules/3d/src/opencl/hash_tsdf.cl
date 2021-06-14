@@ -384,7 +384,7 @@ inline float3 getNormalVoxel(float3 ptVox, __global const struct TsdfVoxel* allV
     int4 offsets[] = { (int4)( 1,  0,  0, 0), (int4)(-1,  0,  0, 0), (int4)( 0,  1,  0, 0), // 0-3
                        (int4)( 0, -1,  0, 0), (int4)( 0,  0,  1, 0), (int4)( 0,  0, -1, 0)  // 4-7
     };
-    
+
     const int nVals = 6;
     float vals[6];
 #else

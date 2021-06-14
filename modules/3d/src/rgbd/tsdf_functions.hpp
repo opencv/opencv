@@ -7,7 +7,7 @@
 #ifndef __OPENCV_TSDF_FUNCTIONS_H__
 #define __OPENCV_TSDF_FUNCTIONS_H__
 
-#include "precomp.hpp"
+#include "utils.hpp"
 
 namespace cv
 {

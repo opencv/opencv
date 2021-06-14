@@ -4,7 +4,7 @@
 
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
-#include "precomp.hpp"
+#include "depth_to_3d.hpp"
 
 namespace cv
 {

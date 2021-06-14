@@ -108,7 +108,7 @@ int main(int argc, char** argv)
         cout << "Format: file_with_rgb_depth_pairs trajectory_file odometry_name [Rgbd or ICP or RgbdICP or FastICP]" << endl;
         return -1;
     }
-    
+
     vector<string> timestamps;
     vector<Mat> Rts;
 
@@ -206,7 +206,7 @@ int main(int argc, char** argv)
             cvtColor(image, gray, COLOR_BGR2GRAY);
             frame_curr->setImage(gray);
             frame_curr->setDepth(depth);
-            
+
             Mat Rt;
             if(!Rts.empty())
             {

@@ -5,7 +5,7 @@
 #ifndef __OPENCV_3D_INTRINSICS_HPP__
 #define __OPENCV_3D_INTRINSICS_HPP__
 
-#include "precomp.hpp"
+#include "utils.hpp"
 
 namespace cv
 {

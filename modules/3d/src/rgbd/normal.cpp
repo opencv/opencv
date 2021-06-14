@@ -4,7 +4,7 @@
 
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
-#include "precomp.hpp"
+#include "utils.hpp"
 
 namespace cv
 {
@@ -856,4 +856,3 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
   }
 
 }
-

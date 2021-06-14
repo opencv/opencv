@@ -19,33 +19,33 @@ void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& t
 {
     CV_Assert(!image.empty());
     CV_Assert(image.type() == CV_8UC1);
-    
+
     CV_Assert(depth.size() == image.size());
     CV_Assert(depth.type() == CV_32FC1);
-    
+
     CV_Assert(!rvec.empty());
     CV_Assert(rvec.total() == 3);
     CV_Assert(rvec.type() == CV_64FC1);
-    
+
     CV_Assert(!tvec.empty());
     CV_Assert(tvec.size() == Size(1, 3));
     CV_Assert(tvec.type() == CV_64FC1);
-    
+
     warpedImage.create(image.size(), CV_8UC1);
     warpedImage = Scalar(0);
     warpedDepth.create(image.size(), CV_32FC1);
     warpedDepth = Scalar(FLT_MAX);
-    
+
     Mat cloud;
     depthTo3d(depth, K, cloud);
     Mat Rt = Mat::eye(4, 4, CV_64FC1);
     {
         Mat R, dst;
         cv::Rodrigues(rvec, R);
-        
+
         dst = Rt(Rect(0,0,3,3));
         R.copyTo(dst);
-        
+
         dst = Rt(Rect(3,0,1,3));
         tvec.copyTo(dst);
     }
@@ -147,10 +147,10 @@ bool CV_OdometryTest::readData(Mat& image, Mat& depth) const
 {
     std::string imageFilename = ts->get_data_path() + "/cv/rgbd/rgb.png";
     std::string depthFilename = ts->get_data_path() + "/cv/rgbd/depth.png";
-    
+
     image = imread(imageFilename,  0);
     depth = imread(depthFilename, -1);
-    
+
     if(image.empty())
     {
         ts->printf( cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str() );
@@ -164,7 +164,7 @@ bool CV_OdometryTest::readData(Mat& image, Mat& depth) const
         ts->set_gtest_status();
         return false;
     }
-    
+
     CV_DbgAssert(image.type() == CV_8UC1);
     CV_DbgAssert(depth.type() == CV_16UC1);
     {
@@ -173,7 +173,7 @@ bool CV_OdometryTest::readData(Mat& image, Mat& depth) const
         depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth_flt < FLT_EPSILON);
         depth = depth_flt;
     }
-    
+
     return true;
 }
 
@@ -206,15 +206,15 @@ void CV_OdometryTest::run(int)
         K.at<float>(0,2) = cx;
         K.at<float>(1,2) = cy;
     }
-    
+
     Mat image, depth;
     if(!readData(image, depth))
         return;
-        
+
     odometry->setCameraMatrix(K);
-    
+
     Mat calcRt;
-    
+
     // 1. Try to find Rt between the same frame (try masks also).
     bool isComputed = odometry->compute(image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
                                         image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
@@ -230,7 +230,7 @@ void CV_OdometryTest::run(int)
         ts->printf(cvtest::TS::LOG, "Incorrect transformation between the same frame (not the identity matrix), diff = %f", diff);
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
-    
+
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
     // Odometry is run on the following pair: the original frame and the warped one.
@@ -247,12 +247,12 @@ void CV_OdometryTest::run(int)
         Mat warpedImage, warpedDepth;
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
-        
+
         Mat imageMask(image.size(), CV_8UC1, Scalar(255));
         isComputed = odometry->compute(image, depth, imageMask, warpedImage, warpedDepth, imageMask, calcRt);
         if(!isComputed)
             continue;
-                
+
         Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
@@ -281,12 +281,12 @@ void CV_OdometryTest::run(int)
         std::cout << "Iter " << iter << std::endl;
         std::cout << "rdiffnorm " << rdiffnorm << "; rnorm " << rnorm << std::endl;
         std::cout << "tdiffnorm " << tdiffnorm << "; tnorm " << tnorm << std::endl;
-        
+
         std::cout << "better_1time_count " << better_1time_count << "; better_5time_count " << better_5times_count << std::endl;
 #endif
     }
 
-    
+
     if(static_cast<double>(better_1time_count) < maxError1 * static_cast<double>(iterCount))
     {
         ts->printf(cvtest::TS::LOG, "\nIncorrect count of accurate poses [1st case]: %f / %f", static_cast<double>(better_1time_count), maxError1 * static_cast<double>(iterCount));

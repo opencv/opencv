@@ -8,7 +8,7 @@
 #ifndef __OPENCV_KINFU_COLORED_TSDF_H__
 #define __OPENCV_KINFU_COLORED_TSDF_H__
 
-#include "precomp.hpp"
+#include "utils.hpp"
 
 namespace cv
 {

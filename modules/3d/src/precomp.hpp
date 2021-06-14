@@ -81,8 +81,9 @@
 #include "rgbd/tsdf.hpp"
 #include "rgbd/tsdf_functions.hpp"
 
-
+#ifdef HAVE_OPENCL
 #include "opencl_kernels_3d.hpp"
+#endif
 
 #define GET_OPTIMIZED(func) (func)
 
