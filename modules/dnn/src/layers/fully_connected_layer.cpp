@@ -55,6 +55,7 @@ using namespace cv::dnn::ocl4dnn;
 #endif
 
 #ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
@@ -523,10 +524,14 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
+        if (weightsMat.empty())
+        {
+            CV_Assert(!bias);
+            return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle));
+        }
+
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
-
         auto biasMat_ = bias ? biasMat : Mat();
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
     }

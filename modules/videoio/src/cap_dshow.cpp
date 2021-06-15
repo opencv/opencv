@@ -2503,7 +2503,10 @@ static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightI
                    int tempH = 999999;
 
                    //Don't want to get stuck in a loop
-                   if(stepX < 1 || stepY < 1) continue;
+                   if(stepX < 1 || stepY < 1){
+                       MyDeleteMediaType(pmtConfig);
+                       continue;
+                    }
 
                    //DebugPrintOut("min is %i %i max is %i %i - res is %i %i\n", scc.MinOutputSize.cx, scc.MinOutputSize.cy,  scc.MaxOutputSize.cx,  scc.MaxOutputSize.cy, stepX, stepY);
                    //DebugPrintOut("min frame duration is %i  max duration is %i\n", scc.MinFrameInterval, scc.MaxFrameInterval);
@@ -2619,7 +2622,8 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
         return true;
     }else{
         VD->streamConf->SetFormat(tmpType);
-        if( tmpType != NULL )MyDeleteMediaType(tmpType);
+        if( VD->pAmMediaType != NULL)MyDeleteMediaType(VD->pAmMediaType);
+        VD->pAmMediaType = tmpType;
     }
 
     return false;

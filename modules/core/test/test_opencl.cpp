@@ -207,9 +207,32 @@ TEST_P(OCL_OpenCLExecutionContext_P, ScopeTest)
     executeUMatCall();
 }
 
-
-
 INSTANTIATE_TEST_CASE_P(/*nothing*/, OCL_OpenCLExecutionContext_P, getOpenCLTestConfigurations());
+
+
+typedef testing::TestWithParam<UMatUsageFlags> UsageFlagsFixture;
+OCL_TEST_P(UsageFlagsFixture, UsageFlagsRetained)
+{
+    if (!cv::ocl::useOpenCL())
+    {
+        throw SkipTestException("OpenCL is not available / disabled");
+    }
+
+    const UMatUsageFlags usage = GetParam();
+    cv::UMat flip_in(10, 10, CV_32F, usage);
+    cv::UMat flip_out(usage);
+    cv::flip(flip_in, flip_out, 1);
+    cv::ocl::finish();
+
+    ASSERT_EQ(usage, flip_in.usageFlags);
+    ASSERT_EQ(usage, flip_out.usageFlags);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /*nothing*/,
+    UsageFlagsFixture,
+    testing::Values(USAGE_DEFAULT, USAGE_ALLOCATE_HOST_MEMORY, USAGE_ALLOCATE_DEVICE_MEMORY)
+);
 
 
 } } // namespace opencv_test::ocl

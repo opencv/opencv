@@ -174,4 +174,11 @@ TEST(MediaFrame, Callback) {
     EXPECT_EQ(3, counter);
 }
 
+TEST(MediaFrame, blobParams) {
+    cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    EXPECT_NO_THROW(frame.blobParams());
+}
+
 } // namespace opencv_test
