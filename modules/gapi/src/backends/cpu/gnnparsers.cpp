@@ -170,14 +170,14 @@ private:
 } // namespace nn
 } // namespace gapi
 
-void unitedParseSSD(const cv::Mat&  in_ssd_result,
-                    const cv::Size& in_size,
-                    const float     confidence_threshold,
-                    const int       filter_label,
-                    const bool      alignment_to_square,
-                    const bool      filter_out_of_bounds,
-                    std::vector<cv::Rect>& out_boxes,
-                    std::vector<int>&      out_labels)
+void ParseSSD(const cv::Mat&  in_ssd_result,
+              const cv::Size& in_size,
+              const float     confidence_threshold,
+              const int       filter_label,
+              const bool      alignment_to_square,
+              const bool      filter_out_of_bounds,
+              std::vector<cv::Rect>& out_boxes,
+              std::vector<int>&      out_labels)
 {
     cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
     out_boxes.clear();

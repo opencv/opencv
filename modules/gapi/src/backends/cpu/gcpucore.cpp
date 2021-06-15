@@ -652,12 +652,12 @@ GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
                     std::vector<cv::Rect>& out_boxes,
                     std::vector<int>&      out_labels)
     {
-        cv::unitedParseSSD(in_ssd_result, in_size,
-                           confidence_threshold,
-                           filter_label,
-                           false,
-                           false,
-                           out_boxes, out_labels);
+        cv::ParseSSD(in_ssd_result, in_size,
+                     confidence_threshold,
+                     filter_label,
+                     false,
+                     false,
+                     out_boxes, out_labels);
     }
 };
 
@@ -671,12 +671,12 @@ GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::parsers::GParseSSD)
                     std::vector<cv::Rect>& out_boxes)
     {
         std::vector<int> unused_labels;
-        cv::unitedParseSSD(in_ssd_result, in_size,
-                           confidence_threshold,
-                           -1,
-                           alignment_to_square,
-                           filter_out_of_bounds,
-                           out_boxes, unused_labels);
+        cv::ParseSSD(in_ssd_result, in_size,
+                     confidence_threshold,
+                     -1,
+                     alignment_to_square,
+                     filter_out_of_bounds,
+                     out_boxes, unused_labels);
     }
 };
 
