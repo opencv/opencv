@@ -227,7 +227,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #ifdef HAVE_IPP_ICV
 #define ICV_BASE
 #if IPP_VERSION_X100 >= 201700
-#include "ippicv.h"
+#include "ippicv_l.h"
+#include "ippicv_defs.h"
+#include "ippversion.h"
 #else
 #include "ipp.h"
 #endif
@@ -239,10 +241,8 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
 #  endif
-#include "iw++/iw.hpp"
-#  ifdef HAVE_IPP_IW_LL
-#include "iw/iw_ll.h"
-#  endif
+#include "iw++/iw_core.hpp"
+
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
 #  endif
@@ -343,29 +343,6 @@ static inline IppDataType ippiGetDataType(int depth)
         (IppDataType)-1;
 }
 
-static inline int ippiSuggestThreadsNum(size_t width, size_t height, size_t elemSize, double multiplier)
-{
-    int threads = cv::getNumThreads();
-    if(threads > 1 && height >= 64)
-    {
-        size_t opMemory = (int)(width*height*elemSize*multiplier);
-        int l2cache = 0;
-#if IPP_VERSION_X100 >= 201700
-        ippGetL2CacheSize(&l2cache);
-#endif
-        if(!l2cache)
-            l2cache = 1 << 18;
-
-        return IPP_MAX(1, (IPP_MIN((int)(opMemory/l2cache), threads)));
-    }
-    return 1;
-}
-
-static inline int ippiSuggestThreadsNum(const cv::Mat &image, double multiplier)
-{
-    return ippiSuggestThreadsNum(image.cols, image.rows, image.elemSize(), multiplier);
-}
-
 #ifdef HAVE_IPP_IW
 static inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeight)
 {
@@ -375,106 +352,13 @@ static inline bool ippiCheckAnchor(int x, int y, int kernelWidth, int kernelHeig
         return 1;
 }
 
-static inline ::ipp::IwiSize ippiGetSize(const cv::Size & size)
-{
-    return ::ipp::IwiSize((IwSize)size.width, (IwSize)size.height);
-}
 
-static inline IwiDerivativeType ippiGetDerivType(int dx, int dy, bool nvert)
-{
-    return (dx == 1 && dy == 0) ? ((nvert)?iwiDerivNVerFirst:iwiDerivVerFirst) :
-           (dx == 0 && dy == 1) ? iwiDerivHorFirst :
-           (dx == 2 && dy == 0) ? iwiDerivVerSecond :
-           (dx == 0 && dy == 2) ? iwiDerivHorSecond :
-           (IwiDerivativeType)-1;
-}
-
-static inline void ippiGetImage(const cv::Mat &src, ::ipp::IwiImage &dst)
-{
-    ::ipp::IwiBorderSize inMemBorder;
-    if(src.isSubmatrix()) // already have physical border
-    {
-        cv::Size  origSize;
-        cv::Point offset;
-        src.locateROI(origSize, offset);
-
-        inMemBorder.left   = (IwSize)offset.x;
-        inMemBorder.top    = (IwSize)offset.y;
-        inMemBorder.right  = (IwSize)(origSize.width - src.cols - offset.x);
-        inMemBorder.bottom = (IwSize)(origSize.height - src.rows - offset.y);
-    }
-
-    dst.Init(ippiSize(src.size()), ippiGetDataType(src.depth()), src.channels(), inMemBorder, (void*)src.ptr(), src.step);
-}
-
-static inline ::ipp::IwiImage ippiGetImage(const cv::Mat &src)
-{
-    ::ipp::IwiImage image;
-    ippiGetImage(src, image);
-    return image;
-}
-
-static inline IppiBorderType ippiGetBorder(::ipp::IwiImage &image, int ocvBorderType, ipp::IwiBorderSize &borderSize)
-{
-    int            inMemFlags = 0;
-    IppiBorderType border     = ippiGetBorderType(ocvBorderType & ~cv::BORDER_ISOLATED);
-    if((int)border == -1)
-        return (IppiBorderType)0;
-
-    if(!(ocvBorderType & cv::BORDER_ISOLATED))
-    {
-        if(image.m_inMemSize.left)
-        {
-            if(image.m_inMemSize.left >= borderSize.left)
-                inMemFlags |= ippBorderInMemLeft;
-            else
-                return (IppiBorderType)0;
-        }
-        else
-            borderSize.left = 0;
-        if(image.m_inMemSize.top)
-        {
-            if(image.m_inMemSize.top >= borderSize.top)
-                inMemFlags |= ippBorderInMemTop;
-            else
-                return (IppiBorderType)0;
-        }
-        else
-            borderSize.top = 0;
-        if(image.m_inMemSize.right)
-        {
-            if(image.m_inMemSize.right >= borderSize.right)
-                inMemFlags |= ippBorderInMemRight;
-            else
-                return (IppiBorderType)0;
-        }
-        else
-            borderSize.right = 0;
-        if(image.m_inMemSize.bottom)
-        {
-            if(image.m_inMemSize.bottom >= borderSize.bottom)
-                inMemFlags |= ippBorderInMemBottom;
-            else
-                return (IppiBorderType)0;
-        }
-        else
-            borderSize.bottom = 0;
-    }
-    else
-        borderSize.left = borderSize.right = borderSize.top = borderSize.bottom = 0;
-
-    return (IppiBorderType)(border|inMemFlags);
-}
 
 static inline ::ipp::IwValueFloat ippiGetValue(const cv::Scalar &scalar)
 {
     return ::ipp::IwValueFloat(scalar[0], scalar[1], scalar[2], scalar[3]);
 }
 
-static inline int ippiSuggestThreadsNum(const ::ipp::IwiImage &image, double multiplier)
-{
-    return ippiSuggestThreadsNum(image.m_size.width, image.m_size.height, image.m_typeSize*image.m_channels, multiplier);
-}
 #endif
 
 // IPP temporary buffer helper

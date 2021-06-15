@@ -5,6 +5,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/private_iw.hpp"
 
 #include "split.simd.hpp"
 #include "split.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
