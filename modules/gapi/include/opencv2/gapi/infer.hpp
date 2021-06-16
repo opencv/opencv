@@ -653,6 +653,7 @@ namespace gapi {
 
 // A type-erased form of network parameters.
 // Similar to how a type-erased GKernel is represented and used.
+/// @private
 struct GAPI_EXPORTS GNetParam {
     std::string tag;     // FIXME: const?
     GBackend backend;    // Specifies the execution model
@@ -664,7 +665,7 @@ struct GAPI_EXPORTS GNetParam {
  */
 /**
  * @brief A container class for network configurations. Similar to
- * GKernelPackage.Use cv::gapi::networks() to construct this object.
+ * GKernelPackage. Use cv::gapi::networks() to construct this object.
  *
  * @sa cv::gapi::networks
  */

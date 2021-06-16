@@ -12,6 +12,11 @@
 
 namespace cv {
 namespace gapi {
+
+/**
+ * @brief This namespace contains G-API serialization and
+ * deserialization functions and data structures.
+ */
 namespace s11n {
 struct IOStream;
 struct IIStream;
