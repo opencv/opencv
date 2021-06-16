@@ -7,6 +7,8 @@
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
 #include "../precomp.hpp"
+#include "utils.hpp"
+#include "fast_icp.hpp"
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  define HAVE_EIGEN3_HERE
@@ -187,10 +189,10 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
         if(pyramidMask.size(-1).width != nLevels)
             CV_Error(Error::StsBadSize, "Levels count of pyramidMask has to be equal to size of pyramidDepth.");
 
-        for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
+        for(int i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            CV_Assert(pyramidMask.size((int)i) == pyramidDepth.size((int)i));
-            CV_Assert(pyramidMask.type((int)i) == CV_8UC1);
+            CV_Assert(pyramidMask.size(i) == pyramidDepth.size(i));
+            CV_Assert(pyramidMask.type(i) == CV_8UC1);
         }
     }
     else
@@ -203,19 +205,19 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
 
         buildPyramid(validMask, pyramidMask, nLevels - 1);
 
-        for(size_t i = 0; i < pyramidMask.size(-1).width; i++)
+        for(int i = 0; i < pyramidMask.size(-1).width; i++)
         {
-            TMat levelDepth = getTMat<TMat>(pyramidDepth, (int)i).clone();
+            TMat levelDepth = getTMat<TMat>(pyramidDepth, i).clone();
             patchNaNs(levelDepth, 0);
 
-            TMat& levelMask = getTMatRef<TMat>(pyramidMask, (int)i);
+            TMat& levelMask = getTMatRef<TMat>(pyramidMask, i);
             levelMask &= (levelDepth > minDepth) & (levelDepth < maxDepth);
 
             if(!pyramidNormal.empty())
             {
-                CV_Assert(pyramidNormal.type((int)i) == CV_32FC3);
-                CV_Assert(pyramidNormal.size((int)i) == pyramidDepth.size((int)i));
-                TMat levelNormal = getTMat<TMat>(pyramidNormal, (int)i).clone();
+                CV_Assert(pyramidNormal.type(i) == CV_32FC3);
+                CV_Assert(pyramidNormal.size(i) == pyramidDepth.size(i));
+                TMat levelNormal = getTMat<TMat>(pyramidNormal, i).clone();
 
                 TMat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
                 CV_Assert(validNormalMask.type() == CV_8UC3);
