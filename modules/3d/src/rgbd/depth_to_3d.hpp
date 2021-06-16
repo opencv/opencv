@@ -8,6 +8,7 @@
 #define __OPENCV_RGBD_DEPTH_TO_3D_HPP__
 
 #include "../precomp.hpp"
+#include "utils.hpp"
 
 namespace cv
 {
