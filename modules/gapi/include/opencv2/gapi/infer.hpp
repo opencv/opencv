@@ -136,11 +136,12 @@ public:
     }
 
     template <typename U>
-    void setInput(const std::string& name, U in)
+    GInferInputsTyped<Ts...>& setInput(const std::string& name, U in)
     {
         m_priv->blobs.emplace(std::piecewise_construct,
                               std::forward_as_tuple(name),
                               std::forward_as_tuple(in));
+        return *this;
     }
 
     using StorageT = cv::util::variant<Ts...>;

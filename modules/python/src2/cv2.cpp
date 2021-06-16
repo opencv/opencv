@@ -1171,6 +1171,41 @@ PyObject* pyopencv_from(const int64& value)
 }
 
 template<>
+bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer type, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        if (PyLong_Check(obj))
+        {
+            value = PyLong_AsLongLong(obj);
+        }
+        else
+        {
+            const bool isParsed = parseNumpyScalar<int64_t>(obj, value);
+            if (!isParsed) {
+                failmsg("Argument '%s' can not be safely parsed to 'int64_t'", info.name);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !PyErr_Occurred();
+}
+
+template<>
 PyObject* pyopencv_from(const String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());

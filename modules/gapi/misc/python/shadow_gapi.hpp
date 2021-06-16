@@ -24,16 +24,16 @@ namespace cv
    {
    public:
        GAPI_WRAP GInferInputs();
-       GAPI_WRAP void setInput(const std::string& name, const cv::GMat&   value);
-       GAPI_WRAP void setInput(const std::string& name, const cv::GFrame& value);
+       GAPI_WRAP GInferInputs& setInput(const std::string& name, const cv::GMat&   value);
+       GAPI_WRAP GInferInputs& setInput(const std::string& name, const cv::GFrame& value);
    };
 
    class GAPI_EXPORTS_W_SIMPLE GInferListInputs
    {
    public:
        GAPI_WRAP GInferListInputs();
-       GAPI_WRAP void setInput(const std::string& name, const cv::GArray<cv::GMat>& value);
-       GAPI_WRAP void setInput(const std::string& name, const cv::GArray<cv::Rect>& value);
+       GAPI_WRAP GInferListInputs setInput(const std::string& name, const cv::GArray<cv::GMat>& value);
+       GAPI_WRAP GInferListInputs setInput(const std::string& name, const cv::GArray<cv::Rect>& value);
    };
 
    class GAPI_EXPORTS_W_SIMPLE GInferOutputs
@@ -58,6 +58,13 @@ namespace cv
 
    namespace gapi
    {
+       namespace streaming
+       {
+           // FIXME: Extend to work with an arbitrary G-type.
+           cv::GOpaque<int64_t> GAPI_EXPORTS_W timestamp(cv::GMat);
+           cv::GOpaque<int64_t> GAPI_EXPORTS_W seqNo(cv::GMat);
+           cv::GOpaque<int64_t> GAPI_EXPORTS_W seq_id(cv::GMat);
+       } // namespace streaming
        namespace wip
        {
            class GAPI_EXPORTS_W IStreamSource { };
