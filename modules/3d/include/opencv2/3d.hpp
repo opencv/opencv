@@ -8,12 +8,12 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/types_c.h"
 
-#include "rgbd/depth.hpp"
-#include "rgbd/volume.hpp"
+#include "./rgbd/depth.hpp"
+#include "./rgbd/volume.hpp"
 
-#include "rgbd/detail/pose_graph.hpp"
-#include "rgbd/detail/kinfu_frame.hpp"
-#include "rgbd/detail/submap.hpp"
+#include "./rgbd/detail/pose_graph.hpp"
+#include "./rgbd/detail/kinfu_frame.hpp"
+#include "./rgbd/detail/submap.hpp"
 
 /**
   @defgroup _3d 3D vision functionality
