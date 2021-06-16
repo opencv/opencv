@@ -372,6 +372,14 @@ protected:
 /** @} */
 
 namespace gapi {
+
+/**
+ * @brief This namespace contains G-API functions, structures, and
+ * symbols related to the Streaming execution mode.
+ *
+ * Some of the operations defined in this namespace (e.g. size(),
+ * BGR(), etc.) can be used in the traditional execution mode too.
+ */
 namespace streaming {
 /**
  * @brief Specify queue capacity for streaming execution.

@@ -340,21 +340,79 @@ namespace detail
 /** \addtogroup gapi_data_objects
  * @{
  */
-
+/**
+ * @brief `cv::GArray<T>` template class represents a list of objects
+ * of class `T` in the graph.
+ *
+ * `cv::GArray<T>` describes a functional relationship between
+ * operations consuming and producing arrays of objects of class
+ * `T`. The primary purpose of `cv::GArray<T>` is to represent a
+ * dynamic list of objects -- where the size of the list is not known
+ * at the graph construction or compile time. Examples include: corner
+ * and feature detectors (`cv::GArray<cv::Point>`), object detection
+ * and tracking  results (`cv::GArray<cv::Rect>`). Programmers can use
+ * their own types with `cv::GArray<T>` in the custom operations.
+ *
+ * Similar to `cv::GScalar`, `cv::GArray<T>` may be value-initialized
+ * -- in this case a graph-constant value is associated with the object.
+ *
+ * `GArray<T>` is a virtual counterpart of `std::vector<T>`, which is
+ * usually used to represent the `GArray<T>` data in G-API during the
+ * execution.
+ *
+ * @sa `cv::GOpaque<T>`
+ */
 template<typename T> class GArray
 {
 public:
     // Host type (or Flat type) - the type this GArray is actually
     // specified to.
+    /// @private
     using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
 
+    /**
+     * @brief Constructs a value-initialized `cv::GArray<T>`
+     *
+     * `cv::GArray<T>` objects  may have their values
+     * be associated at graph construction time. It is useful when
+     * some operation has a `cv::GArray<T>` input which doesn't change during
+     * the program execution, and is set only once. In this case,
+     * there is no need to declare such `cv::GArray<T>` as a graph input.
+     *
+     * @note The value of `cv::GArray<T>` may be overwritten by assigning some
+     * other `cv::GArray<T>` to the object using `operator=` -- on the
+     * assigment, the old association or value is discarded.
+     *
+     * @param v a std::vector<T> to associate with this
+     * `cv::GArray<T>` object. Vector data is copied into the
+     * `cv::GArray<T>` (no reference to the passed data is held).
+     */
     explicit GArray(const std::vector<HT>& v) // Constant value constructor
         : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
+
+    /**
+     * @overload
+     * @brief Constructs a value-initialized `cv::GArray<T>`
+     *
+     * @param v a std::vector<T> to associate with this
+     * `cv::GArray<T>` object. Vector data is moved into the `cv::GArray<T>`.
+     */
     explicit GArray(std::vector<HT>&& v)      // Move-constructor
         : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
-    GArray() { putDetails(); }             // Empty constructor
-    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
-        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
+
+    /**
+     * @brief Constructs an empty `cv::GArray<T>`
+     *
+     * Normally, empty G-API data objects denote a starting point of
+     * the graph. When an empty `cv::GArray<T>` is assigned to a result
+     * of some operation, it obtains a functional link to this
+     * operation (and is not empty anymore).
+     */
+    GArray() { putDetails(); }                // Empty constructor
+
+    /// @private
+    explicit GArray(detail::GArrayU &&ref)    // GArrayU-based constructor
+        : m_ref(ref) { putDetails(); }        //   (used by GCall, not for users)
 
     /// @private
     detail::GArrayU strip() const {

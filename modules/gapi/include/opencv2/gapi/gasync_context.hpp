@@ -17,6 +17,13 @@
 
 namespace cv {
 namespace gapi{
+
+/**
+ * @brief This namespace contains experimental G-API functionality,
+ * functions or structures in this namespace are subjects to change or
+ * removal in the future releases. This namespace also contains
+ * functions which API is not stabilized yet.
+ */
 namespace wip {
 
 /**

@@ -169,6 +169,10 @@ GAPI_EXPORTS GFrame renderFrame(const GFrame& m_frame,
 } // namespace draw
 } // namespace wip
 
+/**
+ * @brief This namespace contains G-API CPU rendering backend functions,
+ * structures, and symbols. See @ref gapi_draw for details.
+ */
 namespace render
 {
 namespace ocv

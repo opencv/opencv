@@ -24,6 +24,11 @@
 namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
+
+/**
+ * @brief This namespace contains G-API OpenVINO backend functions,
+ * structures, and symbols.
+ */
 namespace ie {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();

@@ -15,6 +15,11 @@ namespace cv
 {
 namespace gapi
 {
+
+/**
+ * @brief This namespace contains G-API own data structures used in
+ * its standalone mode build.
+ */
 namespace own
 {
 
