@@ -8,6 +8,45 @@
 
 namespace cv {
 
+class TSDFVolumeCPU : public TSDFVolume
+{
+   public:
+    // dimension in voxels, size in meters
+    TSDFVolumeCPU(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor, float _truncDist,
+                  int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
+
+    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+                           const Matx33f& intrinsics, const int frameId = 0) override;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
+                         OutputArray points, OutputArray normals) const override;
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+
+    virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+
+    virtual void reset() override;
+    virtual TsdfVoxel at(const Vec3i& volumeIdx) const;
+
+    float interpolateVoxel(const cv::Point3f& p) const;
+    Point3f getNormalVoxel(const cv::Point3f& p) const;
+
+#if USE_INTRINSICS
+    float interpolateVoxel(const v_float32x4& p) const;
+    v_float32x4 getNormalVoxel(const v_float32x4& p) const;
+#endif
+    Vec4i volStrides;
+    Vec6f frameParams;
+    Mat pixNorms;
+    // See zFirstMemOrder arg of parent class constructor
+    // for the array layout info
+    // Consist of Voxel elements
+    Mat volume;
+};
+
+
 TSDFVolume::TSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
                        int _maxWeight, Point3i _resolution, bool zFirstMemOrder)
     : Volume(_voxelSize, _pose, _raycastStepFactor),
@@ -811,6 +850,36 @@ void TSDFVolumeCPU::fetchNormals(InputArray _points, OutputArray _normals) const
 ///////// GPU implementation /////////
 
 #ifdef HAVE_OPENCL
+
+class TSDFVolumeGPU : public TSDFVolume
+{
+   public:
+    // dimension in voxels, size in meters
+    TSDFVolumeGPU(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
+                  int _maxWeight, Point3i _resolution);
+
+    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+                           const Matx33f& intrinsics, const int frameId = 0) override;
+    virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
+                         OutputArray _points, OutputArray _normals) const override;
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    { CV_Error(Error::StsNotImplemented, "Not implemented"); };
+
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+
+    virtual void reset() override;
+
+    Vec6f frameParams;
+    UMat pixNorms;
+    // See zFirstMemOrder arg of parent class constructor
+    // for the array layout info
+    // Array elem is CV_8UC2, read as (int8, uint8)
+    UMat volume;
+};
+
 TSDFVolumeGPU::TSDFVolumeGPU(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist, int _maxWeight,
                              Point3i _resolution) :
     TSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _resolution, false)
