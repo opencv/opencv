@@ -13,7 +13,7 @@ namespace opencv_test { namespace {
 #define SHOW_DEBUG_LOG     0
 #define SHOW_DEBUG_IMAGES  0
 
-static 
+static
 void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& tvec, const Mat& K,
                Mat& warpedImage, Mat& warpedDepth)
 {
@@ -292,7 +292,7 @@ void CV_OdometryTest::run(int)
         ts->printf(cvtest::TS::LOG, "\nIncorrect count of accurate poses [1st case]: %f / %f", static_cast<double>(better_1time_count), maxError1 * static_cast<double>(iterCount));
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
-    
+
     if(static_cast<double>(better_5times_count) < maxError5 * static_cast<double>(iterCount))
     {
         ts->printf(cvtest::TS::LOG, "\nIncorrect count of accurate poses [2nd case]: %f / %f", static_cast<double>(better_5times_count), maxError5 * static_cast<double>(iterCount));

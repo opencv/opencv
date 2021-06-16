@@ -45,8 +45,4 @@ namespace cv
     if ((in_depth == CV_32F) || (in_depth == CV_64F))
       in.convertTo(out, depth);
   }
-
-namespace kinfu {
-
-} // namespace kinfu
 } // namespace cv

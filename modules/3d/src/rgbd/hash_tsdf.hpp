@@ -21,8 +21,8 @@ class HashTSDFVolume : public Volume
 
     virtual ~HashTSDFVolume() = default;
 
-    virtual int getVisibleBlocks(int currFrameId, int frameThreshold) const = 0;
-    virtual size_t getTotalVolumeUnits() const = 0;
+    virtual int getVisibleBlocks(int currFrameId, int frameThreshold) const override = 0;
+    virtual size_t getTotalVolumeUnits() const override = 0;
 
    public:
     int maxWeight;
@@ -39,7 +39,7 @@ class HashTSDFVolume : public Volume
 Ptr<HashTSDFVolume> makeHashTSDFVolume(const VolumeParams& _volumeParams);
 //template<typename T>
 Ptr<HashTSDFVolume> makeHashTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
-    int _maxWeight, float truncateThreshold, int volumeUnitResolution = 16);
+                                       int _maxWeight, float truncateThreshold, int volumeUnitResolution = 16);
 
 }  // namespace cv
 #endif
