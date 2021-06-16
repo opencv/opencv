@@ -686,7 +686,6 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
 
                 float tprev = tcurr;
                 float prevTsdf = volume.truncDist;
-                Ptr<TSDFVolumeCPU> currVolumeUnit;
                 while (tcurr < tmax)
                 {
                     Point3f currRayPos = orig + tcurr * rayDirV;
