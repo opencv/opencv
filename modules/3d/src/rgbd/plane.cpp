@@ -14,7 +14,7 @@
  * Houxiang Zhang and Hans Petter Hildre
  */
 
-#include "utils.hpp"
+#include "../precomp.hpp"
 
 namespace cv
 {

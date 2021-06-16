@@ -2,7 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include "utils.hpp"
+#include "../precomp.hpp"
+#include "sparse_block_matrix.hpp"
 
 // matrix form of conjugation
 static const cv::Matx44d M_Conj{ 1,  0,  0,  0,

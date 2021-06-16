@@ -5,7 +5,8 @@
 #ifndef __OPENCV_HASH_TSDF_H__
 #define __OPENCV_HASH_TSDF_H__
 
-#include "utils.hpp"
+#include "../precomp.hpp"
+#include "tsdf_functions.hpp"
 
 namespace cv
 {

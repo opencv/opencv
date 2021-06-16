@@ -71,20 +71,6 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#include "rgbd/utils.hpp"
-#include "rgbd/intrinsics.hpp"
-#include "rgbd/depth_to_3d.hpp"
-#include "rgbd/sparse_block_matrix.hpp"
-#include "rgbd/colored_tsdf.hpp"
-#include "rgbd/fast_icp.hpp"
-#include "rgbd/hash_tsdf.hpp"
-#include "rgbd/tsdf.hpp"
-#include "rgbd/tsdf_functions.hpp"
-
-#ifdef HAVE_OPENCL
-#include "opencl_kernels_3d.hpp"
-#endif
-
 #define GET_OPTIMIZED(func) (func)
 
 

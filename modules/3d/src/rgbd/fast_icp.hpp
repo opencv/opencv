@@ -7,6 +7,7 @@
 #ifndef __OPENCV_KINFU_FAST_ICP_H__
 #define __OPENCV_KINFU_FAST_ICP_H__
 
+#include "../precomp.hpp"
 #include "utils.hpp"
 
 namespace cv {

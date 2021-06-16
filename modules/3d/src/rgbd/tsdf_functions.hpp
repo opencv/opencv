@@ -7,10 +7,38 @@
 #ifndef __OPENCV_TSDF_FUNCTIONS_H__
 #define __OPENCV_TSDF_FUNCTIONS_H__
 
+#include "../precomp.hpp"
 #include "utils.hpp"
 
 namespace cv
 {
+
+typedef int8_t TsdfType;
+typedef uchar WeightType;
+
+struct TsdfVoxel
+{
+    TsdfVoxel(TsdfType _tsdf, WeightType _weight) :
+        tsdf(_tsdf), weight(_weight)
+    { }
+    TsdfType tsdf;
+    WeightType weight;
+};
+
+typedef Vec<uchar, sizeof(TsdfVoxel)> VecTsdfVoxel;
+
+typedef short int ColorType;
+struct RGBTsdfVoxel
+{
+    RGBTsdfVoxel(TsdfType _tsdf, WeightType _weight, ColorType _r, ColorType _g, ColorType _b) :
+        tsdf(_tsdf), weight(_weight), r(_r), g(_g), b(_b)
+    { }
+    TsdfType tsdf;
+    WeightType weight;
+    ColorType r, g, b;
+};
+
+typedef Vec<uchar, sizeof(RGBTsdfVoxel)> VecRGBTsdfVoxel;
 
 inline v_float32x4 tsdfToFloat_INTR(const v_int32x4& num)
 {

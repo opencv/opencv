@@ -8,24 +8,11 @@
 #ifndef __OPENCV_KINFU_TSDF_H__
 #define __OPENCV_KINFU_TSDF_H__
 
-#include "utils.hpp"
+#include "../precomp.hpp"
+#include "tsdf_functions.hpp"
 
 namespace cv
 {
-
-typedef int8_t TsdfType;
-typedef uchar WeightType;
-
-struct TsdfVoxel
-{
-    TsdfVoxel(TsdfType _tsdf, WeightType _weight) :
-        tsdf(_tsdf), weight(_weight)
-    { }
-    TsdfType tsdf;
-    WeightType weight;
-};
-
-typedef Vec<uchar, sizeof(TsdfVoxel)> VecTsdfVoxel;
 
 class TSDFVolume : public Volume
 {

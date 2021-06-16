@@ -2,7 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+#include "../precomp.hpp"
 #include "hash_tsdf.hpp"
+#include "opencl_kernels_3d.hpp"
 
 #define USE_INTERPOLATION_IN_GETNORMAL 1
 #define VOLUMES_SIZE 8192

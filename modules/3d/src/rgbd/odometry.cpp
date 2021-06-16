@@ -6,7 +6,7 @@
 
 // This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
 
-#include "utils.hpp"
+#include "../precomp.hpp"
 
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  define HAVE_EIGEN3_HERE

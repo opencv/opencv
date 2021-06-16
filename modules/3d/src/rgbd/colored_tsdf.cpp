@@ -4,6 +4,7 @@
 
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
 
+#include "../precomp.hpp"
 #include "colored_tsdf.hpp"
 
 #define USE_INTERPOLATION_IN_GETNORMAL 1
