@@ -216,7 +216,7 @@ namespace cv
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param depth a rows x cols matrix of the cleaned up depth
      */
-    CV_WRAP_AS(apply) void
+    CV_WRAP_AS(process) void
     operator()(InputArray points, OutputArray depth) const;
 
     /** Initializes some data that is cached for later computation
@@ -370,7 +370,7 @@ namespace cv
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
      *        and c < 0 (so that the normal points towards the camera)
      */
-    CV_WRAP_AS(apply) void
+    CV_WRAP_AS(findWithNormals) void
     operator()(InputArray points3d, InputArray normals, OutputArray mask,
                OutputArray plane_coefficients);
 
@@ -380,7 +380,7 @@ namespace cv
      *        and 255 if it does not belong to any plane
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0
      */
-    CV_WRAP_AS(apply) void
+    CV_WRAP_AS(find) void
     operator()(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
 
     CV_WRAP int getBlockSize() const
