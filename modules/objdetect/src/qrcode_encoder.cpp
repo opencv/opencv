@@ -953,7 +953,7 @@ Mat gfPolyMul(const Mat &p, const Mat &q)
     Mat r(1, p.cols+q.cols-1, CV_8UC1, Scalar(0));
     int len_p = p.cols;
     int len_q = q.cols;
-    for (int j = 0; j < len_q; j ++ )
+    for (int j = 0; j < len_q; j++)
     {
         if (!q.at<uint8_t>(0, j))
             continue;
@@ -978,7 +978,7 @@ Mat gfPolyDiv(const Mat& dividend, const Mat& divisor, const int& ecc_num)
         uint8_t coef = r.at<uint8_t>(0, dividend_len - i);
         if(coef != 0)
         {
-            for (int j = 0; j < divisor.cols; ++j)
+            for (int j = 0; j < divisor.cols; j++)
             {
                 if (divisor.at<uint8_t>(0, divisor_len - j) != 0)
                 {
@@ -995,7 +995,7 @@ Mat polyGenerator(const int& n)
 {
     Mat result = (Mat_<uint8_t >(1, 1) << 1);
     Mat temp =   (Mat_<uint8_t >(1, 2) << 1,1);
-    for (int i = 1; i <= n; i ++)
+    for (int i = 1; i <= n; i++)
     {
         temp.at<uint8_t>(0, 0) = gfPow(2, i - 1);
         result = gfPolyMul(result, temp);
@@ -1034,13 +1034,10 @@ protected:
     vector<uint8_t>	rearranged_data;
     Mat original;
     Mat masked_data;
-    uint32_t fnc1_second_AI;
     uint8_t parity;
     uint8_t sequence_num;
     uint8_t total_num;
 
-    bool fnc1_first;
-    bool fnc1_second;
     const VersionInfo *version_info ;
     const  BlockParams *cur_ecc_params;
     bool encodeByte(const std::string& input, vector<uint8_t>& output);
@@ -1053,7 +1050,7 @@ protected:
     void eccGenerate(vector<Mat>& data_blocks, vector<Mat>& ecc_blocks);
     void rearrangeBlocks(const vector<Mat>& data_blocks, const vector<Mat>& ecc_blocks);
     void writeReservedArea();
-    bool writeBit(int x, int y, int value);
+    bool writeBit(int x, int y, bool value);
     void writeData();
     void structureFinalMessage();
     void formatGenerate(const int& mask_type_num, Mat& format_array);
@@ -1153,9 +1150,6 @@ int QREncoder::versionAuto(const std::string& input_str)
 
 void QREncoder::init(int mode, int version = 0, int ecc = 0, int structure_num = 2)
 {
-    fnc1_first = false;
-    fnc1_second = false;
-    fnc1_second_AI = 0;
     ecc_level = ecc;
     version_level = version;
     mode_type = mode;
@@ -1208,17 +1202,19 @@ void QREncoder::formatGenerate(const int& mask_type_num , Mat& format_array)
     std::string mask_type_bin = decToBin(mask_type_num, 3);
     std::string ec_level_bin = decToBin(eccLevelToCode(ecc_level), 2);
     std::string format_bits = ec_level_bin + mask_type_bin;
-    Mat binary_bit = (Mat_<uint8_t >(1, 5) <<
+    const int level_mask_info_bits = 5;
+    const int ecc_info_bits = 10;
+    Mat binary_bit = (Mat_<uint8_t >(1, level_mask_info_bits) <<
                                          format_bits[4] - '0', format_bits[3] - '0', format_bits[2] - '0', format_bits[1] - '0', format_bits[0] - '0');
-    Mat shift = Mat(Size(10, 1), CV_8UC1, Scalar(0));
+    Mat shift = Mat(Size(ecc_info_bits, 1), CV_8UC1, Scalar(0));
     hconcat(shift, binary_bit, Polynomial);
     Mat format_generator = (Mat_<uint8_t >(1, 11) << 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1);
-    Mat ecc_code = gfPolyDiv(Polynomial, format_generator, 10);
+    Mat ecc_code = gfPolyDiv(Polynomial, format_generator, ecc_info_bits);
     hconcat(ecc_code, binary_bit, format_array);
-    Mat mask = (Mat_<uint8_t >(1, max_format_length) << 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1);
+    Mat system_mask = (Mat_<uint8_t >(1, max_format_length) << 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1);
     for(int i = 0; i < max_format_length; i++)
     {
-        format_array.at<uint8_t>(0, i) ^= mask.at<uint8_t>(0, i);
+        format_array.at<uint8_t>(0, i) ^= system_mask.at<uint8_t>(0, i);
     }
 }
 
@@ -1250,8 +1246,7 @@ bool QREncoder::encodeAlpha(const std::string& input, vector<uint8_t>& output)
     int str_len = int(input.length());
     std::string counter = decToBin(str_len, bits);
     loadString(counter, output, true);
-    int i;
-    for (i = 0; i < str_len; i += 2)
+    for (int i = 0; i < str_len - 1; i += 2)
     {
         int index_1 = (int)alpha_map.find(input[i]);
         int index_2 = (int)alpha_map.find(input[i + 1]);
@@ -1265,7 +1260,7 @@ bool QREncoder::encodeAlpha(const std::string& input, vector<uint8_t>& output)
     }
     if (str_len % 2 != 0)
     {
-        int index = (int)alpha_map.find(input[i]);
+        int index = (int)alpha_map.find(*input.rbegin());
         if(index == -1)
             return false;
         std::string per_byte = decToBin(index, 6);
@@ -1438,7 +1433,8 @@ bool QREncoder::encodeAuto(const std::string& input, vector<uint8_t>& output)
             {
                 previous = strategy[j];
                 std::string sub_string = cur_string.substr(j, str_len - j);
-                autoEncodePerBlock blocks[3];
+                const int blocks_num = 3;
+                autoEncodePerBlock blocks[blocks_num];
                 if (!generateBlock(sub_string, QR_MODE_NUM, blocks[0]))
                 {
                     blocks[0].block_load_len = error_mode_occur;
@@ -1450,12 +1446,12 @@ bool QREncoder::encodeAuto(const std::string& input, vector<uint8_t>& output)
                 generateBlock(sub_string, QR_MODE_BYTE, blocks[2]);
                 int index = 0;
                 int min_len = error_mode_occur;
-                for (int p = 0; p < 3; p++)
+                for (int tmp_index = 0; tmp_index < blocks_num; tmp_index++)
                 {
-                    if (blocks[p].block_load_len + previous.len < min_len)
+                    if (blocks[tmp_index].block_load_len + previous.len < min_len)
                     {
-                        index = p;
-                        min_len = blocks[p].block_load_len + previous.len;
+                        index = tmp_index;
+                        min_len = blocks[tmp_index].block_load_len + previous.len;
                     }
                 }
                 previous.blocks.push_back(blocks[index]);
@@ -1472,7 +1468,7 @@ bool QREncoder::encodeAuto(const std::string& input, vector<uint8_t>& output)
     encodingMethods result = strategy[strategy.size() - 1];
     for (size_t i = 0; i < result.blocks.size(); i++)
     {
-        for (int j = 0; j < result.blocks[i].block_load_len; ++j)
+        for (int j = 0; j < result.blocks[i].block_load_len; j++)
         {
             output.push_back(result.blocks[i].block_load[j]);
         }
@@ -1483,7 +1479,8 @@ bool QREncoder::encodeAuto(const std::string& input, vector<uint8_t>& output)
 void QREncoder::padBitStream(){
     int total_data = version_info->total_codewords -
                      cur_ecc_params->ecc_codewords * (cur_ecc_params->num_blocks_in_G1 + cur_ecc_params->num_blocks_in_G2);
-    total_data *= 8;
+    const int bits = 8;
+    total_data *= bits;
     int pad_num = total_data - (int)payload.size();
 
     if (pad_num <= 0)
@@ -1496,11 +1493,11 @@ void QREncoder::padBitStream(){
     else
     {
         loadString("0000", payload, true);
-        int i = payload.size() % 8;
+        int i = payload.size() % bits;
 
         if (i != 0)
         {
-            std::string pad = decToBin(0, 8 - i);
+            std::string pad = decToBin(0, bits - i);
             loadString(pad, payload, true);
         }
         pad_num = total_data - (int)payload.size();
@@ -1508,7 +1505,7 @@ void QREncoder::padBitStream(){
         if (pad_num > 0)
         {
             std::string pad_pattern[2] = {"11101100", "00010001"};
-            int num = pad_num / 8;
+            int num = pad_num / bits;
             for (int j = 0; j < num; j++)
             {
                 loadString(pad_pattern[j % 2], payload, true);
@@ -1519,26 +1516,19 @@ void QREncoder::padBitStream(){
 
 bool QREncoder::stringToBits()
 {
-    bool is_ok = true;
     switch (mode_type)
     {
         case QR_MODE_NUM:
-            is_ok = encodeNumeric(input_info, payload);
-            break;
+            return encodeNumeric(input_info, payload);
         case QR_MODE_ALPHA:
-            is_ok = encodeAlpha(input_info, payload);
-            break;
+            return encodeAlpha(input_info, payload);
         case QR_MODE_STRUCTURE:
-            is_ok = encodeStructure(input_info, payload);
-            break;
+            return encodeStructure(input_info, payload);
         case QR_MODE_BYTE:
-            is_ok = encodeByte(input_info, payload);
-            break;
+            return encodeByte(input_info, payload);
         default:
-            is_ok = encodeAuto(input_info, payload);
-            break;
+            return encodeAuto(input_info, payload);
     }
-    return is_ok;
 };
 
 void QREncoder::eccGenerate(vector<Mat>& data_blocks, vector<Mat>& ecc_blocks)
@@ -1628,6 +1618,7 @@ void QREncoder::findAutoMaskType()
 {
     int best_index = 0;
     int lowest_penalty = INT_MAX;
+    int penalty_two_value = 3, penalty_three_value = 40;
     for (int cur_type = 0; cur_type < 8; cur_type++)
     {
         Mat test_result = masked_data.clone();
@@ -1682,7 +1673,7 @@ void QREncoder::findAutoMaskType()
                     color == test_result.at<uint8_t>(i + 1, j + 1) &&
                     color == test_result.at<uint8_t>(i + 1, j))
                 {
-                    penalty_two += 3;
+                    penalty_two += penalty_two_value;
                 }
             }
         }
@@ -1707,7 +1698,7 @@ void QREncoder::findAutoMaskType()
                         bool equal = (countNonZero(diff) == 0);
                         if (equal)
                         {
-                            per_row += 40;
+                            per_row += penalty_three_value;
                         }
                     }
                 }
@@ -1777,18 +1768,19 @@ void QREncoder::writeReservedArea()
     finder_pattern[0] = Rect(Point(0, 0), Point(9, 9));
     finder_pattern[1] = Rect(Point(0, (unsigned)version_size - 8), Point(9, version_size));
     finder_pattern[2] = Rect(Point((unsigned)version_size - 8, 0), Point(version_size, 9));
-    int locator_position[2] = {3, version_size - 1 -3};
+    const int coordinates_num = 2;
+    int locator_position[coordinates_num] = {3, version_size - 1 - 3};
 
-    for (int a = 0; a < 2; a++)
+    for (int first_coordinate = 0; first_coordinate < coordinates_num; first_coordinate++)
     {
-        for (int p = 0; p < 2; p++)
+        for (int second_coordinate = 0; second_coordinate < coordinates_num; second_coordinate++)
         {
-            if (a == 1 && p == 1)
+            if (first_coordinate == 1 && second_coordinate == 1)
             {
                 continue;
             }
-            int x = locator_position[a];
-            int y = locator_position[p];
+            int x = locator_position[first_coordinate];
+            int y = locator_position[second_coordinate];
             for (int i = -5; i <= 5; i ++)
             {
                 for (int j = -5; j <= 5; j ++)
@@ -1797,13 +1789,9 @@ void QREncoder::writeReservedArea()
                     {
                         continue;
                     }
-                    if (((j == 2 || j == -2) && -2 <= i && i <=2) ||
-                       (-2 <= j && j <= 2 && (i == 2 || i == -2)) ||
-                       abs(i) == 4 || abs(j) == 4)
-                    {
-                        masked_data.at<uint8_t>(x + i, y + j) = 255;
-                    }
-                    else
+                    if (!(abs(j) == 2 && -2 <= i && i <=2) &&
+                       !(-2 <= j && j <= 2 && abs(i) == 2) &&
+                       !(abs(i) == 4) && !(abs(j) == 4))
                     {
                         masked_data.at<uint8_t>(x + i, y + j) = 0;
                     }
@@ -1831,14 +1819,7 @@ void QREncoder::writeReservedArea()
             for (int j = version_size - 11; j <= version_size - 8; j++)
             {
                 original.at<uint8_t>(i, j) = invalid_region_value;
-            }
-        }
-
-        for (int i = version_size - 11; i <= version_size - 8; i++)
-        {
-            for (int j = 0; j <= 6; j++)
-            {
-                original.at<uint8_t>(i, j) = invalid_region_value;
+                original.at<uint8_t>(j, i) = invalid_region_value;
             }
         }
     }
@@ -1853,24 +1834,20 @@ void QREncoder::writeReservedArea()
             if ((i == 6 || j == 6))
             {
                 original.at<uint8_t>(i, j) = invalid_region_value;
-                if (((i == 6) && (j - 7) % 2 == 0) ||
-                   ((j == 6) && ((i - 7) % 2 == 0)))
-                {
-                    masked_data.at<uint8_t>(i, j) = 255;
-                }
-                else
+                if (!((i == 6) && (j - 7) % 2 == 0) &&
+                    !((j == 6) && ((i - 7) % 2 == 0)))
                 {
                     masked_data.at<uint8_t>(i, j) = 0;
                 }
             }
         }
     }
-    for (int a = 0; a < max_alignment && version_info->alignment_pattern[a]; a++)
+    for (int first_coord = 0; first_coord < max_alignment && version_info->alignment_pattern[first_coord]; first_coord++)
     {
-        for (int p = 0; p < max_alignment && version_info->alignment_pattern[p]; p++)
+        for (int second_coord = 0; second_coord < max_alignment && version_info->alignment_pattern[second_coord]; second_coord++)
         {
-            x = version_info->alignment_pattern[a];
-            y = version_info->alignment_pattern[p];
+            x = version_info->alignment_pattern[first_coord];
+            y = version_info->alignment_pattern[second_coord];
             bool is_in_finder = false;
             for (size_t i = 0; i < finder_pattern.size(); i++)
             {
@@ -1890,17 +1867,9 @@ void QREncoder::writeReservedArea()
                     for (int j = -2; j <= 2; j++)
                     {
                         original.at<uint8_t>(x + i, y + j) = invalid_region_value;
-                        if (j == 0 && i == 0)
+                        if ((j == 0 && i == 0) || (abs(j) == 2) || abs(i) == 2)
                         {
                             masked_data.at<uint8_t>(x + i, y + j) = 0;
-                        }
-                        else if (j == -2 || j == 2 || i == -2 || i == 2)
-                        {
-                            masked_data.at<uint8_t>(x + i, y + j) = 0;
-                        }
-                        else
-                        {
-                            masked_data.at<uint8_t>(x + i, y + j) = 255;
                         }
                     }
                 }
@@ -1909,11 +1878,16 @@ void QREncoder::writeReservedArea()
     }
 }
 
-bool QREncoder::writeBit(int x, int y, int value)
+bool QREncoder::writeBit(int x, int y, bool value)
 {
     if (original.at<uint8_t>(y, x) == invalid_region_value)
     {
         return false;
+    }
+    if (!value)
+    {
+        original.at<uint8_t>(y, x) = 0;
+        masked_data.at<uint8_t>(y, x) = 0;
     }
     original.at<uint8_t>(y, x) = static_cast<uint8_t>(255 * value);
     masked_data.at<uint8_t>(y, x) = static_cast<uint8_t>(255 * value);
@@ -1935,7 +1909,7 @@ void QREncoder::writeData()
         }
         for(int i = 0; i <= 1; i++)
         {
-            int bit_value = (codeword_value & (0x80 >> count % 8)) == 0;
+            bool bit_value = (codeword_value & (0x80 >> count % 8)) == 0;
             bool success = writeBit(x - i, y, bit_value);
             if (!success)
             {
@@ -1959,66 +1933,94 @@ void QREncoder::writeData()
 
 void QREncoder::fillReserved(const Mat& format_array, Mat& masked)
 {
-    int i;
-    for (i = 0; i < 7; i ++)
+    for (int i = 0; i < 7; i++)
     {
-        masked.at<uint8_t>(version_size - 1 - i, 8) = 255 * (int)(format_array.at<uint8_t>(0, max_format_length - 1 - i) == 0) ;
+        if (format_array.at<uint8_t>(0, max_format_length - 1 - i) == 0)
+        {
+            masked.at<uint8_t>(version_size - 1 - i, 8) = 255;
+        }
+        else
+        {
+            masked.at<uint8_t>(version_size - 1 - i, 8) = 0;
+        }
     }
-    for (i = 0; i < 8; i++)
+    for (int i = 0; i < 8; i++)
     {
-        masked.at<uint8_t>(8, version_size - 8 + i) = 255 * (int)(format_array.at<uint8_t>(0, max_format_length - 1 - (7 + i)) == 0);
+        if (format_array.at<uint8_t>(0, max_format_length - 1 - (7 + i)) == 0)
+        {
+            masked.at<uint8_t>(8, version_size - 8 + i) = 255;
+        }
+        else
+        {
+            masked.at<uint8_t>(8, version_size - 8 + i) = 0;
+        }
     }
-    static const int xs_f[max_format_length] = {
+    static const int xs_format[max_format_length] = {
             8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0
     };
-    static const int ys_f[max_format_length] = {
+    static const int ys_format[max_format_length] = {
             0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8
     };
-    for (i = max_format_length - 1; i >= 0; i --)
+    for (int i = max_format_length - 1; i >= 0; i--)
     {
-        masked.at<uint8_t>(ys_f[i], xs_f[i]) = 255 * (int)(format_array.at<uint8_t>(0, i) == 0);
+        if (format_array.at<uint8_t>(0, i) == 0)
+        {
+            masked.at<uint8_t>(ys_format[i], xs_format[i]) = 255;
+        }
+        else
+        {
+            masked.at<uint8_t>(ys_format[i], xs_format[i]) = 0;
+        }
     }
 
     if (version_level >= 7)
     {
-        int max_size = version_size;
-        const int xs_v[2][max_version_length] = {
+        const int max_size = version_size;
+        const int version_block_width = 2;
+        const int xs_version[version_block_width][max_version_length] = {
                 { 5, 5, 5,
                   4, 4, 4,
                   3, 3, 3,
                   2, 2, 2,
                   1, 1, 1,
                   0, 0, 0
-                  },
-                  { max_size - 9, max_size - 10, max_size - 11,
-                    max_size - 9, max_size - 10, max_size - 11,
-                    max_size - 9, max_size - 10, max_size - 11,
-                    max_size - 9, max_size - 10, max_size - 11,
-                    max_size - 9, max_size - 10, max_size - 11,
-                    max_size - 9, max_size - 10, max_size - 11
-                  }
+                },
+                { max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11
+                }
         };
-        const int ys_v[2][max_version_length] = {
-                {max_size - 9, max_size - 10, max_size - 11,
-                 max_size - 9, max_size - 10, max_size - 11,
-                 max_size - 9, max_size - 10, max_size - 11,
-                 max_size - 9, max_size - 10, max_size - 11,
-                 max_size - 9, max_size - 10, max_size - 11,
-                 max_size - 9, max_size - 10, max_size - 11
-                 },
-                 { 5, 5, 5,
-                   4, 4, 4,
-                   3, 3, 3,
-                   2, 2, 2,
-                   1, 1, 1,
-                   0, 0, 0,
-                  }
+        const int ys_version[version_block_width][max_version_length] = {
+                { max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11,
+                  max_size - 9, max_size - 10, max_size - 11
+                },
+                { 5, 5, 5,
+                  4, 4, 4,
+                  3, 3, 3,
+                  2, 2, 2,
+                  1, 1, 1,
+                  0, 0, 0,
+                }
         };
-        for (int m = 0; m < 2; m++)
+        for (int i = 0; i < version_block_width; i++)
         {
             for (int j = 0; j < max_version_length; j++)
             {
-                masked.at<uint8_t>(ys_v[m][j], xs_v[m][j]) = 255 * (int)( version_reserved.at<uint8_t>(0, max_version_length - j -1) == 0);
+                if (version_reserved.at<uint8_t>(0, max_version_length - j - 1) == 0)
+                {
+                    masked.at<uint8_t>(ys_version[i][j], xs_version[i][j]) = 255;
+                }
+                else
+                {
+                    masked.at<uint8_t>(ys_version[i][j], xs_version[i][j]) = 0;
+                }
             }
         }
     }
@@ -2090,6 +2092,10 @@ bool QRCodeEncoder::generate(cv::String input, cv::OutputArray output,
         if (cur_mat.cols < output_size.height)
             resize(cur_mat, cur_mat, output_size, 0, 0, INTER_AREA);
         output.assign(cur_mat);
+    }
+    else
+    {
+        return false;
     }
     return true;
 }

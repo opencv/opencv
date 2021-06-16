@@ -14,13 +14,11 @@ std::string encode_qrcode_images_name[] = {
 
 const Size fixed_size = Size(600, 600);
 const float border_width = 2.0;
-int countDiffPixels(cv::Mat in1, cv::Mat in2);
 int countDiffPixels(cv::Mat in1, cv::Mat in2) {
     cv::Mat diff;
     cv::compare(in1, in2, diff, cv::CMP_NE);
     return cv::countNonZero(diff);
 }
-int establishCapacity(int mode, int version, int capacity);
 int establishCapacity(int mode, int version, int capacity)
 {
     int result = 0;
@@ -28,7 +26,7 @@ int establishCapacity(int mode, int version, int capacity)
     capacity -= 4;
     switch (mode)
     {
-        case 1:
+        case QR_MODE_NUM:
         {
             if (version >= 10)
                 capacity -= 12;
@@ -42,7 +40,7 @@ int establishCapacity(int mode, int version, int capacity)
                 result += 1;
             break;
         }
-        case 2:
+        case QR_MODE_ALPHA:
         {
             if (version < 10)
                 capacity -= 9;
@@ -54,7 +52,7 @@ int establishCapacity(int mode, int version, int capacity)
                 result++;
             break;
         }
-        case 4:
+        case QR_MODE_BYTE:
         {
             if (version > 9)
                 capacity -= 16;
