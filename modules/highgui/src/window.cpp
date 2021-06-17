@@ -630,9 +630,8 @@ int cv::waitKey(int delay)
     return (code != -1) ? (code & 0xff) : -1;
 }
 
-#if defined(HAVE_WIN32UI)
-// pollKey() implemented in window_w32.cpp
-#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
+#if defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0)) || \
+    !defined(HAVE_WIN32UI) && (defined(HAVE_GTK) || defined(HAVE_COCOA))
 // pollKey() fallback implementation
 int cv::pollKey()
 {
@@ -650,6 +649,8 @@ int cv::pollKey()
     // fallback. please implement a proper polling function
     return cvWaitKey(1);
 }
+#elif defined(HAVE_WIN32UI)
+// pollKey() implemented in window_w32.cpp
 #endif
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
