@@ -11,6 +11,11 @@ def register(mname):
     return parameterized
 
 
+@register('cv2.gapi')
+def networks(*args):
+    return cv.gapi_GNetPackage(list(map(cv.detail.strip, args)))
+
+
 @register('cv2')
 class GOpaque():
     # NB: Inheritance from c++ class cause segfault.

@@ -17,6 +17,7 @@ using gapi_ie_PyParams           = cv::gapi::ie::PyParams;
 using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
 using detail_ExtractArgsCallback = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback = cv::detail::ExtractMetaCallback;
+using vector_GNetParam           = std::vector<cv::gapi::GNetParam>;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs
@@ -162,6 +163,18 @@ bool pyopencv_to(PyObject* obj, cv::GArg& value, const ArgInfo& info)
 {
     value = cv::GArg(cv::detail::PyObjectHolder(obj));
     return true;
+}
+
+template <>
+bool pyopencv_to(PyObject* obj, std::vector<cv::gapi::GNetParam>& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
+}
+
+template <>
+PyObject* pyopencv_from(const std::vector<cv::gapi::GNetParam>& value)
+{
+    return pyopencv_from_generic_vec(value);
 }
 
 template <>
@@ -761,23 +774,6 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
     return pyopencv_from(pkg);
 }
 
-static PyObject* pyopencv_cv_gapi_networks(PyObject*, PyObject* py_args, PyObject*)
-{
-    using namespace cv;
-    gapi::GNetPackage pkg;
-    Py_ssize_t size = PyTuple_Size(py_args);
-    for (int i = 0; i < size; ++i)
-    {
-        gapi_ie_PyParams params;
-        PyObject* item = PyTuple_GetItem(py_args, i);
-        if (pyopencv_to(item, params, ArgInfo("PyParams", false)))
-        {
-            pkg += gapi::networks(params);
-        }
-    }
-    return pyopencv_from(pkg);
-}
-
 static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
 {
     using namespace cv;
@@ -938,7 +934,6 @@ struct PyOpenCV_Converter<cv::GOpaque<T>>
 // extend cv.gapi methods
 #define PYOPENCV_EXTRA_METHODS_GAPI \
   {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \
-  {"networks", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_networks), "networks(...) -> GNetPackage"}, \
   {"__op", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_op), "__op(...) -> retval\n"},
 
 

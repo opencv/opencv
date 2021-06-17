@@ -54,6 +54,7 @@ namespace cv
    {
        struct GAPI_EXPORTS_W_SIMPLE ExtractArgsCallback { };
        struct GAPI_EXPORTS_W_SIMPLE ExtractMetaCallback { };
+       gapi::GNetParam GAPI_EXPORTS_W strip(gapi::ie::PyParams params);
    } // namespace detail
 
    namespace gapi
