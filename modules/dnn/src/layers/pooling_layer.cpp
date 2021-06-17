@@ -46,6 +46,7 @@
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_webnn.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -85,6 +86,7 @@ typedef int HALIDE_DIFF_T;
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
+#include <opencv2/core/utils/logger.hpp>
 
 
 namespace cv
@@ -245,6 +247,51 @@ public:
                 return haveVulkan() &&
                            (type == MAX || type == AVE);
             return false;
+        }
+        else if (backendId == DNN_BACKEND_WEBNN)
+        {
+            if (kernel_size.empty() || kernel_size.size() == 2)
+            {
+                if (!haveWebnn())
+                {
+                    return false;
+                }
+                else
+                {
+                    if (!ceilMode)
+                    {
+                        CV_LOG_WARNING(NULL, "ceilMode is not supported by WebNN backend.");
+                        return false;
+                    }
+                    if (computeMaxIdx)
+                    {
+                        CV_LOG_WARNING(NULL, "Mask is not supported by WebNN backend.");
+                        return false;
+                    }
+                    if (type != MAX && type != AVE)
+                    {
+                        if (type == STOCHASTIC)
+                        {
+                            CV_LOG_WARNING(NULL, "Stochastic Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == SUM)
+                        {
+                            CV_LOG_WARNING(NULL, "Sum Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == ROI)
+                        {
+                            CV_LOG_WARNING(NULL, "ROI Pooling is not supported by WebNN backend.");
+                        }
+                        if (type == PSROI)
+                        {
+                            CV_LOG_WARNING(NULL, "Position-sensitive ROI Pooling is not supported by WebNN backend.");
+                        }
+                        CV_LOG_WARNING(NULL, "WebNN backend only supports MaxPooling and AveragePooling currently.");
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
         return false;
     }
@@ -607,6 +654,79 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+#ifdef HAVE_WEBNN
+    struct Pool2dOptions {
+      public:
+        std::vector<int32_t> windowDimensions;
+        std::vector<int32_t> padding;
+        std::vector<int32_t> strides;
+        std::vector<int32_t> dilations;
+        ml::AutoPad autoPad = ml::AutoPad::Explicit;
+        ml::InputOperandLayout layout = ml::InputOperandLayout::Nchw;
+
+        const ml::Pool2dOptions* AsPtr() {
+            if (!windowDimensions.empty()) {
+                mOptions.windowDimensionsCount = windowDimensions.size();
+                mOptions.windowDimensions = windowDimensions.data();
+            }
+            if (!padding.empty()) {
+                mOptions.paddingCount = padding.size();
+                mOptions.padding = padding.data();
+            }
+            if (!strides.empty()) {
+                mOptions.stridesCount = strides.size();
+                mOptions.strides = strides.data();
+            }
+            if (!dilations.empty()) {
+                mOptions.dilationsCount = dilations.size();
+                mOptions.dilations = dilations.data();
+            }
+            mOptions.layout = layout;
+            mOptions.autoPad = autoPad;
+            return &mOptions;
+        }
+
+      private:
+        ml::Pool2dOptions mOptions;
+    };
+
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        Pool2dOptions options;
+        std::vector<int32_t> kernelSize(kernel_size.begin(), kernel_size.end());
+        std::vector<int32_t> Strides(strides.begin(), strides.end());
+        std::vector<int32_t> Padding;
+        if (padMode.empty()) {
+            Padding = {static_cast<int32_t>(pads_begin[0]),
+                      static_cast<int32_t>(pads_end[0]),
+                      static_cast<int32_t>(pads_begin[1]),
+                      static_cast<int32_t>(pads_end[1])};
+        } else if (padMode == "VALID") {
+            Padding = {0, 0, 0, 0};
+        } else if (padMode == "SAME") {
+            options.autoPad = ml::AutoPad::SameUpper;
+        }
+        options.windowDimensions = kernelSize;
+        options.strides = Strides;
+        options.padding = Padding;
+        if (type == MAX)
+        {
+            auto operand = webnnGraphBuilder.MaxPool2d(webnnInpOperand, options.AsPtr());
+            return Ptr<BackendNode>(new WebnnBackendNode(operand));
+        }
+        else if (type == AVE)
+        {
+            auto operand = webnnGraphBuilder.AveragePool2d(webnnInpOperand, options.AsPtr());
+            return Ptr<BackendNode>(new WebnnBackendNode(operand));
+        } else {
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+        }
+    }
+#endif // HAVE_WEBNN
 
     class PoolingInvoker : public ParallelLoopBody
     {

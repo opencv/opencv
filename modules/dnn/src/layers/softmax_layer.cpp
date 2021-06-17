@@ -47,9 +47,11 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
+#include <opencv2/core/utils/logger.hpp>
 using std::max;
 
 #ifdef HAVE_OPENCL
@@ -97,6 +99,16 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_WEBNN
+        if (backendId == DNN_BACKEND_WEBNN) {
+            // TODO: support logSoftMax
+            if (logSoftMax)
+            {
+                CV_LOG_WARNING(NULL, "logSoftMax is not supported by WebNN backend.")
+            }
+            return !logSoftMax;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
@@ -389,6 +401,18 @@ public:
         params.blobs.push_back(lookUpTable);
         return true;
     }
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        auto operand = webnnGraphBuilder.Softmax(webnnInpOperand);
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+
+#endif
 
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE
