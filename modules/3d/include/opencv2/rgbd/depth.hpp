@@ -67,7 +67,7 @@ namespace cv
    * ``Gradient Response Maps for Real-Time Detection of Texture-Less Objects``
    * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
    */
-  class CV_EXPORTS_W RgbdNormals: public Algorithm
+  class CV_EXPORTS RgbdNormals: public Algorithm
   {
   public:
     enum RGBD_NORMALS_METHOD
@@ -98,71 +98,69 @@ namespace cv
      * @param method one of the methods to use: RGBD_NORMALS_METHOD_SRI, RGBD_NORMALS_METHOD_FALS
      */
     RgbdNormals(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
-        RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+                RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 
     ~RgbdNormals();
 
-    CV_WRAP static Ptr<RgbdNormals> create(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
-        RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+    static Ptr<RgbdNormals> create(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
+                                   RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param normals a rows x cols x 3 matrix
      */
-    CV_WRAP_AS(apply) void
-    operator()(InputArray points, OutputArray normals) const;
+    void operator()(InputArray points, OutputArray normals) const;
 
     /** Initializes some data that is cached for later computation
      * If that function is not called, it will be called the first time normals are computed
      */
-    CV_WRAP void
-    initialize() const;
+    void initialize() const;
 
-    CV_WRAP int getRows() const
+    int getRows() const
     {
         return rows_;
     }
-    CV_WRAP void setRows(int val)
+    void setRows(int val)
     {
         rows_ = val;
     }
-    CV_WRAP int getCols() const
+    int getCols() const
     {
         return cols_;
     }
-    CV_WRAP void setCols(int val)
+    void setCols(int val)
     {
         cols_ = val;
     }
-    CV_WRAP int getWindowSize() const
+    int getWindowSize() const
     {
         return window_size_;
     }
-    CV_WRAP void setWindowSize(int val)
+    void setWindowSize(int val)
     {
         window_size_ = val;
     }
-    CV_WRAP int getDepth() const
+    int getDepth() const
     {
         return depth_;
     }
-    CV_WRAP void setDepth(int val)
+    void setDepth(int val)
     {
         depth_ = val;
     }
-    CV_WRAP cv::Mat getK() const
+    cv::Mat getK() const
     {
         return K_;
     }
-    CV_WRAP void setK(const cv::Mat &val)
+    void setK(const cv::Mat &val)
     {
         K_ = val;
     }
-    CV_WRAP int getMethod() const
+    int getMethod() const
     {
         return method_;
     }
-    CV_WRAP void setMethod(int val)
+    void setMethod(int val)
     {
         method_ = val;
     }
@@ -180,7 +178,7 @@ namespace cv
 
   /** Object that can clean a noisy depth image
    */
-  class CV_EXPORTS_W DepthCleaner: public Algorithm
+  class CV_EXPORTS DepthCleaner: public Algorithm
   {
   public:
     /** NIL method is from
@@ -210,42 +208,40 @@ namespace cv
 
     ~DepthCleaner();
 
-    CV_WRAP static Ptr<DepthCleaner> create(int depth, int window_size = 5, int method = DepthCleaner::DEPTH_CLEANER_NIL);
+    static Ptr<DepthCleaner> create(int depth, int window_size = 5, int method = DepthCleaner::DEPTH_CLEANER_NIL);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param depth a rows x cols matrix of the cleaned up depth
      */
-    CV_WRAP_AS(process) void
-    operator()(InputArray points, OutputArray depth) const;
+    void operator()(InputArray points, OutputArray depth) const;
 
     /** Initializes some data that is cached for later computation
      * If that function is not called, it will be called the first time normals are computed
      */
-    CV_WRAP void
-    initialize() const;
+    void initialize() const;
 
-    CV_WRAP int getWindowSize() const
+    int getWindowSize() const
     {
         return window_size_;
     }
-    CV_WRAP void setWindowSize(int val)
+    void setWindowSize(int val)
     {
         window_size_ = val;
     }
-    CV_WRAP int getDepth() const
+    int getDepth() const
     {
         return depth_;
     }
-    CV_WRAP void setDepth(int val)
+    void setDepth(int val)
     {
         depth_ = val;
     }
-    CV_WRAP int getMethod() const
+    int getMethod() const
     {
         return method_;
     }
-    CV_WRAP void setMethod(int val)
+    void setMethod(int val)
     {
         method_ = val;
     }
@@ -323,7 +319,7 @@ namespace cv
 
   /** Object that can compute planes in an image
    */
-  class CV_EXPORTS_W RgbdPlane: public Algorithm
+  class CV_EXPORTS RgbdPlane: public Algorithm
   {
   public:
     enum RGBD_PLANE_METHOD
@@ -358,7 +354,7 @@ namespace cv
 
     ~RgbdPlane();
 
-    CV_WRAP static Ptr<RgbdPlane> create(int method, int block_size, int min_size, double threshold,
+    static Ptr<RgbdPlane> create(int method, int block_size, int min_size, double threshold,
                                          double sensor_error_a = 0, double sensor_error_b = 0,
                                          double sensor_error_c = 0);
 
@@ -370,9 +366,8 @@ namespace cv
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
      *        and c < 0 (so that the normal points towards the camera)
      */
-    CV_WRAP_AS(findWithNormals) void
-    operator()(InputArray points3d, InputArray normals, OutputArray mask,
-               OutputArray plane_coefficients);
+    void operator()(InputArray points3d, InputArray normals, OutputArray mask,
+                    OutputArray plane_coefficients);
 
     /** Find The planes in a depth image but without doing a normal check, which is faster but less accurate
      * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
@@ -380,62 +375,61 @@ namespace cv
      *        and 255 if it does not belong to any plane
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0
      */
-    CV_WRAP_AS(find) void
-    operator()(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
+    void operator()(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
 
-    CV_WRAP int getBlockSize() const
+    int getBlockSize() const
     {
         return block_size_;
     }
-    CV_WRAP void setBlockSize(int val)
+    void setBlockSize(int val)
     {
         block_size_ = val;
     }
-    CV_WRAP int getMinSize() const
+    int getMinSize() const
     {
         return min_size_;
     }
-    CV_WRAP void setMinSize(int val)
+    void setMinSize(int val)
     {
         min_size_ = val;
     }
-    CV_WRAP int getMethod() const
+    int getMethod() const
     {
         return method_;
     }
-    CV_WRAP void setMethod(int val)
+    void setMethod(int val)
     {
         method_ = val;
     }
-    CV_WRAP double getThreshold() const
+    double getThreshold() const
     {
         return threshold_;
     }
-    CV_WRAP void setThreshold(double val)
+    void setThreshold(double val)
     {
         threshold_ = val;
     }
-    CV_WRAP double getSensorErrorA() const
+    double getSensorErrorA() const
     {
         return sensor_error_a_;
     }
-    CV_WRAP void setSensorErrorA(double val)
+    void setSensorErrorA(double val)
     {
         sensor_error_a_ = val;
     }
-    CV_WRAP double getSensorErrorB() const
+    double getSensorErrorB() const
     {
         return sensor_error_b_;
     }
-    CV_WRAP void setSensorErrorB(double val)
+    void setSensorErrorB(double val)
     {
         sensor_error_b_ = val;
     }
-    CV_WRAP double getSensorErrorC() const
+    double getSensorErrorC() const
     {
         return sensor_error_c_;
     }
-    CV_WRAP void setSensorErrorC(double val)
+    void setSensorErrorC(double val)
     {
         sensor_error_c_ = val;
     }
