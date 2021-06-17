@@ -20,6 +20,7 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_WEBNN
 
+<<<<<<< HEAD
 namespace webnn {
 ml::Operand BuildConstant(const ml::GraphBuilder& builder,
                               const std::vector<int32_t>& dimensions,
@@ -39,6 +40,19 @@ ml::Operand BuildConstant(const ml::GraphBuilder& builder,
 
 static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
 
+=======
+static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
+
+template<typename T>
+static inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+}
+
+>>>>>>> Add WebNN backend for OpenCV DNN Module
 static std::vector<Ptr<WebnnBackendWrapper> >
 webnnWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
 {
@@ -58,6 +72,7 @@ WebnnNet::WebnnNet()
     hasNetOwner = false;
     device_name = "CPU";
 
+<<<<<<< HEAD
 #ifdef __EMSCRIPTEN__
     context = ml::Context(emscripten_webnn_create_context());
 #else
@@ -65,6 +80,11 @@ WebnnNet::WebnnNet()
     webnnProcSetProcs(&backendProcs);
     context = ml::Context(webnn_native::CreateContext());
 #endif
+=======
+    WebnnProcTable backendProcs = webnn_native::GetProcs();
+    webnnProcSetProcs(&backendProcs);
+    context = ml::Context(webnn_native::CreateContext());
+>>>>>>> Add WebNN backend for OpenCV DNN Module
     builder = ::ml::CreateGraphBuilder(context);
     namedOperands = ::ml::CreateNamedOperands();
 }
@@ -104,7 +124,11 @@ std::vector<ml::Operand> WebnnNet::setInputs(const std::vector<cv::Mat>& inputs,
     for (size_t i = 0; i < inputs.size(); i++)
     {
         auto& m = inputs[i];
+<<<<<<< HEAD
         std::vector<int32_t> dimensions = webnn::getShape(m);
+=======
+        std::vector<int32_t> dimensions = getShape<int32_t>(m);
+>>>>>>> Add WebNN backend for OpenCV DNN Module
         ml::OperandDescriptor descriptor;
         descriptor.dimensions = dimensions.data();
         descriptor.dimensionsCount = dimensions.size();
@@ -172,9 +196,7 @@ void WebnnNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers
         const std::string& name = outs[i]->name;
         ml::ArrayBufferView& output = outputs[i];
         output.buffer = outs[i]->host->data;
-        // std::cout<<"host data size: "<<outs[i]->host->total()*outs[i]->host->elemSize()<<std::endl;
         output.byteLength = outs[i]->size;
-        // std::cout<<"outs[i]->size: "<< outs[i]->size << std::endl;
         named_outputs.Set(name.c_str(), &output);
     }
     ml::ComputeGraphStatus status = graph.Compute(named_inputs, named_outputs);

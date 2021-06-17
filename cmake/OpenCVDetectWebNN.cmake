@@ -25,7 +25,6 @@ else()
     )
 endif()
 
-
 if(NOT ${VALID_WEBNN})
   message(WARNING "Can't use WebNN-native")
   return()

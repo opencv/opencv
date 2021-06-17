@@ -675,7 +675,6 @@ public:
         } else if (padMode == "SAME") {
             options.autoPad = ml::AutoPad::SameUpper;
         }
-        // std::cout << "padMode: " << padMode << std::endl;
         options.windowDimensions = kernelSize;
         options.strides = Strides;
         options.padding = Padding;
