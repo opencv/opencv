@@ -9,6 +9,14 @@
 #include <opencv2/gapi/fluid/core.hpp>
 #include <opencv2/gapi/fluid/imgproc.hpp>
 
+static void gscalar_example()
+{
+    //! [gscalar_implicit]
+    cv::GMat a;
+    cv::GMat b = a + 1;
+    //! [gscalar_implicit]
+}
+
 static void typed_example()
 {
     const cv::Size sz(32, 32);
@@ -116,7 +124,9 @@ int main(int argc, char *argv[])
         >();
     //! [kernels_snippet]
 
-    // Just call typed example with no input/output
+    // Just call typed example with no input/output - avoid warnings about
+    // unused functions
     typed_example();
+    gscalar_example();
     return 0;
 }
