@@ -205,7 +205,6 @@ namespace {
             rng = cv::theRNG();
 
 #ifdef OPENCV_TRACE
-            #error xxx
             traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
             traceRootContext = CV_TRACE_NS::details::getTraceManager().tls.get();
 #endif
