@@ -1881,6 +1881,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
                (unsigned)pt.y < (unsigned)(image_widget->original_image->height)
             ))
         {
+            state &= gtk_accelerator_get_default_mod_mask();
             flags |= BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
                 BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
