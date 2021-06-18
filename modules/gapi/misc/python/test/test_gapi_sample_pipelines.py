@@ -225,7 +225,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
             pkg = cv.gapi.kernels(GAddImpl)
-            actual = comp.apply(cv.gin(in_mat1, in_mat2), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat1, in_mat2), args=cv.gapi.compile_args(pkg))
 
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
@@ -245,7 +245,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_ch1, g_ch2, g_ch3))
 
             pkg = cv.gapi.kernels(GSplit3Impl)
-            ch1, ch2, ch3 = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+            ch1, ch2, ch3 = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
 
             self.assertEqual(0.0, cv.norm(in_ch1, ch1, cv.NORM_INF))
             self.assertEqual(0.0, cv.norm(in_ch2, ch2, cv.NORM_INF))
@@ -266,7 +266,7 @@ try:
             comp = cv.GComputation(g_in, g_out)
 
             pkg    = cv.gapi.kernels(GMeanImpl)
-            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
 
             # Comparison
             self.assertEqual(expected, actual)
@@ -287,7 +287,7 @@ try:
             comp  = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(g_out))
 
             pkg = cv.gapi.kernels(GAddCImpl)
-            actual = comp.apply(cv.gin(in_mat, sc), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat, sc), args=cv.gapi.compile_args(pkg))
 
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
@@ -305,7 +305,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_sz))
 
             pkg = cv.gapi.kernels(GSizeImpl)
-            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
 
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
 
@@ -322,7 +322,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_r), cv.GOut(g_sz))
 
             pkg = cv.gapi.kernels(GSizeRImpl)
-            actual = comp.apply(cv.gin(roi), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(roi), args=cv.gapi.compile_args(pkg))
 
             # cv.norm works with tuples ?
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -340,7 +340,7 @@ try:
             comp  = cv.GComputation(cv.GIn(g_pts), cv.GOut(g_br))
 
             pkg = cv.gapi.kernels(GBoundingRectImpl)
-            actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(points), args=cv.gapi.compile_args(pkg))
 
             # cv.norm works with tuples ?
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
@@ -371,7 +371,7 @@ try:
 
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
             pkg = cv.gapi.kernels(GGoodFeaturesImpl)
-            actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+            actual = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
 
             # NB: OpenCV & G-API have different output types.
             # OpenCV - numpy array with shape (num_points, 1, 2)
@@ -453,10 +453,10 @@ try:
             g_in  = cv.GArray.Int()
             comp  = cv.GComputation(cv.GIn(g_in), cv.GOut(GSum.on(g_in)))
 
-            s = comp.apply(cv.gin([1, 2, 3, 4]), args=cv.compile_args(cv.gapi.kernels(GSumImpl)))
+            s = comp.apply(cv.gin([1, 2, 3, 4]), args=cv.gapi.compile_args(cv.gapi.kernels(GSumImpl)))
             self.assertEqual(10, s)
 
-            s = comp.apply(cv.gin([1, 2, 8, 7]), args=cv.compile_args(cv.gapi.kernels(GSumImpl)))
+            s = comp.apply(cv.gin([1, 2, 8, 7]), args=cv.gapi.compile_args(cv.gapi.kernels(GSumImpl)))
             self.assertEqual(18, s)
 
             self.assertEqual(18, GSumImpl.last_result)
@@ -488,13 +488,13 @@ try:
                         'tuple': (42, 42)
                     }
 
-            out = comp.apply(cv.gin(table, 'int'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
+            out = comp.apply(cv.gin(table, 'int'), args=cv.gapi.compile_args(cv.gapi.kernels(GLookUpImpl)))
             self.assertEqual(42, out)
 
-            out = comp.apply(cv.gin(table, 'str'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
+            out = comp.apply(cv.gin(table, 'str'), args=cv.gapi.compile_args(cv.gapi.kernels(GLookUpImpl)))
             self.assertEqual('hello, world!', out)
 
-            out = comp.apply(cv.gin(table, 'tuple'), args=cv.compile_args(cv.gapi.kernels(GLookUpImpl)))
+            out = comp.apply(cv.gin(table, 'tuple'), args=cv.gapi.compile_args(cv.gapi.kernels(GLookUpImpl)))
             self.assertEqual((42, 42), out)
 
 
@@ -521,7 +521,7 @@ try:
             arr1 = [3,    'str']
 
             out = comp.apply(cv.gin(arr0, arr1),
-                             args=cv.compile_args(cv.gapi.kernels(GConcatImpl)))
+                             args=cv.gapi.compile_args(cv.gapi.kernels(GConcatImpl)))
 
             self.assertEqual(arr0 + arr1, out)
 
@@ -550,7 +550,7 @@ try:
             img1 = np.array([1, 2, 3])
 
             with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
-                                                          args=cv.compile_args(
+                                                          args=cv.gapi.compile_args(
                                                               cv.gapi.kernels(GAddImpl)))
 
 
@@ -577,7 +577,7 @@ try:
             img1 = np.array([1, 2, 3])
 
             with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
-                                                          args=cv.compile_args(
+                                                          args=cv.gapi.compile_args(
                                                               cv.gapi.kernels(GAddImpl)))
 
 
@@ -607,7 +607,7 @@ try:
             # FIXME: Cause Bad variant access.
             # Need to provide more descriptive error messsage.
             with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
-                                                          args=cv.compile_args(
+                                                          args=cv.gapi.compile_args(
                                                               cv.gapi.kernels(GAddImpl)))
 
         def test_pipeline_with_custom_kernels(self):
@@ -657,7 +657,7 @@ try:
             g_mean       = cv.gapi.mean(g_transposed)
 
             comp = cv.GComputation(cv.GIn(g_bgr), cv.GOut(g_mean))
-            actual = comp.apply(cv.gin(img), args=cv.compile_args(
+            actual = comp.apply(cv.gin(img), args=cv.gapi.compile_args(
                 cv.gapi.kernels(GResizeImpl, GTransposeImpl)))
 
             self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
