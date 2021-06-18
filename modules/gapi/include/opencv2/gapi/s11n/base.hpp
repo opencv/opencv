@@ -27,8 +27,16 @@ struct NotImplemented {
 /** @brief This structure allows to implement serialization routines for custom types.
  *
  * The default S11N for custom types is not implemented.
+ *
  * @note When providing an overloaded implementation for S11N with your type
  * don't inherit it from NotImplemented structure.
+ *
+ * @note There are lots of overloaded >> and << operators for basic and OpenCV/G-API types
+ * which can be utilized when serializing a custom type.
+ *
+ * Example of usage:
+ * @snippet custom_type_serialization.cpp S11N usage
+ *
  */
 template<typename T>
 struct S11N: public NotImplemented {
