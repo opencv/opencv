@@ -11,7 +11,7 @@ def register(mname):
     return parameterized
 
 
-@register('cv2')
+@register('cv2.gapi')
 def compile_args(*args):
     return list(map(cv.GCompileArg, args))
 

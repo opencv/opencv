@@ -41,7 +41,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in1, in2), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in1, in2), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')
@@ -63,7 +63,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in1, in2), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in1, in2), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')
@@ -83,7 +83,7 @@ try:
             comp = cv.GComputation(g_in, g_out)
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')
@@ -102,7 +102,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(b, g, r))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in_mat), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in_mat), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 for e, a in zip(expected, actual):
                     self.assertEqual(0.0, cv.norm(e, a, cv.NORM_INF),
@@ -125,7 +125,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in, g_sc), cv.GOut(mat, threshold))
 
             for pkg_name, pkg in pkgs:
-                actual_mat, actual_thresh = comp.apply(cv.gin(in_mat, maxv), args=cv.compile_args(pkg))
+                actual_mat, actual_thresh = comp.apply(cv.gin(in_mat, maxv), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected_mat, actual_mat, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')

@@ -52,7 +52,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in1), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in1), args=cv.gapi.compile_args(pkg))
                 # NB: OpenCV & G-API have different output shapes:
                 # OpenCV - (num_points, 1, 2)
                 # G-API  - (num_points, 2)
@@ -78,7 +78,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(in1), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(in1), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')
@@ -103,7 +103,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
 
             for pkg_name, pkg in pkgs:
-                actual = comp.apply(cv.gin(points), args=cv.compile_args(pkg))
+                actual = comp.apply(cv.gin(points), args=cv.gapi.compile_args(pkg))
                 # Comparison
                 self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF),
                                  'Failed on ' + pkg_name + ' backend')

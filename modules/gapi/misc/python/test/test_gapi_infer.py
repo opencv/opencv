@@ -60,7 +60,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
-            gapi_age, gapi_gender = comp.apply(cv.gin(img), args=cv.compile_args(cv.gapi.networks(pp)))
+            gapi_age, gapi_gender = comp.apply(cv.gin(img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Check
             self.assertEqual(0.0, cv.norm(dnn_gender, gapi_gender, cv.NORM_INF))
@@ -99,7 +99,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in, g_roi), cv.GOut(age_g, gender_g))
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
-            gapi_age, gapi_gender = comp.apply(cv.gin(img, roi), args=cv.compile_args(cv.gapi.networks(pp)))
+            gapi_age, gapi_gender = comp.apply(cv.gin(img, roi), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Check
             self.assertEqual(0.0, cv.norm(dnn_gender, gapi_gender, cv.NORM_INF))
@@ -144,7 +144,7 @@ try:
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
             gapi_age_list, gapi_gender_list = comp.apply(cv.gin(img, rois),
-                                                         args=cv.compile_args(cv.gapi.networks(pp)))
+                                                         args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Check
             for gapi_age, gapi_gender, dnn_age, dnn_gender in zip(gapi_age_list,
@@ -193,7 +193,7 @@ try:
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
             gapi_age_list, gapi_gender_list = comp.apply(cv.gin(img, rois),
-                                                         args=cv.compile_args(cv.gapi.networks(pp)))
+                                                         args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Check
             for gapi_age, gapi_gender, dnn_age, dnn_gender in zip(gapi_age_list,
@@ -255,10 +255,8 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(bboxes))
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
-            gapi_age, gapi_gender = comp.apply(cv.gin(img), args=cv.compile_args(cv.gapi.networks(pp)))
-
             gapi_boxes = comp.apply(cv.gin(img.astype(np.float32)),
-                                    args=cv.compile_args(cv.gapi.networks(pp)))
+                                    args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Comparison
             self.assertEqual(0.0, cv.norm(np.array(dnn_boxes).flatten(),
@@ -317,7 +315,7 @@ try:
             pp = cv.gapi.ie.params("net", model_path, weights_path, device_id)
 
             gapi_boxes = comp.apply(cv.gin(img.astype(np.float32)),
-                                    args=cv.compile_args(cv.gapi.networks(pp)))
+                                    args=cv.gapi.compile_args(cv.gapi.networks(pp)))
 
             # Comparison
             self.assertEqual(0.0, cv.norm(np.array(dnn_boxes).flatten(),
