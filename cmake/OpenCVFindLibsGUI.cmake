@@ -2,15 +2,6 @@
 #  Detect 3rd-party GUI libraries
 # ----------------------------------------------------------------------------
 
-#--- Win32 UI ---
-ocv_clear_vars(HAVE_WIN32UI)
-if(WITH_WIN32UI)
-  try_compile(HAVE_WIN32UI
-    "${OpenCV_BINARY_DIR}"
-    "${OpenCV_SOURCE_DIR}/cmake/checks/win32uitest.cpp"
-    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=user32;gdi32")
-endif()
-
 # --- QT4/5 ---
 ocv_clear_vars(HAVE_QT HAVE_QT5)
 if(WITH_QT)
