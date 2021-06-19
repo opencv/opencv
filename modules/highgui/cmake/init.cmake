@@ -43,8 +43,7 @@ else()
 endif()
 
 add_backend("gtk" WITH_GTK)
-
-# TODO win32
+add_backend("win32ui" WITH_WIN32UI)
 # TODO cocoa
 # TODO qt
 # TODO opengl

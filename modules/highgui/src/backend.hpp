@@ -114,6 +114,10 @@ bool setUIBackend(const std::string& backendName);
 
 #ifndef BUILD_PLUGIN
 
+#ifdef HAVE_WIN32UI
+std::shared_ptr<UIBackend> createUIBackendWin32UI();
+#endif
+
 #ifdef HAVE_GTK
 std::shared_ptr<UIBackend> createUIBackendGTK();
 #endif
