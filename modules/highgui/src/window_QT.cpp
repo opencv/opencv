@@ -63,6 +63,7 @@
     #endif
 #endif
 
+using namespace cv;
 
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;
@@ -197,7 +198,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_QT(const String& winname, const String& title)
 {
     if (!guiMainThread)
         CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
