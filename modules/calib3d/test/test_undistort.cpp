@@ -897,7 +897,7 @@ void CV_InitInverseRectificationMapTest::prepare_to_validation(int/* test_case_i
     Mat _new_cam0 = zero_new_cam ? test_mat[INPUT][0] : test_mat[INPUT][3];
     Mat _mapx(img_size, CV_32F), _mapy(img_size, CV_32F);
 
-    double a[9], d[5]={0,0,0,0,0}, R[9]={1, 0, 0, 0, 1, 0, 0, 0, 1}, a1[9];
+    double a[9], d[5]={0., 0., 0., 0. , 0.}, R[9]={1., 0., 0., 0., 1., 0., 0., 0., 1.}, a1[9];
     Mat _a(3, 3, CV_64F, a), _a1(3, 3, CV_64F, a1);
     Mat _d(_d0.rows,_d0.cols, CV_MAKETYPE(CV_64F,_d0.channels()),d);
     Mat _R(3, 3, CV_64F, R);
@@ -951,9 +951,9 @@ void CV_InitInverseRectificationMapTest::prepare_to_validation(int/* test_case_i
             // Undistort
             double x2 = x*x, y2 = y*y;
             double r2 = x2 + y2;
-            double cdist = 1./(1 + (d[0] + (d[1] + d[4]*r2)*r2)*r2); // (1 + (d[5] + (d[6] + d[7]*r2)*r2)*r2) == 1 as d[5-7]=0;
-            double x_ = x*cdist - d[2]*2*x*y + d[3]*(r2 + 2*x2);
-            double y_ = y*cdist - d[3]*2*x*y + d[2]*(r2 + 2*y2);
+            double cdist = 1./(1. + (d[0] + (d[1] + d[4]*r2)*r2)*r2); // (1. + (d[5] + (d[6] + d[7]*r2)*r2)*r2) == 1 as d[5-7]=0;
+            double x_ = (x - (d[2]*2.*x*y + d[3]*(r2 + 2.*x2)))*cdist;
+            double y_ = (y - (d[3]*2.*x*y + d[2]*(r2 + 2.*y2)))*cdist;
 
             // Rectify
             double X = R[0]*x_ + R[1]*y_ + R[2];
@@ -1805,6 +1805,80 @@ TEST(Calib3d_initUndistortRectifyMap, regression_14467)
     undistortPoints(mapxy.reshape(2, (int)mapxy.total()), dst, k, d, noArray(), k);
     dst = dst.reshape(2, mapxy.rows);
     EXPECT_LE(cvtest::norm(dst, mesh_uv, NORM_INF), 1e-3);
+}
+
+TEST(Calib3d_initInverseRectificationMap, regression_20165)
+{
+    Size size_w_h(1280, 800);
+    Mat dst(size_w_h, CV_32FC2); // Reference for validation
+    Mat mapxy; // Output of initInverseRectificationMap()
+
+    // Camera Matrix
+    double k[9]={
+        1.5393951443032472e+03, 0., 6.7491727003047140e+02,
+        0., 1.5400748240626747e+03, 5.1226968329123963e+02,
+        0., 0., 1.
+    };
+    Mat _K(3, 3, CV_64F, k);
+
+    // Distortion
+    // double d[5]={0,0,0,0,0}; // Zero Distortion
+    double d[5]={ // Non-zero distortion
+        -3.4134571357400023e-03, 2.9733267766101856e-03, // K1, K2
+        3.6653586399031184e-03, -3.1960714017365702e-03, // P1, P2
+        0. // K3
+    };
+    Mat _d(1, 5, CV_64F, d);
+
+    // Rotation
+    //double R[9]={1., 0., 0., 0., 1., 0., 0., 0., 1.}; // Identity transform (none)
+    double R[9]={ // Random transform
+        9.6625486010428052e-01, 1.6055789378989216e-02, 2.5708706103628531e-01,
+        -8.0300261706161002e-03, 9.9944797497929860e-01, -3.2237617614807819e-02,
+       -2.5746274294459848e-01, 2.9085338870243265e-02, 9.6585039165403186e-01
+    };
+    Mat _R(3, 3, CV_64F, R);
+
+    // --- Validation --- //
+    initInverseRectificationMap(_K, _d, _R, _K, size_w_h, CV_32FC2, mapxy, noArray());
+
+    // Copy camera matrix
+    double fx, fy, cx, cy, ifx, ify, cxn, cyn;
+    fx = k[0]; fy = k[4]; cx = k[2]; cy = k[5];
+
+    // Copy new camera matrix
+    ifx = k[0]; ify = k[4]; cxn = k[2]; cyn = k[5];
+
+    // Distort Points
+    for( int v = 0; v < size_w_h.height; v++ )
+    {
+        for( int u = 0; u < size_w_h.width; u++ )
+        {
+            // Convert from image to pin-hole coordinates
+            double x = (u - cx)/fx;
+            double y = (v - cy)/fy;
+
+            // Undistort
+            double x2 = x*x, y2 = y*y;
+            double r2 = x2 + y2;
+            double cdist = 1./(1. + (d[0] + (d[1] + d[4]*r2)*r2)*r2); // (1. + (d[5] + (d[6] + d[7]*r2)*r2)*r2) == 1 as d[5-7]=0;
+            double x_ = (x - (d[2]*2.*x*y + d[3]*(r2 + 2.*x2)))*cdist;
+            double y_ = (y - (d[3]*2.*x*y + d[2]*(r2 + 2.*y2)))*cdist;
+
+            // Rectify
+            double X = R[0]*x_ + R[1]*y_ + R[2];
+            double Y = R[3]*x_ + R[4]*y_ + R[5];
+            double Z = R[6]*x_ + R[7]*y_ + R[8];
+            double x__ = X/Z;
+            double y__ = Y/Z;
+
+            // Convert from pin-hole to image coordinates
+            dst.at<Vec2f>(v, u) = Vec2f((float)(x__*ifx + cxn), (float)(y__*ify + cyn));
+        }
+    }
+
+    // Check Result
+    EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
 }} // namespace
