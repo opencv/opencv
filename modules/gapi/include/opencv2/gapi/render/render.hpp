@@ -139,7 +139,7 @@ Output image must be 8-bit unsigned planar 3-channel image
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3
 @param prims draw primitives
 */
-GAPI_EXPORTS GMat render3ch(const GMat& src, const GArray<Prim>& prims);
+GAPI_EXPORTS_W GMat render3ch(const GMat& src, const GArray<Prim>& prims);
 
 /** @brief Renders on two planes
 

@@ -10,6 +10,7 @@
 #include <opencv2/gapi.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/gopaque.hpp>
+#include <opencv2/gapi/render/render_types.hpp> // Prim
 
 #define ID(T, E)  T
 #define ID_(T, E) ID(T, E),
@@ -24,20 +25,23 @@
             GAPI_Assert(false && "Unsupported type"); \
     }
 
+using cv::gapi::wip::draw::Prim;
+
 #define GARRAY_TYPE_LIST_G(G, G2) \
-WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,    G)  \
-WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,     G)  \
-WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,  G)  \
-WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,   G)  \
-WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,  G)  \
-WRAP_ARGS(cv::Point   , cv::gapi::ArgType::CV_POINT,   G)  \
-WRAP_ARGS(cv::Point2f , cv::gapi::ArgType::CV_POINT2F, G)  \
-WRAP_ARGS(cv::Size    , cv::gapi::ArgType::CV_SIZE,    G)  \
-WRAP_ARGS(cv::Rect    , cv::gapi::ArgType::CV_RECT,    G)  \
-WRAP_ARGS(cv::Scalar  , cv::gapi::ArgType::CV_SCALAR,  G)  \
-WRAP_ARGS(cv::Mat     , cv::gapi::ArgType::CV_MAT,     G)  \
-WRAP_ARGS(cv::GArg    , cv::gapi::ArgType::CV_ANY,     G)  \
-WRAP_ARGS(cv::GMat    , cv::gapi::ArgType::CV_GMAT,    G2) \
+WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,      G)  \
+WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,       G)  \
+WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,    G)  \
+WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,     G)  \
+WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,    G)  \
+WRAP_ARGS(cv::Point   , cv::gapi::ArgType::CV_POINT,     G)  \
+WRAP_ARGS(cv::Point2f , cv::gapi::ArgType::CV_POINT2F,   G)  \
+WRAP_ARGS(cv::Size    , cv::gapi::ArgType::CV_SIZE,      G)  \
+WRAP_ARGS(cv::Rect    , cv::gapi::ArgType::CV_RECT,      G)  \
+WRAP_ARGS(cv::Scalar  , cv::gapi::ArgType::CV_SCALAR,    G)  \
+WRAP_ARGS(cv::Mat     , cv::gapi::ArgType::CV_MAT,       G)  \
+WRAP_ARGS(Prim        , cv::gapi::ArgType::CV_DRAW_PRIM, G)  \
+WRAP_ARGS(cv::GArg    , cv::gapi::ArgType::CV_ANY,       G)  \
+WRAP_ARGS(cv::GMat    , cv::gapi::ArgType::CV_GMAT,      G2) \
 
 #define GOPAQUE_TYPE_LIST_G(G, G2) \
 WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,    G)  \
@@ -68,6 +72,7 @@ enum ArgType {
     CV_SCALAR,
     CV_MAT,
     CV_GMAT,
+    CV_DRAW_PRIM,
     CV_ANY,
 };
 

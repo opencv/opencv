@@ -122,7 +122,7 @@ struct FText
  *
  * Parameters match cv::rectangle().
  */
-struct Rect
+struct GAPI_EXPORTS_W_SIMPLE Rect
 {
     /**
      * @brief Rect constructor
@@ -133,23 +133,23 @@ struct Rect
      * @param lt_     The type of the line. See #LineTypes
      * @param shift_  The number of fractional bits in the point coordinates
      */
-    Rect(const cv::Rect& rect_,
-         const cv::Scalar& color_,
-         int thick_ = 1,
-         int lt_ = 8,
-         int shift_ = 0) :
+    GAPI_WRAP Rect(const cv::Rect2i& rect_,
+                   const cv::Scalar& color_,
+                   int thick_ = 1,
+                   int lt_ = 8,
+                   int shift_ = 0) :
         rect(rect_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
     }
 
-    Rect() = default;
+    GAPI_WRAP Rect() = default;
 
     /*@{*/
-    cv::Rect   rect;  //!< Coordinates of the rectangle
-    cv::Scalar color; //!< The rectangle color or brightness (grayscale image)
-    int        thick; //!< The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
-    int        lt;    //!< The type of the line. See #LineTypes
-    int        shift; //!< The number of fractional bits in the point coordinates
+    GAPI_PROP cv::Rect   rect;  //!< Coordinates of the rectangle
+    GAPI_PROP cv::Scalar color; //!< The rectangle color or brightness (grayscale image)
+    GAPI_PROP int        thick; //!< The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
+    GAPI_PROP int        lt;    //!< The type of the line. See #LineTypes
+    GAPI_PROP int        shift; //!< The number of fractional bits in the point coordinates
     /*@{*/
 };
 

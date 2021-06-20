@@ -159,7 +159,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& rp = cv::util::get<Rect>(p);
                 const auto color = converter.cvtColor(rp.color);
-                cv::rectangle(in, rp.rect, color , rp.thick);
+                cv::rectangle(in, rp.rect, color, rp.thick, rp.lt, rp.shift);
                 break;
             }
 
