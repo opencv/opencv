@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 import os, numpy
-
+import unittest
 import cv2 as cv
 
 from tests_common import NewOpenCVTests
