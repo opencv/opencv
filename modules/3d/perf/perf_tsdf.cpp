@@ -321,11 +321,11 @@ public:
         // depth truncation is not used by default but can be useful in some scenes
         float truncateThreshold = 0.f; //meters
 
-        VolumeType volumeType = VolumeType::TSDF;
+        VolumeParams::VolumeType volumeType = VolumeParams::VolumeType::TSDF;
 
         if (useHashTSDF)
         {
-            volumeType = VolumeType::HASHTSDF;
+            volumeType = VolumeParams::VolumeType::HASHTSDF;
             truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
         }
         else

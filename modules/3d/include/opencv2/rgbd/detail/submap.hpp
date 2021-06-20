@@ -46,7 +46,7 @@ class Submap
         : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId)
     {
         VolumeParams vp = volumeParams;
-        vp.type = VolumeType::HASHTSDF;
+        vp.type = VolumeParams::VolumeType::HASHTSDF;
         volume = makeVolume(vp);
 
         CV_LOG_INFO(NULL, "Created volume");

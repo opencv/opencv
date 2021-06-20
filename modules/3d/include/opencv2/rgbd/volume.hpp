@@ -49,15 +49,15 @@ class CV_EXPORTS_W Volume
     const float raycastStepFactor;
 };
 
-enum class VolumeType
+struct CV_EXPORTS VolumeParams
 {
-    TSDF        = 0,
-    HASHTSDF    = 1,
-    COLOREDTSDF = 2
-};
+    enum VolumeType
+    {
+        TSDF        = 0,
+        HASHTSDF    = 1,
+        COLOREDTSDF = 2
+    };
 
-struct CV_EXPORTS_W VolumeParams
-{
     /** @brief Type of Volume
         Values can be TSDF (single volume) or HASHTSDF (hashtable of volume units)
     */

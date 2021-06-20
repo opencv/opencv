@@ -87,29 +87,29 @@ Ptr<VolumeParams> VolumeParams::coarseParams(VolumeType _volumeType)
 
 Ptr<Volume> makeVolume(const VolumeParams& _volumeParams)
 {
-    if(_volumeParams.type == VolumeType::TSDF)
+    if(_volumeParams.type == VolumeParams::VolumeType::TSDF)
         return makeTSDFVolume(_volumeParams);
-    else if(_volumeParams.type == VolumeType::HASHTSDF)
+    else if(_volumeParams.type == VolumeParams::VolumeType::HASHTSDF)
         return makeHashTSDFVolume(_volumeParams);
-    else if(_volumeParams.type == VolumeType::COLOREDTSDF)
+    else if(_volumeParams.type == VolumeParams::VolumeType::COLOREDTSDF)
         return makeColoredTSDFVolume(_volumeParams);
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-Ptr<Volume> makeVolume(VolumeType _volumeType, float _voxelSize, Matx44f _pose,
+Ptr<Volume> makeVolume(VolumeParams::VolumeType _volumeType, float _voxelSize, Matx44f _pose,
                        float _raycastStepFactor, float _truncDist, int _maxWeight,
                        float _truncateThreshold, Point3i _resolution)
 {
     Point3i _presolution = _resolution;
-    if (_volumeType == VolumeType::TSDF)
+    if (_volumeType == VolumeParams::VolumeType::TSDF)
     {
         return makeTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _presolution);
     }
-    else if (_volumeType == VolumeType::HASHTSDF)
+    else if (_volumeType == VolumeParams::VolumeType::HASHTSDF)
     {
         return makeHashTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _truncateThreshold);
     }
-    else if (_volumeType == VolumeType::COLOREDTSDF)
+    else if (_volumeType == VolumeParams::VolumeType::COLOREDTSDF)
     {
         return makeColoredTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _presolution);
     }
