@@ -53,34 +53,16 @@ public:
     void setException(const cv::Exception& exception);
 
 #ifdef CV_CXX11
-    explicit AsyncPromise(AsyncPromise&& o) {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
-        p = o.p; o.p = NULL;
-#else
-        CV_UNUSED(o);
-        CV_Error(cv::Error::StsNotImplemented,
-                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
-    }
-    AsyncPromise& operator=(AsyncPromise&& o) CV_NOEXCEPT {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
-        std::swap(p, o.p); return *this;
-#else
-        CV_UNUSED(o);
-        CV_Error(cv::Error::StsNotImplemented,
-                 "cv::AsyncPromise is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
-}
+    explicit AsyncPromise(AsyncPromise&& o) { p = o.p; o.p = NULL; }
+    AsyncPromise& operator=(AsyncPromise&& o) CV_NOEXCEPT { std::swap(p, o.p); return *this; }
 #endif
 
 
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     // PImpl
     typedef struct AsyncArray::Impl Impl; friend struct AsyncArray::Impl;
     inline void* _getImpl() const CV_NOEXCEPT { return p; }
 protected:
     Impl* p;
-#endif //OPENCV_DISABLE_THREAD_SUPPORT
 };
 
 

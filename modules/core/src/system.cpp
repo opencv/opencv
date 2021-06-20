@@ -216,7 +216,9 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #endif
 #else
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 #include <pthread.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 
@@ -1366,6 +1368,8 @@ bool __termination = false;
 
 namespace details {
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
@@ -1390,9 +1394,6 @@ public:
     static bool isDisposed() { return mark; }
 };
 
-// TlsAbstraction and TlsStorage are unsued when thread support is
-// disabled.
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 // TLS platform abstraction layer
 class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
 {
@@ -1422,7 +1423,7 @@ private:
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
-#endif //_WIN32
+#endif
 };
 
 template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
@@ -1780,28 +1781,128 @@ static void WINAPI opencv_fls_destructor(void* pData)
 }
 #endif // CV_USE_FLS
 #endif // _WIN32
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
+
+#else  // OPENCV_DISABLE_THREAD_SUPPORT
+
+// no threading (OPENCV_DISABLE_THREAD_SUPPORT=ON)
+class TlsStorage
+{
+public:
+    TlsStorage()
+    {
+        slots.reserve(32);
+    }
+    ~TlsStorage()
+    {
+        for (size_t slotIdx = 0; slotIdx < slots.size(); slotIdx++)
+        {
+            SlotInfo& s = slots[slotIdx];
+            TLSDataContainer* container = s.container;
+            if (container && s.data)
+            {
+                container->deleteDataInstance(s.data);  // Can't use from SlotInfo destructor
+                s.data = nullptr;
+            }
+        }
+    }
+
+    // Reserve TLS storage index
+    size_t reserveSlot(TLSDataContainer* container)
+    {
+        size_t slotsSize = slots.size();
+        for (size_t slot = 0; slot < slotsSize; slot++)
+        {
+            SlotInfo& s = slots[slot];
+            if (s.container == NULL)
+            {
+                CV_Assert(!s.data);
+                s.container = container;
+                return slot;
+            }
+        }
+
+        // create new slot
+        slots.push_back(SlotInfo(container));
+        return slotsSize;
+    }
+
+    // Release TLS storage index and pass associated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        void* data = s.data;
+        if (data)
+        {
+            dataVec.push_back(data);
+            s.data = nullptr;
+        }
+        if (!keepSlot)
+        {
+            s.container = NULL;  // mark slot as free (see reserveSlot() implementation)
+        }
+    }
+
+    // Get data by TLS storage index
+    void* getData(size_t slotIdx) const
+    {
+        CV_Assert(slotIdx < slots.size());
+        const SlotInfo& s = slots[slotIdx];
+        return s.data;
+    }
+
+    // Gather data from threads by TLS storage index
+    void gather(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        void* data = s.data;
+        if (data)
+            dataVec.push_back(data);
+        return;
+    }
+
+    // Set data to storage index
+    void setData(size_t slotIdx, void* pData)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        s.data = pData;
+    }
+
+private:
+    struct SlotInfo
+    {
+        SlotInfo(TLSDataContainer* _container) : container(_container), data(nullptr) {}
+        TLSDataContainer* container;  // attached container (to dispose data)
+        void* data;
+    };
+    std::vector<struct SlotInfo> slots;
+};
+
+static TlsStorage& getTlsStorage()
+{
+    static TlsStorage g_storage;  // no threading
+    return g_storage;
+}
+
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
 
 } // namespace details
 using namespace details;
 
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 void releaseTlsStorageThread()
 {
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (!g_isTlsStorageInitialized)
         return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread();
+#endif
 }
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 
 TLSDataContainer::TLSDataContainer()
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     key_ = (int)getTlsStorage().reserveSlot(this); // Reserve key from TLS storage
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 TLSDataContainer::~TLSDataContainer()
@@ -1811,29 +1912,16 @@ TLSDataContainer::~TLSDataContainer()
 
 void TLSDataContainer::gatherData(std::vector<void*> &data) const
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     getTlsStorage().gather(key_, data);
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_UNUSED(data);
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::detachData(std::vector<void*> &data)
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     getTlsStorage().releaseSlot(key_, data, true);
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_UNUSED(data);
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::release()
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     if (key_ == -1)
         return;  // already released
     std::vector<void*> data; data.reserve(32);
@@ -1841,28 +1929,18 @@ void TLSDataContainer::release()
     key_ = -1;
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void TLSDataContainer::cleanup()
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     std::vector<void*> data; data.reserve(32);
     getTlsStorage().releaseSlot(key_, data, true); // Extract stored data with removal from TLS tables
     for(size_t i = 0; i < data.size(); i++)  // Delete all associated data
         deleteDataInstance(data[i]);
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 void* TLSDataContainer::getData() const
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     CV_Assert(key_ != -1 && "Can't fetch data from terminated TLS container.");
     void* pData = getTlsStorage().getData(key_); // Check if data was already allocated
     if(!pData)
@@ -1880,10 +1958,6 @@ void* TLSDataContainer::getData() const
         }
     }
     return pData;
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-    CV_Error(cv::Error::StsNotImplemented,
-             "TlsDataContainer is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
 }
 
 static TLSData<CoreTLSData>& getCoreTlsDataTLS()
@@ -2555,8 +2629,7 @@ String getIppVersion()
 
 bool useIPP()
 {
-    // CoreTLSData require threads to work.
-#if defined(HAVE_IPP) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#ifdef HAVE_IPP
     CoreTLSData& data = getCoreTlsData();
     if (data.useIPP < 0)
     {

@@ -4,7 +4,7 @@
 
 // This is .hpp file included from test_utils.cpp
 
-#if defined(CV_CXX11) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#ifdef CV_CXX11
 #include <thread>  // std::thread
 #endif
 
@@ -34,7 +34,7 @@ public:
 int TLSReporter::g_last_id = 0;
 int TLSReporter::g_allocated = 0;
 
-#if defined(CV_CXX11)  && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#ifdef CV_CXX11
 
 template<typename T>
 static void callNThreadsWithTLS(int N, TLSData<T>& tls)

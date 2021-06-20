@@ -512,7 +512,7 @@ OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT 
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
-OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT    "Build the library without multi-threaded code."            OFF)
+OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT "Build the library without multi-threaded code." OFF)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
@@ -523,33 +523,6 @@ endif()
 
 if(OPENCV_DISABLE_FILESYSTEM_SUPPORT)
   add_definitions(-DOPENCV_HAVE_FILESYSTEM_SUPPORT=0)
-endif()
-
-if(OPENCV_DISABLE_THREAD_SUPPORT)
-  add_definitions(-DOPENCV_DISABLE_THREAD_SUPPORT)
-  # Force removal of code conditionally compiled with `#if
-  # HAVE_PTHREAD`.
-  set(HAVE_PTHREAD 0)
-  # Disable thread/mutex in openjpeg.
-  set(OPJ_USE_THREAD OFF)
-  # There components are disabled because they require
-  # multi-threaded execution.
-  set(WITH_PROTOBUF OFF)
-  set(WITH_GSTREAMER OFF)
-  set(WITH_OPENCL OFF)
-
-  # Trace uses bits of TlsDataContainer which is currently not
-  # supported when threads are disabled.
-  set(CV_TRACE OFF)
-
-  # These modules require `#include
-  # <[thread|mutex|condition_variable|future]>` and linkage into
-  # `libpthread` to work.
-  set(BUILD_opencv_python2 OFF)
-  set(BUILD_opencv_python3 OFF)
-  set(BUILD_opencv_objdetect OFF)
-  set(BUILD_opencv_gapi OFF)
-  set(BUILD_opencv_dnn OFF)
 endif()
 
 set(OPENCV_MATHJAX_RELPATH "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0" CACHE STRING "URI to a MathJax installation")

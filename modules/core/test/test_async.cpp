@@ -86,6 +86,7 @@ TEST(Core_Async, LikePythonTest)
 
 
 #if defined(CV_CXX11) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+
 TEST(Core_Async, AsyncThread_Simple)
 {
     Mat m(3, 3, CV_32FC1, Scalar::all(5.0f));

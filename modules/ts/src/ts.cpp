@@ -787,11 +787,8 @@ void testSetUp()
 {
     fflush(stdout); fflush(stderr);
     cv::ipp::setIppStatus(0);
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     cv::theRNG().state = cvtest::param_seed;
-#endif
     cv::setNumThreads(cvtest::testThreads);
-
     if (malloc_peak)  // if memory profiler is available
     {
         malloc_reset_peak();
@@ -1125,7 +1122,6 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {
@@ -1134,13 +1130,12 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
         ::testing::Test::RecordProperty("cv_parallel_threads", threads);
         std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
     }
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
-#if defined(HAVE_IPP) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#ifdef HAVE_IPP
     recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() : "disabled");
     if (cv::ipp::useIPP())
         recordPropertyVerbose("cv_ipp_features", "Intel(R) IPP features code", cv::format("0x%llx", cv::ipp::getIppTopFeatures()));
-#endif // defined(HAVE_IPP) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#endif
 #ifdef HAVE_OPENCL
     cv::dumpOpenCLInformation();
 #endif

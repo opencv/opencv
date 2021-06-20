@@ -649,21 +649,11 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     }
 }
 
-} // namespace cv
-
-#ifdef OPENCV_DISABLE_THREAD_SUPPORT
-namespace {
-static cv::RNG rng(0);
 }
-#endif
 
 cv::RNG& cv::theRNG()
 {
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     return getCoreTlsData().rng;
-#else
-    return ::rng;
-#endif
 }
 
 void cv::setRNGSeed(int seed)
