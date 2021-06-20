@@ -364,7 +364,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
 
 
     }
-    assert( image_widget->scaled_image );
+    CV_Assert(image_widget->scaled_image);
 }
 
 static void
@@ -849,7 +849,7 @@ static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode)
     return false;
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_GTK(const String& winname, const String& title)
 {
     CV_LOCK_MUTEX();
 
