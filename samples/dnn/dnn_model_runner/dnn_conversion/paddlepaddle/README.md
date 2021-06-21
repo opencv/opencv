@@ -35,8 +35,8 @@ there are 3 part of this execution
 Thanks for [PaddleSeg](https://github.com/PaddlePaddle/PaddleSeg), this Paddle Inference model convert from HRNet w18 small v1. For more details, please refer to [HumanSeg](https://github.com/PaddlePaddle/PaddleSeg/blob/release/2.1/contrib/HumanSeg/README.md).
 
 ```shell
-wget 
-unzip inference_model.zip
+wget https://x2paddle.bj.bcebos.com/inference/models/humanseg_hrnet18_small_v1.zip
+unzip humanseg_hrnet18_small_v1.zip
 ```
 
 Notes:
@@ -45,10 +45,19 @@ Notes:
 
 #### Step2. convert to ONNX model by paddle2onnx
 
+Install paddle2onnx from source
+
+```shell
+pip uninstall paddle2onnx
+git clone -b develop https://github.com/PaddlePaddle/Paddle2ONNX.git
+cd Paddle2ONNX
+python setup.py install
+```
+
 Use the following command to convert
 
 ```
-paddle2onnx --model_dir inference_model/humanseg_hrnet18_small_v1 \
+paddle2onnx --model_dir humanseg_hrnet18_small_v1 \
             --model_filename model.pdmodel \
             --params_filename model.pdiparams \
             --opset_version 11 \
@@ -70,6 +79,8 @@ there are 3 part of this execution
 * 1. Use `cv2.dnn.readNetFromONNX` load model file; 
 * 2. Preprocess image file and do inference.
 * 3. Postprocess image file and visualization.
+
+The result is in the path `data/result_test_human.png` .
 
 ### Portrait segmentation visualization
 
