@@ -198,7 +198,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& cp = cv::util::get<Circle>(p);
                 const auto color = converter.cvtColor(cp.color);
-                cv::circle(in, cp.center, cp.radius, color, cp.thick);
+                cv::circle(in, cp.center, cp.radius, color, cp.thick, cp.lt, cp.shift);
                 break;
             }
 
@@ -206,7 +206,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& lp = cv::util::get<Line>(p);
                 const auto color = converter.cvtColor(lp.color);
-                cv::line(in, lp.pt1, lp.pt2, color, lp.thick);
+                cv::line(in, lp.pt1, lp.pt2, color, lp.thick, lp.lt, lp.shift);
                 break;
             }
 

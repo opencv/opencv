@@ -150,9 +150,9 @@ uv image must be 8-bit unsigned planar 2-channel image @ref CV_8UC2
 @param uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2
 @param prims draw primitives
 */
-GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
-                              const GMat& uv,
-                              const GArray<Prim>& prims);
+GAPI_EXPORTS_W GMat2 renderNV12(const GMat& y,
+                                const GMat& uv,
+                                const GArray<Prim>& prims);
 
 /** @brief Renders Media Frame
 
@@ -177,7 +177,7 @@ namespace render
 {
 namespace ocv
 {
-    GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
+    GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
 
 } // namespace ocv
 } // namespace render

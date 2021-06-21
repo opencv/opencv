@@ -125,23 +125,62 @@ PyObject* pyopencv_from(const cv::detail::PyObjectHolder& v)
     return o;
 }
 
-// #FIXME: It's possible to write pyopencv_from function for every variant.
+// #FIXME: Is it possible to implement pyopencv_from/pyopencv_to for generic
+// cv::variant<Types...> ?
 template <>
 PyObject* pyopencv_from(const cv::gapi::wip::draw::Prim& prim)
 {
-    return NULL;
+    switch (prim.index()) {
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Rect>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Rect>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Text>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Text>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Circle>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Circle>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Line>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Line>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Poly>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Poly>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Mosaic>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Mosaic>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Image>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Image>(prim));
+    }
+
+    util::throw_error(std::logic_error("Unsupported draw primitive type"));
+}
+
+template <>
+PyObject* pyopencv_from(const cv::gapi::wip::draw::Prims& value)
+{
+    return pyopencv_from_generic_vec(value);
 }
 
 template<>
 bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo& info)
 {
-    cv::gapi::wip::draw::Rect rect;
-    if (pyopencv_to_safe(obj, rect, info))
-    {
-        value = rect;
-        return true;
-    }
+#define TRY_EXTRACT(Prim)                                                                                  \
+    if (PyObject_TypeCheck(obj, reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_draw_##Prim##_TypePtr))) \
+    {                                                                                                      \
+        value = reinterpret_cast<pyopencv_gapi_wip_draw_##Prim##_t*>(obj)->v;                              \
+        return true;                                                                                       \
+    }                                                                                                      \
+
+    TRY_EXTRACT(Rect)
+    TRY_EXTRACT(Text)
+    TRY_EXTRACT(Circle)
+    TRY_EXTRACT(Line)
+    TRY_EXTRACT(Mosaic)
+    TRY_EXTRACT(Image)
+    TRY_EXTRACT(Poly)
+
     return false;
+}
+
+template <>
+bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prims& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
 }
 
 template<>
