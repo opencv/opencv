@@ -737,5 +737,78 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_RVV
+
+void fastGEMM( const float* aptr, size_t astep, const float* bptr,
+               size_t bstep, float* cptr, size_t cstep,
+               int ma, int na, int nb )
+{
+    int n = 0;
+    size_t vl;
+    for( ; n <= nb - 16; n += 16 )
+    {
+        for( int m = 0; m < ma; m += 4 )
+        {
+            vl = vsetvl_e32m2(128);
+            const float* aptr0 = aptr + astep*m;
+            const float* aptr1 = aptr + astep*std::min(m+1, ma-1);
+            const float* aptr2 = aptr + astep*std::min(m+2, ma-1);
+            const float* aptr3 = aptr + astep*std::min(m+3, ma-1);
+
+            float* cptr0 = cptr + cstep*m;
+            float* cptr1 = cptr + cstep*std::min(m+1, ma-1);
+            float* cptr2 = cptr + cstep*std::min(m+2, ma-1);
+            float* cptr3 = cptr + cstep*std::min(m+3, ma-1);
+
+            vfloat32m2_t d00 = vfmv_v_f_f32m2(0, vl), d01 = vfmv_v_f_f32m2(0, vl);
+            vfloat32m2_t d10 = vfmv_v_f_f32m2(0, vl), d11 = vfmv_v_f_f32m2(0, vl);
+            vfloat32m2_t d20 = vfmv_v_f_f32m2(0, vl), d21 = vfmv_v_f_f32m2(0, vl);
+            vfloat32m2_t d30 = vfmv_v_f_f32m2(0, vl), d31 = vfmv_v_f_f32m2(0, vl);
+
+            for( int k = 0; k < na; k++ )
+            {
+                vfloat32m2_t a0 = vfmv_v_f_f32m2(aptr0[k], vl);
+                vfloat32m2_t a1 = vfmv_v_f_f32m2(aptr1[k], vl);
+                vfloat32m2_t a2 = vfmv_v_f_f32m2(aptr2[k], vl);
+                vfloat32m2_t a3 = vfmv_v_f_f32m2(aptr3[k], vl);
+                vfloat32m2_t b0 = vle32_v_f32m2(bptr + k*bstep + n, vl);
+                vfloat32m2_t b1 = vle32_v_f32m2(bptr + k*bstep + n + 8, vl);
+                d00 = vfmacc_vv_f32m2(d00, a0, b0, vl);
+                d01 = vfmacc_vv_f32m2(d01, a0, b1, vl);
+                d10 = vfmacc_vv_f32m2(d10, a1, b0, vl);
+                d11 = vfmacc_vv_f32m2(d11, a1, b1, vl);
+                d20 = vfmacc_vv_f32m2(d20, a2, b0, vl);
+                d21 = vfmacc_vv_f32m2(d21, a2, b1, vl);
+                d30 = vfmacc_vv_f32m2(d30, a3, b0, vl);
+                d31 = vfmacc_vv_f32m2(d31, a3, b1, vl);
+            }
+            vse32_v_f32m2(cptr0 + n, d00, vl);
+            vse32_v_f32m2(cptr0 + n + 8, d01, vl);
+            vse32_v_f32m2(cptr1 + n, d10, vl);
+            vse32_v_f32m2(cptr1 + n + 8, d11, vl);
+            vse32_v_f32m2(cptr2 + n, d20, vl);
+            vse32_v_f32m2(cptr2 + n + 8, d21, vl);
+            vse32_v_f32m2(cptr3 + n, d30, vl);
+            vse32_v_f32m2(cptr3 + n + 8, d31, vl);
+        }
+    }
+
+    for( ; n < nb; n++ )
+    {
+        for( int m = 0; m < ma; m++ )
+        {
+            const float* aptr0 = aptr + astep*m;
+            float* cptr0 = cptr + cstep*m;
+            float d0 = 0.f;
+
+            for( int k = 0; k < na; k++ )
+                d0 += aptr0[k]*bptr[k*bstep + n];
+
+            cptr0[n] = d0;
+        }
+    }
+}
+#endif // CV_RVV
+
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace
