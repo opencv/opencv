@@ -32,6 +32,8 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+extern bool DNN_DIAGNOSTICS_RUN;
+
 #if HAVE_PROTOBUF
 
 using ::google::protobuf::RepeatedField;
@@ -471,6 +473,7 @@ public:
     TFImporter(Net& net, const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0);
 protected:
+    std::unique_ptr<Net> utilNet;
     Net& dstNet;
     void populateNet();
 
@@ -2337,7 +2340,8 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
 }
 
 TFImporter::TFImporter(Net& net, const char *model, const char *config)
-    : dstNet(net), dispatch(buildDispatchMap())
+    :  utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
+        dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
 {
     if (model && model[0])
     {
@@ -2358,7 +2362,8 @@ TFImporter::TFImporter(
         const char *dataModel, size_t lenModel,
         const char *dataConfig, size_t lenConfig
 )
-    : dstNet(net), dispatch(buildDispatchMap())
+    : utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
+       dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
 {
     if (dataModel != NULL && lenModel > 0)
     {
@@ -2615,6 +2620,11 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
     return it->second;
 }
 
+Ptr<Layer> dummy_constructor(LayerParams & params)
+{
+    return new Layer(params);
+}
+
 void TFImporter::populateNet()
 {
     CV_Assert(netBin.ByteSize() || netTxt.ByteSize());
@@ -2757,9 +2767,9 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
     const std::string& name = layer.name();
     const std::string& type = layer.op();
 
+    LayerParams layerParams;
     try
     {
-        LayerParams layerParams;
 
         if (layers_to_ignore.find(name) != layers_to_ignore.end())
         {
@@ -2777,13 +2787,36 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
         }
         else
         {
+            if (DNN_DIAGNOSTICS_RUN && !LayerFactory::createLayerInstance(type, layerParams))
+            {
+                CV_LOG_ERROR(NULL, "DNN/TF: Node='" << name << "' of type='"<< type
+                                                    << "' is not supported. This error won't be displayed again.");
+                LayerFactory::registerLayer(type, dummy_constructor);
+            }
+
             parseCustomLayer(net, layer, layerParams);
         }
     }
     catch (const std::exception& e)
     {
-        CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "'. Exception: " << e.what());
-        throw;
+        if (!DNN_DIAGNOSTICS_RUN)
+        {
+            CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
+                                << "'. Exception: " << e.what());
+            throw;
+        }
+        else
+        {
+            CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
+                                << "'. Exception: " << e.what());
+
+            // internal layer failure (didnt call addLayer)
+            if (dstNet.getLayerId(name) == -1)
+            {
+                int id = dstNet.addLayer(name, type, layerParams);
+                layer_id[name] = id;
+            }
+        }
     }
 }
 
