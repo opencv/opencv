@@ -7,6 +7,7 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+// ! [bind usage]
     cv::GCompiled compd;
     std::vector<char> bytes;
     auto graph = cv::gapi::deserialize<cv::GComputation>(bytes);
@@ -16,4 +17,5 @@ int main(int argc, char *argv[])
     auto in_args  = cv::gapi::deserialize<cv::GRunArgs>(bytes);
     auto out_args = cv::gapi::deserialize<cv::GRunArgs>(bytes);
     compd(std::move(in_args), cv::gapi::bind(out_args));
+// ! [bind usage]
 }

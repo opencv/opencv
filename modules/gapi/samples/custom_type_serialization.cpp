@@ -73,12 +73,14 @@ int main(int argc, char *argv[])
     SimpleCustomType2 customVar2 { 1248, "World", {1280, 720, 640, 480},
                                    { {5, 32434142342}, {7, 34242432} } };
 
+// ! [bind usage]
     std::vector<char> sArgs = cv::gapi::serialize(
         cv::compile_args(customVar1, customVar2));
 
     cv::GCompileArgs dArgs = cv::gapi::deserialize<cv::GCompileArgs,
                                                    SimpleCustomType,
                                                    SimpleCustomType2>(sArgs);
+// ! [bind usage]
 
     SimpleCustomType  dCustomVar1 = cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value();
     SimpleCustomType2 dCustomVar2 = cv::gapi::getCompileArg<SimpleCustomType2>(dArgs).value();

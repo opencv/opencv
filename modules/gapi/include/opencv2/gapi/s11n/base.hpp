@@ -40,7 +40,7 @@ struct NotImplemented {
  * which can be utilized when serializing a custom type.
  *
  * Example of usage:
- * @snippet custom_type_serialization.cpp
+ * @snippet custom_type_serialization.cpp S11N usage
  *
  */
 template<typename T>

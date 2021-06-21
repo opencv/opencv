@@ -7,6 +7,7 @@ int main(int argc, char *argv[])
     (void) argc;
     (void) argv;
 
+// ! [bind usage]
     std::vector<cv::GRunArgP> graph_outs;
     cv::GRunArgs out_args;
 
@@ -14,4 +15,5 @@ int main(int argc, char *argv[])
         out_args.emplace_back(cv::gapi::bind(out));
     }
     const auto sargsout = cv::gapi::serialize(out_args);
+// ! [bind usage]
 }

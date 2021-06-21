@@ -223,7 +223,7 @@ using GRunArgsP = std::vector<GRunArgP>;
  * It's an ordinary overload of addition assignment operator.
  *
  * Example of usage:
- * @snippet dynamic_graph.cpp GRunArgsP usage
+ * @snippet dynamic_graph.cpp
  *
  */
 inline GRunArgsP& operator += (GRunArgsP &lhs, const GRunArgsP &rhs)
@@ -247,7 +247,7 @@ namespace gapi
      * it needs to be wrapped by this function.
      *
      * Example of usage:
-     * @snippet bind_after_deserialization_example.cpp
+     * @snippet bind_after_deserialization_example.cpp bind usage
      *
      * @param out_args deserialized GRunArgs.
      * @return the same GRunArgs wrapped in GRunArgsP.
@@ -260,7 +260,7 @@ namespace gapi
      * which this function does.
      *
      * Example of usage:
-     * @snippet bind_before_serialization_example.cpp
+     * @snippet bind_before_serialization_example.cpp bind usage
      *
      * @param out output GRunArgsP available during graph execution.
      * @return the same GRunArgsP wrapped in serializable GRunArgs.
