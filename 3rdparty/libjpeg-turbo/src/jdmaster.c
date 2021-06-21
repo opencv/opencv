@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 2002-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009-2011, 2016, D. R. Commander.
+ * Copyright (C) 2009-2011, 2016, 2019, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
@@ -22,7 +22,6 @@
 #include "jpeglib.h"
 #include "jpegcomp.h"
 #include "jdmaster.h"
-#include "jsimd.h"
 
 
 /*
@@ -70,17 +69,6 @@ use_merged_upsample(j_decompress_ptr cinfo)
       cinfo->comp_info[1]._DCT_scaled_size != cinfo->_min_DCT_scaled_size ||
       cinfo->comp_info[2]._DCT_scaled_size != cinfo->_min_DCT_scaled_size)
     return FALSE;
-#ifdef WITH_SIMD
-  /* If YCbCr-to-RGB color conversion is SIMD-accelerated but merged upsampling
-     isn't, then disabling merged upsampling is likely to be faster when
-     decompressing YCbCr JPEG images. */
-  if (!jsimd_can_h2v2_merged_upsample() && !jsimd_can_h2v1_merged_upsample() &&
-      jsimd_can_ycc_rgb() && cinfo->jpeg_color_space == JCS_YCbCr &&
-      (cinfo->out_color_space == JCS_RGB ||
-       (cinfo->out_color_space >= JCS_EXT_RGB &&
-        cinfo->out_color_space <= JCS_EXT_ARGB)))
-    return FALSE;
-#endif
   /* ??? also need to test for upsample-time rescaling, when & if supported */
   return TRUE;                  /* by golly, it'll work... */
 #else
@@ -580,6 +568,7 @@ master_selection(j_decompress_ptr cinfo)
    */
   cinfo->master->first_iMCU_col = 0;
   cinfo->master->last_iMCU_col = cinfo->MCUs_per_row - 1;
+  cinfo->master->last_good_iMCU_row = 0;
 
 #ifdef D_MULTISCAN_FILES_SUPPORTED
   /* If jpeg_start_decompress will read the whole file, initialize

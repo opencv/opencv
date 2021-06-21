@@ -69,7 +69,8 @@ GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseSSD(const GMat& in,
                                                             const float confidenceThreshold = 0.5f,
                                                             const int   filterLabel = -1);
 
-/** @overload
+/** @brief Parses output of SSD network.
+
 Extracts detection information (box, confidence) from SSD output and
 filters it by given confidence and by going out of bounds.
 
@@ -87,9 +88,9 @@ the larger side of the rectangle.
 */
 GAPI_EXPORTS_W GArray<Rect> parseSSD(const GMat& in,
                                      const GOpaque<Size>& inSz,
-                                     const float confidenceThreshold = 0.5f,
-                                     const bool alignmentToSquare = false,
-                                     const bool filterOutOfBounds = false);
+                                     const float confidenceThreshold,
+                                     const bool alignmentToSquare,
+                                     const bool filterOutOfBounds);
 
 /** @brief Parses output of Yolo network.
 

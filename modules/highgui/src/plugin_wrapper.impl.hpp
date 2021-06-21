@@ -40,7 +40,8 @@ protected:
                 CV_LOG_INFO(NULL, "UI: plugin is incompatible (can't be initialized): " << lib_->getName());
                 return;
             }
-            if (!checkCompatibility(plugin_api_->api_header, ABI_VERSION, API_VERSION, false))
+            // NB: force strict minor version check (ABI is not preserved for now)
+            if (!checkCompatibility(plugin_api_->api_header, ABI_VERSION, API_VERSION, true))
             {
                 plugin_api_ = NULL;
                 return;
@@ -231,8 +232,12 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     return results;
 }
 
+// NB: require loading of imgcodecs module
+static void* g_imwrite = (void*)imwrite;
+
 void PluginUIBackendFactory::loadPlugin()
 {
+    CV_Assert(g_imwrite);
     for (const FileSystemPath_t& plugin : getPluginCandidates(baseName_))
     {
         auto lib = std::make_shared<cv::plugin::impl::DynamicLib>(plugin);

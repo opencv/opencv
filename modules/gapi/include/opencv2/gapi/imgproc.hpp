@@ -47,6 +47,10 @@ void validateFindingContoursMeta(const int depth, const int chan, const int mode
 
 namespace cv { namespace gapi {
 
+/**
+ * @brief This namespace contains G-API Operation Types for OpenCV
+ * ImgProc module functionality.
+ */
 namespace imgproc {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?

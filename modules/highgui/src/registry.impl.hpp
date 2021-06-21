@@ -51,6 +51,14 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
         DECLARE_DYNAMIC_BACKEND("QT")
 #endif
 #endif
+
+#ifdef _WIN32
+#ifdef HAVE_WIN32UI
+        DECLARE_STATIC_BACKEND("WIN32", createUIBackendWin32UI)
+#elif defined(ENABLE_PLUGINS)
+        DECLARE_DYNAMIC_BACKEND("WIN32")
+#endif
+#endif
     };
     return g_backends;
 };
@@ -162,6 +170,9 @@ public:
             const BackendInfo& info = enabledBackends[i];
             os << info.name << '(' << info.priority << ')';
         }
+#if !defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND)
+        os << " + BUILTIN(" OPENCV_HIGHGUI_BUILTIN_BACKEND_STR ")";
+#endif
         return os.str();
     }
 

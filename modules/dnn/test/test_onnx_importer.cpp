@@ -485,8 +485,6 @@ TEST_P(Test_ONNX_layers, MatMul)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
 
     testONNXModels("matmul_2d");
     testONNXModels("matmul_3d");
@@ -735,8 +733,6 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("matmul_with_two_inputs");
 }
 

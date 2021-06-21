@@ -16,13 +16,13 @@ const std::string keys =
     "{ h help |                                    | Print this help message }"
     "{ input  |                                    | Path to the input video file }"
     "{ facem  | face-detection-retail-0005.xml     | Path to OpenVINO face detection model (.xml) }"
-    "{ faced  | CPU                                | Target device for the face detection (e.g. CPU, GPU, VPU, ...) }"
+    "{ faced  | CPU                                | Target device for the face detection (e.g. CPU, GPU, ...) }"
     "{ landm  | facial-landmarks-35-adas-0002.xml  | Path to OpenVINO landmarks detector model (.xml) }"
-    "{ landd  | CPU                                | Target device for the landmarks detector (e.g. CPU, GPU, VPU, ...) }"
+    "{ landd  | CPU                                | Target device for the landmarks detector (e.g. CPU, GPU, ...) }"
     "{ headm  | head-pose-estimation-adas-0001.xml | Path to OpenVINO head pose estimation model (.xml) }"
-    "{ headd  | CPU                                | Target device for the head pose estimation inference (e.g. CPU, GPU, VPU, ...) }"
+    "{ headd  | CPU                                | Target device for the head pose estimation inference (e.g. CPU, GPU, ...) }"
     "{ gazem  | gaze-estimation-adas-0002.xml      | Path to OpenVINO gaze vector estimaiton model (.xml) }"
-    "{ gazed  | CPU                                | Target device for the gaze vector estimation inference (e.g. CPU, GPU, VPU, ...) }"
+    "{ gazed  | CPU                                | Target device for the gaze vector estimation inference (e.g. CPU, GPU, ...) }"
     ;
 
 namespace {
@@ -338,7 +338,7 @@ int main(int argc, char *argv[])
 
     cv::GMat in;
     cv::GMat faces = cv::gapi::infer<custom::Faces>(in);
-    cv::GOpaque<cv::Size> sz = custom::Size::on(in); // FIXME
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
     cv::GArray<cv::Rect> faces_rc = custom::ParseSSD::on(faces, sz, true);
     cv::GArray<cv::GMat> angles_y, angles_p, angles_r;
     std::tie(angles_y, angles_p, angles_r) = cv::gapi::infer<custom::HeadPose>(faces_rc, in);

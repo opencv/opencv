@@ -8,6 +8,10 @@ include("${OpenCV_SOURCE_DIR}/cmake/OpenCVPluginStandalone.cmake")
 set(WITH_GTK ON)
 include("${OpenCV_SOURCE_DIR}/modules/highgui/cmake/init.cmake")
 
+if(NOT HAVE_GTK)
+  message(FATAL_ERROR "GTK: NO")
+endif()
+
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated-declarations)
 
 set(OPENCV_PLUGIN_DEPS core imgproc imgcodecs)
@@ -21,24 +25,34 @@ else()
   message(FATAL_ERROR "Missing dependency target for GTK libraries")
 endif()
 ocv_create_plugin(highgui "opencv_highgui_gtk" "${__deps}" "GTK" "src/window_gtk.cpp")
-
-message(STATUS "GTK: ${GTK2_VERSION}")
-if(HAVE_GTK3)
-  message(STATUS "GTK+: ver ${GTK3_VERSION}")
-elseif(HAVE_GTK)
-  message(STATUS "GTK+: ver ${GTK2_VERSION}")
-else()
-  message(FATAL_ERROR "GTK+: NO")
+if(WITH_OPENGL)
+  if(HAVE_GTK2
+      AND TARGET ocv.3rdparty.gtkglext
+      AND TARGET ocv.3rdparty.gtk_opengl
+      AND NOT OPENCV_GTK_DISABLE_GTKGLEXT
+      AND NOT OPENCV_GTK_DISABLE_OPENGL
+  )
+    message(STATUS "OpenGL: YES")
+    target_link_libraries(${OPENCV_PLUGIN_NAME} PRIVATE
+        ocv.3rdparty.gtkglext ocv.3rdparty.gtk_opengl
+    )
+  else()
+    message(WARNING "OpenGL dependencies are not available!")
+  endif()
 endif()
-if(HAVE_GTK)
-  if(HAVE_GTHREAD)
-    message(STATUS "GThread : YES (ver ${GTHREAD_VERSION})")
-  else()
-    message(STATUS "GThread : NO")
-  endif()
-  if(HAVE_GTKGLEXT)
-    message(STATUS "GtkGlExt: YES (ver ${GTKGLEXT_VERSION})")
-  else()
-    message(STATUS "GtkGlExt: NO")
-  endif()
+
+if(HAVE_GTK3)
+  message(STATUS "GTK3+: ver ${GTK3_VERSION}")
+elseif(HAVE_GTK3)
+  message(STATUS "GTK2+: ver ${GTK2_VERSION}")
+elseif(DEFINED GTK_VERSION)
+  message(STATUS "GTK+: ver ${GTK_VERSION}")
+else()
+  message(STATUS "GTK+: YES")
+endif()
+
+if(HAVE_GTHREAD)
+  message(STATUS "GThread : YES (ver ${GTHREAD_VERSION})")
+else()
+  message(STATUS "GThread : NO")
 endif()
