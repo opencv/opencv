@@ -1968,7 +1968,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 layerParams.set("align_corners", interp_mode == "align_corners");
                 if (layerParams.get<String>("mode") == "linear")
                 {
-                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel" ?
                                             "opencv_linear" : "bilinear");
                 }
             }
@@ -2013,7 +2013,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 layerParams.set("align_corners", interp_mode == "align_corners");
                 if (layerParams.get<String>("mode") == "linear")
                 {
-                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+                    layerParams.set("mode", interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel" ?
                                             "opencv_linear" : "bilinear");
                 }
             }
