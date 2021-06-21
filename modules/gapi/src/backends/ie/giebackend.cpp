@@ -493,7 +493,7 @@ using GConstGIEModel = ade::ConstTypedGraph
 
 inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
     GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
-                        "Callback feature is supported for MediaFrame only");
+                "Remote blob is supported for MediaFrame only");
 
     cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
     auto ie_core = cv::gimpl::ie::wrap::getCore();
@@ -509,7 +509,7 @@ inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
     }
 
     return ctx.uu.rctx->CreateBlob(blob_params->first,
-                                          blob_params->second);
+                                   blob_params->second);
 }
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {

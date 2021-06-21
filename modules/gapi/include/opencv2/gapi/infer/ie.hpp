@@ -13,7 +13,6 @@
 #include <array>
 #include <tuple> // tuple, tuple_size
 #include <map>
-#include <memory>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
