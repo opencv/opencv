@@ -402,6 +402,16 @@ INSTANTIATE_TEST_CASE_P(ConcatVertTestGPU, ConcatVertTest,
                                 Values(-1),
                                 Values(CORE_GPU)));
 
+INSTANTIATE_TEST_CASE_P(TransposeTestGPU, TransposeTest,
+                        Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1,
+                                       CV_8UC2, CV_16UC2, CV_16SC2, CV_32FC2,
+                                       CV_8UC3, CV_16UC3, CV_16SC3, CV_32FC3),
+                                Values(cv::Size(1280, 720),
+                                       cv::Size(640, 480),
+                                       cv::Size(128, 128)),
+                                Values(-1),
+                                Values(CORE_GPU),
+                                Values(AbsExact().to_compare_obj())));
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 INSTANTIATE_TEST_CASE_P(BackendOutputAllocationTestGPU, BackendOutputAllocationTest,

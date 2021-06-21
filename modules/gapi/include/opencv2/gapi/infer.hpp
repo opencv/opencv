@@ -531,7 +531,11 @@ typename Net::Result infer(Args&&... args) {
 }
 
 /**
- * @brief Special network type
+ * @brief Generic network type: input and output layers are configured dynamically at runtime
+ *
+ * Unlike the network types defined with G_API_NET macro, this one
+ * doesn't fix number of network inputs and outputs at the compilation stage
+ * thus providing user with an opportunity to program them in runtime.
  */
 struct Generic { };
 
@@ -649,6 +653,7 @@ namespace gapi {
 
 // A type-erased form of network parameters.
 // Similar to how a type-erased GKernel is represented and used.
+/// @private
 struct GAPI_EXPORTS GNetParam {
     std::string tag;     // FIXME: const?
     GBackend backend;    // Specifies the execution model
@@ -660,7 +665,7 @@ struct GAPI_EXPORTS GNetParam {
  */
 /**
  * @brief A container class for network configurations. Similar to
- * GKernelPackage.Use cv::gapi::networks() to construct this object.
+ * GKernelPackage. Use cv::gapi::networks() to construct this object.
  *
  * @sa cv::gapi::networks
  */
@@ -693,6 +698,14 @@ template<typename... Args>
 cv::gapi::GNetPackage networks(Args&&... args) {
     return cv::gapi::GNetPackage({ cv::detail::strip(args)... });
 }
+
+inline cv::gapi::GNetPackage& operator += (      cv::gapi::GNetPackage& lhs,
+                                           const cv::gapi::GNetPackage& rhs) {
+    lhs.networks.reserve(lhs.networks.size() + rhs.networks.size());
+    lhs.networks.insert(lhs.networks.end(), rhs.networks.begin(), rhs.networks.end());
+    return lhs;
+}
+
 } // namespace gapi
 } // namespace cv
 

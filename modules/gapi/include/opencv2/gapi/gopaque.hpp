@@ -307,15 +307,40 @@ namespace detail
 /** \addtogroup gapi_data_objects
  * @{
  */
-
+/**
+ * @brief `cv::GOpaque<T>` template class represents an object of
+ * class `T` in the graph.
+ *
+ * `cv::GOpaque<T>` describes a functional relationship between operations
+ * consuming and producing object of class `T`. `cv::GOpaque<T>` is
+ * designed to extend G-API with user-defined data types, which are
+ * often required with user-defined operations. G-API can't apply any
+ * optimizations to user-defined types since these types are opaque to
+ * the framework. However, there is a number of G-API operations
+ * declared with `cv::GOpaque<T>` as a return type,
+ * e.g. cv::gapi::streaming::timestamp() or cv::gapi::streaming::size().
+ *
+ * @sa `cv::GArray<T>`
+ */
 template<typename T> class GOpaque
 {
 public:
     // Host type (or Flat type) - the type this GOpaque is actually
     // specified to.
+    /// @private
     using HT = typename detail::flatten_g<util::decay_t<T>>::type;
 
+    /**
+     * @brief Constructs an empty `cv::GOpaque<T>`
+     *
+     * Normally, empty G-API data objects denote a starting point of
+     * the graph. When an empty `cv::GOpaque<T>` is assigned to a result
+     * of some operation, it obtains a functional link to this
+     * operation (and is not empty anymore).
+     */
     GOpaque() { putDetails(); }              // Empty constructor
+
+    /// @private
     explicit GOpaque(detail::GOpaqueU &&ref) // GOpaqueU-based constructor
         : m_ref(ref) { putDetails(); }       // (used by GCall, not for users)
 

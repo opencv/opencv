@@ -43,7 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "intel_gpu_gemm.inl.hpp"
 
@@ -106,47 +106,47 @@ static bool ocl_gemm_amdblas( InputArray matA, InputArray matB, double alpha,
     int offa = (int)A.offset / esz, offb = (int)B.offset / esz, offc = (int)D.offset / esz;
 
     cl_command_queue clq = (cl_command_queue)ocl::Queue::getDefault().ptr();
-    clAmdBlasTranspose transA = atrans ? clAmdBlasTrans : clAmdBlasNoTrans;
-    clAmdBlasTranspose transB = btrans ? clAmdBlasTrans : clAmdBlasNoTrans;
-    clAmdBlasOrder order = clAmdBlasRowMajor;
-    clAmdBlasStatus status = clAmdBlasSuccess;
+    clblasTranspose transA = atrans ? clblasTrans : clblasNoTrans;
+    clblasTranspose transB = btrans ? clblasTrans : clblasNoTrans;
+    clblasOrder order = clblasRowMajor;
+    clblasStatus status = clblasSuccess;
 
     if (type == CV_32FC1)
-        status = clAmdBlasSgemmEx(order, transA, transB, M, N, K,
-                                  (cl_float)alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
-                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
-                                  (cl_float)beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+        status = clblasSgemm(order, transA, transB, M, N, K,
+                             (cl_float)alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                             (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                             (cl_float)beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                             1, &clq, 0, NULL, NULL);
     else if (type == CV_64FC1)
-        status = clAmdBlasDgemmEx(order, transA, transB, M, N, K,
-                                  alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
-                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
-                                  beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+        status = clblasDgemm(order, transA, transB, M, N, K,
+                             alpha, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                             (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                             beta, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                             1, &clq, 0, NULL, NULL);
     else if (type == CV_32FC2)
     {
          cl_float2 alpha_2 = { { (cl_float)alpha, 0 } };
          cl_float2 beta_2  = { { (cl_float)beta, 0 } };
-         status = clAmdBlasCgemmEx(order, transA, transB, M, N, K,
-                                   alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
-                                   (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
-                                   beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                   1, &clq, 0, NULL, NULL);
+         status = clblasCgemm(order, transA, transB, M, N, K,
+                              alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                              (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                              beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                              1, &clq, 0, NULL, NULL);
     }
     else if (type == CV_64FC2)
     {
         cl_double2 alpha_2 = { { alpha, 0 } };
         cl_double2 beta_2  = { { beta, 0 } };
-        status = clAmdBlasZgemmEx(order, transA, transB, M, N, K,
-                                  alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
-                                  (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
-                                  beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
-                                  1, &clq, 0, NULL, NULL);
+        status = clblasZgemm(order, transA, transB, M, N, K,
+                             alpha_2, (const cl_mem)A.handle(ACCESS_READ), offa, lda,
+                             (const cl_mem)B.handle(ACCESS_READ), offb, ldb,
+                             beta_2, (cl_mem)D.handle(ACCESS_RW), offc, ldc,
+                             1, &clq, 0, NULL, NULL);
     }
     else
         CV_Error(Error::StsUnsupportedFormat, "");
 
-    return status == clAmdBlasSuccess;
+    return status == clblasSuccess;
 }
 
 #endif

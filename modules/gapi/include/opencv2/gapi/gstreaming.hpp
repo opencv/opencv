@@ -371,6 +371,39 @@ protected:
 };
 /** @} */
 
+namespace gapi {
+
+/**
+ * @brief This namespace contains G-API functions, structures, and
+ * symbols related to the Streaming execution mode.
+ *
+ * Some of the operations defined in this namespace (e.g. size(),
+ * BGR(), etc.) can be used in the traditional execution mode too.
+ */
+namespace streaming {
+/**
+ * @brief Specify queue capacity for streaming execution.
+ *
+ * In the streaming mode the pipeline steps are connected with queues
+ * and this compile argument controls every queue's size.
+ */
+struct GAPI_EXPORTS queue_capacity
+{
+    explicit queue_capacity(size_t cap = 1) : capacity(cap) { };
+    size_t capacity;
+};
+/** @} */
+} // namespace streaming
+} // namespace gapi
+
+namespace detail
+{
+template<> struct CompileArgTag<cv::gapi::streaming::queue_capacity>
+{
+    static const char* tag() { return "gapi.queue_capacity"; }
+};
+}
+
 }
 
 #endif // OPENCV_GAPI_GSTREAMING_COMPILED_HPP

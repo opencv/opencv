@@ -3,11 +3,10 @@
 
 namespace cv
 {
-   struct GAPI_EXPORTS_W_SIMPLE GCompileArg { };
-
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage pkg);
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GNetPackage pkg);
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage kernels, gapi::GNetPackage nets);
+   struct GAPI_EXPORTS_W_SIMPLE GCompileArg {
+       GAPI_WRAP GCompileArg(gapi::GKernelPackage pkg);
+       GAPI_WRAP GCompileArg(gapi::GNetPackage pkg);
+   };
 
    // NB: This classes doesn't exist in *.so
    // HACK: Mark them as a class to force python wrapper generate code for this entities
@@ -58,7 +57,6 @@ namespace cv
 
    namespace gapi
    {
-       GAPI_EXPORTS_W gapi::GNetPackage networks(const cv::gapi::ie::PyParams& params);
        namespace wip
        {
            class GAPI_EXPORTS_W IStreamSource { };
