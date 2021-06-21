@@ -74,12 +74,12 @@ struct ParamDesc {
     std::map<std::string, std::vector<std::size_t>> reshape_table;
     std::unordered_set<std::string> layer_names_to_reshape;
 
-        // NB: Number of asyncrhonious infer requests
-        size_t nireq;
+    // NB: Number of asyncrhonious infer requests
+    size_t nireq;
 
-        // NB: An optional config to setup RemoteContext for IE
-        cv::util::any context_config;
-    };
+    // NB: An optional config to setup RemoteContext for IE
+    cv::util::any context_config;
+};
 } // namespace detail
 
 // FIXME: this is probably a shared (reusable) thing
@@ -233,6 +233,11 @@ public:
         return *this;
     }
 
+    /** @brief Specifies number of asynchronous inference requests.
+
+    @param nireq Number of inference asynchronous requests.
+    @return reference to this parameter structure.
+    */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
