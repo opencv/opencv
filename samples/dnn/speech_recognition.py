@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
-import argparse, os
-import matplotlib.pyplot as plt
+import argparse
+import os
 import soundfile as sf # Temporary import to load audio files
 
 class FilterbankFeatures():
@@ -53,7 +53,7 @@ class FilterbankFeatures():
         dtype = x.dtype
 
         seq_len = np.ceil(seq_len / self.hop_length)
-        seq_len = np.array(seq_len,dtype=np.int)
+        seq_len = np.array(seq_len,dtype=np.int32)
         
         # dither
         if self.dither > 0:
@@ -67,7 +67,7 @@ class FilterbankFeatures():
         # Short Time Fourier Transform
         x  = self.stft(x, n_fft=self.n_fft, hop_length=self.hop_length,
                   win_length=self.win_length,
-                  window=self.window_tensor)
+                  fft_window=self.window_tensor)
 
         # get power spectrum
         x = (x**2).sum(-1)
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--input_audio', type=str, help='Path to input audio file.')
-    parser.add_argument('--show_spectrogram', type=bool, default=False, help='Whether to show a spectrogram of the input audio.')
+    parser.add_argument('--show_spectrogram', action='store_true', help='Whether to show a spectrogram of the input audio.')
     parser.add_argument('--model', type=str, default='jasper.onnx', help='Path to the onnx file of Jasper. default="jasper.onnx"')
     parser.add_argument('--output', type=str, help='Path to file where recognized audio transcript must be saved. Leave this to print on console.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
@@ -369,11 +369,11 @@ if __name__ == '__main__':
 
     # Read audio File
     try:
-        audio = sf.read(args.input_file)
+        audio = sf.read(args.input_audio)
         X=audio[0]
-        seq_len=np.array([audio[1]],dtype=np.int)
+        seq_len=np.array([audio[1]],dtype=np.int32)
     except:
-        raise Exception(f"Soundfile cannot read {args.input_file}. Try a different format")
+        raise Exception(f"Soundfile cannot read {args.input_audio}. Try a different format")
 
     # Load Network
     net = cv.dnn.readNetFromONNX(args.model)
@@ -386,8 +386,12 @@ if __name__ == '__main__':
 
     # Show spectogram if required
     if args.show_spectrogram:
-        img = plt.imshow((features[0]), origin='lower', cmap='inferno', interpolation='nearest', aspect='auto')
-        plt.show()
+        # img = plt.imshow((features[0]), origin='lower', cmap='jet', interpolation='nearest', aspect='auto')
+        # plt.show()
+        # code below doesn't show correct plot
+        img = cv.applyColorMap((features[0]).astype(np.uint8),cv.COLORMAP_INFERNO)
+        cv.imshow('spectogram',img)
+        cv.waitKey(0)
 
     # Initialize decoder
     decoder = Decoder()
@@ -406,3 +410,4 @@ if __name__ == '__main__':
         print("Done")
     else:
         print(prediction)
+    cv.destroyAllWindows() 
