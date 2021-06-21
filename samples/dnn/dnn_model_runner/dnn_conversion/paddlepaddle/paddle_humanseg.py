@@ -1,5 +1,4 @@
 import os
-import paddle
 import paddlehub.vision.transforms as T
 import cv2 as cv
 import numpy as np
@@ -30,6 +29,7 @@ def get_color_map_list(num_classes):
             lab >>= 3
     color_map = color_map[3:]
     return color_map
+
 
 def visualize(image, result, save_dir=None, weight=0.6):
     """
@@ -66,6 +66,7 @@ def visualize(image, result, save_dir=None, weight=0.6):
     else:
         return vis_result
 
+
 def preprocess(image_path):
     ''' preprocess input image file to np.ndarray
 
@@ -77,16 +78,17 @@ def preprocess(image_path):
                 variable which shape is (1, 3, 192, 192)
     '''
     transforms = T.Compose([
-            T.Resize((192, 192)),
-            T.Normalize(mean=[0.5, 0.5, 0.5],
-                        std=[0.5, 0.5, 0.5])],
-            to_rgb=True)
+        T.Resize((192, 192)),
+        T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ],
+        to_rgb=True)
     return np.expand_dims(transforms(image_path), axis=0)
+
 
 if __name__ == '__main__':
     img_path = "data/human_image.jpg"
     # load mobilenetv2 use cv.dnn
-    net = cv.dnn.readNetFromONNX('/ssd2/wangjunjie06/Paddle2ONNX/humanseg_hrnet18_tiny.onnx')
+    net = cv.dnn.readNetFromONNX('humanseg_hrnet18_tiny.onnx')
     # read and preprocess image file
     im = preprocess(img_path)
     # inference
@@ -96,15 +98,15 @@ if __name__ == '__main__':
     image = cv.imread(img_path)
     r, c, _ = image.shape
     result = np.argmax(result[0], axis=1).astype(np.uint8)
-    result = cv.resize(result[0,:,:], dsize=(c, r), interpolation=cv.INTER_NEAREST)
+    result = cv.resize(result[0, :, :],
+                       dsize=(c, r),
+                       interpolation=cv.INTER_NEAREST)
 
     print("grid_image.shape is: ", result.shape)
     folder_path = "data"
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
     file_path = os.path.join(folder_path, '%s.png' % "result_test_human")
-    result_color = visualize(img_path,result)
+    result_color = visualize(img_path, result)
     cv.imwrite(file_path, result_color)
     print('%s saved' % file_path)
-
-
