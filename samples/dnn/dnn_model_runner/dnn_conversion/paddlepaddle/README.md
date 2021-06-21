@@ -45,15 +45,6 @@ Notes:
 
 #### Step2. convert to ONNX model by paddle2onnx
 
-Install paddle2onnx from source
-
-```shell
-pip uninstall paddle2onnx
-git clone -b develop https://github.com/PaddlePaddle/Paddle2ONNX.git
-cd Paddle2ONNX
-python setup.py install
-```
-
 Use the following command to convert
 
 ```
