@@ -19,6 +19,7 @@
 #include <functional>
 #include <unordered_set>
 #include <atomic>
+#include <chrono>
 
 #include <ade/util/algorithm.hpp>
 
@@ -324,6 +325,8 @@ public:
     // NB: Need to gurantee that MediaFrame::View don't die until request is over.
     using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
     Views views;
+
+    int64_t start_infer_ts = -1;
 
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
@@ -761,6 +764,11 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest   &request,
                         std::shared_ptr<IECallContext>   ctx) {
+    const auto now = std::chrono::system_clock::now();
+    const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+        (now.time_since_epoch());
+    int64_t end_infer_ts = int64_t{dur.count()};
+
     GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
     GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
 
@@ -770,7 +778,10 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
-        ctx->out.meta(output, ctx->input(0).meta);
+        auto m = ctx->input(0).meta;
+        m["latency"] = end_infer_ts - ctx->start_infer_ts;
+        //ctx->out.meta(output, ctx->input(0).meta);
+        ctx->out.meta(output, m);
         ctx->out.post(std::move(output));
 
     }
@@ -908,6 +919,10 @@ struct Infer: public cv::detail::KernelTag {
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
+                        const auto now = std::chrono::system_clock::now();
+                        const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+                            (now.time_since_epoch());
+                        ctx->start_infer_ts = int64_t{dur.count()};
                         req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, ctx)

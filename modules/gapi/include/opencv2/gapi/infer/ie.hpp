@@ -21,6 +21,8 @@
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
 
+#include <opencv2/gapi/streaming/meta.hpp>
+
 namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
@@ -404,6 +406,10 @@ protected:
     detail::ParamDesc desc;
     std::string m_tag;
 };
+
+inline cv::GOpaque<int64_t> latency(cv::GMat g) {
+    return cv::gapi::streaming::meta<int64_t>(g, "latency");
+}
 
 } // namespace ie
 } // namespace gapi
