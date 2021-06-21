@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"
+        ToolsVersion="15.0">
+  <PropertyGroup>
+    <LibraryType Condition="'$(Configuration)'=='Debug'">mdd</LibraryType>
+    <LibraryType Condition="'$(Configuration)'=='Release'">md</LibraryType>
+  </PropertyGroup>
+  <ItemGroup>
+  <FilamentLibs Include="$(MSBuildThisFileDirectory)\x64\vc14\lib\*.lib" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Expland the items to a property -->
+    <FilamentLibraries>@(FilamentLibs)</FilamentLibraries>
+    </PropertyGroup>
+    <ItemDefinitionGroup>
+    <ClCompile>   <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(FilamentLibraries);%(AdditionalDependencies) 
+      </AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>
