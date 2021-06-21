@@ -2,15 +2,15 @@
 
 This tutorial gives 2 demos show how to run PaddlePaddle model by opencv
 
-## 1. Run PaddlePaddle ResNet50 by OpenCV
-
-### Environment Setup
+## Environment Setup
 
 ```shell
 pip install paddlepaddle-gpu
 pip install paddlehub
 pip install paddle2onnx
 ```
+
+## 1. Run PaddlePaddle ResNet50 by OpenCV
 
 ### Run PaddlePaddle model demo
 
@@ -27,14 +27,6 @@ there are 3 part of this execution
 * 3. Preprocess image file and do inference.
 
 ## 2. Run PaddleSeg Portrait Segmentation by OpenCV
-
-### Environment Setup
-
-```shell
-pip install paddlepaddle-gpu
-pip install paddlehub
-pip install paddle2onnx
-```
 
 ### Convert to ONNX Model
 
