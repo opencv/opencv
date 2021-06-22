@@ -13,7 +13,6 @@ try:
     if sys.version_info[:2] < (3, 0):
         raise unittest.SkipTest('Python 2.x is not supported')
 
-    # FIXME: Need to cover Mosaic & Image as well.
     # FIXME: FText isn't supported yet.
     class gapi_render_test(NewOpenCVTests):
         def __init__(self, *args):
@@ -61,6 +60,17 @@ try:
             self.plt = cv.LINE_4
             self.pshift = 1
 
+            # Image
+            self.iorg = (150, 150)
+            img_path = self.find_file('cv/face/david2.jpg', [os.environ.get('OPENCV_TEST_DATA_PATH')])
+            self.img = cv.resize(cv.imread(img_path), (50, 50))
+            self.alpha = np.full(self.img.shape[:2], 0.8, dtype=np.float32)
+
+            # Mosaic
+            self.mos = (100, 100, 100, 100)
+            self.cell_sz = 25
+            self.decim = 0
+
         def cvt_nv12_to_yuv(self, y, uv):
             h,w,_ = uv.shape
             upsample_uv = cv.resize(uv, (h * 2, w * 2))
@@ -78,6 +88,31 @@ try:
             v = bgr[2] *  0.500000 + bgr[1] * -0.418688 + bgr[0] * -0.081312 + 128;
             return (y, u, v)
 
+        def blend_img(self, background, org, img, alpha):
+            x, y = org
+            h, w, _ = img.shape
+            roi_img = background[x:x+w, y:y+h, :]
+            img32f_w = cv.merge([alpha] * 3).astype(np.float32)
+            roi32f_w = np.full(roi_img.shape, 1.0, dtype=np.float32)
+            roi32f_w -= img32f_w
+            img32f = (img / 255).astype(np.float32)
+            roi32f = (roi_img / 255).astype(np.float32)
+            cv.multiply(img32f, img32f_w, dst=img32f)
+            cv.multiply(roi32f, roi32f_w, dst=roi32f)
+            roi32f += img32f
+            roi_img[...] = np.round(roi32f * 255)
+
+        # This is quite naive implementations used as a simple reference
+        # doesn't consider corner cases.
+        def draw_mosaic(self, img, mos, cell_sz, decim):
+            x,y,w,h = mos
+            mosaic_area = img[x:x+w, y:y+h, :]
+            for i in range(0, mosaic_area.shape[0], cell_sz):
+                for j in range(0, mosaic_area.shape[1], cell_sz):
+                    cell_roi = mosaic_area[j:j+cell_sz, i:i+cell_sz, :]
+                    s0, s1, s2 = cv.mean(cell_roi)[:3]
+                    mosaic_area[j:j+cell_sz, i:i+cell_sz] = (round(s0), round(s1), round(s2))
+
         def test_render_primitives_on_bgr(self):
             expected = np.zeros(self.size, dtype=np.uint8)
             actual = np.array(expected, copy=True)
@@ -88,6 +123,8 @@ try:
             cv.circle(expected, self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift)
             cv.line(expected, self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift)
             cv.fillPoly(expected, np.expand_dims(np.array([self.pts]), axis=0), self.pcolor, self.plt, self.pshift)
+            self.draw_mosaic(expected, self.mos, self.cell_sz, self.decim)
+            self.blend_img(expected, self.iorg, self.img, self.alpha)
 
             # G-API
             g_in = cv.GMat()
@@ -98,6 +135,8 @@ try:
                      cv.gapi.wip.draw.Text(self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo),
                      cv.gapi.wip.draw.Circle(self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift),
                      cv.gapi.wip.draw.Line(self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift),
+                     cv.gapi.wip.draw.Mosaic(self.mos, self.cell_sz, self.decim),
+                     cv.gapi.wip.draw.Image(self.iorg, self.img, self.alpha),
                      cv.gapi.wip.draw.Poly(self.pts, self.pcolor, self.pthick, self.plt, self.pshift)]
 
             comp = cv.GComputation(cv.GIn(g_in, g_prims), cv.GOut(g_out))
@@ -119,6 +158,8 @@ try:
             cv.circle(yuv, self.center, self.radius, self.cvt_bgr_to_yuv_color(self.ccolor), self.cthick, self.clt, self.cshift)
             cv.line(yuv, self.pt1, self.pt2, self.cvt_bgr_to_yuv_color(self.lcolor), self.lthick, self.llt, self.lshift)
             cv.fillPoly(yuv, np.expand_dims(np.array([self.pts]), axis=0), self.cvt_bgr_to_yuv_color(self.pcolor), self.plt, self.pshift)
+            self.draw_mosaic(yuv, self.mos, self.cell_sz, self.decim)
+            self.blend_img(yuv, self.iorg, cv.cvtColor(self.img, cv.COLOR_BGR2YUV), self.alpha)
             self.cvt_yuv_to_nv12(yuv, y_expected, uv_expected)
 
             # G-API
@@ -131,6 +172,8 @@ try:
                      cv.gapi.wip.draw.Text(self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo),
                      cv.gapi.wip.draw.Circle(self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift),
                      cv.gapi.wip.draw.Line(self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift),
+                     cv.gapi.wip.draw.Mosaic(self.mos, self.cell_sz, self.decim),
+                     cv.gapi.wip.draw.Image(self.iorg, self.img, self.alpha),
                      cv.gapi.wip.draw.Poly(self.pts, self.pcolor, self.pthick, self.plt, self.pshift)]
 
             comp = cv.GComputation(cv.GIn(g_y, g_uv, g_prims), cv.GOut(g_out_y, g_out_uv))
