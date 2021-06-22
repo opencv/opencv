@@ -14,7 +14,7 @@
 #include <unordered_map>
 
 #include "opencv2/core/mat.inl.hpp"
-#include "opencv2/rgbd/detail/pose_graph.hpp"
+#include "opencv2/3d/detail/pose_graph.hpp"
 
 namespace cv
 {
