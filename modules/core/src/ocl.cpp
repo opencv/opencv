@@ -7086,6 +7086,13 @@ static std::string kerToStr(const Mat & k)
             stream << "DIG(" << data[i] << "f)";
         stream << "DIG(" << data[width] << "f)";
     }
+    else if (depth == CV_16F)
+    {
+        stream.setf(std::ios_base::showpoint);
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << (float)data[i] << "h)";
+        stream << "DIG(" << (float)data[width] << "h)";
+    }
     else
     {
         for (int i = 0; i < width; ++i)
@@ -7109,7 +7116,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<float16_t> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
