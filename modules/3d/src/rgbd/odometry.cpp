@@ -1462,7 +1462,7 @@ Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) co
                                                           normalMethod);
                 TMat c0;
                 frame->getPyramidAt(c0, OdometryFrame::PYR_CLOUD, 0);
-                (*normalsComputer)(c0, normals);
+                normalsComputer->apply(c0, normals);
                 frame->setNormals(normals);
             }
         }
@@ -1616,7 +1616,7 @@ Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType
 
                 TMat c0;
                 frame->getPyramidAt(c0, OdometryFrame::PYR_CLOUD, 0);
-                (*normalsComputer)(c0, normals);
+                normalsComputer->apply(c0, normals);
                 frame->setNormals(normals);
             }
         }

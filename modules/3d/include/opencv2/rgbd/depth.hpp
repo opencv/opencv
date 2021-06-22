@@ -67,7 +67,7 @@ namespace cv
    * ``Gradient Response Maps for Real-Time Detection of Texture-Less Objects``
    * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
    */
-  class CV_EXPORTS RgbdNormals: public Algorithm
+  class CV_EXPORTS_W RgbdNormals: public Algorithm
   {
   public:
     enum RGBD_NORMALS_METHOD
@@ -102,64 +102,78 @@ namespace cv
 
     ~RgbdNormals();
 
-    static Ptr<RgbdNormals> create(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
-                                   RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+    CV_WRAP static Ptr<RgbdNormals> create(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
+                                           RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param normals a rows x cols x 3 matrix
      */
-    void operator()(InputArray points, OutputArray normals) const;
+    CV_WRAP
+    void apply(InputArray points, OutputArray normals) const;
 
     /** Initializes some data that is cached for later computation
      * If that function is not called, it will be called the first time normals are computed
      */
+    CV_WRAP
     void initialize() const;
 
+    CV_WRAP
     int getRows() const
     {
         return rows_;
     }
+    CV_WRAP
     void setRows(int val)
     {
         rows_ = val;
     }
+    CV_WRAP
     int getCols() const
     {
         return cols_;
     }
+    CV_WRAP
     void setCols(int val)
     {
         cols_ = val;
     }
+    CV_WRAP
     int getWindowSize() const
     {
         return window_size_;
     }
+    CV_WRAP
     void setWindowSize(int val)
     {
         window_size_ = val;
     }
+    CV_WRAP
     int getDepth() const
     {
         return depth_;
     }
+    CV_WRAP
     void setDepth(int val)
     {
         depth_ = val;
     }
+    CV_WRAP
     cv::Mat getK() const
     {
         return K_;
     }
+    CV_WRAP
     void setK(const cv::Mat &val)
     {
         K_ = val;
     }
+    CV_WRAP
     int getMethod() const
     {
         return method_;
     }
+    CV_WRAP
     void setMethod(int val)
     {
         method_ = val;

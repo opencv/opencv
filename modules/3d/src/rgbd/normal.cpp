@@ -762,7 +762,7 @@ multiply_by_K_inv(const Matx<T, 3, 3> & K_inv, U a, U b, U c, Vec<T, 3> &res)
    * @param normals a rows x cols x 3 matrix
    */
   void
-  RgbdNormals::operator()(InputArray points3d_in, OutputArray normals_out) const
+  RgbdNormals::apply(InputArray points3d_in, OutputArray normals_out) const
   {
     Mat points3d_ori = points3d_in.getMat();
 

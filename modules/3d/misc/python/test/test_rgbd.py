@@ -18,8 +18,8 @@ class rgbd_test(NewOpenCVTests):
             raise unittest.SkipTest("Missing files with test data")
 
         K = numpy.array([[525, 0, 320.5], [0, 525, 240.5], [0, 0, 1]])
-        points3d = cv.rgbd.depthTo3d(depth_image, K)
-        normals_computer = normals_computer = cv.rgbd.RgbdNormals_create(480, 640, 5, K)
+        points3d = cv.depthTo3d(depth_image, K)
+        normals_computer = normals_computer = cv.RgbdNormals_create(480, 640, 5, K)
         normals = normals_computer.apply(points3d)
         rgbd_plane = cv.RgbdPlane_create(cv.RgbdPlane_RGBD_PLANE_METHOD_DEFAULT, 40, 1600, 0.01, 0, 0, 0)
         _, planes_coeff = rgbd_plane.apply(points3d, normals)

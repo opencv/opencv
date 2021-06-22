@@ -294,10 +294,10 @@ protected:
     {
       std::vector<Mat> channels;
       split(points3d, channels);
-      normals_computer(channels[2], in_normals);
+      normals_computer.apply(channels[2], in_normals);
     }
     else
-      normals_computer(points3d, in_normals);
+      normals_computer.apply(points3d, in_normals);
     tm.stop();
 
     Mat_<Vec3f> normals, ground_normals;
@@ -377,7 +377,7 @@ protected:
         int depth = CV_32F;
         RgbdNormals normals_computer(H, W, depth, K, 5, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
         Mat normals;
-        normals_computer(points3d, normals);
+        normals_computer.apply(points3d, normals);
         tm1.stop();
 
         tm2.start();
