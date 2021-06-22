@@ -524,11 +524,9 @@ namespace detail
     // terminate recursion implementation for `non-void` ReturnType
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    ReturnType apply_visitor_impl(Visitor&& visitor,
-                                                     Variant& v,
-                                                     std::true_type processed,
-                                                     std::false_type no_return,
-                                                     VisitorArgs&& ...args)
+    ReturnType apply_visitor_impl(Visitor&& visitor, Variant& v,
+                                  std::true_type processed, std::false_type no_return,
+                                  VisitorArgs&& ...args)
     {
         // non-used params warning suppression
         constexpr size_t non_variadic_args_num = 4;
@@ -545,11 +543,9 @@ namespace detail
     // terminate recursion implementation for `void` ReturnType
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    void apply_visitor_impl(Visitor&& visitor,
-                                                     Variant& v,
-                                                     std::true_type processed,
-                                                     std::true_type no_return,
-                                                     VisitorArgs&& ...args)
+    void apply_visitor_impl(Visitor&& visitor, Variant& v,
+                            std::true_type processed, std::true_type no_return,
+                            VisitorArgs&& ...args)
     {
         // non-used params warning suppression
         constexpr size_t non_variadic_args_num = 4;

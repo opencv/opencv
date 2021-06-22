@@ -118,7 +118,8 @@ namespace detail
     };
 } // namespace detail
 
-
+namespace util
+{
 template<typename ...L>
 struct overload_lamba_set;
 
@@ -151,6 +152,7 @@ template<typename... L>
 overload_lamba_set<L...> overload_lambdas(L&& ...lambdas)
 {
     return overload_lamba_set<L...>(std::forward<L>(lambdas)...);
+}
 }
 } // namespace cv
 
