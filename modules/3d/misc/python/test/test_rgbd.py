@@ -21,7 +21,7 @@ class rgbd_test(NewOpenCVTests):
         points3d = cv.rgbd.depthTo3d(depth_image, K)
         normals_computer = normals_computer = cv.rgbd.RgbdNormals_create(480, 640, 5, K)
         normals = normals_computer.apply(points3d)
-        rgbd_plane = cv.rgbd.RgbdPlane_create(cv.rgbd.RgbdPlane_RGBD_PLANE_METHOD_DEFAULT, 40, 1600, 0.01, 0, 0, 0)
+        rgbd_plane = cv.RgbdPlane_create(cv.RgbdPlane_RGBD_PLANE_METHOD_DEFAULT, 40, 1600, 0.01, 0, 0, 0)
         _, planes_coeff = rgbd_plane.apply(points3d, normals)
 
         planes_coeff_expected = \

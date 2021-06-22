@@ -381,13 +381,13 @@ protected:
         tm1.stop();
 
         tm2.start();
-        plane_computer(points3d, normals, plane_mask, plane_coefficients);
+        plane_computer.apply(points3d, normals, plane_mask, plane_coefficients);
         tm2.stop();
       }
       else
       {
         tm2.start();
-        plane_computer(points3d, plane_mask, plane_coefficients);
+        plane_computer.apply(points3d, plane_mask, plane_coefficients);
         tm2.stop();
       }
 
@@ -448,7 +448,7 @@ TEST(Rgbd_Plane, regression_2309_valgrind_check)
 
     Mat mask;
     std::vector<cv::Vec4f> planes;
-    plane_detector(points, mask, planes);  // Will corrupt memory; valgrind gets triggered
+    plane_detector.apply(points, mask, planes);  // Will corrupt memory; valgrind gets triggered
 }
 
 }} // namespace
