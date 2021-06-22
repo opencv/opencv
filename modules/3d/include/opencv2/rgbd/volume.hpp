@@ -12,7 +12,7 @@
 
 namespace cv
 {
-class CV_EXPORTS Volume
+class CV_EXPORTS_W Volume
 {
    public:
     Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor)
@@ -25,17 +25,22 @@ class CV_EXPORTS Volume
 
     virtual ~Volume(){};
 
+    CV_WRAP
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0)               = 0;
     virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
                            const Matx44f& cameraPose, const Matx33f& intrinsics,
                            const Matx33f& rgb_intrinsics, const int frameId = 0)                  = 0;
+    CV_WRAP
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
                          const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals, OutputArray colors) const    = 0;
+    CV_WRAP
     virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
+    CV_WRAP
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const             = 0;
+    CV_WRAP
     virtual void reset()                                                                       = 0;
 
     // Works for hash-based volumes only, otherwise returns 1
@@ -49,7 +54,7 @@ class CV_EXPORTS Volume
     const float raycastStepFactor;
 };
 
-struct CV_EXPORTS VolumeParams
+struct CV_EXPORTS_W VolumeParams
 {
     enum VolumeType
     {
@@ -61,66 +66,66 @@ struct CV_EXPORTS VolumeParams
     /** @brief Type of Volume
         Values can be TSDF (single volume) or HASHTSDF (hashtable of volume units)
     */
-    VolumeType type;
+    CV_PROP_RW int type;
 
     /** @brief Resolution of voxel space
         Number of voxels in each dimension.
         Applicable only for TSDF Volume.
         HashTSDF volume only supports equal resolution in all three dimensions
     */
-    int resolutionX;
-    int resolutionY;
-    int resolutionZ;
+    CV_PROP_RW int resolutionX;
+    CV_PROP_RW int resolutionY;
+    CV_PROP_RW int resolutionZ;
 
     /** @brief Resolution of volumeUnit in voxel space
         Number of voxels in each dimension for volumeUnit
         Applicable only for hashTSDF.
     */
-    int unitResolution = {0};
+    CV_PROP_RW int unitResolution = {0};
 
     /** @brief Initial pose of the volume in meters, should be 4x4 float or double matrix */
-    Mat pose;
+    CV_PROP_RW Mat pose;
 
     /** @brief Length of voxels in meters */
-    float voxelSize;
+    CV_PROP_RW float voxelSize;
 
     /** @brief TSDF truncation distance
         Distances greater than value from surface will be truncated to 1.0
     */
-    float tsdfTruncDist;
+    CV_PROP_RW float tsdfTruncDist;
 
     /** @brief Max number of frames to integrate per voxel
         Represents the max number of frames over which a running average
         of the TSDF is calculated for a voxel
     */
-    int maxWeight;
+    CV_PROP_RW int maxWeight;
 
     /** @brief Threshold for depth truncation in meters
         Truncates the depth greater than threshold to 0
     */
-    float depthTruncThreshold;
+    CV_PROP_RW float depthTruncThreshold;
 
     /** @brief Length of single raycast step
         Describes the percentage of voxel length that is skipped per march
     */
-    float raycastStepFactor;
+    CV_PROP_RW float raycastStepFactor;
 
     /** @brief Default set of parameters that provide higher quality reconstruction
         at the cost of slow performance.
     */
-    static Ptr<VolumeParams> defaultParams(VolumeParams::VolumeType _volumeType);
+    CV_WRAP static Ptr<VolumeParams> defaultParams(int _volumeType);
 
     /** @brief Coarse set of parameters that provides relatively higher performance
         at the cost of reconstrution quality.
     */
-    static Ptr<VolumeParams> coarseParams(VolumeParams::VolumeType _volumeType);
+    CV_WRAP static Ptr<VolumeParams> coarseParams(int _volumeType);
 };
 
 
-CV_EXPORTS Ptr<Volume> makeVolume(const VolumeParams& _volumeParams);
-CV_EXPORTS Ptr<Volume> makeVolume(VolumeParams::VolumeType _volumeType, float _voxelSize, Matx44f _pose,
-                                  float _raycastStepFactor, float _truncDist, int _maxWeight,
-                                  float _truncateThreshold, Point3i _resolution);
+CV_EXPORTS_W Ptr<Volume> makeVolume(const VolumeParams& _volumeParams);
+CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
+                                    float _raycastStepFactor, float _truncDist, int _maxWeight,
+                                    float _truncateThreshold, Point3i _resolution);
 
 }  // namespace cv
 #endif
