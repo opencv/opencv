@@ -20,6 +20,7 @@ struct SimpleCustomType2 {
     }
 };
 
+// ! [S11N usage]
 namespace cv {
 namespace gapi {
 namespace s11n {
@@ -49,7 +50,7 @@ template<> struct S11N<SimpleCustomType2> {
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
-
+// ! [S11N usage]
 
 namespace cv {
 namespace detail {
@@ -69,19 +70,23 @@ template<> struct CompileArgTag<SimpleCustomType2> {
 
 int main(int argc, char *argv[])
 {
+    (void) argc;
+    (void) argv;
+
     SimpleCustomType  customVar1 { false };
     SimpleCustomType2 customVar2 { 1248, "World", {1280, 720, 640, 480},
                                    { {5, 32434142342}, {7, 34242432} } };
 
-// ! [bind usage]
     std::vector<char> sArgs = cv::gapi::serialize(
         cv::compile_args(customVar1, customVar2));
 
     cv::GCompileArgs dArgs = cv::gapi::deserialize<cv::GCompileArgs,
                                                    SimpleCustomType,
                                                    SimpleCustomType2>(sArgs);
-// ! [bind usage]
 
     SimpleCustomType  dCustomVar1 = cv::gapi::getCompileArg<SimpleCustomType>(dArgs).value();
     SimpleCustomType2 dCustomVar2 = cv::gapi::getCompileArg<SimpleCustomType2>(dArgs).value();
+
+    (void) dCustomVar1;
+    (void) dCustomVar2;
 }
