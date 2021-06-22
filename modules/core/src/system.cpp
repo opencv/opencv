@@ -1835,7 +1835,15 @@ void* TLSDataContainer::getData() const
     {
         // Create new data instance and save it to TLS storage
         pData = createDataInstance();
-        getTlsStorage().setData(key_, pData);
+        try
+        {
+            getTlsStorage().setData(key_, pData);
+        }
+        catch (...)
+        {
+            deleteDataInstance(pData);
+            throw;
+        }
     }
     return pData;
 }
