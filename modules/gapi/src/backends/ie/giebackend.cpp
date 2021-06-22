@@ -780,7 +780,6 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         auto output = ctx->output(i);
         auto m = ctx->input(0).meta;
         m["latency"] = end_infer_ts - ctx->start_infer_ts;
-        //ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.meta(output, m);
         ctx->out.post(std::move(output));
 
@@ -917,12 +916,12 @@ struct Infer: public cv::detail::KernelTag {
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
                             req.SetBlob(ctx->uu.params.input_names[i], this_blob);
                         }
-                        // FIXME: Should it be done by kernel ?
-                        // What about to do that in RequestPool ?
                         const auto now = std::chrono::system_clock::now();
                         const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
                             (now.time_since_epoch());
                         ctx->start_infer_ts = int64_t{dur.count()};
+                        // FIXME: Should it be done by kernel ?
+                        // What about to do that in RequestPool ?
                         req.StartAsync();
                     },
                     std::bind(PostOutputs, _1, ctx)

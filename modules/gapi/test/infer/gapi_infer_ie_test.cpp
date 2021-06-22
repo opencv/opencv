@@ -234,9 +234,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
-
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
-            cv::compile_args(cv::gapi::networks(pp)));
+               cv::compile_args(cv::gapi::networks(pp)));
 
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
@@ -1453,7 +1452,6 @@ TEST(Infer, TestStreamingInfer)
     cv::GMat age, gender;
 
     std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
-
     cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender, cv::gapi::ie::latency(age)));
 
     auto pp = cv::gapi::ie::Params<AgeGender> {
@@ -1496,7 +1494,7 @@ TEST(Infer, TestStreamingInfer)
         normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
         ++num_frames;
         cap >> in_mat;
-        std::cout << "latency = " << latency / 1000.0 << " ms" << std::endl;
+        std::cout << latency / 1000.0 << " ms" << std::endl;
     }
     pipeline.stop();
 }
