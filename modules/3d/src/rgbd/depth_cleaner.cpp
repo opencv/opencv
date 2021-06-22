@@ -253,7 +253,7 @@ namespace cv
    * @return normals a rows x cols x 3 matrix
    */
   void
-  DepthCleaner::operator()(InputArray depth_in_array, OutputArray depth_out_array) const
+  DepthCleaner::apply(InputArray depth_in_array, OutputArray depth_out_array) const
   {
     Mat depth_in = depth_in_array.getMat();
     CV_Assert(depth_in.dims == 2);

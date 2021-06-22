@@ -192,7 +192,7 @@ namespace cv
 
   /** Object that can clean a noisy depth image
    */
-  class CV_EXPORTS DepthCleaner: public Algorithm
+  class CV_EXPORTS_W DepthCleaner: public Algorithm
   {
   public:
     /** NIL method is from
@@ -222,39 +222,48 @@ namespace cv
 
     ~DepthCleaner();
 
+    CV_WRAP
     static Ptr<DepthCleaner> create(int depth, int window_size = 5, int method = DepthCleaner::DEPTH_CLEANER_NIL);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param depth a rows x cols matrix of the cleaned up depth
      */
-    void operator()(InputArray points, OutputArray depth) const;
+    CV_WRAP
+    void apply(InputArray points, OutputArray depth) const;
 
     /** Initializes some data that is cached for later computation
      * If that function is not called, it will be called the first time normals are computed
      */
+    CV_WRAP
     void initialize() const;
 
+    CV_WRAP
     int getWindowSize() const
     {
         return window_size_;
     }
+    CV_WRAP
     void setWindowSize(int val)
     {
         window_size_ = val;
     }
+    CV_WRAP
     int getDepth() const
     {
         return depth_;
     }
+    CV_WRAP
     void setDepth(int val)
     {
         depth_ = val;
     }
+    CV_WRAP
     int getMethod() const
     {
         return method_;
     }
+    CV_WRAP
     void setMethod(int val)
     {
         method_ = val;
