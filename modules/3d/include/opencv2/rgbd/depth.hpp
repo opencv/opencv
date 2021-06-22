@@ -319,7 +319,7 @@ namespace cv
 
   /** Object that can compute planes in an image
    */
-  class CV_EXPORTS RgbdPlane: public Algorithm
+  class CV_EXPORTS_W RgbdPlane: public Algorithm
   {
   public:
     enum RGBD_PLANE_METHOD
@@ -354,7 +354,7 @@ namespace cv
 
     ~RgbdPlane();
 
-    static Ptr<RgbdPlane> create(int method, int block_size, int min_size, double threshold,
+    CV_WRAP static Ptr<RgbdPlane> create(int method, int block_size, int min_size, double threshold,
                                          double sensor_error_a = 0, double sensor_error_b = 0,
                                          double sensor_error_c = 0);
 
@@ -366,8 +366,9 @@ namespace cv
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
      *        and c < 0 (so that the normal points towards the camera)
      */
-    void operator()(InputArray points3d, InputArray normals, OutputArray mask,
-                    OutputArray plane_coefficients);
+    CV_WRAP_AS(applyWithNormals)
+    void apply(InputArray points3d, InputArray normals, OutputArray mask,
+               OutputArray plane_coefficients);
 
     /** Find The planes in a depth image but without doing a normal check, which is faster but less accurate
      * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
@@ -375,60 +376,75 @@ namespace cv
      *        and 255 if it does not belong to any plane
      * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0
      */
-    void operator()(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
+    CV_WRAP
+    void apply(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
 
+    CV_WRAP
     int getBlockSize() const
     {
         return block_size_;
     }
+    CV_WRAP
     void setBlockSize(int val)
     {
         block_size_ = val;
     }
+    CV_WRAP
     int getMinSize() const
     {
         return min_size_;
     }
+    CV_WRAP
     void setMinSize(int val)
     {
         min_size_ = val;
     }
+    CV_WRAP
     int getMethod() const
     {
         return method_;
     }
+    CV_WRAP
     void setMethod(int val)
     {
         method_ = val;
     }
+    CV_WRAP
     double getThreshold() const
     {
         return threshold_;
     }
+    CV_WRAP
     void setThreshold(double val)
     {
         threshold_ = val;
     }
+    CV_WRAP
     double getSensorErrorA() const
     {
         return sensor_error_a_;
     }
+    CV_WRAP
     void setSensorErrorA(double val)
     {
         sensor_error_a_ = val;
     }
+    CV_WRAP
     double getSensorErrorB() const
     {
         return sensor_error_b_;
     }
+    CV_WRAP
     void setSensorErrorB(double val)
     {
         sensor_error_b_ = val;
     }
+    CV_WRAP
     double getSensorErrorC() const
     {
         return sensor_error_c_;
     }
+    CV_WRAP
     void setSensorErrorC(double val)
     {
         sensor_error_c_ = val;

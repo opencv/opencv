@@ -523,13 +523,13 @@ private:
   {}
 
   void
-  RgbdPlane::operator()(InputArray points3d_in, OutputArray mask_out, OutputArray plane_coefficients)
+  RgbdPlane::apply(InputArray points3d_in, OutputArray mask_out, OutputArray plane_coefficients)
   {
-    this->operator()(points3d_in, Mat(), mask_out, plane_coefficients);
+    this->apply(points3d_in, Mat(), mask_out, plane_coefficients);
   }
 
   void
-  RgbdPlane::operator()(InputArray points3d_in, InputArray normals_in, OutputArray mask_out,
+  RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask_out,
                         OutputArray plane_coefficients_out)
   {
     Mat_<Vec3f> points3d, normals;
