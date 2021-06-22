@@ -1566,6 +1566,7 @@ struct Device::Impl
         version_ = getStrProp(CL_DEVICE_VERSION);
         extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
+        halfFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
@@ -1678,6 +1679,7 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    int halfFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1827,11 +1829,7 @@ int Device::singleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
 
 int Device::halfFPConfig() const
-#ifdef CL_VERSION_1_2
-{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
-#else
-{ CV_REQUIRE_OPENCL_1_2_ERROR; }
-#endif
+{ return p ? p->halfFPConfig_ : 0; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }

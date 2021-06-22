@@ -144,6 +144,10 @@ static void dumpOpenCLInformation()
         DUMP_MESSAGE_STDOUT("    Double support = " << doubleSupportStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_haveDoubleSupport", device.doubleFPConfig() > 0);
 
+        const char* halfSupportStr = device.halfFPConfig() > 0 ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Half support = " << halfSupportStr);
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveHalfSupport", device.halfFPConfig() > 0);
+
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = " << isUnifiedMemoryStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_hostUnifiedMemory", device.hostUnifiedMemory());
