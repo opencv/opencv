@@ -1060,6 +1060,9 @@ namespace cv
      * @param sigmaSpatial Spatial sigma in pixels for bilateral smooth
      * @param kernelSize Kernel size in pixels for bilateral smooth
      * @param iterCounts Count of iterations on each pyramid level
+     * @param depthFactor pre-scale per 1 meter for input values
+     * @param truncateThreshold Threshold for depth truncation in meters
+     *        All depth values beyond this threshold will be set to zero
      */
     FastICPOdometry(const Mat& cameraMatrix,
                     float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
