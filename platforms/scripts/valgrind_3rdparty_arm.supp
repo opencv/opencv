@@ -72,7 +72,7 @@
    png_do_expand_palette_rgb8_neon
    Memcheck:Value8
    ...
-   fun:png_do_expand_palette_rgb8_neon                                                 
+   fun:png_do_expand_palette_rgb8_neon
 }
 
 {
@@ -204,7 +204,7 @@
 
 {
    CSLAddStringMayFail
-   Memcheck:Leak  
+   Memcheck:Leak
    ...
    fun:CSLAddStringMayFail
 }
