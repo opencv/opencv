@@ -223,12 +223,12 @@ public:
         return *this;
     }
 
-    Params& cfgContextConfig(cv::util::any&& ctx_cfg) {
+    Params& cfgContextParams(cv::util::any&& ctx_cfg) {
         desc.context_config = std::move(ctx_cfg);
         return *this;
     }
 
-    Params& cfgContextConfig(const cv::util::any& ctx_cfg) {
+    Params& cfgContextParams(const cv::util::any& ctx_cfg) {
         desc.context_config = ctx_cfg;
         return *this;
     }
