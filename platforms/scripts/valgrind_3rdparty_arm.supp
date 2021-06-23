@@ -1,0 +1,252 @@
+{
+   VSIInstallLargeFileHandler
+   Memcheck:Leak
+   ...
+   fun:VSIInstallLargeFileHandler
+}
+
+{
+   ZN14VSIFileManager3GetEv
+   Memcheck:Leak
+   ...
+   fun:_ZN14VSIFileManager3GetEv
+}
+
+{
+   ZN14VSIFileManager10GetHandlerEPKc
+   Memcheck:Leak
+   ...
+   fun:_ZN14VSIFileManager10GetHandlerEPKc
+}
+
+{
+   VSIStatExL
+   Memcheck:Leak
+   ...
+   fun:VSIStatExL
+}
+
+{
+   GDALAllRegister
+   Memcheck:Leak
+   ...
+   fun:GDALAllRegister
+}
+
+{
+   ZN2cv21ImageCodecInitializerC1Ev
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv21ImageCodecInitializerC1Ev
+}
+
+{
+   ZN2cvL9getCodecsEv
+   Memcheck:Leak
+   ...
+   fun:_ZN2cvL9getCodecsEv
+}
+
+{
+   ZN2cvL11findDecoderERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+   Memcheck:Leak
+   ...
+   fun:_ZN2cvL11findDecoderERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+}
+
+{
+   ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+   Memcheck:Value8
+   ...
+   fun:_ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+}
+
+{
+   ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test4BodyEv
+   Memcheck:Leak
+   ...
+   fun:_ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test4BodyEv
+}
+
+{
+   png_do_expand_palette_rgb8_neon
+   Memcheck:Value8
+   ...
+   fun:png_do_expand_palette_rgb8_neon                                                 
+}
+
+{
+   png_do_expand_palette
+   Memcheck:Leak
+   ...
+   fun:png_do_expand_palette
+}
+
+
+{
+   png_do_read_transformations
+   Memcheck:Value8
+   ...
+   fun:png_do_read_transformations
+}
+
+{
+   png_read_row
+   Memcheck:Value8
+   ...
+   fun:png_read_row
+}
+
+{
+   png_read_image
+   Memcheck:Value8
+   ...
+   fun:png_read_image
+}
+
+{
+   vld3_dup_u8
+   Memcheck:Leak
+   ...
+   fun:vld3_dup_u8
+}
+
+{
+   ZN2cv10PngDecoder8readDataERNS_3MatE
+   Memcheck:Value8
+   ...
+   fun:_ZN2cv10PngDecoder8readDataERNS_3MatE
+}
+
+{
+   ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+   Memcheck:Value8
+   ...
+   fun:_ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+}
+
+{
+   ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test8TestBodyEv
+   Memcheck:Leak
+   ...
+   fun:_ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test8TestBodyEv
+}
+
+{
+   ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
+   Memcheck:Value8
+   ...
+   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
+}
+
+{
+   ZN7testing4Test3RunEv
+   Memcheck:Value8
+   ...
+   fun:_ZN7testing4Test3RunEv
+}
+
+{
+   ZN7testing8TestInfo3RunEv
+   Memcheck:Value8
+   ...
+   fun:_ZN7testing8TestInfo3RunEv
+}
+
+{
+   ZN2cv32cvCreateVideoWriter_FFMPEG_proxyERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv32cvCreateVideoWriter_FFMPEG_proxyERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
+}
+
+{
+   ZNK2cv23StaticBackendWithParams12createWriterERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
+   Memcheck:Leak
+   ...
+   fun:_ZNK2cv23StaticBackendWithParams12createWriterERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
+}
+
+{
+   vld1q_dup_u32
+   Memcheck:Value8
+   ...
+   fun:vld1q_dup_u32
+}
+
+{
+   png_do_expand_palette_rgba8_neon
+   Memcheck:Value8
+   ...
+   fun:png_do_expand_palette_rgba8_neon
+}
+
+{
+   ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test4BodyEv
+   Memcheck:Value8
+   ...
+   fun:_ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test4BodyEv
+}
+
+{
+   ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test8TestBodyEv
+   Memcheck:Value8
+   ...
+   fun:_ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test8TestBodyEv
+}
+
+{
+   VSICallocVerbose
+   Memcheck:Leak
+   ...
+   fun:VSICallocVerbose
+}
+
+{
+   CSLAddStringMayFail
+   Memcheck:Leak  
+   ...
+   fun:CSLAddStringMayFail
+}
+
+{
+   CSLAddString
+   Memcheck:Leak
+   ...
+   fun:CSLAddString
+}
+
+{
+   GDALOpenEx
+   Memcheck:Leak
+   ...
+   fun:GDALOpenEx
+}
+
+{
+   ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE_2
+   Memcheck:Leak
+   ...
+   fun:_ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+}
+
+{
+   ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi_2
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+}
+
+{
+   x264_8_mbtree_propagate_list_internal_neon
+   Memcheck:Leak
+   ...
+   fun:x264_8_mbtree_propagate_list_internal_neon
+}
+
+{
+   TIFFOpen
+   Memcheck:Leak
+   ...
+   fun:TIFFOpen
+}
