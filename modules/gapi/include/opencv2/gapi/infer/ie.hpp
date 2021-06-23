@@ -223,13 +223,27 @@ public:
         return *this;
     }
 
-    Params& cfgContextParams(cv::util::any&& ctx_cfg) {
-        desc.context_config = std::move(ctx_cfg);
+    /** @brief Specifies configuration for RemoteContext in InferenceEngine.
+
+    When RemoteContext is configured the backend imports the networks using the context.
+    It also expects cv::MediaFrames to be actually remote, to operate with blobs via the context.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(const cv::util::any& ctx_cfg) {
+        desc.context_config = ctx_cfg;
         return *this;
     }
 
-    Params& cfgContextParams(const cv::util::any& ctx_cfg) {
-        desc.context_config = ctx_cfg;
+    /** @overload
+    Function with an rvalue parameter.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(cv::util::any&& ctx_cfg) {
+        desc.context_config = std::move(ctx_cfg);
         return *this;
     }
 
