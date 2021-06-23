@@ -2,11 +2,8 @@
 #include <opencv2/gapi/s11n.hpp>
 #include <opencv2/gapi/garg.hpp>
 
-int main(int argc, char *argv[])
+int main()
 {
-    (void) argc;
-    (void) argv;
-
 // ! [bind usage]
     std::vector<cv::GRunArgP> graph_outs;
     cv::GRunArgs out_args;

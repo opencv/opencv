@@ -68,11 +68,8 @@ template<> struct CompileArgTag<SimpleCustomType2> {
 } // namespace detail
 } // namespace cv
 
-int main(int argc, char *argv[])
+int main()
 {
-    (void) argc;
-    (void) argv;
-
     SimpleCustomType  customVar1 { false };
     SimpleCustomType2 customVar2 { 1248, "World", {1280, 720, 640, 480},
                                    { {5, 32434142342}, {7, 34242432} } };

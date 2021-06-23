@@ -2,11 +2,8 @@
 #include <opencv2/gapi/s11n.hpp>
 #include <opencv2/gapi/garg.hpp>
 
-int main(int argc, char *argv[])
+int main()
 {
-    (void) argc;
-    (void) argv;
-
 // ! [bind usage]
     cv::GCompiled compd;
     std::vector<char> bytes;
