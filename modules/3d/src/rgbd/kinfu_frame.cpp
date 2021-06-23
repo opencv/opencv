@@ -45,12 +45,12 @@ inline float specPow<1>(float x)
 
 struct RenderInvoker : ParallelLoopBody
 {
-    RenderInvoker(const Points& _points, const Normals& _normals, Mat_<Vec4b>& _img, Affine3f _lightPose, Size _sz) :
+    RenderInvoker(const Points& _points, const Normals& _normals, Mat_<Vec4b>& _img, Vec3f _lightPt, Size _sz) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
         img(_img),
-        lightPose(_lightPose),
+        lightPt(_lightPt),
         sz(_sz)
     { }
 
@@ -85,7 +85,7 @@ struct RenderInvoker : ParallelLoopBody
                     const float Sx = 1.f;   //specular color, can be RGB
                     const float Lx = 1.f;   //light color
 
-                    Point3f l = normalize(lightPose.translation() - Vec3f(p));
+                    Point3f l = normalize(lightPt - Vec3f(p));
                     Point3f v = normalize(-Vec3f(p));
                     Point3f r = normalize(Vec3f(2.f*n*n.dot(l) - l));
 
@@ -102,18 +102,17 @@ struct RenderInvoker : ParallelLoopBody
     const Points& points;
     const Normals& normals;
     Mat_<Vec4b>& img;
-    Affine3f lightPose;
+    Vec3f lightPt;
     Size sz;
 };
 
 struct RenderColorInvoker : ParallelLoopBody
 {
-    RenderColorInvoker(const Points& _points, const Colors& _colors, Mat_<Vec4b>& _img, Affine3f _lightPose, Size _sz) :
+    RenderColorInvoker(const Points& _points, const Colors& _colors, Mat_<Vec4b>& _img, Size _sz) :
         ParallelLoopBody(),
         points(_points),
         colors(_colors),
         img(_img),
-        lightPose(_lightPose),
         sz(_sz)
     { }
 
@@ -148,7 +147,6 @@ struct RenderColorInvoker : ParallelLoopBody
     const Points& points;
     const Colors& colors;
     Mat_<Vec4b>& img;
-    Affine3f lightPose;
     Size sz;
 };
 
@@ -505,7 +503,7 @@ bool pyrDownPointsNormalsGpu(const UMat p, const UMat n, UMat &pdown, UMat &ndow
 
 
 static bool ocl_renderPointsNormals(const UMat points, const UMat normals,
-                                    UMat img, Affine3f lightPose)
+                                    UMat img, Vec3f lightLoc)
 {
     CV_TRACE_FUNCTION();
 
@@ -519,9 +517,7 @@ static bool ocl_renderPointsNormals(const UMat points, const UMat normals,
     if(k.empty())
         return false;
 
-    Vec4f lightPt(lightPose.translation()[0],
-                  lightPose.translation()[1],
-                  lightPose.translation()[2]);
+    Vec4f lightPt(lightLoc[0], lightLoc[1], lightLoc[2]);
     Size frameSize = points.size();
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(points),
@@ -622,7 +618,7 @@ static bool ocl_buildPyramidPointsNormals(const UMat points, const UMat normals,
 
 namespace detail {
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
+void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Vec3f lightLoc)
 {
     CV_TRACE_FUNCTION();
 
@@ -635,20 +631,20 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     CV_OCL_RUN(_points.isUMat() && _normals.isUMat() && image.isUMat(),
                ocl_renderPointsNormals(_points.getUMat(),
                                        _normals.getUMat(),
-                                       image.getUMat(), lightPose))
+                                       image.getUMat(), lightLoc))
 
     Points  points  = _points.getMat();
     Normals normals = _normals.getMat();
 
     Mat_<Vec4b> img = image.getMat();
 
-    RenderInvoker ri(points, normals, img, lightPose, sz);
+    RenderInvoker ri(points, normals, img, lightLoc, sz);
     Range range(0, sz.height);
     const int nstripes = -1;
     parallel_for_(range, ri, nstripes);
 }
 
-void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image, Affine3f lightPose)
+void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image)
 {
     CV_TRACE_FUNCTION();
 
@@ -657,11 +653,6 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
-
-    CV_OCL_RUN(_points.isUMat() && _normals.isUMat() && image.isUMat(),
-               ocl_renderPointsNormals(_points.getUMat(),
-                                       _normals.getUMat(),
-                                       image.getUMat(), lightPose))
 
     Points  points  = _points.getMat();
     Normals normals = _normals.getMat();
@@ -669,7 +660,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 
     Mat_<Vec4b> img = image.getMat();
 
-    RenderColorInvoker ri(points, colors, img, lightPose, sz);
+    RenderColorInvoker ri(points, colors, img, sz);
     Range range(0, sz.height);
     const int nstripes = -1;
     parallel_for_(range, ri, nstripes);
