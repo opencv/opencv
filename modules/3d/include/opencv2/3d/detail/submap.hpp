@@ -47,7 +47,8 @@ class Submap
     {
         VolumeParams vp = volumeParams;
         vp.type = VolumeParams::VolumeType::HASHTSDF;
-        volume = makeVolume(makePtr(vp));
+        Ptr<VolumeParams> pvp = makePtr<VolumeParams>(vp);
+        volume = makeVolume(pvp);
 
         CV_LOG_INFO(NULL, "Created volume");
     }
