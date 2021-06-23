@@ -124,8 +124,8 @@ struct CV_EXPORTS_W VolumeParams
 
 CV_EXPORTS_W Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams);
 CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
-                                    float _raycastStepFactor, float _truncDist, int _maxWeight,
-                                    float _truncateThreshold, Point3i _resolution);
+                                    float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
+                                    int _resolutionX, int _resolutionY, int _resolutionZ);
 
 }  // namespace cv
 #endif

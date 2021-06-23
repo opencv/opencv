@@ -342,8 +342,8 @@ public:
         }
 
         volume = makeVolume(volumeType, voxelSize, volumePose.matrix,
-            raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
-            truncateThreshold, volumeDims);
+                            raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
+                            truncateThreshold, volumeDims[0], volumeDims[1], volumeDims[2]);
 
         scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
         poses = scene->getPoses();

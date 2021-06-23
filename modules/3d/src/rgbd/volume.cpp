@@ -98,10 +98,10 @@ Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams)
 }
 
 Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
-                       float _raycastStepFactor, float _truncDist, int _maxWeight,
-                       float _truncateThreshold, Point3i _resolution)
+                       float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
+                       int _resolutionX, int _resolutionY, int _resolutionZ)
 {
-    Point3i _presolution = _resolution;
+    Point3i _presolution(_resolutionX, _resolutionY, _resolutionZ);
     if (_volumeType == VolumeParams::VolumeType::TSDF)
     {
         return makeTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _presolution);
