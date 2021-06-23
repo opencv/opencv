@@ -7,7 +7,7 @@ import soundfile as sf # Temporary import to load audio files
 class FilterbankFeatures():
     def __init__(self,
                  sample_rate=16000, window_size=0.02, window_stride=0.01,
-                 n_fft=512, preemph=0.97, n_filt=64, lowfreq=0, 
+                 n_fft=512, preemph=0.97, n_filt=64, lowfreq=0,
                  highfreq=None, log=True, dither=1e-5):
         '''
             Initializes pre-processing class. Default values are the values used by the Jasper
@@ -54,7 +54,7 @@ class FilterbankFeatures():
 
         seq_len = np.ceil(seq_len / self.hop_length)
         seq_len = np.array(seq_len,dtype=np.int32)
-        
+
         # dither
         if self.dither > 0:
             x += self.dither * np.random.randn(*x.shape)
@@ -63,7 +63,7 @@ class FilterbankFeatures():
         if self.preemph is not None:
             x = np.concatenate(
                 (np.expand_dims(x[0],-1), x[1:] - self.preemph * x[:-1]), axis=0)
-        
+
         # Short Time Fourier Transform
         x  = self.stft(x, n_fft=self.n_fft, hop_length=self.hop_length,
                   win_length=self.win_length,
@@ -253,7 +253,7 @@ class FilterbankFeatures():
         '''
             Find the complex numpy dtype corresponding to a real dtype.
             args:
-                d : The real-valued dtype to convert to complex. 
+                d : The real-valued dtype to convert to complex.
                 default : The default complex target type, if `d` does not match a known dtype
             return : The complex dtype
         '''
@@ -268,7 +268,7 @@ class FilterbankFeatures():
 
     def stft(self, y, n_fft, hop_length=None, win_length=None, fft_window=None, pad_mode='reflect', return_complex=False):
         '''
-            Short Time Fourier Transform. The STFT represents a signal in the time-frequency 
+            Short Time Fourier Transform. The STFT represents a signal in the time-frequency
             domain by computing discrete Fourier transforms (DFT) over short overlapping windows.
             args:
                 y : input signal
@@ -276,7 +276,7 @@ class FilterbankFeatures():
                 hop_length : number of audio samples between adjacent STFT columns.
                 win_length : Each frame of audio is windowed by window of length win_length and
                     then padded with zeros to match n_fft
-                fft_window : a vector or array of length `n_fft` having values computed by a 
+                fft_window : a vector or array of length `n_fft` having values computed by a
                     window function
                 pad_mode : mode while padding the singnal
                 return_complex : returns array with complex data type if `True`
@@ -359,7 +359,7 @@ if __name__ == '__main__':
                         help='Select a target device: '
                         "%d: CPU target (by default)"
                         "%d: OpenCL" % targets)
-    
+
     args, _ = parser.parse_known_args()
 
     if args.input_audio and not os.path.isfile(args.input_audio):
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     net = cv.dnn.readNetFromONNX(args.model)
     net.setPreferableBackend(args.backend)
     net.setPreferableTarget(args.target)
-    
+
     # Get Filterbank Features
     feature_extractor=FilterbankFeatures()
     features = feature_extractor.calculate_features(x=X,seq_len=seq_len)
@@ -402,7 +402,7 @@ if __name__ == '__main__':
 
     # decode output to transcript
     prediction = decoder.decode(output[0])
-    
+
     # save transcript if required
     if args.output:
         with open(args.output,'w') as f:
@@ -410,4 +410,4 @@ if __name__ == '__main__':
         print("Done")
     else:
         print(prediction)
-    cv.destroyAllWindows() 
+    cv.destroyAllWindows()
