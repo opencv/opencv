@@ -348,7 +348,7 @@ void computePointsNormals(const Intr intr, float depthFactor, const Depth depth,
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_renderPointsNormals(const UMat points, const UMat normals, UMat image, Affine3f lightPose);
+static bool ocl_renderPointsNormals(const UMat points, const UMat normals, UMat image, Vec3f lightLoc);
 static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals,
                                    const Intr intr, int levels, float depthFactor,
                                    float sigmaDepth, float sigmaSpatial, int kernelSize,
