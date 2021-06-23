@@ -1067,25 +1067,6 @@ struct OdometryFrameImpl : public OdometryFrame
     OdometryFrameImpl(InputArray _image, InputArray _depth, InputArray _mask = noArray(), InputArray _normals = noArray(), int _ID = -1);
     virtual ~OdometryFrameImpl() { }
 
-    virtual void release() CV_OVERRIDE
-    {
-        ID = -1;
-        image.release();
-        depth.release();
-        mask.release();
-        normals.release();
-
-        releasePyramids();
-    }
-
-    virtual void releasePyramids() CV_OVERRIDE
-    {
-        for (auto &p : pyramids)
-        {
-            p.clear();
-        }
-    }
-
     virtual void setImage(InputArray  _image) CV_OVERRIDE
     {
         image = getTMat<TMat>(_image);

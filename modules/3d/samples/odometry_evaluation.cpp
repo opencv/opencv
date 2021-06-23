@@ -234,8 +234,8 @@ int main(int argc, char** argv)
                 Rts.push_back( prevRt * Rt );
             }
 
-            if(!frame_prev.empty())
-                frame_prev->release();
+            if (!frame_prev.empty())
+                frame_prev.release();
             std::swap(frame_prev, frame_curr);
         }
     }

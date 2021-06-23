@@ -530,10 +530,6 @@ namespace cv
     CV_WRAP static Ptr<OdometryFrame> create(InputArray image = noArray(), InputArray depth = noArray(),
                                              InputArray  mask = noArray(), InputArray normals = noArray(), int ID = -1);
 
-    CV_WRAP virtual void release() = 0;
-
-    CV_WRAP virtual void releasePyramids() = 0;
-
     CV_WRAP virtual void setImage(InputArray  _image) = 0;
     CV_WRAP virtual void getImage(OutputArray _image) = 0;
     CV_WRAP virtual void setDepth(InputArray  _depth) = 0;
