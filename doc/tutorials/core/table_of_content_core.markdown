@@ -10,3 +10,5 @@ The Core Functionality (core module) {#tutorial_table_of_content_core}
 -   @subpage tutorial_discrete_fourier_transform
 -   @subpage tutorial_file_input_output_with_xml_yml
 -   @subpage tutorial_how_to_use_OpenCV_parallel_for_
+<!-- -   @subpage tutorial_how_to_use_OpenCV_parallel_for_new -->
+<!-- -   @subpage tutorial_univ_intrin -->
