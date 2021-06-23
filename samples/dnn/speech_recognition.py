@@ -4,6 +4,56 @@ import argparse
 import os
 import soundfile as sf # Temporary import to load audio files
 
+'''
+ You can download the converted onnx model from https://drive.google.com/file/d/1s_zOpwzhFfvx6wg2JsDK28WJ_ifSfWD_/view?usp=sharing
+ or convert the model yourself.
+
+ You can get the original pre-trained Jasper model from NVIDIA : https://ngc.nvidia.com/catalog/models/nvidia:jasper_pyt_onnx_fp16_amp/files
+    Download and unzip : `$ wget --content-disposition https://api.ngc.nvidia.com/v2/models/nvidia/jasper_pyt_onnx_fp16_amp/versions/20.10.0/zip -O jasper_pyt_onnx_fp16_amp_20.10.0.zip && unzip -o ./jasper_pyt_onnx_fp16_amp_20.10.0.zip && unzip -o ./jasper_pyt_onnx_fp16_amp.zip`
+
+ you can get the script to convert the model here : https://gist.github.com/spazewalker/507f1529e19aea7e8417f6e935851a01
+
+ You can convert the model using the following steps:
+     1. Import onnx and load the original model
+        ```
+        import onnx
+        model = onnx.load("./jasper-onnx/1/model.onnx")
+        ```
+
+     3. Change data type of input layer
+        ```
+        inp = model.graph.input[0]
+        model.graph.input.remove(inp)
+        inp.type.tensor_type.elem_type = 1
+        model.graph.input.insert(0,inp)
+        ```
+
+     4. Change the data type of output layer
+        ```
+        out = model.graph.output[0]
+        model.graph.output.remove(out)
+        out.type.tensor_type.elem_type = 1
+        model.graph.output.insert(0,out)
+        ```
+
+     5. Change the data type of every initializer and cast it's values from FP16 to FP32
+        ```
+        for i,init in enumerate(model.graph.initializer):
+            model.graph.initializer.remove(init)
+            init.data_type = 1
+            init.raw_data = np.frombuffer(init.raw_data, count=np.product(init.dims), dtype=np.float16).astype(np.float32).tobytes()
+            model.graph.initializer.insert(i,init)
+        ```
+
+     6. Finally save the model
+        ```
+        with open('jasper_dynamic_input_float.onnx','wb') as f:
+            onnx.save_model(model,f)
+        ```
+
+    Original Repo : https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/SpeechRecognition/Jasper
+ '''
+
 class FilterbankFeatures():
     def __init__(self,
                  sample_rate=16000, window_size=0.02, window_stride=0.01,
