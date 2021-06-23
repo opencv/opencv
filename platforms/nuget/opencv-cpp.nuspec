@@ -11,7 +11,7 @@
     <files>
         <file src="..\..\include\**\*.*"   target="build\native\include" />
         <file src="..\..\modules\core\include\**\*.*"   target="build\native\include" />
-        <file src="README.md"        target="build\native"      />
+        <file src="README.md"        target="README.md"      />
         <file src="opencv-cpp.targets"   target="build\native" />
     </files>
 </package>
