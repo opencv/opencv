@@ -195,6 +195,9 @@ static void dumpOpenCLInformation()
 
         DUMP_MESSAGE_STDOUT("    Preferred vector width double = " << device.preferredVectorWidthDouble());
         DUMP_CONFIG_PROPERTY("cv_ocl_current_preferredVectorWidthDouble", device.preferredVectorWidthDouble());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width half = " << device.preferredVectorWidthHalf());
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_preferredVectorWidthHalf", device.preferredVectorWidthHalf());
     }
     catch (...)
     {
