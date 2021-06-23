@@ -82,13 +82,6 @@ class FilterbankFeatures():
         # normalize if required
         x = self.normalize_batch(x, seq_len)
 
-        # mask to zero any values beyond seq_len in batch,
-        # pad to multiple of `pad_align` (for efficiency)
-        max_len = x.shape[-1]
-        mask = np.arange(max_len, dtype=seq_len.dtype)
-        mask = np.tile(mask,(x.shape[0],1))
-        mask = mask >= np.expand_dims(seq_len,1)
-        x = np.ma.array(x,mask=np.tile(mask,(1,x.shape[1],1)), fill_value=0).filled()
         x.dtype=dtype
         return x
 
@@ -114,7 +107,7 @@ class FilterbankFeatures():
             log_t = frequencies >= min_log_hz
             mels[log_t] = min_log_mel + np.log(frequencies[log_t] / min_log_hz) / logstep
         elif frequencies >= min_log_hz:
-            # If we have scalar data, heck directly
+            # If we have scalar data, directly
             mels = min_log_mel + np.log(frequencies / min_log_hz) / logstep
         return mels
 
@@ -371,7 +364,7 @@ if __name__ == '__main__':
     try:
         audio = sf.read(args.input_audio)
         X=audio[0]
-        seq_len=np.array([audio[1]],dtype=np.int32)
+        seq_len=np.array([X.shape[0]],dtype=np.int32)
     except:
         raise Exception(f"Soundfile cannot read {args.input_audio}. Try a different format")
 
@@ -386,10 +379,8 @@ if __name__ == '__main__':
 
     # Show spectogram if required
     if args.show_spectrogram:
-        # img = plt.imshow((features[0]), origin='lower', cmap='jet', interpolation='nearest', aspect='auto')
-        # plt.show()
-        # code below doesn't show correct plot
-        img = cv.applyColorMap((features[0]).astype(np.uint8),cv.COLORMAP_INFERNO)
+        img = cv.normalize(src=features[0], dst=None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+        img=cv.applyColorMap(img,cv.COLORMAP_JET)
         cv.imshow('spectogram',img)
         cv.waitKey(0)
 
