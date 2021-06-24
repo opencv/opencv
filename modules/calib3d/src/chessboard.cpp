@@ -3924,7 +3924,7 @@ bool findChessboardCornersSB(cv::InputArray image_, cv::Size pattern_size,
     {
         meta_.create(int(board.rowCount()),int(board.colCount()),CV_8UC1);
         cv::Mat meta = meta_.getMat();
-        meta = 0;
+        meta.setTo(cv::Scalar::all(0));
         for(int row =0;row < meta.rows-1;++row)
         {
             for(int col=0;col< meta.cols-1;++col)
