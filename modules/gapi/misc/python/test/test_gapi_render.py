@@ -71,6 +71,15 @@ try:
             self.cell_sz = 25
             self.decim = 0
 
+            # Render primitives
+            self.prims = [cv.gapi.wip.draw.Rect(self.rect, self.rcolor, self.rthick, self.rlt, self.rshift),
+                          cv.gapi.wip.draw.Text(self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo),
+                          cv.gapi.wip.draw.Circle(self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift),
+                          cv.gapi.wip.draw.Line(self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift),
+                          cv.gapi.wip.draw.Mosaic(self.mos, self.cell_sz, self.decim),
+                          cv.gapi.wip.draw.Image(self.iorg, self.img, self.alpha),
+                          cv.gapi.wip.draw.Poly(self.pts, self.pcolor, self.pthick, self.plt, self.pshift)]
+
         def cvt_nv12_to_yuv(self, y, uv):
             h,w,_ = uv.shape
             upsample_uv = cv.resize(uv, (h * 2, w * 2))
@@ -113,46 +122,17 @@ try:
                     s0, s1, s2 = cv.mean(cell_roi)[:3]
                     mosaic_area[j:j+cell_sz, i:i+cell_sz] = (round(s0), round(s1), round(s2))
 
-        def test_render_primitives_on_bgr(self):
-            expected = np.zeros(self.size, dtype=np.uint8)
-            actual = np.array(expected, copy=True)
+        def render_primitives_bgr_ref(self, img):
+            cv.rectangle(img, self.rect, self.rcolor, self.rthick, self.rlt, self.rshift)
+            cv.putText(img, self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo)
+            cv.circle(img, self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift)
+            cv.line(img, self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift)
+            cv.fillPoly(img, np.expand_dims(np.array([self.pts]), axis=0), self.pcolor, self.plt, self.pshift)
+            self.draw_mosaic(img, self.mos, self.cell_sz, self.decim)
+            self.blend_img(img, self.iorg, self.img, self.alpha)
 
-            # OpenCV
-            cv.rectangle(expected, self.rect, self.rcolor, self.rthick, self.rlt, self.rshift)
-            cv.putText(expected, self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo)
-            cv.circle(expected, self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift)
-            cv.line(expected, self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift)
-            cv.fillPoly(expected, np.expand_dims(np.array([self.pts]), axis=0), self.pcolor, self.plt, self.pshift)
-            self.draw_mosaic(expected, self.mos, self.cell_sz, self.decim)
-            self.blend_img(expected, self.iorg, self.img, self.alpha)
-
-            # G-API
-            g_in = cv.GMat()
-            g_prims = cv.GArray.Prim()
-            g_out = cv.gapi.wip.draw.render3ch(g_in, g_prims)
-
-            prims = [cv.gapi.wip.draw.Rect(self.rect, self.rcolor, self.rthick, self.rlt, self.rshift),
-                     cv.gapi.wip.draw.Text(self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo),
-                     cv.gapi.wip.draw.Circle(self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift),
-                     cv.gapi.wip.draw.Line(self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift),
-                     cv.gapi.wip.draw.Mosaic(self.mos, self.cell_sz, self.decim),
-                     cv.gapi.wip.draw.Image(self.iorg, self.img, self.alpha),
-                     cv.gapi.wip.draw.Poly(self.pts, self.pcolor, self.pthick, self.plt, self.pshift)]
-
-            comp = cv.GComputation(cv.GIn(g_in, g_prims), cv.GOut(g_out))
-            actual = comp.apply(cv.gin(actual, prims))
-
-            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
-
-        def test_render_primitives_on_nv12(self):
-            y_expected = np.zeros((self.size[0], self.size[1], 1), dtype=np.uint8)
-            uv_expected = np.zeros((self.size[0] // 2, self.size[1] // 2, 2), dtype=np.uint8)
-
-            y_actual = np.array(y_expected, copy=True)
-            uv_actual = np.array(uv_expected, copy=True)
-
-            # OpenCV
-            yuv = self.cvt_nv12_to_yuv(y_expected, uv_expected)
+        def render_primitives_nv12_ref(self, y_plane, uv_plane):
+            yuv = self.cvt_nv12_to_yuv(y_plane, uv_plane)
             cv.rectangle(yuv, self.rect, self.cvt_bgr_to_yuv_color(self.rcolor), self.rthick, self.rlt, self.rshift)
             cv.putText(yuv, self.text, self.org, self.ff, self.fs, self.cvt_bgr_to_yuv_color(self.tcolor), self.tthick, self.tlt, self.blo)
             cv.circle(yuv, self.center, self.radius, self.cvt_bgr_to_yuv_color(self.ccolor), self.cthick, self.clt, self.cshift)
@@ -160,7 +140,46 @@ try:
             cv.fillPoly(yuv, np.expand_dims(np.array([self.pts]), axis=0), self.cvt_bgr_to_yuv_color(self.pcolor), self.plt, self.pshift)
             self.draw_mosaic(yuv, self.mos, self.cell_sz, self.decim)
             self.blend_img(yuv, self.iorg, cv.cvtColor(self.img, cv.COLOR_BGR2YUV), self.alpha)
-            self.cvt_yuv_to_nv12(yuv, y_expected, uv_expected)
+            self.cvt_yuv_to_nv12(yuv, y_plane, uv_plane)
+
+        def test_render_primitives_on_bgr_graph(self):
+            expected = np.zeros(self.size, dtype=np.uint8)
+            actual = np.array(expected, copy=True)
+
+            # OpenCV
+            self.render_primitives_bgr_ref(expected)
+
+            # G-API
+            g_in = cv.GMat()
+            g_prims = cv.GArray.Prim()
+            g_out = cv.gapi.wip.draw.render3ch(g_in, g_prims)
+
+
+            comp = cv.GComputation(cv.GIn(g_in, g_prims), cv.GOut(g_out))
+            actual = comp.apply(cv.gin(actual, self.prims))
+
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+        def test_render_primitives_on_bgr_function(self):
+            expected = np.zeros(self.size, dtype=np.uint8)
+            actual = np.array(expected, copy=True)
+
+            # OpenCV
+            self.render_primitives_bgr_ref(expected)
+
+            # G-API
+            cv.gapi.wip.draw.render(actual, self.prims)
+            self.assertEqual(0.0, cv.norm(expected, actual, cv.NORM_INF))
+
+        def test_render_primitives_on_nv12_graph(self):
+            y_expected = np.zeros((self.size[0], self.size[1], 1), dtype=np.uint8)
+            uv_expected = np.zeros((self.size[0] // 2, self.size[1] // 2, 2), dtype=np.uint8)
+
+            y_actual = np.array(y_expected, copy=True)
+            uv_actual = np.array(uv_expected, copy=True)
+
+            # OpenCV
+            self.render_primitives_nv12_ref(y_expected, uv_expected)
 
             # G-API
             g_y = cv.GMat()
@@ -168,16 +187,24 @@ try:
             g_prims = cv.GArray.Prim()
             g_out_y, g_out_uv = cv.gapi.wip.draw.renderNV12(g_y, g_uv, g_prims)
 
-            prims = [cv.gapi.wip.draw.Rect(self.rect, self.rcolor, self.rthick, self.rlt, self.rshift),
-                     cv.gapi.wip.draw.Text(self.text, self.org, self.ff, self.fs, self.tcolor, self.tthick, self.tlt, self.blo),
-                     cv.gapi.wip.draw.Circle(self.center, self.radius, self.ccolor, self.cthick, self.clt, self.cshift),
-                     cv.gapi.wip.draw.Line(self.pt1, self.pt2, self.lcolor, self.lthick, self.llt, self.lshift),
-                     cv.gapi.wip.draw.Mosaic(self.mos, self.cell_sz, self.decim),
-                     cv.gapi.wip.draw.Image(self.iorg, self.img, self.alpha),
-                     cv.gapi.wip.draw.Poly(self.pts, self.pcolor, self.pthick, self.plt, self.pshift)]
-
             comp = cv.GComputation(cv.GIn(g_y, g_uv, g_prims), cv.GOut(g_out_y, g_out_uv))
-            y_actual, uv_actual = comp.apply(cv.gin(y_actual, uv_actual, prims))
+            y_actual, uv_actual = comp.apply(cv.gin(y_actual, uv_actual, self.prims))
+
+            self.assertEqual(0.0, cv.norm(y_expected, y_actual, cv.NORM_INF))
+            self.assertEqual(0.0, cv.norm(uv_expected, uv_actual, cv.NORM_INF))
+
+        def test_render_primitives_on_nv12_function(self):
+            y_expected = np.zeros((self.size[0], self.size[1], 1), dtype=np.uint8)
+            uv_expected = np.zeros((self.size[0] // 2, self.size[1] // 2, 2), dtype=np.uint8)
+
+            y_actual = np.array(y_expected, copy=True)
+            uv_actual = np.array(uv_expected, copy=True)
+
+            # OpenCV
+            self.render_primitives_nv12_ref(y_expected, uv_expected)
+
+            # G-API
+            cv.gapi.wip.draw.render(y_actual, uv_actual, self.prims)
 
             self.assertEqual(0.0, cv.norm(y_expected, y_actual, cv.NORM_INF))
             self.assertEqual(0.0, cv.norm(uv_expected, uv_actual, cv.NORM_INF))

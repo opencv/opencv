@@ -81,9 +81,9 @@ using GMatDesc2 = std::tuple<cv::GMatDesc,cv::GMatDesc>;
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::Mat& bgr,
-                         const Prims& prims,
-                         cv::GCompileArgs&& args = {});
+void GAPI_EXPORTS_W render(cv::Mat& bgr,
+                           const Prims& prims,
+                           cv::GCompileArgs&& args = {});
 
 /** @brief The function renders on two NV12 planes passed drawing primitivies
 
@@ -92,10 +92,10 @@ void GAPI_EXPORTS render(cv::Mat& bgr,
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::Mat& y_plane,
-                         cv::Mat& uv_plane,
-                         const Prims& prims,
-                         cv::GCompileArgs&& args = {});
+void GAPI_EXPORTS_W render(cv::Mat& y_plane,
+                           cv::Mat& uv_plane,
+                           const Prims& prims,
+                           cv::GCompileArgs&& args = {});
 
 /** @brief The function renders on the input media frame passed drawing primitivies
 

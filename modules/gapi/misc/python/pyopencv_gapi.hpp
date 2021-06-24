@@ -174,6 +174,7 @@ bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo&
     TRY_EXTRACT(Image)
     TRY_EXTRACT(Poly)
 
+    failmsg("Unsupported primitive type");
     return false;
 }
 
