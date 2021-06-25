@@ -250,3 +250,10 @@
    ...
    fun:TIFFOpen
 }
+
+{
+   Znwm
+   Memcheck:Leak
+   ...
+   fun:_Znwm
+}
