@@ -222,8 +222,17 @@ struct IEUnit {
     IE::ExecutableNetwork this_network;
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
+    InferenceEngine::RemoteContext::Ptr rctx = nullptr;
+
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
+        InferenceEngine::ParamMap* ctx_params =
+                            cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
+        if (ctx_params != nullptr) {
+            auto ie_core = cv::gimpl::ie::wrap::getCore();
+            rctx = ie_core.CreateContext(params.device_id, *ctx_params);
+        }
+
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
             inputs  = net.getInputsInfo();
@@ -231,7 +240,7 @@ struct IEUnit {
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
             this_plugin.SetConfig(params.config);
-            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params);
+            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params, rctx);
             // FIXME: ICNNetwork returns InputsDataMap/OutputsDataMap,
             // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
             inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
@@ -279,7 +288,8 @@ struct IEUnit {
             // for loadNetwork they can be obtained by using readNetwork
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
             non_const_this->this_plugin.SetConfig(params.config);
-            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
+            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
+                                                                            net, params, rctx);
         }
 
         return {params, this_plugin, this_network};
@@ -481,7 +491,32 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
+inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
+    GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
+                "Remote blob is supported for MediaFrame only");
+
+    cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
+    auto ie_core = cv::gimpl::ie::wrap::getCore();
+
+    using ParamType = std::pair<InferenceEngine::TensorDesc,
+                                InferenceEngine::ParamMap>;
+
+    ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
+    if (blob_params == nullptr) {
+        GAPI_Assert(false && "Incorrect type of blobParams: "
+                              "expected std::pair<InferenceEngine::TensorDesc,"
+                                                 "InferenceEngine::ParamMap>");
+    }
+
+    return ctx.uu.rctx->CreateBlob(blob_params->first,
+                                   blob_params->second);
+}
+
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
+    if (ctx.uu.rctx != nullptr) {
+        return extractRemoteBlob(ctx, i);
+    }
+
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             const auto& frame = ctx.inFrame(i);
@@ -1060,6 +1095,7 @@ struct InferList: public cv::detail::KernelTag {
         }
 
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);

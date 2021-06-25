@@ -74,7 +74,11 @@ struct ParamDesc {
     std::map<std::string, std::vector<std::size_t>> reshape_table;
     std::unordered_set<std::string> layer_names_to_reshape;
 
+    // NB: Number of asyncrhonious infer requests
     size_t nireq;
+
+    // NB: An optional config to setup RemoteContext for IE
+    cv::util::any context_config;
 };
 } // namespace detail
 
@@ -115,7 +119,8 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}} {
     };
 
     /** @overload
@@ -135,7 +140,8 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -214,6 +220,30 @@ public:
     */
     Params& pluginConfig(IEConfig&& cfg) {
         desc.config = std::move(cfg);
+        return *this;
+    }
+
+    /** @brief Specifies configuration for RemoteContext in InferenceEngine.
+
+    When RemoteContext is configured the backend imports the networks using the context.
+    It also expects cv::MediaFrames to be actually remote, to operate with blobs via the context.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(const cv::util::any& ctx_cfg) {
+        desc.context_config = ctx_cfg;
+        return *this;
+    }
+
+    /** @overload
+    Function with an rvalue parameter.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(cv::util::any&& ctx_cfg) {
+        desc.context_config = std::move(ctx_cfg);
         return *this;
     }
 
@@ -318,7 +348,10 @@ public:
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
+                {}},
+          m_tag(tag) {
     };
 
     /** @overload
@@ -333,7 +366,10 @@ public:
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
+                {}},
+          m_tag(tag) {
     };
 
     /** @see ie::Params::pluginConfig. */
