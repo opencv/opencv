@@ -193,7 +193,7 @@ public:
     template<typename _Alloc> _InputArray(const std::vector<Mat, _Alloc>& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
     template<typename _Tp, typename _Alloc> _InputArray(const std::vector<_Tp, _Alloc>& vec);
-    template<typename _Alloc> _InputArray(const std::vector<bool, typename _Alloc>& vec);
+    template<typename _Alloc> _InputArray(const std::vector<bool, _Alloc>& vec);
     template<typename _Tp, typename _Alloc1, typename _Alloc2> _InputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec);
     template<typename _Alloc1, typename _Alloc2> _InputArray(const std::vector<std::vector<bool, _Alloc1>, _Alloc2 >&) = delete;  // not supported
     template<typename _Tp, typename _Alloc> _InputArray(const std::vector<Mat_<_Tp>, _Alloc>& vec);
