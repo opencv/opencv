@@ -190,28 +190,28 @@ public:
     _InputArray(int _flags, void* _obj);
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
-    _InputArray(const std::vector<Mat>& vec);
+    template<typename _Alloc> _InputArray(const std::vector<Mat, _Alloc>& vec);
     template<typename _Tp> _InputArray(const Mat_<_Tp>& m);
-    template<typename _Tp> _InputArray(const std::vector<_Tp>& vec);
-    _InputArray(const std::vector<bool>& vec);
-    template<typename _Tp> _InputArray(const std::vector<std::vector<_Tp> >& vec);
-    _InputArray(const std::vector<std::vector<bool> >&) = delete;  // not supported
-    template<typename _Tp> _InputArray(const std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp, typename _Alloc> _InputArray(const std::vector<_Tp, _Alloc>& vec);
+    template<typename _Alloc> _InputArray(const std::vector<bool, typename _Alloc>& vec);
+    template<typename _Tp, typename _Alloc1, typename _Alloc2> _InputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec);
+    template<typename _Alloc1, typename _Alloc2> _InputArray(const std::vector<std::vector<bool, _Alloc1>, _Alloc2 >&) = delete;  // not supported
+    template<typename _Tp, typename _Alloc> _InputArray(const std::vector<Mat_<_Tp>, _Alloc>& vec);
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const double& val);
     _InputArray(const cuda::GpuMat& d_mat);
-    _InputArray(const std::vector<cuda::GpuMat>& d_mat_array);
+    template<typename _Alloc> _InputArray(const std::vector<cuda::GpuMat, _Alloc>& d_mat_array);
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
     _InputArray(const UMat& um);
-    _InputArray(const std::vector<UMat>& umv);
+    template<typename _Alloc> _InputArray(const std::vector<UMat, _Alloc>& umv);
 
     template<typename _Tp, std::size_t _Nm> _InputArray(const std::array<_Tp, _Nm>& arr);
     template<std::size_t _Nm> _InputArray(const std::array<Mat, _Nm>& arr);
 
-    template<typename _Tp> static _InputArray rawIn(const std::vector<_Tp>& vec);
+    template<typename _Tp, typename _Alloc> static _InputArray rawIn(const std::vector<_Tp, _Alloc>& vec);
     template<typename _Tp, std::size_t _Nm> static _InputArray rawIn(const std::array<_Tp, _Nm>& arr);
 
     Mat getMat(int idx=-1) const;
@@ -313,17 +313,17 @@ public:
     _OutputArray();
     _OutputArray(int _flags, void* _obj);
     _OutputArray(Mat& m);
-    _OutputArray(std::vector<Mat>& vec);
+    template<typename _Alloc> _OutputArray(std::vector<Mat, _Alloc>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
-    _OutputArray(std::vector<cuda::GpuMat>& d_mat);
+    template<typename _Alloc> _OutputArray(std::vector<cuda::GpuMat, _Alloc>& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
-    template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
-    _OutputArray(std::vector<bool>& vec) = delete;  // not supported
-    template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
-    _OutputArray(std::vector<std::vector<bool> >&) = delete;  // not supported
-    template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp, typename _Alloc> _OutputArray(std::vector<_Tp, _Alloc>& vec);
+    template<typename _Alloc> _OutputArray(std::vector<bool, _Alloc>& vec) = delete;  // not supported
+    template<typename _Tp, typename _Alloc1, typename _Alloc2> _OutputArray(std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec);
+    template<typename _Alloc1, typename _Alloc2> _OutputArray(std::vector<std::vector<bool, _Alloc1>, _Alloc2 >&) = delete;  // not supported
+    template<typename _Tp, typename _Alloc> _OutputArray(std::vector<Mat_<_Tp>, _Alloc >& vec);
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
@@ -331,15 +331,15 @@ public:
     _OutputArray(std::vector<UMat>& vec);
 
     _OutputArray(const Mat& m);
-    _OutputArray(const std::vector<Mat>& vec);
+    template<typename _Alloc> _OutputArray(const std::vector<Mat, _Alloc>& vec);
     _OutputArray(const cuda::GpuMat& d_mat);
-    _OutputArray(const std::vector<cuda::GpuMat>& d_mat);
+    template<typename _Alloc>_OutputArray(const std::vector<cuda::GpuMat, _Alloc>& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
-    template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
-    template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
-    template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp, typename _Alloc> _OutputArray(const std::vector<_Tp, _Alloc>& vec);
+    template<typename _Tp, typename _Alloc1, typename _Alloc2> _OutputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec);
+    template<typename _Tp, typename _Alloc> _OutputArray(const std::vector<Mat_<_Tp>, _Alloc >& vec);
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
@@ -351,7 +351,7 @@ public:
     template<std::size_t _Nm> _OutputArray(std::array<Mat, _Nm>& arr);
     template<std::size_t _Nm> _OutputArray(const std::array<Mat, _Nm>& arr);
 
-    template<typename _Tp> static _OutputArray rawOut(std::vector<_Tp>& vec);
+    template<typename _Tp, typename _Alloc> static _OutputArray rawOut(std::vector<_Tp, _Alloc>& vec);
     template<typename _Tp, std::size_t _Nm> static _OutputArray rawOut(std::array<_Tp, _Nm>& arr);
 
     bool fixedSize() const;
@@ -388,43 +388,43 @@ public:
     _InputOutputArray();
     _InputOutputArray(int _flags, void* _obj);
     _InputOutputArray(Mat& m);
-    _InputOutputArray(std::vector<Mat>& vec);
+    template<typename _Alloc> _InputOutputArray(std::vector<Mat, _Alloc>& vec);
     _InputOutputArray(cuda::GpuMat& d_mat);
     _InputOutputArray(ogl::Buffer& buf);
     _InputOutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
-    template<typename _Tp> _InputOutputArray(std::vector<_Tp>& vec);
-    _InputOutputArray(std::vector<bool>& vec) = delete;  // not supported
-    template<typename _Tp> _InputOutputArray(std::vector<std::vector<_Tp> >& vec);
-    template<typename _Tp> _InputOutputArray(std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp, typename _Alloc> _InputOutputArray(std::vector<_Tp, _Alloc>& vec);
+    template<typename _Alloc> _InputOutputArray(std::vector<bool, _Alloc>& vec) = delete;  // not supported
+    template<typename _Tp, typename _Alloc1, typename _Alloc2> _InputOutputArray(std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec);
+    template<typename _Tp, typename _Alloc> _InputOutputArray(std::vector<Mat_<_Tp>, _Alloc >& vec);
     template<typename _Tp> _InputOutputArray(Mat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(_Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputOutputArray(Matx<_Tp, m, n>& matx);
     _InputOutputArray(UMat& m);
-    _InputOutputArray(std::vector<UMat>& vec);
+    template<typename _Alloc> _InputOutputArray(std::vector<UMat, _Alloc>& vec);
 
     _InputOutputArray(const Mat& m);
-    _InputOutputArray(const std::vector<Mat>& vec);
+    template<typename _Alloc> _InputOutputArray(const std::vector<Mat, _Alloc>& vec);
     _InputOutputArray(const cuda::GpuMat& d_mat);
-    _InputOutputArray(const std::vector<cuda::GpuMat>& d_mat);
+    template<typename _Alloc> _InputOutputArray(const std::vector<cuda::GpuMat, _Alloc>& d_mat);
     _InputOutputArray(const ogl::Buffer& buf);
     _InputOutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(const cudev::GpuMat_<_Tp>& m);
-    template<typename _Tp> _InputOutputArray(const std::vector<_Tp>& vec);
-    template<typename _Tp> _InputOutputArray(const std::vector<std::vector<_Tp> >& vec);
-    template<typename _Tp> _InputOutputArray(const std::vector<Mat_<_Tp> >& vec);
+    template<typename _Tp, typename _Alloc> _InputOutputArray(const std::vector<_Tp, _Alloc>& vec);
+    template<typename _Tp, typename _Alloc1, typename _Alloc2> _InputOutputArray(const std::vector<std::vector<_Tp, _Alloc1 >, _Alloc2 >& vec);
+    template<typename _Tp, typename _Alloc> _InputOutputArray(const std::vector<Mat_<_Tp>, _Alloc >& vec);
     template<typename _Tp> _InputOutputArray(const Mat_<_Tp>& m);
     template<typename _Tp> _InputOutputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputOutputArray(const Matx<_Tp, m, n>& matx);
     _InputOutputArray(const UMat& m);
-    _InputOutputArray(const std::vector<UMat>& vec);
+    template<typename _Alloc> _InputOutputArray(const std::vector<UMat, _Alloc>& vec);
 
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(const std::array<_Tp, _Nm>& arr);
     template<std::size_t _Nm> _InputOutputArray(std::array<Mat, _Nm>& arr);
     template<std::size_t _Nm> _InputOutputArray(const std::array<Mat, _Nm>& arr);
 
-    template<typename _Tp> static _InputOutputArray rawInOut(std::vector<_Tp>& vec);
+    template<typename _Tp, typename _Alloc> static _InputOutputArray rawInOut(std::vector<_Tp, _Alloc>& vec);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray rawInOut(std::array<_Tp, _Nm>& arr);
 
 };

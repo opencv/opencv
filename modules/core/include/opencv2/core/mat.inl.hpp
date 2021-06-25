@@ -101,12 +101,12 @@ inline Size _InputArray::getSz() const { return sz; }
 inline _InputArray::_InputArray() { init(0 + NONE, 0); }
 inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(MAT+ACCESS_READ, &m); }
-inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
+template<typename _Alloc> inline _InputArray::_InputArray(const std::vector<Mat, _Alloc>& vec) { init(STD_VECTOR_MAT+ACCESS_READ, &vec); }
 inline _InputArray::_InputArray(const UMat& m) { init(UMAT+ACCESS_READ, &m); }
-inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_READ, &vec); }
+template<typename _Alloc> inline _InputArray::_InputArray(const std::vector<UMat, _Alloc>& vec) { init(STD_VECTOR_UMAT+ACCESS_READ, &vec); }
 
-template<typename _Tp> inline
-_InputArray::_InputArray(const std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputArray::_InputArray(const std::vector<_Tp, _Alloc>& vec)
 { init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -117,16 +117,16 @@ template<std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
-inline
-_InputArray::_InputArray(const std::vector<bool>& vec)
+template<typename _Alloc> inline
+_InputArray::_InputArray(const std::vector<bool, _Alloc>& vec)
 { init(FIXED_TYPE + STD_BOOL_VECTOR + traits::Type<bool>::value + ACCESS_READ, &vec); }
 
-template<typename _Tp> inline
-_InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
+template<typename _Tp, typename _Alloc1, typename _Alloc2> inline
+_InputArray::_InputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
 
-template<typename _Tp> inline
-_InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputArray::_InputArray(const std::vector<Mat_<_Tp>, _Alloc >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
 
 template<typename _Tp, int m, int n> inline
@@ -147,7 +147,7 @@ inline _InputArray::_InputArray(const double& val)
 inline _InputArray::_InputArray(const cuda::GpuMat& d_mat)
 { init(CUDA_GPU_MAT + ACCESS_READ, &d_mat); }
 
-inline _InputArray::_InputArray(const std::vector<cuda::GpuMat>& d_mat)
+template<typename _Alloc> inline _InputArray::_InputArray(const std::vector<cuda::GpuMat, _Alloc>& d_mat)
 {	init(STD_VECTOR_CUDA_GPU_MAT + ACCESS_READ, &d_mat);}
 
 inline _InputArray::_InputArray(const ogl::Buffer& buf)
@@ -156,8 +156,8 @@ inline _InputArray::_InputArray(const ogl::Buffer& buf)
 inline _InputArray::_InputArray(const cuda::HostMem& cuda_mem)
 { init(CUDA_HOST_MEM + ACCESS_READ, &cuda_mem); }
 
-template<typename _Tp> inline
-_InputArray _InputArray::rawIn(const std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputArray _InputArray::rawIn(const std::vector<_Tp, _Alloc>& vec)
 {
     _InputArray v;
     v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_READ;
@@ -200,12 +200,12 @@ inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::
 inline _OutputArray::_OutputArray() { init(NONE + ACCESS_WRITE, 0); }
 inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS_WRITE, _obj); }
 inline _OutputArray::_OutputArray(Mat& m) { init(MAT+ACCESS_WRITE, &m); }
-inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
+template<typename _Alloc> inline _OutputArray::_OutputArray(std::vector<Mat, _Alloc>& vec) { init(STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 inline _OutputArray::_OutputArray(UMat& m) { init(UMAT + ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_OutputArray::_OutputArray(std::vector<_Tp, _Alloc>& vec)
 { init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -216,12 +216,12 @@ template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
+template<typename _Tp, typename _Alloc1, typename _Alloc2> inline
+_OutputArray::_OutputArray(std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
+template<typename _Tp, typename _Alloc> inline
+_OutputArray::_OutputArray(std::vector<Mat_<_Tp>, _Alloc >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
@@ -236,8 +236,8 @@ template<typename _Tp> inline
 _OutputArray::_OutputArray(_Tp* vec, int n)
 { init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, vec, Size(n, 1)); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(const std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_OutputArray::_OutputArray(const std::vector<_Tp, _Alloc>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -248,12 +248,12 @@ template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
 { init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(const std::vector<std::vector<_Tp> >& vec)
+template<typename _Tp, typename _Alloc1, typename _Alloc2> inline
+_OutputArray::_OutputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
-template<typename _Tp> inline
-_OutputArray::_OutputArray(const std::vector<Mat_<_Tp> >& vec)
+template<typename _Tp, typename _Alloc> inline
+_OutputArray::_OutputArray(const std::vector<Mat_<_Tp>, _Alloc >& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
 
 template<typename _Tp> inline
@@ -271,7 +271,7 @@ _OutputArray::_OutputArray(const _Tp* vec, int n)
 inline _OutputArray::_OutputArray(cuda::GpuMat& d_mat)
 { init(CUDA_GPU_MAT + ACCESS_WRITE, &d_mat); }
 
-inline _OutputArray::_OutputArray(std::vector<cuda::GpuMat>& d_mat)
+template<typename _Alloc> inline _OutputArray::_OutputArray(std::vector<cuda::GpuMat, _Alloc>& d_mat)
 {	init(STD_VECTOR_CUDA_GPU_MAT + ACCESS_WRITE, &d_mat);}
 
 inline _OutputArray::_OutputArray(ogl::Buffer& buf)
@@ -283,7 +283,7 @@ inline _OutputArray::_OutputArray(cuda::HostMem& cuda_mem)
 inline _OutputArray::_OutputArray(const Mat& m)
 { init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_WRITE, &m); }
 
-inline _OutputArray::_OutputArray(const std::vector<Mat>& vec)
+template<typename _Alloc> inline _OutputArray::_OutputArray(const std::vector<Mat, _Alloc>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 
 inline _OutputArray::_OutputArray(const UMat& m)
@@ -302,8 +302,8 @@ inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
 inline _OutputArray::_OutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_WRITE, &cuda_mem); }
 
-template<typename _Tp> inline
-_OutputArray _OutputArray::rawOut(std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_OutputArray _OutputArray::rawOut(std::vector<_Tp, _Alloc>& vec)
 {
     _OutputArray v;
     v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_WRITE;
@@ -326,12 +326,12 @@ _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
 inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
 inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags+ACCESS_RW, _obj); }
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(MAT+ACCESS_RW, &m); }
-inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
+template<typename _Alloc> inline _InputOutputArray::_InputOutputArray(std::vector<Mat, _Alloc>& vec) { init(STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(UMAT+ACCESS_RW, &m); }
-inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(STD_VECTOR_UMAT+ACCESS_RW, &vec); }
+template<typename _Alloc> inline _InputOutputArray::_InputOutputArray(std::vector<UMat, _Alloc>& vec) { init(STD_VECTOR_UMAT+ACCESS_RW, &vec); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputOutputArray::_InputOutputArray(std::vector<_Tp, _Alloc>& vec)
 { init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -342,12 +342,12 @@ template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
+template<typename _Tp, typename _Alloc1, typename _Alloc2> inline
+_InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec)
 { init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(std::vector<Mat_<_Tp> >& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputOutputArray::_InputOutputArray(std::vector<Mat_<_Tp>, _Alloc >& vec)
 { init(FIXED_TYPE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
@@ -362,8 +362,8 @@ template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(_Tp* vec, int n)
 { init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, vec, Size(n, 1)); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputOutputArray::_InputOutputArray(const std::vector<_Tp, _Alloc>& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -374,12 +374,12 @@ template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
 { init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp> >& vec)
+template<typename _Tp, typename _Alloc1, typename _Alloc2> inline
+_InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp, _Alloc1>, _Alloc2 >& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
-template<typename _Tp> inline
-_InputOutputArray::_InputOutputArray(const std::vector<Mat_<_Tp> >& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputOutputArray::_InputOutputArray(const std::vector<Mat_<_Tp>, _Alloc >& vec)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_MAT + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
 
 template<typename _Tp> inline
@@ -406,19 +406,19 @@ inline _InputOutputArray::_InputOutputArray(cuda::HostMem& cuda_mem)
 inline _InputOutputArray::_InputOutputArray(const Mat& m)
 { init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_RW, &m); }
 
-inline _InputOutputArray::_InputOutputArray(const std::vector<Mat>& vec)
+template<typename _Alloc> inline _InputOutputArray::_InputOutputArray(const std::vector<Mat, _Alloc>& vec)
 { init(FIXED_SIZE + STD_VECTOR_MAT + ACCESS_RW, &vec); }
 
 inline _InputOutputArray::_InputOutputArray(const UMat& m)
 { init(FIXED_TYPE + FIXED_SIZE + UMAT + ACCESS_RW, &m); }
 
-inline _InputOutputArray::_InputOutputArray(const std::vector<UMat>& vec)
+template<typename _Alloc> inline _InputOutputArray::_InputOutputArray(const std::vector<UMat, _Alloc>& vec)
 { init(FIXED_SIZE + STD_VECTOR_UMAT + ACCESS_RW, &vec); }
 
 inline _InputOutputArray::_InputOutputArray(const cuda::GpuMat& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MAT + ACCESS_RW, &d_mat); }
 
-inline _InputOutputArray::_InputOutputArray(const std::vector<cuda::GpuMat>& d_mat)
+template<typename _Alloc> inline _InputOutputArray::_InputOutputArray(const std::vector<cuda::GpuMat, _Alloc>& d_mat)
 { init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT + ACCESS_RW, &d_mat);}
 
 template<> inline _InputOutputArray::_InputOutputArray(std::vector<cuda::GpuMat>& d_mat)
@@ -430,8 +430,8 @@ inline _InputOutputArray::_InputOutputArray(const ogl::Buffer& buf)
 inline _InputOutputArray::_InputOutputArray(const cuda::HostMem& cuda_mem)
 { init(FIXED_TYPE + FIXED_SIZE + CUDA_HOST_MEM + ACCESS_RW, &cuda_mem); }
 
-template<typename _Tp> inline
-_InputOutputArray _InputOutputArray::rawInOut(std::vector<_Tp>& vec)
+template<typename _Tp, typename _Alloc> inline
+_InputOutputArray _InputOutputArray::rawInOut(std::vector<_Tp, _Alloc>& vec)
 {
     _InputOutputArray v;
     v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_RW;
