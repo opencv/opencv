@@ -5,38 +5,24 @@ import cv2 as cv
 
 # ------------------------Service operations------------------------
 def weight_path(model_path):
+    """ Get path of weights based on path to IR
+
+    Params:
+    model_path: the string contains path to IR file
+
+    Return:
+    Path to weights file
+    """
     assert model_path.endswith('.xml'), "Wrong topology path was provided"
     return model_path[:-3] + 'bin'
 
 
-def intersection(surface, rect):
-    l_x = max(surface[0], rect[0])
-    l_y = max(surface[1], rect[1])
-    width = min(surface[0] + surface[2], rect[0] + rect[2]) - l_x
-    height = min(surface[1] + surface[3], rect[1] + rect[3]) - l_y
-    if width < 0 or height < 0:
-        return (0, 0, 0, 0)
-    return (l_x, l_y, width, height)
-
-
-def process_landmarks(r_x, r_y, r_w, r_h, landmarks):
-    lmrks = landmarks[0]
-    raw_x = lmrks[::2] * r_w + r_x
-    raw_y = lmrks[1::2] * r_h + r_y
-    return np.array([[int(x), int(y)] for x, y in zip(raw_x, raw_y)])
-
-
-def eye_box(p_1, p_2, scale=1.8):
-    size = np.linalg.norm(p_1 - p_2)
-    midpoint = (p_1 + p_2) / 2
-    width = scale * size
-    height = width
-    p_x = midpoint[0] - (width / 2)
-    p_y = midpoint[1] - (height / 2)
-    return (int(p_x), int(p_y), int(width), int(height)), list(map(int, midpoint))
-
-
 def build_argparser():
+    """ Parse arguments from comand line
+
+    Return:
+    Pack of arguments from comand line
+    """
     parser = argparse.ArgumentParser(description='This is an OpenCV-based version of ' +
                                      'Gaze Estimation example')
 
@@ -80,10 +66,69 @@ def build_argparser():
     return parser
 
 
-# ------------------------Kernels------------------------
-@cv.gapi.op('custom.ProcessPoses', in_types=[cv.GArray.GMat,
-                                             cv.GArray.GMat,
-                                             cv.GArray.GMat],
+# ------------------------Support functions for custom kernels------------------------
+def intersection(surface, rect):
+    """ Remove zone of out of bound from ROI
+
+    Params:
+    surface: image bounds is rect representation (top left coordinates and width and height)
+    rect: region of interest is also has rect representation
+
+    Return:
+    Modified ROI with correct bounds
+    """
+    l_x = max(surface[0], rect[0])
+    l_y = max(surface[1], rect[1])
+    width = min(surface[0] + surface[2], rect[0] + rect[2]) - l_x
+    height = min(surface[1] + surface[3], rect[1] + rect[3]) - l_y
+    if width < 0 or height < 0:
+        return (0, 0, 0, 0)
+    return (l_x, l_y, width, height)
+
+
+def process_landmarks(r_x, r_y, r_w, r_h, landmarks):
+    """ Create points from result of inference of facial-landmarks network and size of input image
+
+    Params:
+    r_x: x coordinate of top left corner of input image
+    r_y: y coordinate of top left corner of input image
+    r_w: width of input image
+    r_h: height of input image
+    landmarks: result of inference of facial-landmarks network
+
+    Return:
+    Array of landmarks points for one face
+    """
+    lmrks = landmarks[0]
+    raw_x = lmrks[::2] * r_w + r_x
+    raw_y = lmrks[1::2] * r_h + r_y
+    return np.array([[int(x), int(y)] for x, y in zip(raw_x, raw_y)])
+
+
+def eye_box(p_1, p_2, scale=1.8):
+    """ Get bounding box of eye
+
+    Params:
+    p_1: point of left edge of eye
+    p_2: point of right edge of eye
+    scale: change size of box with this value
+
+    Return:
+    Bounding box of eye and its midpoint
+    """
+
+    size = np.linalg.norm(p_1 - p_2)
+    midpoint = (p_1 + p_2) / 2
+    width = scale * size
+    height = width
+    p_x = midpoint[0] - (width / 2)
+    p_y = midpoint[1] - (height / 2)
+    return (int(p_x), int(p_y), int(width), int(height)), list(map(int, midpoint))
+
+
+# ------------------------Custom graph operations------------------------
+@cv.gapi.op('custom.ProcessPoses',
+            in_types=[cv.GArray.GMat, cv.GArray.GMat, cv.GArray.GMat],
             out_types=[cv.GArray.GMat])
 class ProcessPoses:
     @staticmethod
@@ -91,24 +136,9 @@ class ProcessPoses:
         return cv.empty_array_desc()
 
 
-@cv.gapi.kernel(ProcessPoses)
-class GProcessPosesImpl:
-    @staticmethod
-    def run(in_ys, in_ps, in_rs):
-        out_poses = []
-        size = len(in_ys)
-        for i in range(size):
-            out_poses.append(np.array([in_ys[i][0], in_ps[i][0], in_rs[i][0]]).T)
-        return out_poses
-
-
-@cv.gapi.op('custom.ParseEyes', in_types=[cv.GArray.GMat,
-                                          cv.GArray.Rect,
-                                          cv.GOpaque.Size],
-            out_types=[cv.GArray.Rect,
-                       cv.GArray.Rect,
-                       cv.GArray.Point,
-                       cv.GArray.Point])
+@cv.gapi.op('custom.ParseEyes',
+            in_types=[cv.GArray.GMat, cv.GArray.Rect, cv.GOpaque.Size],
+            out_types=[cv.GArray.Rect, cv.GArray.Rect, cv.GArray.Point, cv.GArray.Point])
 class ParseEyes:
     @staticmethod
     def outMeta(arr_desc0, arr_desc1, arr_desc2):
@@ -116,10 +146,56 @@ class ParseEyes:
                cv.empty_array_desc(), cv.empty_array_desc()
 
 
+@cv.gapi.op('custom.GetStates',
+            in_types=[cv.GArray.GMat, cv.GArray.GMat],
+            out_types=[cv.GArray.Int, cv.GArray.Int])
+class GetStates:
+    @staticmethod
+    def outMeta(arr_desc0, arr_desc1):
+        return cv.empty_array_desc(), cv.empty_array_desc()
+
+
+# ------------------------Custom kernels------------------------
+@cv.gapi.kernel(ProcessPoses)
+class GProcessPoses:
+    """ Custom kernel. Processed poses of heads
+    """
+    @staticmethod
+    def run(in_ys, in_ps, in_rs):
+        """ Сustom kernel executable code
+
+        Params:
+        in_ys: yaw angle of head
+        in_ps: pitch angle of head
+        in_rs: roll angle of head
+
+        Return:
+        Arrays with heads poses
+        """
+        out_poses = []
+        size = len(in_ys)
+        for i in range(size):
+            out_poses.append(np.array([in_ys[i][0], in_ps[i][0], in_rs[i][0]]).T)
+        return out_poses
+
+
 @cv.gapi.kernel(ParseEyes)
-class GParseEyesImpl:
+class GParseEyes:
+    """ Custom kernel. Get information about eyes.
+    """
     @staticmethod
     def run(in_landm_per_face, in_face_rcs, frame_size):
+        """ Сustom kernel executable code
+
+        Params:
+        in_landm_per_face: landmarks from inference of facial-landmarks network for each face
+        in_face_rcs: bounding boxes for each face
+        frame_size: size of input image
+
+        Return:
+        Arrays of ROI for left and right eyes, array of midpoints and
+        array of landmarks points
+        """
         left_eyes = []
         right_eyes = []
         midpoints = []
@@ -141,18 +217,21 @@ class GParseEyesImpl:
         return left_eyes, right_eyes, midpoints, lmarks
 
 
-@cv.gapi.op('custom.GetStates', in_types=[cv.GArray.GMat, cv.GArray.GMat],
-            out_types=[cv.GArray.Int, cv.GArray.Int])
-class GetStates:
-    @staticmethod
-    def outMeta(arr_desc0, arr_desc1):
-        return cv.empty_array_desc(), cv.empty_array_desc()
-
-
 @cv.gapi.kernel(GetStates)
-class GGetStatesImpl:
+class GGetStates:
+    """ Custom kernel. Get state of eye - open or closed
+    """
     @staticmethod
     def run(eyesl, eyesr):
+        """ Сustom kernel executable code
+
+        Params:
+        eyesl: result of inference of open-closed-eye network for left eye
+        eyesr: result of inference of open-closed-eye network for right eye
+
+        Return:
+        States of left eyes and states of right eyes
+        """
         size = len(eyesl)
         out_l_st = []
         out_r_st = []
@@ -162,20 +241,6 @@ class GGetStatesImpl:
             for st in eyesr[i]:
                 out_r_st += [1 if st[0] < st[1] else 0]
         return out_l_st, out_r_st
-
-# FIXME: the operation should be wrapped soon
-@cv.gapi.op('custom.Copy', in_types=[cv.GMat], out_types=[cv.GMat])
-class Copy:
-    @staticmethod
-    def outMeta(desc):
-        return desc
-
-
-@cv.gapi.kernel(Copy)
-class GCopyImpl:
-    @staticmethod
-    def run(input):
-        return input
 
 
 if __name__ == '__main__':
@@ -234,7 +299,7 @@ if __name__ == '__main__':
     gaze_outputs = cv.gapi.infer2('gaze-estimation', g_in, gaze_inputs)
     gaze_vectors = gaze_outputs.at('gaze_vector')
 
-    out = Copy.on(g_in)
+    out = cv.gapi.copy(g_in)
     # ------------------------End of graph------------------------
 
     comp = cv.GComputation(cv.GIn(g_in), cv.GOut(out,
@@ -262,12 +327,10 @@ if __name__ == '__main__':
     eye_net = cv.gapi.ie.params('open-closed-eye', ARGUMENTS.eyem,
                                 weight_path(ARGUMENTS.eyem), ARGUMENTS.eyed)
 
-    nets = cv.gapi.networks(face_net, head_pose_net, landmarks_net, gaze_net,
-                            eye_net)
+    nets = cv.gapi.networks(face_net, head_pose_net, landmarks_net, gaze_net, eye_net)
 
     # Kernels pack
-    kernels = cv.gapi.kernels(GParseEyesImpl, GProcessPosesImpl, GGetStatesImpl,
-                              GCopyImpl)
+    kernels = cv.gapi.kernels(GParseEyes, GProcessPoses, GGetStates)
 
     # ------------------------Execution part------------------------
     ccomp = comp.compileStreaming(args=cv.gapi.compile_args(kernels, nets))
@@ -277,24 +340,26 @@ if __name__ == '__main__':
 
     frames = 0
     fps = 0
-    state = True  # pull() result
     print('Processing')
     START_TIME = time.time()
 
-    while state:
+    while True:
         start_time_cycle = time.time()
-        state, (oimg,
-                outr,
-                l_eyes,
-                r_eyes,
-                outg,
-                out_y,
-                out_p,
-                out_r,
-                out_st_l,
-                out_st_r,
-                out_mids,
-                outl) = ccomp.pull()
+        has_frame, (oimg,
+                    outr,
+                    l_eyes,
+                    r_eyes,
+                    outg,
+                    out_y,
+                    out_p,
+                    out_r,
+                    out_st_l,
+                    out_st_r,
+                    out_mids,
+                    outl) = ccomp.pull()
+
+        if not has_frame:
+            break
 
         # Draw
         GREEN = (0, 255, 0)
@@ -310,49 +375,49 @@ if __name__ == '__main__':
 
         FACES_SIZE = len(outr)
 
-        for i in range(FACES_SIZE):
+        for i, out_rect in enumerate(outr):
             # Face box
-            cv.rectangle(oimg, outr[i], WHITE, 1)
-            rx, ry, rwidth, rheight = outr[i]
+            cv.rectangle(oimg, out_rect, WHITE, 1)
+            rx, ry, rwidth, rheight = out_rect
 
             # Landmarks
-            lmRadius = int(0.01 * rwidth + 1)
+            lm_radius = int(0.01 * rwidth + 1)
             lmsize = int(len(outl) / FACES_SIZE)
             for j in range(lmsize):
-                cv.circle(oimg, outl[j + i * lmsize], lmRadius, YELLOW, -1)
+                cv.circle(oimg, outl[j + i * lmsize], lm_radius, YELLOW, -1)
 
             # Headposes
             yaw = out_y[i]
             pitch = out_p[i]
             roll = out_r[i]
-            sinY = np.sin(yaw[:] * M_PI_180)
-            sinP = np.sin(pitch[:] * M_PI_180)
-            sinR = np.sin(roll[:] * M_PI_180)
+            sin_y = np.sin(yaw[:] * M_PI_180)
+            sin_p = np.sin(pitch[:] * M_PI_180)
+            sin_r = np.sin(roll[:] * M_PI_180)
 
-            cosY = np.cos(yaw[:] * M_PI_180)
-            cosP = np.cos(pitch[:] * M_PI_180)
-            cosR = np.cos(roll[:] * M_PI_180)
+            cos_y = np.cos(yaw[:] * M_PI_180)
+            cos_p = np.cos(pitch[:] * M_PI_180)
+            cos_r = np.cos(roll[:] * M_PI_180)
 
-            axisLength = 0.4 * rwidth
-            xCenter = int(rx + rwidth / 2)
-            yCenter = int(ry + rheight / 2)
+            axis_length = 0.4 * rwidth
+            x_center = int(rx + rwidth / 2)
+            y_center = int(ry + rheight / 2)
 
             # center to right
-            cv.line(oimg, [xCenter, yCenter],
-                    [int(xCenter + axisLength * (cosR * cosY + sinY * sinP * sinR)),
-                     int(yCenter + axisLength * cosP * sinR)],
+            cv.line(oimg, [x_center, y_center],
+                    [int(x_center + axis_length * (cos_r * cos_y + sin_y * sin_p * sin_r)),
+                     int(y_center + axis_length * cos_p * sin_r)],
                     RED, 2)
 
             # center to top
-            cv.line(oimg, [xCenter, yCenter],
-                    [int(xCenter + axisLength * (cosR * sinY * sinP + cosY * sinR)),
-                     int(yCenter - axisLength * cosP * cosR)],
+            cv.line(oimg, [x_center, y_center],
+                    [int(x_center + axis_length * (cos_r * sin_y * sin_p + cos_y * sin_r)),
+                     int(y_center - axis_length * cos_p * cos_r)],
                     GREEN, 2)
 
             # center to forward
-            cv.line(oimg, [xCenter, yCenter],
-                    [int(xCenter + axisLength * sinY * cosP),
-                     int(yCenter + axisLength * sinP)],
+            cv.line(oimg, [x_center, y_center],
+                    [int(x_center + axis_length * sin_y * cos_p),
+                     int(y_center + axis_length * sin_p)],
                     PINK, 2)
 
             scale_box = 0.002 * rwidth
@@ -368,13 +433,13 @@ if __name__ == '__main__':
             cv.rectangle(oimg, r_eyes[i], color_r, 1)
 
             # Gaze vectors
-            normGazes = np.linalg.norm(outg[i][0])
-            gazeVector = outg[i][0] / normGazes
+            norm_gazes = np.linalg.norm(outg[i][0])
+            gaze_vector = outg[i][0] / norm_gazes
 
-            arrowLength = 0.4 * rwidth
-            gazeArrow = [arrowLength * gazeVector[0], -arrowLength * gazeVector[1]]
-            left_arrow = [int(a+b) for a, b in zip(out_mids[0 + i * 2], gazeArrow)]
-            right_arrow = [int(a+b) for a, b in zip(out_mids[1 + i * 2], gazeArrow)]
+            arrow_length = 0.4 * rwidth
+            gaze_arrow = [arrow_length * gaze_vector[0], -arrow_length * gaze_vector[1]]
+            left_arrow = [int(a+b) for a, b in zip(out_mids[0 + i * 2], gaze_arrow)]
+            right_arrow = [int(a+b) for a, b in zip(out_mids[1 + i * 2], gaze_arrow)]
             if out_st_l[i]:
                 cv.arrowedLine(oimg, out_mids[0 + i * 2], left_arrow, BLUE, 2)
             if out_st_r[i]:
@@ -382,15 +447,15 @@ if __name__ == '__main__':
 
             v0, v1, v2 = outg[i][0]
 
-            gazeAngles = [180 / M_PI * (M_PI_2 + np.arctan2(v2, v0)),
-                          180 / M_PI * (M_PI_2 - np.arccos(v1 / normGazes))]
+            gaze_angles = [180 / M_PI * (M_PI_2 + np.arctan2(v2, v0)),
+                           180 / M_PI * (M_PI_2 - np.arccos(v1 / norm_gazes))]
             cv.putText(oimg, "gaze angles: (h=%0.0f, v=%0.0f)" %
-                       (np.round(gazeAngles[0]), np.round(gazeAngles[1])),
+                       (np.round(gaze_angles[0]), np.round(gaze_angles[1])),
                        [int(rx), int(ry + rheight + 12 * rwidth / 100)],
                        cv.FONT_HERSHEY_PLAIN, scale_box * 2, WHITE, 1)
 
         # Add FPS value to frame
-        cv.putText(oimg, "FPS: %0i" % (fps), [int(144), int(94)],
+        cv.putText(oimg, "FPS: %0i" % (fps), [int(20), int(40)],
                    cv.FONT_HERSHEY_PLAIN, 2, RED, 2)
 
         # Show result
@@ -398,6 +463,6 @@ if __name__ == '__main__':
 
         fps = int(1. / (time.time() - start_time_cycle))
         frames += 1
-    ALL_TIME = time.time() - START_TIME
+    EXECUTION_TIME = time.time() - START_TIME
     print('Execution successful')
-    print('Mean FPS is ', int(frames / ALL_TIME))
+    print('Mean FPS is ', int(frames / EXECUTION_TIME))
