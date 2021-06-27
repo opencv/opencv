@@ -158,12 +158,18 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     int depth = matA.depth(), cn = matA.channels();
     int type = CV_MAKETYPE(depth, cn);
 
-    CV_Assert_N( type == matB.type(), (type == CV_32FC1 || type == CV_64FC1 || type == CV_32FC2 || type == CV_64FC2) );
+    CV_Assert_N( type == matB.type(),
+        (type == CV_32FC1 || type == CV_64FC1 || type == CV_16FC1 ||
+         type == CV_32FC2 || type == CV_64FC2 || type == CV_16FC2) );
 
     const ocl::Device & dev = ocl::Device::getDefault();
-    bool doubleSupport = dev.doubleFPConfig() > 0;
 
+    bool doubleSupport = dev.doubleFPConfig() > 0;
     if (!doubleSupport && depth == CV_64F)
+        return false;
+
+    bool halfSupport = dev.halfFPConfig() > 0;
+    if (!halfSupport && depth == CV_16F)
         return false;
 
     bool haveC = matC.kind() != cv::_InputArray::NONE;
@@ -179,7 +185,7 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
     UMat A = matA.getUMat(), B = matB.getUMat(), D = matD.getUMat();
 
 
-    if (!dev.intelSubgroupsSupport() || (depth == CV_64F) || cn != 1)
+    if (!dev.intelSubgroupsSupport() || depth == CV_64F || depth == CV_16F || cn != 1)
     {
         String opts;
 
@@ -207,12 +213,13 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         int vectorWidths[] = { 4, 4, 2, 2, 1, 4, cn, -1 };
         int kercn = ocl::checkOptimalVectorWidth(vectorWidths, B, D);
 
-        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d%s%s%s",
+        opts += format(" -D T=%s -D T1=%s -D WT=%s -D cn=%d -D kercn=%d -D LOCAL_SIZE=%d%s%s%s%s",
                           ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(CV_MAKETYPE(depth, kercn)),
                           cn, kercn, block_size,
                           (sizeA.width % block_size !=0) ? " -D NO_MULT" : "",
                           haveC ? " -D HAVE_C" : "",
-                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
+                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                          halfSupport ? " -D HALF_SUPPORT" : "");
 
         ocl::Kernel k("gemm", cv::ocl::core::gemm_oclsrc, opts);
         if (k.empty())
@@ -321,7 +328,8 @@ void gemm(InputArray matA, InputArray matB, double alpha,
 {
 #ifdef HAVE_CLAMDBLAS
     CV_OCL_RUN(ocl::haveAmdBlas() && matA.dims() <= 2 && matB.dims() <= 2 && matC.dims() <= 2 && _matD.isUMat() &&
-        matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrect for small sizes
+        matA.depth() != CV_16F && matB.depth() != CV_16F && matC.depth() != CV_16F &&
+        matA.cols() > 20 && matA.rows() > 20 && matB.cols() > 20, // since it works incorrectly for small sizes
         ocl_gemm_amdblas(matA, matB, alpha, matC, beta, _matD, flags))
 #endif
 

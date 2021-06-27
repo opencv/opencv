@@ -61,18 +61,29 @@ typedef TestBaseWithParam<GemmParams> GemmFixture;
 
 OCL_PERF_TEST_P(GemmFixture, Gemm, ::testing::Combine(
                     ::testing::Values(Size(640, 640), Size(1280, 1280)),
-                    FlagType::all(), testing::Values(CV_32FC1, CV_32FC2)))
+                    FlagType::all(),
+                    testing::Values(CV_32FC1, CV_32FC2, CV_64FC1, CV_64FC2, CV_16FC1, CV_16FC2)))
 {
     GemmParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int flags = get<1>(params);
     const int type = get<2>(params);
 
+    const ocl::Device & dev = ocl::Device::getDefault();
+
+    bool doubleSupport = dev.doubleFPConfig() > 0;
+    if (!doubleSupport && (type == CV_64FC1 || type == CV_64FC2))
+        throw ::perf::TestBase::PerfSkipTestException();
+
+    bool halfSupport = dev.halfFPConfig() > 0;
+    if (!halfSupport && (type == CV_16FC1 || type == CV_16FC2))
+        throw ::perf::TestBase::PerfSkipTestException();
+
     UMat src1(srcSize, type), src2(srcSize, type), src3(srcSize, type), dst(srcSize, type);
     declare.in(src1, src2, src3).out(dst);
-    randu(src1, -10.0f, 10.0f);
-    randu(src2, -10.0f, 10.0f);
-    randu(src3, -10.0f, 10.0f);
+    randu(src1, -10.0, 10.0);
+    randu(src2, -10.0, 10.0);
+    randu(src3, -10.0, 10.0);
 
     OCL_TEST_CYCLE() cv::gemm(src1, src2, 0.6, src3, 1.5, dst, flags);
 
