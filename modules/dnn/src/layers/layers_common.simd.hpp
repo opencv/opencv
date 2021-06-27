@@ -808,6 +808,76 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
         }
     }
 }
+
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
+{
+    int i = 0;
+    size_t vl = vsetvl_e32m2(128);
+    for( ; i <= nvecs - 8; i += 8 )
+    {
+        const float* wptr = weights + i*wstep;
+        vfloat32m2_t vs0 = vfmv_v_f_f32m2(0, vl), vs1 = vfmv_v_f_f32m2(0, vl),
+               vs2 = vfmv_v_f_f32m2(0, vl), vs3 = vfmv_v_f_f32m2(0, vl),
+               vs4 = vfmv_v_f_f32m2(0, vl), vs5 = vfmv_v_f_f32m2(0, vl),
+               vs6 = vfmv_v_f_f32m2(0, vl), vs7 = vfmv_v_f_f32m2(0, vl);
+
+        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        {
+            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
+
+            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
+            vs1 = vfmacc_vv_f32m2(vs1, vle32_v_f32m2(wptr + wstep, vl), v, vl);
+            vs2 = vfmacc_vv_f32m2(vs2, vle32_v_f32m2(wptr + wstep*2, vl), v, vl);
+            vs3 = vfmacc_vv_f32m2(vs3, vle32_v_f32m2(wptr + wstep*3, vl), v, vl);
+            vs4 = vfmacc_vv_f32m2(vs4, vle32_v_f32m2(wptr + wstep*4, vl), v, vl);
+            vs5 = vfmacc_vv_f32m2(vs5, vle32_v_f32m2(wptr + wstep*5, vl), v, vl);
+            vs6 = vfmacc_vv_f32m2(vs6, vle32_v_f32m2(wptr + wstep*6, vl), v, vl);
+            vs7 = vfmacc_vv_f32m2(vs7, vle32_v_f32m2(wptr + wstep*7, vl), v, vl);
+        }
+
+        // Calculate the sum of each vector
+        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vl);
+        vfloat32m1_t temp0 = vfredsum_vs_f32m2_f32m1(temp0, vs0, zero, vl);
+        vfloat32m1_t temp1 = vfredsum_vs_f32m2_f32m1(temp1, vs1, zero, vl);
+        vfloat32m1_t temp2 = vfredsum_vs_f32m2_f32m1(temp2, vs2, zero, vl);
+        vfloat32m1_t temp3 = vfredsum_vs_f32m2_f32m1(temp3, vs3, zero, vl);
+        vfloat32m1_t temp4 = vfredsum_vs_f32m2_f32m1(temp4, vs4, zero, vl);
+        vfloat32m1_t temp5 = vfredsum_vs_f32m2_f32m1(temp5, vs5, zero, vl);
+        vfloat32m1_t temp6 = vfredsum_vs_f32m2_f32m1(temp6, vs6, zero, vl);
+        vfloat32m1_t temp7 = vfredsum_vs_f32m2_f32m1(temp7, vs7, zero, vl);
+        float32_t sum[8] = {0,0,0,0,0,0,0,0};
+        sum[0] = vfmv_f_s_f32m1_f32(temp0);
+        sum[1] = vfmv_f_s_f32m1_f32(temp1);
+        sum[2] = vfmv_f_s_f32m1_f32(temp2);
+        sum[3] = vfmv_f_s_f32m1_f32(temp3);
+        sum[4] = vfmv_f_s_f32m1_f32(temp4);
+        sum[5] = vfmv_f_s_f32m1_f32(temp5);
+        sum[6] = vfmv_f_s_f32m1_f32(temp6);
+        sum[7] = vfmv_f_s_f32m1_f32(temp7);
+
+        vfloat32m2_t s0 = vfadd_vv_f32m2(vle32_v_f32m2(sum, vl), vle32_v_f32m2(bias + i, vl), vl);
+        vse32_v_f32m2(dst + i, s0, vl);
+    }
+
+    for( ; i < nvecs; i++ )
+    {
+        const float* wptr = weights + i*wstep;
+        vfloat32m2_t vs0 = vfmv_v_f_f32m2(0, vl);
+
+        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        {
+            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
+            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
+        }
+        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vl);
+        vfloat32m1_t tempSum = vfredsum_vs_f32m2_f32m1(tempSum, vs0, zero, vl);
+        float32_t sum = vfmv_f_s_f32m1_f32(tempSum);
+
+        dst[i] = sum + bias[i];
+    }
+}
 #endif // CV_RVV
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
