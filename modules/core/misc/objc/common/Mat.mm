@@ -548,7 +548,7 @@ template<typename T> void putData(uchar* dataDest, int count, T (^readData)(int)
     if (depth == CV_8U) {
         putData(dest, count, ^uchar (int index) { return cv::saturate_cast<uchar>(data[offset + index].doubleValue);} );
     } else if (depth == CV_8S) {
-        putData(dest, count, ^char (int index) { return cv::saturate_cast<char>(data[offset + index].doubleValue);} );
+        putData(dest, count, ^schar (int index) { return cv::saturate_cast<schar>(data[offset + index].doubleValue);} );
     } else if (depth == CV_16U) {
         putData(dest, count, ^ushort (int index) { return cv::saturate_cast<ushort>(data[offset + index].doubleValue);} );
     } else if (depth == CV_16S) {
