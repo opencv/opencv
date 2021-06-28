@@ -21,7 +21,7 @@ def build_argparser():
     """ Parse arguments from command line
 
     Return:
-    Pack of arguments from comand line
+    Pack of arguments from command line
     """
     parser = argparse.ArgumentParser(description='This is an OpenCV-based version of ' +
                                      'Gaze Estimation example')
