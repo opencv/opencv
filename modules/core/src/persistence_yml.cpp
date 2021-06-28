@@ -637,7 +637,7 @@ public:
         else if( c == '[' || c == '{' ) // collection as a flow
         {
             int new_min_indent = min_indent + !is_parent_flow;
-            int struct_type = c == '{' ? FileNode::MAP : FileNode::SEQ;
+            int struct_type = ( c == '{' ? FileNode::MAP : FileNode::SEQ ) | FileNode::FLOW;
             int nelems = 0;
 
             fs->convertToCollection(struct_type, node);
@@ -667,7 +667,7 @@ public:
                         CV_PARSE_ERROR_CPP("Invalid input");
                 }
 
-                if( struct_type == FileNode::MAP )
+                if( (struct_type & FileNode::TYPE_MASK) == FileNode::MAP )
                 {
                     ptr = parseKey( ptr, node, elem );
                     ptr = skipSpaces( ptr, new_min_indent, INT_MAX );

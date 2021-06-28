@@ -128,6 +128,7 @@ struct FStructData
     std::string tag;
     int flags;
     int indent;
+    FileNode startNode;
 };
 
 class FileStorage_API
@@ -151,12 +152,14 @@ public:
     virtual void setNonEmpty() = 0;
     virtual int wrapMargin() const = 0;
 
+    virtual bool isBusy() const = 0;
     virtual FStructData& getCurrentStruct() = 0;
 
     virtual void convertToCollection( int type, FileNode& node ) = 0;
     virtual FileNode addNode( FileNode& collection, const std::string& key,
                                int type, const void* value=0, int len=-1 ) = 0;
     virtual void finalizeCollection( FileNode& collection ) = 0;
+    virtual FileNode getCurrentNode() = 0;
     virtual double strtod(char* ptr, char** endptr) = 0;
 
     virtual char* parseBase64(char* ptr, int indent, FileNode& collection) = 0;
@@ -192,6 +195,7 @@ public:
 Ptr<FileStorageEmitter> createXMLEmitter(FileStorage_API* fs);
 Ptr<FileStorageEmitter> createYAMLEmitter(FileStorage_API* fs);
 Ptr<FileStorageEmitter> createJSONEmitter(FileStorage_API* fs);
+Ptr<FileStorageEmitter> createFileNodeEmitter(FileStorage_API* fs);
 
 Ptr<FileStorageParser> createXMLParser(FileStorage_API* fs);
 Ptr<FileStorageParser> createYAMLParser(FileStorage_API* fs);

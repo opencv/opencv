@@ -624,6 +624,18 @@ public:
         return ptr;
     }
 
+    bool is_flow( char* ptr )
+    {
+        char* tmp_ptr = ptr;
+        while ( *tmp_ptr && *tmp_ptr != '\r' && *tmp_ptr != '\n' )
+        {
+            if( *tmp_ptr == ',' )
+                return true;
+            tmp_ptr++;
+        }
+        return false;
+    }
+
     char* parseSeq( char* ptr, FileNode& node )
     {
         if (!ptr)
@@ -634,7 +646,7 @@ public:
         else
             ptr++;
 
-        fs->convertToCollection(FileNode::SEQ, node);
+        fs->convertToCollection(FileNode::SEQ | ( is_flow(ptr) ? FileNode::FLOW : 0 ), node);
 
         for (;;)
         {
@@ -688,7 +700,7 @@ public:
         else
             ptr++;
 
-        fs->convertToCollection(FileNode::MAP, node);
+        fs->convertToCollection(FileNode::MAP | ( is_flow(ptr) ? FileNode::FLOW : 0 ), node);
 
         for( ;; )
         {
