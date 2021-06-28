@@ -62,6 +62,21 @@ public extension Mat {
         }
     }
 
+    @discardableResult func get(indices:[Int32], data:inout [UInt8]) throws -> Int32 {
+        let channels = CvType.channels(Int32(type()))
+        if Int32(data.count) % channels != 0 {
+            try throwIncompatibleBufferSize(count: data.count, channels: channels)
+        } else if depth() != CvType.CV_8U {
+            try throwIncompatibleDataType(typeName: CvType.type(toString: type()))
+        }
+        let count = Int32(data.count)
+        return data.withUnsafeMutableBufferPointer { body in
+            body.withMemoryRebound(to: Int8.self) { reboundBody in
+                return __get(indices as [NSNumber], count: count, byteBuffer: reboundBody.baseAddress!)
+            }
+        }
+    }
+
     @discardableResult func get(indices:[Int32], data:inout [Double]) throws -> Int32 {
         let channels = CvType.channels(Int32(type()))
         if Int32(data.count) % channels != 0 {
@@ -114,7 +129,26 @@ public extension Mat {
         }
     }
 
+    @discardableResult func get(indices:[Int32], data:inout [UInt16]) throws -> Int32 {
+        let channels = CvType.channels(Int32(type()))
+        if Int32(data.count) % channels != 0 {
+            try throwIncompatibleBufferSize(count: data.count, channels: channels)
+        } else if depth() != CvType.CV_16U {
+            try throwIncompatibleDataType(typeName: CvType.type(toString: type()))
+        }
+        let count = Int32(data.count)
+        return data.withUnsafeMutableBufferPointer { body in
+            body.withMemoryRebound(to: Int16.self) { reboundBody in
+                return __get(indices as [NSNumber], count: count, shortBuffer: reboundBody.baseAddress!)
+            }
+        }
+    }
+
     @discardableResult func get(row: Int32, col: Int32, data:inout [Int8]) throws -> Int32 {
+        return try get(indices: [row, col], data: &data)
+    }
+
+    @discardableResult func get(row: Int32, col: Int32, data:inout [UInt8]) throws -> Int32 {
         return try get(indices: [row, col], data: &data)
     }
 
@@ -134,6 +168,10 @@ public extension Mat {
         return try get(indices: [row, col], data: &data)
     }
 
+    @discardableResult func get(row: Int32, col: Int32, data:inout [UInt16]) throws -> Int32 {
+        return try get(indices: [row, col], data: &data)
+    }
+
     @discardableResult func put(indices:[Int32], data:[Int8]) throws -> Int32 {
         let channels = CvType.channels(Int32(type()))
         if Int32(data.count) % channels != 0 {
@@ -144,6 +182,21 @@ public extension Mat {
         let count = Int32(data.count)
         return data.withUnsafeBufferPointer { body in
             return __put(indices as [NSNumber], count: count, byteBuffer: body.baseAddress!)
+        }
+    }
+
+    @discardableResult func put(indices:[Int32], data:[UInt8]) throws -> Int32 {
+        let channels = CvType.channels(Int32(type()))
+        if Int32(data.count) % channels != 0 {
+            try throwIncompatibleBufferSize(count: data.count, channels: channels)
+        } else if depth() != CvType.CV_8U {
+            try throwIncompatibleDataType(typeName: CvType.type(toString: type()))
+        }
+        let count = Int32(data.count)
+        return data.withUnsafeBufferPointer { body in
+            body.withMemoryRebound(to: Int8.self) { reboundBody in
+                return __put(indices as [NSNumber], count: count, byteBuffer: reboundBody.baseAddress!)
+            }
         }
     }
 
@@ -214,7 +267,26 @@ public extension Mat {
         }
     }
 
+    @discardableResult func put(indices:[Int32], data:[UInt16]) throws -> Int32 {
+        let channels = CvType.channels(Int32(type()))
+        if Int32(data.count) % channels != 0 {
+            try throwIncompatibleBufferSize(count: data.count, channels: channels)
+        } else if depth() != CvType.CV_16U {
+            try throwIncompatibleDataType(typeName: CvType.type(toString: type()))
+        }
+        let count = Int32(data.count)
+        return data.withUnsafeBufferPointer { body in
+            body.withMemoryRebound(to: Int16.self) { reboundBody in
+                return __put(indices as [NSNumber], count: count, shortBuffer: reboundBody.baseAddress!)
+            }
+        }
+    }
+
     @discardableResult func put(row: Int32, col: Int32, data:[Int8]) throws -> Int32 {
+        return try put(indices: [row, col], data: data)
+    }
+
+    @discardableResult func put(row: Int32, col: Int32, data:[UInt8]) throws -> Int32 {
         return try put(indices: [row, col], data: data)
     }
 
@@ -235,6 +307,10 @@ public extension Mat {
     }
 
     @discardableResult func put(row: Int32, col: Int32, data: [Int16]) throws -> Int32 {
+        return try put(indices: [row, col], data: data)
+    }
+
+    @discardableResult func put(row: Int32, col: Int32, data: [UInt16]) throws -> Int32 {
         return try put(indices: [row, col], data: data)
     }
 
@@ -303,46 +379,46 @@ public class MatAt<N: Atable> {
 
 extension UInt8: Atable {
     public static func getAt(m: Mat, indices:[Int32]) -> UInt8 {
-        var tmp = [Int8](repeating: 0, count: 1)
+        var tmp = [UInt8](repeating: 0, count: 1)
         try! m.get(indices: indices, data: &tmp)
-        return UInt8(bitPattern: tmp[0])
+        return tmp[0]
     }
 
     public static func putAt(m: Mat, indices: [Int32], v: UInt8) {
-        let tmp = [Int8(bitPattern: v)]
+        let tmp = [v]
         try! m.put(indices: indices, data: tmp)
     }
 
     public static func getAt2c(m: Mat, indices:[Int32]) -> (UInt8, UInt8) {
-        var tmp = [Int8](repeating: 0, count: 2)
+        var tmp = [UInt8](repeating: 0, count: 2)
         try! m.get(indices: indices, data: &tmp)
-        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]))
+        return (tmp[0], tmp[1])
     }
 
     public static func putAt2c(m: Mat, indices: [Int32], v: (UInt8, UInt8)) {
-        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1)]
+        let tmp = [v.0, v.1]
         try! m.put(indices: indices, data: tmp)
     }
 
     public static func getAt3c(m: Mat, indices:[Int32]) -> (UInt8, UInt8, UInt8) {
-        var tmp = [Int8](repeating: 0, count: 3)
+        var tmp = [UInt8](repeating: 0, count: 3)
         try! m.get(indices: indices, data: &tmp)
-        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]), UInt8(bitPattern: tmp[2]))
+        return (tmp[0], tmp[1], tmp[2])
     }
 
     public static func putAt3c(m: Mat, indices: [Int32], v: (UInt8, UInt8, UInt8)) {
-        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1), Int8(bitPattern: v.2)]
+        let tmp = [v.0, v.1, v.2]
         try! m.put(indices: indices, data: tmp)
     }
 
     public static func getAt4c(m: Mat, indices:[Int32]) -> (UInt8, UInt8, UInt8, UInt8) {
-        var tmp = [Int8](repeating: 0, count: 4)
+        var tmp = [UInt8](repeating: 0, count: 4)
         try! m.get(indices: indices, data: &tmp)
-        return (UInt8(bitPattern: tmp[0]), UInt8(bitPattern: tmp[1]), UInt8(bitPattern: tmp[2]), UInt8(bitPattern: tmp[3]))
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
     }
 
     public static func putAt4c(m: Mat, indices: [Int32], v: (UInt8, UInt8, UInt8, UInt8)) {
-        let tmp = [Int8(bitPattern: v.0), Int8(bitPattern: v.1), Int8(bitPattern: v.2), Int8(bitPattern: v.3)]
+        let tmp = [v.0, v.1, v.2, v.3]
         try! m.put(indices: indices, data: tmp)
     }
 }
@@ -526,6 +602,52 @@ extension Int32: Atable {
     }
 
     public static func putAt4c(m: Mat, indices: [Int32], v: (Int32, Int32, Int32, Int32)) {
+        let tmp = [v.0, v.1, v.2, v.3]
+        try! m.put(indices: indices, data: tmp)
+    }
+}
+
+extension UInt16: Atable {
+    public static func getAt(m: Mat, indices:[Int32]) -> UInt16 {
+        var tmp = [UInt16](repeating: 0, count: 1)
+        try! m.get(indices: indices, data: &tmp)
+        return tmp[0]
+    }
+
+    public static func putAt(m: Mat, indices: [Int32], v: UInt16) {
+        let tmp = [v]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt2c(m: Mat, indices:[Int32]) -> (UInt16, UInt16) {
+        var tmp = [UInt16](repeating: 0, count: 2)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1])
+    }
+
+    public static func putAt2c(m: Mat, indices: [Int32], v: (UInt16, UInt16)) {
+        let tmp = [v.0, v.1]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt3c(m: Mat, indices:[Int32]) -> (UInt16, UInt16, UInt16) {
+        var tmp = [UInt16](repeating: 0, count: 3)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2])
+    }
+
+    public static func putAt3c(m: Mat, indices: [Int32], v: (UInt16, UInt16, UInt16)) {
+        let tmp = [v.0, v.1, v.2]
+        try! m.put(indices: indices, data: tmp)
+    }
+
+    public static func getAt4c(m: Mat, indices:[Int32]) -> (UInt16, UInt16, UInt16, UInt16) {
+        var tmp = [UInt16](repeating: 0, count: 4)
+        try! m.get(indices: indices, data: &tmp)
+        return (tmp[0], tmp[1], tmp[2], tmp[3])
+    }
+
+    public static func putAt4c(m: Mat, indices: [Int32], v: (UInt16, UInt16, UInt16, UInt16)) {
         let tmp = [v.0, v.1, v.2, v.3]
         try! m.put(indices: indices, data: tmp)
     }
