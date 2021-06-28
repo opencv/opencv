@@ -335,7 +335,7 @@ if __name__ == '__main__':
     # ------------------------Execution part------------------------
     ccomp = comp.compileStreaming(args=cv.gapi.compile_args(kernels, nets))
     source = cv.gapi.wip.make_capture_src(ARGUMENTS.input)
-    ccomp.setSource(source)
+    ccomp.setSource(cv.gin(source))
     ccomp.start()
 
     frames = 0
