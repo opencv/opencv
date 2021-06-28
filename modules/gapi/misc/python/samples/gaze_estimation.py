@@ -18,7 +18,7 @@ def weight_path(model_path):
 
 
 def build_argparser():
-    """ Parse arguments from comand line
+    """ Parse arguments from command line
 
     Return:
     Pack of arguments from comand line
@@ -127,37 +127,37 @@ def eye_box(p_1, p_2, scale=1.8):
 
 
 # ------------------------Custom graph operations------------------------
-@cv.gapi.op('custom.ProcessPoses',
+@cv.gapi.op('custom.GProcessPoses',
             in_types=[cv.GArray.GMat, cv.GArray.GMat, cv.GArray.GMat],
             out_types=[cv.GArray.GMat])
-class ProcessPoses:
+class GProcessPoses:
     @staticmethod
     def outMeta(arr_desc0, arr_desc1, arr_desc2):
         return cv.empty_array_desc()
 
 
-@cv.gapi.op('custom.ParseEyes',
+@cv.gapi.op('custom.GParseEyes',
             in_types=[cv.GArray.GMat, cv.GArray.Rect, cv.GOpaque.Size],
             out_types=[cv.GArray.Rect, cv.GArray.Rect, cv.GArray.Point, cv.GArray.Point])
-class ParseEyes:
+class GParseEyes:
     @staticmethod
     def outMeta(arr_desc0, arr_desc1, arr_desc2):
         return cv.empty_array_desc(), cv.empty_array_desc(), \
                cv.empty_array_desc(), cv.empty_array_desc()
 
 
-@cv.gapi.op('custom.GetStates',
+@cv.gapi.op('custom.GGetStates',
             in_types=[cv.GArray.GMat, cv.GArray.GMat],
             out_types=[cv.GArray.Int, cv.GArray.Int])
-class GetStates:
+class GGetStates:
     @staticmethod
     def outMeta(arr_desc0, arr_desc1):
         return cv.empty_array_desc(), cv.empty_array_desc()
 
 
 # ------------------------Custom kernels------------------------
-@cv.gapi.kernel(ProcessPoses)
-class GProcessPoses:
+@cv.gapi.kernel(GProcessPoses)
+class GProcessPosesImpl:
     """ Custom kernel. Processed poses of heads
     """
     @staticmethod
@@ -179,9 +179,9 @@ class GProcessPoses:
         return out_poses
 
 
-@cv.gapi.kernel(ParseEyes)
-class GParseEyes:
-    """ Custom kernel. Get information about eyes.
+@cv.gapi.kernel(GParseEyes)
+class GParseEyesImpl:
+    """ Custom kernel. Get information about eyes
     """
     @staticmethod
     def run(in_landm_per_face, in_face_rcs, frame_size):
@@ -217,8 +217,8 @@ class GParseEyes:
         return left_eyes, right_eyes, midpoints, lmarks
 
 
-@cv.gapi.kernel(GetStates)
-class GGetStates:
+@cv.gapi.kernel(GGetStates)
+class GGetStatesImpl:
     """ Custom kernel. Get state of eye - open or closed
     """
     @staticmethod
@@ -268,7 +268,7 @@ if __name__ == '__main__':
     angles_r = face_outputs.at('angle_r_fc')
 
     # Parse poses
-    heads_pos = ProcessPoses.on(angles_y, angles_p, angles_r)
+    heads_pos = GProcessPoses.on(angles_y, angles_p, angles_r)
 
     # Detect landmarks
     landmark_inputs = cv.GInferInputs()
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     landmark = landmark_outputs.at('align_fc3')
 
     # Parse landmarks
-    left_eyes, right_eyes, mids, lmarks = ParseEyes.on(landmark, faces_rc, sz)
+    left_eyes, right_eyes, mids, lmarks = GParseEyes.on(landmark, faces_rc, sz)
 
     # Detect eyes
     eyes_inputs = cv.GInferInputs()
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     eyesr = eyesr_outputs.at('19')
 
     # Process eyes states
-    l_eye_st, r_eye_st = GetStates.on(eyesl, eyesr)
+    l_eye_st, r_eye_st = GGetStates.on(eyesl, eyesr)
 
     # Gaze estimation
     gaze_inputs = cv.GInferListInputs()
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     nets = cv.gapi.networks(face_net, head_pose_net, landmarks_net, gaze_net, eye_net)
 
     # Kernels pack
-    kernels = cv.gapi.kernels(GParseEyes, GProcessPoses, GGetStates)
+    kernels = cv.gapi.kernels(GParseEyesImpl, GProcessPosesImpl, GGetStatesImpl)
 
     # ------------------------Execution part------------------------
     ccomp = comp.compileStreaming(args=cv.gapi.compile_args(kernels, nets))
