@@ -189,12 +189,6 @@ PyObject* pyopencv_from(const std::vector<GCompileArg>& value)
     return pyopencv_from_generic_vec(value);
 }
 
-template <>
-bool pyopencv_to(PyObject* obj, GRunArgs& value, const ArgInfo& info)
-{
-    return pyopencv_to_generic_vec(obj, value, info);
-}
-
 template<>
 PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
 {
@@ -301,18 +295,6 @@ PyObject* pyopencv_from(const GRunArgs& value)
     return list;
 }
 
-template<>
-bool pyopencv_to(PyObject* obj, GMetaArgs& value, const ArgInfo& info)
-{
-    return pyopencv_to_generic_vec(obj, value, info);
-}
-
-template<>
-PyObject* pyopencv_from(const GMetaArgs& value)
-{
-    return pyopencv_from_generic_vec(value);
-}
-
 template <typename T>
 void pyopencv_to_with_check(PyObject* from, T& to, const std::string& msg = "")
 {
@@ -334,16 +316,16 @@ void pyopencv_to_generic_vec_with_check(PyObject* from,
 }
 
 template <typename T>
-static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
+static T extract_proto_args(PyObject* py_args)
 {
     using namespace cv;
 
     GProtoArgs args;
-    Py_ssize_t size = PyTuple_Size(py_args);
+    Py_ssize_t size = PyList_Size(py_args);
     args.reserve(size);
     for (int i = 0; i < size; ++i)
     {
-        PyObject* item = PyTuple_GetItem(py_args, i);
+        PyObject* item = PyList_GetItem(py_args, i);
         if (PyObject_TypeCheck(item, reinterpret_cast<PyTypeObject*>(pyopencv_GScalar_TypePtr)))
         {
             args.emplace_back(reinterpret_cast<pyopencv_GScalar_t*>(item)->v);
@@ -362,22 +344,11 @@ static PyObject* extract_proto_args(PyObject* py_args, PyObject* kw)
         }
         else
         {
-            PyErr_SetString(PyExc_TypeError, "Unsupported type for cv.GIn()/cv.GOut()");
-            return NULL;
+            util::throw_error(std::logic_error("Unsupported type for GProtoArgs"));
         }
     }
 
-    return pyopencv_from<T>(T{std::move(args)});
-}
-
-static PyObject* pyopencv_cv_GIn(PyObject* , PyObject* py_args, PyObject* kw)
-{
-    return extract_proto_args<GProtoInputArgs>(py_args, kw);
-}
-
-static PyObject* pyopencv_cv_GOut(PyObject* , PyObject* py_args, PyObject* kw)
-{
-    return extract_proto_args<GProtoOutputArgs>(py_args, kw);
+    return T(std::move(args));
 }
 
 static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::OpaqueKind kind)
@@ -393,7 +364,6 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,    bool);
         HANDLE_CASE(INT,     int);
-        HANDLE_CASE(INT64,   int64_t);
         HANDLE_CASE(DOUBLE,  double);
         HANDLE_CASE(FLOAT,   float);
         HANDLE_CASE(STRING,  std::string);
@@ -403,6 +373,7 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(RECT,    cv::Rect);
         HANDLE_CASE(UNKNOWN, cv::GArg);
         UNSUPPORTED(UINT64);
+        UNSUPPORTED(INT64);
         UNSUPPORTED(SCALAR);
         UNSUPPORTED(MAT);
         UNSUPPORTED(DRAW_PRIM);
@@ -425,7 +396,6 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,    bool);
         HANDLE_CASE(INT,     int);
-        HANDLE_CASE(INT64,   int64_t);
         HANDLE_CASE(DOUBLE,  double);
         HANDLE_CASE(FLOAT,   float);
         HANDLE_CASE(STRING,  std::string);
@@ -437,6 +407,7 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(MAT,     cv::Mat);
         HANDLE_CASE(UNKNOWN, cv::GArg);
         UNSUPPORTED(UINT64);
+        UNSUPPORTED(INT64);
         UNSUPPORTED(DRAW_PRIM);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
@@ -488,13 +459,15 @@ static cv::GRunArg extract_run_arg(const cv::GTypeInfo& info, PyObject* item)
 
 static cv::GRunArgs extract_run_args(const cv::GTypesInfo& info, PyObject* py_args)
 {
-    cv::GRunArgs args;
-    Py_ssize_t tuple_size = PyTuple_Size(py_args);
-    args.reserve(tuple_size);
+    GAPI_Assert(PyList_Check(py_args));
 
-    for (int i = 0; i < tuple_size; ++i)
+    cv::GRunArgs args;
+    Py_ssize_t list_size = PyList_Size(py_args);
+    args.reserve(list_size);
+
+    for (int i = 0; i < list_size; ++i)
     {
-        args.push_back(extract_run_arg(info[i], PyTuple_GetItem(py_args, i)));
+        args.push_back(extract_run_arg(info[i], PyList_GetItem(py_args, i)));
     }
 
     return args;
@@ -535,13 +508,15 @@ static cv::GMetaArg extract_meta_arg(const cv::GTypeInfo& info, PyObject* item)
 
 static cv::GMetaArgs extract_meta_args(const cv::GTypesInfo& info, PyObject* py_args)
 {
-    cv::GMetaArgs metas;
-    Py_ssize_t tuple_size = PyTuple_Size(py_args);
-    metas.reserve(tuple_size);
+    GAPI_Assert(PyList_Check(py_args));
 
-    for (int i = 0; i < tuple_size; ++i)
+    cv::GMetaArgs metas;
+    Py_ssize_t list_size = PyList_Size(py_args);
+    metas.reserve(list_size);
+
+    for (int i = 0; i < list_size; ++i)
     {
-        metas.push_back(extract_meta_arg(info[i], PyTuple_GetItem(py_args, i)));
+        metas.push_back(extract_meta_arg(info[i], PyList_GetItem(py_args, i)));
     }
 
     return metas;
@@ -607,8 +582,27 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
         // NB: In fact it's impossible situation, becase errors were handled above.
         GAPI_Assert(result.get() && "Python kernel returned NULL!");
 
-        outs = out_info.size() == 1 ? cv::GRunArgs{extract_run_arg(out_info[0], result.get())}
-                                    : extract_run_args(out_info, result.get());
+        if (out_info.size() == 1)
+        {
+            outs = cv::GRunArgs{extract_run_arg(out_info[0], result.get())};
+        }
+        else if (out_info.size() > 1)
+        {
+            GAPI_Assert(PyTuple_Check(result.get()));
+
+            Py_ssize_t tuple_size = PyTuple_Size(result.get());
+            outs.reserve(tuple_size);
+
+            for (int i = 0; i < tuple_size; ++i)
+            {
+                outs.push_back(extract_run_arg(out_info[i], PyTuple_GetItem(result.get(), i)));
+            }
+        }
+        else
+        {
+            // Seems to be impossible case.
+            GAPI_Assert(false);
+        }
     }
     catch (...)
     {
@@ -835,53 +829,54 @@ static PyObject* pyopencv_cv_gapi_op(PyObject* , PyObject* py_args, PyObject*)
     return pyopencv_from(cv::gapi::wip::op(id, outMetaWrapper, std::move(args)));
 }
 
-static PyObject* pyopencv_cv_gin(PyObject*, PyObject* py_args, PyObject*)
+template<>
+bool pyopencv_to(PyObject* obj, cv::detail::ExtractArgsCallback& value, const ArgInfo&)
 {
-    cv::detail::PyObjectHolder holder{py_args};
-    auto callback = cv::detail::ExtractArgsCallback{[=](const cv::GTypesInfo& info)
+    cv::detail::PyObjectHolder holder{obj};
+    value = cv::detail::ExtractArgsCallback{[=](const cv::GTypesInfo& info)
+    {
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
+
+        cv::GRunArgs args;
+        try
         {
-            PyGILState_STATE gstate;
-            gstate = PyGILState_Ensure();
-
-            cv::GRunArgs args;
-            try
-            {
-                args = extract_run_args(info, holder.get());
-            }
-            catch (...)
-            {
-                PyGILState_Release(gstate);
-                throw;
-            }
+            args = extract_run_args(info, holder.get());
+        }
+        catch (...)
+        {
             PyGILState_Release(gstate);
-            return args;
-        }};
-
-    return pyopencv_from(callback);
+            throw;
+        }
+        PyGILState_Release(gstate);
+        return args;
+    }};
+    return true;
 }
 
-static PyObject* pyopencv_cv_descr_of(PyObject*, PyObject* py_args, PyObject*)
+template<>
+bool pyopencv_to(PyObject* obj, cv::detail::ExtractMetaCallback& value, const ArgInfo&)
 {
-    Py_INCREF(py_args);
-    auto callback = cv::detail::ExtractMetaCallback{[=](const cv::GTypesInfo& info)
-        {
-            PyGILState_STATE gstate;
-            gstate = PyGILState_Ensure();
+    cv::detail::PyObjectHolder holder{obj};
+    value = cv::detail::ExtractMetaCallback{[=](const cv::GTypesInfo& info)
+    {
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
 
-            cv::GMetaArgs args;
-            try
-            {
-                args = extract_meta_args(info, py_args);
-            }
-            catch (...)
-            {
-                PyGILState_Release(gstate);
-                throw;
-            }
+        cv::GMetaArgs args;
+        try
+        {
+            args = extract_meta_args(info, holder.get());
+        }
+        catch (...)
+        {
             PyGILState_Release(gstate);
-            return args;
-        }};
-    return pyopencv_from(callback);
+            throw;
+        }
+        PyGILState_Release(gstate);
+        return args;
+    }};
+    return true;
 }
 
 template<typename T>
@@ -930,6 +925,35 @@ struct PyOpenCV_Converter<cv::GOpaque<T>>
     }
 };
 
+template<>
+bool pyopencv_to(PyObject* obj, cv::GProtoInputArgs& value, const ArgInfo& info)
+{
+    try
+    {
+        value = extract_proto_args<cv::GProtoInputArgs>(obj);
+        return true;
+    }
+    catch (...)
+    {
+        failmsg("Can't parse cv::GProtoInputArgs");
+        return false;
+    }
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::GProtoOutputArgs& value, const ArgInfo& info)
+{
+    try
+    {
+        value = extract_proto_args<cv::GProtoOutputArgs>(obj);
+        return true;
+    }
+    catch (...)
+    {
+        failmsg("Can't parse cv::GProtoOutputArgs");
+        return false;
+    }
+}
 
 // extend cv.gapi methods
 #define PYOPENCV_EXTRA_METHODS_GAPI \

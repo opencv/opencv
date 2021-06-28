@@ -1171,41 +1171,6 @@ PyObject* pyopencv_from(const int64& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
-{
-    if (!obj || obj == Py_None)
-    {
-        return true;
-    }
-    if (isBool(obj))
-    {
-        failmsg("Argument '%s' must be integer type, not bool", info.name);
-        return false;
-    }
-    if (PyArray_IsIntegerScalar(obj))
-    {
-        if (PyLong_Check(obj))
-        {
-            value = PyLong_AsLongLong(obj);
-        }
-        else
-        {
-            const bool isParsed = parseNumpyScalar<int64_t>(obj, value);
-            if (!isParsed) {
-                failmsg("Argument '%s' can not be safely parsed to 'int64_t'", info.name);
-                return false;
-            }
-        }
-    }
-    else
-    {
-        failmsg("Argument '%s' is required to be an integer", info.name);
-        return false;
-    }
-    return !PyErr_Occurred();
-}
-
-template<>
 PyObject* pyopencv_from(const String& value)
 {
     return PyString_FromString(value.empty() ? "" : value.c_str());
@@ -2254,12 +2219,6 @@ static PyMethodDef special_methods[] = {
 #ifdef HAVE_OPENCV_DNN
   {"dnn_registerLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_registerLayer), "registerLayer(type, class) -> None"},
   {"dnn_unregisterLayer", CV_PY_FN_WITH_KW(pyopencv_cv_dnn_unregisterLayer), "unregisterLayer(type) -> None"},
-#endif
-#ifdef HAVE_OPENCV_GAPI
-  {"GIn", CV_PY_FN_WITH_KW(pyopencv_cv_GIn), "GIn(...) -> GInputProtoArgs"},
-  {"GOut", CV_PY_FN_WITH_KW(pyopencv_cv_GOut), "GOut(...) -> GOutputProtoArgs"},
-  {"gin", CV_PY_FN_WITH_KW(pyopencv_cv_gin), "gin(...) -> ExtractArgsCallback"},
-  {"descr_of", CV_PY_FN_WITH_KW(pyopencv_cv_descr_of), "descr_of(...) -> ExtractMetaCallback"},
 #endif
   {NULL, NULL},
 };
