@@ -4,6 +4,7 @@
 
 int main()
 {
+    std::cout << "This sample is non-complete. It is used as code snippents in documentation." << std::endl;
 // ! [bind usage]
     cv::GCompiled compd;
     std::vector<char> bytes;

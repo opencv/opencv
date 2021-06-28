@@ -70,6 +70,8 @@ template<> struct CompileArgTag<SimpleCustomType2> {
 
 int main()
 {
+    std::cout << "This sample is non-complete. It is used as code snippents in documentation." << std::endl;
+
     SimpleCustomType  customVar1 { false };
     SimpleCustomType2 customVar2 { 1248, "World", {1280, 720, 640, 480},
                                    { {5, 32434142342}, {7, 34242432} } };
