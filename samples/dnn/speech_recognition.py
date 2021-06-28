@@ -130,9 +130,7 @@ class FilterbankFeatures():
             x = np.log(x + 1e-20)
 
         # normalize if required
-        x = self.normalize_batch(x, seq_len)
-
-        x.dtype=dtype
+        x = self.normalize_batch(x, seq_len).astype(dtype)
         return x
 
     # Mel Frequency calculation
@@ -359,7 +357,7 @@ class Decoder():
     '''
     def __init__(self):
         labels=[' ','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',"'"]
-        self.labels_map = {i: labels[i] for i in range(28)}
+        self.labels_map = {i: label for i,label in enumerate(labels)}
         self.blank_id = 28
 
     def decode(self,x):
@@ -384,9 +382,9 @@ class Decoder():
 if __name__ == '__main__':
 
     # Computation backends supported by layers
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_OPENCV)
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
     # Target Devices for computation
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL)
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16)
 
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -397,11 +395,14 @@ if __name__ == '__main__':
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help='Select a computation backend: '
                         "%d: automatically (by default) "
-                        "%d: OpenCV Implementation" % backends)
+                        "%d: Halide"
+                        "%d: OpenVINO Inference Engine "
+                        "%d: OpenCV Implementation " % backends)
     parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Select a target device: '
-                        "%d: CPU target (by default)"
-                        "%d: OpenCL" % targets)
+                        "%d: CPU target (by default) "
+                        "%d: OpenCL "
+                        "%d: OpenCL FP16 " % targets)
 
     args, _ = parser.parse_known_args()
 
@@ -424,13 +425,13 @@ if __name__ == '__main__':
     net.setPreferableTarget(args.target)
 
     # Get Filterbank Features
-    feature_extractor=FilterbankFeatures()
+    feature_extractor = FilterbankFeatures()
     features = feature_extractor.calculate_features(x=X,seq_len=seq_len)
 
     # Show spectogram if required
     if args.show_spectrogram:
         img = cv.normalize(src=features[0], dst=None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-        img=cv.applyColorMap(img,cv.COLORMAP_JET)
+        img = cv.applyColorMap(img,cv.COLORMAP_JET)
         cv.imshow('spectogram',img)
         cv.waitKey(0)
 
