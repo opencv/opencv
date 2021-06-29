@@ -161,9 +161,6 @@ __kernel void getAb(__global const char * oldPointsptr,
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
-    if(x >= newSize.x || y >= newSize.y)
-        return;
-
     const int gx = get_group_id(0);
     const int gy = get_group_id(1);
     const int gw = get_num_groups(0);
