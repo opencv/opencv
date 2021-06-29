@@ -710,7 +710,7 @@ _ComPtr<IMFAttributes> CvCapture_MSMF::getDefaultSourceConfig(UINT32 num)
     CV_Assert(num > 0);
     _ComPtr<IMFAttributes> res;
     if (FAILED(MFCreateAttributes(&res, num)) ||
-        FAILED(res->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) ||
+        FAILED(res->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, false)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
