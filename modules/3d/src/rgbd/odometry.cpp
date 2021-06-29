@@ -211,7 +211,11 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
             patchNaNs(levelDepth, 0);
 
             TMat& levelMask = getTMatRef<TMat>(pyramidMask, i);
-            levelMask &= (levelDepth > minDepth) & (levelDepth < maxDepth);
+            TMat gtmin, ltmax, tmpMask;
+            cv::compare(levelDepth, Scalar(minDepth), gtmin, CMP_GT);
+            cv::compare(levelDepth, Scalar(maxDepth), ltmax, CMP_LT);
+            cv::bitwise_and(gtmin, ltmax, tmpMask);
+            cv::bitwise_and(levelMask, tmpMask, levelMask);
 
             if(!pyramidNormal.empty())
             {
@@ -219,14 +223,17 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
                 CV_Assert(pyramidNormal.size(i) == pyramidDepth.size(i));
                 TMat levelNormal = getTMat<TMat>(pyramidNormal, i).clone();
 
-                TMat validNormalMask = levelNormal == levelNormal; // otherwise it's Nan
+                TMat validNormalMask;
+                // NaN check
+                cv::compare(levelNormal, levelNormal, validNormalMask, CMP_EQ);
                 CV_Assert(validNormalMask.type() == CV_8UC3);
 
                 std::vector<TMat> channelMasks;
                 split(validNormalMask, channelMasks);
-                validNormalMask = channelMasks[0] & channelMasks[1] & channelMasks[2];
-
-                levelMask &= validNormalMask;
+                TMat tmpChMask;
+                cv::bitwise_and(channelMasks[0], channelMasks[1], tmpChMask);
+                cv::bitwise_and(channelMasks[2], tmpChMask, validNormalMask);
+                cv::bitwise_and(levelMask, validNormalMask, levelMask);
             }
         }
     }
