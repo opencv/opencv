@@ -23,8 +23,7 @@ def build_argparser():
     Return:
     Pack of arguments from command line
     """
-    parser = argparse.ArgumentParser(description='This is an OpenCV-based version of ' +
-                                     'Gaze Estimation example')
+    parser = argparse.ArgumentParser(description='This is an OpenCV-based version of Gaze Estimation example')
 
     parser.add_argument('--input',
                         help='Path to the input video file')
