@@ -94,6 +94,9 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
         case cv::GRunArg::index_of<cv::RMat>() :
             outputs.emplace_back((cv::RMat*)(&(cv::util::get<cv::RMat>(res_obj))));
             break;
+        case cv::GRunArg::index_of<cv::MediaFrame>() :
+            outputs.emplace_back((cv::MediaFrame*)(&(cv::util::get<cv::MediaFrame>(res_obj))));
+            break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
@@ -129,6 +132,9 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
 
     case T::index_of<cv::RMat*>() :
         return cv::GRunArg(*cv::util::get<cv::RMat*>(out));
+
+    case T::index_of<cv::MediaFrame*>() :
+        return cv::GRunArg(*cv::util::get<cv::MediaFrame*>(out));
 
     default:
         // ...maybe our types were extended
