@@ -30,10 +30,11 @@
 #define INF_ENGINE_RELEASE_2021_1 2021010000
 #define INF_ENGINE_RELEASE_2021_2 2021020000
 #define INF_ENGINE_RELEASE_2021_3 2021030000
+#define INF_ENGINE_RELEASE_2021_4 2021040000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2021.3 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_3
+#warning("IE version have not been provided via command-line. Using 2021.4 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_4
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
