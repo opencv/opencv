@@ -133,11 +133,11 @@ struct GAPI_EXPORTS_W_SIMPLE Rect
      * @param lt_     The type of the line. See #LineTypes
      * @param shift_  The number of fractional bits in the point coordinates
      */
-    GAPI_WRAP Rect(const cv::Rect2i& rect_,
-                   const cv::Scalar& color_,
-                   int thick_ = 1,
-                   int lt_ = 8,
-                   int shift_ = 0) :
+    Rect(const cv::Rect& rect_,
+         const cv::Scalar& color_,
+         int thick_ = 1,
+         int lt_ = 8,
+         int shift_ = 0) :
         rect(rect_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
     }
@@ -245,7 +245,7 @@ struct GAPI_EXPORTS_W_SIMPLE Mosaic
      * @param cellSz_ Cell size (same for X, Y)
      * @param decim_  Decimation (0 stands for no decimation)
     */
-    GAPI_WRAP Mosaic(const cv::Rect2i& mos_,
+    Mosaic(const cv::Rect& mos_,
                      int cellSz_,
                      int decim_) :
         mos(mos_), cellSz(cellSz_), decim(decim_)
@@ -255,9 +255,9 @@ struct GAPI_EXPORTS_W_SIMPLE Mosaic
     GAPI_WRAP Mosaic() : cellSz(0), decim(0) {}
 
     /*@{*/
-    GAPI_PROP cv::Rect2i mos;    //!< Coordinates of the mosaic
-    GAPI_PROP int        cellSz; //!< Cell size (same for X, Y)
-    GAPI_PROP int        decim;  //!< Decimation (0 stands for no decimation)
+    GAPI_PROP cv::Rect mos;    //!< Coordinates of the mosaic
+    GAPI_PROP int      cellSz; //!< Cell size (same for X, Y)
+    GAPI_PROP int      decim;  //!< Decimation (0 stands for no decimation)
     /*@{*/
 };
 
