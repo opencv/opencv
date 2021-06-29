@@ -6,6 +6,8 @@
 #include "precomp.hpp"
 #include "persistence.hpp"
 
+using namespace cv;
+
 char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
@@ -519,12 +521,16 @@ static const char symbols[9] = "ucwsifdr";
 
 char icvTypeSymbol(int depth)
 {
-    CV_Assert(depth >=0 && depth < 9);
+    CV_StaticAssert(CV_64F == 6, "");
+    CV_Assert(depth >=0 && depth <= CV_64F);
+    CV_CheckDepth(depth, depth >=0 && depth <= CV_64F, "");
     return symbols[depth];
 }
 
 static int icvSymbolToType(char c)
 {
+    if (c == 'r')
+        return CV_SEQ_ELTYPE_PTR;
     const char* pos = strchr( symbols, c );
     if( !pos )
         CV_Error( CV_StsBadArg, "Invalid data type specification" );
@@ -618,8 +624,12 @@ int icvCalcStructSize( const char* dt, int initial_size )
 {
     int size = icvCalcElemSize( dt, initial_size );
     size_t elem_max_size = 0;
-    for ( const char * type = dt; *type != '\0'; type++ ) {
-        switch ( *type )
+    for ( const char * type = dt; *type != '\0'; type++ )
+    {
+        char v = *type;
+        if (v >= '0' && v <= '9')
+            continue;  // skip vector size
+        switch (v)
         {
         case 'u': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
         case 'c': { elem_max_size = std::max( elem_max_size, sizeof(schar ) ); break; }
@@ -628,7 +638,8 @@ int icvCalcStructSize( const char* dt, int initial_size )
         case 'i': { elem_max_size = std::max( elem_max_size, sizeof(int   ) ); break; }
         case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
         case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
-        default: break;
+        default:
+            CV_Error_(Error::StsNotImplemented, ("Unknown type identifier: '%c' in '%s'", (char)(*type), dt));
         }
     }
     size = cvAlign( size, static_cast<int>(elem_max_size) );
