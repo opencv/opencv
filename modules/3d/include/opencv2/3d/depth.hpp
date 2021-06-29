@@ -617,7 +617,7 @@ namespace cv
      * It is designed to save on computing the frame data (image pyramids, normals, etc.).
      */
     CV_WRAP_AS(compute2) bool
-    compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt = Mat()) const;
+    compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt = Mat()) const;
 
     /** Prepare a cache for the frame. The function checks the precomputed/passed data (throws the error if this data
      * does not satisfy) and computes all remaining cache data needed for the frame. Returned size is a resolution
@@ -625,7 +625,7 @@ namespace cv
      * @param frame The odometry which will process the frame.
      * @param cacheType The cache type: CACHE_SRC, CACHE_DST or CACHE_ALL.
      */
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const;
 
     CV_WRAP static Ptr<Odometry> create(const String & odometryType);
 
@@ -676,7 +676,7 @@ namespace cv
                  const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
                  int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const CV_OVERRIDE;
 
     CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
     {
@@ -767,6 +767,9 @@ namespace cv
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                 const Mat& initRt) const CV_OVERRIDE;
 
+    template<typename TMat>
+    Size prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const;
+
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
     double minDepth, maxDepth, maxDepthDiff;
@@ -807,7 +810,7 @@ namespace cv
                 float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
                 const std::vector<int>& iterCounts = std::vector<int>(), int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const CV_OVERRIDE;
 
     CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
     {
@@ -893,6 +896,9 @@ namespace cv
     virtual bool
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                 const Mat& initRt) const CV_OVERRIDE;
+
+    template<typename TMat>
+    Size prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
@@ -941,7 +947,7 @@ namespace cv
                     const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
                     int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const CV_OVERRIDE;
 
     CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
     {
@@ -1035,6 +1041,9 @@ namespace cv
     virtual bool
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                 const Mat& initRt) const CV_OVERRIDE;
+
+    template<typename TMat>
+    Size prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
@@ -1103,7 +1112,7 @@ namespace cv
                                                float depthFactor = 1.f,
                                                float truncateThreshold = 0.f);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const CV_OVERRIDE;
 
     CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
     {
@@ -1197,7 +1206,7 @@ namespace cv
                 const Mat& initRt) const CV_OVERRIDE;
 
     template<typename TMat>
-    Size prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const;
+    Size prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     float maxDistDiff;

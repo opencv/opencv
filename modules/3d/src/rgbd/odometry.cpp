@@ -1063,9 +1063,46 @@ Ptr<DepthCleaner> DepthCleaner::create(int depth_in, int window_size_in, int met
 template<typename TMat>
 struct OdometryFrameImpl : public OdometryFrame
 {
-    OdometryFrameImpl() : OdometryFrame(), pyramids(N_PYRAMIDS) { }
+    OdometryFrameImpl() : OdometryFrame(), image(), depth(), mask(), normals(), pyramids(N_PYRAMIDS) { }
     OdometryFrameImpl(InputArray _image, InputArray _depth, InputArray _mask = noArray(), InputArray _normals = noArray(), int _ID = -1);
     virtual ~OdometryFrameImpl() { }
+
+    template<typename YMat>
+    OdometryFrameImpl<TMat>& operator=(const OdometryFrameImpl<YMat>& y)
+    {
+        y.image.copyTo(image);
+        y.depth.copyTo(depth);
+        y.mask.copyTo(mask);
+        y.normals.copyTo(normals);
+        pyramids.clear();
+        pyramids.reserve(y.pyramids.size());
+        for (const auto& ypl : y.pyramids)
+        {
+            std::vector<TMat> pl;
+            pl.reserve(ypl.size());
+            for (const auto& yimg : ypl)
+            {
+                TMat img;
+                yimg.copyTo(img);
+                pl.push_back(img);
+            }
+            pyramids.push_back(pl);
+        }
+
+        return *this;
+    }
+
+    template<>
+    OdometryFrameImpl<TMat>& operator=(const OdometryFrameImpl<TMat>& y)
+    {
+        image = y.image;
+        depth = y.depth;
+        mask = y.mask;
+        normals = y.normals;
+        pyramids = y.pyramids;
+
+        return *this;
+    }
 
     virtual void setImage(InputArray  _image) CV_OVERRIDE
     {
@@ -1180,7 +1217,7 @@ bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcM
     return compute(srcFrame, dstFrame, Rt, initRt);
 }
 
-bool Odometry::compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const
+bool Odometry::compute(Ptr<OdometryFrame>& srcFrame, Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
 {
     checkParams();
 
@@ -1193,7 +1230,7 @@ bool Odometry::compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame,
     return computeImpl(srcFrame, dstFrame, Rt, initRt);
 }
 
-Size Odometry::prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) const
+Size Odometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int /*cacheType*/) const
 {
     if (!frame)
         CV_Error(Error::StsBadArg, "Null frame pointer.");
@@ -1256,11 +1293,10 @@ Ptr<RgbdOdometry> RgbdOdometry::create(const Mat& _cameraMatrix, float _minDepth
   return makePtr<RgbdOdometry>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _iterCounts, _minGradientMagnitudes, _maxPointsPart, _transformType);
 }
 
-Size RgbdOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
-{
-    // can be transformed into template argument in the future
-    typedef Mat TMat;
 
+template<typename TMat>
+Size RgbdOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const
+{
     Odometry::prepareFrameCache(frame, cacheType);
     TMat image;
     frame->getImage(image);
@@ -1332,6 +1368,24 @@ Size RgbdOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) co
     return image.size();
 }
 
+Size RgbdOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+{
+    auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();
+
+    CV_Assert(oclFrame != nullptr || cpuFrame != nullptr);
+
+    // RgbdOdometry does not support UMats as input, copy them to host
+    if (oclFrame != nullptr)
+    {
+        cpuFrame = makePtr<OdometryFrameImpl<Mat>>();
+        *cpuFrame = *oclFrame;
+        frame = cpuFrame;
+    }
+
+    return prepareFrameCacheT<Mat>(frame, cacheType);
+}
+
 void RgbdOdometry::checkParams() const
 {
     CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
@@ -1372,11 +1426,9 @@ Ptr<ICPOdometry> ICPOdometry::create(const Mat& _cameraMatrix, float _minDepth, 
   return makePtr<ICPOdometry>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _transformType);
 }
 
-Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+template<typename TMat>
+Size ICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const
 {
-    // can be transformed into template argument in the future
-    typedef Mat TMat;
-
     Odometry::prepareFrameCache(frame, cacheType);
 
     TMat depth;
@@ -1464,6 +1516,24 @@ Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) con
     return depth.size();
 }
 
+Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+{
+    auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();
+
+    CV_Assert(oclFrame != nullptr || cpuFrame != nullptr);
+
+    // ICPOdometry does not support UMats as input, copy them to host
+    if (oclFrame != nullptr)
+    {
+        cpuFrame = makePtr<OdometryFrameImpl<Mat>>();
+        *cpuFrame = *oclFrame;
+        frame = cpuFrame;
+    }
+
+    return prepareFrameCacheT<Mat>(frame, cacheType);
+}
+
 void ICPOdometry::checkParams() const
 {
     CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
@@ -1510,11 +1580,9 @@ Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Mat& _cameraMatrix, float _mi
   return makePtr<RgbdICPOdometry>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _minGradientMagnitudes, _transformType);
 }
 
-Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+template<typename TMat>
+Size RgbdICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const
 {
-    // can be transformed into template argument in the future
-    typedef Mat TMat;
-
     TMat image;
     frame->getImage(image);
     if(image.empty())
@@ -1624,6 +1692,24 @@ Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType)
     return image.size();
 }
 
+Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
+{
+    auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
+    auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();
+
+    CV_Assert(oclFrame != nullptr || cpuFrame != nullptr);
+
+    // RgbdICPOdometry does not support UMats as input, copy them to host
+    if (oclFrame != nullptr)
+    {
+        cpuFrame = makePtr<OdometryFrameImpl<Mat>>();
+        *cpuFrame = *oclFrame;
+        frame = cpuFrame;
+    }
+
+    return prepareFrameCacheT<Mat>(frame, cacheType);
+}
+
 void RgbdICPOdometry::checkParams() const
 {
     CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
@@ -1692,7 +1778,7 @@ Ptr<FastICPOdometry> FastICPOdometry::create(const Mat& _cameraMatrix,
 }
 
 template<typename TMat>
-Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const
+Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame>& frame, int cacheType) const
 {
     Odometry::prepareFrameCache(frame, cacheType);
 
@@ -1748,7 +1834,7 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType
     return depth.size();
 }
 
-Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+Size FastICPOdometry::prepareFrameCache(Ptr<OdometryFrame>& frame, int cacheType) const
 {
     auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
     auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();
@@ -1811,7 +1897,7 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
     }
     else
     {
-        CV_Error(Error::StsBadArg, "Incorrect OdometryFrame type");
+        CV_Error(Error::StsBadArg, "Both OdometryFrames should have the same storage type: Mat or UMat");
     }
 
     Rt.create(Size(4, 4), CV_64FC1);
