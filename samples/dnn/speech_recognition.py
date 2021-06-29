@@ -54,7 +54,7 @@ import soundfile as sf # Temporary import to load audio files
     Original Repo : https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/SpeechRecognition/Jasper
  '''
 
-class FilterbankFeatures():
+class FilterbankFeatures:
     def __init__(self,
                  sample_rate=16000, window_size=0.02, window_stride=0.01,
                  n_fft=512, preemph=0.97, n_filt=64, lowfreq=0,
@@ -351,7 +351,7 @@ class FilterbankFeatures():
         stft_matrix = np.fft.rfft( fft_window * y_frames, axis=0)
         return stft_matrix if return_complex==True else np.stack((stft_matrix.real,stft_matrix.imag),axis=-1)
 
-class Decoder():
+class Decoder:
     '''
         Used for decoding the output of jasper model.
     '''
@@ -382,20 +382,19 @@ class Decoder():
 if __name__ == '__main__':
 
     # Computation backends supported by layers
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
     # Target Devices for computation
     targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16)
 
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input_audio', type=str, help='Path to input audio file.')
+    parser.add_argument('--input_audio', type=str, required=True, help='Path to input audio file.')
     parser.add_argument('--show_spectrogram', action='store_true', help='Whether to show a spectrogram of the input audio.')
     parser.add_argument('--model', type=str, default='jasper.onnx', help='Path to the onnx file of Jasper. default="jasper.onnx"')
     parser.add_argument('--output', type=str, help='Path to file where recognized audio transcript must be saved. Leave this to print on console.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help='Select a computation backend: '
                         "%d: automatically (by default) "
-                        "%d: Halide"
                         "%d: OpenVINO Inference Engine "
                         "%d: OpenCV Implementation " % backends)
     parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
