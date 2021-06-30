@@ -44,6 +44,7 @@ namespace detail
         CV_UNKNOWN,    // Unknown, generic, opaque-to-GAPI data type unsupported in graph seriallization
         CV_BOOL,       // bool user G-API data
         CV_INT,        // int user G-API data
+        CV_INT64,      // int64_t user G-API data
         CV_DOUBLE,     // double user G-API data
         CV_FLOAT,      // float user G-API data
         CV_UINT64,     // uint64_t user G-API data
@@ -61,6 +62,7 @@ namespace detail
     template<typename T> struct GOpaqueTraits;
     template<typename T> struct GOpaqueTraits    { static constexpr const OpaqueKind kind = OpaqueKind::CV_UNKNOWN; };
     template<> struct GOpaqueTraits<int>         { static constexpr const OpaqueKind kind = OpaqueKind::CV_INT; };
+    template<> struct GOpaqueTraits<int64_t>     { static constexpr const OpaqueKind kind = OpaqueKind::CV_INT64; };
     template<> struct GOpaqueTraits<double>      { static constexpr const OpaqueKind kind = OpaqueKind::CV_DOUBLE; };
     template<> struct GOpaqueTraits<float>       { static constexpr const OpaqueKind kind = OpaqueKind::CV_FLOAT; };
     template<> struct GOpaqueTraits<uint64_t>    { static constexpr const OpaqueKind kind = OpaqueKind::CV_UINT64; };

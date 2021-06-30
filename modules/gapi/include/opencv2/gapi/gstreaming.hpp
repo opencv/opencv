@@ -196,7 +196,7 @@ public:
      * @param s a shared pointer to IStreamSource representing the
      * input video stream.
      */
-    GAPI_WRAP void setSource(const gapi::wip::IStreamSource::Ptr& s);
+    void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
      * @brief Constructs and specifies an input video stream for a
