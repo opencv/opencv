@@ -1182,7 +1182,8 @@ class ObjectiveCWrapperGenerator(object):
                     deprecation_decl = " DEPRECATED_ATTRIBUTE" if fi.deprecated else ""
                 )
             )
-
+            _swift_name = " NS_SWIFT_NAME(" + fi.swift_name + "(" + build_swift_signature(args) + "))" if not constructor else "",
+            print(_swift_name)
             method_implementations.write( Template(
 """$prototype {$prologue
     $ret_val$obj_deref$cv_name($cv_args)$tail;$epilogue$ret
