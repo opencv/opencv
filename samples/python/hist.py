@@ -48,7 +48,7 @@ def hist_lines(im):
     cv.normalize(hist_item,hist_item,0,255,cv.NORM_MINMAX)
     hist=np.int32(np.around(hist_item))
     for x,y in enumerate(hist):
-        cv.line(h,(x,0),(x,y),(255,255,255))
+        cv.line(h,(x,0),(x,y[0]),(255,255,255))
     y = np.flipud(h)
     return y
 
