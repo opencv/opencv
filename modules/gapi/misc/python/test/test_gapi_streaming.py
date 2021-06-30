@@ -28,7 +28,7 @@ try:
             g_in = cv.GMat()
             g_out = cv.gapi.medianBlur(g_in, 3)
             c = cv.GComputation(g_in, g_out)
-            ccomp = c.compileStreaming(cv.descr_of(in_mat))
+            ccomp = c.compileStreaming(cv.gapi.descr_of(in_mat))
             ccomp.setSource(cv.gin(in_mat))
             ccomp.start()
 
@@ -52,7 +52,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -87,7 +87,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -176,7 +176,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -206,6 +206,40 @@ try:
 
                 proc_num_frames += 1
                 if proc_num_frames == max_num_frames:
+                    break
+
+
+        def test_gapi_streaming_meta(self):
+            ksize = 3
+            path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
+
+            # G-API
+            g_in = cv.GMat()
+            g_ts = cv.gapi.streaming.timestamp(g_in)
+            g_seqno = cv.gapi.streaming.seqNo(g_in)
+            g_seqid = cv.gapi.streaming.seq_id(g_in)
+
+            c = cv.GComputation(cv.GIn(g_in), cv.GOut(g_ts, g_seqno, g_seqid))
+
+            ccomp = c.compileStreaming()
+            source = cv.gapi.wip.make_capture_src(path)
+            ccomp.setSource(cv.gin(source))
+            ccomp.start()
+
+            # Assert
+            max_num_frames  = 10
+            curr_frame_number = 0
+            while True:
+                has_frame, (ts, seqno, seqid) = ccomp.pull()
+
+                if not has_frame:
+                    break
+
+                self.assertEqual(curr_frame_number, seqno)
+                self.assertEqual(curr_frame_number, seqid)
+
+                curr_frame_number += 1
+                if curr_frame_number == max_num_frames:
                     break
 
 
