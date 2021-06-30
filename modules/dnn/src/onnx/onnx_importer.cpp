@@ -1792,6 +1792,23 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 addConstant(layerParams.name, concatenated[0]);
                 return;
             }
+            else
+            {
+                for (int i = 0; i < node_proto.input_size(); ++i)
+                {
+                    if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
+                    {
+                        LayerParams constParams;
+                        constParams.name = node_proto.input(i);
+                        constParams.type = "Const";
+                        constParams.blobs.push_back(getBlob(node_proto, i));
+
+                        opencv_onnx::NodeProto proto;
+                        proto.add_output(constParams.name);
+                        addLayer(constParams, proto);
+                    }
+                }
+            }
         }
         else if (layer_type == "Resize")
         {
