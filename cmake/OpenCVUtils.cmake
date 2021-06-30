@@ -1978,7 +1978,4 @@ endif()
 #
 # Include configuration override settings
 #
-
-if(OPENCV_DISABLE_THREAD_SUPPORT)
-  include(cmake/vars/OPENCV_DISABLE_THREAD_SUPPORT.cmake)
-endif()
+include(cmake/vars/EnableModeVars.cmake)
