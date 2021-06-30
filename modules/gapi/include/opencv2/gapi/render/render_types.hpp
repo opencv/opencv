@@ -55,30 +55,32 @@ struct GAPI_EXPORTS_W_SIMPLE Text
      * @param lt_                 The line type. See #LineTypes
      * @param bottom_left_origin_ When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
      */
-    GAPI_WRAP Text(const std::string& text_,
-                   const cv::Point& org_,
-                   int ff_,
-                   double fs_,
-                   const cv::Scalar& color_,
-                   int thick_ = 1,
-                   int lt_ = 8,
-                   bool bottom_left_origin_ = false) :
+    GAPI_WRAP
+    Text(const std::string& text_,
+         const cv::Point& org_,
+         int ff_,
+         double fs_,
+         const cv::Scalar& color_,
+         int thick_ = 1,
+         int lt_ = 8,
+         bool bottom_left_origin_ = false) :
         text(text_), org(org_), ff(ff_), fs(fs_),
         color(color_), thick(thick_), lt(lt_), bottom_left_origin(bottom_left_origin_)
     {
     }
 
-    GAPI_WRAP Text() = default;
+    GAPI_WRAP
+    Text() = default;
 
     /*@{*/
-    GAPI_PROP std::string text;               //!< The text string to be drawn
-    GAPI_PROP cv::Point   org;                //!< The bottom-left corner of the text string in the image
-    GAPI_PROP int         ff;                 //!< The font type, see #HersheyFonts
-    GAPI_PROP double      fs;                 //!< The font scale factor that is multiplied by the font-specific base size
-    GAPI_PROP cv::Scalar  color;              //!< The text color
-    GAPI_PROP int         thick;              //!< The thickness of the lines used to draw a text
-    GAPI_PROP int         lt;                 //!< The line type. See #LineTypes
-    GAPI_PROP bool        bottom_left_origin; //!< When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
+    GAPI_PROP_RW std::string text;               //!< The text string to be drawn
+    GAPI_PROP_RW cv::Point   org;                //!< The bottom-left corner of the text string in the image
+    GAPI_PROP_RW int         ff;                 //!< The font type, see #HersheyFonts
+    GAPI_PROP_RW double      fs;                 //!< The font scale factor that is multiplied by the font-specific base size
+    GAPI_PROP_RW cv::Scalar  color;              //!< The text color
+    GAPI_PROP_RW int         thick;              //!< The thickness of the lines used to draw a text
+    GAPI_PROP_RW int         lt;                 //!< The line type. See #LineTypes
+    GAPI_PROP_RW bool        bottom_left_origin; //!< When true, the image data origin is at the bottom-left corner. Otherwise, it is at the top-left corner
     /*@{*/
 };
 
@@ -142,14 +144,15 @@ struct GAPI_EXPORTS_W_SIMPLE Rect
     {
     }
 
-    GAPI_WRAP Rect() = default;
+    GAPI_WRAP
+    Rect() = default;
 
     /*@{*/
-    GAPI_PROP cv::Rect   rect;  //!< Coordinates of the rectangle
-    GAPI_PROP cv::Scalar color; //!< The rectangle color or brightness (grayscale image)
-    GAPI_PROP int        thick; //!< The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
-    GAPI_PROP int        lt;    //!< The type of the line. See #LineTypes
-    GAPI_PROP int        shift; //!< The number of fractional bits in the point coordinates
+    GAPI_PROP_RW cv::Rect   rect;  //!< Coordinates of the rectangle
+    GAPI_PROP_RW cv::Scalar color; //!< The rectangle color or brightness (grayscale image)
+    GAPI_PROP_RW int        thick; //!< The thickness of lines that make up the rectangle. Negative values, like #FILLED, mean that the function has to draw a filled rectangle
+    GAPI_PROP_RW int        lt;    //!< The type of the line. See #LineTypes
+    GAPI_PROP_RW int        shift; //!< The number of fractional bits in the point coordinates
     /*@{*/
 };
 
@@ -170,25 +173,27 @@ struct GAPI_EXPORTS_W_SIMPLE Circle
      * @param  lt_     The Type of the circle boundary. See #LineTypes
      * @param  shift_  The Number of fractional bits in the coordinates of the center and in the radius value
      */
-    GAPI_WRAP Circle(const cv::Point& center_,
-                     int radius_,
-                     const cv::Scalar& color_,
-                     int thick_ = 1,
-                     int lt_ = 8,
-                     int shift_ = 0) :
+    GAPI_WRAP
+    Circle(const cv::Point& center_,
+           int radius_,
+           const cv::Scalar& color_,
+           int thick_ = 1,
+           int lt_ = 8,
+           int shift_ = 0) :
         center(center_), radius(radius_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
     }
 
-    GAPI_WRAP Circle() = default;
+    GAPI_WRAP
+    Circle() = default;
 
     /*@{*/
-    GAPI_PROP cv::Point  center; //!< The center of the circle
-    GAPI_PROP int        radius; //!< The radius of the circle
-    GAPI_PROP cv::Scalar color;  //!< The color of the  circle
-    GAPI_PROP int        thick;  //!< The thickness of the circle outline, if positive. Negative values, like #FILLED, mean that a filled circle is to be drawn
-    GAPI_PROP int        lt;     //!< The Type of the circle boundary. See #LineTypes
-    GAPI_PROP int        shift;  //!< The Number of fractional bits in the coordinates of the center and in the radius value
+    GAPI_PROP_RW cv::Point  center; //!< The center of the circle
+    GAPI_PROP_RW int        radius; //!< The radius of the circle
+    GAPI_PROP_RW cv::Scalar color;  //!< The color of the  circle
+    GAPI_PROP_RW int        thick;  //!< The thickness of the circle outline, if positive. Negative values, like #FILLED, mean that a filled circle is to be drawn
+    GAPI_PROP_RW int        lt;     //!< The Type of the circle boundary. See #LineTypes
+    GAPI_PROP_RW int        shift;  //!< The Number of fractional bits in the coordinates of the center and in the radius value
     /*@{*/
 };
 
@@ -209,25 +214,27 @@ struct GAPI_EXPORTS_W_SIMPLE Line
      * @param  lt_     The Type of the line. See #LineTypes
      * @param  shift_  The number of fractional bits in the point coordinates
     */
-    GAPI_WRAP Line(const cv::Point& pt1_,
-                   const cv::Point& pt2_,
-                   const cv::Scalar& color_,
-                   int thick_ = 1,
-                   int lt_ = 8,
-                   int shift_ = 0) :
+    GAPI_WRAP
+    Line(const cv::Point& pt1_,
+         const cv::Point& pt2_,
+         const cv::Scalar& color_,
+         int thick_ = 1,
+         int lt_ = 8,
+         int shift_ = 0) :
         pt1(pt1_), pt2(pt2_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
     }
 
-    GAPI_WRAP Line() = default;
+    GAPI_WRAP
+    Line() = default;
 
     /*@{*/
-    GAPI_PROP cv::Point  pt1;    //!< The first point of the line segment
-    GAPI_PROP cv::Point  pt2;    //!< The second point of the line segment
-    GAPI_PROP cv::Scalar color;  //!< The line color
-    GAPI_PROP int        thick;  //!< The thickness of line
-    GAPI_PROP int        lt;     //!< The Type of the line. See #LineTypes
-    GAPI_PROP int        shift;  //!< The number of fractional bits in the point coordinates
+    GAPI_PROP_RW cv::Point  pt1;    //!< The first point of the line segment
+    GAPI_PROP_RW cv::Point  pt2;    //!< The second point of the line segment
+    GAPI_PROP_RW cv::Scalar color;  //!< The line color
+    GAPI_PROP_RW int        thick;  //!< The thickness of line
+    GAPI_PROP_RW int        lt;     //!< The Type of the line. See #LineTypes
+    GAPI_PROP_RW int        shift;  //!< The number of fractional bits in the point coordinates
     /*@{*/
 };
 
@@ -252,12 +259,13 @@ struct GAPI_EXPORTS_W_SIMPLE Mosaic
     {
     }
 
-    GAPI_WRAP Mosaic() : cellSz(0), decim(0) {}
+    GAPI_WRAP
+    Mosaic() : cellSz(0), decim(0) {}
 
     /*@{*/
-    GAPI_PROP cv::Rect mos;    //!< Coordinates of the mosaic
-    GAPI_PROP int      cellSz; //!< Cell size (same for X, Y)
-    GAPI_PROP int      decim;  //!< Decimation (0 stands for no decimation)
+    GAPI_PROP_RW cv::Rect mos;    //!< Coordinates of the mosaic
+    GAPI_PROP_RW int      cellSz; //!< Cell size (same for X, Y)
+    GAPI_PROP_RW int      decim;  //!< Decimation (0 stands for no decimation)
     /*@{*/
 };
 
@@ -275,19 +283,21 @@ struct GAPI_EXPORTS_W_SIMPLE Image
      * @param  img_   Image to draw
      * @param  alpha_ Alpha channel for image to draw (same size and number of channels)
     */
-    GAPI_WRAP Image(const cv::Point& org_,
-                    const cv::Mat& img_,
-                    const cv::Mat& alpha_) :
+    GAPI_WRAP
+    Image(const cv::Point& org_,
+          const cv::Mat& img_,
+          const cv::Mat& alpha_) :
         org(org_), img(img_), alpha(alpha_)
     {
     }
 
-    GAPI_WRAP Image() = default;
+    GAPI_WRAP
+    Image() = default;
 
     /*@{*/
-    GAPI_PROP cv::Point org;   //!< The bottom-left corner of the image
-    GAPI_PROP cv::Mat   img;   //!< Image to draw
-    GAPI_PROP cv::Mat   alpha; //!< Alpha channel for image to draw (same size and number of channels)
+    GAPI_PROP_RW cv::Point org;   //!< The bottom-left corner of the image
+    GAPI_PROP_RW cv::Mat   img;   //!< Image to draw
+    GAPI_PROP_RW cv::Mat   alpha; //!< Alpha channel for image to draw (same size and number of channels)
     /*@{*/
 };
 
@@ -305,7 +315,8 @@ struct GAPI_EXPORTS_W_SIMPLE Poly
      * @param lt_     The Type of the line. See #LineTypes
      * @param shift_  The number of fractional bits in the point coordinate
     */
-    GAPI_WRAP Poly(const std::vector<cv::Point>& points_,
+    GAPI_WRAP
+    Poly(const std::vector<cv::Point>& points_,
                    const cv::Scalar& color_,
                    int thick_ = 1,
                    int lt_ = 8,
@@ -314,14 +325,15 @@ struct GAPI_EXPORTS_W_SIMPLE Poly
     {
     }
 
-    GAPI_WRAP Poly() = default;
+    GAPI_WRAP
+    Poly() = default;
 
     /*@{*/
-    GAPI_WRAP std::vector<cv::Point> points;  //!< Points to connect
-    GAPI_WRAP cv::Scalar             color;   //!< The line color
-    GAPI_WRAP int                    thick;   //!< The thickness of line
-    GAPI_WRAP int                    lt;      //!< The Type of the line. See #LineTypes
-    GAPI_WRAP int                    shift;   //!< The number of fractional bits in the point coordinate
+    GAPI_PROP_RW std::vector<cv::Point> points;  //!< Points to connect
+    GAPI_PROP_RW cv::Scalar             color;   //!< The line color
+    GAPI_PROP_RW int                    thick;   //!< The thickness of line
+    GAPI_PROP_RW int                    lt;      //!< The Type of the line. See #LineTypes
+    GAPI_PROP_RW int                    shift;   //!< The number of fractional bits in the point coordinate
     /*@{*/
 };
 
