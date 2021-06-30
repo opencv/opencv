@@ -1208,7 +1208,7 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) co
     return Size();
 }
 
-Ptr<Odometry> Odometry::create(const String & odometryType)
+Ptr<Odometry> Odometry::createFromName(const String & odometryType)
 {
     if (odometryType == "RgbdOdometry")
         return makePtr<RgbdOdometry>();

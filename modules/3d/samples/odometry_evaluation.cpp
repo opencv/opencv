@@ -143,7 +143,7 @@ int main(int argc, char** argv)
 
     Ptr<OdometryFrame> frame_prev = OdometryFrame::create(),
                        frame_curr = OdometryFrame::create();
-    Ptr<Odometry> odometry = Odometry::create(string(argv[3]) + "Odometry");
+    Ptr<Odometry> odometry = Odometry::createFromName(string(argv[3]) + "Odometry");
     if(odometry.empty())
     {
         cout << "Can not create Odometry algorithm. Check the passed odometry name." << endl;
