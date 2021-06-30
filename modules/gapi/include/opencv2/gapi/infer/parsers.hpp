@@ -64,10 +64,10 @@ detection is smaller than confidence threshold, detection is rejected.
 given label will get to the output.
 @return a tuple with a vector of detected boxes and a vector of appropriate labels.
 */
-GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseSSD(const GMat& in,
-                                                            const GOpaque<Size>& inSz,
-                                                            const float confidenceThreshold = 0.5f,
-                                                            const int   filterLabel = -1);
+GAPI_EXPORTS_W std::tuple<GArray<Rect>, GArray<int>> parseSSD(const GMat& in,
+                                                              const GOpaque<Size>& inSz,
+                                                              const float confidenceThreshold = 0.5f,
+                                                              const int   filterLabel = -1);
 
 /** @overload
 Extracts detection information (box, confidence) from SSD output and
@@ -112,12 +112,12 @@ If 1.f, nms is not performed and no boxes are rejected.
 <a href="https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/public/yolo-v2-tiny-tf/yolo-v2-tiny-tf.md">documentation</a>.
 @return a tuple with a vector of detected boxes and a vector of appropriate labels.
 */
-GAPI_EXPORTS std::tuple<GArray<Rect>, GArray<int>> parseYolo(const GMat& in,
-                                                             const GOpaque<Size>& inSz,
-                                                             const float confidenceThreshold = 0.5f,
-                                                             const float nmsThreshold = 0.5f,
-                                                             const std::vector<float>& anchors
-                                                                 = nn::parsers::GParseYolo::defaultAnchors());
+GAPI_EXPORTS_W std::tuple<GArray<Rect>, GArray<int>> parseYolo(const GMat& in,
+                                                               const GOpaque<Size>& inSz,
+                                                               const float confidenceThreshold = 0.5f,
+                                                               const float nmsThreshold = 0.5f,
+                                                               const std::vector<float>& anchors
+                                                                   = nn::parsers::GParseYolo::defaultAnchors());
 
 } // namespace gapi
 } // namespace cv
