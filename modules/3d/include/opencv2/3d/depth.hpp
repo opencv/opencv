@@ -634,7 +634,7 @@ namespace cv
     */
     CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
-    CV_WRAP static Ptr<Odometry> create(const String & odometryType);
+    CV_WRAP static Ptr<Odometry> create_odometry(const String & odometryType);
 
     /** @see setCameraMatrix */
     CV_WRAP virtual cv::Mat getCameraMatrix() const = 0;
