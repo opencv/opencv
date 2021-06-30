@@ -12,8 +12,33 @@ def register(mname):
 
 
 @register('cv2.gapi')
+def networks(*args):
+    return cv.gapi_GNetPackage(list(map(cv.detail.strip, args)))
+
+
+@register('cv2.gapi')
 def compile_args(*args):
     return list(map(cv.GCompileArg, args))
+
+
+@register('cv2')
+def GIn(*args):
+    return [*args]
+
+
+@register('cv2')
+def GOut(*args):
+    return [*args]
+
+
+@register('cv2')
+def gin(*args):
+    return [*args]
+
+
+@register('cv2.gapi')
+def descr_of(*args):
+    return [*args]
 
 
 @register('cv2')

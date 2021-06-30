@@ -30,6 +30,7 @@ using cv::gapi::wip::draw::Prim;
 #define GARRAY_TYPE_LIST_G(G, G2) \
 WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,      G)  \
 WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,       G)  \
+WRAP_ARGS(int64_t     , cv::gapi::ArgType::CV_INT64,     G)  \
 WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,    G)  \
 WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,     G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,    G)  \
@@ -46,6 +47,7 @@ WRAP_ARGS(cv::GMat    , cv::gapi::ArgType::CV_GMAT,      G2) \
 #define GOPAQUE_TYPE_LIST_G(G, G2) \
 WRAP_ARGS(bool        , cv::gapi::ArgType::CV_BOOL,    G)  \
 WRAP_ARGS(int         , cv::gapi::ArgType::CV_INT,     G)  \
+WRAP_ARGS(int64_t     , cv::gapi::ArgType::CV_INT64,   G)  \
 WRAP_ARGS(double      , cv::gapi::ArgType::CV_DOUBLE,  G)  \
 WRAP_ARGS(float       , cv::gapi::ArgType::CV_FLOAT,   G)  \
 WRAP_ARGS(std::string , cv::gapi::ArgType::CV_STRING,  G)  \
@@ -62,6 +64,7 @@ namespace gapi {
 enum ArgType {
     CV_BOOL,
     CV_INT,
+    CV_INT64,
     CV_DOUBLE,
     CV_FLOAT,
     CV_STRING,
