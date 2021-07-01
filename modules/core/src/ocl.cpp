@@ -1566,6 +1566,7 @@ struct Device::Impl
         version_ = getStrProp(CL_DEVICE_VERSION);
         extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
+        halfFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
@@ -1678,6 +1679,7 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    int halfFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1827,11 +1829,7 @@ int Device::singleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
 
 int Device::halfFPConfig() const
-#ifdef CL_VERSION_1_2
-{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
-#else
-{ CV_REQUIRE_OPENCL_1_2_ERROR; }
-#endif
+{ return p ? p->halfFPConfig_ : 0; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
@@ -6668,6 +6666,10 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
         depth = CV_32F;
         break;
 
+    case CL_HALF_FLOAT:
+        depth = CV_16F;
+        break;
+
     default:
         CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
     }
@@ -6676,8 +6678,22 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     switch (fmt.image_channel_order)
     {
     case CL_R:
+    case CL_A:
+    case CL_INTENSITY:
+    case CL_LUMINANCE:
         type = CV_MAKE_TYPE(depth, 1);
         break;
+
+    case CL_RG:
+    case CL_RA:
+        type = CV_MAKE_TYPE(depth, 2);
+        break;
+
+    // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+    // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+    /*case CL_RGB:
+        type = CV_MAKE_TYPE(depth, 3);
+        break;*/
 
     case CL_RGBA:
     case CL_BGRA:
@@ -7068,6 +7084,13 @@ static std::string kerToStr(const Mat & k)
             stream << "DIG(" << data[i] << "f)";
         stream << "DIG(" << data[width] << "f)";
     }
+    else if (depth == CV_16F)
+    {
+        stream.setf(std::ios_base::showpoint);
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << (float)data[i] << "h)";
+        stream << "DIG(" << (float)data[width] << "h)";
+    }
     else
     {
         for (int i = 0; i < width; ++i)
@@ -7091,7 +7114,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<float16_t> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
@@ -7130,14 +7153,14 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), -1 };
+        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf() };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
         vectorWidths[CV_8U] = vectorWidths[CV_8S] = 4;
-        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = vectorWidths[CV_16F] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
@@ -7225,10 +7248,12 @@ struct Image2D::Impl
     {
         cl_image_format format;
         static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
-                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, -1 };
+                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, CL_HALF_FLOAT };
         static const int channelTypesNorm[] = { CL_UNORM_INT8, CL_SNORM_INT8, CL_UNORM_INT16,
                                                 CL_SNORM_INT16, -1, -1, -1, -1 };
-        static const int channelOrders[] = { -1, CL_R, CL_RG, -1, CL_RGBA };
+        // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+        // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+        static const int channelOrders[] = { -1, CL_R, CL_RG, /*CL_RGB*/ -1, CL_RGBA };
 
         int channelType = norm ? channelTypesNorm[depth] : channelTypes[depth];
         int channelOrder = channelOrders[cn];

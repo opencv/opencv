@@ -1297,7 +1297,7 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
                 cv::randu(a, -128, 128);
             else if (depth == CV_16U)
                 cv::randu(a, 0, 1024);
-            else if (depth == CV_32F || depth == CV_64F)
+            else if (depth == CV_32F || depth == CV_64F || depth == CV_16F)
                 cv::randu(a, -1.0, 1.0);
             else if (depth == CV_16S || depth == CV_32S)
                 cv::randu(a, -4096, 4096);
