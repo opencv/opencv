@@ -253,8 +253,8 @@ struct GAPI_EXPORTS_W_SIMPLE Mosaic
      * @param decim_  Decimation (0 stands for no decimation)
     */
     Mosaic(const cv::Rect& mos_,
-                     int cellSz_,
-                     int decim_) :
+           int cellSz_,
+           int decim_) :
         mos(mos_), cellSz(cellSz_), decim(decim_)
     {
     }
@@ -317,10 +317,10 @@ struct GAPI_EXPORTS_W_SIMPLE Poly
     */
     GAPI_WRAP
     Poly(const std::vector<cv::Point>& points_,
-                   const cv::Scalar& color_,
-                   int thick_ = 1,
-                   int lt_ = 8,
-                   int shift_ = 0) :
+         const cv::Scalar& color_,
+         int thick_ = 1,
+         int lt_ = 8,
+         int shift_ = 0) :
         points(points_), color(color_), thick(thick_), lt(lt_), shift(shift_)
     {
     }
