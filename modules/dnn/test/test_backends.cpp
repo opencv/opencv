@@ -204,7 +204,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 0.0;
     float iouDiff = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
-    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.252  : FLT_MIN;
+    float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.262  : FLT_MIN;
          processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                     inp, "detection_out", "", scoreDiff, iouDiff, detectionConfThresh);
     expectNoFallbacksFromIE(net);
@@ -359,8 +359,8 @@ TEST_P(DNNTestNetwork, OpenPose_pose_coco)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0056 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.072 : 0.0;
+    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.009 : 0.0;
+    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.09 : 0.0;
     processNet("dnn/openpose_pose_coco.caffemodel", "dnn/openpose_pose_coco.prototxt",
                Size(46, 46), "", "", l1, lInf);
     expectNoFallbacksFromIE(net);
@@ -380,8 +380,8 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
 #endif
 
     // output range: [-0.001, 0.97]
-    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.012 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.16 : 0.0;
+    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.02 : 0.0;
+    const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.2 : 0.0;
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
                Size(46, 46), "", "", l1, lInf);
     expectNoFallbacksFromIE(net);

@@ -72,18 +72,18 @@ void Hist_and_Backproj(int, void* )
     //! [initialize]
     int histSize = MAX( bins, 2 );
     float hue_range[] = { 0, 180 };
-    const float* ranges = { hue_range };
+    const float* ranges[] = { hue_range };
     //! [initialize]
 
     //! [Get the Histogram and normalize it]
     Mat hist;
-    calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false );
+    calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, ranges, true, false );
     normalize( hist, hist, 0, 255, NORM_MINMAX, -1, Mat() );
     //! [Get the Histogram and normalize it]
 
     //! [Get Backprojection]
     Mat backproj;
-    calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
+    calcBackProject( &hue, 1, 0, hist, backproj, ranges, 1, true );
     //! [Get Backprojection]
 
     //! [Draw the backproj]
