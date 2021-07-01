@@ -229,6 +229,7 @@ struct CvWindow : public std::enable_shared_from_this<CvWindow>
     HGLRC hGLRC = 0;
 
     CvOpenGlDrawCallback glDrawCallback = nullptr;
+    CvOpenGlFreeCallback glFreeCallback = nullptr;
     void* glDrawData = nullptr;
 #endif
 };
@@ -1113,6 +1114,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     }
 
     window->glDrawCallback = 0;
+    window->glFreeCallback = 0;
     window->glDrawData = 0;
 #endif
 
@@ -1192,6 +1194,81 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
     window->glDrawData = userdata;
 }
 
+CV_IMPL void cvSetOpenGlFreeCallback(const char* name, CvOpenGlFreeCallback callback)
+{
+    CV_FUNCNAME("cvSetOpenGlFreeCallback");
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+
+    window = icvFindWindowByName(name);
+    if (!window)
+        EXIT;
+
+    if (!window->useGl)
+        CV_ERROR(CV_OpenGlNotSupported, "Window was created without OpenGL context");
+
+    window->glFreeCallback = callback;
+
+    __END__;
+}
+
+CV_IMPL CvOpenGlDrawCallback cvGetOpenGlDrawCallback(const char* name)
+{
+    CvOpenGlDrawCallback result = NULL;
+    CV_FUNCNAME("cvGetOpenGlDrawCallback");
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+
+    window = icvFindWindowByName(name);
+    if (!window)
+        EXIT;
+
+    if (!window->useGl)
+        CV_ERROR(CV_OpenGlNotSupported, "Window was created without OpenGL context");
+
+    result = window->glDrawCallback;
+
+    __END__;
+
+    return result;
+}
+
+CV_IMPL void* cvGetOpenGlUserData(const char* name)
+{
+    void* result = NULL;
+    CV_FUNCNAME("cvGetOpenGlUserData");
+
+    __BEGIN__;
+
+    CvWindow* window;
+
+    if (!name)
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+
+    window = icvFindWindowByName(name);
+    if (!window)
+        EXIT;
+
+    if (!window->useGl)
+        CV_ERROR(CV_OpenGlNotSupported, "Window was created without OpenGL context");
+
+    result = window->glDrawData;
+
+    __END__;
+
+    return result;
+}
+
 #endif // HAVE_OPENGL
 
 static void icvRemoveWindow(const std::shared_ptr<CvWindow>& window_)
@@ -1214,7 +1291,9 @@ static void icvRemoveWindow(const std::shared_ptr<CvWindow>& window_)
     }
 
 #ifdef HAVE_OPENGL
-    if (window.useGl)
+    if (window->glFreeCallback && window->glDrawData)
+        window->glFreeCallback(window->glDrawData);
+    if (window->useGl)
         releaseGlContext(window);
 #endif
 
@@ -1846,7 +1925,11 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             pt.x = GET_X_LPARAM(lParam);
             pt.y = GET_Y_LPARAM(lParam);
 
-            if (window.flags & CV_WINDOW_AUTOSIZE)
+#ifdef HAVE_OPENGL
+            if ((window->flags & CV_WINDOW_AUTOSIZE) || window->glFreeCallback)
+#else
+            if (window->flags & CV_WINDOW_AUTOSIZE)
+#endif
             {
                 // As user can't change window size, do not scale window coordinates. Underlying windowing system
                 // may prevent full window from being displayed and in this case coordinates should not be scaled.

@@ -276,6 +276,7 @@ private:
     int rows_;
     int cols_;
     int type_;
+    int max_size_;
 };
 
 /** @brief Smart pointer for OpenGL 2D texture memory with reference counting.
@@ -472,6 +473,249 @@ private:
     Buffer texCoord_;
 };
 
+/** @brief Struct used to describe a vertex array attribute.
+ */
+struct CV_EXPORTS Attribute
+{
+    /** @brief The target defines how you intend to use the buffer object.
+    */
+    enum Type
+    {
+        BYTE            = 0x1400, //!< 8-bit integer.
+        UNSIGNED_BYTE   = 0x1401, //!< 8-bit unsigned integer.
+        SHORT           = 0x1402, //!< 16-bit integer.
+        UNSIGNED_SHORT  = 0x1403, //!< 16-bit unsigned integer.
+        INT             = 0x1404, //!< 32-bit integer.
+        UNSIGNED_INT    = 0x1405, //!< 32-bit unsigned integer.
+        FLOAT           = 0x1406, //!< 32-bit floating point.
+    };
+
+    /** @brief Creates a vertex attribute.
+     * 
+     * @param buffer The buffer this attribute takes data from.
+     * @param stride Number of bytes between each element described by this attribute.
+     * @param offset Position of the first element in the buffer in bytes.
+     * @param size Number of components of the type (float = 1 component, vec3 = 3 components).
+     * @param type Type of the vertex attribute. See cv::ogl::Attribute::Type.
+     * @param integer Is the vertex attribute an integer?
+     * @param normalized If the vertex attribute isn't an integer, should it be normalized?
+     * @param shader_loc Location of the attribute in the program. See cv::ogl::Program::getAttributeLocation.
+     */
+    Attribute(Buffer buffer, size_t stride, size_t offset, int size, Type type, bool integer, bool normalized, unsigned int shader_loc);
+
+    Buffer buffer_;
+    size_t stride_;
+    size_t offset_;
+    int size_;
+    Type type_;
+    bool integer_;
+    bool normalized_;
+    unsigned int shader_loc_;
+};
+
+/** @brief Smart pointer for OpenGL vertex arrays with reference counting.
+ */
+class CV_EXPORTS VertexArray
+{
+public:
+    /** @brief The constructors.
+
+    Creates empty ogl::VertexArray object, creates ogl::VertexArray object from a list of attributes.
+     */
+    VertexArray();
+
+    /** @overload
+    @param attributes List of attributes.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+    */
+    VertexArray(std::initializer_list<Attribute> attributes, bool autoRelease = false);
+
+    /** @brief Creates ogl::VertexArray object from a list of attributes.
+
+    @param attributes List of attributes.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+     */
+    void create(std::initializer_list<Attribute> attributes, bool autoRelease = false);
+
+    /** @brief Decrements the reference counter and destroys the vertex array object if needed.
+
+    The function will call setAutoRelease(true) .
+     */
+    void release();
+
+    /** @brief Sets auto release mode.
+
+    The lifetime of the OpenGL object is tied to the lifetime of the context. If OpenGL context was
+    bound to a window it could be released at any time (user can close a window). If object's destructor
+    is called after destruction of the context it will cause an error. Thus ogl::Buffer doesn't destroy
+    OpenGL object in destructor by default (all OpenGL resources will be released with OpenGL context).
+    This function can force ogl::Buffer destructor to destroy OpenGL object.
+    @param flag Auto release mode (if true, release will be called in object's destructor).
+     */
+    void setAutoRelease(bool flag);
+
+    /** @brief Binds OpenGL vertex array.
+     */
+    void bind() const;
+
+    /** @brief Unbind any vertex array.
+     */
+    static void unbind();
+
+    //! get OpenGL object id
+    unsigned int vaId() const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+};
+
+/** @brief Smart pointer for OpenGL shader with reference counting.
+ */
+class CV_EXPORTS Shader
+{
+public:
+    /** @brief The target defines how you intend to use the buffer object.
+    */
+    enum Type
+    {
+        FRAGMENT      = 0x8B30, //!< The shader will be a fragment shader
+        VERTEX        = 0x8B31, //!< The shader will be a vertex shader
+    };
+
+    /** @brief The constructors.
+
+    Creates empty ogl::Shader object, creates ogl::Shader object from source code.
+     */
+    Shader();
+
+    /** @overload
+    @param src Shader source code.
+    @param type Shader type. See cv::ogl::Shader::Type.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+    */
+    Shader(const char* src, Type type, bool autoRelease = false);
+
+    /** @brief Creates ogl::Shader object from source code.
+
+    @param src Shader source code.
+    @param type Shader type. See cv::ogl::Shader::Type.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+     */
+    void create(const char* src, Type type, bool autoRelease = false);
+
+    /** @brief Decrements the reference counter and destroys the shader object if needed.
+
+    The function will call setAutoRelease(true) .
+     */
+    void release();
+
+    /** @brief Sets auto release mode.
+
+    The lifetime of the OpenGL object is tied to the lifetime of the context. If OpenGL context was
+    bound to a window it could be released at any time (user can close a window). If object's destructor
+    is called after destruction of the context it will cause an error. Thus ogl::Buffer doesn't destroy
+    OpenGL object in destructor by default (all OpenGL resources will be released with OpenGL context).
+    This function can force ogl::Buffer destructor to destroy OpenGL object.
+    @param flag Auto release mode (if true, release will be called in object's destructor).
+     */
+    void setAutoRelease(bool flag);
+
+    Type type() const;
+
+    //! get OpenGL object id
+    unsigned int shaderId() const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+    Type type_;
+};
+
+/** @brief Smart pointer for OpenGL program with reference counting.
+ */
+class CV_EXPORTS Program
+{
+public:
+    /** @brief The constructors.
+
+    Creates empty ogl::Program object, creates ogl::Program object from a group of shader objects.
+     */
+    Program();
+
+    /** @overload
+    @param vert Vertex shader. See cv::ogl::Shader.
+    @param frag Fragment shader. See cv::ogl::Shader.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+    */
+    Program(Shader vert, Shader frag, bool autoRelease = false);
+
+    /** @brief Creates ogl::Program object from a group of shader objects.
+
+    @param vert Vertex shader. See cv::ogl::Shader.
+    @param frag Fragment shader. See cv::ogl::Shader.
+    @param autoRelease Auto release mode (if true, release will be called in object's destructor).
+     */
+    void create(Shader vert, Shader frag, bool autoRelease = false);
+
+    /** @brief Decrements the reference counter and destroys the program object if needed.
+
+    The function will call setAutoRelease(true) .
+     */
+    void release();
+
+    /** @brief Sets auto release mode.
+
+    The lifetime of the OpenGL object is tied to the lifetime of the context. If OpenGL context was
+    bound to a window it could be released at any time (user can close a window). If object's destructor
+    is called after destruction of the context it will cause an error. Thus ogl::Program doesn't destroy
+    OpenGL object in destructor by default (all OpenGL resources will be released with OpenGL context).
+    This function can force ogl::Program destructor to destroy OpenGL object.
+    @param flag Auto release mode (if true, release will be called in object's destructor).
+     */
+    void setAutoRelease(bool flag);
+
+    /** @brief Binds OpenGL shader program.
+     */
+    void bind() const;
+
+    /** @brief Unbind any shader program.
+     */
+    static void unbind();
+
+    /** @brief Returns the shader location of an attribute from its name.
+     @param name Attribute name.
+     */
+    int getAttributeLocation(const char* name) const;
+
+    /** @brief Returns the shader location of an uniform from its name.
+     @param name Uniform name.
+     */
+    int getUniformLocation(const char* name) const;
+
+    /** @brief Sets a uniform vector value.
+     @param location Uniform location.
+     @param vec Vector value.
+     */
+    static void setUniformVec3(int location, Vec3f vec);
+
+    /** @brief Sets a uniform matrix value.
+     @param location Uniform location.
+     @param mat Matrix value.
+     */
+    static void setUniformMat4x4(int location, Matx44f mat);
+
+    //! get OpenGL object id
+    unsigned int programId() const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+};
+
 /////////////////// Render Functions ///////////////////
 
 //! render mode
@@ -486,6 +730,18 @@ enum RenderModes {
     QUADS          = 0x0007,
     QUAD_STRIP     = 0x0008,
     POLYGON        = 0x0009
+};
+
+//! index type
+enum IndexType {
+    UNSIGNED_BYTE  = 0x1401,
+    UNSIGNED_SHORT = 0x1403,
+    UNSIGNED_INT   = 0x1405,
+};
+
+//! capability
+enum Capability {
+    DEPTH_TEST     = 0x0B71,
 };
 
 /** @brief Render OpenGL texture or primitives.
@@ -511,6 +767,41 @@ CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scal
 @param color Color for all vertices. Will be used if arr doesn't contain color array.
 */
 CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
+
+/** @brief Clears the current target to a single color.
+@param color New color.
+*/
+CV_EXPORTS void clearColor(Scalar color = Scalar::all(0));
+
+/** @brief Clears the current target depth to a single value.
+@param depth New depth.
+*/
+CV_EXPORTS void clearDepth(float depth);
+
+/** @brief Renders primitives from array data.
+@param first Index of the first vertex to draw.
+@param count Number of vertices to draw.
+@param mode Rendering mode. See cv::ogl::RenderModes.
+*/
+CV_EXPORTS void drawArrays(int first, int count, int mode);
+
+/** @brief Renders primitives from array data with index buffer set.
+@param first Index of the first index to draw.
+@param count Number of indices to draw.
+@param type Index type. See cv::ogl::IndexType.
+@param mode Rendering mode. See cv::ogl::RenderModes.
+*/
+CV_EXPORTS void drawElements(int first, int count, int type, int mode);
+
+/** @brief Enable server-side GL capabilities.
+@param cap The capability to enable.
+*/
+CV_EXPORTS void enable(int cap);
+
+/** @brief Disable server-side GL capabilities.
+@param cap The capability to disable.
+*/
+CV_EXPORTS void disable(int cap);
 
 /////////////////// CL-GL Interoperability Functions ///////////////////
 

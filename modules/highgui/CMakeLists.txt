@@ -47,6 +47,10 @@ file(GLOB highgui_ext_hdrs
 # Removing WinRT API headers by default
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
+file(GLOB highgui_viz3d_srcs "${CMAKE_CURRENT_LIST_DIR}/src/viz3d/*.cpp")
+file(GLOB highgui_viz3d_hdrs "${CMAKE_CURRENT_LIST_DIR}/src/viz3d/*.hpp")
+list(APPEND highgui_srcs "${highgui_viz3d_srcs}" "${highgui_viz3d_hdrs}")
+
 set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
 if(HAVE_QT)

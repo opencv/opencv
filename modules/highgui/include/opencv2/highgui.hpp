@@ -283,6 +283,11 @@ typedef void (*TrackbarCallback)(int pos, void* userdata);
  */
 typedef void (*OpenGlDrawCallback)(void* userdata);
 
+/** @brief Callback function defined to be called when a window's resources should be freed. See cv::setOpenGlFreeCallback
+@param userdata The window's OpenGL user data to be freed.
+ */
+typedef void (*OpenGlFreeCallback)(void* userdata);
+
 /** @brief Callback function for a button created by cv::createButton
 @param state current state of the button. It could be -1 for a push button, 0 or 1 for a check/radio box button.
 @param userdata The optional parameter.
@@ -692,6 +697,26 @@ prototyped as void Foo(void\*) .
  */
 CV_EXPORTS void setOpenGlDrawCallback(const String& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
+/** @brief Sets a callback function to be called when OpenGL resources related to a window should be freed.
+
+@param winname Name of the window.
+@param onOpenGlFree Pointer to the function to be called when resources should be freed. This
+function should be prototyped as void Foo(void\*) .
+ */
+CV_EXPORTS void setOpenGlFreeCallback(const String& winname, OpenGlFreeCallback onOpenGlFree);
+
+/** @brief This function returns the pointer to the function associated to a window to be called every frame. See cv::setOpenGlDrawCallback.
+
+@param winname Name of the window.
+ */
+CV_EXPORTS OpenGlDrawCallback getOpenGlDrawCallback(const String& winname);
+
+/** @brief This function returns the pointer to the OpenGL user data associated to a window.
+
+@param winname Name of the window.
+ */
+CV_EXPORTS void* getOpenGlUserData(const String& winname);
+
 /** @brief Sets the specified window as current OpenGL context.
 
 @param winname Name of the window.
@@ -864,5 +889,7 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 //! @} highgui
 
 } // cv
+
+#include "highgui/viz3d.hpp"
 
 #endif

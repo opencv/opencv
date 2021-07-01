@@ -788,6 +788,53 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 }
 
 
+CV_IMPL void cvSetOpenGlFreeCallback(const char* window_name, CvOpenGlFreeCallback callback)
+{
+    if (!guiMainThread)
+        CV_Error(CV_StsNullPtr, "NULL guiReceiver (please create a window)");
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "setOpenGlFreeCallback",
+        autoBlockingConnection(),
+        Q_ARG(QString, QString(window_name)),
+        Q_ARG(void*, (void*)callback));
+}
+
+
+CV_IMPL CvOpenGlDrawCallback cvGetOpenGlDrawCallback(const char* window_name)
+{
+    if (!guiMainThread)
+        CV_Error(CV_StsNullPtr, "NULL guiReceiver (please create a window)");
+
+    void* callback;
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "getOpenGlDrawCallback",
+        autoBlockingConnection(),
+        Q_RETURN_ARG(void*, callback),
+        Q_ARG(QString, QString(window_name)));
+
+    return (CvOpenGlDrawCallback)callback;
+}
+
+
+CV_IMPL void* cvGetOpenGlUserData(const char* window_name)
+{
+    if (!guiMainThread)
+        CV_Error(CV_StsNullPtr, "NULL guiReceiver (please create a window)");
+
+    void* data;
+
+    QMetaObject::invokeMethod(guiMainThread,
+        "getOpenGlUserData",
+        autoBlockingConnection(),
+        Q_RETURN_ARG(void*, data),
+        Q_ARG(QString, QString(window_name)));
+
+    return data;
+}
+
+
 CV_IMPL void cvSetOpenGlContext(const char* window_name)
 {
     if (!guiMainThread)
@@ -1304,6 +1351,34 @@ void GuiReceiver::setOpenGlDrawCallback(QString name, void* callback, void* user
 
     if (w)
         w->setOpenGlDrawCallback((CvOpenGlDrawCallback) callback, userdata);
+}
+
+void GuiReceiver::setOpenGlFreeCallback(QString name, void* callback)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (w)
+        w->setOpenGlFreeCallback((CvOpenGlDrawCallback)callback);
+}
+
+void* GuiReceiver::getOpenGlDrawCallback(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+        return nullptr;
+
+    return w->getOpenGlDrawCallback();
+}
+
+void* GuiReceiver::getOpenGlUserData(QString name)
+{
+    QPointer<CvWindow> w = icvFindWindowByName(name);
+
+    if (!w)
+        return nullptr;
+
+    return w->getOpenGlUserData();
 }
 
 void GuiReceiver::setOpenGlContext(QString name)
@@ -1958,6 +2033,24 @@ void CvWindow::addSlider2(CvWindow* w, QString name, int* value, int count, CvTr
 void CvWindow::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* userdata)
 {
     myView->setOpenGlDrawCallback(callback, userdata);
+}
+
+
+void CvWindow::setOpenGlFreeCallback(CvOpenGlFreeCallback callback)
+{
+    myView->setOpenGlFreeCallback(callback);
+}
+
+
+CvOpenGlDrawCallback CvWindow::getOpenGlDrawCallback()
+{
+    return myView->getOpenGlDrawCallback();
+}
+
+
+void* CvWindow::getOpenGlUserData()
+{
+    return myView->getOpenGlUserData();
 }
 
 
@@ -2626,6 +2719,24 @@ void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback /*callback*/, v
 }
 
 
+void DefaultViewPort::setOpenGlFreeCallback(CvOpenGlFreeCallback callback)
+{
+    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+}
+
+
+CvOpenGlDrawCallback DefaultViewPort::getOpenGlDrawCallback()
+{
+    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+}
+
+
+void* DefaultViewPort::getOpenGlUserData()
+{
+    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+}
+
+
 void DefaultViewPort::makeCurrentOpenGlContext()
 {
     CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
@@ -3272,6 +3383,21 @@ void OpenGlViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback callback, void* 
 {
     glDrawCallback = callback;
     glDrawData = userdata;
+}
+
+void OpenGlViewPort::setOpenGlFreeCallback(CvOpenGlFreeCallback callback)
+{
+    glFreeCallback = callback;
+}
+
+CvOpenGlDrawCallback OpenGlViewPort::getOpenGlDrawCallback()
+{
+    return glDrawCallback;
+}
+
+void* OpenGlViewPort::getOpenGlUserData()
+{
+    return glDrawData;
 }
 
 void OpenGlViewPort::makeCurrentOpenGlContext()
