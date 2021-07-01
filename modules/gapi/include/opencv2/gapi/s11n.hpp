@@ -15,6 +15,11 @@
 #include <opencv2/gapi/rmat.hpp>
 #include <opencv2/gapi/media.hpp>
 
+// FIXME: caused by deserialize_runarg
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#pragma warning(disable: 4702)
+#endif
+
 namespace cv {
 namespace gapi {
 
