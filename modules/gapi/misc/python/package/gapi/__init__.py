@@ -84,6 +84,10 @@ class GOpaque():
         def __new__(self):
             return cv.GOpaqueT(cv.gapi.CV_RECT)
 
+    class Prim():
+        def __new__(self):
+            return cv.GOpaqueT(cv.gapi.CV_DRAW_PRIM)
+
     class Any():
         def __new__(self):
             return cv.GOpaqueT(cv.gapi.CV_ANY)
@@ -143,6 +147,10 @@ class GArray():
         def __new__(self):
             return cv.GArrayT(cv.gapi.CV_GMAT)
 
+    class Prim():
+        def __new__(self):
+            return cv.GArray(cv.gapi.CV_DRAW_PRIM)
+
     class Any():
         def __new__(self):
             return cv.GArray(cv.gapi.CV_ANY)
@@ -164,6 +172,7 @@ def op(op_id, in_types, out_types):
             cv.GArray.Scalar:  cv.gapi.CV_SCALAR,
             cv.GArray.Mat:     cv.gapi.CV_MAT,
             cv.GArray.GMat:    cv.gapi.CV_GMAT,
+            cv.GArray.Prim:    cv.gapi.CV_DRAW_PRIM,
             cv.GArray.Any:     cv.gapi.CV_ANY
     }
 
@@ -179,22 +188,24 @@ def op(op_id, in_types, out_types):
             cv.GOpaque.Point2f: cv.gapi.CV_POINT2F,
             cv.GOpaque.Size:    cv.gapi.CV_SIZE,
             cv.GOpaque.Rect:    cv.gapi.CV_RECT,
+            cv.GOpaque.Prim:    cv.gapi.CV_DRAW_PRIM,
             cv.GOpaque.Any:     cv.gapi.CV_ANY
     }
 
     type2str = {
-        cv.gapi.CV_BOOL:    'cv.gapi.CV_BOOL' ,
-        cv.gapi.CV_INT:     'cv.gapi.CV_INT' ,
-        cv.gapi.CV_DOUBLE:  'cv.gapi.CV_DOUBLE' ,
-        cv.gapi.CV_FLOAT:   'cv.gapi.CV_FLOAT' ,
-        cv.gapi.CV_STRING:  'cv.gapi.CV_STRING' ,
-        cv.gapi.CV_POINT:   'cv.gapi.CV_POINT' ,
-        cv.gapi.CV_POINT2F: 'cv.gapi.CV_POINT2F' ,
-        cv.gapi.CV_SIZE:    'cv.gapi.CV_SIZE',
-        cv.gapi.CV_RECT:    'cv.gapi.CV_RECT',
-        cv.gapi.CV_SCALAR:  'cv.gapi.CV_SCALAR',
-        cv.gapi.CV_MAT:     'cv.gapi.CV_MAT',
-        cv.gapi.CV_GMAT:    'cv.gapi.CV_GMAT'
+        cv.gapi.CV_BOOL:      'cv.gapi.CV_BOOL' ,
+        cv.gapi.CV_INT:       'cv.gapi.CV_INT' ,
+        cv.gapi.CV_DOUBLE:    'cv.gapi.CV_DOUBLE' ,
+        cv.gapi.CV_FLOAT:     'cv.gapi.CV_FLOAT' ,
+        cv.gapi.CV_STRING:    'cv.gapi.CV_STRING' ,
+        cv.gapi.CV_POINT:     'cv.gapi.CV_POINT' ,
+        cv.gapi.CV_POINT2F:   'cv.gapi.CV_POINT2F' ,
+        cv.gapi.CV_SIZE:      'cv.gapi.CV_SIZE',
+        cv.gapi.CV_RECT:      'cv.gapi.CV_RECT',
+        cv.gapi.CV_SCALAR:    'cv.gapi.CV_SCALAR',
+        cv.gapi.CV_MAT:       'cv.gapi.CV_MAT',
+        cv.gapi.CV_GMAT:      'cv.gapi.CV_GMAT',
+        cv.gapi.CV_DRAW_PRIM: 'cv.gapi.CV_DRAW_PRIM'
     }
 
     # NB: Second lvl decorator takes class to decorate
@@ -274,3 +285,13 @@ def kernel(op_cls):
         return cls
 
     return kernel_with_params
+
+
+# FIXME: On the c++ side every class is placed in cv2 module.
+cv.gapi.wip.draw.Rect = cv.gapi_wip_draw_Rect
+cv.gapi.wip.draw.Text = cv.gapi_wip_draw_Text
+cv.gapi.wip.draw.Circle = cv.gapi_wip_draw_Circle
+cv.gapi.wip.draw.Line = cv.gapi_wip_draw_Line
+cv.gapi.wip.draw.Mosaic = cv.gapi_wip_draw_Mosaic
+cv.gapi.wip.draw.Image = cv.gapi_wip_draw_Image
+cv.gapi.wip.draw.Poly = cv.gapi_wip_draw_Poly
