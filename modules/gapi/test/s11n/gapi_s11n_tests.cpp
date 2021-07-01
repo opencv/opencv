@@ -684,7 +684,7 @@ TEST_F(S11N_Basic, Test_RunArg_MediaFrame_RMat) {
     cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter, MyRMatAdapter>(sargsin);
 
     cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[0]);
-    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[1]);
 
     auto adapter = out_frame.get<MyMediaFrameAdapter>();
     EXPECT_EQ(42, adapter->getVal());
@@ -708,7 +708,7 @@ TEST_F(S11N_Basic, Test_RunArg_RMat_MediaFrame) {
     cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter, MyRMatAdapter>(sargsin);
 
     cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
-    cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[0]);
+    cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[1]);
 
     auto adapter = out_frame.get<MyMediaFrameAdapter>();
     EXPECT_EQ(42, adapter->getVal());
