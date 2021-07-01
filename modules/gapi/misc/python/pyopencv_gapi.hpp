@@ -131,7 +131,8 @@ PyObject* pyopencv_from(const cv::detail::PyObjectHolder& v)
 template <>
 PyObject* pyopencv_from(const cv::gapi::wip::draw::Prim& prim)
 {
-    switch (prim.index()) {
+    switch (prim.index())
+    {
         case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Rect>():
             return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Rect>(prim));
         case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Text>():
@@ -747,8 +748,8 @@ static cv::GMetaArgs get_meta_args(PyObject* tuple)
 }
 
 static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
-                            const cv::GMetaArgs         &meta,
-                            const cv::GArgs             &gargs)
+                             const cv::GMetaArgs         &meta,
+                             const cv::GArgs             &gargs)
 {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
