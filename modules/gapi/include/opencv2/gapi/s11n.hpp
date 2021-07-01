@@ -302,28 +302,30 @@ static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s1
 template<typename T> struct deserialize_runarg;
 
 template<typename T, typename... Types> inline
-typename std::enable_if<std::is_base_of<T, RMat::Adapter>::value, GRunArg>::
+typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
 type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
     auto ptr = std::make_shared<T>();
     ptr->deserialize(is);
     return GRunArg { RMat(std::move(ptr)) };
 }
 
-template<typename T, typename... Types>
-GRunArg deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
+template<typename T, typename... Types> inline
+typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
+type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
 }
 
 template<typename T, typename... Types> inline
-typename std::enable_if<std::is_base_of<T, MediaFrame::IAdapter>::value, GRunArg>::
+typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
 type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
-    auto ptr = std::make_shared<T>();
+    std::unique_ptr<T> ptr(new T);
     ptr->deserialize(is);
     return GRunArg { MediaFrame(std::move(ptr)) };
 }
 
-template<typename T, typename... Types>
-GRunArg deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
+template<typename T, typename... Types> inline
+typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
+type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
 }
 

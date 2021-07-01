@@ -638,13 +638,6 @@ TEST_F(S11N_Basic, Test_RunArg_RMat_Scalar_Mat) {
     EXPECT_EQ(0, cv::norm(mat, out_mat));
 }
 
-TEST_F(S11N_Basic, Test_RunArg_MediaFrame_DefaultAdapter) {
-    cv::MediaFrame frame;
-    auto v = cv::GRunArgs{ cv::GRunArg{ frame } };
-
-    EXPECT_ANY_THROW(cv::gapi::serialize(v));
-}
-
 TEST_F(S11N_Basic, Test_RunArg_MediaFrame) {
     cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
     auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
