@@ -75,6 +75,11 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
+std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::Priv::pull()
+{
+    return m_exec->pull();
+}
+
 bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
 {
     return m_exec->try_pull(std::move(outs));
@@ -123,18 +128,9 @@ bool cv::GStreamingCompiled::pull(cv::GRunArgsP &&outs)
     return m_priv->pull(std::move(outs));
 }
 
-std::tuple<bool, cv::GRunArgs> cv::GStreamingCompiled::pull()
+std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::pull()
 {
-    GRunArgs run_args;
-    GRunArgsP outs;
-    const auto& out_info = m_priv->outInfo();
-    run_args.reserve(out_info.size());
-    outs.reserve(out_info.size());
-
-    cv::detail::constructGraphOutputs(m_priv->outInfo(), run_args, outs);
-
-    bool is_over = m_priv->pull(std::move(outs));
-    return std::make_tuple(is_over, run_args);
+    return m_priv->pull();
 }
 
 bool cv::GStreamingCompiled::pull(cv::GOptRunArgsP &&outs)

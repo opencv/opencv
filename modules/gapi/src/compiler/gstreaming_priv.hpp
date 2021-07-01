@@ -46,6 +46,7 @@ public:
     void start();
     bool pull(cv::GRunArgsP &&outs);
     bool pull(cv::GOptRunArgsP &&outs);
+    std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
 
