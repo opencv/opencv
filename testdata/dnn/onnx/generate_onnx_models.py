@@ -162,6 +162,24 @@ model.eval()
 save_data_and_model("concatenation", input, model)
 
 
+class ConcatConstBlob(nn.Module):
+
+    def __init__(self):
+        super(ConcatConstBlob, self).__init__()
+        self.squeeze = nn.Conv2d(2, 2, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.squeeze(x)
+        y = torch.tensor([[[[0.1, -0.2], [-0.3, 0.4]]]], dtype=torch.float32)
+        return torch.cat([x, y], axis=1)
+
+
+input = Variable(torch.randn(1, 2, 2, 2))
+model = ConcatConstBlob()
+model.eval()
+save_data_and_model("concat_const_blob", input, model)
+
+
 class Mul(nn.Module):
 
     def __init__(self):
