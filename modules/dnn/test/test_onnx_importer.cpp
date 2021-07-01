@@ -327,6 +327,7 @@ TEST_P(Test_ONNX_layers, Concatenation)
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
     testONNXModels("concatenation");
+    testONNXModels("concat_const_blobs");
 }
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
