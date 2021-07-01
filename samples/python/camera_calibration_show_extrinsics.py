@@ -188,7 +188,7 @@ def main():
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
-    ax.set_aspect("equal")
+    ax.set_aspect("auto")
 
     cam_width = args.cam_width
     cam_height = args.cam_height
