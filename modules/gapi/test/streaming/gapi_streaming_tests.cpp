@@ -244,6 +244,35 @@ public:
     }
 };
 
+void checkPullOverload(const cv::Mat& ref,
+                       const bool has_output,
+                       cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>& args) {
+    EXPECT_TRUE(has_output);
+    using runArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    cv::Mat out_mat;
+    switch (args.index()) {
+        case runArgs::index_of<cv::GRunArgs>():
+        {
+            auto outputs = util::get<cv::GRunArgs>(args);
+            EXPECT_EQ(1u, outputs.size());
+            out_mat = cv::util::get<cv::Mat>(outputs[0]);
+            break;
+        }
+        case runArgs::index_of<cv::GOptRunArgs>():
+        {
+            auto outputs = util::get<cv::GOptRunArgs>(args);
+            EXPECT_EQ(1u, outputs.size());
+            auto opt_mat = cv::util::get<cv::optional<cv::Mat>>(outputs[0]);
+            ASSERT_TRUE(opt_mat.has_value());
+            out_mat = *opt_mat;
+            break;
+        }
+        default: GAPI_Assert(false && "Incorrect type of Args");
+    }
+
+    EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
+}
+
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
@@ -1336,13 +1365,45 @@ TEST(Streaming, Python_Pull_Overload)
 
     bool has_output;
     cv::GRunArgs outputs;
-    std::tie(has_output, outputs) = ccomp.pull();
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
 
-    EXPECT_TRUE(has_output);
-    EXPECT_EQ(1u, outputs.size());
+    std::tie(has_output, args) = ccomp.pull();
 
-    auto out_mat = cv::util::get<cv::Mat>(outputs[0]);
-    EXPECT_EQ(0., cv::norm(in_mat, out_mat, cv::NORM_INF));
+    checkPullOverload(in_mat, has_output, args);
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+TEST(GAPI_Streaming_Desync, Python_Pull_Overload)
+{
+    cv::GMat in;
+    cv::GMat out = cv::gapi::streaming::desync(in);
+    cv::GComputation c(in, out);
+
+    cv::Size sz(3,3);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+
+    auto ccomp = c.compileStreaming();
+
+    EXPECT_TRUE(ccomp);
+    EXPECT_FALSE(ccomp.running());
+
+    ccomp.setSource(cv::gin(in_mat));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    bool has_output;
+    cv::GRunArgs outputs;
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
+
+    std::tie(has_output, args) = ccomp.pull();
+
+    checkPullOverload(in_mat, has_output, args);
 
     ccomp.stop();
     EXPECT_FALSE(ccomp.running());
@@ -2132,9 +2193,17 @@ TEST(GAPI_Streaming, TestPythonAPI)
 
     bool is_over = false;
     cv::GRunArgs out_args;
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    RunArgs args;
 
     // NB: Used by python bridge
-    std::tie(is_over, out_args) = cc.pull();
+    std::tie(is_over, args) = cc.pull();
+
+    switch (args.index()) {
+        case RunArgs::index_of<cv::GRunArgs>():
+            out_args = util::get<cv::GRunArgs>(args); break;
+        default: GAPI_Assert(false && "Incorrect type of return value");
+    }
 
     ASSERT_EQ(1u, out_args.size());
     ASSERT_TRUE(cv::util::holds_alternative<cv::Mat>(out_args[0]));

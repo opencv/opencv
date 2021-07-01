@@ -195,6 +195,8 @@ protected:
 
     void wait_shutdown();
 
+    cv::GTypesInfo out_info;
+
 public:
     explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
                                 const cv::GCompileArgs &comp_args);
@@ -203,6 +205,7 @@ public:
     void start();
     bool pull(cv::GRunArgsP &&outs);
     bool pull(cv::GOptRunArgsP &&outs);
+    std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
     bool running() const;
