@@ -67,9 +67,9 @@ TEST(Photo_SeamlessClone_normal, regression)
     Mat destination = imread(original_path2, IMREAD_COLOR);
     Mat mask = imread(original_path3, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(destination.empty()) << "Could not load destination image " << original_path2;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path3;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(destination.empty()) << "Destination image not found " << original_path2;
+    ASSERT_FALSE(mask.empty()) << "Load mask image not found " << original_path3;
 
     Mat result;
     Point p;
@@ -78,7 +78,7 @@ TEST(Photo_SeamlessClone_normal, regression)
     seamlessClone(source, destination, mask, p, result, 1);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     SAVE(result);
 
@@ -109,9 +109,9 @@ TEST(Photo_SeamlessClone_mixed, regression)
     Mat destination = imread(original_path2, IMREAD_COLOR);
     Mat mask = imread(original_path3, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(destination.empty()) << "Could not load destination image " << original_path2;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path3;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(destination.empty()) << "Destination image not found " << original_path2;
+    ASSERT_FALSE(mask.empty()) << "Mask image not found " << original_path3;
 
     Mat result;
     Point p;
@@ -122,7 +122,7 @@ TEST(Photo_SeamlessClone_mixed, regression)
     SAVE(result);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     double errorINF = cvtest::norm(reference, result, NORM_INF);
     EXPECT_LE(errorINF, 1);
@@ -142,9 +142,9 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     Mat destination = imread(original_path2, IMREAD_COLOR);
     Mat mask = imread(original_path3, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(destination.empty()) << "Could not load destination image " << original_path2;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path3;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(destination.empty()) << "Destination image not found " << original_path2;
+    ASSERT_FALSE(mask.empty()) << "Mask image not found " << original_path3;
 
     Mat result;
     Point p;
@@ -155,7 +155,7 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
     SAVE(result);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     double errorINF = cvtest::norm(reference, result, NORM_INF);
     EXPECT_LE(errorINF, 1);
@@ -173,8 +173,8 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(mask.empty()) << "Mask image not found " << original_path2;
 
     Mat result;
     colorChange(source, mask, result, 1.5, .5, .5);
@@ -182,7 +182,7 @@ TEST(Photo_SeamlessClone_colorChange, regression)
     SAVE(result);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     double errorINF = cvtest::norm(reference, result, NORM_INF);
     EXPECT_LE(errorINF, 1);
@@ -200,8 +200,8 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(mask.empty()) << "Mask image not found " << original_path2;
 
     Mat result;
     illuminationChange(source, mask, result, 0.2f, 0.4f);
@@ -209,7 +209,7 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
     SAVE(result);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     double errorINF = cvtest::norm(reference, result, NORM_INF);
     EXPECT_LE(errorINF, 1);
@@ -227,8 +227,8 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     Mat source = imread(original_path1, IMREAD_COLOR);
     Mat mask = imread(original_path2, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
-    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
+    ASSERT_FALSE(source.empty()) << "Source image not found " << original_path1;
+    ASSERT_FALSE(mask.empty()) << "Mask image not found " << original_path2;
 
     Mat result;
     textureFlattening(source, mask, result, 30, 45, 3);
@@ -236,7 +236,7 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     SAVE(result);
 
     Mat reference = imread(reference_path);
-    ASSERT_FALSE(reference.empty()) << "Could not load reference image " << reference_path;
+    ASSERT_FALSE(reference.empty()) << "Reference image not found " << reference_path;
 
     double errorINF = cvtest::norm(reference, result, NORM_INF);
     EXPECT_LE(errorINF, 1);
