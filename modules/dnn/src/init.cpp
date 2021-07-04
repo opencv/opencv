@@ -140,6 +140,7 @@ void initializeLayerFactory()
 
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
 }
 
 CV__DNN_INLINE_NS_END
