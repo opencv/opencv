@@ -221,7 +221,7 @@ bool CvCaptureCAM_Aravis::create( int index )
     if(!getDeviceNameById(index, deviceName))
         return false;
 
-    return NULL != (camera = arv_camera_new(deviceName.c_str()));
+    return NULL != (camera = arv_camera_new(deviceName.c_str(), NULL));
 }
 
 bool CvCaptureCAM_Aravis::init_buffers()
@@ -230,7 +230,7 @@ bool CvCaptureCAM_Aravis::init_buffers()
         g_object_unref(stream);
         stream = NULL;
     }
-    if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
+    if( (stream = arv_camera_create_stream(camera, NULL, NULL, NULL)) ) {
         if( arv_camera_is_gv_device(camera) ) {
             g_object_set(stream,
                 "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
@@ -241,7 +241,7 @@ bool CvCaptureCAM_Aravis::init_buffers()
                 "packet-timeout", (unsigned) 40000,
                 "frame-retention", (unsigned) 200000, NULL);
         }
-        payload = arv_camera_get_payload (camera);
+        payload = arv_camera_get_payload (camera, NULL);
 
         for (int i = 0; i < num_buffers; i++)
             arv_stream_push_buffer(stream, arv_buffer_new(payload, NULL));
