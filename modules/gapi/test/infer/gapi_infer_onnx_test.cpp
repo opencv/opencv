@@ -321,7 +321,7 @@ public:
     std::vector<cv::Mat> out_onnx;
     cv::Mat in_mat;
 
-    void SetUp() {
+    ONNXtest() {
         initTestDataPath();
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -539,7 +539,7 @@ class ONNXYoloV3 : public ONNXWithRemap {
 public:
     std::vector<cv::Mat> ins;
 
-    void setInput(const cv::Mat& src) {
+    void constructYoloInputs(const cv::Mat& src) {
         const int yolo_in_h = 416;
         const int yolo_in_w = 416;
         cv::Mat yolov3_input, shape, prep_mat;
@@ -1003,7 +1003,7 @@ TEST_F(ONNXYoloV3, InferConstInput)
 {
     useModel("object_detection_segmentation/yolov3/model/yolov3-10");
     in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
-    setInput(in_mat);
+    constructYoloInputs(in_mat);
     // ONNX_API code
     infer<float>(ins, out_onnx);
     // G_API code
@@ -1036,7 +1036,7 @@ TEST_F(ONNXYoloV3, InferBSConstInput)
     // Const input has the advantage. It is expected behavior.
     useModel("object_detection_segmentation/yolov3/model/yolov3-10");
     in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
-    setInput(in_mat);
+    constructYoloInputs(in_mat);
     // Tensor with incorrect image size
     // is used for check case when InputLayers and constInput have same names
     cv::Mat bad_shape;
