@@ -136,11 +136,12 @@ public:
     }
 
     template <typename U>
-    void setInput(const std::string& name, U in)
+    GInferInputsTyped<Ts...>& setInput(const std::string& name, U in)
     {
         m_priv->blobs.emplace(std::piecewise_construct,
                               std::forward_as_tuple(name),
                               std::forward_as_tuple(in));
+        return *this;
     }
 
     using StorageT = cv::util::variant<Ts...>;
@@ -654,7 +655,7 @@ namespace gapi {
 // A type-erased form of network parameters.
 // Similar to how a type-erased GKernel is represented and used.
 /// @private
-struct GAPI_EXPORTS GNetParam {
+struct GAPI_EXPORTS_W_SIMPLE GNetParam {
     std::string tag;     // FIXME: const?
     GBackend backend;    // Specifies the execution model
     util::any params;    // Backend-interpreted parameter structure
@@ -671,6 +672,7 @@ struct GAPI_EXPORTS GNetParam {
  */
 struct GAPI_EXPORTS_W_SIMPLE GNetPackage {
     GAPI_WRAP GNetPackage() = default;
+    GAPI_WRAP explicit GNetPackage(std::vector<GNetParam> nets);
     explicit GNetPackage(std::initializer_list<GNetParam> ii);
     std::vector<GBackend> backends() const;
     std::vector<GNetParam> networks;
