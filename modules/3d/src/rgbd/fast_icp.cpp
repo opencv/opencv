@@ -30,7 +30,7 @@ public:
 
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,
-                                   InputArray newPoints, InputArray newNormals
+                                   InputArray newPoints, InputArray newNormals, InputArray oldPointsMask
                                    ) const override;
     template < typename T >
     bool estimateTransformT(cv::Affine3f& transform,
@@ -58,7 +58,8 @@ ICPImpl::ICPImpl(const Matx33f _intrinsics, const std::vector<int> &_iterations,
 
 bool ICPImpl::estimateTransform(cv::Affine3f& transform,
                                 InputArray _oldPoints, InputArray _oldNormals,
-                                InputArray _newPoints, InputArray _newNormals
+                                InputArray _newPoints, InputArray _newNormals,
+                                InputArray _oldPointsMask
                                 ) const
 {
     CV_TRACE_FUNCTION();

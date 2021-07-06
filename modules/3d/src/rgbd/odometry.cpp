@@ -1862,17 +1862,21 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
     auto dstCpuFrame = dstFrame.dynamicCast<OdometryFrameImpl<Mat>>();
     bool useOcl = (srcOclFrame != nullptr) && (dstOclFrame != nullptr);
     bool useCpu = (srcCpuFrame != nullptr) && (dstCpuFrame != nullptr);
+
     if (useOcl)
     {
         result = icp->estimateTransform(transform,
                                         dstOclFrame->pyramids[OdometryFrame::PYR_CLOUD], dstOclFrame->pyramids[OdometryFrame::PYR_NORM],
-                                        srcOclFrame->pyramids[OdometryFrame::PYR_CLOUD], srcOclFrame->pyramids[OdometryFrame::PYR_NORM]);
+                                        srcOclFrame->pyramids[OdometryFrame::PYR_CLOUD], srcOclFrame->pyramids[OdometryFrame::PYR_NORM],
+                                        dstOclFrame->pyramids[OdometryFrame::PYR_CLOUD]
+                                        );
     }
     else if (useCpu)
     {
         result = icp->estimateTransform(transform,
                                         dstCpuFrame->pyramids[OdometryFrame::PYR_CLOUD], dstCpuFrame->pyramids[OdometryFrame::PYR_NORM],
-                                        srcCpuFrame->pyramids[OdometryFrame::PYR_CLOUD], srcCpuFrame->pyramids[OdometryFrame::PYR_NORM]);
+                                        srcCpuFrame->pyramids[OdometryFrame::PYR_CLOUD], srcCpuFrame->pyramids[OdometryFrame::PYR_NORM],
+                                        dstOclFrame->pyramids[OdometryFrame::PYR_CLOUD]);
     }
     else
     {
