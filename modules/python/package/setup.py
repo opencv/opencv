@@ -22,6 +22,7 @@ def main():
         long_description=long_description,
         long_description_content_type="text/markdown",
         packages=setuptools.find_packages(),
+        package_data={"cv2": ["*.pyi", "*.typed"]},
         maintainer="OpenCV Team",
         install_requires="numpy",
         classifiers=[
