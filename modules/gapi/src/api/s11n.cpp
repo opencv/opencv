@@ -76,14 +76,14 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
         {
 #if !defined(GAPI_STANDALONE)
         case T::index_of<cv::UMat>() :
-            outputs.emplace_back((cv::UMat*)(&(cv::util::get<cv::UMat>(res_obj))));
+            outputs.emplace_back(&(cv::util::get<cv::UMat>(res_obj)));
             break;
 #endif
         case cv::GRunArg::index_of<cv::Mat>() :
-            outputs.emplace_back((cv::Mat*)(&(cv::util::get<cv::Mat>(res_obj))));
+            outputs.emplace_back(&(cv::util::get<cv::Mat>(res_obj)));
             break;
         case cv::GRunArg::index_of<cv::Scalar>() :
-            outputs.emplace_back((cv::Scalar*)(&(cv::util::get<cv::Scalar>(res_obj))));
+            outputs.emplace_back(&(cv::util::get<cv::Scalar>(res_obj)));
             break;
         case T::index_of<cv::detail::VectorRef>() :
             outputs.emplace_back(cv::util::get<cv::detail::VectorRef>(res_obj));
@@ -92,10 +92,10 @@ cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
             outputs.emplace_back(cv::util::get<cv::detail::OpaqueRef>(res_obj));
             break;
         case cv::GRunArg::index_of<cv::RMat>() :
-            outputs.emplace_back((cv::RMat*)(&(cv::util::get<cv::RMat>(res_obj))));
+            outputs.emplace_back(&(cv::util::get<cv::RMat>(res_obj)));
             break;
         case cv::GRunArg::index_of<cv::MediaFrame>() :
-            outputs.emplace_back((cv::MediaFrame*)(&(cv::util::get<cv::MediaFrame>(res_obj))));
+            outputs.emplace_back(&(cv::util::get<cv::MediaFrame>(res_obj)));
             break;
         default:
             GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.

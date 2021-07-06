@@ -19,8 +19,8 @@
 namespace cv {
 namespace gapi {
 namespace s11n {
-    struct IOStream;
-    struct IIStream;
+struct IOStream;
+struct IIStream;
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
@@ -136,7 +136,7 @@ public:
     }
 
     /**
-     * @brief Applies serialized data from MediaFrame to a byte array.
+     * @brief Serialize MediaFrame's data to a byte array.
      *
      * @note The actual logic is implemented by frame's adapter class.
      * Does nothing by default.

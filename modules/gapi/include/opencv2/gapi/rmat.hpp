@@ -14,8 +14,8 @@
 namespace cv {
 namespace gapi {
 namespace s11n {
-    struct IOStream;
-    struct IIStream;
+struct IOStream;
+struct IIStream;
 } // namespace s11n
 } // namespace gapi
 } // namespace cv

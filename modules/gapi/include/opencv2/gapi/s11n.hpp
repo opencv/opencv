@@ -306,7 +306,7 @@ static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s1
 
 template<typename T> struct deserialize_runarg;
 
-template<typename T, typename... Types> inline
+template<typename T, typename... Types>
 typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
 type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
     auto ptr = std::make_shared<T>();
@@ -314,13 +314,13 @@ type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
     return GRunArg { RMat(std::move(ptr)) };
 }
 
-template<typename T, typename... Types> inline
+template<typename T, typename... Types>
 typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
 type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
 }
 
-template<typename T, typename... Types> inline
+template<typename T, typename... Types>
 typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
 type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
     std::unique_ptr<T> ptr(new T);
@@ -328,7 +328,7 @@ type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
     return GRunArg { MediaFrame(std::move(ptr)) };
 }
 
-template<typename T, typename... Types> inline
+template<typename T, typename... Types>
 typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
 type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
@@ -340,6 +340,13 @@ static GRunArg exec(cv::gapi::s11n::IIStream&, uint32_t) {
     }
 };
 
+// The idea for deserializing G-API types with adapter is the following:
+// 1) In runtime determine the RunArg type (e.g. RMat or MediaFrame) via index_of
+// 2) After that for each RunArg we get several types of adapters to try to deserialize from
+// 3) During step 2 will try to utilize all the adapter types in compile time,
+//    that's why we need to add a helper function with enable_if for each adapter base
+// 4) Basically we get a 2-level loop here: for each RunArg and for each adapter type.
+//    If those match - we call the adapter's deserialize, otherwise - continue with the next type
 template<typename T, typename... Types>
 struct deserialize_runarg<std::tuple<T, Types...>> {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {

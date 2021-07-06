@@ -676,7 +676,7 @@ TEST_F(S11N_Basic, Test_RunArg_MediaFrame_RMat) {
     cv::Mat mat2 = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
 
     auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
-    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
+    auto rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
 
     auto v = cv::GRunArgs{ cv::GRunArg{ frame }, cv::GRunArg{ rmat } };
 
@@ -700,7 +700,7 @@ TEST_F(S11N_Basic, Test_RunArg_RMat_MediaFrame) {
     cv::Mat mat2 = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
 
     auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
-    cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
+    auto rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
 
     auto v = cv::GRunArgs{ cv::GRunArg{ rmat }, cv::GRunArg{ frame } };
 
