@@ -247,7 +247,7 @@ namespace gapi
  * it needs to be wrapped by this function.
  *
  * Example of usage:
- * @snippet modules/gapi/samples/bind_after_deserialization_example.cpp bind usage
+ * @snippet modules/gapi/samples/api_ref_snippets.cpp bind after deserialization
  *
  * @param out_args deserialized GRunArgs.
  * @return the same GRunArgs wrapped in GRunArgsP.
@@ -260,7 +260,7 @@ GAPI_EXPORTS cv::GRunArgsP bind(cv::GRunArgs &out_args);
  * which this function does.
  *
  * Example of usage:
- * @snippet modules/gapi/samples/bind_before_serialization_example.cpp bind usage
+ * @snippet modules/gapi/samples/api_ref_snippets.cpp bind before serialization
  *
  * @param out output GRunArgsP available during graph execution.
  * @return the same GRunArgsP wrapped in serializable GRunArgs.

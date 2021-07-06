@@ -23,23 +23,17 @@ namespace gapi {
 */
 
 namespace detail {
-    /// @private -- Exclude this function from OpenCV documentation
     GAPI_EXPORTS cv::GComputation getGraph(const std::vector<char> &bytes);
 
-    /// @private -- Exclude this function from OpenCV documentation
     GAPI_EXPORTS cv::GMetaArgs getMetaArgs(const std::vector<char> &bytes);
 
-    /// @private -- Exclude this function from OpenCV documentation
     GAPI_EXPORTS cv::GRunArgs getRunArgs(const std::vector<char> &bytes);
 
-    /// @private -- Exclude this function from OpenCV documentation
     GAPI_EXPORTS std::vector<std::string> getVectorOfStrings(const std::vector<char> &bytes);
 
-    /// @private -- Exclude this function from OpenCV documentation
     template<typename... Types>
     cv::GCompileArgs getCompileArgs(const std::vector<char> &bytes);
 
-    /// @private -- Exclude this function from OpenCV documentation
     template<typename RMatAdapterType>
     cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &bytes);
 } // namespace detail
@@ -125,12 +119,12 @@ std::vector<std::string> deserialize(const std::vector<char> &bytes) {
 /**
  * @brief Deserialize GCompileArgs which types were specified in the template from a byte array.
  *
- * @note S11N template specialization must be provided to make a custom type
+ * @note cv::gapi::s11n::detail::S11N template specialization must be provided to make a custom type
  * in GCompileArgs deserializable.
  *
  * @param bytes vector of bytes to deserialize GCompileArgs object from.
  * @return GCompileArgs object.
- * @see GCompileArgs S11N
+ * @see GCompileArgs cv::gapi::s11n::detail::S11N
  */
 template<typename T, typename... Types> inline
 typename std::enable_if<std::is_same<T, GCompileArgs>::value, GCompileArgs>::
@@ -139,13 +133,13 @@ type deserialize(const std::vector<char> &bytes) {
 }
 
 /**
- * @brief Deserialize GRunArgs including RMat objects from a byte array.
+ * @brief Deserialize GRunArgs including RMat objects if any from a byte array.
  *
  * RMat adapter type is specified in the template.
  * @note To be used properly specified adapter type must overload its serialize() and
  * deserialize() methods.
  * @param bytes vector of bytes to deserialize GRunArgs object from.
- * @return GRunArgs including RMat objects.
+ * @return GRunArgs including RMat objects if any.
  * @see RMat
  */
 template<typename T, typename RMatAdapterType> inline
@@ -213,7 +207,6 @@ struct GAPI_EXPORTS IIStream {
 };
 
 namespace detail {
-/// @private -- Exclude this function from OpenCV documentation
 GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &bytes);
 } // namespace detail
 
@@ -273,7 +266,6 @@ IOStream& operator<< (IOStream& os, const std::map<K, V> &m) {
     for (const auto& it : m) os << it.first << it.second;
     return os;
 }
-
 template<typename K, typename V>
 IIStream& operator>> (IIStream& is, std::map<K, V> &m) {
     m.clear();
@@ -295,7 +287,6 @@ IOStream& operator<< (IOStream& os, const std::unordered_map<K, V> &m) {
     for (auto &&it : m) os << it.first << it.second;
     return os;
 }
-
 template<typename K, typename V>
 IIStream& operator>> (IIStream& is, std::unordered_map<K, V> &m) {
     m.clear();
@@ -317,7 +308,6 @@ IOStream& operator<< (IOStream& os, const std::vector<T> &ts) {
     for (auto &&v : ts) os << v;
     return os;
 }
-
 template<typename T>
 IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
     uint32_t sz = 0u;
@@ -334,13 +324,11 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
 
 // Generic: variant serialization
 namespace detail {
-/// @private -- Exclude this function from OpenCV documentation
 template<typename V>
 IOStream& put_v(IOStream&, const V&, std::size_t) {
     GAPI_Assert(false && "variant>>: requested index is invalid");
 };
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename V, typename X, typename... Xs>
 IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
     return (x == 0u)
@@ -348,13 +336,11 @@ IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
         : put_v<V, Xs...>(os, v, x-1);
 }
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename V>
 IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
     GAPI_Assert(false && "variant<<: requested index is invalid");
 }
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename V, typename X, typename... Xs>
 IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
     if (i == gi) {
@@ -391,17 +377,14 @@ void getRunArgByIdx (IIStream& is, cv::util::variant<Ts...> &v, uint32_t idx) {
 
 namespace detail
 {
-/// @private -- Exclude this struct from OpenCV documentation
 template<typename T> struct try_deserialize_comparg;
 
-/// @private -- Exclude this struct from OpenCV documentation
 template<> struct try_deserialize_comparg<std::tuple<>> {
 static cv::util::optional<GCompileArg> exec(const std::string&, cv::gapi::s11n::IIStream&) {
         return { };
     }
 };
 
-/// @private -- Exclude this struct from OpenCV documentation
 template<typename T, typename... Types>
 struct try_deserialize_comparg<std::tuple<T, Types...>> {
 static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s11n::IIStream& is) {
@@ -416,10 +399,8 @@ static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s1
 }
 };
 
-/// @private -- Exclude this struct from OpenCV documentation
 template<typename T> struct deserialize_runarg;
 
-/// @private -- Exclude this struct from OpenCV documentation
 template<typename RMatAdapterType>
 struct deserialize_runarg {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
@@ -435,7 +416,6 @@ static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
 }
 };
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename... Types>
 inline cv::util::optional<GCompileArg> tryDeserializeCompArg(const std::string& tag,
                                                              const std::vector<char>& sArg) {
@@ -443,7 +423,6 @@ inline cv::util::optional<GCompileArg> tryDeserializeCompArg(const std::string& 
     return try_deserialize_comparg<std::tuple<Types...>>::exec(tag, *pArgIs);
 }
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename... Types>
 cv::GCompileArgs getCompileArgs(const std::vector<char> &sArgs) {
     cv::GCompileArgs args;
@@ -472,7 +451,6 @@ cv::GCompileArgs getCompileArgs(const std::vector<char> &sArgs) {
     return args;
 }
 
-/// @private -- Exclude this function from OpenCV documentation
 template<typename RMatAdapterType>
 cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &bytes) {
     std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(bytes);
