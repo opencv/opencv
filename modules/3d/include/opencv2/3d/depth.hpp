@@ -1128,6 +1128,30 @@ namespace cv
     {
         cameraMatrix = val;
     }
+    CV_WRAP double getMinDepth() const
+    {
+        return minDepth;
+    }
+    CV_WRAP void setMinDepth(double val)
+    {
+        minDepth = val;
+    }
+    CV_WRAP double getMaxDepth() const
+    {
+        return maxDepth;
+    }
+    CV_WRAP void setMaxDepth(double val)
+    {
+        maxDepth = val;
+    }
+    CV_WRAP double getMaxDepthDiff() const
+    {
+        return maxDepthDiff;
+    }
+    CV_WRAP void setMaxDepthDiff(double val)
+    {
+        maxDepthDiff = val;
+    }
     CV_WRAP double getMaxDistDiff() const
     {
         return maxDistDiff;
@@ -1215,6 +1239,8 @@ namespace cv
     Size prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
+    double minDepth, maxDepth, maxDepthDiff;
+
     float maxDistDiff;
 
     float angleThreshold;

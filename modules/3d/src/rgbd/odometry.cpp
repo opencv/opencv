@@ -1687,6 +1687,9 @@ bool RgbdICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<
 using namespace cv::kinfu;
 
 FastICPOdometry::FastICPOdometry() :
+    minDepth(DEFAULT_MIN_DEPTH()),
+    maxDepth(DEFAULT_MAX_DEPTH()),
+    maxDepthDiff(DEFAULT_MAX_DEPTH_DIFF()),
     maxDistDiff(DEFAULT_MAX_DEPTH_DIFF()),
     angleThreshold((float)(30. * CV_PI / 180.)),
     sigmaDepth(0.04f),
@@ -1790,10 +1793,21 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType
     }
     frame->getDepth(depth);
     checkDepth(depth, depth.size());
+    
+    TMat mask;
+    frame->getMask(mask);
+    if (mask.empty() && frame->getPyramidLevels(OdometryFrame::PYR_MASK) > 0)
+    {
+        TMat pyr0;
+        frame->getPyramidAt(pyr0, OdometryFrame::PYR_MASK, 0);
+        frame->setMask(pyr0);
+    }
+    checkMask(mask, depth.size());
 
-    // mask isn't used by FastICP
+
     auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    makeFrameFromDepth(depth, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], cameraMatrix, (int)iterCounts.total(),
+
+    makeFrameFromDepth(depth, mask, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], tframe->pyramids[OdometryFrame::PYR_MASK], tframe->pyramids[OdometryFrame::PYR_NORMMASK], cameraMatrix, (int)iterCounts.total(),
                        depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
 
     return depth.size();

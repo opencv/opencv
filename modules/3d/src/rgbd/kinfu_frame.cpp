@@ -10,7 +10,7 @@
 
 namespace cv {
 
-static void computePointsNormals(const cv::Intr, float depthFactor, const Depth, Points, Normals );
+static void computePointsNormals(const cv::Intr, float depthFactor, const Depth, Points, Normals, Mask, Mask);
 void computePointsNormalsColors(const Intr, const Intr, float, const Depth, const Colors, Points, Normals, Colors);
 static Depth pyrDownBilateral(const Depth depth, float sigma);
 static void pyrDownPointsNormals(const Points p, const Normals n, Points& pdown, Normals& ndown);
@@ -260,11 +260,14 @@ Depth pyrDownBilateral(const Depth depth, float sigma)
 struct ComputePointsNormalsInvoker : ParallelLoopBody
 {
     ComputePointsNormalsInvoker(const Depth& _depth, Points& _points, Normals& _normals,
+                                Mask& _pointsMask, Mask& _normalsMask,
                                 const Intr::Reprojector& _reproj, float _dfac) :
         ParallelLoopBody(),
         depth(_depth),
         points(_points),
         normals(_normals),
+        pointsMask(_pointsMask),
+        normalsMask(_normalsMask),
         reproj(_reproj),
         dfac(_dfac)
     { }
@@ -278,6 +281,9 @@ struct ComputePointsNormalsInvoker : ParallelLoopBody
             ptype    *ptsRow = points[y];
             ptype   *normRow = normals[y];
 
+            int *pmRow = pointsMask[y];
+            int *nmRow = normalsMask[y];
+
             for(int x = 0; x < depth.cols; x++)
             {
                 depthType d00 = depthRow0[x];
@@ -285,6 +291,7 @@ struct ComputePointsNormalsInvoker : ParallelLoopBody
                 Point3f v00 = reproj(Point3f((float)x, (float)y, z00));
 
                 Point3f p = nan3, n = nan3;
+                int pm = 0, nm = 0;
 
                 if(x < depth.cols - 1 && y < depth.rows - 1)
                 {
@@ -304,11 +311,15 @@ struct ComputePointsNormalsInvoker : ParallelLoopBody
                         cv::Vec3f vec = (v01-v00).cross(v10-v00);
                         n = -normalize(vec);
                         p = v00;
+                        nm = 1;
+                        pm = 1;
                     }
                 }
 
                 ptsRow[x] = toPtype(p);
                 normRow[x] = toPtype(n);
+                pmRow[x] = pm;
+                nmRow[x] = nm;
             }
         }
     }
@@ -316,13 +327,15 @@ struct ComputePointsNormalsInvoker : ParallelLoopBody
     const Depth& depth;
     Points& points;
     Normals& normals;
+    Mask& pointsMask;
+    Mask& normalsMask;
     const Intr::Reprojector& reproj;
     float dfac;
 };
 
 
 void computePointsNormals(const Intr intr, float depthFactor, const Depth depth,
-                          Points points, Normals normals)
+                          Points points, Normals normals, Mask pointsMask, Mask normalsMask)
 {
     CV_TRACE_FUNCTION();
 
@@ -337,7 +350,7 @@ void computePointsNormals(const Intr intr, float depthFactor, const Depth depth,
 
     Intr::Reprojector reproj = intr.makeReprojector();
 
-    ComputePointsNormalsInvoker ci(depth, points, normals, reproj, dfac);
+    ComputePointsNormalsInvoker ci(depth, points, normals, pointsMask, normalsMask, reproj, dfac);
     Range range(0, depth.rows);
     const int nstripes = -1;
     parallel_for_(range, ci, nstripes);
@@ -668,8 +681,9 @@ void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArr
 
 } // namespace detail
 
-void makeFrameFromDepth(InputArray _depth,
+void makeFrameFromDepth(InputArray _depth, InputArray _mask,
                         OutputArray pyrPoints, OutputArray pyrNormals,
+                        OutputArray pyrPointsMasks, OutputArray pyrNormalsMasks,
                         const Matx33f _intr, int levels, float depthFactor,
                         float sigmaDepth, float sigmaSpatial, int kernelSize,
                         float truncateThreshold)
@@ -709,17 +723,27 @@ void makeFrameFromDepth(InputArray _depth,
 
     Depth scaled = depthThreshold;
     Size sz = smooth.size();
+
+    Mask mask = _mask.getMat();
+
     pyrPoints.create(levels, 1, POINT_TYPE);
     pyrNormals.create(levels, 1, POINT_TYPE);
+    pyrPointsMasks.create(levels, 1, MASK_TYPE);
+    pyrNormalsMasks.create(levels, 1, MASK_TYPE);
+
     for(int i = 0; i < levels; i++)
     {
         pyrPoints .create(sz, POINT_TYPE, i);
         pyrNormals.create(sz, POINT_TYPE, i);
+        pyrPointsMasks.create(sz, MASK_TYPE, i);
+        pyrNormalsMasks.create(sz, MASK_TYPE, i);
 
         Points  p = pyrPoints. getMatRef(i);
         Normals n = pyrNormals.getMatRef(i);
+        Mask  pm = pyrPointsMasks. getMatRef(i);
+        Mask nm = pyrNormalsMasks.getMatRef(i);
 
-        computePointsNormals(intr.scale(i), depthFactor, scaled, p, n);
+        computePointsNormals(intr.scale(i), depthFactor, scaled, p, n, pm, nm);
 
         if(i < levels - 1)
         {

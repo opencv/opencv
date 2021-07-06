@@ -137,7 +137,8 @@ enum
 {
     DEPTH_TYPE = DataType<depthType>::type,
     POINT_TYPE = DataType<ptype    >::type,
-    COLOR_TYPE = DataType<ptype    >::type
+    COLOR_TYPE = DataType<ptype    >::type,
+    MASK_TYPE  = DataType<int      >::type
 };
 
 typedef cv::Mat_< ptype > Points;
@@ -145,8 +146,10 @@ typedef Points Normals;
 typedef Points Colors;
 
 typedef cv::Mat_< depthType > Depth;
+typedef cv::Mat_< int > Mask;
 
-void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,
+void makeFrameFromDepth(InputArray depth, InputArray _mask, OutputArray pyrPoints, OutputArray pyrNormals,
+                        OutputArray pyrPointsMasks, OutputArray pyrNormalsMasks,
                         const Matx33f intr, int levels, float depthFactor,
                         float sigmaDepth, float sigmaSpatial, int kernelSize,
                         float truncateThreshold);
