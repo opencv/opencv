@@ -255,6 +255,15 @@ namespace util
     {
         struct visitor_interface {};
 
+        // Class `visitor_return_type_deduction_helper`
+        // introduces solution for deduction `return_type` in `visit` function in common way 
+        // for both Lambda and class Visitor and keep one interface invocation point: `visit` only
+        // his helper class is required to unify return_type deduction mechanism because
+        // for Lambda it is possible to take type of `decltype(visitor(get<0>(var)))`
+        // but for class Visitor there is no operator() in base case,
+        // because it provides `operator() (std::size_t index, ...)`
+        // So `visitor_return_type_deduction_helper` expose `operator()`
+        // uses only for class Visitor only for deduction `return type` in visit()
         template<typename R>
         struct visitor_return_type_deduction_helper
         {
@@ -271,6 +280,7 @@ namespace util
     struct static_visitor : public detail::visitor_interface,
                             public detail::visitor_return_type_deduction_helper<R> {
 
+        // assign responsibility for return type deduction to helper class
         using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
         using detail::visitor_return_type_deduction_helper<R>::operator();
         friend Impl;
@@ -291,6 +301,7 @@ namespace util
     struct static_indexed_visitor : public detail::visitor_interface,
                                     public detail::visitor_return_type_deduction_helper<R> {
 
+        // assign responsibility for return type deduction to helper class
         using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
         using detail::visitor_return_type_deduction_helper<R>::operator();
         friend Impl;
@@ -524,38 +535,20 @@ namespace detail
     // terminate recursion implementation for `non-void` ReturnType
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    ReturnType apply_visitor_impl(Visitor&& visitor, Variant& v,
-                                  std::true_type processed, std::false_type no_return,
-                                  VisitorArgs&& ...args)
+    ReturnType apply_visitor_impl(Visitor&&, Variant&,
+                                  std::true_type, std::false_type,
+                                  VisitorArgs&& ...)
     {
-        // non-used params warning suppression
-        constexpr size_t non_variadic_args_num = 4;
-        std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
-                                    (suppress_unused_warning(visitor), true),
-                                    (suppress_unused_warning(v), true),
-                                    (suppress_unused_warning(processed), true),
-                                    (suppress_unused_warning(no_return), true),
-                                    (suppress_unused_warning(args),true)...};
-        suppress_unused_warning(dummy);
         return {};
     }
 
     // terminate recursion implementation for `void` ReturnType
     template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
              typename Visitor, typename Variant, typename... VisitorArgs>
-    void apply_visitor_impl(Visitor&& visitor, Variant& v,
-                            std::true_type processed, std::true_type no_return,
-                            VisitorArgs&& ...args)
+    void apply_visitor_impl(Visitor&&, Variant&,
+                            std::true_type, std::true_type,
+                            VisitorArgs&& ...)
     {
-        // non-used params warning suppression
-        constexpr size_t non_variadic_args_num = 4;
-        std::array<bool, non_variadic_args_num + sizeof...(VisitorArgs)> dummy{
-                                    (suppress_unused_warning(visitor), true),
-                                    (suppress_unused_warning(v), true),
-                                    (suppress_unused_warning(processed), true),
-                                    (suppress_unused_warning(no_return), true),
-                                    (suppress_unused_warning(args),true)...};
-        suppress_unused_warning(dummy);
     }
 
     // Intermediate resursion processor for Lambda Visitors
