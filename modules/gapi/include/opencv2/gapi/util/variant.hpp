@@ -256,7 +256,7 @@ namespace util
         struct visitor_interface {};
 
         // Class `visitor_return_type_deduction_helper`
-        // introduces solution for deduction `return_type` in `visit` function in common way 
+        // introduces solution for deduction `return_type` in `visit` function in common way
         // for both Lambda and class Visitor and keep one interface invocation point: `visit` only
         // his helper class is required to unify return_type deduction mechanism because
         // for Lambda it is possible to take type of `decltype(visitor(get<0>(var)))`
