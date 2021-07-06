@@ -67,17 +67,17 @@ struct ONNXInitPath {
 static ONNXInitPath g_init_path;
 
 cv::Mat initMatrixRandU(const int type, const cv::Size& sz_in) {
-    const cv::Mat in_mat1 = cv::Mat(sz_in, type);
+    const cv::Mat in_mat = cv::Mat(sz_in, type);
 
     if (CV_MAT_DEPTH(type) < CV_32F) {
-        cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+        cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar::all(255));
     } else {
         const int fscale = 256;  // avoid bits near ULP, generate stable test input
-        cv::Mat in_mat32s(in_mat1.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
+        cv::Mat in_mat32s(in_mat.size(), CV_MAKE_TYPE(CV_32S, CV_MAT_CN(type)));
         cv::randu(in_mat32s, cv::Scalar::all(0), cv::Scalar::all(255 * fscale));
-        in_mat32s.convertTo(in_mat1, type, 1.0f / fscale, 0);
+        in_mat32s.convertTo(in_mat, type, 1.0f / fscale, 0);
     }
-    return in_mat1;
+    return in_mat;
 }
 } // anonymous namespace
 namespace opencv_test
@@ -319,15 +319,13 @@ public:
     size_t num_in, num_out;
     std::vector<cv::Mat> out_gapi;
     std::vector<cv::Mat> out_onnx;
-    cv::Mat in_mat1;
+    cv::Mat in_mat;
 
     ONNXtest() {
         initTestDataPath();
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "test");
         memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
         out_gapi.resize(1);
-        // FIXME: It should be an image from own (gapi) directory in opencv extra
-        in_mat1 = cv::imread(findDataFile("cv/dpm/cat.png"));
     }
 
     template<typename T>
@@ -463,13 +461,9 @@ public:
         cv::Rect(cv::Point{70, 10}, cv::Size{20, 260}),
         cv::Rect(cv::Point{5, 15}, cv::Size{200, 160}),
     };
-    cv::Mat m_in_y;
-    cv::Mat m_in_uv;
-    virtual void SetUp() {
-        cv::Size sz{640, 480};
-        m_in_y = initMatrixRandU(CV_8UC1, sz);
-        m_in_uv = initMatrixRandU(CV_8UC2, sz / 2);
-    }
+    const cv::Size sz{640, 480};
+    const cv::Mat m_in_y = initMatrixRandU(CV_8UC1, sz);
+    const cv::Mat m_in_uv = initMatrixRandU(CV_8UC2, sz / 2);
 };
 
 class ONNXGRayScale : public ONNXtest {
@@ -545,20 +539,20 @@ class ONNXYoloV3 : public ONNXWithRemap {
 public:
     std::vector<cv::Mat> ins;
 
-private:
-    virtual void SetUp() {
+    void constructYoloInputs(const cv::Mat& src) {
         const int yolo_in_h = 416;
         const int yolo_in_w = 416;
         cv::Mat yolov3_input, shape, prep_mat;
-        cv::resize(in_mat1, yolov3_input, cv::Size(yolo_in_w, yolo_in_h));
+        cv::resize(src, yolov3_input, cv::Size(yolo_in_w, yolo_in_h));
         shape.create(cv::Size(2, 1), CV_32F);
         float* ptr = shape.ptr<float>();
-        ptr[0] = in_mat1.cols;
-        ptr[1] = in_mat1.rows;
+        ptr[0] = src.cols;
+        ptr[1] = src.rows;
         preprocess(yolov3_input, prep_mat);
         ins = {prep_mat, shape};
     }
 
+private:
     void preprocess(const cv::Mat& src, cv::Mat& dst) {
         cv::Mat cvt;
         src.convertTo(cvt, CV_32F, 1.f / 255.f);
@@ -571,9 +565,10 @@ private:
 TEST_F(ONNXClassification, Infer)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     cv::Mat processed_mat;
-    preprocess(in_mat1, processed_mat);
+    preprocess(in_mat, processed_mat);
     infer<float>(processed_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -583,7 +578,7 @@ TEST_F(ONNXClassification, Infer)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(in_mat1),
+    comp.apply(cv::gin(in_mat),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -593,9 +588,10 @@ TEST_F(ONNXClassification, Infer)
 TEST_F(ONNXClassification, InferTensor)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // Create tensor
     cv::Mat tensor;
-    preprocess(in_mat1, tensor);
+    preprocess(in_mat, tensor);
     // ONNX_API code
     infer<float>(tensor, out_onnx);
     // G_API code
@@ -614,10 +610,11 @@ TEST_F(ONNXClassification, InferTensor)
 TEST_F(ONNXClassification, InferROI)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     const auto ROI = rois.at(0);
     // ONNX_API code
     cv::Mat roi_mat;
-    preprocess(in_mat1(ROI), roi_mat);
+    preprocess(in_mat(ROI), roi_mat);
     infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -628,7 +625,7 @@ TEST_F(ONNXClassification, InferROI)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(in_mat1, ROI),
+    comp.apply(cv::gin(in_mat, ROI),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -638,10 +635,11 @@ TEST_F(ONNXClassification, InferROI)
 TEST_F(ONNXClassification, InferROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat1(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -653,7 +651,7 @@ TEST_F(ONNXClassification, InferROIList)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(in_mat1, rois),
+    comp.apply(cv::gin(in_mat, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -663,10 +661,11 @@ TEST_F(ONNXClassification, InferROIList)
 TEST_F(ONNXClassification, Infer2ROIList)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat1(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -678,7 +677,7 @@ TEST_F(ONNXClassification, Infer2ROIList)
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
     auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
-    comp.apply(cv::gin(in_mat1, rois),
+    comp.apply(cv::gin(in_mat, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -688,9 +687,10 @@ TEST_F(ONNXClassification, Infer2ROIList)
 TEST_F(ONNXWithRemap, InferDynamicInputTensor)
 {
     useModel("object_detection_segmentation/tiny-yolov2/model/tinyyolov2-8");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // Create tensor
     cv::Mat cvt, rsz, tensor;
-    cv::resize(in_mat1, rsz, cv::Size{416, 416});
+    cv::resize(in_mat, rsz, cv::Size{416, 416});
     rsz.convertTo(cvt, CV_32F, 1.f / 255.f);
     toCHW(cvt, tensor);
     tensor = tensor.reshape(1, {1, 3, 416, 416});
@@ -714,9 +714,10 @@ TEST_F(ONNXWithRemap, InferDynamicInputTensor)
 TEST_F(ONNXGRayScale, InferImage)
 {
     useModel("body_analysis/emotion_ferplus/model/emotion-ferplus-8");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     cv::Mat prep_mat;
-    preprocess(in_mat1, prep_mat);
+    preprocess(in_mat, prep_mat);
     infer<float>(prep_mat, out_onnx);
     // G_API code
     G_API_NET(EmotionNet, <cv::GMat(cv::GMat)>, "emotion-ferplus");
@@ -725,7 +726,7 @@ TEST_F(ONNXGRayScale, InferImage)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto net = cv::gapi::onnx::Params<EmotionNet> { model_path }
         .cfgNormalize({ false }); // model accepts 0..255 range in FP32;
-    comp.apply(cv::gin(in_mat1),
+    comp.apply(cv::gin(in_mat),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -735,8 +736,9 @@ TEST_F(ONNXGRayScale, InferImage)
 TEST_F(ONNXWithRemap, InferMultiOutput)
 {
     useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
-    const auto prep_mat = in_mat1.reshape(1, {1, in_mat1.rows, in_mat1.cols, in_mat1.channels()});
+    const auto prep_mat = in_mat.reshape(1, {1, in_mat.rows, in_mat.cols, in_mat.channels()});
     infer<uint8_t>(prep_mat, out_onnx);
     cv::Mat onnx_conv_out({1, 1, 200, 7}, CV_32F);
     remapToIESSDOut({out_onnx[3], out_onnx[0], out_onnx[2], out_onnx[1]}, onnx_conv_out);
@@ -750,7 +752,7 @@ TEST_F(ONNXWithRemap, InferMultiOutput)
     auto net = cv::gapi::onnx::Params<MobileNet>{ model_path }
         .cfgOutputLayers({"detection_output"})
         .cfgPostProc({cv::GMatDesc{CV_32F, {1, 1, 200, 7}}}, remapSSDPorts);
-    comp.apply(cv::gin(in_mat1),
+    comp.apply(cv::gin(in_mat),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
     // Validate
@@ -760,12 +762,13 @@ TEST_F(ONNXWithRemap, InferMultiOutput)
 TEST_F(ONNXMediaFrame, InferBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     cv::Mat processed_mat;
-    preprocess(in_mat1, processed_mat);
+    preprocess(in_mat, processed_mat);
     infer<float>(processed_mat, out_onnx);
     // G_API code
-    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GFrame in;
     cv::GMat out = cv::gapi::infer<SqueezNet>(in);
@@ -783,6 +786,7 @@ TEST_F(ONNXMediaFrame, InferBGR)
 TEST_F(ONNXMediaFrame, InferYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
@@ -808,10 +812,11 @@ TEST_F(ONNXMediaFrame, InferYUV)
 TEST_F(ONNXMediaFrame, InferROIBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
+    auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
     // ONNX_API code
     cv::Mat roi_mat;
-    preprocess(in_mat1(rois.front()), roi_mat);
+    preprocess(in_mat(rois.front()), roi_mat);
     infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -832,6 +837,7 @@ TEST_F(ONNXMediaFrame, InferROIBGR)
 TEST_F(ONNXMediaFrame, InferROIYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
@@ -858,11 +864,12 @@ TEST_F(ONNXMediaFrame, InferROIYUV)
 TEST_F(ONNXMediaFrame, InferListBGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
+    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat1(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -884,6 +891,7 @@ TEST_F(ONNXMediaFrame, InferListBGR)
 TEST_F(ONNXMediaFrame, InferListYUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
@@ -911,8 +919,9 @@ TEST_F(ONNXMediaFrame, InferListYUV)
 TEST_F(ONNXRCNN, InferWithDisabledOut)
 {
     useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     cv::Mat pp;
-    preprocess(in_mat1, pp);
+    preprocess(in_mat, pp);
     // ONNX_API code
     infer<float>(pp, out_onnx, {"6379", "6383"});
     // G_API code
@@ -937,11 +946,12 @@ TEST_F(ONNXRCNN, InferWithDisabledOut)
 TEST_F(ONNXMediaFrame, InferList2BGR)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
-    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat1);
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
+    const auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat1(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat);
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -963,6 +973,7 @@ TEST_F(ONNXMediaFrame, InferList2BGR)
 TEST_F(ONNXMediaFrame, InferList2YUV)
 {
     useModel("classification/squeezenet/model/squeezenet1.0-9");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     const auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
     // ONNX_API code
     cv::Mat pp;
@@ -991,6 +1002,8 @@ TEST_F(ONNXMediaFrame, InferList2YUV)
 TEST_F(ONNXYoloV3, InferConstInput)
 {
     useModel("object_detection_segmentation/yolov3/model/yolov3-10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
+    constructYoloInputs(in_mat);
     // ONNX_API code
     infer<float>(ins, out_onnx);
     // G_API code
@@ -1022,6 +1035,8 @@ TEST_F(ONNXYoloV3, InferBSConstInput)
     // and all input layer names are specified.
     // Const input has the advantage. It is expected behavior.
     useModel("object_detection_segmentation/yolov3/model/yolov3-10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
+    constructYoloInputs(in_mat);
     // Tensor with incorrect image size
     // is used for check case when InputLayers and constInput have same names
     cv::Mat bad_shape;
@@ -1059,8 +1074,9 @@ TEST_F(ONNXYoloV3, InferBSConstInput)
 TEST_F(ONNXRCNN, ConversionInt64to32)
 {
     useModel("object_detection_segmentation/faster-rcnn/model/FasterRCNN-10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     cv::Mat dst;
-    preprocess(in_mat1, dst);
+    preprocess(in_mat, dst);
     // ONNX_API code
     infer<float>(dst, out_onnx);
     // G_API code
@@ -1087,6 +1103,7 @@ TEST_F(ONNXRCNN, ConversionInt64to32)
 TEST_F(ONNXWithRemap, InferOutReallocation)
 {
     useModel("object_detection_segmentation/ssd-mobilenetv1/model/ssd_mobilenet_v1_10");
+    in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // G_API code
     G_API_NET(MobileNet, <cv::GMat(cv::GMat)>, "ssd_mobilenet");
     auto net = cv::gapi::onnx::Params<MobileNet>{model_path}
@@ -1096,7 +1113,7 @@ TEST_F(ONNXWithRemap, InferOutReallocation)
     cv::GMat out1;
     out1 = cv::gapi::infer<MobileNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out1));
-    EXPECT_THROW(comp.apply(cv::gin(in_mat1),
+    EXPECT_THROW(comp.apply(cv::gin(in_mat),
                  cv::gout(out_gapi[0]),
                  cv::compile_args(cv::gapi::networks(net))), std::exception);
 }
