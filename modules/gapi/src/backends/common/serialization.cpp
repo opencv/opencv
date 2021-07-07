@@ -32,6 +32,11 @@ void putData(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade:
         });
     if (s.m_datas.end() == it) {
         s.m_datas.push_back(gdata);
+
+        if (cg.metadata(nh).contains<gimpl::ConstValue>()) {
+            s.m_const_datas.emplace(s.m_datas.size() - 1,
+                                    cg.metadata(nh).get<gimpl::ConstValue>());
+        }
     }
 }
 
@@ -42,11 +47,21 @@ void putOp(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade::N
     s.m_ops.push_back(op);
 }
 
-void mkDataNode(ade::Graph& g, const cv::gimpl::Data& data) {
+ade::NodeHandle mkDataNode(ade::Graph& g, const cv::gimpl::Data& data) {
     cv::gimpl::GModel::Graph gm(g);
     auto nh = gm.createNode();
     gm.metadata(nh).set(cv::gimpl::NodeType{cv::gimpl::NodeType::DATA});
     gm.metadata(nh).set(data);
+    return nh;
+}
+
+ade::NodeHandle mkConstDataNode(ade::Graph& g, const cv::gimpl::Data& data, const cv::gimpl::ConstValue& const_data) {
+
+    auto nh = mkDataNode(g, data);
+
+    cv::gimpl::GModel::Graph gm(g);
+    gm.metadata(nh).set(const_data);
+    return nh;
 }
 
 void mkOpNode(ade::Graph& g, const cv::gimpl::Op& op) {
@@ -624,6 +639,10 @@ IOStream& operator<< (IOStream& os, const cv::gimpl::Data &d) {
     return os << d.shape << d.rc << d.meta << d.storage << d.kind;
 }
 
+IOStream& operator<< (IOStream& os, const cv::gimpl::ConstValue &cd) {
+    return os << cd.arg;
+}
+
 namespace
 {
 template<typename Ref, typename T, typename... Ts>
@@ -667,6 +686,9 @@ IIStream& operator>> (IIStream& is, cv::gimpl::Data &d) {
     return is;
 }
 
+IIStream& operator>> (IIStream& is, cv::gimpl::ConstValue &cd) {
+    return is >> cd.arg;
+}
 
 IOStream& operator<< (IOStream& os, const cv::gimpl::DataObjectCounter &c) {
     return os << c.m_next_data_id;
@@ -709,18 +731,35 @@ void serialize( IOStream& os
     }
     s.m_counter = cg.metadata().get<cv::gimpl::DataObjectCounter>();
     s.m_proto   = p;
-    os << s.m_ops << s.m_datas << s.m_counter << s.m_proto;
+    os << s.m_ops << s.m_datas << s.m_counter << s.m_proto << s.m_const_datas;
 }
 
 GSerialized deserialize(IIStream &is) {
     GSerialized s;
-    is >> s.m_ops >> s.m_datas >> s.m_counter >> s.m_proto;
+    is >> s.m_ops >> s.m_datas >> s.m_counter >> s.m_proto >> s.m_const_datas;
     return s;
 }
 
 void reconstruct(const GSerialized &s, ade::Graph &g) {
     GAPI_Assert(g.nodes().empty());
-    for (const auto& d  : s.m_datas) cv::gapi::s11n::mkDataNode(g, d);
+
+    size_t index = 0;
+    for (const auto& d  : s.m_datas) {
+        if (d.storage == gimpl::Data::Storage::CONST_VAL)
+        {
+            auto cit = s.m_const_datas.find(index);
+            if (cit == s.m_const_datas.end()) {
+                util::throw_error(std::logic_error("Data::Storage::CONST_VAL by index: " +
+                                  std::to_string(index) + " requires ConstValue. Invalid serialization"));
+            }
+
+            mkConstDataNode(g, d, cit->second);
+        } else {
+            cv::gapi::s11n::mkDataNode(g, d);
+        }
+
+        index ++;
+    }
     for (const auto& op : s.m_ops)   cv::gapi::s11n::mkOpNode(g, op);
     cv::gapi::s11n::linkNodes(g);
 
