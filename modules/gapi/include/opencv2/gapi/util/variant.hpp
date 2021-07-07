@@ -11,6 +11,7 @@
 #include <array>
 #include <type_traits>
 
+#include <opencv2/gapi/util/compiler_hints.hpp>
 #include <opencv2/gapi/util/throw.hpp>
 #include <opencv2/gapi/util/util.hpp> // max_of_t
 #include <opencv2/gapi/util/type_traits.hpp>
@@ -42,6 +43,12 @@ namespace util
     struct type_list_index
     {
         static const constexpr std::size_t value = detail::type_list_index_helper<0, Target, Types...>::value;
+    };
+
+    template<std::size_t Index, class... Types >
+    struct type_list_element
+    {
+        using type = typename std::tuple_element<Index, std::tuple<Types...> >::type;
     };
 
     class bad_variant_access: public std::exception
@@ -233,9 +240,87 @@ namespace util
     template<typename T, typename... Types>
     const T& get(const util::variant<Types...> &v);
 
+    template<std::size_t Index, typename... Types>
+    typename util::type_list_element<Index, Types...>::type& get(util::variant<Types...> &v);
+
+    template<std::size_t Index, typename... Types>
+    const typename util::type_list_element<Index, Types...>::type& get(const util::variant<Types...> &v);
+
     template<typename T, typename... Types>
     bool holds_alternative(const util::variant<Types...> &v) noexcept;
 
+
+    // Visitor
+    namespace detail
+    {
+        struct visitor_interface {};
+
+        // Class `visitor_return_type_deduction_helper`
+        // introduces solution for deduction `return_type` in `visit` function in common way
+        // for both Lambda and class Visitor and keep one interface invocation point: `visit` only
+        // his helper class is required to unify return_type deduction mechanism because
+        // for Lambda it is possible to take type of `decltype(visitor(get<0>(var)))`
+        // but for class Visitor there is no operator() in base case,
+        // because it provides `operator() (std::size_t index, ...)`
+        // So `visitor_return_type_deduction_helper` expose `operator()`
+        // uses only for class Visitor only for deduction `return type` in visit()
+        template<typename R>
+        struct visitor_return_type_deduction_helper
+        {
+            using return_type = R;
+
+            // to be used in Lambda return type deduction context only
+            template<typename T>
+            return_type operator() (T&&);
+        };
+    }
+
+    // Special purpose `static_visitor` can receive additional arguments
+    template<typename R, typename Impl>
+    struct static_visitor : public detail::visitor_interface,
+                            public detail::visitor_return_type_deduction_helper<R> {
+
+        // assign responsibility for return type deduction to helper class
+        using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
+        using detail::visitor_return_type_deduction_helper<R>::operator();
+        friend Impl;
+
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t index, VariantValue&& value, Args&& ...args)
+        {
+            suppress_unused_warning(index);
+            return static_cast<Impl*>(this)-> visit(
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    // Special purpose `static_indexed_visitor` can receive additional arguments
+    // And make forwarding current variant index as runtime function argument to its `Impl`
+    template<typename R, typename Impl>
+    struct static_indexed_visitor : public detail::visitor_interface,
+                                    public detail::visitor_return_type_deduction_helper<R> {
+
+        // assign responsibility for return type deduction to helper class
+        using return_type = typename detail::visitor_return_type_deduction_helper<R>::return_type;
+        using detail::visitor_return_type_deduction_helper<R>::operator();
+        friend Impl;
+
+        template<typename VariantValue, typename ...Args>
+        return_type operator() (std::size_t Index, VariantValue&& value, Args&& ...args)
+        {
+            return static_cast<Impl*>(this)-> visit(Index,
+                                                std::forward<VariantValue>(value),
+                                                std::forward<Args>(args)...);
+        }
+    };
+
+    template <class T>
+    struct variant_size;
+
+    template <class... Types>
+    struct variant_size<util::variant<Types...>>
+        : std::integral_constant<std::size_t, sizeof...(Types)> { };
     // FIXME: T&&, const TT&& versions.
 
     // Implementation //////////////////////////////////////////////////////////
@@ -402,6 +487,22 @@ namespace util
             throw_error(bad_variant_access());
     }
 
+    template<std::size_t Index, typename... Types>
+    typename util::type_list_element<Index, Types...>::type& get(util::variant<Types...> &v)
+    {
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return const_cast<ReturnType&>(get<Index, Types...>(static_cast<const util::variant<Types...> &>(v)));
+    }
+
+    template<std::size_t Index, typename... Types>
+    const typename util::type_list_element<Index, Types...>::type& get(const util::variant<Types...> &v)
+    {
+        static_assert(Index < sizeof...(Types),
+                      "`Index` it out of bound of `util::variant` type list");
+        using ReturnType = typename util::type_list_element<Index, Types...>::type;
+        return get<ReturnType>(v);
+    }
+
     template<typename T, typename... Types>
     bool holds_alternative(const util::variant<Types...> &v) noexcept
     {
@@ -428,7 +529,130 @@ namespace util
     {
         return !(lhs == rhs);
     }
-} // namespace cv
+
+namespace detail
+{
+    // terminate recursion implementation for `non-void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    ReturnType apply_visitor_impl(Visitor&&, Variant&,
+                                  std::true_type, std::false_type,
+                                  VisitorArgs&& ...)
+    {
+        return {};
+    }
+
+    // terminate recursion implementation for `void` ReturnType
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, typename... VisitorArgs>
+    void apply_visitor_impl(Visitor&&, Variant&,
+                            std::true_type, std::true_type,
+                            VisitorArgs&& ...)
+    {
+    }
+
+    // Intermediate resursion processor for Lambda Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<!std::is_base_of<visitor_interface, typename std::decay<Visitor>::type>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
+    {
+        static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
+                      "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
+                      " must return the same type");
+        suppress_unused_warning(not_processed);
+        if (v.index() == CurIndex)
+        {
+            return visitor.operator()(get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
+
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  should_no_return,
+                                  std::forward<VisitorArgs>(args)...);
+    }
+
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<static_visitor<ReturnType, typename std::decay<Visitor>::type>,
+                                            typename std::decay<Visitor>::type>::value, ReturnType>::type
+    invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return static_cast<static_visitor<ReturnType, typename std::decay<Visitor>::type>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
+    }
+
+    //Visual Studio 2014 compilation fix: cast visitor to base class before invoke operator()
+    template<std::size_t CurIndex, typename ReturnType, typename Visitor, class Value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<static_indexed_visitor<ReturnType, typename std::decay<Visitor>::type>,
+                                            typename std::decay<Visitor>::type>::value, ReturnType>::type
+    invoke_class_visitor(Visitor& visitor, Value&& v,  VisitorArgs&&...args)
+    {
+        return static_cast<static_indexed_visitor<ReturnType, typename std::decay<Visitor>::type>&>(visitor).operator() (CurIndex, std::forward<Value>(v), std::forward<VisitorArgs>(args)... );
+    }
+
+    // Intermediate recursion processor for special case `visitor_interface` derived Visitors
+    template<typename ReturnType, std::size_t CurIndex, std::size_t ElemCount,
+             typename Visitor, typename Variant, bool no_return_value, typename... VisitorArgs>
+    typename std::enable_if<std::is_base_of<visitor_interface, typename std::decay<Visitor>::type>::value, ReturnType>::type
+         apply_visitor_impl(Visitor&& visitor, Variant&& v, std::false_type not_processed,
+                                               std::integral_constant<bool, no_return_value> should_no_return,
+                                               VisitorArgs&& ...args)
+    {
+        static_assert(std::is_same<ReturnType, decltype(visitor(get<CurIndex>(v)))>::value,
+                      "Different `ReturnType`s detected! All `Visitor::visit` or `overload_lamba_set`"
+                      " must return the same type");
+        suppress_unused_warning(not_processed);
+        if (v.index() == CurIndex)
+        {
+            return invoke_class_visitor<CurIndex, ReturnType>(visitor, get<CurIndex>(v), std::forward<VisitorArgs>(args)... );
+        }
+
+        using is_variant_processed_t = std::integral_constant<bool, CurIndex + 1 >= ElemCount>;
+        return apply_visitor_impl<ReturnType, CurIndex +1, ElemCount>(
+                                  std::forward<Visitor>(visitor),
+                                  std::forward<Variant>(v),
+                                  is_variant_processed_t{},
+                                  should_no_return,
+                                  std::forward<VisitorArgs>(args)...);
+    }
+} // namespace detail
+
+    template<typename Visitor, typename Variant, typename... VisitorArg>
+    auto visit(Visitor &visitor, const Variant& var, VisitorArg &&...args) -> decltype(visitor(get<0>(var)))
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+
+        using ReturnType = decltype(visitor(get<0>(var)));
+        using return_t = std::is_same<ReturnType, void>;
+        return detail::apply_visitor_impl<ReturnType, 0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{},
+                                    return_t{},
+                                    std::forward<VisitorArg>(args)...);
+    }
+
+    template<typename Visitor, typename Variant>
+    auto visit(Visitor&& visitor, const Variant& var) -> decltype(visitor(get<0>(var)))
+    {
+        constexpr std::size_t varsize = util::variant_size<Variant>::value;
+        static_assert(varsize != 0, "utils::variant must contains one type at least ");
+        using is_variant_processed_t = std::false_type;
+
+        using ReturnType = decltype(visitor(get<0>(var)));
+        using return_t = std::is_same<ReturnType, void>;
+        return detail::apply_visitor_impl<ReturnType, 0, varsize, Visitor>(
+                                    std::forward<Visitor>(visitor),
+                                    var, is_variant_processed_t{},
+                                    return_t{});
+    }
 } // namespace util
+} // namespace cv
 
 #endif // OPENCV_GAPI_UTIL_VARIANT_HPP

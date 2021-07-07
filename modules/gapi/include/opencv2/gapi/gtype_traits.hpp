@@ -43,19 +43,6 @@ namespace detail
         GOPAQUE,      // a cv::GOpaqueU (note - exactly GOpaqueU, not GOpaque<T>!)
     };
 
-    template<typename T>
-    constexpr const char* meta_to_string() noexcept;
-    template<>
-    constexpr const char* meta_to_string<cv::GMatDesc>() noexcept { return "GMatDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GScalarDesc>() noexcept { return "GScalarDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GArrayDesc>() noexcept { return "GArrayDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GOpaqueDesc>() noexcept { return "GOpaqueDesc"; }
-    template<>
-    constexpr const char* meta_to_string<cv::GFrameDesc>() noexcept { return "GFrameDesc";}
-
     // Describe G-API types (G-types) with traits.  Mostly used by
     // cv::GArg to store meta information about types passed into
     // operation arguments. Please note that cv::GComputation is
