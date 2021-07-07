@@ -161,7 +161,7 @@ bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
 // 1 any coord to check is enough since we know the generation
 
 
-#if USE_INTRINSICS && 0
+#if USE_INTRINSICS
 static inline bool fastCheck(const v_float32x4& p0, const v_float32x4& p1)
 {
     float check = (p0.get0() + p1.get0());
@@ -214,7 +214,7 @@ struct GetAbInvoker : ParallelLoopBody
 
     virtual void operator ()(const Range& range) const override
     {
-#if USE_INTRINSICS && 0
+#if USE_INTRINSICS
         CV_Assert(ptype::channels == 4);
 
         const size_t utBufferSize = 9;
@@ -250,12 +250,21 @@ struct GetAbInvoker : ParallelLoopBody
             const CV_DECL_ALIGNED(16) float* newPtsRow = (const float*)newPts[y];
             const CV_DECL_ALIGNED(16) float* newNrmRow = (const float*)newNrm[y];
 
+            const CV_DECL_ALIGNED(16) int* newPtsMaskRow = (const int*)newPtsMask[y];
+            const CV_DECL_ALIGNED(16) int* newNrmMaskRow = (const int*)newNrmMask[y];
+
             for(int x = 0; x < newPts.cols; x++)
             {
                 v_float32x4 newP = v_load_aligned(newPtsRow + x*4);
                 v_float32x4 newN = v_load_aligned(newNrmRow + x*4);
 
-                if(!fastCheck(newP, newN))
+                v_int32x4 newPMask = v_load_aligned(newPtsMaskRow + x);
+                v_int32x4 newNMask = v_load_aligned(newNrmMaskRow + x);
+
+                //std::cout << newPMask.get0() << std::endl;
+
+                //if(!fastCheck(newP, newN))
+                if(newPMask.get0()==0 && newNMask.get0()==0)
                     continue;
 
                 //transform to old coord system
@@ -274,6 +283,8 @@ struct GetAbInvoker : ParallelLoopBody
                 // bilinearly interpolate oldPts and oldNrm under oldCoords point
                 v_float32x4 oldP;
                 v_float32x4 oldN;
+                v_int32x4 oldPMask;
+                v_int32x4 oldNMask;
                 {
                     v_int32x4 ixy = v_floor(oldCoords);
                     v_float32x4 txy = oldCoords - v_cvt_f32(ixy);
@@ -286,10 +297,18 @@ struct GetAbInvoker : ParallelLoopBody
                     const float* prow0 = (const float*)oldPts[yi+0];
                     const float* prow1 = (const float*)oldPts[yi+1];
 
+                    const int* oldPMask0 = (const int*)oldPtsMask[yi + 0];
+                    const int* oldPMask1 = (const int*)oldPtsMask[yi + 1];
+
                     v_float32x4 p00 = v_load(prow0 + (xi+0)*4);
                     v_float32x4 p01 = v_load(prow0 + (xi+1)*4);
                     v_float32x4 p10 = v_load(prow1 + (xi+0)*4);
                     v_float32x4 p11 = v_load(prow1 + (xi+1)*4);
+
+                    oldPMask = v_int32x4(*(oldPMask0 + (xi + 0)),
+                                         *(oldPMask0 + (xi + 1)),
+                                         *(oldPMask1 + (xi + 0)),
+                                         *(oldPMask1 + (xi + 1)));
 
                     // do not fix missing data
                     // NaN check is done later
@@ -297,10 +316,18 @@ struct GetAbInvoker : ParallelLoopBody
                     const float* nrow0 = (const float*)oldNrm[yi+0];
                     const float* nrow1 = (const float*)oldNrm[yi+1];
 
+                    const int* oldNMask0 = (const int*)oldPtsMask[yi + 0];
+                    const int* oldNMask1 = (const int*)oldPtsMask[yi + 1];
+
                     v_float32x4 n00 = v_load(nrow0 + (xi+0)*4);
                     v_float32x4 n01 = v_load(nrow0 + (xi+1)*4);
                     v_float32x4 n10 = v_load(nrow1 + (xi+0)*4);
                     v_float32x4 n11 = v_load(nrow1 + (xi+1)*4);
+
+                    oldNMask = v_int32x4(*(oldNMask0 + (xi + 0)),
+                                         *(oldNMask0 + (xi + 1)),
+                                         *(oldNMask1 + (xi + 0)),
+                                         *(oldNMask1 + (xi + 1)));
 
                     // NaN check is done later
 
@@ -314,6 +341,8 @@ struct GetAbInvoker : ParallelLoopBody
                 }
 
                 bool oldPNcheck = fastCheck(oldP, oldN);
+                //TODO: find check for 0 in vector
+                //bool oldPNcheck = (v_reduce_sum(oldPMask) + v_reduce_sum(oldNMask)) != 0;
 
                 //filter by distance
                 v_float32x4 diff = newP - oldP;
