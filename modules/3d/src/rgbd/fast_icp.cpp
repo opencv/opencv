@@ -30,18 +30,23 @@ public:
 
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,
-                                   InputArray newPoints, InputArray newNormals, InputArray oldPointsMask
+                                   InputArray newPoints, InputArray newNormals,
+                                   InputArray oldPointsMask, InputArray oldNormalsMask,
+                                   InputArray newPointsMask, InputArray newNormalsMask
                                    ) const override;
     template < typename T >
     bool estimateTransformT(cv::Affine3f& transform,
                             const vector<T>& oldPoints, const vector<T>& oldNormals,
-                            const vector<T>& newPoints, const vector<T>& newNormals
+                            const vector<T>& newPoints, const vector<T>& newNormals,
+                            const vector<T>& oldPointsMask, const vector<T>& oldNormalsMask,
+                            const vector<T>& newPointsMask, const vector<T>& newNormalsMask
                             ) const;
 
     virtual ~ICPImpl() { }
 
     template < typename T >
     void getAb(const T& oldPts, const T& oldNrm, const T& newPts, const T& newNrm,
+               const T& oldPtsMask, const T& oldNrmMask, const T& newPtsMask, const T& newNrmMask,
                cv::Affine3f pose, int level, cv::Matx66f& A, cv::Vec6f& b) const;
 
 private:
@@ -59,7 +64,8 @@ ICPImpl::ICPImpl(const Matx33f _intrinsics, const std::vector<int> &_iterations,
 bool ICPImpl::estimateTransform(cv::Affine3f& transform,
                                 InputArray _oldPoints, InputArray _oldNormals,
                                 InputArray _newPoints, InputArray _newNormals,
-                                InputArray _oldPointsMask
+                                InputArray _oldPointsMask, InputArray _oldNormalsMask,
+                                InputArray _newPointsMask, InputArray _newNormalsMask
                                 ) const
 {
     CV_TRACE_FUNCTION();
@@ -78,6 +84,13 @@ bool ICPImpl::estimateTransform(cv::Affine3f& transform,
         _newPoints.getUMatVector(np);
         _oldNormals.getUMatVector(on);
         _newNormals.getUMatVector(nn);
+
+        std::vector<UMat> opm, onm, npm, nnm;
+        _oldPointsMask.getUMatVector(opm);
+        _newPointsMask.getUMatVector(npm);
+        _oldNormalsMask.getUMatVector(onm);
+        _newNormalsMask.getUMatVector(nnm);
+
         return estimateTransformT<UMat>(transform, op, on, np, nn);
     }
 #endif
@@ -87,13 +100,22 @@ bool ICPImpl::estimateTransform(cv::Affine3f& transform,
     _newPoints.getMatVector(np);
     _oldNormals.getMatVector(on);
     _newNormals.getMatVector(nn);
-    return estimateTransformT<Mat>(transform, op, on, np, nn);
+
+    std::vector<Mat> opm, onm, npm, nnm;
+    _oldPointsMask.getMatVector(opm);
+    _newPointsMask.getMatVector(npm);
+    _oldNormalsMask.getMatVector(onm);
+    _newNormalsMask.getMatVector(nnm);
+
+    return estimateTransformT<Mat>(transform, op, on, np, nn, opm, onm, npm, nnm);
 }
 
 template < typename T >
 bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
                                  const vector<T>& oldPoints, const vector<T>& oldNormals,
-                                 const vector<T>& newPoints, const vector<T>& newNormals
+                                 const vector<T>& newPoints, const vector<T>& newNormals,
+                                 const vector<T>& oldPointsMask, const vector<T>& oldNormalsMask,
+                                 const vector<T>& newPointsMask, const vector<T>& newNormalsMask
                                  ) const
 {
     CV_TRACE_FUNCTION();
@@ -105,13 +127,16 @@ bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
 
         const T& oldPts = oldPoints [level], newPts = newPoints [level];
         const T& oldNrm = oldNormals[level], newNrm = newNormals[level];
+        
+        const T& oldPtsMask = oldPointsMask [level], newPtsMask = newPointsMask [level];
+        const T& oldNrmMask = oldNormalsMask[level], newNrmMask = newNormalsMask[level];
 
         for(int iter = 0; iter < iterations[level]; iter++)
         {
             Matx66f A;
             Vec6f b;
 
-            getAb(oldPts, oldNrm, newPts, newNrm, transform, (int)level, A, b);
+            getAb(oldPts, oldNrm, newPts, newNrm, oldPtsMask, oldNrmMask, newPtsMask, newNrmMask, transform, (int)level, A, b);
 
             double det = cv::determinant(A);
 
@@ -136,7 +161,7 @@ bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
 // 1 any coord to check is enough since we know the generation
 
 
-#if USE_INTRINSICS
+#if USE_INTRINSICS && 0
 static inline bool fastCheck(const v_float32x4& p0, const v_float32x4& p1)
 {
     float check = (p0.get0() + p1.get0());
@@ -177,16 +202,19 @@ struct GetAbInvoker : ParallelLoopBody
 {
     GetAbInvoker(ABtype& _globalAb, Mutex& _mtx,
                  const Points& _oldPts, const Normals& _oldNrm, const Points& _newPts, const Normals& _newNrm,
+                 const Mask& _oldPtsMask, const Mask& _oldNrmMask, const Mask& _newPtsMask, const Mask& _newNrmMask,
                  Affine3f _pose, Intr::Projector _proj, float _sqDistanceThresh, float _minCos) :
         ParallelLoopBody(),
         globalSumAb(_globalAb), mtx(_mtx),
         oldPts(_oldPts), oldNrm(_oldNrm), newPts(_newPts), newNrm(_newNrm), pose(_pose),
+        oldPtsMask(_oldPtsMask), oldNrmMask(_oldNrmMask),
+        newPtsMask(_newPtsMask), newNrmMask(_newNrmMask),
         proj(_proj), sqDistanceThresh(_sqDistanceThresh), minCos(_minCos)
     { }
 
     virtual void operator ()(const Range& range) const override
     {
-#if USE_INTRINSICS
+#if USE_INTRINSICS && 0
         CV_Assert(ptype::channels == 4);
 
         const size_t utBufferSize = 9;
@@ -370,6 +398,9 @@ struct GetAbInvoker : ParallelLoopBody
             const ptype* newPtsRow = newPts[y];
             const ptype* newNrmRow = newNrm[y];
 
+            const int* newPtsMaskRow = newPtsMask[y];
+            const int* newNrmMaskRow = newNrmMask[y];
+
             for(int x = 0; x < newPts.cols; x++)
             {
                 Point3f newP = fromPtype(newPtsRow[x]);
@@ -377,7 +408,8 @@ struct GetAbInvoker : ParallelLoopBody
 
                 Point3f oldP(nan3), oldN(nan3);
 
-                if(!(fastCheck(newP) && fastCheck(newN)))
+                //if(fastCheck(newP) && fastCheck(newN))
+                if((newPtsMaskRow[x]==0 && newNrmMaskRow[x]==0))
                     continue;
 
                 //transform to old coord system
@@ -397,26 +429,36 @@ struct GetAbInvoker : ParallelLoopBody
                 const ptype* prow0 = oldPts[yi+0];
                 const ptype* prow1 = oldPts[yi+1];
 
+                const int* oldPtsMaskRow0 = oldPtsMask[yi + 0];
+                const int* oldPtsMaskRow1 = oldPtsMask[yi + 1];
+
                 Point3f p00 = fromPtype(prow0[xi+0]);
                 Point3f p01 = fromPtype(prow0[xi+1]);
                 Point3f p10 = fromPtype(prow1[xi+0]);
                 Point3f p11 = fromPtype(prow1[xi+1]);
 
                 //do not fix missing data
-                if(!(fastCheck(p00) && fastCheck(p01) &&
-                     fastCheck(p10) && fastCheck(p11)))
-                    continue;
+                //if(!(fastCheck(p00) && fastCheck(p01) &&
+                //     fastCheck(p10) && fastCheck(p11))) 
+                if(oldPtsMaskRow0[xi+0]==0 && oldPtsMaskRow0[xi+1]==0 &&
+                   oldPtsMaskRow1[xi+0]==0 && oldPtsMaskRow1[xi+1]==0)
+                   continue;
 
                 const ptype* nrow0 = oldNrm[yi+0];
                 const ptype* nrow1 = oldNrm[yi+1];
+
+                const int* oldNrmMaskRow0 = oldNrmMask[yi + 0];
+                const int* oldNrmMaskRow1 = oldNrmMask[yi + 1];
 
                 Point3f n00 = fromPtype(nrow0[xi+0]);
                 Point3f n01 = fromPtype(nrow0[xi+1]);
                 Point3f n10 = fromPtype(nrow1[xi+0]);
                 Point3f n11 = fromPtype(nrow1[xi+1]);
 
-                if(!(fastCheck(n00) && fastCheck(n01) &&
-                     fastCheck(n10) && fastCheck(n11)))
+                //if(!(fastCheck(n00) && fastCheck(n01) &&
+                //     fastCheck(n10) && fastCheck(n11)))
+                if (oldNrmMaskRow0[xi + 0] == 0 && oldNrmMaskRow0[xi + 1] == 0 &&
+                    oldNrmMaskRow1[xi + 0] == 0 && oldNrmMaskRow1[xi + 1] == 0)
                     continue;
 
                 Point3f p0 = p00 + tx*(p01 - p00);
@@ -427,6 +469,9 @@ struct GetAbInvoker : ParallelLoopBody
                 Point3f n1 = n10 + tx*(n11 - n10);
                 oldN = n0 + ty*(n1 - n0);
 
+                // Check for what?
+                // TODO: add assert instead of "if"
+                // why is there nans ????
                 if(!(fastCheck(oldP) && fastCheck(oldN)))
                     continue;
 
@@ -483,6 +528,10 @@ struct GetAbInvoker : ParallelLoopBody
     const Normals& oldNrm;
     const Points& newPts;
     const Normals& newNrm;
+    const Mask& oldPtsMask;
+    const Mask& oldNrmMask;
+    const Mask& newPtsMask;
+    const Mask& newNrmMask;
     Affine3f pose;
     const Intr::Projector proj;
     float sqDistanceThresh;
@@ -492,6 +541,7 @@ struct GetAbInvoker : ParallelLoopBody
 
 template <>
 void ICPImpl::getAb<Mat>(const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
+                         const Mat& oldPtsMask, const Mat& oldNrmMask, const Mat& newPtsMask, const Mat& newNrmMask,
                          cv::Affine3f pose, int level, cv::Matx66f& A, cv::Vec6f& b) const
 {
     CV_TRACE_FUNCTION();
@@ -503,7 +553,11 @@ void ICPImpl::getAb<Mat>(const Mat& oldPts, const Mat& oldNrm, const Mat& newPts
     Mutex mutex;
     const Points  op(oldPts), on(oldNrm);
     const Normals np(newPts), nn(newNrm);
-    GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
+
+    const Mask opm(oldPtsMask), onm(oldNrmMask);
+    const Mask npm(newPtsMask), nnm(newNrmMask);
+
+    GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, opm, onm, npm, nnm, pose,
                          intrinsics.scale(level).makeProjector(),
                          distanceThreshold*distanceThreshold, std::cos(angleThreshold));
     Range range(0, newPts.rows);

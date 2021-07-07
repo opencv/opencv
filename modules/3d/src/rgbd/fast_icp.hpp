@@ -21,7 +21,8 @@ public:
     virtual bool estimateTransform(cv::Affine3f& transform,
                                    InputArray oldPoints, InputArray oldNormals,
                                    InputArray newPoints, InputArray newNormals,
-                                   InputArray _oldPointsMask
+                                   InputArray oldPointsMask, InputArray oldNormalsMask,
+                                   InputArray newPointsMask, InputArray newNormalsMask
                                    ) const = 0;
     virtual ~ICP() { }
 
