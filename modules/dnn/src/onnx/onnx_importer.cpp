@@ -788,7 +788,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 int blob_total = blob.total();
                 if (blob_total == 1) {
                     layerParams.type = "Power";
-                    layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(0));
+                    layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(cv::Vec4i(0, 0, 0, 0)));
                 }
                 else {
                     MatShape inpShape = outShapes[node_proto.input(1 - const_blob_id)];
