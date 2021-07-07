@@ -124,7 +124,11 @@ IE::Core giewrap::getPlugin(const GIEParam& params) {
         {
             try
             {
+#if INF_ENGINE_RELEASE >= 2021040000
+                plugin.AddExtension(std::make_shared<IE::Extension>(extlib), params.device_id);
+#else
                 plugin.AddExtension(IE::make_so_pointer<IE::IExtension>(extlib), params.device_id);
+#endif
                 CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << extlib);
                 break;
             }
