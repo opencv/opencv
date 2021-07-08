@@ -185,8 +185,8 @@ IOStream& operator<< (IOStream& os, const cv::RMat& mat) {
 }
 IIStream& operator>> (IIStream& is, cv::RMat&) {
     util::throw_error(std::logic_error("operator>> for RMat should never be called. "
-                                        "Instead, deserialize() method in it's adapter "
-                                        "should be implemented and used"));
+                                        "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
+                                        "should be used"));
     return is;
 }
 
@@ -196,8 +196,8 @@ IOStream& operator<< (IOStream& os, const cv::MediaFrame &frame) {
 }
 IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
     util::throw_error(std::logic_error("operator>> for MediaFrame should never be called. "
-                                        "Instead, deserialize() method in it's adapter "
-                                        "should be implemented and used"));
+                                        "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
+                                        "should be used"));
     return is;
 }
 

@@ -14,6 +14,7 @@
 #include <opencv2/gapi/gcomputation.hpp>
 #include <opencv2/gapi/rmat.hpp>
 #include <opencv2/gapi/media.hpp>
+#include <opencv2/gapi/util/util.hpp>
 
 // FIXME: caused by deserialize_runarg
 #if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
@@ -404,56 +405,38 @@ static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s1
 }
 };
 
-template<typename T> struct deserialize_runarg;
+template<typename ...T>
+struct deserialize_arg_with_adapter;
 
-template<typename T, typename... Types>
-typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
-type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
-    auto ptr = std::make_shared<T>();
+template<typename RA, typename TA>
+struct deserialize_arg_with_adapter<RA, TA> {
+static GRunArg exec(cv::gapi::s11n::IIStream& is) {
+    std::unique_ptr<TA> ptr(new TA);
     ptr->deserialize(is);
-    return GRunArg { RMat(std::move(ptr)) };
+    return GRunArg { RA(std::move(ptr)) };
 }
-
-template<typename T, typename... Types>
-typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
-type deserializeRMatHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
-    return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
-}
-
-template<typename T, typename... Types>
-typename std::enable_if<std::is_base_of<MediaFrame::IAdapter, T>::value, GRunArg>::
-type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t) {
-    std::unique_ptr<T> ptr(new T);
-    ptr->deserialize(is);
-    return GRunArg { MediaFrame(std::move(ptr)) };
-}
-
-template<typename T, typename... Types>
-typename std::enable_if<std::is_base_of<RMat::Adapter, T>::value, GRunArg>::
-type deserializeMediaFrameHelper(cv::gapi::s11n::IIStream& is, uint32_t idx) {
-    return deserialize_runarg<std::tuple<Types...>>::exec(is, idx);
-}
-
-template<> struct deserialize_runarg<std::tuple<>> {
-static GRunArg exec(cv::gapi::s11n::IIStream&, uint32_t) {
-        GAPI_Assert(false && "Failed to deserialize MediaFrame or RMat - mismatched adapter types");
-    }
 };
 
-// The idea for deserializing G-API types with adapter is the following:
-// 1) In runtime determine the RunArg type (e.g. RMat or MediaFrame) via index_of
-// 2) After that for each RunArg we get several types of adapters to try to deserialize from
-// 3) During step 2 will try to utilize all the adapter types in compile time,
-//    that's why we need to add a helper function with enable_if for each adapter base
-// 4) Basically we get a 2-level loop here: for each RunArg and for each adapter type.
-//    If those match - we call the adapter's deserialize, otherwise - continue with the next type
-template<typename T, typename... Types>
-struct deserialize_runarg<std::tuple<T, Types...>> {
+template<typename RA>
+struct deserialize_arg_with_adapter<RA, void> {
+static GRunArg exec(cv::gapi::s11n::IIStream&) {
+    GAPI_Assert(false && "No suitable adapter class found during RMat/MediaFrame deserialization. "
+                         "Please, make sure you've passed them in cv::gapi::deserialize() template");
+    return GRunArg{};
+}
+};
+
+template<typename... Types>
+struct deserialize_runarg {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     if (idx == GRunArg::index_of<RMat>()) {
-        return deserializeRMatHelper<T, Types...>(is, idx);
+        // Type or void (if not found)
+        using TA = typename cv::util::find_adapter_impl<RMat::Adapter, Types...>::type;
+        return deserialize_arg_with_adapter<RMat, TA>::exec(is);
     } else if (idx == GRunArg::index_of<MediaFrame>()) {
-        return deserializeMediaFrameHelper<T, Types...>(is, idx);
+        // Type or void (if not found)
+        using TA = typename cv::util::find_adapter_impl<MediaFrame::IAdapter, Types...>::type;
+        return deserialize_arg_with_adapter<MediaFrame, TA>::exec(is);
     } else { // not an adapter holding type runarg - use default deserialization
         GRunArg arg;
         getRunArgByIdx(is, arg, idx);
@@ -508,7 +491,7 @@ cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &p) {
     for (uint32_t i = 0; i < sz; ++i) {
         uint32_t idx = 0;
         is >> idx;
-        args.push_back(cv::gapi::detail::deserialize_runarg<std::tuple<AdapterTypes...>>::exec(is, idx));
+        args.push_back(cv::gapi::detail::deserialize_runarg<AdapterTypes...>::exec(is, idx));
     }
 
     return args;
