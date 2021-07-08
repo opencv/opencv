@@ -416,29 +416,31 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Settings settings(isHashTSDF, false);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _tmpnormals;
-    UMat _newPoints, _newNormals;
+    UMat udepth;
+    depth.copyTo(udepth);
+    UMat upoints, unormals, utmpnormals;
+    UMat unewPoints, unewNormals;
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    settings.volume->integrate(udepth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, unormals);
     }
     if (isFetchPointsNormals)
     {
-        settings.volume->fetchPointsNormals(_points, _normals);
+        settings.volume->fetchPointsNormals(upoints, unormals);
     }
     if (isFetchNormals)
     {
-        settings.volume->fetchPointsNormals(_points, _tmpnormals);
-        settings.volume->fetchNormals(_points, _normals);
+        settings.volume->fetchPointsNormals(upoints, utmpnormals);
+        settings.volume->fetchNormals(upoints, unormals);
     }
 
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
+    normals = unormals.getMat(af);
+    points  = upoints.getMat(af);
 
     if (parallelCheck)
         normals.forEach<Vec4f>(normalCheck);
@@ -450,9 +452,9 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
-        normals = _newNormals.getMat(af);
-        points = _newPoints.getMat(af);
+        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, unewPoints, unewNormals);
+        normals = unewNormals.getMat(af);
+        points  = unewPoints.getMat(af);
         normalsCheck(normals);
 
         if (parallelCheck)
@@ -472,24 +474,26 @@ void valid_points_test(bool isHashTSDF)
     Settings settings(isHashTSDF, true);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _newPoints, _newNormals;
+    UMat udepth;
+    depth.copyTo(udepth);
+    UMat upoints, unormals, unewPoints, unewNormals;
     AccessFlag af = ACCESS_READ;
     Mat  points, normals;
     int anfas, profile;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
-    normals = _normals.getMat(af);
-    points = _points.getMat(af);
+    settings.volume->integrate(udepth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, upoints, unormals);
+    normals = unormals.getMat(af);
+    points  = upoints.getMat(af);
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
         displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
-    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
-    normals = _newNormals.getMat(af);
-    points = _newPoints.getMat(af);
+    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, unewPoints, unewNormals);
+    normals = unewNormals.getMat(af);
+    points  = unewPoints.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
@@ -504,15 +508,15 @@ void valid_points_test(bool isHashTSDF)
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-TEST(TSDF_GPU, raycast_normals) { normal_test(false, true, false, false); }
+TEST(TSDF_GPU, raycast_normals)      { normal_test(false, true, false, false); }
 TEST(TSDF_GPU, fetch_points_normals) { normal_test(false, false, true, false); }
-TEST(TSDF_GPU, fetch_normals) { normal_test(false, false, false, true); }
-TEST(TSDF_GPU, valid_points) { valid_points_test(false); }
+TEST(TSDF_GPU, fetch_normals)        { normal_test(false, false, false, true); }
+TEST(TSDF_GPU, valid_points)         { valid_points_test(false); }
 
-TEST(HashTSDF_GPU, raycast_normals) { normal_test(true, true, false, false); }
+TEST(HashTSDF_GPU, raycast_normals)      { normal_test(true, true, false, false); }
 TEST(HashTSDF_GPU, fetch_points_normals) { normal_test(true, false, true, false); }
-TEST(HashTSDF_GPU, fetch_normals) { normal_test(true, false, false, true); }
-TEST(HashTSDF_GPU, valid_points) { valid_points_test(true); }
+TEST(HashTSDF_GPU, fetch_normals)        { normal_test(true, false, false, true); }
+TEST(HashTSDF_GPU, valid_points)         { valid_points_test(true); }
 
 }
 }  // namespace
