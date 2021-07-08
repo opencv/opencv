@@ -1,5 +1,5 @@
 # run script
-# .\build-nuspec.py --package_name "OpenCV CPP" --package_version "0.0.1" --native_build_path "C:\opencv-cpp-build" --packages_path "C:\opencv-cpp-build" --sources_path "D:\Github\opencv"
+# .\build-nuspec.py --package_name "OpenCV CPP" --package_version "0.0.1" --output_path "C:\opencv-cpp-build" --sources_path "D:\Github\opencv"
 import os, sys, argparse
 
 authors = 'OpenCV'
@@ -16,9 +16,7 @@ def parse_arguments():
     # Main arguments
     parser.add_argument("--package_name", required=True, help="Package name. e.g.: OpenCV.CPP")
     parser.add_argument("--package_version", required=True, help="Package version. e.g: 1.0.0")
-    # parser.add_argument("--target_architecture", required=True, help="e.g.: x64")
-    parser.add_argument("--native_build_path", required=True, help="Native build output directory.")
-    parser.add_argument("--packages_path", required=True, help="Nuget packages output directory.")
+    parser.add_argument("--output_path", required=True, help="Nuget packages output directory - this is where target, nuspec, etc go.")
     parser.add_argument("--sources_path", required=True, help="OpenCV source code root.")
     parser.add_argument("--targets_path", required=True, help="Path name for the generated targets file.")
     parser.add_argument("--targets_file", required=True, help="File name for the generated targets file.")
@@ -127,7 +125,7 @@ def main():
     lines = generate_nuspec(args)
 
     # Create the nuspec needed to generate the Nuget
-    with open(os.path.join(args.native_build_path, 'opencv-cpp.nuspec'), 'w') as f:
+    with open(os.path.join(args.output_path, 'opencv-cpp.nuspec'), 'w') as f:
         for line in lines:
             f.write(line)
             f.write('\n')
