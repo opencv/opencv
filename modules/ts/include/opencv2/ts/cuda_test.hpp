@@ -95,6 +95,11 @@ namespace cvtest
     };
 
     #define ALL_DEVICES testing::ValuesIn(cvtest::DeviceManager::instance().values())
+    #define FIRST_DEVICE testing::ValuesIn( \
+        std::vector<cv::cuda::DeviceInfo>( \
+            cvtest::DeviceManager::instance().values().begin(), \
+            std::min(cvtest::DeviceManager::instance().values().begin() + 1, \
+                     cvtest::DeviceManager::instance().values().end())))
 
     //////////////////////////////////////////////////////////////////////
     // Additional assertion
