@@ -27,14 +27,6 @@ def parse_arguments():
 
 def generate_files(list, args):
     files_list = ['<files>']
-
-    # Process headers
-    # files_list.append('<file src=' + '"' + os.path.join(args.sources_path,
-    #                                                     'include\\onnxruntime\\core\\session\\onnxruntime_*.h') +
-    #                   '" target="build\\native\\include" />')
-
-    # Process Readme, License, ThirdPartyNotices, Privacy
-    # files_list.append('<file src=' + '"' + os.path.join(args.sources_path, 'LICENSE.txt') + '" target="LICENSE.txt" />')
     
     # add source includes folder
     derived_path = os.path.join(args.sources_path, 'include\**\*.*')

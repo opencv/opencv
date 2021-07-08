@@ -1,6 +1,6 @@
 # Building the NuGet package for OpenCV
 
-This is a test repository for an unlisted OpenCV Nuget package.
+This repository helps generate the OpenCV Nuget package.
 
 ## Pre-requisites
 - CMake
@@ -16,6 +16,7 @@ This is a test repository for an unlisted OpenCV Nuget package.
 - Build OpenCV from source - [Reference](https://docs.opencv.org/master/d3/d52/tutorial_windows_install.html)
     - Generate separate build folders for vc14, vc15 & vc16
     - Make sure to select the option/ variable to build the "opencv_build" binary (dll file)
+- TODO: Merge the build files/ folders in the source opencv pull directory
 
 ## Package creation and pushing
 
@@ -32,10 +33,10 @@ https://docs.microsoft.com/en-us/nuget/create-packages/sign-a-package#register-t
 - In command prompt, run `build-nuspec.py` with arguments
     - package_name - name of the package
     - package_version - version number of the package
-    - output_path - 
-    - sources_path
-    - targets_path
-    - targets_file
+    - output_path - directory where nuspec file is written to
+    - sources_path - directory where opencv source code was pulled and built (NOT the /source directory; instead the outer /opencv directory should be passed here)
+    - targets_path - directory where targets file was generated in previous step
+    - targets_file - targets file name from previous step
 - `.\build-nuspec.py --package_name "OpenCV CPP" --package_version "0.0.1" --output_path "<path-to-output-folder>" --sources_path "<path to opencv git pull>" --targets_path "<path-to-output-targets-file" --targets_file "opencv-cpp.targets"`
 
 
