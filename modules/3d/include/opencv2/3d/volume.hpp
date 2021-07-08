@@ -56,17 +56,17 @@ class CV_EXPORTS_W Volume
 
 struct CV_EXPORTS_W VolumeParams
 {
-    enum VolumeType
+    enum VolumeKind
     {
         TSDF        = 0,
         HASHTSDF    = 1,
         COLOREDTSDF = 2
     };
 
-    /** @brief Type of Volume
+    /** @brief Kind of Volume
         Values can be TSDF (single volume) or HASHTSDF (hashtable of volume units)
     */
-    CV_PROP_RW int type;
+    CV_PROP_RW int kind;
 
     /** @brief Resolution of voxel space
         Number of voxels in each dimension.

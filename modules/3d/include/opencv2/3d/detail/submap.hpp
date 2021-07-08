@@ -46,7 +46,7 @@ class Submap
         : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId)
     {
         VolumeParams vp = volumeParams;
-        vp.type = VolumeParams::VolumeType::HASHTSDF;
+        vp.kind = VolumeParams::VolumeKind::HASHTSDF;
         Ptr<VolumeParams> pvp = makePtr<VolumeParams>(vp);
         volume = makeVolume(pvp);
 
