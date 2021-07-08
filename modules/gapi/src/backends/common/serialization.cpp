@@ -36,7 +36,7 @@ void putData(GSerialized& s, const cv::gimpl::GModel::ConstGraph& cg, const ade:
         if (cg.metadata(nh).contains<gimpl::ConstValue>()) {
             size_t datas_num = s.m_datas.size() - 1;
             GAPI_DbgAssert(datas_num <= static_cast<size_t>(std::numeric_limits<GSerialized::data_tag_t>::max()));
-            GSerialized::data_tag_t tag = static_cast<GSerialized::data_tag_t>(datas_num);            
+            GSerialized::data_tag_t tag = static_cast<GSerialized::data_tag_t>(datas_num);
             s.m_const_datas.emplace(tag,
                                     cg.metadata(nh).get<gimpl::ConstValue>());
         }
