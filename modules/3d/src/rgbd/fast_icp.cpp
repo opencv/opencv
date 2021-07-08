@@ -196,6 +196,20 @@ static inline bool fastCheck(const Point3f& p)
 
 #endif
 
+void print_v_int(v_int32x4 v)
+{
+    int v0 = v.get0();
+    v = v_reinterpret_as_s32(v_rotate_right<1>(v_reinterpret_as_u32(v)));
+    int v1 = v.get0();
+    v = v_reinterpret_as_s32(v_rotate_right<1>(v_reinterpret_as_u32(v)));
+    int v2 = v.get0();
+    v = v_reinterpret_as_s32(v_rotate_right<1>(v_reinterpret_as_u32(v)));
+    int v3 = v.get0();
+    v = v_reinterpret_as_s32(v_rotate_right<1>(v_reinterpret_as_u32(v)));
+
+    std::cout << "[" << v0 << " " << v1 << " " << v2 << " " << v3 << "]" << std::endl;
+}
+
 typedef Matx<float, 6, 7> ABtype;
 
 struct GetAbInvoker : ParallelLoopBody
@@ -233,6 +247,8 @@ struct GetAbInvoker : ParallelLoopBody
           NA, NA, NA, NA, NA, 26, 34
         };
 
+        v_int32x4 v_zero_int(0, 0, 0, 0);
+
         const float (&pm)[16] = pose.matrix.val;
         v_float32x4 poseRot0(pm[0], pm[4], pm[ 8], 0);
         v_float32x4 poseRot1(pm[1], pm[5], pm[ 9], 0);
@@ -260,8 +276,6 @@ struct GetAbInvoker : ParallelLoopBody
 
                 v_int32x4 newPMask = v_load_aligned(newPtsMaskRow + x);
                 v_int32x4 newNMask = v_load_aligned(newNrmMaskRow + x);
-
-                //std::cout << newPMask.get0() << std::endl;
 
                 //if(!fastCheck(newP, newN))
                 if(newPMask.get0()==0 && newNMask.get0()==0)
@@ -340,9 +354,12 @@ struct GetAbInvoker : ParallelLoopBody
                     oldN = n0 + ty*(n1 - n0);
                 }
 
-                bool oldPNcheck = fastCheck(oldP, oldN);
-                //TODO: find check for 0 in vector
-                //bool oldPNcheck = (v_reduce_sum(oldPMask) + v_reduce_sum(oldNMask)) != 0;
+                //print_v_int(oldPMask);
+                //print_v_int(oldNMask);
+
+                //bool oldPNcheck = fastCheck(oldP, oldN);
+                bool oldPNcheck = v_check_all(oldPMask!=v_zero_int) &&
+                                   v_check_all(oldNMask!=v_zero_int);
 
                 //filter by distance
                 v_float32x4 diff = newP - oldP;
