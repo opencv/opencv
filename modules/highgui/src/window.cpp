@@ -990,7 +990,7 @@ void cv::imshow( const String& winname, InputArray _img )
         auto backend = getCurrentUIBackend();
         if (backend)
         {
-            auto window = backend->createWindow(winname, WINDOW_NORMAL);
+            auto window = backend->createWindow(winname, WINDOW_AUTOSIZE);
             if (!window)
             {
                 CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create window: '" << winname << "'");

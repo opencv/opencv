@@ -43,6 +43,7 @@ using GArray_Rect    = cv::GArray<cv::Rect>;
 using GArray_Scalar  = cv::GArray<cv::Scalar>;
 using GArray_Mat     = cv::GArray<cv::Mat>;
 using GArray_GMat    = cv::GArray<cv::GMat>;
+using GArray_Prim    = cv::GArray<cv::gapi::wip::draw::Prim>;
 
 // FIXME: Python wrapper generate code without namespace std,
 // so it cause error: "string wasn't declared"
@@ -125,6 +126,66 @@ PyObject* pyopencv_from(const cv::detail::PyObjectHolder& v)
     return o;
 }
 
+// #FIXME: Is it possible to implement pyopencv_from/pyopencv_to for generic
+// cv::variant<Types...> ?
+template <>
+PyObject* pyopencv_from(const cv::gapi::wip::draw::Prim& prim)
+{
+    switch (prim.index())
+    {
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Rect>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Rect>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Text>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Text>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Circle>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Circle>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Line>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Line>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Poly>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Poly>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Mosaic>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Mosaic>(prim));
+        case cv::gapi::wip::draw::Prim::index_of<cv::gapi::wip::draw::Image>():
+            return pyopencv_from(cv::util::get<cv::gapi::wip::draw::Image>(prim));
+    }
+
+    util::throw_error(std::logic_error("Unsupported draw primitive type"));
+}
+
+template <>
+PyObject* pyopencv_from(const cv::gapi::wip::draw::Prims& value)
+{
+    return pyopencv_from_generic_vec(value);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo& info)
+{
+#define TRY_EXTRACT(Prim)                                                                                  \
+    if (PyObject_TypeCheck(obj, reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_draw_##Prim##_TypePtr))) \
+    {                                                                                                      \
+        value = reinterpret_cast<pyopencv_gapi_wip_draw_##Prim##_t*>(obj)->v;                              \
+        return true;                                                                                       \
+    }                                                                                                      \
+
+    TRY_EXTRACT(Rect)
+    TRY_EXTRACT(Text)
+    TRY_EXTRACT(Circle)
+    TRY_EXTRACT(Line)
+    TRY_EXTRACT(Mosaic)
+    TRY_EXTRACT(Image)
+    TRY_EXTRACT(Poly)
+
+    failmsg("Unsupported primitive type");
+    return false;
+}
+
+template <>
+bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prims& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
+}
+
 template<>
 PyObject* pyopencv_from(const cv::GArg& value)
 {
@@ -137,21 +198,21 @@ PyObject* pyopencv_from(const cv::GArg& value)
 #define UNSUPPORTED(T) case cv::detail::OpaqueKind::CV_##T: break
     switch (value.opaque_kind)
     {
-        HANDLE_CASE(BOOL,    bool);
-        HANDLE_CASE(INT,     int);
+        HANDLE_CASE(BOOL,      bool);
+        HANDLE_CASE(INT,       int);
         HANDLE_CASE(INT64,   int64_t);
-        HANDLE_CASE(DOUBLE,  double);
-        HANDLE_CASE(FLOAT,   float);
-        HANDLE_CASE(STRING,  std::string);
-        HANDLE_CASE(POINT,   cv::Point);
-        HANDLE_CASE(POINT2F, cv::Point2f);
-        HANDLE_CASE(SIZE,    cv::Size);
-        HANDLE_CASE(RECT,    cv::Rect);
-        HANDLE_CASE(SCALAR,  cv::Scalar);
-        HANDLE_CASE(MAT,     cv::Mat);
-        HANDLE_CASE(UNKNOWN, cv::detail::PyObjectHolder);
+        HANDLE_CASE(DOUBLE,    double);
+        HANDLE_CASE(FLOAT,     float);
+        HANDLE_CASE(STRING,    std::string);
+        HANDLE_CASE(POINT,     cv::Point);
+        HANDLE_CASE(POINT2F,   cv::Point2f);
+        HANDLE_CASE(SIZE,      cv::Size);
+        HANDLE_CASE(RECT,      cv::Rect);
+        HANDLE_CASE(SCALAR,    cv::Scalar);
+        HANDLE_CASE(MAT,       cv::Mat);
+        HANDLE_CASE(UNKNOWN,   cv::detail::PyObjectHolder);
+        HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
         UNSUPPORTED(UINT64);
-        UNSUPPORTED(DRAW_PRIM);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }
@@ -205,10 +266,10 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_SIZE      : return pyopencv_from(o.rref<cv::Size>());
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from(o.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from(o.rref<cv::GArg>());
+        case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from(o.rref<cv::gapi::wip::draw::Prim>());
         case cv::detail::OpaqueKind::CV_UINT64    : break;
         case cv::detail::OpaqueKind::CV_SCALAR    : break;
         case cv::detail::OpaqueKind::CV_MAT       : break;
-        case cv::detail::OpaqueKind::CV_DRAW_PRIM : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GOpaque type");
@@ -233,8 +294,8 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_SCALAR    : return pyopencv_from_generic_vec(v.rref<cv::Scalar>());
         case cv::detail::OpaqueKind::CV_MAT       : return pyopencv_from_generic_vec(v.rref<cv::Mat>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from_generic_vec(v.rref<cv::GArg>());
+        case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from_generic_vec(v.rref<cv::gapi::wip::draw::Prim>());
         case cv::detail::OpaqueKind::CV_UINT64    : break;
-        case cv::detail::OpaqueKind::CV_DRAW_PRIM : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GArray type");
@@ -259,40 +320,69 @@ PyObject* pyopencv_from(const GRunArg& v)
             return pyopencv_from(util::get<cv::detail::OpaqueRef>(v));
     }
 
-    PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
+    PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs. Index of variant is unknown");
+    return NULL;
+}
+
+template <typename T>
+PyObject* pyopencv_from(const cv::optional<T>& opt)
+{
+    if (!opt.has_value())
+    {
+        Py_RETURN_NONE;
+    }
+    return pyopencv_from(*opt);
+}
+
+template <>
+PyObject* pyopencv_from(const GOptRunArg& v)
+{
+    switch (v.index())
+    {
+        case GOptRunArg::index_of<cv::optional<cv::Mat>>():
+            return pyopencv_from(util::get<cv::optional<cv::Mat>>(v));
+
+        case GOptRunArg::index_of<cv::optional<cv::Scalar>>():
+            return pyopencv_from(util::get<cv::optional<cv::Scalar>>(v));
+
+        case GOptRunArg::index_of<optional<cv::detail::VectorRef>>():
+            return pyopencv_from(util::get<optional<cv::detail::VectorRef>>(v));
+
+        case GOptRunArg::index_of<optional<cv::detail::OpaqueRef>>():
+            return pyopencv_from(util::get<optional<cv::detail::OpaqueRef>>(v));
+    }
+
+    PyErr_SetString(PyExc_TypeError, "Failed to unpack GOptRunArg. Index of variant is unknown");
     return NULL;
 }
 
 template<>
 PyObject* pyopencv_from(const GRunArgs& value)
 {
-    size_t i, n = value.size();
+     return value.size() == 1 ? pyopencv_from(value[0]) : pyopencv_from_generic_vec(value);
+}
 
-    // NB: It doesn't make sense to return list with a single element
-    if (n == 1)
+template<>
+PyObject* pyopencv_from(const GOptRunArgs& value)
+{
+    return value.size() == 1 ? pyopencv_from(value[0]) : pyopencv_from_generic_vec(value);
+}
+
+// FIXME: cv::variant should be wrapped once for all types.
+template <>
+PyObject* pyopencv_from(const cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>& v)
+{
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    switch (v.index())
     {
-        PyObject* item = pyopencv_from(value[0]);
-        if(!item)
-        {
-            return NULL;
-        }
-        return item;
+        case RunArgs::index_of<cv::GRunArgs>():
+            return pyopencv_from(util::get<cv::GRunArgs>(v));
+        case RunArgs::index_of<cv::GOptRunArgs>():
+            return pyopencv_from(util::get<cv::GOptRunArgs>(v));
     }
 
-    PyObject* list = PyList_New(n);
-    for(i = 0; i < n; ++i)
-    {
-        PyObject* item = pyopencv_from(value[i]);
-        if(!item)
-        {
-            Py_DECREF(list);
-            PyErr_SetString(PyExc_TypeError, "Failed to unpack GRunArgs");
-            return NULL;
-        }
-        PyList_SetItem(list, i, item);
-    }
-
-    return list;
+    PyErr_SetString(PyExc_TypeError, "Failed to recognize kind of RunArgs. Index of variant is unknown");
+    return NULL;
 }
 
 template <typename T>
@@ -394,21 +484,21 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
 #define UNSUPPORTED(T) case cv::detail::OpaqueKind::CV_##T: break
     switch (kind)
     {
-        HANDLE_CASE(BOOL,    bool);
-        HANDLE_CASE(INT,     int);
-        HANDLE_CASE(DOUBLE,  double);
-        HANDLE_CASE(FLOAT,   float);
-        HANDLE_CASE(STRING,  std::string);
-        HANDLE_CASE(POINT,   cv::Point);
-        HANDLE_CASE(POINT2F, cv::Point2f);
-        HANDLE_CASE(SIZE,    cv::Size);
-        HANDLE_CASE(RECT,    cv::Rect);
-        HANDLE_CASE(SCALAR,  cv::Scalar);
-        HANDLE_CASE(MAT,     cv::Mat);
-        HANDLE_CASE(UNKNOWN, cv::GArg);
+        HANDLE_CASE(BOOL,      bool);
+        HANDLE_CASE(INT,       int);
+        HANDLE_CASE(DOUBLE,    double);
+        HANDLE_CASE(FLOAT,     float);
+        HANDLE_CASE(STRING,    std::string);
+        HANDLE_CASE(POINT,     cv::Point);
+        HANDLE_CASE(POINT2F,   cv::Point2f);
+        HANDLE_CASE(SIZE,      cv::Size);
+        HANDLE_CASE(RECT,      cv::Rect);
+        HANDLE_CASE(SCALAR,    cv::Scalar);
+        HANDLE_CASE(MAT,       cv::Mat);
+        HANDLE_CASE(UNKNOWN,   cv::GArg);
+        HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
         UNSUPPORTED(UINT64);
         UNSUPPORTED(INT64);
-        UNSUPPORTED(DRAW_PRIM);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }
@@ -574,7 +664,8 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
         cv::detail::PyObjectHolder result(
                 PyObject_CallObject(kernel.get(), args.get()), false);
 
-        if (PyErr_Occurred()) {
+        if (PyErr_Occurred())
+        {
             PyErr_PrintEx(0);
             PyErr_Clear();
             throw std::logic_error("Python kernel failed with error!");
@@ -657,8 +748,9 @@ static cv::GMetaArgs get_meta_args(PyObject* tuple)
 }
 
 static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
-                            const cv::GMetaArgs         &meta,
-                            const cv::GArgs             &gargs) {
+                             const cv::GMetaArgs         &meta,
+                             const cv::GArgs             &gargs)
+{
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
@@ -700,7 +792,8 @@ static GMetaArgs run_py_meta(cv::detail::PyObjectHolder out_meta,
         cv::detail::PyObjectHolder result(
                 PyObject_CallObject(out_meta.get(), args.get()), false);
 
-        if (PyErr_Occurred()) {
+        if (PyErr_Occurred())
+        {
             PyErr_PrintEx(0);
             PyErr_Clear();
             throw std::logic_error("Python outMeta failed with error!");
@@ -732,21 +825,24 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
         PyObject* user_kernel = PyTuple_GetItem(py_args, i);
 
         PyObject* id_obj = PyObject_GetAttrString(user_kernel, "id");
-        if (!id_obj) {
+        if (!id_obj)
+        {
             PyErr_SetString(PyExc_TypeError,
                     "Python kernel should contain id, please use cv.gapi.kernel to define kernel");
             return NULL;
         }
 
         PyObject* out_meta = PyObject_GetAttrString(user_kernel, "outMeta");
-        if (!out_meta) {
+        if (!out_meta)
+        {
             PyErr_SetString(PyExc_TypeError,
                     "Python kernel should contain outMeta, please use cv.gapi.kernel to define kernel");
             return NULL;
         }
 
         PyObject* run  = PyObject_GetAttrString(user_kernel, "run");
-        if (!run) {
+        if (!run)
+        {
             PyErr_SetString(PyExc_TypeError,
                     "Python kernel should contain run, please use cv.gapi.kernel to define kernel");
             return NULL;
@@ -891,9 +987,12 @@ struct PyOpenCV_Converter<cv::GArray<T>>
         if (PyObject_TypeCheck(obj, reinterpret_cast<PyTypeObject*>(pyopencv_GArrayT_TypePtr)))
         {
             auto& array = reinterpret_cast<pyopencv_GArrayT_t*>(obj)->v;
-            try {
+            try
+            {
                 value = cv::util::get<cv::GArray<T>>(array.arg());
-            } catch (...) {
+            }
+            catch (...)
+            {
                 return false;
             }
             return true;
@@ -914,9 +1013,12 @@ struct PyOpenCV_Converter<cv::GOpaque<T>>
         if (PyObject_TypeCheck(obj, reinterpret_cast<PyTypeObject*>(pyopencv_GOpaqueT_TypePtr)))
         {
             auto& opaque = reinterpret_cast<pyopencv_GOpaqueT_t*>(obj)->v;
-            try {
+            try
+            {
                 value = cv::util::get<cv::GOpaque<T>>(opaque.arg());
-            } catch (...) {
+            }
+            catch (...)
+            {
                 return false;
             }
             return true;

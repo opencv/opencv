@@ -859,8 +859,6 @@ TEST_F(S11N_Basic, Test_Deserialize_CompileArgs_RandomOrder) {
     std::vector<char> sArgs = cv::gapi::serialize(
         cv::compile_args(simpleCustomVar, simpleCustomVar2));
     GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs,
-                                               // Here, types of passed to serialize() arguments
-                                               // are enumerated in reverse order
                                                SimpleCustomType2,
                                                SimpleCustomType>(sArgs);
 
