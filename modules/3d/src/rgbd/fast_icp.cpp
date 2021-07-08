@@ -75,6 +75,7 @@ bool ICPImpl::estimateTransform(cv::Affine3f& transform,
     CV_Assert(_oldPoints.size() == _newPoints.size());
 
 #ifdef HAVE_OPENCL
+    std::cout << "estimateTransform_GPU" << std::endl;
     if(cv::ocl::isOpenCLActivated() &&
        _oldPoints.isUMatVector() && _oldNormals.isUMatVector() &&
        _newPoints.isUMatVector() && _newNormals.isUMatVector())
@@ -91,7 +92,7 @@ bool ICPImpl::estimateTransform(cv::Affine3f& transform,
         _oldNormalsMask.getUMatVector(onm);
         _newNormalsMask.getUMatVector(nnm);
 
-        return estimateTransformT<UMat>(transform, op, on, np, nn);
+        return estimateTransformT<UMat>(transform, op, on, np, nn, opm, onm, npm, nnm);
     }
 #endif
 
@@ -119,7 +120,7 @@ bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
                                  ) const
 {
     CV_TRACE_FUNCTION();
-
+    std::cout << "estimateTransformT_GPU" << std::endl;
     transform = Affine3f::Identity();
     for(size_t l = 0; l < iterations.size(); l++)
     {
@@ -591,6 +592,7 @@ void ICPImpl::getAb<Mat>(const Mat& oldPts, const Mat& oldNrm, const Mat& newPts
                          cv::Affine3f pose, int level, cv::Matx66f& A, cv::Vec6f& b) const
 {
     CV_TRACE_FUNCTION();
+    std::cout << "getAb<Mat>" << std::endl;
 
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
@@ -629,10 +631,11 @@ void ICPImpl::getAb<Mat>(const Mat& oldPts, const Mat& oldNrm, const Mat& newPts
 
 template <>
 void ICPImpl::getAb<UMat>(const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
+                          const UMat& oldPtsMask, const UMat& oldNrmMask, const UMat& newPtsMask, const UMat& newNrmMask,
                           Affine3f pose, int level, Matx66f &A, Vec6f &b) const
 {
     CV_TRACE_FUNCTION();
-
+    std::cout << "getAb<UMat>" << std::endl;
     Size oldSize = oldPts.size(), newSize = newPts.size();
     CV_Assert(oldSize == oldNrm.size());
     CV_Assert(newSize == newNrm.size());

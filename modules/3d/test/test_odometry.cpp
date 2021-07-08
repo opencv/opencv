@@ -193,7 +193,7 @@ void CV_OdometryTest::generateRandomTransformation(Mat& rvec, Mat& tvec)
     normalize(tvec, tvec, rng.uniform(0.008f, maxTranslation));
 }
 
-void CV_OdometryTest::run(int)
+void CV_OdometryTest::run(int useOpenCl)
 {
     float fx = 525.0f, // default
           fy = 525.0f,
@@ -216,9 +216,16 @@ void CV_OdometryTest::run(int)
     Mat calcRt;
 
     // 1. Try to find Rt between the same frame (try masks also).
-    bool isComputed = odometry->compute(image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
-                                        image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
-                                        calcRt);
+    bool isComputed;
+    if (!useOpenCl)
+        isComputed = odometry->compute(image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
+                                       image, depth, Mat(image.size(), CV_8UC1, Scalar(255)),
+                                       calcRt);
+    else
+        isComputed = odometry->compute(image.getUMat(ACCESS_RW), depth.getUMat(ACCESS_RW), Mat(image.size(), CV_8UC1, Scalar(255)).getUMat(ACCESS_MASK),
+                                       image.getUMat(ACCESS_RW), depth.getUMat(ACCESS_RW), Mat(image.size(), CV_8UC1, Scalar(255)).getUMat(ACCESS_MASK),
+                                       calcRt);
+
     if(!isComputed)
     {
         ts->printf(cvtest::TS::LOG, "Can not find Rt between the same frame");
@@ -230,6 +237,8 @@ void CV_OdometryTest::run(int)
         ts->printf(cvtest::TS::LOG, "Incorrect transformation between the same frame (not the identity matrix), diff = %f", diff);
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
+
+    std::cout << "DONE" << std::endl;
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
@@ -249,7 +258,12 @@ void CV_OdometryTest::run(int)
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
         Mat imageMask(image.size(), CV_8UC1, Scalar(255));
-        isComputed = odometry->compute(image, depth, imageMask, warpedImage, warpedDepth, imageMask, calcRt);
+        if (!useOpenCl)
+            isComputed = odometry->compute(image, depth, imageMask, warpedImage, warpedDepth, imageMask, calcRt);
+        else
+            isComputed = odometry->compute(image.getUMat(ACCESS_RW), depth.getUMat(ACCESS_RW), imageMask.getUMat(ACCESS_RW),
+                                           warpedImage.getUMat(ACCESS_RW), warpedDepth.getUMat(ACCESS_RW), imageMask.getUMat(ACCESS_RW), calcRt.getUMat(ACCESS_RW));
+
         if(!isComputed)
             continue;
 
@@ -327,6 +341,14 @@ TEST(RGBD_Odometry_FastICP, algorithmic)
     CV_OdometryTest test(cv::Odometry::createFromName("FastICPOdometry"), 0.99, 0.99, FLT_EPSILON);
     test.safe_run();
 }
+
+#ifdef HAVE_OPENCL
+TEST(RGBD_Odometry_FastICP_GPU, algorithmic)
+{
+    CV_OdometryTest test(cv::Odometry::createFromName("FastICPOdometry"), 0.99, 0.99, FLT_EPSILON);
+    test.safe_run(1);
+}
+#endif // HAVE_OPENCL
 
 
 }} // namespace

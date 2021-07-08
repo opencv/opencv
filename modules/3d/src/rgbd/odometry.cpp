@@ -1181,6 +1181,7 @@ bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcM
                        InputArray dstImage, InputArray dstDepth, InputArray dstMask,
                        OutputArray Rt, const Mat& initRt) const
 {
+    std::cout << "compute1" << std::endl;
     Ptr<OdometryFrame> srcFrame = makeOdometryFrame(srcImage, srcDepth, srcMask);
     Ptr<OdometryFrame> dstFrame = makeOdometryFrame(dstImage, dstDepth, dstMask);
 
@@ -1190,7 +1191,7 @@ bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcM
 bool Odometry::compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const
 {
     checkParams();
-
+    std::cout << "compute2" << std::endl;
     Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
     Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
 
@@ -1852,6 +1853,7 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
                                          iterations,
                                          angleThreshold,
                                          maxDistDiff);
+    std::cout << "computeImpl" << std::endl;
 
     // KinFu's ICP calculates transformation from new frame to old one (src to dst)
     Affine3f transform;
