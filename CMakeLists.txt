@@ -512,6 +512,7 @@ OCV_OPTION(OPENCV_GENERATE_SETUPVARS  "Generate setup_vars* scripts" ON IF (NOT 
 OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn't match requested (WITH_XXX != HAVE_XXX)" OFF)
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
+OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT "Build the library without multi-threaded code." OFF)
 
 OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
 OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
@@ -664,6 +665,11 @@ if(UNIX)
     endif()
   else()
     set(HAVE_PTHREAD 1)
+  endif()
+
+  # Ensure that libpthread is not listed as one of the libraries to pass to the linker.
+  if (OPENCV_DISABLE_THREAD_SUPPORT)
+    list(REMOVE_ITEM OPENCV_LINKER_LIBS pthread)
   endif()
 
   if(OPENCV_ENABLE_MEMALIGN)
@@ -1459,6 +1465,15 @@ ocv_build_features_string(parallel_status EXCLUSIVE
   ELSE "none")
 status("")
 status("  Parallel framework:" "${parallel_status}")
+if (OPENCV_DISABLE_THREAD_SUPPORT)
+  status("" "Multi thread code explicitly disabled with OPENCV_DISABLE_THREAD_SUPPORT.")
+  if(HAVE_PTHREADS_PF OR HAVE_HPX OR HAVE_OPENMP OR HAVE_GCD OR HAVE_CONCURRENCY)
+    message(FATAL_ERROR "Not all parallel frameworks have been disabled (using ${parallel_status}).")
+  endif()
+  if(HAVE_PTHREAD)
+    message(FATAL_ERROR "Thread execution might be in use in some component.")
+  endif()
+endif()
 
 if(CV_TRACE OR OPENCV_TRACE)
   ocv_build_features_string(trace_status EXCLUSIVE

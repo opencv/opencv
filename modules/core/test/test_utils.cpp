@@ -8,8 +8,11 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
-#include "test_utils_tls.impl.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
+
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+#include "test_utils_tls.impl.hpp"
+#endif
 
 namespace opencv_test { namespace {
 
