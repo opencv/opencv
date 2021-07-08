@@ -15,7 +15,7 @@ def generate_property_group(list, args):
 def generate_item_definition_group(list, args):
     files_list = ['<ItemDefinitionGroup>']
     files_list.append(f'<ClCompile>')
-    files_list.append(f'<AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>')
+    files_list.append(f'<AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)\\include\\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>')
     files_list.append(f'</ClCompile>')
     files_list.append('</ItemDefinitionGroup>')
 
@@ -24,7 +24,7 @@ def generate_item_definition_group(list, args):
 def generate_item_definition_group_2(list, args):
     files_list = ['<ItemDefinitionGroup>']
     files_list.append(f'<Link>')
-    files_list.append(f'<AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)\x$(Platform)\vc$(VisualStudioVersion)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>')
+    files_list.append(f'<AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)\\x$(Platform)\\vc$(VisualStudioVersion)\\lib\\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>')
     files_list.append(f'<AdditionalDependencies>opencv_world*$(LibraryType).lib;%(AdditionalDependencies)</AdditionalDependencies>')
     files_list.append(f'</Link>')
     files_list.append('</ItemDefinitionGroup>')
