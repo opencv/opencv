@@ -809,7 +809,7 @@ TEST(S11N, Pipeline_Render_RGB)
 
 TEST(S11N, Pipeline_Const_GScalar)
 {
-    static constexpr auto in_scalar= 10;
+    static constexpr auto in_scalar = 10;
 
     cv::GMat a;
     cv::GScalar s;

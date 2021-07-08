@@ -31,7 +31,9 @@ struct GSerialized {
     std::vector<cv::gimpl::Data> m_datas;
     cv::gimpl::DataObjectCounter m_counter;
     cv::gimpl::Protocol m_proto;
-    std::map<size_t, cv::gimpl::ConstValue> m_const_datas;
+
+    using data_tag_t = uint32_t;
+    std::map<data_tag_t, cv::gimpl::ConstValue> m_const_datas;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
