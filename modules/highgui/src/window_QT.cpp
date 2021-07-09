@@ -63,6 +63,7 @@
     #endif
 #endif
 
+using namespace cv;
 
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;
@@ -197,7 +198,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_QT(const String& winname, const String& title)
 {
     if (!guiMainThread)
         CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
@@ -1219,9 +1220,6 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
     if (t) //trackbar exists
         return;
 
-    if (!value)
-        CV_Error(CV_StsNullPtr, "NULL value pointer" );
-
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
         CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
 
@@ -1342,7 +1340,8 @@ void CvTrackbar::create(CvWindow* arg, QString name, int* value, int _count)
     slider->setMinimum(0);
     slider->setMaximum(_count);
     slider->setPageStep(5);
-    slider->setValue(*value);
+    if (dataSlider)
+        slider->setValue(*dataSlider);
     slider->setTickPosition(QSlider::TicksBelow);
 
 
@@ -1409,7 +1408,8 @@ void CvTrackbar::update(int myvalue)
 {
     setLabel(myvalue);
 
-    *dataSlider = myvalue;
+    if (dataSlider)
+        *dataSlider = myvalue;
     if (callback)
     {
         callback(myvalue);

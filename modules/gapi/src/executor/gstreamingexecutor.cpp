@@ -1017,6 +1017,49 @@ void check_DesyncObjectConsumedByMultipleIslands(const cv::gimpl::GIslandModel::
     } // for(nodes)
 }
 
+// NB: Construct GRunArgsP based on passed info and store the memory in passed cv::GRunArgs.
+// Needed for python bridge, because in case python user doesn't pass output arguments to apply.
+void constructOptGraphOutputs(const cv::GTypesInfo &out_info,
+                                    cv::GOptRunArgs &args,
+                                    cv::GOptRunArgsP &outs)
+{
+    for (auto&& info : out_info)
+    {
+        switch (info.shape)
+        {
+            case cv::GShape::GMAT:
+            {
+                args.emplace_back(cv::optional<cv::Mat>{});
+                outs.emplace_back(&cv::util::get<cv::optional<cv::Mat>>(args.back()));
+                break;
+            }
+            case cv::GShape::GSCALAR:
+            {
+                args.emplace_back(cv::optional<cv::Scalar>{});
+                outs.emplace_back(&cv::util::get<cv::optional<cv::Scalar>>(args.back()));
+                break;
+            }
+            case cv::GShape::GARRAY:
+            {
+                cv::detail::VectorRef ref;
+                cv::util::get<cv::detail::ConstructVec>(info.ctor)(ref);
+                args.emplace_back(cv::util::make_optional(std::move(ref)));
+                outs.emplace_back(wrap_opt_arg(cv::util::get<cv::optional<cv::detail::VectorRef>>(args.back())));
+                break;
+            }
+            case cv::GShape::GOPAQUE:
+            {
+                cv::detail::OpaqueRef ref;
+                cv::util::get<cv::detail::ConstructOpaque>(info.ctor)(ref);
+                args.emplace_back(cv::util::make_optional(std::move(ref)));
+                outs.emplace_back(wrap_opt_arg(cv::util::get<cv::optional<cv::detail::OpaqueRef>>(args.back())));
+                break;
+            }
+            default:
+                cv::util::throw_error(std::logic_error("Unsupported optional output shape for Python"));
+        }
+    }
+}
 } // anonymous namespace
 
 class cv::gimpl::GStreamingExecutor::Synchronizer final {
@@ -1126,14 +1169,17 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     m_sink_queues   .resize(proto.out_nhs.size(), nullptr);
     m_sink_sync     .resize(proto.out_nhs.size(), -1);
 
-    // Very rough estimation to limit internal queue sizes.
+    // Very rough estimation to limit internal queue sizes if not specified by the user.
     // Pipeline depth is equal to number of its (pipeline) steps.
-    const auto queue_capacity = 3*std::count_if
-        (m_gim.nodes().begin(),
-         m_gim.nodes().end(),
-         [&](ade::NodeHandle nh) {
-            return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
-         });
+    auto has_queue_capacity = cv::gapi::getCompileArg<cv::gapi::streaming::queue_capacity>(m_comp_args);
+    const auto queue_capacity = has_queue_capacity ? has_queue_capacity->capacity :
+            3*std::count_if
+            (m_gim.nodes().begin(),
+            m_gim.nodes().end(),
+            [&](ade::NodeHandle nh) {
+                return m_gim.metadata(nh).get<NodeKind>().k == NodeKind::ISLAND;
+            });
+    GAPI_Assert(queue_capacity != 0u);
 
     auto sync_policy = cv::gimpl::getCompileArg<cv::gapi::streaming::sync_policy>(m_comp_args)
                        .value_or(cv::gapi::streaming::sync_policy::dont_sync);
@@ -1317,6 +1363,16 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
     // per the same input frame, so the output traffic multiplies)
     GAPI_Assert(m_collector_map.size() > 0u);
     m_out_queue.set_capacity(queue_capacity * m_collector_map.size());
+
+    // FIXME: The code duplicates logic of collectGraphInfo()
+    cv::gimpl::GModel::ConstGraph cgr(*m_orig_graph);
+    auto meta = cgr.metadata().get<cv::gimpl::Protocol>().out_nhs;
+    out_info.reserve(meta.size());
+
+    ade::util::transform(meta, std::back_inserter(out_info), [&cgr](const ade::NodeHandle& nh) {
+        const auto& data = cgr.metadata(nh).get<cv::gimpl::Data>();
+        return cv::GTypeInfo{data.shape, data.kind, data.ctor};
+    });
 }
 
 cv::gimpl::GStreamingExecutor::~GStreamingExecutor()
@@ -1650,6 +1706,31 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
     return true;
 }
 
+std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::gimpl::GStreamingExecutor::pull()
+{
+    using RunArgs = cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>;
+    bool is_over = false;
+
+    if (m_desync) {
+        GOptRunArgs opt_run_args;
+        GOptRunArgsP opt_outs;
+        opt_outs.reserve(out_info.size());
+        opt_run_args.reserve(out_info.size());
+
+        constructOptGraphOutputs(out_info, opt_run_args, opt_outs);
+        is_over = pull(std::move(opt_outs));
+        return std::make_tuple(is_over, RunArgs(opt_run_args));
+    }
+
+    GRunArgs run_args;
+    GRunArgsP outs;
+    run_args.reserve(out_info.size());
+    outs.reserve(out_info.size());
+
+    constructGraphOutputs(out_info, run_args, outs);
+    is_over = pull(std::move(outs));
+    return std::make_tuple(is_over, RunArgs(run_args));
+}
 
 bool cv::gimpl::GStreamingExecutor::try_pull(cv::GRunArgsP &&outs)
 {

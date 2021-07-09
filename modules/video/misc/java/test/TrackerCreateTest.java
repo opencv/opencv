@@ -1,7 +1,10 @@
 package org.opencv.test.video;
 
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.CvException;
+import org.opencv.core.Mat;
+import org.opencv.core.Rect;
 import org.opencv.test.OpenCVTestCase;
 
 import org.opencv.video.Tracker;
@@ -27,6 +30,10 @@ public class TrackerCreateTest extends OpenCVTestCase {
 
     public void testCreateTrackerMIL() {
         Tracker tracker = TrackerMIL.create();
+        assert(tracker != null);
+        Mat mat = new Mat(100, 100, CvType.CV_8UC1);
+        Rect rect = new Rect(10, 10, 30, 30);
+        tracker.init(mat, rect);  // should not crash (https://github.com/opencv/opencv/issues/19915)
     }
 
 }

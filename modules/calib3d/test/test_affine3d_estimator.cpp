@@ -201,4 +201,25 @@ TEST(Calib3d_EstimateAffine3D, regression_16007)
     EXPECT_EQ(1, res);
 }
 
+TEST(Calib3d_EstimateAffine3D, umeyama_3_pt)
+{
+    std::vector<cv::Vec3d> points =   {{{0.80549149, 0.8225781, 0.79949521},
+                                        {0.28906756, 0.57158557, 0.9864789},
+                                        {0.58266182, 0.65474983, 0.25078834}}};
+    cv::Mat R =   (cv::Mat_<double>(3,3) << 0.9689135, -0.0232753, 0.2463025,
+                                            0.0236362,  0.9997195, 0.0014915,
+                                            -0.2462682, 0.0043765, 0.9691918);
+    cv::Vec3d t(1., 2., 3.);
+    cv::Affine3d transform(R, t);
+    std::vector<cv::Vec3d> transformed_points(points.size());
+    std::transform(points.begin(), points.end(), transformed_points.begin(), [transform](const cv::Vec3d v){return transform * v;});
+    double scale;
+    cv::Mat trafo_est = estimateAffine3D(points, transformed_points, &scale);
+    Mat R_est(trafo_est(Rect(0, 0, 3, 3)));
+    EXPECT_LE(cvtest::norm(R_est, R, NORM_INF), 1e-6);
+    Vec3d t_est = trafo_est.col(3);
+    EXPECT_LE(cvtest::norm(t_est, t, NORM_INF), 1e-6);
+    EXPECT_NEAR(scale, 1.0, 1e-6);
+}
+
 }} // namespace
