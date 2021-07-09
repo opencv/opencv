@@ -178,17 +178,14 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
-  # We need pthread's, unless we have explicitly disabled multi-thread execution.
-  if(NOT OPENCV_DISABLE_THREAD_SUPPORT
-      AND (
-        (UNIX
+  # We need pthread's
+  if((UNIX
           AND NOT ANDROID
           AND NOT (APPLE AND CV_CLANG)
           AND NOT EMSCRIPTEN
-        )
-        OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
       )
-  ) # TODO
+      OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
+  )
     add_extra_compiler_option(-pthread)
   endif()
 

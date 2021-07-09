@@ -35,6 +35,7 @@ namespace detail
     template<> struct ProtoToMeta<cv::GScalar>  { using type = cv::GScalarDesc; };
     template<typename U> struct ProtoToMeta<cv::GArray<U> >  { using type = cv::GArrayDesc; };
     template<typename U> struct ProtoToMeta<cv::GOpaque<U> > { using type = cv::GOpaqueDesc; };
+    template<> struct ProtoToMeta<cv::GFrame>  { using type = cv::GFrameDesc; };
     template<typename T> using ProtoToMetaT = typename ProtoToMeta<T>::type;
 
     //workaround for MSVC 19.0 bug

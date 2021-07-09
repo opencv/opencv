@@ -1,8 +1,0 @@
-# Gedit temp files
-*~
-
-# Qt Creator file
-*.user
-
-# MacOS-specific (Desktop Services Store)
-.DS_Store

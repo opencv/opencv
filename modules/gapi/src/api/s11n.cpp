@@ -65,11 +65,11 @@ std::vector<char> cv::gapi::serialize(const std::vector<std::string>& vs)
 
 // FIXME: This function should move from S11N to GRunArg-related entities.
 // it has nothing to do with the S11N as it is
-cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &out_args)
+cv::GRunArgsP cv::gapi::bind(cv::GRunArgs &results)
 {
     cv::GRunArgsP outputs;
-    outputs.reserve(out_args.size());
-    for (cv::GRunArg &res_obj : out_args)
+    outputs.reserve(results.size());
+    for (cv::GRunArg &res_obj : results)
     {
         using T = cv::GRunArg;
         switch (res_obj.index())

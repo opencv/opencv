@@ -32,9 +32,7 @@ endif()
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
-if(NOT OPENCV_DISABLE_THREAD_SUPPORT)
-  add_definitions(-DWEBP_USE_THREAD)
-endif()
+add_definitions(-DWEBP_USE_THREAD)
 
 add_library(${WEBP_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 if(ANDROID)
