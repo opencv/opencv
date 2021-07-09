@@ -92,6 +92,7 @@
 #ifdef HAVE_PROTOBUF
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/stubs/common.h>
 #include <google/protobuf/text_format.h>
 
 #include <opencv2/core.hpp>
@@ -1111,7 +1112,11 @@ static const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 by
 
 bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
     CodedInputStream coded_input(input);
+#if GOOGLE_PROTOBUF_VERSION >= 3006000
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit);
+#else
     coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+#endif
 
     return proto->ParseFromCodedStream(&coded_input);
 }
