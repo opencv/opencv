@@ -806,4 +806,33 @@ TEST(S11N, Pipeline_Render_RGB)
 
     EXPECT_EQ(cv::norm(input,  ref_mat), 0);
 }
+
+TEST(S11N, Pipeline_Const_GScalar)
+{
+    static constexpr auto in_scalar = 10;
+
+    cv::GMat a;
+    cv::GScalar s;
+
+    cv::GComputation computation(GIn(a), GOut(cv::gapi::addC(a, in_scalar)));
+    auto p = cv::gapi::serialize(computation);
+    auto deserialized_computation = cv::gapi::deserialize<cv::GComputation>(p);
+
+    cv::Mat in_mat = cv::Mat::eye(32, 32, CV_8UC1);
+    cv::Mat ref_mat;
+    cv::add(in_mat, in_scalar, ref_mat);
+
+    cv::Mat out_mat;
+    computation.apply(cv::gin(in_mat/*, in_scalar*/), cv::gout(out_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
+
+    out_mat = cv::Mat();
+    deserialized_computation.apply(cv::gin(in_mat/*, in_scalar*/), cv::gout(out_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
+
+    out_mat = cv::Mat();
+    auto cc = deserialized_computation.compile(cv::descr_of(in_mat));
+    cc(cv::gin(in_mat/*, in_scalar*/), cv::gout(out_mat));
+    EXPECT_EQ(0, cvtest::norm(out_mat, ref_mat, NORM_INF));
+}
 } // namespace opencv_test

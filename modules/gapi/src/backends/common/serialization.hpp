@@ -31,6 +31,9 @@ struct GSerialized {
     std::vector<cv::gimpl::Data> m_datas;
     cv::gimpl::DataObjectCounter m_counter;
     cv::gimpl::Protocol m_proto;
+
+    using data_tag_t = uint64_t;
+    std::map<data_tag_t, cv::gimpl::ConstValue> m_const_datas;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -96,6 +99,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Op &op);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::Data &op);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Data &op);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::ConstValue &cd);
+GAPI_EXPORTS IIStream& operator>> (IIStream& os, cv::gimpl::ConstValue &cd);
 
 // Render types ////////////////////////////////////////////////////////////////
 
