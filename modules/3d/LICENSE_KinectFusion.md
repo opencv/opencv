@@ -1,9 +1,3 @@
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html
-
-/*=============================================================================
-
 Copyright (c) 2012, Anatoly Baksheev
 All rights reserved.
 
@@ -31,20 +25,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-===============================================================================*/
-
-#ifndef __OPENCV_KINFU_FRAME_H__
-#define __OPENCV_KINFU_FRAME_H__
-
-#include <opencv2/core/affine.hpp>
-
-namespace cv {
-namespace detail {
-
-CV_EXPORTS_W void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, cv::Vec3f lightLoc);
-CV_EXPORTS_W void renderPointsNormalsColors(InputArray _points, InputArray _normals, InputArray _colors, OutputArray image);
-
-} // namespace detail
-} // namespace cv
-#endif
