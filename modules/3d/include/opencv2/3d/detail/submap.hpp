@@ -49,8 +49,6 @@ class Submap
         vp.kind = VolumeParams::VolumeKind::HASHTSDF;
         Ptr<VolumeParams> pvp = makePtr<VolumeParams>(vp);
         volume = makeVolume(pvp);
-
-        CV_LOG_INFO(NULL, "Created volume");
     }
     virtual ~Submap() = default;
 
@@ -200,8 +198,6 @@ int SubmapManager<MatType>::createNewSubmap(bool isCurrentMap, int currFrameId, 
     newSubmapData.type             = isCurrentMap ? Type::CURRENT : Type::NEW;
     activeSubmaps[newId]           = newSubmapData;
 
-    std::cout << "Created new submap\n";
-
     return newId;
 }
 
@@ -249,8 +245,6 @@ bool SubmapManager<MatType>::shouldCreateSubmap(int currFrameId)
 
     Ptr<SubmapT> currSubmap = getSubmap(currSubmapId);
     float ratio             = currSubmap->calcVisibilityRatio(currFrameId);
-
-    std::cout << "Ratio: " << ratio << "\n";
 
     if (ratio < 0.2f)
         return true;
@@ -356,9 +350,6 @@ int SubmapManager<MatType>::estimateConstraint(int fromSubmapId, int toSubmapId,
     inlierPose = Affine3f(inlierConstraint);
     inliers    = localInliers;
 
-    /* std::cout << inlierPose.matrix << "\n"; */
-    /* std::cout << " inliers: " << inliers << "\n"; */
-
     if (inliers >= MIN_INLIERS)
     {
         return 1;
@@ -410,18 +401,15 @@ bool SubmapManager<MatType>::updateMap(int _frameId, Ptr<OdometryFrame> _frame)
             int inliers;
             Affine3f inlierPose;
             int constraintUpdate = estimateConstraint(submapId, currSubmapId, inliers, inlierPose);
-            std::cout << "SubmapId: " << submapId << " Tracking attempts: " << submapData.trackingAttempts << "\n";
             if (constraintUpdate == 1)
             {
                 typename SubmapT::PoseConstraint& submapConstraint = getSubmap(submapId)->getConstraint(currSubmapId);
                 submapConstraint.accumulatePose(inlierPose, inliers);
-                std::cout << "Submap constraint estimated pose: \n" << submapConstraint.estimatedPose.matrix << "\n";
                 submapData.constraints.clear();
                 submapData.trackingAttempts = 0;
 
                 if (shouldChangeCurrSubmap(_frameId, submapId))
                 {
-                    std::cout << "Should change current map to the new map\n";
                     changedCurrentMapId = submapId;
                 }
                 mapUpdated = true;
@@ -490,11 +478,9 @@ bool SubmapManager<MatType>::updateMap(int _frameId, Ptr<OdometryFrame> _frame)
         {
             Ptr<SubmapT> currSubmap = submapList.at(i);
             typename SubmapT::Constraints::const_iterator itBegin = currSubmap->constraints.begin();
-            std::cout << "Constraint list for SubmapID: " << currSubmap->id << "\n";
             for(typename SubmapT::Constraints::const_iterator it = itBegin; it != currSubmap->constraints.end(); ++it)
             {
                 const typename SubmapT::PoseConstraint& constraint = it->second;
-                std::cout << "[" << it->first << "] weight: "  << constraint.weight << "\n " << constraint.estimatedPose.matrix << " \n";
             }
         }
     }
@@ -535,7 +521,6 @@ void SubmapManager<MatType>::PoseGraphToMap(const Ptr<detail::PoseGraph>& update
         Affine3d pose = updatedPoseGraph->getNodePose(currSubmap->id);
         if(!updatedPoseGraph->isNodeFixed(currSubmap->id))
             currSubmap->pose = pose;
-        std::cout << "Current node: " << currSubmap->id << " Updated Pose: \n" << currSubmap->pose.matrix << std::endl;
     }
 }
 
