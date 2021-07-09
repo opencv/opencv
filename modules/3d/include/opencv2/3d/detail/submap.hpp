@@ -23,7 +23,7 @@ namespace detail
 template<typename MatType>
 class Submap
 {
-   public:
+public:
     struct PoseConstraint
     {
         Affine3f estimatedPose;
@@ -80,7 +80,7 @@ class Submap
         return constraints[_id];
     }
 
-   public:
+public:
     const int id;
     cv::Affine3f pose;
     cv::Affine3f cameraPose;
@@ -132,7 +132,7 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f
 template<typename MatType>
 class SubmapManager
 {
-   public:
+public:
     enum class Type
     {
         NEW            = 0,
