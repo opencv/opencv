@@ -237,9 +237,6 @@ void CV_OdometryTest::run(int useOpenCl)
         ts->printf(cvtest::TS::LOG, "Incorrect transformation between the same frame (not the identity matrix), diff = %f", diff);
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
     }
-
-    std::cout << "DONE" << std::endl;
-
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
     // On each iteration an input frame is warped using generated transformation.
     // Odometry is run on the following pair: the original frame and the warped one.

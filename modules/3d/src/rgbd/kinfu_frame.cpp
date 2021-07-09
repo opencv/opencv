@@ -377,16 +377,20 @@ static bool pyrDownPointsNormalsGpu(const UMat p, const UMat n, UMat &pdown, UMa
 
 
 bool computePointsNormalsGpu(const Intr intr, float depthFactor, const UMat& depth,
-                             UMat& points, UMat& normals)
+                             UMat& points, UMat& normals, UMat& pointsMasks, UMat& normalsMasks)
 {
     CV_TRACE_FUNCTION();
 
     CV_Assert(!points.empty() && !normals.empty());
     CV_Assert(depth.size() == points.size());
     CV_Assert(depth.size() == normals.size());
+    CV_Assert(depth.size() == pointsMasks.size());
+    CV_Assert(depth.size() == normalsMasks.size());
     CV_Assert(depth.type() == DEPTH_TYPE);
     CV_Assert(points.type()  == POINT_TYPE);
     CV_Assert(normals.type() == POINT_TYPE);
+    CV_Assert(pointsMasks.type()  == MASK_TYPE);
+    CV_Assert(normalsMasks.type() == MASK_TYPE);
 
     // conversion to meters
     float dfac = 1.f/depthFactor;
@@ -407,6 +411,8 @@ bool computePointsNormalsGpu(const Intr intr, float depthFactor, const UMat& dep
 
     k.args(ocl::KernelArg::WriteOnlyNoSize(points),
            ocl::KernelArg::WriteOnlyNoSize(normals),
+           ocl::KernelArg::WriteOnlyNoSize(pointsMasks),
+           ocl::KernelArg::WriteOnlyNoSize(normalsMasks),
            ocl::KernelArg::ReadOnly(depth),
            fxyinv.val,
            cxy.val,
@@ -548,6 +554,7 @@ static bool ocl_renderPointsNormals(const UMat points, const UMat normals,
 
 
 static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points, OutputArrayOfArrays normals,
+                                   const UMat mask, OutputArrayOfArrays pointsMasks, OutputArrayOfArrays normalsMasks,
                                    const Intr intr, int levels, float depthFactor,
                                    float sigmaDepth, float sigmaSpatial, int kernelSize,
                                    float truncateThreshold)
@@ -573,14 +580,22 @@ static bool ocl_makeFrameFromDepth(const UMat depth, OutputArrayOfArrays points,
     Size sz = smooth.size();
     points.create(levels, 1, POINT_TYPE);
     normals.create(levels, 1, POINT_TYPE);
+    pointsMasks.create(levels, 1, MASK_TYPE);
+    normalsMasks.create(levels, 1, MASK_TYPE);
+
     for(int i = 0; i < levels; i++)
     {
         UMat& p = points.getUMatRef(i);
         UMat& n = normals.getUMatRef(i);
+        UMat& pm = pointsMasks.getUMatRef(i);
+        UMat& nm = normalsMasks.getUMatRef(i);
+
         p.create(sz, POINT_TYPE);
         n.create(sz, POINT_TYPE);
+        pm.create(sz, MASK_TYPE);
+        nm.create(sz, MASK_TYPE);
 
-        if(!computePointsNormalsGpu(intr.scale(i), depthFactor, scaled, p, n))
+        if(!computePointsNormalsGpu(intr.scale(i), depthFactor, scaled, p, n, pm, nm))
             return false;
 
         if(i < levels - 1)
@@ -693,8 +708,10 @@ void makeFrameFromDepth(InputArray _depth, InputArray _mask,
     CV_Assert(_depth.type() == DEPTH_TYPE);
 
     Intr intr(_intr);
-    CV_OCL_RUN(_depth.isUMat() && pyrPoints.isUMatVector() && pyrNormals.isUMatVector(),
+    CV_OCL_RUN(_depth.isUMat() && pyrPoints.isUMatVector() && pyrNormals.isUMatVector() &&
+               _mask.isUMat() && pyrPointsMasks.isUMatVector() && pyrNormalsMasks.isUMatVector(),
                ocl_makeFrameFromDepth(_depth.getUMat(), pyrPoints, pyrNormals,
+                                      _mask.getUMat(), pyrPointsMasks, pyrNormalsMasks,
                                       intr, levels, depthFactor,
                                       sigmaDepth, sigmaSpatial, kernelSize,
                                       truncateThreshold));

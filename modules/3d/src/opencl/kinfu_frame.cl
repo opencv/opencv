@@ -16,6 +16,12 @@ __kernel void computePointsNormals(__global char * pointsptr,
                                    int points_step, int points_offset,
                                    __global char * normalsptr,
                                    int normals_step, int normals_offset,
+                                   
+                                   __global char * points_masksptr,
+                                   int points_masks_step, int points_masks_offset,
+                                   __global char * normals_masksptr,
+                                   int normals_masks_step, int normals_masks_offset,
+                                   
                                    __global const char * depthptr,
                                    int depth_step, int depth_offset,
                                    int depth_rows, int depth_cols,
@@ -41,6 +47,7 @@ __kernel void computePointsNormals(__global char * pointsptr,
     float3 v00 = reproject(p00, fxyinv, cxy);
 
     float3 p = nan((uint)0), n = nan((uint)0);
+    int pm = 0, nm = 0;
 
     if(x < depth_cols - 1 && y < depth_rows - 1)
     {
@@ -60,13 +67,29 @@ __kernel void computePointsNormals(__global char * pointsptr,
             float3 vec = cross(v01 - v00, v10 - v00);
             n = - normalize(vec);
             p = v00;
+            //TODO: understand WHY THERE ARE NANs
+            if ( any(isnan(p)) || any(isnan(n)) )
+            {
+                pm = 0;
+                nm = 0;
+            }
+            else
+            {
+                pm = 1;
+                nm = 1;
+            }
         }
     }
 
     __global float* pts = (__global float*)(pointsptr  +  points_offset + y*points_step  + x*sizeof(ptype));
     __global float* nrm = (__global float*)(normalsptr + normals_offset + y*normals_step + x*sizeof(ptype));
+    __global int* pts_m = (__global int*)(points_masksptr  +  points_masks_offset + y*points_masks_step  + x*sizeof(int));
+    __global int* nrm_m = (__global int*)(normals_masksptr + normals_masks_offset + y*normals_masks_step + x*sizeof(int));
+
     vstore4((ptype)(p, 0), 0, pts);
     vstore4((ptype)(n, 0), 0, nrm);
+    *pts_m = pm;
+    *nrm_m = nm;
 }
 
 __kernel void pyrDownBilateral(__global const char * depthptr,
