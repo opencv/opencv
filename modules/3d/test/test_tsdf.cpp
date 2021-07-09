@@ -413,12 +413,16 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Settings settings(isHashTSDF, false);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _tmpnormals;
+    Mat mask(depth.size(), CV_32S, Scalar(255));
+    for (int y = 0; y < depth.rows; y++)
+        for (int x = 0; x < depth.cols; x++)
+            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                mask.at<int>(y, x) = 0;    UMat _points, _normals, _tmpnormals;
     UMat _newPoints, _newNormals;
     Mat  points, normals;
     AccessFlag af = ACCESS_READ;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    settings.volume->integrate(depth, mask, settings.depthFactor, settings.poses[0].matrix, settings.intr);
 
     if (isRaycast)
     {
@@ -469,12 +473,17 @@ void valid_points_test(bool isHashTSDF)
     Settings settings(isHashTSDF, true);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
+    Mat mask(depth.size(), CV_32S, Scalar(255));
+    for (int y = 0; y < depth.rows; y++)
+        for (int x = 0; x < depth.cols; x++)
+            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                mask.at<int>(y, x) = 0;
     UMat _points, _normals, _newPoints, _newNormals;
     AccessFlag af = ACCESS_READ;
     Mat  points, normals;
     int anfas, profile;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+    settings.volume->integrate(depth, mask, settings.depthFactor, settings.poses[0].matrix, settings.intr);
     settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
     normals = _normals.getMat(af);
     points = _points.getMat(af);

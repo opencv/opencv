@@ -8,6 +8,8 @@
 #include "tsdf.hpp"
 #include "opencl_kernels_3d.hpp"
 
+#define USE_INTRINSICS 0
+
 namespace cv {
 
 class TSDFVolumeCPU : public TSDFVolume
@@ -17,11 +19,11 @@ class TSDFVolumeCPU : public TSDFVolume
     TSDFVolumeCPU(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor, float _truncDist,
                   int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
 
-    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+    virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals) const override;
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
     virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
@@ -148,14 +150,18 @@ TsdfVoxel TSDFVolumeCPU::at(const Vec3i& volumeIdx) const
 }
 
 // use depth instead of distance (optimization)
-void TSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+void TSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                               const Matx33f& _intrinsics, const int frameId)
 {
+    std::cout << "integrateCPU_intr0" << std::endl;
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
     CV_Assert(_depth.type() == DEPTH_TYPE);
     CV_Assert(!_depth.empty());
+    CV_Assert(_depthMask.type() == MASK_TYPE);
+    CV_Assert(!_depthMask.empty());
     Depth depth = _depth.getMat();
+    Mask depthMask = _depthMask.getMat();
 
     Intr intrinsics(_intrinsics);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
@@ -860,11 +866,11 @@ class TSDFVolumeGPU : public TSDFVolume
     TSDFVolumeGPU(float _voxelSize, Matx44f _pose, float _raycastStepFactor, float _truncDist,
                   int _maxWeight, Point3i _resolution);
 
-    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+    virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray _points, OutputArray _normals) const override;
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
     virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
@@ -901,7 +907,7 @@ void TSDFVolumeGPU::reset()
 }
 
 // use depth instead of distance (optimization)
-void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
+void TSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, float depthFactor,
                               const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();

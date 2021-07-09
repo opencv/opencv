@@ -86,9 +86,9 @@ public:
 
     HashTSDFVolumeCPU(const VolumeParams& _volumeParams, bool zFirstMemOrder = true);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); }
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
+    void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
                  OutputArray normals) const override;
@@ -159,7 +159,7 @@ void HashTSDFVolumeCPU::reset()
     volumeUnits = VolumeUnitIndexes();
 }
 
-void HashTSDFVolumeCPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
+void HashTSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
 
@@ -887,9 +887,9 @@ public:
 
     void markActive(const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId);
 
-    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
+    virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
+    void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
                  OutputArray normals) const override;
@@ -1245,7 +1245,7 @@ void HashTSDFVolumeGPU::markActive(const Matx44f& cameraPose, const Intr& intrin
 }
 
 
-void HashTSDFVolumeGPU::integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
+void HashTSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& _intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
 

@@ -26,9 +26,9 @@ class CV_EXPORTS_W Volume
     virtual ~Volume(){};
 
     CV_WRAP
-    virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
+    virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0)               = 0;
-    virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
+    virtual void integrate(InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor,
                            const Matx44f& cameraPose, const Matx33f& intrinsics,
                            const Matx33f& rgb_intrinsics, const int frameId = 0)                  = 0;
     CV_WRAP

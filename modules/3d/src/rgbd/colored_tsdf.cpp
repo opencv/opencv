@@ -60,9 +60,9 @@ public:
     // dimension in voxels, size in meters
     ColoredTSDFVolumeCPU(float _voxelSize, cv::Matx44f _pose, float _raycastStepFactor, float _truncDist,
                          int _maxWeight, Vec3i _resolution, bool zFirstMemOrder = true);
-    virtual void integrate(InputArray, float, const Matx44f&, const Matx33f&, const int) override
+    virtual void integrate(InputArray, InputArray, float, const Matx44f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
+    virtual void integrate(InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& depth_intrinsics, const Matx33f& rgb_intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& depth_intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals, OutputArray colors) const override;
@@ -151,7 +151,7 @@ RGBTsdfVoxel ColoredTSDFVolumeCPU::at(const Vec3i& volumeIdx) const
 }
 
 // use depth instead of distance (optimization)
-void ColoredTSDFVolumeCPU::integrate(InputArray _depth, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
+void ColoredTSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
                                      const Matx33f& _depth_intrinsics, const Matx33f& _rgb_intrinsics, const int frameId)
 {
     CV_TRACE_FUNCTION();
