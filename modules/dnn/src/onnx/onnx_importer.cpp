@@ -788,7 +788,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 int blob_total = blob.total();
                 if (blob_total == 1) {
                     layerParams.type = "Power";
-                    layerParams.set("shift", (isSub ? -1 : 1) * blob.at<float>(0));
+                    layerParams.set("shift", (isSub ? -1 : 1) * blob.ptr<float>()[0]);
                 }
                 else {
                     MatShape inpShape = outShapes[node_proto.input(1 - const_blob_id)];
@@ -871,7 +871,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
 
             blob.convertTo(blob, CV_32F);
             layerParams.type = "Power";
-            layerParams.set("power", blob.at<float>(0));
+            layerParams.set("power", blob.ptr<float>()[0]);
         }
         else if (layer_type == "Max")
         {
@@ -1150,7 +1150,8 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 Mat blob = getBlob(node_proto, constId);
                 blob = blob.reshape(1, 1);
                 if (blob.total() == 1) {
-                    float coeff = isDiv ? 1.0 / blob.at<float>(0) : blob.at<float>(0);
+                    float blob_value = blob.ptr<float>()[0];
+                    float coeff = isDiv ? 1.0 / blob_value : blob_value;
                     layerParams.set("scale", coeff);
                     layerParams.type = "Power";
                 }
@@ -1188,12 +1189,14 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 {
                     if (inp0.total() == 1)
                     {
-                        float coeff = isDiv ? 1.0 / inp0.at<float>(0) : inp0.at<float>(0);
+                        float inp0_value = inp0.ptr<float>()[0];
+                        float coeff = isDiv ? 1.0 / inp0_value : inp0_value;
                         multiply(inp1, coeff, out);
                     }
                     else
                     {
-                        float coeff = isDiv ? 1.0 / inp1.at<float>(0) : inp1.at<float>(0);
+                        float inp1_value = inp1.ptr<float>()[0];
+                        float coeff = isDiv ? 1.0 / inp1_value : inp1_value;
                         multiply(inp0, coeff, out);
                     }
 
@@ -1605,7 +1608,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
                 if (node_proto.input_size() == 3)
                 {
                     Mat value = getBlob(node_proto, 2);
-                    layerParams.set("value", value.at<float>(0));
+                    layerParams.set("value", value.ptr<float>()[0]);
                 }
             }
         }
