@@ -605,8 +605,7 @@ int main(int argc, char* argv[]) {
     cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], static_cast<float>(scales[0]), conf_thresh_p);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(faces0, true);
     cv::GArray<custom::Face> final_faces_pnet0 = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
-    nms_p_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
-    total_faces[0] = custom::AccumulatePyramidOutputs::on(faces_init, nms_p_faces[0]);
+    total_faces[0] = custom::RunNMS::on(final_faces_pnet0, 0.5f, false);
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
     {
