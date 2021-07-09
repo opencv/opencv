@@ -458,7 +458,7 @@ struct GetAbInvoker : ParallelLoopBody
                 Point3f oldP(nan3), oldN(nan3);
 
                 //if(fastCheck(newP) && fastCheck(newN))
-                if((newPtsMaskRow[x]==0 && newNrmMaskRow[x]==0))
+                if((newPtsMaskRow[x]==0 || newNrmMaskRow[x]==0))
                     continue;
 
                 //transform to old coord system
@@ -489,8 +489,8 @@ struct GetAbInvoker : ParallelLoopBody
                 //do not fix missing data
                 //if(!(fastCheck(p00) && fastCheck(p01) &&
                 //     fastCheck(p10) && fastCheck(p11))) 
-                if(oldPtsMaskRow0[xi+0]==0 && oldPtsMaskRow0[xi+1]==0 &&
-                   oldPtsMaskRow1[xi+0]==0 && oldPtsMaskRow1[xi+1]==0)
+                if(oldPtsMaskRow0[xi+0]==0 || oldPtsMaskRow0[xi+1]==0 ||
+                   oldPtsMaskRow1[xi+0]==0 || oldPtsMaskRow1[xi+1]==0)
                    continue;
 
                 const ptype* nrow0 = oldNrm[yi+0];
@@ -506,8 +506,8 @@ struct GetAbInvoker : ParallelLoopBody
 
                 //if(!(fastCheck(n00) && fastCheck(n01) &&
                 //     fastCheck(n10) && fastCheck(n11)))
-                if (oldNrmMaskRow0[xi + 0] == 0 && oldNrmMaskRow0[xi + 1] == 0 &&
-                    oldNrmMaskRow1[xi + 0] == 0 && oldNrmMaskRow1[xi + 1] == 0)
+                if (oldNrmMaskRow0[xi + 0] == 0 || oldNrmMaskRow0[xi + 1] == 0 ||
+                    oldNrmMaskRow1[xi + 0] == 0 || oldNrmMaskRow1[xi + 1] == 0)
                     continue;
 
                 Point3f p0 = p00 + tx*(p01 - p00);
@@ -520,9 +520,8 @@ struct GetAbInvoker : ParallelLoopBody
 
                 // Check for what?
                 // TODO: add assert instead of "if"
-                // why is there nans ????
-                if(!(fastCheck(oldP) && fastCheck(oldN)))
-                    continue;
+                //if(!(fastCheck(oldP) && fastCheck(oldN)))
+                //    continue;
 
                 //filter by distance
                 Point3f diff = newP - oldP;
