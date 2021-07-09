@@ -5,16 +5,15 @@
 #ifndef __OPENCV_RGBD_SUBMAP_HPP__
 #define __OPENCV_RGBD_SUBMAP_HPP__
 
-#include <opencv2/core/cvdef.h>
-
+#include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
+#include "opencv2/3d/detail/pose_graph.hpp"
+
 #include <type_traits>
 #include <vector>
 #include <map>
 #include <unordered_map>
 
-#include "opencv2/core/mat.inl.hpp"
-#include "opencv2/3d/detail/pose_graph.hpp"
 
 namespace cv
 {
