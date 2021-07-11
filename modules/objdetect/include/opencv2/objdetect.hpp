@@ -672,11 +672,11 @@ public:
 
 /**Encoding mode*/
 enum QREncodeMode {
-    QR_MODE_AUTO       = -1,
-    QR_MODE_NUM        = 1,
-    QR_MODE_ALPHA      = 2,
-    QR_MODE_BYTE       = 4,
-    QR_MODE_STRUCTURE  = 3
+    QR_MODE_AUTO              = -1,
+    QR_MODE_NUMERIC           = 1,
+    QR_MODE_ALPHANUMERIC      = 2,
+    QR_MODE_BYTE              = 4,
+    QR_MODE_STRUCTURED_APPEND = 3
 };
 
 enum QRCodeCorrectionLevel {
@@ -687,27 +687,44 @@ enum QRCodeCorrectionLevel {
 };
 
 class CV_EXPORTS_W QRCodeEncoder {
+protected:
+    QRCodeEncoder();  // use ::create()
 public:
-    CV_WRAP QRCodeEncoder();
-    ~QRCodeEncoder();
+    virtual ~QRCodeEncoder();
 
-    /** @brief Generates QR code from input string.
-     @param input Input string to encode (ascii).
-     @param output Generated QR code or vector of QR codes if encoding mode is Structured Append.
+    /** @brief QR code encoder parameters.
      @param version The optional version of QR code (by default - maximum possible depending on
                     the length of the string).
      @param correction_level The optional level of error correction (by default - the lowest).
      @param mode The optional encoding mode - Numeric, Alphanumeric, Byte or Structured Append.
      @param structure_number The optional number of QR codes to generate in Structured Append mode.
-     @param output_size The optional size of generated QR code (by default is small and depends on version).
     */
-    CV_WRAP bool generate(String input, OutputArray  output,
-                          int version = 0, int correction_level = CORRECT_LEVEL_L,
-                          int mode = QR_MODE_AUTO, int structure_number = 1,
-                          Size output_size = Size(23, 23));
-protected:
-    struct Impl;
-    Ptr<Impl> p;
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW int version;
+        CV_PROP_RW int correction_level;
+        CV_PROP_RW int mode;
+        CV_PROP_RW int structure_number;
+    };
+
+    /** @brief Constructor
+    @param parameters QR code encoder parameters QRCodeEncoder::Params
+    */
+    static CV_WRAP
+    Ptr<QRCodeEncoder> create(const QRCodeEncoder::Params& parameters = QRCodeEncoder::Params());
+
+    /** @brief Generates QR code from input string.
+     @param encoded_info Input string to encode (ascii).
+     @param qrcode Generated QR code.
+    */
+    CV_WRAP virtual void encode(String encoded_info, OutputArray qrcode) = 0;
+    /** @brief Generates QR code from input string in Structured Append mode. The encoded message is splitting over a number of QR codes.
+     @param encoded_info Input string to encode (ascii).
+     @param qrcodes Vector of generated QR codes.
+    */
+    CV_WRAP virtual void encodeStructuredAppend(String encoded_info, OutputArrayOfArrays qrcodes) = 0;
+
 };
 
 class CV_EXPORTS_W QRCodeDetector
