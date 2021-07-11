@@ -1398,7 +1398,7 @@ public:
     CV_WRAP virtual void clear();
 
     /** @overload */
-    CV_WRAP virtual Mat cluster() const = 0;
+    CV_WRAP virtual Mat cluster() = 0;
 
     /** @brief Clusters train descriptors.
 
@@ -1409,7 +1409,7 @@ public:
     variant of the method, train descriptors stored in the object are clustered. In the second variant,
     input descriptors are clustered.
      */
-    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const = 0;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) = 0;
 
 protected:
     std::vector<Mat> descriptors;
@@ -1430,8 +1430,8 @@ public:
     virtual ~BOWKMeansTrainer();
 
     // Returns trained vocabulary (i.e. cluster centers).
-    CV_WRAP virtual Mat cluster() const CV_OVERRIDE;
-    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster() CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
 
 protected:
 
@@ -1439,6 +1439,43 @@ protected:
     TermCriteria termcrit;
     int attempts;
     int flags;
+};
+
+/** @brief Hierarchical bag-of-words for faster query.
+
+For more details, please refer to *Bags of Binary Words for Fast Place Recognition in Image Sequences*, T-RO 2012.
+ */
+class CV_EXPORTS_W DBOWTrainer : public BOWTrainer
+{
+public:
+    /** @brief The constructor.
+    */
+    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const TermCriteria& termcrit=TermCriteria(),
+                      int attempts=3, int flags=KMEANS_PP_CENTERS );
+    virtual ~DBOWTrainer();
+
+    CV_WRAP virtual Mat cluster() CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
+    CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level);
+
+protected:
+    struct Node
+    {
+        unsigned idx;
+        unsigned parent;
+        cv::Mat descriptor;
+        std::vector<unsigned> child;
+
+        Node() : idx(0), parent(0) {}
+        Node(unsigned _idx) : idx(_idx), parent(0) {}
+        Node(unsigned _idx, unsigned _parent, cv::Mat _descriptor) : idx(_idx), parent(_parent), descriptor(_descriptor) {}
+    };
+
+    int clusterCountPerLevel, level;
+    TermCriteria termcrit;
+    int attempts;
+    int flags;
+    std::vector<Node> nodes;
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.

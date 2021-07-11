@@ -87,7 +87,7 @@ BOWKMeansTrainer::BOWKMeansTrainer( int _clusterCount, const TermCriteria& _term
     clusterCount(_clusterCount), termcrit(_termcrit), attempts(_attempts), flags(_flags)
 {}
 
-Mat BOWKMeansTrainer::cluster() const
+Mat BOWKMeansTrainer::cluster()
 {
     CV_INSTRUMENT_REGION();
 
@@ -106,7 +106,7 @@ Mat BOWKMeansTrainer::cluster() const
 BOWKMeansTrainer::~BOWKMeansTrainer()
 {}
 
-Mat BOWKMeansTrainer::cluster( const Mat& _descriptors ) const
+Mat BOWKMeansTrainer::cluster( const Mat& _descriptors )
 {
     CV_INSTRUMENT_REGION();
 
@@ -115,6 +115,91 @@ Mat BOWKMeansTrainer::cluster( const Mat& _descriptors ) const
     return vocabulary;
 }
 
+DBOWTrainer::DBOWTrainer( int _clusterCountPerLevel, int _level, const TermCriteria& _termcrit,
+                                    int _attempts, int _flags ) :
+    clusterCountPerLevel(_clusterCountPerLevel), level(_level), termcrit(_termcrit), attempts(_attempts), flags(_flags)
+{}
+
+DBOWTrainer::~DBOWTrainer()
+{}
+
+Mat DBOWTrainer::cluster()
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert( !descriptors.empty() );
+
+    Mat mergedDescriptors;
+    vconcat(descriptors, mergedDescriptors);
+    mergedDescriptors.convertTo(mergedDescriptors, CV_32F);
+
+    return cluster( mergedDescriptors );
+}
+
+Mat DBOWTrainer::cluster( const Mat& _descriptors )
+{
+    nodes.clear();
+    int expected_nodes = (int)((pow((double)clusterCountPerLevel, (double)level + 1) - 1) / (clusterCountPerLevel - 1));
+    nodes.reserve(expected_nodes);
+
+    nodes.push_back(Node(0));
+    kmeansStep( _descriptors , 0, 1);
+
+    return Mat();
+}
+
+void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_level)
+{
+    if (_descriptors.empty()) return;
+    
+    Mat labels, vocabulary;
+    std::vector<std::vector<unsigned> > groups;
+    groups.reserve(clusterCountPerLevel);
+    
+    if (_descriptors.rows <= clusterCountPerLevel)
+    {
+        groups.resize(_descriptors.rows);
+        for (int i = 0; i < _descriptors.rows; i++)
+        {
+            groups[i].push_back(i);
+            vocabulary.push_back(_descriptors.row(i));
+        }
+    }
+    else{
+        groups.resize(clusterCountPerLevel);
+        kmeans( _descriptors, clusterCountPerLevel, labels, termcrit, attempts, flags, vocabulary );
+        for (int i = 0; i < labels.rows; i++)
+            groups[labels.at<int>(0, i)].push_back(i);
+    }
+
+    for (int i = 0; i < clusterCountPerLevel; i++) 
+    {
+        nodes.push_back(Node(nodes.size(), parent, vocabulary.row(i)));
+        nodes[parent].child.push_back(i);
+    }
+
+
+    if (current_level < level)
+    {
+        std::vector<unsigned> childs = nodes[parent].child;
+        for (int i = 0; i < clusterCountPerLevel; i++)
+        {
+            unsigned child = childs[i];
+            std::vector<cv::Mat> childDescriptors;
+            childDescriptors.reserve(groups[i].size());
+
+            for (int j = 0; j < (int)groups[i].size(); j++)
+                childDescriptors.push_back(_descriptors.row(groups[i][j]));
+
+            if (childDescriptors.size() > 1)
+            {
+                cv::Mat mergedDescriptors;
+                vconcat(descriptors, mergedDescriptors);
+                kmeansStep(mergedDescriptors, child, current_level + 1);
+            }
+        }
+    }
+}
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor,
                                                       const Ptr<DescriptorMatcher>& _dmatcher ) :
