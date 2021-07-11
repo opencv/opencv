@@ -7,7 +7,7 @@ This repository helps generate the OpenCV Nuget package. The generated .targets,
 - [NuGet](https://www.nuget.org/downloads)
 - [Visual Studio](https://visualstudio.microsoft.com/downloads/)
 
-## Setup 
+## Setup
 - Add nuget.exe to your `PATH` environment variable
 - Install Visual Studio for the current user, preferably:
     - Visual Studio 2019 (has compiler vc16)

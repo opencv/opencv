@@ -28,7 +28,7 @@ def parse_arguments():
 
 def generate_files(list, args):
     files_list = ['<files>']
-    
+
     # add source includes folder
     derived_path = os.path.join(args.sources_path, 'include\**\*.*')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\include" />')
