@@ -470,20 +470,6 @@ bool SubmapManager<MatType>::updateMap(int _frameId, Ptr<OdometryFrame> _frame)
         newSubmap->frame              = _frame;
     }
 
-    // Debugging only
-    if(_frameId%100 == 0)
-    {
-        for(size_t i = 0; i < submapList.size(); i++)
-        {
-            Ptr<SubmapT> currSubmap = submapList.at(i);
-            typename SubmapT::Constraints::const_iterator itBegin = currSubmap->constraints.begin();
-            for(typename SubmapT::Constraints::const_iterator it = itBegin; it != currSubmap->constraints.end(); ++it)
-            {
-                const typename SubmapT::PoseConstraint& constraint = it->second;
-            }
-        }
-    }
-
     return mapUpdated;
 }
 
