@@ -1,5 +1,5 @@
 # run script
-# .\build-targets.py --package_name "OpenCV CPP" --package_version "0.0.1" --native_build_path "C:\opencv-cpp-build" --packages_path "C:\opencv-cpp-build" --sources_path "D:\Github\opencv"
+# .\build-targets.py --targets_path "C:\opencv-cpp-build" --targets_file "opencv-cpp.targets"
 import os, sys, argparse
 
 

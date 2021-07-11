@@ -1,6 +1,6 @@
 # Building the NuGet package for OpenCV
 
-This repository helps generate the OpenCV Nuget package.
+This repository helps generate the OpenCV Nuget package. The generated .targets, .nuspec and .nupkg files are excluded here, but a sample [nupkg file can be viewed online](https://drive.google.com/file/d/1-rMDqsAbpoUVXg601yGZWCW0TIuUr2Dg/view?usp=sharing)
 
 ## Pre-requisites
 - CMake
@@ -18,7 +18,7 @@ This repository helps generate the OpenCV Nuget package.
     - Make sure to select the option/ variable to build the "opencv_build" binary (dll file)
 - TODO: Merge the build files/ folders in the source opencv pull directory
 
-## Package creation and pushing
+## (Manual) Package creation and pushing
 
 ### TODO: Create a code signing certificate
 https://docs.microsoft.com/en-us/nuget/create-packages/sign-a-package#register-the-certificate-on-nugetorg
@@ -49,3 +49,6 @@ https://docs.microsoft.com/en-us/nuget/create-packages/sign-a-package#register-t
 - [Reference](https://docs.microsoft.com/en-us/nuget/nuget-org/publish-a-package)
 - In command prompt, `nuget setApiKey <your_API_key>` to set the API key
 - `nuget push opencv-cpp.nupkg -Source https://api.nuget.org/v3/index.json` to push package to nuget.org
+## (Automated) Package creation and pushing
+
+TODO: Create a .bat file to automate the manual process documented above (i.e. CI will only have to run this one .bat file.)

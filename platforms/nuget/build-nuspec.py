@@ -1,5 +1,6 @@
 # run script
-# .\build-nuspec.py --package_name "OpenCV CPP" --package_version "0.0.1" --output_path "C:\opencv-cpp-build" --sources_path "D:\Github\opencv"
+# .\build-nuspec.py --package_name "OpenCV-CPP" --package_version "0.0.1" --output_path "C:\opencv-cpp-build" --sources_path "D:\OpenCV Nuget Windows\C++ nuspec test 1\opencv-nuget" --targets_path "C:\opencv-cpp-build" --targets_file "opencv-cpp.targets"
+
 import os, sys, argparse
 
 authors = 'OpenCV'
@@ -7,7 +8,7 @@ owners = 'OpenCV'
 description = 'This is description.'
 copyright = '\xc2\xa9 ' + 'OpenCV. All rights reserved.'
 tags = 'OpenCV Computer Vision'
-iconUrl = 'https://avatars.githubusercontent.com/u/5009934?s=200&v=4'
+iconUrl = 'https://avatars.githubusercontent.com/u/5009934'
 project_url = 'https://github.com/opencv/opencv'
 
 def parse_arguments():
@@ -35,25 +36,25 @@ def generate_files(list, args):
     # add vc14 compiled lib & dlls
     derived_path = os.path.join(args.sources_path, 'x64\\vc14\\lib\\**\\opencv_world*.lib')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc14.0\\lib" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc14\\lib\\**\\opencv_world*.dll')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc14\\bin\\**\\opencv_world*.dll')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc14.0\\bin" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc14\\lib\\**\\opencv_world*.pdb')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc14\\bin\\**\\opencv_world*.pdb')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc14.0\\bin" />')
 
     # add vc15 compiled lib & dlls
     derived_path = os.path.join(args.sources_path, 'x64\\vc15\\lib\\**\\opencv_world*.lib')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc15.0\\lib" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc15\\lib\\**\\opencv_world*.dll')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc15\\bin\\**\\opencv_world*.dll')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc15.0\\bin" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc15\\lib\\**\\opencv_world*.pdb')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc15\\bin\\**\\opencv_world*.pdb')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc15.0\\bin" />')
 
     # add vc16 compiled lib & dlls
     derived_path = os.path.join(args.sources_path, 'x64\\vc16\\lib\\**\\opencv_world*.lib')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc16.0\\lib" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc16\\lib\\**\\opencv_world*.dll')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc16\\bin\\**\\opencv_world*.dll')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc16.0\\bin" />')
-    derived_path = os.path.join(args.sources_path, 'x64\\vc16\\lib\\**\\opencv_world*.pdb')
+    derived_path = os.path.join(args.sources_path, 'x64\\vc16\\bin\\**\\opencv_world*.pdb')
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="build\\native\\x64\\vc16.0\\bin" />')
 
     # add readme file
@@ -61,7 +62,8 @@ def generate_files(list, args):
     files_list.append(f'<file src="{os.path.join(derived_path)}" target="README.md" />')
 
     # add generated targets file
-    files_list.append(f'<file src="{args.targets_path}" target="{args.targets_file}" />')
+    derived_path = os.path.join(args.targets_path, args.targets_file)
+    files_list.append(f'<file src="{derived_path}" target="build\\native" />')
     files_list.append('</files>')
 
     list += files_list
@@ -96,8 +98,8 @@ def generate_metadata(list, args):
     # package icon
     metadata_list.append(f'<iconUrl>{iconUrl}</iconUrl>')
     # package license
-    derived_path = os.path.join(args.sources_path, 'LICENSE.txt')
-    metadata_list.append(f'<license type="file">{os.path.join(derived_path)}</license>')
+    derived_path = os.path.join(args.sources_path, 'LICENSE')
+    #metadata_list.append(f'<license type="file">{os.path.join(derived_path)}</license>')
     # package project url
     metadata_list.append(f'<projectUrl>{project_url}</projectUrl>')
 
