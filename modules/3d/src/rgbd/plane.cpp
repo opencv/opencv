@@ -2,8 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-// This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
-
 /** This is an implementation of a fast plane detection loosely inspired by
  * Fast Plane Detection and Polygonalization in noisy 3D Range Images
  * Jann Poppinga, Narunas Vaskevicius, Andreas Birk, and Kaustubh Pathak

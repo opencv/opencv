@@ -3,8 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 // This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
-
-// This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
+// Partially rewritten from https://github.com/Nerei/kinfu_remake
 
 #ifndef __OPENCV_RGBD_UTILS_HPP__
 #define __OPENCV_RGBD_UTILS_HPP__
