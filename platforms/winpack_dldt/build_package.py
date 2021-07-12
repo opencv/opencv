@@ -189,7 +189,10 @@ class BuilderDLDT:
         if self.srcdir is None:
             self.srcdir = prepare_dir(self.outdir / 'sources', clean=clean_src_dir)
         self.build_dir = prepare_dir(self.outdir / 'build', clean=self.config.clean_dldt)
-        self.sysrootdir = prepare_dir(self.outdir / 'sysroot', clean=self.config.clean_dldt)
+        self.sysrootdir = prepare_dir(self.outdir / 'sysroot', clean=self.config.clean_dldt or self.config.clean_dldt_sysroot)
+        if not (self.config.clean_dldt or self.config.clean_dldt_sysroot):
+            _ = prepare_dir(self.sysrootdir / 'bin', clean=True)  # always clean sysroot/bin (package files)
+            _ = prepare_dir(self.sysrootdir / 'etc', clean=True)  # always clean sysroot/etc (package files)
 
         if self.config.build_subst_drive:
             if os.path.exists(self.config.build_subst_drive + ':\\'):
@@ -483,8 +486,9 @@ def main():
     parser.add_argument('--cmake_option', action='append', help='Append OpenCV CMake option')
     parser.add_argument('--cmake_option_dldt', action='append', help='Append CMake option for DLDT project')
 
-    parser.add_argument('--clean_dldt', action='store_true', help='Clear DLDT build and sysroot directories')
-    parser.add_argument('--clean_opencv', action='store_true', help='Clear OpenCV build directory')
+    parser.add_argument('--clean_dldt', action='store_true', help='Clean DLDT build and sysroot directories')
+    parser.add_argument('--clean_dldt_sysroot', action='store_true', help='Clean DLDT sysroot directories')
+    parser.add_argument('--clean_opencv', action='store_true', help='Clean OpenCV build directory')
 
     parser.add_argument('--build_debug', action='store_true', help='Build debug binaries')
     parser.add_argument('--build_tests', action='store_true', help='Build OpenCV tests')
