@@ -886,10 +886,10 @@ class TSDFVolumeGPU : public TSDFVolume
     virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
-                         OutputArray _points, OutputArray _normals) const override;
+                         OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const override;
     virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -983,7 +983,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, float de
 
 
 void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
-                            OutputArray _points, OutputArray _normals) const
+                            OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
 {
     CV_TRACE_FUNCTION();
 

@@ -175,6 +175,9 @@ typedef cv::Vec4f ptype;
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
 typedef Size2i Size;
+typedef int maskType;
+typedef cv::Mat_< maskType > Mask;
+
 
 template<int p>
 inline float specPow(float x)
@@ -214,66 +217,75 @@ inline Point3f normalize(const Vec3f& v)
     return v * (nv ? 1. / nv : 0.);
 }
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
+void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _pointsMask, InputArray _normalsMask, OutputArray image, Affine3f lightPose)
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
+    Mask  pointsMask = _pointsMask.getMat();
+    Mask normalsMask = _normalsMask.getMat();
+
+    std::cout << pointsMask << std::endl;
 
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
     const int nstripes = -1;
-    parallel_for_(range, [&](const Range&)
+    auto render = [&](const Range&)
+    {
+        for (int y = range.start; y < range.end; y++)
         {
-            for (int y = range.start; y < range.end; y++)
+            Vec4b* imgRow = img[y];
+            const ptype* ptsRow = points[y];
+            const ptype* nrmRow = normals[y];
+            const maskType* ptsMRow = pointsMask[y];
+            const maskType* nrmMRow = normalsMask[y];
+
+            for (int x = 0; x < sz.width; x++)
             {
-                Vec4b* imgRow = img[y];
-                const ptype* ptsRow = points[y];
-                const ptype* nrmRow = normals[y];
+                Point3f p = fromPtype(ptsRow[x]);
+                Point3f n = fromPtype(nrmRow[x]);
 
-                for (int x = 0; x < sz.width; x++)
+                Vec4b color;
+
+                //if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                if (ptsMRow[x] == 0 || nrmMRow[x] == 0)
                 {
-                    Point3f p = fromPtype(ptsRow[x]);
-                    Point3f n = fromPtype(nrmRow[x]);
-
-                    Vec4b color;
-
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
-                    {
-                        color = Vec4b(0, 32, 0, 0);
-                    }
-                    else
-                    {
-                        const float Ka = 0.3f;  //ambient coeff
-                        const float Kd = 0.5f;  //diffuse coeff
-                        const float Ks = 0.2f;  //specular coeff
-                        const int   sp = 20;  //specular power
-
-                        const float Ax = 1.f;   //ambient color,  can be RGB
-                        const float Dx = 1.f;   //diffuse color,  can be RGB
-                        const float Sx = 1.f;   //specular color, can be RGB
-                        const float Lx = 1.f;   //light color
-
-                        Point3f l = normalize(lightPose.translation() - Vec3f(p));
-                        Point3f v = normalize(-Vec3f(p));
-                        Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
-
-                        uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
-                            Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
-                        color = Vec4b(ix, ix, ix, 0);
-                    }
-
-                    imgRow[x] = color;
+                    color = Vec4b(0, 32, 0, 0);
                 }
+                else
+                {
+                    const float Ka = 0.3f;  //ambient coeff
+                    const float Kd = 0.5f;  //diffuse coeff
+                    const float Ks = 0.2f;  //specular coeff
+                    const int   sp = 20;  //specular power
+
+                    const float Ax = 1.f;   //ambient color,  can be RGB
+                    const float Dx = 1.f;   //diffuse color,  can be RGB
+                    const float Sx = 1.f;   //specular color, can be RGB
+                    const float Lx = 1.f;   //light color
+
+                    Point3f l = normalize(lightPose.translation() - Vec3f(p));
+                    Point3f v = normalize(-Vec3f(p));
+                    Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
+
+                    uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
+                        Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
+                    color = Vec4b(ix, ix, ix, 0);
+                }
+
+                imgRow[x] = color;
             }
-        }, nstripes);
+        }
+    };
+    //parallel_for_(range, render, nstripes);
+    render(range);
 }
 // ----------------------------
 
-static const bool display = false;
+static const bool display = true;
 static const bool parallelCheck = false;
 
 class Settings
@@ -350,12 +362,12 @@ public:
     }
 };
 
-void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
+void displayImage(Mat depth, Mat points, Mat normals, Mat pointsMask, Mat normalsMask, float depthFactor, Vec3f lightPose)
 {
     Mat image;
     patchNaNs(points);
     imshow("depth", depth * (1.f / depthFactor / 4.f));
-    renderPointsNormals(points, normals, image, lightPose);
+    renderPointsNormals(points, normals, pointsMask, normalsMask, image, lightPose);
     imshow("render", image);
     waitKey(2000);
 }
@@ -453,13 +465,15 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         normalsCheck(normals);
 
     if (isRaycast && display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
 
     if (isRaycast)
     {
         settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
         normals = _newNormals.getMat(af);
         points = _newPoints.getMat(af);
+        normalsMask = _newNormalsMask.getMat(af);
+        pointsMask = _newPointsMask.getMat(af);
         normalsCheck(normals);
 
         if (parallelCheck)
@@ -468,7 +482,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
             normalsCheck(normals);
 
         if (display)
-            displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+            displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
     }
 
     points.release(); normals.release();
@@ -500,16 +514,18 @@ void valid_points_test(bool isHashTSDF)
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
 
     settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
+    normalsMask = _newNormalsMask.getMat(af);
+    pointsMask = _newPointsMask.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);

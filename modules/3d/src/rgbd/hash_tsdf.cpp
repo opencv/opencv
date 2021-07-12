@@ -908,8 +908,8 @@ public:
     void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
-                 OutputArray normals) const override;
-    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+                 OutputArray normals, OutputArray pointsMask, OutputArray normalsMask) const override;
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -1577,7 +1577,7 @@ Point3f HashTSDFVolumeGPU::getNormalVoxel(const Point3f& point) const
 
 
 void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
-                                OutputArray _points, OutputArray _normals) const
+                                OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(frameSize.area() > 0);
