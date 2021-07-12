@@ -1433,6 +1433,7 @@ protected:
 
 /** @brief Hierarchical bag-of-words for faster query.
 
+This algorithm represents the output of the K-means cluster descriptors in a tree structure.
 For more details, please refer to *Bags of Binary Words for Fast Place Recognition in Image Sequences*, T-RO 2012.
  */
 class CV_EXPORTS_W DBOWTrainer : public BOWTrainer
@@ -1446,6 +1447,13 @@ public:
 
     CV_WRAP virtual Mat cluster() CV_OVERRIDE;
     CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
+
+    /** @brief Recursively clustering descriptors at each level in the vocabulary tree.
+
+    @param descriptors Descriptors to cluster. Each row of the descriptors matrix is a descriptor.
+    @param parent parent node index.
+    @param current_level current level in the vocabulary tree.
+     */
     CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level);
 
 protected:
