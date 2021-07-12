@@ -719,11 +719,281 @@ double CV_InitUndistortRectifyMapTest::get_success_error_level( int /*test_case_
     return 8;
 }
 
+//------------------------------------------------------
+
+class CV_InitInverseRectificationMapTest : public cvtest::ArrayTest
+{
+public:
+    CV_InitInverseRectificationMapTest();
+protected:
+    int prepare_test_case (int test_case_idx);
+    void prepare_to_validation( int test_case_idx );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
+    double get_success_error_level( int test_case_idx, int i, int j );
+    void run_func();
+
+private:
+    static const int MAX_X = 1024;
+    static const int MAX_Y = 1024;
+    bool zero_new_cam;
+    bool zero_distortion;
+    bool zero_R;
+
+    cv::Size img_size;
+    int map_type;
+};
+
+CV_InitInverseRectificationMapTest::CV_InitInverseRectificationMapTest()
+{
+    test_array[INPUT].push_back(NULL); // camera matrix
+    test_array[INPUT].push_back(NULL); // distortion coeffs
+    test_array[INPUT].push_back(NULL); // R matrix
+    test_array[INPUT].push_back(NULL); // new camera matrix
+    test_array[OUTPUT].push_back(NULL); // inverse rectified mapx
+    test_array[OUTPUT].push_back(NULL); // inverse rectified mapy
+    test_array[REF_OUTPUT].push_back(NULL);
+    test_array[REF_OUTPUT].push_back(NULL);
+
+    zero_distortion = zero_new_cam = zero_R = false;
+    map_type = 0;
+}
+
+void CV_InitInverseRectificationMapTest::get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types )
+{
+    cvtest::ArrayTest::get_test_array_types_and_sizes(test_case_idx,sizes,types);
+    RNG& rng = ts->get_rng();
+    //rng.next();
+
+    map_type = CV_32F;
+    types[OUTPUT][0] = types[OUTPUT][1] = types[REF_OUTPUT][0] = types[REF_OUTPUT][1] = map_type;
+
+    img_size.width = cvtest::randInt(rng) % MAX_X + 1;
+    img_size.height = cvtest::randInt(rng) % MAX_Y + 1;
+
+    types[INPUT][0] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][1] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][2] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+    types[INPUT][3] = cvtest::randInt(rng)%2 ? CV_64F : CV_32F;
+
+    sizes[OUTPUT][0] = sizes[OUTPUT][1] = sizes[REF_OUTPUT][0] = sizes[REF_OUTPUT][1] = img_size;
+    sizes[INPUT][0] = sizes[INPUT][2] = sizes[INPUT][3] = cvSize(3,3);
+
+    Size dsize;
+
+    if (cvtest::randInt(rng)%2)
+    {
+        if (cvtest::randInt(rng)%2)
+        {
+            dsize = Size(1,4);
+        }
+        else
+        {
+            dsize = Size(1,5);
+        }
+    }
+    else
+    {
+        if (cvtest::randInt(rng)%2)
+        {
+            dsize = Size(4,1);
+        }
+        else
+        {
+            dsize = Size(5,1);
+        }
+    }
+    sizes[INPUT][1] = dsize;
+}
+
+
+int CV_InitInverseRectificationMapTest::prepare_test_case(int test_case_idx)
+{
+    RNG& rng = ts->get_rng();
+    int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
+
+    if (code <= 0)
+        return code;
+
+    int dist_size = test_mat[INPUT][1].cols > test_mat[INPUT][1].rows ? test_mat[INPUT][1].cols : test_mat[INPUT][1].rows;
+    double cam[9] = {0,0,0,0,0,0,0,0,1};
+    vector<double> dist(dist_size);
+    vector<double> new_cam(test_mat[INPUT][3].cols * test_mat[INPUT][3].rows);
+
+    Mat _camera(3,3,CV_64F,cam);
+    Mat _distort(test_mat[INPUT][1].size(),CV_64F,&dist[0]);
+    Mat _new_cam(test_mat[INPUT][3].size(),CV_64F,&new_cam[0]);
+
+    //Generating camera matrix
+    double sz = MAX(img_size.width,img_size.height);
+    double aspect_ratio = cvtest::randReal(rng)*0.6 + 0.7;
+    cam[2] = (img_size.width - 1)*0.5 + cvtest::randReal(rng)*10 - 5;
+    cam[5] = (img_size.height - 1)*0.5 + cvtest::randReal(rng)*10 - 5;
+    cam[0] = sz/(0.9 - cvtest::randReal(rng)*0.6);
+    cam[4] = aspect_ratio*cam[0];
+
+    //Generating distortion coeffs
+    dist[0] = cvtest::randReal(rng)*0.06 - 0.03;
+    dist[1] = cvtest::randReal(rng)*0.06 - 0.03;
+    if( dist[0]*dist[1] > 0 )
+        dist[1] = -dist[1];
+    if( cvtest::randInt(rng)%4 != 0 )
+    {
+        dist[2] = cvtest::randReal(rng)*0.004 - 0.002;
+        dist[3] = cvtest::randReal(rng)*0.004 - 0.002;
+        if (dist_size > 4)
+            dist[4] = cvtest::randReal(rng)*0.004 - 0.002;
+    }
+    else
+    {
+        dist[2] = dist[3] = 0;
+        if (dist_size > 4)
+            dist[4] = 0;
+    }
+
+    //Generating new camera matrix
+    _new_cam = Scalar::all(0);
+    new_cam[8] = 1;
+
+    // If P == K
+    //new_cam[0] = cam[0];
+    //new_cam[4] = cam[4];
+    //new_cam[2] = cam[2];
+    //new_cam[5] = cam[5];
+
+    // If P != K
+    new_cam[0] = cam[0] + (cvtest::randReal(rng) - (double)0.5)*0.2*cam[0]; //10%
+    new_cam[4] = cam[4] + (cvtest::randReal(rng) - (double)0.5)*0.2*cam[4]; //10%
+    new_cam[2] = cam[2] + (cvtest::randReal(rng) - (double)0.5)*0.3*img_size.width; //15%
+    new_cam[5] = cam[5] + (cvtest::randReal(rng) - (double)0.5)*0.3*img_size.height; //15%
+
+    //Generating R matrix
+    Mat _rot(3,3,CV_64F);
+    Mat rotation(1,3,CV_64F);
+    rotation.at<double>(0) = CV_PI/8*(cvtest::randReal(rng) - (double)0.5); // phi
+    rotation.at<double>(1) = CV_PI/8*(cvtest::randReal(rng) - (double)0.5); // ksi
+    rotation.at<double>(2) = CV_PI/3*(cvtest::randReal(rng) - (double)0.5); //khi
+    cvtest::Rodrigues(rotation, _rot);
+
+    //cvSetIdentity(_rot);
+    //copying data
+    cvtest::convert( _camera, test_mat[INPUT][0], test_mat[INPUT][0].type());
+    cvtest::convert( _distort, test_mat[INPUT][1], test_mat[INPUT][1].type());
+    cvtest::convert( _rot, test_mat[INPUT][2], test_mat[INPUT][2].type());
+    cvtest::convert( _new_cam, test_mat[INPUT][3], test_mat[INPUT][3].type());
+
+    zero_distortion = (cvtest::randInt(rng)%2) == 0 ? false : true;
+    zero_new_cam = (cvtest::randInt(rng)%2) == 0 ? false : true;
+    zero_R = (cvtest::randInt(rng)%2) == 0 ? false : true;
+
+    return code;
+}
+
+void CV_InitInverseRectificationMapTest::prepare_to_validation(int/* test_case_idx*/)
+{
+    // Configure Parameters
+    Mat _a0 = test_mat[INPUT][0];
+    Mat _d0 = zero_distortion ? cv::Mat() : test_mat[INPUT][1];
+    Mat _R0 = zero_R ? cv::Mat() : test_mat[INPUT][2];
+    Mat _new_cam0 = zero_new_cam ? test_mat[INPUT][0] : test_mat[INPUT][3];
+    Mat _mapx(img_size, CV_32F), _mapy(img_size, CV_32F);
+
+    double a[9], d[5]={0., 0., 0., 0. , 0.}, R[9]={1., 0., 0., 0., 1., 0., 0., 0., 1.}, a1[9];
+    Mat _a(3, 3, CV_64F, a), _a1(3, 3, CV_64F, a1);
+    Mat _d(_d0.rows,_d0.cols, CV_MAKETYPE(CV_64F,_d0.channels()),d);
+    Mat _R(3, 3, CV_64F, R);
+    double fx, fy, cx, cy, ifx, ify, cxn, cyn;
+
+    // Camera matrix
+    CV_Assert(_a0.size() == Size(3, 3));
+    _a0.convertTo(_a, CV_64F);
+    if( !_new_cam0.empty() )
+    {
+        CV_Assert(_new_cam0.size() == Size(3, 3));
+        _new_cam0.convertTo(_a1, CV_64F);
+    }
+    else
+    {
+        _a.copyTo(_a1);
+    }
+
+    // Distortion
+    CV_Assert(_d0.empty() ||
+              _d0.size() == Size(5, 1) ||
+              _d0.size() == Size(1, 5) ||
+              _d0.size() == Size(4, 1) ||
+              _d0.size() == Size(1, 4));
+    if( !_d0.empty() )
+        _d0.convertTo(_d, CV_64F);
+
+    // Rotation
+    if( !_R0.empty() )
+    {
+        CV_Assert(_R0.size() == Size(3, 3));
+        Mat tmp;
+        _R0.convertTo(_R, CV_64F);
+    }
+
+    // Copy camera matrix
+    fx = a[0]; fy = a[4]; cx = a[2]; cy = a[5];
+
+    // Copy new camera matrix
+    ifx = a1[0]; ify = a1[4]; cxn = a1[2]; cyn = a1[5];
+
+    // Undistort
+    for( int v = 0; v < img_size.height; v++ )
+    {
+        for( int u = 0; u < img_size.width; u++ )
+        {
+            // Convert from image to pin-hole coordinates
+            double x = (u - cx)/fx;
+            double y = (v - cy)/fy;
+
+            // Undistort
+            double x2 = x*x, y2 = y*y;
+            double r2 = x2 + y2;
+            double cdist = 1./(1. + (d[0] + (d[1] + d[4]*r2)*r2)*r2); // (1. + (d[5] + (d[6] + d[7]*r2)*r2)*r2) == 1 as d[5-7]=0;
+            double x_ = (x - (d[2]*2.*x*y + d[3]*(r2 + 2.*x2)))*cdist;
+            double y_ = (y - (d[3]*2.*x*y + d[2]*(r2 + 2.*y2)))*cdist;
+
+            // Rectify
+            double X = R[0]*x_ + R[1]*y_ + R[2];
+            double Y = R[3]*x_ + R[4]*y_ + R[5];
+            double Z = R[6]*x_ + R[7]*y_ + R[8];
+            double x__ = X/Z;
+            double y__ = Y/Z;
+
+            // Convert from pin-hole to image coordinates
+            _mapy.at<float>(v, u) = (float)(y__*ify + cyn);
+            _mapx.at<float>(v, u) = (float)(x__*ifx + cxn);
+        }
+    }
+
+    // Convert
+    _mapx.convertTo(test_mat[REF_OUTPUT][0], test_mat[REF_OUTPUT][0].type());
+    _mapy.convertTo(test_mat[REF_OUTPUT][1], test_mat[REF_OUTPUT][0].type());
+}
+
+void CV_InitInverseRectificationMapTest::run_func()
+{
+    cv::Mat camera_mat = test_mat[INPUT][0];
+    cv::Mat dist = zero_distortion ? cv::Mat() : test_mat[INPUT][1];
+    cv::Mat R = zero_R ? cv::Mat() : test_mat[INPUT][2];
+    cv::Mat new_cam = zero_new_cam ? cv::Mat() : test_mat[INPUT][3];
+    cv::Mat& mapx = test_mat[OUTPUT][0], &mapy = test_mat[OUTPUT][1];
+    cv::initInverseRectificationMap(camera_mat,dist,R,new_cam,img_size,map_type,mapx,mapy);
+}
+
+double CV_InitInverseRectificationMapTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
+{
+    return 8;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TEST(Calib3d_DefaultNewCameraMatrix, accuracy) { CV_DefaultNewCameraMatrixTest test; test.safe_run(); }
 TEST(Calib3d_UndistortPoints, accuracy) { CV_UndistortPointsTest test; test.safe_run(); }
 TEST(Calib3d_InitUndistortRectifyMap, accuracy) { CV_InitUndistortRectifyMapTest test; test.safe_run(); }
+TEST(DISABLED_Calib3d_InitInverseRectificationMap, accuracy) { CV_InitInverseRectificationMapTest test; test.safe_run(); }
 
 ////////////////////////////// undistort /////////////////////////////////
 
@@ -1535,6 +1805,80 @@ TEST(Calib3d_initUndistortRectifyMap, regression_14467)
     undistortPoints(mapxy.reshape(2, (int)mapxy.total()), dst, k, d, noArray(), k);
     dst = dst.reshape(2, mapxy.rows);
     EXPECT_LE(cvtest::norm(dst, mesh_uv, NORM_INF), 1e-3);
+}
+
+TEST(Calib3d_initInverseRectificationMap, regression_20165)
+{
+    Size size_w_h(1280, 800);
+    Mat dst(size_w_h, CV_32FC2); // Reference for validation
+    Mat mapxy; // Output of initInverseRectificationMap()
+
+    // Camera Matrix
+    double k[9]={
+        1.5393951443032472e+03, 0., 6.7491727003047140e+02,
+        0., 1.5400748240626747e+03, 5.1226968329123963e+02,
+        0., 0., 1.
+    };
+    Mat _K(3, 3, CV_64F, k);
+
+    // Distortion
+    // double d[5]={0,0,0,0,0}; // Zero Distortion
+    double d[5]={ // Non-zero distortion
+        -3.4134571357400023e-03, 2.9733267766101856e-03, // K1, K2
+        3.6653586399031184e-03, -3.1960714017365702e-03, // P1, P2
+        0. // K3
+    };
+    Mat _d(1, 5, CV_64F, d);
+
+    // Rotation
+    //double R[9]={1., 0., 0., 0., 1., 0., 0., 0., 1.}; // Identity transform (none)
+    double R[9]={ // Random transform
+        9.6625486010428052e-01, 1.6055789378989216e-02, 2.5708706103628531e-01,
+        -8.0300261706161002e-03, 9.9944797497929860e-01, -3.2237617614807819e-02,
+       -2.5746274294459848e-01, 2.9085338870243265e-02, 9.6585039165403186e-01
+    };
+    Mat _R(3, 3, CV_64F, R);
+
+    // --- Validation --- //
+    initInverseRectificationMap(_K, _d, _R, _K, size_w_h, CV_32FC2, mapxy, noArray());
+
+    // Copy camera matrix
+    double fx, fy, cx, cy, ifx, ify, cxn, cyn;
+    fx = k[0]; fy = k[4]; cx = k[2]; cy = k[5];
+
+    // Copy new camera matrix
+    ifx = k[0]; ify = k[4]; cxn = k[2]; cyn = k[5];
+
+    // Distort Points
+    for( int v = 0; v < size_w_h.height; v++ )
+    {
+        for( int u = 0; u < size_w_h.width; u++ )
+        {
+            // Convert from image to pin-hole coordinates
+            double x = (u - cx)/fx;
+            double y = (v - cy)/fy;
+
+            // Undistort
+            double x2 = x*x, y2 = y*y;
+            double r2 = x2 + y2;
+            double cdist = 1./(1. + (d[0] + (d[1] + d[4]*r2)*r2)*r2); // (1. + (d[5] + (d[6] + d[7]*r2)*r2)*r2) == 1 as d[5-7]=0;
+            double x_ = (x - (d[2]*2.*x*y + d[3]*(r2 + 2.*x2)))*cdist;
+            double y_ = (y - (d[3]*2.*x*y + d[2]*(r2 + 2.*y2)))*cdist;
+
+            // Rectify
+            double X = R[0]*x_ + R[1]*y_ + R[2];
+            double Y = R[3]*x_ + R[4]*y_ + R[5];
+            double Z = R[6]*x_ + R[7]*y_ + R[8];
+            double x__ = X/Z;
+            double y__ = Y/Z;
+
+            // Convert from pin-hole to image coordinates
+            dst.at<Vec2f>(v, u) = Vec2f((float)(x__*ifx + cxn), (float)(y__*ify + cyn));
+        }
+    }
+
+    // Check Result
+    EXPECT_LE(cvtest::norm(dst, mapxy, NORM_INF), 2e-1);
 }
 
 }} // namespace

@@ -72,7 +72,7 @@
     #endif
 #endif
 
-#if defined CV_CXX11
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
 
@@ -884,6 +884,7 @@ T minNonZero(const T& val_1, const T& val_2)
     return (val_1 != 0) ? val_1 : val_2;
 }
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 static
 int getNumberOfCPUs_()
 {
@@ -985,6 +986,13 @@ int getNumberOfCPUs()
     static int nCPUs = getNumberOfCPUs_();
     return nCPUs;  // cached value
 }
+
+#else  // OPENCV_DISABLE_THREAD_SUPPORT
+int getNumberOfCPUs()
+{
+    return 1;
+}
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
 
 const char* currentParallelFramework()
 {

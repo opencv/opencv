@@ -37,6 +37,31 @@ namespace
         {
         }
     };
+
+    struct GCompiledValidateMetaEmpty: public ::testing::Test
+    {
+        cv::GMat in;
+        cv::GScalar scale;
+        cv::GComputation m_ucc;
+
+        G_API_OP(GReturn42, <cv::GOpaque<int>(cv::GMat)>, "org.opencv.test.return_42")
+        {
+            static GOpaqueDesc outMeta(cv::GMatDesc /* in */) { return cv::empty_gopaque_desc(); }
+        };
+
+        GAPI_OCV_KERNEL(GOCVReturn42, GReturn42)
+        {
+            static void run(const cv::Mat &/* in */, int &out)
+            {
+                out = 42;
+            }
+        };
+
+        GCompiledValidateMetaEmpty() : m_ucc(cv::GIn(in),
+                                             cv::GOut(GReturn42::on(in)))
+        {
+        }
+    };
 } // anonymous namespace
 
 TEST_F(GCompiledValidateMetaTyped, ValidMeta)
@@ -170,4 +195,38 @@ TEST_F(GCompiledValidateMetaUntyped, InvalidMetaNumber)
     EXPECT_THROW(f(cv::gin(in1, sc), cv::gout(out1, out2)), std::logic_error);
 }
 
+TEST_F(GCompiledValidateMetaEmpty, InvalidMatMetaCompile)
+{
+    EXPECT_THROW(m_ucc.compile(cv::empty_gmat_desc(),
+                               cv::empty_scalar_desc()),
+                 std::logic_error);
+}
+
+TEST_F(GCompiledValidateMetaEmpty, InvalidMatMetaApply)
+{
+    cv::Mat emptyIn;
+    int out {};
+    const auto pkg = cv::gapi::kernels<GCompiledValidateMetaEmpty::GOCVReturn42>();
+
+    EXPECT_THROW(m_ucc.apply(cv::gin(emptyIn), cv::gout(out), cv::compile_args(pkg)),
+                 std::logic_error);
+}
+
+TEST_F(GCompiledValidateMetaEmpty, ValidInvalidMatMetasApply)
+{
+    int out {};
+    const auto pkg = cv::gapi::kernels<GCompiledValidateMetaEmpty::GOCVReturn42>();
+
+    cv::Mat nonEmptyMat = cv::Mat::eye(cv::Size(64,32), CV_8UC1);
+    m_ucc.apply(cv::gin(nonEmptyMat), cv::gout(out), cv::compile_args(pkg));
+    EXPECT_EQ(out, 42);
+
+    cv::Mat emptyIn;
+    EXPECT_THROW(m_ucc.apply(cv::gin(emptyIn), cv::gout(out), cv::compile_args(pkg)),
+                 std::logic_error);
+
+    out = 0;
+    m_ucc.apply(cv::gin(nonEmptyMat), cv::gout(out), cv::compile_args(pkg));
+    EXPECT_EQ(out, 42);
+}
 } // namespace opencv_test

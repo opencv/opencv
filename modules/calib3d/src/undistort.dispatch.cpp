@@ -164,6 +164,125 @@ void initUndistortRectifyMap( InputArray _cameraMatrix, InputArray _distCoeffs,
         fx, fy, k1, k2, p1, p2, k3, k4, k5, k6, s1, s2, s3, s4));
 }
 
+void initInverseRectificationMap( InputArray _cameraMatrix, InputArray _distCoeffs,
+                              InputArray _matR, InputArray _newCameraMatrix,
+                              const Size& size, int m1type, OutputArray _map1, OutputArray _map2 )
+{
+    // Parameters
+    Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
+    Mat matR = _matR.getMat(), newCameraMatrix = _newCameraMatrix.getMat();
+
+    // Check m1type validity
+    if( m1type <= 0 )
+        m1type = CV_16SC2;
+    CV_Assert( m1type == CV_16SC2 || m1type == CV_32FC1 || m1type == CV_32FC2 );
+
+    // Init Maps
+    _map1.create( size, m1type );
+    Mat map1 = _map1.getMat(), map2;
+    if( m1type != CV_32FC2 )
+    {
+        _map2.create( size, m1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+        map2 = _map2.getMat();
+    }
+    else {
+        _map2.release();
+    }
+
+    // Init camera intrinsics
+    Mat_<double> A = Mat_<double>(cameraMatrix), Ar;
+    if( !newCameraMatrix.empty() )
+        Ar = Mat_<double>(newCameraMatrix);
+    else
+        Ar = getDefaultNewCameraMatrix( A, size, true );
+    CV_Assert( A.size() == Size(3,3) );
+    CV_Assert( Ar.size() == Size(3,3) || Ar.size() == Size(4, 3));
+
+    // Init rotation matrix
+    Mat_<double> R = Mat_<double>::eye(3, 3);
+    if( !matR.empty() )
+    {
+        R = Mat_<double>(matR);
+        //Note, do not inverse
+    }
+    CV_Assert( Size(3,3) == R.size() );
+
+    // Init distortion vector
+    if( !distCoeffs.empty() ){
+        distCoeffs = Mat_<double>(distCoeffs);
+
+        // Fix distortion vector orientation
+        if( distCoeffs.rows != 1 && !distCoeffs.isContinuous() ) {
+            distCoeffs = distCoeffs.t();
+        }
+    }
+
+    // Validate distortion vector size
+    CV_Assert(  distCoeffs.empty() || // Empty allows cv::undistortPoints to skip distortion
+                distCoeffs.size() == Size(1, 4) || distCoeffs.size() == Size(4, 1) ||
+                distCoeffs.size() == Size(1, 5) || distCoeffs.size() == Size(5, 1) ||
+                distCoeffs.size() == Size(1, 8) || distCoeffs.size() == Size(8, 1) ||
+                distCoeffs.size() == Size(1, 12) || distCoeffs.size() == Size(12, 1) ||
+                distCoeffs.size() == Size(1, 14) || distCoeffs.size() == Size(14, 1));
+
+    // Create objectPoints
+    std::vector<cv::Point2i> p2i_objPoints;
+    std::vector<cv::Point2f> p2f_objPoints;
+    for (int r = 0; r < size.height; r++)
+    {
+        for (int c = 0; c < size.width; c++)
+        {
+            p2i_objPoints.push_back(cv::Point2i(c, r));
+            p2f_objPoints.push_back(cv::Point2f(static_cast<float>(c), static_cast<float>(r)));
+        }
+    }
+
+    // Undistort
+    std::vector<cv::Point2f> p2f_objPoints_undistorted;
+    undistortPoints(
+        p2f_objPoints,
+        p2f_objPoints_undistorted,
+        A,
+        distCoeffs,
+        cv::Mat::eye(cv::Size(3, 3), CV_64FC1), // R
+        cv::Mat::eye(cv::Size(3, 3), CV_64FC1) // P = New K
+    );
+
+    // Rectify
+    std::vector<cv::Point2f> p2f_sourcePoints_pinHole;
+    perspectiveTransform(
+        p2f_objPoints_undistorted,
+        p2f_sourcePoints_pinHole,
+        R
+    );
+
+    // Project points back to camera coordinates.
+    std::vector<cv::Point2f> p2f_sourcePoints;
+    undistortPoints(
+        p2f_sourcePoints_pinHole,
+        p2f_sourcePoints,
+        cv::Mat::eye(cv::Size(3, 3), CV_32FC1), // K
+        cv::Mat::zeros(cv::Size(1, 4), CV_32FC1), // Distortion
+        cv::Mat::eye(cv::Size(3, 3), CV_32FC1), // R
+        Ar // New K
+    );
+
+    // Copy to map
+    if (m1type == CV_16SC2) {
+        for (size_t i=0; i < p2i_objPoints.size(); i++) {
+            map1.at<Vec2s>(p2i_objPoints[i].y, p2i_objPoints[i].x) = Vec2s(saturate_cast<short>(p2f_sourcePoints[i].x), saturate_cast<short>(p2f_sourcePoints[i].y));
+        }
+    } else if (m1type == CV_32FC2) {
+        for (size_t i=0; i < p2i_objPoints.size(); i++) {
+            map1.at<Vec2f>(p2i_objPoints[i].y, p2i_objPoints[i].x) = Vec2f(p2f_sourcePoints[i]);
+        }
+    } else { // m1type == CV_32FC1
+        for (size_t i=0; i < p2i_objPoints.size(); i++) {
+            map1.at<float>(p2i_objPoints[i].y, p2i_objPoints[i].x) = p2f_sourcePoints[i].x;
+            map2.at<float>(p2i_objPoints[i].y, p2i_objPoints[i].x) = p2f_sourcePoints[i].y;
+        }
+    }
+}
 
 void undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
                 InputArray _distCoeffs, InputArray _newCameraMatrix )

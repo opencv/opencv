@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -60,6 +60,8 @@ template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
 template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
 #endif // TBB
 
+#include "utils/itt.hpp"
+
 namespace IE = InferenceEngine;
 
 namespace {
@@ -116,6 +118,7 @@ inline int toCV(IE::Precision prec) {
     case IE::Precision::FP32: return CV_32F;
     case IE::Precision::I32:  return CV_32S;
     case IE::Precision::I64:  return CV_32S;
+    case IE::Precision::FP16: return CV_16F;
     default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return -1;
@@ -194,6 +197,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
         HANDLE(I32, int);
+        HANDLE(FP16, cv::float16_t);
 #undef HANDLE
         case IE::Precision::I64: {
             GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
@@ -218,8 +222,17 @@ struct IEUnit {
     IE::ExecutableNetwork this_network;
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
+    InferenceEngine::RemoteContext::Ptr rctx = nullptr;
+
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
+        InferenceEngine::ParamMap* ctx_params =
+                            cv::util::any_cast<InferenceEngine::ParamMap>(&params.context_config);
+        if (ctx_params != nullptr) {
+            auto ie_core = cv::gimpl::ie::wrap::getCore();
+            rctx = ie_core.CreateContext(params.device_id, *ctx_params);
+        }
+
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
             inputs  = net.getInputsInfo();
@@ -227,7 +240,7 @@ struct IEUnit {
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
             this_plugin.SetConfig(params.config);
-            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params);
+            this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params, rctx);
             // FIXME: ICNNetwork returns InputsDataMap/OutputsDataMap,
             // but ExecutableNetwork returns ConstInputsDataMap/ConstOutputsDataMap
             inputs  = cv::gimpl::ie::wrap::toInputsDataMap(this_network.GetInputsInfo());
@@ -275,7 +288,8 @@ struct IEUnit {
             // for loadNetwork they can be obtained by using readNetwork
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
             non_const_this->this_plugin.SetConfig(params.config);
-            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin, net, params);
+            non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
+                                                                            net, params, rctx);
         }
 
         return {params, this_plugin, this_network};
@@ -477,7 +491,32 @@ using GConstGIEModel = ade::ConstTypedGraph
     , IECallable
     >;
 
+inline IE::Blob::Ptr extractRemoteBlob(IECallContext& ctx, std::size_t i) {
+    GAPI_Assert(ctx.inShape(i) == cv::GShape::GFRAME &&
+                "Remote blob is supported for MediaFrame only");
+
+    cv::util::any any_blob_params = ctx.inFrame(i).blobParams();
+    auto ie_core = cv::gimpl::ie::wrap::getCore();
+
+    using ParamType = std::pair<InferenceEngine::TensorDesc,
+                                InferenceEngine::ParamMap>;
+
+    ParamType* blob_params = cv::util::any_cast<ParamType>(&any_blob_params);
+    if (blob_params == nullptr) {
+        GAPI_Assert(false && "Incorrect type of blobParams: "
+                              "expected std::pair<InferenceEngine::TensorDesc,"
+                                                 "InferenceEngine::ParamMap>");
+    }
+
+    return ctx.uu.rctx->CreateBlob(blob_params->first,
+                                   blob_params->second);
+}
+
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
+    if (ctx.uu.rctx != nullptr) {
+        return extractRemoteBlob(ctx, i);
+    }
+
     switch (ctx.inShape(i)) {
         case cv::GShape::GFRAME: {
             const auto& frame = ctx.inFrame(i);
@@ -757,6 +796,9 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest   &request,
                         std::shared_ptr<IECallContext>   ctx) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ie_cb_post_outputs_hndl, "IE_async_callback_PostOutputs");
+    GAPI_ITT_AUTO_TRACE_GUARD(ie_cb_post_outputs_hndl);
+
     for (auto i : ade::util::iota(ctx->uu.params.num_out))
     {
         auto& out_mat = ctx->outMatR(i);
@@ -1053,6 +1095,7 @@ struct InferList: public cv::detail::KernelTag {
         }
 
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
+
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
@@ -1284,6 +1327,17 @@ namespace {
                                     , cv::gimpl::ie::InferList
                                     , cv::gimpl::ie::InferList2
                                     >();
+        }
+
+        virtual bool controlsMerge() const override {
+            return true;
+        }
+
+        virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &,
+                                 const ade::NodeHandle &) const override {
+            return false;
         }
     };
 }

@@ -258,6 +258,8 @@ class ClassInfo(GeneralInfo):
         for m in decl[2]:
             if m.startswith("="):
                 self.jname = m[1:]
+            if m == '/Simple':
+                self.smart = False
 
         if self.classpath:
             prefix = self.classpath.replace('.', '_')
@@ -445,7 +447,7 @@ class JavaWrapperGenerator(object):
 
     def clear(self):
         self.namespaces = ["cv"]
-        classinfo_Mat = ClassInfo([ 'class cv.Mat', '', [], [] ], self.namespaces)
+        classinfo_Mat = ClassInfo([ 'class cv.Mat', '', ['/Simple'], [] ], self.namespaces)
         self.classes = { "Mat" : classinfo_Mat }
         self.module = ""
         self.Module = ""
@@ -466,10 +468,15 @@ class JavaWrapperGenerator(object):
         if name in type_dict and not classinfo.base:
             logging.warning('duplicated: %s', classinfo)
             return
+        if self.isSmartClass(classinfo):
+            jni_name = "*((*(Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj).get())"
+        else:
+            jni_name = "(*("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj)"
         type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "(*("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj)", "jni_type" : "jlong",
+              "jni_name" : jni_name,
+              "jni_type" : "jlong",
               "suffix" : "J",
               "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
             }
@@ -477,7 +484,8 @@ class JavaWrapperGenerator(object):
         type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
               "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
-              "jni_name" : "("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj", "jni_type" : "jlong",
+              "jni_name" : "&("+jni_name+")",
+              "jni_type" : "jlong",
               "suffix" : "J",
               "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
             }
@@ -966,7 +974,13 @@ class JavaWrapperGenerator(object):
                 ret = "return env->NewStringUTF(_retval_.c_str());"
                 default = 'return env->NewStringUTF("");'
             elif self.isWrapped(fi.ctype): # wrapped class:
-                ret = "return (jlong) new %s(_retval_);" % self.fullTypeNameCPP(fi.ctype)
+                ret = None
+                if fi.ctype in self.classes:
+                    ret_ci = self.classes[fi.ctype]
+                    if self.isSmartClass(ret_ci):
+                        ret = "return (jlong)(new Ptr<%(ctype)s>(new %(ctype)s(_retval_)));" % { 'ctype': ret_ci.fullNameCPP() }
+                if ret is None:
+                    ret = "return (jlong) new %s(_retval_);" % self.fullTypeNameCPP(fi.ctype)
             elif fi.ctype.startswith('Ptr_'):
                 c_prologue.append("typedef Ptr<%s> %s;" % (self.fullTypeNameCPP(fi.ctype[4:]), fi.ctype))
                 ret = "return (jlong)(new %(ctype)s(_retval_));" % { 'ctype':fi.ctype }
@@ -1207,17 +1221,7 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
         if ci.smart != None:
             return ci.smart
 
-        # if parents are smart (we hope) then children are!
-        # if not we believe the class is smart if it has "create" method
-        ci.smart = False
-        if ci.base or ci.name == 'Algorithm':
-            ci.smart = True
-        else:
-            for fi in ci.methods:
-                if fi.name == "create":
-                    ci.smart = True
-                    break
-
+        ci.smart = True  # smart class is not properly handled in case of base/derived classes
         return ci.smart
 
     def smartWrap(self, ci, fullname):
@@ -1236,13 +1240,13 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
 def copy_java_files(java_files_dir, java_base_path, default_package_path='org/opencv/'):
     global total_files, updated_files
     java_files = []
-    re_filter = re.compile(r'^.+\.(java|aidl)(.in)?$')
+    re_filter = re.compile(r'^.+\.(java|aidl|kt)(.in)?$')
     for root, dirnames, filenames in os.walk(java_files_dir):
        java_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     java_files = [f.replace('\\', '/') for f in java_files]
 
     re_package = re.compile(r'^package +(.+);')
-    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl)(.in)?$')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl|kt)(.in)?$')
     for java_file in java_files:
         src = checkFileRemap(java_file)
         with open(src, 'r') as f:

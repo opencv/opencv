@@ -749,6 +749,7 @@ std::string getCapturePluginVersion(
     CV_Assert(plugin_backend_factory);
     return plugin_backend_factory->getCapturePluginVersion(version_ABI, version_API);
 #else
+    CV_UNUSED(backend_factory);
     CV_UNUSED(version_ABI);
     CV_UNUSED(version_API);
     CV_Error(Error::StsBadFunc, "Plugins are not available in this build");
@@ -768,6 +769,7 @@ std::string getWriterPluginVersion(
     CV_Assert(plugin_backend_factory);
     return plugin_backend_factory->getWriterPluginVersion(version_ABI, version_API);
 #else
+    CV_UNUSED(backend_factory);
     CV_UNUSED(version_ABI);
     CV_UNUSED(version_API);
     CV_Error(Error::StsBadFunc, "Plugins are not available in this build");

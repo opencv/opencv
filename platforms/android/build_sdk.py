@@ -159,6 +159,7 @@ class Builder:
         self.debug_info = True if config.debug_info else False
         self.no_samples_build = True if config.no_samples_build else False
         self.opencl = True if config.opencl else False
+        self.no_kotlin = True if config.no_kotlin else False
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -219,6 +220,7 @@ class Builder:
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
             INSTALL_CREATE_DISTRIB="ON",
             WITH_OPENCL="OFF",
+            BUILD_KOTLIN_EXTENSIONS="ON",
             WITH_IPP=("ON" if abi.haveIPP() else "OFF"),
             WITH_TBB="ON",
             BUILD_EXAMPLES="OFF",
@@ -239,6 +241,9 @@ class Builder:
 
         if self.opencl:
             cmake_vars['WITH_OPENCL'] = "ON"
+
+        if self.no_kotlin:
+            cmake_vars['BUILD_KOTLIN_EXTENSIONS'] = "OFF"
 
         if self.config.modules_list is not None:
             cmd.append("-DBUILD_LIST='%s'" % self.config.modules_list)
@@ -359,6 +364,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug_info', action="store_true", help="Build with debug information (useful for Release mode: BUILD_WITH_DEBUG_INFO=ON)")
     parser.add_argument('--no_samples_build', action="store_true", help="Do not build samples (speeds up build)")
     parser.add_argument('--opencl', action="store_true", help="Enable OpenCL support")
+    parser.add_argument('--no_kotlin', action="store_true", help="Disable Kotlin extensions")
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)

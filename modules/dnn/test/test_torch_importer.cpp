@@ -290,9 +290,14 @@ TEST_P(Test_Torch_layers, net_padding)
 
 TEST_P(Test_Torch_layers, net_non_spatial)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
+#if defined(INF_ENGINE_RELEASE) && ( \
+    INF_ENGINE_VER_MAJOR_EQ(2021030000) || \
+    INF_ENGINE_VER_MAJOR_EQ(2021040000) \
+)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // crash
+        // 2021.3: crash
+        // 2021.4: [ GENERAL_ERROR ]  AssertionFailed: !out.networkInputs.empty()
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)

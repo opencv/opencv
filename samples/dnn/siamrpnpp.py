@@ -327,9 +327,11 @@ def main():
     """ Sample SiamRPN Tracker
     """
     # Computation backends supported by layers
-    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV)
+    backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
+                cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
     # Target Devices for computation
-    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD)
+    targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
+               cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
     parser = argparse.ArgumentParser(description='Use this script to run SiamRPN++ Visual Tracker',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -338,17 +340,22 @@ def main():
     parser.add_argument('--search_net', type=str, default='search_net.onnx', help='Path to part of SiamRPN++ ran on search frame.')
     parser.add_argument('--rpn_head', type=str, default='rpn_head.onnx', help='Path to RPN Head ONNX model.')
     parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help='Select a computation backend: '
-                        "%d: automatically (by default) "
-                        "%d: Halide"
-                        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit)"
-                        "%d: OpenCV Implementation" % backends)
+                        help="Select a computation backend: "
+                        "%d: automatically (by default), "
+                        "%d: Halide, "
+                        "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                        "%d: OpenCV Implementation, "
+                        "%d: VKCOM, "
+                        "%d: CUDA" % backends)
     parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Select a target device: '
-                        "%d: CPU target (by default)"
-                        "%d: OpenCL"
-                        "%d: OpenCL FP16"
-                        "%d: Myriad" % targets)
+                        '%d: CPU target (by default), '
+                        '%d: OpenCL, '
+                        '%d: OpenCL FP16, '
+                        '%d: Myriad, '
+                        '%d: Vulkan, '
+                        '%d: CUDA, '
+                        '%d: CUDA fp16 (half-float preprocess)' % targets)
     args, _ = parser.parse_known_args()
 
     if args.input_video and not os.path.isfile(args.input_video):
