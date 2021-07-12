@@ -151,11 +151,11 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
 void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_level)
 {
     if (_descriptors.empty()) return;
-    
+
     Mat labels, vocabulary;
     std::vector<std::vector<unsigned> > groups;
     groups.reserve(clusterCountPerLevel);
-    
+
     if (_descriptors.rows <= clusterCountPerLevel)
     {
         groups.resize(_descriptors.rows);
@@ -172,7 +172,7 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             groups[labels.at<int>(0, i)].push_back(i);
     }
 
-    for (int i = 0; i < clusterCountPerLevel; i++) 
+    for (int i = 0; i < clusterCountPerLevel; i++)
     {
         nodes.push_back(Node((unsigned)nodes.size(), parent, vocabulary.row(i)));
         nodes[parent].child.push_back(i);
