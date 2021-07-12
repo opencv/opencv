@@ -174,7 +174,7 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
 
     for (int i = 0; i < clusterCountPerLevel; i++) 
     {
-        nodes.push_back(Node(nodes.size(), parent, vocabulary.row(i)));
+        nodes.push_back(Node((unsigned)nodes.size(), parent, vocabulary.row(i)));
         nodes[parent].child.push_back(i);
     }
 
