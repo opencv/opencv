@@ -148,10 +148,10 @@ type deserialize(const std::vector<char> &bytes) {
  * @return GRunArgs including RMat and MediaFrame objects if any.
  * @see RMat MediaFrame
  */
-template<typename T, typename... AdapterTypes> inline
+template<typename T, typename AtLeastOneAdapterT, typename... AdapterTypes> inline
 typename std::enable_if<std::is_same<T, GRunArgs>::value, GRunArgs>::
 type deserialize(const std::vector<char> &p) {
-    return detail::getRunArgsWithAdapters<AdapterTypes...>(p);
+    return detail::getRunArgsWithAdapters<AtLeastOneAdapterT, AdapterTypes...>(p);
 }
 } // namespace gapi
 } // namespace cv

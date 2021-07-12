@@ -605,6 +605,17 @@ TEST_F(S11N_Basic, Test_Vector_Of_Strings) {
     EXPECT_EQ("42", des[2]);
 }
 
+TEST_F(S11N_Basic, Test_RunArg) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    auto v = cv::GRunArgs{ cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs>(sargsin);
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[0]);
+
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
 TEST_F(S11N_Basic, Test_RunArg_RMat) {
     cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
     cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
