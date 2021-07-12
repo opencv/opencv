@@ -878,6 +878,266 @@ void fastGEMM1T( const float* vec, const float* weights,
         dst[i] = sum + bias[i];
     }
 }
+
+enum { FASCONV_BASE_VECSZ = 4 }; // TODO: Large base size.
+void fastConv( const float* weights, size_t wstep, const float* bias,
+               const float* rowbuf, float* output, const int* outShape,
+               int blockSize, int vecsize, int vecsize_aligned,
+               const float* relu, bool initOutput )
+{
+    int vl = vsetvl_e32m1(128); // vl = 4
+    int outCn = outShape[1];
+    size_t outPlaneSize = outShape[2]*outShape[3];
+    float r0 = 1.f, r1 = 1.f, r2 = 1.f;
+    vfloat32m1_t vr0 = vfmv_v_f_f32m1(1, vl), vr1 = vfmv_v_f_f32m1(1, vl), vr2 = vfmv_v_f_f32m1(1, vl);
+    int maskbuf[FASCONV_BASE_VECSZ] = {0};
+    int rsz = blockSize % FASCONV_BASE_VECSZ;
+    for( int i = 0; i < rsz; i++ )
+        maskbuf[FASCONV_BASE_VECSZ - i - 1] = -1;
+    vint32m1_t vmaskbuf = vle32_v_i32m1(maskbuf ,vl);
+    vbool32_t mask = vmslt_vx_i32m1_b32(vmaskbuf, 0, vl); // mask for tail
+    // now compute dot product of the weights
+    // and im2row-transformed part of the tensor
+    for( int i = 0; i < outCn; i += 3 )
+    {
+        const float* wptr0 = weights + i*wstep;
+        const float* wptr1 = wptr0 + wstep;
+        const float* wptr2 = wptr1 + wstep;
+        float* outptr0 = output + i*outPlaneSize;
+        float* outptr1 = outptr0 + outPlaneSize;
+        float* outptr2 = outptr1 + outPlaneSize;
+        float bias0 = bias[i], bias1 = bias[i+1], bias2 = bias[i+2];
+
+        if( i+2 >= outCn )
+        {
+            wptr2 = wptr1;
+            outptr2 = outptr1;
+            bias2 = bias1;
+            if( i+1 >= outCn )
+            {
+                wptr2 = wptr1 = wptr0;
+                outptr2 = outptr1 = outptr0;
+                bias2 = bias1 = bias0;
+            }
+        }
+
+        if( relu )
+        {
+            r0 = relu[i]; r1 = relu[i+1]; r2 = relu[i+2];
+            if( i+2 >= outCn )
+            {
+                r2 = r1;
+                if( i+1 >= outCn )
+                    r2 = r1 = r0;
+            }
+            vr0 = vfmv_v_f_f32m1(r0, vl);
+            vr1 = vfmv_v_f_f32m1(r1, vl);
+            vr2 = vfmv_v_f_f32m1(r2, vl);
+        }
+
+        int j = 0;
+        for( ; j < blockSize; j += FASCONV_BASE_VECSZ )
+        {
+            bool tail = false;
+            if (j + FASCONV_BASE_VECSZ > blockSize)
+            {
+                // TODO: Use mask method or setVl instead of scalar
+                if (j == 0) // blockSize < FASCONV_BASE_VECSZ at first loop
+                    break;  // skip and goto scalar part
+                j = blockSize - FASCONV_BASE_VECSZ;
+                tail = true;
+            }
+            int k = 0;
+            const float* rptr = rowbuf + j*vecsize_aligned;
+            int vlm2 = vsetvl_e32m2(128); // vl = 8
+            vfloat32m2_t vs00 = vfmv_v_f_f32m2(0, vlm2), vs01 = vfmv_v_f_f32m2(0, vlm2),
+                   vs02 = vfmv_v_f_f32m2(0, vlm2), vs03 = vfmv_v_f_f32m2(0, vlm2),
+                   vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
+                   vs12 = vfmv_v_f_f32m2(0, vlm2), vs13 = vfmv_v_f_f32m2(0, vlm2),
+                   vs20 = vfmv_v_f_f32m2(0, vlm2), vs21 = vfmv_v_f_f32m2(0, vlm2),
+                   vs22 = vfmv_v_f_f32m2(0, vlm2), vs23 = vfmv_v_f_f32m2(0, vlm2);
+
+            for (; k < vecsize; k += 8, rptr += 8 )
+            {
+                vfloat32m2_t w0 = vle32_v_f32m2(wptr0 + k, vlm2);
+                vfloat32m2_t w1 = vle32_v_f32m2(wptr1 + k, vlm2);
+                vfloat32m2_t w2 = vle32_v_f32m2(wptr2 + k, vlm2);
+                vfloat32m2_t r0 = vle32_v_f32m2(rptr, vlm2);
+
+                vs00 = vfmacc_vv_f32m2(vs00, w0, r0, vlm2);
+                vs10 = vfmacc_vv_f32m2(vs10, w1, r0, vlm2);
+                vs20 = vfmacc_vv_f32m2(vs20, w2, r0, vlm2);
+
+                r0 = vle32_v_f32m2(rptr + vecsize_aligned, vlm2);
+                vs01 = vfmacc_vv_f32m2(vs01, w0, r0, vlm2);
+                vs11 = vfmacc_vv_f32m2(vs11, w1, r0, vlm2);
+                vs21 = vfmacc_vv_f32m2(vs21, w2, r0, vlm2);
+
+                r0 = vle32_v_f32m2(rptr + vecsize_aligned*2, vlm2);
+                vs02 = vfmacc_vv_f32m2(vs02, w0, r0, vlm2);
+                vs12 = vfmacc_vv_f32m2(vs12, w1, r0, vlm2);
+                vs22 = vfmacc_vv_f32m2(vs22, w2, r0, vlm2);
+
+                r0 = vle32_v_f32m2(rptr + vecsize_aligned*3, vlm2);
+                vs03 = vfmacc_vv_f32m2(vs03, w0, r0, vlm2);
+                vs13 = vfmacc_vv_f32m2(vs13, w1, r0, vlm2);
+                vs23 = vfmacc_vv_f32m2(vs23, w2, r0, vlm2);
+            }
+            vfloat32m1_t s0, s1, s2;
+
+            if( initOutput )
+            {
+                s0 = vfmv_v_f_f32m1(bias0, vl);
+                s1 = vfmv_v_f_f32m1(bias1, vl);
+                s2 = vfmv_v_f_f32m1(bias2, vl);
+            }
+            else
+            {
+                s0 = vle32_v_f32m1(outptr0 + j, vl);
+                s1 = vle32_v_f32m1(outptr1 + j, vl);
+                s2 = vle32_v_f32m1(outptr2 + j, vl);
+            }
+            // compute sum of each vs
+            vfloat32m1_t zero = vfmv_v_f_f32m1(0, vl);
+            vfloat32m1_t temp00 = vfredsum_vs_f32m2_f32m1(temp00, vs00, zero, vlm2);
+            vfloat32m1_t temp01 = vfredsum_vs_f32m2_f32m1(temp01, vs01, zero, vlm2);
+            vfloat32m1_t temp02 = vfredsum_vs_f32m2_f32m1(temp02, vs02, zero, vlm2);
+            vfloat32m1_t temp03 = vfredsum_vs_f32m2_f32m1(temp03, vs03, zero, vlm2);
+            vfloat32m1_t temp10 = vfredsum_vs_f32m2_f32m1(temp10, vs10, zero, vlm2);
+            vfloat32m1_t temp11 = vfredsum_vs_f32m2_f32m1(temp11, vs11, zero, vlm2);
+            vfloat32m1_t temp12 = vfredsum_vs_f32m2_f32m1(temp12, vs12, zero, vlm2);
+            vfloat32m1_t temp13 = vfredsum_vs_f32m2_f32m1(temp13, vs13, zero, vlm2);
+            vfloat32m1_t temp20 = vfredsum_vs_f32m2_f32m1(temp20, vs20, zero, vlm2);
+            vfloat32m1_t temp21 = vfredsum_vs_f32m2_f32m1(temp21, vs21, zero, vlm2);
+            vfloat32m1_t temp22 = vfredsum_vs_f32m2_f32m1(temp22, vs22, zero, vlm2);
+            vfloat32m1_t temp23 = vfredsum_vs_f32m2_f32m1(temp23, vs23, zero, vlm2);
+            float32_t sum0[4] = {0}, sum1[4] = {0}, sum2[4] = {0};
+            sum0[0] = vfmv_f_s_f32m1_f32(temp00);
+            sum0[1] = vfmv_f_s_f32m1_f32(temp01);
+            sum0[2] = vfmv_f_s_f32m1_f32(temp02);
+            sum0[3] = vfmv_f_s_f32m1_f32(temp03);
+            sum1[0] = vfmv_f_s_f32m1_f32(temp10);
+            sum1[1] = vfmv_f_s_f32m1_f32(temp11);
+            sum1[2] = vfmv_f_s_f32m1_f32(temp12);
+            sum1[3] = vfmv_f_s_f32m1_f32(temp13);
+            sum2[0] = vfmv_f_s_f32m1_f32(temp20);
+            sum2[1] = vfmv_f_s_f32m1_f32(temp21);
+            sum2[2] = vfmv_f_s_f32m1_f32(temp22);
+            sum2[3] = vfmv_f_s_f32m1_f32(temp23);
+
+            s0 = vfadd_vv_f32m1(vle32_v_f32m1(sum0, vl), s0, vl);
+            s1 = vfadd_vv_f32m1(vle32_v_f32m1(sum1, vl), s1, vl);
+            s2 = vfadd_vv_f32m1(vle32_v_f32m1(sum2, vl), s2, vl);
+
+
+            if( relu )
+            {
+                vbool32_t m0 = vmfgt_vf_f32m1_b32(s0, 0, vl);
+                vbool32_t m1 = vmfgt_vf_f32m1_b32(s1, 0, vl);
+                vbool32_t m2 = vmfgt_vf_f32m1_b32(s2, 0, vl);
+                s0 = vmerge_vvm_f32m1(m0, vfmul_vv_f32m1(s0, vr0, vl), s0, vl);
+                s1 = vmerge_vvm_f32m1(m1, vfmul_vv_f32m1(s1, vr1, vl), s1, vl);
+                s2 = vmerge_vvm_f32m1(m2, vfmul_vv_f32m1(s2, vr2, vl), s2, vl);
+            }
+
+            if( tail )
+            {
+                s0 = vmerge_vvm_f32m1(mask, vle32_v_f32m1(outptr0 + j, vl), s0, vl);
+                s1 = vmerge_vvm_f32m1(mask, vle32_v_f32m1(outptr1 + j, vl), s1, vl);
+                s2 = vmerge_vvm_f32m1(mask, vle32_v_f32m1(outptr2 + j, vl), s2, vl);
+            }
+
+            vse32_v_f32m1(outptr0 + j, s0, vl);
+            vse32_v_f32m1(outptr1 + j, s1, vl);
+            vse32_v_f32m1(outptr2 + j, s2, vl);
+        }
+
+        // Only use for very small blocksize(<4). Maybe instead by "setVL".
+        for( ; j <= blockSize - 2; j += 2 )
+        {
+            const float* rptr0 = rowbuf + j*vecsize_aligned;
+            const float* rptr1 = rowbuf + (j+1)*vecsize_aligned;
+            float s00, s01, s10, s11, s20, s21;
+
+            if( initOutput )
+            {
+                s00 = s01 = bias0;
+                s10 = s11 = bias1;
+                s20 = s21 = bias2;
+            }
+            else
+            {
+                s00 = outptr0[j]; s01 = outptr0[j+1];
+                s10 = outptr1[j]; s11 = outptr1[j+1];
+                s20 = outptr2[j]; s21 = outptr2[j+1];
+            }
+
+            for( int k = 0; k < vecsize; k++ )
+            {
+                float w0 = wptr0[k], w1 = wptr1[k], w2 = wptr2[k];
+                float r = rptr0[k];
+                s00 += w0*r; s10 += w1*r; s20 += w2*r;
+                r = rptr1[k];
+                s01 += w0*r; s11 += w1*r; s21 += w2*r;
+            }
+
+            if( relu )
+            {
+                s00 = s00 > 0.f ? s00 : s00*r0;
+                s01 = s01 > 0.f ? s01 : s01*r0;
+                s10 = s10 > 0.f ? s10 : s10*r1;
+                s11 = s11 > 0.f ? s11 : s11*r1;
+                s20 = s20 > 0.f ? s20 : s20*r2;
+                s21 = s21 > 0.f ? s21 : s21*r2;
+            }
+
+            outptr0[j] = s00;
+            outptr0[j+1] = s01;
+            outptr1[j] = s10;
+            outptr1[j+1] = s11;
+            outptr2[j] = s20;
+            outptr2[j+1] = s21;
+        }
+
+        for( ; j < blockSize; j++ )
+        {
+            const float* rptr0 = rowbuf + j*vecsize_aligned;
+            float s00, s10, s20;
+
+            if( initOutput )
+            {
+                s00 = bias0;
+                s10 = bias1;
+                s20 = bias2;
+            }
+            else
+            {
+                s00 = outptr0[j];
+                s10 = outptr1[j];
+                s20 = outptr2[j];
+            }
+
+            for( int k = 0; k < vecsize; k++ )
+            {
+                float w0 = wptr0[k], w1 = wptr1[k], w2 = wptr2[k];
+                float r = rptr0[k];
+                s00 += w0*r; s10 += w1*r; s20 += w2*r;
+            }
+
+            if( relu )
+            {
+                s00 = s00 > 0.f ? s00 : s00*r0;
+                s10 = s10 > 0.f ? s10 : s10*r1;
+                s20 = s20 > 0.f ? s20 : s20*r2;
+            }
+
+            outptr0[j] = s00;
+            outptr1[j] = s10;
+            outptr2[j] = s20;
+        }
+    }
+}
+
 #endif // CV_RVV
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END

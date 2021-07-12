@@ -1549,6 +1549,12 @@ public:
                                          outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
+                    #if CV_TRY_RVV
+                        if(useRVV)
+                            opt_RVV::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                         outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
+                        else
+                    #endif
                         for( int i = 0; i < outCn; i += 2 )
                         {
                             const float* wptr0 = wptr + i*wstep;
