@@ -42,7 +42,7 @@ namespace detail {
     cv::GCompileArgs getCompileArgs(const std::vector<char> &bytes);
 
     template<typename... AdapterType>
-    cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &p);
+    cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes);
 } // namespace detail
 
 /** @brief Serialize a graph represented by GComputation into an array of bytes.
@@ -150,8 +150,8 @@ type deserialize(const std::vector<char> &bytes) {
  */
 template<typename T, typename AtLeastOneAdapterT, typename... AdapterTypes> inline
 typename std::enable_if<std::is_same<T, GRunArgs>::value, GRunArgs>::
-type deserialize(const std::vector<char> &p) {
-    return detail::getRunArgsWithAdapters<AtLeastOneAdapterT, AdapterTypes...>(p);
+type deserialize(const std::vector<char> &bytes) {
+    return detail::getRunArgsWithAdapters<AtLeastOneAdapterT, AdapterTypes...>(bytes);
 }
 } // namespace gapi
 } // namespace cv
@@ -481,8 +481,8 @@ cv::GCompileArgs getCompileArgs(const std::vector<char> &sArgs) {
 }
 
 template<typename... AdapterTypes>
-cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &p) {
-    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(p);
+cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes) {
+    std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(bytes);
     cv::gapi::s11n::IIStream& is = *pIs;
     cv::GRunArgs args;
 
