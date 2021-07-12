@@ -524,14 +524,6 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 }
 
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
-{
-    CV_INSTRUMENT_REGION();
-
-    FAST(_img, keypoints, threshold, nonmax_suppression, FastFeatureDetector::TYPE_9_16);
-}
-
-
 class FastFeatureDetector_Impl CV_FINAL : public FastFeatureDetector
 {
 public:
