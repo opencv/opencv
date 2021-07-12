@@ -76,18 +76,24 @@ inline void colorFix(Point3f& c)
 cv::Mat preCalculationPixNorm(Depth depth, const Intr& intrinsics);
 cv::UMat preCalculationPixNormGPU(const UMat& depth, const Intr& intrinsics);
 
-inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
+inline depthType bilinearDepth(const Depth& d, const Mask& m, cv::Point2f pt)
 {
     const bool fixMissingData = false;
     const depthType defaultValue = qnan;
-    if (pt.x < 0 || pt.x >= m.cols - 1 ||
-        pt.y < 0 || pt.y >= m.rows - 1)
+    if (pt.x < 0 || pt.x >= d.cols - 1 ||
+        pt.y < 0 || pt.y >= d.rows - 1)
         return defaultValue;
 
     int xi = cvFloor(pt.x), yi = cvFloor(pt.y);
 
-    const depthType* row0 = m[yi + 0];
-    const depthType* row1 = m[yi + 1];
+    const depthType* row0 = d[yi + 0];
+    const depthType* row1 = d[yi + 1];
+
+    const maskType* rowM0 = m[yi + 0];
+    const maskType* rowM1 = m[yi + 1];
+
+    if (rowM0[xi + 0] == 0 || rowM0[xi + 1] == 0 || rowM1[xi + 0] == 0 || rowM1[xi + 1] == 0)
+        return defaultValue;
 
     depthType v00 = row0[xi + 0];
     depthType v01 = row0[xi + 1];
@@ -153,13 +159,13 @@ inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
 void integrateVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
-    InputArray _depth, float depthFactor, const cv::Matx44f& cameraPose,
+    InputArray _depth, InputArray _depthMask, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& intrinsics, InputArray _pixNorms, InputArray _volume);
 
 void integrateRGBVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
-    InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
+    InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume);
 
 

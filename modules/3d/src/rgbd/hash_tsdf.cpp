@@ -91,8 +91,8 @@ public:
     void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
-                 OutputArray normals) const override;
-    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+                 OutputArray normals, OutputArray _pointsMask, OutputArray _normalsMask) const override;
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); }
     void fetchNormals(InputArray points, OutputArray _normals) const override;
     void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -164,7 +164,10 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, floa
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
+    CV_Assert(_depthMask.type() == MASK_TYPE);
+    CV_Assert(!_depthMask.empty());
     Depth depth = _depth.getMat();
+    Mask depthMask = _depthMask.getMat();
 
     //! Compute volumes to be allocated
     const int depthStride = volumeUnitDegree;
@@ -304,7 +307,7 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, floa
             {
                 //! The volume unit should already be added into the Volume from the allocator
                 integrateVolumeUnit(truncDist, voxelSize, maxWeight, volumeUnit.pose,
-                                    Point3i(volumeUnitResolution, volumeUnitResolution, volumeUnitResolution), volStrides, depth,
+                                    Point3i(volumeUnitResolution, volumeUnitResolution, volumeUnitResolution), volStrides, depth, depthMask,
                                     depthFactor, cameraPose, intrinsics, pixNorms, volUnitsData.row(volumeUnit.index));
 
                 //! Ensure all active volumeUnits are set to inactive for next integration
@@ -632,19 +635,26 @@ Point3f HashTSDFVolumeCPU::getNormalVoxel(const Point3f &point) const
 }
 
 void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
-                                OutputArray _points, OutputArray _normals) const
+                                OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(frameSize.area() > 0);
 
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
+    _pointsMask.create(frameSize, MASK_TYPE);
+    _normalsMask.create(frameSize, MASK_TYPE);
 
     Points points1   = _points.getMat();
     Normals normals1 = _normals.getMat();
+    Mask pointsMask1  = _pointsMask.getMat();
+    Mask normalsMask1 = _normalsMask.getMat();
 
     Points& points(points1);
     Normals& normals(normals1);
+    Mask& pointsMask(pointsMask1);
+    Mask& normalsMask(normalsMask1);
+
     const HashTSDFVolumeCPU& volume(*this);
     const float tstep(volume.truncDist * volume.raycastStepFactor);
     const Affine3f cam2vol(volume.pose.inv() * Affine3f(cameraPose));
@@ -666,11 +676,14 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
+            maskType* ptsMRow = pointsMask[y];
+            maskType* nrmMRow = normalsMask[y];
 
             for (int x = 0; x < points.cols; x++)
             {
                 //! Initialize default value
                 Point3f point = nan3, normal = nan3;
+                maskType pm = 0, nm = 0;
 
                 //! Ray origin and direction in the volume coordinate frame
                 Point3f orig    = cam2volTrans;
@@ -725,6 +738,7 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                             {
                                 normal = vol2camRot * nv;
                                 point = vol2cam * pv;
+                                pm = 1; nm = 1;
                             }
                         }
                         break;
@@ -736,6 +750,8 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                 }
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
+                ptsMRow[x] = pm;
+                nrmMRow[x] = nm;
             }
         }
     };

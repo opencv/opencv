@@ -47,6 +47,7 @@ rescaleDepthTemplated<double>(const Mat& in, Mat& out)
 #define USE_INTRINSICS CV_SIMD128
 
 typedef float depthType;
+typedef int   maskType;
 
 const float qnan = std::numeric_limits<float>::quiet_NaN();
 const cv::Vec3f nan3(qnan, qnan, qnan);
@@ -138,7 +139,7 @@ enum
     DEPTH_TYPE = DataType<depthType>::type,
     POINT_TYPE = DataType<ptype    >::type,
     COLOR_TYPE = DataType<ptype    >::type,
-    MASK_TYPE  = DataType<int      >::type
+    MASK_TYPE  = DataType<maskType >::type
 };
 
 typedef cv::Mat_< ptype > Points;

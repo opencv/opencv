@@ -83,15 +83,19 @@ cv::UMat preCalculationPixNormGPU(const UMat& depth, const Intr& intrinsics)
 void integrateVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
-    InputArray _depth, float depthFactor, const cv::Matx44f& cameraPose,
+    InputArray _depth, InputArray _depthMask, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& intrinsics, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
     CV_Assert(!_depth.empty());
+    CV_Assert(_depthMask.type() == MASK_TYPE);
+    CV_Assert(!_depthMask.empty());
+
     cv::Affine3f vpose(_pose);
     Depth depth = _depth.getMat();
+    Mask depthMask = _depthMask.getMat();
 
     Range integrateRange(0, volResolution.x);
 
@@ -192,6 +196,11 @@ void integrateVolumeUnit(
 
                         const depthType* row0 = depth[yi + 0];
                         const depthType* row1 = depth[yi + 1];
+
+                        const maskType* rowM0 = depthMask[yi + 0];
+                        const maskType* rowM1 = depthMask[yi + 1];
+                        if (rowM0[xi + 0] == 0 || rowM0[xi + 1] == 0 || rowM1[xi + 0] == 0 || rowM1[xi + 1] == 0)
+                            continue;
 
                         // v001 = [v(xi + 0, yi + 0), v(xi + 1, yi + 0)]
                         v_float32x4 v001 = v_load_low(row0 + xi);
@@ -307,7 +316,7 @@ void integrateVolumeUnit(
                     Point3f camPixVec;
                     Point2f projected = proj(camSpacePt, camPixVec);
 
-                    depthType v = bilinearDepth(depth, projected);
+                    depthType v = bilinearDepth(depth, depthMask, projected);
                     if (v == 0) {
                         continue;
                     }
@@ -347,15 +356,18 @@ void integrateVolumeUnit(
 void integrateRGBVolumeUnit(
     float truncDist, float voxelSize, int maxWeight,
     cv::Matx44f _pose, Point3i volResolution, Vec4i volStrides,
-    InputArray _depth, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
+    InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor, const cv::Matx44f& cameraPose,
     const cv::Intr& depth_intrinsics, const cv::Intr& rgb_intrinsics, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
     CV_Assert(!_depth.empty());
+    CV_Assert(_depthMask.type() == MASK_TYPE);
+    CV_Assert(!_depthMask.empty());
     cv::Affine3f vpose(_pose);
     Depth depth = _depth.getMat();
+    Mask depthMask = _depthMask.getMat();
     Colors color = _rgb.getMat();
     Range integrateRange(0, volResolution.x);
 
@@ -458,6 +470,11 @@ void integrateRGBVolumeUnit(
 
                         const depthType* row0 = depth[yi + 0];
                         const depthType* row1 = depth[yi + 1];
+
+                        const maskType* rowM0 = depthMask[yi + 0];
+                        const maskType* rowM1 = depthMask[yi + 1];
+                        if (rowM0[xi + 0] == 0 || rowM0[xi + 1] == 0 || rowM1[xi + 0] == 0 || rowM1[xi + 1] == 0)
+                            continue;
 
                         // v001 = [v(xi + 0, yi + 0), v(xi + 1, yi + 0)]
                         v_float32x4 v001 = v_load_low(row0 + xi);
@@ -593,7 +610,7 @@ void integrateRGBVolumeUnit(
                     Point2f projectedRGB = projRGB(camSpacePt, camPixVec);
 
 
-                    depthType v = bilinearDepth(depth, projected);
+                    depthType v = bilinearDepth(depth, depthMask, projected);
                     if (v == 0) {
                         continue;
                     }

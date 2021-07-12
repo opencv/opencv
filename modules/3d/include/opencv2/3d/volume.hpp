@@ -30,12 +30,14 @@ class CV_EXPORTS_W Volume
                            const Matx33f& intrinsics, const int frameId = 0)               = 0;
     virtual void integrate(InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor,
                            const Matx44f& cameraPose, const Matx33f& intrinsics,
-                           const Matx33f& rgb_intrinsics, const int frameId = 0)                  = 0;
+                           const Matx33f& rgb_intrinsics, const int frameId = 0)               = 0;
     CV_WRAP
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
-                         const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
+                         const Size& frameSize, OutputArray points, OutputArray normals,
+                         OutputArray _pointsMask, OutputArray _normalsMask) const              = 0;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
-                         OutputArray points, OutputArray normals, OutputArray colors) const    = 0;
+                         OutputArray points, OutputArray normals, OutputArray colors,
+                         OutputArray pointsMask, OutputArray normalsMask, OutputArray colorsMask) const = 0;
     CV_WRAP
     virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
     CV_WRAP

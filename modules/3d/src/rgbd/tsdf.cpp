@@ -8,8 +8,6 @@
 #include "tsdf.hpp"
 #include "opencl_kernels_3d.hpp"
 
-#define USE_INTRINSICS 0
-
 namespace cv {
 
 class TSDFVolumeCPU : public TSDFVolume
@@ -22,10 +20,10 @@ class TSDFVolumeCPU : public TSDFVolume
     virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
-                         OutputArray points, OutputArray normals) const override;
+                         OutputArray points, OutputArray normals, OutputArray _pointsMask, OutputArray _normalsMask) const override;
     virtual void integrate(InputArray, InputArray, InputArray, float, const Matx44f&, const Matx33f&, const Matx33f&, const int) override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
-    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -153,7 +151,6 @@ TsdfVoxel TSDFVolumeCPU::at(const Vec3i& volumeIdx) const
 void TSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose,
                               const Matx33f& _intrinsics, const int frameId)
 {
-    std::cout << "integrateCPU_intr0" << std::endl;
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
     CV_Assert(_depth.type() == DEPTH_TYPE);
@@ -173,7 +170,7 @@ void TSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, float de
         pixNorms = preCalculationPixNorm(depth, intrinsics);
     }
 
-    integrateVolumeUnit(truncDist, voxelSize, maxWeight, (this->pose).matrix, volResolution, volStrides, depth,
+    integrateVolumeUnit(truncDist, voxelSize, maxWeight, (this->pose).matrix, volResolution, volStrides, depth, depthMask,
         depthFactor, cameraPose, intrinsics, pixNorms, volume);
 }
 
@@ -379,11 +376,13 @@ inline Point3f TSDFVolumeCPU::getNormalVoxel(const Point3f& p) const
 
 struct RaycastInvoker : ParallelLoopBody
 {
-    RaycastInvoker(Points& _points, Normals& _normals, const Matx44f& cameraPose,
-                  const Intr& intrinsics, const TSDFVolumeCPU& _volume) :
+    RaycastInvoker(Points& _points, Normals& _normals, Mask& _pointsMask, Mask& _normalsMask,
+                   const Matx44f& cameraPose, const Intr& intrinsics, const TSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
+        pointsMask(_pointsMask),
+        normalsMask(_normalsMask),
         volume(_volume),
         tstep(volume.truncDist * volume.raycastStepFactor),
         // We do subtract voxel size to minimize checks after
@@ -427,10 +426,13 @@ struct RaycastInvoker : ParallelLoopBody
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
+            maskType* ptsMRow = pointsMask[y];
+            maskType* nrmMRow = normalsMask[y];
 
             for(int x = 0; x < points.cols; x++)
             {
                 v_float32x4 point = nanv, normal = nanv;
+                maskType pm = 0, nm = 0;
 
                 v_float32x4 orig = camTrans;
 
@@ -531,6 +533,7 @@ struct RaycastInvoker : ParallelLoopBody
                                                                    volume.voxelSize,
                                                                    volume.voxelSize, 1.f),
                                                     volRot0, volRot1, volRot2, volTrans);
+                                pm = 1; nm = 1;
                             }
                         }
                     }
@@ -538,6 +541,8 @@ struct RaycastInvoker : ParallelLoopBody
 
                 v_store((float*)(&ptsRow[x]), point);
                 v_store((float*)(&nrmRow[x]), normal);
+                ptsMRow[x] = pm;
+                nrmMRow[x] = nm;
             }
         }
     }
@@ -552,10 +557,13 @@ struct RaycastInvoker : ParallelLoopBody
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
+            maskType* ptsMRow = pointsMask[y];
+            maskType* nrmMRow = normalsMask[y];
 
             for(int x = 0; x < points.cols; x++)
             {
                 Point3f point = nan3, normal = nan3;
+                maskType pm = 0, nm = 0;
 
                 Point3f orig = camTrans;
                 // direction through pixel in volume space
@@ -637,12 +645,15 @@ struct RaycastInvoker : ParallelLoopBody
                                 normal = volRot * nv;
                                 // interpolation optimized a little
                                 point = vol2cam * (pv*volume.voxelSize);
+                                pm = 1; nm = 1;
                             }
                         }
                     }
                 }
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
+                ptsMRow[x] = pm;
+                nrmMRow[x] = nm;
             }
         }
     }
@@ -650,6 +661,8 @@ struct RaycastInvoker : ParallelLoopBody
 
     Points& points;
     Normals& normals;
+    Mask& pointsMask;
+    Mask& normalsMask;
     const TSDFVolumeCPU& volume;
 
     const float tstep;
@@ -664,7 +677,7 @@ struct RaycastInvoker : ParallelLoopBody
 
 
 void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
-                            OutputArray _points, OutputArray _normals) const
+                            OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
 {
     CV_TRACE_FUNCTION();
 
@@ -672,11 +685,15 @@ void TSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& intrinsics
 
     _points.create (frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
+    _pointsMask.create (frameSize, MASK_TYPE);
+    _normalsMask.create(frameSize, MASK_TYPE);
 
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
+    Mask pointsMask =  _pointsMask.getMat();
+    Mask normalsMask = _normalsMask.getMat();
 
-    RaycastInvoker ri(points, normals, cameraPose, Intr(intrinsics), *this);
+    RaycastInvoker ri(points, normals, pointsMask, normalsMask, cameraPose, Intr(intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);

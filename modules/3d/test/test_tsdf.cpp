@@ -416,17 +416,23 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     Mat mask(depth.size(), CV_32S, Scalar(255));
     for (int y = 0; y < depth.rows; y++)
         for (int x = 0; x < depth.cols; x++)
-            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
-                mask.at<int>(y, x) = 0;    UMat _points, _normals, _tmpnormals;
+            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) <= FLT_EPSILON)
+                mask.at<int>(y, x) = 0;
+            else
+                mask.at<int>(y, x) = 1;
+    UMat _points, _normals, _tmpnormals;
+    UMat _pointsMask, _normalsMask, _tmpnormalsMask;
     UMat _newPoints, _newNormals;
+    UMat _newPointsMask, _newNormalsMask;
     Mat  points, normals;
+    Mat  pointsMask, normalsMask;
     AccessFlag af = ACCESS_READ;
 
     settings.volume->integrate(depth, mask, settings.depthFactor, settings.poses[0].matrix, settings.intr);
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask, _normalsMask);
     }
     if (isFetchPointsNormals)
     {
@@ -451,7 +457,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
+        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
         normals = _newNormals.getMat(af);
         points = _newPoints.getMat(af);
         normalsCheck(normals);
@@ -476,15 +482,18 @@ void valid_points_test(bool isHashTSDF)
     Mat mask(depth.size(), CV_32S, Scalar(255));
     for (int y = 0; y < depth.rows; y++)
         for (int x = 0; x < depth.cols; x++)
-            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) <= FLT_EPSILON)
                 mask.at<int>(y, x) = 0;
+
     UMat _points, _normals, _newPoints, _newNormals;
+    UMat _pointsMask, _normalsMask, _newPointsMask, _newNormalsMask;
     AccessFlag af = ACCESS_READ;
     Mat  points, normals;
+    Mat  pointsMask, normalsMask;
     int anfas, profile;
 
     settings.volume->integrate(depth, mask, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask, _normalsMask);
     normals = _normals.getMat(af);
     points = _points.getMat(af);
     patchNaNs(points);
@@ -493,7 +502,7 @@ void valid_points_test(bool isHashTSDF)
     if (display)
         displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
-    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
+    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
     patchNaNs(points);
