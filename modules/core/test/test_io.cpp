@@ -1837,4 +1837,69 @@ TEST(Core_InputOutput, FileStorage_copy_constructor_17412_heap)
     EXPECT_EQ(0, remove(fname.c_str()));
 }
 
+
+static void test_20279(FileStorage& fs)
+{
+    Mat m32fc1(5, 10, CV_32FC1, Scalar::all(0));
+    for (size_t i = 0; i < m32fc1.total(); i++)
+    {
+        float v = (float)i;
+        m32fc1.at<float>((int)i) = v * 0.5f;
+    }
+    Mat m16fc1;
+    // produces CV_16S output: convertFp16(m32fc1, m16fc1);
+    m32fc1.convertTo(m16fc1, CV_16FC1);
+    EXPECT_EQ(CV_16FC1, m16fc1.type()) << typeToString(m16fc1.type());
+    //std::cout << m16fc1 << std::endl;
+
+    Mat m32fc3(4, 3, CV_32FC3, Scalar::all(0));
+    for (size_t i = 0; i < m32fc3.total(); i++)
+    {
+        float v = (float)i;
+        m32fc3.at<Vec3f>((int)i) = Vec3f(v, v * 0.2f, -v);
+    }
+    Mat m16fc3;
+    m32fc3.convertTo(m16fc3, CV_16FC3);
+    EXPECT_EQ(CV_16FC3, m16fc3.type()) << typeToString(m16fc3.type());
+    //std::cout << m16fc3 << std::endl;
+
+    fs << "m16fc1" << m16fc1;
+    fs << "m16fc3" << m16fc3;
+
+    string content = fs.releaseAndGetString();
+    if (cvtest::debugLevel > 0) std::cout << content << std::endl;
+
+    FileStorage fs_read(content, FileStorage::READ + FileStorage::MEMORY);
+    Mat m16fc1_result;
+    Mat m16fc3_result;
+    fs_read["m16fc1"] >> m16fc1_result;
+    ASSERT_FALSE(m16fc1_result.empty());
+    EXPECT_EQ(CV_16FC1, m16fc1_result.type()) << typeToString(m16fc1_result.type());
+    EXPECT_LE(cvtest::norm(m16fc1_result, m16fc1, NORM_INF), 1e-2);
+
+    fs_read["m16fc3"] >> m16fc3_result;
+    ASSERT_FALSE(m16fc3_result.empty());
+    EXPECT_EQ(CV_16FC3, m16fc3_result.type()) << typeToString(m16fc3_result.type());
+    EXPECT_LE(cvtest::norm(m16fc3_result, m16fc3, NORM_INF), 1e-2);
+}
+
+TEST(Core_InputOutput, FileStorage_16F_xml)
+{
+    FileStorage fs("test.xml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    test_20279(fs);
+}
+
+TEST(Core_InputOutput, FileStorage_16F_yml)
+{
+    FileStorage fs("test.yml", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    test_20279(fs);
+}
+
+TEST(Core_InputOutput, FileStorage_16F_json)
+{
+    FileStorage fs("test.json", cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    test_20279(fs);
+}
+
+
 }} // namespace

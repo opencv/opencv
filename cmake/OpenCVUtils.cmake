@@ -1973,3 +1973,9 @@ if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
 else()
   ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
 endif()
+
+
+#
+# Include configuration override settings
+#
+include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")

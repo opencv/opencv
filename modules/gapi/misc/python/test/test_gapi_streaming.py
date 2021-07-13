@@ -5,14 +5,33 @@ import cv2 as cv
 import os
 import sys
 import unittest
+import time
 
 from tests_common import NewOpenCVTests
 
 
 try:
-
     if sys.version_info[:2] < (3, 0):
         raise unittest.SkipTest('Python 2.x is not supported')
+
+
+    @cv.gapi.op('custom.delay', in_types=[cv.GMat], out_types=[cv.GMat])
+    class GDelay:
+        """Delay for 10 ms."""
+
+        @staticmethod
+        def outMeta(desc):
+            return desc
+
+
+    @cv.gapi.kernel(GDelay)
+    class GDelayImpl:
+        """Implementation for GDelay operation."""
+
+        @staticmethod
+        def run(img):
+            time.sleep(0.01)
+            return img
 
 
     class test_gapi_streaming(NewOpenCVTests):
@@ -28,7 +47,7 @@ try:
             g_in = cv.GMat()
             g_out = cv.gapi.medianBlur(g_in, 3)
             c = cv.GComputation(g_in, g_out)
-            ccomp = c.compileStreaming(cv.descr_of(in_mat))
+            ccomp = c.compileStreaming(cv.gapi.descr_of(in_mat))
             ccomp.setSource(cv.gin(in_mat))
             ccomp.start()
 
@@ -52,7 +71,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -87,7 +106,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -148,7 +167,7 @@ try:
 
                 proc_num_frames += 1
                 if proc_num_frames == max_num_frames:
-                    break;
+                    break
 
 
         def test_video_good_features_to_track(self):
@@ -176,7 +195,7 @@ try:
 
             ccomp = c.compileStreaming()
             source = cv.gapi.wip.make_capture_src(path)
-            ccomp.setSource(source)
+            ccomp.setSource(cv.gin(source))
             ccomp.start()
 
             # Assert
@@ -207,6 +226,85 @@ try:
                 proc_num_frames += 1
                 if proc_num_frames == max_num_frames:
                     break
+
+
+        def test_gapi_streaming_meta(self):
+            ksize = 3
+            path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
+
+            # G-API
+            g_in = cv.GMat()
+            g_ts = cv.gapi.streaming.timestamp(g_in)
+            g_seqno = cv.gapi.streaming.seqNo(g_in)
+            g_seqid = cv.gapi.streaming.seq_id(g_in)
+
+            c = cv.GComputation(cv.GIn(g_in), cv.GOut(g_ts, g_seqno, g_seqid))
+
+            ccomp = c.compileStreaming()
+            source = cv.gapi.wip.make_capture_src(path)
+            ccomp.setSource(cv.gin(source))
+            ccomp.start()
+
+            # Assert
+            max_num_frames  = 10
+            curr_frame_number = 0
+            while True:
+                has_frame, (ts, seqno, seqid) = ccomp.pull()
+
+                if not has_frame:
+                    break
+
+                self.assertEqual(curr_frame_number, seqno)
+                self.assertEqual(curr_frame_number, seqid)
+
+                curr_frame_number += 1
+                if curr_frame_number == max_num_frames:
+                    break
+
+        def test_desync(self):
+            path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
+
+            # G-API
+            g_in = cv.GMat()
+            g_out1 = cv.gapi.copy(g_in)
+            des = cv.gapi.streaming.desync(g_in)
+            g_out2 = GDelay.on(des)
+
+            c = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out1, g_out2))
+
+            kernels = cv.gapi.kernels(GDelayImpl)
+            ccomp = c.compileStreaming(args=cv.gapi.compile_args(kernels))
+            source = cv.gapi.wip.make_capture_src(path)
+            ccomp.setSource(cv.gin(source))
+            ccomp.start()
+
+            # Assert
+            max_num_frames  = 10
+            proc_num_frames = 0
+
+            out_counter = 0
+            desync_out_counter = 0
+            none_counter = 0
+            while True:
+                has_frame, (out1, out2) = ccomp.pull()
+                if not has_frame:
+                    break
+
+                if not out1 is None:
+                    out_counter += 1
+                if not out2 is None:
+                    desync_out_counter += 1
+                else:
+                    none_counter += 1
+
+                proc_num_frames += 1
+                if proc_num_frames == max_num_frames:
+                    ccomp.stop()
+                    break
+
+            self.assertLess(0, proc_num_frames)
+            self.assertLess(desync_out_counter, out_counter)
+            self.assertLess(0, none_counter)
 
 
 except unittest.SkipTest as e:

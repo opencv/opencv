@@ -2123,7 +2123,7 @@ static void showSaveDialog(CvWindow& window)
     SIZE sz;
     int channels;
     void* data;
-    if (icvGetBitmapData(window, sz, channels, data))
+    if (!icvGetBitmapData(window, sz, channels, data))
         return; // nothing to save
 
     char szFileName[MAX_PATH] = "";
@@ -2206,6 +2206,7 @@ static bool handleMessage(MSG& message, int& keyCode)
         switch (message.message)
         {
             case WM_DESTROY:
+                // fallthru
             case WM_CHAR:
                 DispatchMessage(&message);
                 keyCode = (int)message.wParam;
@@ -2221,6 +2222,20 @@ static bool handleMessage(MSG& message, int& keyCode)
                 break;
 
             case WM_KEYDOWN:
+                // Intercept Ctrl+C for copy to clipboard
+                if ('C' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                {
+                    ::SendMessage(message.hwnd, WM_COPY, 0, 0);
+                    return false;
+                }
+
+                // Intercept Ctrl+S for "save as" dialog
+                if ('S' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
+                {
+                    showSaveDialog(window);
+                    return false;
+                }
+
                 TranslateMessage(&message);
                 if ((message.wParam >= VK_F1 && message.wParam <= VK_F24)      ||
                     message.wParam == VK_HOME   || message.wParam == VK_END    ||
@@ -2235,13 +2250,7 @@ static bool handleMessage(MSG& message, int& keyCode)
                     return true;
                 }
 
-                // Intercept Ctrl+C for copy to clipboard
-                if ('C' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
-                    ::SendMessage(message.hwnd, WM_COPY, 0, 0);
-
-                // Intercept Ctrl+S for "save as" dialog
-                if ('S' == message.wParam && (::GetKeyState(VK_CONTROL) >> 15))
-                    showSaveDialog(window);
+                // fallthru
 
             default:
                 DispatchMessage(&message);

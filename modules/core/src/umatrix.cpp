@@ -56,10 +56,6 @@ void setSize(UMat& m, int _dims, const int* _sz, const size_t* _steps,
 void updateContinuityFlag(UMat& m);
 void finalizeHdr(UMat& m);
 
-// it should be a prime number for the best hash function
-enum { UMAT_NLOCKS = 31 };
-static Mutex umatLocks[UMAT_NLOCKS];
-
 UMatData::UMatData(const MatAllocator* allocator)
 {
     prevAllocator = currAllocator = allocator;
@@ -130,6 +126,12 @@ UMatData::~UMatData()
         originalUMatData = NULL;
     }
 }
+
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+
+// it should be a prime number for the best hash function
+enum { UMAT_NLOCKS = 31 };
+static Mutex umatLocks[UMAT_NLOCKS];
 
 static size_t getUMatDataLockIndex(const UMatData* u)
 {
@@ -227,6 +229,33 @@ UMatDataAutoLock::~UMatDataAutoLock()
 {
     getUMatDataAutoLocker().release(u1, u2);
 }
+
+#else
+
+void UMatData::lock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+void UMatData::unlock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(NULL)
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u1_, UMatData* u2_) : u1(u1_), u2(u2_)
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+UMatDataAutoLock::~UMatDataAutoLock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
 
 //////////////////////////////// UMat ////////////////////////////////
 
@@ -951,11 +980,11 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-UMat UMat::diag(const UMat& d)
+UMat UMat::diag(const UMat& d, UMatUsageFlags usageFlags)
 {
     CV_Assert( d.cols == 1 || d.rows == 1 );
     int len = d.rows + d.cols - 1;
-    UMat m(len, len, d.type(), Scalar(0));
+    UMat m(len, len, d.type(), Scalar(0), usageFlags);
     UMat md = m.diag();
     if( d.cols == 1 )
         d.copyTo(md);
@@ -1323,34 +1352,34 @@ UMat UMat::t() const
     return m;
 }
 
-UMat UMat::zeros(int rows, int cols, int type)
+UMat UMat::zeros(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(rows, cols, type, Scalar::all(0));
+    return UMat(rows, cols, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::zeros(Size size, int type)
+UMat UMat::zeros(Size size, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(size, type, Scalar::all(0));
+    return UMat(size, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::zeros(int ndims, const int* sz, int type)
+UMat UMat::zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(ndims, sz, type, Scalar::all(0));
+    return UMat(ndims, sz, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::ones(int rows, int cols, int type)
+UMat UMat::ones(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
-    return UMat::ones(Size(cols, rows), type);
+    return UMat(rows, cols, type, Scalar(1), usageFlags);
 }
 
-UMat UMat::ones(Size size, int type)
+UMat UMat::ones(Size size, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(size, type, Scalar(1));
+    return UMat(size, type, Scalar(1), usageFlags);
 }
 
-UMat UMat::ones(int ndims, const int* sz, int type)
+UMat UMat::ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(ndims, sz, type, Scalar(1));
+    return UMat(ndims, sz, type, Scalar(1), usageFlags);
 }
 
 }

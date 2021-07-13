@@ -71,6 +71,15 @@ using GOptRunArgP = util::variant<
 >;
 using GOptRunArgsP = std::vector<GOptRunArgP>;
 
+using GOptRunArg = util::variant<
+    optional<cv::Mat>,
+    optional<cv::RMat>,
+    optional<cv::Scalar>,
+    optional<cv::detail::VectorRef>,
+    optional<cv::detail::OpaqueRef>
+>;
+using GOptRunArgs = std::vector<GOptRunArg>;
+
 namespace detail {
 
 template<typename T> inline GOptRunArgP wrap_opt_arg(optional<T>& arg) {
@@ -196,7 +205,7 @@ public:
      * @param s a shared pointer to IStreamSource representing the
      * input video stream.
      */
-    GAPI_WRAP void setSource(const gapi::wip::IStreamSource::Ptr& s);
+    void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
      * @brief Constructs and specifies an input video stream for a
@@ -255,7 +264,7 @@ public:
 
     // NB: Used from python
     /// @private -- Exclude this function from OpenCV documentation
-    GAPI_WRAP std::tuple<bool, cv::GRunArgs> pull();
+    GAPI_WRAP std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
 
     /**
      * @brief Get some next available data from the pipeline.
