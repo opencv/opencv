@@ -69,6 +69,9 @@ static void integrateVolumeUnit(
                         __global const char * depthptr,
                         int depth_step, int depth_offset,
                         int depth_rows, int depth_cols,
+                        __global const char * depth_mask_ptr,
+                        int depth_mask_step, int depth_mask_offset,
+                        int depth_mask_rows, int depth_mask_cols,
                         __global struct TsdfVoxel * volumeptr,
                         const __global char * pixNormsPtr,
                         int pixNormsStep, int pixNormsOffset,
@@ -166,13 +169,27 @@ static void integrateVolumeUnit(
                                                                  (yi+0)*depth_step);
             __global const float* row1 = (__global const float*)(depthptr + depth_offset +
                                                                  (yi+1)*depth_step);
+            
+            __global const int* rowM0 = (__global const int*)(depth_mask_ptr + depth_mask_offset +
+                                                                 (yi+0)*depth_mask_step);
+            __global const int* rowM1 = (__global const int*)(depth_mask_ptr + depth_mask_offset +
+                                                                 (yi+1)*depth_mask_step);
 
             float v00 = row0[xi+0];
             float v01 = row0[xi+1];
             float v10 = row1[xi+0];
             float v11 = row1[xi+1];
             float4 vv = (float4)(v00, v01, v10, v11);
+            
+            float m00 = rowM0[xi+0];
+            float m01 = rowM0[xi+1];
+            float m10 = rowM1[xi+0];
+            float m11 = rowM1[xi+1];
+            float4 mm = (float4)(m00, m01, m10, m11);
 
+            if(all(mm != 0))
+                continue;
+            
             // assume correct depth is positive
             if(all(vv > 0))
             {
@@ -223,6 +240,10 @@ __kernel void integrateAllVolumeUnits(
                         __global const char * depthptr,
                         int depth_step, int depth_offset,
                         int depth_rows, int depth_cols,
+                        // depthMask
+                        __global const char * depth_mask_ptr,
+                        int depth_mask_step, int depth_mask_offset,
+                        int depth_mask_rows, int depth_mask_cols,
                         // hashMap
                         __global const int* hashes,
                         __global const int4* data,
@@ -287,6 +308,9 @@ __kernel void integrateAllVolumeUnits(
             depthptr,
             depth_step, depth_offset,
             depth_rows, depth_cols,
+            depth_mask_ptr,
+            depth_mask_step, depth_mask_offset,
+            depth_mask_rows, depth_mask_cols,
             volumeptr,
             pixNormsPtr,
             pixNormsStep, pixNormsOffset,
@@ -478,10 +502,19 @@ typedef float4 ptype;
 __kernel void raycast(
                     __global const int* hashes,
                     __global const int4* data,
+                    //points
                     __global char * pointsptr,
                       int points_step, int points_offset,
+                    //normals
                     __global char * normalsptr,
                       int normals_step, int normals_offset,
+                    //pointsMask
+                    __global char * points_mask_ptr,
+                      int points_mask_step, int points_mask_offset,
+                    //normalsMask
+                    __global char * normals_mask_ptr,
+                      int normals_mask_step, int normals_mask_offset,
+                    
                     const int2 frameSize,
                     __global const struct TsdfVoxel * allVolumePtr,
                         int table_step, int table_offset,
@@ -509,6 +542,7 @@ __kernel void raycast(
 
     float3 point  = nan((uint)0);
     float3 normal = nan((uint)0);
+    int pm = 0, nm = 0;
 
     const float3 camRot0  = cam2volRotGPU.s012;
     const float3 camRot1  = cam2volRotGPU.s456;
@@ -584,6 +618,7 @@ __kernel void raycast(
                     point = (float3)(dot(pv, volRot0),
                                      dot(pv, volRot1),
                                      dot(pv, volRot2)) + volTrans;
+                    pm = 1; nm = 1;
                 }
             }
             break;
@@ -595,8 +630,12 @@ __kernel void raycast(
 
     __global float* pts = (__global float*)(pointsptr  +  points_offset + y*points_step   + x*sizeof(ptype));
     __global float* nrm = (__global float*)(normalsptr + normals_offset + y*normals_step  + x*sizeof(ptype));
+    __global int* ptsM = (__global int*)(points_mask_ptr  + points_mask_offset  + y*points_mask_step  + x*sizeof(int));
+    __global int* nrmM = (__global int*)(normals_mask_ptr + normals_mask_offset + y*normals_mask_step + x*sizeof(int));
     vstore4((float4)(point,  0), 0, pts);
     vstore4((float4)(normal, 0), 0, nrm);
+    *ptsM = pm;
+    *nrmM = nm;
 }
 
 

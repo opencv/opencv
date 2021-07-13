@@ -185,10 +185,12 @@ void HashTSDFVolumeCPU::integrate(InputArray _depth, InputArray _depthMask, floa
         for (int y = range.start; y < range.end; y += depthStride)
         {
             const depthType* depthRow = depth[y];
+            const maskType* depthMaskRow = depthMask[y];
+
             for (int x = 0; x < depth.cols; x += depthStride)
             {
                 depthType z = depthRow[x] * invDepthFactor;
-                if (z <= 0 || z > this->truncateThreshold)
+                if (z <= 0 || z > this->truncateThreshold || depthMaskRow[x] == 0)
                     continue;
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
                 Point3f volPoint = cam2vol * camPoint;
@@ -897,9 +899,9 @@ public:
 
     void reset() override;
 
-    void integrateAllVolumeUnitsGPU(const UMat& depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics);
+    void integrateAllVolumeUnitsGPU(const UMat& depth, const UMat& depthMask, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics);
 
-    void allocateVolumeUnits(const UMat& depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics);
+    void allocateVolumeUnits(const UMat& depth, const UMat& depthMask, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics);
 
     void markActive(const Matx44f& cameraPose, const Intr& intrinsics, const Size frameSz, const int frameId);
 
@@ -1000,10 +1002,11 @@ void HashTSDFVolumeGPU::reset()
 }
 
 
-void HashTSDFVolumeGPU::integrateAllVolumeUnitsGPU(const UMat& depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics)
+void HashTSDFVolumeGPU::integrateAllVolumeUnitsGPU(const UMat& depth, const UMat& depthMask, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!depth.empty());
+    CV_Assert(!depthMask.empty());
 
     String errorStr;
     String name = "integrateAllVolumeUnits";
@@ -1024,6 +1027,7 @@ void HashTSDFVolumeGPU::integrateAllVolumeUnitsGPU(const UMat& depth, float dept
     UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
 
     k.args(ocl::KernelArg::ReadOnly(depth),
+           ocl::KernelArg::ReadOnly(depthMask),
            ocl::KernelArg::PtrReadOnly(hashesGpu),
            ocl::KernelArg::PtrReadOnly(hashDataGpu),
            ocl::KernelArg::ReadWrite(volUnitsData),
@@ -1052,12 +1056,13 @@ void HashTSDFVolumeGPU::integrateAllVolumeUnitsGPU(const UMat& depth, float dept
 }
 
 
-void HashTSDFVolumeGPU::allocateVolumeUnits(const UMat& _depth, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics)
+void HashTSDFVolumeGPU::allocateVolumeUnits(const UMat& _depth, const UMat& _depthMask, float depthFactor, const Matx44f& cameraPose, const Intr& intrinsics)
 {
     constexpr int pixCapacity = 16;
     typedef std::array<Vec3i, pixCapacity> LocalVolUnits;
 
     Depth depth = _depth.getMat(ACCESS_READ);
+    Mask depthMask = _depthMask.getMat(ACCESS_READ);
 
     //! Compute volumes to be allocated
     const int depthStride = volumeUnitDegree;
@@ -1075,10 +1080,11 @@ void HashTSDFVolumeGPU::allocateVolumeUnits(const UMat& _depth, float depthFacto
         for (int y = yrange.start; y < yrange.end; y += depthStride)
         {
             const depthType* depthRow = depth[y];
+            const maskType* depthMaskRow = depthMask[y];
             for (int x = xrange.start; x < xrange.end; x += depthStride)
             {
                 depthType z = depthRow[x] * invDepthFactor;
-                if (z <= 0 || z > this->truncateThreshold)
+                if (z <= 0 || z > this->truncateThreshold || depthMaskRow == 0)
                     continue;
                 Point3f camPoint = reproj(Point3f((float)x, (float)y, z));
                 Point3f volPoint = cam2vol * camPoint;
@@ -1266,13 +1272,15 @@ void HashTSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, floa
     CV_TRACE_FUNCTION();
 
     CV_Assert(_depth.type() == DEPTH_TYPE);
+    CV_Assert(_depthMask.type() == MASK_TYPE);
     UMat depth = _depth.getUMat();
+    UMat depthMask = _depthMask.getUMat();
 
     Intr intrinsics(_intrinsics);
 
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
-    allocateVolumeUnits(depth, depthFactor, cameraPose, intrinsics);
+    allocateVolumeUnits(depth, depthMask, depthFactor, cameraPose, intrinsics);
     int sizeAfter = hashTable.last;
     //! Perform the allocation
 
@@ -1325,7 +1333,7 @@ void HashTSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, floa
     }
 
     //! Integrate the correct volumeUnits
-    integrateAllVolumeUnitsGPU(depth, depthFactor, cameraPose, intrinsics);
+    integrateAllVolumeUnitsGPU(depth, depthMask, depthFactor, cameraPose, intrinsics);
 }
 
 
@@ -1594,9 +1602,13 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
 
     _points.create(frameSize, CV_32FC4);
     _normals.create(frameSize, CV_32FC4);
+    _pointsMask.create(frameSize, CV_32S);
+    _normalsMask.create(frameSize, CV_32S);
 
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
+    UMat pointsMask = _pointsMask.getUMat();
+    UMat normalsMask = _normalsMask.getUMat();
 
     Intr intrinsics(_intrinsics);
     Intr::Reprojector r = intrinsics.makeReprojector();
@@ -1626,6 +1638,8 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
         ocl::KernelArg::PtrReadOnly(hashDataGpu),
         ocl::KernelArg::WriteOnlyNoSize(points),
         ocl::KernelArg::WriteOnlyNoSize(normals),
+        ocl::KernelArg::WriteOnlyNoSize(pointsMask),
+        ocl::KernelArg::WriteOnlyNoSize(normalsMask),
         frameSize,
         ocl::KernelArg::ReadOnly(volUnitsData),
         cam2volRotGPU,
