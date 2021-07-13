@@ -596,7 +596,6 @@ int main(int argc, char* argv[]) {
     cv::GMat scores[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> nms_p_faces[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> total_faces[MAX_PYRAMID_LEVELS];
-    cv::GArray<custom::Face> faces_init(std::vector<custom::Face>{});
 
     //The very first PNet pyramid layer to init total_faces[0]
     in_resized[0] = cv::gapi::resize(in_originalRGB, level_size[0]);
