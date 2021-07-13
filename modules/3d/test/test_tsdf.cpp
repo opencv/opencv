@@ -227,8 +227,6 @@ void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _po
     Mask  pointsMask = _pointsMask.getMat();
     Mask normalsMask = _normalsMask.getMat();
 
-    std::cout << pointsMask << std::endl;
-
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -458,6 +456,8 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
 
     normals = _normals.getMat(af);
     points = _points.getMat(af);
+    normalsMask = _normalsMask.getMat(af);
+    pointsMask = _pointsMask.getMat(af);
 
     if (parallelCheck)
         normals.forEach<Vec4f>(normalCheck);
@@ -510,6 +510,8 @@ void valid_points_test(bool isHashTSDF)
     settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask, _normalsMask);
     normals = _normals.getMat(af);
     points = _points.getMat(af);
+    normalsMask = _normalsMask.getMat(af);
+    pointsMask = _pointsMask.getMat(af);
     patchNaNs(points);
     anfas = counterOfValid(points);
 
