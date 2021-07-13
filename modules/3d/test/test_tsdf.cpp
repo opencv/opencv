@@ -278,12 +278,12 @@ void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _po
             }
         }
     };
-    //parallel_for_(range, render, nstripes);
-    render(range);
+    parallel_for_(range, render, nstripes);
+    //render(range);
 }
 // ----------------------------
 
-static const bool display = true;
+static const bool display = false;
 static const bool parallelCheck = false;
 
 class Settings

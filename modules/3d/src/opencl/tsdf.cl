@@ -29,6 +29,9 @@ static inline float tsdfToFloat(TsdfType num)
 __kernel void integrate(__global const char * depthptr,
                         int depth_step, int depth_offset,
                         int depth_rows, int depth_cols,
+                        __global const char * depth_mask_ptr,
+                        int depth_mask_step, int depth_mask_offset,
+                        int depth_mask_rows, int depth_mask_cols,
                         __global struct TsdfVoxel * volumeptr,
                         const float16 vol2camMatrix,
                         const float voxelSize,
@@ -127,13 +130,27 @@ __kernel void integrate(__global const char * depthptr,
                                                                  (yi+0)*depth_step);
             __global const float* row1 = (__global const float*)(depthptr + depth_offset +
                                                                  (yi+1)*depth_step);
+            
+            __global const float* rowM0 = (__global const float*)(depth_mask_ptr + depth_mask_offset +
+                                                                 (yi+0)*depth_mask_step);
+            __global const float* rowM1 = (__global const float*)(depth_mask_ptr + depth_mask_offset +
+                                                                 (yi+1)*depth_mask_step);
 
             float v00 = row0[xi+0];
             float v01 = row0[xi+1];
             float v10 = row1[xi+0];
             float v11 = row1[xi+1];
             float4 vv = (float4)(v00, v01, v10, v11);
+            
+            float m00 = rowM0[xi+0];
+            float m01 = rowM0[xi+1];
+            float m10 = rowM1[xi+0];
+            float m11 = rowM1[xi+1];
+            float4 mm = (float4)(m00, m01, m10, m11);
 
+            if(all(mm != 0))
+                continue;
+            
             // assume correct depth is positive
             if(all(vv > 0))
             {
@@ -251,6 +268,12 @@ __kernel void raycast(__global char * pointsptr,
                       int points_step, int points_offset,
                       __global char * normalsptr,
                       int normals_step, int normals_offset,
+                      
+                      __global char * points_mask_ptr,
+                      int points_mask_step, int points_mask_offset,
+                      __global char * normals_mask_ptr,
+                      int normals_mask_step, int normals_mask_offset,
+                      
                       const int2 frameSize,
                       __global const struct TsdfVoxel * volumeptr,
                       __global const float * vol2camptr,
@@ -298,6 +321,8 @@ __kernel void raycast(__global char * pointsptr,
 
     float3 point  = nan((uint)0);
     float3 normal = nan((uint)0);
+
+    int pm = 0, nm = 0;
 
     float3 orig = camTrans;
 
@@ -403,6 +428,7 @@ __kernel void raycast(__global char * pointsptr,
                     point = (float3)(dot(pv, volRot0),
                                      dot(pv, volRot1),
                                      dot(pv, volRot2)) + volTrans;
+                    pm = 1; nm = 1;
                 }
             }
         }
@@ -410,8 +436,12 @@ __kernel void raycast(__global char * pointsptr,
 
     __global float* pts = (__global float*)(pointsptr  +  points_offset + y*points_step  + x*sizeof(ptype));
     __global float* nrm = (__global float*)(normalsptr + normals_offset + y*normals_step + x*sizeof(ptype));
+    __global int* ptsM = (__global int*)(points_mask_ptr  +  points_mask_offset + y*points_mask_step  + x*sizeof(int));
+    __global int* nrmM = (__global int*)(normals_mask_ptr + normals_mask_offset + y*normals_mask_step + x*sizeof(int));
     vstore4((float4)(point,  0), 0, pts);
     vstore4((float4)(normal, 0), 0, nrm);
+    *ptsM = pm;
+    *nrmM = nm;
 }
 
 

@@ -930,8 +930,10 @@ void TSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, float de
     CV_TRACE_FUNCTION();
     CV_UNUSED(frameId);
     CV_Assert(!_depth.empty());
+    CV_Assert(!_depthMask.empty());
 
     UMat depth = _depth.getUMat();
+    UMat depthMask = _depthMask.getUMat();
 
     String errorStr;
     String name           = "integrate";
@@ -960,6 +962,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, InputArray _depthMask, float de
     // TODO: optimization possible
     // Use sampler for depth (mask needed)
     k.args(ocl::KernelArg::ReadOnly(depth),
+           ocl::KernelArg::ReadOnly(depthMask),
            ocl::KernelArg::PtrReadWrite(volume),
            ocl::KernelArg::Constant(vol2cam.matrix.val,
                                     sizeof(vol2cam.matrix.val)),
@@ -1001,9 +1004,13 @@ void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsic
 
     _points.create (frameSize, CV_32FC4);
     _normals.create(frameSize, CV_32FC4);
+    _pointsMask.create (frameSize, CV_32S);
+    _normalsMask.create(frameSize, CV_32S);
 
     UMat points  =  _points.getUMat();
     UMat normals = _normals.getUMat();
+    UMat pointsMask  =  _pointsMask.getUMat();
+    UMat normalsMask = _normalsMask.getUMat();
 
     UMat vol2camGpu, cam2volGpu;
     Affine3f vol2cam = Affine3f(cameraPose.inv()) * pose;
@@ -1025,6 +1032,8 @@ void TSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsic
 
     k.args(ocl::KernelArg::WriteOnlyNoSize(points),
            ocl::KernelArg::WriteOnlyNoSize(normals),
+           ocl::KernelArg::WriteOnlyNoSize(pointsMask),
+           ocl::KernelArg::WriteOnlyNoSize(normalsMask),
            frameSize,
            ocl::KernelArg::PtrReadOnly(volume),
            ocl::KernelArg::PtrReadOnly(vol2camGpu),
