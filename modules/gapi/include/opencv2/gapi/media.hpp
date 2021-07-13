@@ -15,6 +15,16 @@
 #include <opencv2/gapi/gframe.hpp>
 #include <opencv2/gapi/util/any.hpp>
 
+// Forward declaration
+namespace cv {
+namespace gapi {
+namespace s11n {
+struct IOStream;
+struct IIStream;
+} // namespace s11n
+} // namespace gapi
+} // namespace cv
+
 namespace cv {
 
 /** \addtogroup gapi_data_structures
@@ -125,6 +135,16 @@ public:
         return dynamic_cast<T*>(adapter);
     }
 
+    /**
+     * @brief Serialize MediaFrame's data to a byte array.
+     *
+     * @note The actual logic is implemented by frame's adapter class.
+     * Does nothing by default.
+     *
+     * @param os Bytestream to store serialized MediaFrame data in.
+     */
+    void serialize(cv::gapi::s11n::IOStream& os) const;
+
 private:
     struct Priv;
     std::shared_ptr<Priv> m;
@@ -221,6 +241,14 @@ public:
     // FIXME: design a better solution
     // The default implementation does nothing
     virtual cv::util::any blobParams() const;
+    virtual void serialize(cv::gapi::s11n::IOStream&) {
+        GAPI_Assert(false && "Generic serialize method of MediaFrame::IAdapter does nothing by default. "
+                             "Please, implement it in derived class to properly serialize the object.");
+    }
+    virtual void deserialize(cv::gapi::s11n::IIStream&) {
+        GAPI_Assert(false && "Generic deserialize method of MediaFrame::IAdapter does nothing by default. "
+                             "Please, implement it in derived class to properly deserialize the object.");
+    }
 };
 /** @} */
 
