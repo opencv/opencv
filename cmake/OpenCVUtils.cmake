@@ -1978,4 +1978,4 @@ endif()
 #
 # Include configuration override settings
 #
-include(cmake/vars/EnableModeVars.cmake)
+include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")
