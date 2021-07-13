@@ -153,7 +153,29 @@ overload_lamba_set<L...> overload_lambdas(L&& ...lambdas)
 {
     return overload_lamba_set<L...>(std::forward<L>(lambdas)...);
 }
-}
+
+template<typename ...T>
+struct find_adapter_impl;
+
+template<typename AdapterT, typename T>
+struct find_adapter_impl<AdapterT, T>
+{
+    using type = typename std::conditional<std::is_base_of<AdapterT, T>::value,
+                                           T,
+                                           void>::type;
+    static constexpr bool found = std::is_base_of<AdapterT, T>::value;
+};
+
+template<typename AdapterT, typename T, typename... Types>
+struct find_adapter_impl<AdapterT, T, Types...>
+{
+    using type = typename std::conditional<std::is_base_of<AdapterT, T>::value,
+                                           T,
+                                           typename find_adapter_impl<AdapterT, Types...>::type>::type;
+    static constexpr bool found = std::is_base_of<AdapterT, T>::value ||
+                                  find_adapter_impl<AdapterT, Types...>::found;
+};
+} // namespace util
 } // namespace cv
 
 // \endcond
