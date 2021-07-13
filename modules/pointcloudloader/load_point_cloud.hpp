@@ -2,6 +2,7 @@
 #define __OPENCV_LOAD_POINT_CLOUD_HPP__
 
 #include <opencv2/core.hpp>
+#include <iostream>
 
 //////////////////////////////// pont cloud codec ////////////////////////////////
 namespace cv
@@ -22,6 +23,7 @@ namespace pc
     @param vertices (vector of Point3f) Point coordinates of a point cloud
     @param normals (vector of Point3f) Point normals of a point cloud
 */
+//void loadPointCloud( const String& filename, std::vector<Point3f>& points, std::vector<Point3f>& normals );
 void loadPointCloud( const String& filename, OutputArray vertices, OutputArray normals);
 
 
