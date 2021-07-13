@@ -568,6 +568,39 @@ TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
     runTensorFlowNet("l2_normalize_3d");
 }
 
+class Test_TensorFlow_diagnostics : public DNNTestLayer {
+public:
+    Test_TensorFlow_diagnostics()
+    {
+        enableModelDiagnostics(true);
+    }
+
+    ~Test_TensorFlow_diagnostics()
+    {
+        enableModelDiagnostics(false);
+    }
+
+    void runFailingTensorFlowNet(const std::string& prefix, bool hasText = false)
+    {
+        std::string netPath = path(prefix + "_net.pb");
+        std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
+
+        Net net = readNetFromTensorflow(netPath, netConfig);
+    }
+};
+
+TEST_P(Test_TensorFlow_diagnostics, not_implemented_layer)
+{
+    runFailingTensorFlowNet("not_implemented_layer");
+}
+
+TEST_P(Test_TensorFlow_diagnostics, broken_parameters)
+{
+    runFailingTensorFlowNet("broken_layer");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_diagnostics, dnnBackendsAndTargets());
+
 class Test_TensorFlow_nets : public DNNTestLayer {};
 
 TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
