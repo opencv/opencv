@@ -51,4 +51,3 @@ set(OPJ_USE_THREAD OFF)
 add_definitions(-D_GNU_SOURCE)
 
 add_definitions(-D_POSIX_PATH_MAX=0)
-
