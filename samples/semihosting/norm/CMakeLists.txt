@@ -23,4 +23,3 @@ target_include_directories(${norm} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(${norm} PRIVATE ${RAW_PIXEL_INCLUDE})
 ocv_target_link_libraries(${norm} PRIVATE ${OPENCV_LINKER_LIBS}
   ${LOCAL_DEPS})
-add_dependencies(${norm} raw_pixels_for_baremetal)

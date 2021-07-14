@@ -24,4 +24,3 @@ target_include_directories(${histogram} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(${histogram} PRIVATE ${RAW_PIXEL_INCLUDE})
 ocv_target_link_libraries(${histogram} PRIVATE ${OPENCV_LINKER_LIBS}
   ${LOCAL_DEPS})
-add_dependencies(${histogram} raw_pixels_for_baremetal)
