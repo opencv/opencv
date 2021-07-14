@@ -54,9 +54,9 @@ class Submap
     }
     virtual ~Submap() = default;
 
-    virtual void integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
+    virtual void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const cv::Matx33f& intrinsics, const int currframeId);
     virtual void raycast(const cv::Affine3f& cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
-                         OutputArray points = noArray(), OutputArray normals = noArray());
+                         OutputArray points = noArray(), OutputArray normals = noArray(), OutputArray pointsMask = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume->getTotalVolumeUnits()); };
     virtual int getVisibleBlocks(int currFrameId) const
@@ -101,29 +101,31 @@ class Submap
 
 template<typename MatType>
 
-void Submap<MatType>::integrate(InputArray _depth, float depthFactor, const cv::Matx33f& intrinsics,
+void Submap<MatType>::integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const cv::Matx33f& intrinsics,
                                 const int currFrameId)
 {
     CV_Assert(currFrameId >= startFrameId);
-    volume->integrate(_depth, depthFactor, cameraPose.matrix, intrinsics, currFrameId);
+    volume->integrate(_depth, _depthMask, depthFactor, cameraPose.matrix, intrinsics, currFrameId);
 }
 
 template<typename MatType>
 void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f& intrinsics, cv::Size frameSize,
-                              OutputArray points, OutputArray normals)
+                              OutputArray points, OutputArray normals, OutputArray pointsMask)
 {
     if (!points.needed() && !normals.needed())
     {
-        MatType pts, nrm;
+        MatType pts, nrm, mrm;
         frame->getPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
         frame->getPyramidAt(nrm, OdometryFrame::PYR_NORM, 0);
-        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
+        frame->getPyramidAt(mrm, OdometryFrame::PYR_MASK, 0);
+        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm, mrm);
         frame->setPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
         frame->setPyramidAt(nrm, OdometryFrame::PYR_NORM,  0);
+        frame->setPyramidAt(mrm, OdometryFrame::PYR_MASK, 0);
     }
     else
     {
-        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals);
+        volume->raycast(_cameraPose.matrix, intrinsics, frameSize, points, normals, pointsMask);
     }
 }
 

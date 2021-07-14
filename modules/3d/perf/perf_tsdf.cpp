@@ -174,6 +174,8 @@ typedef cv::Vec4f ptype;
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
 typedef Size2i Size;
+typedef int maskType;
+typedef cv::Mat_< maskType > Mask;
 
 template<int p>
 inline float specPow(float x)
@@ -213,64 +215,68 @@ inline Point3f normalize(const Vec3f& v)
     return v * (nv ? 1. / nv : 0.);
 }
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
+void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _mask, OutputArray image, Affine3f lightPose)
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
+    Mask  mask = _mask.getMat();
 
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
     const int nstripes = -1;
-    parallel_for_(range, [&](const Range&)
+    auto render = [&](const Range&)
+    {
+        for (int y = range.start; y < range.end; y++)
         {
-            for (int y = range.start; y < range.end; y++)
+            Vec4b* imgRow = img[y];
+            const ptype* ptsRow = points[y];
+            const ptype* nrmRow = normals[y];
+            const maskType* maskRow = mask[y];
+
+            for (int x = 0; x < sz.width; x++)
             {
-                Vec4b* imgRow = img[y];
-                const ptype* ptsRow = points[y];
-                const ptype* nrmRow = normals[y];
+                Point3f p = fromPtype(ptsRow[x]);
+                Point3f n = fromPtype(nrmRow[x]);
 
-                for (int x = 0; x < sz.width; x++)
+                Vec4b color;
+
+                //if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                if (maskRow[x] == 0)
                 {
-                    Point3f p = fromPtype(ptsRow[x]);
-                    Point3f n = fromPtype(nrmRow[x]);
-
-                    Vec4b color;
-
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z) )
-                    {
-                        color = Vec4b(0, 32, 0, 0);
-                    }
-                    else
-                    {
-                        const float Ka = 0.3f;  //ambient coeff
-                        const float Kd = 0.5f;  //diffuse coeff
-                        const float Ks = 0.2f;  //specular coeff
-                        const int   sp = 20;  //specular power
-
-                        const float Ax = 1.f;   //ambient color,  can be RGB
-                        const float Dx = 1.f;   //diffuse color,  can be RGB
-                        const float Sx = 1.f;   //specular color, can be RGB
-                        const float Lx = 1.f;   //light color
-
-                        Point3f l = normalize(lightPose.translation() - Vec3f(p));
-                        Point3f v = normalize(-Vec3f(p));
-                        Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
-
-                        uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
-                            Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
-                        color = Vec4b(ix, ix, ix, 0);
-                    }
-
-                    imgRow[x] = color;
+                    color = Vec4b(0, 32, 0, 0);
                 }
-            }
-        }, nstripes);
-}
+                else
+                {
+                    const float Ka = 0.3f;  //ambient coeff
+                    const float Kd = 0.5f;  //diffuse coeff
+                    const float Ks = 0.2f;  //specular coeff
+                    const int   sp = 20;  //specular power
 
+                    const float Ax = 1.f;   //ambient color,  can be RGB
+                    const float Dx = 1.f;   //diffuse color,  can be RGB
+                    const float Sx = 1.f;   //specular color, can be RGB
+                    const float Lx = 1.f;   //light color
+
+                    Point3f l = normalize(lightPose.translation() - Vec3f(p));
+                    Point3f v = normalize(-Vec3f(p));
+                    Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
+
+                    uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
+                        Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
+                    color = Vec4b(ix, ix, ix, 0);
+                }
+
+                imgRow[x] = color;
+            }
+        }
+    };
+    parallel_for_(range, render, nstripes);
+    //render(range);
+}
 // ----------------------------
 
 class Settings
@@ -347,16 +353,17 @@ public:
     }
 };
 
-void displayImage(Mat depth, UMat _points, UMat _normals, float depthFactor, Vec3f lightPose)
+void displayImage(Mat depth, UMat _points, UMat _normals, UMat _pointsMask, float depthFactor, Vec3f lightPose)
 {
-    Mat  points, normals, image;
+    Mat  points, normals, pointsMask, image;
     AccessFlag af = ACCESS_READ;
     normals = _normals.getMat(af);
     points = _points.getMat(af);
+    pointsMask = _pointsMask.getMat(af);
     patchNaNs(points);
 
     imshow("depth", depth * (1.f / depthFactor / 4.f));
-    renderPointsNormals(points, normals, image, lightPose);
+    renderPointsNormals(points, normals, pointsMask, image, lightPose);
     imshow("render", image);
     waitKey(2000);
 }
@@ -370,8 +377,13 @@ PERF_TEST(Perf_TSDF, integrate)
     {
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
+        Mat mask(depth.size(), CV_32S, Scalar(255));
+        for (int y = 0; y < depth.rows; y++)
+            for (int x = 0; x < depth.cols; x++)
+                if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                    mask.at<int>(y, x) = 0;
         startTimer();
-        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
+        settings.volume->integrate(depth, mask, settings.depthFactor, pose, settings.intr);
         stopTimer();
         depth.release();
     }
@@ -383,17 +395,22 @@ PERF_TEST(Perf_TSDF, raycast)
     Settings settings(false);
     for (size_t i = 0; i < settings.poses.size(); i++)
     {
-        UMat _points, _normals;
+        UMat _points, _normals, _pointsMask;
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
+        Mat mask(depth.size(), CV_32S, Scalar(255));
+        for (int y = 0; y < depth.rows; y++)
+            for (int x = 0; x < depth.cols; x++)
+                if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                    mask.at<int>(y, x) = 0;
 
-        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
+        settings.volume->integrate(depth, mask, settings.depthFactor, pose, settings.intr);
         startTimer();
-        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals);
+        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals, _pointsMask);
         stopTimer();
 
         if (display)
-            displayImage(depth, _points, _normals, settings.depthFactor, settings.lightPose);
+            displayImage(depth, _points, _normals, _pointsMask, settings.depthFactor, settings.lightPose);
     }
     SANITY_CHECK_NOTHING();
 }
@@ -406,8 +423,14 @@ PERF_TEST(Perf_HashTSDF, integrate)
     {
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
+        Mat mask(depth.size(), CV_32S, Scalar(255));
+        for (int y = 0; y < depth.rows; y++)
+            for (int x = 0; x < depth.cols; x++)
+                if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                    mask.at<int>(y, x) = 0;
+
         startTimer();
-        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
+        settings.volume->integrate(depth, mask, settings.depthFactor, pose, settings.intr);
         stopTimer();
         depth.release();
     }
@@ -419,17 +442,22 @@ PERF_TEST(Perf_HashTSDF, raycast)
     Settings settings(true);
     for (size_t i = 0; i < settings.poses.size(); i++)
     {
-        UMat _points, _normals;
+        UMat _points, _normals, _pointsMask;
         Matx44f pose = settings.poses[i].matrix;
         Mat depth = settings.scene->depth(pose);
+        Mat mask(depth.size(), CV_32S, Scalar(255));
+        for (int y = 0; y < depth.rows; y++)
+            for (int x = 0; x < depth.cols; x++)
+                if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+                    mask.at<int>(y, x) = 0;
 
-        settings.volume->integrate(depth, settings.depthFactor, pose, settings.intr);
+        settings.volume->integrate(depth, mask, settings.depthFactor, pose, settings.intr);
         startTimer();
-        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals);
+        settings.volume->raycast(pose, settings.intr, settings.frameSize, _points, _normals, _pointsMask);
         stopTimer();
 
         if (display)
-            displayImage(depth, _points, _normals, settings.depthFactor, settings.lightPose);
+            displayImage(depth, _points, _normals, _pointsMask, settings.depthFactor, settings.lightPose);
     }
     SANITY_CHECK_NOTHING();
 }
