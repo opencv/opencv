@@ -1461,6 +1461,7 @@ protected:
     {
         unsigned idx;
         unsigned parent;
+        unsigned word;
         cv::Mat descriptor;
         std::vector<unsigned> child;
 
@@ -1474,6 +1475,7 @@ protected:
     int attempts;
     int flags;
     std::vector<Node> nodes;
+    std::vector<Node> words;
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.

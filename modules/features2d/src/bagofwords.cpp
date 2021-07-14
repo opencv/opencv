@@ -142,8 +142,24 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
     int expected_nodes = (int)((pow((double)clusterCountPerLevel, (double)level + 1) - 1) / (clusterCountPerLevel - 1));
     nodes.reserve(expected_nodes);
 
+    // Start clustering descriptors and building tree nodes
     nodes.push_back(Node(0));
     kmeansStep( _descriptors , 0, 1);
+
+    // Create words (nodes that are leaves) from nodes
+    words.resize(0);
+    if (!nodes.empty())
+    {
+        words.reserve( (int)pow((double)clusterCountPerLevel, (double)level) );
+        for (std::vector<Node>::iterator it = nodes.begin() + 1; it != nodes.end(); it++)
+        {
+            if (it->child.empty())
+            {
+                it->word = words.size();
+                words.push_back(*it);
+            }
+        }
+    }
 
     return Mat();
 }
@@ -172,10 +188,10 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             groups[labels.at<int>(0, i)].push_back(i);
     }
 
-    for (int i = 0; i < clusterCountPerLevel; i++)
+    for (int i = 0; i < vocabulary.rows; i++)
     {
         nodes.push_back(Node((unsigned)nodes.size(), parent, vocabulary.row(i)));
-        nodes[parent].child.push_back(i);
+        nodes[parent].child.push_back(nodes.size());
     }
 
 
@@ -194,7 +210,7 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             if (childDescriptors.size() > 1)
             {
                 cv::Mat mergedDescriptors;
-                vconcat(descriptors, mergedDescriptors);
+                vconcat(childDescriptors, mergedDescriptors);
                 kmeansStep(mergedDescriptors, child, current_level + 1);
             }
         }
