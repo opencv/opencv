@@ -155,7 +155,7 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
         {
             if (it->child.empty())
             {
-                it->word = words.size();
+                it->word = (unsigned)words.size();
                 words.push_back(*it);
             }
         }
@@ -190,8 +190,9 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
 
     for (int i = 0; i < vocabulary.rows; i++)
     {
-        nodes.push_back(Node((unsigned)nodes.size(), parent, vocabulary.row(i)));
-        nodes[parent].child.push_back(nodes.size());
+        unsigned idx = (unsigned)nodes.size();
+        nodes.push_back(Node(idx, parent, vocabulary.row(i)));
+        nodes[parent].child.push_back(idx);
     }
 
 
