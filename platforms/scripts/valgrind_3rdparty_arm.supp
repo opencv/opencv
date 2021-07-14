@@ -6,17 +6,17 @@
 }
 
 {
-   ZN14VSIFileManager3GetEv
+   VSIFileManager::Get()
    Memcheck:Leak
    ...
-   fun:_ZN14VSIFileManager3GetEv
+   fun:VSIFileManager::Get()
 }
 
 {
-   ZN14VSIFileManager10GetHandlerEPKc
+   VSIFileManager::GetHandler(char const*)
    Memcheck:Leak
    ...
-   fun:_ZN14VSIFileManager10GetHandlerEPKc
+   fun:VSIFileManager::GetHandler(char const*)
 }
 
 {
@@ -34,43 +34,43 @@
 }
 
 {
-   ZN2cv21ImageCodecInitializerC1Ev
+   cv::ImageCodecInitializer::ImageCodecInitializer()
    Memcheck:Leak
    ...
-   fun:_ZN2cv21ImageCodecInitializerC1Ev
+   fun:cv::ImageCodecInitializer::ImageCodecInitializer()
 }
 
 {
-   ZN2cvL9getCodecsEv
+   cv::getCodecs()
    Memcheck:Leak
    ...
-   fun:_ZN2cvL9getCodecsEv
+   fun:cv::getCodecs()
 }
 
 {
-   ZN2cvL11findDecoderERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+   cv::findDecoder(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
    Memcheck:Leak
    ...
-   fun:_ZN2cvL11findDecoderERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
+   fun:cv::findDecoder(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)
 }
 
 {
-   ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+   cv::imread_(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, cv::Mat&)
    Memcheck:Value8
    ...
-   fun:_ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+   fun:cv::imread_(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, cv::Mat&)
 }
 
 {
-   ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test4BodyEv
+   opencv_test::(anonymous namespace)::Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test::Body()
    Memcheck:Leak
    ...
-   fun:_ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test4BodyEv
+   fun:opencv_test::(anonymous namespace)::Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test::Body()
 }
 
 {
    png_do_expand_palette_rgb8_neon
-   Memcheck:Value8
+   Memcheck:Leak
    ...
    fun:png_do_expand_palette_rgb8_neon
 }
@@ -81,7 +81,6 @@
    ...
    fun:png_do_expand_palette
 }
-
 
 {
    png_do_read_transformations
@@ -105,94 +104,80 @@
 }
 
 {
-   vld3_dup_u8
+   cv::PngDecoder::readData(cv::Mat&)
+   Memcheck:Value8
+   ...
+   fun:cv::PngDecoder::readData(cv::Mat&)
+}
+
+{
+   cv::imread(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+   Memcheck:Value8
+   ...
+   fun:cv::imread(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+}
+
+{
+   opencv_test::(anonymous namespace)::Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test::TestBody()
    Memcheck:Leak
    ...
-   fun:vld3_dup_u8
+   fun:opencv_test::(anonymous namespace)::Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test::TestBody()
 }
 
 {
-   ZN2cv10PngDecoder8readDataERNS_3MatE
+   void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*)
    Memcheck:Value8
    ...
-   fun:_ZN2cv10PngDecoder8readDataERNS_3MatE
+   fun:void testing::internal::HandleExceptionsInMethodIfSupported<testing::Test, void>(testing::Test*, void (testing::Test::*)(), char const*)
 }
 
 {
-   ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+   testing::Test::Run()
    Memcheck:Value8
    ...
-   fun:_ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+   fun:testing::Test::Run()
 }
 
 {
-   ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test8TestBodyEv
+   testing::TestInfo::Run()
+   Memcheck:Value8
+   ...
+   fun:testing::TestInfo::Run()
+}
+
+{
+   cv::cvCreateVideoWriter_FFMPEG_proxy(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, double, cv::Size_<int> const&, cv::VideoWriterParameters const&)
    Memcheck:Leak
    ...
-   fun:_ZN11opencv_test12_GLOBAL__N_158Calib3d_CirclesPatternDetectorWithClustering_accuracy_Test8TestBodyEv
+   fun:cv::cvCreateVideoWriter_FFMPEG_proxy(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, double, cv::Size_<int> const&, cv::VideoWriterParameters const&)
 }
 
 {
-   ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-   Memcheck:Value8
-   ...
-   fun:_ZN7testing8internal35HandleExceptionsInMethodIfSupportedINS_4TestEvEET0_PT_MS4_FS3_vEPKc
-}
-
-{
-   ZN7testing4Test3RunEv
-   Memcheck:Value8
-   ...
-   fun:_ZN7testing4Test3RunEv
-}
-
-{
-   ZN7testing8TestInfo3RunEv
-   Memcheck:Value8
-   ...
-   fun:_ZN7testing8TestInfo3RunEv
-}
-
-{
-   ZN2cv32cvCreateVideoWriter_FFMPEG_proxyERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
+   cv::StaticBackendWithParams::createWriter(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, double, cv::Size_<int> const&, cv::VideoWriterParameters const&) const
    Memcheck:Leak
    ...
-   fun:_ZN2cv32cvCreateVideoWriter_FFMPEG_proxyERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
-}
-
-{
-   ZNK2cv23StaticBackendWithParams12createWriterERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
-   Memcheck:Leak
-   ...
-   fun:_ZNK2cv23StaticBackendWithParams12createWriterERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEidRKNS_5Size_IiEERKNS_21VideoWriterParametersE
-}
-
-{
-   vld1q_dup_u32
-   Memcheck:Value8
-   ...
-   fun:vld1q_dup_u32
+   fun:cv::StaticBackendWithParams::createWriter(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, double, cv::Size_<int> const&, cv::VideoWriterParameters const&) const
 }
 
 {
    png_do_expand_palette_rgba8_neon
-   Memcheck:Value8
+   Memcheck:Leak
    ...
    fun:png_do_expand_palette_rgba8_neon
 }
 
 {
-   ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test4BodyEv
+   opencv_test::(anonymous namespace)::Imgcodecs_Png_read_color_palette_with_alpha_Test::Body()
    Memcheck:Value8
    ...
-   fun:_ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test4BodyEv
+   fun:opencv_test::(anonymous namespace)::Imgcodecs_Png_read_color_palette_with_alpha_Test::Body()
 }
 
 {
-   ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test8TestBodyEv
+   opencv_test::(anonymous namespace)::Imgcodecs_Png_read_color_palette_with_alpha_Test::TestBody()
    Memcheck:Value8
    ...
-   fun:_ZN11opencv_test12_GLOBAL__N_148Imgcodecs_Png_read_color_palette_with_alpha_Test8TestBodyEv
+   fun:opencv_test::(anonymous namespace)::Imgcodecs_Png_read_color_palette_with_alpha_Test::TestBody()
 }
 
 {
@@ -224,17 +209,17 @@
 }
 
 {
-   ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE_2
+   cv::imread_(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, cv::Mat&)
    Memcheck:Leak
    ...
-   fun:_ZN2cvL7imread_ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiRNS_3MatE
+   fun:cv::imread_(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int, cv::Mat&)
 }
 
 {
-   ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi_2
+   cv::imread(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
    Memcheck:Leak
    ...
-   fun:_ZN2cv6imreadERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi
+   fun:cv::imread(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
 }
 
 {
