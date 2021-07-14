@@ -13,47 +13,6 @@ namespace cv
 //! @addtogroup rgbd
 //! @{
 
-  /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
-   * a limit. For a float/double, we just check if it is a NaN
-   * @param depth the depth to check for validity
-   */
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const float & depth)
-  {
-    return !cvIsNaN(depth);
-  }
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const double & depth)
-  {
-    return !cvIsNaN(depth);
-  }
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const short int & depth)
-  {
-    return (depth != std::numeric_limits<short int>::min()) && (depth != std::numeric_limits<short int>::max());
-  }
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const unsigned short int & depth)
-  {
-    return (depth != std::numeric_limits<unsigned short int>::min())
-        && (depth != std::numeric_limits<unsigned short int>::max());
-  }
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const int & depth)
-  {
-    return (depth != std::numeric_limits<int>::min()) && (depth != std::numeric_limits<int>::max());
-  }
-  CV_EXPORTS
-  inline bool
-  isValidDepth(const unsigned int & depth)
-  {
-    return (depth != std::numeric_limits<unsigned int>::min()) && (depth != std::numeric_limits<unsigned int>::max());
-  }
 
   /** Object that can compute the normals in an image.
    * It is an object as it can cache data for speed efficiency

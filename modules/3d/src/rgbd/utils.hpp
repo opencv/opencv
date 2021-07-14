@@ -13,6 +13,46 @@
 namespace cv
 {
 
+
+ /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
+  * a limit. For a float/double, we just check if it is a NaN
+  * @param depth the depth to check for validity
+  */
+inline bool isValidDepth(const float& depth)
+{
+    return !cvIsNaN(depth);
+}
+
+inline bool isValidDepth(const double& depth)
+{
+    return !cvIsNaN(depth);
+}
+
+inline bool isValidDepth(const short int& depth)
+{
+    return (depth != std::numeric_limits<short int>::min()) &&
+           (depth != std::numeric_limits<short int>::max());
+}
+
+inline bool isValidDepth(const unsigned short int& depth)
+{
+    return (depth != std::numeric_limits<unsigned short int>::min()) &&
+           (depth != std::numeric_limits<unsigned short int>::max());
+}
+
+inline bool isValidDepth(const int& depth)
+{
+    return (depth != std::numeric_limits<int>::min()) &&
+           (depth != std::numeric_limits<int>::max());
+}
+
+
+inline bool isValidDepth(const unsigned int& depth)
+{
+    return (depth != std::numeric_limits<unsigned int>::min()) &&
+           (depth != std::numeric_limits<unsigned int>::max());
+}
+
 /** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
  * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
  * Otherwise, the image is simply converted to floats
