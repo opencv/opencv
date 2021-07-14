@@ -13,20 +13,19 @@ namespace cv
 //! @addtogroup rgbd
 //! @{
 
-
-  /** Object that can compute the normals in an image.
-   * It is an object as it can cache data for speed efficiency
-   * The implemented methods are either:
-   * - FALS (the fastest) and SRI from
-   * ``Fast and Accurate Computation of Surface Normals from Range Images``
-   * by H. Badino, D. Huber, Y. Park and T. Kanade
-   * - the normals with bilateral filtering on a depth image from
-   * ``Gradient Response Maps for Real-Time Detection of Texture-Less Objects``
-   * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
-   */
-  class CV_EXPORTS_W RgbdNormals: public Algorithm
-  {
-  public:
+/** Object that can compute the normals in an image.
+ * It is an object as it can cache data for speed efficiency
+ * The implemented methods are either:
+ * - FALS (the fastest) and SRI from
+ * ``Fast and Accurate Computation of Surface Normals from Range Images``
+ * by H. Badino, D. Huber, Y. Park and T. Kanade
+ * - the normals with bilateral filtering on a depth image from
+ * ``Gradient Response Maps for Real-Time Detection of Texture-Less Objects``
+ * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
+ */
+class CV_EXPORTS_W RgbdNormals: public Algorithm
+{
+public:
     enum RGBD_NORMALS_METHOD
     {
       RGBD_NORMALS_METHOD_FALS = 0,
@@ -145,12 +144,12 @@ namespace cv
     int window_size_;
     int method_;
     mutable void* rgbd_normals_impl_;
-  };
+};
 
-  /** Object that can clean a noisy depth image
-   */
-  class CV_EXPORTS_W DepthCleaner: public Algorithm
-  {
+/** Object that can clean a noisy depth image
+ */
+class CV_EXPORTS_W DepthCleaner: public Algorithm
+{
   public:
     /** NIL method is from
      * ``Modeling Kinect Sensor Noise for Improved 3d Reconstruction and Tracking``
@@ -234,74 +233,66 @@ namespace cv
     int window_size_;
     int method_;
     mutable void* depth_cleaner_impl_;
-  };
+};
 
 
-  /** Registers depth data to an external camera
-   * Registration is performed by creating a depth cloud, transforming the cloud by
-   * the rigid body transformation between the cameras, and then projecting the
-   * transformed points into the RGB camera.
-   *
-   * uv_rgb = K_rgb * [R | t] * z * inv(K_ir) * uv_ir
-   *
-   * Currently does not check for negative depth values.
-   *
-   * @param unregisteredCameraMatrix the camera matrix of the depth camera
-   * @param registeredCameraMatrix the camera matrix of the external camera
-   * @param registeredDistCoeffs the distortion coefficients of the external camera
-   * @param Rt the rigid body transform between the cameras. Transforms points from depth camera frame to external camera frame.
-   * @param unregisteredDepth the input depth data
-   * @param outputImagePlaneSize the image plane dimensions of the external camera (width, height)
-   * @param registeredDepth the result of transforming the depth into the external camera
-   * @param depthDilation whether or not the depth is dilated to avoid holes and occlusion errors (optional)
-   */
-  CV_EXPORTS_W
-  void
-  registerDepth(InputArray unregisteredCameraMatrix, InputArray registeredCameraMatrix, InputArray registeredDistCoeffs,
-                InputArray Rt, InputArray unregisteredDepth, const Size& outputImagePlaneSize,
-                OutputArray registeredDepth, bool depthDilation=false);
+/** Registers depth data to an external camera
+ * Registration is performed by creating a depth cloud, transforming the cloud by
+ * the rigid body transformation between the cameras, and then projecting the
+ * transformed points into the RGB camera.
+ *
+ * uv_rgb = K_rgb * [R | t] * z * inv(K_ir) * uv_ir
+ *
+ * Currently does not check for negative depth values.
+ *
+ * @param unregisteredCameraMatrix the camera matrix of the depth camera
+ * @param registeredCameraMatrix the camera matrix of the external camera
+ * @param registeredDistCoeffs the distortion coefficients of the external camera
+ * @param Rt the rigid body transform between the cameras. Transforms points from depth camera frame to external camera frame.
+ * @param unregisteredDepth the input depth data
+ * @param outputImagePlaneSize the image plane dimensions of the external camera (width, height)
+ * @param registeredDepth the result of transforming the depth into the external camera
+ * @param depthDilation whether or not the depth is dilated to avoid holes and occlusion errors (optional)
+ */
+CV_EXPORTS_W void registerDepth(InputArray unregisteredCameraMatrix, InputArray registeredCameraMatrix, InputArray registeredDistCoeffs,
+                                InputArray Rt, InputArray unregisteredDepth, const Size& outputImagePlaneSize,
+                                OutputArray registeredDepth, bool depthDilation=false);
 
-  /**
-   * @param depth the depth image
-   * @param in_K
-   * @param in_points the list of xy coordinates
-   * @param points3d the resulting 3d points
-   */
-  CV_EXPORTS_W
-  void
-  depthTo3dSparse(InputArray depth, InputArray in_K, InputArray in_points, OutputArray points3d);
+/**
+ * @param depth the depth image
+ * @param in_K
+ * @param in_points the list of xy coordinates
+ * @param points3d the resulting 3d points
+ */
+CV_EXPORTS_W void depthTo3dSparse(InputArray depth, InputArray in_K, InputArray in_points, OutputArray points3d);
 
-  /** Converts a depth image to an organized set of 3d points.
-   * The coordinate system is x pointing left, y down and z away from the camera
-   * @param depth the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
-   *              (as done with the Microsoft Kinect), otherwise, if given as CV_32F or CV_64F, it is assumed in meters)
-   * @param K The calibration matrix
-   * @param points3d the resulting 3d points. They are of depth the same as `depth` if it is CV_32F or CV_64F, and the
-   *        depth of `K` if `depth` is of depth CV_U
-   * @param mask the mask of the points to consider (can be empty)
-   */
-  CV_EXPORTS_W
-  void
-  depthTo3d(InputArray depth, InputArray K, OutputArray points3d, InputArray mask = noArray());
+/** Converts a depth image to an organized set of 3d points.
+ * The coordinate system is x pointing left, y down and z away from the camera
+ * @param depth the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
+ *              (as done with the Microsoft Kinect), otherwise, if given as CV_32F or CV_64F, it is assumed in meters)
+ * @param K The calibration matrix
+ * @param points3d the resulting 3d points. They are of depth the same as `depth` if it is CV_32F or CV_64F, and the
+ *        depth of `K` if `depth` is of depth CV_U
+ * @param mask the mask of the points to consider (can be empty)
+ */
+CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d, InputArray mask = noArray());
 
-  /** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
-   * by depth_factor to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
-   * Otherwise, the image is simply converted to floats
-   * @param in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
-   *              (as done with the Microsoft Kinect), it is assumed in meters)
-   * @param depth the desired output depth (floats or double)
-   * @param out The rescaled float depth image
-   * @param depth_factor (optional) factor by which depth is converted to distance (by default = 1000.0 for Kinect sensor)
-   */
-  CV_EXPORTS_W
-  void
-  rescaleDepth(InputArray in, int depth, OutputArray out, double depth_factor = 1000.0);
+/** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
+ * by depth_factor to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
+ * Otherwise, the image is simply converted to floats
+ * @param in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
+ *              (as done with the Microsoft Kinect), it is assumed in meters)
+ * @param depth the desired output depth (floats or double)
+ * @param out The rescaled float depth image
+ * @param depth_factor (optional) factor by which depth is converted to distance (by default = 1000.0 for Kinect sensor)
+ */
+CV_EXPORTS_W void rescaleDepth(InputArray in, int depth, OutputArray out, double depth_factor = 1000.0);
 
-  /** Object that can compute planes in an image
-   */
-  class CV_EXPORTS_W RgbdPlane: public Algorithm
-  {
-  public:
+/** Object that can compute planes in an image
+ */
+class CV_EXPORTS_W RgbdPlane: public Algorithm
+{
+public:
     enum RGBD_PLANE_METHOD
     {
       RGBD_PLANE_METHOD_DEFAULT
@@ -430,7 +421,7 @@ namespace cv
         sensor_error_c_ = val;
     }
 
-  private:
+private:
     /** The method to use to compute the planes */
     int method_;
     /** The size of the blocks to look at for a stable MSE */
@@ -441,15 +432,16 @@ namespace cv
     double threshold_;
     /** coefficient of the sensor error with respect to the. All 0 by default but you want a=0.0075 for a Kinect */
     double sensor_error_a_, sensor_error_b_, sensor_error_c_;
-  };
+};
 
 
-  /** Object that contains a frame data that is possibly needed for the Odometry.
-   * It's used for the efficiency (to pass precomputed/cached data of the frame that participates
-   * in the Odometry processing several times).
-   */
-  struct CV_EXPORTS_W OdometryFrame
-  {
+/** Object that contains a frame data that is possibly needed for the Odometry.
+ * It's used for the efficiency (to pass precomputed/cached data of the frame that participates
+ * in the Odometry processing several times).
+ */
+struct CV_EXPORTS_W OdometryFrame
+{
+public:
     /** These constants are used to set a type of cache which has to be prepared depending on the frame role:
      * srcFrame or dstFrame (see compute method of the Odometry class). For the srcFrame and dstFrame different cache data may be required,
      * some part of a cache may be common for both frame roles.
@@ -503,13 +495,13 @@ namespace cv
     CV_WRAP virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) = 0;
 
     CV_PROP int ID;
-  };
+};
 
-  /** Base class for computation of odometry.
-   */
-  class CV_EXPORTS_W Odometry: public Algorithm
-  {
-  public:
+/** Base class for computation of odometry.
+ */
+class CV_EXPORTS_W Odometry: public Algorithm
+{
+public:
 
     /** A class of transformation*/
     enum
@@ -602,21 +594,21 @@ namespace cv
     /** @copybrief getTransformType @see getTransformType */
     CV_WRAP virtual void setTransformType(int val) = 0;
 
-  protected:
+protected:
     virtual void
     checkParams() const = 0;
 
     virtual bool
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                 const Mat& initRt) const = 0;
-  };
+};
 
-  /** Odometry based on the paper "Real-Time Visual Odometry from Dense RGB-D Images",
-   * F. Steinbucker, J. Strum, D. Cremers, ICCV, 2011.
-   */
-  class CV_EXPORTS_W RgbdOdometry: public Odometry
-  {
-  public:
+/** Odometry based on the paper "Real-Time Visual Odometry from Dense RGB-D Images",
+ * F. Steinbucker, J. Strum, D. Cremers, ICCV, 2011.
+ */
+class CV_EXPORTS_W RgbdOdometry: public Odometry
+{
+public:
     RgbdOdometry();
     /** Constructor.
      * @param cameraMatrix Camera matrix
@@ -725,7 +717,7 @@ namespace cv
         maxRotation = val;
     }
 
-  protected:
+protected:
     virtual void
     checkParams() const CV_OVERRIDE;
 
@@ -746,14 +738,14 @@ namespace cv
     int transformType;
 
     double maxTranslation, maxRotation;
-  };
+};
 
-  /** Odometry based on the paper "KinectFusion: Real-Time Dense Surface Mapping and Tracking",
-   * Richard A. Newcombe, Andrew Fitzgibbon, at al, SIGGRAPH, 2011.
-   */
-  class CV_EXPORTS_W ICPOdometry: public Odometry
-  {
-  public:
+/** Odometry based on the paper "KinectFusion: Real-Time Dense Surface Mapping and Tracking",
+ * Richard A. Newcombe, Andrew Fitzgibbon, at al, SIGGRAPH, 2011.
+ */
+class CV_EXPORTS_W ICPOdometry: public Odometry
+{
+public:
     ICPOdometry();
     /** Constructor.
      * @param cameraMatrix Camera matrix
@@ -854,7 +846,7 @@ namespace cv
         return normalsComputer;
     }
 
-  protected:
+protected:
     virtual void
     checkParams() const CV_OVERRIDE;
 
@@ -878,12 +870,11 @@ namespace cv
     mutable Ptr<RgbdNormals> normalsComputer;
   };
 
-  /** Odometry that merges RgbdOdometry and ICPOdometry by minimize sum of their energy functions.
-   */
-
-  class CV_EXPORTS_W RgbdICPOdometry: public Odometry
-  {
-  public:
+/** Odometry that merges RgbdOdometry and ICPOdometry by minimize sum of their energy functions.
+ */
+class CV_EXPORTS_W RgbdICPOdometry: public Odometry
+{
+public:
     RgbdICPOdometry();
     /** Constructor.
      * @param cameraMatrix Camera matrix
@@ -998,7 +989,7 @@ namespace cv
         return normalsComputer;
     }
 
-  protected:
+protected:
     virtual void
     checkParams() const CV_OVERRIDE;
 
@@ -1022,22 +1013,22 @@ namespace cv
     double maxTranslation, maxRotation;
 
     mutable Ptr<RgbdNormals> normalsComputer;
-  };
+};
 
-  /** A faster version of ICPOdometry which is used in KinectFusion implementation
-   * Partial list of differences:
-   * - Works in parallel
-   * - Written in universal intrinsics
-   * - Filters points by angle
-   * - Interpolates points and normals
-   * - Doesn't use masks or min/max depth filtering
-   * - Doesn't use random subsets of points
-   * - Supports only Rt transform type
-   * - Supports only 4-float vectors as input type
-   */
-  class CV_EXPORTS_W FastICPOdometry: public Odometry
-  {
-  public:
+/** A faster version of ICPOdometry which is used in KinectFusion implementation
+ * Partial list of differences:
+ * - Works in parallel
+ * - Written in universal intrinsics
+ * - Filters points by angle
+ * - Interpolates points and normals
+ * - Doesn't use masks or min/max depth filtering
+ * - Doesn't use random subsets of points
+ * - Supports only Rt transform type
+ * - Supports only 4-float vectors as input type
+ */
+class CV_EXPORTS_W FastICPOdometry: public Odometry
+{
+public:
     FastICPOdometry();
     /** Constructor.
      * @param cameraMatrix Camera matrix
@@ -1160,7 +1151,7 @@ namespace cv
                                      " for this odometry method");
     }
 
-  protected:
+protected:
     virtual void
     checkParams() const CV_OVERRIDE;
 
@@ -1190,25 +1181,23 @@ namespace cv
     float depthFactor;
 
     float truncateThreshold;
-  };
+};
 
-  /** Warp the image: compute 3d points from the depth, transform them using given transformation,
-   * then project color point cloud to an image plane.
-   * This function can be used to visualize results of the Odometry algorithm.
-   * @param image The image (of CV_8UC1 or CV_8UC3 type)
-   * @param depth The depth (of type used in depthTo3d fuction)
-   * @param mask The mask of used pixels (of CV_8UC1), it can be empty
-   * @param Rt The transformation that will be applied to the 3d points computed from the depth
-   * @param cameraMatrix Camera matrix
-   * @param distCoeff Distortion coefficients
-   * @param warpedImage The warped image.
-   * @param warpedDepth The warped depth.
-   * @param warpedMask The warped mask.
-   */
-  CV_EXPORTS_W
-  void
-  warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix,
-            const Mat& distCoeff, OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
+/** Warp the image: compute 3d points from the depth, transform them using given transformation,
+ * then project color point cloud to an image plane.
+ * This function can be used to visualize results of the Odometry algorithm.
+ * @param image The image (of CV_8UC1 or CV_8UC3 type)
+ * @param depth The depth (of type used in depthTo3d fuction)
+ * @param mask The mask of used pixels (of CV_8UC1), it can be empty
+ * @param Rt The transformation that will be applied to the 3d points computed from the depth
+ * @param cameraMatrix Camera matrix
+ * @param distCoeff Distortion coefficients
+ * @param warpedImage The warped image.
+ * @param warpedDepth The warped depth.
+ * @param warpedMask The warped mask.
+ */
+CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+                            OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
 
 // TODO Depth interpolation
 // Curvature

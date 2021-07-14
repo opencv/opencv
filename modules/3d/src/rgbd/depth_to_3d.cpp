@@ -8,16 +8,15 @@
 namespace cv
 {
 
-  /**
-   * @param K
-   * @param depth the depth image
-   * @param mask the mask of the points to consider (can be empty)
-   * @param points3d the resulting 3d points, a 3-channel matrix
-   */
-  static void
-  depthTo3d_from_uvz(const cv::Mat& in_K, const cv::Mat& u_mat, const cv::Mat& v_mat, const cv::Mat& z_mat,
-                     cv::Mat& points3d)
-  {
+/**
+ * @param K
+ * @param depth the depth image
+ * @param mask the mask of the points to consider (can be empty)
+ * @param points3d the resulting 3d points, a 3-channel matrix
+ */
+static void depthTo3d_from_uvz(const cv::Mat& in_K, const cv::Mat& u_mat, const cv::Mat& v_mat, const cv::Mat& z_mat,
+                               cv::Mat& points3d)
+{
     CV_Assert((u_mat.size() == z_mat.size()) && (v_mat.size() == z_mat.size()));
     if (u_mat.empty())
       return;
@@ -48,7 +47,7 @@ namespace cv
     coordinates[1] = (v_mat - cy).mul(z_mat) * (1. / fy);
     coordinates[2] = z_mat;
     cv::merge(coordinates, points3d);
-  }
+}
 
   /**
    * @param K

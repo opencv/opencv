@@ -8,17 +8,16 @@
 namespace cv
 {
 
-  /** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
-   * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
-   * Otherwise, the image is simply converted to floats
-   * @param in_in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
-   *              (as done with the Microsoft Kinect), it is assumed in meters)
-   * @param depth the desired output depth (floats or double)
-   * @param out_out The rescaled float depth image
-   */
-  void
-  rescaleDepth(InputArray in_in, int depth, OutputArray out_out, double depth_factor)
-  {
+/** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
+ * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
+ * Otherwise, the image is simply converted to floats
+ * @param in_in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
+ *              (as done with the Microsoft Kinect), it is assumed in meters)
+ * @param depth the desired output depth (floats or double)
+ * @param out_out The rescaled float depth image
+ */
+void rescaleDepth(InputArray in_in, int depth, OutputArray out_out, double depth_factor)
+{
     cv::Mat in = in_in.getMat();
     CV_Assert(in.type() == CV_64FC1 || in.type() == CV_32FC1 || in.type() == CV_16UC1 || in.type() == CV_16SC1);
     CV_Assert(depth == CV_64FC1 || depth == CV_32FC1);
@@ -41,5 +40,5 @@ namespace cv
     }
     if ((in_depth == CV_32F) || (in_depth == CV_64F))
       in.convertTo(out, depth);
-  }
+}
 } // namespace cv
