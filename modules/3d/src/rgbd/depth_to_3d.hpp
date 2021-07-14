@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_RGBD_DEPTH_TO_3D_HPP__
-#define __OPENCV_RGBD_DEPTH_TO_3D_HPP__
+#ifndef OPENCV_3D_DEPTH_TO_3D_HPP
+#define OPENCV_3D_DEPTH_TO_3D_HPP
 
 #include "../precomp.hpp"
 #include "utils.hpp"
@@ -86,6 +86,4 @@ convertDepthToFloat(const cv::Mat& depth, float scale, const cv::Mat &uv_mat, cv
 
 }
 
-#endif
-
-/* End of file. */
+#endif // include guard

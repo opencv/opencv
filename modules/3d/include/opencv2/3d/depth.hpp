@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_RGBD_DEPTH_HPP__
-#define __OPENCV_RGBD_DEPTH_HPP__
+#ifndef OPENCV_3D_DEPTH_HPP
+#define OPENCV_3D_DEPTH_HPP
 
 #include <opencv2/core.hpp>
 #include <limits>
@@ -1259,6 +1259,4 @@ namespace cv
 
 } /* namespace cv */
 
-#endif
-
-/* End of file. */
+#endif // include guard

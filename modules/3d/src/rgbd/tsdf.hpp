@@ -5,8 +5,8 @@
 // Partially rewritten from https://github.com/Nerei/kinfu_remake
 // Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
-#ifndef __OPENCV_KINFU_TSDF_H__
-#define __OPENCV_KINFU_TSDF_H__
+#ifndef OPENCV_3D_TSDF_HPP
+#define OPENCV_3D_TSDF_HPP
 
 #include "../precomp.hpp"
 #include "tsdf_functions.hpp"
@@ -37,4 +37,5 @@ Ptr<TSDFVolume> makeTSDFVolume(float _voxelSize, Matx44f _pose, float _raycastSt
                                float _truncDist, int _maxWeight, Point3i _resolution);
 Ptr<TSDFVolume> makeTSDFVolume(const VolumeParams& _params);
 }  // namespace cv
-#endif
+
+#endif // include guard

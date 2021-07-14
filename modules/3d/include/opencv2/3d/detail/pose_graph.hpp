@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef OPENCV_RGBD_POSE_GRAPH_HPP
-#define OPENCV_RGBD_POSE_GRAPH_HPP
+#ifndef OPENCV_3D_DETAIL_POSE_GRAPH_HPP
+#define OPENCV_3D_DETAIL_POSE_GRAPH_HPP
 
 #include "opencv2/core/affine.hpp"
 #include "opencv2/core/quaternion.hpp"
@@ -56,4 +56,5 @@ public:
 
 }  // namespace detail
 }  // namespace cv
-#endif /* ifndef OPENCV_RGBD_POSE_GRAPH_HPP */
+
+#endif // include guard

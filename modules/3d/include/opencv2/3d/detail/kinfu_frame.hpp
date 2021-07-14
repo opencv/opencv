@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_KINFU_FRAME_H__
-#define __OPENCV_KINFU_FRAME_H__
+#ifndef OPENCV_3D_DETAIL_KINFU_FRAME_HPP
+#define OPENCV_3D_DETAIL_KINFU_FRAME_HPP
 
 #include <opencv2/core/affine.hpp>
 
@@ -15,4 +15,5 @@ CV_EXPORTS_W void renderPointsNormalsColors(InputArray _points, InputArray _norm
 
 } // namespace detail
 } // namespace cv
-#endif
+
+#endif // include guard

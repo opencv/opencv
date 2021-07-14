@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_RGBD_VOLUME_H__
-#define __OPENCV_RGBD_VOLUME_H__
+#ifndef OPENCV_3D_VOLUME_HPP
+#define OPENCV_3D_VOLUME_HPP
 
 #include "opencv2/core/affine.hpp"
 
@@ -125,4 +125,5 @@ CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _
                                     int _resolutionX, int _resolutionY, int _resolutionZ);
 
 }  // namespace cv
-#endif
+
+#endif // include guard

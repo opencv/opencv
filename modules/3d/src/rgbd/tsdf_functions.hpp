@@ -5,8 +5,8 @@
 // Partially rewritten from https://github.com/Nerei/kinfu_remake
 // Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
-#ifndef __OPENCV_TSDF_FUNCTIONS_H__
-#define __OPENCV_TSDF_FUNCTIONS_H__
+#ifndef OPENCV_3D_TSDF_FUNCTIONS_HPP
+#define OPENCV_3D_TSDF_FUNCTIONS_HPP
 
 #include "../precomp.hpp"
 #include "utils.hpp"
@@ -403,4 +403,5 @@ public:
 };
 
 }  // namespace cv
-#endif
+
+#endif // include guard

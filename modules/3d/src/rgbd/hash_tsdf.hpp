@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#ifndef __OPENCV_HASH_TSDF_H__
-#define __OPENCV_HASH_TSDF_H__
+#ifndef OPENCV_3D_HASH_TSDF_HPP
+#define OPENCV_3D_HASH_TSDF_HPP
 
 #include "../precomp.hpp"
 #include "tsdf_functions.hpp"
@@ -43,4 +43,5 @@ Ptr<HashTSDFVolume> makeHashTSDFVolume(float _voxelSize, Matx44f _pose, float _r
                                        int _maxWeight, float truncateThreshold, int volumeUnitResolution = 16);
 
 }  // namespace cv
-#endif
+
+#endif // include guard

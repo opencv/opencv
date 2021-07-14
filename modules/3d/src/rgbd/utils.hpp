@@ -5,8 +5,8 @@
 // Partially rewritten from https://github.com/Nerei/kinfu_remake
 // Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
-#ifndef __OPENCV_RGBD_UTILS_HPP__
-#define __OPENCV_RGBD_UTILS_HPP__
+#ifndef OPENCV_3D_UTILS_HPP
+#define OPENCV_3D_UTILS_HPP
 
 #include "../precomp.hpp"
 
@@ -219,6 +219,4 @@ struct Intr
 } // namespace cv
 
 
-#endif
-
-/* End of file. */
+#endif // include guard
