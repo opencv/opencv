@@ -65,9 +65,8 @@ public:
     virtual void integrate(InputArray _depth, InputArray _depthMask, InputArray _rgb, float depthFactor, const Matx44f& cameraPose,
                            const Matx33f& depth_intrinsics, const Matx33f& rgb_intrinsics, const int frameId = 0) override;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& depth_intrinsics, const Size& frameSize,
-                         OutputArray points, OutputArray normals, OutputArray colors,
-                         OutputArray pointsMask, OutputArray normalsMask, OutputArray colorsMask) const override;
-    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray) const override
+                         OutputArray points, OutputArray normals, OutputArray colors, OutputArray mask) const override;
+    virtual void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     virtual void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -521,16 +520,13 @@ inline Point3f ColoredTSDFVolumeCPU::getColorVoxel(const Point3f& p) const
 
 struct ColorRaycastInvoker : ParallelLoopBody
 {
-    ColorRaycastInvoker(Points& _points, Normals& _normals, Colors& _colors,
-                        Mask& _pointsMask, Mask& _normalsMask, Mask& _colorsMask,
+    ColorRaycastInvoker(Points& _points, Normals& _normals, Colors& _colors, Mask& _mask,
                         const Matx44f& cameraPose, const Intr& depth_intrinsics, const ColoredTSDFVolumeCPU& _volume) :
         ParallelLoopBody(),
         points(_points),
         normals(_normals),
         colors(_colors),
-        pointsMask(_pointsMask),
-        normalsMask(_normalsMask),
-        colorsMask(_colorsMask),
+        mask(_mask),
         volume(_volume),
         tstep(volume.truncDist * volume.raycastStepFactor),
         // We do subtract voxel size to minimize checks after
@@ -575,14 +571,12 @@ struct ColorRaycastInvoker : ParallelLoopBody
             ptype* nrmRow = normals[y];
             ptype* clrRow = colors[y];
 
-            maskType* ptsMRow = pointsMask[y];
-            maskType* nrmMRow = normalsMask[y];
-            maskType* clrMRow = colorsMask[y];
+            maskType* maskRow = mask[y];
 
             for (int x = 0; x < points.cols; x++)
             {
                 v_float32x4 point = nanv, normal = nanv, color = nanv;
-                maskType pm = 0, nm = 0, cm = 0;
+                maskType m = 0;
                 v_float32x4 orig = camTrans;
 
                 // get direction through pixel in volume space:
@@ -684,7 +678,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
                                     volume.voxelSize,
                                     volume.voxelSize, 1.f),
                                     volRot0, volRot1, volRot2, volTrans);
-                                pm = 1; nm = 1; cm = 1;
+                                m = 1;
                             }
                         }
                     }
@@ -693,9 +687,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
                 v_store((float*)(&ptsRow[x]), point);
                 v_store((float*)(&nrmRow[x]), normal);
                 v_store((float*)(&clrRow[x]), color);
-                ptsMRow[x] = pm;
-                nrmMRow[x] = nm;
-                clrMRow[x] = cm;
+                maskRow[x] = m;
             }
         }
     }
@@ -712,14 +704,12 @@ struct ColorRaycastInvoker : ParallelLoopBody
             ptype* nrmRow = normals[y];
             ptype* clrRow = colors[y];
 
-            maskType* ptsMRow = pointsMask[y];
-            maskType* nrmMRow = normalsMask[y];
-            maskType* clrMRow = colorsMask[y];
+            maskType* maskRow = mask[y];
  
             for(int x = 0; x < points.cols; x++)
             {
                 Point3f point = nan3, normal = nan3, color = nan3;
-                maskType pm = 0, nm = 0, cm = 0;
+                maskType m = 0;
 
                 Point3f orig = camTrans;
                 // direction through pixel in volume space
@@ -802,7 +792,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
                                 color = cv;
                                 // interpolation optimized a little
                                 point = vol2cam * (pv*volume.voxelSize);
-                                pm = 1; nm = 1; cm = 1;
+                                m = 1;
                             }
                         }
                     }
@@ -810,9 +800,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
                 clrRow[x] = toPtype(color);
-                ptsMRow[x] = pm;
-                nrmMRow[x] = nm;
-                clrMRow[x] = cm;
+                maskRow[x] = m;
             }
         }
     }
@@ -821,9 +809,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
     Points& points;
     Normals& normals;
     Colors& colors;
-    Mask& pointsMask;
-    Mask& normalsMask;
-    Mask& colorsMask;
+    Mask& mask;
     const ColoredTSDFVolumeCPU& volume;
 
     const float tstep;
@@ -838,8 +824,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
 
 
 void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& depth_intrinsics, const Size& frameSize,
-                                   OutputArray _points, OutputArray _normals, OutputArray _colors,
-                                   OutputArray _pointsMask, OutputArray _normalsMask, OutputArray _colorsMask) const
+                                   OutputArray _points, OutputArray _normals, OutputArray _colors, OutputArray _mask) const
 {
     CV_TRACE_FUNCTION();
 
@@ -849,19 +834,15 @@ void ColoredTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& dep
     _normals.create(frameSize, POINT_TYPE);
     _colors.create(frameSize, POINT_TYPE);
 
-    _pointsMask.create (frameSize, MASK_TYPE);
-    _normalsMask.create(frameSize, MASK_TYPE);
-    _colorsMask.create(frameSize, MASK_TYPE);
+    _mask.create (frameSize, MASK_TYPE);
 
     Points points   =  _points.getMat();
     Normals normals = _normals.getMat();
     Colors colors = _colors.getMat();
 
-    Mask pointsMask  = _pointsMask.getMat();
-    Mask normalsMask = _normalsMask.getMat();
-    Mask colorsMask  = _colorsMask.getMat();
+    Mask mask  = _mask.getMat();
 
-    ColorRaycastInvoker ri(points, normals, colors, pointsMask, normalsMask, colorsMask, cameraPose, Intr(depth_intrinsics), *this);
+    ColorRaycastInvoker ri(points, normals, colors, mask, cameraPose, Intr(depth_intrinsics), *this);
 
     const int nstripes = -1;
     parallel_for_(Range(0, points.rows), ri, nstripes);

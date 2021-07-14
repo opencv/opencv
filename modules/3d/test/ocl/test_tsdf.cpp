@@ -219,15 +219,14 @@ inline Point3f normalize(const Vec3f& v)
     return v * (nv ? 1. / nv : 0.);
 }
 
-void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _pointsMask, InputArray _normalsMask, OutputArray image, Affine3f lightPose)
+void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _mask, OutputArray image, Affine3f lightPose)
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
-    Mask  pointsMask = _pointsMask.getMat();
-    Mask normalsMask = _normalsMask.getMat();
+    Mask  mask = _mask.getMat();
 
     Mat_<Vec4b> img = image.getMat();
 
@@ -240,8 +239,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _po
             Vec4b* imgRow = img[y];
             const ptype* ptsRow = points[y];
             const ptype* nrmRow = normals[y];
-            const maskType* ptsMRow = pointsMask[y];
-            const maskType* nrmMRow = normalsMask[y];
+            const maskType* maskRow = mask[y];
 
             for (int x = 0; x < sz.width; x++)
             {
@@ -251,7 +249,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _po
                 Vec4b color;
 
                 //if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
-                if (ptsMRow[x] == 0 || nrmMRow[x] == 0)
+                if (maskRow[x] == 0)
                 {
                     color = Vec4b(0, 32, 0, 0);
                 }
@@ -285,7 +283,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, InputArray _po
 }
 // ----------------------------
 
-static const bool display = true;
+static const bool display = false;
 static const bool parallelCheck = false;
 
 class Settings
@@ -362,12 +360,12 @@ public:
     }
 };
 
-void displayImage(Mat depth, Mat points, Mat normals, Mat pointsMask, Mat normalsMask, float depthFactor, Vec3f lightPose)
+void displayImage(Mat depth, Mat points, Mat normals, Mat mask, float depthFactor, Vec3f lightPose)
 {
     Mat image;
     patchNaNs(points);
     imshow("depth", depth * (1.f / depthFactor / 4.f));
-    renderPointsNormals(points, normals, pointsMask, normalsMask, image, lightPose);
+    renderPointsNormals(points, normals, mask, image, lightPose);
     imshow("render", image);
     waitKey(2000);
 }
@@ -442,7 +440,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask, _normalsMask);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask);
     }
     if (isFetchPointsNormals)
     {
@@ -465,11 +463,11 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         normalsCheck(normals);
 
     if (isRaycast && display)
-        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, settings.depthFactor, settings.lightPose);
 
     if (isRaycast)
     {
-        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
+        settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask);
         normals = _newNormals.getMat(af);
         points = _newPoints.getMat(af);
         normalsMask = _newNormalsMask.getMat(af);
@@ -482,7 +480,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
             normalsCheck(normals);
 
         if (display)
-            displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
+            displayImage(depth, points, normals, pointsMask, settings.depthFactor, settings.lightPose);
     }
 
     points.release(); normals.release();
@@ -506,7 +504,7 @@ void valid_points_test(bool isHashTSDF)
     int anfas, profile;
 
     settings.volume->integrate(depth, mask, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask, _normalsMask);
+    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _pointsMask);
     normals = _normals.getMat(af);
     points = _points.getMat(af);
     normalsMask = _normalsMask.getMat(af);
@@ -515,16 +513,16 @@ void valid_points_test(bool isHashTSDF)
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, settings.depthFactor, settings.lightPose);
 
-    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask, _newNormalsMask);
+    settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
     patchNaNs(points);
     profile = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, pointsMask, normalsMask, settings.depthFactor, settings.lightPose);
+        displayImage(depth, points, normals, pointsMask, settings.depthFactor, settings.lightPose);
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);

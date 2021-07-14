@@ -511,9 +511,6 @@ __kernel void raycast(
                     //pointsMask
                     __global char * points_mask_ptr,
                       int points_mask_step, int points_mask_offset,
-                    //normalsMask
-                    __global char * normals_mask_ptr,
-                      int normals_mask_step, int normals_mask_offset,
                     
                     const int2 frameSize,
                     __global const struct TsdfVoxel * allVolumePtr,
@@ -542,7 +539,7 @@ __kernel void raycast(
 
     float3 point  = nan((uint)0);
     float3 normal = nan((uint)0);
-    int pm = 0, nm = 0;
+    int pm = 0;
 
     const float3 camRot0  = cam2volRotGPU.s012;
     const float3 camRot1  = cam2volRotGPU.s456;
@@ -618,7 +615,7 @@ __kernel void raycast(
                     point = (float3)(dot(pv, volRot0),
                                      dot(pv, volRot1),
                                      dot(pv, volRot2)) + volTrans;
-                    pm = 1; nm = 1;
+                    pm = 1;
                 }
             }
             break;
@@ -631,11 +628,9 @@ __kernel void raycast(
     __global float* pts = (__global float*)(pointsptr  +  points_offset + y*points_step   + x*sizeof(ptype));
     __global float* nrm = (__global float*)(normalsptr + normals_offset + y*normals_step  + x*sizeof(ptype));
     __global int* ptsM = (__global int*)(points_mask_ptr  + points_mask_offset  + y*points_mask_step  + x*sizeof(int));
-    __global int* nrmM = (__global int*)(normals_mask_ptr + normals_mask_offset + y*normals_mask_step + x*sizeof(int));
     vstore4((float4)(point,  0), 0, pts);
     vstore4((float4)(normal, 0), 0, nrm);
     *ptsM = pm;
-    *nrmM = nm;
 }
 
 

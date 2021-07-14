@@ -91,8 +91,8 @@ public:
     void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
-                 OutputArray normals, OutputArray _pointsMask, OutputArray _normalsMask) const override;
-    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
+                 OutputArray normals, OutputArray mask) const override;
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); }
     void fetchNormals(InputArray points, OutputArray _normals) const override;
     void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -637,25 +637,22 @@ Point3f HashTSDFVolumeCPU::getNormalVoxel(const Point3f &point) const
 }
 
 void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
-                                OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
+                                OutputArray _points, OutputArray _normals, OutputArray _mask) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(frameSize.area() > 0);
 
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
-    _pointsMask.create(frameSize, MASK_TYPE);
-    _normalsMask.create(frameSize, MASK_TYPE);
+    _mask.create(frameSize, MASK_TYPE);
 
     Points points1   = _points.getMat();
     Normals normals1 = _normals.getMat();
-    Mask pointsMask1  = _pointsMask.getMat();
-    Mask normalsMask1 = _normalsMask.getMat();
+    Mask mask1  = _mask.getMat();
 
     Points& points(points1);
     Normals& normals(normals1);
-    Mask& pointsMask(pointsMask1);
-    Mask& normalsMask(normalsMask1);
+    Mask& mask(mask1);
 
     const HashTSDFVolumeCPU& volume(*this);
     const float tstep(volume.truncDist * volume.raycastStepFactor);
@@ -678,14 +675,13 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
         {
             ptype* ptsRow = points[y];
             ptype* nrmRow = normals[y];
-            maskType* ptsMRow = pointsMask[y];
-            maskType* nrmMRow = normalsMask[y];
+            maskType* maskRow = mask[y];
 
             for (int x = 0; x < points.cols; x++)
             {
                 //! Initialize default value
                 Point3f point = nan3, normal = nan3;
-                maskType pm = 0, nm = 0;
+                maskType m = 0;
 
                 //! Ray origin and direction in the volume coordinate frame
                 Point3f orig    = cam2volTrans;
@@ -740,7 +736,7 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                             {
                                 normal = vol2camRot * nv;
                                 point = vol2cam * pv;
-                                pm = 1; nm = 1;
+                                m = 1;
                             }
                         }
                         break;
@@ -752,8 +748,7 @@ void HashTSDFVolumeCPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
                 }
                 ptsRow[x] = toPtype(point);
                 nrmRow[x] = toPtype(normal);
-                ptsMRow[x] = pm;
-                nrmMRow[x] = nm;
+                maskRow[x] = m;
             }
         }
     };
@@ -910,8 +905,8 @@ public:
     void integrate(InputArray _depth, InputArray _depthMask, float depthFactor, const Matx44f& cameraPose, const Matx33f& intrinsics,
                    const int frameId = 0) override;
     void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize, OutputArray points,
-                 OutputArray normals, OutputArray pointsMask, OutputArray normalsMask) const override;
-    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray, OutputArray) const override
+                 OutputArray normals, OutputArray mask) const override;
+    void raycast(const Matx44f&, const Matx33f&, const Size&, OutputArray, OutputArray, OutputArray, OutputArray) const override
     { CV_Error(Error::StsNotImplemented, "Not implemented"); };
 
     void fetchNormals(InputArray points, OutputArray _normals) const override;
@@ -1585,7 +1580,7 @@ Point3f HashTSDFVolumeGPU::getNormalVoxel(const Point3f& point) const
 
 
 void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intrinsics, const Size& frameSize,
-                                OutputArray _points, OutputArray _normals, OutputArray _pointsMask, OutputArray _normalsMask) const
+                                OutputArray _points, OutputArray _normals, OutputArray _mask) const
 {
     CV_TRACE_FUNCTION();
     CV_Assert(frameSize.area() > 0);
@@ -1602,13 +1597,11 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
 
     _points.create(frameSize, CV_32FC4);
     _normals.create(frameSize, CV_32FC4);
-    _pointsMask.create(frameSize, CV_32S);
-    _normalsMask.create(frameSize, CV_32S);
+    _mask.create(frameSize, CV_32S);
 
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
-    UMat pointsMask = _pointsMask.getUMat();
-    UMat normalsMask = _normalsMask.getUMat();
+    UMat mask = _mask.getUMat();
 
     Intr intrinsics(_intrinsics);
     Intr::Reprojector r = intrinsics.makeReprojector();
@@ -1638,8 +1631,7 @@ void HashTSDFVolumeGPU::raycast(const Matx44f& cameraPose, const Matx33f& _intri
         ocl::KernelArg::PtrReadOnly(hashDataGpu),
         ocl::KernelArg::WriteOnlyNoSize(points),
         ocl::KernelArg::WriteOnlyNoSize(normals),
-        ocl::KernelArg::WriteOnlyNoSize(pointsMask),
-        ocl::KernelArg::WriteOnlyNoSize(normalsMask),
+        ocl::KernelArg::WriteOnlyNoSize(mask),
         frameSize,
         ocl::KernelArg::ReadOnly(volUnitsData),
         cam2volRotGPU,

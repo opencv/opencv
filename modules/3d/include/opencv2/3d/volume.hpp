@@ -34,10 +34,10 @@ class CV_EXPORTS_W Volume
     CV_WRAP
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
                          const Size& frameSize, OutputArray points, OutputArray normals,
-                         OutputArray _pointsMask, OutputArray _normalsMask) const              = 0;
+                         OutputArray mask) const              = 0;
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics, const Size& frameSize,
                          OutputArray points, OutputArray normals, OutputArray colors,
-                         OutputArray pointsMask, OutputArray normalsMask, OutputArray colorsMask) const = 0;
+                         OutputArray mask) const = 0;
     CV_WRAP
     virtual void fetchNormals(InputArray points, OutputArray _normals) const                   = 0;
     CV_WRAP
