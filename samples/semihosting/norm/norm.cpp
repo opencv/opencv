@@ -18,7 +18,7 @@ static_assert(IMG_ROWS * IMG_COLS <= RAW_PIXELS_SIZE, "Incompatible size");
 int main(void)
 {
     // Number of experiment runs
-    long no_runs = 2;
+    int no_runs = 2;
 
     // https://docs.opencv.org/master/d3/d63/classcv_1_1Mat.html
     cv::Mat src(IMG_ROWS, IMG_COLS, cv::IMREAD_GRAYSCALE, (void *)raw_pixels);
