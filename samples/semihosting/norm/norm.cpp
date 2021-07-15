@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <array>
+#include <iostream>
 #include "raw_pixels.hpp"
 
 #define IMG_ROWS 100
@@ -24,6 +25,7 @@ int main(void)
 
     // Run calc Hist
     for(int i=0; i < no_runs; i++){
+        std::cout << "Running iteration # "<< i << std::endl;
         cv::norm(src);
     }
 
