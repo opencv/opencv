@@ -2,6 +2,9 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+#ifndef OPENCV_3D_SPARSE_BLOCK_MATRIX_HPP
+#define OPENCV_3D_SPARSE_BLOCK_MATRIX_HPP
+
 #include "../precomp.hpp"
 
 #if defined(HAVE_EIGEN)
@@ -190,3 +193,5 @@ struct BlockSparseMat
 };
 
 }  // namespace cv
+
+#endif // include guard

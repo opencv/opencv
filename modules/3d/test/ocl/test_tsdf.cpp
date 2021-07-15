@@ -334,11 +334,11 @@ public:
         // depth truncation is not used by default but can be useful in some scenes
         float truncateThreshold = 0.f; //meters
 
-        VolumeParams::VolumeType volumeType = VolumeParams::VolumeType::TSDF;
+        VolumeParams::VolumeKind volumeKind = VolumeParams::VolumeKind::TSDF;
 
         if (useHashTSDF)
         {
-            volumeType = VolumeParams::VolumeType::HASHTSDF;
+            volumeKind = VolumeParams::VolumeKind::HASHTSDF;
             truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
         }
         else
@@ -351,7 +351,7 @@ public:
             raycast_step_factor = 0.75f;  //in voxel sizes
         }
 
-        volume = makeVolume(volumeType, voxelSize, volumePose.matrix,
+        volume = makeVolume(volumeKind, voxelSize, volumePose.matrix,
                             raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
                             truncateThreshold, volumeDims[0], volumeDims[1], volumeDims[2]);
 
@@ -432,6 +432,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     UMat _pointsMask, _normalsMask, _tmpnormalsMask;
     UMat _newPoints, _newNormals;
     UMat _newPointsMask, _newNormalsMask;
+
     Mat  points, normals;
     Mat  pointsMask, normalsMask;
     AccessFlag af = ACCESS_READ;
@@ -457,6 +458,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     normalsMask = _normalsMask.getMat(af);
     pointsMask = _pointsMask.getMat(af);
 
+
     if (parallelCheck)
         normals.forEach<Vec4f>(normalCheck);
     else
@@ -472,6 +474,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         points = _newPoints.getMat(af);
         normalsMask = _newNormalsMask.getMat(af);
         pointsMask = _newPointsMask.getMat(af);
+
         normalsCheck(normals);
 
         if (parallelCheck)
@@ -498,6 +501,7 @@ void valid_points_test(bool isHashTSDF)
                 mask.at<int>(y, x) = 0;
     UMat _points, _normals, _newPoints, _newNormals;
     UMat _pointsMask, _normalsMask, _newPointsMask, _newNormalsMask;
+
     AccessFlag af = ACCESS_READ;
     Mat  points, normals;
     Mat  pointsMask, normalsMask;
@@ -509,6 +513,7 @@ void valid_points_test(bool isHashTSDF)
     points = _points.getMat(af);
     normalsMask = _normalsMask.getMat(af);
     pointsMask = _pointsMask.getMat(af);
+
     patchNaNs(points);
     anfas = counterOfValid(points);
 
@@ -518,6 +523,7 @@ void valid_points_test(bool isHashTSDF)
     settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals, _newPointsMask);
     normals = _newNormals.getMat(af);
     points = _newPoints.getMat(af);
+
     patchNaNs(points);
     profile = counterOfValid(points);
 
@@ -532,15 +538,15 @@ void valid_points_test(bool isHashTSDF)
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
-TEST(TSDF_GPU, raycast_normals) { normal_test(false, true, false, false); }
+TEST(TSDF_GPU, raycast_normals)      { normal_test(false, true, false, false); }
 TEST(TSDF_GPU, fetch_points_normals) { normal_test(false, false, true, false); }
-TEST(TSDF_GPU, fetch_normals) { normal_test(false, false, false, true); }
-TEST(TSDF_GPU, valid_points) { valid_points_test(false); }
+TEST(TSDF_GPU, fetch_normals)        { normal_test(false, false, false, true); }
+TEST(TSDF_GPU, valid_points)         { valid_points_test(false); }
 
-TEST(HashTSDF_GPU, raycast_normals) { normal_test(true, true, false, false); }
+TEST(HashTSDF_GPU, raycast_normals)      { normal_test(true, true, false, false); }
 TEST(HashTSDF_GPU, fetch_points_normals) { normal_test(true, false, true, false); }
-TEST(HashTSDF_GPU, fetch_normals) { normal_test(true, false, false, true); }
-TEST(HashTSDF_GPU, valid_points) { valid_points_test(true); }
+TEST(HashTSDF_GPU, fetch_normals)        { normal_test(true, false, false, true); }
+TEST(HashTSDF_GPU, valid_points)         { valid_points_test(true); }
 
 }
 }  // namespace

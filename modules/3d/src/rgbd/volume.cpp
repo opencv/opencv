@@ -10,10 +10,10 @@
 namespace cv
 {
 
-Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeType)
+Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeKind)
 {
     VolumeParams params;
-    params.type              = _volumeType;
+    params.kind              = _volumeKind;
     params.maxWeight         = 64;
     params.raycastStepFactor = 0.25f;
     params.unitResolution    = 0;  // unitResolution not used for TSDF
@@ -21,7 +21,7 @@ Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeType)
     Matx44f pose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f)).matrix;
     params.pose = Mat(pose);
 
-    if(params.type == VolumeType::TSDF)
+    if(params.kind == VolumeKind::TSDF)
     {
         params.resolutionX = 512;
         params.resolutionY = 512;
@@ -31,7 +31,7 @@ Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeType)
         params.tsdfTruncDist = 7 * params.voxelSize;  //! About 0.04f in meters
         return makePtr<VolumeParams>(params);
     }
-    else if(params.type == VolumeType::HASHTSDF)
+    else if(params.kind == VolumeKind::HASHTSDF)
     {
         params.unitResolution      = 16;
         params.voxelSize           = volumeSize / 512.f;
@@ -39,7 +39,7 @@ Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeType)
         params.tsdfTruncDist = 7 * params.voxelSize;  //! About 0.04f in meters
         return makePtr<VolumeParams>(params);
     }
-    else if (params.type == VolumeType::COLOREDTSDF)
+    else if (params.kind == VolumeKind::COLOREDTSDF)
     {
         params.resolutionX = 512;
         params.resolutionY = 512;
@@ -52,13 +52,13 @@ Ptr<VolumeParams> VolumeParams::defaultParams(int _volumeType)
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-Ptr<VolumeParams> VolumeParams::coarseParams(int _volumeType)
+Ptr<VolumeParams> VolumeParams::coarseParams(int _volumeKind)
 {
-    Ptr<VolumeParams> params = defaultParams(_volumeType);
+    Ptr<VolumeParams> params = defaultParams(_volumeKind);
 
     params->raycastStepFactor = 0.75f;
     float volumeSize          = 3.0f;
-    if(params->type == VolumeType::TSDF)
+    if(params->kind == VolumeKind::TSDF)
     {
         params->resolutionX = 128;
         params->resolutionY = 128;
@@ -67,13 +67,13 @@ Ptr<VolumeParams> VolumeParams::coarseParams(int _volumeType)
         params->tsdfTruncDist = 2 * params->voxelSize;  //! About 0.04f in meters
         return params;
     }
-    else if(params->type == VolumeType::HASHTSDF)
+    else if(params->kind == VolumeKind::HASHTSDF)
     {
         params->voxelSize = volumeSize / 128.f;
         params->tsdfTruncDist = 2 * params->voxelSize;  //! About 0.04f in meters
         return params;
     }
-    else if (params->type == VolumeType::COLOREDTSDF)
+    else if (params->kind == VolumeKind::COLOREDTSDF)
     {
         params->resolutionX = 128;
         params->resolutionY = 128;
@@ -87,30 +87,30 @@ Ptr<VolumeParams> VolumeParams::coarseParams(int _volumeType)
 
 Ptr<Volume> makeVolume(const Ptr<VolumeParams>& _volumeParams)
 {
-    int type = _volumeParams->type;
-    if(type == VolumeParams::VolumeType::TSDF)
+    int kind = _volumeParams->kind;
+    if(kind == VolumeParams::VolumeKind::TSDF)
         return makeTSDFVolume(*_volumeParams);
-    else if(type == VolumeParams::VolumeType::HASHTSDF)
+    else if(kind == VolumeParams::VolumeKind::HASHTSDF)
         return makeHashTSDFVolume(*_volumeParams);
-    else if(type == VolumeParams::VolumeType::COLOREDTSDF)
+    else if(kind == VolumeParams::VolumeKind::COLOREDTSDF)
         return makeColoredTSDFVolume(*_volumeParams);
     CV_Error(Error::StsBadArg, "Invalid VolumeType does not have parameters");
 }
 
-Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _pose,
+Ptr<Volume> makeVolume(int _volumeKind, float _voxelSize, Matx44f _pose,
                        float _raycastStepFactor, float _truncDist, int _maxWeight, float _truncateThreshold,
                        int _resolutionX, int _resolutionY, int _resolutionZ)
 {
     Point3i _presolution(_resolutionX, _resolutionY, _resolutionZ);
-    if (_volumeType == VolumeParams::VolumeType::TSDF)
+    if (_volumeKind == VolumeParams::VolumeKind::TSDF)
     {
         return makeTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _presolution);
     }
-    else if (_volumeType == VolumeParams::VolumeType::HASHTSDF)
+    else if (_volumeKind == VolumeParams::VolumeKind::HASHTSDF)
     {
         return makeHashTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _truncateThreshold);
     }
-    else if (_volumeType == VolumeParams::VolumeType::COLOREDTSDF)
+    else if (_volumeKind == VolumeParams::VolumeKind::COLOREDTSDF)
     {
         return makeColoredTSDFVolume(_voxelSize, _pose, _raycastStepFactor, _truncDist, _maxWeight, _presolution);
     }

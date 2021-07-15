@@ -2,11 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-// This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this
-// module's directory
-
-#ifndef __OPENCV_RGBD_VOLUME_H__
-#define __OPENCV_RGBD_VOLUME_H__
+#ifndef OPENCV_3D_VOLUME_HPP
+#define OPENCV_3D_VOLUME_HPP
 
 #include "opencv2/core/affine.hpp"
 
@@ -58,17 +55,17 @@ class CV_EXPORTS_W Volume
 
 struct CV_EXPORTS_W VolumeParams
 {
-    enum VolumeType
+    enum VolumeKind
     {
         TSDF        = 0,
         HASHTSDF    = 1,
         COLOREDTSDF = 2
     };
 
-    /** @brief Type of Volume
+    /** @brief Kind of Volume
         Values can be TSDF (single volume) or HASHTSDF (hashtable of volume units)
     */
-    CV_PROP_RW int type;
+    CV_PROP_RW int kind;
 
     /** @brief Resolution of voxel space
         Number of voxels in each dimension.
@@ -130,4 +127,5 @@ CV_EXPORTS_W Ptr<Volume> makeVolume(int _volumeType, float _voxelSize, Matx44f _
                                     int _resolutionX, int _resolutionY, int _resolutionZ);
 
 }  // namespace cv
-#endif
+
+#endif // include guard

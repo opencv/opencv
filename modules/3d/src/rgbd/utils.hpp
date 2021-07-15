@@ -2,17 +2,56 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-// This code is also subject to the license terms in the LICENSE_KinectFusion.md file found in this module's directory
+// Partially rewritten from https://github.com/Nerei/kinfu_remake
+// Copyright(c) 2012, Anatoly Baksheev. All rights reserved.
 
-// This code is also subject to the license terms in the LICENSE_WillowGarage.md file found in this module's directory
-
-#ifndef __OPENCV_RGBD_UTILS_HPP__
-#define __OPENCV_RGBD_UTILS_HPP__
+#ifndef OPENCV_3D_UTILS_HPP
+#define OPENCV_3D_UTILS_HPP
 
 #include "../precomp.hpp"
 
 namespace cv
 {
+
+
+ /** Checks if the value is a valid depth. For CV_16U or CV_16S, the convention is to be invalid if it is
+  * a limit. For a float/double, we just check if it is a NaN
+  * @param depth the depth to check for validity
+  */
+inline bool isValidDepth(const float& depth)
+{
+    return !cvIsNaN(depth);
+}
+
+inline bool isValidDepth(const double& depth)
+{
+    return !cvIsNaN(depth);
+}
+
+inline bool isValidDepth(const short int& depth)
+{
+    return (depth != std::numeric_limits<short int>::min()) &&
+           (depth != std::numeric_limits<short int>::max());
+}
+
+inline bool isValidDepth(const unsigned short int& depth)
+{
+    return (depth != std::numeric_limits<unsigned short int>::min()) &&
+           (depth != std::numeric_limits<unsigned short int>::max());
+}
+
+inline bool isValidDepth(const int& depth)
+{
+    return (depth != std::numeric_limits<int>::min()) &&
+           (depth != std::numeric_limits<int>::max());
+}
+
+
+inline bool isValidDepth(const unsigned int& depth)
+{
+    return (depth != std::numeric_limits<unsigned int>::min()) &&
+           (depth != std::numeric_limits<unsigned int>::max());
+}
 
 /** If the input image is of type CV_16UC1 (like the Kinect one), the image is converted to floats, divided
  * by 1000 to get a depth in meters, and the values 0 are converted to std::numeric_limits<float>::quiet_NaN()
@@ -224,6 +263,4 @@ struct Intr
 } // namespace cv
 
 
-#endif
-
-/* End of file. */
+#endif // include guard

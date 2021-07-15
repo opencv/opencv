@@ -332,11 +332,11 @@ public:
         // depth truncation is not used by default but can be useful in some scenes
         float truncateThreshold = 0.f; //meters
 
-        VolumeParams::VolumeType volumeType = VolumeParams::VolumeType::TSDF;
+        VolumeParams::VolumeKind volumeKind = VolumeParams::VolumeKind::TSDF;
 
         if (useHashTSDF)
         {
-            volumeType = VolumeParams::VolumeType::HASHTSDF;
+            volumeKind = VolumeParams::VolumeKind::HASHTSDF;
             truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
         }
         else
@@ -349,7 +349,7 @@ public:
             raycast_step_factor = 0.75f;  //in voxel sizes
         }
 
-        volume = makeVolume(volumeType, voxelSize, volumePose.matrix,
+        volume = makeVolume(volumeKind, voxelSize, volumePose.matrix,
                             raycast_step_factor, tsdf_trunc_dist, tsdf_max_weight,
                             truncateThreshold, volumeDims[0], volumeDims[1], volumeDims[2]);
 
