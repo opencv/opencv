@@ -8,6 +8,3 @@ set(WITH_TIFF OFF)
 
 # Turn off `libpng` for some linking issues.
 set(WITH_PNG OFF)
-
-# Turn off threads in openjpeg.
-set(OPJ_USE_THREAD OFF)
