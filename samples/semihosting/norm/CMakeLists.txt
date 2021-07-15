@@ -17,7 +17,7 @@ if(NOT OCV_DEPENDENCIES_FOUND)
   return()
 endif()
 
-ocv_define_sample(norm norm.cpp ${BM_SUFFIX})
+ocv_define_sample(norm norm.cpp ${SEMIHOSTING_SUFFIX})
 ocv_include_modules_recurse(${LOCAL_DEPS})
 target_include_directories(${norm} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(${norm} PRIVATE ${RAW_PIXEL_INCLUDE})

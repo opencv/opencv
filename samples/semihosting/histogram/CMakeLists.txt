@@ -18,7 +18,7 @@ if(NOT OCV_DEPENDENCIES_FOUND)
   return()
 endif()
 
-ocv_define_sample(histogram histogram.cpp ${BM_SUFFIX})
+ocv_define_sample(histogram histogram.cpp ${SEMIHOSTING_SUFFIX})
 ocv_include_modules_recurse(${LOCAL_DEPS})
 target_include_directories(${histogram} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(${histogram} PRIVATE ${RAW_PIXEL_INCLUDE})
