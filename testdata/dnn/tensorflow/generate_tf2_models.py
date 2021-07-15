@@ -58,6 +58,15 @@ def save(model, name, **kwargs):
 
     shutil.rmtree(name)
 
+def getGraph(model):
+    func = tf.function(lambda x: model(x))
+    func = func.get_concrete_function([tf.TensorSpec(model_input.shape, model_input.dtype) for model_input in model.inputs])
+
+    frozen_func = convert_variables_to_constants_v2(func)
+    return frozen_func.graph.as_graph_def()
+
+def saveBroken(graph, name):
+    tf.io.write_graph(graph_or_graph_def=graph, logdir='.', name=name + '_net.pb', as_text=False)
 
 # Test cases ###################################################################
 model = tf.keras.models.Sequential([
@@ -78,6 +87,24 @@ model = tf.keras.models.Sequential([
 ])
 save(model, 'tf2_permute_nhwc_ncwh', average_pooling2d_input=tf.TensorSpec(shape=[None, 4, 6, 3], dtype=tf.float32))
 ################################################################################
+# TF 2.5.0 + python 3.6.13
+x_0 = tf.keras.layers.Input(batch_shape = (2, 3, 4))
+mid_0 = tf.expand_dims(x_0, axis=0)
+x_1 = tf.keras.layers.Input(batch_shape = (2, 3, 4))
+mid_1 = tf.reshape(x_1, [1, 2, 3, 4])
+out = tf.math.multiply(mid_0, mid_1)
+graph = getGraph(tf.keras.Model([x_0, x_1], out))
+graph.node[3].op = 'UnknownLayer' # replace ExpandDims op with womething that will never be implemented
+saveBroken(graph, 'not_implemented_layer')
+################################################################################
+# TF 2.5.0 + python 3.6.13
+x_0 = tf.keras.layers.Input(batch_shape = (1, 3, 4))
+x_1 = tf.keras.layers.Input(batch_shape = (1, 3, 4))
+mid = tf.math.multiply(x_0, x_1)
+out = tf.math.multiply(mid, x_1)
+graph = getGraph(tf.keras.Model([x_0, x_1], out))
+graph.node[2].input.pop() # break the connection in the graph
+saveBroken(graph, 'broken_layer')
 
 # Uncomment to print the final graph.
 # with tf.io.gfile.GFile('tf2_prelu_net.pb', 'rb') as f:
