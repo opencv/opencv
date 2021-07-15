@@ -12,7 +12,7 @@
 #define IMG_ROWS 100
 #define IMG_COLS 100
 
-static_assert(IMG_ROWS * IMG_COLS <= RAW_PIXELS_SIZE  , "Incompatible size");
+static_assert(IMG_ROWS * IMG_COLS <= RAW_PIXELS_SIZE, "Incompatible size");
 
 int main(void)
 {
