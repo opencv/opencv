@@ -1971,15 +1971,23 @@ static void OnChange(int pos, void *param)
 }
 
 #ifdef HAVE_OPENCV_HIGHGUI
+// workaround for #20408, use nullptr, set value later
+static int _createTrackbar(const String &trackbar_name, const String &window_name, int value, int count,
+                    TrackbarCallback onChange, PyObject* py_callback_info)
+{
+    int n = createTrackbar(trackbar_name, window_name, NULL, count, onChange, py_callback_info);
+    setTrackbarPos(trackbar_name, window_name, value);
+    return n;
+}
 static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
     char* trackbar_name;
     char* window_name;
-    int *value = new int;
+    int value;
     int count;
 
-    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
+    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, &value, &count, &on_change))
         return NULL;
     if (!PyCallable_Check(on_change)) {
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
@@ -1998,7 +2006,7 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
     {
         registered_callbacks.insert(std::pair<std::string, PyObject*>(name, py_callback_info));
     }
-    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, py_callback_info));
+    ERRWRAP2(_createTrackbar(trackbar_name, window_name, value, count, OnChange, py_callback_info));
     Py_RETURN_NONE;
 }
 
