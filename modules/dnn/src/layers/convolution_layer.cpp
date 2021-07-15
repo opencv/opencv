@@ -1179,6 +1179,13 @@ public:
                                     biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
                             else
                         #endif
+                        #if CV_TRY_RVV
+                            if(useRVV)
+                                opt_RVV::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
+                            else
+                        #endif
                             {
                                 const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                                             w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
