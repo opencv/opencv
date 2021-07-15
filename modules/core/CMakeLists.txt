@@ -131,9 +131,6 @@ elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
   endif()
 endif()
 
-if (OPENCV_SEMIHOSTING)
-  add_definitions("-DOPENCV_SEMIHOSTING")
-endif(OPENCV_SEMIHOSTING)
 
 if(PARALLEL_ENABLE_PLUGINS)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")
@@ -159,6 +156,10 @@ endif()
 if(OPENCV_DISABLE_THREAD_SUPPORT)
   ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")
 endif()
+
+if (OPENCV_SEMIHOSTING)
+  ocv_target_compile_definitions(${the_module} PRIVATE "-DOPENCV_SEMIHOSTING")
+endif(OPENCV_SEMIHOSTING)
 
 if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
