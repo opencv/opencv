@@ -33,19 +33,6 @@ set(OPENCV_DISABLE_FILESYSTEM_SUPPORT ON)
 set(BUILD_SHARED_LIBS OFF)
 set(OPENCV_FORCE_3RDPARTY_BUILD OFF)
 
-set(CV_TRACE OFF)
-
-# These third parties libraries are incompatible with the semihosting
-# toolchain.
-set(WITH_JPEG OFF)
-set(WITH_OPENEXR OFF)
-set(WITH_TIFF OFF)
-
-# Turn off `libpng` for some linking issues.
-set(WITH_PNG OFF)
-
-# Turn off threads in openjpeg.
-set(OPJ_USE_THREAD OFF)
 
 # Enable newlib.
 add_definitions(-D_GNU_SOURCE)
