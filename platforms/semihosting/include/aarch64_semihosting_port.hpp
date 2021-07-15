@@ -1,7 +1,6 @@
 // This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the
-// top-level directory of this distribution and at
-// http://opencv.org/license.html
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #ifndef AARCH64_BAREMETAL_PORT_HPP
 #define AARCH64_BAREMETAL_PORT_HPP
