@@ -1058,10 +1058,6 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-Ptr<RgbdNormals> RgbdNormals::create(int rows_in, int cols_in, int depth_in, InputArray K_in, int window_size_in, int method_in) {
-  return makePtr<RgbdNormals>(rows_in, cols_in, depth_in, K_in, window_size_in, method_in);
-}
-
 Ptr<DepthCleaner> DepthCleaner::create(int depth_in, int window_size_in, int method_in) {
   return makePtr<DepthCleaner>(depth_in, window_size_in, method_in);
 }
@@ -1465,7 +1461,7 @@ Size ICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) con
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
                    norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
-                   normalsComputer = makePtr<RgbdNormals>(depth.rows,
+                    normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),
                                                           cameraMatrix,
@@ -1632,7 +1628,7 @@ Size RgbdICPOdometry::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType)
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
                    norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
-                   normalsComputer = makePtr<RgbdNormals>(depth.rows,
+                    normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),
                                                           cameraMatrix,

@@ -216,8 +216,8 @@ protected:
           else
             std::cout << "* double" << std::endl;
 
-          RgbdNormals normals_computer(H, W, depth, K, 5, method);
-          normals_computer.initialize();
+          Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, method);
+          normals_computer->cache();
 
           std::vector<Plane> plane_params;
           Mat points3d, ground_normals;
@@ -283,19 +283,19 @@ protected:
   }
 
   float
-  testit(const Mat & points3d, const Mat & in_ground_normals, const RgbdNormals & normals_computer)
+  testit(const Mat & points3d, const Mat & in_ground_normals, const Ptr<RgbdNormals>& normals_computer)
   {
     TickMeter tm;
     tm.start();
     Mat in_normals;
-    if (normals_computer.getMethod() == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD && points3d.channels() == 3)
+    if (normals_computer->getMethod() == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD && points3d.channels() == 3)
     {
       std::vector<Mat> channels;
       split(points3d, channels);
-      normals_computer.apply(channels[2], in_normals);
+      normals_computer->apply(channels[2], in_normals);
     }
     else
-      normals_computer.apply(points3d, in_normals);
+      normals_computer->apply(points3d, in_normals);
     tm.stop();
 
     Mat_<Vec3f> normals, ground_normals;
@@ -373,9 +373,9 @@ protected:
         tm1.start();
         // First, get the normals
         int depth = CV_32F;
-        RgbdNormals normals_computer(H, W, depth, K, 5, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+        Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
         Mat normals;
-        normals_computer.apply(points3d, normals);
+        normals_computer->apply(points3d, normals);
         tm1.stop();
 
         tm2.start();

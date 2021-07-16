@@ -23,7 +23,7 @@ namespace cv
  * ``Gradient Response Maps for Real-Time Detection of Texture-Less Objects``
  * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
  */
-class CV_EXPORTS_W RgbdNormals: public Algorithm
+class CV_EXPORTS_W RgbdNormals
 {
 public:
     enum RGBD_NORMALS_METHOD
@@ -33,19 +33,10 @@ public:
       RGBD_NORMALS_METHOD_SRI = 2
     };
 
-    RgbdNormals()
-        :
-          rows_(0),
-          cols_(0),
-          depth_(0),
-          K_(Mat()),
-          window_size_(0),
-          method_(RGBD_NORMALS_METHOD_FALS),
-          rgbd_normals_impl_(0)
-    {
-    }
+    RgbdNormals() { }
+    virtual ~RgbdNormals() { }
 
-    /** Constructor
+    /** Creates new RgbdNormals object
      * @param rows the number of rows of the depth image normals will be computed on
      * @param cols the number of cols of the depth image normals will be computed on
      * @param depth the depth of the normals (only CV_32F or CV_64F)
@@ -53,102 +44,37 @@ public:
      * @param window_size the window size to compute the normals: can only be 1,3,5 or 7
      * @param method one of the methods to use: RGBD_NORMALS_METHOD_SRI, RGBD_NORMALS_METHOD_FALS
      */
-    RgbdNormals(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
-                RgbdNormals::RGBD_NORMALS_METHOD_FALS);
-
-    ~RgbdNormals();
-
-    CV_WRAP static Ptr<RgbdNormals> create(int rows, int cols, int depth, InputArray K, int window_size = 5, int method =
-                                           RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+    CV_WRAP static Ptr<RgbdNormals> create(int rows = 0, int cols = 0, int depth = 0, InputArray K = noArray(), int window_size = 5,
+                                           int method = RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
      * @param normals a rows x cols x 3 matrix
      */
-    CV_WRAP
-    void apply(InputArray points, OutputArray normals) const;
+    CV_WRAP virtual void apply(InputArray points, OutputArray normals) const = 0;
 
-    /** Initializes some data that is cached for later computation
-     * If that function is not called, it will be called the first time normals are computed
-     */
-    CV_WRAP
-    void initialize() const;
+    /** Prepares cached data required for calculation
+    * If not called by user, called automatically at first calculation
+    */
+    CV_WRAP virtual void cache() const = 0;
 
-    CV_WRAP
-    int getRows() const
-    {
-        return rows_;
-    }
-    CV_WRAP
-    void setRows(int val)
-    {
-        rows_ = val;
-    }
-    CV_WRAP
-    int getCols() const
-    {
-        return cols_;
-    }
-    CV_WRAP
-    void setCols(int val)
-    {
-        cols_ = val;
-    }
-    CV_WRAP
-    int getWindowSize() const
-    {
-        return window_size_;
-    }
-    CV_WRAP
-    void setWindowSize(int val)
-    {
-        window_size_ = val;
-    }
-    CV_WRAP
-    int getDepth() const
-    {
-        return depth_;
-    }
-    CV_WRAP
-    void setDepth(int val)
-    {
-        depth_ = val;
-    }
-    CV_WRAP
-    cv::Mat getK() const
-    {
-        return K_;
-    }
-    CV_WRAP
-    void setK(const cv::Mat &val)
-    {
-        K_ = val;
-    }
-    CV_WRAP
-    int getMethod() const
-    {
-        return method_;
-    }
-    CV_WRAP
-    void setMethod(int val)
-    {
-        method_ = val;
-    }
-
-  protected:
-    void
-    initialize_normals_impl(int rows, int cols, int depth, const Mat & K, int window_size, int method) const;
-
-    int rows_, cols_, depth_;
-    Mat K_;
-    int window_size_;
-    int method_;
-    mutable void* rgbd_normals_impl_;
+    CV_WRAP virtual int getRows() const = 0;
+    CV_WRAP virtual void setRows(int val) = 0;
+    CV_WRAP virtual int getCols() const = 0;
+    CV_WRAP virtual void setCols(int val) = 0;
+    CV_WRAP virtual int getWindowSize() const = 0;
+    CV_WRAP virtual void setWindowSize(int val) = 0;
+    CV_WRAP virtual int getDepth() const = 0;
+    CV_WRAP virtual void setDepth(int val) = 0;
+    CV_WRAP virtual cv::Mat getK() const = 0;
+    CV_WRAP virtual void setK(const cv::Mat &val) = 0;
+    CV_WRAP virtual int getMethod() const = 0;
+    CV_WRAP virtual void setMethod(int val) = 0;
 };
 
 /** Object that can clean a noisy depth image
  */
-class CV_EXPORTS_W DepthCleaner: public Algorithm
+class CV_EXPORTS_W DepthCleaner
 {
   public:
     /** NIL method is from
@@ -290,7 +216,7 @@ CV_EXPORTS_W void rescaleDepth(InputArray in, int depth, OutputArray out, double
 
 /** Object that can compute planes in an image
  */
-class CV_EXPORTS_W RgbdPlane: public Algorithm
+class CV_EXPORTS_W RgbdPlane
 {
 public:
     enum RGBD_PLANE_METHOD
@@ -499,7 +425,7 @@ public:
 
 /** Base class for computation of odometry.
  */
-class CV_EXPORTS_W Odometry: public Algorithm
+class CV_EXPORTS_W Odometry
 {
 public:
 
