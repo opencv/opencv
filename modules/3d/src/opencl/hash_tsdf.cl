@@ -169,7 +169,7 @@ static void integrateVolumeUnit(
                                                                  (yi+0)*depth_step);
             __global const float* row1 = (__global const float*)(depthptr + depth_offset +
                                                                  (yi+1)*depth_step);
-            
+
             __global const int* rowM0 = (__global const int*)(depth_mask_ptr + depth_mask_offset +
                                                                  (yi+0)*depth_mask_step);
             __global const int* rowM1 = (__global const int*)(depth_mask_ptr + depth_mask_offset +
@@ -180,7 +180,7 @@ static void integrateVolumeUnit(
             float v10 = row1[xi+0];
             float v11 = row1[xi+1];
             float4 vv = (float4)(v00, v01, v10, v11);
-            
+
             float m00 = rowM0[xi+0];
             float m01 = rowM0[xi+1];
             float m10 = rowM1[xi+0];
@@ -189,7 +189,7 @@ static void integrateVolumeUnit(
 
             if(all(mm != 0))
                 continue;
-            
+
             // assume correct depth is positive
             if(all(vv > 0))
             {
@@ -511,7 +511,6 @@ __kernel void raycast(
                     //pointsMask
                     __global char * points_mask_ptr,
                       int points_mask_step, int points_mask_offset,
-                    
                     const int2 frameSize,
                     __global const struct TsdfVoxel * allVolumePtr,
                         int table_step, int table_offset,

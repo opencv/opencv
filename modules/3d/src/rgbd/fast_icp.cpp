@@ -133,7 +133,7 @@ bool ICPImpl::estimateTransformT(cv::Affine3f& transform,
         const T& oldPtsMask = oldPointsMask [level], newPtsMask = newPointsMask [level];
         const T& oldNrmMask = oldNormalsMask[level], newNrmMask = newNormalsMask[level];
 
-       
+
 
         for(int iter = 0; iter < iterations[level]; iter++)
         {
@@ -489,7 +489,7 @@ struct GetAbInvoker : ParallelLoopBody
 
                 //do not fix missing data
                 //if(!(fastCheck(p00) && fastCheck(p01) &&
-                //     fastCheck(p10) && fastCheck(p11))) 
+                //     fastCheck(p10) && fastCheck(p11)))
                 if(oldPtsMaskRow0[xi+0]==0 || oldPtsMaskRow0[xi+1]==0 ||
                    oldPtsMaskRow1[xi+0]==0 || oldPtsMaskRow1[xi+1]==0)
                    continue;

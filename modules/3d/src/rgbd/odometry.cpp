@@ -1793,7 +1793,7 @@ Size FastICPOdometry::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType
     }
     frame->getDepth(depth);
     checkDepth(depth, depth.size());
-    
+
     TMat mask;
     frame->getMask(mask);
     if (mask.empty() && frame->getPyramidLevels(OdometryFrame::PYR_MASK) > 0)

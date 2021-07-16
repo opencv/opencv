@@ -706,7 +706,7 @@ struct ColorRaycastInvoker : ParallelLoopBody
             ptype* clrRow = colors[y];
 
             maskType* maskRow = mask[y];
- 
+
             for(int x = 0; x < points.cols; x++)
             {
                 Point3f point = nan3, normal = nan3, color = nan3;

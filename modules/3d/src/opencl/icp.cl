@@ -17,23 +17,23 @@ inline void calcAb7(__global const char * oldPointsptr,
                     int oldPoints_step, int oldPoints_offset,
                     __global const char * oldNormalsptr,
                     int oldNormals_step, int oldNormals_offset,
-                    
+
                     __global const char * oldPointsMasksptr,
                     int oldPointsMasks_step, int oldPointsMasks_offset,
                     __global const char * oldNormalsMasksptr,
                     int oldNormalsMasks_step, int oldNormalsMasks_offset,
-                    
+
                     const int2 oldSize,
                     __global const char * newPointsptr,
                     int newPoints_step, int newPoints_offset,
                     __global const char * newNormalsptr,
                     int newNormals_step, int newNormals_offset,
-                    
+
                     __global const char * newPointsMasksptr,
                     int newPointsMasks_step, int newPointsMasks_offset,
                     __global const char * newNormalsMasksptr,
                     int newNormalsMasks_step, int newNormalsMasks_offset,
-                    
+
                     const int2 newSize,
                     const float16 poseMatrix,
                     const float2 fxy,
@@ -66,7 +66,7 @@ inline void calcAb7(__global const char * oldPointsptr,
                                                               newNormals_offset +
                                                               y*newNormals_step);
 
-    
+
     __global const int* newPtsMasksRow = (__global const int*)(newPointsMasksptr +
                                                               newPointsMasks_offset +
                                                               y*newPointsMasks_step);
@@ -109,14 +109,14 @@ inline void calcAb7(__global const char * oldPointsptr,
     __global const ptype* prow1 = (__global const ptype*)(oldPointsptr +
                                                           oldPoints_offset +
                                                           (yi+1)*oldPoints_step);
-    
+
     __global const int* pm_row0 = (__global const int*)(oldPointsMasksptr +
                                                         oldPointsMasks_offset +
                                                         (yi+0)*oldPointsMasks_step);
     __global const int* pm_row1 = (__global const int*)(oldPointsMasksptr +
                                                         oldPointsMasks_offset +
                                                         (yi+1)*oldPointsMasks_step);
-    
+
     if (pm_row0[xi+0] == 0 || pm_row0[xi+1] == 0 ||
         pm_row1[xi+0] == 0 || pm_row1[xi+1] == 0)
         return;
@@ -141,7 +141,7 @@ inline void calcAb7(__global const char * oldPointsptr,
     __global const int* nm_row1 = (__global const int*)(oldNormalsMasksptr +
                                                         oldNormalsMasks_offset +
                                                         (yi+1)*oldNormalsMasks_step);
-    
+
     if (nm_row0[xi+0] == 0 || nm_row0[xi+1] == 0 ||
         nm_row1[xi+0] == 0 || nm_row1[xi+1] == 0)
         return;
@@ -192,24 +192,24 @@ __kernel void getAb(__global const char * oldPointsptr,
                     int oldPoints_step, int oldPoints_offset,
                     __global const char * oldNormalsptr,
                     int oldNormals_step, int oldNormals_offset,
-                    
+
                     __global const char * oldPointsMasksptr,
                     int oldPointsMasks_step, int oldPointsMasks_offset,
                     __global const char * oldNormalsMasksptr,
                     int oldNormalsMasks_step, int oldNormalsMasks_offset,
-                    
+
                     const int2 oldSize,
-                    
+
                     __global const char * newPointsptr,
                     int newPoints_step, int newPoints_offset,
                     __global const char * newNormalsptr,
                     int newNormals_step, int newNormals_offset,
-                    
+
                     __global const char * newPointsMasksptr,
                     int newPointsMasks_step, int newPointsMasks_offset,
                     __global const char * newNormalsMasksptr,
                     int newNormalsMasks_step, int newNormalsMasks_offset,
-                    
+
                     const int2 newSize,
                     const float16 poseMatrix,
                     const float2 fxy,

@@ -17,12 +17,12 @@ __kernel void computePointsNormals(__global char * pointsptr,
                                    int points_step, int points_offset,
                                    __global char * normalsptr,
                                    int normals_step, int normals_offset,
-                                   
+
                                    __global char * points_masksptr,
                                    int points_masks_step, int points_masks_offset,
                                    __global char * normals_masksptr,
                                    int normals_masks_step, int normals_masks_offset,
-                                   
+
                                    __global const char * depthptr,
                                    int depth_step, int depth_offset,
                                    int depth_rows, int depth_cols,
