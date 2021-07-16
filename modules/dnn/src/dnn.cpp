@@ -99,6 +99,15 @@ bool DNN_DIAGNOSTICS_RUN = false;
 void enableModelDiagnostics(bool isDiagnosticsMode)
 {
     DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
+
+    if (DNN_DIAGNOSTICS_RUN)
+    {
+        detail::NotImplemented::Register();
+    }
+    else
+    {
+        detail::NotImplemented::unRegister();
+    }
 }
 
 using std::vector;
@@ -4014,13 +4023,24 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
 
-    if (impl->getLayerId(name) >= 0)
+    int id = impl->getLayerId(name);
+    if (id >= 0)
     {
-        CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
-        return -1;
+        if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
+        {
+            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+            return -1;
+        }
+        else
+        {
+            LayerData& ld = impl->layers.find(id)->second;
+            ld.type = type;
+            ld.params = params;
+            return -1;
+        }
     }
 
-    int id = ++impl->lastLayerId;
+    id = ++impl->lastLayerId;
     impl->layerNameToId.insert(std::make_pair(name, id));
     impl->layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
     if (params.get<bool>("has_dynamic_shapes", false))

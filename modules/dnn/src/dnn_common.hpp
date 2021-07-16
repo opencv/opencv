@@ -15,6 +15,15 @@ void initializeLayerFactory();
 
 namespace detail {
 
+class NotImplemented : public Layer
+{
+public:
+    static Ptr<Layer> create(const LayerParams &params);
+
+    static void Register();
+    static void unRegister();
+};
+
 struct NetImplBase
 {
     const int networkId;  // network global identifier
