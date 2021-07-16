@@ -116,10 +116,14 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
+#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
+#if defined __QNXNTO__
+#  include <sys/elf.h>
+#else
 #  include <elf.h>
+#endif
 #if defined __ANDROID__ || defined __linux__
 #  include <linux/auxvec.h>
 #endif
@@ -130,7 +134,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 
-#if (defined __ppc64__ || defined __PPC64__) && defined __linux__
+#if (defined __ppc64__ || defined __PPC64__) && defined __unix__
 # include "sys/auxv.h"
 # ifndef AT_HWCAP2
 #   define AT_HWCAP2 26
@@ -233,7 +237,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
+#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -600,7 +604,7 @@ struct HWFeatures
         have[CV_CPU_MSA] = true;
     #endif
 
-    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
+    #if (defined __ppc64__ || defined __PPC64__) && defined __unix__
         unsigned int hwcap = getauxval(AT_HWCAP);
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             hwcap = getauxval(AT_HWCAP2);
@@ -814,12 +818,12 @@ int64 getTickCount(void)
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
-#elif defined __linux || defined __linux__
+#elif defined __MACH__ && defined __APPLE__
+    return (int64)mach_absolute_time();
+#elif defined __unix__
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
-#elif defined __MACH__ && defined __APPLE__
-    return (int64)mach_absolute_time();
 #else
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -833,8 +837,6 @@ double getTickFrequency(void)
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
-#elif defined __linux || defined __linux__
-    return 1e9;
 #elif defined __MACH__ && defined __APPLE__
     static double freq = 0;
     if( freq == 0 )
@@ -844,6 +846,8 @@ double getTickFrequency(void)
         freq = sTimebaseInfo.denom*1e9/sTimebaseInfo.numer;
     }
     return freq;
+#elif defined __unix__
+    return 1e9;
 #else
     return 1e6;
 #endif
