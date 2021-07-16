@@ -199,7 +199,7 @@ static inline bool fastCheck(const Point3f& p)
 }
 
 #endif
-
+/*
 void print_v_int(v_int32x4 v)
 {
     int v0 = v.get0();
@@ -213,7 +213,7 @@ void print_v_int(v_int32x4 v)
 
     std::cout << "[" << v0 << " " << v1 << " " << v2 << " " << v3 << "]" << std::endl;
 }
-
+*/
 typedef Matx<float, 6, 7> ABtype;
 
 struct GetAbInvoker : ParallelLoopBody
@@ -224,9 +224,9 @@ struct GetAbInvoker : ParallelLoopBody
                  Affine3f _pose, Intr::Projector _proj, float _sqDistanceThresh, float _minCos) :
         ParallelLoopBody(),
         globalSumAb(_globalAb), mtx(_mtx),
-        oldPts(_oldPts), oldNrm(_oldNrm), newPts(_newPts), newNrm(_newNrm), pose(_pose),
+        oldPts(_oldPts), oldNrm(_oldNrm), newPts(_newPts), newNrm(_newNrm),
         oldPtsMask(_oldPtsMask), oldNrmMask(_oldNrmMask),
-        newPtsMask(_newPtsMask), newNrmMask(_newNrmMask),
+        newPtsMask(_newPtsMask), newNrmMask(_newNrmMask), pose(_pose),
         proj(_proj), sqDistanceThresh(_sqDistanceThresh), minCos(_minCos)
     { }
 
