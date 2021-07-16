@@ -12,22 +12,21 @@ namespace cv
 class CV_EXPORTS_W Volume
 {
    public:
-    Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor)
-        : voxelSize(_voxelSize),
-          voxelSizeInv(1.0f / voxelSize),
-          pose(_pose),
-          raycastStepFactor(_raycastStepFactor)
-    {
-    }
+    Volume(float _voxelSize, Matx44f _pose, float _raycastStepFactor) :
+        voxelSize(_voxelSize),
+        voxelSizeInv(1.0f / voxelSize),
+        pose(_pose),
+        raycastStepFactor(_raycastStepFactor)
+    { }
 
     virtual ~Volume(){};
 
     CV_WRAP
     virtual void integrate(InputArray _depth, float depthFactor, const Matx44f& cameraPose,
-                           const Matx33f& intrinsics, const int frameId = 0)               = 0;
+                           const Matx33f& intrinsics, const int frameId = 0)                   = 0;
     virtual void integrate(InputArray _depth, InputArray _rgb, float depthFactor,
                            const Matx44f& cameraPose, const Matx33f& intrinsics,
-                           const Matx33f& rgb_intrinsics, const int frameId = 0)                  = 0;
+                           const Matx33f& rgb_intrinsics, const int frameId = 0)               = 0;
     CV_WRAP
     virtual void raycast(const Matx44f& cameraPose, const Matx33f& intrinsics,
                          const Size& frameSize, OutputArray points, OutputArray normals) const = 0;
