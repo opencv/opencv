@@ -50,9 +50,30 @@ class CV_EXPORTS_W DNNFaceRecognizer
 {
 public:
     virtual ~DNNFaceRecognizer() {};
+
+    /** @brief Aligning image to put face on the standard position
+     *  @param src_img input image
+     *  @param face_box the detection result used for indicate face in input image
+     *  @param aligned_img output aligned image
+     */
     CV_WRAP virtual void AlignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
+
+    /** @brief Extracting face feature from aligned image
+     *  @param aligned_img input aligned image
+     *  @param face_feature output face feature
+     */
     CV_WRAP virtual void facefeature(InputArray aligned_img, OutputArray face_feature) = 0;
+
+    /** @brief Calculating the distance between two face features
+     *  @param _face_feature1 the first input feature
+     *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
+     *  @param distype defining the similarity with optional values "norml2" or "cosine"
+     */
     CV_WRAP virtual double facematch(InputArray _face_feature1, InputArray _face_feature2, const String& distype) const = 0;
+
+    /** @brief Creates an instance of this class with given parameters
+     *  @param onnx_path the path of the onnx model used for face recognition
+     */
     CV_WRAP static Ptr<DNNFaceRecognizer> create(const String& onnx_path);
 };
 
