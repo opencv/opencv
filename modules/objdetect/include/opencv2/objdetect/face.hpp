@@ -46,6 +46,16 @@ public:
                                                 int target_id = 0);
 };
 
+class CV_EXPORTS_W DNNFaceRecognizer
+{
+public:
+    virtual ~DNNFaceRecognizer() {};
+    CV_WRAP virtual void AlignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
+    CV_WRAP virtual void facefeature(InputArray aligned_img, OutputArray face_feature) = 0;
+    CV_WRAP virtual double facematch(InputArray _face_feature1, InputArray _face_feature2, const String& distype) const = 0;
+    CV_WRAP static Ptr<DNNFaceRecognizer> create(const String& onnx_path);
+};
+
 } // namespace cv
 
 #endif
