@@ -107,12 +107,14 @@ void GCApplication::showImage() const
 
     Mat res;
     Mat binMask;
-    if( !isInitialized )
-        image->copyTo( res );
-    else
-    {
-        getBinMask( mask, binMask );
-        image->copyTo( res, binMask );
+    image->copyTo( res );
+    if( isInitialized ){
+        getBinMask( mask, binMask);
+
+        Mat black (binMask.rows, binMask.cols, CV_8UC3, cv::Scalar(0,0,0));
+        black.setTo(Scalar::all(255), binMask);
+
+        addWeighted(black, 0.5, res, 0.5, 0.0, res);
     }
 
     vector<Point>::const_iterator it;
@@ -201,17 +203,29 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
     case EVENT_LBUTTONUP:
         if( rectState == IN_PROCESS )
         {
-            rect = Rect( Point(rect.x, rect.y), Point(x,y) );
-            rectState = SET;
-            setRectInMask();
-            CV_Assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
+            if(rect.x == x || rect.y == y){
+                rectState = NOT_SET;
+            }
+            else{
+                rect = Rect( Point(rect.x, rect.y), Point(x,y) );
+                rectState = SET;
+                setRectInMask();
+                CV_Assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
+            }
             showImage();
         }
         if( lblsState == IN_PROCESS )
         {
             setLblsInMask(flags, Point(x,y), false);
             lblsState = SET;
+            nextIter();
             showImage();
+        }
+        else{
+            if(rectState == SET){
+                nextIter();
+                showImage();
+            }
         }
         break;
     case EVENT_RBUTTONUP:
@@ -219,6 +233,9 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
         {
             setLblsInMask(flags, Point(x,y), true);
             prLblsState = SET;
+        }
+        if(rectState == SET){
+            nextIter();
             showImage();
         }
         break;

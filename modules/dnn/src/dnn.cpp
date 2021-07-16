@@ -2078,7 +2078,10 @@ struct Net::Impl : public detail::NetImplBase
 
             Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
             CV_Assert(!ieNode.empty());
-            ieNode->net->reset();
+
+            CV_Assert(ieNode->net);
+            InfEngineNgraphNet& ienet = *ieNode->net;
+            ienet.reset();
 
             for (it = layers.begin(); it != layers.end(); ++it)
             {
@@ -2095,16 +2098,26 @@ struct Net::Impl : public detail::NetImplBase
                 {
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
-                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                        dataPtr->setName(ld.name);
+                        auto it = ienet.outputsDesc.find(ld.name);
+                        if (it != ienet.outputsDesc.end())
+                        {
+                            const InferenceEngine::TensorDesc& descriptor = it->second;
+                            InferenceEngine::DataPtr dataPtr = ngraphDataOutputNode(ld.outputBlobsWrappers[i], descriptor, ld.name);
+                            dataPtr->setName(ld.name);
+                        }
+                        else
+                        {
+                            InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
+                            dataPtr->setName(ld.name);
+                        }
                     }
                 }
-                ieNode->net->addBlobs(ld.inputBlobsWrappers);
-                ieNode->net->addBlobs(ld.outputBlobsWrappers);
+                ienet.addBlobs(ld.inputBlobsWrappers);
+                ienet.addBlobs(ld.outputBlobsWrappers);
                 ld.skip = true;
             }
             layers[lastLayerId].skip = false;
-            ieNode->net->init((Target)preferableTarget);
+            ienet.init((Target)preferableTarget);
             return;
         }
 
@@ -4198,8 +4211,8 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
         matvec.push_back(impl->getBlob(pins[i]));
     }
 
-    std::vector<Mat> & outputvec = *(std::vector<Mat> *)outputBlobs.getObj();
-    outputvec = matvec;
+    outputBlobs.create((int)matvec.size(), 1, CV_32F/*FIXIT*/, -1);  // allocate vector
+    outputBlobs.assign(matvec);
 }
 
 void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,
