@@ -1263,6 +1263,45 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
             }
             int outCn = layerParams.blobs.empty() ? outShapes[node_proto.input(1)][0] : layerParams.blobs[0].size[0];
             layerParams.set("num_output", outCn);
+
+            // Check for asymmetric padding in Conv2D
+            if (layerParams.has("pad"))
+            {
+                bool asymmetricPadding = false;
+                DictValue pads = layerParams.get("pad");
+                const int dims = pads.size() / 2;
+                for (int i = 0; i < dims; ++i)
+                {
+                    if (pads.get<int>(i) != pads.get<int>(i + dims))
+                    {
+                        asymmetricPadding = true;
+                        break;
+                    }
+                }
+                if (asymmetricPadding && pads.size() == 4) // [pad_t, pad_l, pad_b, pad_r]
+                {
+                    layerParams.erase("pad");
+                    // No paddings required for N, C axis
+                    std::vector<int> paddings(4, 0);
+                    // Add paddings for H, W axis
+                    for (int i = 0; i < dims; ++i)
+                    {
+                        paddings.push_back(pads.get<int>(i));
+                        paddings.push_back(pads.get<int>(dims + i));
+                    }
+                    LayerParams padLp;
+                    padLp.name = layerParams.name + "/pad";
+                    padLp.type = "Padding";
+                    padLp.set("paddings", DictValue::arrayInt(&paddings[0], paddings.size()));
+
+                    opencv_onnx::NodeProto proto;
+                    proto.add_input(node_proto.input(0));
+                    proto.add_output(padLp.name);
+
+                    addLayer(padLp, proto);
+                    node_proto.set_input(0, padLp.name);
+                }
+            }
         }
         else if (layer_type == "ConvTranspose")
         {
