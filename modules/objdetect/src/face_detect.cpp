@@ -44,6 +44,7 @@ public:
     {
         img_w = input_size.width;
         img_h = input_size.height;
+        generatePriors();
     }
 
     Size getInputSize() override
@@ -142,6 +143,7 @@ private:
         const std::vector<int> steps = { 8, 16, 32, 64 };
 
         // Generate priors
+        priors.clear();
         for (size_t i = 0; i < feature_map_sizes.size(); ++i)
         {
             Size feature_map_size = feature_map_sizes[i];
