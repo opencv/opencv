@@ -1,19 +1,16 @@
-# Generate an array with random data.
+# Populate a C array with random data.
 set(RAW_PIXELS_SIZE 102400)
-set(RAW_PIXELS_HEADER_PATH ${CMAKE_CURRENT_BINARY_DIR}/raw_pixels.hpp)
-file(WRITE ${RAW_PIXELS_HEADER_PATH})
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "#ifndef RAW_PIXELS_HPP\n")
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "#define RAW_PIXELS_HPP\n")
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "#include <cstdint>\n")
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "#define RAW_PIXELS_SIZE ${RAW_PIXELS_SIZE}\n")
+set(RAW_PIXELS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/raw_pixels.hpp)
+set(RAW_PIXELS_HEADER_IN ${CMAKE_CURRENT_SOURCE_DIR}/raw_pixels.hpp.in)
 
+set(RAW_PIXEL_VALUES "")
 # Seed the random number generator.
 string(RANDOM LENGTH 8 ALPHABET 0123456789abcdf RANDOM_SEED 314 number)
+math(EXPR LOOP_RANGE "${RAW_PIXELS_SIZE} - 1")
 
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "static std::uint32_t raw_pixels[RAW_PIXELS_SIZE + 1] = {\n")
-foreach(i RANGE ${RAW_PIXELS_SIZE})
+foreach(i RANGE ${LOOP_RANGE})
   string(RANDOM LENGTH 8 ALPHABET 0123456789abcdf number)
-  file(APPEND ${RAW_PIXELS_HEADER_PATH} "0x${number},\n")
+  string(CONCAT RAW_PIXEL_VALUES ${RAW_PIXEL_VALUES} "0x${number}, \\\n")
 endforeach()
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "};\n")
-file(APPEND ${RAW_PIXELS_HEADER_PATH} "#endif //RAW_PIXELS_HPP\n")
+
+configure_file(${RAW_PIXELS_HEADER_IN} ${RAW_PIXELS_HEADER})
