@@ -13,10 +13,10 @@
 namespace cv
 {
 
-class DNNFaceRecognizerImpl : public DNNFaceRecognizer
+class FaceRecognizerImpl : public FaceRecognizer
 {
 public:
-    DNNFaceRecognizerImpl(const String& onnx_path)
+    FaceRecognizerImpl(const String& onnx_path)
     {
         this->model = dnn::readNet(onnx_path);
     };
@@ -176,9 +176,9 @@ private:
     dnn::Net model;
 };
 
-Ptr<DNNFaceRecognizer> DNNFaceRecognizer::create(const String& onnx_path)
+Ptr<FaceRecognizer> FaceRecognizer::create(const String& onnx_path)
 {
-    return makePtr<DNNFaceRecognizerImpl>(onnx_path);
+    return makePtr<FaceRecognizerImpl>(onnx_path);
 }
 
 } // namespace cv

@@ -41,10 +41,10 @@ int main(int argc, char ** argv)
     float l2norm_similar_thresh = 1.32;
     int top_k = 5000;
 
-    // Initialize DNNFaceDetector
-    Ptr<DNNFaceDetector> faceDetector;
+    // Initialize FaceDetector
+    Ptr<FaceDetector> faceDetector;
     
-    faceDetector = DNNFaceDetector::create(det_onnx_path, image1.size(), score_thresh, nms_thresh, top_k);
+    faceDetector = FaceDetector::create(det_onnx_path, image1.size(), score_thresh, nms_thresh, top_k);
     Mat faces_1;
     faceDetector->detect(image1, faces_1);
     if (faces_1.rows < 1)
@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
         return -1;
     }
 
-    faceDetector = DNNFaceDetector::create(det_onnx_path, image2.size(), score_thresh, nms_thresh, top_k);
+    faceDetector = FaceDetector::create(det_onnx_path, image2.size(), score_thresh, nms_thresh, top_k);
     Mat faces_2;
     faceDetector->detect(image2, faces_2);
     if (faces_2.rows < 1)
@@ -62,8 +62,8 @@ int main(int argc, char ** argv)
         return -1;
     }
 
-    // Initialize DNNFaceRecognizer
-    Ptr<DNNFaceRecognizer> faceRecognizer = DNNFaceRecognizer::create(reg_onnx_path);
+    // Initialize FaceRecognizer
+    Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(reg_onnx_path);
 
 
     Mat aligned_face1, aligned_face2;

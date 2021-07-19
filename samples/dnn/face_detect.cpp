@@ -27,8 +27,8 @@ int main(int argc, char ** argv)
     float nms_thresh = 0.3;
     int top_k = 5000;
 
-    // Initialize DNNFaceDetector
-    Ptr<DNNFaceDetector> faceDetector = DNNFaceDetector::create(onnx_path, image.size(), score_thresh, nms_thresh, top_k);
+    // Initialize FaceDetector
+    Ptr<FaceDetector> faceDetector = FaceDetector::create(onnx_path, image.size(), score_thresh, nms_thresh, top_k);
 
     // Forward
     Mat faces;

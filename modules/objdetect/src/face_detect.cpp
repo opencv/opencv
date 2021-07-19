@@ -13,16 +13,16 @@
 namespace cv
 {
 
-class DNNFaceDetectorImpl : public DNNFaceDetector
+class FaceDetectorImpl : public FaceDetector
 {
 public:
-    DNNFaceDetectorImpl(const String& onnx_path,
-                        const Size& input_size,
-                        float score_threshold = 0.9,
-                        float nms_threshold = 0.3,
-                        int top_k = 5000,
-                        int backend_id = 0,
-                        int target_id = 0)
+    FaceDetectorImpl(const String& onnx_path,
+                     const Size& input_size,
+                     float score_threshold = 0.9,
+                     float nms_threshold = 0.3,
+                     int top_k = 5000,
+                     int backend_id = 0,
+                     int target_id = 0)
     {
         net = dnn::readNet(onnx_path);
         CV_Assert(!net.empty());
@@ -270,15 +270,15 @@ private:
     std::vector<Rect2f> priors;
 };
 
-Ptr<DNNFaceDetector> DNNFaceDetector::create(const String& onnx_path,
-                                             const Size& shape,
-                                             const float score_threshold,
-                                             const float nms_threshold,
-                                             const int top_k,
-                                             const int backend_id,
-                                             const int target_id)
+Ptr<FaceDetector> FaceDetector::create(const String& onnx_path,
+                                       const Size& shape,
+                                       const float score_threshold,
+                                       const float nms_threshold,
+                                       const int top_k,
+                                       const int backend_id,
+                                       const int target_id)
 {
-    return makePtr<DNNFaceDetectorImpl>(onnx_path, shape, score_threshold, nms_threshold, top_k, backend_id, target_id);
+    return makePtr<FaceDetectorImpl>(onnx_path, shape, score_threshold, nms_threshold, top_k, backend_id, target_id);
 }
 
 } // namespace cv

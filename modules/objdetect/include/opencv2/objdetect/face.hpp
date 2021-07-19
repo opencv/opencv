@@ -15,10 +15,10 @@ namespace cv
 
 /** @brief DNN-based face detector, model download link: https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx.
  */
-class CV_EXPORTS_W DNNFaceDetector
+class CV_EXPORTS_W FaceDetector
 {
 public:
-    virtual ~DNNFaceDetector() {};
+    virtual ~FaceDetector() {};
 
     CV_WRAP virtual void setInputSize(const Size& input_size) = 0;
 
@@ -53,19 +53,19 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<DNNFaceDetector> create(const String& onnx_path,
-                                                const Size& input_size,
-                                                float score_threshold = 0.9,
-                                                float nms_threshold = 0.3,
-                                                int top_k = 5000,
-                                                int backend_id = 0,
-                                                int target_id = 0);
+    CV_WRAP static Ptr<FaceDetector> create(const String& onnx_path,
+                                            const Size& input_size,
+                                            float score_threshold = 0.9,
+                                            float nms_threshold = 0.3,
+                                            int top_k = 5000,
+                                            int backend_id = 0,
+                                            int target_id = 0);
 };
 
-class CV_EXPORTS_W DNNFaceRecognizer
+class CV_EXPORTS_W FaceRecognizer
 {
 public:
-    virtual ~DNNFaceRecognizer() {};
+    virtual ~FaceRecognizer() {};
 
     /** @brief Aligning image to put face on the standard position
      *  @param src_img input image
@@ -90,7 +90,7 @@ public:
     /** @brief Creates an instance of this class with given parameters
      *  @param onnx_path the path of the onnx model used for face recognition
      */
-    CV_WRAP static Ptr<DNNFaceRecognizer> create(const String& onnx_path);
+    CV_WRAP static Ptr<FaceRecognizer> create(const String& onnx_path);
 };
 
 } // namespace cv
