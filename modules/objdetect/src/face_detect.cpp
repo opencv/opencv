@@ -40,6 +40,50 @@ public:
         generatePriors();
     }
 
+    void setInputSize(const Size& input_size) override
+    {
+        img_w = input_size.width;
+        img_h = input_size.height;
+    }
+
+    Size getInputSize() override
+    {
+        Size input_size;
+        input_size.width = img_w;
+        input_size.height = img_h;
+        return input_size;
+    }
+
+    void setScoreThreshold(float score_threshold) override
+    {
+        scoreThreshold = score_threshold;
+    }
+
+    float getScoreThreshold() override
+    {
+        return scoreThreshold;
+    }
+
+    void setNMSThreshold(float nms_threshold) override
+    {
+        nmsThreshold = nms_threshold;
+    }
+
+    float getNMSThreshold() override
+    {
+        return nmsThreshold;
+    }
+
+    void setTopK(int top_k) override
+    {
+        topK = top_k;
+    }
+
+    int getTopK() override
+    {
+        return topK;
+    }
+
     int detect(InputArray input_image, OutputArray faces) override
     {
         // TODO: more checkings should be done?

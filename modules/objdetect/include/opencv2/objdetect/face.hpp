@@ -20,6 +20,22 @@ class CV_EXPORTS_W DNNFaceDetector
 public:
     virtual ~DNNFaceDetector() {};
 
+    CV_WRAP virtual void setInputSize(const Size& input_size) = 0;
+
+    CV_WRAP virtual Size getInputSize() = 0;
+
+    CV_WRAP virtual void setScoreThreshold(float score_threshold) = 0;
+
+    CV_WRAP virtual float getScoreThreshold() = 0;
+
+    CV_WRAP virtual void setNMSThreshold(float nms_threshold) = 0;
+
+    CV_WRAP virtual float getNMSThreshold() = 0;
+
+    CV_WRAP virtual void setTopK(int top_k) = 0;
+
+    CV_WRAP virtual int getTopK() = 0;
+
     /** @brief A simple interface to detect face from given image
      *
      *  @param image an image to detect
