@@ -163,6 +163,10 @@ set(gapi_srcs
     src/backends/ie/bindings_ie.cpp
     src/backends/python/gpythonbackend.cpp
 
+    src/streaming/onevpl_cap.cpp
+    src/streaming/onevpl_builder.cpp
+    src/streaming/vpl/vpl_source_impl.cpp
+
     # Utils (ITT tracing)
     src/utils/itt.cpp
     )
@@ -234,6 +238,20 @@ if(HAVE_PLAIDML)
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
 
+message("G-API HAVE_ONEVPL: ${HAVE_ONEVPL}")
+if(HAVE_ONEVPL)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_ONEVPL)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE VPL::dispatcher)
+    ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${INCLUDE_VPL})
+  endif()
+
+  get_target_property(INCLUDE_VPL VPL::dispatcher INTERFACE_INCLUDE_DIRECTORIES)
+  message ("G-API LINK VPL::dispatcher, INCLUDE_VPL: ${INCLUDE_VPL}")
+  ocv_target_link_libraries(${the_module} PRIVATE VPL::dispatcher)
+  ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${INCLUDE_VPL})
+endif()
 
 if(WIN32)
   # Required for htonl/ntohl on Windows

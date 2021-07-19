@@ -446,6 +446,9 @@ OCV_OPTION(WITH_TENGINE "Include Arm Inference Tengine support" OFF
 OCV_OPTION(WITH_ONNX "Include Microsoft ONNX Runtime support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_ONNX)
+OCV_OPTION(WITH_ONEVPL "Include oneVPL support" OFF
+  VISIBLE_IF (WIN32 AND NOT WINRT AND NOT MINGW)
+  VERIFY HAVE_ONEVPL)
 
 # OpenCV build components
 # ===================================================
@@ -1448,6 +1451,10 @@ if(WITH_MFX OR HAVE_MFX)
     endif()
   endif()
   status("    Intel Media SDK:" HAVE_MFX      THEN "YES${__details}" ELSE NO)
+endif()
+
+if(WITH_ONEVPL OR HAVE_ONEVPL)
+  status("    Intel oneVPL:" HAVE_ONEVPL      THEN "YES${__details}" ELSE NO)
 endif()
 
 if(WITH_GPHOTO2 OR HAVE_GPHOTO2)

@@ -22,6 +22,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
+#include <opencv2/gapi/streaming/onevpl_cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
 
@@ -2214,4 +2215,16 @@ TEST(GAPI_Streaming, TestPythonAPI)
     cc.stop();
 }
 
+//#ifdef HAVE_ONEVPL 
+TEST(OneVPL_Source, Init)
+{
+    cv::Ptr<cv::gapi::wip::IStreamSource> cap = cv::gapi::wip::make_vpl_src("stub.source");
+    cv::GMetaArg descr = cap->descr_of();
+    (void)descr;
+
+    cv::gapi::wip::Data data;
+    ASSERT_TRUE(cap->pull(data));
+    (void)data;
+}
+//#endif 
 } // namespace opencv_test

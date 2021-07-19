@@ -19,6 +19,10 @@ if(NOT TARGET ade)
   include("${CMAKE_CURRENT_LIST_DIR}/DownloadADE.cmake")
 endif()
 
+if(NOT TARGET VPL::dispatcher)
+  include("${CMAKE_CURRENT_LIST_DIR}/detect_onevpl.cmake")
+endif()
+
 if(WITH_FREETYPE)
   ocv_check_modules(FREETYPE freetype2)
   if (FREETYPE_FOUND)

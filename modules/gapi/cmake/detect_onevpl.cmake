@@ -1,0 +1,7 @@
+if(WITH_ONEVPL)
+  find_package(VPL REQUIRED HINTS "${ONEVPLROOT}")
+  message("G-API VPL_FOUND: ${VPL_FOUND}")
+  if (VPL_FOUND)
+      set(HAVE_ONEVPL TRUE)
+  endif()
+endif()

@@ -6,6 +6,10 @@ if (NOT TARGET ade )
   find_package(ade 0.1.0 REQUIRED)
 endif()
 
+if(NOT TARGET VPL::dispatcher)
+  include("${CMAKE_CURRENT_LIST_DIR}/detect_onevpl.cmake")
+endif()
+
 set(FLUID_TARGET fluid)
 set(FLUID_ROOT "${CMAKE_CURRENT_LIST_DIR}/../")
 
