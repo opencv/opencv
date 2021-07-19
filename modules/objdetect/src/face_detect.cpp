@@ -18,11 +18,11 @@ class FaceDetectorImpl : public FaceDetector
 public:
     FaceDetectorImpl(const String& onnx_path,
                      const Size& input_size,
-                     float score_threshold = 0.9,
-                     float nms_threshold = 0.3,
-                     int top_k = 5000,
-                     int backend_id = 0,
-                     int target_id = 0)
+                     float score_threshold,
+                     float nms_threshold,
+                     int top_k,
+                     int backend_id,
+                     int target_id)
     {
         net = dnn::readNet(onnx_path);
         CV_Assert(!net.empty());
