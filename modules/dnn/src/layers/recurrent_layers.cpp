@@ -112,12 +112,16 @@ public:
             const Mat& Wh = blobs[0];
             const Mat& Wx = blobs[1];
             const Mat& bias = blobs[2];
+            const Mat& hInternal = blobs[3];
+            const Mat& cInternal = blobs[4];
             CV_CheckEQ(Wh.dims, 2, "");
             CV_CheckEQ(Wx.dims, 2, "");
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
-            // check hc internal
+            CV_CheckEQ(hInternal.cols, Wh.cols, "");
+            CV_CheckEQ(hInternal.cols, cInternal.cols, "");
+            CV_CheckEQ(hInternal.rows, cInternal.rows, "");
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
