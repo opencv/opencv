@@ -1766,8 +1766,8 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     // op: "BlockLSTM"
     // input: "lstm_block_wrapper/ToInt64/x"  (ignore, number of time stamps)
     // input: "input"
-    // input: "lstm_block_wrapper/zeros"      (ignore)
-    // input: "lstm_block_wrapper/zeros"      (ignore)
+    // input: "lstm_block_wrapper/zeros"
+    // input: "lstm_block_wrapper/zeros"
     // input: "lstm_block_wrapper/kernel"
     // input: "lstm_block_wrapper/w_i_diag"
     // input: "lstm_block_wrapper/w_f_diag"
@@ -1793,9 +1793,11 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         }
     }
 
-    Mat W, Wh, Wx, b;
+    Mat W, Wh, Wx, b, cs_prev, h_prev;
     blobFromTensor(getConstBlob(layer, value_id, 4), W);
     blobFromTensor(getConstBlob(layer, value_id, 8), b);
+    blobFromTensor(getConstBlob(layer, value_id, 2), cs_prev);
+    blobFromTensor(getConstBlob(layer, value_id, 3), h_prev);
     const int outSize = W.cols / 4;
 
     // IGFO->IFOG
@@ -1811,10 +1813,12 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     Wx = W.rowRange(0, W.rows - outSize).t();
     Wh = W.rowRange(W.rows - outSize, W.rows).t();
 
-    layerParams.blobs.resize(3);
+    layerParams.blobs.resize(5);
     layerParams.blobs[0] = Wh;
     layerParams.blobs[1] = Wx;
     layerParams.blobs[2] = b;
+    layerParams.blobs[3] = h_prev;
+    layerParams.blobs[4] = cs_prev;
 
     if (hasLayerAttr(layer, "use_peephole"))
     {
@@ -1822,14 +1826,14 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         if (usePeephole)
         {
             layerParams.set("use_peephole", true);
-            layerParams.blobs.resize(6);
+            layerParams.blobs.resize(8);
             for (int i = 0; i < 3; ++i)
             {
                 Mat w;
                 blobFromTensor(getConstBlob(layer, value_id, 5 + i), w);
                 w = w.reshape(1, w.total());  // Single column.
                 w = Mat::diag(w);  // Make a diagonal matrix.
-                layerParams.blobs[3 + i] = w;
+                layerParams.blobs[5 + i] = w;
             }
         }
     }

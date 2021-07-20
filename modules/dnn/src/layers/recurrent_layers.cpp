@@ -117,14 +117,15 @@ public:
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
+            // check hc internal
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
-            if (blobs.size() > 3)
+            if (blobs.size() > 5)
             {
-                CV_Assert(blobs.size() == 6);
+                CV_Assert(blobs.size() == 8);
                 const int N = Wh.cols;
-                for (int i = 3; i < 6; ++i)
+                for (int i = 5; i < 8; ++i)
                 {
                     CV_Assert(blobs[i].rows == N && blobs[i].cols == N);
                     CV_Assert(blobs[i].type() == bias.type());
@@ -181,7 +182,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert((!usePeephole && blobs.size() == 3) || (usePeephole && blobs.size() == 6));
+        CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
         CV_Assert(inputs.size() == 1);
         const MatShape& inp0 = inputs[0];
 
@@ -215,8 +216,6 @@ public:
         size_t noutputs = produceCellOutput ? 2 : 1;
         outputs.assign(noutputs, outResShape);
 
-        internals.assign(1, shape(_numSamples, _numOut)); // hInternal
-        internals.push_back(shape(_numSamples, _numOut)); // cInternal
         internals.push_back(shape(_numSamples, 1)); // dummyOnes
         internals.push_back(shape(_numSamples, 4*_numOut)); // gates
 
@@ -228,7 +227,7 @@ public:
         std::vector<Mat> input;
         inputs_arr.getMatVector(input);
 
-        CV_Assert((!usePeephole && blobs.size() == 3) || (usePeephole && blobs.size() == 6));
+        CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
         CV_Assert(input.size() == 1);
         const Mat& inp0 = input[0];
 
@@ -284,13 +283,11 @@ public:
             const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
             const Mat &Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
             const Mat &bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
+            Mat hInternal = blobs[3].rowRange(i * blobs[3].rows / numDirs, (i + 1) * blobs[3].rows / numDirs);
+            Mat cInternal = blobs[4].rowRange(i * blobs[4].rows / numDirs, (i + 1) * blobs[4].rows / numDirs);
 
             int numOut = Wh.size[1];
-
-            Mat hInternal = internals[0], cInternal = internals[1],
-                    dummyOnes = internals[2], gates = internals[3];
-            hInternal.setTo(0.);
-            cInternal.setTo(0.);
+            Mat dummyOnes = internals[0], gates = internals[1];
             dummyOnes.setTo(1.);
 
             int numSamplesTotal = numTimeStamps*numSamples;
@@ -331,8 +328,8 @@ public:
                 if (usePeephole)
                 {
                     Mat gatesIF = gates.colRange(0, 2*numOut);
-                    gemm(cInternal, blobs[3], 1, gateI, 1, gateI);
-                    gemm(cInternal, blobs[4], 1, gateF, 1, gateF);
+                    gemm(cInternal, blobs[5], 1, gateI, 1, gateI);
+                    gemm(cInternal, blobs[6], 1, gateF, 1, gateF);
                     sigmoid(gatesIF, gatesIF);
                 }
                 else
@@ -355,7 +352,7 @@ public:
                 }
                 if (usePeephole)
                 {
-                    gemm(cInternal, blobs[5], 1, gateO, 1, gateO);
+                    gemm(cInternal, blobs[7], 1, gateO, 1, gateO);
                     sigmoid(gateO, gateO);
                 }
 
