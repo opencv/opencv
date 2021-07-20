@@ -434,7 +434,7 @@ class Layer_LSTM_Test : public ::testing::Test
 {
 public:
     int numInp, numOut;
-    Mat Wh, Wx, b;
+    Mat Wh, Wx, b, h, c;
     Ptr<LSTMLayer> layer;
     std::vector<Mat> inputs, outputs;
 
@@ -449,12 +449,17 @@ public:
         Wh = Mat::ones(4 * numOut, numOut, CV_32F);
         Wx = Mat::ones(4 * numOut, numInp, CV_32F);
         b  = Mat::ones(4 * numOut, 1, CV_32F);
+        h  = Mat::ones(4, numOut, CV_32F);
+        c  = Mat::ones(4, numOut, CV_32F);
 
         LayerParams lp;
-        lp.blobs.resize(3);
+        lp.blobs.resize(5);
         lp.blobs[0] = Wh;
         lp.blobs[1] = Wx;
         lp.blobs[2] = b;
+        lp.blobs[3] = h;
+        lp.blobs[4] = c;
+
         lp.set<bool>("produce_cell_output", produceCellOutput);
         lp.set<bool>("use_timestamp_dim", useTimestampDim);
 
@@ -502,10 +507,12 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
 {
     LayerParams lp;
-    lp.blobs.resize(3);
+    lp.blobs.resize(5);
     lp.blobs[0] = blobFromNPY(_tf("lstm.prototxt.w_2.npy"));  // Wh
     lp.blobs[1] = blobFromNPY(_tf("lstm.prototxt.w_0.npy"));  // Wx
     lp.blobs[2] = blobFromNPY(_tf("lstm.prototxt.w_1.npy"));  // bias
+    lp.blobs[3] = Mat::zeros(2, 17, CV_32F);                     // h_0
+    lp.blobs[4] = Mat::zeros(2, 17, CV_32F);                     // c_0
     Ptr<LSTMLayer> layer = LSTMLayer::create(lp);
 
     Mat inp = blobFromNPY(_tf("recurrent.input.npy"));
@@ -560,6 +567,9 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
     bias.at<float>(2, 0) = 1e10f;  // Output gate - always output everything
     bias.at<float>(3, 0) = 0.f;  // Update signal
 
+    cv::Mat hInternal = cv::Mat::zeros(1, 1, CV_32FC1);
+    cv::Mat cInternal = cv::Mat::zeros(1, 1, CV_32FC1);
+
     LayerParams lp;
     lp.set("reverse", true);
     lp.set("use_timestamp_dim", true);
@@ -567,6 +577,8 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
     lp.blobs.push_back(Wh);
     lp.blobs.push_back(Wx);
     lp.blobs.push_back(bias);
+    lp.blobs.push_back(hInternal);
+    lp.blobs.push_back(cInternal);
 
     cv::Ptr<cv::dnn::LSTMLayer> layer = LSTMLayer::create(lp);
     std::vector<cv::Mat> outputs;
