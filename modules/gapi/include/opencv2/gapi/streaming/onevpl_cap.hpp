@@ -7,16 +7,9 @@
 #ifndef OPENCV_GAPI_STREAMING_ONEVPL_CAP_HPP
 #define OPENCV_GAPI_STREAMING_ONEVPL_CAP_HPP
 
-#ifdef HAVE_ONEVPL
-
-#if (MFX_VERSION >= 2000)
-#include <vpl/mfxdispatcher.h>
-#endif
-
-#include <vpl/mfx.h>
-
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
+#include <opencv2/gapi/streaming/onevpl_builder.hpp>
 
 namespace cv {
 namespace gapi {
@@ -25,28 +18,27 @@ namespace wip {
 class GAPI_EXPORTS OneVPLCapture : public IStreamSource
 {
 public:
-
+    friend class oneVPLBulder;
     struct IPriv;
  
-    explicit OneVPLCapture(const std::string& filepath);
     ~OneVPLCapture() override;
 
     bool pull(cv::gapi::wip::Data& data) override;
     GMetaArg descr_of() const override;
 
 private:
+    explicit OneVPLCapture(std::unique_ptr<IPriv>&& impl);
     std::unique_ptr<IPriv> m_priv;
 };
 
 template<class... Args>
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(Args&&... args)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(const std::string& filePath, Args&&... args)
 {
-    return make_src<OneVPLCapture>(std::forward<Args>(args)...);
+    return make_src<oneVPLBulder>(filePath, std::forward<Args>(args)...);
 }
 
 } // namespace wip
 } // namespace gapi
 } // namespace cv
 
-#endif // HAVE_ONEVPL
 #endif // OPENCV_GAPI_STREAMING_ONEVPL_CAP_HPP

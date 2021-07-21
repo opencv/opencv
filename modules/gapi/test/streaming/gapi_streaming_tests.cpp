@@ -2218,7 +2218,25 @@ TEST(GAPI_Streaming, TestPythonAPI)
 //#ifdef HAVE_ONEVPL 
 TEST(OneVPL_Source, Init)
 {
-    cv::Ptr<cv::gapi::wip::IStreamSource> cap = cv::gapi::wip::make_vpl_src("stub.source");
+    cv::gapi::wip::CFGParams src_params;
+    {
+        cv::gapi::wip::CFGParamValue param;
+        param.Type = MFX_VARIANT_TYPE_U32;
+        param.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
+
+        src_params.emplace("mfxImplDescription.Impl", std::move(param));
+    }
+    {
+        cv::gapi::wip::CFGParamValue param;
+        param.Type = MFX_VARIANT_TYPE_U32;
+        param.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
+
+        src_params.emplace("mfxImplDescription.AccelerationMode", std::move(param));
+    }
+
+    cv::Ptr<cv::gapi::wip::IStreamSource> cap =
+            cv::gapi::wip::make_vpl_src("C:\\Users\\sivanov\\github\\oneVPL_tt\\build\\_install\\share\\oneVPL\\examples\\content\\cars_128x96.h265",
+                                        src_params);
     cv::GMetaArg descr = cap->descr_of();
     (void)descr;
 

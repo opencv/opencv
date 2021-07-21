@@ -16,6 +16,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
+struct VPLAccelerationPolicy;
 class VPLSourceImpl : public OneVPLCapture::IPriv
 {
 public:
@@ -26,7 +27,10 @@ public:
 
     static const CFGParams& getDefaultCfgParams();
     const CFGParams& getCfgParams() const;
+
+    void initializeHWAccel();
 private:
+    
     bool pull(cv::gapi::wip::Data& data) override;
     GMetaArg descr_of() const override;
 
@@ -41,7 +45,7 @@ private:
     std::string filePath;
     CFGParams cfg_params;
 
-    
+    std::unique_ptr<VPLAccelerationPolicy> accel_policy;
 };
 } // namespace wip
 } // namespace gapi

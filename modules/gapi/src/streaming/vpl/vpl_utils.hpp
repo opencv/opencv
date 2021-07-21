@@ -6,11 +6,7 @@
 #include <map>
 #include <string>
 
-using CFGParamName = std::string;
-using CFGParamValue = mfxVariant;
-using CFGParams = std::map<CFGParamName, CFGParamValue>;
-
-
+#include <opencv2/gapi/streaming/onevpl_cap.hpp>
 
 
 namespace cv {

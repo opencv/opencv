@@ -166,6 +166,7 @@ set(gapi_srcs
     src/streaming/onevpl_cap.cpp
     src/streaming/onevpl_builder.cpp
     src/streaming/vpl/vpl_source_impl.cpp
+    src/streaming/vpl/vpl_dx11_accel.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
@@ -245,6 +246,12 @@ if(HAVE_ONEVPL)
   endif()
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE VPL::dispatcher)
+  if(HAVE_D3D11)
+    message("G-API has DX11")
+    if(HAVE_OPENCL)
+        ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
+  endif()
 endif()
 
 if(WIN32)

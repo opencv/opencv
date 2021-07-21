@@ -1,25 +1,37 @@
 #ifndef OPENCV_GAPI_STREAMING_ONEVPL_PRIV_BUILDER_HPP
 #define OPENCV_GAPI_STREAMING_ONEVPL_PRIV_BUILDER_HPP
 
+#include <map>
 #include <memory>
 #include <string>
 
-#include <opencv2/gapi/streaming/onevpl_cap.hpp>
-#include "streaming/vpl/vpl_utils.hpp"
+#include <opencv2/gapi/streaming/source.hpp>
+
+#ifdef HAVE_ONEVPL
+
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif
+
+#include <vpl/mfx.h>
 
 namespace cv {
 namespace gapi {
 namespace wip {
-    
-struct OneVPLCapture::IPriv;
 
+using CFGParamName = std::string;
+using CFGParamValue = mfxVariant;
+using CFGParams = std::map<CFGParamName, CFGParamValue>;
 
-class oneVPLBulder
+class GAPI_EXPORTS oneVPLBulder
 {
 public:
+    template<typename... Param>
+    oneVPLBulder(Param&& ...params)
+    {
+        set(std::forward<Param>(params)...);
+    }
 
-    oneVPLBulder();
-    
     template<typename... Param>
     void set(Param&& ...params)
     {
@@ -28,15 +40,18 @@ public:
         (void)expander;
     }
 
-    std::unique_ptr<OneVPLCapture::IPriv> build() const;
+    std::shared_ptr<IStreamSource> build() const;
 
+private:
     void set_arg(const std::string& file_path);
     void set_arg(const CFGParams& params);
-private:
+
     std::string filePath;
     CFGParams cfg_params;
 };
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+
+#endif // HAVE_ONEVPL
 #endif // OPENCV_GAPI_STREAMING_ONEVPL_PRIV_BUILDER_HPP

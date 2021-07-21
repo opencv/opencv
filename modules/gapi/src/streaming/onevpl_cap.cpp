@@ -6,8 +6,8 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-OneVPLCapture::OneVPLCapture(const std::string& filepath) : IStreamSource(),
-    m_priv(OneVPLCapture::IPriv::make_priv(filepath))
+OneVPLCapture::OneVPLCapture(std::unique_ptr<IPriv>&& impl) : IStreamSource(),
+    m_priv(std::move(impl))
 {
 }
 

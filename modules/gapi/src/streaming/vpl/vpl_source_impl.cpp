@@ -2,8 +2,24 @@
 
 #include <sstream>
 
+#ifdef HAVE_DIRECTX
+//#include "directx.inc.hpp"
+    #ifdef HAVE_D3D11
+        #define D3D11_NO_HELPERS
+        #include <d3d11.h>
+        #include <codecvt>
+        #include "opencv2/core/directx.hpp"
+        #ifdef HAVE_OPENCL
+            #include <CL/cl_d3d11.h>
+        #endif
+    #endif // HAVE_D3D11
+
+#endif // HAVE_DIRECTX
+
+
 #include "streaming/vpl/vpl_source_impl.hpp"
 #include "streaming/vpl/vpl_utils.hpp"
+#include "streaming/vpl/vpl_dx11_accel.hpp"
 #include "logger.hpp"
 
 namespace cv {
@@ -89,14 +105,14 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             }
             ss << *idesc << std::endl;
 
-            GAPI_LOG_INFO(nullptr, "Implementation description: " << i);
+            GAPI_LOG_INFO(nullptr, "Implementation index: " << i);
             GAPI_LOG_INFO(nullptr, ss.str());
 
             MFXDispReleaseImplDescription(mfx_handle, idesc);
 
             // find intersection
             CFGParams matched_params = get_params_from_string(ss.str());
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "Found param intersection: " << matched_params.size() << " for implementation: " << i);
+            GAPI_LOG_INFO/*DEBUG*/(nullptr, "Equal param intersection count: " << matched_params.size());
         
             matches_count.emplace(matches_count.size(), i++);
         }
@@ -126,6 +142,35 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
 
         MFXUnload(mfx_handle);
         util::throw_error(std::logic_error(str));
+    }
+}
+
+void VPLSourceImpl::initializeHWAccel()
+{
+    auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
+    if (accel_mode_it == cfg_params.end())
+    {
+        GAPI_LOG_INFO/*DEBUG*/(nullptr, "No HW Accel requested");
+        return;
+    }
+
+    GAPI_LOG_INFO/*DEBUG*/(nullptr, "Add HW acceleration support");
+    try {
+        switch(accel_mode_it->second.Data.U32) {
+            case MFX_ACCEL_MODE_VIA_D3D11:
+            {
+                std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy(mfx_session));
+                accel_policy = std::move(cand);
+                break;
+            }
+            default:
+                throw std::logic_error("invalid type: " +
+                                               std::to_string(accel_mode_it->second.Data.U32));
+                break;
+        }
+    } catch (const std::exception& ex) {
+         util::throw_error(
+                std::logic_error(std::string("Cannot initialize HW Accel, error: ") + ex.what()));
     }
 }
 
