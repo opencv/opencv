@@ -68,6 +68,10 @@ class CV_EXPORTS_W FaceRecognizer
 public:
     virtual ~FaceRecognizer() {};
 
+    /** @brief Definition of distance used for calculating the distance between two face features
+     */
+    enum distype { cosine=0, norml2=1 };
+
     /** @brief Aligning image to put face on the standard position
      *  @param src_img input image
      *  @param face_box the detection result used for indicate face in input image
@@ -86,12 +90,12 @@ public:
      *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
      *  @param distype defining the similarity with optional values "norml2" or "cosine"
      */
-    CV_WRAP virtual double facematch(InputArray _face_feature1, InputArray _face_feature2, const String& distype) const = 0;
+    CV_WRAP virtual double facematch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
      *  @param onnx_path the path of the onnx model used for face recognition
      */
-    CV_WRAP static Ptr<FaceRecognizer> create(const String& onnx_path);
+    CV_WRAP static Ptr<FaceRecognizer> create(const String& model, const String& config);
 };
 
 } // namespace cv
