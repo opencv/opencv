@@ -25,4 +25,3 @@ executed with qemu in Linux userspace:
     qemu-aarch64 ./bin/example_semihosting_histogram
     qemu-aarch64 ./bin/example_semihosting_norm
 ```
-
