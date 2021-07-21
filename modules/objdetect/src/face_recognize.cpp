@@ -23,7 +23,7 @@ public:
     void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
         Mat face_mat = _face_mat.getMat();
-        double src_point[5][2];
+        float src_point[5][2];
         for (int row = 0; row < 5; ++row)
         {
             for(int col = 0; col < 2; ++col)
@@ -57,15 +57,15 @@ public:
     };
 
 private:
-    Mat getSimilarityTransformMatrix(double src[5][2]) const {
-        double dst[5][2] = { 38.2946, 51.6963, 73.5318, 51.5014, 56.0252, 71.7366, 41.5493, 92.3655, 70.7299, 92.2041 };
-        double avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
-        double avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
+    Mat getSimilarityTransformMatrix(float src[5][2]) const {
+        float dst[5][2] = { 38.2946, 51.6963, 73.5318, 51.5014, 56.0252, 71.7366, 41.5493, 92.3655, 70.7299, 92.2041 };
+        float avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
+        float avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
         //Compute mean of src and dst.
-        double src_mean[2] = { avg0, avg1 };
-        double dst_mean[2] = { 56.0262, 71.9008 };
+        float src_mean[2] = { avg0, avg1 };
+        float dst_mean[2] = { 56.0262, 71.9008 };
         //Subtract mean from src and dst.
-        double src_demean[5][2];
+        float src_demean[5][2];
         for (int i = 0; i < 2; i++)
         {
             for (int j = 0; j < 5; j++)
@@ -73,7 +73,7 @@ private:
                 src_demean[j][i] = src[j][i] - src_mean[i];
             }
         }
-        double dst_demean[5][2];
+        float dst_demean[5][2];
         for (int i = 0; i < 2; i++)
         {
             for (int j = 0; j < 5; j++)
