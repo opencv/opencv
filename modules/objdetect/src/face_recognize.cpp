@@ -16,19 +16,19 @@ namespace cv
 class FaceRecognizerImpl : public FaceRecognizer
 {
 public:
-    FaceRecognizerImpl(const String& onnx_path)
+    FaceRecognizerImpl(const String& model, const String& config)
     {
-        this->model = dnn::readNet(onnx_path);
+        this->model = dnn::readNet(model);
     };
     void AlignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
         Mat face_mat = _face_mat.getMat();
-        float src_point[5][2];
+        double src_point[5][2];
         for (int row = 0; row < 5; ++row)
         {
             for(int col = 0; col < 2; ++col)
             {
-                src_point[row][col] = face_mat.at<double>(1, row*2+col+4);
+                src_point[row][col] = face_mat.at<float>(0, row*2+col+4);
             }
         }
         Mat warp_mat = getSimilarityTransformMatrix(src_point);
@@ -38,34 +38,34 @@ public:
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
         this->model.setInput(inputBolb);
-        return this->model.forward(_face_feature);
+        this->model.forward(_face_feature);
     };
-    double facematch(InputArray _face_feature1, InputArray _face_feature2, const String& distype) const override
+    double facematch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
         face_feature1 /= norm(face_feature1);
         face_feature2 /= norm(face_feature2);
         
-        if(distype == "cosine"){
+        if(dis_type == distype::cosine){
             return sum(face_feature1.mul(face_feature2))[0];
-        }else if(distype == "norml2"){
+        }else if(dis_type == distype::norml2){
             return norm(face_feature1, face_feature2);
         }else{
-            throw std::invalid_argument("invalid parameter " + distype);
+            throw std::invalid_argument("invalid parameter " + dis_type);
         }
 
     };
 
 private:
-    Mat getSimilarityTransformMatrix(float src[5][2]) const {
-        float dst[5][2] = { 38.2946, 51.6963, 73.5318, 51.5014, 56.0252, 71.7366, 41.5493, 92.3655, 70.7299, 92.2041 };
-        float avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
-        float avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
+    Mat getSimilarityTransformMatrix(double src[5][2]) const {
+        double dst[5][2] = { 38.2946, 51.6963, 73.5318, 51.5014, 56.0252, 71.7366, 41.5493, 92.3655, 70.7299, 92.2041 };
+        double avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
+        double avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
         //Compute mean of src and dst.
-        float src_mean[2] = { avg0, avg1 };
-        float dst_mean[2] = { 56.0262, 71.9008 };
+        double src_mean[2] = { avg0, avg1 };
+        double dst_mean[2] = { 56.0262, 71.9008 };
         //Subtract mean from src and dst.
-        float src_demean[5][2];
+        double src_demean[5][2];
         for (int i = 0; i < 2; i++)
         {
             for (int j = 0; j < 5; j++)
@@ -73,7 +73,7 @@ private:
                 src_demean[j][i] = src[j][i] - src_mean[i];
             }
         }
-        float dst_demean[5][2];
+        double dst_demean[5][2];
         for (int i = 0; i < 2; i++)
         {
             for (int j = 0; j < 5; j++)
@@ -176,11 +176,9 @@ private:
     dnn::Net model;
 };
 
-Ptr<FaceRecognizer> FaceRecognizer::create(const String& onnx_path)
+Ptr<FaceRecognizer> FaceRecognizer::create(const String& model, const String& config)
 {
-    return makePtr<FaceRecognizerImpl>(onnx_path);
+    return makePtr<FaceRecognizerImpl>(model, config);
 }
 
 } // namespace cv
-
-
