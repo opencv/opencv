@@ -16,3 +16,6 @@ endmacro()
 
 variable_watch(OPENCV_DISABLE_THREAD_SUPPORT ocv_change_mode_var)
 set(OPENCV_DISABLE_THREAD_SUPPORT "${OPENCV_DISABLE_THREAD_SUPPORT}")
+
+variable_watch(OPENCV_SEMIHOSTING ocv_change_mode_var)
+set(OPENCV_SEMIHOSTING "${OPENCV_SEMIHOSTING}")

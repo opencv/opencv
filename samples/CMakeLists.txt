@@ -45,7 +45,12 @@ endif()
 if(INSTALL_PYTHON_EXAMPLES)
   add_subdirectory(python)
 endif()
-
+# The examples in this folder will work with a semihosting version of
+# OpenCV. For more information about semihosting, see
+# https://developer.arm.com/documentation/100863/latest
+if(OPENCV_SEMIHOSTING)
+  add_subdirectory(semihosting)
+endif()
 ocv_install_example_src("." CMakeLists.txt samples_utils.cmake)
 if(INSTALL_C_EXAMPLES)
   install(DIRECTORY data DESTINATION "${OPENCV_SAMPLES_SRC_INSTALL_PATH}" COMPONENT samples_data)
