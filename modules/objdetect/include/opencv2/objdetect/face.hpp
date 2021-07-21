@@ -77,20 +77,20 @@ public:
      *  @param face_box the detection result used for indicate face in input image
      *  @param aligned_img output aligned image
      */
-    CV_WRAP virtual void AlignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
+    CV_WRAP virtual void alignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
 
     /** @brief Extracting face feature from aligned image
      *  @param aligned_img input aligned image
      *  @param face_feature output face feature
      */
-    CV_WRAP virtual void facefeature(InputArray aligned_img, OutputArray face_feature) = 0;
+    CV_WRAP virtual void faceFeature(InputArray aligned_img, OutputArray face_feature) = 0;
 
     /** @brief Calculating the distance between two face features
      *  @param _face_feature1 the first input feature
      *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
      *  @param distype defining the similarity with optional values "norml2" or "cosine"
      */
-    CV_WRAP virtual double facematch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const = 0;
+    CV_WRAP virtual double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
      *  @param onnx_path the path of the onnx model used for face recognition
