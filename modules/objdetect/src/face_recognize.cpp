@@ -20,7 +20,7 @@ public:
     {
         this->model = dnn::readNet(model);
     };
-    void AlignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
+    void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
         Mat face_mat = _face_mat.getMat();
         double src_point[5][2];
@@ -34,13 +34,13 @@ public:
         Mat warp_mat = getSimilarityTransformMatrix(src_point);
         warpAffine(_src_img, _aligned_img, warp_mat, Size(112, 112), INTER_LINEAR);
     };
-    void facefeature(InputArray _aligned_img, OutputArray _face_feature) override
+    void faceFeature(InputArray _aligned_img, OutputArray _face_feature) override
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
         this->model.setInput(inputBolb);
         this->model.forward(_face_feature);
     };
-    double facematch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
+    double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
         face_feature1 /= norm(face_feature1);
