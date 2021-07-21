@@ -913,7 +913,7 @@ add_subdirectory(include)
 ocv_add_modules_compiler_options()
 
 # OpenCV modules
-add_subdirectory(modules)
+ocv_register_modules()
 
 # Generate targets for documentation
 add_subdirectory(doc)
@@ -1243,7 +1243,7 @@ endif(WIN32)
 
 # ========================== GUI ==========================
 status("")
-status("  GUI: ")
+status("  GUI: " "${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
 
 if(WITH_QT OR HAVE_QT)
   if(HAVE_QT5)
