@@ -16,7 +16,8 @@ namespace cv
 class FaceDetectorImpl : public FaceDetector
 {
 public:
-    FaceDetectorImpl(const String& onnx_path,
+    FaceDetectorImpl(const String& model,
+                     const String& config,
                      const Size& input_size,
                      float score_threshold,
                      float nms_threshold,
@@ -24,7 +25,7 @@ public:
                      int backend_id,
                      int target_id)
     {
-        net = dnn::readNet(onnx_path);
+        net = dnn::readNet(model, config);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(backend_id);
@@ -272,15 +273,16 @@ private:
     std::vector<Rect2f> priors;
 };
 
-Ptr<FaceDetector> FaceDetector::create(const String& onnx_path,
-                                       const Size& shape,
+Ptr<FaceDetector> FaceDetector::create(const String& model,
+                                       const String& config,
+                                       const Size& input_size,
                                        const float score_threshold,
                                        const float nms_threshold,
                                        const int top_k,
                                        const int backend_id,
                                        const int target_id)
 {
-    return makePtr<FaceDetectorImpl>(onnx_path, shape, score_threshold, nms_threshold, top_k, backend_id, target_id);
+    return makePtr<FaceDetectorImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
 }
 
 } // namespace cv

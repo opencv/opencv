@@ -53,7 +53,8 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetector> create(const String& onnx_path,
+    CV_WRAP static Ptr<FaceDetector> create(const String& model,
+                                            const String& config,
                                             const Size& input_size,
                                             float score_threshold = 0.9,
                                             float nms_threshold = 0.3,
