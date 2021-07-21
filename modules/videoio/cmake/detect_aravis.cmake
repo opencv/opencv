@@ -21,7 +21,7 @@ if(NOT HAVE_ARAVIS_API)
     string(REGEX REPLACE ".*ARAVIS_MAJOR_VERSION[^0-9]+([0-9]+).*" "\\1" ver_major "${ver_strings}")
     string(REGEX REPLACE ".*ARAVIS_MINOR_VERSION[^0-9]+([0-9]+).*" "\\1" ver_minor "${ver_strings}")
     string(REGEX REPLACE ".*ARAVIS_MICRO_VERSION[^0-9]+([0-9]+).*" "\\1" ver_micro "${ver_strings}")
-    set(ARAVIS_VERSION "${ver_major}.${ver_minor}.${ver_micro}" PARENT_SCOPE) # informational
+    set(ARAVIS_VERSION "${ver_major}.${ver_minor}.${ver_micro}")  # informational
     set(ARAVIS_INCLUDE_DIRS "${ARAVIS_INCLUDE}")
     set(ARAVIS_LIBRARIES "${ARAVIS_LIBRARY}")
   endif()
@@ -30,5 +30,3 @@ endif()
 if(HAVE_ARAVIS_API)
   ocv_add_external_target(aravis "${ARAVIS_INCLUDE_DIRS}" "${ARAVIS_LIBRARIES}" "HAVE_ARAVIS_API")
 endif()
-
-set(HAVE_ARAVIS_API ${HAVE_ARAVIS_API} PARENT_SCOPE)

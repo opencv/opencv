@@ -11,5 +11,3 @@ if(APPLE AND IOS)
     "-framework UIKit")
   ocv_add_external_target(cap_ios "" "${libs}" "HAVE_CAP_IOS")
 endif()
-
-set(HAVE_CAP_IOS ${HAVE_CAP_IOS} PARENT_SCOPE)

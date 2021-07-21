@@ -19,5 +19,3 @@ endif()
 if(HAVE_PVAPI)
   ocv_add_external_target(pvapi "${PVAPI_INCLUDE}" "${PVAPI_LIBRARY}" "HAVE_PVAPI")
 endif()
-
-set(HAVE_PVAPI ${HAVE_PVAPI} PARENT_SCOPE)
