@@ -63,7 +63,7 @@ int main(int argc, char ** argv)
     }
 
     // Initialize FaceRecognizer
-    Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(reg_onnx_path);
+    Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(reg_onnx_path, "");
 
 
     Mat aligned_face1, aligned_face2;
@@ -72,10 +72,12 @@ int main(int argc, char ** argv)
 
     Mat feature1, feature2;
     faceRecognizer->facefeature(aligned_face1, feature1);
-    faceRecognizer->facefeature(aligned_face1, feature2);
+    feature1 = feature1.clone();
+    faceRecognizer->facefeature(aligned_face2, feature2);
+    feature2 = feature2.clone();
 
-    double cos_score = faceRecognizer->facematch(feature1, feature2, "cosine");
-    double L2_score = faceRecognizer->facematch(feature1, feature2, "norml2");
+    double cos_score = faceRecognizer->facematch(feature1, feature2, FaceRecognizer::distype::cosine);
+    double L2_score = faceRecognizer->facematch(feature1, feature2, FaceRecognizer::distype::norml2);
     
     if(cos_score >= cosine_similar_thresh)
     {
