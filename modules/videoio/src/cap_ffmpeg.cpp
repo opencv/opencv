@@ -402,7 +402,8 @@ CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        return instance->writeToFile(filename) ? CV_ERROR_OK : CV_ERROR_FAIL;
+        instance->writeToFile(filename);
+        return CV_ERROR_OK;
     }
     catch (const std::exception& e)
     {

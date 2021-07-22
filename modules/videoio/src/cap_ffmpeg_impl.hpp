@@ -478,7 +478,7 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
-    void writeToFile(const char* filename);
+    void writeToFile(const char* _filenameOut);
 
     void init();
 
@@ -529,6 +529,7 @@ struct CvCapture_FFMPEG
 
     bool setRaw();
     bool processRawPacket();
+    bool fixSideData();
     bool rawMode;
     bool rawModeInitialized;
     bool sendSideInfo;
@@ -1294,6 +1295,30 @@ bool CvCapture_FFMPEG::processRawPacket()
     return packet.data != NULL;
 }
 
+bool CvCapture_FFMPEG::fixSideData() {
+    // for some reason the side info for h264[5] starts uses the 00 00 01 start code instead of 00 00 00 01, the rest of the
+    // start codes seperating the sps from the pps are correct
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
+    CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+#else
+    CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
+#endif
+    if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
+        || eVideoCodec == CV_CODEC(CODEC_ID_H265)
+#elif LIBAVCODEC_VERSION_MICRO < 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
+        || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
+#endif
+        && ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
+        packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1)
+    {
+        return true;
+    }
+    return false;
+}
+
 bool CvCapture_FFMPEG::grabFrame()
 {
     bool valid = false;
@@ -1375,24 +1400,7 @@ bool CvCapture_FFMPEG::grabFrame()
         if (oFile) {
             if (writeSideInfo) {
                 writeSideInfo = false;
-                // for some reason the side info for h264[5] starts usese the 00 00 01 start code instead of 00 00 00 01, the rest of the
-                // start codes seperating the sps from the pps are correct
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
-                CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
-#else
-                CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
-#endif
-                if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
-#if LIBAVCODEC_VERSION_MICRO >= 100 \
-    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
-                    || eVideoCodec == CV_CODEC(CODEC_ID_H265)
-#elif LIBAVCODEC_VERSION_MICRO < 100 \
-    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
-                    || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
-#endif
-                    && ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
-                    packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1)
-                {
+                if (fixSideData()) {
                     if (putc(0x00, oFile) == EOF) {
                         fclose(oFile);
                         oFile = 0;
@@ -1401,13 +1409,13 @@ bool CvCapture_FFMPEG::grabFrame()
                 }
 
                 if (fwrite(ic->streams[video_stream]->codec->extradata, sizeof(*ic->streams[video_stream]->codec->extradata),
-                    ic->streams[video_stream]->codec->extradata_size, oFile) < ic->streams[video_stream]->codec->extradata_size) {
+                    ic->streams[video_stream]->codec->extradata_size, oFile) < (size_t)ic->streams[video_stream]->codec->extradata_size) {
                     fclose(oFile);
                     oFile = 0;
                     return false;
                 }
             }
-            if (fwrite(packet.data, sizeof(*packet.data), packet.size, oFile) < packet.size) {
+            if (fwrite(packet.data, sizeof(*packet.data), packet.size, oFile) < (size_t)packet.size) {
                 fclose(oFile);
                 oFile = 0;
                 return false;
@@ -1474,9 +1482,17 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         if (writeSideInfo) {
             writeSideInfo = false;
             *step = ic->streams[video_stream]->codec->extradata_size + p.size;
+            const bool appendZeros = fixSideData();
+            if (appendZeros)
+                (*step)++;
             sideInfo = new uint8_t[*step];
-            memcpy(sideInfo, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
-            memcpy(&sideInfo[ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
+            int iFirstCpy = 0;
+            if (appendZeros) {
+                sideInfo[0] = 0x00;
+                iFirstCpy = 1;
+            }
+            memcpy(&sideInfo[iFirstCpy], ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
+            memcpy(&sideInfo[iFirstCpy + ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
             *data = sideInfo;
         }
         else {
@@ -1593,13 +1609,13 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 #endif
 }
 
-void CvCapture_FFMPEG::writeToFile(const char* filename) {
+void CvCapture_FFMPEG::writeToFile(const char* _filenameOut) {
         restartRtspFileWrite = true;
         if (filenameOut)
             delete[] filenameOut;
-        const int sz = strlen(filename) + 1;
+        const int sz = strlen(_filenameOut) + 1;
         filenameOut = new char[sz];
-        memcpy(filenameOut, filename, sz);
+        memcpy(filenameOut, _filenameOut, sz);
 }
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const

@@ -83,11 +83,20 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries
      */
     CvResult (CV_API_CALL *Capture_setProperty)(CvPluginCapture handle, int prop, double val);
 
+    /** @brief WriteToFile property value
+
+    @param handle Capture handle
+    @param filename Full path to output file
+
+    @note API-CALL 6, API-Version == 0
+     */
+    CvResult(CV_API_CALL* Capture_writeToFile)(CvPluginCapture handle, const char* filename);
+
     /** @brief Grab frame
 
     @param handle Capture handle
 
-    @note API-CALL 6, API-Version == 0
+    @note API-CALL 7, API-Version == 0
      */
     CvResult (CV_API_CALL *Capture_grab)(CvPluginCapture handle);
 
@@ -98,7 +107,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries
     @param callback retrieve callback (synchronous)
     @param userdata callback context data
 
-    @note API-CALL 7, API-Version == 0
+    @note API-CALL 8, API-Version == 0
      */
     CvResult (CV_API_CALL *Capture_retreive)(CvPluginCapture handle, int stream_idx, cv_videoio_capture_retrieve_cb_t callback, void* userdata);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries

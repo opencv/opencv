@@ -88,11 +88,20 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
      */
     CvResult (CV_API_CALL *Capture_setProperty)(CvPluginCapture handle, int prop, double val);
 
+    /** @brief WriteToFile property value
+
+    @param handle Capture handle
+    @param filename Full path to output file
+
+    @note API-CALL 6, API-Version == 0
+     */
+    CvResult(CV_API_CALL* Capture_writeToFile)(CvPluginCapture handle, const char* filename);
+
     /** @brief Grab frame
 
     @param handle Capture handle
 
-    @note API-CALL 6, API-Version == 0
+    @note API-CALL 7, API-Version == 0
      */
     CvResult (CV_API_CALL *Capture_grab)(CvPluginCapture handle);
 
@@ -103,7 +112,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
     @param callback retrieve callback (synchronous)
     @param userdata callback context data
 
-    @note API-CALL 7, API-Version == 0
+    @note API-CALL 8, API-Version == 0
      */
     CvResult (CV_API_CALL *Capture_retreive)(CvPluginCapture handle, int stream_idx, cv_videoio_retrieve_cb_t callback, void* userdata);
 
@@ -118,7 +127,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
     @param isColor true if video stream should save color frames
     @param[out] handle pointer on Writer handle
 
-    @note API-CALL 8, API-Version == 0
+    @note API-CALL 9, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_open)(const char* filename, int fourcc, double fps, int width, int height, int isColor,
                                          CV_OUT CvPluginWriter* handle);
@@ -127,7 +136,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
 
     @param handle Writer handle
 
-    @note API-CALL 9, API-Version == 0
+    @note API-CALL 10, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_release)(CvPluginWriter handle);
 
@@ -137,7 +146,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
     @param prop Property index
     @param[out] val property value
 
-    @note API-CALL 10, API-Version == 0
+    @note API-CALL 11, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_getProperty)(CvPluginWriter handle, int prop, CV_OUT double* val);
 
@@ -147,7 +156,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
     @param prop Property index
     @param val property value
 
-    @note API-CALL 11, API-Version == 0
+    @note API-CALL 12, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_setProperty)(CvPluginWriter handle, int prop, double val);
 
@@ -160,7 +169,7 @@ struct OpenCV_VideoIO_Plugin_API_v0_0_api_entries
     @param height frame height
     @param cn number of channels per pixel
 
-    @note API-CALL 12, API-Version == 0
+    @note API-CALL 13, API-Version == 0
      */
     CvResult (CV_API_CALL *Writer_write)(CvPluginWriter handle, const unsigned char *data, int step, int width, int height, int cn);
 }; // OpenCV_VideoIO_Plugin_API_v0_0_api_entries
