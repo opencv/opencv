@@ -2222,7 +2222,7 @@ TEST(OneVPL_Source, Init)
     {
         cv::gapi::wip::CFGParamValue param;
         param.Type = MFX_VARIANT_TYPE_U32;
-        param.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
+        param.Data.U32 = MFX_IMPL_TYPE_HARDWARE;;
 
         src_params.emplace("mfxImplDescription.Impl", std::move(param));
     }
@@ -2233,13 +2233,20 @@ TEST(OneVPL_Source, Init)
 
         src_params.emplace("mfxImplDescription.AccelerationMode", std::move(param));
     }
+    {
+        cv::gapi::wip::CFGParamValue param;
+        param.Type = MFX_VARIANT_TYPE_U32;
+        param.Data.U32 = MFX_CODEC_HEVC;
+
+        src_params.emplace("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", std::move(param));
+    }
 
     cv::Ptr<cv::gapi::wip::IStreamSource> cap =
             cv::gapi::wip::make_vpl_src("C:\\Users\\sivanov\\github\\oneVPL_tt\\build\\_install\\share\\oneVPL\\examples\\content\\cars_128x96.h265",
                                         src_params);
-    cv::GMetaArg descr = cap->descr_of();
+    /*cv::GMetaArg descr = cap->descr_of();
     (void)descr;
-
+    */
     cv::gapi::wip::Data data;
     ASSERT_TRUE(cap->pull(data));
     (void)data;

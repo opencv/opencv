@@ -1,5 +1,6 @@
 #ifdef HAVE_ONEVPL
 
+#include <algorithm>
 #include <sstream>
 
 #ifdef HAVE_DIRECTX
@@ -16,7 +17,7 @@
 
 #endif // HAVE_DIRECTX
 
-
+#include "streaming/vpl/vpl_source_engine.hpp"
 #include "streaming/vpl/vpl_source_impl.hpp"
 #include "streaming/vpl/vpl_utils.hpp"
 #include "streaming/vpl/vpl_dx11_accel.hpp"
@@ -26,17 +27,20 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-
 VPLSourceImpl::VPLSourceImpl() :
-    mfx_handle(MFXLoad()),
-    source_handle(nullptr, nullptr)
-    
+    mfx_handle(MFXLoad())
 {
     GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
 }
 
 VPLSourceImpl::~VPLSourceImpl()
 {
+    GAPI_LOG_INFO(nullptr, "Close Decode for session: " << mfx_session);
+    MFXVideoDECODE_Close(mfx_session);
+
+    GAPI_LOG_INFO(nullptr, "Close session: " << mfx_session);
+    MFXClose(mfx_session);
+
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
     MFXUnload(mfx_handle);
 }
@@ -44,8 +48,6 @@ VPLSourceImpl::~VPLSourceImpl()
 VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& params) :
     VPLSourceImpl()
 {
-    this->filePath = file_path;
-
     // Enable Config
     if (params.empty())
     {
@@ -58,9 +60,9 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
     }
 
     try {
-        source_handle = file_ptr(fopen(filePath.c_str(), "rb"), &fclose);
+        VPLDecodeEngine::file_ptr source_handle(fopen(file_path.c_str(), "rb"), &fclose);
         if (!source_handle) {
-            throw std::runtime_error("Cannot open source file: " + filePath);
+            throw std::runtime_error("Cannot open source file: " + file_path);
         }
 
         GAPI_LOG_INFO(nullptr, "Requested cfg params count: " << cfg_params.size());
@@ -111,40 +113,120 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             MFXDispReleaseImplDescription(mfx_handle, idesc);
 
             // find intersection
-            CFGParams matched_params = get_params_from_string(ss.str());
+            CFGParams impl_params = get_params_from_string(ss.str());
+
+            CFGParams matched_params;
+            std::set_intersection(impl_params.begin(), impl_params.end(), cfg_params.begin(), cfg_params.end(),
+            std::inserter(matched_params, matched_params.end()),
+                          [] (typename CFGParams::value_type& lhs, typename CFGParams::value_type& rhs) -> bool
+            {
+                if (lhs.first != rhs.first) {
+                    return false;
+                }
+                if(lhs.second.Type != rhs.second.Type) {
+                    return false;
+                }
+                if(!memcmp(&lhs.second.Data, &rhs.second.Data, sizeof(rhs.second.Data))) {
+                    return false;
+                }
+                return true;
+            });
             GAPI_LOG_INFO/*DEBUG*/(nullptr, "Equal param intersection count: " << matched_params.size());
         
             matches_count.emplace(matches_count.size(), i++);
         }
 
         //Get max matched
+        int impl_number = 0;
         auto max_match_it = matches_count.rbegin();
         if (max_match_it == matches_count.rend()) {
             throw std::logic_error("Cannot find matched MFX implementation for requested configuration");
         }
 
         // create session
-        mfxStatus sts = MFXCreateSession(mfx_handle, max_match_it->second, &mfx_session);
+        GAPI_LOG_INFO(nullptr, "Chosen implementation index: " << impl_number);
+        mfxStatus sts = MFXCreateSession(mfx_handle, impl_number, &mfx_session);
         if (MFX_ERR_NONE != sts)
         {
             throw std::logic_error("Cannot create MFX Session for implementation index:" +
-                               std::to_string(max_match_it->second));
+                                   std::to_string(max_match_it->second));
         }
 
-        //open file
-        //TODO
-        
+        GAPI_LOG_INFO(nullptr, "Initialized MFX session: " << mfx_session);
+
+        // initialize decoder
+        try {
+            // Find codec ID from config
+            auto dec_it = cfg_params.find(CFGParamName("mfxImplDescription.mfxDecoderDescription.decoder.CodecID"));
+            if (dec_it == cfg_params.end()) {
+                throw std::logic_error("Cannot determine DecoderID from oneVPL config. Abort");
+            }
+
+            mfxBitstream mfx_session_bitstream = create_decoder_from_file(dec_it->second, source_handle.get());
+
+            if (!engine) {
+                engine.reset(new VPLDecodeEngine(std::move(source_handle)));
+            }
+            engine->initialize_session(mfx_session, std::move(mfx_session_bitstream));
+        } catch(const std::exception& ex) {
+            std::stringstream ss;
+            ss << ex.what() << ". Unload VPL session: " << mfx_session;
+            const std::string str = ss.str();
+            GAPI_LOG_WARNING(nullptr, str);
+            MFXClose(mfx_session);
+            util::throw_error(std::logic_error(str));
+        }
     } catch (const std::exception& ex) {
         std::stringstream ss;
         ss << "Cannot create VPL source Impl, error: " << ex.what() << ". Unload MFX handle: " << mfx_handle;
         const std::string str = ss.str();
         GAPI_LOG_WARNING(nullptr, str);
-
         MFXUnload(mfx_handle);
         util::throw_error(std::logic_error(str));
     }
+
+    //prepare
+    engine->process(mfx_session);
 }
 
+mfxBitstream VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr)
+{
+    if (!source_ptr) {
+        throw std::runtime_error("Cannot create decoder, source is nullptr");
+    }
+
+    mfxBitstream bitstream{};
+    const int BITSTREAM_BUFFER_SIZE = 2000000;
+    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
+    bitstream.Data      = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
+    if(!bitstream.Data) {
+        throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
+                             std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
+    }
+    bitstream.CodecId = decoder.Data.U32;
+
+    mfxStatus sts = ReadEncodedStream(bitstream, source_ptr);
+    if(MFX_ERR_NONE != sts) {
+        throw std::runtime_error("Error reading bitstream, error: " + std::to_string(sts));
+    }
+
+    // Retrieve the frame information from input stream
+    mfxVideoParam mfxDecParams {};
+    mfxDecParams.mfx.CodecId = decoder.Data.U32;
+    mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
+    sts                      = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
+    if(MFX_ERR_NONE != sts) {
+        throw std::runtime_error("Error decoding header, error: " + std::to_string(sts));
+    }
+
+    // Input parameters finished, now initialize decode
+    sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
+    if (MFX_ERR_NONE != sts) {
+        throw std::runtime_error("Error initializing Decode, error: " + std::to_string(sts));
+    }
+    return bitstream;
+}
+    
 void VPLSourceImpl::initializeHWAccel()
 {
     auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
@@ -202,13 +284,79 @@ const CFGParams& VPLSourceImpl::getCfgParams() const
     
 bool VPLSourceImpl::pull(cv::gapi::wip::Data& data)
 {
-    (void)data;
+/*
+    mfxStatus sts = ReadEncodedStream(mfx_session_bitstream, source);
+    if (sts != MFX_ERR_NONE) // No more data to read, start decode draining mode
+        isDrainingDec = true;
+    }
+    sts = MFXVideoDECODE_DecodeFrameAsync(mfx_session,
+                                          (isDrainingDec == true) ? nullptr : &mfx_session_bitstream,
+                                          nullptr,
+                                          &dec_surface_out,
+                                          &syncp);
+    switch (sts) {
+        case MFX_ERR_NONE: // Got 1 decoded frame
+            do {
+                sts = MFXVideoCORE_SyncOperation(mfx_session, syncp, 100);
+                if (MFX_ERR_NONE == sts) {
+
+                    // -S- TODO Consume Data
+                    framenum++;
+                }
+            } while (sts == MFX_WRN_IN_EXECUTION);
+            break;
+        case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
+            if (isDrainingDec == true)
+                isDrainingEnc =
+                    true; // No more data to drain from decoder, start encode draining mode
+            else
+                continue; // read more data
+            break;
+        case MFX_ERR_MORE_SURFACE:
+            // The function requires more frame surface at output before decoding can proceed.
+            // This applies to external memory allocations and should not be expected for
+            // a simple internal allocation case like this
+            nIndex = GetFreeSurfaceIndex(decSurfPool, decRequest.NumFrameSuggested);
+            break;
+        case MFX_ERR_DEVICE_LOST:
+            // For non-CPU implementations,
+            // Cleanup if device is lost
+            break;
+        case MFX_WRN_DEVICE_BUSY:
+            // For non-CPU implementations,
+            // Wait a few milliseconds then try again
+            break;
+        case MFX_WRN_VIDEO_PARAM_CHANGED:
+            // The decoder detected a new sequence header in the bitstream.
+            // Video parameters may have changed.
+            // In external memory allocation case, might need to reallocate the output surface
+            break;
+        case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
+            // The function detected that video parameters provided by the application
+            // are incompatible with initialization parameters.
+            // The application should close the component and then reinitialize it
+            break;
+        case MFX_ERR_REALLOC_SURFACE:
+            // Bigger surface_work required. May be returned only if
+            // mfxInfoMFX::EnableReallocRequest was set to ON during initialization.
+            // This applies to external memory allocations and should not be expected for
+            // a simple internal allocation case like this
+            break;
+        default:
+            printf("unknown status %d\n", sts);
+            isStillGoing = false;
+            break;
+    }
+    */
+
+    engine->process(mfx_session);
     return true;
 }
 
 GMetaArg VPLSourceImpl::descr_of() const
 {
-    return GMetaArg{};
+    GAPI_Assert(!first_frame.empty());
+    return cv::GMetaArg{cv::descr_of(first_frame)};
 }
 } // namespace wip
 } // namespace gapi
