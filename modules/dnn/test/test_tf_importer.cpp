@@ -203,6 +203,16 @@ TEST_P(Test_TensorFlow_layers, padding)
     runTensorFlowNet("keras_pad_concat");
 }
 
+TEST_P(Test_TensorFlow_layers, padding_asymmetric)
+{
+    runTensorFlowNet("conv2d_asymmetric_pads_nchw");
+    runTensorFlowNet("conv2d_asymmetric_pads_nhwc");
+    runTensorFlowNet("max_pool2d_asymmetric_pads_nchw");
+    runTensorFlowNet("max_pool2d_asymmetric_pads_nhwc");
+    runTensorFlowNet("conv2d_backprop_input_asymmetric_pads_nchw");
+    runTensorFlowNet("conv2d_backprop_input_asymmetric_pads_nhwc");
+}
+
 TEST_P(Test_TensorFlow_layers, padding_same)
 {
     // Reference output values are in range [0.0006, 2.798]
