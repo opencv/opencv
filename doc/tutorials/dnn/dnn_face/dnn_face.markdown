@@ -61,7 +61,7 @@ Following Face Detection, run codes below to extract face feature from facial im
 // Initialize FaceRecognizer with model path (cv::String)
 Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(model_path, "");
 
-// Aligning and cropping facial image with faces detected by dnn_face::DNNFaceDetector
+// Aligning and cropping facial image through the first face of faces detected by dnn_face::DNNFaceDetector
 Mat aligned_face;
 faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
 
