@@ -408,6 +408,16 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
     return *this;
 }
 
+bool VideoCapture::writeToFile(const char* filename)
+{
+    bool ret = false;
+    if (!icap.empty()) {
+        icap->writeToFile(filename);
+        ret = true;
+    }
+    return ret;
+}
+
 bool VideoCapture::set(int propId, double value)
 {
     CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");

@@ -478,6 +478,7 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
+    void writeToFile(const char* filename);
 
     void init();
 
@@ -530,12 +531,18 @@ struct CvCapture_FFMPEG
     bool processRawPacket();
     bool rawMode;
     bool rawModeInitialized;
+    bool sendSideInfo;
+    uint8_t* sideInfo;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
  #else
     AVBitStreamFilterContext* bsfc;
 #endif
+    char* filenameOut;
+    FILE* oFile;
+    bool restartRtspFileWrite;
+    bool writeSideInfo;
     VideoAccelerationType va_type;
     int hw_device;
     int use_opencl;
@@ -571,9 +578,15 @@ void CvCapture_FFMPEG::init()
 
     rawMode = false;
     rawModeInitialized = false;
+    sendSideInfo = false;
+    sideInfo = 0;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
+    filenameOut = 0;
+    oFile = 0;
+    restartRtspFileWrite = false;
+    writeSideInfo = false;
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
     use_opencl = 0;
@@ -645,6 +658,21 @@ void CvCapture_FFMPEG::close()
 #else
         av_bitstream_filter_close(bsfc);
 #endif
+    }
+
+    if (filenameOut) {
+        delete[] filenameOut;
+        filenameOut = 0;
+    }
+
+    if (oFile) {
+        fclose(oFile);
+        oFile = 0;
+    }
+
+    if (sideInfo) {
+        delete[] sideInfo;
+        sideInfo = 0;
     }
 
     init();
@@ -1172,6 +1200,8 @@ bool CvCapture_FFMPEG::processRawPacket()
     if (!rawModeInitialized)
     {
         rawModeInitialized = true;
+        if (ic->streams[video_stream]->codec->extradata_size)
+            writeSideInfo = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
 #else
@@ -1329,6 +1359,61 @@ bool CvCapture_FFMPEG::grabFrame()
             continue;
         }
 
+        if (restartRtspFileWrite) {
+            if (!oFile || packet.flags == 1) {
+                if (oFile)
+                    fclose(oFile);
+                oFile = fopen(filenameOut, "wb");
+                if (!oFile)
+                    return false;
+                restartRtspFileWrite = false;
+                if (ic->streams[video_stream]->codec->extradata_size)
+                    writeSideInfo = true;
+            }
+        }
+
+        if (oFile) {
+            if (writeSideInfo) {
+                writeSideInfo = false;
+                // for some reason the side info for h264[5] starts usese the 00 00 01 start code instead of 00 00 00 01, the rest of the
+                // start codes seperating the sps from the pps are correct
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
+                CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
+#else
+                CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
+#endif
+                if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
+#if LIBAVCODEC_VERSION_MICRO >= 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
+                    || eVideoCodec == CV_CODEC(CODEC_ID_H265)
+#elif LIBAVCODEC_VERSION_MICRO < 100 \
+    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
+                    || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
+#endif
+                    && ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
+                    packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1)
+                {
+                    if (putc(0x00, oFile) == EOF) {
+                        fclose(oFile);
+                        oFile = 0;
+                        return false;
+                    }
+                }
+
+                if (fwrite(ic->streams[video_stream]->codec->extradata, sizeof(*ic->streams[video_stream]->codec->extradata),
+                    ic->streams[video_stream]->codec->extradata_size, oFile) < ic->streams[video_stream]->codec->extradata_size) {
+                    fclose(oFile);
+                    oFile = 0;
+                    return false;
+                }
+            }
+            if (fwrite(packet.data, sizeof(*packet.data), packet.size, oFile) < packet.size) {
+                fclose(oFile);
+                oFile = 0;
+                return false;
+            }
+        }
+
         if (rawMode)
         {
             valid = processRawPacket();
@@ -1386,9 +1471,19 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if (rawMode)
     {
         AVPacket& p = bsfc ? packet_filtered : packet;
-        *data = p.data;
-        *step = p.size;
-        *width = p.size;
+        if (writeSideInfo) {
+            writeSideInfo = false;
+            *step = ic->streams[video_stream]->codec->extradata_size + p.size;
+            sideInfo = new uint8_t[*step];
+            memcpy(sideInfo, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
+            memcpy(&sideInfo[ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
+            *data = sideInfo;
+        }
+        else {
+            *data = p.data;
+            *step = p.size;
+        }
+        *width = *step;
         *height = 1;
         *cn = 1;
         return p.data != NULL;
@@ -1496,6 +1591,15 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
     CV_UNUSED(output);
     return false;
 #endif
+}
+
+void CvCapture_FFMPEG::writeToFile(const char* filename) {
+        restartRtspFileWrite = true;
+        if (filenameOut)
+            delete[] filenameOut;
+        const int sz = strlen(filename) + 1;
+        filenameOut = new char[sz];
+        memcpy(filenameOut, filename, sz);
 }
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
@@ -2893,6 +2997,11 @@ int cvSetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id, double v
 double cvGetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id)
 {
     return capture->getProperty(prop_id);
+}
+
+void cvWriteToFile_FFMPEG(CvCapture_FFMPEG* capture, const char* filename)
+{
+    capture->writeToFile(filename);
 }
 
 int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)

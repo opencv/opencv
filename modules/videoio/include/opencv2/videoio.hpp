@@ -853,6 +853,22 @@ public:
      */
     CV_WRAP virtual bool read(OutputArray image);
 
+    /** @brief Signals VideoCapture to start writing the raw bitstream to the given file from the next key frame.
+
+    @param filename Full path to the output file.
+    @return `true` if VideoCapture is open.  This does not mean the file has or can be created as this is
+    performed inside read()/grab().
+
+    The function is intended to be used when streaming from an rtsp source where it is either
+    a) desirable to store the original streamed data, or
+    b) the overhead of re-encoding the decoded frame is undesirable.
+
+    @note This should only be used when streaming from rtsp and is not guaranteed to work when reading from a
+    file, especially from container formats avi, mp4 etc.  If the filename provided is invalid, cannot be opened
+    or written to, the first call to read()/grab() after calling this function will return false.
+     */
+    CV_WRAP virtual bool writeToFile(const char* filename);
+
     /** @brief Sets a property in the VideoCapture.
 
     @param propId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)

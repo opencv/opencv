@@ -56,6 +56,7 @@
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
 #define icvSetCaptureProperty_FFMPEG_p cvSetCaptureProperty_FFMPEG
 #define icvGetCaptureProperty_FFMPEG_p cvGetCaptureProperty_FFMPEG
+#define icvWriteToFile_FFMPEG_p cvWriteToFile_FFMPEG
 #define icvCreateVideoWriter_FFMPEG_p cvCreateVideoWriter_FFMPEG
 #define icvReleaseVideoWriter_FFMPEG_p cvReleaseVideoWriter_FFMPEG
 #define icvWriteFrame_FFMPEG_p cvWriteFrame_FFMPEG
@@ -82,6 +83,13 @@ public:
     virtual bool setProperty(int propId, double value) CV_OVERRIDE
     {
         return ffmpegCapture ? icvSetCaptureProperty_FFMPEG_p(ffmpegCapture, propId, value)!=0 : false;
+    }
+    virtual bool writeToFile(const char* filename) CV_OVERRIDE
+    {
+        if (!ffmpegCapture)
+            return false;
+        icvWriteToFile_FFMPEG_p(ffmpegCapture, filename);
+        return true;
     }
     virtual bool grabFrame() CV_OVERRIDE
     {
@@ -387,6 +395,28 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
+CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
+        return instance->writeToFile(filename) ? CV_ERROR_OK : CV_ERROR_FAIL;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
+        return CV_ERROR_FAIL;
+    }
+}
+
+static
 CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 {
     if (!handle)
@@ -577,13 +607,14 @@ static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
         /*  3*/cv_capture_release,
         /*  4*/cv_capture_get_prop,
         /*  5*/cv_capture_set_prop,
-        /*  6*/cv_capture_grab,
-        /*  7*/cv_capture_retrieve,
-        /*  8*/cv_writer_open,
-        /*  9*/cv_writer_release,
-        /* 10*/cv_writer_get_prop,
-        /* 11*/cv_writer_set_prop,
-        /* 12*/cv_writer_write
+        /*  6*/cv_capture_write_to_file,
+        /*  7*/cv_capture_grab,
+        /*  8*/cv_capture_retrieve,
+        /*  9*/cv_writer_open,
+        /* 10*/cv_writer_release,
+        /* 11*/cv_writer_get_prop,
+        /* 12*/cv_writer_set_prop,
+        /* 13*/cv_writer_write
     }
 };
 
@@ -609,11 +640,12 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         /*  3*/cv_capture_release,
         /*  4*/cv_capture_get_prop,
         /*  5*/cv_capture_set_prop,
-        /*  6*/cv_capture_grab,
-        /*  7*/cv_capture_retrieve,
+        /*  6*/cv_capture_write_to_file,
+        /*  7*/cv_capture_grab,
+        /*  8*/cv_capture_retrieve,
     },
     {
-        /*  8*/cv_capture_open_with_params,
+        /*  9*/cv_capture_open_with_params,
     }
 };
 

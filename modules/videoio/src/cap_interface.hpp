@@ -219,6 +219,7 @@ public:
     virtual bool retrieveFrame(int, OutputArray) = 0;
     virtual bool isOpened() const = 0;
     virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
+    virtual bool writeToFile(const char* filename) { return false; }
 };
 
 class IVideoWriter

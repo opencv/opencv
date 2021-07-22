@@ -180,6 +180,88 @@ const videoio_container_params_t videoio_container_params[] =
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
 
+typedef tuple<VideoCaptureAPIs, string, string, bool> videoio_writeToFile_params_t;
+typedef testing::TestWithParam< videoio_writeToFile_params_t > videoio_writeToFile;
+
+TEST_P(videoio_writeToFile, write)
+{
+    const VideoCaptureAPIs api = get<0>(GetParam());
+
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+
+    const string path = get<1>(GetParam());
+    const string ext = get<2>(GetParam());
+    const bool rawRead = get<3>(GetParam());
+    const string fileName = path + "." + ext;
+    const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext.c_str()).c_str());
+
+    // Write encoded video read using VideoCapture.writeToFile() to a tmp file
+    {
+        VideoCapture cap(findDataFile(fileName), api);
+        if (!cap.isOpened())
+            throw SkipTestException("Video stream is not supported");
+        if (rawRead) {
+            if (!cap.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
+                throw SkipTestException("Fetching of RAW video streams is not supported");
+            ASSERT_EQ(-1.f, cap.get(CAP_PROP_FORMAT));
+        }
+        if (!cap.writeToFile(fileNameOut.c_str())) // turn on in loop file writing
+            throw SkipTestException("Raw file writing from VideoCapture is not supported");
+        Mat data;
+        size_t totalBytes = 0;
+        while (true)
+        {
+            cap >> data;
+            size_t size = data.total();
+            if (data.empty())
+                break;
+            if (rawRead) {
+                ASSERT_EQ(CV_8UC1, data.type());
+                ASSERT_LE(data.dims, 2);
+                ASSERT_EQ(data.rows, 1);
+                ASSERT_EQ((size_t)data.cols, data.total());
+                ASSERT_TRUE(data.isContinuous());
+                totalBytes += size;
+            }
+        }
+        if (rawRead)
+            ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
+    }
+
+    std::cout << "Checking written video stream: " << fileNameOut << std::endl;
+
+    // Check decoded frames read from original media while writeToFile() is enabled are equal to frames decoded from tmp file
+    {
+        VideoCapture capReference(findDataFile(fileName), api);
+        ASSERT_TRUE(capReference.isOpened());
+        VideoCapture capActual(fileNameOut.c_str(), api);
+        ASSERT_TRUE(capActual.isOpened());
+        ASSERT_TRUE(capActual.writeToFile(fileNameOut.c_str()));
+        Mat reference, actual;
+        int nframes = 0, n_err = 0;
+        while (capReference.read(reference) && n_err < 3)
+        {
+            nframes++;
+            ASSERT_TRUE(capActual.read(actual)) << nframes;
+            EXPECT_EQ(0, cvtest::norm(actual, reference, NORM_INF)) << "frame=" << nframes << " err=" << ++n_err;
+        }
+        ASSERT_GT(nframes, 0);
+    }
+
+    ASSERT_EQ(0, remove(fileNameOut.c_str()));
+}
+
+const videoio_writeToFile_params_t videoio_writeToFile_params[] =
+{
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", false),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", true),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", false),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", true),
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_writeToFile, testing::ValuesIn(videoio_writeToFile_params));
+
 typedef tuple<string, string, int> videoio_skip_params_t;
 typedef testing::TestWithParam< videoio_skip_params_t > videoio_skip;
 
