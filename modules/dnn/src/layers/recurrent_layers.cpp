@@ -220,6 +220,8 @@ public:
         size_t noutputs = produceCellOutput ? 2 : 1;
         outputs.assign(noutputs, outResShape);
 
+        internals.assign(1, shape(_numSamples, _numOut)); // hInternal
+        internals.push_back(shape(_numSamples, _numOut)); // cInternal
         internals.push_back(shape(_numSamples, 1)); // dummyOnes
         internals.push_back(shape(_numSamples, 4*_numOut)); // gates
 
@@ -287,11 +289,14 @@ public:
             const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
             const Mat &Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
             const Mat &bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
-            Mat hInternal = blobs[3].rowRange(i * blobs[3].rows / numDirs, (i + 1) * blobs[3].rows / numDirs);
-            Mat cInternal = blobs[4].rowRange(i * blobs[4].rows / numDirs, (i + 1) * blobs[4].rows / numDirs);
+            const Mat &h_0 = blobs[3].rowRange(i * blobs[3].rows / numDirs, (i + 1) * blobs[3].rows / numDirs);
+            const Mat &c_0 = blobs[4].rowRange(i * blobs[4].rows / numDirs, (i + 1) * blobs[4].rows / numDirs);
 
             int numOut = Wh.size[1];
-            Mat dummyOnes = internals[0], gates = internals[1];
+            Mat hInternal = internals[0], cInternal = internals[1],
+                    dummyOnes = internals[2], gates = internals[3];
+            h_0.copyTo(hInternal);
+            c_0.copyTo(cInternal);
             dummyOnes.setTo(1.);
 
             int numSamplesTotal = numTimeStamps*numSamples;
