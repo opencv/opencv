@@ -63,6 +63,8 @@ public:
                                             int target_id = 0);
 };
 
+/** @brief DNN-based face recognizer, model download link: https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view.
+ */
 class CV_EXPORTS_W FaceRecognizer
 {
 public:
