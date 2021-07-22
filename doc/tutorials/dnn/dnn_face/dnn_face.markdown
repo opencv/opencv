@@ -37,8 +37,8 @@ There are two models (ONNX format) pre-trained and required for this module:
 ### DNNFaceDetector
 
 ```cpp
-// Initialize DNNFaceDetector
-Ptr<DNNFaceDetector> faceDetector = DNNFaceDetector::create(onnx_path, image.size(), score_thresh, nms_thresh, top_k);
+// Initialize FaceDetector
+Ptr<FaceDetector> faceDetector = FaceDetector::create(onnx_path, "", image.size(), score_thresh, nms_thresh, top_k);
 
 // Forward
 Mat faces;
