@@ -523,6 +523,68 @@ TEST(Layer_LSTM_Test_Accuracy_with_, CaffeRecurrent)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
+{
+    Mat Wx = blobFromNPY(_tf("lstm.hidden.W.npy"));
+    Mat Wh = blobFromNPY(_tf("lstm.hidden.R.npy"));
+    Mat b = blobFromNPY(_tf("lstm.hidden.B.npy"));
+    Mat h0 = blobFromNPY(_tf("lstm.hidden.h0.npy"));
+    Mat c0 = blobFromNPY(_tf("lstm.hidden.c0.npy"));
+
+    const int numHidden = 3;
+    const int numDirs = Wx.size[0];
+    const int numFeatures = Wx.size[2];
+
+    b = b.reshape(1, b.size[0]);
+    Mat bx = b.colRange(0, b.cols / 2);
+    Mat bh = b.colRange(b.cols / 2, b.cols);
+    b = bx + bh;
+
+    // IFGO->IGFO
+    for (int k = 0; k < numDirs; ++k)
+    {
+        float* WxData = Wx.ptr<float>(k);
+        float* WhData = Wh.ptr<float>(k);
+        float* biasData = b.ptr<float>(k);
+        for (int j = 0; j < numHidden; ++j)
+        {
+            for (int i = 0; i < numFeatures; ++i)
+            {
+                std::swap(WxData[(numHidden + j) * numFeatures + i],
+                          WxData[(numHidden * 2 + j) * numFeatures + i]);
+            }
+            for (int i = 0; i < numHidden; ++i)
+            {
+                std::swap(WhData[(numHidden + j) * numHidden + i],
+                          WhData[(numHidden * 2 + j) * numHidden + i]);
+            }
+            std::swap(biasData[numHidden + j], biasData[numHidden * 2 + j]);
+        }
+    }
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+
+    LayerParams lstmParams;
+    lstmParams.blobs.resize(5);
+    lstmParams.blobs[0] = Wh;
+    lstmParams.blobs[1] = Wx;
+    lstmParams.blobs[2] = b;
+    lstmParams.blobs[3] = h0;
+    lstmParams.blobs[4] = c0;
+    lstmParams.set("bidirectional", false);
+    Ptr<LSTMLayer> layer = LSTMLayer::create(lstmParams);
+
+    Mat inp = blobFromNPY(_tf("lstm.hidden.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat h_t_reference = blobFromNPY(_tf("lstm.hidden.output.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
