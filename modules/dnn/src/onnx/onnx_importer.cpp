@@ -1000,8 +1000,9 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, opencv_onnx::NodeProto no
     Mat Wx = getBlob(node_proto, 1);
     Mat Wh = getBlob(node_proto, 2);
     Mat b = getBlob(node_proto, 3);
-    CV_CheckEQ(countNonZero(getBlob(node_proto, 5)), 0, "Unsupported non zero initial_h");
-    CV_CheckEQ(countNonZero(getBlob(node_proto, 6)), 0, "Unsupported non zero initial_c");
+    Mat h0 = getBlob(node_proto, 5);
+    Mat c0 = getBlob(node_proto, 6);
+
     b = b.reshape(1, b.size[0]);
 
     const int numHidden = lstmParams.get<int>("hidden_size");
@@ -1034,11 +1035,15 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, opencv_onnx::NodeProto no
     }
     Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
     Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
 
-    lstmParams.blobs.resize(3);
+    lstmParams.blobs.resize(5);
     lstmParams.blobs[0] = Wh;
     lstmParams.blobs[1] = Wx;
     lstmParams.blobs[2] = b;
+    lstmParams.blobs[3] = h0;
+    lstmParams.blobs[4] = c0;
     lstmParams.set("bidirectional", lstmParams.get<String>("direction", "") == "bidirectional");
 
     node_proto.set_output(0, lstmParams.name);  // set different name so output shapes will be registered on that name
