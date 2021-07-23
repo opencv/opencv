@@ -522,7 +522,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
         DispatchMap::const_iterator iter = dispatch.find(layer_type);
         if (iter != dispatch.end())
         {
-            ((*this).*(iter->second))(layerParams, node_proto);
+            CALL_MEMBER_FN(*this, iter->second)(layerParams, node_proto);
         }
         else
         {
@@ -985,7 +985,7 @@ void ONNXImporter::parseNeg(LayerParams& layerParams, opencv_onnx::NodeProto nod
 
 void ONNXImporter::parseConstant(LayerParams& layerParams, opencv_onnx::NodeProto node_proto)
 {
-	CV_Assert(node_proto.input_size() == 0);
+    CV_Assert(node_proto.input_size() == 0);
     CV_Assert(layerParams.blobs.size() == 1);
     addConstant(layerParams.name, layerParams.blobs[0]);
 }

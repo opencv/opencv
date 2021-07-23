@@ -14,6 +14,7 @@ Mutex& getInitializationMutex();
 void initializeLayerFactory();
 
 namespace detail {
+#define CALL_MEMBER_FN(object, ptrToMemFn)  ((object).*(ptrToMemFn))
 
 struct NetImplBase
 {
