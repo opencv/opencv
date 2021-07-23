@@ -1201,7 +1201,7 @@ bool CvCapture_FFMPEG::processRawPacket()
     if (!rawModeInitialized)
     {
         rawModeInitialized = true;
-        if (ic->streams[video_stream]->codec->extradata_size)
+        if (ic->streams[video_stream]->codec->extradata_size && strcmp(ic->iformat->name,"rtsp") == 0)
             writeSideInfo = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
@@ -1392,7 +1392,7 @@ bool CvCapture_FFMPEG::grabFrame()
                 if (!oFile)
                     return false;
                 restartRtspFileWrite = false;
-                if (ic->streams[video_stream]->codec->extradata_size)
+                if (ic->streams[video_stream]->codec->extradata_size && strcmp(ic->iformat->name, "rtsp") == 0)
                     writeSideInfo = true;
             }
         }
