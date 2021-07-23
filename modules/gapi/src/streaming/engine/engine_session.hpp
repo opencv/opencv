@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifdef HAVE_ONEVPL
@@ -20,29 +21,28 @@ struct EngineSession {
     mfxSyncPoint sync;
     mfxStatus last_status;
 
-    using operation_t = std::function<void(EngineSession&)>;
-    EngineSession(mfxSession sess, mfxBitstream str) :
-        session(sess), stream(str) {}
-		
+    enum class ExecutionStatus {
+        Continue,
+        Processed,
+        Failed
+    };
+    
+    using operation_t = std::function<ExecutionStatus(EngineSession&)>;
+    EngineSession(mfxSession sess, mfxBitstream&& str);
+    virtual ~EngineSession();
+    
     template<class ...Ops>
     void create_operations(Ops&&...ops)
     {
-        operations = std::vector<operation_t>({ops...});
+        std::vector<operation_t>({std::forward<Ops>(ops)...}).swap(operations);
         cur_op_it = operations.begin();
     }
 
-    void execute() 
-    {
-        (*cur_op_it) (*this);
+    ExecutionStatus execute();
 
-        ++cur_op_it;
-        if (cur_op_it == operations.end())
-        {
-            cur_op_it = operations.begin();
-        }
-    }
-
+    static const char * status_to_string(ExecutionStatus);
 private:
+    virtual ExecutionStatus execute_op(operation_t& op);
     std::vector<operation_t> operations;
     typename std::vector<operation_t>::iterator cur_op_it;
 };

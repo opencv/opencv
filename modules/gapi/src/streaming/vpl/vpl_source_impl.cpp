@@ -35,12 +35,6 @@ VPLSourceImpl::VPLSourceImpl() :
 
 VPLSourceImpl::~VPLSourceImpl()
 {
-    GAPI_LOG_INFO(nullptr, "Close Decode for session: " << mfx_session);
-    MFXVideoDECODE_Close(mfx_session);
-
-    GAPI_LOG_INFO(nullptr, "Close session: " << mfx_session);
-    MFXClose(mfx_session);
-
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
     MFXUnload(mfx_handle);
 }
@@ -284,72 +278,12 @@ const CFGParams& VPLSourceImpl::getCfgParams() const
     
 bool VPLSourceImpl::pull(cv::gapi::wip::Data& data)
 {
-/*
-    mfxStatus sts = ReadEncodedStream(mfx_session_bitstream, source);
-    if (sts != MFX_ERR_NONE) // No more data to read, start decode draining mode
-        isDrainingDec = true;
+    while(!engine->get_ready_frames_count())
+    {
+        engine->process(mfx_session);
     }
-    sts = MFXVideoDECODE_DecodeFrameAsync(mfx_session,
-                                          (isDrainingDec == true) ? nullptr : &mfx_session_bitstream,
-                                          nullptr,
-                                          &dec_surface_out,
-                                          &syncp);
-    switch (sts) {
-        case MFX_ERR_NONE: // Got 1 decoded frame
-            do {
-                sts = MFXVideoCORE_SyncOperation(mfx_session, syncp, 100);
-                if (MFX_ERR_NONE == sts) {
 
-                    // -S- TODO Consume Data
-                    framenum++;
-                }
-            } while (sts == MFX_WRN_IN_EXECUTION);
-            break;
-        case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (isDrainingDec == true)
-                isDrainingEnc =
-                    true; // No more data to drain from decoder, start encode draining mode
-            else
-                continue; // read more data
-            break;
-        case MFX_ERR_MORE_SURFACE:
-            // The function requires more frame surface at output before decoding can proceed.
-            // This applies to external memory allocations and should not be expected for
-            // a simple internal allocation case like this
-            nIndex = GetFreeSurfaceIndex(decSurfPool, decRequest.NumFrameSuggested);
-            break;
-        case MFX_ERR_DEVICE_LOST:
-            // For non-CPU implementations,
-            // Cleanup if device is lost
-            break;
-        case MFX_WRN_DEVICE_BUSY:
-            // For non-CPU implementations,
-            // Wait a few milliseconds then try again
-            break;
-        case MFX_WRN_VIDEO_PARAM_CHANGED:
-            // The decoder detected a new sequence header in the bitstream.
-            // Video parameters may have changed.
-            // In external memory allocation case, might need to reallocate the output surface
-            break;
-        case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
-            // The function detected that video parameters provided by the application
-            // are incompatible with initialization parameters.
-            // The application should close the component and then reinitialize it
-            break;
-        case MFX_ERR_REALLOC_SURFACE:
-            // Bigger surface_work required. May be returned only if
-            // mfxInfoMFX::EnableReallocRequest was set to ON during initialization.
-            // This applies to external memory allocations and should not be expected for
-            // a simple internal allocation case like this
-            break;
-        default:
-            printf("unknown status %d\n", sts);
-            isStillGoing = false;
-            break;
-    }
-    */
-
-    engine->process(mfx_session);
+    engine->get_frame(data);
     return true;
 }
 

@@ -166,6 +166,7 @@ set(gapi_srcs
     src/streaming/onevpl_cap.cpp
     src/streaming/onevpl_builder.cpp
     src/streaming/engine/base_engine.cpp
+    src/streaming/engine/engine_session.cpp
     src/streaming/vpl/vpl_source_impl.cpp
     src/streaming/vpl/vpl_dx11_accel.cpp
     src/streaming/vpl/vpl_source_engine.cpp

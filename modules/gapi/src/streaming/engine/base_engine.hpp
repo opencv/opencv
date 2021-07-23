@@ -1,6 +1,7 @@
 #ifndef GAPI_STREAMING_BASE_ENGINE_HPP
 #define GAPI_STREAMING_BASE_ENGINE_HPP
 
+#include <queue>
 #include "streaming/engine/engine_session.hpp"
 
 #ifdef HAVE_ONEVPL
@@ -12,19 +13,29 @@ namespace wip {
 
 class VPLProcessingEngine {
 public:
-    using SessionsTable = std::map<mfxSession, EngineSession>;
-    SessionsTable sessions;
+    using session_ptr = std::shared_ptr<EngineSession>;
+    using SessionsTable = std::map<mfxSession, session_ptr>;
 
-    template<class ...SessionArgs>
-    void register_session(mfxSession session, mfxBitstream stream, SessionArgs&& ...args)
+    using frame_t = cv::gapi::wip::Data;
+    using frames_container_t = std::queue<frame_t>;
+    
+    template<class SpecificSession, class ...SessionArgs>
+    std::shared_ptr<SpecificSession> register_session(mfxSession session, mfxBitstream&& stream, SessionArgs&& ...args)
     {
-        auto it = sessions.emplace(std::piecewise_construct, 
-                                   std::forward_as_tuple(session),
-                                   std::forward_as_tuple(session, stream)).first;
-        it->second.create_operations(std::forward<SessionArgs>(args)...);
+        auto sess_impl = std::make_shared<SpecificSession>(session, std::move(stream));
+        sess_impl->create_operations(std::forward<SessionArgs>(args)...);
+        
+        sessions.emplace(session, sess_impl);
+        return sess_impl;
     }
 
     void process(mfxSession session);
+
+    size_t get_ready_frames_count() const;
+    void get_frame(Data &data);
+protected:
+    SessionsTable sessions;
+    frames_container_t ready_frames;
 };
 } // namespace wip
 } // namespace gapi

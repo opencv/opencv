@@ -8,8 +8,22 @@ void VPLProcessingEngine::process(mfxSession session) {
     auto sess_it = sessions.find(session);
     if (sess_it == sessions.end()) { abort();}
 
-    EngineSession &processing_session = sess_it->second;
-    processing_session.execute();
+    session_ptr processing_session = sess_it->second;
+    EngineSession::ExecutionStatus status = processing_session->execute();
+
+    if (status == EngineSession::ExecutionStatus::Failed) {
+        sessions.erase(sess_it);
+    }
+}
+
+size_t VPLProcessingEngine::get_ready_frames_count() const
+{
+    return ready_frames.size();
+}
+void VPLProcessingEngine::get_frame(Data &data)
+{
+    data = ready_frames.front();
+    ready_frames.pop();
 }
 } // namespace wip
 } // namespace gapi
