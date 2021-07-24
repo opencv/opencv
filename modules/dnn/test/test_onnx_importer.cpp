@@ -710,6 +710,16 @@ TEST_P(Test_ONNX_layers, LSTM_bidirectional)
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, LSTM_hidden)
+{
+    testONNXModels("hidden_lstm", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
+{
+    testONNXModels("hidden_lstm_bi", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
