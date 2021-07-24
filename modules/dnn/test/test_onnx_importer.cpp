@@ -112,6 +112,7 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
+    testONNXModels("conv_asymmetric_pads");
 }
 
 TEST_P(Test_ONNX_layers, Convolution_variable_weight)

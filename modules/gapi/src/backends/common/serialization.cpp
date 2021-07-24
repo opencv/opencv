@@ -201,18 +201,20 @@ IOStream& operator<< (IOStream& os, const cv::RMat& mat) {
     return os;
 }
 IIStream& operator>> (IIStream& is, cv::RMat&) {
-    util::throw_error(std::logic_error("operator>> for RMat should never be called"));
+    util::throw_error(std::logic_error("operator>> for RMat should never be called. "
+                                        "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
+                                        "should be used"));
     return is;
 }
 
-IOStream& operator<< (IOStream& os, const cv::MediaFrame &) {
-    // Stub
-    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+IOStream& operator<< (IOStream& os, const cv::MediaFrame &frame) {
+    frame.serialize(os);
     return os;
 }
 IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
-    // Stub
-    GAPI_Assert(false && "cv::MediaFrame serialization is not supported!");
+    util::throw_error(std::logic_error("operator>> for MediaFrame should never be called. "
+                                        "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
+                                        "should be used"));
     return is;
 }
 

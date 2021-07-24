@@ -33,7 +33,7 @@ public:
 
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
 
         if (type_name && memcmp(type_name, "binary", 6) == 0)
@@ -120,11 +120,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
         {
@@ -174,6 +174,16 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
         int i, keylen = 0;
         int datalen = 0;
         char* ptr;
@@ -188,7 +198,7 @@ public:
         if( FileNode::isCollection(struct_flags) )
         {
             if( (FileNode::isMap(struct_flags) ^ (key != 0)) )
-                CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                          "or add element with key to sequence" );
         }
         else
@@ -201,10 +211,10 @@ public:
         {
             keylen = (int)strlen(key);
             if( keylen == 0 )
-                CV_Error( CV_StsBadArg, "The key is an empty" );
+                CV_Error( cv::Error::StsBadArg, "The key is an empty" );
 
             if( keylen > CV_FS_MAX_LEN )
-                CV_Error( CV_StsBadArg, "The key is too long" );
+                CV_Error( cv::Error::StsBadArg, "The key is too long" );
         }
 
         if( data )
@@ -238,7 +248,7 @@ public:
         if( key )
         {
             if( !cv_isalpha(key[0]) && key[0] != '_' )
-                CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
+                CV_Error( cv::Error::StsBadArg, "Key must start with a letter or _" );
 
             ptr = fs->resizeWriteBuffer( ptr, keylen );
 
@@ -248,7 +258,7 @@ public:
 
                 ptr[i] = c;
                 if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
-                    CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+                    CV_Error( cv::Error::StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
             }
 
             ptr += keylen;
@@ -271,7 +281,7 @@ public:
     void writeComment(const char* comment, bool eol_comment)
     {
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         int len = (int)strlen(comment);
         const char* eol = strchr(comment, '\n');
