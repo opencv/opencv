@@ -589,7 +589,7 @@ Some features have been added specifically for automated build environments, lik
 | `OPENCV_CMAKE_HOOKS_DIR` | _empty_ | OpenCV allows to customize configuration process by adding custom hook scripts at each stage and substage. cmake scripts with predefined names located in the directory set by this variable will be included before and after various configuration stages. Examples of file names: _CMAKE_INIT.cmake_, _PRE_CMAKE_BOOTSTRAP.cmake_, _POST_CMAKE_BOOTSTRAP.cmake_, etc.. Other names are not documented and can be found in the project cmake files by searching for the _ocv_cmake_hook_ macro calls. |
 | `OPENCV_DUMP_HOOKS_FLOW` | _OFF_ | Enables a debug message print on each cmake hook script call. |
 
-## Contrib Modules 
+## Contrib Modules
 
 Following build options are utilized in `opencv_contrib` modules, as stated [previously](#tutorial_config_reference_general_contrib), these extra modules can be added to your final build by setting `DOPENCV_EXTRA_MODULES_PATH` option.
 
