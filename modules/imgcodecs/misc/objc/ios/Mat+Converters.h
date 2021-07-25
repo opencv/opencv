@@ -1,5 +1,5 @@
 //
-//  Mat+UIImage.h
+//  Mat+Converters.h
 //
 //  Created by Giles Payne on 2020/03/03.
 //
