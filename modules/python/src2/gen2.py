@@ -379,6 +379,7 @@ class ArgInfo(object):
         self.outputarg = False
         self.returnarg = False
         self.isrvalueref = False
+        self.isImage = True
         for m in arg_tuple[3]:
             if m == "/O":
                 self.inputarg = False
@@ -403,7 +404,7 @@ class ArgInfo(object):
         return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+        return "ArgInfo(\"%s\", %d, %d)" % (self.name, self.outputarg, self.isImage)
 
 
 class FuncVariant(object):
@@ -422,6 +423,10 @@ class FuncVariant(object):
         self.array_counters = {}
         for a in decl[3]:
             ainfo = ArgInfo(a)
+            # Do not treat blob as an image while passing
+            # from python to cpp if passed from setInput()
+            if name=='setInput' and a[1]=='blob':
+                ainfo.isImage=False
             if ainfo.isarray and not ainfo.arraycvt:
                 c = ainfo.arraylen
                 c_arrlist = self.array_counters.get(c, [])

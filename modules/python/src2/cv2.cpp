@@ -54,9 +54,11 @@ class ArgInfo
 public:
     const char* name;
     bool outputarg;
+    bool isimage = true;
     // more fields may be added if necessary
 
     ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
+    ArgInfo(const char* name_, bool outputarg_,bool isimage_) : name(name_), outputarg(outputarg_), isimage(isimage_) {}
 
 private:
     ArgInfo(const ArgInfo&) = delete;
@@ -766,7 +768,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         ndims++;
     }
 
-    if( ismultichannel )
+    if( ismultichannel && info.isimage)
     {
         ndims--;
         type |= CV_MAKETYPE(0, size[2]);
