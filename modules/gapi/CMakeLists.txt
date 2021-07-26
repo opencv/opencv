@@ -170,6 +170,8 @@ set(gapi_srcs
     src/streaming/vpl/vpl_source_impl.cpp
     src/streaming/vpl/vpl_dx11_accel.cpp
     src/streaming/vpl/vpl_source_engine.cpp
+    src/streaming/vpl/vpl_legacy_source_engine.cpp
+    src/streaming/vpl/vpl_utils.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp

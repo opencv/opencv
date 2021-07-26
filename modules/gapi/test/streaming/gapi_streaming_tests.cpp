@@ -2249,6 +2249,11 @@ TEST(OneVPL_Source, Init)
     */
     cv::gapi::wip::Data data;
     ASSERT_TRUE(cap->pull(data));
+
+    bool ret = true;
+    do {
+        ret = cap->pull(data);
+    } while(ret);
     (void)data;
 }
 //#endif 

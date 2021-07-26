@@ -29,7 +29,6 @@ public:
     static const CFGParams& getDefaultCfgParams();
     const CFGParams& getCfgParams() const;
 
-    void initializeHWAccel();
 private:
     
     bool pull(cv::gapi::wip::Data& data) override;
@@ -37,19 +36,21 @@ private:
 
     VPLSourceImpl();
 
-    mfxBitstream create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr);
-
+    DecoderParams create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr);
+    std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel(mfxSession mfx_session);
+    
     mfxLoader mfx_handle;
+    mfxImplDescription *mfx_impl_desription;
     std::vector<mfxConfig> mfx_handle_configs;
     CFGParams cfg_params;
 
     mfxSession mfx_session;
-    std::unique_ptr<VPLAccelerationPolicy> accel_policy;
+    
 
 
     cv::Mat first_frame;
 private:
-    std::unique_ptr<VPLDecodeEngine> engine;
+    std::unique_ptr<VPLProcessingEngine> engine;
 };
 } // namespace wip
 } // namespace gapi

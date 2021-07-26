@@ -14,7 +14,6 @@ std::shared_ptr<IStreamSource> oneVPLBulder::build() const
     }
 #ifdef HAVE_ONEVPL
     std::unique_ptr<VPLSourceImpl> impl(new VPLSourceImpl(filePath, cfg_params));
-    impl->initializeHWAccel();
     return std::shared_ptr<IStreamSource>(new OneVPLCapture(std::move(impl)));
 #else
     abort();
