@@ -532,7 +532,7 @@ public:
         const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
+        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
 
         std::vector<bool> checked(size_,false);
         int checks = 0;
@@ -547,8 +547,6 @@ public:
             NodePtr node = branch.node;
             findNN(node, result, vec, checks, maxChecks, heap, checked, false);
         }
-
-        delete heap;
 
         CV_Assert(result.full());
     }
@@ -742,7 +740,7 @@ private:
 
 
     void findNN(NodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap, std::vector<bool>& checked, bool explore_all_trees = false)
+                const cv::Ptr<Heap<BranchSt>>& heap, std::vector<bool>& checked, bool explore_all_trees = false)
     {
         if (node->childs==NULL) {
             if (!explore_all_trees && (checks>=maxChecks) && result.full()) {
