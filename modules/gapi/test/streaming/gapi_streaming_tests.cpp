@@ -2247,6 +2247,7 @@ TEST(OneVPL_Source, Init)
     /*cv::GMetaArg descr = cap->descr_of();
     (void)descr;
     */
+    try {
     cv::gapi::wip::Data data;
     ASSERT_TRUE(cap->pull(data));
 
@@ -2255,6 +2256,9 @@ TEST(OneVPL_Source, Init)
         ret = cap->pull(data);
     } while(ret);
     (void)data;
+    } catch (const std::exception& ex) {
+        std::cerr << ex.what() << std::endl;
+    }
 }
 //#endif 
 } // namespace opencv_test

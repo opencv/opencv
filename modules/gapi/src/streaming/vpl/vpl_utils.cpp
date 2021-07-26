@@ -132,6 +132,11 @@ CFGParamValue create_cfg_value_u32(mfxU32 value)
 
 // Read encoded stream from file
 mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f) {
+
+    if (!f) {
+        return MFX_ERR_MORE_DATA;
+    }
+
     mfxU8 *p0 = bs.Data;
     mfxU8 *p1 = bs.Data + bs.DataOffset;
     if (bs.DataOffset > bs.MaxLength - 1) {

@@ -108,7 +108,7 @@ std::shared_ptr<mfxFrameSurface1> LegacyDecodeSession::get_free_surface() const 
     auto it =
         std::find_if(decoder_surf_pool.begin(), decoder_surf_pool.end(),
                      [](const std::shared_ptr<mfxFrameSurface1>& val) {
-        assert(val && "Surface must exist");
+        //assert(val && "Surface must exist");
         return !val->Data.Locked;
     });
 
@@ -130,8 +130,13 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
             my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.source_handle.get());
+
+            GAPI_LOG_INFO(nullptr, "ReadEncodedStream, session: " << my_sess.session <<
+                                   ", error: " <<  my_sess.last_status);
             if (my_sess.last_status != MFX_ERR_NONE) {
                 my_sess.source_handle.reset(); //close source
+                GAPI_LOG_INFO(nullptr, "Close source, session: " << my_sess.session <<
+                                   ", source: " <<  my_sess.source_handle);
             }
             return ExecutionStatus::Continue;
         },
@@ -141,7 +146,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
             GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << my_sess.session <<
                                             ", sess.last_status: " << my_sess.last_status <<
-                                            ", siurf_ptr: " << my_sess.curr_surface_ptr);
+                                            ", surf_ptr: " << my_sess.curr_surface_ptr);
 
             sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
@@ -277,11 +282,13 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
 {
     GAPI_LOG_INFO/*DEBUG*/(nullptr, "status: " << status);
-    LegacyDecodeSession& my_sess = static_cast<LegacyDecodeSession&>(sess);
+
     switch (status) {
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
+            GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_DATA for session: " << sess.session <<
+                                            ", source: " << sess.source_handle);
             if (!sess.source_handle) {
                 // No more data to drain from decoder, start encode draining mode
                 return ExecutionStatus::Processed;
@@ -294,8 +301,14 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
             // The function requires more frame surface at output before decoding can proceed.
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
-            auto surf_ptr = my_sess.get_free_surface();
-            my_sess.curr_surface_ptr = surf_ptr.get();
+
+            mfxFrameSurface1 *oldSurface = sess.curr_surface_ptr;
+            auto surf_ptr = sess.get_free_surface();
+            sess.curr_surface_ptr = surf_ptr.get();
+
+            GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
+                                             ", old surface: " << oldSurface <<
+                                             ", new surface: "<< sess.curr_surface_ptr);
             break;
         }
         case MFX_ERR_DEVICE_LOST:
