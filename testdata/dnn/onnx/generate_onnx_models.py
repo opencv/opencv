@@ -796,6 +796,29 @@ hidden_lstm = HiddenLSTM(features, hidden, num_layers=3, is_bidirectional=True)
 save_data_and_model("hidden_lstm_bi", input, hidden_lstm, version=11, export_params=True)
 
 
+class GRU(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers=2, is_bidirectional=False):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.bi_coeff = 2 if is_bidirectional else 1
+        self.gru = nn.GRU(input_size=input_size, hidden_size=hidden_size,
+                          num_layers=num_layers, bidirectional=is_bidirectional)
+
+    def forward(self, t):
+        h_0 = torch.ones(self.num_layers * self.bi_coeff, t.size(1),
+                         self.hidden_size)
+        return self.gru(t, h_0)[0]
+
+input = torch.randn(seq_len, batch, features)
+hidden_lstm = GRU(features, hidden, num_layers=3, is_bidirectional=False)
+save_data_and_model("gru", input, hidden_lstm, version=11, export_params=True)
+
+input = torch.randn(seq_len, batch, features)
+hidden_lstm = GRU(features, hidden, num_layers=3, is_bidirectional=True)
+save_data_and_model("gru_bi", input, hidden_lstm, version=11, export_params=True)
+
+
 class MatMul(nn.Module):
     def __init__(self):
         super(MatMul, self).__init__()
