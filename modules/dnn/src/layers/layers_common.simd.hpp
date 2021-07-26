@@ -918,11 +918,13 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             bool tail = false;
             if (j + FASCONV_BASE_VECSZ > blockSize)
             {
-                // TODO: Use mask method or setVl instead of scalar
-                if (j == 0) // blockSize < FASCONV_BASE_VECSZ at first loop
-                    break;  // skip and goto scalar part
-                j = blockSize - FASCONV_BASE_VECSZ;
-                tail = true;
+                if (j == 0) {
+                    vl = blockSize;
+                }
+                else {
+                    j = blockSize - FASCONV_BASE_VECSZ;
+                    tail = true;
+                }
             }
             int k = 0;
             const float* rptr = rowbuf + j*vecsize_aligned;
@@ -936,6 +938,9 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
 
             for (; k < vecsize; k += 8, rptr += 8 )
             {
+                if (k+8 >= vecsize) {
+                    vlm2 = vecsize - k;
+                }
                 vfloat32m2_t w0 = vle32_v_f32m2(wptr0 + k, vlm2);
                 vfloat32m2_t w1 = vle32_v_f32m2(wptr1 + k, vlm2);
                 vfloat32m2_t w2 = vle32_v_f32m2(wptr2 + k, vlm2);
@@ -976,18 +981,18 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             }
             // compute sum of each vs
             vfloat32m1_t zero = vfmv_v_f_f32m1(0, vl);
-            vfloat32m1_t temp00 = vfredsum_vs_f32m2_f32m1(temp00, vs00, zero, vlm2);
-            vfloat32m1_t temp01 = vfredsum_vs_f32m2_f32m1(temp01, vs01, zero, vlm2);
-            vfloat32m1_t temp02 = vfredsum_vs_f32m2_f32m1(temp02, vs02, zero, vlm2);
-            vfloat32m1_t temp03 = vfredsum_vs_f32m2_f32m1(temp03, vs03, zero, vlm2);
-            vfloat32m1_t temp10 = vfredsum_vs_f32m2_f32m1(temp10, vs10, zero, vlm2);
-            vfloat32m1_t temp11 = vfredsum_vs_f32m2_f32m1(temp11, vs11, zero, vlm2);
-            vfloat32m1_t temp12 = vfredsum_vs_f32m2_f32m1(temp12, vs12, zero, vlm2);
-            vfloat32m1_t temp13 = vfredsum_vs_f32m2_f32m1(temp13, vs13, zero, vlm2);
-            vfloat32m1_t temp20 = vfredsum_vs_f32m2_f32m1(temp20, vs20, zero, vlm2);
-            vfloat32m1_t temp21 = vfredsum_vs_f32m2_f32m1(temp21, vs21, zero, vlm2);
-            vfloat32m1_t temp22 = vfredsum_vs_f32m2_f32m1(temp22, vs22, zero, vlm2);
-            vfloat32m1_t temp23 = vfredsum_vs_f32m2_f32m1(temp23, vs23, zero, vlm2);
+            vfloat32m1_t temp00 = vfredsum_vs_f32m2_f32m1(temp00, vs00, zero, 8);
+            vfloat32m1_t temp01 = vfredsum_vs_f32m2_f32m1(temp01, vs01, zero, 8);
+            vfloat32m1_t temp02 = vfredsum_vs_f32m2_f32m1(temp02, vs02, zero, 8);
+            vfloat32m1_t temp03 = vfredsum_vs_f32m2_f32m1(temp03, vs03, zero, 8);
+            vfloat32m1_t temp10 = vfredsum_vs_f32m2_f32m1(temp10, vs10, zero, 8);
+            vfloat32m1_t temp11 = vfredsum_vs_f32m2_f32m1(temp11, vs11, zero, 8);
+            vfloat32m1_t temp12 = vfredsum_vs_f32m2_f32m1(temp12, vs12, zero, 8);
+            vfloat32m1_t temp13 = vfredsum_vs_f32m2_f32m1(temp13, vs13, zero, 8);
+            vfloat32m1_t temp20 = vfredsum_vs_f32m2_f32m1(temp20, vs20, zero, 8);
+            vfloat32m1_t temp21 = vfredsum_vs_f32m2_f32m1(temp21, vs21, zero, 8);
+            vfloat32m1_t temp22 = vfredsum_vs_f32m2_f32m1(temp22, vs22, zero, 8);
+            vfloat32m1_t temp23 = vfredsum_vs_f32m2_f32m1(temp23, vs23, zero, 8);
             float32_t sum0[4] = {0}, sum1[4] = {0}, sum2[4] = {0};
             sum0[0] = vfmv_f_s_f32m1_f32(temp00);
             sum0[1] = vfmv_f_s_f32m1_f32(temp01);
@@ -1028,94 +1033,10 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             vse32_v_f32m1(outptr1 + j, s1, vl);
             vse32_v_f32m1(outptr2 + j, s2, vl);
         }
-
-        // Only use for very small blocksize(<4). Maybe instead by "setVL".
-        for( ; j <= blockSize - 2; j += 2 )
-        {
-            const float* rptr0 = rowbuf + j*vecsize_aligned;
-            const float* rptr1 = rowbuf + (j+1)*vecsize_aligned;
-            float s00, s01, s10, s11, s20, s21;
-
-            if( initOutput )
-            {
-                s00 = s01 = bias0;
-                s10 = s11 = bias1;
-                s20 = s21 = bias2;
-            }
-            else
-            {
-                s00 = outptr0[j]; s01 = outptr0[j+1];
-                s10 = outptr1[j]; s11 = outptr1[j+1];
-                s20 = outptr2[j]; s21 = outptr2[j+1];
-            }
-
-            for( int k = 0; k < vecsize; k++ )
-            {
-                float w0 = wptr0[k], w1 = wptr1[k], w2 = wptr2[k];
-                float r = rptr0[k];
-                s00 += w0*r; s10 += w1*r; s20 += w2*r;
-                r = rptr1[k];
-                s01 += w0*r; s11 += w1*r; s21 += w2*r;
-            }
-
-            if( relu )
-            {
-                s00 = s00 > 0.f ? s00 : s00*r0;
-                s01 = s01 > 0.f ? s01 : s01*r0;
-                s10 = s10 > 0.f ? s10 : s10*r1;
-                s11 = s11 > 0.f ? s11 : s11*r1;
-                s20 = s20 > 0.f ? s20 : s20*r2;
-                s21 = s21 > 0.f ? s21 : s21*r2;
-            }
-
-            outptr0[j] = s00;
-            outptr0[j+1] = s01;
-            outptr1[j] = s10;
-            outptr1[j+1] = s11;
-            outptr2[j] = s20;
-            outptr2[j+1] = s21;
-        }
-
-        for( ; j < blockSize; j++ )
-        {
-            const float* rptr0 = rowbuf + j*vecsize_aligned;
-            float s00, s10, s20;
-
-            if( initOutput )
-            {
-                s00 = bias0;
-                s10 = bias1;
-                s20 = bias2;
-            }
-            else
-            {
-                s00 = outptr0[j];
-                s10 = outptr1[j];
-                s20 = outptr2[j];
-            }
-
-            for( int k = 0; k < vecsize; k++ )
-            {
-                float w0 = wptr0[k], w1 = wptr1[k], w2 = wptr2[k];
-                float r = rptr0[k];
-                s00 += w0*r; s10 += w1*r; s20 += w2*r;
-            }
-
-            if( relu )
-            {
-                s00 = s00 > 0.f ? s00 : s00*r0;
-                s10 = s10 > 0.f ? s10 : s10*r1;
-                s20 = s20 > 0.f ? s20 : s20*r2;
-            }
-
-            outptr0[j] = s00;
-            outptr1[j] = s10;
-            outptr2[j] = s20;
-        }
     }
 }
 
-/* 
+/*
 Example for load_deinterleave:
     input: ptr[16] = {1,2,3, ... ,14,15,16}
     output: a = {1, 3, 5, 7, 9, 11, 13, 15}
