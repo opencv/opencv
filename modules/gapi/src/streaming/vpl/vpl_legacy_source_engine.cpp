@@ -185,7 +185,6 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                          file_ptr&& source_handle,
                                          std::unique_ptr<VPLAccelerationPolicy>&& acceleration_policy)
 {
-    (void)acceleration_policy;
     mfxFrameAllocRequest decRequest = {};
     mfxU8 *decOutBuf                = nullptr;
     // Query number required surfaces for decoder
@@ -196,7 +195,7 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                     ", mfxFrameAllocRequest.NumFrameSuggested: " << decRequest.NumFrameSuggested <<
                                     ", mfxFrameAllocRequest.Type: " << decRequest.Type);
 
-    std::vector<std::shared_ptr<mfxFrameSurface1>> decoder_surf_pool (decRequest.NumFrameSuggested);
+    std::vector<std::shared_ptr<mfxFrameSurface1>> decoder_surf_pool (decRequest.NumFrameSuggested * 3);
     
     mfxU32 singleSurfaceSize = GetSurfaceSize(decoder_param.param.mfx.FrameInfo.FourCC,
                                         decoder_param.param.mfx.FrameInfo.Width,
@@ -243,7 +242,7 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
 
     // TODO Use common pool for all sessions ?
     sess_ptr->init_surface_pool(std::move(decoder_surf_pool), std::move(decRequest));
-
+    sess_ptr->acceleration_policy = std::move(acceleration_policy);
 }
 
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
@@ -261,22 +260,10 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
 
     GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << sess.session << ", surface: " << sess.dec_surface_out <<
                            ", w: " << w << ", h: " << h << ", p: " << p);
-    const int cols = info->CropW;
-    const int rows = info->CropH;
-
-    switch (info->FourCC) {
-        case MFX_FOURCC_I420: {
-        } break;
-
-        case MFX_FOURCC_NV12: {
-        } break;
-
-        default:
-            GAPI_LOG_WARNING(nullptr, "Unsupported FourCC code: " << info->FourCC << ". Skip");
-            return;
-    }
-
-    ready_frames.push(cv::Mat(cv::Size{rows, cols}, CV_8UC3));
+    
+    // manage memory ownership rely on acceleration policy 
+    auto frame_adapter = sess.acceleration_policy->create_frame_adapter(sess.dec_surface_out);
+    ready_frames.push(cv::MediaFrame(std::move(frame_adapter)));
 }
 
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
@@ -303,12 +290,20 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
             // a simple internal allocation case like this
 
             mfxFrameSurface1 *oldSurface = sess.curr_surface_ptr;
-            auto surf_ptr = sess.get_free_surface();
-            sess.curr_surface_ptr = surf_ptr.get();
+            try
+            {
+                auto surf_ptr = sess.get_free_surface();
+                sess.curr_surface_ptr = surf_ptr.get();
 
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
+                GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
                                              ", old surface: " << oldSurface <<
                                              ", new surface: "<< sess.curr_surface_ptr);
+                return ExecutionStatus::Continue; 
+            } catch (const std::exception& ex)
+            {
+                GAPI_LOG_WARNING(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
+                                             ", Not processed, error: " << ex.what());
+            }
             break;
         }
         case MFX_ERR_DEVICE_LOST:

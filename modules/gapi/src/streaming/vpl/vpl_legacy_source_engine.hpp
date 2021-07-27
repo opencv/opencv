@@ -47,6 +47,7 @@ public:
     bool stop_processing;
 private:
     std::vector<std::shared_ptr<mfxFrameSurface1>> decoder_surf_pool;
+    std::unique_ptr<VPLAccelerationPolicy> acceleration_policy;
     mfxFrameAllocRequest request;
 
     mfxFrameSurface1 *curr_surface_ptr;

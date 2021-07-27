@@ -21,7 +21,7 @@ namespace gapi {
 namespace wip {
 VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
 {
-#if 0 /*Not eeded actually*/
+#if 0 /* Activate it for LEGACY API*/
 //Create device
     UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
@@ -70,20 +70,26 @@ VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
     hw_handle->GetImmediateContext(&pD11Context);
     pD11Context->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
     pD11Multithread->SetMultithreadProtected(true);
- #endif
-    mfxStatus sts;/* = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE, (mfxHDL) hw_handle);
+ 
+    mfxStatus sts = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE, (mfxHDL) hw_handle);
     if (sts != MFX_ERR_NONE)
     {
         throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_SetHandle error: " + std::to_string(sts));
     }
-    */
+#else
+    mfxStatus sts;
+#endif
     sts = MFXVideoCORE_GetHandle(session, MFX_HANDLE_D3D11_DEVICE, reinterpret_cast<mfxHDL*>(&hw_handle));
     if (sts != MFX_ERR_NONE)
     {
         throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_GetHandle error: " + std::to_string(sts));
     }
 
+    //MFXVideoCORE_SetFrameAllocator(session, mfxFrameAllocator instance)
     GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy initialized");
+#ifdef CPU_ACCEL_ADAPTER
+    adapter.reset(new VPLCPUAccelerationPolicy(session));
+#endif
 }
 
 VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
@@ -93,6 +99,15 @@ VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
         GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy release ID3D11Device");
         hw_handle->Release();
     }
+}
+
+cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(mfxFrameSurface1* surface_ptr) {
+
+#ifdef CPU_ACCEL_ADAPTER
+    return adapter->create_frame_adapter(surface_ptr);
+#endif
+    (void)surface_ptr;
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
 }
 } // namespace wip
 } // namespace gapi

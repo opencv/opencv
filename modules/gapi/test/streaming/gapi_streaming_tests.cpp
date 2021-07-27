@@ -2229,7 +2229,7 @@ TEST(OneVPL_Source, Init)
     {
         cv::gapi::wip::CFGParamValue param;
         param.Type = MFX_VARIANT_TYPE_U32;
-        param.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
+        param.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;//MFX_ACCEL_MODE_NA
 
         src_params.emplace("mfxImplDescription.AccelerationMode", std::move(param));
     }

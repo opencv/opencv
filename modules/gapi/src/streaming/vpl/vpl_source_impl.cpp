@@ -7,6 +7,7 @@
 #include "streaming/vpl/vpl_legacy_source_engine.hpp"
 #include "streaming/vpl/vpl_source_impl.hpp"
 #include "streaming/vpl/vpl_dx11_accel.hpp"
+#include "streaming/vpl/vpl_cpu_accel.hpp"
 #include "streaming/vpl/vpl_utils.hpp"
 
 #include "logger.hpp"
@@ -163,6 +164,11 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
 
             //create decoder for session accoring to header recovered from source file
             DecoderParams decoder_param = create_decoder_from_file(dec_it->second, source_handle.get());
+
+            /* TODO if you want GET automatically created HW device interface
+             * then put `initializeHWAccel` after Decoder creation
+             * Otherwise: provide YOUR HW device interface BEFORE Decoder creation
+             */ 
             std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel(mfx_session);
             
             // create session driving engine if required
@@ -265,6 +271,12 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel(mfxSessi
                 ret = std::move(cand);
                 break;
             }
+            case MFX_ACCEL_MODE_NA:
+            {
+                std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(session));
+                ret = std::move(cand);
+                break;
+            }   
             default:
                 throw std::logic_error("invalid type: " +
                                                std::to_string(accel_mode_it->second.Data.U32));
