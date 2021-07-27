@@ -515,6 +515,13 @@ public:
                 return true;
         return false;
     }
+    bool writeToFile(const char* filename) CV_OVERRIDE
+    {
+        if (plugin_api_->v0.Capture_writeToFile)
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_writeToFile(capture_, filename))
+                return true;
+        return false;
+    }
     bool grabFrame() CV_OVERRIDE
     {
         if (plugin_api_->v0.Capture_grab)

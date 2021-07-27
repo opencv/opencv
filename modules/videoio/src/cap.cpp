@@ -410,12 +410,7 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 
 bool VideoCapture::writeToFile(const char* filename)
 {
-    bool ret = false;
-    if (!icap.empty()) {
-        icap->writeToFile(filename);
-        ret = true;
-    }
-    return ret;
+    return !icap.empty() ? icap->writeToFile(filename) : false;
 }
 
 bool VideoCapture::set(int propId, double value)
