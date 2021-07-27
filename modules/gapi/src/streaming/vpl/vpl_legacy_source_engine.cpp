@@ -131,12 +131,8 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
             my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.source_handle.get());
 
-            GAPI_LOG_INFO(nullptr, "ReadEncodedStream, session: " << my_sess.session <<
-                                   ", error: " <<  my_sess.last_status);
             if (my_sess.last_status != MFX_ERR_NONE) {
                 my_sess.source_handle.reset(); //close source
-                GAPI_LOG_INFO(nullptr, "Close source, session: " << my_sess.session <<
-                                   ", source: " <<  my_sess.source_handle);
             }
             return ExecutionStatus::Continue;
         },
@@ -144,9 +140,6 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << my_sess.session <<
-                                            ", sess.last_status: " << my_sess.last_status <<
-                                            ", surf_ptr: " << my_sess.curr_surface_ptr);
 
             sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
@@ -156,8 +149,6 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
                                                     my_sess.curr_surface_ptr,
                                                     &my_sess.dec_surface_out,
                                                     &my_sess.sync);
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << my_sess.session << ", dec_surface_out: " << my_sess.dec_surface_out <<
-                                   ", sess.last_status: " << my_sess.last_status);
             return ExecutionStatus::Continue;
         },
         // 3) Wait for ASYNC decode result

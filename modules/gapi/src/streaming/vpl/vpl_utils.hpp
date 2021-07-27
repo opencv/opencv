@@ -228,6 +228,8 @@ inline const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type
     }
 }
 
+std::string mfxstatus_to_string(mfxStatus err);
+
 inline std::tuple<mfxU32/*fourcc*/, mfxU32/*type*/> mfx_codec_type_to_cstr(const char* cstr)
 {
     (void)cstr;

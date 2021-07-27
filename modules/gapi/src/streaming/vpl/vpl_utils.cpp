@@ -130,6 +130,34 @@ CFGParamValue create_cfg_value_u32(mfxU32 value)
     return ret;
 }
 
+std::string mfxstatus_to_string(mfxStatus err) {
+    switch(err)
+    {
+        case MFX_ERR_NONE:
+            return "MFX_ERR_NONE";
+        case MFX_ERR_MORE_DATA:
+            return "MFX_ERR_MORE_DATA";
+        case MFX_ERR_MORE_SURFACE:
+            return "MFX_ERR_MORE_SURFACE";
+        case MFX_ERR_DEVICE_LOST:
+            return "MFX_ERR_DEVICE_LOST";
+        case MFX_WRN_DEVICE_BUSY:
+            return "MFX_WRN_DEVICE_BUSY";
+        case MFX_WRN_VIDEO_PARAM_CHANGED:
+            return "MFX_WRN_VIDEO_PARAM_CHANGED";
+        case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
+            return "MFX_ERR_INCOMPATIBLE_VIDEO_PARAM";
+        case MFX_ERR_REALLOC_SURFACE:
+            return "MFX_ERR_REALLOC_SURFACE";
+        default:
+            break;
+    }
+
+    std::string ret("<unknown ");
+    ret += std::to_string(err) + ">";
+    return ret;
+}
+
 // Read encoded stream from file
 mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f) {
 

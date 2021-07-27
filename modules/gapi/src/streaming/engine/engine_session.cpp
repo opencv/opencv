@@ -1,6 +1,7 @@
 #include <iterator>
 
 #include "streaming/engine/engine_session.hpp"
+#include "streaming/vpl/vpl_utils.hpp"
 #include "logger.hpp"
 
 namespace cv {
@@ -17,6 +18,11 @@ EngineSession::~EngineSession()
 
     GAPI_LOG_INFO(nullptr, "Close session: " << session);
     MFXClose(session);
+}
+
+std::string EngineSession::error_code_to_str() const
+{
+    return mfxstatus_to_string(last_status);
 }
 } // namespace wip
 } // namespace gapi

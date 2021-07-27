@@ -27,6 +27,7 @@ struct EngineSession {
     mfxStatus last_status;
 
     EngineSession(mfxSession sess, mfxBitstream&& str);
+    std::string error_code_to_str() const;
     virtual ~EngineSession();
 };
 } // namespace wip
