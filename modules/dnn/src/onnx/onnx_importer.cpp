@@ -546,7 +546,6 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto_)
     }
 }
 
-// TODO: find returns
 void ONNXImporter::parseMaxPool(LayerParams& layerParams, opencv_onnx::NodeProto node_proto)
 {
     layerParams.type = "Pooling";
@@ -857,6 +856,7 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, opencv_onnx::NodeProto n
     addLayer(layerParams, node_proto);
 }
 
+// "Add" "Sum" "Sub"
 void ONNXImporter::parseBias(LayerParams& layerParams, opencv_onnx::NodeProto node_proto)
 {
     const std::string& layer_type = node_proto.op_type();
@@ -2155,7 +2155,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["MaxPool"] = &ONNXImporter::parseMaxPool;
     dispatch["AveragePool"] = &ONNXImporter::parseAveragePool;
     dispatch["GlobalAveragePool"] = dispatch["GlobalMaxPool"] = dispatch["ReduceMean"] = dispatch["ReduceSum"] =
-        dispatch["ReduceMax"] = &ONNXImporter::parseReduce;
+            dispatch["ReduceMax"] = &ONNXImporter::parseReduce;
     dispatch["Slice"] = &ONNXImporter::parseSlice;
     dispatch["Split"] = &ONNXImporter::parseSplit;
     dispatch["Add"] = dispatch["Sum"] = dispatch["Sub"] = &ONNXImporter::parseBias;
