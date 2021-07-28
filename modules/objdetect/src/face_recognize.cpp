@@ -18,7 +18,7 @@ class FaceRecognizerImpl : public FaceRecognizer
 public:
     FaceRecognizerImpl(const String& model, const String& config)
     {
-        this->model = dnn::readNet(model);
+        net = dnn::readNet(model, config);
     };
     void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
@@ -37,8 +37,8 @@ public:
     void faceFeature(InputArray _aligned_img, OutputArray _face_feature) override
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
-        this->model.setInput(inputBolb);
-        this->model.forward(_face_feature);
+        net.setInput(inputBolb);
+        net.forward(_face_feature);
     };
     double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
     {
@@ -173,7 +173,7 @@ private:
         return transform_mat;
     }
 private:
-    dnn::Net model;
+    dnn::Net net;
 };
 
 Ptr<FaceRecognizer> FaceRecognizer::create(const String& model, const String& config)
