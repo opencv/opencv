@@ -37,8 +37,8 @@ There are two models (ONNX format) pre-trained and required for this module:
 ### DNNFaceDetector
 
 ```cpp
-// Initialize DNNFaceDetector
-Ptr<DNNFaceDetector> faceDetector = DNNFaceDetector::create(onnx_path, image.size(), score_thresh, nms_thresh, top_k);
+// Initialize FaceDetector
+Ptr<FaceDetector> faceDetector = FaceDetector::create(onnx_path, "", image.size(), score_thresh, nms_thresh, top_k);
 
 // Forward
 Mat faces;
@@ -51,3 +51,33 @@ The detection output `faces` is a two-dimension array, whose rows are the detect
 x1, y1, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rcm, y_rcm, x_lcm, y_lcm
 ```
 , where `x1, y1, w, h` are the top-left coordinates, width and height of the face bounding box, `{x, y}_{re, le, nt, rcm, lcm}` stands for the coordinates of right eye, left eye, nose tip, the right corner and left corner of the mouth respectively.
+
+
+### Face Recognition
+
+Following Face Detection, run codes below to extract face feature from facial image.
+
+```cpp
+// Initialize FaceRecognizer with model path (cv::String)
+Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(model_path, "");
+
+// Aligning and cropping facial image through the first face of faces detected by dnn_face::DNNFaceDetector
+Mat aligned_face;
+faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
+
+// Run feature extraction with given aligned_face (cv::Mat)
+Mat feature;
+faceRecognizer->faceFeature(aligned_face, feature);
+feature = feature.clone();
+```
+
+After obtaining face features *feature1* and *feature2* of two facial images, run codes below to calculate the identity discrepancy between the two faces.
+
+```cpp
+// Calculating the discrepancy between two face features by using cosine distance.
+double cos_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::cosine);
+// Calculating the discrepancy between two face features by using normL2 distance.
+double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::norml2);
+```
+
+For example, two faces have same identity if the cosine distance is greater than or equal to 0.34, or the normL2 distance is less than or equal to 1.32.

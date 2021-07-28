@@ -16,11 +16,11 @@ namespace cv
 class FaceRecognizerImpl : public FaceRecognizer
 {
 public:
-    FaceRecognizerImpl(const String& onnx_path)
+    FaceRecognizerImpl(const String& model, const String& config)
     {
-        this->model = dnn::readNet(onnx_path);
+        this->model = dnn::readNet(model);
     };
-    void AlignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
+    void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
         Mat face_mat = _face_mat.getMat();
         float src_point[5][2];
@@ -28,30 +28,30 @@ public:
         {
             for(int col = 0; col < 2; ++col)
             {
-                src_point[row][col] = face_mat.at<double>(1, row*2+col+4);
+                src_point[row][col] = face_mat.at<float>(0, row*2+col+4);
             }
         }
         Mat warp_mat = getSimilarityTransformMatrix(src_point);
         warpAffine(_src_img, _aligned_img, warp_mat, Size(112, 112), INTER_LINEAR);
     };
-    void facefeature(InputArray _aligned_img, OutputArray _face_feature) override
+    void faceFeature(InputArray _aligned_img, OutputArray _face_feature) override
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
         this->model.setInput(inputBolb);
-        return this->model.forward(_face_feature);
+        this->model.forward(_face_feature);
     };
-    double facematch(InputArray _face_feature1, InputArray _face_feature2, const String& distype) const override
+    double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
         face_feature1 /= norm(face_feature1);
         face_feature2 /= norm(face_feature2);
         
-        if(distype == "cosine"){
+        if(dis_type == distype::cosine){
             return sum(face_feature1.mul(face_feature2))[0];
-        }else if(distype == "norml2"){
+        }else if(dis_type == distype::norml2){
             return norm(face_feature1, face_feature2);
         }else{
-            throw std::invalid_argument("invalid parameter " + distype);
+            throw std::invalid_argument("invalid parameter " + dis_type);
         }
 
     };
@@ -176,11 +176,9 @@ private:
     dnn::Net model;
 };
 
-Ptr<FaceRecognizer> FaceRecognizer::create(const String& onnx_path)
+Ptr<FaceRecognizer> FaceRecognizer::create(const String& model, const String& config)
 {
-    return makePtr<FaceRecognizerImpl>(onnx_path);
+    return makePtr<FaceRecognizerImpl>(model, config);
 }
 
 } // namespace cv
-
-
