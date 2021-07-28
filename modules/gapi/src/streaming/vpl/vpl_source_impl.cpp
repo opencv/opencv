@@ -70,7 +70,8 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
                                                        cfg_param_it->second);
             if (sts != MFX_ERR_NONE )
             {
-                throw std::runtime_error("MFXSetConfigFilterProperty failed, error: " + std::to_string(sts) +
+                throw std::runtime_error("MFXSetConfigFilterProperty failed, error: " +
+                                         mfxstatus_to_string(sts) +
                                          " - for \"" + cfg_param_it->first + "\"");
             }
 
@@ -149,7 +150,8 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
         if (MFX_ERR_NONE != sts)
         {
             throw std::logic_error("Cannot create MFX Session for implementation index:" +
-                                   std::to_string(impl_number));
+                                   std::to_string(impl_number) +
+                                   ", error: " + mfxstatus_to_string(sts));
         }
 
         GAPI_LOG_INFO(nullptr, "Initialized MFX session: " << mfx_session);
@@ -230,22 +232,25 @@ DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decod
 
     mfxStatus sts = ReadEncodedStream(bitstream, source_ptr);
     if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error reading bitstream, error: " + std::to_string(sts));
+        throw std::runtime_error("Error reading bitstream, error: " +
+                                 mfxstatus_to_string(sts));
     }
 
     // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder.Data.U32;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-    sts                      = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
+    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
     if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error decoding header, error: " + std::to_string(sts));
+        throw std::runtime_error("Error decoding header, error: " +
+                                 mfxstatus_to_string(sts));
     }
 
     // Input parameters finished, now initialize decode
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error initializing Decode, error: " + std::to_string(sts));
+        throw std::runtime_error("Error initializing Decode, error: " +
+                                 mfxstatus_to_string(sts));
     }
 
     return {bitstream, mfxDecParams};;

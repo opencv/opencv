@@ -130,7 +130,6 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
             my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.source_handle.get());
-
             if (my_sess.last_status != MFX_ERR_NONE) {
                 my_sess.source_handle.reset(); //close source
             }
@@ -141,7 +140,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
 
-            sess.last_status =
+            my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.last_status == MFX_ERR_NONE
                                                         ? &my_sess.stream
@@ -165,7 +164,11 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
                     }
                 } while (sess.last_status == MFX_WRN_IN_EXECUTION);
             }
-
+            return ExecutionStatus::Continue;
+        },
+        // 4) Falls back on generic status procesing
+        [this] (EngineSession& sess) -> ExecutionStatus
+        {
             return this->process_error(sess.last_status, static_cast<LegacyDecodeSession&>(sess));
         }
     );
@@ -259,14 +262,12 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
 
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
 {
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "status: " << status);
+    GAPI_LOG_INFO/*DEBUG*/(nullptr, "status: " << mfxstatus_to_string(status));
 
     switch (status) {
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_DATA for session: " << sess.session <<
-                                            ", source: " << sess.source_handle);
             if (!sess.source_handle) {
                 // No more data to drain from decoder, start encode draining mode
                 return ExecutionStatus::Processed;
@@ -286,14 +287,14 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
                 auto surf_ptr = sess.get_free_surface();
                 sess.curr_surface_ptr = surf_ptr.get();
 
-                GAPI_LOG_INFO/*DEBUG*/(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
-                                             ", old surface: " << oldSurface <<
-                                             ", new surface: "<< sess.curr_surface_ptr);
+                GAPI_LOG_INFO/*DEBUG*/(nullptr, "[" << sess.session << "] change surface"
+                                             ", old: " << oldSurface <<
+                                             ", new: "<< sess.curr_surface_ptr);
                 return ExecutionStatus::Continue; 
             } catch (const std::exception& ex)
             {
-                GAPI_LOG_WARNING(nullptr, "MFX_ERR_MORE_SURFACE for session: " << sess.session <<
-                                             ", Not processed, error: " << ex.what());
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
+                                          "Abort");
             }
             break;
         }
@@ -322,7 +323,7 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
             // a simple internal allocation case like this
             break;
         default:
-            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << status);
+            GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status));
             break;
     }
 

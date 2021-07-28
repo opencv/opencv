@@ -1,5 +1,6 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/vpl/vpl_dx11_accel.hpp"
+#include "streaming/vpl/vpl_utils.hpp"
 #include "logger.hpp"
 
 #ifdef HAVE_DIRECTX
@@ -74,7 +75,8 @@ VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
     mfxStatus sts = MFXVideoCORE_SetHandle(session, MFX_HANDLE_D3D11_DEVICE, (mfxHDL) hw_handle);
     if (sts != MFX_ERR_NONE)
     {
-        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_SetHandle error: " + std::to_string(sts));
+        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_SetHandle error: " +
+                               mfxstatus_to_string(sts));
     }
 #else
     mfxStatus sts;
@@ -82,11 +84,12 @@ VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
     sts = MFXVideoCORE_GetHandle(session, MFX_HANDLE_D3D11_DEVICE, reinterpret_cast<mfxHDL*>(&hw_handle));
     if (sts != MFX_ERR_NONE)
     {
-        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_GetHandle error: " + std::to_string(sts));
+        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_GetHandle error: " +
+                               mfxstatus_to_string(sts));
     }
 
     //MFXVideoCORE_SetFrameAllocator(session, mfxFrameAllocator instance)
-    GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy initialized");
+    GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy initialized, session: " << session);
 #ifdef CPU_ACCEL_ADAPTER
     adapter.reset(new VPLCPUAccelerationPolicy(session));
 #endif

@@ -2,6 +2,7 @@
 #include <exception>
 
 #include "streaming/vpl/vpl_cpu_accel.hpp"
+#include "streaming/vpl/vpl_utils.hpp"
 #include "logger.hpp"
 
 namespace cv {
@@ -28,12 +29,18 @@ private:
 VPLCPUAccelerationPolicy::MediaFrameAdapter::MediaFrameAdapter(mfxFrameSurface1* parent):
     parent_surface_ptr(parent) {
 
+    GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
     parent_surface_ptr->Data.Locked++;
+    GAPI_LOG_INFO/*DEBUG*/(nullptr, "surface: " << parent_surface_ptr <<
+                                    ", locked times: " << parent_surface_ptr->Data.Locked + 1);
 }
 
 VPLCPUAccelerationPolicy::MediaFrameAdapter::~MediaFrameAdapter()
 {
+    GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
     parent_surface_ptr->Data.Locked--;
+    GAPI_LOG_INFO/*DEBUG*/(nullptr, "surface: " << parent_surface_ptr <<
+                                    ", locked times: " << parent_surface_ptr->Data.Locked);
 }
 
 cv::GFrameDesc VPLCPUAccelerationPolicy::MediaFrameAdapter::meta() const
@@ -117,18 +124,17 @@ VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy(mfxSession session)
 {
     (void)session;
     //MFXVideoCORE_SetFrameAllocator(session, mfxFrameAllocator instance)
-    GAPI_LOG_INFO(nullptr, "VPLCPUAccelerationPolicy initialized");
+    GAPI_LOG_INFO(nullptr, "VPLCPUAccelerationPolicy initialized, session: " << session);
 }
 
 VPLCPUAccelerationPolicy::~VPLCPUAccelerationPolicy()
 {
-    GAPI_LOG_INFO(nullptr, "VPLCPUAccelerationPolicy release ID3D11Device");
+    GAPI_LOG_INFO(nullptr, "VPLCPUAccelerationPolicy deinitialized");
 }
 
 cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(mfxFrameSurface1* surface_ptr) {
 
-    cv::MediaFrame::AdapterPtr ret(new VPLCPUAccelerationPolicy::MediaFrameAdapter(surface_ptr));
-    return ret;
+    return cv::MediaFrame::AdapterPtr{new VPLCPUAccelerationPolicy::MediaFrameAdapter(surface_ptr)};
 }
 } // namespace wip
 } // namespace gapi
