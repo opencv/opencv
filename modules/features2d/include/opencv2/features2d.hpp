@@ -1441,29 +1441,22 @@ class CV_EXPORTS_W DBOWTrainer : public BOWTrainer
 public:
     /** @brief The constructor.
     */
-    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const TermCriteria& termcrit=TermCriteria(),
-                      int attempts=3, int flags=KMEANS_PP_CENTERS );
+    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const NormTypes scoringType=NORM_L2,
+                      const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
     virtual ~DBOWTrainer();
 
     CV_WRAP virtual Mat cluster() CV_OVERRIDE;
     CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
-
-    /** @brief Recursively clustering descriptors at each level in the vocabulary tree.
-
-    @param descriptors Descriptors to cluster. Each row of the descriptors matrix is a descriptor.
-    @param parent parent node index.
-    @param current_level current level in the vocabulary tree.
-     */
-    CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level);
 
 protected:
     struct Node
     {
         unsigned idx;
         unsigned parent;
-        unsigned word;
+        unsigned wordIdx;
+        double weight;
         cv::Mat descriptor;
-        std::vector<unsigned> child;
+        std::vector<unsigned> childs;
 
         Node() : idx(0), parent(0) {}
         Node(unsigned _idx) : idx(_idx), parent(0) {}
@@ -1471,11 +1464,31 @@ protected:
     };
 
     int clusterCountPerLevel, level;
+    NormTypes scoringType;
     TermCriteria termcrit;
     int attempts;
     int flags;
     std::vector<Node> nodes;
     std::vector<Node> words;
+
+    /** @brief Recursively clustering descriptors at each level in the vocabulary tree.
+
+    @param descriptors Descriptors to cluster. Each row of the descriptors matrix is a descriptor.
+    @param parent parent node index.
+    @param current_level current level in the vocabulary tree.
+     */
+    CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level );
+
+    /** @brief Set weights for nodes.
+     */
+    CV_WRAP virtual void setWeights();
+
+    /** @brief Return most likely wordIdx to the given feature.
+
+    @param descriptors Input descriptors.
+    @param word Output word index.
+     */
+    CV_WRAP virtual void transform( const Mat& descriptors, unsigned& word);
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.

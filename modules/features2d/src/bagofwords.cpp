@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -115,9 +116,9 @@ Mat BOWKMeansTrainer::cluster( const Mat& _descriptors )
     return vocabulary;
 }
 
-DBOWTrainer::DBOWTrainer( int _clusterCountPerLevel, int _level, const TermCriteria& _termcrit,
-                                    int _attempts, int _flags ) :
-    clusterCountPerLevel(_clusterCountPerLevel), level(_level), termcrit(_termcrit), attempts(_attempts), flags(_flags)
+DBOWTrainer::DBOWTrainer( int _clusterCountPerLevel, int _level, const NormTypes _scoringType,
+                            const TermCriteria& _termcrit, int _attempts, int _flags ) :
+    clusterCountPerLevel(_clusterCountPerLevel), level(_level), scoringType(_scoringType), termcrit(_termcrit), attempts(_attempts), flags(_flags)
 {}
 
 DBOWTrainer::~DBOWTrainer()
@@ -153,18 +154,20 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
         words.reserve( (int)pow((double)clusterCountPerLevel, (double)level) );
         for (std::vector<Node>::iterator it = nodes.begin() + 1; it != nodes.end(); it++)
         {
-            if (it->child.empty())
+            if (it->childs.empty())
             {
-                it->word = (unsigned)words.size();
+                it->wordIdx = (unsigned)words.size();
                 words.push_back(*it);
             }
         }
     }
 
+    setWeights();
+
     return Mat();
 }
 
-void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_level)
+void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_level )
 {
     if (_descriptors.empty()) return;
 
@@ -181,24 +184,25 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             vocabulary.push_back(_descriptors.row(i));
         }
     }
-    else{
+    else
+    {
         groups.resize(clusterCountPerLevel);
         kmeans( _descriptors, clusterCountPerLevel, labels, termcrit, attempts, flags, vocabulary );
         for (int i = 0; i < labels.rows; i++)
-            groups[labels.at<int>(0, i)].push_back(i);
+            groups[labels.at<int>(i)].push_back(i);
     }
 
     for (int i = 0; i < vocabulary.rows; i++)
     {
         unsigned idx = (unsigned)nodes.size();
         nodes.push_back(Node(idx, parent, vocabulary.row(i)));
-        nodes[parent].child.push_back(idx);
+        nodes[parent].childs.push_back(idx);
     }
 
 
     if (current_level < level)
     {
-        std::vector<unsigned> childs = nodes[parent].child;
+        std::vector<unsigned> childs = nodes[parent].childs;
         for (int i = 0; i < clusterCountPerLevel; i++)
         {
             unsigned child = childs[i];
@@ -216,6 +220,65 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             }
         }
     }
+}
+
+void DBOWTrainer::setWeights()
+{
+    CV_Assert( !words.empty() );
+    const int nDescriptors = (int)descriptors.size();
+    const int nWords = (int)words.size();
+
+    std::vector<unsigned> cnt(nWords, 0);
+    std::vector<bool> visited(nWords, false);
+
+    for (int i = 0; i < nDescriptors; i++)
+    {
+        fill(visited.begin(), visited.end(), false);
+        for (int j = 0; j < descriptors[i].rows; j++)
+        {
+            cv::Mat descriptor = descriptors[i].row(j);
+            unsigned wordIdx;
+            transform(descriptor, wordIdx);
+
+            if (!visited[wordIdx])
+            {
+                cnt[wordIdx]++;
+                visited[wordIdx] = true;
+            }
+        }
+    }
+
+    for (int i = 0; i < nWords; i++)
+        if (cnt[i] > 0)
+            words[i].weight = log((double)nDescriptors / (double)cnt[i]);
+}
+
+void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx)
+{
+    std::vector<unsigned> childs;
+    std::vector<unsigned>::const_iterator child;
+    unsigned returnIdx = 0;
+
+    do
+    {
+        childs = nodes[returnIdx].childs;
+        returnIdx = childs[0];
+
+        double minDistance = norm(_descriptor, nodes[returnIdx].descriptor, scoringType);
+
+        for (child = childs.begin() + 1; child != childs.end(); child++)
+        {
+            double distance = norm(_descriptor, nodes[*child].descriptor, scoringType);
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                returnIdx = *child;
+            }
+        }
+
+    } while (!nodes[returnIdx].childs.empty());
+
+    wordIdx = nodes[returnIdx].wordIdx;
 }
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor,
