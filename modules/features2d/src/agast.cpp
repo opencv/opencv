@@ -7934,13 +7934,6 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
 #endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
-void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
-{
-    CV_INSTRUMENT_REGION();
-
-    AGAST(_img, keypoints, threshold, nonmax_suppression, AgastFeatureDetector::OAST_9_16);
-}
-
 class AgastFeatureDetector_Impl CV_FINAL : public AgastFeatureDetector
 {
 public:
