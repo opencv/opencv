@@ -54,7 +54,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             throw std::runtime_error("Cannot open source file: " + file_path);
         }
 
-        GAPI_LOG_INFO(nullptr, "Requested cfg params count: " << cfg_params.size());
+        GAPI_LOG_DEBUG(nullptr, "Requested cfg params count: " << cfg_params.size());
         this->mfx_handle_configs.resize(cfg_params.size());
 
         // Set handle config params
@@ -78,7 +78,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             ++cfg_param_it;
         }
 
-        GAPI_LOG_INFO(nullptr, "Find MFX better implementation satisfying requested params, handle: " << mfx_handle);
+        GAPI_LOG_DEBUG(nullptr, "Find MFX better implementation satisfying requested params, handle: " << mfx_handle);
         int i = 0;
         mfxImplDescription *idesc = nullptr;
         std::vector<mfxImplDescription*> descriptions;
@@ -100,8 +100,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             }
             ss << *idesc << std::endl;
 
-            GAPI_LOG_INFO(nullptr, "Implementation index: " << i);
-            GAPI_LOG_INFO(nullptr, ss.str());
+            GAPI_LOG_INFO(nullptr, "Implementation index: " << i << "\n" << ss.str());
 
             // find intersection
             CFGParams impl_params = get_params_from_string(ss.str());
@@ -122,7 +121,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
                 }
                 return true;
             });
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "Equal param intersection count: " << matched_params.size());
+            GAPI_LOG_DEBUG(nullptr, "Equal param intersection count: " << matched_params.size());
         
             matches_count.emplace(matches_count.size(), i++);
         }
@@ -263,11 +262,11 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel(mfxSessi
     auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
     if (accel_mode_it == cfg_params.end())
     {
-        GAPI_LOG_INFO/*DEBUG*/(nullptr, "No HW Accel requested, session: " << session);
+        GAPI_LOG_DEBUG(nullptr, "No HW Accel requested, session: " << session);
         return ret;
     }
 
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "Add HW acceleration support, session: " << session);
+    GAPI_LOG_DEBUG(nullptr, "Add HW acceleration support, session: " << session);
     try {
         switch(accel_mode_it->second.Data.U32) {
             case MFX_ACCEL_MODE_VIA_D3D11:

@@ -16,14 +16,14 @@ VPLProcessingEngine::ExecutionStatus VPLProcessingEngine::process(mfxSession ses
     session_ptr processing_session = sess_it->second;
     ExecutionData& exec_data = execution_table[session];
 
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "[" << session <<"] start op id: " << exec_data.op_id);
+    GAPI_LOG_DEBUG(nullptr, "[" << session <<"] start op id: " << exec_data.op_id);
     ExecutionStatus status = execute_op(pipeline.at(exec_data.op_id), *processing_session);
     size_t old_op_id = exec_data.op_id++;
     if (exec_data.op_id == pipeline.size())
     {
         exec_data.op_id = 0;
     }
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "[" << session <<"] finish op id: " << old_op_id <<
+    GAPI_LOG_DEBUG(nullptr, "[" << session <<"] finish op id: " << old_op_id <<
                                     ", " << processing_session->error_code_to_str() <<
                                     ", " << VPLProcessingEngine::status_to_string(status) <<
                                     ", next op id: " << exec_data.op_id);

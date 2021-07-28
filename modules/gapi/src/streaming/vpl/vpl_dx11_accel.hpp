@@ -31,7 +31,9 @@ struct VPLDX11AccelerationPolicy final: public VPLAccelerationPolicy
     VPLDX11AccelerationPolicy(mfxSession session);
     ~VPLDX11AccelerationPolicy();
 
-    cv::MediaFrame::AdapterPtr create_frame_adapter(mfxFrameSurface1* surface_ptr) override;
+    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
+    surface_weak_ptr_t get_free_surface(pool_key_t key) const override;
+    cv::MediaFrame::AdapterPtr create_frame_adapter(surface_raw_ptr_t surface) override;
 
 private:
     ID3D11Device *hw_handle;

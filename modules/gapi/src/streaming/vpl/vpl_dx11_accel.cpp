@@ -104,12 +104,35 @@ VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
     }
 }
 
-cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(mfxFrameSurface1* surface_ptr) {
+VPLDX11AccelerationPolicy::pool_key_t
+VPLDX11AccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_size_bytes,
+                                               surface_ptr_ctr_t creator) {
+    GAPI_LOG_DEBUG(nullptr, "pool size: " << pool_size << ", surface size bytes: " << surface_size_bytes);
 
 #ifdef CPU_ACCEL_ADAPTER
-    return adapter->create_frame_adapter(surface_ptr);
+    return adapter->create_surface_pool(pool_size, surface_size_bytes, creator);
 #endif
-    (void)surface_ptr;
+    (void)pool_size;
+    (void)surface_size_bytes;
+    (void)creator;
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+}
+
+VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key) const
+{
+#ifdef CPU_ACCEL_ADAPTER
+    return adapter->get_free_surface(key);
+#endif
+    (void)key;
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+}
+
+cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(surface_raw_ptr_t surface) {
+
+#ifdef CPU_ACCEL_ADAPTER
+    return adapter->create_frame_adapter(surface);
+#endif
+    (void)surface;
     throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
 }
 } // namespace wip

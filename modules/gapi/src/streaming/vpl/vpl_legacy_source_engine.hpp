@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "streaming/engine/base_engine.hpp"
+#include "streaming/vpl/vpl_accel_policy.hpp"
 #ifdef HAVE_ONEVPL
 #include <vpl/mfxvideo.h>
 
@@ -37,10 +38,9 @@ public:
     
     LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, file_ptr&& source);
     using EngineSession::EngineSession;
-    void init_surface_pool(std::vector<std::shared_ptr<mfxFrameSurface1>>&& surf_pool,
-                                            mfxFrameAllocRequest&& decRequest);
 
-    std::shared_ptr<mfxFrameSurface1> LegacyDecodeSession::get_free_surface() const;
+    void swap_surface();
+    void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
     
     mfxVideoParam mfx_decoder_param;
     VPLLegacyDecodeEngine::file_ptr source_handle;
@@ -48,10 +48,11 @@ public:
 private:
     std::vector<std::shared_ptr<mfxFrameSurface1>> decoder_surf_pool;
     std::unique_ptr<VPLAccelerationPolicy> acceleration_policy;
+    VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;
 
-    mfxFrameSurface1 *curr_surface_ptr;
-    mfxFrameSurface1 *dec_surface_out;
+    VPLAccelerationPolicy::surface_weak_ptr_t procesing_surface_ptr;
+    VPLAccelerationPolicy::surface_raw_ptr_t output_surface_ptr;
 };
 } // namespace wip
 } // namespace gapi

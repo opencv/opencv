@@ -33,7 +33,6 @@ VPLDecodeEngine::VPLDecodeEngine() {
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             DecodeSession &my_sess = static_cast<DecodeSession&>(sess);
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << my_sess.session << ", sess.last_status: " << my_sess.last_status);
             sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.last_status == MFX_ERR_NONE
@@ -42,8 +41,7 @@ VPLDecodeEngine::VPLDecodeEngine() {
                                                         nullptr,
                                                     &my_sess.dec_surface_out,
                                                     &my_sess.sync);
-            GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << my_sess.session << ", dec_surface_out: " << my_sess.dec_surface_out <<
-                                   ", sess.last_status: " << my_sess.last_status);
+            GAPI_LOG_DEBUG(nullptr, "[" << my_sess.session << "], dec_surface_out: " << my_sess.dec_surface_out);
             return ExecutionStatus::Continue;
         },
         // 3) Wait for ASYNC decode result
@@ -89,9 +87,10 @@ void VPLDecodeEngine::on_frame_ready(DecodeSession& sess)
     size_t h = info->Height;
     size_t p = data->Pitch;
 
-
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "session: " << sess.session << ", surface: " << sess.dec_surface_out <<
-                           ", w: " << w << ", h: " << h << ", p: " << p);
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    
+    GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], surface: " << sess.dec_surface_out <<
+                            ", w: " << w << ", h: " << h << ", p: " << p);
     const int cols = info->CropW;
     const int rows = info->CropH;
 
@@ -112,7 +111,7 @@ void VPLDecodeEngine::on_frame_ready(DecodeSession& sess)
 
 VPLProcessingEngine::ExecutionStatus VPLDecodeEngine::process_error(mfxStatus status, DecodeSession& sess)
 {
-    GAPI_LOG_INFO/*DEBUG*/(nullptr, "status: " << status);
+    GAPI_LOG_DEBUG(nullptr, "status: " << status);
     switch (status) {
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
