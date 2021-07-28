@@ -1985,6 +1985,12 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
+CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename)
+{
+    return CV_ERROR_FAIL;
+}
+
+static
 CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
 {
     if (!handle)
@@ -2184,11 +2190,12 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
         /*  3*/cv::cv_capture_release,
         /*  4*/cv::cv_capture_get_prop,
         /*  5*/cv::cv_capture_set_prop,
-        /*  6*/cv::cv_capture_grab,
-        /*  7*/cv::cv_capture_retrieve,
+        /*  6*/cv_capture_write_to_file,
+        /*  7*/cv::cv_capture_grab,
+        /*  8*/cv::cv_capture_retrieve,
     },
     {
-        /*  8*/cv::cv_capture_open_with_params,
+        /*  9*/cv::cv_capture_open_with_params,
     }
 };
 
