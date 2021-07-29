@@ -81,3 +81,12 @@ double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::
 ```
 
 For example, two faces have same identity if the cosine distance is greater than or equal to 0.34, or the normL2 distance is less than or equal to 1.32.
+
+## Reference:
+
+- https://github.com/ShiqiYu/libfacedetection
+- https://github.com/ShiqiYu/libfacedetection.train
+
+## Acknowledgement
+
+Thanks [Prof. Yu](https://github.com/ShiqiYu/) for training and providing the face detection model.
