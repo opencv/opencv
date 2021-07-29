@@ -258,7 +258,6 @@ public:
         sensor_error_c_ = val;
     }
 
-private:
     /** The method to use to compute the planes */
     int method_;
     /** The size of the blocks to look at for a stable MSE */
