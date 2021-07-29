@@ -843,7 +843,7 @@ void fastGEMM1T( const float* vec, const float* weights,
         vfloat32m1_t temp5 = vfredsum_vs_f32m2_f32m1(temp5, vs5, zero, vl);
         vfloat32m1_t temp6 = vfredsum_vs_f32m2_f32m1(temp6, vs6, zero, vl);
         vfloat32m1_t temp7 = vfredsum_vs_f32m2_f32m1(temp7, vs7, zero, vl);
-        float32_t sum[8] = {0,0,0,0,0,0,0,0};
+        float32_t sum[8];
         sum[0] = vfmv_f_s_f32m1_f32(temp0);
         sum[1] = vfmv_f_s_f32m1_f32(temp1);
         sum[2] = vfmv_f_s_f32m1_f32(temp2);
@@ -995,7 +995,7 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             vfloat32m1_t temp21 = vfredsum_vs_f32m2_f32m1(temp21, vs21, zero, 8);
             vfloat32m1_t temp22 = vfredsum_vs_f32m2_f32m1(temp22, vs22, zero, 8);
             vfloat32m1_t temp23 = vfredsum_vs_f32m2_f32m1(temp23, vs23, zero, 8);
-            float32_t sum0[4] = {0}, sum1[4] = {0}, sum2[4] = {0};
+            float32_t sum0[4], sum1[4], sum2[4];
             sum0[0] = vfmv_f_s_f32m1_f32(temp00);
             sum0[1] = vfmv_f_s_f32m1_f32(temp01);
             sum0[2] = vfmv_f_s_f32m1_f32(temp02);
