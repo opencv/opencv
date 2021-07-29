@@ -1058,10 +1058,6 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-Ptr<DepthCleaner> DepthCleaner::create(int depth_in, int window_size_in, int method_in) {
-  return makePtr<DepthCleaner>(depth_in, window_size_in, method_in);
-}
-
 template<typename TMat>
 struct OdometryFrameImpl : public OdometryFrame
 {
