@@ -739,9 +739,6 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/** Default constructor of the Algorithm class that computes normals
- */
-
 Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K, int windowSize, int method)
 {
     CV_Assert(rows > 0 && cols > 0 && (depth == CV_32F || depth == CV_64F));
@@ -782,4 +779,4 @@ Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K
     return ptr;
 }
 
-}
+} // namespace cv

@@ -293,7 +293,7 @@ public:
       CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST
     };
 
-    /** Indicates what pyramid size is to get using get/set methods:
+    /** Indicates what pyramid is to access using get/setPyramid... methods:
     * @param PYR_IMAGE The pyramid of RGB images
     * @param PYR_DEPTH The pyramid of depth images
     * @param PYR_MASK  The pyramid of masks
