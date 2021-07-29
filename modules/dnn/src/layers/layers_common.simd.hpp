@@ -744,9 +744,9 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                int ma, int na, int nb )
 {
     int n = 0;
-    size_t vl = vsetvl_e32m2(128);
-    size_t mvl0 = vsetvl_e32m2(128);
-    size_t mvl1 = vsetvl_e32m2(128);
+    size_t vl = 8;
+    size_t mvl0 = 8;
+    size_t mvl1 = 8;
     for( ; n < nb; n += 16 )
     {
         if ( n + 16 > nb) {
@@ -805,8 +805,8 @@ void fastGEMM1T( const float* vec, const float* weights,
                  float* dst, int nvecs, int vecsize )
 {
     int i = 0;
-    size_t vl = vsetvl_e32m2(128);
-    size_t mvl = vsetvl_e32m2(128);
+    size_t vl = 8;
+    size_t mvl = 8;
     for( ; i < nvecs; i += 8 )
     {
         if (i + 8 >= nvecs)
@@ -864,7 +864,7 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
                int blockSize, int vecsize, int vecsize_aligned,
                const float* relu, bool initOutput )
 {
-    int vl = vsetvl_e32m1(128); // vl = 4
+    int vl = 4;
     int outCn = outShape[1];
     size_t outPlaneSize = outShape[2]*outShape[3];
     float r0 = 1.f, r1 = 1.f, r2 = 1.f;
@@ -930,7 +930,7 @@ void fastConv( const float* weights, size_t wstep, const float* bias,
             }
             int k = 0;
             const float* rptr = rowbuf + j*vecsize_aligned;
-            int vlm2 = vsetvl_e32m2(128); // vl = 8
+            int vlm2 = 8;
             vfloat32m2_t vs00 = vfmv_v_f_f32m2(0, vlm2), vs01 = vfmv_v_f_f32m2(0, vlm2),
                    vs02 = vfmv_v_f_f32m2(0, vlm2), vs03 = vfmv_v_f_f32m2(0, vlm2),
                    vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
@@ -1046,7 +1046,7 @@ Example for load_deinterleave:
 */
 static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& a, vfloat32m2_t& b)
 {
-    int vl = vsetvl_e32m2(128);
+    int vl = 8;
     uint32_t masks[] = {1,1,1,1,0,0,0,0};
     vuint32m2_t vm = vle32_v_u32m2(masks,vl);
     vbool16_t mask01 = vmseq_vx_u32m2_b16 (vm, 0, vl);
@@ -1074,7 +1074,7 @@ void fastDepthwiseConv( const float* wptr,
                      float* outptr_,
                      int out_d, int outH, int outW )
 {
-    int vl = vsetvl_e32m2(128);
+    int vl = 8;
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                 w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
                 w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
