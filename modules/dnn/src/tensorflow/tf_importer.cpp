@@ -406,10 +406,51 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
     }
 }
 
-void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer)
+void setPadMode(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "padding"))
         layerParams.set("pad_mode", getLayerAttr(layer, "padding").s());
+}
+
+bool getExplicitPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, int64_t (&pads)[8])
+{
+    if (!layerParams.has("pad_mode") ||
+        layerParams.get("pad_mode").getStringValue() != "EXPLICIT")
+    {
+        return false;
+    }
+
+    CV_Assert(hasLayerAttr(layer, "explicit_paddings"));
+
+    const tensorflow::AttrValue& protoPads = getLayerAttr(layer, "explicit_paddings");
+    if (protoPads.list().i_size() != 8)
+    {
+        CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding configuration.");
+    }
+
+    int n = sizeof(pads) / sizeof(pads[0]);
+    for (int i = 0; i < n; ++i)
+    {
+        pads[i] = protoPads.list().i(i);
+    }
+
+    if (getDataLayout(layer) != DATA_LAYOUT_NCHW)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF:     Data format " << getLayerAttr(layer, "data_format").s() << ", assuming NHWC.");
+        // Perhaps, we have NHWC padding dimensions order.
+        //  N    H    W    C
+        // 0 1  2 3  4 5  6 7
+        std::swap(pads[2], pads[6]);
+        std::swap(pads[3], pads[7]);
+        //  N    C    W    H
+        // 0 1  2 3  4 5  6 7
+        std::swap(pads[4], pads[6]);
+        std::swap(pads[5], pads[7]);
+        //  N    C    H    W
+        // 0 1  2 3  4 5  6 7
+    }
+
+    return true;
 }
 
 Pin parsePin(const std::string &name)
@@ -516,6 +557,7 @@ protected:
 
 private:
     void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId);
+    void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value = 0.);
 
     friend class LayerHandler;
     typedef void (TFImporter::*TFImporterNodeParser)(tensorflow::GraphDef&, const tensorflow::NodeDef&, LayerParams&);
@@ -557,6 +599,31 @@ private:
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
+
+void TFImporter::setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value)
+{
+    setPadMode(layerParams, layer);
+    int64_t pads[8];
+
+    if (!getExplicitPadding(layerParams, layer, pads))
+    {
+        return;
+    }
+
+    LayerParams padLp;
+    padLp.name = layer.name() + "/pad";
+    padLp.type = "Padding";
+    padLp.set("paddings", DictValue::arrayInt(pads, sizeof(pads) / sizeof(pads[0])));
+    padLp.set("value", value);
+
+    int id = dstNet.addLayer(padLp.name, padLp.type, padLp);
+    layer_id[padLp.name] = id;
+
+    connect(layer_id, dstNet, parsePin(inputName), id, 0);
+    inputName = padLp.name;
+
+    layerParams.set("pad_mode", "VALID");
+}
 
 class LayerHandler
 {
@@ -808,7 +875,7 @@ void TFImporter::parseConvolution(tensorflow::GraphDef& net, const tensorflow::N
 
     setStrides(layerParams, layer);
     if (!layerParams.has("pad_w") && !layerParams.has("pad_h"))
-        setPadding(layerParams, layer);
+        setPadding(layerParams, layer, input);
 
     // The final node of dilated convolution subgraph.
     next_layers = getNextLayers(net, name, "BatchToSpaceND");
@@ -1253,20 +1320,21 @@ void TFImporter::parseMaxPool(tensorflow::GraphDef& net, const tensorflow::NodeD
 {
     const std::string& name = layer.name();
     const int num_inputs = layer.input_size();
+    std::string inputName = layer.input(0);
 
     CV_CheckGT(num_inputs, 0, "");
     layerParams.set("pool", "max");
 
     setKSize(layerParams, layer);
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadding(layerParams, layer, inputName, -std::numeric_limits<float>::infinity());
     // Test_TensorFlow_nets.EAST_text_detection/1, NGRAPH/CPU
     layerParams.set("ceil_mode", false);
 
     int id = dstNet.addLayer(name, "Pooling", layerParams);
     layer_id[name] = id;
 
-    connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
+    connectToAllBlobs(layer_id, dstNet, parsePin(inputName), id, num_inputs);
 }
 
 void TFImporter::parseAvgPool(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
@@ -1279,7 +1347,7 @@ void TFImporter::parseAvgPool(tensorflow::GraphDef& net, const tensorflow::NodeD
     layerParams.set("ave_pool_padded_area", false);
     setKSize(layerParams, layer);
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadMode(layerParams, layer);
 
     int id = dstNet.addLayer(name, "Pooling", layerParams);
     layer_id[name] = id;
@@ -1694,7 +1762,7 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     // input: "weights"
     // input: "input"
 
-    const std::string& name = layer.name();
+    std::string name = layer.name();
     const int num_inputs = layer.input_size();
 
     CV_CheckEQ(num_inputs, 3, "Expected output shape, weights and input nodes");
@@ -1725,7 +1793,21 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     layerParams.set("num_output", kshape[1]);
 
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadMode(layerParams, layer);
+    int64_t pads[8];
+    bool explicit_pads = getExplicitPadding(layerParams, layer, pads);
+    int64_t begs[4] = {};
+    int64_t ends[4] = {-1, -1, -1, -1};
+    if (explicit_pads)
+    {
+        name += "/deconv";
+        layerParams.set("pad_mode", "VALID");
+        for (int i = 2; i < 4; ++i) // begins=[0, 0, a, b], ends=[-1, -1, c, d]
+        {
+            begs[i] = pads[2*i];
+            ends[i] = -1 - pads[2*i + 1];
+        }
+    }
 
     // For convolution layer, output shape computes as
     // o = 1 + (i - k + 2*p) / s
@@ -1742,8 +1824,9 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     const int strideY = layerParams.get<int>("stride_h");
     const int strideX = layerParams.get<int>("stride_w");
     Mat outShape = getTensorContent(getConstBlob(layer, value_id, 0));
-    const int outH = outShape.at<int>(1);
-    const int outW = outShape.at<int>(2);
+    int shift = (getDataLayout(layer) == DATA_LAYOUT_NCHW);
+    const int outH = outShape.at<int>(1 + shift) + begs[2] - 1 - ends[2];
+    const int outW = outShape.at<int>(2 + shift) + begs[3] - 1 - ends[3];
     if (layerParams.get<String>("pad_mode") == "SAME")
     {
         layerParams.set("adj_w", (outW - 1) % strideX);
@@ -1759,6 +1842,16 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
 
     // one input only
     connect(layer_id, dstNet, parsePin(layer.input(2)), id, 0);
+    if (explicit_pads) // If we have explicit paddings, remove extra data
+    {
+        layerParams.set("begin", DictValue::arrayInt(begs, sizeof(begs) / sizeof(begs[0])));
+        layerParams.set("end", DictValue::arrayInt(ends, sizeof(ends) / sizeof(ends[0])));
+
+        int id = dstNet.addLayer(layer.name(), "Slice", layerParams);
+        layer_id[layer.name()] = id;
+
+        connect(layer_id, dstNet, parsePin(name), id, 0);
+    }
 }
 
 void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
@@ -1766,8 +1859,8 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     // op: "BlockLSTM"
     // input: "lstm_block_wrapper/ToInt64/x"  (ignore, number of time stamps)
     // input: "input"
-    // input: "lstm_block_wrapper/zeros"      (ignore)
-    // input: "lstm_block_wrapper/zeros"      (ignore)
+    // input: "lstm_block_wrapper/zeros"
+    // input: "lstm_block_wrapper/zeros"
     // input: "lstm_block_wrapper/kernel"
     // input: "lstm_block_wrapper/w_i_diag"
     // input: "lstm_block_wrapper/w_f_diag"
@@ -1793,9 +1886,11 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         }
     }
 
-    Mat W, Wh, Wx, b;
+    Mat W, Wh, Wx, b, cs_prev, h_prev;
     blobFromTensor(getConstBlob(layer, value_id, 4), W);
     blobFromTensor(getConstBlob(layer, value_id, 8), b);
+    blobFromTensor(getConstBlob(layer, value_id, 2), cs_prev);
+    blobFromTensor(getConstBlob(layer, value_id, 3), h_prev);
     const int outSize = W.cols / 4;
 
     // IGFO->IFOG
@@ -1811,10 +1906,12 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     Wx = W.rowRange(0, W.rows - outSize).t();
     Wh = W.rowRange(W.rows - outSize, W.rows).t();
 
-    layerParams.blobs.resize(3);
+    layerParams.blobs.resize(5);
     layerParams.blobs[0] = Wh;
     layerParams.blobs[1] = Wx;
     layerParams.blobs[2] = b;
+    layerParams.blobs[3] = h_prev;
+    layerParams.blobs[4] = cs_prev;
 
     if (hasLayerAttr(layer, "use_peephole"))
     {
@@ -1822,14 +1919,14 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         if (usePeephole)
         {
             layerParams.set("use_peephole", true);
-            layerParams.blobs.resize(6);
+            layerParams.blobs.resize(8);
             for (int i = 0; i < 3; ++i)
             {
                 Mat w;
                 blobFromTensor(getConstBlob(layer, value_id, 5 + i), w);
                 w = w.reshape(1, w.total());  // Single column.
                 w = Mat::diag(w);  // Make a diagonal matrix.
-                layerParams.blobs[3 + i] = w;
+                layerParams.blobs[5 + i] = w;
             }
         }
     }
