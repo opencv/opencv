@@ -57,11 +57,12 @@ public:
 private:
     void set_arg(const std::string& file_path);
     void set_arg(const CFGParams& params);
-    template<typename Param>
+    /*template<typename Param>
     void set_arg(Param&& p) {
         (void)p;
         abort();
-    }
+        static_assert(std::is_same<typename std::decay<Param>::type,CFGParams>::value, "Unexpected param");
+    }*/
     
     std::string filePath;
     CFGParams cfg_params;

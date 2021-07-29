@@ -45,10 +45,9 @@ private:
     CFGParams cfg_params;
 
     mfxSession mfx_session;
-    
 
-
-    cv::Mat first_frame;
+    cv::GFrameDesc description;
+    bool description_is_valid;
 private:
     std::unique_ptr<VPLProcessingEngine> engine;
 };

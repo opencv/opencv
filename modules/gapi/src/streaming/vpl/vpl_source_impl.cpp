@@ -26,6 +26,8 @@ VPLSourceImpl::VPLSourceImpl() :
     mfx_impl_desription()
 {
     GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
+
+    description_is_valid = false;
 }
 
 VPLSourceImpl::~VPLSourceImpl()
@@ -252,7 +254,23 @@ DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decod
                                  mfxstatus_to_string(sts));
     }
 
-    return {bitstream, mfxDecParams};;
+    // set valid description
+    description.size = cv::Size {
+                            mfxDecParams.mfx.FrameInfo.Width,
+                            mfxDecParams.mfx.FrameInfo.Height};
+    switch(mfxDecParams.mfx.FrameInfo.FourCC) {
+        case MFX_FOURCC_I420:
+            throw std::runtime_error("Cannot parse GMetaArg description: MediaFrame doesn't support I420 type");
+        case MFX_FOURCC_NV12:
+            description.fmt = cv::MediaFormat::NV12;
+            break;
+        default:
+            throw std::runtime_error("Cannot parse GMetaArg description: MediaFrame unknown 'fmt' type: " +
+                                     std::to_string(mfxDecParams.mfx.FrameInfo.FourCC));
+    }
+    description_is_valid = true;
+    
+    return {bitstream, mfxDecParams};
 }
 
 std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel(mfxSession session)
@@ -262,7 +280,9 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel(mfxSessi
     auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
     if (accel_mode_it == cfg_params.end())
     {
-        GAPI_LOG_DEBUG(nullptr, "No HW Accel requested, session: " << session);
+        GAPI_LOG_DEBUG(nullptr, "No HW Accel requested, session: " << session << ". Use CPU");
+
+        ret.reset(new VPLCPUAccelerationPolicy(session));
         return ret;
     }
 
@@ -336,8 +356,9 @@ bool VPLSourceImpl::pull(cv::gapi::wip::Data& data)
 
 GMetaArg VPLSourceImpl::descr_of() const
 {
-    GAPI_Assert(!first_frame.empty());
-    return cv::GMetaArg{cv::descr_of(first_frame)};
+    GAPI_Assert(description_is_valid);
+    GMetaArg arg(description);
+    return arg;
 }
 } // namespace wip
 } // namespace gapi
