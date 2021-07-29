@@ -591,7 +591,6 @@ int main(int argc, char* argv[]) {
     cv::GMat in_originalRGB = cv::gapi::BGR2RGB(in_original);
     cv::GMat in_transposedRGB = cv::gapi::transpose(in_originalRGB);
     cv::GOpaque<cv::Size> in_sz = cv::gapi::streaming::size(in_original);
-    cv::GMat in_resized[MAX_PYRAMID_LEVELS];
     cv::GMat regressions[MAX_PYRAMID_LEVELS];
     cv::GMat scores[MAX_PYRAMID_LEVELS];
     cv::GArray<custom::Face> nms_p_faces[MAX_PYRAMID_LEVELS];
