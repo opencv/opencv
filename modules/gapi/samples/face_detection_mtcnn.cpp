@@ -598,9 +598,7 @@ int main(int argc, char* argv[]) {
     cv::GArray<custom::Face> total_faces[MAX_PYRAMID_LEVELS];
 
     //The very first PNet pyramid layer to init total_faces[0]
-    cv::Size currentSize = cv::Size(level_size[0].height, level_size[0].width);
-    in_resized[0] = cv::gapi::resize(in_transposedRGB, currentSize);
-    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_resized[0], get_pnet_level_name(level_size[0]));
+    std::tie(regressions[0], scores[0]) = run_mtcnn_p(in_transposedRGB, get_pnet_level_name(level_size[0]));
     cv::GArray<custom::Face> faces0 = custom::BuildFaces::on(scores[0], regressions[0], static_cast<float>(scales[0]), conf_thresh_p);
     cv::GArray<custom::Face> final_p_faces_for_bb2squares = custom::ApplyRegression::on(faces0, true);
     cv::GArray<custom::Face> final_faces_pnet0 = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares);
@@ -608,9 +606,7 @@ int main(int argc, char* argv[]) {
     //The rest PNet pyramid layers to accumlate all layers result in total_faces[PYRAMID_LEVELS - 1]]
     for (int i = 1; i < pyramid_levels; ++i)
     {
-        currentSize = cv::Size(level_size[i].height, level_size[i].width);
-        in_resized[i] = cv::gapi::resize(in_transposedRGB, currentSize);
-        std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_resized[i], get_pnet_level_name(level_size[i]));
+        std::tie(regressions[i], scores[i]) = run_mtcnn_p(in_transposedRGB, get_pnet_level_name(level_size[i]));
         cv::GArray<custom::Face> faces = custom::BuildFaces::on(scores[i], regressions[i], static_cast<float>(scales[i]), conf_thresh_p);
         cv::GArray<custom::Face> final_p_faces_for_bb2squares_i = custom::ApplyRegression::on(faces, true);
         cv::GArray<custom::Face> final_faces_pnet_i = custom::BBoxesToSquares::on(final_p_faces_for_bb2squares_i);
