@@ -13,11 +13,11 @@ import argparse
 import cv2 as cv
 import numpy as np
 
-from options import (FEATURES_FIND_CHOICES, ESTIMATOR_CHOICES,
+from stitching_detailed.options import (FEATURES_FIND_CHOICES, ESTIMATOR_CHOICES,
                      BA_COST_CHOICES, WAVE_CORRECT_CHOICES, WARP_CHOICES,
                      SEAM_FIND_CHOICES, EXPOS_COMP_CHOICES, BLEND_CHOICES)
 
-from pipeline import Stitcher
+from stitching_detailed.pipeline import Stitcher
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
