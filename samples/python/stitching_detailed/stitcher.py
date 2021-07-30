@@ -241,13 +241,12 @@ class Stitcher:
         if not timelapse:
             result = None
             result_mask = None
-            result, result_mask = blender.blend(result, result_mask)
-            cv.imwrite(result_name, result)
-            zoom_x = 600.0 / result.shape[1]
-            dst = cv.normalize(src=result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-            dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
-            cv.imshow(result_name, dst)
-            cv.waitKey()
+            self.result, result_mask = blender.blend(result, result_mask)
+            cv.imwrite(result_name, self.result)
+            zoom_x = 600.0 / self.result.shape[1]
+            dst = cv.normalize(src=self.result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+            self.dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
+
 
         print("Done")
 
