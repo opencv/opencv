@@ -305,5 +305,32 @@ class dnn_test(NewOpenCVTests):
 
         cv.dnn_unregisterLayer('CropCaffe')
 
+    def test_lstm(self):
+        model = self.find_dnn_file('dnn/onnx/models/hidden_lstm.onnx')
+        input_file = self.find_dnn_file('dnn/onnx/data/input_hidden_lstm.npy')
+        output_file = self.find_dnn_file('dnn/onnx/data/output_hidden_lstm.npy')
+        if model is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/onnx/models/hidden_lstm.onnx). "
+                                    "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+        if input_file is None or output_file is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/onnx/data/{input/output}_hidden_lstm.npy). "
+                                    "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+
+        net = cv.dnn.readNet(model)
+        input = np.load(input_file)
+        # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
+        input = np.expand_dims(input, axis=3)
+        gold_output = np.load(output_file)
+        net.setInput(input)
+
+        for backend, target in self.dnnBackendsAndTargets:
+            printParams(backend, target)
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+            real_output = net.forward()
+
+            normAssert(self, real_output, gold_output)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
