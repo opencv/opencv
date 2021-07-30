@@ -13,11 +13,15 @@ import argparse
 import cv2 as cv
 import numpy as np
 
-from stitching_detailed.options import (FEATURES_FIND_CHOICES, ESTIMATOR_CHOICES,
-                     BA_COST_CHOICES, WAVE_CORRECT_CHOICES, WARP_CHOICES,
-                     SEAM_FIND_CHOICES, EXPOS_COMP_CHOICES, BLEND_CHOICES)
-
-from stitching_detailed.pipeline import Stitcher
+from stitching_detailed.stitcher import Stitcher
+from stitching_detailed.stitcher_choices import (FEATURES_FIND_CHOICES,
+                                                 ESTIMATOR_CHOICES,
+                                                 BA_COST_CHOICES,
+                                                 WAVE_CORRECT_CHOICES,
+                                                 WARP_CHOICES,
+                                                 SEAM_FIND_CHOICES,
+                                                 EXPOS_COMP_CHOICES,
+                                                 BLEND_CHOICES)
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -181,8 +185,9 @@ parser.add_argument(
 __doc__ += '\n' + parser.format_help()
 
 if __name__ == '__main__':
-    #print(__doc__)
+    print(__doc__)
     args, unknown = parser.parse_known_args()
     args_dict = vars(args)
     stitcher = Stitcher(args_dict.pop("img_names"), **args_dict)
+    stitcher.stitch()
     cv.destroyAllWindows()
