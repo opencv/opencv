@@ -729,7 +729,7 @@ void ONNXImporter::parseAveragePool(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseReduce(LayerParams &layerParams, const opencv_onnx::NodeProto &node_proto_)
+void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     const std::string& layer_type = node_proto.op_type();
@@ -964,9 +964,9 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
             // Very strange application for Slice op with tensor reversing.
             // We just workaround it for 2d constants.
             if (constBlobs.find(node_proto.input(0)) != constBlobs.end() &&
-            axis == 0 &&
-            start_blob.at<int>(0) == -1 && step_blob.at<int>(0) == -1 &&
-            end_blob.at<int>(0) == std::numeric_limits<int32_t>::min())
+                axis == 0 &&
+                start_blob.at<int>(0) == -1 && step_blob.at<int>(0) == -1 &&
+                end_blob.at<int>(0) == std::numeric_limits<int32_t>::min())
             {
                 Mat inp = getBlob(node_proto, 0);
                 if (inp.dims == 2)
@@ -1607,7 +1607,7 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
             }
         }
         if (asymmetricPadding && pads.size() == 4) // [pad_t, pad_l, pad_b, pad_r]
-            {
+        {
             layerParams.erase("pad");
             // No paddings required for N, C axis
             std::vector<int> paddings(4, 0);
@@ -1628,7 +1628,7 @@ void ONNXImporter::parseConv(LayerParams& layerParams, const opencv_onnx::NodePr
 
             addLayer(padLp, proto);
             node_proto.set_input(0, padLp.name);
-            }
+        }
     }
     addLayer(layerParams, node_proto);
 }
@@ -1666,7 +1666,7 @@ void ONNXImporter::parseConvTranspose(LayerParams& layerParams, const opencv_onn
                 int sz = outShape.get<int>(2 + i);
                 int stride = strides.get<int>(i);
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
-                (sz - kernel.get<int>(i)) % stride);
+                                                         (sz - kernel.get<int>(i)) % stride);
             }
             layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], adjust_pads.size()));
         }
@@ -1890,7 +1890,7 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     }
 
     if (broadcast_axes.size() == 2 &&
-    broadcast_axes[0] == broadcast_axes[1] - 1 && broadcast_axes[1] == inpShape.size() - 1)
+        broadcast_axes[0] == broadcast_axes[1] - 1 && broadcast_axes[1] == inpShape.size() - 1)
     {
         LayerParams constParams;
         constParams.name = layerParams.name + "/const";
@@ -1949,8 +1949,7 @@ void ONNXImporter::parseReshape(LayerParams& layerParams, const opencv_onnx::Nod
         Mat blob = getBlob(node_proto, 1);
         CV_Assert(blob.type() == CV_32SC1);
 
-        layerParams.set("dim", DictValue::arrayInt<int*>(
-                blob.ptr<int>(), blob.total() ));
+        layerParams.set("dim", DictValue::arrayInt<int*>(blob.ptr<int>(), blob.total()));
 
         if (layer_id.find(node_proto.input(0)) == layer_id.end()) {
             std::vector<Mat> inputs(1, getBlob(node_proto, 0)), outputs;
@@ -2026,10 +2025,10 @@ void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodePr
             case opencv_onnx::TensorProto_DataType_UINT16:  type = CV_16U; break;
             case opencv_onnx::TensorProto_DataType_FLOAT16: type = CV_16S; break;
             case opencv_onnx::TensorProto_DataType_INT8:
-                case opencv_onnx::TensorProto_DataType_INT16:
-                    case opencv_onnx::TensorProto_DataType_INT32:
-                        case opencv_onnx::TensorProto_DataType_INT64:   type = CV_32S; break;
-                        default: type = blob.type();
+            case opencv_onnx::TensorProto_DataType_INT16:
+            case opencv_onnx::TensorProto_DataType_INT32:
+            case opencv_onnx::TensorProto_DataType_INT64:   type = CV_32S; break;
+            default: type = blob.type();
         }
         Mat dst;
         blob.convertTo(dst, type);
@@ -2220,7 +2219,7 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
         if (layerParams.get<String>("mode") == "linear")
         {
             layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
-            "opencv_linear" : "bilinear");
+                                    "opencv_linear" : "bilinear");
         }
     }
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
@@ -2228,7 +2227,7 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
 
     // input = [X, scales], [X, roi, scales] or [x, roi, scales, sizes]
     int foundScaleId = hasDynamicShapes ? node_proto.input_size() - 1
-            : node_proto.input_size() > 2 ? 2 : 1;
+                                        : node_proto.input_size() > 2 ? 2 : 1;
 
     Mat scales = getBlob(node_proto, foundScaleId);
     if (scales.total() == 4)
@@ -2267,7 +2266,7 @@ void ONNXImporter::parseUpsample(LayerParams& layerParams, const opencv_onnx::No
         if (layerParams.get<String>("mode") == "linear")
         {
             layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
-            "opencv_linear" : "bilinear");
+                                    "opencv_linear" : "bilinear");
         }
     }
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
