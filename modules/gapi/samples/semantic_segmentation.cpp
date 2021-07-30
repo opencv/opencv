@@ -49,20 +49,20 @@ std::string get_weights_path(const std::string &model_path) {
 }
 
 void classesToColors(const cv::Mat &out_blob,
-                           cv::Mat &maskImg) {
+                           cv::Mat &mask_img) {
     const int H = out_blob.size[0];
     const int W = out_blob.size[1];
 
-    maskImg.create(H, W, CV_8UC3);
+    mask_img.create(H, W, CV_8UC3);
     GAPI_Assert(out_blob.type() == CV_8UC1);
     const uint8_t* const classes = out_blob.ptr<uint8_t>();
 
     for (int rowId = 0; rowId < H; ++rowId) {
         for (int colId = 0; colId < W; ++colId) {
-            uint8_t classId = classes[rowId * W + colId];
-            maskImg.at<cv::Vec3b>(rowId, colId) =
-                classId < colors.size()
-                ? colors[classId]
+            uint8_t class_id = classes[rowId * W + colId];
+            mask_img.at<cv::Vec3b>(rowId, colId) =
+                class_id < colors.size()
+                ? colors[class_id]
                 : cv::Vec3b{0, 0, 0}; // NB: sample supports 20 classes
         }
     }
@@ -115,10 +115,10 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
             classes = classes.reshape(1, out_blob.size[2]);
         }
 
-        cv::Mat maskImg;
-        classesToColors(classes, maskImg);
+        cv::Mat mask_img;
+        classesToColors(classes, mask_img);
 
-        cv::resize(maskImg, out, in.size());
+        cv::resize(mask_img, out, in.size());
         const float blending = 0.3f;
         out = in * blending + out * (1 - blending);
     }
