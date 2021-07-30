@@ -74,6 +74,7 @@ void probsToClasses(const cv::Mat& probs, cv::Mat& classes) {
      int W = probs.size[3];
 
      classes.create(H, W, CV_8UC1);
+     GAPI_Assert(probs.depth() == CV_32F);
      float* out_p       = reinterpret_cast<float*>(probs.data);
      uint8_t* classes_p = reinterpret_cast<uint8_t*>(classes.data);
 
