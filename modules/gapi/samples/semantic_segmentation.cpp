@@ -105,7 +105,7 @@ G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_pro
 GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
     static void run(const cv::Mat &in, const cv::Mat &out_blob, cv::Mat &out) {
         cv::Mat classes;
-        // NB: If output has more than single plane, it contains probabilites
+        // NB: If output has more than single plane, it contains probabilities
         // otherwise class id.
         if (out_blob.size[1] > 1) {
             probsToClasses(out_blob, classes);
