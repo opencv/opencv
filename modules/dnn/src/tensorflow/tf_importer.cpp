@@ -2894,7 +2894,7 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
         DispatchMap::const_iterator iter = dispatch.find(type);
         if (iter != dispatch.end())
         {
-            ((*this).*(iter->second))(net, layer, layerParams);
+            CALL_MEMBER_FN(*this, iter->second)(net, layer, layerParams);
         }
         else if (!DNN_DIAGNOSTICS_RUN || !layerHandler->handleMissing(layer))
         {
