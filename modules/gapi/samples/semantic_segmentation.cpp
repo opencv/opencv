@@ -59,11 +59,11 @@ void classesToColors(const cv::Mat &out_blob,
 
     for (int rowId = 0; rowId < H; ++rowId) {
         for (int colId = 0; colId < W; ++colId) {
-            uint8_t classId = static_cast<uint8_t>(classes[rowId * W + colId]);
+            uint8_t classId = classes[rowId * W + colId];
             maskImg.at<cv::Vec3b>(rowId, colId) =
                 classId < colors.size()
                 ? colors[classId]
-                : cv::Vec3b{0, 0, 0}; // sample detects 20 classes
+                : cv::Vec3b{0, 0, 0}; // NB: sample supports 20 classes
         }
     }
 }
