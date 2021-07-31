@@ -28,5 +28,3 @@ endif()
 if(HAVE_XIMEA)
   ocv_add_external_target(ximea "${XIMEA_INCLUDE}" "${XIMEA_LIBRARY}" "HAVE_XIMEA")
 endif()
-
-set(HAVE_XIMEA ${HAVE_XIMEA} PARENT_SCOPE)

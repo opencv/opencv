@@ -21,5 +21,3 @@ unset(_WIN_LIB_SUFFIX)
 if(HAVE_UEYE)
   ocv_add_external_target(ueye "${UEYE_INCLUDE}" "${UEYE_LIBRARY}" "HAVE_UEYE")
 endif()
-
-set(HAVE_UEYE ${HAVE_UEYE} PARENT_SCOPE)
