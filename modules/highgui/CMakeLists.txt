@@ -218,7 +218,8 @@ endif()
 if(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "NONE")
 endif()
-message(STATUS "highgui: using builtin backend: ${OPENCV_HIGHGUI_BUILTIN_BACKEND}")  # FIXIT: propagate to root CMake
+message(STATUS "highgui: using builtin backend: ${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
+set(OPENCV_HIGHGUI_BUILTIN_BACKEND "${OPENCV_HIGHGUI_BUILTIN_BACKEND}" PARENT_SCOPE)  # informational
 
 if(TRUE)
   # these variables are set by 'ocv_append_build_options(HIGHGUI ...)'

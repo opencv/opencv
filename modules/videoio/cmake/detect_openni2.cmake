@@ -42,8 +42,6 @@ if(HAVE_OPENNI2)
   string(REGEX REPLACE ".*ONI_VERSION_MAJOR[^0-9]+([0-9]+).*" "\\1" ver_major "${ver_strings}")
   string(REGEX REPLACE ".*ONI_VERSION_MINOR[^0-9]+([0-9]+).*" "\\1" ver_minor "${ver_strings}")
   string(REGEX REPLACE ".*ONI_VERSION_MAINTENANCE[^0-9]+([0-9]+).*" "\\1" ver_maint "${ver_strings}")
-  set(OPENNI2_VERSION "${ver_major}.${ver_minor}.${ver_maint}" PARENT_SCOPE) # informational
+  set(OPENNI2_VERSION "${ver_major}.${ver_minor}.${ver_maint}")  # informational
   ocv_add_external_target(openni2 "${OPENNI2_INCLUDE_DIRS}" "${OPENNI2_LIBRARIES}" "HAVE_OPENNI2")
 endif()
-
-set(HAVE_OPENNI2 ${HAVE_OPENNI2} PARENT_SCOPE)

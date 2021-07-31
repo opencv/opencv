@@ -15,5 +15,3 @@ if(NOT HAVE_V4L)
     ocv_add_external_target(v4l "" "" "${defs}")
   endif()
 endif()
-
-set(HAVE_V4L ${HAVE_V4L} PARENT_SCOPE)
