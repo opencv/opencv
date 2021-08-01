@@ -91,7 +91,7 @@ convexity defects, which are the local maximum deviations of hull from contours.
 
 There is a little bit things to discuss about it its syntax:
 @code{.py}
-hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]
+hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]])
 @endcode
 Arguments details:
 
