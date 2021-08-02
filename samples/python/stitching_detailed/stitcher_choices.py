@@ -14,27 +14,6 @@ BA_COST_CHOICES['reproj'] = cv.detail_BundleAdjusterReproj
 BA_COST_CHOICES['affine'] = cv.detail_BundleAdjusterAffinePartial
 BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
-FEATURES_FIND_CHOICES = OrderedDict()
-try:
-    cv.xfeatures2d_SURF.create() # check if the function can be called
-    FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
-except (AttributeError, cv.error) as e:
-    print("SURF not available")
-# if SURF not available, ORB is default
-FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
-try:
-    FEATURES_FIND_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
-except AttributeError:
-    print("SIFT not available")
-try:
-    FEATURES_FIND_CHOICES['brisk'] = cv.BRISK_create
-except AttributeError:
-    print("BRISK not available")
-try:
-    FEATURES_FIND_CHOICES['akaze'] = cv.AKAZE_create
-except AttributeError:
-    print("AKAZE not available")
-
 SEAM_FIND_CHOICES = OrderedDict()
 SEAM_FIND_CHOICES['dp_color'] = cv.detail_DpSeamFinder('COLOR')
 SEAM_FIND_CHOICES['dp_colorgrad'] = cv.detail_DpSeamFinder('COLOR_GRAD')

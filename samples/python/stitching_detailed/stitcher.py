@@ -4,6 +4,7 @@ import cv2 as cv
 import numpy as np
 
 from . import stitcher_choices as choices
+from .feature_detector import FeatureDetector
 
 class Stitcher:
 
@@ -15,6 +16,9 @@ class Stitcher:
         args = self.args
         img_names = self.img_names
         print(img_names)
+
+        finder = FeatureDetector(args.features)
+
         work_megapix = args.work_megapix
         seam_megapix = args.seam_megapix
         compose_megapix = args.compose_megapix
@@ -40,7 +44,6 @@ class Stitcher:
                 exit()
         else:
             timelapse = False
-        finder = choices.FEATURES_FIND_CHOICES[args.features]()
         seam_work_aspect = 1
         full_img_sizes = []
         features = []
@@ -67,7 +70,7 @@ class Stitcher:
                 seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
                 seam_work_aspect = seam_scale / work_scale
                 is_seam_scale_set = True
-            img_feat = cv.detail.computeImageFeatures2(finder, img)
+            img_feat = finder.detect_features(img)
             features.append(img_feat)
             img = cv.resize(src=full_img, dsize=None, fx=seam_scale, fy=seam_scale, interpolation=cv.INTER_LINEAR_EXACT)
             images.append(img)

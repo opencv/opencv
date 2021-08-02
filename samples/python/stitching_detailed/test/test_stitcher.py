@@ -9,8 +9,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
 
 from stitching_detailed.stitcher import Stitcher
 
+
 # Eine Klasse erstellen, die von unittest.TestCase erbt
 class TestStitcher(unittest.TestCase):
+    def tearDown(self):
+        try:
+            os.remove("result.jpg")
+        except OSError:
+            pass
 
     def test_stitcher(self):
         settings = {

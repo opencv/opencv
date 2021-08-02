@@ -14,14 +14,15 @@ import cv2 as cv
 import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
-from stitching_detailed.stitcher_choices import (FEATURES_FIND_CHOICES,
-                                                 ESTIMATOR_CHOICES,
+from stitching_detailed.stitcher_choices import (ESTIMATOR_CHOICES,
                                                  BA_COST_CHOICES,
                                                  WAVE_CORRECT_CHOICES,
                                                  WARP_CHOICES,
                                                  SEAM_FIND_CHOICES,
                                                  EXPOS_COMP_CHOICES,
                                                  BLEND_CHOICES)
+
+from stitching_detailed.feature_detector import FeatureDetector
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -45,10 +46,10 @@ parser.add_argument(
 )
 parser.add_argument(
     '--features', action='store',
-    default=list(FEATURES_FIND_CHOICES.keys())[0],
+    default=FeatureDetector.default,
     help="Type of features used for images matching. "
-         "The default is '%s'." % list(FEATURES_FIND_CHOICES.keys())[0],
-    choices=FEATURES_FIND_CHOICES.keys(),
+         "The default is '%s'." % FeatureDetector.default,
+    choices=FeatureDetector.choices.keys(),
     type=str, dest='features'
 )
 parser.add_argument(
