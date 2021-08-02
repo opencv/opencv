@@ -165,35 +165,29 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
                 throw std::logic_error("Cannot determine DecoderID from oneVPL config. Abort");
             }
 
-            //create decoder for session accoring to header recovered from source file
-            DecoderParams decoder_param = create_decoder_from_file(dec_it->second, source_handle.get());
-
-            /* TODO if you want GET automatically created HW device interface
-             * then put `initializeHWAccel` after Decoder creation
-             * Otherwise: provide YOUR HW device interface BEFORE Decoder creation
-             */ 
-            std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel(mfx_session);
-            
             // create session driving engine if required
             if (!engine) {
 
+                std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel();
                 assert(mfx_impl_desription && "mfx_impl_desription must exist");
 
                 // TODO  Add factory stati method in VPLProcessingEngine
                 if (mfx_impl_desription->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION)
                 {
-                    engine.reset(new VPLDecodeEngine);
+                    engine.reset(new VPLDecodeEngine(std::move(acceleration)));
                 }
                 else
                 {
-                    engine.reset(new VPLLegacyDecodeEngine);
+                    engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
                 }
             }
 
+            //create decoder for session accoring to header recovered from source file
+            DecoderParams decoder_param = create_decoder_from_file(dec_it->second, source_handle.get());
+
             // create engine session for processing mfx session pipeline
             engine->initialize_session(mfx_session, std::move(decoder_param),
-                                                    std::move(source_handle),
-                                                    std::move(acceleration));
+                                                    std::move(source_handle));
         } catch(const std::exception& ex) {
             std::stringstream ss;
             ss << ex.what() << ". Unload VPL session: " << mfx_session;
@@ -273,31 +267,31 @@ DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decod
     return {bitstream, mfxDecParams};
 }
 
-std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel(mfxSession session)
+std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
 {
     std::unique_ptr<VPLAccelerationPolicy> ret;
     
     auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
     if (accel_mode_it == cfg_params.end())
     {
-        GAPI_LOG_DEBUG(nullptr, "No HW Accel requested, session: " << session << ". Use CPU");
+        GAPI_LOG_DEBUG(nullptr, "No HW Accel requested. Use CPU");
 
-        ret.reset(new VPLCPUAccelerationPolicy(session));
+        ret.reset(new VPLCPUAccelerationPolicy);
         return ret;
     }
 
-    GAPI_LOG_DEBUG(nullptr, "Add HW acceleration support, session: " << session);
+    GAPI_LOG_DEBUG(nullptr, "Add HW acceleration support");
     try {
         switch(accel_mode_it->second.Data.U32) {
             case MFX_ACCEL_MODE_VIA_D3D11:
             {
-                std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy(session));
+                std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy);
                 ret = std::move(cand);
                 break;
             }
             case MFX_ACCEL_MODE_NA:
             {
-                std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy(session));
+                std::unique_ptr<VPLCPUAccelerationPolicy> cand(new VPLCPUAccelerationPolicy);
                 ret = std::move(cand);
                 break;
             }   

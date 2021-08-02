@@ -37,7 +37,7 @@ private:
     VPLSourceImpl();
 
     DecoderParams create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr);
-    std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel(mfxSession mfx_session);
+    std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
     
     mfxLoader mfx_handle;
     mfxImplDescription *mfx_impl_desription;

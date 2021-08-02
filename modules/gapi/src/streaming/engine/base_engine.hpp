@@ -33,22 +33,26 @@ public:
 
     static const char * status_to_string(ExecutionStatus);
 
-    virtual ~VPLProcessingEngine(){};
+    VPLProcessingEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
+    virtual ~VPLProcessingEngine();
 
     virtual void initialize_session(mfxSession mfx_session,
                             DecoderParams&& decoder_param,
-                            file_ptr&& source_handle,
-                            std::unique_ptr<VPLAccelerationPolicy>&& accel_policy) = 0;
+                            file_ptr&& source_handle) = 0;
                                          
     ExecutionStatus process(mfxSession session);
     size_t get_ready_frames_count() const;
     void get_frame(Data &data);
+
+    const VPLAccelerationPolicy* get_accel() const;
+    VPLAccelerationPolicy* get_accel();
 protected:
     SessionsTable sessions;
     frames_container_t ready_frames;
     ExecutionDataTable execution_table;
     
     std::vector<operation_t> pipeline;
+    std::unique_ptr<VPLAccelerationPolicy> acceleration_policy;
 
     virtual ExecutionStatus execute_op(operation_t& op, EngineSession& sess);
 

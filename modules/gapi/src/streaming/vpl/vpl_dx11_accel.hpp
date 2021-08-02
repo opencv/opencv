@@ -28,12 +28,18 @@ namespace wip {
 
 struct VPLDX11AccelerationPolicy final: public VPLAccelerationPolicy
 {
-    VPLDX11AccelerationPolicy(mfxSession session);
+    VPLDX11AccelerationPolicy();
     ~VPLDX11AccelerationPolicy();
 
+    void init(session_t session) override;
+    void deinit(session_t session) override;
     pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
     surface_weak_ptr_t get_free_surface(pool_key_t key) const override;
-    cv::MediaFrame::AdapterPtr create_frame_adapter(surface_raw_ptr_t surface) override;
+    size_t get_free_surface_count(pool_key_t key) const override;
+    size_t get_surface_count(pool_key_t key) const override;
+
+    cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
+                                                    mfxFrameSurface1* surface) override;
 
 private:
     ID3D11Device *hw_handle;

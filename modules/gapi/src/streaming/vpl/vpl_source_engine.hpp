@@ -17,11 +17,10 @@ class VPLDecodeEngine : public VPLProcessingEngine {
 public:
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
 
-    VPLDecodeEngine();
+    VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
     void initialize_session(mfxSession mfx_session,
                             DecoderParams&& decoder_param,
-                            file_ptr&& source_handle,
-                            std::unique_ptr<VPLAccelerationPolicy>&& accel_policy);
+                            file_ptr&& source_handle) override;
 
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;

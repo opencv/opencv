@@ -6,7 +6,10 @@
 #include "streaming/engine/base_engine.hpp"
 #include "streaming/vpl/vpl_accel_policy.hpp"
 #ifdef HAVE_ONEVPL
-#include <vpl/mfxvideo.h>
+#if (MFX_VERSION >= 2000)
+    #include <vpl/mfxdispatcher.h>
+#endif
+#include <vpl/mfx.h>
 
 namespace cv {
 namespace gapi {
@@ -19,10 +22,9 @@ struct DecoderParams;
 class VPLLegacyDecodeEngine : public VPLProcessingEngine {
 public:
 
-    VPLLegacyDecodeEngine();
+    VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
     void initialize_session(mfxSession mfx_session, DecoderParams&& decoder_param,
-                            file_ptr&& source_handle,
-                            std::unique_ptr<VPLAccelerationPolicy>&& acceleration_policy);
+                            file_ptr&& source_handle) override;
 
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
@@ -39,20 +41,17 @@ public:
     LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, file_ptr&& source);
     using EngineSession::EngineSession;
 
-    void swap_surface();
+    void swap_surface(VPLLegacyDecodeEngine& engine);
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
     
     mfxVideoParam mfx_decoder_param;
     VPLLegacyDecodeEngine::file_ptr source_handle;
-    bool stop_processing;
 private:
-    std::vector<std::shared_ptr<mfxFrameSurface1>> decoder_surf_pool;
-    std::unique_ptr<VPLAccelerationPolicy> acceleration_policy;
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;
 
-    VPLAccelerationPolicy::surface_weak_ptr_t procesing_surface_ptr;
-    VPLAccelerationPolicy::surface_raw_ptr_t output_surface_ptr;
+    std::weak_ptr<Surface> procesing_surface_ptr;
+    mfxFrameSurface1* output_surface_ptr;
 };
 } // namespace wip
 } // namespace gapi

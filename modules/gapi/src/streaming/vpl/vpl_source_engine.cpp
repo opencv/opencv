@@ -15,7 +15,8 @@ DecodeSession::DecodeSession(mfxSession sess, mfxBitstream&& str, VPLDecodeEngin
 {
 }
 
-VPLDecodeEngine::VPLDecodeEngine() {
+VPLDecodeEngine::VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
+ : VPLProcessingEngine(std::move(accel)) {
 
     GAPI_LOG_INFO(nullptr, "Create VPL Decode Engine");
     create_pipeline(
@@ -66,13 +67,12 @@ VPLDecodeEngine::VPLDecodeEngine() {
 
 void VPLDecodeEngine::initialize_session(mfxSession mfx_session,
                                          DecoderParams&& decoder_param,
-                                         file_ptr&& source_handle,
-                                         std::unique_ptr<VPLAccelerationPolicy>&& accel_policy)
+                                         file_ptr&& source_handle)
 {
-    (void)accel_policy;
     register_session<DecodeSession>(mfx_session,
                                     std::move(decoder_param.stream),
                                     std::move(source_handle));
+    acceleration_policy->init(mfx_session);
 }
 
 VPLProcessingEngine::ExecutionStatus VPLDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {

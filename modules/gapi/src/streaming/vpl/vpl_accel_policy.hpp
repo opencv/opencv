@@ -14,23 +14,36 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
+class Surface;
 struct VPLAccelerationPolicy
 {
     virtual ~VPLAccelerationPolicy() {}
 
     using pool_key_t = void*;
 
-    using surface_t = mfxFrameSurface1;
-    using surface_raw_ptr_t = typename std::add_pointer<surface_t>::type;
+    using session_t = mfxSession;
+    using surface_t = Surface;
     using surface_ptr_t = std::shared_ptr<surface_t>;
     using surface_weak_ptr_t = std::weak_ptr<surface_t>;
-    using surface_ptr_ctr_t = std::function<surface_ptr_t(void* out_buf_ptr,
+    using surface_ptr_ctr_t = std::function<surface_ptr_t(std::shared_ptr<void> out_buf_ptr,
                                                           size_t out_buf_ptr_offset,
                                                           size_t out_buf_ptr_size)>;
-                                                 
+
+    virtual void init(session_t session) = 0;
+    virtual void deinit(session_t session) = 0;
+
+    // Limitation: cannot give guarantee in succesful memory realloccation
+    // for existing workspace in existing pool (see realloc)
+    // thus it is not implemented,
+    // PLEASE provide initial memory area large enough
     virtual pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) = 0;
+    
     virtual surface_weak_ptr_t get_free_surface(pool_key_t key) const = 0;
-    virtual cv::MediaFrame::AdapterPtr create_frame_adapter(surface_raw_ptr_t surface) = 0;
+    virtual size_t get_free_surface_count(pool_key_t key) const = 0;
+    virtual size_t get_surface_count(pool_key_t key) const = 0;
+    
+    virtual cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
+                                                            mfxFrameSurface1* surface) = 0;
 };
 } // namespace wip
 } // namespace gapi

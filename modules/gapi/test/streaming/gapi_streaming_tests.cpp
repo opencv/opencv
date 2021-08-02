@@ -2248,16 +2248,18 @@ TEST(OneVPL_Source, Init)
     (void)descr;
     */
     try {
-    cv::gapi::wip::Data data;
-    ASSERT_TRUE(cap->pull(data));
+        cv::gapi::wip::Data data;
+        ASSERT_TRUE(cap->pull(data));
 
-    bool ret = true;
-    do {
-        ret = cap->pull(data);
-    } while(ret);
-    (void)data;
+        bool ret = true;
+        do {
+            ret = cap->pull(data);
+        } while(ret);
+
+        cap.reset();
+        (void)data;
     } catch (const std::exception& ex) {
-        std::cerr << ex.what() << std::endl;
+        std::cerr << "Failed with exception: " << ex.what() << std::endl;
     }
 }
 //#endif 

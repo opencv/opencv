@@ -1,9 +1,18 @@
 #include "streaming/engine/base_engine.hpp"
+#include "streaming/vpl/vpl_accel_policy.hpp"
 #include "logger.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
+
+VPLProcessingEngine::VPLProcessingEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel) :
+    acceleration_policy(std::move(accel)) {
+}
+
+VPLProcessingEngine::~VPLProcessingEngine() {
+    GAPI_LOG_INFO(nullptr, "destroyed");
+}
 
 VPLProcessingEngine::ExecutionStatus VPLProcessingEngine::process(mfxSession session) {
     auto sess_it = sessions.find(session);
@@ -70,6 +79,14 @@ void VPLProcessingEngine::get_frame(Data &data)
 {
     data = ready_frames.front();
     ready_frames.pop();
+}
+
+const VPLAccelerationPolicy* VPLProcessingEngine::get_accel() const {
+    return acceleration_policy.get();
+}
+
+VPLAccelerationPolicy* VPLProcessingEngine::get_accel() {
+    return const_cast<VPLAccelerationPolicy*>(static_cast<const VPLProcessingEngine*>(this)->get_accel());
 }
 } // namespace wip
 } // namespace gapi

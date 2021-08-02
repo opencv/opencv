@@ -92,6 +92,7 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
         const float blending = 0.3f;
         out = in * blending + out * (1 - blending);
 */
+    out = in;
     }
 };
 } // namespace custom

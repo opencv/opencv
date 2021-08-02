@@ -4,12 +4,10 @@
 #include "streaming/vpl/vpl_legacy_source_engine.hpp"
 #include "streaming/vpl/vpl_utils.hpp"
 #include "streaming/vpl/vpl_dx11_accel.hpp"
+#include "streaming/vpl/surface/surface.hpp"
 
 #include "logger.hpp"
 
-#if (MFX_VERSION >= 2000)
-    #include <vpl/mfxdispatcher.h>
-#endif
 
 namespace cv {
 namespace gapi {
@@ -38,12 +36,12 @@ mfxU32 GetSurfaceSize(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     return nbytes;
 }
 
-VPLAccelerationPolicy::surface_ptr_t create_surface_RGB4(mfxFrameInfo frameInfo,
-                                                         void* out_buf_ptr,
-                                                         size_t out_buf_ptr_offset,
-                                                         size_t out_buf_size)
+surface_ptr_t create_surface_RGB4(mfxFrameInfo frameInfo,
+                                  std::shared_ptr<void> out_buf_ptr,
+                                  size_t out_buf_ptr_offset,
+                                  size_t out_buf_size)
 {
-    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr);
+    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfW = frameInfo.Width * 4;
     mfxU16 surfH = frameInfo.Height;
     (void)surfH;
@@ -58,25 +56,25 @@ VPLAccelerationPolicy::surface_ptr_t create_surface_RGB4(mfxFrameInfo frameInfo,
         GAPI_Assert(false && "Invalid offset");
     }
 
-    VPLAccelerationPolicy::surface_ptr_t ret(new mfxFrameSurface1);
-    memset(ret.get(), 0, sizeof(mfxFrameSurface1));
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
 
-    ret->Info = frameInfo;
-    ret->Data.B = buf + out_buf_ptr_offset;
-    ret->Data.G = ret->Data.B + 1;
-    ret->Data.R = ret->Data.B + 2;
-    ret->Data.A = ret->Data.B + 3;
-    ret->Data.Pitch = surfW;
+    handle->Info = frameInfo;
+    handle->Data.B = buf + out_buf_ptr_offset;
+    handle->Data.G = handle->Data.B + 1;
+    handle->Data.R = handle->Data.B + 2;
+    handle->Data.A = handle->Data.B + 3;
+    handle->Data.Pitch = surfW;
 
-    return ret;
+    return Surface::create_surface(std::move(handle), out_buf_ptr);
 }
 
-VPLAccelerationPolicy::surface_ptr_t create_surface_other(mfxFrameInfo frameInfo,
-                                                          void* out_buf_ptr,
-                                                          size_t out_buf_ptr_offset,
-                                                          size_t out_buf_size)
+surface_ptr_t create_surface_other(mfxFrameInfo frameInfo,
+                                   std::shared_ptr<void> out_buf_ptr,
+                                   size_t out_buf_ptr_offset,
+                                   size_t out_buf_size)
 {
-    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr);
+    mfxU8* buf = reinterpret_cast<mfxU8*>(out_buf_ptr.get());
     mfxU16 surfH = frameInfo.Height;
     mfxU16 surfW = (frameInfo.FourCC == MFX_FOURCC_P010) ? frameInfo.Width * 2 : frameInfo.Width;
     
@@ -91,16 +89,16 @@ VPLAccelerationPolicy::surface_ptr_t create_surface_other(mfxFrameInfo frameInfo
         GAPI_Assert(false && "Invalid offset");
     }
 
-    VPLAccelerationPolicy::surface_ptr_t ret(new mfxFrameSurface1);
-    memset(ret.get(), 0, sizeof(mfxFrameSurface1));
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
     
-    ret->Info = frameInfo;
-    ret->Data.Y     = buf + out_buf_ptr_offset;
-    ret->Data.U     = buf + out_buf_ptr_offset + (surfW * surfH);
-    ret->Data.V     = ret->Data.U + ((surfW / 2) * (surfH / 2));
-    ret->Data.Pitch = surfW;
+    handle->Info = frameInfo;
+    handle->Data.Y     = buf + out_buf_ptr_offset;
+    handle->Data.U     = buf + out_buf_ptr_offset + (surfW * surfH);
+    handle->Data.V     = handle->Data.U + ((surfW / 2) * (surfH / 2));
+    handle->Data.Pitch = surfW;
 
-    return ret;
+    return Surface::create_surface(std::move(handle), out_buf_ptr);
 }
 
 
@@ -111,22 +109,21 @@ LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
     EngineSession(sess, std::move(decoder_param.stream)),
     mfx_decoder_param(std::move(decoder_param.param)),
     source_handle(std::move(source)),
-    stop_processing(false),
-    acceleration_policy(),
     procesing_surface_ptr(),
     output_surface_ptr()
 {
 }
 
-void LegacyDecodeSession::swap_surface() {
+void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
+    VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
     auto old_locked = procesing_surface_ptr.lock();
     try {
         auto cand = acceleration_policy->get_free_surface(decoder_pool_id).lock();
 
         GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
-                                ", old: " << old_locked.get() <<
-                                ", new: "<< cand.get());
+                                ", old: " << (old_locked ? old_locked->get_handle() : nullptr) <<
+                                ", new: "<< cand->get_handle());
 
         procesing_surface_ptr = cand;
     } catch (const std::exception& ex) {
@@ -138,12 +135,10 @@ void LegacyDecodeSession::swap_surface() {
 void LegacyDecodeSession::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {
     GAPI_Assert(key && "Init decode pull with empty key");
     decoder_pool_id = key;
-
-    // prepare working decode surface
-    swap_surface();
 }
 
-VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
+VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
+ : VPLProcessingEngine(std::move(accel)) {
 
     GAPI_LOG_INFO(nullptr, "Create Legacy Decode Engine");
     create_pipeline(
@@ -167,7 +162,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
                                                     my_sess.last_status == MFX_ERR_NONE
                                                         ? &my_sess.stream
                                                         : nullptr, /* No more data to read, start decode draining mode*/
-                                                    my_sess.procesing_surface_ptr.lock().get(),
+                                                    my_sess.procesing_surface_ptr.lock()->get_handle(),
                                                     &my_sess.output_surface_ptr,
                                                     &my_sess.sync);
             return ExecutionStatus::Continue;
@@ -198,8 +193,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine() {
 
 void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                          DecoderParams&& decoder_param,
-                                         file_ptr&& source_handle,
-                                         std::unique_ptr<VPLAccelerationPolicy>&& acceleration_policy)
+                                         file_ptr&& source_handle)
 {
     mfxFrameAllocRequest decRequest = {};
     // Query number required surfaces for decoder
@@ -222,8 +216,8 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
 
     const auto &frameInfo = decoder_param.param.mfx.FrameInfo;
     auto surface_creator =
-            [&frameInfo] (void* out_buf_ptr, size_t out_buf_ptr_offset,
-                          size_t out_buf_size) -> VPLAccelerationPolicy::surface_ptr_t {
+            [&frameInfo] (std::shared_ptr<void> out_buf_ptr, size_t out_buf_ptr_offset,
+                          size_t out_buf_size) -> surface_ptr_t {
                 return (frameInfo.FourCC == MFX_FOURCC_RGB4) ?
                         create_surface_RGB4(frameInfo, out_buf_ptr, out_buf_ptr_offset,
                                             out_buf_size) :
@@ -243,9 +237,9 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                                       std::move(decoder_param),
                                                       std::move(source_handle));
 
-    // TODO Use common pool for all sessions ?
-    sess_ptr->acceleration_policy = std::move(acceleration_policy);
     sess_ptr->init_surface_pool(decode_pool_key);
+    // prepare working decode surface
+    sess_ptr->swap_surface(*this);
 }
 
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation_t& op, EngineSession& sess) {
@@ -254,18 +248,11 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::execute_op(operation
     
 void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
 {
-    mfxFrameInfo *info = &sess.output_surface_ptr->Info;
-    mfxFrameData *data = &sess.output_surface_ptr->Data;
-    size_t w = info->Width;
-    size_t h = info->Height;
-    size_t p = data->Pitch;
-
-
-    GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], surface: " << sess.output_surface_ptr <<
-                            ", w: " << w << ", h: " << h << ", p: " << p);
+    GAPI_LOG_DEBUG(nullptr, "[" << sess.session << "], frame ready");
     
     // manage memory ownership rely on acceleration policy 
-    auto frame_adapter = sess.acceleration_policy->create_frame_adapter(sess.output_surface_ptr);
+    auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
+                                                                   sess.output_surface_ptr);
     ready_frames.push(cv::MediaFrame(std::move(frame_adapter)));
 }
 
@@ -290,7 +277,7 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
             try {
-                sess.swap_surface();
+                sess.swap_surface(*this);
                 return ExecutionStatus::Continue; 
             } catch (const std::exception& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<

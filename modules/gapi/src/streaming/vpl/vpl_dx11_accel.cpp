@@ -1,6 +1,8 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/vpl/vpl_dx11_accel.hpp"
 #include "streaming/vpl/vpl_utils.hpp"
+#include "streaming/vpl/surface/frame_adapter.hpp"
+#include "streaming/vpl/surface/surface.hpp"
 #include "logger.hpp"
 
 #ifdef HAVE_DIRECTX
@@ -20,8 +22,23 @@
 namespace cv {
 namespace gapi {
 namespace wip {
-VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
+VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy()
 {
+#ifdef CPU_ACCEL_ADAPTER
+    adapter.reset(new VPLCPUAccelerationPolicy);
+#endif
+}
+
+VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
+{
+    if (hw_handle)
+    {
+        GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy release ID3D11Device");
+        hw_handle->Release();
+    }
+}
+
+void VPLDX11AccelerationPolicy::init(session_t session) {
 #if 0 /* Activate it for LEGACY API*/
 //Create device
     UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -90,18 +107,11 @@ VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(mfxSession session)
 
     //MFXVideoCORE_SetFrameAllocator(session, mfxFrameAllocator instance)
     GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy initialized, session: " << session);
-#ifdef CPU_ACCEL_ADAPTER
-    adapter.reset(new VPLCPUAccelerationPolicy(session));
-#endif
 }
 
-VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy()
-{
-    if (hw_handle)
-    {
-        GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy release ID3D11Device");
-        hw_handle->Release();
-    }
+void VPLDX11AccelerationPolicy::deinit(session_t session) {
+    (void)session;
+    GAPI_LOG_INFO(nullptr, "deinitialize session: " << session);
 }
 
 VPLDX11AccelerationPolicy::pool_key_t
@@ -127,11 +137,29 @@ VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_fre
     throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
 }
 
-cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(surface_raw_ptr_t surface) {
+size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t key) const {
+    #ifdef CPU_ACCEL_ADAPTER
+    return adapter->get_free_surface_count(key);
+#endif
+    (void)key;
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+}
+
+size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
+#ifdef CPU_ACCEL_ADAPTER
+    return adapter->get_surface_count(key);
+#endif
+    (void)key;
+    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+}
+
+cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
+                                                                           mfxFrameSurface1* surface) {
 
 #ifdef CPU_ACCEL_ADAPTER
-    return adapter->create_frame_adapter(surface);
+    return adapter->create_frame_adapter(key, surface);
 #endif
+    (void)key;
     (void)surface;
     throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
 }
