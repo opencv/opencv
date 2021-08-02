@@ -10,12 +10,17 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
 
 from stitching_detailed.stitcher import Stitcher
 from stitching_detailed.feature_detector import FeatureDetector
+from stitching_detailed.feature_matcher import FeatureMatcher
 
 
 # Eine Klasse erstellen, die von unittest.TestCase erbt
 class TestStitcher(unittest.TestCase):
     def setUp(self):
         self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        detector = FeatureDetector("orb")
+        self.features = [detector.detect_features(self.img1),
+                         detector.detect_features(self.img2)]
+
 
     def tearDown(self):
         try:
@@ -60,9 +65,7 @@ class TestStitcher(unittest.TestCase):
 
     def test_feature_detector(self):
         default_number_of_keypoints = 500
-        detector = FeatureDetector("orb")
-        features = detector.detect_features(self.img1)
-        self.assertEqual(len(features.getKeypoints()),
+        self.assertEqual(len(self.features[0].getKeypoints()),
                          default_number_of_keypoints)
 
         other_keypoints = 100
@@ -70,6 +73,10 @@ class TestStitcher(unittest.TestCase):
         features = detector.detect_features(self.img1)
         self.assertEqual(len(features.getKeypoints()), other_keypoints)
 
+    def test_feature_matcher(self):
+        matcher = FeatureMatcher()
+        pairwise_matches = matcher.match_features(self.features)
+        self.assertEqual(len(pairwise_matches), len(self.features)**2)
 
 def starttest():
     unittest.main()
