@@ -6,6 +6,10 @@ import numpy as np
 from . import stitcher_choices as choices
 from .feature_detector import FeatureDetector
 from .feature_matcher import FeatureMatcher
+from .camera_estimator import CameraEstimator
+from .camera_adjuster import CameraAdjuster
+from .camera_wave_corrector import WaveCorrector
+
 
 class Stitcher:
 
@@ -28,12 +32,14 @@ class Stitcher:
                                  try_use_gpu=args.try_cuda,
                                  match_conf=args.match_conf)
 
+        camera_estimator = CameraEstimator(args.estimator)
+        camera_adjuster = CameraAdjuster(args.ba)
+        wave_corrector = WaveCorrector(args.wave_correct)
+
         work_megapix = args.work_megapix
         seam_megapix = args.seam_megapix
         compose_megapix = args.compose_megapix
         conf_thresh = args.conf_thresh
-        ba_refine_mask = args.ba_refine_mask
-        wave_correct = choices.WAVE_CORRECT_CHOICES[args.wave_correct]
         if args.save_graph is None:
             save_graph = False
         else:
@@ -106,32 +112,10 @@ class Stitcher:
             print("Need more images")
             exit()
 
-        estimator = choices.ESTIMATOR_CHOICES[args.estimator]()
-        b, cameras = estimator.apply(features, p, None)
-        if not b:
-            print("Homography estimation failed.")
-            exit()
-        for cam in cameras:
-            cam.R = cam.R.astype(np.float32)
+        cameras = camera_estimator.estimate(features, p)
+        camera_adjuster.set_refinement_mask(args.ba_refine_mask)
+        cameras = camera_adjuster.adjust(features, p, cameras)
 
-        adjuster = choices.BA_COST_CHOICES[args.ba]()
-        adjuster.setConfThresh(1)
-        refine_mask = np.zeros((3, 3), np.uint8)
-        if ba_refine_mask[0] == 'x':
-            refine_mask[0, 0] = 1
-        if ba_refine_mask[1] == 'x':
-            refine_mask[0, 1] = 1
-        if ba_refine_mask[2] == 'x':
-            refine_mask[0, 2] = 1
-        if ba_refine_mask[3] == 'x':
-            refine_mask[1, 1] = 1
-        if ba_refine_mask[4] == 'x':
-            refine_mask[1, 2] = 1
-        adjuster.setRefinementMask(refine_mask)
-        b, cameras = adjuster.apply(features, p, cameras)
-        if not b:
-            print("Camera parameters adjusting failed.")
-            exit()
         focals = []
         for cam in cameras:
             focals.append(cam.focal)
@@ -140,13 +124,9 @@ class Stitcher:
             warped_image_scale = focals[len(focals) // 2]
         else:
             warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
-        if wave_correct is not None:
-            rmats = []
-            for cam in cameras:
-                rmats.append(np.copy(cam.R))
-            rmats = cv.detail.waveCorrect(rmats, wave_correct)
-            for idx, cam in enumerate(cameras):
-                cam.R = rmats[idx]
+
+        cameras = wave_corrector.correct(cameras)
+
         corners = []
         masks_warped = []
         images_warped = []

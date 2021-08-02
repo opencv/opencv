@@ -14,16 +14,16 @@ import cv2 as cv
 import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
-from stitching_detailed.stitcher_choices import (ESTIMATOR_CHOICES,
-                                                 BA_COST_CHOICES,
-                                                 WAVE_CORRECT_CHOICES,
-                                                 WARP_CHOICES,
+from stitching_detailed.stitcher_choices import (WARP_CHOICES,
                                                  SEAM_FIND_CHOICES,
                                                  EXPOS_COMP_CHOICES,
                                                  BLEND_CHOICES)
 
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
+from stitching_detailed.camera_estimator import CameraEstimator
+from stitching_detailed.camera_adjuster import CameraAdjuster
+from stitching_detailed.camera_wave_corrector import WaveCorrector
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -61,10 +61,10 @@ parser.add_argument(
     type=str, dest='matcher'
 )
 parser.add_argument(
-    '--estimator', action='store', default=list(ESTIMATOR_CHOICES.keys())[0],
+    '--estimator', action='store', default=CameraEstimator.default,
     help="Type of estimator used for transformation estimation. "
-         "The default is '%s'." % list(ESTIMATOR_CHOICES.keys())[0],
-    choices=ESTIMATOR_CHOICES.keys(),
+         "The default is '%s'." % CameraEstimator.default,
+    choices=CameraEstimator.choices.keys(),
     type=str, dest='estimator'
 )
 parser.add_argument(
@@ -80,10 +80,10 @@ parser.add_argument(
     type=float, dest='conf_thresh'
 )
 parser.add_argument(
-    '--ba', action='store', default=list(BA_COST_CHOICES.keys())[0],
+    '--ba', action='store', default=CameraAdjuster.default,
     help="Bundle adjustment cost function. "
-         "The default is '%s'." % list(BA_COST_CHOICES.keys())[0],
-    choices=BA_COST_CHOICES.keys(),
+         "The default is '%s'." % CameraAdjuster.default,
+    choices=CameraAdjuster.choices.keys(),
     type=str, dest='ba'
 )
 parser.add_argument(
@@ -97,11 +97,10 @@ parser.add_argument(
     type=str, dest='ba_refine_mask'
 )
 parser.add_argument(
-    '--wave_correct', action='store',
-    default=list(WAVE_CORRECT_CHOICES.keys())[0],
+    '--wave_correct', action='store', default=WaveCorrector.default,
     help="Perform wave effect correction. "
-         "The default is '%s'" % list(WAVE_CORRECT_CHOICES.keys())[0],
-    choices=WAVE_CORRECT_CHOICES.keys(),
+         "The default is '%s'" % WaveCorrector.default,
+    choices=WaveCorrector.choices.keys(),
     type=str, dest='wave_correct'
 )
 parser.add_argument(
