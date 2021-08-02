@@ -89,7 +89,7 @@ void probsToClasses(const cv::Mat& probs, cv::Mat& classes) {
                         class_id = c;
                     }
              }
-             classes_p[h * W + w] = class_id;
+             classes_p[h * W + w] = static_cast<uint8_t>(class_id);
          }
      }
 }
