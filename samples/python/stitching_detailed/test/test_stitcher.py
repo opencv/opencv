@@ -16,20 +16,7 @@ from stitching_detailed.feature_matcher import FeatureMatcher
 # Eine Klasse erstellen, die von unittest.TestCase erbt
 class TestStitcher(unittest.TestCase):
     def setUp(self):
-        self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
-        detector = FeatureDetector("orb")
-        self.features = [detector.detect_features(self.img1),
-                         detector.detect_features(self.img2)]
-
-
-    def tearDown(self):
-        try:
-            os.remove("result.jpg")
-        except OSError:
-            pass
-
-    def test_stitcher(self):
-        settings = {
+        self.settings = {
             "try_cuda": False,
             "work_megapix": 0.6,
             "features": "orb",
@@ -39,7 +26,7 @@ class TestStitcher(unittest.TestCase):
             "conf_thresh": 1.0,
             "ba": "ray",
             "ba_refine_mask": "xxxxx",
-            "wave_correct": "horiz",
+            "wave_correct": "no",
             "save_graph": None,
             "warp": "spherical",
             "seam_megapix": 0.1,
@@ -54,18 +41,42 @@ class TestStitcher(unittest.TestCase):
             "output": "result.jpg",
             "timelapse": None,
             "rangewidth": -1
-        }
-        stitcher = Stitcher(["s1.jpg", "s2.jpg"], **settings)
+            }
+
+    def tearDown(self):
+        try:
+            os.remove("result.jpg")
+        except OSError:
+            pass
+
+    def test_stitcher_aquaduct(self):
+        stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
         stitcher.stitch()
 
-        max_image_shape_derivation_per_pixel = 3
-        np.testing.assert_allclose(stitcher.result.shape,
-                                   (700, 1811, 3),
-                                   max_image_shape_derivation_per_pixel)
+        max_image_shape_derivation = 3
+        np.testing.assert_allclose(stitcher.result.shape[:2],
+                                   (700, 1811),
+                                   atol=max_image_shape_derivation)
+
+    @unittest.skip("skip boat test (high resuolution ran ~10s)")
+    def test_stitcher_boat(self):
+        stitcher = Stitcher(["boat1.jpg", "boat2.jpg",
+                             "boat3.jpg", "boat4.jpg",
+                             "boat5.jpg", "boat6.jpg"], **self.settings)
+        stitcher.stitch()
+
+        max_image_shape_derivation = 100
+        np.testing.assert_allclose(stitcher.result.shape[:2],
+                                   (2667, 10751),
+                                   atol=max_image_shape_derivation)
 
     def test_feature_detector(self):
+        self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+
         default_number_of_keypoints = 500
-        self.assertEqual(len(self.features[0].getKeypoints()),
+        detector = FeatureDetector("orb")
+        features = detector.detect_features(self.img1)
+        self.assertEqual(len(features.getKeypoints()),
                          default_number_of_keypoints)
 
         other_keypoints = 100
@@ -74,9 +85,17 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(len(features.getKeypoints()), other_keypoints)
 
     def test_feature_matcher(self):
+        self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+
+        detector = FeatureDetector("orb")
+        features = [detector.detect_features(self.img1),
+                    detector.detect_features(self.img2)]
+
         matcher = FeatureMatcher()
-        pairwise_matches = matcher.match_features(self.features)
-        self.assertEqual(len(pairwise_matches), len(self.features)**2)
+        pairwise_matches = matcher.match_features(features)
+        self.assertEqual(len(pairwise_matches), len(features)**2)
+        self.assertGreater(pairwise_matches[1].confidence, 2)
+
 
 def starttest():
     unittest.main()
