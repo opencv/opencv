@@ -124,27 +124,32 @@ inline void signNormal(T a, T b, T c, Vec<T, 3>& normal)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+template<typename T>
 class RgbdNormalsImpl : public RgbdNormals
 {
 public:
-    RgbdNormalsImpl(int _rows, int _cols, int _windowSize, int _depth, const Mat& _K, RgbdNormals::RGBD_NORMALS_METHOD _method) :
+    static const int dtype = cv::traits::Depth<T>::value;
+
+    RgbdNormalsImpl(int _rows, int _cols, int _windowSize, const Mat& _K, RgbdNormals::RGBD_NORMALS_METHOD _method) :
         rows(_rows),
         cols(_cols),
-        depth(_depth),
         windowSize(_windowSize),
         method(_method),
         cacheIsDirty(true)
     {
-        CV_Assert(_depth == CV_32F || _depth == CV_64F);
         CV_Assert(_K.cols == 3 && _K.rows == 3);
 
-        _K.convertTo(K, depth);
+        _K.convertTo(K, dtype);
         _K.copyTo(K_ori);
     }
 
     virtual ~RgbdNormalsImpl() CV_OVERRIDE
     { }
 
+    virtual int getDepth() const CV_OVERRIDE
+    {
+        return dtype;
+    }
     virtual int getRows() const CV_OVERRIDE
     {
         return rows;
@@ -169,14 +174,6 @@ public:
     {
         windowSize = val; cacheIsDirty = true;
     }
-    virtual int getDepth() const CV_OVERRIDE
-    {
-        return depth;
-    }
-    virtual void setDepth(int val) CV_OVERRIDE
-    {
-        depth = val; cacheIsDirty = true;
-    }
     virtual cv::Mat getK() const CV_OVERRIDE
     {
         return K;
@@ -196,19 +193,16 @@ public:
 
     // Helper functions for apply()
     virtual void assertOnBadArg(const Mat& points3d_ori) const = 0;
-    virtual void calcRadiusAnd3d(const Mat& points3d_ori, int depth_, Mat& points3d, Mat& radius) const
+    virtual void calcRadiusAnd3d(const Mat& points3d_ori, Mat& points3d, Mat& radius) const
     {
         // Make the points have the right depth
-        if (points3d_ori.depth() == depth_)
+        if (points3d_ori.depth() == dtype)
             points3d = points3d_ori;
         else
-            points3d_ori.convertTo(points3d, depth_);
+            points3d_ori.convertTo(points3d, dtype);
 
         // Compute the distance to the points
-        if (depth_ == CV_32F)
-            radius = computeRadius<float>(points3d);
-        else
-            radius = computeRadius<double>(points3d);
+        radius = computeRadius<T>(points3d);
     }
     virtual void compute(const Mat& in, Mat& normals) const = 0;
 
@@ -230,10 +224,10 @@ public:
 
         // Precompute something for RGBD_NORMALS_METHOD_SRI and RGBD_NORMALS_METHOD_FALS
         Mat points3d, radius;
-        calcRadiusAnd3d(points3d_ori, depth, points3d, radius);
+        calcRadiusAnd3d(points3d_ori, points3d, radius);
 
         // Get the normals
-        normals_out.create(points3d_ori.size(), CV_MAKETYPE(depth, 3));
+        normals_out.create(points3d_ori.size(), CV_MAKETYPE(dtype, 3));
         if (points3d_in.empty())
             return;
 
@@ -248,7 +242,7 @@ public:
         }
     }
 
-    int rows, cols, depth;
+    int rows, cols;
     Mat K, K_ori;
     int windowSize;
     int method;
@@ -263,15 +257,15 @@ public:
  * by H. Badino, D. Huber, Y. Park and T. Kanade
  */
 template<typename T>
-class FALS : public RgbdNormalsImpl
+class FALS : public RgbdNormalsImpl<T>
 {
 public:
     typedef Matx<T, 3, 3> Mat33T;
     typedef Vec<T, 9> Vec9T;
     typedef Vec<T, 3> Vec3T;
 
-    FALS(int _rows, int _cols, int _windowSize, int _depth, const Mat& _K) :
-        RgbdNormalsImpl(_rows, _cols, _windowSize, _depth, _K, RGBD_NORMALS_METHOD_FALS)
+    FALS(int _rows, int _cols, int _windowSize, const Mat& _K) :
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_FALS)
     { }
     virtual ~FALS() CV_OVERRIDE
     { }
@@ -404,14 +398,14 @@ void multiply_by_K_inv(const Matx<T, 3, 3>& K_inv, U a, U b, U c, Vec<T, 3>& res
  * by S. Hinterstoisser, C. Cagniart, S. Ilic, P. Sturm, N. Navab, P. Fua, and V. Lepetit
  */
 template<typename T>
-class LINEMOD : public RgbdNormalsImpl
+class LINEMOD : public RgbdNormalsImpl<T>
 {
 public:
     typedef Vec<T, 3> Vec3T;
     typedef Matx<T, 3, 3> Mat33T;
 
-    LINEMOD(int _rows, int _cols, int _windowSize, int _depth, const Mat& _K) :
-        RgbdNormalsImpl(_rows, _cols, _windowSize, _depth, _K, RGBD_NORMALS_METHOD_LINEMOD)
+    LINEMOD(int _rows, int _cols, int _windowSize, const Mat& _K) :
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_LINEMOD)
     { }
 
     /** Compute cached data
@@ -558,7 +552,7 @@ public:
                   ((points3d_ori.channels() == 1) && (points3d_ori.depth() == CV_16U || points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)));
     }
 
-    virtual void calcRadiusAnd3d(const Mat& /*points3d_ori*/, int /*depth_*/, Mat& /*points3d*/, Mat& /*radius*/) const CV_OVERRIDE
+    virtual void calcRadiusAnd3d(const Mat& /*points3d_ori*/, Mat& /*points3d*/, Mat& /*radius*/) const CV_OVERRIDE
     { }
 };
 
@@ -570,15 +564,15 @@ public:
  * by H. Badino, D. Huber, Y. Park and T. Kanade
  */
 template<typename T>
-class SRI : public RgbdNormalsImpl
+class SRI : public RgbdNormalsImpl<T>
 {
 public:
     typedef Matx<T, 3, 3> Mat33T;
     typedef Vec<T, 9> Vec9T;
     typedef Vec<T, 3> Vec3T;
 
-    SRI(int _rows, int _cols, int _windowSize, int _depth, const Mat& _K) :
-        RgbdNormalsImpl(_rows, _cols, _windowSize, _depth, _K, RGBD_NORMALS_METHOD_SRI),
+    SRI(int _rows, int _cols, int _windowSize, const Mat& _K) :
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_SRI),
         phi_step_(0),
         theta_step_(0)
     { }
@@ -594,8 +588,8 @@ public:
         computeThetaPhi<T>(rows, cols, K, cos_theta, sin_theta, cos_phi, sin_phi);
 
         // Create the derivative kernels
-        getDerivKernels(kx_dx_, ky_dx_, 1, 0, windowSize, true, depth);
-        getDerivKernels(kx_dy_, ky_dy_, 0, 1, windowSize, true, depth);
+        getDerivKernels(kx_dx_, ky_dx_, 1, 0, windowSize, true, dtype);
+        getDerivKernels(kx_dy_, ky_dy_, 0, 1, windowSize, true, dtype);
 
         // Get the mapping function for SRI
         float min_theta = (float)std::asin(sin_theta(0, 0)), max_theta = (float)std::asin(sin_theta(0, cols - 1));
@@ -747,31 +741,31 @@ Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K
 
     Mat mK = K.getMat();
     CV_Assert(method == RGBD_NORMALS_METHOD_FALS || method == RGBD_NORMALS_METHOD_LINEMOD || method == RGBD_NORMALS_METHOD_SRI);
-    Ptr<RgbdNormalsImpl> ptr;
+    Ptr<RgbdNormals> ptr;
     switch (method)
     {
     case (RGBD_NORMALS_METHOD_FALS):
     {
         if (depth == CV_32F)
-            ptr = makePtr<FALS<float> >(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<FALS<float> >(rows, cols, windowSize, mK);
         else
-            ptr = makePtr<FALS<double>>(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<FALS<double>>(rows, cols, windowSize, mK);
         break;
     }
     case (RGBD_NORMALS_METHOD_LINEMOD):
     {
         if (depth == CV_32F)
-            ptr = makePtr<LINEMOD<float> >(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<LINEMOD<float> >(rows, cols, windowSize, mK);
         else
-            ptr = makePtr<LINEMOD<double>>(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<LINEMOD<double>>(rows, cols, windowSize, mK);
         break;
     }
     case RGBD_NORMALS_METHOD_SRI:
     {
         if (depth == CV_32F)
-            ptr = makePtr<SRI<float> >(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<SRI<float> >(rows, cols, windowSize, mK);
         else
-            ptr = makePtr<SRI<double>>(rows, cols, windowSize, depth, mK);
+            ptr = makePtr<SRI<double>>(rows, cols, windowSize, mK);
         break;
     }
     }

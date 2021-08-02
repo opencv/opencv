@@ -65,7 +65,6 @@ public:
     CV_WRAP virtual int getWindowSize() const = 0;
     CV_WRAP virtual void setWindowSize(int val) = 0;
     CV_WRAP virtual int getDepth() const = 0;
-    CV_WRAP virtual void setDepth(int val) = 0;
     CV_WRAP virtual cv::Mat getK() const = 0;
     CV_WRAP virtual void setK(const cv::Mat &val) = 0;
     CV_WRAP virtual int getMethod() const = 0;
