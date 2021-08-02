@@ -189,7 +189,10 @@ if __name__ == '__main__':
     print(__doc__)
     args, unknown = parser.parse_known_args()
     args_dict = vars(args)
-    stitcher = Stitcher(args_dict.pop("img_names"), **args_dict)
+    img_names = args_dict.pop("img_names")
+    img_names = [cv.samples.findFile(img_name) for img_name in img_names]
+
+    stitcher = Stitcher(img_names, **args_dict)
     stitcher.stitch()
 
     cv.imshow(args.output, stitcher.dst)

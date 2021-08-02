@@ -4,6 +4,8 @@ import cv2 as cv
 import numpy as np
 
 from . import stitcher_choices as choices
+from .panorama_part import PanoramaPart
+from .image_to_megapix_scaler import ImageToMegapixScaler
 from .feature_detector import FeatureDetector
 from .feature_matcher import FeatureMatcher
 from .camera_estimator import CameraEstimator
@@ -20,7 +22,9 @@ class Stitcher:
     def stitch(self):
         args = self.args
         img_names = self.img_names
-        print(img_names)
+
+        work_megapix_scaler = ImageToMegapixScaler(args.work_megapix)
+        seam_megapix_scaler = ImageToMegapixScaler(args.seam_megapix)
 
         finder = FeatureDetector(args.features)
 
@@ -36,8 +40,6 @@ class Stitcher:
         camera_adjuster = CameraAdjuster(args.ba)
         wave_corrector = WaveCorrector(args.wave_correct)
 
-        work_megapix = args.work_megapix
-        seam_megapix = args.seam_megapix
         compose_megapix = args.compose_megapix
         conf_thresh = args.conf_thresh
         if args.save_graph is None:
@@ -59,36 +61,24 @@ class Stitcher:
                 exit()
         else:
             timelapse = False
-        seam_work_aspect = 1
         full_img_sizes = []
         features = []
         images = []
         is_work_scale_set = False
         is_seam_scale_set = False
         is_compose_scale_set = False
+
         for name in img_names:
-            full_img = cv.imread(cv.samples.findFile(name))
-            if full_img is None:
-                print("Cannot read image ", name)
-                exit()
-            full_img_sizes.append((full_img.shape[1], full_img.shape[0]))
-            if work_megapix < 0:
-                img = full_img
-                work_scale = 1
-                is_work_scale_set = True
-            else:
-                if is_work_scale_set is False:
-                    work_scale = min(1.0, np.sqrt(work_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
-                    is_work_scale_set = True
-                img = cv.resize(src=full_img, dsize=None, fx=work_scale, fy=work_scale, interpolation=cv.INTER_LINEAR_EXACT)
-            if is_seam_scale_set is False:
-                seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
-                seam_work_aspect = seam_scale / work_scale
-                is_seam_scale_set = True
-            img_feat = finder.detect_features(img)
-            features.append(img_feat)
-            img = cv.resize(src=full_img, dsize=None, fx=seam_scale, fy=seam_scale, interpolation=cv.INTER_LINEAR_EXACT)
-            images.append(img)
+            image = PanoramaPart(name)
+            image.read_image()
+            full_img_sizes.append(image.full_img_size)
+            image.set_work_image(work_megapix_scaler)
+            features.append(finder.detect_features(image.work_img))
+            image.set_seam_image(seam_megapix_scaler)
+            images.append(image.seam_img)
+
+        seam_work_aspect = (work_megapix_scaler.scale /
+                            seam_megapix_scaler.scale )
 
         p = matcher.match_features(features)
 
@@ -173,7 +163,7 @@ class Stitcher:
                 if compose_megapix > 0:
                     compose_scale = min(1.0, np.sqrt(compose_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
                 is_compose_scale_set = True
-                compose_work_aspect = compose_scale / work_scale
+                compose_work_aspect = compose_scale / work_megapix_scaler.scale
                 warped_image_scale *= compose_work_aspect
                 warper = cv.PyRotationWarper(warp_type, warped_image_scale)
                 for i in range(0, len(img_names)):

@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..')))
 
 from stitching_detailed.stitcher import Stitcher
+from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
+from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
 
@@ -58,7 +60,7 @@ class TestStitcher(unittest.TestCase):
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
-    @unittest.skip("skip boat test (high resuolution ran ~10s)")
+    #@unittest.skip("skip boat test (high resuolution ran ~10s)")
     def test_stitcher_boat(self):
         stitcher = Stitcher(["boat1.jpg", "boat2.jpg",
                              "boat3.jpg", "boat4.jpg",
@@ -70,18 +72,29 @@ class TestStitcher(unittest.TestCase):
                                    (2667, 10751),
                                    atol=max_image_shape_derivation)
 
+    def test_image_to_megapix_scaler(self):
+        img1 = cv.imread("s1.jpg")
+        scaler = ImageToMegapixScaler(0.6)
+        self.assertEqual(scaler.get_scale(img1), 0.8294067854101966)
+        resized = scaler.resize_to_scale(img1, scaler.get_scale(img1))
+        self.assertEqual(resized.shape, (581, 1033, 3))
+
+        scaler = ImageToMegapixScaler(2)
+        self.assertEqual(scaler.get_scale(img1), 1.5142826857233715)
+        self.assertEqual(scaler.get_scale_to_force_downscale(img1), 1.0)
+
     def test_feature_detector(self):
-        self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        img1 = cv.imread("s1.jpg")
 
         default_number_of_keypoints = 500
         detector = FeatureDetector("orb")
-        features = detector.detect_features(self.img1)
+        features = detector.detect_features(img1)
         self.assertEqual(len(features.getKeypoints()),
                          default_number_of_keypoints)
 
         other_keypoints = 100
         detector = FeatureDetector("orb", nfeatures=other_keypoints)
-        features = detector.detect_features(self.img1)
+        features = detector.detect_features(img1)
         self.assertEqual(len(features.getKeypoints()), other_keypoints)
 
     def test_feature_matcher(self):
