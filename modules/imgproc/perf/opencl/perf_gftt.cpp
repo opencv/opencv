@@ -57,7 +57,7 @@ typedef tuple<String, double, bool> GoodFeaturesToTrackParams;
 typedef TestBaseWithParam<GoodFeaturesToTrackParams> GoodFeaturesToTrackFixture;
 
 OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
-                ::testing::Combine(OCL_PERF_ENUM(String("gpu/opticalflow/rubberwhale1.png")),
+                ::testing::Combine(OCL_PERF_ENUM(String("samples/data/rubberwhale1.png")),
                                    OCL_PERF_ENUM(0.0, 3.0), Bool()))
 {
     GoodFeaturesToTrackParams params = GetParam();
@@ -83,7 +83,7 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
 }
 
 OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrackWithQuality,
-                ::testing::Combine(OCL_PERF_ENUM(String("gpu/opticalflow/rubberwhale1.png")),
+                ::testing::Combine(OCL_PERF_ENUM(String("samples/data/rubberwhale1.png")),
                                    OCL_PERF_ENUM(3.0), Bool()))
 {
     GoodFeaturesToTrackParams params = GetParam();

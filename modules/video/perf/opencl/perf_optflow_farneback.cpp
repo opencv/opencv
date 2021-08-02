@@ -69,10 +69,10 @@ OCL_PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
                     )
                 )
 {
-    Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
+    Mat frame0 = imread(getDataPath("samples/data/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
 
-    Mat frame1 = imread(getDataPath("gpu/opticalflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
+    Mat frame1 = imread(getDataPath("samples/data/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
 
     const Size srcSize = frame0.size();

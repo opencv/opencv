@@ -72,8 +72,8 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, double, bool)
 
     void generateTestData()
     {
-        Mat frame = readImage("../gpu/opticalflow/rubberwhale1.png", IMREAD_GRAYSCALE);
-        ASSERT_FALSE(frame.empty()) << "could not load gpu/opticalflow/rubberwhale1.png";
+        Mat frame = readImage("../samples/data/rubberwhale1.png", IMREAD_GRAYSCALE);
+        ASSERT_FALSE(frame.empty()) << "could not load samples/data/rubberwhale1.png";
 
         Size roiSize = frame.size();
         Border srcBorder = randomBorder(0, useRoi ? 2 : 0);

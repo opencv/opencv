@@ -59,10 +59,10 @@ OCL_PERF_TEST_P(PyrLKOpticalFlowFixture, PyrLKOpticalFlow,
                 ::testing::Values(1000, 2000, 4000)
                 )
 {
-    Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
+    Mat frame0 = imread(getDataPath("samples/data/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
 
-    Mat frame1 = imread(getDataPath("gpu/opticalflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
+    Mat frame1 = imread(getDataPath("samples/data/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
 
     UMat uFrame0; frame0.copyTo(uFrame0);
