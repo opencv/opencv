@@ -596,6 +596,35 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
+{
+    Mat Wx = blobFromNPY(_tf("gru.W.npy"));
+    Mat Wh = blobFromNPY(_tf("gru.R.npy"));
+    Mat b = blobFromNPY(_tf("gru.B.npy"));
+    Mat h0 = blobFromNPY(_tf("gru.h0.npy"));
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    b = b.reshape(1, b.size[0]);
+
+    LayerParams gruParams;
+    gruParams.blobs.resize(4);
+    gruParams.blobs[0] = Wh;
+    gruParams.blobs[1] = Wx;
+    gruParams.blobs[2] = b;
+    gruParams.blobs[3] = h0;
+    gruParams.set("bidirectional", false);
+    Ptr<GRULayer> layer = GRULayer::create(gruParams);
+
+    Mat inp = blobFromNPY(_tf("gru.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat h_t_reference = blobFromNPY(_tf("gru.output.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
@@ -618,9 +647,9 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
 {
     // This handcrafted setup calculates (approximately) the prefix sum of the
     // input, assuming the inputs are suitably small.
-    cv::Mat input(2, 1, CV_32FC1);
-    input.at<float>(0, 0) = 1e-5f;
-    input.at<float>(1, 0) = 2e-5f;
+    std::vector<int> input_dims = {2, 1, 1};
+    std::array<float, 2> input_data = {1e-5f, 2e-5f};
+    cv::Mat input(input_dims, CV_32FC1, input_data.data());
 
     cv::Mat Wx(4, 1, CV_32FC1);
     Wx.at<float>(0, 0) = 0.f;  // Input gate
