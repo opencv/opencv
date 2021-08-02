@@ -152,10 +152,6 @@ VideoCapture_uEye::VideoCapture_uEye(int camera)
 
     ASSERT_UEYE(is_ResetToDefault(cam_id));
 
-    UINT nRange[3]; // min, max, inc
-    ASSERT_UEYE(is_PixelClock(cam_id, IS_PIXELCLOCK_CMD_GET_RANGE, (void*)nRange, sizeof(nRange)))
-    ASSERT_UEYE(is_PixelClock(cam_id, IS_PIXELCLOCK_CMD_SET, (void*)&(nRange[1]), sizeof(nRange[1])))
-
     ASSERT_UEYE(is_SetFrameRate(cam_id, IS_GET_FRAMERATE, &fps));
 
     start_camera();
