@@ -62,6 +62,12 @@ def printParams(backend, target):
     }
     print('%s/%s' % (backendNames[backend], targetNames[target]))
 
+def getDefaultThreshold(target):
+    if target == cv.dnn.DNN_TARGET_OPENCL_FP16 or target == cv.dnn.DNN_TARGET_MYRIAD:
+        return 4e-3
+    else:
+        return 1e-5
+
 testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
 
 g_dnnBackendsAndTargets = None
@@ -330,7 +336,7 @@ class dnn_test(NewOpenCVTests):
             net.setPreferableTarget(target)
             real_output = net.forward()
 
-            normAssert(self, real_output, gold_output)
+            normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
