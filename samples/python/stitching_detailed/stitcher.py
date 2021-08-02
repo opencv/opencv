@@ -5,6 +5,7 @@ import numpy as np
 
 from . import stitcher_choices as choices
 from .feature_detector import FeatureDetector
+from .feature_matcher import FeatureMatcher
 
 class Stitcher:
 
@@ -18,6 +19,14 @@ class Stitcher:
         print(img_names)
 
         finder = FeatureDetector(args.features)
+
+        if args.match_conf is None:
+            args.match_conf = FeatureMatcher.get_default_match_conf(args.features)
+
+        matcher = FeatureMatcher(args.matcher,
+                                 args.rangewidth,
+                                 try_use_gpu=args.try_cuda,
+                                 match_conf=args.match_conf)
 
         work_megapix = args.work_megapix
         seam_megapix = args.seam_megapix
@@ -75,9 +84,7 @@ class Stitcher:
             img = cv.resize(src=full_img, dsize=None, fx=seam_scale, fy=seam_scale, interpolation=cv.INTER_LINEAR_EXACT)
             images.append(img)
 
-        matcher = get_matcher(args)
-        p = matcher.apply2(features)
-        matcher.collectGarbage()
+        p = matcher.match_features(features)
 
         if save_graph:
             with open(args.save_graph, 'w') as fh:
@@ -253,24 +260,7 @@ class Stitcher:
 
         print("Done")
 
-def get_matcher(args):
-    try_cuda = args.try_cuda
-    matcher_type = args.matcher
-    if args.match_conf is None:
-        if args.features == 'orb':
-            match_conf = 0.3
-        else:
-            match_conf = 0.65
-    else:
-        match_conf = args.match_conf
-    range_width = args.rangewidth
-    if matcher_type == "affine":
-        matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
-    elif range_width == -1:
-        matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
-    else:
-        matcher = cv.detail.BestOf2NearestRangeMatcher_create(range_width, try_cuda, match_conf)
-    return matcher
+
 
 
 def get_compensator(args):

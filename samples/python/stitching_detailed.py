@@ -23,6 +23,7 @@ from stitching_detailed.stitcher_choices import (ESTIMATOR_CHOICES,
                                                  BLEND_CHOICES)
 
 from stitching_detailed.feature_detector import FeatureDetector
+from stitching_detailed.feature_matcher import FeatureMatcher
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -53,10 +54,10 @@ parser.add_argument(
     type=str, dest='features'
 )
 parser.add_argument(
-    '--matcher', action='store', default='homography',
+    '--matcher', action='store', default=FeatureMatcher.default,
     help="Matcher used for pairwise image matching. "
-         "The default is 'homography'.",
-    choices=('homography', 'affine'),
+         "The default is '%s'." % FeatureMatcher.default,
+    choices=FeatureMatcher.choices,
     type=str, dest='matcher'
 )
 parser.add_argument(
