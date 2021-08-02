@@ -69,9 +69,9 @@ void classesToColors(const cv::Mat &out_blob,
 }
 
 void probsToClasses(const cv::Mat& probs, cv::Mat& classes) {
-     int C = probs.size[1];
-     int H = probs.size[2];
-     int W = probs.size[3];
+     const int C = probs.size[1];
+     const int H = probs.size[2];
+     const int W = probs.size[3];
 
      classes.create(H, W, CV_8UC1);
      GAPI_Assert(probs.depth() == CV_32F);
