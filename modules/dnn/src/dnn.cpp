@@ -2463,7 +2463,7 @@ struct Net::Impl : public detail::NetImplBase
             {
                 // For test use. when not using WebNN, the test case will fail
                 // with the following code.
-                
+
                 CV_LOG_WARNING(NULL, "Layer " + ld.type + " name " + ld.name + " is unsupported by WebNN backend.");
 
                 addWebnnOutputs(ld);
