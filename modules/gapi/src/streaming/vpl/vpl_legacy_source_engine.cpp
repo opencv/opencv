@@ -225,7 +225,7 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                              out_buf_size);};
 
     //TODO Configure preallocation size (how many frames we can hold)
-    const size_t preallocated_frames_count = 3;
+    const size_t preallocated_frames_count = 30;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
                 acceleration_policy->create_surface_pool(decRequest.NumFrameSuggested * preallocated_frames_count,
                                                          singleSurfaceSize,

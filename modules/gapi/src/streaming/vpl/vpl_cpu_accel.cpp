@@ -18,6 +18,72 @@ namespace gapi {
 namespace wip {
 
 
+#ifdef TEST_PERF    
+void VPLCPUAccelerationPolicy::pool_t::reserve(size_t size) {
+    surfaces.reserve(size);
+}
+
+size_t VPLCPUAccelerationPolicy::pool_t::size() const {
+    return surfaces.size();
+}
+
+void VPLCPUAccelerationPolicy::pool_t::clear() {
+    surfaces.clear();
+    next_free_it = surfaces.begin();
+    cache.clear();
+}
+
+void VPLCPUAccelerationPolicy::pool_t::push_back(surface_ptr_t &&surf) {
+    cache.insert(std::make_pair(surf->get_handle(), surf));
+    surfaces.push_back(std::move(surf));
+    next_free_it = surfaces.begin();
+}
+
+surface_ptr_t VPLCPUAccelerationPolicy::pool_t::find_free() {
+
+        auto it =
+            std::find_if(next_free_it, surfaces.end(),
+                        [](const surface_ptr_t& val) {
+                GAPI_DbgAssert(val && "Pool contains empty surface");
+                return !val->get_locks_count();
+            });
+
+        // Limitation realloc pool might be a future extension
+        if (it == surfaces.end()) {
+            it =
+                std::find_if(surfaces.begin(), next_free_it,
+                            [](const surface_ptr_t& val) {
+                    GAPI_DbgAssert(val && "Pool contains empty surface");
+                    return !val->get_locks_count();
+                });
+            if (it == next_free_it) {
+                std::stringstream ss;
+                ss << "cannot get free surface from pool, size: " << surfaces.size();
+                const std::string& str = ss.str();
+                GAPI_LOG_WARNING(nullptr, str);
+                throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
+            }
+        }
+
+        next_free_it = it;
+        ++next_free_it;
+
+    return *it;
+}
+surface_ptr_t VPLCPUAccelerationPolicy::pool_t::find_by_handle(mfxFrameSurface1* handle) {
+    auto it = cache.find(handle);
+    if (it == cache.end()) {
+        std::stringstream ss;
+        ss << "cannot get requested surface from pool, surf: "
+           << handle << ", pool size: " << surfaces.size();
+        const std::string& str = ss.str();
+        GAPI_LOG_WARNING(nullptr, str);
+        throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
+    }
+    return it->second;
+}
+#endif // TEST_PERF
+
     
 VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy() {
     GAPI_LOG_INFO(nullptr, "created");
@@ -118,7 +184,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     return preallocated_pool_memory_ptr;
 }
 
-VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_surface(pool_key_t key) const {
+VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_surface(pool_key_t key) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
         std::stringstream ss;
@@ -128,11 +194,14 @@ VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_
         throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
     }
 
-    const pool_t& requested_pool = pool_it->second;
+    pool_t& requested_pool = pool_it->second;
+#ifdef TEST_PERF
+    return requested_pool.find_free();
+#else // TEST_PERF
     auto it =
         std::find_if(requested_pool.begin(), requested_pool.end(),
                      [](const surface_ptr_t& val) {
-            GAPI_Assert(val && "Pool contains empty surface");
+            GAPI_DbgAssert(val && "Pool contains empty surface");
             return !val->get_locks_count();
         });
 
@@ -146,6 +215,7 @@ VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_
     }
 
     return *it;
+#endif // TEST_PERF
 }
 
 size_t VPLCPUAccelerationPolicy::get_free_surface_count(pool_key_t key) const {
@@ -155,7 +225,9 @@ size_t VPLCPUAccelerationPolicy::get_free_surface_count(pool_key_t key) const {
                                   ", table size: " << pool_table.size());
         return 0;
     }
-
+#ifdef TEST_PERF
+    return 0;
+#else // TEST_PERF
     const pool_t& requested_pool = pool_it->second;
     size_t free_surf_count =
         std::count_if(requested_pool.begin(), requested_pool.end(),
@@ -164,6 +236,7 @@ size_t VPLCPUAccelerationPolicy::get_free_surface_count(pool_key_t key) const {
             return !val->get_locks_count();
         });
     return free_surf_count;
+#endif // TEST_PERF
 }
 
 size_t VPLCPUAccelerationPolicy::get_surface_count(pool_key_t key) const {
@@ -173,7 +246,9 @@ size_t VPLCPUAccelerationPolicy::get_surface_count(pool_key_t key) const {
                                 ", table size: " << pool_table.size());
         return 0;
     }
-
+#ifdef TEST_PERF
+    return 0;
+#else // TEST_PERF
     const pool_t& requested_pool = pool_it->second;
     size_t free_surf_count =
         std::count_if(requested_pool.begin(), requested_pool.end(),
@@ -182,6 +257,7 @@ size_t VPLCPUAccelerationPolicy::get_surface_count(pool_key_t key) const {
             return !val->get_locks_count();
         });
     return requested_pool.size() - free_surf_count;
+#endif // TEST_PERF
 }
 
 cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_key_t key,
@@ -195,11 +271,14 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
         throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
     }
 
-    const pool_t& requested_pool = pool_it->second;
+    pool_t& requested_pool = pool_it->second;
+#ifdef TEST_PERF
+    return cv::MediaFrame::AdapterPtr{new MediaFrameAdapter(requested_pool.find_by_handle(surface))};
+#else // TEST_PERF
     auto it =
         std::find_if(requested_pool.begin(), requested_pool.end(),
                      [surface](const surface_ptr_t& val) {
-            GAPI_Assert(val && "Pool contains empty surface");
+            GAPI_DbgAssert(val && "Pool contains empty surface");
             return val->get_handle() == surface;
         });
 
@@ -214,6 +293,7 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
     }
     
     return cv::MediaFrame::AdapterPtr{new MediaFrameAdapter(*it)};
+#endif // TEST_PERF
 }
 } // namespace wip
 } // namespace gapi

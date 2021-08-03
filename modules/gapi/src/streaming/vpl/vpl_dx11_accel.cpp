@@ -128,7 +128,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_
     throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
 }
 
-VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key) const
+VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key)
 {
 #ifdef CPU_ACCEL_ADAPTER
     return adapter->get_free_surface(key);

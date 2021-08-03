@@ -34,7 +34,7 @@ struct VPLDX11AccelerationPolicy final: public VPLAccelerationPolicy
     void init(session_t session) override;
     void deinit(session_t session) override;
     pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
-    surface_weak_ptr_t get_free_surface(pool_key_t key) const override;
+    surface_weak_ptr_t get_free_surface(pool_key_t key) override;
     size_t get_free_surface_count(pool_key_t key) const override;
     size_t get_surface_count(pool_key_t key) const override;
 
