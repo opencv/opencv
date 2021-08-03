@@ -11,6 +11,7 @@ from .feature_matcher import FeatureMatcher
 from .camera_estimator import CameraEstimator
 from .camera_adjuster import CameraAdjuster
 from .camera_wave_corrector import WaveCorrector
+from .warper import Warper
 
 
 class Stitcher:
@@ -124,19 +125,15 @@ class Stitcher:
             um = cv.UMat(255 * np.ones((images[i].shape[0], images[i].shape[1]), np.uint8))
             masks.append(um)
 
-        warper = cv.PyRotationWarper(warp_type, warped_image_scale * seam_work_aspect)  # warper could be nullptr?
+        warper = Warper(warp_type, warped_image_scale * seam_work_aspect)
         for idx in range(0, num_images):
             K = cameras[idx].K().astype(np.float32)
             swa = seam_work_aspect
-            K[0, 0] *= swa
-            K[0, 2] *= swa
-            K[1, 1] *= swa
-            K[1, 2] *= swa
-            corner, image_wp = warper.warp(images[idx], K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
+            corner, image_wp = warper.warp_image(images[idx], cameras[idx], swa)
             corners.append(corner)
             sizes.append((image_wp.shape[1], image_wp.shape[0]))
             images_warped.append(image_wp)
-            p, mask_wp = warper.warp(masks[idx], K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
+            p, mask_wp = warper.warp_image(masks[idx], cameras[idx], swa)
             masks_warped.append(mask_wp.get())
 
         images_warped_f = []

@@ -24,6 +24,7 @@ from stitching_detailed.feature_matcher import FeatureMatcher
 from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
+from stitching_detailed.warper import Warper
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -109,9 +110,9 @@ parser.add_argument(
     type=str, dest='save_graph'
 )
 parser.add_argument(
-    '--warp', action='store', default=WARP_CHOICES[0],
-    help="Warp surface type. The default is '%s'." % WARP_CHOICES[0],
-    choices=WARP_CHOICES,
+    '--warp', action='store', default=Warper.default,
+    help="Warp surface type. The default is '%s'." % Warper.default,
+    choices=Warper.choices,
     type=str, dest='warp'
 )
 parser.add_argument(
