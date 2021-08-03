@@ -108,6 +108,7 @@ inline IE::Precision toIE(int depth) {
     case CV_8U:  return IE::Precision::U8;
     case CV_32S: return IE::Precision::I32;
     case CV_32F: return IE::Precision::FP32;
+    case CV_16F: return IE::Precision::FP16;
     default:     GAPI_Assert(false && "IE. Unsupported data type");
     }
     return IE::Precision::UNSPECIFIED;
