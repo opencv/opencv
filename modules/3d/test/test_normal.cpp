@@ -325,101 +325,93 @@ protected:
 class CV_RgbdPlaneTest: public cvtest::BaseTest
 {
 public:
-  CV_RgbdPlaneTest()
-  {
-  }
-  ~CV_RgbdPlaneTest()
-  {
-  }
+    CV_RgbdPlaneTest() { }
+    ~CV_RgbdPlaneTest() { }
 protected:
-  void
-  run(int)
-  {
-    try
+    void run(int)
     {
-      RgbdPlane plane_computer;
-
-      std::vector<Plane> planes;
-      Mat points3d, ground_normals;
-      Mat_<unsigned char> plane_mask;
-      gen_points_3d(planes, plane_mask, points3d, ground_normals, 1);
-      testit(planes, plane_mask, points3d, plane_computer); // 1 plane, continuous scene, very low error..
-      for (int ii = 0; ii < 10; ii++)
-      {
-        gen_points_3d(planes, plane_mask, points3d, ground_normals, 3); //three planes
-        testit(planes, plane_mask, points3d, plane_computer); // 3 discontinuities, more error expected.
-      }
-    } catch (...)
-    {
-      ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-    }
-    ts->set_failed_test_info(cvtest::TS::OK);
-  }
-
-  void
-  testit(const std::vector<Plane> & gt_planes, const Mat & gt_plane_mask, const Mat & points3d,
-         RgbdPlane & plane_computer)
-  {
-    for (char i_test = 0; i_test < 2; ++i_test)
-    {
-      TickMeter tm1, tm2;
-      Mat plane_mask;
-      std::vector<Vec4f> plane_coefficients;
-
-      if (i_test == 0)
-      {
-        tm1.start();
-        // First, get the normals
-        int depth = CV_32F;
-        Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
-        Mat normals;
-        normals_computer->apply(points3d, normals);
-        tm1.stop();
-
-        tm2.start();
-        plane_computer.apply(points3d, normals, plane_mask, plane_coefficients);
-        tm2.stop();
-      }
-      else
-      {
-        tm2.start();
-        plane_computer.apply(points3d, plane_mask, plane_coefficients);
-        tm2.stop();
-      }
-
-      // Compare each found plane to each ground truth plane
-      int n_planes = (int)plane_coefficients.size();
-      int n_gt_planes = (int)gt_planes.size();
-      Mat_<int> matching(n_gt_planes, n_planes);
-      for (int j = 0; j < n_gt_planes; ++j)
-      {
-        Mat gt_mask = gt_plane_mask == j;
-        int n_gt = countNonZero(gt_mask);
-        int n_max = 0, i_max = 0;
-        for (int i = 0; i < n_planes; ++i)
+        try
         {
-          Mat dst;
-          bitwise_and(gt_mask, plane_mask == i, dst);
-          matching(j, i) = countNonZero(dst);
-          if (matching(j, i) > n_max)
-          {
-            n_max = matching(j, i);
-            i_max = i;
-          }
+            std::vector<Plane> planes;
+            Mat points3d, ground_normals;
+            Mat_<unsigned char> plane_mask;
+            gen_points_3d(planes, plane_mask, points3d, ground_normals, 1);
+            testit(planes, plane_mask, points3d); // 1 plane, continuous scene, very low error..
+            for (int ii = 0; ii < 10; ii++)
+            {
+                gen_points_3d(planes, plane_mask, points3d, ground_normals, 3); //three planes
+                testit(planes, plane_mask, points3d); // 3 discontinuities, more error expected.
+            }
         }
-        // Get the best match
-        ASSERT_LE(float(n_max - n_gt) / n_gt, 0.001);
-        // Compare the normals
-        Vec3d normal(plane_coefficients[i_max][0], plane_coefficients[i_max][1], plane_coefficients[i_max][2]);
-        ASSERT_GE(std::abs(gt_planes[j].n.dot(normal)), 0.95);
-      }
-
-      std::cout << " Speed: ";
-      if (i_test == 0)
-        std::cout << "normals " << tm1.getTimeMilli() << " ms and ";
-      std::cout << "plane " << tm2.getTimeMilli() << " ms " << std::endl;
+        catch (...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+        }
+        ts->set_failed_test_info(cvtest::TS::OK);
     }
-  }
+
+    void testit(const std::vector<Plane>& gt_planes, const Mat& gt_plane_mask, const Mat& points3d)
+    {
+        for (char i_test = 0; i_test < 2; ++i_test)
+        {
+            TickMeter tm1, tm2;
+            Mat plane_mask;
+            std::vector<Vec4f> plane_coefficients;
+
+            if (i_test == 0)
+            {
+                tm1.start();
+                // First, get the normals
+                int depth = CV_32F;
+                Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+                Mat normals;
+                normals_computer->apply(points3d, normals);
+                tm1.stop();
+
+                tm2.start();
+                findPlanes(points3d, normals, plane_mask, plane_coefficients);
+                tm2.stop();
+            }
+            else
+            {
+                tm2.start();
+                findPlanes(points3d, noArray(), plane_mask, plane_coefficients);
+                tm2.stop();
+            }
+
+            // Compare each found plane to each ground truth plane
+            int n_planes = (int)plane_coefficients.size();
+            int n_gt_planes = (int)gt_planes.size();
+            Mat_<int> matching(n_gt_planes, n_planes);
+            for (int j = 0; j < n_gt_planes; ++j)
+            {
+                Mat gt_mask = gt_plane_mask == j;
+                int n_gt = countNonZero(gt_mask);
+                int n_max = 0, i_max = 0;
+                for (int i = 0; i < n_planes; ++i)
+                {
+                    Mat dst;
+                    bitwise_and(gt_mask, plane_mask == i, dst);
+                    matching(j, i) = countNonZero(dst);
+                    if (matching(j, i) > n_max)
+                    {
+                        n_max = matching(j, i);
+                        i_max = i;
+                    }
+                }
+                // Get the best match
+                ASSERT_LE(float(n_max - n_gt) / n_gt, 0.001);
+                // Compare the normals
+                Vec3d normal(plane_coefficients[i_max][0], plane_coefficients[i_max][1], plane_coefficients[i_max][2]);
+                ASSERT_GE(std::abs(gt_planes[j].n.dot(normal)), 0.95);
+            }
+
+            std::cout << " Speed: ";
+            if (i_test == 0)
+                std::cout << "normals " << tm1.getTimeMilli() << " ms and ";
+            std::cout << "plane " << tm2.getTimeMilli() << " ms " << std::endl;
+        }
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -439,12 +431,13 @@ TEST(RGBD_Plane, compute)
 TEST(RGBD_Plane, regression_2309_valgrind_check)
 {
     Mat points(640, 480, CV_32FC3, Scalar::all(0));
-    RgbdPlane plane_detector;
-    plane_detector.setBlockSize(9);  // Note, 640%9 is 1 and 480%9 is 3
+    // Note, 640%9 is 1 and 480%9 is 3
+    int blockSize = 9;
 
     Mat mask;
     std::vector<cv::Vec4f> planes;
-    plane_detector.apply(points, mask, planes);  // Will corrupt memory; valgrind gets triggered
+    // Will corrupt memory; valgrind gets triggered
+    findPlanes(points, noArray(), mask, planes, blockSize);
 }
 
 }} // namespace

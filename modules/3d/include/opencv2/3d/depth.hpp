@@ -124,151 +124,31 @@ CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d
  */
 CV_EXPORTS_W void rescaleDepth(InputArray in, int depth, OutputArray out, double depth_factor = 1000.0);
 
-/** Object that can compute planes in an image
- */
-class CV_EXPORTS_W RgbdPlane
+enum RGBD_PLANE_METHOD
 {
-public:
-    enum RGBD_PLANE_METHOD
-    {
-      RGBD_PLANE_METHOD_DEFAULT
-    };
-
-      RgbdPlane(int method = RgbdPlane::RGBD_PLANE_METHOD_DEFAULT)
-        :
-          method_(method),
-          block_size_(40),
-          min_size_(block_size_*block_size_),
-          threshold_(0.01),
-          sensor_error_a_(0),
-          sensor_error_b_(0),
-          sensor_error_c_(0)
-    {
-    }
-
-    /** Constructor
-     * @param block_size The size of the blocks to look at for a stable MSE
-     * @param min_size The minimum size of a cluster to be considered a plane
-     * @param threshold The maximum distance of a point from a plane to belong to it (in meters)
-     * @param sensor_error_a coefficient of the sensor error. 0 by default, 0.0075 for a Kinect
-     * @param sensor_error_b coefficient of the sensor error. 0 by default
-     * @param sensor_error_c coefficient of the sensor error. 0 by default
-     * @param method The method to use to compute the planes.
-     */
-    RgbdPlane(int method, int block_size,
-              int min_size, double threshold, double sensor_error_a = 0,
-              double sensor_error_b = 0, double sensor_error_c = 0);
-
-    ~RgbdPlane();
-
-    CV_WRAP static Ptr<RgbdPlane> create(int method, int block_size, int min_size, double threshold,
-                                         double sensor_error_a = 0, double sensor_error_b = 0,
-                                         double sensor_error_c = 0);
-
-    /** Find The planes in a depth image
-     * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
-     * @param normals the normals for every point in the depth image
-     * @param mask An image where each pixel is labeled with the plane it belongs to
-     *        and 255 if it does not belong to any plane
-     * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
-     *        and c < 0 (so that the normal points towards the camera)
-     */
-    CV_WRAP_AS(applyWithNormals)
-    void apply(InputArray points3d, InputArray normals, OutputArray mask,
-               OutputArray plane_coefficients);
-
-    /** Find The planes in a depth image but without doing a normal check, which is faster but less accurate
-     * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
-     * @param mask An image where each pixel is labeled with the plane it belongs to
-     *        and 255 if it does not belong to any plane
-     * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0
-     */
-    CV_WRAP
-    void apply(InputArray points3d, OutputArray mask, OutputArray plane_coefficients);
-
-    CV_WRAP
-    int getBlockSize() const
-    {
-        return block_size_;
-    }
-    CV_WRAP
-    void setBlockSize(int val)
-    {
-        block_size_ = val;
-    }
-    CV_WRAP
-    int getMinSize() const
-    {
-        return min_size_;
-    }
-    CV_WRAP
-    void setMinSize(int val)
-    {
-        min_size_ = val;
-    }
-    CV_WRAP
-    int getMethod() const
-    {
-        return method_;
-    }
-    CV_WRAP
-    void setMethod(int val)
-    {
-        method_ = val;
-    }
-    CV_WRAP
-    double getThreshold() const
-    {
-        return threshold_;
-    }
-    CV_WRAP
-    void setThreshold(double val)
-    {
-        threshold_ = val;
-    }
-    CV_WRAP
-    double getSensorErrorA() const
-    {
-        return sensor_error_a_;
-    }
-    CV_WRAP
-    void setSensorErrorA(double val)
-    {
-        sensor_error_a_ = val;
-    }
-    CV_WRAP
-    double getSensorErrorB() const
-    {
-        return sensor_error_b_;
-    }
-    CV_WRAP
-    void setSensorErrorB(double val)
-    {
-        sensor_error_b_ = val;
-    }
-    CV_WRAP
-    double getSensorErrorC() const
-    {
-        return sensor_error_c_;
-    }
-    CV_WRAP
-    void setSensorErrorC(double val)
-    {
-        sensor_error_c_ = val;
-    }
-
-    /** The method to use to compute the planes */
-    int method_;
-    /** The size of the blocks to look at for a stable MSE */
-    int block_size_;
-    /** The minimum size of a cluster to be considered a plane */
-    int min_size_;
-    /** How far a point can be from a plane to belong to it (in meters) */
-    double threshold_;
-    /** coefficient of the sensor error with respect to the. All 0 by default but you want a=0.0075 for a Kinect */
-    double sensor_error_a_, sensor_error_b_, sensor_error_c_;
+    RGBD_PLANE_METHOD_DEFAULT
 };
 
+/** Find the planes in a depth image
+ * @param points3d the 3d points organized like the depth image: rows x cols with 3 channels
+ * @param normals the normals for every point in the depth image
+ * @param mask An image where each pixel is labeled with the plane it belongs to
+ *        and 255 if it does not belong to any plane
+ * @param plane_coefficients the coefficients of the corresponding planes (a,b,c,d) such that ax+by+cz+d=0, norm(a,b,c)=1
+ *        and c < 0 (so that the normal points towards the camera)
+ * @param block_size The size of the blocks to look at for a stable MSE
+ * @param min_size The minimum size of a cluster to be considered a plane
+ * @param threshold The maximum distance of a point from a plane to belong to it (in meters)
+ * @param sensor_error_a coefficient of the sensor error. 0 by default, use 0.0075 for a Kinect
+ * @param sensor_error_b coefficient of the sensor error. 0 by default
+ * @param sensor_error_c coefficient of the sensor error. 0 by default
+ * @param method The method to use to compute the planes.
+ */
+CV_EXPORTS_W void findPlanes(InputArray points3d, InputArray normals, OutputArray mask, OutputArray plane_coefficients,
+                             int block_size = 40, int min_size = 40*40, double threshold = 0.01,
+                             double sensor_error_a = 0, double sensor_error_b = 0,
+                             double sensor_error_c = 0,
+                             int method = RGBD_PLANE_METHOD_DEFAULT);
 
 /** Object that contains a frame data that is possibly needed for the Odometry.
  * It's used for the efficiency (to pass precomputed/cached data of the frame that participates

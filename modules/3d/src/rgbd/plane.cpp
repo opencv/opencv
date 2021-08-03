@@ -472,39 +472,12 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RgbdPlane::RgbdPlane(int method, int block_size,
-                     int min_size, double threshold, double sensor_error_a,
-                     double sensor_error_b, double sensor_error_c) :
-    method_(method),
-    block_size_(block_size),
-    min_size_(min_size),
-    threshold_(threshold),
-    sensor_error_a_(sensor_error_a),
-    sensor_error_b_(sensor_error_b),
-    sensor_error_c_(sensor_error_c)
-{}
-
-Ptr<RgbdPlane> RgbdPlane::create(int method, int block_size, int min_size, double threshold,
-                                 double sensor_error_a, double sensor_error_b,
-                                 double sensor_error_c)
+void findPlanes(InputArray points3d_in, InputArray normals_in, OutputArray mask_out, OutputArray plane_coefficients_out,
+                int block_size, int min_size, double threshold, double sensor_error_a, double sensor_error_b, double sensor_error_c,
+                int method)
 {
-    return makePtr<RgbdPlane>(method, block_size, min_size, threshold,
-                              sensor_error_a, sensor_error_b, sensor_error_c);
-}
+    CV_Assert(method == RGBD_PLANE_METHOD_DEFAULT);
 
-RgbdPlane::~RgbdPlane()
-{}
-
-void
-RgbdPlane::apply(InputArray points3d_in, OutputArray mask_out, OutputArray plane_coefficients)
-{
-    this->apply(points3d_in, Mat(), mask_out, plane_coefficients);
-}
-
-void
-RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask_out,
-    OutputArray plane_coefficients_out)
-{
     Mat_<Vec3f> points3d, normals;
     if (points3d_in.depth() == CV_32F)
         points3d = points3d_in.getMat();
@@ -523,12 +496,12 @@ RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask
     Mat mask_out_mat = mask_out.getMat();
     Mat_<unsigned char> mask_out_uc = (Mat_<unsigned char>&) mask_out_mat;
     mask_out_uc.setTo(255);
-    PlaneGrid plane_grid(points3d, block_size_);
+    PlaneGrid plane_grid(points3d, block_size);
     TileQueue plane_queue(plane_grid);
     size_t index_plane = 0;
 
     std::vector<Vec4f> plane_coefficients;
-    float mse_min = (float)(threshold_ * threshold_);
+    float mse_min = (float)(threshold * threshold);
 
     while (!plane_queue.empty())
     {
@@ -537,20 +510,20 @@ RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask
         if (front_tile.mse_ > mse_min)
             break;
 
-        InlierFinder inlier_finder((float)threshold_, points3d, normals, (unsigned char)index_plane, block_size_);
+        InlierFinder inlier_finder((float)threshold, points3d, normals, (unsigned char)index_plane, block_size);
 
         // Construct the plane for the first tile
         int x = front_tile.x_, y = front_tile.y_;
         const Vec3f& n = plane_grid.n_(y, x);
         Ptr<PlaneBase> plane;
-        if ((sensor_error_a_ == 0) && (sensor_error_b_ == 0) && (sensor_error_c_ == 0))
+        if ((sensor_error_a == 0) && (sensor_error_b == 0) && (sensor_error_c == 0))
             plane = Ptr<PlaneBase>(new Plane(plane_grid.m_(y, x), n, (int)index_plane));
         else
             plane = Ptr<PlaneBase>(new PlaneABC(plane_grid.m_(y, x), n, (int)index_plane,
-                (float)sensor_error_a_, (float)sensor_error_b_, (float)sensor_error_c_));
+                                   (float)sensor_error_a, (float)sensor_error_b, (float)sensor_error_c));
 
-        Mat_<unsigned char> plane_mask = Mat_<unsigned char>::zeros(divUp(points3d.rows, block_size_),
-            divUp(points3d.cols, block_size_));
+        Mat_<unsigned char> plane_mask = Mat_<unsigned char>::zeros(divUp(points3d.rows, block_size),
+                                                                    divUp(points3d.cols, block_size));
         std::set<TileQueue::PlaneTile> neighboring_tiles;
         neighboring_tiles.insert(front_tile);
         plane_queue.remove(front_tile.y_, front_tile.x_);
@@ -563,7 +536,7 @@ RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask
         if (plane->empty())
             continue;
         // Don't record the plane if it's smaller than asked
-        if (plane->K() < min_size_)
+        if (plane->K() < min_size)
         {
             // Reset the plane index in the mask
             for (y = 0; y < plane_mask.rows; ++y)
@@ -572,13 +545,11 @@ RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask
                     if (!plane_mask(y, x))
                         continue;
                     // Go over the tile
-                    for (int yy = y * block_size_;
-                        yy < std::min((y + 1) * block_size_, mask_out_uc.rows); ++yy)
+                    for (int yy = y * block_size;
+                        yy < std::min((y + 1) * block_size, mask_out_uc.rows); ++yy)
                     {
-                        uchar* data = mask_out_uc.ptr(yy, x * block_size_);
-                        uchar* data_end = data
-                            + std::min(block_size_,
-                                mask_out_uc.cols - x * block_size_);
+                        uchar* data = mask_out_uc.ptr(yy, x * block_size);
+                        uchar* data_end = data + std::min(block_size, mask_out_uc.cols - x * block_size);
                         for (; data != data_end; ++data)
                         {
                             if (*data == index_plane)
@@ -609,4 +580,4 @@ RgbdPlane::apply(InputArray points3d_in, InputArray normals_in, OutputArray mask
             *data = plane_coefficients[i][j];
 }
 
-}
+} // namespace cv
