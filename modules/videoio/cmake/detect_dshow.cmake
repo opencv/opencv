@@ -10,5 +10,3 @@ endif()
 if(HAVE_DSHOW)
   ocv_add_external_target(dshow "" "" "HAVE_DSHOW")
 endif()
-
-set(HAVE_DSHOW ${HAVE_DSHOW} PARENT_SCOPE)

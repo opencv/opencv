@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 #ifndef OPENCV_GAPI_INFER_IE_HPP
 #define OPENCV_GAPI_INFER_IE_HPP
@@ -24,12 +24,17 @@
 namespace cv {
 namespace gapi {
 // FIXME: introduce a new sub-namespace for NN?
+
+/**
+ * @brief This namespace contains G-API OpenVINO backend functions,
+ * structures, and symbols.
+ */
 namespace ie {
 
 GAPI_EXPORTS cv::gapi::GBackend backend();
 
 /**
- * Specify how G-API and IE should trait input data
+ * Specifies how G-API and IE should trait input data
  *
  * In OpenCV, the same cv::Mat is used to represent both
  * image and tensor data. Sometimes those are hardly distinguishable,
@@ -47,34 +52,34 @@ enum class TraitAs: int
 using IEConfig = std::map<std::string, std::string>;
 
 namespace detail {
-    struct ParamDesc {
-        std::string model_path;
-        std::string weights_path;
-        std::string device_id;
+struct ParamDesc {
+    std::string model_path;
+    std::string weights_path;
+    std::string device_id;
 
-        // NB: Here order follows the `Net` API
-        std::vector<std::string> input_names;
-        std::vector<std::string> output_names;
+    std::vector<std::string> input_names;
+    std::vector<std::string> output_names;
 
-        using ConstInput = std::pair<cv::Mat, TraitAs>;
-        std::unordered_map<std::string, ConstInput> const_inputs;
+    using ConstInput = std::pair<cv::Mat, TraitAs>;
+    std::unordered_map<std::string, ConstInput> const_inputs;
 
-        // NB: nun_* may differ from topology's real input/output port numbers
-        // (e.g. topology's partial execution)
-        std::size_t num_in;  // How many inputs are defined in the operation
-        std::size_t num_out; // How many outputs are defined in the operation
+    std::size_t num_in;
+    std::size_t num_out;
 
-        enum class Kind { Load, Import };
-        Kind kind;
-        bool is_generic;
-        IEConfig config;
+    enum class Kind {Load, Import};
+    Kind kind;
+    bool is_generic;
+    IEConfig config;
 
-        std::map<std::string, std::vector<std::size_t>> reshape_table;
-        std::unordered_set<std::string> layer_names_to_reshape;
+    std::map<std::string, std::vector<std::size_t>> reshape_table;
+    std::unordered_set<std::string> layer_names_to_reshape;
 
-        // NB: Number of asyncrhonious infer requests
-        size_t nireq;
-    };
+    // NB: Number of asyncrhonious infer requests
+    size_t nireq;
+
+    // NB: An optional config to setup RemoteContext for IE
+    cv::util::any context_config;
+};
 } // namespace detail
 
 // FIXME: this is probably a shared (reusable) thing
@@ -88,8 +93,21 @@ struct PortCfg {
         , std::tuple_size<typename Net::OutArgs>::value >;
 };
 
+/**
+ * @brief This structure provides functions
+ * that fill inference parameters for "OpenVINO Toolkit" model.
+ */
 template<typename Net> class Params {
 public:
+    /** @brief Class constructor.
+
+    Constructs Params based on model information and specifies default values for other
+    inference description parameters. Model is loaded and compiled using "OpenVINO Toolkit".
+
+    @param model Path to topology IR (.xml file).
+    @param weights Path to weights (.bin file).
+    @param device target device to use.
+    */
     Params(const std::string &model,
            const std::string &weights,
            const std::string &device)
@@ -101,9 +119,17 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}} {
     };
 
+    /** @overload
+    Use this constructor to work with pre-compiled network.
+    Model is imported from a pre-compiled blob.
+
+    @param model Path to model.
+    @param device target device to use.
+    */
     Params(const std::string &model,
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}
@@ -114,25 +140,57 @@ public:
               , {}
               , {}
               , {}
-              , 1u} {
+              , 1u
+              , {}} {
     };
 
-    Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &ll) {
+    /** @brief Specifies sequence of network input layers names for inference.
+
+    The function is used to associate cv::gapi::infer<> inputs with the model inputs.
+    Number of names has to match the number of network inputs as defined in G_API_NET().
+    In case a network has only single input layer, there is no need to specify name manually.
+
+    @param layer_names std::array<std::string, N> where N is the number of inputs
+    as defined in the @ref G_API_NET. Contains names of input layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInputLayers(const typename PortCfg<Net>::In &layer_names) {
         desc.input_names.clear();
-        desc.input_names.reserve(ll.size());
-        std::copy(ll.begin(), ll.end(),
+        desc.input_names.reserve(layer_names.size());
+        std::copy(layer_names.begin(), layer_names.end(),
                   std::back_inserter(desc.input_names));
         return *this;
     }
 
-    Params<Net>& cfgOutputLayers(const typename PortCfg<Net>::Out &ll) {
+    /** @brief Specifies sequence of network output layers names for inference.
+
+    The function is used to associate cv::gapi::infer<> outputs with the model outputs.
+    Number of names has to match the number of network outputs as defined in G_API_NET().
+    In case a network has only single output layer, there is no need to specify name manually.
+
+    @param layer_names std::array<std::string, N> where N is the number of outputs
+    as defined in the @ref G_API_NET. Contains names of output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputLayers(const typename PortCfg<Net>::Out &layer_names) {
         desc.output_names.clear();
-        desc.output_names.reserve(ll.size());
-        std::copy(ll.begin(), ll.end(),
+        desc.output_names.reserve(layer_names.size());
+        std::copy(layer_names.begin(), layer_names.end(),
                   std::back_inserter(desc.output_names));
         return *this;
     }
 
+    /** @brief Specifies a constant input.
+
+    The function is used to set a constant input. This input has to be
+    a preprocessed tensor if its type is TENSOR. Need to provide name of the
+    network layer which will receive provided data.
+
+    @param layer_name Name of network layer.
+    @param data cv::Mat that contains data which will be associated with network layer.
+    @param hint Input type @sa cv::gapi::ie::TraitAs.
+    @return reference to this parameter structure.
+    */
     Params<Net>& constInput(const std::string &layer_name,
                             const cv::Mat &data,
                             TraitAs hint = TraitAs::TENSOR) {
@@ -140,49 +198,121 @@ public:
         return *this;
     }
 
+    /** @brief Specifies OpenVINO plugin configuration.
+
+    The function is used to set configuration for OpenVINO plugin. Some parameters
+    can be different for each plugin. Please follow https://docs.openvinotoolkit.org/latest/index.html
+    to check information about specific plugin.
+
+    @param cfg Map of pairs: (config parameter name, config parameter value).
+    @return reference to this parameter structure.
+    */
+       Params& pluginConfig(const IEConfig& cfg) {
+        desc.config = cfg;
+        return *this;
+    }
+
+    /** @overload
+    Function with a rvalue parameter.
+
+    @param cfg rvalue map of pairs: (config parameter name, config parameter value).
+    @return reference to this parameter structure.
+    */
     Params& pluginConfig(IEConfig&& cfg) {
         desc.config = std::move(cfg);
         return *this;
     }
 
-    Params& pluginConfig(const IEConfig& cfg) {
-        desc.config = cfg;
+    /** @brief Specifies configuration for RemoteContext in InferenceEngine.
+
+    When RemoteContext is configured the backend imports the networks using the context.
+    It also expects cv::MediaFrames to be actually remote, to operate with blobs via the context.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(const cv::util::any& ctx_cfg) {
+        desc.context_config = ctx_cfg;
         return *this;
     }
 
+    /** @overload
+    Function with an rvalue parameter.
+
+    @param ctx_cfg cv::util::any value which holds InferenceEngine::ParamMap.
+    @return reference to this parameter structure.
+    */
+    Params& cfgContextParams(cv::util::any&& ctx_cfg) {
+        desc.context_config = std::move(ctx_cfg);
+        return *this;
+    }
+
+    /** @brief Specifies number of asynchronous inference requests.
+
+    @param nireq Number of inference asynchronous requests.
+    @return reference to this parameter structure.
+    */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
         return *this;
     }
 
-    Params<Net>& cfgInputReshape(std::map<std::string, std::vector<std::size_t>>&& reshape_table) {
-        desc.reshape_table = std::move(reshape_table);
-        return *this;
-    }
+    /** @brief Specifies new input shapes for the network inputs.
 
+    The function is used to specify new input shapes for the network inputs.
+    Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1networkNetwork.html
+    for additional information.
+
+    @param reshape_table Map of pairs: name of corresponding data and its dimension.
+    @return reference to this parameter structure.
+    */
     Params<Net>& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>& reshape_table) {
         desc.reshape_table = reshape_table;
         return *this;
     }
 
-    Params<Net>& cfgInputReshape(std::string&& layer_name, std::vector<size_t>&& layer_dims) {
-        desc.reshape_table.emplace(layer_name, layer_dims);
+    /** @overload */
+    Params<Net>& cfgInputReshape(std::map<std::string, std::vector<std::size_t>>&& reshape_table) {
+        desc.reshape_table = std::move(reshape_table);
         return *this;
     }
 
+    /** @overload
+
+    @param layer_name Name of layer.
+    @param layer_dims New dimensions for this layer.
+    @return reference to this parameter structure.
+    */
     Params<Net>& cfgInputReshape(const std::string& layer_name, const std::vector<size_t>& layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
-    Params<Net>& cfgInputReshape(std::unordered_set<std::string>&& layer_names) {
-        desc.layer_names_to_reshape = std::move(layer_names);
+    /** @overload */
+    Params<Net>& cfgInputReshape(std::string&& layer_name, std::vector<size_t>&& layer_dims) {
+        desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
+    /** @overload
+
+    @param layer_names set of names of network layers that will be used for network reshape.
+    @return reference to this parameter structure.
+    */
     Params<Net>& cfgInputReshape(const std::unordered_set<std::string>& layer_names) {
         desc.layer_names_to_reshape = layer_names;
+        return *this;
+    }
+
+    /** @overload
+
+    @param layer_names rvalue set of the selected layers will be reshaped automatically
+    its input image size.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInputReshape(std::unordered_set<std::string>&& layer_names) {
+        desc.layer_names_to_reshape = std::move(layer_names);
         return *this;
     }
 
@@ -196,32 +326,65 @@ protected:
     detail::ParamDesc desc;
 };
 
+/*
+* @brief This structure provides functions for generic network type that
+* fill inference parameters.
+* @see struct Generic
+*/
 template<>
 class Params<cv::gapi::Generic> {
 public:
+    /** @brief Class constructor.
+
+    Constructs Params based on model information and sets default values for other
+    inference description parameters. Model is loaded and compiled using OpenVINO Toolkit.
+
+    @param tag string tag of the network for which these parameters are intended.
+    @param model path to topology IR (.xml file).
+    @param weights path to weights (.bin file).
+    @param device target device to use.
+    */
     Params(const std::string &tag,
            const std::string &model,
            const std::string &weights,
            const std::string &device)
-        : desc{ model, weights, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
+                {}},
+          m_tag(tag) {
     };
 
+    /** @overload
+
+    This constructor for pre-compiled networks. Model is imported from pre-compiled
+    blob.
+
+    @param tag string tag of the network for which these parameters are intended.
+    @param model path to model.
+    @param device target device to use.
+    */
     Params(const std::string &tag,
            const std::string &model,
            const std::string &device)
-        : desc{ model, {}, device, {}, {}, {}, 0u, 0u, detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u}, m_tag(tag) {
+        : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
+                detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
+                {}},
+          m_tag(tag) {
     };
 
-    Params& pluginConfig(IEConfig&& cfg) {
-        desc.config = std::move(cfg);
-        return *this;
-    }
-
+    /** @see ie::Params::pluginConfig. */
     Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
         return *this;
     }
 
+    /** @overload */
+    Params& pluginConfig(IEConfig&& cfg) {
+        desc.config = std::move(cfg);
+        return *this;
+    }
+
+    /** @see ie::Params::constInput. */
     Params& constInput(const std::string &layer_name,
                        const cv::Mat &data,
                        TraitAs hint = TraitAs::TENSOR) {
@@ -229,37 +392,44 @@ public:
         return *this;
     }
 
+    /** @see ie::Params::cfgNumRequests. */
     Params& cfgNumRequests(size_t nireq) {
         GAPI_Assert(nireq > 0 && "Number of infer requests must be greater than zero!");
         desc.nireq = nireq;
         return *this;
     }
 
-    Params& cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
-        desc.reshape_table = std::move(reshape_table);
-        return *this;
-    }
-
+    /** @see ie::Params::cfgInputReshape */
     Params& cfgInputReshape(const std::map<std::string, std::vector<std::size_t>>&reshape_table) {
         desc.reshape_table = reshape_table;
         return *this;
     }
 
+    /** @overload */
+    Params& cfgInputReshape(std::map<std::string, std::vector<std::size_t>> && reshape_table) {
+        desc.reshape_table = std::move(reshape_table);
+        return *this;
+    }
+
+    /** @overload */
     Params& cfgInputReshape(std::string && layer_name, std::vector<size_t> && layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(const std::string & layer_name, const std::vector<size_t>&layer_dims) {
         desc.reshape_table.emplace(layer_name, layer_dims);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(std::unordered_set<std::string> && layer_names) {
         desc.layer_names_to_reshape = std::move(layer_names);
         return *this;
     }
 
+    /** @overload */
     Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
         return *this;

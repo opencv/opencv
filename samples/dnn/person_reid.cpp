@@ -36,13 +36,15 @@ const char* keys =
 "0: automatically (by default), "
 "1: Halide language (http://halide-lang.org/), "
 "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-"3: OpenCV implementation ,"
+"3: OpenCV implementation, "
+"4: VKCOM, "
 "5: CUDA }"
 "{target  t  | 0                | choose one of target computation devices: "
 "0: CPU target (by default), "
 "1: OpenCL, "
 "2: OpenCL fp16 (half-float precision), "
-"6: CUDA ,"
+"4: Vulkan, "
+"6: CUDA, "
 "7: CUDA fp16 (half-float preprocess) }";
 
 namespace cv{

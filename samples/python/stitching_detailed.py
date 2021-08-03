@@ -49,8 +49,6 @@ except AttributeError:
     print("AKAZE not available")
 
 SEAM_FIND_CHOICES = OrderedDict()
-SEAM_FIND_CHOICES['gc_color'] = cv.detail_GraphCutSeamFinder('COST_COLOR')
-SEAM_FIND_CHOICES['gc_colorgrad'] = cv.detail_GraphCutSeamFinder('COST_COLOR_GRAD')
 SEAM_FIND_CHOICES['dp_color'] = cv.detail_DpSeamFinder('COLOR')
 SEAM_FIND_CHOICES['dp_colorgrad'] = cv.detail_DpSeamFinder('COLOR_GRAD')
 SEAM_FIND_CHOICES['voronoi'] = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_VORONOI_SEAM)
@@ -432,7 +430,7 @@ def main():
     compensator.feed(corners=corners, images=images_warped, masks=masks_warped)
 
     seam_finder = SEAM_FIND_CHOICES[args.seam]
-    seam_finder.find(images_warped_f, corners, masks_warped)
+    masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
     compose_scale = 1
     corners = []
     sizes = []
@@ -452,7 +450,8 @@ def main():
                 cameras[i].focal *= compose_work_aspect
                 cameras[i].ppx *= compose_work_aspect
                 cameras[i].ppy *= compose_work_aspect
-                sz = (full_img_sizes[i][0] * compose_scale, full_img_sizes[i][1] * compose_scale)
+                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                      int(round(full_img_sizes[i][1] * compose_scale)))
                 K = cameras[i].K().astype(np.float32)
                 roi = warper.warpRoi(sz, K, cameras[i].R)
                 corners.append(roi[0:2])

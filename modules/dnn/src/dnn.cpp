@@ -99,6 +99,15 @@ bool DNN_DIAGNOSTICS_RUN = false;
 void enableModelDiagnostics(bool isDiagnosticsMode)
 {
     DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
+
+    if (DNN_DIAGNOSTICS_RUN)
+    {
+        detail::NotImplemented::Register();
+    }
+    else
+    {
+        detail::NotImplemented::unRegister();
+    }
 }
 
 using std::vector;
@@ -2078,7 +2087,10 @@ struct Net::Impl : public detail::NetImplBase
 
             Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
             CV_Assert(!ieNode.empty());
-            ieNode->net->reset();
+
+            CV_Assert(ieNode->net);
+            InfEngineNgraphNet& ienet = *ieNode->net;
+            ienet.reset();
 
             for (it = layers.begin(); it != layers.end(); ++it)
             {
@@ -2095,16 +2107,26 @@ struct Net::Impl : public detail::NetImplBase
                 {
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {
-                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                        dataPtr->setName(ld.name);
+                        auto it = ienet.outputsDesc.find(ld.name);
+                        if (it != ienet.outputsDesc.end())
+                        {
+                            const InferenceEngine::TensorDesc& descriptor = it->second;
+                            InferenceEngine::DataPtr dataPtr = ngraphDataOutputNode(ld.outputBlobsWrappers[i], descriptor, ld.name);
+                            dataPtr->setName(ld.name);
+                        }
+                        else
+                        {
+                            InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
+                            dataPtr->setName(ld.name);
+                        }
                     }
                 }
-                ieNode->net->addBlobs(ld.inputBlobsWrappers);
-                ieNode->net->addBlobs(ld.outputBlobsWrappers);
+                ienet.addBlobs(ld.inputBlobsWrappers);
+                ienet.addBlobs(ld.outputBlobsWrappers);
                 ld.skip = true;
             }
             layers[lastLayerId].skip = false;
-            ieNode->net->init((Target)preferableTarget);
+            ienet.init((Target)preferableTarget);
             return;
         }
 
@@ -4001,13 +4023,24 @@ int Net::addLayer(const String &name, const String &type, LayerParams &params)
 {
     CV_TRACE_FUNCTION();
 
-    if (impl->getLayerId(name) >= 0)
+    int id = impl->getLayerId(name);
+    if (id >= 0)
     {
-        CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
-        return -1;
+        if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
+        {
+            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+            return -1;
+        }
+        else
+        {
+            LayerData& ld = impl->layers.find(id)->second;
+            ld.type = type;
+            ld.params = params;
+            return -1;
+        }
     }
 
-    int id = ++impl->lastLayerId;
+    id = ++impl->lastLayerId;
     impl->layerNameToId.insert(std::make_pair(name, id));
     impl->layers.insert(std::make_pair(id, LayerData(id, name, type, params)));
     if (params.get<bool>("has_dynamic_shapes", false))
@@ -4198,8 +4231,8 @@ void Net::forward(OutputArrayOfArrays outputBlobs,
         matvec.push_back(impl->getBlob(pins[i]));
     }
 
-    std::vector<Mat> & outputvec = *(std::vector<Mat> *)outputBlobs.getObj();
-    outputvec = matvec;
+    outputBlobs.create((int)matvec.size(), 1, CV_32F/*FIXIT*/, -1);  // allocate vector
+    outputBlobs.assign(matvec);
 }
 
 void Net::forward(std::vector<std::vector<Mat> >& outputBlobs,

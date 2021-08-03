@@ -81,9 +81,9 @@ using GMatDesc2 = std::tuple<cv::GMatDesc,cv::GMatDesc>;
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::Mat& bgr,
-                         const Prims& prims,
-                         cv::GCompileArgs&& args = {});
+void GAPI_EXPORTS_W render(cv::Mat& bgr,
+                           const Prims& prims,
+                           cv::GCompileArgs&& args = {});
 
 /** @brief The function renders on two NV12 planes passed drawing primitivies
 
@@ -92,10 +92,10 @@ void GAPI_EXPORTS render(cv::Mat& bgr,
 @param prims vector of drawing primitivies
 @param args graph compile time parameters
 */
-void GAPI_EXPORTS render(cv::Mat& y_plane,
-                         cv::Mat& uv_plane,
-                         const Prims& prims,
-                         cv::GCompileArgs&& args = {});
+void GAPI_EXPORTS_W render(cv::Mat& y_plane,
+                           cv::Mat& uv_plane,
+                           const Prims& prims,
+                           cv::GCompileArgs&& args = {});
 
 /** @brief The function renders on the input media frame passed drawing primitivies
 
@@ -139,7 +139,7 @@ Output image must be 8-bit unsigned planar 3-channel image
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3
 @param prims draw primitives
 */
-GAPI_EXPORTS GMat render3ch(const GMat& src, const GArray<Prim>& prims);
+GAPI_EXPORTS_W GMat render3ch(const GMat& src, const GArray<Prim>& prims);
 
 /** @brief Renders on two planes
 
@@ -150,9 +150,9 @@ uv image must be 8-bit unsigned planar 2-channel image @ref CV_8UC2
 @param uv input image: 8-bit unsigned 2-channel image @ref CV_8UC2
 @param prims draw primitives
 */
-GAPI_EXPORTS GMat2 renderNV12(const GMat& y,
-                              const GMat& uv,
-                              const GArray<Prim>& prims);
+GAPI_EXPORTS_W GMat2 renderNV12(const GMat& y,
+                                const GMat& uv,
+                                const GArray<Prim>& prims);
 
 /** @brief Renders Media Frame
 
@@ -169,11 +169,15 @@ GAPI_EXPORTS GFrame renderFrame(const GFrame& m_frame,
 } // namespace draw
 } // namespace wip
 
+/**
+ * @brief This namespace contains G-API CPU rendering backend functions,
+ * structures, and symbols. See @ref gapi_draw for details.
+ */
 namespace render
 {
 namespace ocv
 {
-    GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
+    GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
 
 } // namespace ocv
 } // namespace render

@@ -201,6 +201,52 @@ bool cv::can_describe(const GMetaArgs &metas, const GRunArgs &args)
                      });
 }
 
+void cv::gimpl::proto::validate_input_meta_arg(const cv::GMetaArg& meta)
+{
+    switch (meta.index())
+    {
+        case cv::GMetaArg::index_of<cv::GMatDesc>():
+        {
+            cv::gimpl::proto::validate_input_meta(cv::util::get<GMatDesc>(meta)); //may throw
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void cv::gimpl::proto::validate_input_meta(const cv::GMatDesc& meta)
+{
+    if (meta.dims.empty())
+    {
+        if (!(meta.size.height > 0 && meta.size.width > 0))
+        {
+            cv::util::throw_error
+                (std::logic_error(
+                 "Image format is invalid. Size must contain positive values"
+                 ", got width: " + std::to_string(meta.size.width ) +
+                 (", height: ") + std::to_string(meta.size.height)));
+        }
+
+        if (!(meta.chan > 0))
+        {
+            cv::util::throw_error
+                (std::logic_error(
+                 "Image format is invalid. Channel mustn't be negative value, got channel: " +
+                 std::to_string(meta.chan)));
+        }
+    }
+
+    if (!(meta.depth >= 0))
+    {
+        cv::util::throw_error
+            (std::logic_error(
+             "Image format is invalid. Depth must be positive value, got depth: " +
+             std::to_string(meta.depth)));
+    }
+    // All checks are ok
+}
+
 // FIXME: Is it tested for all types?
 // FIXME: Where does this validation happen??
 void cv::validate_input_arg(const GRunArg& arg)
@@ -212,13 +258,15 @@ void cv::validate_input_arg(const GRunArg& arg)
     case GRunArg::index_of<cv::UMat>():
     {
         const auto desc = cv::descr_of(util::get<cv::UMat>(arg));
-        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of cv::UMat!"); break;
+        cv::gimpl::proto::validate_input_meta(desc); //may throw
+        break;
     }
 #endif //  !defined(GAPI_STANDALONE)
     case GRunArg::index_of<cv::Mat>():
     {
         const auto desc = cv::descr_of(util::get<cv::Mat>(arg));
-        GAPI_Assert(desc.size.height != 0 && desc.size.width != 0 && "incorrect dimensions of Mat!"); break;
+        cv::gimpl::proto::validate_input_meta(desc); //may throw
+        break;
     }
     default:
         // No extra handling

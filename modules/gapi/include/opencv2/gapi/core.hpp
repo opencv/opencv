@@ -29,6 +29,10 @@
  */
 
 namespace cv { namespace gapi {
+/**
+ * @brief This namespace contains G-API Operation Types for OpenCV
+ * Core module functionality.
+ */
 namespace core {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
@@ -573,6 +577,12 @@ namespace core {
         static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
         outMeta(const GArrayDesc&,int,const GArrayDesc&,const TermCriteria&,int,KmeansFlags) {
             return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GTranspose, <GMat(GMat)>, "org.opencv.core.transpose") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in.withSize({in.size.height, in.size.width});
         }
     };
 } // namespace core
@@ -1490,7 +1500,7 @@ enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv:
 
 @sa  warpAffine, warpPerspective, remap, resizeP
  */
-GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
+GAPI_EXPORTS_W GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
 
 /** @brief Resizes a planar image.
 
@@ -1926,6 +1936,21 @@ kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
 GAPI_EXPORTS std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
 kmeans(const GArray<Point3f>& data, const int K, const GArray<int>& bestLabels,
        const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+
+/** @brief Transposes a matrix.
+
+The function transposes the matrix:
+\f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
+
+@note
+ - Function textual ID is "org.opencv.core.transpose"
+ - No complex conjugation is done in case of a complex matrix. It should be done separately if needed.
+
+@param src input array.
+*/
+GAPI_EXPORTS GMat transpose(const GMat& src);
+
 
 namespace streaming {
 /** @brief Gets dimensions from Mat.

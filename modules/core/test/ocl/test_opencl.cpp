@@ -132,6 +132,73 @@ TEST(OpenCL, support_SPIR_programs)
     testOpenCLKernel(k);
 }
 
+
+TEST(OpenCL, image2Dcount_regression_19334)
+{
+    cv::ocl::Context ctx = cv::ocl::Context::getDefault();
+    if (!ctx.ptr())
+    {
+        throw cvtest::SkipTestException("OpenCL is not available");
+    }
+    cv::ocl::Device device = cv::ocl::Device::getDefault();
+    if (!device.compilerAvailable())
+    {
+        throw cvtest::SkipTestException("OpenCL compiler is not available");
+    }
+
+    std::string module_name; // empty to disable OpenCL cache
+
+    static const char* opencl_kernel_src =
+"__kernel void test_kernel(int a,\n"
+"                          __global const uchar* src0, int src0_step, int src0_offset, int src0_rows, int src0_cols,\n"
+"                          __global const uchar* src1, int src1_step, int src1_offset, int src1_rows, int src1_cols,\n"
+"                          __global const uchar* src2, int src2_step, int src2_offset, int src2_rows, int src2_cols,\n"
+"                          __read_only image2d_t image)\n"
+"{\n"
+"}";
+    cv::ocl::ProgramSource src(module_name, "test_opencl_image_arg", opencl_kernel_src, "");
+    cv::String errmsg;
+    cv::ocl::Program program(src, "", errmsg);
+    ASSERT_TRUE(program.ptr() != NULL);
+    cv::ocl::Kernel k("test_kernel", program);
+    ASSERT_FALSE(k.empty());
+
+    std::vector<UMat> images(4);
+    for (size_t i = 0; i < images.size(); ++i)
+        images[i] = UMat(10, 10, CV_8UC1);
+    cv::ocl::Image2D image;
+    try
+    {
+        cv::ocl::Image2D image_(images.back());
+        image = image_;
+    }
+    catch (const cv::Exception&)
+    {
+        throw cvtest::SkipTestException("OpenCL images are not supported");
+    }
+
+    int nargs = 0;
+    int a = 0;
+    nargs = k.set(nargs, a);
+    ASSERT_EQ(1, nargs);
+    nargs = k.set(nargs, images[0]);
+    ASSERT_EQ(6, nargs);
+    nargs = k.set(nargs, images[1]);
+    ASSERT_EQ(11, nargs);
+    nargs = k.set(nargs, images[2]);
+    ASSERT_EQ(16, nargs);
+
+    // do not throw (issue of #19334)
+    ASSERT_NO_THROW(nargs = k.set(nargs, image));
+    ASSERT_EQ(17, nargs);
+
+    // allow to replace image argument if kernel is not running
+    UMat image2(10, 10, CV_8UC1);
+    ASSERT_NO_THROW(nargs = k.set(16, cv::ocl::Image2D(image2)));
+    ASSERT_EQ(17, nargs);
+}
+
+
 TEST(OpenCL, move_construct_assign)
 {
     cv::ocl::Context ctx1 = cv::ocl::Context::getDefault();

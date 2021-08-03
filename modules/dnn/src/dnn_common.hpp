@@ -14,6 +14,16 @@ Mutex& getInitializationMutex();
 void initializeLayerFactory();
 
 namespace detail {
+#define CALL_MEMBER_FN(object, ptrToMemFn)  ((object).*(ptrToMemFn))
+
+class NotImplemented : public Layer
+{
+public:
+    static Ptr<Layer> create(const LayerParams &params);
+
+    static void Register();
+    static void unRegister();
+};
 
 struct NetImplBase
 {
