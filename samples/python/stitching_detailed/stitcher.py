@@ -64,18 +64,16 @@ class Stitcher:
         full_img_sizes = []
         features = []
         images = []
-        is_work_scale_set = False
-        is_seam_scale_set = False
         is_compose_scale_set = False
 
         for name in img_names:
             image = PanoramaPart(name)
             image.read_image()
             full_img_sizes.append(image.full_img_size)
-            image.set_work_image(work_megapix_scaler)
-            features.append(finder.detect_features(image.work_img))
-            image.set_seam_image(seam_megapix_scaler)
-            images.append(image.seam_img)
+            work_img = work_megapix_scaler.set_scale_and_downscale(image.full_img)
+            features.append(finder.detect_features(work_img))
+            seam_img = seam_megapix_scaler.set_scale_and_downscale(image.full_img)
+            images.append(seam_img)
 
         seam_work_aspect = (work_megapix_scaler.scale /
                             seam_megapix_scaler.scale )

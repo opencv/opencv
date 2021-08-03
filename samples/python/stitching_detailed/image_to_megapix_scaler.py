@@ -15,16 +15,33 @@ class ImageToMegapixScaler:
         else:
             return 1.0
 
+    def resize_to_scale(self, img, scale):
+        if scale != 1.0:
+            return cv.resize(src=img, dsize=None,
+                             fx=scale, fy=scale,
+                             interpolation=cv.INTER_LINEAR_EXACT)
+        else:
+            return img
+
+    def set_scale_if_not_set(self, scale):
+        if self.is_scale_set is False:
+            self.scale = scale
+            self.is_scale_set = True
+
+    def resize_to_set_scale(self, img):
+        if self.is_scale_set:
+            return self.resize_to_scale(img, self.scale)
+        else:
+            print("Scale not set")
+            exit()
+
+    """ DOWNSCALING """
+
     def get_scale_to_force_downscale(self, img):
         return min(1.0, self.get_scale(img))
 
-    def resize_to_scale(self, img, scale):
-        return cv.resize(src=img, dsize=None,
-                         fx=scale, fy=scale,
-                         interpolation=cv.INTER_LINEAR_EXACT)
-
     def set_scale_and_downscale(self, img):
         if self.is_scale_set is False:
-            self.scale = self.get_scale_to_force_downscale(img)
-            self.is_scale_set = True
-        return self.resize_to_scale(img, self.scale)
+            scale = self.get_scale_to_force_downscale(img)
+            self.set_scale_if_not_set(scale)
+        return self.resize_to_set_scale(img)

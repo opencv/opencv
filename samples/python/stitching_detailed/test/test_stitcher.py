@@ -13,7 +13,7 @@ from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
-
+# %%
 
 # Eine Klasse erstellen, die von unittest.TestCase erbt
 class TestStitcher(unittest.TestCase):
@@ -60,7 +60,7 @@ class TestStitcher(unittest.TestCase):
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
-    #@unittest.skip("skip boat test (high resuolution ran ~10s)")
+    @unittest.skip("skip boat test (high resuolution ran >5s)")
     def test_stitcher_boat(self):
         stitcher = Stitcher(["boat1.jpg", "boat2.jpg",
                              "boat3.jpg", "boat4.jpg",
@@ -73,11 +73,18 @@ class TestStitcher(unittest.TestCase):
                                    atol=max_image_shape_derivation)
 
     def test_image_to_megapix_scaler(self):
-        img1 = cv.imread("s1.jpg")
+        img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
         scaler = ImageToMegapixScaler(0.6)
         self.assertEqual(scaler.get_scale(img1), 0.8294067854101966)
         resized = scaler.resize_to_scale(img1, scaler.get_scale(img1))
         self.assertEqual(resized.shape, (581, 1033, 3))
+
+        resized = scaler.set_scale_and_downscale(img1)
+        self.assertEqual(resized.shape, (581, 1033, 3))
+
+        resized = scaler.set_scale_and_downscale(img2)
+        self.assertEqual(resized.shape, (581, 1149, 3))
+        self.assertIsNot(scaler.scale, scaler.get_scale(img2))
 
         scaler = ImageToMegapixScaler(2)
         self.assertEqual(scaler.get_scale(img1), 1.5142826857233715)
@@ -98,11 +105,11 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(len(features.getKeypoints()), other_keypoints)
 
     def test_feature_matcher(self):
-        self.img1, self.img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
 
         detector = FeatureDetector("orb")
-        features = [detector.detect_features(self.img1),
-                    detector.detect_features(self.img2)]
+        features = [detector.detect_features(img1),
+                    detector.detect_features(img2)]
 
         matcher = FeatureMatcher()
         pairwise_matches = matcher.match_features(features)
