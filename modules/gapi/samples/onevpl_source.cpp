@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <cctype>
 
@@ -13,15 +14,15 @@
 const std::string about =
     "This is an OpenCV-based version of oneVPLSource decoder example";
 const std::string keys =
-    "{ h help       |                                     | Print this help message }"
-    "{ input        |                                     | Path to the input video file }"
-    "{ output       |                                     | Path to the output video file }"
-    "{ ssm          | semantic-segmentation-adas-0001.xml | Path to OpenVINO IE semantic segmentation model (.xml) }"
-    "{ cfg_param_1  |                                     | oneVPL variant }"
-    "{ cfg_param_2  |                                     | oneVPL variant }"
-    "{ cfg_param_3  |                                     | oneVPL variant }"
-    "{ cfg_param_4  |                                     | oneVPL variant }"
-    "{ cfg_param_5  |                                     | oneVPL variant }";
+    "{ h help       |                                           | Print this help message }"
+    "{ input        |                                           | Path to the input demultiplexed video file }"
+    "{ output       |                                           | Path to the output RAW video file. Use .avi extension }"
+    "{ ssm          | semantic-segmentation-adas-0001.xml       | Path to OpenVINO IE semantic segmentation model (.xml) }"
+    "{ cfg_param_1  | <property name>:<property value>          | oneVPL variant is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }"
+    "{ cfg_param_2  |                                           | Another one oneVPL variant is used for configuring source }"
+    "{ cfg_param_3  |                                           | Another one oneVPL variant is used for configuring source }"
+    "{ cfg_param_4  |                                           | Another one oneVPL variant is used for configuring source }"
+    "{ cfg_param_5  |                                           | Another one oneVPL variant is used for configuring source }";
 
 // 20 colors for 20 classes of semantic-segmentation-adas-0001
 const std::vector<cv::Vec3b> colors = {
@@ -63,16 +64,16 @@ std::string get_weights_path(const std::string &model_path) {
 } // anonymous namespace
 
 namespace custom {
-G_API_OP(PostProcessing, <cv::GFrame(cv::GFrame, cv::GMat)>, "sample.custom.post_processing") {
-    static cv::GFrameDesc outMeta(const cv::GFrameDesc &in, const cv::GMatDesc &) {
+G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_processing") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in, const cv::GMatDesc &) {
         return in;
     }
 };
 
 GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
-    static void run(const cv::MediaFrame &in, const cv::Mat &detected_classes, cv::MediaFrame &out) {
+    static void run(const cv::Mat &in, const cv::Mat &detected_classes, cv::Mat &out) {
         // This kernel constructs output image by class table and colors vector
-/*
+
         // The semantic-segmentation-adas-0001 output a blob with the shape
         // [B, C=1, H=1024, W=2048]
         const int outHeight = 1024;
@@ -88,11 +89,10 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
                         : cv::Vec3b{0, 0, 0}; // sample detects 20 classes
             }
         }
+
         cv::resize(maskImg, out, in.size());
         const float blending = 0.3f;
         out = in * blending + out * (1 - blending);
-*/
-    out = in;
     }
 };
 } // namespace custom
@@ -116,6 +116,15 @@ int main(int argc, char *argv[]) {
     const auto model_path    = cmd.get<std::string>("ssm");
     const auto weights_path  = get_weights_path(model_path);
 
+    // check ouput file extension
+    if (!output.empty()) {
+        auto ext = output.find_last_of(".");
+        if (ext == std::string::npos || (output.substr(ext + 1) != "avi")) {
+            std::cerr << "Output file should have *.avi extension for output video" << std::endl;
+            return -1;
+        }
+    }
+
     // get VPL params from cmd
     int param_index = 1;
     cv::gapi::wip::CFGParams source_cfgs;
@@ -133,7 +142,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    const auto device        = "CPU";
+    const auto device = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
     const auto net = cv::gapi::ie::Params<SemSegmNet> {
         model_path, weights_path, device
@@ -144,7 +153,7 @@ int main(int argc, char *argv[]) {
     // Now build the graph
     cv::GFrame in;
     cv::GMat detected_classes = cv::gapi::infer<SemSegmNet>(in);
-    cv::GFrame out = custom::PostProcessing::on(in, detected_classes);
+    cv::GMat out = custom::PostProcessing::on(cv::gapi::streaming::BGR(in), detected_classes);
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -153,31 +162,41 @@ int main(int argc, char *argv[]) {
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
         cap = cv::gapi::wip::make_vpl_src(file_path, source_cfgs);
-        std::cout << "CAP desr: " << cap->descr_of() << std::endl;
+        std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
         return -1;
     }
 
+    cv::GMetaArg descr = cap->descr_of();
+    auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
+    
     // The execution part
     pipeline.setSource(std::move(cap));
     pipeline.start();
 
+    int framesCount = 0;
+    cv::TickMeter t;
+    t.start();
     cv::VideoWriter writer;
-    //cv::Mat outMat;
-    cv::MediaFrame outMat;
+    cv::Mat outMat;
     while (pipeline.pull(cv::gout(outMat))) {
-        //cv::imshow("Out", outMat);
+        cv::imshow("Out", outMat);
         cv::waitKey(1);
-        /*if (!output.empty()) {
+        if (!output.empty()) {
             if (!writer.isOpened()) {
                 const auto sz = cv::Size{outMat.cols, outMat.rows};
                 writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
                 CV_Assert(writer.isOpened());
             }
             writer << outMat;
-        }*/
+        }
+        framesCount++;
     }
+    t.stop();
+    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
+    std::cout << "FPS: " << framesCount /  t.getTimeSec() << std::endl;
+
     return 0;
 }
 
