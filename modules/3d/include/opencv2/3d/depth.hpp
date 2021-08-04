@@ -271,6 +271,8 @@ public:
       return 15; // in degrees
     }
 
+    virtual ~Odometry() { }
+
     /** Method to compute a transformation from the source frame to the destination one.
      * Some odometry algorithms do not used some data of frames (eg. ICP does not use images).
      * In such case corresponding arguments can be set as empty Mat.
@@ -314,16 +316,18 @@ public:
     */
     CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
+    /** Create a new Odometry object based on its name. Currently supported names are:
+    * "RgbdOdometry", "ICPOdometry", "RgbdICPOdometry", "FastICPOdometry".
+    * @param odometryType algorithm's name
+    */
     CV_WRAP static Ptr<Odometry> createFromName(const String & odometryType);
 
-    /** @see setCameraMatrix */
     CV_WRAP virtual cv::Mat getCameraMatrix() const = 0;
-    /** @copybrief getCameraMatrix @see getCameraMatrix */
     CV_WRAP virtual void setCameraMatrix(const cv::Mat &val) = 0;
-    /** @see setTransformType */
     CV_WRAP virtual int getTransformType() const = 0;
-    /** @copybrief getTransformType @see getTransformType */
     CV_WRAP virtual void setTransformType(int val) = 0;
+    CV_WRAP virtual cv::Mat getIterationCounts() const = 0;
+    CV_WRAP virtual void setIterationCounts(const cv::Mat& val) = 0;
 
 protected:
     virtual void
@@ -340,8 +344,9 @@ protected:
 class CV_EXPORTS_W RgbdOdometry: public Odometry
 {
 public:
-    RgbdOdometry();
-    /** Constructor.
+    RgbdOdometry() { }
+
+    /** Creates RgbdOdometry object
      * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
@@ -353,122 +358,22 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    RgbdOdometry(const Mat& cameraMatrix, float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                 float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
-                 const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                 int transformType = Odometry::RIGID_BODY_MOTION);
-
     CV_WRAP static Ptr<RgbdOdometry> create(const Mat& cameraMatrix = Mat(), float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                 float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
-                 const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                 int transformType = Odometry::RIGID_BODY_MOTION);
+                                            float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
+                                            const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                            int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual double getMinDepth() const = 0;
+    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepth() const = 0;
+    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepthDiff() const = 0;
+    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual cv::Mat getMinGradientMagnitudes() const = 0;
+    CV_WRAP virtual void setMinGradientMagnitudes(const cv::Mat &val) = 0;
+    CV_WRAP virtual double getMaxPointsPart() const = 0;
+    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
 
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
-
-    CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    CV_WRAP void setCameraMatrix(const cv::Mat &val) CV_OVERRIDE
-    {
-        cameraMatrix = val;
-    }
-    CV_WRAP double getMinDepth() const
-    {
-        return minDepth;
-    }
-    CV_WRAP void setMinDepth(double val)
-    {
-        minDepth = val;
-    }
-    CV_WRAP double getMaxDepth() const
-    {
-        return maxDepth;
-    }
-    CV_WRAP void setMaxDepth(double val)
-    {
-        maxDepth = val;
-    }
-    CV_WRAP double getMaxDepthDiff() const
-    {
-        return maxDepthDiff;
-    }
-    CV_WRAP void setMaxDepthDiff(double val)
-    {
-        maxDepthDiff = val;
-    }
-    CV_WRAP cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    CV_WRAP void setIterationCounts(const cv::Mat &val)
-    {
-        iterCounts = val;
-    }
-    CV_WRAP cv::Mat getMinGradientMagnitudes() const
-    {
-        return minGradientMagnitudes;
-    }
-    CV_WRAP void setMinGradientMagnitudes(const cv::Mat &val)
-    {
-        minGradientMagnitudes = val;
-    }
-    CV_WRAP double getMaxPointsPart() const
-    {
-        return maxPointsPart;
-    }
-    CV_WRAP void setMaxPointsPart(double val)
-    {
-        maxPointsPart = val;
-    }
-    CV_WRAP int getTransformType() const CV_OVERRIDE
-    {
-        return transformType;
-    }
-    CV_WRAP void setTransformType(int val) CV_OVERRIDE
-    {
-        transformType = val;
-    }
-    CV_WRAP double getMaxTranslation() const
-    {
-        return maxTranslation;
-    }
-    CV_WRAP void setMaxTranslation(double val)
-    {
-        maxTranslation = val;
-    }
-    CV_WRAP double getMaxRotation() const
-    {
-        return maxRotation;
-    }
-    CV_WRAP void setMaxRotation(double val)
-    {
-        maxRotation = val;
-    }
-
-protected:
-    virtual void
-    checkParams() const CV_OVERRIDE;
-
-    virtual bool
-    computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                const Mat& initRt) const CV_OVERRIDE;
-
-    // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
-    /*float*/
-    double minDepth, maxDepth, maxDepthDiff;
-    /*vector<int>*/
-    Mat iterCounts;
-    /*vector<float>*/
-    Mat minGradientMagnitudes;
-    double maxPointsPart;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
 };
 
 /** Odometry based on the paper "KinectFusion: Real-Time Dense Surface Mapping and Tracking",
@@ -477,8 +382,9 @@ protected:
 class CV_EXPORTS_W ICPOdometry: public Odometry
 {
 public:
-    ICPOdometry();
-    /** Constructor.
+    ICPOdometry() { }
+
+    /** Creates new ICPOdometry object
      * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used
      * @param maxDepth Pixels with depth larger than maxDepth will not be used
@@ -488,126 +394,29 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    ICPOdometry(const Mat& cameraMatrix, float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                const std::vector<int>& iterCounts = std::vector<int>(), int transformType = Odometry::RIGID_BODY_MOTION);
-
     CV_WRAP static Ptr<ICPOdometry> create(const Mat& cameraMatrix = Mat(), float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                const std::vector<int>& iterCounts = std::vector<int>(), int transformType = Odometry::RIGID_BODY_MOTION);
+                                           float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                           const std::vector<int>& iterCounts = std::vector<int>(), int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
-
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
-
-    CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    CV_WRAP void setCameraMatrix(const cv::Mat &val) CV_OVERRIDE
-    {
-        cameraMatrix = val;
-    }
-    CV_WRAP double getMinDepth() const
-    {
-        return minDepth;
-    }
-    CV_WRAP void setMinDepth(double val)
-    {
-        minDepth = val;
-    }
-    CV_WRAP double getMaxDepth() const
-    {
-        return maxDepth;
-    }
-    CV_WRAP void setMaxDepth(double val)
-    {
-        maxDepth = val;
-    }
-    CV_WRAP double getMaxDepthDiff() const
-    {
-        return maxDepthDiff;
-    }
-    CV_WRAP void setMaxDepthDiff(double val)
-    {
-        maxDepthDiff = val;
-    }
-    CV_WRAP cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    CV_WRAP void setIterationCounts(const cv::Mat &val)
-    {
-        iterCounts = val;
-    }
-    CV_WRAP double getMaxPointsPart() const
-    {
-        return maxPointsPart;
-    }
-    CV_WRAP void setMaxPointsPart(double val)
-    {
-        maxPointsPart = val;
-    }
-    CV_WRAP int getTransformType() const CV_OVERRIDE
-    {
-        return transformType;
-    }
-    CV_WRAP void setTransformType(int val) CV_OVERRIDE
-    {
-        transformType = val;
-    }
-    CV_WRAP double getMaxTranslation() const
-    {
-        return maxTranslation;
-    }
-    CV_WRAP void setMaxTranslation(double val)
-    {
-        maxTranslation = val;
-    }
-    CV_WRAP double getMaxRotation() const
-    {
-        return maxRotation;
-    }
-    CV_WRAP void setMaxRotation(double val)
-    {
-        maxRotation = val;
-    }
-    CV_WRAP Ptr<RgbdNormals> getNormalsComputer() const
-    {
-        return normalsComputer;
-    }
-
-protected:
-    virtual void
-    checkParams() const CV_OVERRIDE;
-
-    virtual bool
-    computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                const Mat& initRt) const CV_OVERRIDE;
-
-    // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
-    /*float*/
-    double minDepth, maxDepth, maxDepthDiff;
-    /*float*/
-    double maxPointsPart;
-    /*vector<int>*/
-    Mat iterCounts;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
-
-    mutable Ptr<RgbdNormals> normalsComputer;
-  };
+    CV_WRAP virtual double getMinDepth() const = 0;
+    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepth() const = 0;
+    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepthDiff() const = 0;
+    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual double getMaxPointsPart() const = 0;
+    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
+    CV_WRAP virtual Ptr<RgbdNormals> getNormalsComputer() const = 0;
+};
 
 /** Odometry that merges RgbdOdometry and ICPOdometry by minimize sum of their energy functions.
  */
 class CV_EXPORTS_W RgbdICPOdometry: public Odometry
 {
 public:
-    RgbdICPOdometry();
-    /** Constructor.
+    RgbdICPOdometry() { }
+
+    /** Creates RgbdICPOdometry object
      * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used
      * @param maxDepth Pixels with depth larger than maxDepth will not be used
@@ -619,149 +428,45 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    RgbdICPOdometry(const Mat& cameraMatrix, float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                    float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                    const std::vector<int>& iterCounts = std::vector<int>(),
-                    const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
-                    int transformType = Odometry::RIGID_BODY_MOTION);
+    CV_WRAP static Ptr<RgbdICPOdometry> create(const Mat& cameraMatrix = Mat(),
+                                               float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                                               float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                               const std::vector<int>& iterCounts = std::vector<int>(),
+                                               const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
+                                               int transformType = Odometry::RIGID_BODY_MOTION);
 
-    CV_WRAP static Ptr<RgbdICPOdometry> create(const Mat& cameraMatrix = Mat(), float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                    float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                    const std::vector<int>& iterCounts = std::vector<int>(),
-                    const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
-                    int transformType = Odometry::RIGID_BODY_MOTION);
+    CV_WRAP virtual double getMinDepth() const = 0;
+    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepth() const = 0;
+    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual double getMaxDepthDiff() const = 0;
+    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual double getMaxPointsPart() const = 0;
+    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
+    CV_WRAP virtual cv::Mat getMinGradientMagnitudes() const = 0;
+    CV_WRAP virtual void setMinGradientMagnitudes(const cv::Mat &val) = 0;
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
-
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
-
-    CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    CV_WRAP void setCameraMatrix(const cv::Mat &val) CV_OVERRIDE
-    {
-        cameraMatrix = val;
-    }
-    CV_WRAP double getMinDepth() const
-    {
-        return minDepth;
-    }
-    CV_WRAP void setMinDepth(double val)
-    {
-        minDepth = val;
-    }
-    CV_WRAP double getMaxDepth() const
-    {
-        return maxDepth;
-    }
-    CV_WRAP void setMaxDepth(double val)
-    {
-        maxDepth = val;
-    }
-    CV_WRAP double getMaxDepthDiff() const
-    {
-        return maxDepthDiff;
-    }
-    CV_WRAP void setMaxDepthDiff(double val)
-    {
-        maxDepthDiff = val;
-    }
-    CV_WRAP double getMaxPointsPart() const
-    {
-        return maxPointsPart;
-    }
-    CV_WRAP void setMaxPointsPart(double val)
-    {
-        maxPointsPart = val;
-    }
-    CV_WRAP cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    CV_WRAP void setIterationCounts(const cv::Mat &val)
-    {
-        iterCounts = val;
-    }
-    CV_WRAP cv::Mat getMinGradientMagnitudes() const
-    {
-        return minGradientMagnitudes;
-    }
-    CV_WRAP void setMinGradientMagnitudes(const cv::Mat &val)
-    {
-        minGradientMagnitudes = val;
-    }
-    CV_WRAP int getTransformType() const CV_OVERRIDE
-    {
-        return transformType;
-    }
-    CV_WRAP void setTransformType(int val) CV_OVERRIDE
-    {
-        transformType = val;
-    }
-    CV_WRAP double getMaxTranslation() const
-    {
-        return maxTranslation;
-    }
-    CV_WRAP void setMaxTranslation(double val)
-    {
-        maxTranslation = val;
-    }
-    CV_WRAP double getMaxRotation() const
-    {
-        return maxRotation;
-    }
-    CV_WRAP void setMaxRotation(double val)
-    {
-        maxRotation = val;
-    }
-    CV_WRAP Ptr<RgbdNormals> getNormalsComputer() const
-    {
-        return normalsComputer;
-    }
-
-protected:
-    virtual void
-    checkParams() const CV_OVERRIDE;
-
-    virtual bool
-    computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                const Mat& initRt) const CV_OVERRIDE;
-
-    // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
-    /*float*/
-    double minDepth, maxDepth, maxDepthDiff;
-    /*float*/
-    double maxPointsPart;
-    /*vector<int>*/
-    Mat iterCounts;
-    /*vector<float>*/
-    Mat minGradientMagnitudes;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
-
-    mutable Ptr<RgbdNormals> normalsComputer;
+    CV_WRAP virtual Ptr<RgbdNormals> getNormalsComputer() const = 0;
 };
 
 /** A faster version of ICPOdometry which is used in KinectFusion implementation
  * Partial list of differences:
- * - Works in parallel
- * - Written in universal intrinsics
+ * - UMats are processed using OpenCL
+ * - CPU version is written in universal intrinsics
  * - Filters points by angle
  * - Interpolates points and normals
  * - Doesn't use masks or min/max depth filtering
  * - Doesn't use random subsets of points
  * - Supports only Rt transform type
+ * - Initial transform is not supported and always ignored
  * - Supports only 4-float vectors as input type
  */
 class CV_EXPORTS_W FastICPOdometry: public Odometry
 {
 public:
-    FastICPOdometry();
-    /** Constructor.
+    FastICPOdometry() { }
+
+    /** Creates FastICPOdometry object
      * @param cameraMatrix Camera matrix
      * @param maxDistDiff Correspondences between pixels of two given frames will be filtered out
      *                     if their depth difference is larger than maxDepthDiff
@@ -775,17 +480,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    FastICPOdometry(const Mat& cameraMatrix,
-                    float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
-                    float angleThreshold = (float)(30. * CV_PI / 180.),
-                    float sigmaDepth = 0.04f,
-                    float sigmaSpatial = 4.5f,
-                    int kernelSize = 7,
-                    const std::vector<int>& iterCounts = std::vector<int>(),
-                    float depthFactor = 1.f,
-                    float truncateThreshold = 0.f);
-
-    CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix,
+    CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix = Mat(),
                                                float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,
@@ -795,123 +490,21 @@ public:
                                                float depthFactor = 1.f,
                                                float truncateThreshold = 0.f);
 
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    CV_WRAP virtual double getMaxDistDiff() const = 0;
+    CV_WRAP virtual void setMaxDistDiff(float val) = 0;
+    CV_WRAP virtual float getAngleThreshold() const = 0;
+    CV_WRAP virtual void setAngleThreshold(float f) = 0;
+    CV_WRAP virtual float getSigmaDepth() const = 0;
+    CV_WRAP virtual void setSigmaDepth(float f) = 0;
+    CV_WRAP virtual float getSigmaSpatial() const = 0;
+    CV_WRAP virtual void setSigmaSpatial(float f) = 0;
+    CV_WRAP virtual int getKernelSize() const = 0;
+    CV_WRAP virtual void setKernelSize(int f) = 0;
+    CV_WRAP virtual float getDepthFactor() const = 0;
+    CV_WRAP virtual void setDepthFactor(float _depthFactor) = 0;
+    CV_WRAP virtual float getTruncateThreshold() const = 0;
+    CV_WRAP virtual void setTruncateThreshold(float _truncateThreshold) = 0;
 
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
-
-    CV_WRAP cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    CV_WRAP void setCameraMatrix(const cv::Mat &val) CV_OVERRIDE
-    {
-        cameraMatrix = val;
-    }
-    CV_WRAP double getMaxDistDiff() const
-    {
-        return maxDistDiff;
-    }
-    CV_WRAP void setMaxDistDiff(float val)
-    {
-        maxDistDiff = val;
-    }
-    CV_WRAP float getAngleThreshold() const
-    {
-        return angleThreshold;
-    }
-    CV_WRAP void setAngleThreshold(float f)
-    {
-        angleThreshold = f;
-    }
-    CV_WRAP float getSigmaDepth() const
-    {
-        return sigmaDepth;
-    }
-    CV_WRAP void setSigmaDepth(float f)
-    {
-        sigmaDepth = f;
-    }
-    CV_WRAP float getSigmaSpatial() const
-    {
-        return sigmaSpatial;
-    }
-    CV_WRAP void setSigmaSpatial(float f)
-    {
-        sigmaSpatial = f;
-    }
-    CV_WRAP int getKernelSize() const
-    {
-        return kernelSize;
-    }
-    CV_WRAP void setKernelSize(int f)
-    {
-        kernelSize = f;
-    }
-    CV_WRAP float getDepthFactor() const
-    {
-        return depthFactor;
-    }
-    CV_WRAP void setDepthFactor(float _depthFactor)
-    {
-        depthFactor = _depthFactor;
-    }
-    CV_WRAP float getTruncateThreshold() const
-    {
-        return truncateThreshold;
-    }
-    CV_WRAP void setTruncateThreshold(float _truncateThreshold)
-    {
-        truncateThreshold = _truncateThreshold;
-    }
-    CV_WRAP cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    CV_WRAP void setIterationCounts(const cv::Mat &val)
-    {
-        iterCounts = val;
-    }
-    CV_WRAP int getTransformType() const CV_OVERRIDE
-    {
-        return Odometry::RIGID_BODY_MOTION;
-    }
-    CV_WRAP void setTransformType(int val) CV_OVERRIDE
-    {
-        if(val != Odometry::RIGID_BODY_MOTION)
-            throw std::runtime_error("Rigid Body Motion is the only accepted transformation type"
-                                     " for this odometry method");
-    }
-
-protected:
-    virtual void
-    checkParams() const CV_OVERRIDE;
-
-    virtual bool
-    computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                const Mat& initRt) const CV_OVERRIDE;
-
-    template<typename TMat>
-    Size prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const;
-
-    // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
-    float maxDistDiff;
-
-    float angleThreshold;
-
-    float sigmaDepth;
-
-    float sigmaSpatial;
-
-    int kernelSize;
-
-    /*vector<int>*/
-    Mat iterCounts;
-
-    Mat cameraMatrix;
-
-    float depthFactor;
-
-    float truncateThreshold;
 };
 
 // TODO Depth interpolation
