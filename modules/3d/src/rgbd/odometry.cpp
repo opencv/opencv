@@ -1136,7 +1136,7 @@ struct OdometryFrameImpl : public OdometryFrame
         pyramids[pyrType][level] = img;
     }
 
-    CV_WRAP virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) CV_OVERRIDE
+    virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) CV_OVERRIDE
     {
         TMat img;
         img = pyramids[pyrType][level];
