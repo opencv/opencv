@@ -1196,8 +1196,6 @@ bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcM
 
 bool Odometry::compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const
 {
-    checkParams();
-
     Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
     Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
 
@@ -1220,19 +1218,6 @@ Size Odometry::prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) co
 class RgbdOdometryImpl : public RgbdOdometry
 {
 public:
-    RgbdOdometryImpl() :
-        minDepth(DEFAULT_MIN_DEPTH()),
-        maxDepth(DEFAULT_MAX_DEPTH()),
-        maxDepthDiff(DEFAULT_MAX_DEPTH_DIFF()),
-        maxPointsPart(DEFAULT_MAX_POINTS_PART()),
-        transformType(Odometry::RIGID_BODY_MOTION),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()),
-        maxRotation(DEFAULT_MAX_ROTATION())
-    {
-        setDefaultIterCounts(iterCounts);
-        setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-    }
-
     /** Constructor.
      * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
@@ -1245,22 +1230,21 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    RgbdOdometryImpl(const Mat& _cameraMatrix, float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+    RgbdOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                      float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& _iterCounts = std::vector<int>(),
                      const std::vector<float>& _minGradientMagnitudes = std::vector<float>(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                     int _transformType = Odometry::RIGID_BODY_MOTION):
-        minDepth(_minDepth), maxDepth(_maxDepth), maxDepthDiff(_maxDepthDiff),
-        iterCounts(Mat(_iterCounts).clone()),
-        minGradientMagnitudes(Mat(_minGradientMagnitudes).clone()),
-        maxPointsPart(_maxPointsPart),
-        cameraMatrix(_cameraMatrix), transformType(_transformType),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()), maxRotation(DEFAULT_MAX_ROTATION())
+                     int _transformType = Odometry::RIGID_BODY_MOTION)
     {
-        if (iterCounts.empty() || minGradientMagnitudes.empty())
-        {
-            setDefaultIterCounts(iterCounts);
-            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-        }
+        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
+        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setMinDepth(_minDepth);
+        setMaxDepth(_maxDepth);
+        setMaxDepthDiff(_maxDepthDiff);
+        setCameraMatrix(_cameraMatrix);
+        setMaxPointsPart(_maxPointsPart);
+        setTransformType(_transformType);
+        setIterationCounts(Mat(_iterCounts).clone());
+        setMinGradientMagnitudes(Mat(_minGradientMagnitudes).clone());
     }
 
     virtual ~RgbdOdometryImpl() { }
@@ -1275,6 +1259,7 @@ public:
     }
     virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
     {
+        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
         cameraMatrix = val;
     }
     virtual double getMinDepth() const CV_OVERRIDE
@@ -1307,7 +1292,10 @@ public:
     }
     virtual void setIterationCounts(const cv::Mat& val) CV_OVERRIDE
     {
-        iterCounts = val;
+        if (val.empty())
+            setDefaultIterCounts(iterCounts);
+        else
+            iterCounts = val;
     }
     virtual cv::Mat getMinGradientMagnitudes() const CV_OVERRIDE
     {
@@ -1315,7 +1303,13 @@ public:
     }
     virtual void setMinGradientMagnitudes(const cv::Mat& val) CV_OVERRIDE
     {
-        minGradientMagnitudes = val;
+        if (val.empty())
+            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
+        else
+        {
+            CV_Assert(val.size() == iterCounts.size() || val.size() == iterCounts.t().size());
+            minGradientMagnitudes = val;
+        }
     }
     virtual double getMaxPointsPart() const CV_OVERRIDE
     {
@@ -1323,6 +1317,7 @@ public:
     }
     virtual void setMaxPointsPart(double val) CV_OVERRIDE
     {
+        CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
     virtual int getTransformType() const CV_OVERRIDE
@@ -1351,7 +1346,6 @@ public:
     }
 
 protected:
-    virtual void checkParams() const CV_OVERRIDE;
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                              const Mat& initRt) const CV_OVERRIDE;
@@ -1468,13 +1462,6 @@ Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType
 }
 
 
-void RgbdOdometryImpl::checkParams() const
-{
-    CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
-    CV_Assert(cameraMatrix.size() == Size(3,3) && (cameraMatrix.type() == CV_32FC1 || cameraMatrix.type() == CV_64FC1));
-    CV_Assert(minGradientMagnitudes.size() == iterCounts.size() || minGradientMagnitudes.size() == iterCounts.t().size());
-}
-
 bool RgbdOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
 {
     return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, RGBD_ODOMETRY, transformType);
@@ -1485,14 +1472,6 @@ bool RgbdOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr
 class ICPOdometryImpl : public ICPOdometry
 {
 public:
-    ICPOdometryImpl() :
-        minDepth(DEFAULT_MIN_DEPTH()), maxDepth(DEFAULT_MAX_DEPTH()),
-        maxDepthDiff(DEFAULT_MAX_DEPTH_DIFF()), maxPointsPart(DEFAULT_MAX_POINTS_PART()),
-        transformType(Odometry::RIGID_BODY_MOTION),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()), maxRotation(DEFAULT_MAX_ROTATION())
-    {
-        setDefaultIterCounts(iterCounts);
-    }
 
     /** Constructor.
      * @param cameraMatrix Camera matrix
@@ -1504,16 +1483,19 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    ICPOdometryImpl(const Mat& _cameraMatrix, float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+    ICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                     float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                    const std::vector<int>& _iterCounts = std::vector<int>(), int _transformType = Odometry::RIGID_BODY_MOTION) :
-        minDepth(_minDepth), maxDepth(_maxDepth), maxDepthDiff(_maxDepthDiff),
-        maxPointsPart(_maxPointsPart), iterCounts(Mat(_iterCounts).clone()),
-        cameraMatrix(_cameraMatrix), transformType(_transformType),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()), maxRotation(DEFAULT_MAX_ROTATION())
+                    const std::vector<int>& _iterCounts = std::vector<int>(), int _transformType = Odometry::RIGID_BODY_MOTION)
     {
-        if (iterCounts.empty())
-            setDefaultIterCounts(iterCounts);
+        setMinDepth(_minDepth);
+        setMaxDepth(_maxDepth);
+        setMaxDepthDiff(_maxDepthDiff);
+        setTransformType(_transformType);
+        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
+        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setIterationCounts(Mat(_iterCounts).clone());
+        setCameraMatrix(_cameraMatrix);
+        setMaxPointsPart(_maxPointsPart);
     }
 
     virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
@@ -1526,6 +1508,7 @@ public:
     }
     virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
     {
+        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
         cameraMatrix = val;
     }
     virtual double getMinDepth() const
@@ -1558,7 +1541,10 @@ public:
     }
     virtual void setIterationCounts(const cv::Mat& val)
     {
-        iterCounts = val;
+        if (val.empty())
+            setDefaultIterCounts(iterCounts);
+        else
+            iterCounts = val;
     }
     virtual double getMaxPointsPart() const
     {
@@ -1566,6 +1552,7 @@ public:
     }
     virtual void setMaxPointsPart(double val)
     {
+        CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
     virtual int getTransformType() const CV_OVERRIDE
@@ -1598,7 +1585,6 @@ public:
     }
 
 protected:
-    virtual void checkParams() const CV_OVERRIDE;
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                              const Mat& initRt) const CV_OVERRIDE;
@@ -1729,12 +1715,6 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType)
 }
 
 
-void ICPOdometryImpl::checkParams() const
-{
-    CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
-    CV_Assert(cameraMatrix.size() == Size(3,3) && (cameraMatrix.type() == CV_32FC1 || cameraMatrix.type() == CV_64FC1));
-}
-
 bool ICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
 {
     return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, ICP_ODOMETRY, transformType);
@@ -1745,15 +1725,6 @@ bool ICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<
 class RgbdICPOdometryImpl : public RgbdICPOdometry
 {
 public:
-    RgbdICPOdometryImpl() :
-        minDepth(DEFAULT_MIN_DEPTH()), maxDepth(DEFAULT_MAX_DEPTH()),
-        maxDepthDiff(DEFAULT_MAX_DEPTH_DIFF()), maxPointsPart(DEFAULT_MAX_POINTS_PART()), transformType(Odometry::RIGID_BODY_MOTION),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()), maxRotation(DEFAULT_MAX_ROTATION())
-    {
-        setDefaultIterCounts(iterCounts);
-        setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-    }
-
     /** Constructor.
      * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used
@@ -1766,22 +1737,22 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    RgbdICPOdometryImpl(const Mat& _cameraMatrix, float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+    RgbdICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                         float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
                         const std::vector<int>& _iterCounts = std::vector<int>(),
                         const std::vector<float>& _minGradientMagnitudes = std::vector<float>(),
-                        int _transformType = Odometry::RIGID_BODY_MOTION) :
-        minDepth(_minDepth), maxDepth(_maxDepth), maxDepthDiff(_maxDepthDiff),
-        maxPointsPart(_maxPointsPart), iterCounts(Mat(_iterCounts).clone()),
-        minGradientMagnitudes(Mat(_minGradientMagnitudes).clone()),
-        cameraMatrix(_cameraMatrix), transformType(_transformType),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()), maxRotation(DEFAULT_MAX_ROTATION())
+                        int _transformType = Odometry::RIGID_BODY_MOTION)
     {
-        if (iterCounts.empty() || minGradientMagnitudes.empty())
-        {
-            setDefaultIterCounts(iterCounts);
-            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-        }
+        setMinDepth(_minDepth);
+        setMaxDepth(_maxDepth);
+        setMaxDepthDiff(_maxDepthDiff);
+        setTransformType(_transformType);
+        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
+        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setIterationCounts(Mat(_iterCounts).clone());
+        setMinGradientMagnitudes(Mat(_minGradientMagnitudes).clone());
+        setMaxPointsPart(_maxPointsPart);
+        setCameraMatrix(_cameraMatrix);
     }
 
     virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
@@ -1794,6 +1765,7 @@ public:
     }
     virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
     {
+        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
         cameraMatrix = val;
     }
     virtual double getMinDepth() const
@@ -1826,6 +1798,7 @@ public:
     }
     virtual void setMaxPointsPart(double val)
     {
+        CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
     virtual cv::Mat getIterationCounts() const
@@ -1834,7 +1807,12 @@ public:
     }
     virtual void setIterationCounts(const cv::Mat& val)
     {
-        iterCounts = val;
+        if (val.empty())
+            setDefaultIterCounts(iterCounts);
+        else
+        {
+            iterCounts = val;
+        }
     }
     virtual cv::Mat getMinGradientMagnitudes() const
     {
@@ -1842,7 +1820,13 @@ public:
     }
     virtual void setMinGradientMagnitudes(const cv::Mat& val)
     {
-        minGradientMagnitudes = val;
+        if (val.empty())
+            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
+        else
+        {
+            CV_Assert(val.size() == iterCounts.size() || val.size() == iterCounts.t().size());
+            minGradientMagnitudes = val;
+        }
     }
     virtual int getTransformType() const CV_OVERRIDE
     {
@@ -1874,7 +1858,6 @@ public:
     }
 
 protected:
-    virtual void checkParams() const CV_OVERRIDE;
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                              const Mat& initRt) const CV_OVERRIDE;
@@ -2034,13 +2017,6 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheT
 }
 
 
-void RgbdICPOdometryImpl::checkParams() const
-{
-    CV_Assert(maxPointsPart > 0. && maxPointsPart <= 1.);
-    CV_Assert(cameraMatrix.size() == Size(3,3) && (cameraMatrix.type() == CV_32FC1 || cameraMatrix.type() == CV_64FC1));
-    CV_Assert(minGradientMagnitudes.size() == iterCounts.size() || minGradientMagnitudes.size() == iterCounts.t().size());
-}
-
 bool RgbdICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
 {
     return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts,  maxTranslation, maxRotation, MERGED_ODOMETRY, transformType);
@@ -2051,20 +2027,6 @@ bool RgbdICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const 
 class FastICPOdometryImpl : public FastICPOdometry
 {
 public:
-    FastICPOdometryImpl() :
-        maxDistDiff(DEFAULT_MAX_DEPTH_DIFF()),
-        angleThreshold((float)(30. * CV_PI / 180.)),
-        sigmaDepth(0.04f),
-        sigmaSpatial(4.5f),
-        kernelSize(7),
-        depthFactor(1.f),
-        truncateThreshold(0.f),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()),
-        maxRotation(DEFAULT_MAX_ROTATION())
-    {
-        setDefaultIterCounts(iterCounts);
-    }
-
     /** Creates FastICPOdometry object
      * @param cameraMatrix Camera matrix
      * @param maxDistDiff Correspondences between pixels of two given frames will be filtered out
@@ -2079,7 +2041,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    FastICPOdometryImpl(const Mat& _cameraMatrix,
+    FastICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F),
                         float _maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
                         float _angleThreshold = (float)(30. * CV_PI / 180.),
                         float _sigmaDepth = 0.04f,
@@ -2087,21 +2049,19 @@ public:
                         int _kernelSize = 7,
                         const std::vector<int>& _iterCounts = std::vector<int>(),
                         float _depthFactor = 1.f,
-                        float _truncateThreshold = 0.f):
-        maxDistDiff(_maxDistDiff),
-        angleThreshold(_angleThreshold),
-        sigmaDepth(_sigmaDepth),
-        sigmaSpatial(_sigmaSpatial),
-        kernelSize(_kernelSize),
-        iterCounts(Mat(_iterCounts).clone()),
-        cameraMatrix(_cameraMatrix),
-        depthFactor(_depthFactor),
-        truncateThreshold(_truncateThreshold),
-        maxTranslation(DEFAULT_MAX_TRANSLATION()),
-        maxRotation(DEFAULT_MAX_ROTATION())
+                        float _truncateThreshold = 0.f)
     {
-        if (iterCounts.empty())
-            setDefaultIterCounts(iterCounts);
+        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
+        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setMaxDistDiff(_maxDistDiff);
+        setAngleThreshold(_angleThreshold);
+        setSigmaDepth(_sigmaDepth);
+        setSigmaSpatial(_sigmaSpatial);
+        setKernelSize(_kernelSize);
+        setDepthFactor(_depthFactor);
+        setTruncateThreshold(_truncateThreshold);
+        setIterationCounts(Mat(_iterCounts).clone());
+        setCameraMatrix(_cameraMatrix);
     }
 
     virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
@@ -2114,6 +2074,7 @@ public:
     }
     virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
     {
+        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
         cameraMatrix = val;
     }
     virtual double getMaxDistDiff() const CV_OVERRIDE
@@ -2122,6 +2083,7 @@ public:
     }
     virtual void setMaxDistDiff(float val) CV_OVERRIDE
     {
+        CV_Assert(val > 0);
         maxDistDiff = val;
     }
     virtual float getAngleThreshold() const CV_OVERRIDE
@@ -2130,6 +2092,7 @@ public:
     }
     virtual void setAngleThreshold(float f) CV_OVERRIDE
     {
+        CV_Assert(f > 0);
         angleThreshold = f;
     }
     virtual float getSigmaDepth() const CV_OVERRIDE
@@ -2138,6 +2101,7 @@ public:
     }
     virtual void setSigmaDepth(float f) CV_OVERRIDE
     {
+        CV_Assert(f > 0);
         sigmaDepth = f;
     }
     virtual float getSigmaSpatial() const CV_OVERRIDE
@@ -2146,6 +2110,7 @@ public:
     }
     virtual void setSigmaSpatial(float f) CV_OVERRIDE
     {
+        CV_Assert(f > 0);
         sigmaSpatial = f;
     }
     virtual int getKernelSize() const CV_OVERRIDE
@@ -2154,6 +2119,7 @@ public:
     }
     virtual void setKernelSize(int f) CV_OVERRIDE
     {
+        CV_Assert(f > 0);
         kernelSize = f;
     }
     virtual float getDepthFactor() const CV_OVERRIDE
@@ -2194,7 +2160,10 @@ public:
     }
     virtual void setIterationCounts(const cv::Mat& val) CV_OVERRIDE
     {
-        iterCounts = val;
+        if (val.empty())
+            setDefaultIterCounts(iterCounts);
+        else
+            iterCounts = val;
     }
     virtual int getTransformType() const CV_OVERRIDE
     {
@@ -2203,12 +2172,10 @@ public:
     virtual void setTransformType(int val) CV_OVERRIDE
     {
         if (val != Odometry::RIGID_BODY_MOTION)
-            throw std::runtime_error("Rigid Body Motion is the only accepted transformation type"
-                " for this odometry method");
+            CV_Error(CV_StsBadArg, "Rigid Body Motion is the only accepted transformation type for this odometry method");
     }
 
 protected:
-    virtual void checkParams() const CV_OVERRIDE;
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                              const Mat& initRt) const CV_OVERRIDE;
@@ -2336,16 +2303,6 @@ Size FastICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheT
     }
 }
 
-void FastICPOdometryImpl::checkParams() const
-{
-    CV_Assert(cameraMatrix.size() == Size(3,3) &&
-              (cameraMatrix.type() == CV_32FC1 ||
-               cameraMatrix.type() == CV_64FC1));
-
-    CV_Assert(maxDistDiff > 0);
-    CV_Assert(angleThreshold > 0);
-    CV_Assert(sigmaDepth > 0 && sigmaSpatial > 0 && kernelSize > 0);
-}
 
 bool FastICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame,
                                       const Ptr<OdometryFrame>& dstFrame,

@@ -228,6 +228,8 @@ public:
     CV_PROP int ID;
 };
 
+
+
 /** Base class for computation of odometry.
  */
 class CV_EXPORTS_W Odometry
@@ -342,8 +344,6 @@ public:
     CV_WRAP virtual void setMaxRotation(double val) = 0;
 
 protected:
-    virtual void
-    checkParams() const = 0;
 
     virtual bool
     computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
@@ -370,9 +370,13 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    CV_WRAP static Ptr<RgbdOdometry> create(const Mat& cameraMatrix = Mat(), float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                            float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& iterCounts = std::vector<int>(),
-                                            const std::vector<float>& minGradientMagnitudes = std::vector<float>(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+    CV_WRAP static Ptr<RgbdOdometry> create(const Mat& cameraMatrix = Mat::eye(3, 3, CV_64F),
+                                            float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
+                                            float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                                            float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                                            const std::vector<int>& iterCounts = std::vector<int>(),
+                                            const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
+                                            float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
                                             int transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
@@ -406,9 +410,13 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<ICPOdometry> create(const Mat& cameraMatrix = Mat(), float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                           float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                                           const std::vector<int>& iterCounts = std::vector<int>(), int transformType = Odometry::RIGID_BODY_MOTION);
+    CV_WRAP static Ptr<ICPOdometry> create(const Mat& cameraMatrix = Mat::eye(3, 3, CV_64F),
+                                           float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
+                                           float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                                           float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                                           float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                           const std::vector<int>& iterCounts = std::vector<int>(),
+                                           int transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
     CV_WRAP virtual void setMinDepth(double val) = 0;
@@ -440,9 +448,11 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<RgbdICPOdometry> create(const Mat& cameraMatrix = Mat(),
-                                               float minDepth = Odometry::DEFAULT_MIN_DEPTH(), float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                               float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+    CV_WRAP static Ptr<RgbdICPOdometry> create(const Mat& cameraMatrix = Mat::eye(3, 3, CV_64F),
+                                               float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
+                                               float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                                               float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                                               float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
                                                const std::vector<int>& iterCounts = std::vector<int>(),
                                                const std::vector<float>& minGradientMagnitudes = std::vector<float>(),
                                                int transformType = Odometry::RIGID_BODY_MOTION);
@@ -492,7 +502,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix = Mat(),
+    CV_WRAP static Ptr<FastICPOdometry> create(const Mat& cameraMatrix = Mat::eye(3, 3, CV_64F),
                                                float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,
