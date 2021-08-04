@@ -40,30 +40,15 @@ const double sobelScale = 1./8.;
 int normalWinSize = 5;
 int normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
 
-static inline
-void setDefaultIterCounts(Mat& iterCounts)
-{
-    iterCounts = Mat(Vec4i(7,7,7,10));
-}
-
-static inline
-void setDefaultMinGradientMagnitudes(Mat& minGradientMagnitudes)
-{
-    minGradientMagnitudes = Mat(Vec4f(10,10,10,10));
-}
-
 static
-void buildPyramidCameraMatrix(const Mat& cameraMatrix, int levels, std::vector<Mat>& pyramidCameraMatrix)
+void buildPyramidCameraMatrix(const Matx33d& cameraMatrix, int levels, std::vector<Matx33d>& pyramidCameraMatrix)
 {
     pyramidCameraMatrix.resize(levels);
 
-    Mat cameraMatrix_dbl;
-    cameraMatrix.convertTo(cameraMatrix_dbl, CV_64FC1);
-
     for(int i = 0; i < levels; i++)
     {
-        Mat levelCameraMatrix = i == 0 ? cameraMatrix_dbl : 0.5f * pyramidCameraMatrix[i-1];
-        levelCameraMatrix.at<double>(2,2) = 1.;
+        Matx33d levelCameraMatrix = (i == 0) ? cameraMatrix : 0.5f * pyramidCameraMatrix[i-1];
+        levelCameraMatrix(2, 2) = 1.0;
         pyramidCameraMatrix[i] = levelCameraMatrix;
     }
 }
@@ -240,7 +225,7 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
 
 template<typename TMat>
 static
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Mat& cameraMatrix, InputOutputArrayOfArrays pyramidCloud)
+void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33d& cameraMatrix, InputOutputArrayOfArrays pyramidCloud)
 {
     size_t depthSize = pyramidDepth.size(-1).width;
     size_t cloudSize = pyramidCloud.size(-1).width;
@@ -257,7 +242,7 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Mat& cameraMatri
     }
     else
     {
-        std::vector<Mat> pyramidCameraMatrix;
+        std::vector<Matx33d> pyramidCameraMatrix;
         buildPyramidCameraMatrix(cameraMatrix, (int)depthSize, pyramidCameraMatrix);
 
         pyramidCloud.create((int)depthSize, 1, CV_32FC3, -1);
@@ -495,13 +480,11 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 }
 
 static
-void computeCorresps(const Mat& K, const Mat& K_inv, const Mat& Rt,
+void computeCorresps(const Matx33d& K, const Matx33d& K_inv, const Mat& Rt,
                      const Mat& depth0, const Mat& validMask0,
                      const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
                      Mat& _corresps)
 {
-    CV_Assert(K.type() == CV_64FC1);
-    CV_Assert(K_inv.type() == CV_64FC1);
     CV_Assert(Rt.type() == CV_64FC1);
 
     Mat corresps(depth1.size(), CV_16SC2, Scalar::all(-1));
@@ -850,7 +833,7 @@ static
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          const Ptr<OdometryFrame>& srcFrame,
                          const Ptr<OdometryFrame>& dstFrame,
-                         const Mat& cameraMatrix,
+                         const Matx33d& cameraMatrix,
                          float maxDepthDiff, const std::vector<int>& iterCounts,
                          double maxTranslation, double maxRotation,
                          int method, int transfromType)
@@ -882,7 +865,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     const int minOverdetermScale = 20;
     const int minCorrespsCount = minOverdetermScale * transformDim;
 
-    std::vector<Mat> pyramidCameraMatrix;
+    std::vector<Matx33d> pyramidCameraMatrix;
     buildPyramidCameraMatrix(cameraMatrix, (int)iterCounts.size(), pyramidCameraMatrix);
 
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
@@ -891,14 +874,14 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     bool isOk = false;
     for(int level = (int)iterCounts.size() - 1; level >= 0; level--)
     {
-        const Mat& levelCameraMatrix = pyramidCameraMatrix[level];
-        const Mat& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
+        const Matx33d& levelCameraMatrix = pyramidCameraMatrix[level];
+        const Matx33d& levelCameraMatrix_inv = levelCameraMatrix.inv(DECOMP_SVD);
         const Mat srcLevelDepth, dstLevelDepth;
         srcFrame->getPyramidAt(srcLevelDepth, OdometryFrame::PYR_DEPTH, level);
         dstFrame->getPyramidAt(dstLevelDepth, OdometryFrame::PYR_DEPTH, level);
 
-        const double fx = levelCameraMatrix.at<double>(0,0);
-        const double fy = levelCameraMatrix.at<double>(1,1);
+        const double fx = levelCameraMatrix(0, 0);
+        const double fy = levelCameraMatrix(1, 1);
         const double determinantThreshold = 1e-6;
 
         Mat AtA_rgbd, AtB_rgbd, AtA_icp, AtB_icp;
@@ -1020,7 +1003,7 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
     Mat transformedCloud;
     perspectiveTransform(cloud, transformedCloud, Rt);
     projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
-                distCoeff, points2d);
+                  distCoeff, points2d);
 
     Mat image = _image.getMat();
     Size sz = _image.size();
@@ -1061,8 +1044,8 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
 }
 
 void warpFrame(InputArray image, InputArray depth, InputArray mask,
-    const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
-    OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+               const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+               OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
     if (image.type() == CV_8UC1)
         warpFrameImpl<uchar>(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
@@ -1187,6 +1170,19 @@ Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, I
 class OdometryImpl : public Odometry
 {
 public:
+    OdometryImpl(const Matx33d& _cameraMatrix = Matx33d::eye(),
+                 InputArray _iterCounts = noArray(),
+                 InputArray _minGradientMagnitudes = noArray(),
+                 int _transformType = Odometry::RIGID_BODY_MOTION)
+    {
+        setTransformType(_transformType);
+        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
+        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setCameraMatrix(_cameraMatrix);
+        setIterationCounts(_iterCounts);
+        setMinGradientMagnitudes(_minGradientMagnitudes);
+    }
+
     virtual ~OdometryImpl() { }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
@@ -1222,29 +1218,105 @@ public:
      * @param depth Depth data of the frame (CV_32FC1, in meters)
      * @param mask  Mask that sets which pixels have to be used from the frame (CV_8UC1)
     */
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
+    virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
-    CV_WRAP virtual cv::Mat getCameraMatrix() const = 0;
-    CV_WRAP virtual void setCameraMatrix(const cv::Mat& val) = 0;
-    CV_WRAP virtual int getTransformType() const = 0;
-    CV_WRAP virtual void setTransformType(int val) = 0;
-    CV_WRAP virtual cv::Mat getIterationCounts() const = 0;
-    CV_WRAP virtual void setIterationCounts(const cv::Mat& val) = 0;
+    virtual cv::Matx33d getCameraMatrix() const CV_OVERRIDE
+    {
+        return cameraMatrix;
+    }
+    virtual void setCameraMatrix(const Matx33d& val) CV_OVERRIDE
+    {
+        cameraMatrix = val;
+    }
+
+    virtual int getTransformType() const CV_OVERRIDE
+    {
+        return transformType;
+    }
+    virtual void setTransformType(int val) CV_OVERRIDE
+    {
+        transformType = val;
+    }
+
+    virtual void getIterationCounts(OutputArray val) const CV_OVERRIDE
+    {
+        val.create((int)iterCounts.size(), 1, CV_32S);
+        Mat(iterCounts).copyTo(val);
+    }
+    virtual void setIterationCounts(InputArray val) CV_OVERRIDE
+    {
+        if (val.empty())
+        {
+            DEFAULT_ITER_COUNTS().copyTo(iterCounts);
+        }
+        else
+        {
+            CV_Assert(val.type() == CV_32SC1);
+            CV_Assert(val.rows() == 1 || val.cols() == 1);
+            iterCounts.resize(val.rows() * val.cols());
+            val.copyTo(iterCounts);
+
+            minGradientMagnitudes.resize(iterCounts.size(), DEFAULT_MIN_GRADIENT_MAGNITUDE());
+        }
+    }
+
+    virtual void getMinGradientMagnitudes(OutputArray val) const CV_OVERRIDE
+    {
+        val.create((int)minGradientMagnitudes.size(), 1, CV_32F);
+        Mat(minGradientMagnitudes).copyTo(val);
+    }
+    virtual void setMinGradientMagnitudes(InputArray val) CV_OVERRIDE
+    {
+        if (val.empty())
+        {
+            minGradientMagnitudes = std::vector<float>(iterCounts.size(), DEFAULT_MIN_GRADIENT_MAGNITUDE());
+        }
+        else
+        {
+            CV_Assert(val.type() == CV_32FC1);
+            CV_Assert(val.rows() == 1 || val.cols() == 1);
+            size_t valSize = val.rows() * val.cols();
+            CV_Assert(valSize == iterCounts.size());
+            minGradientMagnitudes.resize(valSize);
+            val.copyTo(minGradientMagnitudes);
+        }
+    }
+
     /** Get max allowed translation in meters.
     Found delta transform is considered successful only if the translation is in given limits. */
-    CV_WRAP virtual double getMaxTranslation() const = 0;
+    virtual double getMaxTranslation() const CV_OVERRIDE
+    {
+        return maxTranslation;
+    }
     /** Set max allowed translation in meters.
     * Found delta transform is considered successful only if the translation is in given limits. */
-    CV_WRAP virtual void setMaxTranslation(double val) = 0;
+    virtual void setMaxTranslation(double val) CV_OVERRIDE
+    {
+        maxTranslation = val;
+    }
     /** Get max allowed rotation in degrees.
     * Found delta transform is considered successful only if the rotation is in given limits. */
-    CV_WRAP virtual double getMaxRotation() const = 0;
+    virtual double getMaxRotation() const CV_OVERRIDE
+    {
+        return maxRotation;
+    }
     /** Set max allowed rotation in degrees.
     * Found delta transform is considered successful only if the rotation is in given limits. */
-    CV_WRAP virtual void setMaxRotation(double val) = 0;
+    virtual void setMaxRotation(double val) CV_OVERRIDE
+    {
+        maxRotation = val;
+    }
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
                              const Mat& initRt) const = 0;
+
+    double maxTranslation, maxRotation;
+
+    int transformType;
+
+    Matx33d cameraMatrix;
+    std::vector<int> iterCounts;
+    std::vector<float> minGradientMagnitudes;
 };
 
 //
@@ -1265,21 +1337,20 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    RgbdOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                     float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), const std::vector<int>& _iterCounts = std::vector<int>(),
-                     const std::vector<float>& _minGradientMagnitudes = std::vector<float>(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                     int _transformType = Odometry::RIGID_BODY_MOTION)
+    RgbdOdometryImpl(const Matx33d& _cameraMatrix = Matx33d::eye(),
+                     float _minDepth = Odometry::DEFAULT_MIN_DEPTH(),
+                     float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                     float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                     InputArray _iterCounts = noArray(),
+                     InputArray _minGradientMagnitudes = noArray(),
+                     float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                     int _transformType = Odometry::RIGID_BODY_MOTION) :
+        OdometryImpl(_cameraMatrix, _iterCounts, _minGradientMagnitudes, _transformType)
     {
-        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
-        setMaxRotation(DEFAULT_MAX_ROTATION());
         setMinDepth(_minDepth);
         setMaxDepth(_maxDepth);
         setMaxDepthDiff(_maxDepthDiff);
-        setCameraMatrix(_cameraMatrix);
         setMaxPointsPart(_maxPointsPart);
-        setTransformType(_transformType);
-        setIterationCounts(Mat(_iterCounts).clone());
-        setMinGradientMagnitudes(Mat(_minGradientMagnitudes).clone());
     }
 
     virtual ~RgbdOdometryImpl() { }
@@ -1288,15 +1359,6 @@ public:
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
-    {
-        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
-        cameraMatrix = val;
-    }
     virtual double getMinDepth() const CV_OVERRIDE
     {
         return minDepth;
@@ -1321,31 +1383,6 @@ public:
     {
         maxDepthDiff = val;
     }
-    virtual cv::Mat getIterationCounts() const CV_OVERRIDE
-    {
-        return iterCounts;
-    }
-    virtual void setIterationCounts(const cv::Mat& val) CV_OVERRIDE
-    {
-        if (val.empty())
-            setDefaultIterCounts(iterCounts);
-        else
-            iterCounts = val;
-    }
-    virtual cv::Mat getMinGradientMagnitudes() const CV_OVERRIDE
-    {
-        return minGradientMagnitudes;
-    }
-    virtual void setMinGradientMagnitudes(const cv::Mat& val) CV_OVERRIDE
-    {
-        if (val.empty())
-            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-        else
-        {
-            CV_Assert(val.size() == iterCounts.size() || val.size() == iterCounts.t().size());
-            minGradientMagnitudes = val;
-        }
-    }
     virtual double getMaxPointsPart() const CV_OVERRIDE
     {
         return maxPointsPart;
@@ -1355,29 +1392,54 @@ public:
         CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
+
+    virtual void getIterationCounts(OutputArray val) const CV_OVERRIDE
+    {
+        OdometryImpl::getIterationCounts(val);
+    }
+    virtual void setIterationCounts(InputArray val) CV_OVERRIDE
+    {
+        OdometryImpl::setIterationCounts(val);
+    }
+    virtual void getMinGradientMagnitudes(OutputArray val) const CV_OVERRIDE
+    {
+        OdometryImpl::getMinGradientMagnitudes(val);
+    }
+    virtual void setMinGradientMagnitudes(InputArray val) CV_OVERRIDE
+    {
+        OdometryImpl::setMinGradientMagnitudes(val);
+    }
+    virtual cv::Matx33d getCameraMatrix() const CV_OVERRIDE
+    {
+        return OdometryImpl::getCameraMatrix();
+    }
+    virtual void setCameraMatrix(const Matx33d& val) CV_OVERRIDE
+    {
+        OdometryImpl::setCameraMatrix(val);
+    }
     virtual int getTransformType() const CV_OVERRIDE
     {
-        return transformType;
+        return OdometryImpl::getTransformType();
     }
     virtual void setTransformType(int val) CV_OVERRIDE
     {
-        transformType = val;
+        OdometryImpl::setTransformType(val);
     }
     virtual double getMaxTranslation() const CV_OVERRIDE
     {
-        return maxTranslation;
+        return OdometryImpl::getMaxTranslation();
     }
     virtual void setMaxTranslation(double val) CV_OVERRIDE
     {
-        maxTranslation = val;
+        OdometryImpl::setMaxTranslation(val);
     }
     virtual double getMaxRotation() const CV_OVERRIDE
     {
-        return maxRotation;
+        return OdometryImpl::getMaxRotation();
     }
     virtual void setMaxRotation(double val) CV_OVERRIDE
     {
-        maxRotation = val;
+        OdometryImpl::setMaxRotation(val);
     }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
@@ -1399,21 +1461,13 @@ protected:
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
     double minDepth, maxDepth, maxDepthDiff;
-    /*vector<int>*/
-    Mat iterCounts;
-    /*vector<float>*/
-    Mat minGradientMagnitudes;
+
     double maxPointsPart;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
 };
 
-Ptr<RgbdOdometry> RgbdOdometry::create(const Mat& _cameraMatrix, float _minDepth, float _maxDepth,
-                                       float _maxDepthDiff, const std::vector<int>& _iterCounts,
-                                       const std::vector<float>& _minGradientMagnitudes, float _maxPointsPart,
+Ptr<RgbdOdometry> RgbdOdometry::create(const Matx33d& _cameraMatrix, float _minDepth, float _maxDepth,
+                                       float _maxDepthDiff, InputArray _iterCounts,
+                                       InputArray _minGradientMagnitudes, float _maxPointsPart,
                                        int _transformType)
 {
     return makePtr<RgbdOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _iterCounts, _minGradientMagnitudes, _maxPointsPart, _transformType);
@@ -1486,9 +1540,9 @@ Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType
     checkMask(mask, image.size());
 
     auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    preparePyramidImage(image, tframe->pyramids[OdometryFrame::PYR_IMAGE], iterCounts.total());
+    preparePyramidImage(image, tframe->pyramids[OdometryFrame::PYR_IMAGE], iterCounts.size());
 
-    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.total());
+    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.size());
 
     preparePyramidMask<TMat>(mask, tframe->pyramids[OdometryFrame::PYR_DEPTH], (float)minDepth, (float)maxDepth,
                              tframe->pyramids[OdometryFrame::PYR_NORM], tframe->pyramids[OdometryFrame::PYR_MASK]);
@@ -1530,18 +1584,14 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    ICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+    ICPOdometryImpl(const Matx33d& _cameraMatrix = Matx33d::eye(), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                     float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                    const std::vector<int>& _iterCounts = std::vector<int>(), int _transformType = Odometry::RIGID_BODY_MOTION)
+                    InputArray _iterCounts = noArray(), int _transformType = Odometry::RIGID_BODY_MOTION) :
+        OdometryImpl(_cameraMatrix, _iterCounts, noArray(), _transformType)
     {
         setMinDepth(_minDepth);
         setMaxDepth(_maxDepth);
         setMaxDepthDiff(_maxDepthDiff);
-        setTransformType(_transformType);
-        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
-        setMaxRotation(DEFAULT_MAX_ROTATION());
-        setIterationCounts(Mat(_iterCounts).clone());
-        setCameraMatrix(_cameraMatrix);
         setMaxPointsPart(_maxPointsPart);
     }
 
@@ -1549,15 +1599,6 @@ public:
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
-    {
-        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
-        cameraMatrix = val;
-    }
     virtual double getMinDepth() const
     {
         return minDepth;
@@ -1582,17 +1623,6 @@ public:
     {
         maxDepthDiff = val;
     }
-    virtual cv::Mat getIterationCounts() const
-    {
-        return iterCounts;
-    }
-    virtual void setIterationCounts(const cv::Mat& val)
-    {
-        if (val.empty())
-            setDefaultIterCounts(iterCounts);
-        else
-            iterCounts = val;
-    }
     virtual double getMaxPointsPart() const
     {
         return maxPointsPart;
@@ -1602,30 +1632,56 @@ public:
         CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
+
+    virtual void getIterationCounts(OutputArray val) const CV_OVERRIDE
+    {
+        OdometryImpl::getIterationCounts(val);
+    }
+    virtual void setIterationCounts(InputArray val) CV_OVERRIDE
+    {
+        OdometryImpl::setIterationCounts(val);
+    }
+    virtual void getMinGradientMagnitudes(OutputArray /*val*/) const CV_OVERRIDE
+    {
+        CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
+    }
+    virtual void setMinGradientMagnitudes(InputArray /*val*/) CV_OVERRIDE
+    {
+        CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
+    }
+    virtual cv::Matx33d getCameraMatrix() const CV_OVERRIDE
+    {
+        return OdometryImpl::getCameraMatrix();
+    }
+    virtual void setCameraMatrix(const Matx33d& val) CV_OVERRIDE
+    {
+        OdometryImpl::setCameraMatrix(val);
+    }
     virtual int getTransformType() const CV_OVERRIDE
     {
-        return transformType;
+        return OdometryImpl::getTransformType();
     }
     virtual void setTransformType(int val) CV_OVERRIDE
     {
-        transformType = val;
+        OdometryImpl::setTransformType(val);
     }
-    virtual double getMaxTranslation() const
+    virtual double getMaxTranslation() const CV_OVERRIDE
     {
-        return maxTranslation;
+        return OdometryImpl::getMaxTranslation();
     }
-    virtual void setMaxTranslation(double val)
+    virtual void setMaxTranslation(double val) CV_OVERRIDE
     {
-        maxTranslation = val;
+        OdometryImpl::setMaxTranslation(val);
     }
-    virtual double getMaxRotation() const
+    virtual double getMaxRotation() const CV_OVERRIDE
     {
-        return maxRotation;
+        return OdometryImpl::getMaxRotation();
     }
-    virtual void setMaxRotation(double val)
+    virtual void setMaxRotation(double val) CV_OVERRIDE
     {
-        maxRotation = val;
+        OdometryImpl::setMaxRotation(val);
     }
+
     virtual Ptr<RgbdNormals> getNormalsComputer() const
     {
         return normalsComputer;
@@ -1652,21 +1708,15 @@ protected:
     double minDepth, maxDepth, maxDepthDiff;
     /*float*/
     double maxPointsPart;
-    /*vector<int>*/
-    Mat iterCounts;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
 
     mutable Ptr<RgbdNormals> normalsComputer;
 };
 
-Ptr<ICPOdometry> ICPOdometry::create(const Mat& _cameraMatrix, float _minDepth, float _maxDepth,
-                 float _maxDepthDiff, float _maxPointsPart, const std::vector<int>& _iterCounts,
-                 int _transformType) {
-  return makePtr<ICPOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _transformType);
+Ptr<ICPOdometry> ICPOdometry::create(const Matx33d& _cameraMatrix, float _minDepth, float _maxDepth,
+                                     float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
+                                     int _transformType)
+{
+    return makePtr<ICPOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _transformType);
 }
 
 Ptr<OdometryFrame> ICPOdometryImpl::makeOdometryFrame(InputArray _image, InputArray _depth, InputArray _mask) const
@@ -1721,7 +1771,7 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType)
     checkMask(mask, depth.size());
 
     auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.total());
+    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.size());
 
     preparePyramidCloud<TMat>(tframe->pyramids[OdometryFrame::PYR_DEPTH], cameraMatrix, tframe->pyramids[OdometryFrame::PYR_CLOUD]);
 
@@ -1742,7 +1792,7 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType)
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
-                   norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
+                   norm(Matx33d(normalsComputer->getK()), cameraMatrix) > FLT_EPSILON)
                     normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),
@@ -1796,37 +1846,26 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    RgbdICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F), float _minDepth = Odometry::DEFAULT_MIN_DEPTH(), float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                        float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(), float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
-                        const std::vector<int>& _iterCounts = std::vector<int>(),
-                        const std::vector<float>& _minGradientMagnitudes = std::vector<float>(),
-                        int _transformType = Odometry::RIGID_BODY_MOTION)
+    RgbdICPOdometryImpl(const Matx33d& _cameraMatrix = Matx33d::eye(),
+                        float _minDepth = Odometry::DEFAULT_MIN_DEPTH(),
+                        float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
+                        float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                        float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                        InputArray _iterCounts = noArray(),
+                        InputArray _minGradientMagnitudes = noArray(),
+                        int _transformType = Odometry::RIGID_BODY_MOTION) :
+        OdometryImpl(_cameraMatrix, _iterCounts, _minGradientMagnitudes, _transformType)
     {
         setMinDepth(_minDepth);
         setMaxDepth(_maxDepth);
         setMaxDepthDiff(_maxDepthDiff);
-        setTransformType(_transformType);
-        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
-        setMaxRotation(DEFAULT_MAX_ROTATION());
-        setIterationCounts(Mat(_iterCounts).clone());
-        setMinGradientMagnitudes(Mat(_minGradientMagnitudes).clone());
         setMaxPointsPart(_maxPointsPart);
-        setCameraMatrix(_cameraMatrix);
     }
 
     virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
-    {
-        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
-        cameraMatrix = val;
-    }
     virtual double getMinDepth() const
     {
         return minDepth;
@@ -1860,57 +1899,56 @@ public:
         CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
     }
-    virtual cv::Mat getIterationCounts() const
+
+    virtual void getIterationCounts(OutputArray val) const CV_OVERRIDE
     {
-        return iterCounts;
+        OdometryImpl::getIterationCounts(val);
     }
-    virtual void setIterationCounts(const cv::Mat& val)
+    virtual void setIterationCounts(InputArray val) CV_OVERRIDE
     {
-        if (val.empty())
-            setDefaultIterCounts(iterCounts);
-        else
-        {
-            iterCounts = val;
-        }
+        OdometryImpl::setIterationCounts(val);
     }
-    virtual cv::Mat getMinGradientMagnitudes() const
+    virtual void getMinGradientMagnitudes(OutputArray val) const CV_OVERRIDE
     {
-        return minGradientMagnitudes;
+        OdometryImpl::getMinGradientMagnitudes(val);
     }
-    virtual void setMinGradientMagnitudes(const cv::Mat& val)
+    virtual void setMinGradientMagnitudes(InputArray val) CV_OVERRIDE
     {
-        if (val.empty())
-            setDefaultMinGradientMagnitudes(minGradientMagnitudes);
-        else
-        {
-            CV_Assert(val.size() == iterCounts.size() || val.size() == iterCounts.t().size());
-            minGradientMagnitudes = val;
-        }
+        OdometryImpl::setMinGradientMagnitudes(val);
+    }
+    virtual cv::Matx33d getCameraMatrix() const CV_OVERRIDE
+    {
+        return OdometryImpl::getCameraMatrix();
+    }
+    virtual void setCameraMatrix(const Matx33d& val) CV_OVERRIDE
+    {
+        OdometryImpl::setCameraMatrix(val);
     }
     virtual int getTransformType() const CV_OVERRIDE
     {
-        return transformType;
+        return OdometryImpl::getTransformType();
     }
     virtual void setTransformType(int val) CV_OVERRIDE
     {
-        transformType = val;
+        OdometryImpl::setTransformType(val);
     }
-    virtual double getMaxTranslation() const
+    virtual double getMaxTranslation() const CV_OVERRIDE
     {
-        return maxTranslation;
+        return OdometryImpl::getMaxTranslation();
     }
-    virtual void setMaxTranslation(double val)
+    virtual void setMaxTranslation(double val) CV_OVERRIDE
     {
-        maxTranslation = val;
+        OdometryImpl::setMaxTranslation(val);
     }
-    virtual double getMaxRotation() const
+    virtual double getMaxRotation() const CV_OVERRIDE
     {
-        return maxRotation;
+        return OdometryImpl::getMaxRotation();
     }
-    virtual void setMaxRotation(double val)
+    virtual void setMaxRotation(double val) CV_OVERRIDE
     {
-        maxRotation = val;
+        OdometryImpl::setMaxRotation(val);
     }
+
     virtual Ptr<RgbdNormals> getNormalsComputer() const
     {
         return normalsComputer;
@@ -1937,23 +1975,14 @@ protected:
     double minDepth, maxDepth, maxDepthDiff;
     /*float*/
     double maxPointsPart;
-    /*vector<int>*/
-    Mat iterCounts;
-    /*vector<float>*/
-    Mat minGradientMagnitudes;
-
-    Mat cameraMatrix;
-    int transformType;
-
-    double maxTranslation, maxRotation;
 
     mutable Ptr<RgbdNormals> normalsComputer;
 };
 
 
-Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Mat& _cameraMatrix, float _minDepth, float _maxDepth,
-                                             float _maxDepthDiff, float _maxPointsPart, const std::vector<int>& _iterCounts,
-                                             const std::vector<float>& _minGradientMagnitudes,
+Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Matx33d& _cameraMatrix, float _minDepth, float _maxDepth,
+                                             float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
+                                             InputArray _minGradientMagnitudes,
                                              int _transformType)
 {
     return makePtr<RgbdICPOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _minGradientMagnitudes, _transformType);
@@ -2026,9 +2055,9 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheT
     checkMask(mask, image.size());
 
     auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    preparePyramidImage(image, tframe->pyramids[OdometryFrame::PYR_IMAGE], iterCounts.total());
+    preparePyramidImage(image, tframe->pyramids[OdometryFrame::PYR_IMAGE], iterCounts.size());
 
-    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.total());
+    preparePyramidDepth(depth, tframe->pyramids[OdometryFrame::PYR_DEPTH], iterCounts.size());
 
     preparePyramidCloud<TMat>(tframe->pyramids[OdometryFrame::PYR_DEPTH], cameraMatrix, tframe->pyramids[OdometryFrame::PYR_CLOUD]);
 
@@ -2049,7 +2078,7 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheT
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
-                   norm(normalsComputer->getK(), cameraMatrix) > FLT_EPSILON)
+                   norm(Matx33d(normalsComputer->getK()), cameraMatrix) > FLT_EPSILON)
                     normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),
@@ -2112,18 +2141,17 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    FastICPOdometryImpl(const Mat& _cameraMatrix = Mat::eye(3, 3, CV_64F),
+    FastICPOdometryImpl(const Matx33d& _cameraMatrix = Matx33d::eye(),
                         float _maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
                         float _angleThreshold = (float)(30. * CV_PI / 180.),
                         float _sigmaDepth = 0.04f,
                         float _sigmaSpatial = 4.5f,
                         int _kernelSize = 7,
-                        const std::vector<int>& _iterCounts = std::vector<int>(),
+                        InputArray _iterCounts = noArray(),
                         float _depthFactor = 1.f,
-                        float _truncateThreshold = 0.f)
+                        float _truncateThreshold = 0.f) :
+        OdometryImpl(_cameraMatrix, _iterCounts, noArray(), Odometry::RIGID_BODY_MOTION)
     {
-        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
-        setMaxRotation(DEFAULT_MAX_ROTATION());
         setMaxDistDiff(_maxDistDiff);
         setAngleThreshold(_angleThreshold);
         setSigmaDepth(_sigmaDepth);
@@ -2131,23 +2159,12 @@ public:
         setKernelSize(_kernelSize);
         setDepthFactor(_depthFactor);
         setTruncateThreshold(_truncateThreshold);
-        setIterationCounts(Mat(_iterCounts).clone());
-        setCameraMatrix(_cameraMatrix);
     }
 
     virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual cv::Mat getCameraMatrix() const CV_OVERRIDE
-    {
-        return cameraMatrix;
-    }
-    virtual void setCameraMatrix(const cv::Mat& val) CV_OVERRIDE
-    {
-        CV_Assert(val.size() == Size(3, 3) && (val.type() == CV_32FC1 || val.type() == CV_64FC1));
-        cameraMatrix = val;
-    }
     virtual double getMaxDistDiff() const CV_OVERRIDE
     {
         return maxDistDiff;
@@ -2209,32 +2226,46 @@ public:
     {
         truncateThreshold = _truncateThreshold;
     }
-    virtual double getMaxTranslation() const
+
+    virtual void getIterationCounts(OutputArray val) const CV_OVERRIDE
     {
-        return maxTranslation;
+        OdometryImpl::getIterationCounts(val);
     }
-    virtual void setMaxTranslation(double val)
+    virtual void setIterationCounts(InputArray val) CV_OVERRIDE
     {
-        maxTranslation = val;
+        OdometryImpl::setIterationCounts(val);
     }
-    virtual double getMaxRotation() const
+    virtual void getMinGradientMagnitudes(OutputArray /*val*/) const CV_OVERRIDE
     {
-        return maxRotation;
+        CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
     }
-    virtual void setMaxRotation(double val)
+    virtual void setMinGradientMagnitudes(InputArray /*val*/) CV_OVERRIDE
     {
-        maxRotation = val;
+        CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
     }
-    virtual cv::Mat getIterationCounts() const CV_OVERRIDE
+    virtual cv::Matx33d getCameraMatrix() const CV_OVERRIDE
     {
-        return iterCounts;
+        return OdometryImpl::getCameraMatrix();
     }
-    virtual void setIterationCounts(const cv::Mat& val) CV_OVERRIDE
+    virtual void setCameraMatrix(const Matx33d& val) CV_OVERRIDE
     {
-        if (val.empty())
-            setDefaultIterCounts(iterCounts);
-        else
-            iterCounts = val;
+        OdometryImpl::setCameraMatrix(val);
+    }
+    virtual double getMaxTranslation() const CV_OVERRIDE
+    {
+        return OdometryImpl::getMaxTranslation();
+    }
+    virtual void setMaxTranslation(double val) CV_OVERRIDE
+    {
+        OdometryImpl::setMaxTranslation(val);
+    }
+    virtual double getMaxRotation() const CV_OVERRIDE
+    {
+        return OdometryImpl::getMaxRotation();
+    }
+    virtual void setMaxRotation(double val) CV_OVERRIDE
+    {
+        OdometryImpl::setMaxRotation(val);
     }
     virtual int getTransformType() const CV_OVERRIDE
     {
@@ -2276,27 +2307,20 @@ protected:
 
     int kernelSize;
 
-    /*vector<int>*/
-    Mat iterCounts;
-
-    Mat cameraMatrix;
-
     float depthFactor;
 
     float truncateThreshold;
-
-    double maxTranslation, maxRotation;
 };
 
 using namespace cv::kinfu;
 
-Ptr<FastICPOdometry> FastICPOdometry::create(const Mat& _cameraMatrix,
+Ptr<FastICPOdometry> FastICPOdometry::create(const Matx33d& _cameraMatrix,
                                              float _maxDistDiff,
                                              float _angleThreshold,
                                              float _sigmaDepth,
                                              float _sigmaSpatial,
                                              int _kernelSize,
-                                             const std::vector<int>& _iterCounts,
+                                             InputArray _iterCounts,
                                              float _depthFactor,
                                              float _truncateThreshold)
 {
@@ -2328,7 +2352,7 @@ Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cache
                 frame->getPyramidAt(normals, OdometryFrame::PYR_NORM, 0);
                 std::vector<TMat> pyrPoints, pyrNormals;
                 // in, in, out, out
-                size_t nLevels = iterCounts.total();
+                size_t nLevels = iterCounts.size();
                 buildPyramidPointsNormals(points, normals, pyrPoints, pyrNormals, (int)nLevels);
                 for (size_t i = 1; i < nLevels; i++)
                 {
@@ -2361,7 +2385,7 @@ Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cache
 
     // mask isn't used by FastICP
     auto tframe = frame.dynamicCast<OdometryFrameImpl<TMat>>();
-    makeFrameFromDepth(depth, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], cameraMatrix, (int)iterCounts.total(),
+    makeFrameFromDepth(depth, tframe->pyramids[OdometryFrame::PYR_CLOUD], tframe->pyramids[OdometryFrame::PYR_NORM], cameraMatrix, (int)iterCounts.size(),
                        depthFactor, sigmaDepth, sigmaSpatial, kernelSize, truncateThreshold);
 
     return depth.size();
@@ -2391,9 +2415,8 @@ bool FastICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame,
                                       OutputArray Rt, const Mat& /*initRt*/) const
 {
     Intr intr(cameraMatrix);
-    std::vector<int> iterations = iterCounts;
     Ptr<kinfu::ICP> icp = kinfu::makeICP(intr,
-                                         iterations,
+                                         iterCounts,
                                          angleThreshold,
                                          maxDistDiff);
 
