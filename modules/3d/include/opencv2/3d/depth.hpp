@@ -118,11 +118,11 @@ CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d
  * Otherwise, the image is simply converted to floats
  * @param in the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
  *              (as done with the Microsoft Kinect), it is assumed in meters)
- * @param depth the desired output depth (floats or double)
+ * @param type the desired output depth (CV_32F or CV_64F)
  * @param out The rescaled float depth image
  * @param depth_factor (optional) factor by which depth is converted to distance (by default = 1000.0 for Kinect sensor)
  */
-CV_EXPORTS_W void rescaleDepth(InputArray in, int depth, OutputArray out, double depth_factor = 1000.0);
+CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double depth_factor = 1000.0);
 
 enum RGBD_PLANE_METHOD
 {

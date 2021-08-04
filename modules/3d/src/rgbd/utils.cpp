@@ -16,29 +16,29 @@ namespace cv
  * @param depth the desired output depth (floats or double)
  * @param out_out The rescaled float depth image
  */
-void rescaleDepth(InputArray in_in, int depth, OutputArray out_out, double depth_factor)
+void rescaleDepth(InputArray in_in, int type, OutputArray out_out, double depth_factor)
 {
     cv::Mat in = in_in.getMat();
     CV_Assert(in.type() == CV_64FC1 || in.type() == CV_32FC1 || in.type() == CV_16UC1 || in.type() == CV_16SC1);
-    CV_Assert(depth == CV_64FC1 || depth == CV_32FC1);
+    CV_Assert(type == CV_64FC1 || type == CV_32FC1);
 
     int in_depth = in.depth();
 
-    out_out.create(in.size(), depth);
+    out_out.create(in.size(), type);
     cv::Mat out = out_out.getMat();
     if (in_depth == CV_16U)
     {
-      in.convertTo(out, depth, 1 / depth_factor); //convert to float so that it is in meters
+      in.convertTo(out, type, 1 / depth_factor); //convert to float so that it is in meters
       cv::Mat valid_mask = in == std::numeric_limits<ushort>::min(); // Should we do std::numeric_limits<ushort>::max() too ?
       out.setTo(std::numeric_limits<float>::quiet_NaN(), valid_mask); //set a$
     }
     if (in_depth == CV_16S)
     {
-      in.convertTo(out, depth, 1 / depth_factor); //convert to float so tha$
+      in.convertTo(out, type, 1 / depth_factor); //convert to float so tha$
       cv::Mat valid_mask = (in == std::numeric_limits<short>::min()) | (in == std::numeric_limits<short>::max()); // Should we do std::numeric_limits<ushort>::max() too ?
       out.setTo(std::numeric_limits<float>::quiet_NaN(), valid_mask); //set a$
     }
     if ((in_depth == CV_32F) || (in_depth == CV_64F))
-      in.convertTo(out, depth);
+      in.convertTo(out, type);
 }
 } // namespace cv
