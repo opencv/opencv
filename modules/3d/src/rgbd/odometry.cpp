@@ -2386,6 +2386,9 @@ bool FastICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame,
 
     Rt.create(Size(4, 4), CV_64FC1);
     Mat(Matx44d(transform.matrix)).copyTo(Rt.getMat());
+
+    result = result && testDeltaTransformation(Mat(Matx44d(transform.matrix)), maxTranslation, maxRotation);
+
     return result;
 }
 

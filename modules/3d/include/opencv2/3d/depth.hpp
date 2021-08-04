@@ -328,6 +328,18 @@ public:
     CV_WRAP virtual void setTransformType(int val) = 0;
     CV_WRAP virtual cv::Mat getIterationCounts() const = 0;
     CV_WRAP virtual void setIterationCounts(const cv::Mat& val) = 0;
+    /** Get max allowed translation in meters.
+    Found delta transform is considered successful only if the translation is in given limits. */
+    CV_WRAP virtual double getMaxTranslation() const = 0;
+    /** Set max allowed translation in meters.
+    * Found delta transform is considered successful only if the translation is in given limits. */
+    CV_WRAP virtual void setMaxTranslation(double val) = 0;
+    /** Get max allowed rotation in degrees.
+    * Found delta transform is considered successful only if the rotation is in given limits. */
+    CV_WRAP virtual double getMaxRotation() const = 0;
+    /** Set max allowed rotation in degrees.
+    * Found delta transform is considered successful only if the rotation is in given limits. */
+    CV_WRAP virtual void setMaxRotation(double val) = 0;
 
 protected:
     virtual void
