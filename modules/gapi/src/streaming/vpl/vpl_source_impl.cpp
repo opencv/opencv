@@ -42,7 +42,7 @@ VPLSourceImpl::~VPLSourceImpl()
     MFXUnload(mfx_handle);
 }
 
-VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& params) :
+VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<oneVPL_cfg_param>& params) :
     VPLSourceImpl()
 {
     // Enable Config
@@ -112,12 +112,12 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             GAPI_LOG_INFO(nullptr, "Implementation index: " << i << "\n" << ss.str());
 
             // find intersection
-            CFGParams impl_params = get_params_from_string<CFGParamValue>(ss.str());
+            std::vector<oneVPL_cfg_param> impl_params = get_params_from_string<oneVPL_cfg_param>(ss.str());
 
-            CFGParams matched_params;
+            std::vector<oneVPL_cfg_param> matched_params;
             std::set_intersection(impl_params.begin(), impl_params.end(), cfg_params.begin(), cfg_params.end(),
             std::inserter(matched_params, matched_params.end()),
-                          [] (typename CFGParams::value_type& lhs, typename CFGParams::value_type& rhs) -> bool
+                          [] (const oneVPL_cfg_param& lhs, const oneVPL_cfg_param& rhs) -> bool
             {
                 return lhs == rhs;
             });
@@ -158,9 +158,9 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
         // initialize decoder
         try {
             // Find codec ID from config
-            auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (typename CFGParams::value_type& value)
+            auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const oneVPL_cfg_param& value)
             {
-                return value.get_name() == CFGParamName("mfxImplDescription.mfxDecoderDescription.decoder.CodecID");
+                return value.get_name() == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID";
             });
             if (dec_it == cfg_params.end()) {
                 throw std::logic_error("Cannot determine DecoderID from oneVPL config. Abort");
@@ -209,7 +209,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
     engine->process(mfx_session);
 }
 
-DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decoder_cfg, FILE* source_ptr)
+DecoderParams VPLSourceImpl::create_decoder_from_file(const oneVPL_cfg_param& decoder_cfg, FILE* source_ptr)
 {
     if (!source_ptr) {
         throw std::runtime_error("Cannot create decoder, source is nullptr");
@@ -273,8 +273,8 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
 {
     std::unique_ptr<VPLAccelerationPolicy> ret;
 
-    auto accel_mode_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const typename CFGParams::value_type& value) {
-        return value.get_name() == CFGParamName("mfxImplDescription.AccelerationMode");
+    auto accel_mode_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const oneVPL_cfg_param& value) {
+        return value.get_name() == "mfxImplDescription.AccelerationMode";
     });
     if (accel_mode_it == cfg_params.end())
     {
@@ -314,17 +314,17 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
     return ret;
 }
 
-const CFGParams& VPLSourceImpl::getDefaultCfgParams()
+const std::vector<oneVPL_cfg_param>& VPLSourceImpl::getDefaultCfgParams()
 {
-    using default_creator = ParamCreator<CFGParamValue>;
-    static const CFGParams def_params{
+    using default_creator = ParamCreator<oneVPL_cfg_param>;
+    static const std::vector<oneVPL_cfg_param> def_params{
                     default_creator().create<mfxU32>("mfxImplDescription.Impl", MFX_IMPL_TYPE_HARDWARE),
                     default_creator().create<mfxU32>("mfxImplDescription.AccelerationMode", MFX_ACCEL_MODE_VIA_D3D11)/*,
                     default_creator().create<mfxU32>("mfxImplDescription.ApiVersion.Version", VPL_NEW_API_MAJOR_VERSION << 16 | VPL_NEW_API_MINOR_VERSION)*/
             };
     return def_params;
 }
-const CFGParams& VPLSourceImpl::getCfgParams() const
+const std::vector<oneVPL_cfg_param>& VPLSourceImpl::getCfgParams() const
 {
     return cfg_params;
 }

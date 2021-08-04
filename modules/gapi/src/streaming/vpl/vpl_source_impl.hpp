@@ -34,12 +34,12 @@ class VPLSourceImpl : public OneVPLCapture::IPriv
 {
 public:
     explicit VPLSourceImpl(const std::string& filePath,
-                           const CFGParams& params);
+                           const std::vector<oneVPL_cfg_param>& params);
 
     ~VPLSourceImpl();
 
-    static const CFGParams& getDefaultCfgParams();
-    const CFGParams& getCfgParams() const;
+    static const std::vector<oneVPL_cfg_param>& getDefaultCfgParams();
+    const std::vector<oneVPL_cfg_param>& getCfgParams() const;
 
 private:
     
@@ -48,13 +48,13 @@ private:
 
     VPLSourceImpl();
 
-    DecoderParams create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr);
+    DecoderParams create_decoder_from_file(const oneVPL_cfg_param& decoder, FILE* source_ptr);
     std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
     
     mfxLoader mfx_handle;
     mfxImplDescription *mfx_impl_desription;
     std::vector<mfxConfig> mfx_handle_configs;
-    CFGParams cfg_params;
+    std::vector<oneVPL_cfg_param> cfg_params;
 
     mfxSession mfx_session;
 

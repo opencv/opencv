@@ -2226,7 +2226,7 @@ TEST(GAPI_Streaming, TestPythonAPI)
 #ifdef HAVE_ONEVPL
 TEST(OneVPL_Source, Init)
 {
-    cv::gapi::wip::CFGParams src_params;
+    std::vector<cv::gapi::wip::oneVPL_cfg_param> src_params;
     src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.Impl",
                                                                                MFX_IMPL_TYPE_HARDWARE));
     src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.AccelerationMode",

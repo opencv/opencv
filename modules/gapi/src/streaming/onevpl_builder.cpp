@@ -103,7 +103,7 @@ void oneVPLBulder::set_arg(const std::string& file_path)
     this->filePath = file_path;
 }
 
-void oneVPLBulder::set_arg(const CFGParams& params)
+void oneVPLBulder::set_arg(const std::vector<cv::gapi::wip::oneVPL_cfg_param>& params)
 {
     cfg_params = params;
 }

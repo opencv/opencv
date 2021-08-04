@@ -277,7 +277,7 @@ struct ParamCreator {
     ReturnType create(const std::string& name, ValueType&& value);
 };
 
-mfxVariant cfg_param_to_mfx_variant(const CFGParamValue& value);
+mfxVariant cfg_param_to_mfx_variant(const oneVPL_cfg_param& value);
 mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f);
 } // namespace wip
 } // namespace gapi

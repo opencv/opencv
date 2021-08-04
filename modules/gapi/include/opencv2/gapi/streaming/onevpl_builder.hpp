@@ -47,10 +47,6 @@ private:
     std::shared_ptr<Priv> m_priv;
 };
 
-using CFGParamValue = oneVPL_cfg_param;
-using CFGParamName = oneVPL_cfg_param::name_t;
-using CFGParams = std::vector<oneVPL_cfg_param>;
-
 class GAPI_EXPORTS oneVPLBulder
 {
 public:
@@ -79,10 +75,10 @@ public:
 
 private:
     void set_arg(const std::string& file_path);
-    void set_arg(const CFGParams& params);
+    void set_arg(const std::vector<oneVPL_cfg_param>& params);
 
     std::string filePath;
-    CFGParams cfg_params;
+    std::vector<oneVPL_cfg_param> cfg_params;
 };
 } // namespace wip
 } // namespace gapi

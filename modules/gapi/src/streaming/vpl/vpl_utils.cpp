@@ -85,9 +85,9 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
 }
 
 template <>
-struct ParamCreator<CFGParamValue> {
+struct ParamCreator<oneVPL_cfg_param> {
     template<typename ValueType>
-    CFGParamValue create (const std::string& name, ValueType&& value) {
+    oneVPL_cfg_param create (const std::string& name, ValueType&& value) {
         return oneVPLBulder::create_cfg_param(name, std::forward<ValueType>(value), true);
     }
 };
@@ -145,12 +145,12 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
 }
 
 template
-std::vector<CFGParamValue> get_params_from_string(const std::string& str);
+std::vector<oneVPL_cfg_param> get_params_from_string(const std::string& str);
 template
 std::vector<mfxVariant> get_params_from_string(const std::string& str);
 
-mfxVariant cfg_param_to_mfx_variant(const CFGParamValue& cfg_val) {
-    const CFGParamValue::name_t& name = cfg_val.get_name();
+mfxVariant cfg_param_to_mfx_variant(const oneVPL_cfg_param& cfg_val) {
+    const oneVPL_cfg_param::name_t& name = cfg_val.get_name();
     mfxVariant ret;
     cv::util::visit(cv::util::overload_lambdas(
             [&ret](uint8_t value)   { ret.Type = MFX_VARIANT_TYPE_U8;   ret.Data.U8 = value;    },
