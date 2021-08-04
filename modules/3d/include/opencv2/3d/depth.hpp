@@ -275,6 +275,12 @@ public:
 
     virtual ~Odometry() { }
 
+    /** Create a new Odometry object based on its name. Currently supported names are:
+    * "RgbdOdometry", "ICPOdometry", "RgbdICPOdometry", "FastICPOdometry".
+    * @param odometryType algorithm's name
+    */
+    CV_WRAP static Ptr<Odometry> createFromName(const String& odometryType);
+
     /** Method to compute a transformation from the source frame to the destination one.
      * Some odometry algorithms do not used some data of frames (eg. ICP does not use images).
      * In such case corresponding arguments can be set as empty Mat.
@@ -293,15 +299,13 @@ public:
      Rt is 4x4 matrix of CV_64FC1 type.
      * @param initRt Initial transformation from the source frame to the destination one (optional)
      */
-    CV_WRAP bool
-    compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-            InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const;
+    CV_WRAP virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                                 InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const = 0;
 
     /** One more method to compute a transformation from the source frame to the destination one.
      * It is designed to save on computing the frame data (image pyramids, normals, etc.).
      */
-    CV_WRAP_AS(compute2) bool
-    compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt = Mat()) const;
+    CV_WRAP_AS(compute2) virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt = Mat()) const = 0;
 
     /** Prepare a cache for the frame. The function checks the precomputed/passed data (throws the error if this data
      * does not satisfy) and computes all remaining cache data needed for the frame. Returned size is a resolution
@@ -309,7 +313,7 @@ public:
      * @param frame The odometry which will process the frame.
      * @param cacheType The cache type: CACHE_SRC, CACHE_DST or CACHE_ALL.
      */
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const = 0;
 
     /** Create odometry frame for current Odometry implementation
      * @param image Image data of the frame (CV_8UC1)
@@ -317,12 +321,6 @@ public:
      * @param mask  Mask that sets which pixels have to be used from the frame (CV_8UC1)
     */
     CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
-
-    /** Create a new Odometry object based on its name. Currently supported names are:
-    * "RgbdOdometry", "ICPOdometry", "RgbdICPOdometry", "FastICPOdometry".
-    * @param odometryType algorithm's name
-    */
-    CV_WRAP static Ptr<Odometry> createFromName(const String & odometryType);
 
     CV_WRAP virtual cv::Mat getCameraMatrix() const = 0;
     CV_WRAP virtual void setCameraMatrix(const cv::Mat &val) = 0;
@@ -342,12 +340,6 @@ public:
     /** Set max allowed rotation in degrees.
     * Found delta transform is considered successful only if the rotation is in given limits. */
     CV_WRAP virtual void setMaxRotation(double val) = 0;
-
-protected:
-
-    virtual bool
-    computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                const Mat& initRt) const = 0;
 };
 
 /** Odometry based on the paper "Real-Time Visual Odometry from Dense RGB-D Images",

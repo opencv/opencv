@@ -1184,38 +1184,73 @@ Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, I
 }
 
 
-bool Odometry::compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask,
-                       InputArray dstImage, InputArray dstDepth, InputArray dstMask,
-                       OutputArray Rt, const Mat& initRt) const
+class OdometryImpl : public Odometry
 {
-    Ptr<OdometryFrame> srcFrame = makeOdometryFrame(srcImage, srcDepth, srcMask);
-    Ptr<OdometryFrame> dstFrame = makeOdometryFrame(dstImage, dstDepth, dstMask);
+public:
+    virtual ~OdometryImpl() { }
 
-    return compute(srcFrame, dstFrame, Rt, initRt);
-}
+    virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+    {
+        Ptr<OdometryFrame> srcFrame = makeOdometryFrame(srcImage, srcDepth, srcMask);
+        Ptr<OdometryFrame> dstFrame = makeOdometryFrame(dstImage, dstDepth, dstMask);
 
-bool Odometry::compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const
-{
-    Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
-    Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
+        return compute(srcFrame, dstFrame, Rt, initRt);
+    }
 
-    if(srcSize != dstSize)
-        CV_Error(Error::StsBadSize, "srcFrame and dstFrame have to have the same size (resolution).");
+    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    {
+        Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
+        Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
 
-    return computeImpl(srcFrame, dstFrame, Rt, initRt);
-}
+        if (srcSize != dstSize)
+            CV_Error(Error::StsBadSize, "srcFrame and dstFrame have to have the same size (resolution).");
 
-Size Odometry::prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) const
-{
-    if (!frame)
-        CV_Error(Error::StsBadArg, "Null frame pointer.");
+        return computeImpl(srcFrame, dstFrame, Rt, initRt);
+    }
 
-    return Size();
-}
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) const CV_OVERRIDE
+    {
+        if (!frame)
+            CV_Error(Error::StsBadArg, "Null frame pointer.");
+
+        return Size();
+    }
+
+    /** Create odometry frame for current Odometry implementation
+     * @param image Image data of the frame (CV_8UC1)
+     * @param depth Depth data of the frame (CV_32FC1, in meters)
+     * @param mask  Mask that sets which pixels have to be used from the frame (CV_8UC1)
+    */
+    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
+
+    CV_WRAP virtual cv::Mat getCameraMatrix() const = 0;
+    CV_WRAP virtual void setCameraMatrix(const cv::Mat& val) = 0;
+    CV_WRAP virtual int getTransformType() const = 0;
+    CV_WRAP virtual void setTransformType(int val) = 0;
+    CV_WRAP virtual cv::Mat getIterationCounts() const = 0;
+    CV_WRAP virtual void setIterationCounts(const cv::Mat& val) = 0;
+    /** Get max allowed translation in meters.
+    Found delta transform is considered successful only if the translation is in given limits. */
+    CV_WRAP virtual double getMaxTranslation() const = 0;
+    /** Set max allowed translation in meters.
+    * Found delta transform is considered successful only if the translation is in given limits. */
+    CV_WRAP virtual void setMaxTranslation(double val) = 0;
+    /** Get max allowed rotation in degrees.
+    * Found delta transform is considered successful only if the rotation is in given limits. */
+    CV_WRAP virtual double getMaxRotation() const = 0;
+    /** Set max allowed rotation in degrees.
+    * Found delta transform is considered successful only if the rotation is in given limits. */
+    CV_WRAP virtual void setMaxRotation(double val) = 0;
+
+    virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
+                             const Mat& initRt) const = 0;
+};
 
 //
 
-class RgbdOdometryImpl : public RgbdOdometry
+// Public Odometry classes are pure abstract, therefore a sin of multiple inheritance should be forgiven
+class RgbdOdometryImpl : public OdometryImpl, public RgbdOdometry
 {
 public:
     /** Constructor.
@@ -1345,6 +1380,17 @@ public:
         maxRotation = val;
     }
 
+    virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
+    }
+
+    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
+    }
+
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
@@ -1382,7 +1428,7 @@ Ptr<OdometryFrame> RgbdOdometryImpl::makeOdometryFrame(InputArray _image, InputA
 
 Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
 {
-    Odometry::prepareFrameCache(frame, cacheType);
+    OdometryImpl::prepareFrameCache(frame, cacheType);
 
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -1469,7 +1515,8 @@ bool RgbdOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr
 
 //
 
-class ICPOdometryImpl : public ICPOdometry
+// Public Odometry classes are pure abstract, therefore a sin of multiple inheritance should be forgiven
+class ICPOdometryImpl : public OdometryImpl, public ICPOdometry
 {
 public:
 
@@ -1584,6 +1631,17 @@ public:
         return normalsComputer;
     }
 
+    virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
+    }
+
+    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
+    }
+
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
@@ -1620,7 +1678,7 @@ Ptr<OdometryFrame> ICPOdometryImpl::makeOdometryFrame(InputArray _image, InputAr
 
 Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
 {
-    Odometry::prepareFrameCache(frame, cacheType);
+    OdometryImpl::prepareFrameCache(frame, cacheType);
 
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -1722,7 +1780,8 @@ bool ICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<
 
 //
 
-class RgbdICPOdometryImpl : public RgbdICPOdometry
+// Public Odometry classes are pure abstract, therefore a sin of multiple inheritance should be forgiven
+class RgbdICPOdometryImpl : public OdometryImpl, public RgbdICPOdometry
 {
 public:
     /** Constructor.
@@ -1857,6 +1916,17 @@ public:
         return normalsComputer;
     }
 
+    virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
+    }
+
+    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
+    }
+
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
@@ -1898,7 +1968,7 @@ Ptr<OdometryFrame> RgbdICPOdometryImpl::makeOdometryFrame(InputArray _image, Inp
 
 Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
 {
-    Odometry::prepareFrameCache(frame, cacheType);
+    OdometryImpl::prepareFrameCache(frame, cacheType);
 
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -2024,7 +2094,8 @@ bool RgbdICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const 
 
 //
 
-class FastICPOdometryImpl : public FastICPOdometry
+// Public Odometry classes are pure abstract, therefore a sin of multiple inheritance should be forgiven
+class FastICPOdometryImpl : public OdometryImpl, public FastICPOdometry
 {
 public:
     /** Creates FastICPOdometry object
@@ -2175,6 +2246,17 @@ public:
             CV_Error(CV_StsBadArg, "Rigid Body Motion is the only accepted transformation type for this odometry method");
     }
 
+    virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
+                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
+    }
+
+    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    {
+        return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
+    }
+
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
@@ -2231,7 +2313,7 @@ Ptr<OdometryFrame> FastICPOdometryImpl::makeOdometryFrame(InputArray _image, Inp
 template<typename TMat>
 Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const
 {
-    Odometry::prepareFrameCache(frame, cacheType);
+    OdometryImpl::prepareFrameCache(frame, cacheType);
 
     TMat depth;
     frame->getDepth(depth);
