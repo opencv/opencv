@@ -43,6 +43,7 @@ static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
 =======
 static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
 
+<<<<<<< HEAD
 template<typename T>
 static inline std::vector<T> getShape(const Mat& mat)
 {
@@ -53,6 +54,8 @@ static inline std::vector<T> getShape(const Mat& mat)
 }
 
 >>>>>>> Add WebNN backend for OpenCV DNN Module
+=======
+>>>>>>> Implement BatchNorm Layer by WebNN API
 static std::vector<Ptr<WebnnBackendWrapper> >
 webnnWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
 {

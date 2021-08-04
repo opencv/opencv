@@ -54,6 +54,7 @@ inline std::vector<int32_t> getShape(const Mat& mat)
     return result;
 }
 
+<<<<<<< HEAD
 ml::Operand BuildConstant(const ml::GraphBuilder& builder,
                               const std::vector<int32_t>& dimensions,
                               const void* value,
@@ -94,6 +95,15 @@ struct Pool2dOptions {
       private:
         ml::Pool2dOptions mOptions;
     };
+=======
+template<typename T>
+inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+>>>>>>> Implement BatchNorm Layer by WebNN API
 }
 
 class WebnnNet
