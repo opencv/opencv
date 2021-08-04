@@ -80,6 +80,11 @@ class Stitcher:
 
         cameras = image_registration.estimate_camera_parameters(features, p)
         cameras = image_registration.adjust_camera_parameters(features, p, cameras)
+        cameras = image_registration.perform_wave_correction(cameras)
+
+# =============================================================================
+# COMPOSITION PART
+# =============================================================================
 
         focals = []
         for cam in cameras:
@@ -89,12 +94,6 @@ class Stitcher:
             warped_image_scale = focals[len(focals) // 2]
         else:
             warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
-
-        cameras = image_registration.perform_wave_correction(cameras)
-
-# =============================================================================
-# COMPOSITION PART
-# =============================================================================
 
         compose_megapix = args.compose_megapix
         warp_type = args.warp

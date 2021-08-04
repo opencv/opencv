@@ -12,6 +12,9 @@ from stitching_detailed.stitcher import Stitcher
 from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
+from stitching_detailed.camera_estimator import CameraEstimator
+from stitching_detailed.camera_adjuster import CameraAdjuster
+from stitching_detailed.camera_wave_corrector import WaveCorrector
 # %%
 
 # Eine Klasse erstellen, die von unittest.TestCase erbt
@@ -115,6 +118,24 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(len(pairwise_matches), len(features)**2)
         self.assertGreater(pairwise_matches[1].confidence, 2)
 
+    def test_equality_of_focals(self):
+        img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        detector = FeatureDetector("orb")
+        features = [detector.detect_features(img1),
+                    detector.detect_features(img2)]
+        matcher = FeatureMatcher()
+        pairwise_matches = matcher.match_features(features)
+
+        estimator = CameraEstimator()
+        adjuster = CameraAdjuster()
+        corrector = WaveCorrector('horiz')
+        cameras_estimated = estimator.estimate(features, pairwise_matches)
+        cameras_adjusted = adjuster.adjust(features, pairwise_matches,
+                                           cameras_estimated)
+        cameras_wave_corrected = corrector.correct(cameras_adjusted)
+
+        self.assertEqual(cameras_adjusted[0].focal,
+                          cameras_wave_corrected[0].focal)
 
 def starttest():
     unittest.main()
