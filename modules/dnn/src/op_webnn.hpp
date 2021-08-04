@@ -40,6 +40,14 @@ class WebnnBackendNode;
 class WebnnBackendWrapper;
 
 
+template<typename T>
+inline std::vector<T> getShape(const Mat& mat)
+{
+    std::vector<T> result(mat.dims);
+    for (int i = 0; i < mat.dims; i++)
+        result[i] = (T)mat.size[i];
+    return result;
+}
 
 class WebnnNet
 {

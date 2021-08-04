@@ -22,15 +22,6 @@ namespace cv { namespace dnn {
 
 static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
 
-template<typename T>
-static inline std::vector<T> getShape(const Mat& mat)
-{
-    std::vector<T> result(mat.dims);
-    for (int i = 0; i < mat.dims; i++)
-        result[i] = (T)mat.size[i];
-    return result;
-}
-
 static std::vector<Ptr<WebnnBackendWrapper> >
 webnnWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
 {
