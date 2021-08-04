@@ -162,6 +162,7 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         HANDLE(8U, uint8_t);
         HANDLE(32F, float);
         HANDLE(32S, int);
+        HANDLE(16F, int16_t);
 #undef HANDLE
     default: GAPI_Assert(false && "IE. Unsupported data type");
     }
