@@ -51,7 +51,7 @@ jasper                JasPer is a collection of software
                       Copyright (c) 1999-2000 The University of British Columbia
                       Copyright (c) 2001-2003 Michael David Adams
 
-                      See jasper official github repository
+                      See JasPer official GitHub repository
                       https://github.com/jasper-software/jasper.git
                       for details and links to source code
 ------------------------------------------------------------------------------------
