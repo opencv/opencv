@@ -137,6 +137,28 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(cameras_adjusted[0].focal,
                           cameras_wave_corrected[0].focal)
 
+    def test_subsetting(self):
+        img1, img3 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        img2 = cv.imread("boat1.jpg")
+        detector = FeatureDetector("orb")
+        features = [detector.detect_features(img1),
+                    detector.detect_features(img2),
+                    detector.detect_features(img3)]
+        matcher = FeatureMatcher()
+        pairwise_matches = matcher.match_features(features)
+
+        indices = cv.detail.leaveBiggestComponent(features, pairwise_matches, 1)
+        img_names = ["s1.jpg", "boat1.jpg", "s2.jpg"]
+
+        img_names_subset = []
+        for i in range(len(indices)):
+            img_names_subset.append(img_names[indices[i, 0]])
+
+        estimator = CameraEstimator()
+        cameras_estimated = estimator.estimate(features, pairwise_matches)
+        # !!!!! SHOULD NOT BE 3 CAMERAS !!!
+        # !!!!! The second camera is matched to boat1.jpg which is sorted out
+
 def starttest():
     unittest.main()
 
