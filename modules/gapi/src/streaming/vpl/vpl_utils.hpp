@@ -1,7 +1,18 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021 Intel Corporation
+
 #ifndef OPENCV_GAPI_VPL_UTILS_HPP
 #define OPENCV_GAPI_VPL_UTILS_HPP
 
 #ifdef HAVE_ONEVPL
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif // MFX_VERSION
+
+#include <vpl/mfx.h>
 #include <vpl/mfxvideo.h>
 #include <map>
 #include <string>
@@ -113,6 +124,25 @@ inline mfxResourceType cstr_to_mfx_resource_type(const char* cstr) {
     
     abort(); // TODO
     return MFX_RESOURCE_SYSTEM_SURFACE;
+}
+
+inline mfxU32 cstr_to_mfx_codec_id(const char* cstr) {
+    if (!strcmp(cstr, "MFX_CODEC_AVC")) {
+          return MFX_CODEC_AVC;
+    } else if (!strcmp(cstr, "MFX_CODEC_HEVC")) {
+         return MFX_CODEC_HEVC;
+    } else if (!strcmp(cstr, "MFX_CODEC_MPEG2")) {
+         return MFX_CODEC_MPEG2;
+    } else if (!strcmp(cstr, "MFX_CODEC_VC1")) {
+         return MFX_CODEC_VC1;
+    } else if (!strcmp(cstr, "MFX_CODEC_CAPTURE")) {
+         return MFX_CODEC_CAPTURE;
+    } else if (!strcmp(cstr, "MFX_CODEC_VP9")) {
+         return MFX_CODEC_VP9;
+    } else if (!strcmp(cstr, "MFX_CODEC_AV1")) {
+         return MFX_CODEC_AV1;
+    }
+    throw std::logic_error(std::string("Cannot parse \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" value: ") + cstr);
 }
 
 inline const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
@@ -237,8 +267,17 @@ inline std::tuple<mfxU32/*fourcc*/, mfxU32/*type*/> mfx_codec_type_to_cstr(const
 }
     
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc);
-CFGParams get_params_from_string(const std::string& str);
-CFGParamValue create_cfg_value_u32(mfxU32 value);
+
+template<typename ValueType>
+std::vector<ValueType> get_params_from_string(const std::string& str);
+
+template <typename ReturnType>
+struct ParamCreator {
+    template<typename ValueType>
+    ReturnType create(const std::string& name, ValueType&& value);
+};
+
+mfxVariant cfg_param_to_mfx_variant(const CFGParamValue& value);
 mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f);
 } // namespace wip
 } // namespace gapi

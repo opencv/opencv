@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021 Intel Corporation
+
 #include <stdio.h>
 
 #include <algorithm>
@@ -6,6 +12,7 @@
 #ifdef HAVE_ONEVPL
 
 #include "streaming/vpl/vpl_utils.hpp"
+#include "logger.hpp"
 
 namespace cv {
 namespace gapi {
@@ -77,10 +84,32 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
     return out;
 }
 
+template <>
+struct ParamCreator<CFGParamValue> {
+    template<typename ValueType>
+    CFGParamValue create (const std::string& name, ValueType&& value) {
+        return oneVPLBulder::create_cfg_param(name, std::forward<ValueType>(value), true);
+    }
+};
 
-CFGParams get_params_from_string(const std::string& str)
-{
-    CFGParams ret;
+template <>
+struct ParamCreator<mfxVariant> {
+    template<typename ValueType>
+    mfxVariant create (const std::string& name, mfxU32 value) {
+        return create_impl(name, value);
+    }
+private:
+    mfxVariant create_impl(const std::string&, mfxU32 value) {
+        mfxVariant ret;
+        ret.Type = MFX_VARIANT_TYPE_U32;
+        ret.Data.U32 = value;
+        return ret;
+    }
+};
+
+template<typename ValueType>
+std::vector<ValueType> get_params_from_string(const std::string& str) {
+    std::vector<ValueType> ret;
     std::string::size_type pos = 0;
     std::string::size_type endline_pos = std::string::npos;
     do
@@ -96,24 +125,17 @@ CFGParams get_params_from_string(const std::string& str)
         std::string name = line.substr(0, name_endline_pos);
         std::string value = line.substr(name_endline_pos + 2);
 
-        CFGParamValue candidate_value;
+        ParamCreator<ValueType> creator;
         if (name == "mfxImplDescription.Impl") {
-            candidate_value.Type = MFX_VARIANT_TYPE_U32;
-            candidate_value.Data.U32 = cstr_to_mfx_impl(value.c_str());
-
-            ret.emplace(name, candidate_value);
-            
+            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_impl(value.c_str())));
         } else if (name == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID") {
-            candidate_value.Type = MFX_VARIANT_TYPE_U32;
-            candidate_value.Data.U32 = static_cast<mfxU32>(std::strtoll(value.c_str(), nullptr, 10));
-
-            ret.emplace(name, candidate_value);
+            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
         } else if (name == "mfxImplDescription.AccelerationMode") {
-            candidate_value.Type = MFX_VARIANT_TYPE_U32;
-            candidate_value.Data.U32 = cstr_to_mfx_accel_mode(value.c_str());
-
-            ret.emplace(name, candidate_value);
-        }//TODO
+            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
+        } else {
+            GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
+                                    ", value: " << value);
+        }
 
         pos = endline_pos + 1;
     }
@@ -122,11 +144,33 @@ CFGParams get_params_from_string(const std::string& str)
     return ret;
 }
 
-CFGParamValue create_cfg_value_u32(mfxU32 value)
-{
-    CFGParamValue ret;
-    ret.Type = MFX_VARIANT_TYPE_U32;
-    ret.Data.U32 = value;
+template
+std::vector<CFGParamValue> get_params_from_string(const std::string& str);
+template
+std::vector<mfxVariant> get_params_from_string(const std::string& str);
+
+mfxVariant cfg_param_to_mfx_variant(const CFGParamValue& cfg_val) {
+    const CFGParamValue::name_t& name = cfg_val.get_name();
+    mfxVariant ret;
+    cv::util::visit(cv::util::overload_lambdas(
+            [&ret](uint8_t value)   { ret.Type = MFX_VARIANT_TYPE_U8;   ret.Data.U8 = value;    },
+            [&ret](int8_t value)    { ret.Type = MFX_VARIANT_TYPE_I8;   ret.Data.I8 = value;    },
+            [&ret](uint16_t value)  { ret.Type = MFX_VARIANT_TYPE_U16;  ret.Data.U16 = value;   },
+            [&ret](int16_t value)   { ret.Type = MFX_VARIANT_TYPE_I16;  ret.Data.I16 = value;   },
+            [&ret](uint32_t value)  { ret.Type = MFX_VARIANT_TYPE_U32;  ret.Data.U32 = value;   },
+            [&ret](int32_t value)   { ret.Type = MFX_VARIANT_TYPE_I32;  ret.Data.I32 = value;   },
+            [&ret](uint64_t value)  { ret.Type = MFX_VARIANT_TYPE_U64;  ret.Data.U64 = value;   },
+            [&ret](int64_t value)   { ret.Type = MFX_VARIANT_TYPE_I64;  ret.Data.I64 = value;   },
+            [&ret](float_t value)   { ret.Type = MFX_VARIANT_TYPE_F32;  ret.Data.F32 = value;   },
+            [&ret](double_t value)  { ret.Type = MFX_VARIANT_TYPE_F64;  ret.Data.F64 = value;   },
+            [&ret](void* value)     { ret.Type = MFX_VARIANT_TYPE_PTR;  ret.Data.Ptr = value;   },
+            [&ret, &name] (const std::string& value) {
+                auto parsed = get_params_from_string<mfxVariant>(name + ": " + value + "\n");
+                if (parsed.empty()) {
+                    throw std::logic_error("Unsupported parameter, name: " + name + ", value: " + value);
+                }
+                ret = *parsed.begin();
+            }), cfg_val.get_value());
     return ret;
 }
 

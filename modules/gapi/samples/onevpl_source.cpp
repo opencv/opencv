@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
             if (line.empty()) {
                 break;
             }
-            source_cfgs.insert(detail::create_from_string(line));
+            source_cfgs.push_back(detail::create_from_string(line));
             param_index++;
         } while(true);
     } catch (const std::exception& ex) {
@@ -177,9 +177,9 @@ int main(int argc, char *argv[]) {
 
     int framesCount = 0;
     cv::TickMeter t;
-    t.start();
     cv::VideoWriter writer;
     cv::Mat outMat;
+    t.start();
     while (pipeline.pull(cv::gout(outMat))) {
         cv::imshow("Out", outMat);
         cv::waitKey(1);
@@ -202,10 +202,6 @@ int main(int argc, char *argv[]) {
 
 
 namespace detail {
-cv::gapi::wip::CFGParamValue create_cfg_impl_description(const std::string& value);
-cv::gapi::wip::CFGParamValue create_cfg_decoder_codec_id(const std::string& value);
-cv::gapi::wip::CFGParamValue create_cfg_accel_mode(const std::string& value);
-
 typename cv::gapi::wip::CFGParams::value_type create_from_string(const std::string &line) {
     using namespace cv::gapi::wip;
 
@@ -222,90 +218,6 @@ typename cv::gapi::wip::CFGParams::value_type create_from_string(const std::stri
     std::string name = line.substr(0, name_endline_pos);
     std::string value = line.substr(name_endline_pos + 1);
 
-    CFGParamValue candidate_value;
-    if (name == "mfxImplDescription.Impl") {
-        candidate_value = create_cfg_impl_description(value);
-    } else if (name == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID") {
-        candidate_value = create_cfg_decoder_codec_id(value);
-    } else if (name == "mfxImplDescription.AccelerationMode") {
-        candidate_value = create_cfg_accel_mode(value);
-    } else {
-        throw std::logic_error("Unhandled parameter name: " + name);
-    }
-
-    return {name, candidate_value};
-}
-
-cv::gapi::wip::CFGParamValue create_cfg_impl_description(const std::string& value) {
-    cv::gapi::wip::CFGParamValue ret {};
-#ifdef HAVE_ONEVPL
-    ret.Type = MFX_VARIANT_TYPE_U32;
-
-    if (!value.compare("MFX_IMPL_TYPE_SOFTWARE")) {
-        ret.Data.U32 = MFX_IMPL_TYPE_SOFTWARE;
-    } else if (!value.compare("MFX_IMPL_TYPE_HARDWARE")) {
-         ret.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
-    } else {
-        throw std::logic_error("Cannot parse \"mfxImplDescription.Impl\" value: " + value);
-    }
-#endif
-    return ret;
-}
-
-cv::gapi::wip::CFGParamValue create_cfg_decoder_codec_id(const std::string& value) {
-    cv::gapi::wip::CFGParamValue ret {};
-#ifdef HAVE_ONEVPL
-    ret.Type = MFX_VARIANT_TYPE_U32;
-
-    if (!value.compare("MFX_CODEC_AVC")) {
-        ret.Data.U32 = MFX_CODEC_AVC;
-    } else if (!value.compare("MFX_CODEC_HEVC")) {
-         ret.Data.U32 = MFX_CODEC_HEVC;
-    } else if (!value.compare("MFX_CODEC_MPEG2")) {
-         ret.Data.U32 = MFX_CODEC_MPEG2;
-    } else if (!value.compare("MFX_CODEC_VC1")) {
-         ret.Data.U32 = MFX_CODEC_VC1;
-    } else if (!value.compare("MFX_CODEC_CAPTURE")) {
-         ret.Data.U32 = MFX_CODEC_CAPTURE;
-    } else if (!value.compare("MFX_CODEC_VP9")) {
-         ret.Data.U32 = MFX_CODEC_VP9;
-    } else if (!value.compare("MFX_CODEC_AV1")) {
-         ret.Data.U32 = MFX_CODEC_AV1;
-    } else {
-        throw std::logic_error("Cannot parse \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" value: " + value);
-    }
-#endif
-    return ret;
-}
-
-
-cv::gapi::wip::CFGParamValue create_cfg_accel_mode(const std::string& value) {
-    cv::gapi::wip::CFGParamValue ret {};
-#ifdef HAVE_ONEVPL
-    ret.Type = MFX_VARIANT_TYPE_U32;
-
-    if (!value.compare("MFX_ACCEL_MODE_NA")) {
-        ret.Data.U32 = MFX_ACCEL_MODE_NA;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_D3D9")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_D3D9;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_D3D11")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_VAAPI")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_DRM_MODESET;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_VAAPI_GLX")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_GLX;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_VAAPI_X11")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_X11;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_VAAPI_WAYLAND;
-    } else if (!value.compare("MFX_ACCEL_MODE_VIA_HDDLUNITE")) {
-         ret.Data.U32 = MFX_ACCEL_MODE_VIA_HDDLUNITE;
-    } else {
-        throw std::logic_error("Cannot parse \"mfxImplDescription.AccelerationMode\" value: " + value);
-    }
-#endif
-    return ret;
+    return cv::gapi::wip::oneVPLBulder::create_cfg_param(name, value);
 }
 }

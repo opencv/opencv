@@ -165,20 +165,25 @@ set(gapi_srcs
 
     src/streaming/onevpl_cap.cpp
     src/streaming/onevpl_builder.cpp
-    src/streaming/engine/base_engine.cpp
-    src/streaming/engine/engine_session.cpp
-    src/streaming/vpl/vpl_source_impl.cpp
-    src/streaming/vpl/vpl_dx11_accel.cpp
-    src/streaming/vpl/vpl_cpu_accel.cpp
-    src/streaming/vpl/vpl_source_engine.cpp
-    src/streaming/vpl/vpl_legacy_source_engine.cpp
-    src/streaming/vpl/surface/frame_adapter.cpp
-    src/streaming/vpl/surface/surface.cpp
-    src/streaming/vpl/vpl_utils.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
     )
+
+if(HAVE_ONEVPL)
+    list(APPEND gapi_srcs
+        src/streaming/engine/base_engine.cpp
+        src/streaming/engine/engine_session.cpp
+        src/streaming/vpl/vpl_source_impl.cpp
+        src/streaming/vpl/vpl_dx11_accel.cpp
+        src/streaming/vpl/vpl_cpu_accel.cpp
+        src/streaming/vpl/vpl_source_engine.cpp
+        src/streaming/vpl/vpl_legacy_source_engine.cpp
+        src/streaming/vpl/surface/frame_adapter.cpp
+        src/streaming/vpl/surface/surface.cpp
+        src/streaming/vpl/vpl_utils.cpp
+    )
+endif()
 
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
 
@@ -250,12 +255,11 @@ endif()
 if(HAVE_ONEVPL)
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_ONEVPL)
-    ocv_target_link_libraries(opencv_test_gapi PRIVATE VPL::dispatcher)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
   endif()
-  ocv_target_compile_definitions(${the_module} PUBLIC -DHAVE_ONEVPL)
-  ocv_target_link_libraries(${the_module} PUBLIC VPL::dispatcher)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
+  ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
   if(HAVE_D3D11)
-    message("G-API has DX11")
     if(HAVE_OPENCL)
         ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
     endif()
@@ -277,10 +281,5 @@ if(HAVE_ONNX)
 endif()
 
 ocv_add_perf_tests()
-if(HAVE_ONEVPL)
-    #TODO Why is it? CMake `PUBLIC` dependency must be carried to dependent target of ${the_module}?
-    ocv_add_samples(VPL::dispatcher)
-else()
-    ocv_add_samples()
-endif()
+ocv_add_samples()
 

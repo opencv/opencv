@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021 Intel Corporation
+
 #ifndef OPENCV_GAPI_STREAMING_ONEVPLSOURCE_IMPL_HPP
 #define OPENCV_GAPI_STREAMING_ONEVPLSOURCE_IMPL_HPP
 
@@ -7,9 +13,15 @@
 #include <string>
 
 #include "streaming/onevpl_priv_interface.hpp"
-#include "streaming/vpl/vpl_source_engine.hpp"
 
 #ifdef HAVE_ONEVPL
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif // MFX_VERSION
+
+#include <vpl/mfx.h>
+
+#include "streaming/vpl/vpl_source_engine.hpp"
 #include <vpl/mfxvideo.h>
 
 namespace cv {

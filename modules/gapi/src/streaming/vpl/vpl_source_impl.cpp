@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021 Intel Corporation
+
 #ifdef HAVE_ONEVPL
 
 #include <algorithm>
@@ -67,14 +73,15 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
                 throw std::runtime_error("MFXCreateConfig failed");
             }
 
+            mfxVariant mfx_param = cfg_param_to_mfx_variant(*cfg_param_it);
             mfxStatus sts = MFXSetConfigFilterProperty(cfg_inst,
-                                                       (mfxU8 *)cfg_param_it->first.c_str(),
-                                                       cfg_param_it->second);
+                                                       (mfxU8 *)cfg_param_it->get_name().c_str(),
+                                                       mfx_param);
             if (sts != MFX_ERR_NONE )
             {
                 throw std::runtime_error("MFXSetConfigFilterProperty failed, error: " +
                                          mfxstatus_to_string(sts) +
-                                         " - for \"" + cfg_param_it->first + "\"");
+                                         " - for \"" + cfg_param_it->get_name() + "\"");
             }
 
             ++cfg_param_it;
@@ -91,7 +98,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
                                                       reinterpret_cast<mfxHDL *>(&idesc))) {
 
             descriptions.push_back(idesc);
-            
+
             std::stringstream ss;
             mfxHDL hImplPath = nullptr;
             if (MFX_ERR_NONE == MFXEnumImplementations(mfx_handle, i, MFX_IMPLCAPS_IMPLPATH, &hImplPath)) {
@@ -105,23 +112,14 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             GAPI_LOG_INFO(nullptr, "Implementation index: " << i << "\n" << ss.str());
 
             // find intersection
-            CFGParams impl_params = get_params_from_string(ss.str());
+            CFGParams impl_params = get_params_from_string<CFGParamValue>(ss.str());
 
             CFGParams matched_params;
             std::set_intersection(impl_params.begin(), impl_params.end(), cfg_params.begin(), cfg_params.end(),
             std::inserter(matched_params, matched_params.end()),
                           [] (typename CFGParams::value_type& lhs, typename CFGParams::value_type& rhs) -> bool
             {
-                if (lhs.first != rhs.first) {
-                    return false;
-                }
-                if(lhs.second.Type != rhs.second.Type) {
-                    return false;
-                }
-                if(!memcmp(&lhs.second.Data, &rhs.second.Data, sizeof(rhs.second.Data))) {
-                    return false;
-                }
-                return true;
+                return lhs == rhs;
             });
             GAPI_LOG_DEBUG(nullptr, "Equal param intersection count: " << matched_params.size());
         
@@ -145,7 +143,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             }
         }
         descriptions.clear();
-        
+
         // create session for implementation
         mfxStatus sts = MFXCreateSession(mfx_handle, impl_number, &mfx_session);
         if (MFX_ERR_NONE != sts)
@@ -160,7 +158,10 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
         // initialize decoder
         try {
             // Find codec ID from config
-            auto dec_it = cfg_params.find(CFGParamName("mfxImplDescription.mfxDecoderDescription.decoder.CodecID"));
+            auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (typename CFGParams::value_type& value)
+            {
+                return value.get_name() == CFGParamName("mfxImplDescription.mfxDecoderDescription.decoder.CodecID");
+            });
             if (dec_it == cfg_params.end()) {
                 throw std::logic_error("Cannot determine DecoderID from oneVPL config. Abort");
             }
@@ -183,7 +184,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
             }
 
             //create decoder for session accoring to header recovered from source file
-            DecoderParams decoder_param = create_decoder_from_file(dec_it->second, source_handle.get());
+            DecoderParams decoder_param = create_decoder_from_file(*dec_it, source_handle.get());
 
             // create engine session for processing mfx session pipeline
             engine->initialize_session(mfx_session, std::move(decoder_param),
@@ -201,7 +202,6 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
         ss << "Cannot create VPL source Impl, error: " << ex.what() << ". Unload MFX handle: " << mfx_handle;
         const std::string str = ss.str();
         GAPI_LOG_WARNING(nullptr, str);
-        MFXUnload(mfx_handle);
         util::throw_error(std::logic_error(str));
     }
 
@@ -209,7 +209,7 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const CFGParams& para
     engine->process(mfx_session);
 }
 
-DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decoder, FILE* source_ptr)
+DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decoder_cfg, FILE* source_ptr)
 {
     if (!source_ptr) {
         throw std::runtime_error("Cannot create decoder, source is nullptr");
@@ -223,6 +223,8 @@ DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decod
         throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
                              std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
     }
+
+    mfxVariant decoder = cfg_param_to_mfx_variant(decoder_cfg);
     bitstream.CodecId = decoder.Data.U32;
 
     mfxStatus sts = ReadEncodedStream(bitstream, source_ptr);
@@ -263,15 +265,17 @@ DecoderParams VPLSourceImpl::create_decoder_from_file(const CFGParamValue& decod
                                      std::to_string(mfxDecParams.mfx.FrameInfo.FourCC));
     }
     description_is_valid = true;
-    
+
     return {bitstream, mfxDecParams};
 }
 
 std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
 {
     std::unique_ptr<VPLAccelerationPolicy> ret;
-    
-    auto accel_mode_it = cfg_params.find(CFGParamName("mfxImplDescription.AccelerationMode"));
+
+    auto accel_mode_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const typename CFGParams::value_type& value) {
+        return value.get_name() == CFGParamName("mfxImplDescription.AccelerationMode");
+    });
     if (accel_mode_it == cfg_params.end())
     {
         GAPI_LOG_DEBUG(nullptr, "No HW Accel requested. Use CPU");
@@ -281,8 +285,10 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
     }
 
     GAPI_LOG_DEBUG(nullptr, "Add HW acceleration support");
+    mfxVariant accel_mode = cfg_param_to_mfx_variant(*accel_mode_it);
+
     try {
-        switch(accel_mode_it->second.Data.U32) {
+        switch(accel_mode.Data.U32) {
             case MFX_ACCEL_MODE_VIA_D3D11:
             {
                 std::unique_ptr<VPLDX11AccelerationPolicy> cand(new VPLDX11AccelerationPolicy);
@@ -297,7 +303,7 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
             }   
             default:
                 throw std::logic_error("invalid type: " +
-                                               std::to_string(accel_mode_it->second.Data.U32));
+                                               std::to_string(accel_mode.Data.U32));
                 break;
         }
     } catch (const std::exception& ex) {
@@ -310,19 +316,11 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
 
 const CFGParams& VPLSourceImpl::getDefaultCfgParams()
 {
+    using default_creator = ParamCreator<CFGParamValue>;
     static const CFGParams def_params{
-                {
-                    CFGParamName("mfxImplDescription.Impl"),
-                    create_cfg_value_u32(MFX_IMPL_TYPE_HARDWARE)},
-                {
-                    CFGParamName("mfxImplDescription.AccelerationMode"),
-                    create_cfg_value_u32(MFX_ACCEL_MODE_VIA_D3D11)}/*,
-                {
-                    CFGParamName("mfxImplDescription.mfxDecoderDescription.decoder.CodecID"),
-                    create_cfg_value_u32(MFX_CODEC_HEVC)},
-                {
-                    CFGParamName("mfxImplDescription.ApiVersion.Version"),
-                    create_cfg_value_u32(VPL_NEW_API_MAJOR_VERSION << 16 | VPL_NEW_API_MINOR_VERSION)}*/
+                    default_creator().create<mfxU32>("mfxImplDescription.Impl", MFX_IMPL_TYPE_HARDWARE),
+                    default_creator().create<mfxU32>("mfxImplDescription.AccelerationMode", MFX_ACCEL_MODE_VIA_D3D11)/*,
+                    default_creator().create<mfxU32>("mfxImplDescription.ApiVersion.Version", VPL_NEW_API_MAJOR_VERSION << 16 | VPL_NEW_API_MINOR_VERSION)*/
             };
     return def_params;
 }
@@ -330,7 +328,7 @@ const CFGParams& VPLSourceImpl::getCfgParams() const
 {
     return cfg_params;
 }
-    
+
 bool VPLSourceImpl::pull(cv::gapi::wip::Data& data)
 {
     VPLProcessingEngine::ExecutionStatus status = VPLProcessingEngine::ExecutionStatus::Continue;

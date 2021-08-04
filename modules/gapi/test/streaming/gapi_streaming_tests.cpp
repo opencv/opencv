@@ -26,6 +26,14 @@
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
 
+#ifdef HAVE_ONEVPL
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif // MFX_VERSION
+
+#include <vpl/mfx.h>
+#endif // HAVE_ONEVPL
+
 namespace opencv_test
 {
 namespace
@@ -2215,38 +2223,20 @@ TEST(GAPI_Streaming, TestPythonAPI)
     cc.stop();
 }
 
-//#ifdef HAVE_ONEVPL 
+#ifdef HAVE_ONEVPL
 TEST(OneVPL_Source, Init)
 {
     cv::gapi::wip::CFGParams src_params;
-    {
-        cv::gapi::wip::CFGParamValue param;
-        param.Type = MFX_VARIANT_TYPE_U32;
-        param.Data.U32 = MFX_IMPL_TYPE_HARDWARE;;
+    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.Impl",
+                                                                               MFX_IMPL_TYPE_HARDWARE));
+    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                                               MFX_ACCEL_MODE_VIA_D3D11));
+    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+                                                                               MFX_CODEC_HEVC));
 
-        src_params.emplace("mfxImplDescription.Impl", std::move(param));
-    }
-    {
-        cv::gapi::wip::CFGParamValue param;
-        param.Type = MFX_VARIANT_TYPE_U32;
-        param.Data.U32 = MFX_ACCEL_MODE_VIA_D3D11;//MFX_ACCEL_MODE_NA
-
-        src_params.emplace("mfxImplDescription.AccelerationMode", std::move(param));
-    }
-    {
-        cv::gapi::wip::CFGParamValue param;
-        param.Type = MFX_VARIANT_TYPE_U32;
-        param.Data.U32 = MFX_CODEC_HEVC;
-
-        src_params.emplace("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", std::move(param));
-    }
-
-    cv::Ptr<cv::gapi::wip::IStreamSource> cap =
-            cv::gapi::wip::make_vpl_src("C:\\Users\\sivanov\\github\\oneVPL_tt\\build\\_install\\share\\oneVPL\\examples\\content\\cars_128x96.h265",
-                                        src_params);
-    /*cv::GMetaArg descr = cap->descr_of();
-    (void)descr;
-    */
+    cv::Ptr<cv::gapi::wip::IStreamSource> cap;
+    EXPECT_THROW(cv::gapi::wip::make_vpl_src("not_existing_file",
+                                             src_params), std::logic_error);
     try {
         cv::gapi::wip::Data data;
         ASSERT_TRUE(cap->pull(data));
@@ -2262,5 +2252,5 @@ TEST(OneVPL_Source, Init)
         std::cerr << "Failed with exception: " << ex.what() << std::endl;
     }
 }
-//#endif 
+#endif 
 } // namespace opencv_test
