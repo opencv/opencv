@@ -347,6 +347,10 @@ public:
         if (backendId == DNN_BACKEND_VKCOM)
             return ksize == 2;
 #endif
+#ifdef HAVE_WEBNN
+        if (backendId == DNN_BACKEND_WEBNN)
+            return ksize == 2 && !blobs.empty();
+#endif
         return false;
     }
 
@@ -894,6 +898,36 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_WEBNN
+    ml::Operand BuildConstant(const ml::GraphBuilder& builder,
+                              const std::vector<int32_t>& dimensions,
+                              const void* value,
+                              size_t size,
+                              ml::OperandType type) {
+        ml::OperandDescriptor desc;
+        desc.type = type;
+        desc.dimensions = dimensions.data();
+        desc.dimensionsCount = (uint32_t)dimensions.size();
+        ml::ArrayBufferView resource;
+        resource.buffer = const_cast<void*>(value);
+        resource.byteLength = size;
+        return builder.Constant(&desc, &resource);
+    }
+
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        std::vector<size_t> dims = kernel_size;
+
+
+
+        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+    }
+#endif // HAVE_WEBNN
 
     class ParallelConv : public cv::ParallelLoopBody
     {
