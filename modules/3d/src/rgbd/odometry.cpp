@@ -486,6 +486,8 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 
     Rodrigues(rvec, R);
 
+    // TODO 2: use DualQuaternion exponent instead to get the same results with the Eigen code above
+
     Rt.at<double>(0,3) = ksi.at<double>(3);
     Rt.at<double>(1,3) = ksi.at<double>(4);
     Rt.at<double>(2,3) = ksi.at<double>(5);
