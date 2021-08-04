@@ -1001,6 +1001,8 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     return isOk;
 }
 
+//
+
 template<class ImageElemType>
 static void
 warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
@@ -1054,6 +1056,18 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
         zBuffer.setTo(std::numeric_limits<float>::quiet_NaN(), zBuffer == std::numeric_limits<float>::max());
         zBuffer.copyTo(warpedDepth);
     }
+}
+
+void warpFrame(InputArray image, InputArray depth, InputArray mask,
+    const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+    OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+{
+    if (image.type() == CV_8UC1)
+        warpFrameImpl<uchar>(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
+    else if (image.type() == CV_8UC3)
+        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
+    else
+        CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1862,17 +1876,7 @@ bool FastICPOdometry::computeImpl(const Ptr<OdometryFrame>& srcFrame,
 }
 
 //
-void
-warpFrame(InputArray image, InputArray depth, InputArray mask,
-          const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
-          OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
-    if(image.type() == CV_8UC1)
-        warpFrameImpl<uchar>(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
-    else if(image.type() == CV_8UC3)
-        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
-    else
-        CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
 }
 
 } // namespace cv

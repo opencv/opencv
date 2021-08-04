@@ -124,6 +124,22 @@ CV_EXPORTS_W void depthTo3d(InputArray depth, InputArray K, OutputArray points3d
  */
 CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double depth_factor = 1000.0);
 
+/** Warp the image: compute 3d points from the depth, transform them using given transformation,
+ * then project color point cloud to an image plane.
+ * This function can be used to visualize results of the Odometry algorithm.
+ * @param image The image (of CV_8UC1 or CV_8UC3 type)
+ * @param depth The depth (of type used in depthTo3d fuction)
+ * @param mask The mask of used pixels (of CV_8UC1), it can be empty
+ * @param Rt The transformation that will be applied to the 3d points computed from the depth
+ * @param cameraMatrix Camera matrix
+ * @param distCoeff Distortion coefficients
+ * @param warpedImage The warped image.
+ * @param warpedDepth The warped depth.
+ * @param warpedMask The warped mask.
+ */
+CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+                            OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
+
 enum RGBD_PLANE_METHOD
 {
     RGBD_PLANE_METHOD_DEFAULT
@@ -897,22 +913,6 @@ protected:
 
     float truncateThreshold;
 };
-
-/** Warp the image: compute 3d points from the depth, transform them using given transformation,
- * then project color point cloud to an image plane.
- * This function can be used to visualize results of the Odometry algorithm.
- * @param image The image (of CV_8UC1 or CV_8UC3 type)
- * @param depth The depth (of type used in depthTo3d fuction)
- * @param mask The mask of used pixels (of CV_8UC1), it can be empty
- * @param Rt The transformation that will be applied to the 3d points computed from the depth
- * @param cameraMatrix Camera matrix
- * @param distCoeff Distortion coefficients
- * @param warpedImage The warped image.
- * @param warpedDepth The warped depth.
- * @param warpedMask The warped mask.
- */
-CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
-                            OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
 
 // TODO Depth interpolation
 // Curvature
