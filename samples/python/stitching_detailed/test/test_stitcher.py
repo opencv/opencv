@@ -11,7 +11,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
 from stitching_detailed.stitcher import Stitcher
 from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
 from stitching_detailed.feature_detector import FeatureDetector
-from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
 # %%
 

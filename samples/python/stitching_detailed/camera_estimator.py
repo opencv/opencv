@@ -5,14 +5,16 @@ import numpy as np
 
 class CameraEstimator:
 
-    choices = OrderedDict()
-    choices['homography'] = cv.detail_HomographyBasedEstimator
-    choices['affine'] = cv.detail_AffineBasedEstimator
+    CAMERA_ESTIMATOR_CHOICES = OrderedDict()
+    CAMERA_ESTIMATOR_CHOICES['homography'] = cv.detail_HomographyBasedEstimator
+    CAMERA_ESTIMATOR_CHOICES['affine'] = cv.detail_AffineBasedEstimator
 
-    default = list(choices.keys())[0]
+    DEFAULT_CAMERA_ESTIMATOR = list(CAMERA_ESTIMATOR_CHOICES.keys())[0]
 
-    def __init__(self, estimator=default, *args, **kwargs):
-        self.estimator = CameraEstimator.choices[estimator](*args, **kwargs)
+    def __init__(self, estimator=DEFAULT_CAMERA_ESTIMATOR, *args, **kwargs):
+        self.estimator = CameraEstimator.CAMERA_ESTIMATOR_CHOICES[estimator](
+            *args, **kwargs
+            )
 
     def estimate(self, features, pairwise_matches):
         b, cameras = self.estimator.apply(features, pairwise_matches, None)

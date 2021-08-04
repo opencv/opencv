@@ -3,12 +3,13 @@ import cv2 as cv
 
 class FeatureMatcher:
 
-    choices = ('homography', 'affine')
-    default = 'homography'
+    MATCHER_CHOICES = ('homography', 'affine')
+    DEFAULT_MATCHER = 'homography'
+    DEFAULT_RANGE_WIDTH = -1
 
     def __init__(self,
-                 matcher_type=default,
-                 range_width=-1,
+                 matcher_type=DEFAULT_MATCHER,
+                 range_width=DEFAULT_RANGE_WIDTH,
                  *args, **kwargs):
 
         if matcher_type == "affine":
@@ -32,8 +33,8 @@ class FeatureMatcher:
         self.matcher.collectGarbage()
         return pairwise_matches
 
-    def get_default_match_conf(feature_detector):
-        if feature_detector == 'orb':
+    def get_default_match_conf(feature_detector_type):
+        if feature_detector_type == 'orb':
             return 0.3
         else:
             return 0.65

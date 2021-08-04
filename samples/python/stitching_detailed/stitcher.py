@@ -6,11 +6,7 @@ import numpy as np
 from . import stitcher_choices as choices
 from .panorama_part import PanoramaPart
 from .image_to_megapix_scaler import ImageToMegapixScaler
-from .feature_detector import FeatureDetector
-from .feature_matcher import FeatureMatcher
-from .camera_estimator import CameraEstimator
-from .camera_adjuster import CameraAdjuster
-from .camera_wave_corrector import WaveCorrector
+from .image_registration import ImageRegistration
 from .warper import Warper
 
 
@@ -20,6 +16,14 @@ class Stitcher:
         self.img_names = img_names
         self.args = SimpleNamespace(**kwargs)
 
+    def downscale_images(self, images, megapix):
+        scaler = ImageToMegapixScaler(megapix)
+        images = [scaler.set_scale_and_downscale(img) for img in images]
+        return images, scaler.scale
+
+        # work_images, work_scale = self.downscale_images(images,
+        #                                                 self.args.work_megapix)
+
     def stitch(self):
         args = self.args
         img_names = self.img_names
@@ -27,43 +31,14 @@ class Stitcher:
         work_megapix_scaler = ImageToMegapixScaler(args.work_megapix)
         seam_megapix_scaler = ImageToMegapixScaler(args.seam_megapix)
 
-        finder = FeatureDetector(args.features)
-
-        if args.match_conf is None:
-            args.match_conf = FeatureMatcher.get_default_match_conf(args.features)
-
-        matcher = FeatureMatcher(args.matcher,
-                                 args.rangewidth,
-                                 try_use_gpu=args.try_cuda,
-                                 match_conf=args.match_conf)
-
-        camera_estimator = CameraEstimator(args.estimator)
-        camera_adjuster = CameraAdjuster(args.ba)
-        wave_corrector = WaveCorrector(args.wave_correct)
-
-        compose_megapix = args.compose_megapix
         conf_thresh = args.conf_thresh
         if args.save_graph is None:
             save_graph = False
         else:
             save_graph = True
-        warp_type = args.warp
-        blend_type = args.blend
-        blend_strength = args.blend_strength
-        result_name = args.output
-        if args.timelapse is not None:
-            timelapse = True
-            if args.timelapse == "as_is":
-                timelapse_type = cv.detail.Timelapser_AS_IS
-            elif args.timelapse == "crop":
-                timelapse_type = cv.detail.Timelapser_CROP
-            else:
-                print("Bad timelapse method")
-                exit()
-        else:
-            timelapse = False
+
         full_img_sizes = []
-        features = []
+        work_imgs = []
         images = []
         is_compose_scale_set = False
 
@@ -72,14 +47,16 @@ class Stitcher:
             image.read_image()
             full_img_sizes.append(image.full_img_size)
             work_img = work_megapix_scaler.set_scale_and_downscale(image.full_img)
-            features.append(finder.detect_features(work_img))
+            work_imgs.append(work_img)
             seam_img = seam_megapix_scaler.set_scale_and_downscale(image.full_img)
             images.append(seam_img)
 
         seam_work_aspect = (work_megapix_scaler.scale /
                             seam_megapix_scaler.scale )
 
-        p = matcher.match_features(features)
+        image_registration = get_image_registration_object(args)
+        features = image_registration.find_features(work_imgs)
+        p = image_registration.match_features(features)
 
         if save_graph:
             with open(args.save_graph, 'w') as fh:
@@ -101,9 +78,8 @@ class Stitcher:
             print("Need more images")
             exit()
 
-        cameras = camera_estimator.estimate(features, p)
-        camera_adjuster.set_refinement_mask(args.ba_refine_mask)
-        cameras = camera_adjuster.adjust(features, p, cameras)
+        cameras = image_registration.estimate_camera_parameters(features, p)
+        cameras = image_registration.adjust_camera_parameters(features, p, cameras)
 
         focals = []
         for cam in cameras:
@@ -114,7 +90,28 @@ class Stitcher:
         else:
             warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
 
-        cameras = wave_corrector.correct(cameras)
+        cameras = image_registration.perform_wave_correction(cameras)
+
+# =============================================================================
+# COMPOSITION PART
+# =============================================================================
+
+        compose_megapix = args.compose_megapix
+        warp_type = args.warp
+        blend_type = args.blend
+        blend_strength = args.blend_strength
+        result_name = args.output
+        if args.timelapse is not None:
+            timelapse = True
+            if args.timelapse == "as_is":
+                timelapse_type = cv.detail.Timelapser_AS_IS
+            elif args.timelapse == "crop":
+                timelapse_type = cv.detail.Timelapser_CROP
+            else:
+                print("Bad timelapse method")
+                exit()
+        else:
+            timelapse = False
 
         corners = []
         masks_warped = []
@@ -226,7 +223,16 @@ class Stitcher:
         print("Done")
 
 
-
+def get_image_registration_object(args):
+    return ImageRegistration(args.features,
+                             args.matcher,
+                             args.rangewidth,
+                             args.try_cuda,
+                             args.match_conf,
+                             args.estimator,
+                             args.ba,
+                             args.ba_refine_mask,
+                             args.wave_correct)
 
 def get_compensator(args):
     expos_comp_type = choices.EXPOS_COMP_CHOICES[args.expos_comp]

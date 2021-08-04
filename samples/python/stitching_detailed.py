@@ -14,8 +14,7 @@ import cv2 as cv
 import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
-from stitching_detailed.stitcher_choices import (WARP_CHOICES,
-                                                 SEAM_FIND_CHOICES,
+from stitching_detailed.stitcher_choices import (SEAM_FIND_CHOICES,
                                                  EXPOS_COMP_CHOICES,
                                                  BLEND_CHOICES)
 
@@ -48,24 +47,30 @@ parser.add_argument(
 )
 parser.add_argument(
     '--features', action='store',
-    default=FeatureDetector.default,
+    default=FeatureDetector.DEFAULT_DETECTOR,
     help="Type of features used for images matching. "
-         "The default is '%s'." % FeatureDetector.default,
-    choices=FeatureDetector.choices.keys(),
+         "The default is '%s'." % FeatureDetector.DEFAULT_DETECTOR,
+    choices=FeatureDetector.DETECTOR_CHOICES.keys(),
     type=str, dest='features'
 )
 parser.add_argument(
-    '--matcher', action='store', default=FeatureMatcher.default,
+    '--matcher', action='store', default=FeatureMatcher.DEFAULT_MATCHER,
     help="Matcher used for pairwise image matching. "
-         "The default is '%s'." % FeatureMatcher.default,
-    choices=FeatureMatcher.choices,
+         "The default is '%s'." % FeatureMatcher.DEFAULT_MATCHER,
+    choices=FeatureMatcher.MATCHER_CHOICES,
     type=str, dest='matcher'
 )
 parser.add_argument(
-    '--estimator', action='store', default=CameraEstimator.default,
+    '--rangewidth', action='store', default=FeatureMatcher.DEFAULT_RANGE_WIDTH,
+    help="uses range_width to limit number of images to match with.",
+    type=int, dest='rangewidth'
+)
+parser.add_argument(
+    '--estimator', action='store',
+    default=CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
     help="Type of estimator used for transformation estimation. "
-         "The default is '%s'." % CameraEstimator.default,
-    choices=CameraEstimator.choices.keys(),
+         "The default is '%s'." % CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
+    choices=CameraEstimator.CAMERA_ESTIMATOR_CHOICES.keys(),
     type=str, dest='estimator'
 )
 parser.add_argument(
@@ -81,27 +86,30 @@ parser.add_argument(
     type=float, dest='conf_thresh'
 )
 parser.add_argument(
-    '--ba', action='store', default=CameraAdjuster.default,
+    '--ba', action='store', default=CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
     help="Bundle adjustment cost function. "
-         "The default is '%s'." % CameraAdjuster.default,
-    choices=CameraAdjuster.choices.keys(),
+         "The default is '%s'." % CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
+    choices=CameraAdjuster.CAMERA_ADJUSTER_CHOICES.keys(),
     type=str, dest='ba'
 )
 parser.add_argument(
-    '--ba_refine_mask', action='store', default='xxxxx',
+    '--ba_refine_mask', action='store',
+    default=CameraAdjuster.DEFAULT_REFINEMENT_MASK,
     help="Set refinement mask for bundle adjustment. It looks like 'x_xxx', "
          "where 'x' means refine respective parameter and '_' means don't "
          "refine, and has the following format:<fx><skew><ppx><aspect><ppy>. "
-         "The default mask is 'xxxxx'. "
+         "The default mask is '%s'. "
          "If bundle adjustment doesn't support estimation of selected "
-         "parameter then the respective flag is ignored.",
+         "parameter then the respective flag is ignored."
+         "" % CameraAdjuster.DEFAULT_REFINEMENT_MASK,
     type=str, dest='ba_refine_mask'
 )
 parser.add_argument(
-    '--wave_correct', action='store', default=WaveCorrector.default,
+    '--wave_correct', action='store',
+    default=WaveCorrector.DEFAULT_WAVE_CORRECTION,
     help="Perform wave effect correction. "
-         "The default is '%s'" % WaveCorrector.default,
-    choices=WaveCorrector.choices.keys(),
+         "The default is '%s'" % WaveCorrector.DEFAULT_WAVE_CORRECTION,
+    choices=WaveCorrector.WAVE_CORRECT_CHOICES.keys(),
     type=str, dest='wave_correct'
 )
 parser.add_argument(
@@ -177,11 +185,6 @@ parser.add_argument(
     help="Output warped images separately as frames of a time lapse movie, "
          "with 'fixed_' prepended to input file names.",
     type=str, dest='timelapse'
-)
-parser.add_argument(
-    '--rangewidth', action='store', default=-1,
-    help="uses range_width to limit number of images to match with.",
-    type=int, dest='rangewidth'
 )
 
 __doc__ += '\n' + parser.format_help()

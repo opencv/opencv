@@ -5,16 +5,18 @@ import numpy as np
 
 class WaveCorrector:
     """https://docs.opencv.org/master/d7/d74/group__stitching__rotation.html#ga83b24d4c3e93584986a56d9e43b9cf7f"""  # noqa
-    choices = OrderedDict()
-    choices['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
-    choices['vert'] = cv.detail.WAVE_CORRECT_VERT
-    choices['auto'] = cv.detail.WAVE_CORRECT_AUTO
-    choices['no'] = None
+    WAVE_CORRECT_CHOICES = OrderedDict()
+    WAVE_CORRECT_CHOICES['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
+    WAVE_CORRECT_CHOICES['vert'] = cv.detail.WAVE_CORRECT_VERT
+    WAVE_CORRECT_CHOICES['auto'] = cv.detail.WAVE_CORRECT_AUTO
+    WAVE_CORRECT_CHOICES['no'] = None
 
-    default = list(choices.keys())[0]
+    DEFAULT_WAVE_CORRECTION = list(WAVE_CORRECT_CHOICES.keys())[0]
 
-    def __init__(self, wave_correct_kind=default):
-        self.wave_correct_kind = WaveCorrector.choices[wave_correct_kind]
+    def __init__(self, wave_correct_kind=DEFAULT_WAVE_CORRECTION):
+        self.wave_correct_kind = WaveCorrector.WAVE_CORRECT_CHOICES[
+            wave_correct_kind
+            ]
 
     def correct(self, cameras):
         if self.wave_correct_kind:
