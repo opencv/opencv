@@ -1568,35 +1568,35 @@ public:
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual double getMinDepth() const
+    virtual double getMinDepth() const CV_OVERRIDE
     {
         return minDepth;
     }
-    virtual void setMinDepth(double val)
+    virtual void setMinDepth(double val) CV_OVERRIDE
     {
         minDepth = val;
     }
-    virtual double getMaxDepth() const
+    virtual double getMaxDepth() const CV_OVERRIDE
     {
         return maxDepth;
     }
-    virtual void setMaxDepth(double val)
+    virtual void setMaxDepth(double val) CV_OVERRIDE
     {
         maxDepth = val;
     }
-    virtual double getMaxDepthDiff() const
+    virtual double getMaxDepthDiff() const CV_OVERRIDE
     {
         return maxDepthDiff;
     }
-    virtual void setMaxDepthDiff(double val)
+    virtual void setMaxDepthDiff(double val) CV_OVERRIDE
     {
         maxDepthDiff = val;
     }
-    virtual double getMaxPointsPart() const
+    virtual double getMaxPointsPart() const CV_OVERRIDE
     {
         return maxPointsPart;
     }
-    virtual void setMaxPointsPart(double val)
+    virtual void setMaxPointsPart(double val) CV_OVERRIDE
     {
         CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;
@@ -1835,35 +1835,35 @@ public:
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
-    virtual double getMinDepth() const
+    virtual double getMinDepth() const CV_OVERRIDE
     {
         return minDepth;
     }
-    virtual void setMinDepth(double val)
+    virtual void setMinDepth(double val) CV_OVERRIDE
     {
         minDepth = val;
     }
-    virtual double getMaxDepth() const
+    virtual double getMaxDepth() const CV_OVERRIDE
     {
         return maxDepth;
     }
-    virtual void setMaxDepth(double val)
+    virtual void setMaxDepth(double val) CV_OVERRIDE
     {
         maxDepth = val;
     }
-    virtual double getMaxDepthDiff() const
+    virtual double getMaxDepthDiff() const CV_OVERRIDE
     {
         return maxDepthDiff;
     }
-    virtual void setMaxDepthDiff(double val)
+    virtual void setMaxDepthDiff(double val) CV_OVERRIDE
     {
         maxDepthDiff = val;
     }
-    virtual double getMaxPointsPart() const
+    virtual double getMaxPointsPart() const CV_OVERRIDE
     {
         return maxPointsPart;
     }
-    virtual void setMaxPointsPart(double val)
+    virtual void setMaxPointsPart(double val) CV_OVERRIDE
     {
         CV_Assert(val > 0. && val <= 1.);
         maxPointsPart = val;

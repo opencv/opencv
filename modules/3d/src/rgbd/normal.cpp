@@ -319,7 +319,7 @@ public:
      * @param r
      * @return
      */
-    virtual void compute(const Mat& r, Mat& normals) const
+    virtual void compute(const Mat& r, Mat& normals) const CV_OVERRIDE
     {
         // Compute B
         Mat_<Vec3T> B(rows, cols);
@@ -660,7 +660,7 @@ public:
      * @param r
      * @return
      */
-    void compute(const Mat& in, Mat& normals_out) const
+    virtual void compute(const Mat& in, Mat& normals_out) const CV_OVERRIDE
     {
         const Mat_<T>& r_non_interp = in;
 
