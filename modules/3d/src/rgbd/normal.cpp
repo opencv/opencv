@@ -265,7 +265,7 @@ public:
     typedef Vec<T, 3> Vec3T;
 
     FALS(int _rows, int _cols, int _windowSize, const Mat& _K) :
-        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_FALS)
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RgbdNormals::RGBD_NORMALS_METHOD_FALS)
     { }
     virtual ~FALS() CV_OVERRIDE
     { }
@@ -274,12 +274,12 @@ public:
      */
     virtual void cache() const CV_OVERRIDE
     {
-        if (!cacheIsDirty)
+        if (!this->cacheIsDirty)
             return;
 
         // Compute theta and phi according to equation 3
         Mat cos_theta, sin_theta, cos_phi, sin_phi;
-        computeThetaPhi<T>(rows, cols, K, cos_theta, sin_theta, cos_phi, sin_phi);
+        computeThetaPhi<T>(this->rows, this->cols, this->K, cos_theta, sin_theta, cos_phi, sin_phi);
 
         // Compute all the v_i for every points
         std::vector<Mat> channels(3);
@@ -289,21 +289,21 @@ public:
         merge(channels, V_);
 
         // Compute M
-        Mat_<Vec9T> M(rows, cols);
+        Mat_<Vec9T> M(this->rows, this->cols);
         Mat33T VVt;
         const Vec3T* vec = V_[0];
-        Vec9T* M_ptr = M[0], * M_ptr_end = M_ptr + rows * cols;
+        Vec9T* M_ptr = M[0], * M_ptr_end = M_ptr + this->rows * this->cols;
         for (; M_ptr != M_ptr_end; ++vec, ++M_ptr)
         {
             VVt = (*vec) * vec->t();
             *M_ptr = Vec9T(VVt.val);
         }
 
-        boxFilter(M, M, M.depth(), Size(windowSize, windowSize), Point(-1, -1), false);
+        boxFilter(M, M, M.depth(), Size(this->windowSize, this->windowSize), Point(-1, -1), false);
 
         // Compute M's inverse
         Mat33T M_inv;
-        M_inv_.create(rows, cols);
+        M_inv_.create(this->rows, this->cols);
         Vec9T* M_inv_ptr = M_inv_[0];
         for (M_ptr = &M(0); M_ptr != M_ptr_end; ++M_inv_ptr, ++M_ptr)
         {
@@ -312,7 +312,7 @@ public:
             *M_inv_ptr = Vec9T(M_inv.val);
         }
 
-        cacheIsDirty = false;
+        this->cacheIsDirty = false;
     }
 
     /** Compute the normals
@@ -322,9 +322,9 @@ public:
     virtual void compute(const Mat& r, Mat& normals) const CV_OVERRIDE
     {
         // Compute B
-        Mat_<Vec3T> B(rows, cols);
+        Mat_<Vec3T> B(this->rows, this->cols);
 
-        const T* row_r = r.ptr < T >(0), * row_r_end = row_r + rows * cols;
+        const T* row_r = r.ptr < T >(0), * row_r_end = row_r + this->rows * this->cols;
         const Vec3T* row_V = V_[0];
         Vec3T* row_B = B[0];
         for (; row_r != row_r_end; ++row_r, ++row_B, ++row_V)
@@ -339,7 +339,7 @@ public:
         }
 
         // Apply a box filter to B
-        boxFilter(B, B, B.depth(), Size(windowSize, windowSize), Point(-1, -1), false);
+        boxFilter(B, B, B.depth(), Size(this->windowSize, this->windowSize), Point(-1, -1), false);
 
         // compute the Minv*B products
         row_r = r.ptr < T >(0);
@@ -477,7 +477,7 @@ public:
                 offsets_x_x[index] = i * i;
                 offsets_x_y[index] = i * j;
                 offsets_y_y[index] = j * j;
-                offsets[index] = j * cols + i;
+                offsets[index] = j * this->cols + i;
             }
 
         // Define K_inv by hand, just for higher accuracy
@@ -493,12 +493,12 @@ public:
 
         ContainerDepth difference_threshold = 50;
         normals.setTo(std::numeric_limits<DepthDepth>::quiet_NaN());
-        for (int y = r; y < rows - r - 1; ++y)
+        for (int y = r; y < this->rows - r - 1; ++y)
         {
             const DepthDepth* p_line = reinterpret_cast<const DepthDepth*>(depthIn.ptr(y, r));
             Vec3T* normal = normals.ptr<Vec3T>(y, r);
 
-            for (int x = r; x < cols - r - 1; ++x)
+            for (int x = r; x < this->cols - r - 1; ++x)
             {
                 DepthDepth d = p_line[0];
 
@@ -581,28 +581,28 @@ public:
      */
     virtual void cache() const CV_OVERRIDE
     {
-        if (!cacheIsDirty)
+        if (!this->cacheIsDirty)
             return;
 
         Mat_<T> cos_theta, sin_theta, cos_phi, sin_phi;
-        computeThetaPhi<T>(rows, cols, K, cos_theta, sin_theta, cos_phi, sin_phi);
+        computeThetaPhi<T>(this->rows, this->cols, this->K, cos_theta, sin_theta, cos_phi, sin_phi);
 
         // Create the derivative kernels
-        getDerivKernels(kx_dx_, ky_dx_, 1, 0, windowSize, true, dtype);
-        getDerivKernels(kx_dy_, ky_dy_, 0, 1, windowSize, true, dtype);
+        getDerivKernels(kx_dx_, ky_dx_, 1, 0, this->windowSize, true, dtype);
+        getDerivKernels(kx_dy_, ky_dy_, 0, 1, this->windowSize, true, dtype);
 
         // Get the mapping function for SRI
-        float min_theta = (float)std::asin(sin_theta(0, 0)), max_theta = (float)std::asin(sin_theta(0, cols - 1));
-        float min_phi = (float)std::asin(sin_phi(0, cols / 2 - 1)), max_phi = (float)std::asin(sin_phi(rows - 1, cols / 2 - 1));
+        float min_theta = (float)std::asin(sin_theta(0, 0)), max_theta = (float)std::asin(sin_theta(0, this->cols - 1));
+        float min_phi = (float)std::asin(sin_phi(0, this->cols / 2 - 1)), max_phi = (float)std::asin(sin_phi(this->rows - 1, this->cols / 2 - 1));
 
-        std::vector<Point3f> points3d(cols * rows);
-        R_hat_.create(rows, cols);
-        phi_step_ = float(max_phi - min_phi) / (rows - 1);
-        theta_step_ = float(max_theta - min_theta) / (cols - 1);
-        for (int phi_int = 0, k = 0; phi_int < rows; ++phi_int)
+        std::vector<Point3f> points3d(this->cols * this->rows);
+        R_hat_.create(this->rows, this->cols);
+        phi_step_ = float(max_phi - min_phi) / (this->rows - 1);
+        theta_step_ = float(max_theta - min_theta) / (this->cols - 1);
+        for (int phi_int = 0, k = 0; phi_int < this->rows; ++phi_int)
         {
             float phi = min_phi + phi_int * phi_step_;
-            for (int theta_int = 0; theta_int < cols; ++theta_int, ++k)
+            for (int theta_int = 0; theta_int < this->cols; ++theta_int, ++k)
             {
                 float theta = min_theta + theta_int * theta_step_;
                 // Store the 3d point to project it later
@@ -624,19 +624,19 @@ public:
             }
         }
 
-        map_.create(rows, cols);
-        projectPoints(points3d, Mat(3, 1, CV_32FC1, Scalar::all(0.0f)), Mat(3, 1, CV_32FC1, Scalar::all(0.0f)), K, Mat(), map_);
-        map_ = map_.reshape(2, rows);
+        map_.create(this->rows, this->cols);
+        projectPoints(points3d, Mat(3, 1, CV_32FC1, Scalar::all(0.0f)), Mat(3, 1, CV_32FC1, Scalar::all(0.0f)), this->K, Mat(), map_);
+        map_ = map_.reshape(2, this->rows);
         convertMaps(map_, Mat(), xy_, fxy_, CV_16SC2);
 
         //map for converting from Spherical coordinate space to Euclidean space
-        euclideanMap_.create(rows, cols);
-        float invFx = (float)(1.0f / K.at<T>(0, 0)), cx = (float)K.at<T>(0, 2);
-        double invFy = 1.0f / K.at<T>(1, 1), cy = K.at<T>(1, 2);
-        for (int i = 0; i < rows; i++)
+        euclideanMap_.create(this->rows, this->cols);
+        float invFx = (float)(1.0f / this->K.at<T>(0, 0)), cx = (float)this->K.at<T>(0, 2);
+        double invFy = 1.0f / this->K.at<T>(1, 1), cy = this->K.at<T>(1, 2);
+        for (int i = 0; i < this->rows; i++)
         {
             float y = (float)((i - cy) * invFy);
-            for (int j = 0; j < cols; j++)
+            for (int j = 0; j < this->cols; j++)
             {
                 float x = (j - cx) * invFx;
                 float theta = std::atan(x);
@@ -653,7 +653,7 @@ public:
         kx_dx_ /= theta_step_;
         ky_dy_ /= phi_step_;
 
-        cacheIsDirty = false;
+        this->cacheIsDirty = false;
     }
 
     /** Compute the normals
@@ -678,9 +678,9 @@ public:
         sepFilter2D(r, r_phi, r.depth(), kx_dy_, ky_dy_);
 
         // Fill the result matrix
-        Mat_<Vec3T> normals(rows, cols);
+        Mat_<Vec3T> normals(this->rows, this->cols);
 
-        const T* r_theta_ptr = r_theta[0], * r_theta_ptr_end = r_theta_ptr + rows * cols;
+        const T* r_theta_ptr = r_theta[0], * r_theta_ptr_end = r_theta_ptr + this->rows * this->cols;
         const T* r_phi_ptr = r_phi[0];
         const Mat33T* R = reinterpret_cast<const Mat33T*>(R_hat_[0]);
         const T* r_ptr = r[0];
@@ -706,7 +706,7 @@ public:
 
         remap(normals, normals_out, invxy_, invfxy_, INTER_LINEAR);
         normal = normals_out.ptr<Vec3T>(0);
-        Vec3T* normal_end = normal + rows * cols;
+        Vec3T* normal_end = normal + this->rows * this->cols;
         for (; normal != normal_end; ++normal)
             signNormal((*normal)[0], (*normal)[1], (*normal)[2], *normal);
     }
