@@ -8,87 +8,51 @@
 
 namespace opencv_test { namespace {
 
-class CV_RgbdDepthRegistrationTest: public cvtest::BaseTest
+class RgbdDepthRegistrationTest
 {
 public:
-  CV_RgbdDepthRegistrationTest()
-  {
-  }
-  ~CV_RgbdDepthRegistrationTest()
-  {
-  }
-protected:
-  void
-  run(int)
-  {
+    RgbdDepthRegistrationTest() { }
+    ~RgbdDepthRegistrationTest() { }
 
-      // Test all three input types for no-op registrations (where a depth image is registered to itself)
+    void run()
+    {
+        // Test all three input types for no-op registrations (where a depth image is registered to itself)
+        noOpRandomRegistrationTest<unsigned short>(100, 2500);
+        noOpRandomRegistrationTest<float>(0.1f, 2.5f);
+        noOpRandomRegistrationTest<double>(0.1, 2.5);
 
-      int code = noOpRandomRegistrationTest<unsigned short>(100, 2500);
-      if( code != cvtest::TS::OK )
-      {
-          ts->set_failed_test_info(code);
-          return;
-      }
+        // Test sentinel value handling, occlusion, and dilation
+        {
+            // K from a VGA Kinect
+            Mat K = (Mat_<float>(3, 3) << 525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.);
 
-      code = noOpRandomRegistrationTest<float>(0.1f, 2.5f);
-      if( code != cvtest::TS::OK )
-      {
-          ts->set_failed_test_info(code);
-          return;
-      }
+            int width = 640, height = 480;
 
-      code = noOpRandomRegistrationTest<double>(0.1, 2.5);
-      if( code != cvtest::TS::OK )
-      {
-          ts->set_failed_test_info(code);
-          return;
-      }
+            // All elements are zero except for first two along the diagonal
+            Mat_<unsigned short> vgaDepth(height, width, (unsigned short)0);
+            vgaDepth(0, 0) = 1001;
+            vgaDepth(1, 1) = 1000;
 
+            Mat_<unsigned short> registeredDepth;
+            registerDepth(K, K, Mat(), Matx44f::eye(), vgaDepth, Size(width, height), registeredDepth, true);
 
-      // Test sentinel value handling, occlusion, and dilation
-      {
+            // We expect the closer depth of 1000 to occlude the more distant depth and occupy the
+            // upper four left pixels in the depth image because of dilation
+            Mat_<unsigned short> expectedResult(height, width, (unsigned short)0);
+            expectedResult(0, 0) = 1000;
+            expectedResult(0, 1) = 1000;
+            expectedResult(1, 0) = 1000;
+            expectedResult(1, 1) = 1000;
 
-          // K from a VGA Kinect
-          Mat K = (Mat_<float>(3, 3) << 525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.);
-
-          int width = 640, height = 480;
-
-          // All elements are zero except for first two along the diagonal
-          Mat_<unsigned short> vgaDepth(height, width, (unsigned short)0);
-          vgaDepth(0,0) = 1001;
-          vgaDepth(1,1) = 1000;
-
-          Mat_<unsigned short> registeredDepth;
-          registerDepth(K, K, Mat(), Matx44f::eye(), vgaDepth, Size(width, height), registeredDepth, true);
-
-          // We expect the closer depth of 1000 to occlude the more distant depth and occupy the
-          // upper four left pixels in the depth image because of dilation
-          Mat_<unsigned short> expectedResult(height, width, (unsigned short)0);
-          expectedResult(0,0) = 1000;
-          expectedResult(0,1) = 1000;
-          expectedResult(1,0) = 1000;
-          expectedResult(1,1) = 1000;
-
-          int cmpResult =  cvtest::cmpEps2( ts, registeredDepth, expectedResult, 0, true, "Dilation and occlusion");
-
-          if( cmpResult != cvtest::TS::OK )
-          {
-              ts->set_failed_test_info(cmpResult);
-              return;
-          }
-
-      }
-
-      ts->set_failed_test_info(cvtest::TS::OK);
-
-  }
-private:
+            Mat ad;
+            absdiff(registeredDepth, expectedResult, ad);
+            ASSERT_GT(std::numeric_limits<double>::min(), abs(sum(ad)[0])) << "Dilation and occlusion";
+        }
+    }
 
     template <class DepthDepth>
-    int noOpRandomRegistrationTest(DepthDepth minDepth, DepthDepth maxDepth)
+    void noOpRandomRegistrationTest(DepthDepth minDepth, DepthDepth maxDepth)
     {
-
         // K from a VGA Kinect
         Mat K = (Mat_<float>(3, 3) << 525., 0., 319.5, 0., 525., 239.5, 0., 0., 1.);
 
@@ -100,20 +64,25 @@ private:
         Mat registeredDepth;
         registerDepth(K, K, Mat(), Matx44f::eye(), randomVGADepth, Size(640, 480), registeredDepth);
 
-        // See if registeredDepth == depth
-        return cvtest::cmpEps2( ts, registeredDepth, randomVGADepth, 1e-5, true, "No-op registration");
+        // Check per-pixel relative difference
 
+        Mat ad;
+        absdiff(registeredDepth, randomVGADepth, ad);
+        Mat mmin;
+        cv::min(registeredDepth, randomVGADepth, mmin);
+        Mat rel = ad / mmin;
+        double maxDiff = cv::norm(rel, NORM_INF);
+        ASSERT_GT(1e-07, maxDiff) << "No-op registration";
     }
-
 };
 
-TEST(Rgbd_DepthRegistration, compute)
+TEST(RGBD_DepthRegistration, compute)
 {
-  CV_RgbdDepthRegistrationTest test;
-  test.safe_run();
+    RgbdDepthRegistrationTest test;
+    test.run();
 }
 
-TEST(Rgbd_DepthRegistration, issue_2234)
+TEST(RGBD_DepthRegistration, issue_2234)
 {
     Matx33f intrinsicsDepth(100, 0,  50, 0, 100, 50, 0, 0, 1);
     Matx33f intrinsicsColor(100, 0, 200, 0, 100, 50, 0, 0, 1);
