@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -349,7 +350,13 @@ public:
 #endif
 #ifdef HAVE_WEBNN
         if (backendId == DNN_BACKEND_WEBNN)
-            return ksize == 2 && !blobs.empty();
+        {
+            if (ksize != 2)
+            {
+                CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
+            }
+            return ksize == 2;
+        }
 #endif
         return false;
     }
@@ -900,32 +907,115 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_WEBNN
-    ml::Operand BuildConstant(const ml::GraphBuilder& builder,
-                              const std::vector<int32_t>& dimensions,
-                              const void* value,
-                              size_t size,
-                              ml::OperandType type) {
-        ml::OperandDescriptor desc;
-        desc.type = type;
-        desc.dimensions = dimensions.data();
-        desc.dimensionsCount = (uint32_t)dimensions.size();
-        ml::ArrayBufferView resource;
-        resource.buffer = const_cast<void*>(value);
-        resource.byteLength = size;
-        return builder.Constant(&desc, &resource);
-    }
-
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
         auto& webnnInpOperand = node->operand;
         auto& webnnGraphBuilder = node->net->builder;
-        std::vector<size_t> dims = kernel_size;
+        ml::Operand webnnWeights = nodes.size() > 1 ? nodes[1].dynamicCast<WebnnBackendNode>()->operand : nullptr;
+        if (nodes.size() > 1)
+            CV_Assert(webnnWeights);
+        // const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
+        const int group = blobs.size() - hasBias();
+        const int inpGroupCn = blobs[0].size[1];
+        // const int group = inpCn / inpGroupCn;
+        std::cout<<"Group: "<<group<<std::endl;
+        std::cout<<"padMode:"<<padMode<<std::endl;
+        std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
+        std::vector<int32_t> kernel_shape;
+        if (group != 1)
+        {
+            kernel_shape.push_back(group);
+        }
+        kernel_shape.push_back(numOutput / group);
+        kernel_shape.push_back(inpGroupCn);
+        std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
 
+        if (nodes.size() == 1)
+        {
+            std::cout<<"fusedWeights: "<<fusedWeights<<std::endl;
+            webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+            std::cout<<"blobs: "<< blobs[0].total()<<" "<<blobs[0].elemSize()<<" "<<sizeof(float)<<std::endl;
+            if (fusedWeights)
+            {
+                if (weightsMat.isContinuous())
+                {
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
+                }
+                else
+                {
+                    Mat newWeights;
+                    Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / numOutput);
+                    cvWeights.copyTo(newWeights);
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
+                }
+            }
+        }
+        else
+        {
+            webnnWeights  = webnnGraphBuilder.Reshape(webnnWeights, kernel_shape.data(), kernel_shape.size());
+        }
 
+        ml::AutoPad pad_type = ml::AutoPad::Explicit;
+        if (!padMode.empty())
+            pad_type = padMode == "VALID" ? ml::AutoPad::Explicit : ml::AutoPad::SameUpper;
 
-        return Ptr<BackendNode>(new WebnnBackendNode(operand));
+        ml::Conv2dOptions options;
+        options.autoPad = pad_type;
+        // std::vector<int32_t> Strides(strides.begin(), strides.end());
+        if (!strides.empty())
+        {
+            options.stridesCount = strides.size();
+            options.strides = reinterpret_cast<int32_t*>(strides.data());
+        }
+        std::vector<int32_t> Padding;
+        if (padMode.empty())
+        {
+            Padding = {static_cast<int32_t>(pads_begin[0]),
+                       static_cast<int32_t>(pads_end[0]),
+                       static_cast<int32_t>(pads_begin[1]),
+                       static_cast<int32_t>(pads_end[1])};
+        }
+        else if (padMode == "VALID")
+        {
+            Padding = {0, 0, 0, 0};
+        }
+        if (!Padding.empty())
+        {
+            options.paddingCount = Padding.size();
+            options.padding = Padding.data();
+        }
+        std::cout<<"Padding: "<<Padding[0]<<" "<<Padding[1]<<" "<<Padding[2]<<" "<<Padding[3]<<" "<<std::endl;
+        // std::vector<int32_t> Dilations(dilations.begin(), dilations.end());
+        if (!dilations.empty())
+        {
+            options.dilationsCount = dilations.size();
+            options.dilations = reinterpret_cast<int32_t*>(dilations.data());
+        }
+        const ml::Operand weights = webnnWeights;
+        const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, weights, &options);
+        // const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, *const_cast<ml::Operand*>(&webnnWeights), &options);
+        // const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, webnnWeights, &options);
+        
+        ml::Operand result = operand;
+        if (hasBias() || fusedBias || nodes.size() == 3)
+        {
+            ml::Operand webnnBias;
+            if (nodes.size() == 3)
+            {
+                webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, kernel_shape.data(), kernel_shape.size());
+            }
+            else
+            {
+                webnnBias = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, biasvec.data(), biasvec.size()*sizeof(float), ml::OperandType::Float32);
+            }
+            const ml::Operand bias = webnnBias;
+            // result = webnnGraphBuilder.Add(operand, *const_cast<ml::Operand*>(&webnnBias));
+            result = webnnGraphBuilder.Add(operand, bias);
+            // result = webnnGraphBuilder.Add(operand, webnnBias);
+        }
+        return Ptr<BackendNode>(new WebnnBackendNode(result));
     }
 #endif // HAVE_WEBNN
 
