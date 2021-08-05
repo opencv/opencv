@@ -145,143 +145,129 @@ void gen_points_3d(std::vector<Plane>& planes_out, Mat_<unsigned char> &plane_ma
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CV_RgbdNormalsTest : public cvtest::BaseTest
+class RgbdNormalsTest
 {
 public:
-    CV_RgbdNormalsTest()
-    {
-    }
-    ~CV_RgbdNormalsTest()
-    {
-    }
-protected:
-    void
-        run(int)
-    {
-        try
-        {
-            Mat_<unsigned char> plane_mask;
-            for (unsigned char i = 0; i < 3; ++i)
-            {
-                RgbdNormals::RGBD_NORMALS_METHOD method;
-                // inner vector: whether it's 1 plane or 3 planes
-                // outer vector: float or double
-                std::vector<std::vector<float> > errors(2);
-                errors[0].resize(4);
-                errors[1].resize(4);
-                switch (i)
-                {
-                case 0:
-                    method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
-                    std::cout << std::endl << "*** FALS" << std::endl;
-                    errors[0][0] = 0.006f;
-                    errors[0][1] = 0.03f;
-                    errors[1][0] = 0.0001f;
-                    errors[1][1] = 0.02f;
-                    break;
-                case 1:
-                    method = RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD;
-                    std::cout << std::endl << "*** LINEMOD" << std::endl;
-                    errors[0][0] = 0.04f;
-                    errors[0][1] = 0.07f;
-                    errors[0][2] = 0.04f; // depth 16U 1 plane
-                    errors[0][3] = 0.07f; // depth 16U 3 planes
+    RgbdNormalsTest() { }
+    ~RgbdNormalsTest() { }
 
-                    errors[1][0] = 0.05f;
-                    errors[1][1] = 0.08f;
-                    errors[1][2] = 0.05f; // depth 16U 1 plane
-                    errors[1][3] = 0.08f; // depth 16U 3 planes
-                    break;
-                case 2:
-                    method = RgbdNormals::RGBD_NORMALS_METHOD_SRI;
-                    std::cout << std::endl << "*** SRI" << std::endl;
-                    errors[0][0] = 0.02f;
-                    errors[0][1] = 0.04f;
-                    errors[1][0] = 0.02f;
-                    errors[1][1] = 0.04f;
-                    break;
-                default:
-                    method = (RgbdNormals::RGBD_NORMALS_METHOD)-1;
-                    CV_Error(0, "");
+    void run()
+    {
+        Mat_<unsigned char> plane_mask;
+        for (unsigned char i = 0; i < 3; ++i)
+        {
+            RgbdNormals::RGBD_NORMALS_METHOD method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;;
+            // inner vector: whether it's 1 plane or 3 planes
+            // outer vector: float or double
+            std::vector<std::vector<float> > errors(2);
+            errors[0].resize(4);
+            errors[1].resize(4);
+            switch (i)
+            {
+            case 0:
+                method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+                CV_LOG_INFO(NULL, "*** FALS");
+                errors[0][0] = 0.006f;
+                errors[0][1] = 0.03f;
+                errors[1][0] = 0.0001f;
+                errors[1][1] = 0.02f;
+                break;
+            case 1:
+                method = RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD;
+                CV_LOG_INFO(NULL, "*** LINEMOD");
+                errors[0][0] = 0.04f;
+                errors[0][1] = 0.07f;
+                errors[0][2] = 0.04f; // depth 16U 1 plane
+                errors[0][3] = 0.07f; // depth 16U 3 planes
+
+                errors[1][0] = 0.05f;
+                errors[1][1] = 0.08f;
+                errors[1][2] = 0.05f; // depth 16U 1 plane
+                errors[1][3] = 0.08f; // depth 16U 3 planes
+                break;
+            case 2:
+                method = RgbdNormals::RGBD_NORMALS_METHOD_SRI;
+                CV_LOG_INFO(NULL, "*** SRI");
+                errors[0][0] = 0.02f;
+                errors[0][1] = 0.04f;
+                errors[1][0] = 0.02f;
+                errors[1][1] = 0.04f;
+                break;
+            }
+
+            for (unsigned char j = 0; j < 2; ++j)
+            {
+                int depth = (j % 2 == 0) ? CV_32F : CV_64F;
+                if (depth == CV_32F)
+                {
+                    CV_LOG_INFO(NULL, " * float");
+                }
+                else
+                {
+                    CV_LOG_INFO(NULL, " * double");
                 }
 
-                for (unsigned char j = 0; j < 2; ++j)
+                Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, method);
+                normals_computer->cache();
+
+                std::vector<Plane> plane_params;
+                Mat points3d, ground_normals;
+                // 1 plane, continuous scene, very low error..
+                CV_LOG_INFO(NULL, "1 plane - input 3d points");
+                float err_mean = 0;
+                for (int ii = 0; ii < 5; ++ii)
                 {
-                    int depth = (j % 2 == 0) ? CV_32F : CV_64F;
-                    if (depth == CV_32F)
-                        std::cout << "* float" << std::endl;
-                    else
-                        std::cout << "* double" << std::endl;
+                    gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 1);
+                    err_mean += testit(points3d, ground_normals, normals_computer);
+                }
+                CV_LOG_INFO(NULL, "mean diff: " << (err_mean / 5));
+                EXPECT_LE(err_mean / 5, errors[j][0]);
 
-                    Ptr<RgbdNormals> normals_computer = RgbdNormals::create(H, W, depth, K, 5, method);
-                    normals_computer->cache();
+                // 3 discontinuities, more error expected.
+                CV_LOG_INFO(NULL, "3 planes");
+                err_mean = 0;
+                for (int ii = 0; ii < 5; ++ii)
+                {
+                    gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 3);
+                    err_mean += testit(points3d, ground_normals, normals_computer);
+                }
+                CV_LOG_INFO(NULL, "mean diff: " << (err_mean / 5));
+                EXPECT_LE(err_mean / 5, errors[j][1]);
 
-                    std::vector<Plane> plane_params;
-                    Mat points3d, ground_normals;
-                    // 1 plane, continuous scene, very low error..
-                    std::cout << "1 plane - input 3d points" << std::endl;
-                    float err_mean = 0;
+                if (method == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
+                {
+                    // depth 16U test
+                    CV_LOG_INFO(NULL, "** depth 16U - 1 plane");
+                    err_mean = 0;
                     for (int ii = 0; ii < 5; ++ii)
                     {
                         gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 1);
-                        err_mean += testit(points3d, ground_normals, normals_computer);
+                        Mat depthMap;
+                        points3dToDepth16U(points3d, depthMap);
+                        err_mean += testit(depthMap, ground_normals, normals_computer);
                     }
-                    std::cout << "mean diff: " << (err_mean / 5) << std::endl;
-                    EXPECT_LE(err_mean / 5, errors[j][0]) << " thresh: " << errors[j][0] << std::endl;
+                    CV_LOG_INFO(NULL, "mean diff: " << (err_mean / 5));
+                    EXPECT_LE(err_mean / 5, errors[j][2]);
 
-                    // 3 discontinuities, more error expected.
-                    std::cout << "3 planes" << std::endl;
+                    CV_LOG_INFO(NULL, "** depth 16U - 3 plane");
                     err_mean = 0;
                     for (int ii = 0; ii < 5; ++ii)
                     {
                         gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 3);
-                        err_mean += testit(points3d, ground_normals, normals_computer);
+                        Mat depthMap;
+                        points3dToDepth16U(points3d, depthMap);
+                        err_mean += testit(depthMap, ground_normals, normals_computer);
                     }
-                    std::cout << "mean diff: " << (err_mean / 5) << std::endl;
-                    EXPECT_LE(err_mean / 5, errors[j][1]) << "mean diff: " << (err_mean / 5) << " thresh: " << errors[j][1] << std::endl;
-
-                    if (method == RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
-                    {
-                        // depth 16U test
-                        std::cout << "** depth 16U - 1 plane" << std::endl;
-                        err_mean = 0;
-                        for (int ii = 0; ii < 5; ++ii)
-                        {
-                            gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 1);
-                            Mat depthMap;
-                            points3dToDepth16U(points3d, depthMap);
-                            err_mean += testit(depthMap, ground_normals, normals_computer);
-                        }
-                        std::cout << "mean diff: " << (err_mean / 5) << std::endl;
-                        EXPECT_LE(err_mean / 5, errors[j][2]) << " thresh: " << errors[j][2] << std::endl;
-
-                        std::cout << "** depth 16U - 3 plane" << std::endl;
-                        err_mean = 0;
-                        for (int ii = 0; ii < 5; ++ii)
-                        {
-                            gen_points_3d(plane_params, plane_mask, points3d, ground_normals, 3);
-                            Mat depthMap;
-                            points3dToDepth16U(points3d, depthMap);
-                            err_mean += testit(depthMap, ground_normals, normals_computer);
-                        }
-                        std::cout << "mean diff: " << (err_mean / 5) << std::endl;
-                        EXPECT_LE(err_mean / 5, errors[j][3]) << "mean diff: " << (err_mean / 5) << " thresh: " << errors[j][3] << std::endl;
-                    }
+                    CV_LOG_INFO(NULL, "mean diff: " << (err_mean / 5));
+                    EXPECT_LE(err_mean / 5, errors[j][3]);
                 }
             }
-
-            //TODO test NaNs in data
-
         }
-        catch (...)
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
-        ts->set_failed_test_info(cvtest::TS::OK);
+
+        //TODO test NaNs in data
     }
 
-    float
-        testit(const Mat& points3d, const Mat& in_ground_normals, const Ptr<RgbdNormals>& normals_computer)
+    float testit(const Mat& points3d, const Mat& in_ground_normals, const Ptr<RgbdNormals>& normals_computer)
     {
         TickMeter tm;
         tm.start();
@@ -315,39 +301,31 @@ protected:
             }
 
         err /= normals.rows * normals.cols;
-        std::cout << "Average error: " << err << " Speed: " << tm.getTimeMilli() << " ms" << std::endl;
+        CV_LOG_INFO(NULL, "Average error: " << err << " Speed: " << tm.getTimeMilli() << " ms");
         return err;
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class CV_RgbdPlaneTest: public cvtest::BaseTest
+class RgbdPlaneTest
 {
 public:
-    CV_RgbdPlaneTest() { }
-    ~CV_RgbdPlaneTest() { }
-protected:
-    void run(int)
+    RgbdPlaneTest() { }
+    ~RgbdPlaneTest() { }
+
+    void run()
     {
-        try
+        std::vector<Plane> planes;
+        Mat points3d, ground_normals;
+        Mat_<unsigned char> plane_mask;
+        gen_points_3d(planes, plane_mask, points3d, ground_normals, 1);
+        testit(planes, plane_mask, points3d); // 1 plane, continuous scene, very low error..
+        for (int ii = 0; ii < 10; ii++)
         {
-            std::vector<Plane> planes;
-            Mat points3d, ground_normals;
-            Mat_<unsigned char> plane_mask;
-            gen_points_3d(planes, plane_mask, points3d, ground_normals, 1);
-            testit(planes, plane_mask, points3d); // 1 plane, continuous scene, very low error..
-            for (int ii = 0; ii < 10; ii++)
-            {
-                gen_points_3d(planes, plane_mask, points3d, ground_normals, 3); //three planes
-                testit(planes, plane_mask, points3d); // 3 discontinuities, more error expected.
-            }
+            gen_points_3d(planes, plane_mask, points3d, ground_normals, 3); //three planes
+            testit(planes, plane_mask, points3d); // 3 discontinuities, more error expected.
         }
-        catch (...)
-        {
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
-        ts->set_failed_test_info(cvtest::TS::OK);
     }
 
     void testit(const std::vector<Plane>& gt_planes, const Mat& gt_plane_mask, const Mat& points3d)
@@ -406,10 +384,10 @@ protected:
                 ASSERT_GE(std::abs(gt_planes[j].n.dot(normal)), 0.95);
             }
 
-            std::cout << " Speed: ";
+            CV_LOG_INFO(NULL, "Speed: ");
             if (i_test == 0)
-                std::cout << "normals " << tm1.getTimeMilli() << " ms and ";
-            std::cout << "plane " << tm2.getTimeMilli() << " ms " << std::endl;
+                CV_LOG_INFO(NULL, "normals " << tm1.getTimeMilli() << " ms and ");
+            CV_LOG_INFO(NULL, "plane " << tm2.getTimeMilli() << " ms");
         }
     }
 };
@@ -418,14 +396,14 @@ protected:
 
 TEST(RGBD_Normals, compute)
 {
-  CV_RgbdNormalsTest test;
-  test.safe_run();
+  RgbdNormalsTest test;
+  test.run();
 }
 
 TEST(RGBD_Plane, compute)
 {
-  CV_RgbdPlaneTest test;
-  test.safe_run();
+  RgbdPlaneTest test;
+  test.run();
 }
 
 TEST(RGBD_Plane, regression_2309_valgrind_check)
