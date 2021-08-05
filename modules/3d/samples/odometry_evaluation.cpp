@@ -8,6 +8,7 @@
 #include <opencv2/3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/utility.hpp>
+#include <opencv2/core/quaternion.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -16,32 +17,6 @@ using namespace std;
 using namespace cv;
 
 #define BILATERAL_FILTER 0// if 1 then bilateral filter will be used for the depth
-
-class MyTickMeter
-{
-public:
-    MyTickMeter() { reset(); }
-    void start() { startTime = getTickCount(); }
-    void stop()
-    {
-        int64 time = getTickCount();
-        if ( startTime == 0 )
-            return;
-        ++counter;
-        sumTime += ( time - startTime );
-        startTime = 0;
-    }
-
-    int64 getTimeTicks() const { return sumTime; }
-    double getTimeSec()   const { return (double)getTimeTicks()/getTickFrequency(); }
-    int64 getCounter() const { return counter; }
-
-    void reset() { startTime = sumTime = 0; counter = 0; }
-private:
-    int64 counter;
-    int64 sumTime;
-    int64 startTime;
-};
 
 static
 void writeResults( const string& filename, const vector<string>& timestamps, const vector<Mat>& Rt )
@@ -61,22 +36,12 @@ void writeResults( const string& filename, const vector<string>& timestamps, con
 
         CV_Assert( Rt_curr.type() == CV_64FC1 );
 
-        Mat R = Rt_curr(Rect(0,0,3,3)), rvec;
-        Rodrigues(R, rvec);
-        double alpha = norm( rvec );
-        if(alpha > DBL_MIN)
-            rvec = rvec / alpha;
+        Quatd rot = Quatd::createFromRotMat(Rt_curr(Rect(0, 0, 3, 3)));
 
-        double cos_alpha2 = std::cos(0.5 * alpha);
-        double sin_alpha2 = std::sin(0.5 * alpha);
-
-        rvec *= sin_alpha2;
-
-        CV_Assert( rvec.type() == CV_64FC1 );
         // timestamp tx ty tz qx qy qz qw
         file << timestamps[i] << " " << fixed
              << Rt_curr.at<double>(0,3) << " " << Rt_curr.at<double>(1,3) << " " << Rt_curr.at<double>(2,3) << " "
-             << rvec.at<double>(0) << " " << rvec.at<double>(1) << " " << rvec.at<double>(2) << " " << cos_alpha2 << endl;
+             << rot.x << " " << rot.y << " " << rot.z << " " << rot.w << endl;
 
     }
     file.close();
@@ -149,7 +114,7 @@ int main(int argc, char** argv)
     }
     odometry->setCameraMatrix(cameraMatrix);
 
-    MyTickMeter gtm;
+    TickMeter gtm;
     int count = 0;
     for(int i = 0; !file.eof(); i++)
     {
@@ -162,7 +127,7 @@ int main(int argc, char** argv)
         // Read one pair (rgb and depth)
         // example: 1305031453.359684 rgb/1305031453.359684.png 1305031453.374112 depth/1305031453.374112.png
 #if BILATERAL_FILTER
-        MyTickMeter tm_bilateral_filter;
+        TickMeter tm_bilateral_filter;
 #endif
         {
             string rgbFilename = str.substr(timestampLength + 1, rgbPathLehgth );
@@ -208,7 +173,7 @@ int main(int argc, char** argv)
             Mat Rt;
             if(!Rts.empty())
             {
-                MyTickMeter tm;
+                TickMeter tm;
                 tm.start();
                 gtm.start();
                 bool res = odometry->compute(frame_curr, frame_prev, Rt);
@@ -238,7 +203,7 @@ int main(int argc, char** argv)
         }
     }
 
-    std::cout << "Average time " << gtm.getTimeSec()/count << std::endl;
+    std::cout << "Average time " << gtm.getAvgTimeSec() << std::endl;
     writeResults(argv[2], timestamps, Rts);
 
     return 0;
