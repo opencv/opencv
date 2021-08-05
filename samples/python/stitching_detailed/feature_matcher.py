@@ -35,33 +35,27 @@ class FeatureMatcher:
         self.matcher.collectGarbage()
         return pairwise_matches
 
+    @staticmethod
     def get_default_match_conf(feature_detector_type):
         if feature_detector_type == 'orb':
             return 0.3
         else:
             return 0.65
 
+    @staticmethod
+    def get_matches_matrix(pairwise_matches):
+        return FeatureMatcher.__array_in_sqare_matrix(pairwise_matches)
 
-def get_matches_graph(img_names, pairwise_matches, confidence_threshold):
-    return cv.detail.matchesGraphAsString(img_names,
-                                          pairwise_matches,
-                                          confidence_threshold)
+    @staticmethod
+    def get_confidence_matrix(pairwise_matches):
+        matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
+        m_confs = [[m.confidence for m in row] for row in matches_matrix]
+        m_conf_matrix = np.array(m_confs)
+        return m_conf_matrix
 
-
-def get_matches_matrix(pairwise_matches):
-    return __array_in_sqare_matrix(pairwise_matches)
-
-
-def get_confidence_matrix(pairwise_matches):
-    matches_matrix = get_matches_matrix(pairwise_matches)
-    m_confs = [[m.confidence for m in row] for row in matches_matrix]
-    m_conf_matrix = np.array(m_confs)
-    return m_conf_matrix
-
-
-def __array_in_sqare_matrix(array):
-    matrix_dimension = int(math.sqrt(len(array)))
-    rows = []
-    for i in range(0, len(array), matrix_dimension):
-        rows.append(array[i:i+matrix_dimension])
-    return np.array(rows)
+    def __array_in_sqare_matrix(array):
+        matrix_dimension = int(math.sqrt(len(array)))
+        rows = []
+        for i in range(0, len(array), matrix_dimension):
+            rows.append(array[i:i+matrix_dimension])
+        return np.array(rows)

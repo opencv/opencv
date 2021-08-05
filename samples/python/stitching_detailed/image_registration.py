@@ -13,6 +13,7 @@ class ImageRegistration:
                  matcher_try_cuda=False,
                  matcher_match_conf=None,
                  conf_thresh=Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
+                 save_graph=Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
                  estimator=CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
                  ba=CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
                  ba_refine_mask=CameraAdjuster.DEFAULT_REFINEMENT_MASK,
@@ -31,14 +32,16 @@ class ImageRegistration:
         self.camera_adjuster = CameraAdjuster(ba, ba_refine_mask)
         self.wave_corrector = WaveCorrector(wave_correct)
 
-    def register(self, images):
+    def register(self, img_names, images):
         features = self.find_features(images)
         matches = self.match_features(features)
-        indices, features, matches = self.subset(features, matches)
+        img_names, features, matches = self.subset(
+            img_names, features, matches
+            )
         cameras = self.estimate_camera_parameters(features, matches)
         cameras = self.adjust_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
-        return indices, cameras
+        return img_names, cameras
 
     def find_features(self, images):
         return [self.finder.detect_features(img) for img in images]

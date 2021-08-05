@@ -229,6 +229,7 @@ def get_image_registration_object(args):
                              args.try_cuda,
                              args.match_conf,
                              args.conf_thresh,
+                             args.save_graph,
                              args.estimator,
                              args.ba,
                              args.ba_refine_mask,

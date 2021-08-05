@@ -119,6 +119,14 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(len(pairwise_matches), len(features)**2)
         self.assertGreater(pairwise_matches[1].confidence, 2)
 
+        matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
+        self.assertEqual(matches_matrix.shape, (2, 2))
+        conf_matrix = FeatureMatcher.get_confidence_matrix(pairwise_matches)
+        self.assertTrue(np.array_equal(
+            conf_matrix > 2,
+            np.array([[False,  True], [True, False]])
+            ))
+
     def test_equality_of_focals(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
         detector = FeatureDetector("orb")
@@ -152,7 +160,8 @@ class TestStitcher(unittest.TestCase):
                     detector.detect_features(img5)]
         matcher = FeatureMatcher()
         pairwise_matches = matcher.match_features(features)
-        subsetter = Subsetter(confidence_threshold=1)
+        subsetter = Subsetter(confidence_threshold=1,
+                              matches_graph_dot_file="dot_graph.txt")  # view in https://dreampuf.github.io  # noqa
 
         indices = subsetter.get_indices_to_keep(features, pairwise_matches)
         indices_to_delete = subsetter.get_indices_to_delete(len(img_names),
@@ -165,12 +174,19 @@ class TestStitcher(unittest.TestCase):
         self.assertEqual(subsetted_image_names,
                          ['boat1.jpg', 'boat2.jpg', 'boat3.jpg'])
 
-        subset = subsetter.subset(features, pairwise_matches)
-        indices, feature_subset, matches_subset = subset
-        # get_confidence_matrix(pairwise_matches)
-        # get_confidence_matrix(subsetted_matches)
+        subset = subsetter.subset(img_names,
+                                  features,
+                                  pairwise_matches)
+
+        img_names, feature_subset, matches_subset = subset
+        # FeatureMatcher.get_confidence_matrix(pairwise_matches)
+        # FeatureMatcher.get_confidence_matrix(subsetted_matches)
         self.assertEqual(pairwise_matches[13].confidence,
                          matches_subset[1].confidence)
+
+        graph = subsetter.get_matches_graph_dot_file(img_names,
+                                                     pairwise_matches)
+        self.assertTrue(graph.startswith("graph matches_graph{"))
 
 
 def starttest():

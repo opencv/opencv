@@ -115,7 +115,8 @@ parser.add_argument(
     type=str, dest='wave_correct'
 )
 parser.add_argument(
-    '--save_graph', action='store', default=None,
+    '--save_graph', action='store',
+    default=Subsetter.DEFAULT_MATCHES_GRAPH_DOT_FILE,
     help="Save matches graph represented in DOT language to <file_name> file.",
     type=str, dest='save_graph'
 )
