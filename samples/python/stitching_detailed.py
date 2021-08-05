@@ -157,11 +157,6 @@ parser.add_argument(
     type=np.int32, dest='expos_comp_nr_feeds'
 )
 parser.add_argument(
-    '--expos_comp_nr_filtering', action='store', default=2,
-    help="Number of filtering iterations of the exposure compensation gains.",
-    type=float, dest='expos_comp_nr_filtering'
-)
-parser.add_argument(
     '--expos_comp_block_size', action='store', default=32,
     help="BLock size in pixels used by the exposure compensator. "
          "The default is 32.",

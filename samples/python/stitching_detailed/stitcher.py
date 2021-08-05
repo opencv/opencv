@@ -8,6 +8,7 @@ from .image_to_megapix_scaler import ImageToMegapixScaler
 from .image_registration import ImageRegistration
 from .subsetter import Subsetter
 from .warper import Warper
+from .exposure_error_compensator import ExposureErrorCompensator
 
 
 class Stitcher:
@@ -107,8 +108,10 @@ class Stitcher:
             imgf = img.astype(np.float32)
             images_warped_f.append(imgf)
 
-        compensator = get_compensator(args)
-        compensator.feed(corners=corners, images=images_warped, masks=masks_warped)
+        compensator = ExposureErrorCompensator(args.expos_comp,
+                                               args.expos_comp_nr_feeds,
+                                               args.expos_comp_block_size)
+        compensator.feed(corners, images_warped, masks_warped)
 
         seam_finder = choices.SEAM_FIND_CHOICES[args.seam]
         masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
@@ -147,7 +150,7 @@ class Stitcher:
             corner, image_warped = warper.warp(img, K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
             p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
-            compensator.apply(idx, corners[idx], image_warped, mask_warped)
+            image_warped = compensator.apply(idx, corners[idx], image_warped, mask_warped)
             image_warped_s = image_warped.astype(np.int16)
             dilated_mask = cv.dilate(masks_warped[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
@@ -211,21 +214,3 @@ def get_image_registration_object(args):
                              args.ba,
                              args.ba_refine_mask,
                              args.wave_correct)
-
-def get_compensator(args):
-    expos_comp_type = choices.EXPOS_COMP_CHOICES[args.expos_comp]
-    expos_comp_nr_feeds = args.expos_comp_nr_feeds
-    expos_comp_block_size = args.expos_comp_block_size
-    # expos_comp_nr_filtering = args.expos_comp_nr_filtering
-    if expos_comp_type == cv.detail.ExposureCompensator_CHANNELS:
-        compensator = cv.detail_ChannelsCompensator(expos_comp_nr_feeds)
-        # compensator.setNrGainsFilteringIterations(expos_comp_nr_filtering)
-    elif expos_comp_type == cv.detail.ExposureCompensator_CHANNELS_BLOCKS:
-        compensator = cv.detail_BlocksChannelsCompensator(
-            expos_comp_block_size, expos_comp_block_size,
-            expos_comp_nr_feeds
-        )
-        # compensator.setNrGainsFilteringIterations(expos_comp_nr_filtering)
-    else:
-        compensator = cv.detail.ExposureCompensator_createDefault(expos_comp_type)
-    return compensator
