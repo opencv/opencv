@@ -73,6 +73,11 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
                 throw std::runtime_error("MFXCreateConfig failed");
             }
 
+            if (!cfg_param_it->is_major()) {
+                GAPI_LOG_DEBUG(nullptr, "Skip not major param: " << cfg_param_it->get_name());
+                ++cfg_param_it;
+                continue;
+            }
             mfxVariant mfx_param = cfg_param_to_mfx_variant(*cfg_param_it);
             mfxStatus sts = MFXSetConfigFilterProperty(cfg_inst,
                                                        (mfxU8 *)cfg_param_it->get_name().c_str(),
@@ -87,7 +92,13 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
             ++cfg_param_it;
         }
 
-        GAPI_LOG_DEBUG(nullptr, "Find MFX better implementation satisfying requested params, handle: " << mfx_handle);
+        //collect optional-preferred parameters
+        std::vector<oneVPL_cfg_param> preferred_params;
+        std::copy_if(cfg_params.begin(), cfg_params.end(), std::back_inserter(preferred_params),
+                     [] (const oneVPL_cfg_param& param) { return !param.is_major(); });
+        std::sort(preferred_params.begin(), preferred_params.end());
+        GAPI_LOG_DEBUG(nullptr, "Find MFX better implementation from handle: " << mfx_handle <<
+                                " is satisfying preferrable params count: " << preferred_params.size());
         int i = 0;
         mfxImplDescription *idesc = nullptr;
         std::vector<mfxImplDescription*> descriptions;
@@ -113,17 +124,23 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
 
             // find intersection
             std::vector<oneVPL_cfg_param> impl_params = get_params_from_string<oneVPL_cfg_param>(ss.str());
+            std::sort(impl_params.begin(), impl_params.end());
+            GAPI_LOG_DEBUG(nullptr, "Find implementation cfg params count" << impl_params.size());
 
             std::vector<oneVPL_cfg_param> matched_params;
-            std::set_intersection(impl_params.begin(), impl_params.end(), cfg_params.begin(), cfg_params.end(),
-            std::inserter(matched_params, matched_params.end()),
-                          [] (const oneVPL_cfg_param& lhs, const oneVPL_cfg_param& rhs) -> bool
-            {
-                return lhs == rhs;
-            });
-            GAPI_LOG_DEBUG(nullptr, "Equal param intersection count: " << matched_params.size());
-        
-            matches_count.emplace(matches_count.size(), i++);
+            std::set_intersection(impl_params.begin(), impl_params.end(),
+                                  preferred_params.begin(), preferred_params.end(),
+                                  std::back_inserter(matched_params));
+
+            if (preferred_params.empty()) {
+                // in case of no preferrance we consider all params are matched
+                matches_count.emplace(impl_params.size(), i++);
+                GAPI_LOG_DEBUG(nullptr, "No preferrable params, use the first one implementation");
+                break;
+            } else {
+                GAPI_LOG_DEBUG(nullptr, "Equal param intersection count: " << matched_params.size());
+                matches_count.emplace(matches_count.size(), i++);
+            }
         }
 
         //Get max matched

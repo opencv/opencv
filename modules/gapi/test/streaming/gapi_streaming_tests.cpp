@@ -2224,33 +2224,43 @@ TEST(GAPI_Streaming, TestPythonAPI)
 }
 
 #ifdef HAVE_ONEVPL
+const unsigned char hevc_header[] = {
+ 0x00, 0x00, 0x00, 0x01, 0x40, 0x01, 0x0C, 0x06, 0xFF, 0xFF, 0x01, 0x40, 0x00,
+ 0x00, 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00,
+ 0x00, 0x04, 0x02, 0x10, 0x30, 0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03,
+ 0x01, 0xE5, 0x00, 0x00, 0x00, 0x01, 0x42, 0x01, 0x06, 0x01, 0x40, 0x00, 0x00,
+ 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00, 0x00,
+ 0xA0, 0x10, 0x20, 0x61, 0x63, 0x41, 0x00, 0x86, 0x49, 0x1B, 0x2B, 0x20, 0x00,
+ 0x00, 0x00, 0x01, 0x44, 0x01, 0xC0, 0x71, 0xC0, 0xD9, 0x20, 0x00, 0x00, 0x00,
+ 0x01, 0x26, 0x01, 0xAF, 0x0C
+};
 TEST(OneVPL_Source, Init)
 {
     std::vector<cv::gapi::wip::oneVPL_cfg_param> src_params;
     src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.Impl",
                                                                                MFX_IMPL_TYPE_HARDWARE));
     src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                               MFX_ACCEL_MODE_VIA_D3D11));
+                                                                               MFX_ACCEL_MODE_VIA_D3D11, false));
     src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
                                                                                MFX_CODEC_HEVC));
+    std::string stub_file_name("stub_file");
+    FILE* stub_file = fopen(stub_file_name.c_str(), "w+");
+    EXPECT_NE(stub_file, nullptr);
+    fwrite(hevc_header, sizeof(hevc_header), 1, stub_file);
+    fclose(stub_file);
+    stub_file = nullptr;
 
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
-    EXPECT_THROW(cv::gapi::wip::make_vpl_src("not_existing_file",
-                                             src_params), std::logic_error);
+    bool cap_created = false;
     try {
-        cv::gapi::wip::Data data;
-        ASSERT_TRUE(cap->pull(data));
-
-        bool ret = true;
-        do {
-            ret = cap->pull(data);
-        } while(ret);
-
-        cap.reset();
-        (void)data;
-    } catch (const std::exception& ex) {
-        std::cerr << "Failed with exception: " << ex.what() << std::endl;
+        cap = cv::gapi::wip::make_vpl_src(stub_file_name,
+                                          src_params);
+        cap_created = true;
+    } catch (const std::exception&) {
+        unlink(stub_file_name.c_str());
     }
+    ASSERT_TRUE(cap_created);
+    unlink(stub_file_name.c_str());
 }
 #endif 
 } // namespace opencv_test

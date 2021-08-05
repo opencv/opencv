@@ -35,6 +35,7 @@ struct GAPI_EXPORTS oneVPL_cfg_param {
     const value_t& get_value() const;
     bool is_major() const;
     bool operator==(const oneVPL_cfg_param& src) const;
+    bool operator< (const oneVPL_cfg_param& src) const;
     bool operator!=(const oneVPL_cfg_param& src) const;
 
     oneVPL_cfg_param& operator=(const oneVPL_cfg_param& src);

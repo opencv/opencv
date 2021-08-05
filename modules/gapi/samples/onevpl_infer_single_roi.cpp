@@ -300,12 +300,12 @@ typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &l
     using namespace cv::gapi::wip;
 
     if (line.empty()) {
-        throw std::runtime_error("Cannot parse CFGParams from emply line");
+        throw std::runtime_error("Cannot parse oneVPL_cfg_param from emply line");
     }
 
     std::string::size_type name_endline_pos = line.find(':');
     if (name_endline_pos == std::string::npos) {
-        throw std::runtime_error("Cannot parse CFGParams from: " + line +
+        throw std::runtime_error("Cannot parse oneVPL_cfg_param from: " + line +
                                  "\nExpected separator \":\"");
     }
 

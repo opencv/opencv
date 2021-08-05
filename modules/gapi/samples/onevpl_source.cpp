@@ -98,7 +98,7 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 } // namespace custom
 
 namespace detail {
-typename cv::gapi::wip::CFGParams::value_type create_from_string(const std::string &line);
+typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &line);
 }
 
 int main(int argc, char *argv[]) {
@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
 
     // get VPL params from cmd
     int param_index = 1;
-    cv::gapi::wip::CFGParams source_cfgs;
+    std::vector<cv::gapi::wip::oneVPL_cfg_param> source_cfgs;
     try {
         do {
             std::string line = cmd.get<std::string>("cfg_param_" + std::to_string(param_index));
@@ -202,16 +202,16 @@ int main(int argc, char *argv[]) {
 
 
 namespace detail {
-typename cv::gapi::wip::CFGParams::value_type create_from_string(const std::string &line) {
+typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &line) {
     using namespace cv::gapi::wip;
 
     if (line.empty()) {
-        throw std::runtime_error("Cannot parse CFGParams from emply line");
+        throw std::runtime_error("Cannot parse oneVPL_cfg_param from emply line");
     }
 
     std::string::size_type name_endline_pos = line.find(':');
     if (name_endline_pos == std::string::npos) {
-        throw std::runtime_error("Cannot parse CFGParams from: " + line +
+        throw std::runtime_error("Cannot parse oneVPL_cfg_param from: " + line +
                                  "\nExpected separator \":\"");
     }
 
