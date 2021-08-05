@@ -311,7 +311,8 @@ class dnn_test(NewOpenCVTests):
 
         cv.dnn_unregisterLayer('CropCaffe')
 
-    def test_lstm(self):
+    # check that dnn module can work with 3D tensor as input for network
+    def test_input_3d(self):
         model = self.find_dnn_file('dnn/onnx/models/hidden_lstm.onnx')
         input_file = self.find_dnn_file('dnn/onnx/data/input_hidden_lstm.npy')
         output_file = self.find_dnn_file('dnn/onnx/data/output_hidden_lstm.npy')
@@ -325,6 +326,8 @@ class dnn_test(NewOpenCVTests):
         net = cv.dnn.readNet(model)
         input = np.load(input_file)
         # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
+        # it should be fixed in future. see : https://github.com/opencv/opencv/issues/19091
+        # please remove `expand_dims` after that
         input = np.expand_dims(input, axis=3)
         gold_output = np.load(output_file)
         net.setInput(input)
