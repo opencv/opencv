@@ -405,7 +405,7 @@ public:
     typedef Matx<T, 3, 3> Mat33T;
 
     LINEMOD(int _rows, int _cols, int _windowSize, const Mat& _K) :
-        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_LINEMOD)
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD)
     { }
 
     /** Compute cached data
@@ -572,7 +572,7 @@ public:
     typedef Vec<T, 3> Vec3T;
 
     SRI(int _rows, int _cols, int _windowSize, const Mat& _K) :
-        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RGBD_NORMALS_METHOD_SRI),
+        RgbdNormalsImpl<T>(_rows, _cols, _windowSize, _K, RgbdNormals::RGBD_NORMALS_METHOD_SRI),
         phi_step_(0),
         theta_step_(0)
     { }
