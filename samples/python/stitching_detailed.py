@@ -121,9 +121,9 @@ parser.add_argument(
     type=str, dest='save_graph'
 )
 parser.add_argument(
-    '--warp', action='store', default=Warper.default,
-    help="Warp surface type. The default is '%s'." % Warper.default,
-    choices=Warper.choices,
+    '--warp', action='store', default=Warper.DEFAULT_WARP_TYPE,
+    help="Warp surface type. The default is '%s'." % Warper.DEFAULT_WARP_TYPE,
+    choices=Warper.WARP_TYPE_CHOICES,
     type=str, dest='warp'
 )
 parser.add_argument(

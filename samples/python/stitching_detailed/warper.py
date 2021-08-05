@@ -4,15 +4,18 @@ import numpy as np
 
 class Warper:
 
-    choices = ('spherical', 'plane', 'affine', 'cylindrical', 'fisheye',
-               'stereographic', 'compressedPlaneA2B1', 'compressedPlaneA1.5B1',
-               'compressedPlanePortraitA2B1', 'compressedPlanePortraitA1.5B1',
-               'paniniA2B1', 'paniniA1.5B1', 'paniniPortraitA2B1',
-               'paniniPortraitA1.5B1', 'mercator', 'transverseMercator')
+    WARP_TYPE_CHOICES = ('spherical', 'plane', 'affine', 'cylindrical',
+                         'fisheye', 'stereographic', 'compressedPlaneA2B1',
+                         'compressedPlaneA1.5B1',
+                         'compressedPlanePortraitA2B1',
+                         'compressedPlanePortraitA1.5B1',
+                         'paniniA2B1', 'paniniA1.5B1', 'paniniPortraitA2B1',
+                         'paniniPortraitA1.5B1', 'mercator',
+                         'transverseMercator')
 
-    default = 'spherical'
+    DEFAULT_WARP_TYPE = 'spherical'
 
-    def __init__(self, warper_type=default, scale=1):
+    def __init__(self, warper_type=DEFAULT_WARP_TYPE, scale=1):
         self.warper = cv.PyRotationWarper(warper_type, scale)
 
     def warp_image(self, image, camera, aspect=1):
