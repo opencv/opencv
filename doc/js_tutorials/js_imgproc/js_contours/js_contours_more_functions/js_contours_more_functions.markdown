@@ -1,6 +1,9 @@
 Contours : More Functions {#tutorial_js_contours_more_functions}
 =========================
 
+@prev_tutorial{tutorial_js_contour_properties}
+@next_tutorial{tutorial_js_contours_hierarchy}
+
 Goal
 ----
 
