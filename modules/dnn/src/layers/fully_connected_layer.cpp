@@ -46,6 +46,7 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_webnn.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -150,6 +151,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1) ||
+               (backendId == DNN_BACKEND_WEBNN && axis == 1) ||
                (((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && !blobs.empty()) ||
                 backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && axis == 1);
     }
@@ -656,6 +658,37 @@ public:
         params.blobs.push_back(outputMultiplier);
         return true;
     }
+
+#ifdef HAVE_WEBNN
+    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+        auto& webnnInpOperand = node->operand;
+        auto& webnnGraphBuilder = node->net->builder;
+        ml::GemmOptions gemmOptions = {};
+        if (bias)
+        {
+            std::vector<int32_t> biasDims = {(int32_t)blobs[1].size[1]};
+            ml::Operand bias = webnn::BuildConstant(webnnGraphBuilder, biasDims, blobs[1].data, blobs[1].total()*blobs[1].elemSize(), ml::OperandType::Float32);
+            gemmOptions.c = bias;
+        }
+        ml::Operand result = nullptr;
+        if (nodes.size() == 2)
+        {
+            auto& inp2 = nodes[1].dynamicCast<WebnnBackendNode>()->operand;
+            result = webnnGraphBuilder.Gemm(webnnInpOperand, inp2, &gemmOptions);
+        }
+        else
+        {
+            std::vector<int32_t> weight_shape = {(int32_t)blobs[0].size[0], (int32_t)blobs[0].size[1]};
+            std::cout<<"weight_shape: " << weight_shape[0]<<" "<<weight_shape[1]<<std::endl;
+            ml::Operand inp2 = webnn::BuildConstant(webnnGraphBuilder, weight_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+            gemmOptions.bTranspose = true;
+            result = webnnGraphBuilder.Gemm(webnnInpOperand, inp2, &gemmOptions);
+        }
+        return Ptr<BackendNode>(new WebnnBackendNode(result));
+    }
+#endif // HAVE_WEBNN
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
