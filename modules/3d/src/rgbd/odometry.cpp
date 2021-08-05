@@ -10,22 +10,6 @@
 #include "utils.hpp"
 #include "fast_icp.hpp"
 
-#if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
-#  define HAVE_EIGEN3_HERE
-#  if defined(_MSC_VER)
-#    pragma warning(push)
-#    pragma warning(disable:4701)  // potentially uninitialized local variable
-#    pragma warning(disable:4702)  // unreachable code
-#    pragma warning(disable:4714)  // const marked as __forceinline not inlined
-#  endif
-#  include <Eigen/Core>
-#  include <unsupported/Eigen/MatrixFunctions>
-#  include <Eigen/Dense>
-#  if defined(_MSC_VER)
-#    pragma warning(pop)
-#  endif
-#endif
-
 namespace cv
 {
 
@@ -452,32 +436,12 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 {
     CV_Assert(ksi.size() == Size(1,6) && ksi.type() == CV_64FC1);
 
-#ifdef HAVE_EIGEN3_HERE
     const double* ksi_ptr = ksi.ptr<const double>();
-    Eigen::Matrix<double,4,4> twist, g;
-    twist << 0.,          -ksi_ptr[2], ksi_ptr[1],  ksi_ptr[3],
-             ksi_ptr[2],  0.,          -ksi_ptr[0], ksi_ptr[4],
-             -ksi_ptr[1], ksi_ptr[0],  0,           ksi_ptr[5],
-             0.,          0.,          0.,          0.;
-    g = twist.exp();
+    // 0.5 multiplication is here because (dual) quaternions keep half an angle/twist inside
+    Matx44d matdq = (DualQuatd(0, ksi_ptr[0], ksi_ptr[1], ksi_ptr[2],
+                               0, ksi_ptr[3], ksi_ptr[4], ksi_ptr[5])*0.5).exp().toMat(QUAT_ASSUME_UNIT);
 
-    eigen2cv(g, Rt);
-#else
-    // TODO: check computeProjectiveMatrix when there is not eigen library,
-    //       because it gives less accurate pose of the camera
-    Rt = Mat::eye(4, 4, CV_64FC1);
-
-    Mat R = Rt(Rect(0,0,3,3));
-    Mat rvec = ksi.rowRange(0,3);
-
-    Rodrigues(rvec, R);
-
-    // TODO 2: use DualQuaternion exponent instead to get the same results with the Eigen code above
-
-    Rt.at<double>(0,3) = ksi.at<double>(3);
-    Rt.at<double>(1,3) = ksi.at<double>(4);
-    Rt.at<double>(2,3) = ksi.at<double>(5);
-#endif
+    matdq.copyTo(Rt);
 }
 
 static

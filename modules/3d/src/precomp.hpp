@@ -51,6 +51,7 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 #include "opencv2/core/quaternion.hpp"
+#include "opencv2/core/dualquaternion.hpp"
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/trace.hpp"
