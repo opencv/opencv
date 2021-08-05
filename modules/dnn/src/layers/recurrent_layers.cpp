@@ -169,7 +169,7 @@ public:
         CV_Assert(!reverse || !bidirectional);
 
         // read activations
-        auto activations = params.get<DictValue>("activations", "");
+        DictValue activations = params.get<DictValue>("activations", "");
         if (activations.size() == 1) // if activations wasn't specified use default
         {
             f_activation = sigmoid;
