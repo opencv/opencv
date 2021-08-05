@@ -424,47 +424,19 @@ public:
     }
 
 #ifdef HAVE_WEBNN
-<<<<<<< HEAD
-=======
-    ml::Operand BuildConstant(const ml::GraphBuilder& builder,
-                              const std::vector<int32_t>& dimensions,
-                              const void* value,
-                              size_t size,
-                              ml::OperandType type) {
-        ml::OperandDescriptor desc;
-        desc.type = type;
-        desc.dimensions = dimensions.data();
-        desc.dimensionsCount = (uint32_t)dimensions.size();
-        ml::ArrayBufferView resource;
-        resource.buffer = const_cast<void*>(value);
-        resource.byteLength = size;
-        return builder.Constant(&desc, &resource);
-    }
-
->>>>>>> Implement BatchNorm Layer by WebNN API
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
         auto& webnnInpOperand = node->operand;
         auto& webnnGraphBuilder = node->net->builder;
-<<<<<<< HEAD
         std::vector<int32_t> weights_shape = webnn::getShape(weights_);
         ml::Operand weights = webnn::BuildConstant(webnnGraphBuilder, weights_shape, weights_.data, weights_.total()*weights_.elemSize(), ml::OperandType::Float32);
-=======
-        std::vector<int32_t> weights_shape = getShape<int32_t>(weights_);
-        ml::Operand weights = BuildConstant(webnnGraphBuilder, weights_shape, weights_.data, weights_.total()*weights_.elemSize(), ml::OperandType::Float32);
->>>>>>> Implement BatchNorm Layer by WebNN API
         std::vector<int32_t> shape(dims, 1);
         shape[1] = weights_shape[1];
         ml::Operand weights_reshaped = webnnGraphBuilder.Reshape(weights, shape.data(), shape.size());
         ml::Operand mul_res = webnnGraphBuilder.Mul(webnnInpOperand, weights_reshaped);
-<<<<<<< HEAD
         std::vector<int32_t> bias_shape = webnn::getShape(bias_);
         ml::Operand bias = webnn::BuildConstant(webnnGraphBuilder, bias_shape, bias_.data, bias_.total()*bias_.elemSize(), ml::OperandType::Float32);
-=======
-        std::vector<int32_t> bias_shape = getShape<int32_t>(bias_);
-        ml::Operand bias = BuildConstant(webnnGraphBuilder, bias_shape, bias_.data, bias_.total()*bias_.elemSize(), ml::OperandType::Float32);
->>>>>>> Implement BatchNorm Layer by WebNN API
         shape[1] = bias_shape[1];
         ml::Operand bias_reshaped = webnnGraphBuilder.Reshape(bias, shape.data(), shape.size());
         ml::Operand add_res = webnnGraphBuilder.Add(mul_res, bias_reshaped);
