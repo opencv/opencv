@@ -30,8 +30,8 @@ public:
              const std::string &device);
 
     GAPI_WRAP PyParams(const std::string &tag,
-             const std::string &model,
-             const std::string &device);
+                       const std::string &model,
+                       const std::string &device);
 
     GAPI_WRAP PyParams& constInput(const std::string &layer_name,
                                    const cv::Mat &data,
