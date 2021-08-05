@@ -178,7 +178,7 @@ class TestStitcher(unittest.TestCase):
                                   features,
                                   pairwise_matches)
 
-        img_names, feature_subset, matches_subset = subset
+        indices, feature_subset, matches_subset = subset
         # FeatureMatcher.get_confidence_matrix(pairwise_matches)
         # FeatureMatcher.get_confidence_matrix(subsetted_matches)
         self.assertEqual(pairwise_matches[13].confidence,

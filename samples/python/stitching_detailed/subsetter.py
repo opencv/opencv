@@ -25,7 +25,6 @@ class Subsetter:
         indices_to_delete = self.get_indices_to_delete(len(features),
                                                        indices)
 
-        img_names_subset = Subsetter.subset_list(img_names, indices)
         feature_subset = Subsetter.subset_list(features, indices)
 
         matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
@@ -40,7 +39,7 @@ class Subsetter:
                     pairwise_matches
                     ))
 
-        return img_names_subset, feature_subset, matches_subset
+        return indices, feature_subset, matches_subset
 
     def get_indices_to_keep(self, features, pairwise_matches):
         indices = cv.detail.leaveBiggestComponent(features,

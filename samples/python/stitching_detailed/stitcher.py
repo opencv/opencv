@@ -4,9 +4,9 @@ import cv2 as cv
 import numpy as np
 
 from . import stitcher_choices as choices
-from .panorama_part import PanoramaPart
 from .image_to_megapix_scaler import ImageToMegapixScaler
 from .image_registration import ImageRegistration
+from .subsetter import Subsetter
 from .warper import Warper
 
 
@@ -16,75 +16,45 @@ class Stitcher:
         self.img_names = img_names
         self.args = SimpleNamespace(**kwargs)
 
-    def downscale_images(self, images, megapix):
-        scaler = ImageToMegapixScaler(megapix)
-        images = [scaler.set_scale_and_downscale(img) for img in images]
-        return images, scaler.scale
-
-        # work_images, work_scale = self.downscale_images(images,
-        #                                                 self.args.work_megapix)
-
     def stitch(self):
         args = self.args
         img_names = self.img_names
 
+        work_imgs = []
+        images = []
+        full_img_sizes = []
+
         work_megapix_scaler = ImageToMegapixScaler(args.work_megapix)
         seam_megapix_scaler = ImageToMegapixScaler(args.seam_megapix)
 
-        conf_thresh = args.conf_thresh
-        if args.save_graph is None:
-            save_graph = False
-        else:
-            save_graph = True
+        for img in img_names:
+            full_img = read_image(img)
+            full_img_sizes.append((full_img.shape[1], full_img.shape[0]))
+            work_imgs.append(work_megapix_scaler.set_scale_and_downscale(full_img))
+            images.append(seam_megapix_scaler.set_scale_and_downscale(full_img))
 
-        full_img_sizes = []
-        work_imgs = []
-        images = []
-        is_compose_scale_set = False
+# =============================================================================
+# REGISTRATION PART
+# =============================================================================
 
-        for name in img_names:
-            image = PanoramaPart(name)
-            image.read_image()
-            full_img_sizes.append(image.full_img_size)
-            work_img = work_megapix_scaler.set_scale_and_downscale(image.full_img)
-            work_imgs.append(work_img)
-            seam_img = seam_megapix_scaler.set_scale_and_downscale(image.full_img)
-            images.append(seam_img)
-
-        seam_work_aspect = (work_megapix_scaler.scale /
-                            seam_megapix_scaler.scale )
 
         image_registration = get_image_registration_object(args)
-        features = image_registration.find_features(work_imgs)
-        p = image_registration.match_features(features)
+        indices, cameras = image_registration.register(img_names, work_imgs)
 
-        if save_graph:
-            with open(args.save_graph, 'w') as fh:
-                fh.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
-
-        indices = cv.detail.leaveBiggestComponent(features, p, conf_thresh)
-        img_subset = []
-        img_names_subset = []
-        full_img_sizes_subset = []
-        for i in range(len(indices)):
-            img_names_subset.append(img_names[indices[i, 0]])
-            img_subset.append(images[indices[i, 0]])
-            full_img_sizes_subset.append(full_img_sizes[indices[i, 0]])
-        images = img_subset
-        img_names = img_names_subset
-        full_img_sizes = full_img_sizes_subset
-        num_images = len(img_names)
-        if num_images < 2:
-            print("Need more images")
-            exit()
-
-        cameras = image_registration.estimate_camera_parameters(features, p)
-        cameras = image_registration.adjust_camera_parameters(features, p, cameras)
-        cameras = image_registration.perform_wave_correction(cameras)
 
 # =============================================================================
 # COMPOSITION PART
 # =============================================================================
+
+        img_names = Subsetter.subset_list(img_names, indices)
+        images = Subsetter.subset_list(images, indices)
+        full_img_sizes = Subsetter.subset_list(full_img_sizes, indices)
+        num_images = len(images)
+
+        is_compose_scale_set = False
+
+        seam_work_aspect = (work_megapix_scaler.scale /
+                            seam_megapix_scaler.scale )
 
         focals = []
         for cam in cameras:
@@ -221,6 +191,13 @@ class Stitcher:
 
         print("Done")
 
+
+def read_image(img_name):
+    img = cv.imread(img_name)
+    if img is None:
+        print("Cannot read image ", img_name)
+        exit()
+    return img
 
 def get_image_registration_object(args):
     return ImageRegistration(args.features,

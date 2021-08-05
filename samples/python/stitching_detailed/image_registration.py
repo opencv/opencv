@@ -35,13 +35,13 @@ class ImageRegistration:
     def register(self, img_names, images):
         features = self.find_features(images)
         matches = self.match_features(features)
-        img_names, features, matches = self.subset(
+        indices, features, matches = self.subset(
             img_names, features, matches
             )
         cameras = self.estimate_camera_parameters(features, matches)
         cameras = self.adjust_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
-        return img_names, cameras
+        return indices, cameras
 
     def find_features(self, images):
         return [self.finder.detect_features(img) for img in images]
@@ -49,9 +49,8 @@ class ImageRegistration:
     def match_features(self, features):
         return self.matcher.match_features(features)
 
-    def subset(self, features, matches):
-        subsetter = Subsetter(features, matches)
-        return subsetter.subset(features, matches)
+    def subset(self, img_names, features, matches):
+        return self.subsetter.subset(img_names, features, matches)
 
     def estimate_camera_parameters(self, features, matches):
         return self.camera_estimator.estimate(features, matches)
