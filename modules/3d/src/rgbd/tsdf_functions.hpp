@@ -74,8 +74,8 @@ inline void colorFix(Point3f& c)
     if (c.z > 255) c.z = 255;
 }
 
-cv::Mat preCalculationPixNorm(Depth depth, const Intr& intrinsics);
-cv::UMat preCalculationPixNormGPU(const UMat& depth, const Intr& intrinsics);
+cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics);
+cv::UMat preCalculationPixNormGPU(Size size, const Intr& intrinsics);
 
 inline depthType bilinearDepth(const Depth& m, cv::Point2f pt)
 {

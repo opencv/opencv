@@ -11,23 +11,21 @@
 
 namespace cv {
 
-cv::Mat preCalculationPixNorm(Depth depth, const Intr& intrinsics)
+cv::Mat preCalculationPixNorm(Size size, const Intr& intrinsics)
 {
-    int height = depth.rows;
-    int widht = depth.cols;
     Point2f fl(intrinsics.fx, intrinsics.fy);
     Point2f pp(intrinsics.cx, intrinsics.cy);
-    Mat pixNorm(height, widht, CV_32F);
-    std::vector<float> x(widht);
-    std::vector<float> y(height);
-    for (int i = 0; i < widht; i++)
+    Mat pixNorm(size.height, size.width, CV_32F);
+    std::vector<float> x(size.width);
+    std::vector<float> y(size.height);
+    for (int i = 0; i < size.width; i++)
         x[i] = (i - pp.x) / fl.x;
-    for (int i = 0; i < height; i++)
+    for (int i = 0; i < size.height; i++)
         y[i] = (i - pp.y) / fl.y;
 
-    for (int i = 0; i < height; i++)
+    for (int i = 0; i < size.height; i++)
     {
-        for (int j = 0; j < widht; j++)
+        for (int j = 0; j < size.width; j++)
         {
             pixNorm.at<float>(i, j) = sqrtf(x[j] * x[j] + y[i] * y[i] + 1.0f);
         }
@@ -36,45 +34,13 @@ cv::Mat preCalculationPixNorm(Depth depth, const Intr& intrinsics)
 }
 
 #ifdef HAVE_OPENCL
-cv::UMat preCalculationPixNormGPU(const UMat& depth, const Intr& intrinsics)
+cv::UMat preCalculationPixNormGPU(Size size, const Intr& intrinsics)
 {
-    int depth_cols = depth.cols;
-    int depth_rows = depth.rows;
-    Point2f fl(intrinsics.fx, intrinsics.fy);
-    Point2f pp(intrinsics.cx, intrinsics.cy);
-    Mat x(1, depth_cols, CV_32FC1);
-    Mat y(1, depth_rows, CV_32FC1);
-    UMat pixNorm(depth_rows, depth_cols, CV_32F);
+    // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
+    Mat cpuPixNorm = preCalculationPixNorm(size, intrinsics);
 
-    for (int i = 0; i < depth_cols; i++)
-        x.at<float>(i) = (i - pp.x) / fl.x;
-    for (int i = 0; i < depth_rows; i++)
-        y.at<float>(i) = (i - pp.y) / fl.y;
-
-    cv::String errorStr;
-    cv::String name = "preCalculationPixNorm";
-    ocl::ProgramSource source = ocl::_3d::tsdf_functions_oclsrc;
-    cv::String options = "-cl-mad-enable";
-    ocl::Kernel kk;
-    kk.create(name.c_str(), source, options, &errorStr);
-
-    if (kk.empty())
-        throw std::runtime_error("Failed to create kernel: " + errorStr);
-
-    AccessFlag af = ACCESS_READ;
-    UMat xx = x.getUMat(af);
-    UMat yy = y.getUMat(af);
-
-    kk.args(ocl::KernelArg::WriteOnly(pixNorm),
-        ocl::KernelArg::PtrReadOnly(xx),
-        ocl::KernelArg::PtrReadOnly(yy));
-
-    size_t globalSize[2];
-    globalSize[0] = depth_rows;
-    globalSize[1] = depth_cols;
-
-    if (!kk.run(2, globalSize, NULL, true))
-        throw std::runtime_error("Failed to run kernel");
+    UMat pixNorm(size, CV_32F);
+    cpuPixNorm.copyTo(pixNorm);
 
     return pixNorm;
 }

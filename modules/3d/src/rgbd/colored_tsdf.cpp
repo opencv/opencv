@@ -169,7 +169,7 @@ void ColoredTSDFVolumeCPU::integrate(InputArray _depth, InputArray _rgb, float d
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
-        pixNorms = preCalculationPixNorm(depth, depth_intrinsics);
+        pixNorms = preCalculationPixNorm(depth.size(), depth_intrinsics);
     }
 
     integrateRGBVolumeUnit(truncDist, voxelSize, maxWeight, (this->pose).matrix, volResolution, volStrides, depth, rgb,
