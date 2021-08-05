@@ -655,48 +655,13 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 #ifdef HAVE_WEBNN
-    struct Pool2dOptions {
-      public:
-        std::vector<int32_t> windowDimensions;
-        std::vector<int32_t> padding;
-        std::vector<int32_t> strides;
-        std::vector<int32_t> dilations;
-        ml::AutoPad autoPad = ml::AutoPad::Explicit;
-        ml::InputOperandLayout layout = ml::InputOperandLayout::Nchw;
-
-        const ml::Pool2dOptions* AsPtr() {
-            if (!windowDimensions.empty()) {
-                mOptions.windowDimensionsCount = windowDimensions.size();
-                mOptions.windowDimensions = windowDimensions.data();
-            }
-            if (!padding.empty()) {
-                mOptions.paddingCount = padding.size();
-                mOptions.padding = padding.data();
-            }
-            if (!strides.empty()) {
-                mOptions.stridesCount = strides.size();
-                mOptions.strides = strides.data();
-            }
-            if (!dilations.empty()) {
-                mOptions.dilationsCount = dilations.size();
-                mOptions.dilations = dilations.data();
-            }
-            mOptions.layout = layout;
-            mOptions.autoPad = autoPad;
-            return &mOptions;
-        }
-
-      private:
-        ml::Pool2dOptions mOptions;
-    };
-
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
         Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
         auto& webnnInpOperand = node->operand;
         auto& webnnGraphBuilder = node->net->builder;
-        Pool2dOptions options;
+        webnn::Pool2dOptions options;
         std::vector<int32_t> kernelSize(kernel_size.begin(), kernel_size.end());
         std::vector<int32_t> Strides(strides.begin(), strides.end());
         std::vector<int32_t> Padding;

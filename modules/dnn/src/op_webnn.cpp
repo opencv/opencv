@@ -20,6 +20,23 @@ namespace cv { namespace dnn {
 
 #ifdef HAVE_WEBNN
 
+namespace webnn {
+ml::Operand BuildConstant(const ml::GraphBuilder& builder,
+                              const std::vector<int32_t>& dimensions,
+                              const void* value,
+                              size_t size,
+                              ml::OperandType type) {
+        ml::OperandDescriptor desc;
+        desc.type = type;
+        desc.dimensions = dimensions.data();
+        desc.dimensionsCount = (uint32_t)dimensions.size();
+        ml::ArrayBufferView resource;
+        resource.buffer = const_cast<void*>(value);
+        resource.byteLength = size;
+        return builder.Constant(&desc, &resource);
+    }
+}
+
 static std::string kDefaultInpLayerName = "opencv_webnn_empty_inp_layer_name";
 
 static std::vector<Ptr<WebnnBackendWrapper> >
@@ -83,7 +100,7 @@ std::vector<ml::Operand> WebnnNet::setInputs(const std::vector<cv::Mat>& inputs,
     for (size_t i = 0; i < inputs.size(); i++)
     {
         auto& m = inputs[i];
-        std::vector<int32_t> dimensions = getShape<int32_t>(m);
+        std::vector<int32_t> dimensions = webnn::getShape(m);
         ml::OperandDescriptor descriptor;
         descriptor.dimensions = dimensions.data();
         descriptor.dimensionsCount = dimensions.size();

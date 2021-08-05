@@ -617,26 +617,11 @@ struct ReLU6Functor : public BaseFunctor
 
 
 #ifdef HAVE_WEBNN
-    ml::Operand BuildConstant(const ml::GraphBuilder& builder,
-                              const std::vector<int32_t>& dimensions,
-                              const void* value,
-                              size_t size,
-                              ml::OperandType type) {
-        ml::OperandDescriptor desc;
-        desc.type = type;
-        desc.dimensions = dimensions.data();
-        desc.dimensionsCount = (uint32_t)dimensions.size();
-        ml::ArrayBufferView resource;
-        resource.buffer = const_cast<void*>(value);
-        resource.byteLength = size;
-        return builder.Constant(&desc, &resource);
-    }
-
     ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
     {
         ml::ClampOptions clampOptions;
-        clampOptions.minValue = BuildConstant(builder, {}, &minValue, 1 * sizeof(float), ml::OperandType::Float32);
-        clampOptions.maxValue = BuildConstant(builder, {}, &maxValue, 1 * sizeof(float), ml::OperandType::Float32);
+        clampOptions.minValue = webnn::BuildConstant(builder, {}, &minValue, 1 * sizeof(float), ml::OperandType::Float32);
+        clampOptions.maxValue = webnn::BuildConstant(builder, {}, &maxValue, 1 * sizeof(float), ml::OperandType::Float32);
         return builder.Clamp(input, &clampOptions);
     }
 #endif

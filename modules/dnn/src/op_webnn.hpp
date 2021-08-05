@@ -39,14 +39,55 @@ constexpr bool haveWebnn() {
 class WebnnBackendNode;
 class WebnnBackendWrapper;
 
-
-template<typename T>
-inline std::vector<T> getShape(const Mat& mat)
+namespace webnn {
+inline std::vector<int32_t> getShape(const Mat& mat)
 {
-    std::vector<T> result(mat.dims);
+    std::vector<int32_t> result(mat.dims);
     for (int i = 0; i < mat.dims; i++)
-        result[i] = (T)mat.size[i];
+        result[i] = (int32_t)mat.size[i];
     return result;
+}
+
+ml::Operand BuildConstant(const ml::GraphBuilder& builder,
+                              const std::vector<int32_t>& dimensions,
+                              const void* value,
+                              size_t size,
+                              ml::OperandType type);
+
+struct Pool2dOptions {
+      public:
+        std::vector<int32_t> windowDimensions;
+        std::vector<int32_t> padding;
+        std::vector<int32_t> strides;
+        std::vector<int32_t> dilations;
+        ml::AutoPad autoPad = ml::AutoPad::Explicit;
+        ml::InputOperandLayout layout = ml::InputOperandLayout::Nchw;
+
+        const ml::Pool2dOptions* AsPtr() {
+            if (!windowDimensions.empty()) {
+                mOptions.windowDimensionsCount = windowDimensions.size();
+                mOptions.windowDimensions = windowDimensions.data();
+            }
+            if (!padding.empty()) {
+                mOptions.paddingCount = padding.size();
+                mOptions.padding = padding.data();
+            }
+            if (!strides.empty()) {
+                mOptions.stridesCount = strides.size();
+                mOptions.strides = strides.data();
+            }
+            if (!dilations.empty()) {
+                mOptions.dilationsCount = dilations.size();
+                mOptions.dilations = dilations.data();
+            }
+            mOptions.layout = layout;
+            mOptions.autoPad = autoPad;
+            return &mOptions;
+        }
+
+      private:
+        ml::Pool2dOptions mOptions;
+    };
 }
 
 class WebnnNet
