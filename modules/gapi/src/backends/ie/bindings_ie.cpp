@@ -37,3 +37,10 @@ cv::gapi::ie::PyParams cv::gapi::ie::params(const std::string &tag,
                                             const std::string &device) {
     return {tag, model, device};
 }
+
+cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::constInput(const std::string &layer_name,
+                                                           const cv::Mat &data,
+                                                           TraitAs hint) {
+    m_priv->constInput(layer_name, data, hint);
+    return *this;
+}
