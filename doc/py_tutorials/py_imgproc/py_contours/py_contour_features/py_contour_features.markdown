@@ -1,6 +1,9 @@
 Contour Features {#tutorial_py_contour_features}
 ================
 
+@prev_tutorial{tutorial_py_contours_begin}
+@next_tutorial{tutorial_py_contour_properties}
+
 Goal
 ----
 

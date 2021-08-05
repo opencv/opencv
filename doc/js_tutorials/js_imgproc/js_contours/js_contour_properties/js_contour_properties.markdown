@@ -1,6 +1,9 @@
 Contour Properties {#tutorial_js_contour_properties}
 ==================
 
+@prev_tutorial{tutorial_js_contour_features}
+@next_tutorial{tutorial_js_contours_more_functions}
+
 Goal
 ----
 

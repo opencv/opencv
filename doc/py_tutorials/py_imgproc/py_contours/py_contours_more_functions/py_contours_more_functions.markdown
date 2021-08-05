@@ -1,6 +1,10 @@
 Contours : More Functions {#tutorial_py_contours_more_functions}
 =========================
 
+@prev_tutorial{tutorial_py_contour_properties}
+@next_tutorial{tutorial_py_contours_hierarchy}
+
+
 Goal
 ----
 
