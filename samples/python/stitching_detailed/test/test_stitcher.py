@@ -12,6 +12,7 @@ from stitching_detailed.stitcher import Stitcher
 from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
+from stitching_detailed.subsetter import Subsetter
 from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
@@ -135,29 +136,42 @@ class TestStitcher(unittest.TestCase):
         cameras_wave_corrected = corrector.correct(cameras_adjusted)
 
         self.assertEqual(cameras_adjusted[0].focal,
-                          cameras_wave_corrected[0].focal)
+                         cameras_wave_corrected[0].focal)
 
     def test_subsetting(self):
-        img1, img3 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
-        img2 = cv.imread("boat1.jpg")
+        img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        img3, img4 = cv.imread("boat1.jpg"), cv.imread("boat2.jpg")
+        img5 = cv.imread("boat3.jpg")
+        img_names = ["s1.jpg", "s2.jpg", "boat1.jpg", "boat2.jpg", "boat3.jpg"]
+
         detector = FeatureDetector("orb")
         features = [detector.detect_features(img1),
                     detector.detect_features(img2),
-                    detector.detect_features(img3)]
+                    detector.detect_features(img3),
+                    detector.detect_features(img4),
+                    detector.detect_features(img5)]
         matcher = FeatureMatcher()
         pairwise_matches = matcher.match_features(features)
+        subsetter = Subsetter(confidence_threshold=1)
 
-        indices = cv.detail.leaveBiggestComponent(features, pairwise_matches, 1)
-        img_names = ["s1.jpg", "boat1.jpg", "s2.jpg"]
+        indices = subsetter.get_indices_to_keep(features, pairwise_matches)
+        indices_to_delete = subsetter.get_indices_to_delete(len(img_names),
+                                                            indices)
 
-        img_names_subset = []
-        for i in range(len(indices)):
-            img_names_subset.append(img_names[indices[i, 0]])
+        self.assertEqual(indices, [2, 3, 4])
+        self.assertEqual(indices_to_delete, [0, 1])
 
-        estimator = CameraEstimator()
-        cameras_estimated = estimator.estimate(features, pairwise_matches)
-        # !!!!! SHOULD NOT BE 3 CAMERAS !!!
-        # !!!!! The second camera is matched to boat1.jpg which is sorted out
+        subsetted_image_names = subsetter.subset_list(img_names, indices)
+        self.assertEqual(subsetted_image_names,
+                         ['boat1.jpg', 'boat2.jpg', 'boat3.jpg'])
+
+        subset = subsetter.subset(features, pairwise_matches)
+        indices, feature_subset, matches_subset = subset
+        # get_confidence_matrix(pairwise_matches)
+        # get_confidence_matrix(subsetted_matches)
+        self.assertEqual(pairwise_matches[13].confidence,
+                         matches_subset[1].confidence)
+
 
 def starttest():
     unittest.main()

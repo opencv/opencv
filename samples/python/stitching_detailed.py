@@ -20,6 +20,7 @@ from stitching_detailed.stitcher_choices import (SEAM_FIND_CHOICES,
 
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
+from stitching_detailed.subsetter import Subsetter
 from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
@@ -80,9 +81,10 @@ parser.add_argument(
     type=float, dest='match_conf'
 )
 parser.add_argument(
-    '--conf_thresh', action='store', default=1.0,
+    '--conf_thresh', action='store',
+    default=Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
     help="Threshold for two images are from the same panorama confidence. "
-         "The default is 1.0.",
+         "The default is '%s'." % Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
     type=float, dest='conf_thresh'
 )
 parser.add_argument(
