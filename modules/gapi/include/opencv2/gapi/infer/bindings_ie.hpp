@@ -37,6 +37,8 @@ public:
                                    const cv::Mat &data,
                                    TraitAs hint = TraitAs::TENSOR);
 
+    GAPI_WRAP PyParams& cfgNumRequests(size_t nireq);
+
     GBackend      backend() const;
     std::string   tag()     const;
     cv::util::any params()  const;

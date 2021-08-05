@@ -44,3 +44,8 @@ cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::constInput(const std::string &la
     m_priv->constInput(layer_name, data, hint);
     return *this;
 }
+
+cv::gapi::ie::PyParams& cv::gapi::ie::PyParams::cfgNumRequests(size_t nireq) {
+    m_priv->cfgNumRequests(nireq);
+    return *this;
+}
