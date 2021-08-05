@@ -665,6 +665,11 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     testONNXModels("split_max");
 }
 
+TEST_P(Test_ONNX_layers, LSTM_Activations)
+{
+    testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
