@@ -1,4 +1,6 @@
-include(FindPkgConfig)
+if(NOT PROJECT_NAME STREQUAL "OpenCV")
+  include(FindPkgConfig)
+endif()
 
 macro(add_backend backend_id cond_var)
   if(${cond_var})
