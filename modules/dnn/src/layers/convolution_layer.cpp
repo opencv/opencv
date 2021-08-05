@@ -917,7 +917,6 @@ public:
         if (nodes.size() > 1)
             CV_Assert(webnnWeights);
         // const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
-<<<<<<< HEAD
         // const int group = blobs.size() - hasBias();
         const int inpGroupCn = blobs[0].size[1];
         // // const int group = inpCn / inpGroupCn;
@@ -925,14 +924,6 @@ public:
         // std::cout<<"Group: "<<group<<std::endl;
         // std::cout<<"padMode:"<<padMode<<std::endl;
         // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
-=======
-        const int group = blobs.size() - hasBias();
-        const int inpGroupCn = blobs[0].size[1];
-        // const int group = inpCn / inpGroupCn;
-        std::cout<<"Group: "<<group<<std::endl;
-        std::cout<<"padMode:"<<padMode<<std::endl;
-        std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
->>>>>>> Update convolution_layer.cpp
         std::vector<int32_t> kernel_shape;
         if (group != 1)
         {
@@ -944,33 +935,19 @@ public:
 
         if (nodes.size() == 1)
         {
-<<<<<<< HEAD
             webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
-=======
-            std::cout<<"fusedWeights: "<<fusedWeights<<std::endl;
-            webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
-            std::cout<<"blobs: "<< blobs[0].total()<<" "<<blobs[0].elemSize()<<" "<<sizeof(float)<<std::endl;
->>>>>>> Update convolution_layer.cpp
             if (fusedWeights)
             {
                 if (weightsMat.isContinuous())
                 {
-<<<<<<< HEAD
                     webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(weightsMat), weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
-=======
-                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
->>>>>>> Update convolution_layer.cpp
                 }
                 else
                 {
                     Mat newWeights;
                     Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / numOutput);
                     cvWeights.copyTo(newWeights);
-<<<<<<< HEAD
                     webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(newWeights), newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
-=======
-                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
->>>>>>> Update convolution_layer.cpp
                 }
             }
         }
@@ -978,7 +955,6 @@ public:
         {
             webnnWeights  = webnnGraphBuilder.Reshape(webnnWeights, kernel_shape.data(), kernel_shape.size());
         }
-<<<<<<< HEAD
 
         ml::AutoPad pad_type = ml::AutoPad::Explicit;
         if (!padMode.empty())
@@ -1035,68 +1011,6 @@ public:
             operand = webnnGraphBuilder.Add(operand, webnnBias);
         }
         return Ptr<BackendNode>(new WebnnBackendNode(operand));
-=======
-
-        ml::AutoPad pad_type = ml::AutoPad::Explicit;
-        if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ml::AutoPad::Explicit : ml::AutoPad::SameUpper;
-
-        ml::Conv2dOptions options;
-        options.autoPad = pad_type;
-        // std::vector<int32_t> Strides(strides.begin(), strides.end());
-        if (!strides.empty())
-        {
-            options.stridesCount = strides.size();
-            options.strides = reinterpret_cast<int32_t*>(strides.data());
-        }
-        std::vector<int32_t> Padding;
-        if (padMode.empty())
-        {
-            Padding = {static_cast<int32_t>(pads_begin[0]),
-                       static_cast<int32_t>(pads_end[0]),
-                       static_cast<int32_t>(pads_begin[1]),
-                       static_cast<int32_t>(pads_end[1])};
-        }
-        else if (padMode == "VALID")
-        {
-            Padding = {0, 0, 0, 0};
-        }
-        if (!Padding.empty())
-        {
-            options.paddingCount = Padding.size();
-            options.padding = Padding.data();
-        }
-        std::cout<<"Padding: "<<Padding[0]<<" "<<Padding[1]<<" "<<Padding[2]<<" "<<Padding[3]<<" "<<std::endl;
-        // std::vector<int32_t> Dilations(dilations.begin(), dilations.end());
-        if (!dilations.empty())
-        {
-            options.dilationsCount = dilations.size();
-            options.dilations = reinterpret_cast<int32_t*>(dilations.data());
-        }
-        const ml::Operand weights = webnnWeights;
-        const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, weights, &options);
-        // const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, *const_cast<ml::Operand*>(&webnnWeights), &options);
-        // const ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, webnnWeights, &options);
-        
-        ml::Operand result = operand;
-        if (hasBias() || fusedBias || nodes.size() == 3)
-        {
-            ml::Operand webnnBias;
-            if (nodes.size() == 3)
-            {
-                webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, kernel_shape.data(), kernel_shape.size());
-            }
-            else
-            {
-                webnnBias = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, biasvec.data(), biasvec.size()*sizeof(float), ml::OperandType::Float32);
-            }
-            const ml::Operand bias = webnnBias;
-            // result = webnnGraphBuilder.Add(operand, *const_cast<ml::Operand*>(&webnnBias));
-            result = webnnGraphBuilder.Add(operand, bias);
-            // result = webnnGraphBuilder.Add(operand, webnnBias);
-        }
-        return Ptr<BackendNode>(new WebnnBackendNode(result));
->>>>>>> Update convolution_layer.cpp
     }
 #endif // HAVE_WEBNN
 
