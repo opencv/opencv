@@ -20,7 +20,7 @@ class rgbd_test(NewOpenCVTests):
         K = numpy.array([[525, 0, 320.5], [0, 525, 240.5], [0, 0, 1]])
         points3d = cv.depthTo3d(depth_image, K)
         normals = cv.RgbdNormals_create(480, 640, cv.CV_32F, K).apply(points3d)
-        _, planes_coeff = cv.findPlanes(points3d, normals, np.array([]), np.array([]), 40, 1600, 0.01, 0, 0, 0, cv.RGBD_PLANE_METHOD_DEFAULT)
+        _, planes_coeff = cv.findPlanes(points3d, normals, numpy.array([]), numpy.array([]), 40, 1600, 0.01, 0, 0, 0, cv.RGBD_PLANE_METHOD_DEFAULT)
 
         planes_coeff_expected = \
         numpy.asarray([[[-0.02447728, -0.8678335 , -0.49625182,  4.02800846]],
