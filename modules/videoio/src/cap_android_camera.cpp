@@ -324,6 +324,7 @@ public:
             LOGE("Unsupported format");
             return false;
         }
+
         buffer.clear();
         buffer.insert(buffer.end(), yPixel, yPixel + yLen);
         buffer.insert(buffer.end(), uPixel, uPixel + yLen / 2);
