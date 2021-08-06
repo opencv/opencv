@@ -1967,7 +1967,7 @@ void v_rshr_pack_store(_Tp* ptr, const _wTpvec& a) \
     _wTp arr[_Tpvec::nlanes] = {0}; \
     v_store(arr, a); \
     v_store(arr + _wTpvec::nlanes, _wTpvec(vmv_v_x_##suffix##m1(0, hvl))); \
-    v_store(ptr, _Tpvec(rshr(vle##width##_v_##suffix##m2(arr, vl), n, vl))); \
+    vse##hwidth##_v_##hsuffix##m1(ptr, _Tpvec(rshr(vle##width##_v_##suffix##m2(arr, vl), n, vl)), hvl); \
 }
 
 OPENCV_HAL_IMPL_RVV_PACK(v_uint8x16, uchar, v_uint16x8, ushort, 8, 16, u8, u16, vnclipu_wx_u8m1, vnclipu_wx_u8m1, 8, 16)
