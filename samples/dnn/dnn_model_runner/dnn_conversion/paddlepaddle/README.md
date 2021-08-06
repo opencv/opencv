@@ -14,7 +14,7 @@ pip install paddle2onnx
 
 ### Run PaddlePaddle model demo
 
-Run the example code as below, 
+Run the example code as below,
 
 ```shell
 python paddle_resnet50.py
@@ -22,8 +22,8 @@ python paddle_resnet50.py
 
 there are 3 part of this execution
 
-* 1. Export PaddlePaddle ResNet50 model to onnx format; 
-* 2. Use `cv2.dnn.readNetFromONNX` load model file; 
+* 1. Export PaddlePaddle ResNet50 model to onnx format;
+* 2. Use `cv2.dnn.readNetFromONNX` load model file;
 * 3. Preprocess image file and do inference.
 
 ## 2. Run PaddleSeg Portrait Segmentation by OpenCV
@@ -59,7 +59,7 @@ The converted model is the one under the current path `humanseg_hrnet18_tiny.onn
 
 ### Run PaddleSeg Portrait Segmentation demo
 
-Run the example code as below, 
+Run the example code as below,
 
 ```shell
 python paddle_humanseg.py
@@ -67,7 +67,7 @@ python paddle_humanseg.py
 
 there are 3 part of this execution
 
-* 1. Use `cv2.dnn.readNetFromONNX` load model file; 
+* 1. Use `cv2.dnn.readNetFromONNX` load model file;
 * 2. Preprocess image file and do inference.
 * 3. Postprocess image file and visualization.
 
