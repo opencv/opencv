@@ -595,7 +595,8 @@ public:
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional)) * 3 * Wh.cols, "");
             CV_CheckEQ(Wh.rows * 2, (int)bias.total(), "");
             CV_CheckEQ(hInternal.cols, Wh.cols, "");
-            CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
+            CV_CheckTypeEQ(Wh.type(), Wx.type(), "");
+            CV_CheckTypeEQ(Wx.type(), bias.type(), "");
         }
 
         allocated = false;

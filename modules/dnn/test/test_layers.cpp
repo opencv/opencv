@@ -647,9 +647,9 @@ TEST(Layer_LSTM_Test_Accuracy_, Reverse)
 {
     // This handcrafted setup calculates (approximately) the prefix sum of the
     // input, assuming the inputs are suitably small.
-    std::vector<int> input_dims = {2, 1, 1};
-    std::array<float, 2> input_data = {1e-5f, 2e-5f};
-    cv::Mat input(input_dims, CV_32FC1, input_data.data());
+    cv::Mat input(2, 1, CV_32FC1);
+    input.at<float>(0, 0) = 1e-5f;
+    input.at<float>(1, 0) = 2e-5f;
 
     cv::Mat Wx(4, 1, CV_32FC1);
     Wx.at<float>(0, 0) = 0.f;  // Input gate
