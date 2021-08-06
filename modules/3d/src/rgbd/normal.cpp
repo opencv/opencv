@@ -482,7 +482,7 @@ public:
 
         // Define K_inv by hand, just for higher accuracy
         Mat33T K_inv = Matx<T, 3, 3>::eye(), kmat;
-        K.copyTo(kmat);
+        this->K.copyTo(kmat);
         K_inv(0, 0) = 1.0f / kmat(0, 0);
         K_inv(0, 1) = -kmat(0, 1) / (kmat(0, 0) * kmat(1, 1));
         K_inv(0, 2) = (kmat(0, 1) * kmat(1, 2) - kmat(0, 2) * kmat(1, 1)) / (kmat(0, 0) * kmat(1, 1));
@@ -588,8 +588,8 @@ public:
         computeThetaPhi<T>(this->rows, this->cols, this->K, cos_theta, sin_theta, cos_phi, sin_phi);
 
         // Create the derivative kernels
-        getDerivKernels(kx_dx_, ky_dx_, 1, 0, this->windowSize, true, dtype);
-        getDerivKernels(kx_dy_, ky_dy_, 0, 1, this->windowSize, true, dtype);
+        getDerivKernels(kx_dx_, ky_dx_, 1, 0, this->windowSize, true, this->dtype);
+        getDerivKernels(kx_dy_, ky_dy_, 0, 1, this->windowSize, true, this->dtype);
 
         // Get the mapping function for SRI
         float min_theta = (float)std::asin(sin_theta(0, 0)), max_theta = (float)std::asin(sin_theta(0, this->cols - 1));
@@ -631,8 +631,9 @@ public:
 
         //map for converting from Spherical coordinate space to Euclidean space
         euclideanMap_.create(this->rows, this->cols);
-        float invFx = (float)(1.0f / this->K.at<T>(0, 0)), cx = (float)this->K.at<T>(0, 2);
-        double invFy = 1.0f / this->K.at<T>(1, 1), cy = this->K.at<T>(1, 2);
+        Matx<T, 3, 3> km(this->K);
+        float invFx = (float)(1.0f / km(0, 0)), cx = (float)(km(0, 2));
+        double invFy = 1.0f / (km(1, 1)), cy = km(1, 2);
         for (int i = 0; i < this->rows; i++)
         {
             float y = (float)((i - cy) * invFy);

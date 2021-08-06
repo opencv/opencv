@@ -1179,13 +1179,6 @@ public:
         return Size();
     }
 
-    /** Create odometry frame for current Odometry implementation
-     * @param image Image data of the frame (CV_8UC1)
-     * @param depth Depth data of the frame (CV_32FC1, in meters)
-     * @param mask  Mask that sets which pixels have to be used from the frame (CV_8UC1)
-    */
-    virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
-
     virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
     {
         return cameraMatrix;
@@ -1651,7 +1644,7 @@ public:
         OdometryImpl::setMaxRotation(val);
     }
 
-    virtual Ptr<RgbdNormals> getNormalsComputer() const
+    virtual Ptr<RgbdNormals> getNormalsComputer() const CV_OVERRIDE
     {
         return normalsComputer;
     }
@@ -1918,7 +1911,7 @@ public:
         OdometryImpl::setMaxRotation(val);
     }
 
-    virtual Ptr<RgbdNormals> getNormalsComputer() const
+    virtual Ptr<RgbdNormals> getNormalsComputer() const CV_OVERRIDE
     {
         return normalsComputer;
     }
