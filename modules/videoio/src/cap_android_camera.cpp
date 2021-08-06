@@ -304,8 +304,8 @@ public:
         AImage_getPlaneRowStride(image.get(), 0, &yStride);
         AImage_getPlaneRowStride(image.get(), 1, &uvStride);
         AImage_getPlaneData(image.get(), 0, &yPixel, &yLen);
-        AImage_getPlaneData(image.get(), 1, &uPixel, &vLen);
-        AImage_getPlaneData(image.get(), 2, &vPixel, &uLen);
+        AImage_getPlaneData(image.get(), 1, &uPixel, &uLen);
+        AImage_getPlaneData(image.get(), 2, &vPixel, &vLen);
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
 
         if ( (uvPixelStride == 2) && (vPixel == uPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
