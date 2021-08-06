@@ -687,8 +687,9 @@ void makeFrameFromDepth(InputArray _depth,
                                       truncateThreshold));
 
     int kp = pyrPoints.kind(), kn = pyrNormals.kind();
-    CV_Assert(kp == _InputArray::STD_ARRAY_MAT || kp == _InputArray::STD_VECTOR_MAT);
-    CV_Assert(kn == _InputArray::STD_ARRAY_MAT || kn == _InputArray::STD_VECTOR_MAT);
+    // There can be UMats in the container (when OpenCL is off)
+    CV_Assert(kp == _InputArray::STD_ARRAY_MAT || kp == _InputArray::STD_VECTOR_MAT || kp == _InputArray::STD_VECTOR_UMAT);
+    CV_Assert(kn == _InputArray::STD_ARRAY_MAT || kn == _InputArray::STD_VECTOR_MAT || kp == _InputArray::STD_VECTOR_UMAT);
 
     Depth depth = _depth.getMat();
 
@@ -696,7 +697,7 @@ void makeFrameFromDepth(InputArray _depth,
     Depth smooth;
     Depth depthNoNans = depth.clone();
     patchNaNs(depthNoNans);
-    bilateralFilter(depthNoNans, smooth, kernelSize, sigmaDepth*depthFactor, sigmaSpatial);
+    bilateralFilter(depthNoNans, smooth, kernelSize, sigmaDepth * depthFactor, sigmaSpatial);
 
     // depth truncation can be used in some scenes
     Depth depthThreshold;
@@ -717,8 +718,10 @@ void makeFrameFromDepth(InputArray _depth,
         pyrPoints .create(sz, POINT_TYPE, i);
         pyrNormals.create(sz, POINT_TYPE, i);
 
-        Points  p = pyrPoints. getMatRef(i);
-        Normals n = pyrNormals.getMatRef(i);
+        // There can be UMats in the container (when OpenCL is off),
+        // getMatRef() is not applicable
+        Points  p = pyrPoints. getMat(i);
+        Normals n = pyrNormals.getMat(i);
 
         computePointsNormals(intr.scale(i), depthFactor, scaled, p, n);
 
