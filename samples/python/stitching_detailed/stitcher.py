@@ -3,13 +3,13 @@ from types import SimpleNamespace
 import cv2 as cv
 import numpy as np
 
-from . import stitcher_choices as choices
 from .image_to_megapix_scaler import ImageToMegapixScaler
 from .image_registration import ImageRegistration
 from .subsetter import Subsetter
 from .warper import Warper
 from .exposure_error_compensator import ExposureErrorCompensator
 from .seam_finder import SeamFinder
+from .blender import Blender
 
 
 class Stitcher:
@@ -69,8 +69,6 @@ class Stitcher:
 
         compose_megapix = args.compose_megapix
         warp_type = args.warp
-        blend_type = args.blend
-        blend_strength = args.blend_strength
         result_name = args.output
         if args.timelapse is not None:
             timelapse = True
@@ -157,18 +155,8 @@ class Stitcher:
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
             mask_warped = cv.bitwise_and(seam_mask, mask_warped)
             if blender is None and not timelapse:
-                blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
-                dst_sz = cv.detail.resultRoi(corners=corners, sizes=sizes)
-                blend_width = np.sqrt(dst_sz[2] * dst_sz[3]) * blend_strength / 100
-                if blend_width < 1:
-                    blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
-                elif blend_type == "multiband":
-                    blender = cv.detail_MultiBandBlender()
-                    blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
-                elif blend_type == "feather":
-                    blender = cv.detail_FeatherBlender()
-                    blender.setSharpness(1. / blend_width)
-                blender.prepare(dst_sz)
+                blender = Blender(args.blend, args.blend_strength)
+                blender.prepare(corners, sizes)
             elif timelapser is None and timelapse:
                 timelapser = cv.detail.Timelapser_createDefault(timelapse_type)
                 timelapser.initialize(corners, sizes)

@@ -49,9 +49,9 @@ class FeatureMatcher:
     @staticmethod
     def get_confidence_matrix(pairwise_matches):
         matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
-        m_confs = [[m.confidence for m in row] for row in matches_matrix]
-        m_conf_matrix = np.array(m_confs)
-        return m_conf_matrix
+        match_confs = [[m.confidence for m in row] for row in matches_matrix]
+        match_conf_matrix = np.array(match_confs)
+        return match_conf_matrix
 
     def __array_in_sqare_matrix(array):
         matrix_dimension = int(math.sqrt(len(array)))

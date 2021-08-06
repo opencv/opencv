@@ -14,7 +14,6 @@ import cv2 as cv
 import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
-from stitching_detailed.stitcher_choices import BLEND_CHOICES
 
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
@@ -25,6 +24,7 @@ from stitching_detailed.camera_wave_corrector import WaveCorrector
 from stitching_detailed.warper import Warper
 from stitching_detailed.exposure_error_compensator import ExposureErrorCompensator  # noqa
 from stitching_detailed.seam_finder import SeamFinder
+from stitching_detailed.blender import Blender
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -166,14 +166,15 @@ parser.add_argument(
     type=np.int32, dest='expos_comp_block_size'
 )
 parser.add_argument(
-    '--blend', action='store', default=BLEND_CHOICES[0],
-    help="Blending method. The default is '%s'." % BLEND_CHOICES[0],
-    choices=BLEND_CHOICES,
+    '--blend', action='store', default=Blender.DEFAULT_BLENDER,
+    help="Blending method. The default is '%s'." % Blender.DEFAULT_BLENDER,
+    choices=Blender.BLENDER_CHOICES,
     type=str, dest='blend'
 )
 parser.add_argument(
-    '--blend_strength', action='store', default=5,
-    help="Blending strength from [0,100] range. The default is 5",
+    '--blend_strength', action='store', default=Blender.DEFAULT_BLEND_STRENGTH,
+    help="Blending strength from [0,100] range. "
+         "The default is '%s'." % Blender.DEFAULT_BLEND_STRENGTH,
     type=np.int32, dest='blend_strength'
 )
 parser.add_argument(
