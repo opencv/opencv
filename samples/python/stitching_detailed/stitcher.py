@@ -3,9 +3,15 @@ from types import SimpleNamespace
 import cv2 as cv
 import numpy as np
 
+from .feature_detector import FeatureDetector
+from .feature_matcher import FeatureMatcher
+from .subsetter import Subsetter
+from .camera_estimator import CameraEstimator
+from .camera_adjuster import CameraAdjuster
+from .camera_wave_corrector import WaveCorrector
+
 from .image_to_megapix_scaler import ImageToMegapixScaler
 from .image_registration import ImageRegistration
-from .subsetter import Subsetter
 from .warper import Warper
 from .exposure_error_compensator import ExposureErrorCompensator
 from .seam_finder import SeamFinder
@@ -174,14 +180,17 @@ def read_image(img_name):
     return img
 
 def get_image_registration_object(args):
-    return ImageRegistration(args.features,
-                             args.matcher,
-                             args.rangewidth,
-                             args.try_cuda,
-                             args.match_conf,
-                             args.conf_thresh,
-                             args.save_graph,
-                             args.estimator,
-                             args.ba,
-                             args.ba_refine_mask,
-                             args.wave_correct)
+    if not args.match_conf:
+        args.match_conf = FeatureMatcher.get_default_match_conf(args.features)
+
+    finder = FeatureDetector(args.features)
+    matcher = FeatureMatcher(args.matcher, args.rangewidth,
+                             try_use_gpu=args.try_cuda,
+                             match_conf=args.match_conf)
+    subsetter = Subsetter(args.conf_thresh, args.save_graph)
+    camera_estimator = CameraEstimator(args.estimator)
+    camera_adjuster = CameraAdjuster(args.ba, args.ba_refine_mask)
+    wave_corrector = WaveCorrector(args.wave_correct)
+
+    return ImageRegistration(finder, matcher, subsetter, camera_estimator,
+                             camera_adjuster, wave_corrector)

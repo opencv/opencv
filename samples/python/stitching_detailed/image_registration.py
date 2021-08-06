@@ -5,32 +5,22 @@ from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
 
+
 class ImageRegistration:
     def __init__(self,
-                 finder=FeatureDetector.DEFAULT_DETECTOR,
-                 matcher=FeatureMatcher.DEFAULT_MATCHER,
-                 matcher_rangewidth=FeatureMatcher.DEFAULT_RANGE_WIDTH,
-                 matcher_try_cuda=False,
-                 matcher_match_conf=None,
-                 conf_thresh=Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
-                 save_graph=Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
-                 estimator=CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
-                 ba=CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
-                 ba_refine_mask=CameraAdjuster.DEFAULT_REFINEMENT_MASK,
-                 wave_correct=WaveCorrector.DEFAULT_WAVE_CORRECTION):
+                 finder=FeatureDetector(),
+                 matcher=FeatureMatcher(),
+                 subsetter=Subsetter(),
+                 camera_estimator=CameraEstimator(),
+                 camera_adjuster=CameraAdjuster(),
+                 wave_corrector=WaveCorrector()):
 
-        self.finder = FeatureDetector(finder)
-
-        if not matcher_match_conf:
-            matcher_match_conf = FeatureMatcher.get_default_match_conf(finder)
-
-        self.matcher = FeatureMatcher(matcher, matcher_rangewidth,
-                                      try_use_gpu=matcher_try_cuda,
-                                      match_conf=matcher_match_conf)
-        self.subsetter = Subsetter(conf_thresh)
-        self.camera_estimator = CameraEstimator(estimator)
-        self.camera_adjuster = CameraAdjuster(ba, ba_refine_mask)
-        self.wave_corrector = WaveCorrector(wave_correct)
+        self.finder = finder
+        self.matcher = matcher
+        self.subsetter = subsetter
+        self.camera_estimator = camera_estimator
+        self.camera_adjuster = camera_adjuster
+        self.wave_corrector = wave_corrector
 
     def register(self, img_names, images):
         features = self.find_features(images)

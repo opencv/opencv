@@ -49,10 +49,8 @@ class TestStitcher(unittest.TestCase):
             }
 
     def tearDown(self):
-        try:
-            os.remove("result.jpg")
-        except OSError:
-            pass
+        for file in ["result.jpg", "dot_graph.txt"]:
+            remove_file(file)
 
     def test_stitcher_aquaduct(self):
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
@@ -188,6 +186,10 @@ class TestStitcher(unittest.TestCase):
                                                      pairwise_matches)
         self.assertTrue(graph.startswith("graph matches_graph{"))
 
+        with open('dot_graph.txt', 'r') as file:
+            graph = file.read()
+            self.assertTrue(graph.startswith("graph matches_graph{"))
+
     # visual test
     # def test_timelapse(self):
     #     self.settings["timelapse"] = "as_is"
@@ -210,6 +212,12 @@ class TestStitcher(unittest.TestCase):
     #     os.remove("frame1.jpg")
     #     os.remove("frame2.jpg")
 
+
+def remove_file(file):
+    try:
+        os.remove(file)
+    except OSError:
+        pass
 
 def starttest():
     unittest.main()

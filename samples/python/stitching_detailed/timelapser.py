@@ -29,11 +29,7 @@ class Timelapser:
         self.timelapser.initialize(*args)
 
     def process_and_save_frame(self, img_name, img, corner):
-        print(img_name)
-        print(img.shape)
-        print(corner)
-        self.process_frame(img, corner)
-        #self.save_frame(self.get_fixed_filename(img_name), self.get_frame())
+        self.save_frame(self.get_fixed_filename(img_name), self.get_frame())
 
     def process_frame(self, img, corner):
         mask = np.ones((img.shape[0], img.shape[1]), np.uint8)
