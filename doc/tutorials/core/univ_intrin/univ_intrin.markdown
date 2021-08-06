@@ -21,17 +21,6 @@ Theory
 
 In this section, we will briefly look into a few concepts to better help understand the functionality.
 
-### SIMD
-
-SIMD stands for  **S**ingle **I**nstruction, **M**ultiple **D**ata
-
-Most of the popular C++ compilers include **intrinsic** functions which allow efficient vector operations using SIMD architecture. Intrinsics are basically built in functions that are handled by the compiler.
-
-Intrinsics are often highly optimized. They, however, depend on the processor capabilities. Thus, different systems may be compatible with different “instruction sets". Popular instruction sets include **SSE, SSE2, AVX, AVX2, AVX512**, etc.
-
-If your computer supports a particular instruction set, it allows you to use intrinsics pertaining to those instructions. Systems may be compatible with more than one instruction set.
-
-
 ### Intrinsics
 Intrinsics are functions which are separately handled by the compiler. These functions are often optimized to perform in the most efficient ways possible and hence run faster than normal implementations. However, since these functions depend on the compiler, it makes it difficult to write universal applications.
 
@@ -54,17 +43,18 @@ OpenCV Universal Intrinsics support the following instruction sets:
 * *256 bit* registers are supported on x86(AVX2) and
 * *512 bit* registers are supported on x86(AVX512)
 
-@note To know more about what Instruction Sets are supported by your CPU, look [here]()
+@note To know more about what Instruction Sets are supported by your CPU, look [here](). You may also run [this] sample code to check availability. Remember to enable the corresponding tags when compiling.
 
 
 We will now introduce the available structures and functions:
 * Register structures
 * Load and store
 * Mathematical Operations
-* Type conversions
 * Reduce and Mask
 
-### Register Structures
+@note For detailed information about every available methods, look [here](https://docs.opencv.org/master/df/d91/group__core__hal__intrin.html#ga6093cc09443c787193a24ffe4b0b4dcd).
+
+#### Register Structures
 
 The Universal Intrinsics set implements every register as a structure based on the particular SIMD register.
 All types contain the **nlanes** enumeration which gives the exact number of values that the type can hold. This eliminates the need to hardcode the number of values during implementations.
@@ -121,9 +111,9 @@ There are **two types** of registers:
 
 @note Every 256-bit and 512-bit structure is a typedef of the v_reg<_Tp, n> class with the corresponding data type (_Tp) and the number of values (n). For using 256-bit(512-bit) registers, check the CV_SIMD256 (CV_SIMD512) preprocessor definition.
 
-### Load and Store operations
+#### Load and Store operations
 
-Now that we know how registers work, let us look at the functions used for filling these registers with values. For detailed information about every available methods, look [here](https://do).
+Now that we know how registers work, let us look at the functions used for filling these registers with values.
 
 * **Load**: Load functions allow you to *load* values into a register.
     * *Constructors* - When declaring a register structure, we can either provide a memory address from where the register will pick up contiguous values, or provide the values explicitly as multiple arguments (Explicit multiple arguments is available only for Constant Sized Registers):
@@ -179,10 +169,103 @@ Now that we know how registers work, let us look at the functions used for filli
 
         @note reg containing values of a type may lead to wrong interpretation during storage. For example: if **ptr** is a pointer to a 32-bit float and reg is a register containing 32-bit integers,  the values in ptr may not be as intended. You may cast the registers into the proper type before carrying out operations.
 
-### Operations
+#### Binary and Unary Operators
 
-### Type Conversions
+The universal intrinsics set provides element wise binary and unary operations.
 
-### Reduce and Mask
+* **Arithmetics**: We can add, subtract, multiply and divide two registers element-wise. The registers must be of the same width and hold the same type. To multiply two registers, for example:
 
+    ```
+    v_float32x4 a, b;   // {a1, a2, a3, a4}, {b1, b2, b3, b4}
+    v_float32x4 c;
+    c = a + b           // {a1 + b1, a2 + b2, a3 + b3, a4 + b4}
+    c = a*b;            // {a1*b1, a2*b2, a3*b3, a4*b4}
+    ```
 
+* **Bitwise Logic and Shifts**: We can left shift or right shift the bits of each element of the register. We can also apply bitwise &, |, ^ and ~ operators between two registers element-wise:
+
+    ```
+    v_int32x4 as;                // {a1, a2, a3, a4}
+    v_int32x4 al = as << 2;      // {a1 << 2, ..., a4 << 2}
+    v_int32x4 bl = as >> 2;      // {a1 >> 2, ..., a4 >> 2}
+
+    v_int32x4 a, b;
+    v_int32x4 a_and_b = a & b;   // {a1 & b1, a2 & b2, a3 & b3, a4 & b4}
+    ```
+
+    @note: Bitwise shift and logic operators are only available for integer values. Bitwise shift is available only for 16, 32 and 64 bit integers.
+
+* **Comparison Operators**: We can compare values between two registers using the <, >, <= , >=, == and != operators. Since each register contains multiple values, we don't get a single bool for these operations. Instead, for true values, all bits are converted to one (0xff for 8 bits, 0xffff for 16 bits, etc), while false values return bits converted to zero.
+
+    ```
+    v_uint8 a; // a = {0, 1, 2, ..., 15} (in 128-bit registers)
+    v_uint8 b; // b = {15, 14, 13, ..., 0}
+
+    v_uint8 c = a < b;
+
+    /*
+        let us look at the first 4 values in binary
+
+        a = |00000000|00000001|00000010|00000011|
+        b = |00001111|00001110|00001101|00001100|
+        c = |11111111|11111111|11111111|11111111|
+
+        If we store the values of c and print them as integers, we will get 255 for true values and 0 for false values.
+    */
+    ---
+    v_int32 a; // a = {1, 2, 3, 4, 5, 6, 7, 8} (in a 256bit supported computer)
+    v_int32 b; // b = {8, 7, 6, 5, 4, 3, 2, 1}
+
+    v_int32 c = (a < b); // c = {-1, -1, -1, -1, 0, 0, 0, 0}
+
+    /*
+        The true values are 0xffffffff, which in signed 32-bit integer representation is equal to -1.
+    */
+    ```
+
+    @note: Comparison operators are not available for 64bit integers
+
+* **Min/Max operations**: We can use the v_min and v_max functions to return registers containing element-wise min, or max, of the two registers:
+
+    ```
+    v_int32x4 a;                    // {a1, a2, a3, a4}
+    v_int32x4 b;                    // {b1, b2, b3, b4}
+
+    v_int32x4 mn = v_min(a, b);     // {min(a1, b1), ..., min(a4, b4)}
+    v_int32x4 mx = v_max(a, b);     // {max(a1, b1), ..., max(a4, b4)}
+    ```
+
+    @note: Min and max functions are not available for 64bit integers
+
+#### Reduce and Mask
+
+* **Reduce Operations**: The v_reduce_min, v_reduce_max and v_reduce_sum return a single value denoting the min, max or sum of the entire register:
+
+    ```
+    v_int32x4 a;                    //  a = {a1, a2, a3, a4}
+    int mn = v_reduce_min(a);       // mn = min(a1, a2, a3, a4)
+    int sum = v_reduce_sum(a);      // sum = a1 + a2 + a3 + a4
+    ```
+
+* **Mask Operations**: Mask operations allow us to replicate conditionals in wide registers. These include:
+    * *v_check_all* - Returns a bool, which is true if all the values in the register are less than zero.
+    * *v_check_any* - Returns a bool, which is true if any value in the register is less than zero.
+    * *v_select* - Returns a register, which blends two registers, based on a mask.
+        ```
+        v_uint8 a;                           // {a1, .., a16}
+        v_uint8 b;                           // {b1, ..., b16}
+
+        v_int32x4 mask:                      // {0xff, 0, 0, 0xff, ..., 0}
+
+        v_uint8 Res = v_select(mask, a, b)   // {a1, b2, b3, a4, ..., b16}
+
+        /*
+            "Res" will contain the value from "a" if mask is true (all bits set to 1),
+            and value from "b" if mask is false (all bits set to 0)
+
+            We can use comparison operators to generate mask and v_select to obtain results based on conditionals.
+            It is common to set all values of b to 0. Thus, v_select will give values of "a" or 0 based on the mask.
+        */
+        ```
+
+### Compilation Flags
