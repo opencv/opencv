@@ -102,9 +102,21 @@ public:
 #ifdef HAVE_WEBNN
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
-        auto& webnnGraphBuilder = node->net->builder;
-        ml::Operand operand = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+        ml::Operand operand = nullptr;
+        if (nodes.size() != 0)
+        {
+            Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
+            auto& webnnGraphBuilder = node->net->builder;
+            operand = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+        }
+        else
+        {
+            WebnnProcTable backendProcs = webnn_native::GetProcs();
+            webnnProcSetProcs(&backendProcs);
+            ml::Context context = ml::Context(webnn_native::CreateContext());
+            ml::GraphBuilder builder = ml::CreateGraphBuilder(context);
+            operand = webnn::BuildConstant(builder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
+        }
         return Ptr<BackendNode>(new WebnnBackendNode(operand));
     }
 #endif

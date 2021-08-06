@@ -348,16 +348,16 @@ public:
         if (backendId == DNN_BACKEND_VKCOM)
             return ksize == 2;
 #endif
-#ifdef HAVE_WEBNN
-        if (backendId == DNN_BACKEND_WEBNN)
-        {
-            if (ksize != 2)
-            {
-                CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
-            }
-            return ksize == 2;
-        }
-#endif
+// #ifdef HAVE_WEBNN
+//         if (backendId == DNN_BACKEND_WEBNN)
+//         {
+//             if (ksize != 2)
+//             {
+//                 CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
+//             }
+//             return ksize == 2;
+//         }
+// #endif
         return false;
     }
 

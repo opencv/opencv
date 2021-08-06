@@ -681,7 +681,6 @@ public:
         else
         {
             std::vector<int32_t> weight_shape = {(int32_t)blobs[0].size[0], (int32_t)blobs[0].size[1]};
-            std::cout<<"weight_shape: " << weight_shape[0]<<" "<<weight_shape[1]<<std::endl;
             ml::Operand inp2 = webnn::BuildConstant(webnnGraphBuilder, weight_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
             gemmOptions.bTranspose = true;
             result = webnnGraphBuilder.Gemm(webnnInpOperand, inp2, &gemmOptions);
