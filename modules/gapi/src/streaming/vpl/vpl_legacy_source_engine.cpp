@@ -179,6 +179,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             if (sess.last_status == MFX_ERR_NONE) // Got 1 decoded frame
             {
                 do {
+                    //TODO try to extract TIMESTAMP
                     sess.last_status = MFXVideoCORE_SyncOperation(sess.session, sess.sync, 100);
                     if (MFX_ERR_NONE == sess.last_status) {
 

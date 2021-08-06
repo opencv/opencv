@@ -265,6 +265,9 @@ int main(int argc, char *argv[]) {
                 .compileStreaming(cv::compile_args(kernels, networks));
 
     // The execution part
+
+    // TODO USE may set pool size from outside and set queue_capacity size,
+    // compile arg: cv::gapi::streaming::queue_capacity
     pipeline.setSource(std::move(cap));
     pipeline.start();
 
@@ -312,6 +315,6 @@ typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &l
     std::string name = line.substr(0, name_endline_pos);
     std::string value = line.substr(name_endline_pos + 1);
 
-    return cv::gapi::wip::oneVPLBulder::create_cfg_param(name, value);
+    return cv::gapi::wip::oneVPL_cfg_param::create(name, value);
 }
 }

@@ -6,8 +6,7 @@
 
 #include <opencv2/gapi/util/throw.hpp>
 
-#include <opencv2/gapi/streaming/onevpl_builder.hpp>
-#include "streaming/vpl/vpl_source_impl.hpp"
+#include <opencv2/gapi/streaming/onevpl_cfg_params.hpp>
 
 namespace cv {
 namespace gapi {
@@ -117,29 +116,6 @@ bool oneVPL_cfg_param::operator!=(const oneVPL_cfg_param& src) const {
     return !(*this == src);
 }
 
-std::shared_ptr<IStreamSource> oneVPLBulder::build() const
-{
-    if (filePath.empty()) {
-        util::throw_error(std::logic_error("Cannot create 'OneVPLCapture' on empty source file name"));
-    }
-#ifdef HAVE_ONEVPL
-    std::unique_ptr<VPLSourceImpl> impl(new VPLSourceImpl(filePath, cfg_params));
-    return std::shared_ptr<IStreamSource>(new OneVPLCapture(std::move(impl)));
-#else
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_ONEVPL=ON`");
-    return {};
-#endif
-}
-
-void oneVPLBulder::set_arg(const std::string& file_path)
-{
-    this->filePath = file_path;
-}
-
-void oneVPLBulder::set_arg(const std::vector<cv::gapi::wip::oneVPL_cfg_param>& params)
-{
-    cfg_params = params;
-}
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -2236,12 +2236,14 @@ const unsigned char hevc_header[] = {
 };
 TEST(OneVPL_Source, Init)
 {
-    std::vector<cv::gapi::wip::oneVPL_cfg_param> src_params;
-    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.Impl",
+    using cfg_param = cv::gapi::wip::oneVPL_cfg_param;
+
+    std::vector<cfg_param> src_params;
+    src_params.push_back(cfg_param::create<uint32_t>("mfxImplDescription.Impl",
                                                                                MFX_IMPL_TYPE_HARDWARE));
-    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.AccelerationMode",
+    src_params.push_back(cfg_param::create<uint32_t>("mfxImplDescription.AccelerationMode",
                                                                                MFX_ACCEL_MODE_VIA_D3D11, false));
-    src_params.push_back(cv::gapi::wip::oneVPLBulder::create_cfg_param<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+    src_params.push_back(cfg_param::create<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
                                                                                MFX_CODEC_HEVC));
     std::string stub_file_name("stub_file");
     FILE* stub_file = fopen(stub_file_name.c_str(), "w+");

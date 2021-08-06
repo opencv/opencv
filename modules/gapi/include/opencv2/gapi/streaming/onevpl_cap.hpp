@@ -9,18 +9,20 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
-#include <opencv2/gapi/streaming/onevpl_builder.hpp>
+#include <opencv2/gapi/streaming/onevpl_cfg_params.hpp>
 
 namespace cv {
 namespace gapi {
 namespace wip {
 
+using onevpl_params_container_t = std::vector<oneVPL_cfg_param>;
+
 class GAPI_EXPORTS OneVPLCapture : public IStreamSource
 {
 public:
-    friend class oneVPLBulder;
     struct IPriv;
- 
+
+    OneVPLCapture(const std::string& filePath, const onevpl_params_container_t& cfg_params);
     ~OneVPLCapture() override;
 
     bool pull(cv::gapi::wip::Data& data) override;
@@ -34,7 +36,7 @@ private:
 template<class... Args>
 GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(const std::string& filePath, Args&&... args)
 {
-    return make_src<oneVPLBulder>(filePath, std::forward<Args>(args)...);
+    return make_src<OneVPLCapture>(filePath, std::forward<Args>(args)...);
 }
 
 } // namespace wip

@@ -17,6 +17,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
     struct Data; // "forward-declaration" of GRunArg
+
 /**
  * @brief Abstract streaming pipeline source.
  *
@@ -45,33 +46,13 @@ public:
     virtual ~IStreamSource() = default;
 };
 
-
-
-namespace detail
-{
-template<class T, class... Args>
-typename std::enable_if<!std::is_base_of<IStreamSource, T>::value, IStreamSource::Ptr>::type
-inline make_src_impl(Args&&... args)
-{
-    T builder(std::forward<Args>(args)...);
-    return builder.build();
-}
-
-template<class T, class... Args>
-typename std::enable_if<std::is_base_of<IStreamSource, T>::value, IStreamSource::Ptr>::type
-inline make_src_impl(Args&&... args)
-{
-    auto src_ptr = std::make_shared<T>(std::forward<Args>(args)...);
-    return src_ptr->ptr();
-}
-} // namespace detail
-
-
-
 template<class T, class... Args>
 IStreamSource::Ptr inline make_src(Args&&... args)
 {
-    return detail::make_src_impl<T, Args...>(std::forward<Args>(args)...);
+    static_assert(std::is_base_of<IStreamSource, T>::value,
+                  "T must implement the cv::gapi::IStreamSource interface!");
+    auto src_ptr = std::make_shared<T>(std::forward<Args>(args)...);
+    return src_ptr->ptr();
 }
 
 } // namespace wip

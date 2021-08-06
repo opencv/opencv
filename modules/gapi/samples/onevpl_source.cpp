@@ -218,6 +218,6 @@ typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &l
     std::string name = line.substr(0, name_endline_pos);
     std::string value = line.substr(name_endline_pos + 1);
 
-    return cv::gapi::wip::oneVPLBulder::create_cfg_param(name, value);
+    return cv::gapi::wip::oneVPL_cfg_param::create(name, value);
 }
 }

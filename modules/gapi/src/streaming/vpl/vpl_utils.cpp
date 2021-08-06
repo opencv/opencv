@@ -88,7 +88,7 @@ template <>
 struct ParamCreator<oneVPL_cfg_param> {
     template<typename ValueType>
     oneVPL_cfg_param create (const std::string& name, ValueType&& value) {
-        return oneVPLBulder::create_cfg_param(name, std::forward<ValueType>(value), is_major_flag);
+        return oneVPL_cfg_param::create(name, std::forward<ValueType>(value), is_major_flag);
     }
     bool is_major_flag = false;
 };
