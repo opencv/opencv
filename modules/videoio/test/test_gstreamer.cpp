@@ -35,6 +35,10 @@ TEST_P(videoio_gstreamer, read_check)
 
         cvtColor(decode_frame, rgb_frame, convertToRGB);
         cvtColor(rgb_frame, gray_frame, COLOR_RGB2GRAY);
+        if (gray_frame.depth() == CV_16U)
+        {
+            gray_frame.convertTo(gray_frame, CV_8U, 255.0/65535);
+        }
 
         vector<Vec3f> circles;
         HoughCircles(gray_frame, circles, HOUGH_GRADIENT, 1, gray_frame.rows/16, 100, 30, 1, 30 );
@@ -76,6 +80,10 @@ static const Param test_data[] = {
     make_tuple("video/x-raw, format=NV21" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_NV21),
     make_tuple("video/x-raw, format=YV12" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_YV12),
     make_tuple("video/x-raw, format=I420" , Size(322, 242), Size(322, 363), COLOR_YUV2RGB_I420),
+
+    // 16 bit
+    make_tuple("video/x-raw, format=GRAY16_LE", Size(640, 480), Size(640, 480), COLOR_GRAY2RGB),
+    make_tuple("video/x-raw, format=GRAY16_BE", Size(640, 480), Size(640, 480), COLOR_GRAY2RGB),
 };
 
 INSTANTIATE_TEST_CASE_P(videoio, videoio_gstreamer, testing::ValuesIn(test_data));

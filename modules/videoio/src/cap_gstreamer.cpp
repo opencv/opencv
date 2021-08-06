@@ -475,8 +475,8 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
     //     video/x-raw, format=I420  -> 8bit, 1 channel (height is 1.5x larger than true height)
     //     video/x-bayer             -> 8bit, 1 channel
     //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
+    //     video/x-raw, format=GRAY16_LE (BE) -> 16 bit, 1 channel
     // bayer data is never decoded, the user is responsible for that
-    // everything is 8 bit, so we just test the caps for bit depth
     Size sz = Size(frame_width, frame_height);
     guint n_planes = GST_VIDEO_INFO_N_PLANES(&info);
     if (name == "video/x-raw")
@@ -504,6 +504,15 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
             size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
             CV_CheckGE(step, (size_t)frame_width, "");
             Mat src(sz, CV_8UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
+        else if (format == "GRAY16_LE" || format == "GRAY16_BE")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_16UC1, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
             src.copyTo(dst);
             return true;
         }
@@ -999,7 +1008,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
 
-    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8, GRAY16_LE, GRAY16_BE}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
 
     if (manualpipeline)
     {
