@@ -278,7 +278,6 @@ struct ParamCreator {
 };
 
 mfxVariant cfg_param_to_mfx_variant(const oneVPL_cfg_param& value);
-mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f);
 } // namespace wip
 } // namespace gapi
 } // namespace cv

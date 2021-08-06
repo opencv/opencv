@@ -13,6 +13,7 @@
 #include <string>
 
 #include "streaming/onevpl_priv_interface.hpp"
+#include <opencv2/gapi/streaming/onevpl_data_provider_interface.hpp>
 
 #ifdef HAVE_ONEVPL
 #if (MFX_VERSION >= 2000)
@@ -33,7 +34,7 @@ class VPLDecodeEngine;
 class VPLSourceImpl : public OneVPLSource::IPriv
 {
 public:
-    explicit VPLSourceImpl(const std::string& filePath,
+    explicit VPLSourceImpl(std::shared_ptr<IDataProvider> provider,
                            const std::vector<oneVPL_cfg_param>& params);
 
     ~VPLSourceImpl();
@@ -48,7 +49,8 @@ private:
 
     VPLSourceImpl();
 
-    DecoderParams create_decoder_from_file(const oneVPL_cfg_param& decoder, FILE* source_ptr);
+    DecoderParams create_decoder_from_file(const oneVPL_cfg_param& decoder,
+                                           std::shared_ptr<IDataProvider> provider);
     std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
     
     mfxLoader mfx_handle;

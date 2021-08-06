@@ -8,6 +8,7 @@
 
 #include "streaming/onevpl_priv_interface.hpp"
 #include "streaming/vpl/vpl_source_impl.hpp"
+#include "streaming/onevpl_file_data_provider.hpp"
 
 namespace cv {
 namespace gapi {
@@ -15,7 +16,8 @@ namespace wip {
     
 #ifdef HAVE_ONEVPL
 OneVPLSource::OneVPLSource(const std::string& filePath, const onevpl_params_container_t& cfg_params) :
-    OneVPLSource(std::unique_ptr<IPriv>(new VPLSourceImpl(filePath, cfg_params))) {
+    OneVPLSource(std::unique_ptr<IPriv>(new VPLSourceImpl(std::make_shared<FileDataProvider>(filePath),
+                                                          cfg_params))) {
 
     if (filePath.empty()) {
         util::throw_error(std::logic_error("Cannot create 'OneVPLSource' on empty source file name"));
@@ -25,15 +27,17 @@ OneVPLSource::OneVPLSource(const std::string& filePath, const onevpl_params_cont
 OneVPLSource::OneVPLSource(const std::string& filePath, const onevpl_params_container_t& cfg_params) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_ONEVPL=ON`")
 }
-
 #endif
-OneVPLSource::OneVPLSource(std::unique_ptr<IPriv>&& impl) : IStreamSource(),
-    m_priv(std::move(impl))
-{
+OneVPLSource::OneVPLSource(std::shared_ptr<IDataProvider> source, const onevpl_params_container_t& cfg_params) :
+     OneVPLSource(std::unique_ptr<IPriv>(new VPLSourceImpl(source, cfg_params))) {
 }
 
-OneVPLSource::~OneVPLSource()
-{
+OneVPLSource::OneVPLSource(std::unique_ptr<IPriv>&& impl) :
+    IStreamSource(),
+    m_priv(std::move(impl)) {
+}
+
+OneVPLSource::~OneVPLSource() {
 }
 
 bool OneVPLSource::pull(cv::gapi::wip::Data& data)
@@ -44,6 +48,18 @@ bool OneVPLSource::pull(cv::gapi::wip::Data& data)
 GMetaArg OneVPLSource::descr_of() const
 {
     return m_priv->descr_of();
+}
+
+
+DataProviderSystemErrorException::DataProviderSystemErrorException(int error_code, const std::string& desription) {
+    reason = desription + ", error: " + std::to_string(error_code) + ", desctiption: " + strerror(error_code);
+}
+
+DataProviderSystemErrorException::~DataProviderSystemErrorException() {
+}
+
+const char* DataProviderSystemErrorException::what() const noexcept {
+    return reason.c_str();
 }
 
 } // namespace wip

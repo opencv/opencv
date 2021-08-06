@@ -13,9 +13,9 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-DecodeSession::DecodeSession(mfxSession sess, mfxBitstream&& str, VPLDecodeEngine::file_ptr&& source) :
+DecodeSession::DecodeSession(mfxSession sess, mfxBitstream&& str, std::shared_ptr<IDataProvider> provider) :
     EngineSession(sess, std::move(str)),
-    source_handle(std::move(source)),
+    data_provider(std::move(provider)),
     stop_processing(false),
     dec_surface_out()
 {
@@ -30,9 +30,9 @@ VPLDecodeEngine::VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             DecodeSession &my_sess = static_cast<DecodeSession&>(sess);
-            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.source_handle.get());
+            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.data_provider);
             if (my_sess.last_status != MFX_ERR_NONE) {
-                my_sess.source_handle.reset(); //close source
+               // my_sess.source_handle.reset(); //close source
             }
             return ExecutionStatus::Continue;
         },
@@ -73,11 +73,11 @@ VPLDecodeEngine::VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
 
 void VPLDecodeEngine::initialize_session(mfxSession mfx_session,
                                          DecoderParams&& decoder_param,
-                                         file_ptr&& source_handle)
+                                         std::shared_ptr<IDataProvider> provider)
 {
     register_session<DecodeSession>(mfx_session,
                                     std::move(decoder_param.stream),
-                                    std::move(source_handle));
+                                    provider);
     acceleration_policy->init(mfx_session);
 }
 
@@ -122,7 +122,7 @@ VPLProcessingEngine::ExecutionStatus VPLDecodeEngine::process_error(mfxStatus st
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (!sess.source_handle) {
+            if (sess.data_provider->empty()) {
                 // No more data to drain from decoder, start encode draining mode
                 return ExecutionStatus::Processed;
             }

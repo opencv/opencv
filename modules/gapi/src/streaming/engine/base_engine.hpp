@@ -15,7 +15,7 @@ namespace gapi {
 namespace wip {
 
 struct VPLAccelerationPolicy;
-
+struct IDataProvider;
 class VPLProcessingEngine {
 public:
     enum class ExecutionStatus {
@@ -44,7 +44,7 @@ public:
 
     virtual void initialize_session(mfxSession mfx_session,
                             DecoderParams&& decoder_param,
-                            file_ptr&& source_handle) = 0;
+                            std::shared_ptr<IDataProvider> provider) = 0;
                                          
     ExecutionStatus process(mfxSession session);
     size_t get_ready_frames_count() const;
@@ -77,6 +77,9 @@ protected:
         return sess_impl;
     }
 };
+
+
+mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& data_provider);
 } // namespace wip
 } // namespace gapi
 } // namespace cv

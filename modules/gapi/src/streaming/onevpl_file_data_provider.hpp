@@ -1,0 +1,26 @@
+#ifndef GAPI_STREAMING_FILE_DATA_PROVIDER_HPP
+#define GAPI_STREAMING_FILE_DATA_PROVIDER_HPP
+#include <stdio.h>
+
+#include <opencv2/gapi/streaming/onevpl_data_provider_interface.hpp>
+
+namespace cv {
+namespace gapi {
+namespace wip {
+
+struct FileDataProvider : public IDataProvider {
+
+    using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
+    FileDataProvider(const std::string& file_path);
+    ~FileDataProvider();
+
+    size_t provide_data(size_t out_data_bytes_size, void* out_data) override;
+    bool empty() const override;
+private:
+    file_ptr source_handle;
+};
+} // namespace wip
+} // namespace gapi
+} // namespace cv
+
+#endif // GAPI_STREAMING_FILE_DATA_PROVIDER_HPP

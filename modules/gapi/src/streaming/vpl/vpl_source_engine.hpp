@@ -18,6 +18,7 @@ namespace gapi {
 namespace wip {
 
 class DecodeSession;
+struct IDataProvider;
 
 class VPLDecodeEngine : public VPLProcessingEngine {
 public:
@@ -26,7 +27,7 @@ public:
     VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
     void initialize_session(mfxSession mfx_session,
                             DecoderParams&& decoder_param,
-                            file_ptr&& source_handle) override;
+                            std::shared_ptr<IDataProvider> provider) override;
 
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
@@ -41,10 +42,10 @@ class DecodeSession : public EngineSession
 public:
     friend class VPLDecodeEngine;
 
-    DecodeSession(mfxSession sess, mfxBitstream&& str, VPLDecodeEngine::file_ptr&& source);
+    DecodeSession(mfxSession sess, mfxBitstream&& str, std::shared_ptr<IDataProvider> provider);
     using EngineSession::EngineSession;
 
-    VPLDecodeEngine::file_ptr source_handle;
+    std::shared_ptr<IDataProvider> data_provider;
     bool stop_processing;
     mfxFrameSurface1 *dec_surface_out;
 };

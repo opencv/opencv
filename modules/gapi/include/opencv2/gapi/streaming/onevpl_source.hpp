@@ -10,6 +10,7 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
 #include <opencv2/gapi/streaming/onevpl_cfg_params.hpp>
+#include <opencv2/gapi/streaming/onevpl_data_provider_interface.hpp>
 
 namespace cv {
 namespace gapi {
@@ -23,6 +24,7 @@ public:
     struct IPriv;
 
     OneVPLSource(const std::string& filePath, const onevpl_params_container_t& cfg_params);
+    OneVPLSource(std::shared_ptr<IDataProvider> source, const onevpl_params_container_t& cfg_params);
     ~OneVPLSource() override;
 
     bool pull(cv::gapi::wip::Data& data) override;

@@ -24,13 +24,14 @@ namespace wip {
 
 class LegacyDecodeSession;
 struct DecoderParams;
+struct IDataProvider;
 
 class VPLLegacyDecodeEngine : public VPLProcessingEngine {
 public:
 
     VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel);
     void initialize_session(mfxSession mfx_session, DecoderParams&& decoder_param,
-                            file_ptr&& source_handle) override;
+                            std::shared_ptr<IDataProvider> provider) override;
 
 private:
     ExecutionStatus execute_op(operation_t& op, EngineSession& sess) override;
@@ -42,16 +43,15 @@ private:
 class LegacyDecodeSession : public EngineSession {
 public:
     friend class VPLLegacyDecodeEngine;
-    using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
     
-    LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, file_ptr&& source);
+    LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, std::shared_ptr<IDataProvider> provider);
     using EngineSession::EngineSession;
 
     void swap_surface(VPLLegacyDecodeEngine& engine);
     void init_surface_pool(VPLAccelerationPolicy::pool_key_t key);
     
     mfxVideoParam mfx_decoder_param;
-    VPLLegacyDecodeEngine::file_ptr source_handle;
+    std::shared_ptr<IDataProvider> data_provider;
 private:
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;

@@ -111,10 +111,10 @@ surface_ptr_t create_surface_other(mfxFrameInfo frameInfo,
     
 LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
                                          DecoderParams&& decoder_param,
-                                         VPLLegacyDecodeEngine::file_ptr&& source) :
+                                         std::shared_ptr<IDataProvider> provider) :
     EngineSession(sess, std::move(decoder_param.stream)),
     mfx_decoder_param(std::move(decoder_param.param)),
-    source_handle(std::move(source)),
+    data_provider(std::move(provider)),
     procesing_surface_ptr(),
     output_surface_ptr()
 {
@@ -152,9 +152,9 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
-            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.source_handle.get());
+            my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.data_provider);
             if (my_sess.last_status != MFX_ERR_NONE) {
-                my_sess.source_handle.reset(); //close source
+                //my_sess.source_handle.reset(); //close source
             }
             return ExecutionStatus::Continue;
         },
@@ -200,7 +200,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
 
 void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
                                          DecoderParams&& decoder_param,
-                                         file_ptr&& source_handle)
+                                         std::shared_ptr<IDataProvider> provider)
 {
     mfxFrameAllocRequest decRequest = {};
     // Query number required surfaces for decoder
@@ -242,7 +242,7 @@ void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
     std::shared_ptr<LegacyDecodeSession> sess_ptr =
                 register_session<LegacyDecodeSession>(mfx_session,
                                                       std::move(decoder_param),
-                                                      std::move(source_handle));
+                                                      provider);
 
     sess_ptr->init_surface_pool(decode_pool_key);
     // prepare working decode surface
@@ -271,7 +271,7 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (!sess.source_handle) {
+            if (sess.data_provider->empty()) {
                 // No more data to drain from decoder, start encode draining mode
                 return ExecutionStatus::Processed;
             }

@@ -238,32 +238,6 @@ std::string mfxstatus_to_string(mfxStatus err) {
     ret += std::to_string(err) + ">";
     return ret;
 }
-
-// Read encoded stream from file
-mfxStatus ReadEncodedStream(mfxBitstream &bs, FILE *f) {
-
-    if (!f) {
-        return MFX_ERR_MORE_DATA;
-    }
-
-    mfxU8 *p0 = bs.Data;
-    mfxU8 *p1 = bs.Data + bs.DataOffset;
-    if (bs.DataOffset > bs.MaxLength - 1) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-    if (bs.DataLength + bs.DataOffset > bs.MaxLength) {
-        return MFX_ERR_NOT_ENOUGH_BUFFER;
-    }
-    for (mfxU32 i = 0; i < bs.DataLength; i++) {
-        *(p0++) = *(p1++);
-    }
-    bs.DataOffset = 0;
-    bs.DataLength += (mfxU32)fread(bs.Data + bs.DataLength, 1, bs.MaxLength - bs.DataLength, f);
-    if (bs.DataLength == 0)
-        return MFX_ERR_MORE_DATA;
-
-    return MFX_ERR_NONE;
-}
 } // namespace wip
 } // namespace gapi
 } // namespace cv

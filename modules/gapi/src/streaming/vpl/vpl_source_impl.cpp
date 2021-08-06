@@ -42,7 +42,7 @@ VPLSourceImpl::~VPLSourceImpl()
     MFXUnload(mfx_handle);
 }
 
-VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<oneVPL_cfg_param>& params) :
+VPLSourceImpl::VPLSourceImpl(std::shared_ptr<IDataProvider> provider, const std::vector<oneVPL_cfg_param>& params) :
     VPLSourceImpl()
 {
     // Enable Config
@@ -57,11 +57,6 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
     }
 
     try {
-        VPLDecodeEngine::file_ptr source_handle(fopen(file_path.c_str(), "rb"), &fclose);
-        if (!source_handle) {
-            throw std::runtime_error("Cannot open source file: " + file_path);
-        }
-
         GAPI_LOG_DEBUG(nullptr, "Requested cfg params count: " << cfg_params.size());
         this->mfx_handle_configs.resize(cfg_params.size());
 
@@ -201,11 +196,11 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
             }
 
             //create decoder for session accoring to header recovered from source file
-            DecoderParams decoder_param = create_decoder_from_file(*dec_it, source_handle.get());
+            DecoderParams decoder_param = create_decoder_from_file(*dec_it, provider);
 
             // create engine session for processing mfx session pipeline
             engine->initialize_session(mfx_session, std::move(decoder_param),
-                                                    std::move(source_handle));
+                                                    provider);
         } catch(const std::exception& ex) {
             std::stringstream ss;
             ss << ex.what() << ". Unload VPL session: " << mfx_session;
@@ -226,25 +221,24 @@ VPLSourceImpl::VPLSourceImpl(const std::string& file_path, const std::vector<one
     engine->process(mfx_session);
 }
 
-DecoderParams VPLSourceImpl::create_decoder_from_file(const oneVPL_cfg_param& decoder_cfg, FILE* source_ptr)
+DecoderParams VPLSourceImpl::create_decoder_from_file(const oneVPL_cfg_param& decoder_cfg,
+                                                      std::shared_ptr<IDataProvider> provider)
 {
-    if (!source_ptr) {
-        throw std::runtime_error("Cannot create decoder, source is nullptr");
-    }
+    GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
     mfxBitstream bitstream{};
     const int BITSTREAM_BUFFER_SIZE = 2000000;
     bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.Data      = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
+    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
     if(!bitstream.Data) {
         throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
-                             std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
+                                 std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
     }
 
     mfxVariant decoder = cfg_param_to_mfx_variant(decoder_cfg);
     bitstream.CodecId = decoder.Data.U32;
 
-    mfxStatus sts = ReadEncodedStream(bitstream, source_ptr);
+    mfxStatus sts = ReadEncodedStream(bitstream, provider);
     if(MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error reading bitstream, error: " +
                                  mfxstatus_to_string(sts));

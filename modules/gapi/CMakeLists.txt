@@ -174,6 +174,7 @@ if(HAVE_ONEVPL)
     list(APPEND gapi_srcs
         src/streaming/engine/base_engine.cpp
         src/streaming/engine/engine_session.cpp
+        src/streaming/onevpl_file_data_provider.cpp
         src/streaming/vpl/vpl_source_impl.cpp
         src/streaming/vpl/vpl_dx11_accel.cpp
         src/streaming/vpl/vpl_cpu_accel.cpp
