@@ -10,6 +10,7 @@ from .warper import Warper
 from .exposure_error_compensator import ExposureErrorCompensator
 from .seam_finder import SeamFinder
 from .blender import Blender
+from .timelapser import Timelapser
 
 
 class Stitcher:
@@ -70,17 +71,6 @@ class Stitcher:
         compose_megapix = args.compose_megapix
         warp_type = args.warp
         result_name = args.output
-        if args.timelapse is not None:
-            timelapse = True
-            if args.timelapse == "as_is":
-                timelapse_type = cv.detail.Timelapser_AS_IS
-            elif args.timelapse == "crop":
-                timelapse_type = cv.detail.Timelapser_CROP
-            else:
-                print("Bad timelapse method")
-                exit()
-        else:
-            timelapse = False
 
         corners = []
         masks_warped = []
@@ -118,7 +108,7 @@ class Stitcher:
         corners = []
         sizes = []
         blender = None
-        timelapser = None
+        timelapser = Timelapser(args.timelapse)
         # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
         for idx, name in enumerate(img_names):
             full_img = cv.imread(name)
@@ -154,24 +144,16 @@ class Stitcher:
             dilated_mask = cv.dilate(masks_warped[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
             mask_warped = cv.bitwise_and(seam_mask, mask_warped)
-            if blender is None and not timelapse:
+            if blender is None and not timelapser.do_timelapse:
                 blender = Blender(args.blend, args.blend_strength)
                 blender.prepare(corners, sizes)
-            elif timelapser is None and timelapse:
-                timelapser = cv.detail.Timelapser_createDefault(timelapse_type)
-                timelapser.initialize(corners, sizes)
-            if timelapse:
-                ma_tones = np.ones((image_warped_s.shape[0], image_warped_s.shape[1]), np.uint8)
-                timelapser.process(image_warped_s, ma_tones, corners[idx])
-                pos_s = img_names[idx].rfind("/")
-                if pos_s == -1:
-                    fixed_file_name = "fixed_" + img_names[idx]
-                else:
-                    fixed_file_name = img_names[idx][:pos_s + 1] + "fixed_" + img_names[idx][pos_s + 1:]
-                cv.imwrite(fixed_file_name, timelapser.getDst())
+            if timelapser.do_timelapse:
+                timelapser.process_and_save_frame(img_names[idx],
+                                                  image_warped_s,
+                                                  corners[idx])
             else:
                 blender.feed(cv.UMat(image_warped_s), mask_warped, corners[idx])
-        if not timelapse:
+        if not timelapser.do_timelapse:
             result = None
             result_mask = None
             self.result, result_mask = blender.blend(result, result_mask)

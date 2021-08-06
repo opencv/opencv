@@ -188,6 +188,28 @@ class TestStitcher(unittest.TestCase):
                                                      pairwise_matches)
         self.assertTrue(graph.startswith("graph matches_graph{"))
 
+    # visual test
+    # def test_timelapse(self):
+    #     self.settings["timelapse"] = "as_is"
+    #     stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
+    #     stitcher.stitch()
+
+    #     frame1, frame2 = cv.imread("fixed_s1.jpg"), cv.imread("fixed_s2.jpg")
+
+    #     max_image_shape_derivation = 3
+    #     np.testing.assert_allclose(frame1.shape[:2],
+    #                                (700, 1811),
+    #                                atol=max_image_shape_derivation)
+    #     self.assertEqual(np.count_nonzero(frame1[:, 1300:, ]), 0)
+
+    #     np.testing.assert_allclose(frame2.shape[:2],
+    #                                (700, 1811),
+    #                                atol=max_image_shape_derivation)
+    #     self.assertEqual(np.count_nonzero(frame1[:, :400, ]), 0)
+
+    #     os.remove("frame1.jpg")
+    #     os.remove("frame2.jpg")
+
 
 def starttest():
     unittest.main()

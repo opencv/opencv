@@ -25,6 +25,7 @@ from stitching_detailed.warper import Warper
 from stitching_detailed.exposure_error_compensator import ExposureErrorCompensator  # noqa
 from stitching_detailed.seam_finder import SeamFinder
 from stitching_detailed.blender import Blender
+from stitching_detailed.timelapser import Timelapser
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -183,9 +184,11 @@ parser.add_argument(
     type=str, dest='output'
 )
 parser.add_argument(
-    '--timelapse', action='store', default=None,
+    '--timelapse', action='store', default=Timelapser.DEFAULT_TIMELAPSE,
     help="Output warped images separately as frames of a time lapse movie, "
-         "with 'fixed_' prepended to input file names.",
+         "with 'fixed_' prepended to input file names. "
+         "The default is '%s'." % Timelapser.DEFAULT_TIMELAPSE,
+    choices=Timelapser.TIMELAPSE_CHOICES,
     type=str, dest='timelapse'
 )
 
