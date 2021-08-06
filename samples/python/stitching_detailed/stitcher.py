@@ -9,6 +9,7 @@ from .image_registration import ImageRegistration
 from .subsetter import Subsetter
 from .warper import Warper
 from .exposure_error_compensator import ExposureErrorCompensator
+from .seam_finder import SeamFinder
 
 
 class Stitcher:
@@ -113,7 +114,7 @@ class Stitcher:
                                                args.expos_comp_block_size)
         compensator.feed(corners, images_warped, masks_warped)
 
-        seam_finder = choices.SEAM_FIND_CHOICES[args.seam]
+        seam_finder = SeamFinder(args.seam)
         masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
         compose_scale = 1
         corners = []

@@ -14,9 +14,7 @@ import cv2 as cv
 import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
-from stitching_detailed.stitcher_choices import (SEAM_FIND_CHOICES,
-                                                 EXPOS_COMP_CHOICES,
-                                                 BLEND_CHOICES)
+from stitching_detailed.stitcher_choices import BLEND_CHOICES
 
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
@@ -25,6 +23,8 @@ from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
 from stitching_detailed.warper import Warper
+from stitching_detailed.exposure_error_compensator import ExposureErrorCompensator  # noqa
+from stitching_detailed.seam_finder import SeamFinder
 
 parser = argparse.ArgumentParser(
     prog="stitching_detailed.py", description="Rotation model images stitcher"
@@ -132,10 +132,10 @@ parser.add_argument(
     type=float, dest='seam_megapix'
 )
 parser.add_argument(
-    '--seam', action='store', default=list(SEAM_FIND_CHOICES.keys())[0],
+    '--seam', action='store', default=SeamFinder.DEFAULT_SEAM_FINDER,
     help="Seam estimation method. "
-         "The default is '%s'." % list(SEAM_FIND_CHOICES.keys())[0],
-    choices=SEAM_FIND_CHOICES.keys(),
+         "The default is '%s'." % SeamFinder.DEFAULT_SEAM_FINDER,
+    choices=SeamFinder.SEAM_FINDER_CHOICES.keys(),
     type=str, dest='seam'
 )
 parser.add_argument(
@@ -145,21 +145,24 @@ parser.add_argument(
     type=float, dest='compose_megapix'
 )
 parser.add_argument(
-    '--expos_comp', action='store', default=list(EXPOS_COMP_CHOICES.keys())[0],
+    '--expos_comp', action='store',
+    default=ExposureErrorCompensator.DEFAULT_COMPENSATOR,
     help="Exposure compensation method. "
-         "The default is '%s'." % list(EXPOS_COMP_CHOICES.keys())[0],
-    choices=EXPOS_COMP_CHOICES.keys(),
+         "The default is '%s'." % ExposureErrorCompensator.DEFAULT_COMPENSATOR,
+    choices=ExposureErrorCompensator.COMPENSATOR_CHOICES.keys(),
     type=str, dest='expos_comp'
 )
 parser.add_argument(
-    '--expos_comp_nr_feeds', action='store', default=1,
+    '--expos_comp_nr_feeds', action='store',
+    default=ExposureErrorCompensator.DEFAULT_NR_FEEDS,
     help="Number of exposure compensation feed.",
     type=np.int32, dest='expos_comp_nr_feeds'
 )
 parser.add_argument(
-    '--expos_comp_block_size', action='store', default=32,
+    '--expos_comp_block_size', action='store',
+    default=ExposureErrorCompensator.DEFAULT_BLOCK_SIZE,
     help="BLock size in pixels used by the exposure compensator. "
-         "The default is 32.",
+         "The default is '%s'." % ExposureErrorCompensator.DEFAULT_BLOCK_SIZE,
     type=np.int32, dest='expos_comp_block_size'
 )
 parser.add_argument(
