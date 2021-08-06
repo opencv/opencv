@@ -9,7 +9,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/render.hpp>
-#include <opencv2/gapi/streaming/onevpl_cap.hpp>
+#include <opencv2/gapi/streaming/onevpl_source.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
 
 const std::string about =

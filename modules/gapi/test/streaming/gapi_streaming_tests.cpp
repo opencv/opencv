@@ -22,7 +22,7 @@
 #include <opencv2/gapi/ocl/imgproc.hpp>
 
 #include <opencv2/gapi/streaming/cap.hpp>
-#include <opencv2/gapi/streaming/onevpl_cap.hpp>
+#include <opencv2/gapi/streaming/onevpl_source.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
 

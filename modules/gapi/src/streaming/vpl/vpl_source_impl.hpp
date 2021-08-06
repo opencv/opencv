@@ -30,7 +30,7 @@ namespace wip {
 
 struct VPLAccelerationPolicy;
 class VPLDecodeEngine;
-class VPLSourceImpl : public OneVPLCapture::IPriv
+class VPLSourceImpl : public OneVPLSource::IPriv
 {
 public:
     explicit VPLSourceImpl(const std::string& filePath,

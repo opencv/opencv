@@ -17,26 +17,26 @@ namespace wip {
 
 using onevpl_params_container_t = std::vector<oneVPL_cfg_param>;
 
-class GAPI_EXPORTS OneVPLCapture : public IStreamSource
+class GAPI_EXPORTS OneVPLSource : public IStreamSource
 {
 public:
     struct IPriv;
 
-    OneVPLCapture(const std::string& filePath, const onevpl_params_container_t& cfg_params);
-    ~OneVPLCapture() override;
+    OneVPLSource(const std::string& filePath, const onevpl_params_container_t& cfg_params);
+    ~OneVPLSource() override;
 
     bool pull(cv::gapi::wip::Data& data) override;
     GMetaArg descr_of() const override;
 
 private:
-    explicit OneVPLCapture(std::unique_ptr<IPriv>&& impl);
+    explicit OneVPLSource(std::unique_ptr<IPriv>&& impl);
     std::unique_ptr<IPriv> m_priv;
 };
 
 template<class... Args>
 GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(const std::string& filePath, Args&&... args)
 {
-    return make_src<OneVPLCapture>(filePath, std::forward<Args>(args)...);
+    return make_src<OneVPLSource>(filePath, std::forward<Args>(args)...);
 }
 
 } // namespace wip

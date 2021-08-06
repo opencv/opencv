@@ -163,7 +163,7 @@ set(gapi_srcs
     src/backends/ie/bindings_ie.cpp
     src/backends/python/gpythonbackend.cpp
 
-    src/streaming/onevpl_cap.cpp
+    src/streaming/onevpl_source.cpp
     src/streaming/onevpl_cfg_params.cpp
 
     # Utils (ITT tracing)

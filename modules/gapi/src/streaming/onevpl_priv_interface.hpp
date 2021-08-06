@@ -9,13 +9,13 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
-#include <opencv2/gapi/streaming/onevpl_cap.hpp>
+#include <opencv2/gapi/streaming/onevpl_source.hpp>
 #include <opencv2/gapi/streaming/onevpl_cfg_params.hpp>
 
 namespace cv {
 namespace gapi {
 namespace wip {
-struct OneVPLCapture::IPriv
+struct OneVPLSource::IPriv
 {
     virtual ~IPriv() {}
     

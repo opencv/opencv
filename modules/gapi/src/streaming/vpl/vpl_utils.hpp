@@ -17,7 +17,7 @@
 #include <map>
 #include <string>
 
-#include <opencv2/gapi/streaming/onevpl_cap.hpp>
+#include <opencv2/gapi/streaming/onevpl_source.hpp>
 
 
 namespace cv {
