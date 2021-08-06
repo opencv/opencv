@@ -377,7 +377,7 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    CV_WRAP static Ptr<RgbdOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
                                             float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
                                             float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                                             float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
@@ -415,7 +415,7 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<ICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<ICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
                                            float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
                                            float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                                            float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
@@ -453,7 +453,7 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<RgbdICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
                                                float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
                                                float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
                                                float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
@@ -505,7 +505,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    CV_WRAP static Ptr<FastICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<FastICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
                                                float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,
