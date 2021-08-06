@@ -333,12 +333,11 @@ std::unique_ptr<VPLAccelerationPolicy> VPLSourceImpl::initializeHWAccel()
 
 const std::vector<oneVPL_cfg_param>& VPLSourceImpl::getDefaultCfgParams()
 {
-    using default_creator = ParamCreator<oneVPL_cfg_param>;
-    static const std::vector<oneVPL_cfg_param> def_params{
-                    default_creator().create<mfxU32>("mfxImplDescription.Impl", MFX_IMPL_TYPE_HARDWARE),
-                    default_creator().create<mfxU32>("mfxImplDescription.AccelerationMode", MFX_ACCEL_MODE_VIA_D3D11)/*,
-                    default_creator().create<mfxU32>("mfxImplDescription.ApiVersion.Version", VPL_NEW_API_MAJOR_VERSION << 16 | VPL_NEW_API_MINOR_VERSION)*/
-            };
+    static const std::vector<oneVPL_cfg_param> def_params =
+        get_params_from_string<oneVPL_cfg_param>(
+                    "mfxImplDescription.Impl: MFX_IMPL_TYPE_HARDWARE\n"
+                    "mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\n");
+
     return def_params;
 }
 const std::vector<oneVPL_cfg_param>& VPLSourceImpl::getCfgParams() const
@@ -354,7 +353,7 @@ bool VPLSourceImpl::pull(cv::gapi::wip::Data& data)
     {
         status = engine->process(mfx_session);
     }
-
+    //TODO add metadata
     if (engine->get_ready_frames_count()) {
         engine->get_frame(data);
         return true;
