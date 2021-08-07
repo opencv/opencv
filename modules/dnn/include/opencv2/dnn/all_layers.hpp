@@ -165,6 +165,40 @@ CV__DNN_INLINE_NS_BEGIN
         int outputNameToIndex(const String& outputName) CV_OVERRIDE;
     };
 
+    /** @brief GRU recurrent one-layer
+     *
+     * Accepts input sequence and computes the final hidden state for each element in the batch.
+     *
+     * - input[0] containing the features of the input sequence.
+     * input[0] should have shape [`T`, `N`, `data_dims`] where `T` is sequence length, `N` is batch size, `data_dims` is input size
+     * - output would have shape [`T`, `N`, `D` * `hidden_size`] where `D = 2` if layer is bidirectional otherwise `D = 1`
+     *
+     * Depends on the following attributes:
+     * - hidden_size - Number of neurons in the hidden layer
+     * - direction - RNN could be bidirectional or forward
+     *
+     * The final hidden state @f$ h_t @f$ computes by the following formulas:
+     *
+     @f{eqnarray*}{
+     r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+     z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
+     n_t = \tanh(W_{in} x_t + b_{in} + r_t \odot (W_{hn} h_{(t-1)}+ b_{hn})) \\
+     h_t = (1 - z_t) \odot n_t + z_t \odot h_{(t-1)} \\
+     @f}
+     * Where @f$x_t@f$ is current input, @f$h_{(t-1)}@f$ is previous or initial hidden state.
+     *
+     * @f$W_{x?}@f$, @f$W_{h?}@f$ and @f$b_{?}@f$ are learned weights represented as matrices:
+     * @f$W_{x?} \in R^{N_h \times N_x}@f$, @f$W_{h?} \in R^{N_h \times N_h}@f$, @f$b_? \in R^{N_h}@f$.
+     *
+     * @f$\odot@f$ is per-element multiply operation.
+    */
+    class CV_EXPORTS GRULayer : public Layer
+    {
+    public:
+        /** Creates instance of GRU layer */
+        static Ptr<GRULayer> create(const LayerParams& params);
+    };
+
     /** @brief Classical recurrent layer
 
     Accepts two inputs @f$x_t@f$ and @f$h_{t-1}@f$ and compute two outputs @f$o_t@f$ and @f$h_t@f$.
