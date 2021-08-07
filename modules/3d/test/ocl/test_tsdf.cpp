@@ -332,7 +332,7 @@ public:
         if (useHashTSDF)
         {
             volumeKind = VolumeParams::VolumeKind::HASHTSDF;
-            truncateThreshold = Odometry::DEFAULT_MAX_DEPTH();
+            truncateThreshold = 4.f;
         }
         else
         {
