@@ -241,47 +241,6 @@ public:
       ROTATION = 1, TRANSLATION = 2, RIGID_BODY_MOTION = 4
     };
 
-    CV_WRAP static inline float
-    DEFAULT_MIN_DEPTH()
-    {
-      return 0.f; // in meters
-    }
-    CV_WRAP static inline float
-    DEFAULT_MAX_DEPTH()
-    {
-      return 4.f; // in meters
-    }
-    CV_WRAP static inline float
-    DEFAULT_MAX_DEPTH_DIFF()
-    {
-      return 0.07f; // in meters
-    }
-    CV_WRAP static inline float
-    DEFAULT_MAX_POINTS_PART()
-    {
-      return 0.07f; // in [0, 1]
-    }
-    CV_WRAP static inline float
-    DEFAULT_MAX_TRANSLATION()
-    {
-      return 0.15f; // in meters
-    }
-    CV_WRAP static inline float
-    DEFAULT_MAX_ROTATION()
-    {
-      return 15; // in degrees
-    }
-    CV_WRAP static inline Mat
-    DEFAULT_ITER_COUNTS()
-    {
-        return Mat(Vec4i(7, 7, 7, 10));
-    }
-    CV_WRAP static inline float
-    DEFAULT_MIN_GRADIENT_MAGNITUDE()
-    {
-        return 10;
-    }
-
     virtual ~Odometry() { }
 
     /** Create a new Odometry object based on its name. Currently supported names are:
@@ -343,13 +302,13 @@ public:
     CV_WRAP virtual void getMinGradientMagnitudes(OutputArray val) const = 0;
     CV_WRAP virtual void setMinGradientMagnitudes(InputArray val) = 0;
 
-    /** Get max allowed translation in meters.
+    /** Get max allowed translation in meters, default is 0.15 meters
     Found delta transform is considered successful only if the translation is in given limits. */
     CV_WRAP virtual double getMaxTranslation() const = 0;
     /** Set max allowed translation in meters.
     * Found delta transform is considered successful only if the translation is in given limits. */
     CV_WRAP virtual void setMaxTranslation(double val) = 0;
-    /** Get max allowed rotation in degrees.
+    /** Get max allowed rotation in degrees, default is 15 degrees.
     * Found delta transform is considered successful only if the rotation is in given limits. */
     CV_WRAP virtual double getMaxRotation() const = 0;
     /** Set max allowed rotation in degrees.
@@ -371,19 +330,19 @@ public:
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
      *                     if their depth difference is larger than maxDepthDiff (in meters)
-     * @param iterCounts Count of iterations on each pyramid level.
-     * @param minGradientMagnitudes For each pyramid level the pixels will be filtered out
+     * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
+     * @param minGradientMagnitudes For each pyramid level the pixels will be filtered out, default is 10 per each level
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
-     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
+     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart (from 0 to 1)
      * @param transformType Class of transformation
      */
     CV_WRAP static Ptr<RgbdOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
-                                            float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                                            float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                            float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                                            float minDepth = 0.f,
+                                            float maxDepth = 4.f,
+                                            float maxDepthDiff = 0.07f,
                                             InputArray iterCounts = noArray(),
                                             InputArray minGradientMagnitudes = noArray(),
-                                            float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                            float maxPointsPart = 0.07f,
                                             int transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
@@ -407,19 +366,19 @@ public:
 
     /** Creates new ICPOdometry object
      * @param cameraMatrix Camera matrix
-     * @param minDepth Pixels with depth less than minDepth will not be used
-     * @param maxDepth Pixels with depth larger than maxDepth will not be used
+     * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
+     * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
-     *                     if their depth difference is larger than maxDepthDiff
-     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
-     * @param iterCounts Count of iterations on each pyramid level.
+     *                     if their depth difference is larger than maxDepthDiff (in meters)
+     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart (from 0 to 1)
+     * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
      * @param transformType Class of trasformation
      */
     CV_WRAP static Ptr<ICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
-                                           float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                                           float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                           float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
-                                           float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                           float minDepth = 0.f,
+                                           float maxDepth = 4.f,
+                                           float maxDepthDiff = 0.07f,
+                                           float maxPointsPart = 0.07f,
                                            InputArray iterCounts = noArray(),
                                            int transformType = Odometry::RIGID_BODY_MOTION);
 
@@ -443,21 +402,21 @@ public:
 
     /** Creates RgbdICPOdometry object
      * @param cameraMatrix Camera matrix
-     * @param minDepth Pixels with depth less than minDepth will not be used
-     * @param maxDepth Pixels with depth larger than maxDepth will not be used
+     * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
+     * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
-     *                     if their depth difference is larger than maxDepthDiff
-     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
-     * @param iterCounts Count of iterations on each pyramid level.
+     *                     if their depth difference is larger than maxDepthDiff (in meters)
+     * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart (from 0 to 1)
+     * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
      * @param minGradientMagnitudes For each pyramid level the pixels will be filtered out
-     *                              if they have gradient magnitude less than minGradientMagnitudes[level].
+     *                              if they have gradient magnitude less than minGradientMagnitudes[level], default is 10 per each level
      * @param transformType Class of trasformation
      */
     CV_WRAP static Ptr<RgbdICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
-                                               float minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                                               float maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                                               float maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
-                                               float maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                                               float minDepth = 0.f,
+                                               float maxDepth = 4.f,
+                                               float maxDepthDiff = 0.07f,
+                                               float maxPointsPart = 0.07f,
                                                InputArray iterCounts = noArray(),
                                                InputArray minGradientMagnitudes = noArray(),
                                                int transformType = Odometry::RIGID_BODY_MOTION);
@@ -494,19 +453,19 @@ public:
     /** Creates FastICPOdometry object
      * @param cameraMatrix Camera matrix
      * @param maxDistDiff Correspondences between pixels of two given frames will be filtered out
-     *                     if their depth difference is larger than maxDepthDiff
+     *                    if their depth difference is larger than maxDepthDiff (in meters)
      * @param angleThreshold Correspondence will be filtered out
      *                     if an angle between their normals is bigger than threshold
      * @param sigmaDepth Depth sigma in meters for bilateral smooth
      * @param sigmaSpatial Spatial sigma in pixels for bilateral smooth
      * @param kernelSize Kernel size in pixels for bilateral smooth
-     * @param iterCounts Count of iterations on each pyramid level
+     * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
      * @param depthFactor pre-scale per 1 meter for input values
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
     CV_WRAP static Ptr<FastICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
-                                               float maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                                               float maxDistDiff = 0.07f,
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,
                                                float sigmaSpatial = 4.5f,

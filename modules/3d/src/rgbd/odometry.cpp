@@ -1136,14 +1136,24 @@ Ptr<OdometryFrame> OdometryFrame::create(InputArray _image, InputArray _depth, I
 class OdometryImpl : public Odometry
 {
 public:
+    // initialized outside of a class
+    static const float defaultMaxTranslation;
+    static const float defaultMaxRotation;
+    static const float defaultMinGradientMagnitude;
+    static const std::vector<int> defaultIterCounts;
+    static const float defaultMinDepth;
+    static const float defaultMaxDepth;
+    static const float defaultMaxDepthDiff;
+    static const float defaultMaxPointsPart;
+
     OdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
                  InputArray _iterCounts = noArray(),
                  InputArray _minGradientMagnitudes = noArray(),
                  int _transformType = Odometry::RIGID_BODY_MOTION)
     {
         setTransformType(_transformType);
-        setMaxTranslation(DEFAULT_MAX_TRANSLATION());
-        setMaxRotation(DEFAULT_MAX_ROTATION());
+        setMaxTranslation(defaultMaxTranslation);
+        setMaxRotation(defaultMaxRotation);
         setCameraMatrix(_cameraMatrix);
         setIterationCounts(_iterCounts);
         setMinGradientMagnitudes(_minGradientMagnitudes);
@@ -1206,7 +1216,7 @@ public:
     {
         if (val.empty())
         {
-            DEFAULT_ITER_COUNTS().copyTo(iterCounts);
+            iterCounts = defaultIterCounts;
         }
         else
         {
@@ -1215,7 +1225,7 @@ public:
             iterCounts.resize(val.rows() * val.cols());
             val.copyTo(iterCounts);
 
-            minGradientMagnitudes.resize(iterCounts.size(), DEFAULT_MIN_GRADIENT_MAGNITUDE());
+            minGradientMagnitudes.resize(iterCounts.size(), defaultMinGradientMagnitude);
         }
     }
 
@@ -1228,7 +1238,7 @@ public:
     {
         if (val.empty())
         {
-            minGradientMagnitudes = std::vector<float>(iterCounts.size(), DEFAULT_MIN_GRADIENT_MAGNITUDE());
+            minGradientMagnitudes = std::vector<float>(iterCounts.size(), defaultMinGradientMagnitude);
         }
         else
         {
@@ -1278,6 +1288,15 @@ public:
     std::vector<float> minGradientMagnitudes;
 };
 
+const float OdometryImpl::defaultMaxTranslation = 0.15f;
+const float OdometryImpl::defaultMaxRotation = 15.f;
+const float OdometryImpl::defaultMinGradientMagnitude = 10.f;
+const std::vector<int> OdometryImpl::defaultIterCounts = { 7, 7, 7, 10 };
+const float OdometryImpl::defaultMinDepth = 0.f;
+const float OdometryImpl::defaultMaxDepth = 4.f;
+const float OdometryImpl::defaultMaxDepthDiff = 0.07f;
+const float OdometryImpl::defaultMaxPointsPart = 0.07f;
+
 //
 
 // Public Odometry classes are pure abstract, therefore a sin of multiple inheritance should be forgiven
@@ -1297,12 +1316,12 @@ public:
      * @param transformType Class of transformation
      */
     RgbdOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
-                     float _minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                     float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                     float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                     float _minDepth = defaultMinDepth,
+                     float _maxDepth = defaultMaxDepth,
+                     float _maxDepthDiff = defaultMaxDepthDiff,
                      InputArray _iterCounts = noArray(),
                      InputArray _minGradientMagnitudes = noArray(),
-                     float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                     float _maxPointsPart = defaultMaxPointsPart,
                      int _transformType = Odometry::RIGID_BODY_MOTION) :
         OdometryImpl(_cameraMatrix, _iterCounts, _minGradientMagnitudes, _transformType)
     {
@@ -1544,10 +1563,10 @@ public:
      * @param transformType Class of trasformation
      */
     ICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
-                    float _minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                    float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                    float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
-                    float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                    float _minDepth = defaultMinDepth,
+                    float _maxDepth = defaultMaxDepth,
+                    float _maxDepthDiff = defaultMaxDepthDiff,
+                    float _maxPointsPart = defaultMaxPointsPart,
                     InputArray _iterCounts = noArray(), int _transformType = Odometry::RIGID_BODY_MOTION) :
         OdometryImpl(_cameraMatrix, _iterCounts, noArray(), _transformType)
     {
@@ -1809,10 +1828,10 @@ public:
      * @param transformType Class of trasformation
      */
     RgbdICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
-                        float _minDepth = Odometry::DEFAULT_MIN_DEPTH(),
-                        float _maxDepth = Odometry::DEFAULT_MAX_DEPTH(),
-                        float _maxDepthDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
-                        float _maxPointsPart = Odometry::DEFAULT_MAX_POINTS_PART(),
+                        float _minDepth = defaultMinDepth,
+                        float _maxDepth = defaultMaxDepth,
+                        float _maxDepthDiff = defaultMaxDepthDiff,
+                        float _maxPointsPart = defaultMaxPointsPart,
                         InputArray _iterCounts = noArray(),
                         InputArray _minGradientMagnitudes = noArray(),
                         int _transformType = Odometry::RIGID_BODY_MOTION) :
@@ -2104,7 +2123,7 @@ public:
      *        All depth values beyond this threshold will be set to zero
      */
     FastICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
-                        float _maxDistDiff = Odometry::DEFAULT_MAX_DEPTH_DIFF(),
+                        float _maxDistDiff = 0.1f,
                         float _angleThreshold = (float)(30. * CV_PI / 180.),
                         float _sigmaDepth = 0.04f,
                         float _sigmaSpatial = 4.5f,
