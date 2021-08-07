@@ -596,6 +596,35 @@ TEST(Layer_LSTM_Test_Accuracy_with_, HiddenParams)
     normAssert(h_t_reference, outputs[0]);
 }
 
+TEST(Layer_GRU_Test_Accuracy_with_, Pytorch)
+{
+    Mat Wx = blobFromNPY(_tf("gru.W.npy"));
+    Mat Wh = blobFromNPY(_tf("gru.R.npy"));
+    Mat b = blobFromNPY(_tf("gru.B.npy"));
+    Mat h0 = blobFromNPY(_tf("gru.h0.npy"));
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    b = b.reshape(1, b.size[0]);
+
+    LayerParams gruParams;
+    gruParams.blobs.resize(4);
+    gruParams.blobs[0] = Wh;
+    gruParams.blobs[1] = Wx;
+    gruParams.blobs[2] = b;
+    gruParams.blobs[3] = h0;
+    gruParams.set("bidirectional", false);
+    Ptr<GRULayer> layer = GRULayer::create(gruParams);
+
+    Mat inp = blobFromNPY(_tf("gru.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+
+    Mat h_t_reference = blobFromNPY(_tf("gru.output.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
 TEST(Layer_RNN_Test_Accuracy_with_, CaffeRecurrent)
 {
     Ptr<RNNLayer> layer = RNNLayer::create(LayerParams());
