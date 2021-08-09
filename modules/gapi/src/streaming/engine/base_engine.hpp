@@ -43,8 +43,8 @@ public:
     virtual ~VPLProcessingEngine();
 
     virtual void initialize_session(mfxSession mfx_session,
-                            DecoderParams&& decoder_param,
-                            std::shared_ptr<IDataProvider> provider) = 0;
+                                    DecoderParams&& decoder_param,
+                                    std::shared_ptr<IDataProvider> provider) = 0;
                                          
     ExecutionStatus process(mfxSession session);
     size_t get_ready_frames_count() const;
@@ -65,13 +65,16 @@ protected:
     template<class ...Ops>
     void create_pipeline(Ops&&...ops)
     {
+        GAPI_DbgAssert(pipeline.empty() && "Pipeline must be empty");
         std::vector<operation_t>({std::forward<Ops>(ops)...}).swap(pipeline);
     }
     
     template<class SpecificSession, class ...SessionArgs>
-    std::shared_ptr<SpecificSession> register_session(mfxSession key, SessionArgs&& ...args)
+    std::shared_ptr<SpecificSession> register_session(mfxSession key,
+                                                      SessionArgs&& ...args)
     {
-        auto sess_impl = std::make_shared<SpecificSession>(key, std::forward<SessionArgs>(args)...);
+        auto sess_impl = std::make_shared<SpecificSession>(key,
+                                                           std::forward<SessionArgs>(args)...);
         sessions.emplace(key, sess_impl);
         execution_table.emplace(key, ExecutionData{});
         return sess_impl;

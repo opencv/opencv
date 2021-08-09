@@ -279,7 +279,7 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
 
     pool_t& requested_pool = pool_it->second;
 #ifdef TEST_PERF
-    return cv::MediaFrame::AdapterPtr{new MediaFrameAdapter(requested_pool.find_by_handle(surface))};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameCPUAdapter(requested_pool.find_by_handle(surface))};
 #else // TEST_PERF
     auto it =
         std::find_if(requested_pool.begin(), requested_pool.end(),
@@ -298,7 +298,7 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
         throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
     }
     
-    return cv::MediaFrame::AdapterPtr{new MediaFrameAdapter(*it)};
+    return cv::MediaFrame::AdapterPtr{new VPLMediaFrameCPUAdapter(*it)};
 #endif // TEST_PERF
 }
 } // namespace wip

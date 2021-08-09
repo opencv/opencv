@@ -22,14 +22,16 @@ namespace wip {
 mfxU32 GetSurfaceSize(mfxU32 FourCC, mfxU32 width, mfxU32 height) {
     mfxU32 nbytes = 0;
 
+    mfxU32 half_width = width / 2;
+    mfxU32 half_height = height / 2;
     switch (FourCC) {
         case MFX_FOURCC_I420:
         case MFX_FOURCC_NV12:
-            nbytes = width * height + (width >> 1) * (height >> 1) + (width >> 1) * (height >> 1);
+            nbytes = width * height +  2 * half_width * half_height;
             break;
         case MFX_FOURCC_I010:
         case MFX_FOURCC_P010:
-            nbytes = width * height + (width >> 1) * (height >> 1) + (width >> 1) * (height >> 1);
+            nbytes = width * height + 2 * half_width * half_height;
             nbytes *= 2;
             break;
         case MFX_FOURCC_RGB4:
@@ -119,6 +121,12 @@ LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
     output_surface_ptr(),
     decoded_frames_count()
 {
+}
+
+LegacyDecodeSession::~LegacyDecodeSession()
+{
+    GAPI_LOG_INFO(nullptr, "Close Decode for session: " << session);
+    MFXVideoDECODE_Close(session);
 }
 
 void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
@@ -307,26 +315,36 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
         case MFX_ERR_DEVICE_LOST:
             // For non-CPU implementations,
             // Cleanup if device is lost
+            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+                                    "MFX_ERR_DEVICE_LOST is not processed");
             break;
         case MFX_WRN_DEVICE_BUSY:
             // For non-CPU implementations,
             // Wait a few milliseconds then try again
+            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+                                    "MFX_WRN_DEVICE_BUSY is not processed");
             break;
         case MFX_WRN_VIDEO_PARAM_CHANGED:
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
+            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+                                    "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
             // The function detected that video parameters provided by the application
             // are incompatible with initialization parameters.
             // The application should close the component and then reinitialize it
+            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+                                    "MFX_ERR_INCOMPATIBLE_VIDEO_PARAM is not processed");
             break;
         case MFX_ERR_REALLOC_SURFACE:
             // Bigger surface_work required. May be returned only if
             // mfxInfoMFX::EnableReallocRequest was set to ON during initialization.
             // This applies to external memory allocations and should not be expected for
             // a simple internal allocation case like this
+            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+                                    "MFX_ERR_REALLOC_SURFACE is not processed");
             break;
         default:
             GAPI_LOG_WARNING(nullptr, "Unknown status code: " << mfxstatus_to_string(status));

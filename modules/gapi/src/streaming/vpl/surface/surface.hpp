@@ -9,7 +9,6 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 
 #ifdef HAVE_ONEVPL
 
@@ -24,7 +23,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-class Surface : public std::enable_shared_from_this<Surface> {
+class Surface {
     using handle_t = mfxFrameSurface1;
     
     std::shared_ptr<void> workspace_memory_ptr;
@@ -37,8 +36,6 @@ public:
     static std::shared_ptr<Surface> create_surface(std::unique_ptr<handle_t>&& surf,
                                                    std::shared_ptr<void> accociated_memory);
     ~Surface();
-
-    std::shared_ptr<Surface> get_ptr();
 
     handle_t* get_handle() const;
     const info_t& get_info() const;

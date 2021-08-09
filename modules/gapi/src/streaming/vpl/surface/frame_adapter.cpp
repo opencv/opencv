@@ -20,7 +20,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-MediaFrameAdapter::MediaFrameAdapter(std::shared_ptr<Surface> surface):
+VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surface):
     parent_surface_ptr(surface) {
 
     GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
@@ -35,15 +35,15 @@ MediaFrameAdapter::MediaFrameAdapter(std::shared_ptr<Surface> surface):
                             ", p: " << data.Pitch);
 }
 
-MediaFrameAdapter::~MediaFrameAdapter() {
+VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
 
-    // Each MediaFrameAdapter releases mfx surface counter
-    // The last MediaFrameAdapter releases shared Surface pointer
+    // Each VPLMediaFrameCPUAdapter releases mfx surface counter
+    // The last VPLMediaFrameCPUAdapter releases shared Surface pointer
     // The last surface pointer releases workspace memory
     parent_surface_ptr->release_lock();
 }
 
-cv::GFrameDesc MediaFrameAdapter::meta() const {
+cv::GFrameDesc VPLMediaFrameCPUAdapter::meta() const {
     GFrameDesc desc;
     const Surface::info_t info = parent_surface_ptr->get_info();
     switch(info.FourCC)
@@ -62,13 +62,11 @@ cv::GFrameDesc MediaFrameAdapter::meta() const {
     return desc;
 }
 
-MediaFrame::View MediaFrameAdapter::access(MediaFrame::Access mode) {
-    (void)mode;
-
+MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
     const Surface::data_t& data = parent_surface_ptr->get_data();
-    const Surface::info_t info = parent_surface_ptr->get_info();
+    const Surface::info_t& info = parent_surface_ptr->get_info();
     using stride_t = typename cv::MediaFrame::View::Strides::value_type;
-    GAPI_Assert(data.Pitch >= 0 && "Pitch is less 0");
+    GAPI_Assert(data.Pitch >= 0 && "Pitch is less than 0");
 
     stride_t pitch = static_cast<stride_t>(data.Pitch);
     switch(info.FourCC) {
@@ -105,15 +103,17 @@ MediaFrame::View MediaFrameAdapter::access(MediaFrame::Access mode) {
     }
 }
 
-cv::util::any MediaFrameAdapter::blobParams() const {
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
+    GAPI_Assert("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
+    return {};
 }
 
-void MediaFrameAdapter::serialize(cv::gapi::s11n::IOStream&) {
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+void VPLMediaFrameCPUAdapter::serialize(cv::gapi::s11n::IOStream&) {
+    GAPI_Assert("VPLMediaFrameCPUAdapter::serialize() is not implemented");
 }
-void MediaFrameAdapter::deserialize(cv::gapi::s11n::IIStream&) {
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+
+void VPLMediaFrameCPUAdapter::deserialize(cv::gapi::s11n::IIStream&) {
+    GAPI_Assert("VPLMediaFrameCPUAdapter::deserialize() is not implemented");
 }
 
 #endif HAVE_ONEVPL

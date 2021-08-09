@@ -19,9 +19,6 @@ EngineSession::EngineSession(mfxSession sess, mfxBitstream&& str) :
         session(sess), stream(std::move(str)) {}
 EngineSession::~EngineSession()
 {
-    GAPI_LOG_INFO(nullptr, "Close Decode for session: " << session);
-    MFXVideoDECODE_Close(session);
-
     GAPI_LOG_INFO(nullptr, "Close session: " << session);
     MFXClose(session);
 }

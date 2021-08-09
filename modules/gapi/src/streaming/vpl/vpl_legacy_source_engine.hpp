@@ -45,6 +45,7 @@ public:
     friend class VPLLegacyDecodeEngine;
     
     LegacyDecodeSession(mfxSession sess, DecoderParams&& decoder_param, std::shared_ptr<IDataProvider> provider);
+    ~LegacyDecodeSession();
     using EngineSession::EngineSession;
 
     void swap_surface(VPLLegacyDecodeEngine& engine);

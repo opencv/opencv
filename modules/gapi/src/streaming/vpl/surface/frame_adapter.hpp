@@ -6,7 +6,9 @@
 
 #ifndef GAPI_STREAMING_VPL_SURFACE_FRAME_ADAPTER_HPP
 #define GAPI_STREAMING_VPL_SURFACE_FRAME_ADAPTER_HPP
+#include <memory>
 
+#include <opencv2/gapi/media.hpp>
 
 #ifdef HAVE_ONEVPL
 
@@ -15,14 +17,13 @@ namespace gapi {
 namespace wip {
 
 class Surface;
-class MediaFrameAdapter : public cv::MediaFrame::IAdapter {
+class VPLMediaFrameCPUAdapter : public cv::MediaFrame::IAdapter {
 public:
-    MediaFrameAdapter(std::shared_ptr<Surface> assoc_surface);
-    ~MediaFrameAdapter();
+    VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> assoc_surface);
+    ~VPLMediaFrameCPUAdapter();
     cv::GFrameDesc meta() const override;
     MediaFrame::View access(MediaFrame::Access) override;
     
-    // FIXME: design a better solution
     // The default implementation does nothing
     cv::util::any blobParams() const override;
     void serialize(cv::gapi::s11n::IOStream&) override;
@@ -35,6 +36,4 @@ private:
 } // namespace cv
 
 #endif // HAVE_ONEVPL
-
-
 #endif // GAPI_STREAMING_VPL_SURFACE_FRAME_ADAPTER_HPP

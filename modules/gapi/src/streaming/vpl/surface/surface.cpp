@@ -35,10 +35,6 @@ std::shared_ptr<Surface> Surface::create_surface(std::unique_ptr<handle_t>&& sur
     return ret;
 }
 
-std::shared_ptr<Surface> Surface::get_ptr() {
-    return shared_from_this();
-}
-
 Surface::handle_t* Surface::get_handle() const {
     return mfx_surface.get();
 }

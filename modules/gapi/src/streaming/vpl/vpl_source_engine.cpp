@@ -23,8 +23,10 @@ DecodeSession::DecodeSession(mfxSession sess, mfxBitstream&& str, std::shared_pt
 
 VPLDecodeEngine::VPLDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
  : VPLProcessingEngine(std::move(accel)) {
-
-    GAPI_LOG_INFO(nullptr, "Create VPL Decode Engine");
+    GAPI_LOG_WARNING(nullptr, "VPLDecodeEngine for new oneVPL API version 2.0 "
+                              "is not available at the moment. Please "
+                              "use configuration param \"mfxImplDescription.Version:1.1\"");
+    GAPI_Assert(false && "Create VPL Decode Engine is not supported");
     create_pipeline(
         // 1) Reade File
         [this] (EngineSession& sess) -> ExecutionStatus

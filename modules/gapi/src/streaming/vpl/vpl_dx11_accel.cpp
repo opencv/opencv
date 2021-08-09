@@ -14,7 +14,6 @@
 #ifdef HAVE_DIRECTX
     #ifdef HAVE_D3D11
         #pragma comment(lib,"d3d11.lib")
-        //#pragma comment(lib,"d3d10.lib")
 
         #define D3D11_NO_HELPERS
         #include <d3d11.h>
@@ -131,7 +130,7 @@ VPLDX11AccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_
     (void)pool_size;
     (void)surface_size_bytes;
     (void)creator;
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    throw std::runtime_error("VPLDX11AccelerationPolicy::create_surface_pool() is not implemented");
 }
 
 VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t key)
@@ -140,7 +139,7 @@ VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_fre
     return adapter->get_free_surface(key);
 #endif
     (void)key;
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    throw std::runtime_error("VPLDX11AccelerationPolicy::get_free_surface() is not implemented");
 }
 
 size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t key) const {
@@ -148,7 +147,7 @@ size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t key) const {
     return adapter->get_free_surface_count(key);
 #endif
     (void)key;
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    throw std::runtime_error("get_free_surface_count() is not implemented");
 }
 
 size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
@@ -156,7 +155,7 @@ size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
     return adapter->get_surface_count(key);
 #endif
     (void)key;
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    throw std::runtime_error("VPLDX11AccelerationPolicy::get_surface_count() is not implemented");
 }
 
 cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t key,
@@ -167,7 +166,7 @@ cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_
 #endif
     (void)key;
     (void)surface;
-    throw std::runtime_error(std::string(__FUNCTION__) + " is not implemented");
+    throw std::runtime_error("VPLDX11AccelerationPolicy::create_frame_adapter() is not implemented");
 }
 } // namespace wip
 } // namespace gapi
