@@ -3,6 +3,7 @@ import time
 import numpy as np
 import cv2 as cv
 
+
 # ------------------------Service operations------------------------
 def weight_path(model_path):
     """ Get path of weights based on path to IR
@@ -171,11 +172,7 @@ class GProcessPosesImpl:
         Return:
         Arrays with heads poses
         """
-        out_poses = []
-        size = len(in_ys)
-        for i in range(size):
-            out_poses.append(np.array([in_ys[i][0], in_ps[i][0], in_rs[i][0]]).T)
-        return out_poses
+        return [np.array([ys[0], ps[0], rs[0]]).T for ys, ps, rs in zip(in_ys, in_ps, in_rs)]
 
 
 @cv.gapi.kernel(GParseEyes)
@@ -199,20 +196,19 @@ class GParseEyesImpl:
         right_eyes = []
         midpoints = []
         lmarks = []
-        num_faces = len(in_landm_per_face)
         surface = (0, 0, *frame_size)
-        for i in range(num_faces):
-            rect = in_face_rcs[i]
-            points = process_landmarks(*rect, in_landm_per_face[i])
-            for p in points:
-                lmarks.append(p)
-            size = int(len(in_landm_per_face[i][0]) / 2)
+        for landm_face, rect in zip(in_landm_per_face, in_face_rcs):
+            points = process_landmarks(*rect, landm_face)
+            lmarks.extend(points)
 
-            rect, midpoint_l = eye_box(lmarks[0 + i * size], lmarks[1 + i * size])
+            rect, midpoint_l = eye_box(points[0], points[1])
             left_eyes.append(intersection(surface, rect))
-            rect, midpoint_r = eye_box(lmarks[2 + i * size], lmarks[3 + i * size])
+
+            rect, midpoint_r = eye_box(points[2], points[3])
             right_eyes.append(intersection(surface, rect))
-            midpoints += [midpoint_l, midpoint_r]
+
+            midpoints.append(midpoint_l)
+            midpoints.append(midpoint_r)
         return left_eyes, right_eyes, midpoints, lmarks
 
 
@@ -231,14 +227,8 @@ class GGetStatesImpl:
         Return:
         States of left eyes and states of right eyes
         """
-        size = len(eyesl)
-        out_l_st = []
-        out_r_st = []
-        for i in range(size):
-            for st in eyesl[i]:
-                out_l_st += [1 if st[0] < st[1] else 0]
-            for st in eyesr[i]:
-                out_r_st += [1 if st[0] < st[1] else 0]
+        out_l_st = [int(st) for eye_l in eyesl for st in (eye_l[:, 0] < eye_l[:, 1]).ravel()]
+        out_r_st = [int(st) for eye_r in eyesr for st in (eye_r[:, 0] < eye_r[:, 1]).ravel()]
         return out_l_st, out_r_st
 
 
@@ -459,6 +449,7 @@ if __name__ == '__main__':
 
         # Show result
         cv.imshow('Gaze Estimation', oimg)
+        cv.waitKey(1)
 
         fps = int(1. / (time.time() - start_time_cycle))
         frames += 1
