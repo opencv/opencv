@@ -70,5 +70,3 @@ if(HAVE_MFX)
   list(APPEND MFX_DEFS "HAVE_MFX")
   ocv_add_external_target(mediasdk "${MFX_INCLUDE_DIRS}" "${MFX_LIBRARIES}" "${MFX_DEFS}")
 endif()
-
-set(HAVE_MFX ${HAVE_MFX} PARENT_SCOPE)

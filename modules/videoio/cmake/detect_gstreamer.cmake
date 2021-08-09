@@ -69,7 +69,7 @@ if(NOT HAVE_GSTREAMER AND WIN32)
     string(REGEX REPLACE ".*GST_VERSION_MAJOR[^0-9]+([0-9]+).*" "\\1" ver_major "${ver_strings}")
     string(REGEX REPLACE ".*GST_VERSION_MINOR[^0-9]+([0-9]+).*" "\\1" ver_minor "${ver_strings}")
     string(REGEX REPLACE ".*GST_VERSION_MICRO[^0-9]+([0-9]+).*" "\\1" ver_micro "${ver_strings}")
-    set(GSTREAMER_VERSION "${ver_major}.${ver_minor}.${ver_micro}" PARENT_SCOPE) # informational
+    set(GSTREAMER_VERSION "${ver_major}.${ver_minor}.${ver_micro}")  # informational
     set(HAVE_GSTREAMER TRUE)
     set(GSTREAMER_LIBRARIES
       ${GSTREAMER_gstreamer_LIBRARY}
@@ -95,7 +95,7 @@ if(NOT HAVE_GSTREAMER AND PKG_CONFIG_FOUND)
   ocv_check_modules(GSTREAMER_video gstreamer-video-1.0)
   if(GSTREAMER_base_FOUND AND GSTREAMER_app_FOUND AND GSTREAMER_riff_FOUND AND GSTREAMER_pbutils_FOUND AND GSTREAMER_video_FOUND)
     set(HAVE_GSTREAMER TRUE)
-    set(GSTREAMER_VERSION ${GSTREAMER_base_VERSION} PARENT_SCOPE) # informational
+    set(GSTREAMER_VERSION ${GSTREAMER_base_VERSION})  # informational
     set(GSTREAMER_LIBRARIES ${GSTREAMER_base_LIBRARIES} ${GSTREAMER_app_LIBRARIES} ${GSTREAMER_riff_LIBRARIES} ${GSTREAMER_pbutils_LIBRARIES} ${GSTREAMER_video_LIBRARIES})
     set(GSTREAMER_INCLUDE_DIRS ${GSTREAMER_base_INCLUDE_DIRS} ${GSTREAMER_app_INCLUDE_DIRS} ${GSTREAMER_riff_INCLUDE_DIRS} ${GSTREAMER_pbutils_INCLUDE_DIRS} ${GSTREAMER_video_INCLUDE_DIRS})
   endif()
@@ -104,5 +104,3 @@ endif()
 if(HAVE_GSTREAMER)
   ocv_add_external_target(gstreamer "${GSTREAMER_INCLUDE_DIRS}" "${GSTREAMER_LIBRARIES}" "HAVE_GSTREAMER")
 endif()
-
-set(HAVE_GSTREAMER ${HAVE_GSTREAMER} PARENT_SCOPE)

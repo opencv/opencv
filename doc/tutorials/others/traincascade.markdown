@@ -13,6 +13,8 @@ Working with a boosted cascade of weak classifiers includes two major stages: th
 
 To support this tutorial, several official OpenCV applications will be used: [opencv_createsamples](https://github.com/opencv/opencv/tree/master/apps/createsamples), [opencv_annotation](https://github.com/opencv/opencv/tree/master/apps/annotation), [opencv_traincascade](https://github.com/opencv/opencv/tree/master/apps/traincascade) and [opencv_visualisation](https://github.com/opencv/opencv/tree/master/apps/visualisation).
 
+@note Createsamples and traincascade are disabled since OpenCV 4.0. Consider using these apps for training from 3.4 branch for Cascade Classifier. Model format is the same between 3.4 and 4.x.
+
 ### Important notes
 
  - If you come across any tutorial mentioning the old opencv_haartraining tool <i>(which is deprecated and still using the OpenCV1.x interface)</i>, then please ignore that tutorial and stick to the opencv_traincascade tool. This tool is a newer version, written in C++ in accordance to the OpenCV 2.x and OpenCV 3.x API. The opencv_traincascade supports both HAAR like wavelet features @cite Viola01 and LBP (Local Binary Patterns) @cite Liao2007 features. LBP features yield integer precision in contrast to HAAR features, yielding floating point precision, so both training and detection with LBP are several times faster then with HAAR features. Regarding the LBP and HAAR detection quality, it mainly depends on the training data used and the training parameters selected. It's possible to train a LBP-based classifier that will provide almost the same quality as HAAR-based one, within a percentage of the training time.
