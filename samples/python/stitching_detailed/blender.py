@@ -13,7 +13,6 @@ class Blender:
         self.blender_type = blender_type
         self.blend_strength = blend_strength
         self.blender = None
-        self.is_blender_prepared = False
 
     def prepare(self, corners, sizes):
         dst_sz = cv.detail.resultRoi(corners=corners, sizes=sizes)

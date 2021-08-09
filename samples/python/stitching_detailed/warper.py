@@ -18,18 +18,23 @@ class Warper:
     def __init__(self, warper_type=DEFAULT_WARP_TYPE, scale=1):
         self.warper = cv.PyRotationWarper(warper_type, scale)
 
-    def warp_image(self, image, camera, aspect=1):
+    def set_scale(self, scale):
+        self.warper.setScale(scale)
+
+    def warp_image(self, image, camera, aspect=1, mask=False):
+        if mask:
+            interp_mode = cv.INTER_NEAREST
+            border_mode = cv.BORDER_CONSTANT
+        else:
+            interp_mode = cv.INTER_LINEAR
+            border_mode = cv.BORDER_REFLECT
 
         corner, warped_image = self.warper.warp(image,
                                                 Warper.get_K(camera, aspect),
                                                 camera.R,
-                                                cv.INTER_LINEAR,
-                                                cv.BORDER_REFLECT)
+                                                interp_mode,
+                                                border_mode)
         return corner, warped_image
-
-    # def warp_images(self, images, cameras, aspect=1):
-    #     for image, camera in zip(images, cameras):
-    #         self.warp_image(image, camera, aspect)
 
     def get_K(camera, aspect=1):
         K = camera.K().astype(np.float32)

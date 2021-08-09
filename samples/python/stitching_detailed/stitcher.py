@@ -17,6 +17,7 @@ from .exposure_error_compensator import ExposureErrorCompensator
 from .seam_finder import SeamFinder
 from .blender import Blender
 from .timelapser import Timelapser
+from .image_composition import ImageComposition
 
 
 class Stitcher:
@@ -32,14 +33,17 @@ class Stitcher:
         work_imgs = []
         images = []
         full_img_sizes = []
+        compose_imgs = []
 
         work_megapix_scaler = ImageToMegapixScaler(args.work_megapix)
         seam_megapix_scaler = ImageToMegapixScaler(args.seam_megapix)
+        compose_megapix_scaler = ImageToMegapixScaler(args.compose_megapix)
 
         for img in img_names:
             full_img = read_image(img)
             full_img_sizes.append((full_img.shape[1], full_img.shape[0]))
             work_imgs.append(work_megapix_scaler.set_scale_and_downscale(full_img))
+            compose_imgs.append(compose_megapix_scaler.set_scale_and_downscale(full_img))
             images.append(seam_megapix_scaler.set_scale_and_downscale(full_img))
 
 # =============================================================================
@@ -49,32 +53,28 @@ class Stitcher:
 
         image_registration = get_image_registration_object(args)
         indices, cameras = image_registration.register(img_names, work_imgs)
+        seam_work_aspect = (work_megapix_scaler.scale /
+                            seam_megapix_scaler.scale )
 
 
-# =============================================================================
-# COMPOSITION PART
-# =============================================================================
 
         img_names = Subsetter.subset_list(img_names, indices)
         images = Subsetter.subset_list(images, indices)
         full_img_sizes = Subsetter.subset_list(full_img_sizes, indices)
         num_images = len(images)
 
-        is_compose_scale_set = False
 
-        seam_work_aspect = (work_megapix_scaler.scale /
-                            seam_megapix_scaler.scale )
-
-        focals = []
-        for cam in cameras:
-            focals.append(cam.focal)
+        import statistics
+        focals = [cam.focal for cam in cameras]
         focals.sort()
-        if len(focals) % 2 == 1:
-            warped_image_scale = focals[len(focals) // 2]
-        else:
-            warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
+        warped_image_scale = statistics.median(focals)
 
-        compose_megapix = args.compose_megapix
+# =============================================================================
+# COMPOSITION PART
+# =============================================================================
+
+        image_composition = get_image_composition_object(args)
+
         warp_type = args.warp
         result_name = args.output
 
@@ -83,20 +83,11 @@ class Stitcher:
         images_warped = []
         sizes = []
         masks = []
-        for i in range(0, num_images):
-            um = cv.UMat(255 * np.ones((images[i].shape[0], images[i].shape[1]), np.uint8))
-            masks.append(um)
 
-        warper = Warper(warp_type, warped_image_scale * seam_work_aspect)
-        for idx in range(0, num_images):
-            K = cameras[idx].K().astype(np.float32)
-            swa = seam_work_aspect
-            corner, image_wp = warper.warp_image(images[idx], cameras[idx], swa)
-            corners.append(corner)
-            sizes.append((image_wp.shape[1], image_wp.shape[0]))
-            images_warped.append(image_wp)
-            p, mask_wp = warper.warp_image(masks[idx], cameras[idx], swa)
-            masks_warped.append(mask_wp.get())
+        image_composition.warper.set_scale(warped_image_scale * seam_work_aspect)
+        images_warped, masks_warped, corners = image_composition.warp_images(images,
+                                                                             cameras,
+                                                                             seam_work_aspect)
 
         images_warped_f = []
         for img in images_warped:
@@ -117,30 +108,21 @@ class Stitcher:
         timelapser = Timelapser(args.timelapse)
         # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
         for idx, name in enumerate(img_names):
-            full_img = cv.imread(name)
-            if not is_compose_scale_set:
-                if compose_megapix > 0:
-                    compose_scale = min(1.0, np.sqrt(compose_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
-                is_compose_scale_set = True
-                compose_work_aspect = compose_scale / work_megapix_scaler.scale
-                warped_image_scale *= compose_work_aspect
-                warper = cv.PyRotationWarper(warp_type, warped_image_scale)
-                for i in range(0, len(img_names)):
-                    cameras[i].focal *= compose_work_aspect
-                    cameras[i].ppx *= compose_work_aspect
-                    cameras[i].ppy *= compose_work_aspect
-                    sz = (int(round(full_img_sizes[i][0] * compose_scale)),
-                          int(round(full_img_sizes[i][1] * compose_scale)))
-                    K = cameras[i].K().astype(np.float32)
-                    roi = warper.warpRoi(sz, K, cameras[i].R)
-                    corners.append(roi[0:2])
-                    sizes.append(roi[2:4])
-            if abs(compose_scale - 1) > 1e-1:
-                img = cv.resize(src=full_img, dsize=None, fx=compose_scale, fy=compose_scale,
-                                interpolation=cv.INTER_LINEAR_EXACT)
-            else:
-                img = full_img
-            _img_size = (img.shape[1], img.shape[0])
+            img = compose_imgs[idx]
+            compose_work_aspect = compose_megapix_scaler.scale / work_megapix_scaler.scale
+            warped_image_scale *= compose_work_aspect
+            warper = cv.PyRotationWarper(warp_type, warped_image_scale)
+            for i in range(0, len(img_names)):
+                cameras[i].focal *= compose_work_aspect
+                cameras[i].ppx *= compose_work_aspect
+                cameras[i].ppy *= compose_work_aspect
+                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                      int(round(full_img_sizes[i][1] * compose_scale)))
+                K = cameras[i].K().astype(np.float32)
+                roi = warper.warpRoi(sz, K, cameras[i].R)
+                corners.append(roi[0:2])
+                sizes.append(roi[2:4])
+
             K = cameras[idx].K().astype(np.float32)
             corner, image_warped = warper.warp(img, K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
@@ -192,3 +174,15 @@ def get_image_registration_object(args):
 
     return ImageRegistration(finder, matcher, subsetter, camera_estimator,
                              camera_adjuster, wave_corrector)
+
+def get_image_composition_object(args):
+    warper = Warper(args.warp)
+    seam_finder = SeamFinder(args.seam)
+    compensator = ExposureErrorCompensator(args.expos_comp,
+                                           args.expos_comp_nr_feeds,
+                                           args.expos_comp_block_size)
+    blender = Blender(args.blend, args.blend_strength)
+    timelapser = Timelapser(args.timelapse)
+
+    return ImageComposition(warper, seam_finder, compensator, blender,
+                            timelapser)

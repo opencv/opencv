@@ -1,3 +1,6 @@
+import numpy as np
+
+
 from stitching_detailed.warper import Warper
 from stitching_detailed.exposure_error_compensator import ExposureErrorCompensator  # noqa
 from stitching_detailed.seam_finder import SeamFinder
@@ -5,7 +8,7 @@ from stitching_detailed.blender import Blender
 from stitching_detailed.timelapser import Timelapser
 
 
-class Compositing:
+class ImageComposition:
     def __init__(self,
                  warper=Warper(),
                  seam_finder=SeamFinder(),
@@ -32,6 +35,21 @@ class Compositing:
 
         final_pano = self.blend_images(imgs, corners, sizes, seam_masks)
         return final_pano
+
+    def warp_images(self, imgs, cameras, aspect=1):
+        imgs_warped = []
+        masks_warped = []
+        corners = []
+        for img, camera in zip(imgs, cameras):
+            corner, img = self.warper.warp_image(img, camera, aspect)
+            imgs_warped.append(img)
+            corners.append(corner)
+
+            mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
+            _, mask = self.warper.warp_image(mask, camera, aspect, mask=True)
+            masks_warped.append(mask)
+
+        return imgs_warped, masks_warped, corners
 
     def find_seam_masks(self, imgs, masks, corners):
         return [self.seam_finder.find(img, corner, mask)
