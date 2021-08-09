@@ -29,6 +29,7 @@ class Timelapser:
         self.timelapser.initialize(*args)
 
     def process_and_save_frame(self, img_name, img, corner):
+        self.process_frame(img, corner)
         self.save_frame(self.get_fixed_filename(img_name), self.get_frame())
 
     def process_frame(self, img, corner):

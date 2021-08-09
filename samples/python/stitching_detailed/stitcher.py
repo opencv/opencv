@@ -160,9 +160,7 @@ class Stitcher:
             else:
                 blender.feed(cv.UMat(image_warped_s), mask_warped, corners[idx])
         if not timelapser.do_timelapse:
-            result = None
-            result_mask = None
-            self.result, result_mask = blender.blend(result, result_mask)
+            self.result = blender.blend()
             cv.imwrite(result_name, self.result)
             zoom_x = 600.0 / self.result.shape[1]
             dst = cv.normalize(src=self.result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)

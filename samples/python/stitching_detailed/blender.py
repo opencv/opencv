@@ -13,6 +13,7 @@ class Blender:
         self.blender_type = blender_type
         self.blend_strength = blend_strength
         self.blender = None
+        self.is_blender_prepared = False
 
     def prepare(self, corners, sizes):
         dst_sz = cv.detail.resultRoi(corners=corners, sizes=sizes)
@@ -39,6 +40,9 @@ class Blender:
         """https://docs.opencv.org/master/d6/d4a/classcv_1_1detail_1_1Blender.html#a64837308bcf4e414a6219beff6cbe37a"""  # noqa
         self.blender.feed(*args)
 
-    def blend(self, *args):
+    def blend(self):
         """https://docs.opencv.org/master/d6/d4a/classcv_1_1detail_1_1Blender.html#aa0a91ce0d6046d3a63e0123cbb1b5c00"""  # noqa
-        return self.blender.blend(*args)
+        result = None
+        result_mask = None
+        result, result_mask = self.blender.blend(result, result_mask)
+        return result
