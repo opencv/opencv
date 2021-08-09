@@ -104,6 +104,7 @@ private:
     void parseNeg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGRU                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseImageScaler          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLeakyRelu            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1127,6 +1128,46 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     layerParams.set("dim", DictValue::arrayInt(&lstmShape[0], lstmShape.size()));
     node_proto.set_input(0, lstmParams.name);  // redirect input to LSTM
     node_proto.set_output(0, layerParams.name);  // keep origin LSTM's name
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+{
+    opencv_onnx::NodeProto node_proto = node_proto_;
+    LayerParams gruParams = layerParams;
+    gruParams.name += "/gru";
+
+    // https://pytorch.org/docs/stable/generated/torch.nn.GRU.html?highlight=gru#
+    CV_Assert(node_proto.input_size() == 6);
+    Mat Wx = getBlob(node_proto, 1);
+    Mat Wh = getBlob(node_proto, 2);
+    Mat b = getBlob(node_proto, 3);
+    Mat h0 = getBlob(node_proto, 5);
+
+    Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
+    Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
+    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    b = b.reshape(1, b.size[0]);
+
+    gruParams.blobs.resize(4);
+    gruParams.blobs[0] = Wh;
+    gruParams.blobs[1] = Wx;
+    gruParams.blobs[2] = b;
+    gruParams.blobs[3] = h0;
+    gruParams.set("bidirectional", gruParams.get<String>("direction", "") == "bidirectional");
+
+    node_proto.set_output(0, gruParams.name);  // set different name so output shapes will be registered on that name
+    addLayer(gruParams, node_proto);
+
+    MatShape gruShape = outShapes[node_proto.output(0)];
+
+    // Add fake 1 as it is done in ONNX
+    gruShape.insert(gruShape.begin() + 1, 1);
+
+    layerParams.type = "Reshape";
+    layerParams.set("dim", DictValue::arrayInt(&gruShape[0], gruShape.size()));
+    node_proto.set_input(0, gruParams.name);  // redirect input to GRU
+    node_proto.set_output(0, layerParams.name);  // keep origin GRU's name
     addLayer(layerParams, node_proto);
 }
 
@@ -2235,6 +2276,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["Neg"] = &ONNXImporter::parseNeg;
     dispatch["Constant"] = &ONNXImporter::parseConstant;
     dispatch["LSTM"] = &ONNXImporter::parseLSTM;
+    dispatch["GRU"] = &ONNXImporter::parseGRU;
     dispatch["ImageScaler"] = &ONNXImporter::parseImageScaler;
     dispatch["Clip"] = &ONNXImporter::parseClip;
     dispatch["LeakyRelu"] = &ONNXImporter::parseLeakyRelu;
