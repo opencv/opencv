@@ -1,5 +1,5 @@
 //
-//  Mat+UIImage.mm
+//  Mat+Converters.mm
 //
 //  Created by Giles Payne on 2020/03/03.
 //
