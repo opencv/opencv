@@ -5,6 +5,8 @@
 #ifndef __OPENCV_DNN_COMMON_HPP__
 #define __OPENCV_DNN_COMMON_HPP__
 
+#include <set>
+
 #include <opencv2/dnn.hpp>
 
 namespace cv { namespace dnn {
@@ -12,6 +14,9 @@ CV__DNN_INLINE_NS_BEGIN
 #define IS_DNN_OPENCL_TARGET(id) (id == DNN_TARGET_OPENCL || id == DNN_TARGET_OPENCL_FP16)
 Mutex& getInitializationMutex();
 void initializeLayerFactory();
+
+extern bool DNN_DIAGNOSTICS_RUN;
+extern bool DNN_SKIP_REAL_IMPORT;
 
 namespace detail {
 #define CALL_MEMBER_FN(object, ptrToMemFn)  ((object).*(ptrToMemFn))
@@ -23,6 +28,39 @@ public:
 
     static void Register();
     static void unRegister();
+};
+
+template <typename Importer, typename ... Args>
+Net readNet(Args&& ... args)
+{
+    Net net;
+    Importer importer(net, std::forward<Args>(args)...);
+    return net;
+}
+
+template <typename Importer, typename ... Args>
+Net readNetDiagnostic(Args&& ... args)
+{
+    Net maybeDebugNet = readNet<Importer>(std::forward<Args>(args)...);
+    if (DNN_DIAGNOSTICS_RUN && !DNN_SKIP_REAL_IMPORT)
+    {
+        // if we just imported the net in diagnostic mode, disable it and import again
+        enableModelDiagnostics(false);
+        Net releaseNet = readNet<Importer>(std::forward<Args>(args)...);
+        enableModelDiagnostics(true);
+        return releaseNet;
+    }
+    return maybeDebugNet;
+}
+
+class LayerHandler
+{
+public:
+    bool addMissing(const std::string& name, const std::string& type);
+
+protected:
+    LayerParams getNotImplementedParams(const std::string& name, const std::string& op);
+    std::set<std::string> layers;
 };
 
 struct NetImplBase

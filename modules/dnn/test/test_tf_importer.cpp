@@ -583,11 +583,13 @@ public:
     Test_TensorFlow_diagnostics()
     {
         enableModelDiagnostics(true);
+        skipModelImport(true);
     }
 
     ~Test_TensorFlow_diagnostics()
     {
         enableModelDiagnostics(false);
+        skipModelImport(false);
     }
 
     void runFailingTensorFlowNet(const std::string& prefix, bool hasText = false)
