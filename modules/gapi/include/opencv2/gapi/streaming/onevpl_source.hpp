@@ -36,6 +36,12 @@ private:
 };
 
 template<class... Args>
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(std::shared_ptr<IDataProvider> source, Args&&... args)
+{
+    return make_src<OneVPLSource>(source, std::forward<Args>(args)...);
+}
+
+template<class... Args>
 GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(const std::string& filePath, Args&&... args)
 {
     return make_src<OneVPLSource>(filePath, std::forward<Args>(args)...);

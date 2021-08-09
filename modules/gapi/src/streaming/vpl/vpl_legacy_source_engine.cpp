@@ -154,7 +154,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             LegacyDecodeSession &my_sess = static_cast<LegacyDecodeSession&>(sess);
             my_sess.last_status = ReadEncodedStream(my_sess.stream, my_sess.data_provider);
             if (my_sess.last_status != MFX_ERR_NONE) {
-                //my_sess.source_handle.reset(); //close source
+                my_sess.data_provider.reset(); //close source
             }
             return ExecutionStatus::Continue;
         },
@@ -271,7 +271,7 @@ VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSta
         case MFX_ERR_NONE:
             return ExecutionStatus::Continue; 
         case MFX_ERR_MORE_DATA: // The function requires more bitstream at input before decoding can proceed
-            if (sess.data_provider->empty()) {
+            if (!sess.data_provider || sess.data_provider->empty()) {
                 // No more data to drain from decoder, start encode draining mode
                 return ExecutionStatus::Processed;
             }
