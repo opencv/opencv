@@ -41,13 +41,14 @@ class ImageComposition:
         masks_warped = []
         corners = []
         for img, camera in zip(imgs, cameras):
-            corner, img = self.warper.warp_image(img, camera, aspect)
-            imgs_warped.append(img)
+            corner, img_warped = self.warper.warp_image(img, camera, aspect)
+            imgs_warped.append(img_warped)
             corners.append(corner)
 
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
-            _, mask = self.warper.warp_image(mask, camera, aspect, mask=True)
-            masks_warped.append(mask)
+            _, mask_warped = self.warper.warp_image(mask, camera,
+                                                    aspect, mask=True)
+            masks_warped.append(mask_warped)
 
         return imgs_warped, masks_warped, corners
 

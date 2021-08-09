@@ -19,7 +19,7 @@ class Warper:
         self.warper = cv.PyRotationWarper(warper_type, scale)
 
     def set_scale(self, scale):
-        self.warper.setScale(scale)
+        self.warper = cv.PyRotationWarper('spherical', scale)
 
     def warp_image(self, image, camera, aspect=1, mask=False):
         if mask:

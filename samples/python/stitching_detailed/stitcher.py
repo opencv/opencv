@@ -56,12 +56,11 @@ class Stitcher:
         seam_work_aspect = (work_megapix_scaler.scale /
                             seam_megapix_scaler.scale )
 
-
+        print(indices)
 
         img_names = Subsetter.subset_list(img_names, indices)
         images = Subsetter.subset_list(images, indices)
         full_img_sizes = Subsetter.subset_list(full_img_sizes, indices)
-        num_images = len(images)
 
 
         import statistics
@@ -83,7 +82,7 @@ class Stitcher:
                                                                              cameras,
                                                                              seam_work_aspect)
 
-        masks_warped = image_composition.find_seam_masks(images_warped, masks_warped, corners)
+        seam_masks = image_composition.find_seam_masks(images_warped, masks_warped, corners)
         image_composition.estimate_exposure_errors(images_warped, masks_warped, corners)
 
         compose_scale = 1
@@ -113,8 +112,9 @@ class Stitcher:
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
             p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
             image_warped = image_composition.compensator.apply(idx, corners[idx], image_warped, mask_warped)
+            cv.imwrite(f"test_big_{idx}.png", image_warped)
             image_warped_s = image_warped.astype(np.int16)
-            dilated_mask = cv.dilate(masks_warped[idx], None)
+            dilated_mask = cv.dilate(seam_masks[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
             mask_warped = cv.bitwise_and(seam_mask, mask_warped)
             if blender is None and not timelapser.do_timelapse:

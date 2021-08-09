@@ -16,6 +16,7 @@ from stitching_detailed.subsetter import Subsetter
 from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
+from stitching_detailed.image_registration import ImageRegistration
 # %%
 
 # Eine Klasse erstellen, die von unittest.TestCase erbt
@@ -48,9 +49,9 @@ class TestStitcher(unittest.TestCase):
             "rangewidth": -1
             }
 
-    def tearDown(self):
-        for file in ["result.jpg", "dot_graph.txt"]:
-            remove_file(file)
+    # def tearDown(self):
+    #     for file in ["result.jpg", "dot_graph.txt"]:
+    #         remove_file(file)
 
     def test_stitcher_aquaduct(self):
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
@@ -61,7 +62,7 @@ class TestStitcher(unittest.TestCase):
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
-    @unittest.skip("skip boat test (high resuolution ran >5s)")
+    #@unittest.skip("skip boat test (high resuolution ran >5s)")
     def test_stitcher_boat(self):
         stitcher = Stitcher(["boat1.jpg", "boat2.jpg",
                              "boat3.jpg", "boat4.jpg",
@@ -211,6 +212,12 @@ class TestStitcher(unittest.TestCase):
 
     #     os.remove("frame1.jpg")
     #     os.remove("frame2.jpg")
+
+    def test_composition(self):
+        img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
+        ir = ImageRegistration()
+        indices, cameras = ir.register(["s1.jpg", "s2.jpg"], [img1, img2])
+
 
 
 def remove_file(file):
