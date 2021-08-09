@@ -25,7 +25,7 @@ class ImageComposition:
     def compose(self, img_names, images, images_small, cameras):
         imgs, masks, corners = self.warp_images(images_small, cameras)
         seam_masks = self.find_seam_masks(imgs, masks, corners)
-        self.estimate_exposure_errors(corners, imgs, masks)
+        self.estimate_exposure_errors(imgs, masks, corners)
         imgs, masks, corners = self.warp_images(images, cameras)
         imgs = self.compensate_exposure_errors(imgs, masks, corners)
         seam_masks = self.resize_seam_masks_to_original_resolution(seam_masks,
@@ -52,8 +52,7 @@ class ImageComposition:
         return imgs_warped, masks_warped, corners
 
     def find_seam_masks(self, imgs, masks, corners):
-        return [self.seam_finder.find(img, corner, mask)
-                for img, mask, corner in zip(imgs, masks, corners)]
+        return self.seam_finder.find(imgs, corners, masks)
 
     def estimate_exposure_errors(self, imgs, masks, corners):
         self.compensator.feed(corners, imgs, masks)

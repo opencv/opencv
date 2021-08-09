@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import cv2 as cv
+import numpy as np
 
 
 class SeamFinder:
@@ -15,6 +16,7 @@ class SeamFinder:
     def __init__(self, finder=DEFAULT_SEAM_FINDER):
         self.finder = SeamFinder.SEAM_FINDER_CHOICES[finder]
 
-    def find(self, *args):
+    def find(self, imgs, corners, masks):
         """https://docs.opencv.org/master/d0/dd5/classcv_1_1detail_1_1DpSeamFinder.html#a7914624907986f7a94dd424209a8a609"""  # noqa
-        return self.finder.find(*args)
+        imgs_float = [img.astype(np.float32) for img in imgs]
+        return self.finder.find(imgs_float, corners, masks)

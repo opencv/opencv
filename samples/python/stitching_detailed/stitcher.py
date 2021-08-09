@@ -78,29 +78,14 @@ class Stitcher:
         warp_type = args.warp
         result_name = args.output
 
-        corners = []
-        masks_warped = []
-        images_warped = []
-        sizes = []
-        masks = []
-
         image_composition.warper.set_scale(warped_image_scale * seam_work_aspect)
         images_warped, masks_warped, corners = image_composition.warp_images(images,
                                                                              cameras,
                                                                              seam_work_aspect)
 
-        images_warped_f = []
-        for img in images_warped:
-            imgf = img.astype(np.float32)
-            images_warped_f.append(imgf)
+        masks_warped = image_composition.find_seam_masks(images_warped, masks_warped, corners)
+        image_composition.estimate_exposure_errors(images_warped, masks_warped, corners)
 
-        compensator = ExposureErrorCompensator(args.expos_comp,
-                                               args.expos_comp_nr_feeds,
-                                               args.expos_comp_block_size)
-        compensator.feed(corners, images_warped, masks_warped)
-
-        seam_finder = SeamFinder(args.seam)
-        masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
         compose_scale = 1
         corners = []
         sizes = []
@@ -127,7 +112,7 @@ class Stitcher:
             corner, image_warped = warper.warp(img, K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
             p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
-            image_warped = compensator.apply(idx, corners[idx], image_warped, mask_warped)
+            image_warped = image_composition.compensator.apply(idx, corners[idx], image_warped, mask_warped)
             image_warped_s = image_warped.astype(np.int16)
             dilated_mask = cv.dilate(masks_warped[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
