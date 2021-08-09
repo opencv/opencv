@@ -274,9 +274,9 @@ struct IEUnit {
         }
         if (params.num_out == 1u && params.output_names.empty()) {
             if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                params.input_names = { outputs.begin()->first };
+                params.output_names = { outputs.begin()->first };
             } else {
-                params.input_names = { this_network.GetOutputsInfo().begin()->first };
+                params.output_names = { this_network.GetOutputsInfo().begin()->first };
             }
         }
         if (!params.reshape_table.empty()) {
