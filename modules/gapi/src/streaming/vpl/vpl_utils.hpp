@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef OPENCV_GAPI_VPL_UTILS_HPP
-#define OPENCV_GAPI_VPL_UTILS_HPP
+#ifndef OPENCV_GAPI_STREAMING_VPL_UTILS_HPP
+#define OPENCV_GAPI_STREAMING_VPL_UTILS_HPP
 
 #ifdef HAVE_ONEVPL
 #if (MFX_VERSION >= 2000)
@@ -282,4 +282,4 @@ mfxVariant cfg_param_to_mfx_variant(const oneVPL_cfg_param& value);
 } // namespace gapi
 } // namespace cv
 #endif // HAVE_ONEVPL
-#endif // OPENCV_GAPI_VPL_UTILS_HPP
+#endif // OPENCV_GAPI_STREAMING_VPL_UTILS_HPP

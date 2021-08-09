@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef GAPI_STREAMING_FILE_DATA_PROVIDER_HPP
-#define GAPI_STREAMING_FILE_DATA_PROVIDER_HPP
+#ifndef GAPI_STREAMING_ONEVPL_FILE_DATA_PROVIDER_HPP
+#define GAPI_STREAMING_ONEVPL_FILE_DATA_PROVIDER_HPP
 #include <stdio.h>
 
 #include <opencv2/gapi/streaming/onevpl_data_provider_interface.hpp>
@@ -29,4 +29,4 @@ private:
 } // namespace gapi
 } // namespace cv
 
-#endif // GAPI_STREAMING_FILE_DATA_PROVIDER_HPP
+#endif // GAPI_STREAMING_ONEVPL_FILE_DATA_PROVIDER_HPP

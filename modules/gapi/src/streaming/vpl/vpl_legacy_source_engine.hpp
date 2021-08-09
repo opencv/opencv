@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef OPENCV_GAPI_STREAMING_VPL_LEGACY_ENGINE_HPP
-#define OPENCV_GAPI_STREAMING_VPL_LEGACY_ENGINE_HPP
+#ifndef OPENCV_GAPI_STREAMING_VPL_LEGACY_SOURCE_ENGINE_HPP
+#define OPENCV_GAPI_STREAMING_VPL_LEGACY_SOURCE_ENGINE_HPP
 #include <stdio.h>
 #include <memory>
 
@@ -67,4 +67,4 @@ private:
 } // namespace gapi
 } // namespace cv
 #endif // HAVE_ONEVPL
-#endif // OPENCV_GAPI_STREAMING_VPL_LEGACY_ENGINE_HPP
+#endif // OPENCV_GAPI_STREAMING_VPL_LEGACY_SOURCE_ENGINE_HPP

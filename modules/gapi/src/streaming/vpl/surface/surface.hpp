@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef GAPI_STREAMIN_ONE_VPL_SURFACE_HPP
-#define GAPI_STREAMIN_ONE_VPL_SURFACE_HPP
+#ifndef GAPI_STREAMING_VPL_SURFACE_HPP
+#define GAPI_STREAMING_VPL_SURFACE_HPP
 
 #include <atomic>
 #include <memory>
@@ -59,4 +59,4 @@ using surface_weak_ptr_t = std::weak_ptr<Surface>;
 } // namespace gapi
 } // namespace cv
 
-#endif // GAPI_STREAMIN_ONE_VPL_SURFACE_HPP
+#endif // GAPI_STREAMING_VPL_SURFACE_HPP

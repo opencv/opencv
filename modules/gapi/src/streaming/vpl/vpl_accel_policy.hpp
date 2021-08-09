@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef GAPI_VPL_ACCEL_POLICY_HPP
-#define GAPI_VPL_ACCEL_POLICY_HPP
+#ifndef GAPI_STREAMING_VPL_ACCEL_POLICY_HPP
+#define GAPI_STREAMING_VPL_ACCEL_POLICY_HPP
 
 #include <functional>
 #include <memory>
@@ -56,4 +56,4 @@ struct VPLAccelerationPolicy
 } // namespace cv
 
 #endif // HAVE_ONEVPL
-#endif // GAPI_VPL_ACCEL_POLICY_HPP
+#endif // GAPI_STREAMING_VPL_ACCEL_POLICY_HPP

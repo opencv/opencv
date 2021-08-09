@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef ONEVPL_PRIV_INTERFACE_HPP
-#define ONEVPL_PRIV_INTERFACE_HPP
+#ifndef GAPI_STREAMING_ONEVPL_PRIV_INTERFACE_HPP
+#define GAPI_STREAMING_ONEVPL_PRIV_INTERFACE_HPP
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
@@ -26,4 +26,4 @@ struct OneVPLSource::IPriv
 } // namespace gapi
 } // namespace cv
 
-#endif // ONEVPL_PRIV_INTERFACE_HPP
+#endif // GAPI_STREAMING_ONEVPL_PRIV_INTERFACE_HPP

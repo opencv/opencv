@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef OPENCV_GAPI_STREAMING_VPL_ENGINE_HPP
-#define OPENCV_GAPI_STREAMING_VPL_ENGINE_HPP
+#ifndef OPENCV_GAPI_STREAMING_VPL_SOURCE_ENGINE_HPP
+#define OPENCV_GAPI_STREAMING_VPL_SOURCE_ENGINE_HPP
 #include <memory>
 
 #include "streaming/engine/base_engine.hpp"
@@ -54,4 +54,4 @@ public:
 } // namespace cv
 
 #endif // HAVE_ONEVPL
-#endif // OPENCV_GAPI_STREAMING_VPL_ENGINE_HPP
+#endif // OPENCV_GAPI_STREAMING_VPL_SOURCE_ENGINE_HPP
