@@ -52,12 +52,16 @@ public:
     
     mfxVideoParam mfx_decoder_param;
     std::shared_ptr<IDataProvider> data_provider;
+
+    Data::Meta generate_frame_meta();
 private:
     VPLAccelerationPolicy::pool_key_t decoder_pool_id;
     mfxFrameAllocRequest request;
 
     std::weak_ptr<Surface> procesing_surface_ptr;
     mfxFrameSurface1* output_surface_ptr;
+
+    int64_t decoded_frames_count;
 };
 } // namespace wip
 } // namespace gapi

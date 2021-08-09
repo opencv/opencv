@@ -116,7 +116,8 @@ LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
     mfx_decoder_param(std::move(decoder_param.param)),
     data_provider(std::move(provider)),
     procesing_surface_ptr(),
-    output_surface_ptr()
+    output_surface_ptr(),
+    decoded_frames_count()
 {
 }
 
@@ -141,6 +142,17 @@ void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
 void LegacyDecodeSession::init_surface_pool(VPLAccelerationPolicy::pool_key_t key) {
     GAPI_Assert(key && "Init decode pull with empty key");
     decoder_pool_id = key;
+}
+
+Data::Meta LegacyDecodeSession::generate_frame_meta() {
+    const auto now = std::chrono::system_clock::now();
+    const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+                (now.time_since_epoch());
+    Data::Meta meta {
+                        {cv::gapi::streaming::meta_tag::timestamp, int64_t{dur.count()} },
+                        {cv::gapi::streaming::meta_tag::seq_id, int64_t{decoded_frames_count++}}
+                    };
+    return meta;
 }
 
 VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPolicy>&& accel)
@@ -260,7 +272,7 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess)
     // manage memory ownership rely on acceleration policy 
     auto frame_adapter = acceleration_policy->create_frame_adapter(sess.decoder_pool_id,
                                                                    sess.output_surface_ptr);
-    ready_frames.push(cv::MediaFrame(std::move(frame_adapter)));
+    ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 }
 
 VPLProcessingEngine::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxStatus status, LegacyDecodeSession& sess)
