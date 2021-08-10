@@ -19,11 +19,11 @@ class WaveCorrector:
             ]
 
     def correct(self, cameras):
-        if self.wave_correct_kind:
-            rmats = []
-            for cam in cameras:
-                rmats.append(np.copy(cam.R))
+        if self.wave_correct_kind is not None:
+            rmats = [np.copy(cam.R) for cam in cameras]
             rmats = cv.detail.waveCorrect(rmats, self.wave_correct_kind)
             for idx, cam in enumerate(cameras):
                 cam.R = rmats[idx]
-        return cameras
+            return cameras
+        else:
+            return cameras

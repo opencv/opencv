@@ -1,5 +1,0 @@
-graph matches_graph{
-"s1.jpg" -- "s2.jpg"[label="Nm=267, Ni=246, C=2.79228"];
-"boat1.jpg" -- "boat2.jpg"[label="Nm=114, Ni=87, C=2.06161"];
-"boat1.jpg" -- "boat3.jpg"[label="Nm=51, Ni=30, C=1.28755"];
-}

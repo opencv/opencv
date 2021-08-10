@@ -1,0 +1,7 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!test_stitcher.py
+!SAMPLE_IMAGES_TO_DOWNLOAD.txt

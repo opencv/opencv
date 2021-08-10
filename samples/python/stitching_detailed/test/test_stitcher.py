@@ -49,10 +49,6 @@ class TestStitcher(unittest.TestCase):
             "rangewidth": -1
             }
 
-    # def tearDown(self):
-    #     for file in ["result.jpg", "dot_graph.txt"]:
-    #         remove_file(file)
-
     def test_stitcher_aquaduct(self):
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
         stitcher.stitch()
@@ -62,20 +58,42 @@ class TestStitcher(unittest.TestCase):
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
-    #@unittest.skip("skip boat test (high resuolution ran >5s)")
-    def test_stitcher_boat(self):
-        self.settings["warp"] = "compressedPlaneA2B1"
-        self.settings["wave_correct"] = "horiz"
-        self.settings["expos_comp"] = "channel_blocks"
+    def test_stitcher_boat1(self):
+        self.settings["warp"] = "fisheye"
+        self.settings["wave_correct"] = "no"
+        self.settings["seam"] = "dp_colorgrad"
+        self.settings["expos_comp"] = "no"
+        self.settings["conf_thresh"] = 0.3
+        self.settings["output"] = "boat_fisheye.jpg"
         stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
                              "boat3.jpg", "boat4.jpg",
                              "boat1.jpg", "boat6.jpg"], **self.settings)
         stitcher.stitch()
 
-        max_image_shape_derivation = 100
+        max_image_shape_derivation = 600
         np.testing.assert_allclose(stitcher.result.shape[:2],
-                                   (2667, 10751),
+                                   (14488,  7556),
                                    atol=max_image_shape_derivation)
+
+    def test_stitcher_boat2(self):
+        self.settings["warp"] = "compressedPlaneA2B1"
+        self.settings["wave_correct"] = "horiz"
+        self.settings["seam"] = "dp_colorgrad"
+        self.settings["expos_comp"] = "channel_blocks"
+        self.settings["conf_thresh"] = 0.3
+        self.settings["output"] = "boat_plane.jpg"
+        stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
+                             "boat3.jpg", "boat4.jpg",
+                             "boat1.jpg", "boat6.jpg"], **self.settings)
+        stitcher.stitch()
+
+        max_image_shape_derivation = 600
+        np.testing.assert_allclose(stitcher.result.shape[:2],
+                                   (7400, 12340),
+                                   atol=max_image_shape_derivation)
+
+
+    #@unittest.skip("skip boat test (high resuolution ran >30s)")
 
     def test_image_to_megapix_scaler(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
