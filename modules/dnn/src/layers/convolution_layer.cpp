@@ -994,7 +994,7 @@ public:
             options.dilations = Dilations.data();
         }
         ml::Operand operand = webnnGraphBuilder.Conv2d(webnnInpOperand, webnnWeights, &options);
-        
+
         // ml::Operand result = operand;
         if (hasBias() || fusedBias || nodes.size() == 3)
         {
