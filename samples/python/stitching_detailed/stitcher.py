@@ -86,6 +86,8 @@ class Stitcher:
         compose_scale = 1
         corners = []
         sizes = []
+        warped_images = []
+        masks = []
         blender = None
         is_roi_set = False
         timelapser = Timelapser(args.timelapse)
@@ -95,7 +97,8 @@ class Stitcher:
             if not is_roi_set:
                 compose_work_aspect = compose_megapix_scaler.scale / work_megapix_scaler.scale
                 warped_image_scale *= compose_work_aspect
-                warper = cv.PyRotationWarper(warp_type, warped_image_scale)
+                image_composition.warper.set_scale(warp_type, warped_image_scale)
+                warper = image_composition.warper.warper
                 for i in range(0, len(img_names)):
                     cameras[i].focal *= compose_work_aspect
                     cameras[i].ppx *= compose_work_aspect
@@ -107,6 +110,7 @@ class Stitcher:
                     corners.append(roi[0:2])
                     sizes.append(roi[2:4])
                 is_roi_set = True
+                print(corners, sizes)
 
 
             K = cameras[idx].K().astype(np.float32)
@@ -114,21 +118,18 @@ class Stitcher:
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
             p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
             image_warped = image_composition.compensator.apply(idx, corners[idx], image_warped, mask_warped)
+            warped_images.append(image_warped)
             image_warped_s = image_warped.astype(np.int16)
             dilated_mask = cv.dilate(seam_masks[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
             mask_warped = cv.bitwise_and(seam_mask, mask_warped)
-            if blender is None and not timelapser.do_timelapse:
-                blender = Blender(args.blend, args.blend_strength)
-                blender.prepare(corners, sizes)
+            masks.append(mask_warped)
             if timelapser.do_timelapse:
                 timelapser.process_and_save_frame(img_names[idx],
                                                   image_warped_s,
                                                   corners[idx])
-            else:
-                blender.feed(cv.UMat(image_warped_s), mask_warped, corners[idx])
         if not timelapser.do_timelapse:
-            self.result = blender.blend()
+            self.result = image_composition.blend_images(warped_images, corners, sizes, masks)
             cv.imwrite(result_name, self.result)
             zoom_x = 600.0 / self.result.shape[1]
             dst = cv.normalize(src=self.result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)

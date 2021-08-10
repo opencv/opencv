@@ -58,6 +58,7 @@ class TestStitcher(unittest.TestCase):
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
+    @unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat1(self):
         self.settings["warp"] = "fisheye"
         self.settings["wave_correct"] = "no"
@@ -66,15 +67,16 @@ class TestStitcher(unittest.TestCase):
         self.settings["conf_thresh"] = 0.3
         self.settings["output"] = "boat_fisheye.jpg"
         stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
-                             "boat3.jpg", "boat4.jpg",
-                             "boat1.jpg", "boat6.jpg"], **self.settings)
+                              "boat3.jpg", "boat4.jpg",
+                              "boat1.jpg", "boat6.jpg"], **self.settings)
         stitcher.stitch()
 
         max_image_shape_derivation = 600
         np.testing.assert_allclose(stitcher.result.shape[:2],
-                                   (14488,  7556),
-                                   atol=max_image_shape_derivation)
+                                    (14488,  7556),
+                                    atol=max_image_shape_derivation)
 
+    @unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat2(self):
         self.settings["warp"] = "compressedPlaneA2B1"
         self.settings["wave_correct"] = "horiz"
@@ -83,17 +85,31 @@ class TestStitcher(unittest.TestCase):
         self.settings["conf_thresh"] = 0.3
         self.settings["output"] = "boat_plane.jpg"
         stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
-                             "boat3.jpg", "boat4.jpg",
-                             "boat1.jpg", "boat6.jpg"], **self.settings)
+                              "boat3.jpg", "boat4.jpg",
+                              "boat1.jpg", "boat6.jpg"], **self.settings)
         stitcher.stitch()
 
         max_image_shape_derivation = 600
         np.testing.assert_allclose(stitcher.result.shape[:2],
-                                   (7400, 12340),
+                                    (7400, 12340),
+                                    atol=max_image_shape_derivation)
+
+    def test_stitcher_budapest(self):
+        self.settings["matcher"] = "affine"
+        self.settings["ba"] = "affine"
+        self.settings["warp"] = "affine"
+        self.settings["estimator"] = "affine"
+        self.settings["conf_thresh"] = 0.3
+        self.settings["output"] = "budapest.jpg"
+        stitcher = Stitcher(["budapest1.jpg", "budapest2.jpg",
+                             "budapest3.jpg", "budapest4.jpg",
+                             "budapest5.jpg", "budapest6.jpg"], **self.settings)
+        stitcher.stitch()
+
+        max_image_shape_derivation = 20
+        np.testing.assert_allclose(stitcher.result.shape[:2],
+                                   (1155, 2310),
                                    atol=max_image_shape_derivation)
-
-
-    #@unittest.skip("skip boat test (high resuolution ran >30s)")
 
     def test_image_to_megapix_scaler(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
