@@ -64,9 +64,12 @@ class TestStitcher(unittest.TestCase):
 
     #@unittest.skip("skip boat test (high resuolution ran >5s)")
     def test_stitcher_boat(self):
-        stitcher = Stitcher(["boat1.jpg", "boat2.jpg",
+        self.settings["warp"] = "compressedPlaneA2B1"
+        self.settings["wave_correct"] = "horiz"
+        self.settings["expos_comp"] = "channel_blocks"
+        stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
                              "boat3.jpg", "boat4.jpg",
-                             "boat5.jpg", "boat6.jpg"], **self.settings)
+                             "boat1.jpg", "boat6.jpg"], **self.settings)
         stitcher.stitch()
 
         max_image_shape_derivation = 100

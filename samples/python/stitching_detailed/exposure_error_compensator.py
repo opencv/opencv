@@ -23,7 +23,7 @@ class ExposureErrorCompensator:
         if compensator == 'channel':
             self.compensator = cv.detail_ChannelsCompensator(nr_feeds)
         elif compensator == 'channel_blocks':
-            compensator = cv.detail_BlocksChannelsCompensator(
+            self.compensator = cv.detail_BlocksChannelsCompensator(
                 block_size, block_size, nr_feeds
                 )
         else:

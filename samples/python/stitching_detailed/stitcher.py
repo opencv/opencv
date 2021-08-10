@@ -56,8 +56,6 @@ class Stitcher:
         seam_work_aspect = (work_megapix_scaler.scale /
                             seam_megapix_scaler.scale )
 
-        print(indices)
-
         img_names = Subsetter.subset_list(img_names, indices)
         images = Subsetter.subset_list(images, indices)
         full_img_sizes = Subsetter.subset_list(full_img_sizes, indices)
@@ -77,7 +75,7 @@ class Stitcher:
         warp_type = args.warp
         result_name = args.output
 
-        image_composition.warper.set_scale(warped_image_scale * seam_work_aspect)
+        image_composition.warper.set_scale(warp_type, warped_image_scale * seam_work_aspect)
         images_warped, masks_warped, corners = image_composition.warp_images(images,
                                                                              cameras,
                                                                              seam_work_aspect)
@@ -89,30 +87,33 @@ class Stitcher:
         corners = []
         sizes = []
         blender = None
+        is_roi_set = False
         timelapser = Timelapser(args.timelapse)
         # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
         for idx, name in enumerate(img_names):
             img = compose_imgs[idx]
-            compose_work_aspect = compose_megapix_scaler.scale / work_megapix_scaler.scale
-            warped_image_scale *= compose_work_aspect
-            warper = cv.PyRotationWarper(warp_type, warped_image_scale)
-            for i in range(0, len(img_names)):
-                cameras[i].focal *= compose_work_aspect
-                cameras[i].ppx *= compose_work_aspect
-                cameras[i].ppy *= compose_work_aspect
-                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
-                      int(round(full_img_sizes[i][1] * compose_scale)))
-                K = cameras[i].K().astype(np.float32)
-                roi = warper.warpRoi(sz, K, cameras[i].R)
-                corners.append(roi[0:2])
-                sizes.append(roi[2:4])
+            if not is_roi_set:
+                compose_work_aspect = compose_megapix_scaler.scale / work_megapix_scaler.scale
+                warped_image_scale *= compose_work_aspect
+                warper = cv.PyRotationWarper(warp_type, warped_image_scale)
+                for i in range(0, len(img_names)):
+                    cameras[i].focal *= compose_work_aspect
+                    cameras[i].ppx *= compose_work_aspect
+                    cameras[i].ppy *= compose_work_aspect
+                    sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                          int(round(full_img_sizes[i][1] * compose_scale)))
+                    K = cameras[i].K().astype(np.float32)
+                    roi = warper.warpRoi(sz, K, cameras[i].R)
+                    corners.append(roi[0:2])
+                    sizes.append(roi[2:4])
+                is_roi_set = True
+
 
             K = cameras[idx].K().astype(np.float32)
             corner, image_warped = warper.warp(img, K, cameras[idx].R, cv.INTER_LINEAR, cv.BORDER_REFLECT)
             mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
             p, mask_warped = warper.warp(mask, K, cameras[idx].R, cv.INTER_NEAREST, cv.BORDER_CONSTANT)
             image_warped = image_composition.compensator.apply(idx, corners[idx], image_warped, mask_warped)
-            cv.imwrite(f"test_big_{idx}.png", image_warped)
             image_warped_s = image_warped.astype(np.int16)
             dilated_mask = cv.dilate(seam_masks[idx], None)
             seam_mask = cv.resize(dilated_mask, (mask_warped.shape[1], mask_warped.shape[0]), 0, 0, cv.INTER_LINEAR_EXACT)
