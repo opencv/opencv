@@ -50,6 +50,7 @@ class TestStitcher(unittest.TestCase):
             }
 
     def test_stitcher_aquaduct(self):
+        #self.settings["timelapse"] = "as_is"
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
         stitcher.stitch()
 

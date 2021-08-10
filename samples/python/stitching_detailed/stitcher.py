@@ -53,8 +53,8 @@ class Stitcher:
 
         image_registration = get_image_registration_object(args)
         indices, cameras = image_registration.register(img_names, work_imgs)
-        seam_work_aspect = (work_megapix_scaler.scale /
-                            seam_megapix_scaler.scale )
+        seam_work_aspect = (seam_megapix_scaler.scale /
+                            work_megapix_scaler.scale)
 
         img_names = Subsetter.subset_list(img_names, indices)
         images = Subsetter.subset_list(images, indices)
@@ -110,7 +110,6 @@ class Stitcher:
                     corners.append(roi[0:2])
                     sizes.append(roi[2:4])
                 is_roi_set = True
-                print(corners, sizes)
 
 
             K = cameras[idx].K().astype(np.float32)
