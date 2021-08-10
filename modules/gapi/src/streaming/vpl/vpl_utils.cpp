@@ -247,13 +247,33 @@ const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
     }
 }
 
+mfxU32 cstr_to_mfx_version(const char* cstr) {
+    if (!cstr) {
+        return std::numeric_limits<mfxU32>::max();
+    }
+
+    const char* delim = strchr(cstr, '.');
+    if (!delim) {
+        // in digital form - return as is
+        return std::stoul(cstr, nullptr, 10);
+    }
+    std::string major (cstr, delim - cstr);
+    std::string minor (delim + 1);
+    mfxU32 major_val = std::stoul(major, nullptr, 10);
+    mfxU32 minor_val = std::stoul(minor, nullptr, 10);
+
+    // pack to digital form
+    return {major_val << 16 | minor_val};
+}
+
 std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
 {
     out << "mfxImplDescription.Version: " << static_cast<int>(idesc.Version.Major)
         << "." << static_cast<int>(idesc.Version.Minor) << std::endl;
     out << "mfxImplDescription.Impl: " << mfx_impl_to_cstr(idesc.Impl) << std::endl;
-    out << "mfxImplDescription.AccelerationMode: " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
+    out << "(*)mfxImplDescription.AccelerationMode: " << mfx_accel_mode_to_cstr(idesc.AccelerationMode) << std::endl;
     out << "mfxImplDescription.ApiVersion: " << idesc.ApiVersion.Major << "." << idesc.ApiVersion.Minor << std::endl;
+    out << "(*)mfxImplDescription.ApiVersion.Version: " << idesc.ApiVersion.Version << std::endl;
     out << "mfxImplDescription.ImplName: " << idesc.ImplName << std::endl;
     out << "mfxImplDescription.License: " << idesc.License << std::endl;
     out << "mfxImplDescription.Keywords: " << idesc.Keywords << std::endl;
@@ -282,7 +302,7 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
         << "." << static_cast<int>(dec.Version.Minor) << std::endl;
     for (int codec = 0; codec < dec.NumCodecs; codec++) {
         auto cid = dec.Codecs[codec].CodecID;
-        out << "mfxImplDescription.mfxDecoderDescription.decoder.CodecID: " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
+        out << "(*)mfxImplDescription.mfxDecoderDescription.decoder.CodecID: " << cid;//(cid & 0xff) << "." << (cid >> 8 & 0xff) << "." << (cid >> 16 & 0xff) << "." << (cid >> 24 & 0xff)  << std::endl;
         out << "mfxImplDescription.mfxDecoderDescription.decoder.MaxcodecLevel: " << dec.Codecs[codec].MaxcodecLevel << std::endl;
         for (int profile = 0; profile < dec.Codecs[codec].NumProfiles; profile++) {
             out << "mfxImplDescription.mfxDecoderDescription.decoder.Profiles: "
@@ -308,6 +328,8 @@ std::ostream& operator<< (std::ostream& out, const mfxImplDescription& idesc)
     }
 
     out << "mfxImplDescription.NumExtParam: " << idesc.NumExtParam << std::endl;
+
+    out << "\n(*) - configurable params" << std::endl;
     return out;
 }
 
@@ -362,6 +384,8 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_codec_id(value.c_str())));
         } else if (name == "mfxImplDescription.AccelerationMode") {
             ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_accel_mode(value.c_str())));
+        } else if (name == "mfxImplDescription.ApiVersion.Version") {
+            ret.push_back(creator.create<mfxU32>(name, cstr_to_mfx_version(value.c_str())));
         } else {
             GAPI_LOG_DEBUG(nullptr, "Cannot parse configuration param, name: " << name <<
                                     ", value: " << value);
