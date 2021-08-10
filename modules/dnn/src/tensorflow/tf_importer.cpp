@@ -406,10 +406,51 @@ void setKSize(LayerParams &layerParams, const tensorflow::NodeDef &layer)
     }
 }
 
-void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer)
+void setPadMode(LayerParams &layerParams, const tensorflow::NodeDef &layer)
 {
     if (hasLayerAttr(layer, "padding"))
         layerParams.set("pad_mode", getLayerAttr(layer, "padding").s());
+}
+
+bool getExplicitPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, int64_t (&pads)[8])
+{
+    if (!layerParams.has("pad_mode") ||
+        layerParams.get("pad_mode").getStringValue() != "EXPLICIT")
+    {
+        return false;
+    }
+
+    CV_Assert(hasLayerAttr(layer, "explicit_paddings"));
+
+    const tensorflow::AttrValue& protoPads = getLayerAttr(layer, "explicit_paddings");
+    if (protoPads.list().i_size() != 8)
+    {
+        CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding configuration.");
+    }
+
+    int n = sizeof(pads) / sizeof(pads[0]);
+    for (int i = 0; i < n; ++i)
+    {
+        pads[i] = protoPads.list().i(i);
+    }
+
+    if (getDataLayout(layer) != DATA_LAYOUT_NCHW)
+    {
+        CV_LOG_DEBUG(NULL, "DNN/TF:     Data format " << getLayerAttr(layer, "data_format").s() << ", assuming NHWC.");
+        // Perhaps, we have NHWC padding dimensions order.
+        //  N    H    W    C
+        // 0 1  2 3  4 5  6 7
+        std::swap(pads[2], pads[6]);
+        std::swap(pads[3], pads[7]);
+        //  N    C    W    H
+        // 0 1  2 3  4 5  6 7
+        std::swap(pads[4], pads[6]);
+        std::swap(pads[5], pads[7]);
+        //  N    C    H    W
+        // 0 1  2 3  4 5  6 7
+    }
+
+    return true;
 }
 
 Pin parsePin(const std::string &name)
@@ -466,6 +507,8 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
         net.mutable_node()->DeleteSubrange(layer_index, 1);
 }
 
+class LayerHandler;
+
 class TFImporter
 {
 public:
@@ -473,6 +516,7 @@ public:
     TFImporter(Net& net, const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0);
 protected:
+    std::unique_ptr<LayerHandler> layerHandler;
     std::unique_ptr<Net> utilNet;
     Net& dstNet;
     void populateNet();
@@ -513,7 +557,9 @@ protected:
 
 private:
     void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId);
+    void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value = 0.);
 
+    friend class LayerHandler;
     typedef void (TFImporter::*TFImporterNodeParser)(tensorflow::GraphDef&, const tensorflow::NodeDef&, LayerParams&);
     typedef std::map<std::string, TFImporterNodeParser> DispatchMap;
 
@@ -552,6 +598,45 @@ private:
     void parseActivation         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+};
+
+void TFImporter::setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value)
+{
+    setPadMode(layerParams, layer);
+    int64_t pads[8];
+
+    if (!getExplicitPadding(layerParams, layer, pads))
+    {
+        return;
+    }
+
+    LayerParams padLp;
+    padLp.name = layer.name() + "/pad";
+    padLp.type = "Padding";
+    padLp.set("paddings", DictValue::arrayInt(pads, sizeof(pads) / sizeof(pads[0])));
+    padLp.set("value", value);
+
+    int id = dstNet.addLayer(padLp.name, padLp.type, padLp);
+    layer_id[padLp.name] = id;
+
+    connect(layer_id, dstNet, parsePin(inputName), id, 0);
+    inputName = padLp.name;
+
+    layerParams.set("pad_mode", "VALID");
+}
+
+class LayerHandler
+{
+public:
+    LayerHandler(TFImporter* importer_);
+    ~LayerHandler() = default;
+
+    bool handleMissing(const opencv_tensorflow::NodeDef& layer);
+    void handleFailed(const opencv_tensorflow::NodeDef& layer);
+
+private:
+    TFImporter* importer;
+    std::set<std::string> layers;
 };
 
 const TFImporter::DispatchMap TFImporter::buildDispatchMap()
@@ -790,7 +875,7 @@ void TFImporter::parseConvolution(tensorflow::GraphDef& net, const tensorflow::N
 
     setStrides(layerParams, layer);
     if (!layerParams.has("pad_w") && !layerParams.has("pad_h"))
-        setPadding(layerParams, layer);
+        setPadding(layerParams, layer, input);
 
     // The final node of dilated convolution subgraph.
     next_layers = getNextLayers(net, name, "BatchToSpaceND");
@@ -1235,20 +1320,21 @@ void TFImporter::parseMaxPool(tensorflow::GraphDef& net, const tensorflow::NodeD
 {
     const std::string& name = layer.name();
     const int num_inputs = layer.input_size();
+    std::string inputName = layer.input(0);
 
     CV_CheckGT(num_inputs, 0, "");
     layerParams.set("pool", "max");
 
     setKSize(layerParams, layer);
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadding(layerParams, layer, inputName, -std::numeric_limits<float>::infinity());
     // Test_TensorFlow_nets.EAST_text_detection/1, NGRAPH/CPU
     layerParams.set("ceil_mode", false);
 
     int id = dstNet.addLayer(name, "Pooling", layerParams);
     layer_id[name] = id;
 
-    connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
+    connectToAllBlobs(layer_id, dstNet, parsePin(inputName), id, num_inputs);
 }
 
 void TFImporter::parseAvgPool(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
@@ -1261,7 +1347,7 @@ void TFImporter::parseAvgPool(tensorflow::GraphDef& net, const tensorflow::NodeD
     layerParams.set("ave_pool_padded_area", false);
     setKSize(layerParams, layer);
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadMode(layerParams, layer);
 
     int id = dstNet.addLayer(name, "Pooling", layerParams);
     layer_id[name] = id;
@@ -1676,7 +1762,7 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     // input: "weights"
     // input: "input"
 
-    const std::string& name = layer.name();
+    std::string name = layer.name();
     const int num_inputs = layer.input_size();
 
     CV_CheckEQ(num_inputs, 3, "Expected output shape, weights and input nodes");
@@ -1707,7 +1793,21 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     layerParams.set("num_output", kshape[1]);
 
     setStrides(layerParams, layer);
-    setPadding(layerParams, layer);
+    setPadMode(layerParams, layer);
+    int64_t pads[8];
+    bool explicit_pads = getExplicitPadding(layerParams, layer, pads);
+    int64_t begs[4] = {};
+    int64_t ends[4] = {-1, -1, -1, -1};
+    if (explicit_pads)
+    {
+        name += "/deconv";
+        layerParams.set("pad_mode", "VALID");
+        for (int i = 2; i < 4; ++i) // begins=[0, 0, a, b], ends=[-1, -1, c, d]
+        {
+            begs[i] = pads[2*i];
+            ends[i] = -1 - pads[2*i + 1];
+        }
+    }
 
     // For convolution layer, output shape computes as
     // o = 1 + (i - k + 2*p) / s
@@ -1724,8 +1824,9 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
     const int strideY = layerParams.get<int>("stride_h");
     const int strideX = layerParams.get<int>("stride_w");
     Mat outShape = getTensorContent(getConstBlob(layer, value_id, 0));
-    const int outH = outShape.at<int>(1);
-    const int outW = outShape.at<int>(2);
+    int shift = (getDataLayout(layer) == DATA_LAYOUT_NCHW);
+    const int outH = outShape.at<int>(1 + shift) + begs[2] - 1 - ends[2];
+    const int outW = outShape.at<int>(2 + shift) + begs[3] - 1 - ends[3];
     if (layerParams.get<String>("pad_mode") == "SAME")
     {
         layerParams.set("adj_w", (outW - 1) % strideX);
@@ -1741,6 +1842,16 @@ void TFImporter::parseConv2DBackpropInput(tensorflow::GraphDef& net, const tenso
 
     // one input only
     connect(layer_id, dstNet, parsePin(layer.input(2)), id, 0);
+    if (explicit_pads) // If we have explicit paddings, remove extra data
+    {
+        layerParams.set("begin", DictValue::arrayInt(begs, sizeof(begs) / sizeof(begs[0])));
+        layerParams.set("end", DictValue::arrayInt(ends, sizeof(ends) / sizeof(ends[0])));
+
+        int id = dstNet.addLayer(layer.name(), "Slice", layerParams);
+        layer_id[layer.name()] = id;
+
+        connect(layer_id, dstNet, parsePin(name), id, 0);
+    }
 }
 
 void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
@@ -1748,8 +1859,8 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     // op: "BlockLSTM"
     // input: "lstm_block_wrapper/ToInt64/x"  (ignore, number of time stamps)
     // input: "input"
-    // input: "lstm_block_wrapper/zeros"      (ignore)
-    // input: "lstm_block_wrapper/zeros"      (ignore)
+    // input: "lstm_block_wrapper/zeros"
+    // input: "lstm_block_wrapper/zeros"
     // input: "lstm_block_wrapper/kernel"
     // input: "lstm_block_wrapper/w_i_diag"
     // input: "lstm_block_wrapper/w_f_diag"
@@ -1775,9 +1886,11 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         }
     }
 
-    Mat W, Wh, Wx, b;
+    Mat W, Wh, Wx, b, cs_prev, h_prev;
     blobFromTensor(getConstBlob(layer, value_id, 4), W);
     blobFromTensor(getConstBlob(layer, value_id, 8), b);
+    blobFromTensor(getConstBlob(layer, value_id, 2), cs_prev);
+    blobFromTensor(getConstBlob(layer, value_id, 3), h_prev);
     const int outSize = W.cols / 4;
 
     // IGFO->IFOG
@@ -1793,10 +1906,12 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     Wx = W.rowRange(0, W.rows - outSize).t();
     Wh = W.rowRange(W.rows - outSize, W.rows).t();
 
-    layerParams.blobs.resize(3);
+    layerParams.blobs.resize(5);
     layerParams.blobs[0] = Wh;
     layerParams.blobs[1] = Wx;
     layerParams.blobs[2] = b;
+    layerParams.blobs[3] = h_prev;
+    layerParams.blobs[4] = cs_prev;
 
     if (hasLayerAttr(layer, "use_peephole"))
     {
@@ -1804,14 +1919,14 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
         if (usePeephole)
         {
             layerParams.set("use_peephole", true);
-            layerParams.blobs.resize(6);
+            layerParams.blobs.resize(8);
             for (int i = 0; i < 3; ++i)
             {
                 Mat w;
                 blobFromTensor(getConstBlob(layer, value_id, 5 + i), w);
                 w = w.reshape(1, w.total());  // Single column.
                 w = Mat::diag(w);  // Make a diagonal matrix.
-                layerParams.blobs[3 + i] = w;
+                layerParams.blobs[5 + i] = w;
             }
         }
     }
@@ -2340,7 +2455,8 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
 }
 
 TFImporter::TFImporter(Net& net, const char *model, const char *config)
-    :  utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
+    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new LayerHandler(this) : nullptr),
+        utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
         dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
 {
     if (model && model[0])
@@ -2362,7 +2478,8 @@ TFImporter::TFImporter(
         const char *dataModel, size_t lenModel,
         const char *dataConfig, size_t lenConfig
 )
-    : utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
+    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new LayerHandler(this) : nullptr),
+       utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
        dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
 {
     if (dataModel != NULL && lenModel > 0)
@@ -2620,11 +2737,6 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
     return it->second;
 }
 
-Ptr<Layer> dummy_constructor(LayerParams & params)
-{
-    return new Layer(params);
-}
-
 void TFImporter::populateNet()
 {
     CV_Assert(netBin.ByteSize() || netTxt.ByteSize());
@@ -2727,7 +2839,6 @@ void TFImporter::populateNet()
     addConstNodes(netBin, value_id, layers_to_ignore);
     addConstNodes(netTxt, value_id, layers_to_ignore);
 
-
     for (int li = 0; li < layersSize; li++)
     {
         const tensorflow::NodeDef& layer = net.node(li);
@@ -2783,41 +2894,64 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
         DispatchMap::const_iterator iter = dispatch.find(type);
         if (iter != dispatch.end())
         {
-            ((*this).*(iter->second))(net, layer, layerParams);
+            CALL_MEMBER_FN(*this, iter->second)(net, layer, layerParams);
         }
-        else
+        else if (!DNN_DIAGNOSTICS_RUN || !layerHandler->handleMissing(layer))
         {
-            if (DNN_DIAGNOSTICS_RUN && !LayerFactory::createLayerInstance(type, layerParams))
-            {
-                CV_LOG_ERROR(NULL, "DNN/TF: Node='" << name << "' of type='"<< type
-                                                    << "' is not supported. This error won't be displayed again.");
-                LayerFactory::registerLayer(type, dummy_constructor);
-            }
-
             parseCustomLayer(net, layer, layerParams);
         }
     }
     catch (const std::exception& e)
     {
-        if (!DNN_DIAGNOSTICS_RUN)
+        CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
+                                                                  << "'. Exception: " << e.what());
+
+        if (DNN_DIAGNOSTICS_RUN)
         {
-            CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
-                                << "'. Exception: " << e.what());
-            throw;
+            layerHandler->handleFailed(layer);
         }
         else
         {
-            CV_LOG_ERROR(NULL, "DNN/TF: Can't parse layer for node='" << name << "' of type='" << type
-                                << "'. Exception: " << e.what());
-
-            // internal layer failure (didnt call addLayer)
-            if (dstNet.getLayerId(name) == -1)
-            {
-                int id = dstNet.addLayer(name, type, layerParams);
-                layer_id[name] = id;
-            }
+            throw;
         }
     }
+}
+
+LayerHandler::LayerHandler(TFImporter* importer_) : importer(importer_) {}
+
+void LayerHandler::handleFailed(const opencv_tensorflow::NodeDef& layer)
+{
+    LayerParams lp;
+    lp.name = layer.name();
+    lp.type = "NotImplemented";
+    lp.set("type", layer.op());
+
+    // the layer will be created or its params and type will be replaced
+    int id = importer->dstNet.addLayer(lp.name, "NotImplemented", lp);
+    if (id != -1) // internal layer failure before the call to addLayer()
+    {
+        importer->layer_id[lp.name] = id;
+    }
+}
+
+bool LayerHandler::handleMissing(const opencv_tensorflow::NodeDef& layer)
+{
+    LayerParams lp;
+    // If we didn't add it, but can create it, it's custom and not missing.
+    if (layers.find(layer.op()) == layers.end() && LayerFactory::createLayerInstance(layer.op(), lp))
+    {
+        return false;
+    }
+
+    if (layers.insert(layer.op()).second)
+    {
+        CV_LOG_ERROR(NULL, "DNN/TF: Node='" << layer.name() << "' of type='"<< layer.op()
+                                            << "' is not supported. This error won't be displayed again.");
+    }
+
+    handleFailed(layer);
+
+    return true;
 }
 
 } // namespace

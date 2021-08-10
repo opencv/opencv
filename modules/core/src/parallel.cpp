@@ -56,7 +56,7 @@
     #undef abs
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __GLIBC__ \
+#if defined __unix__ || defined __APPLE__ || defined __GLIBC__ \
     || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ \
     || defined __OpenBSD__
     #include <unistd.h>
@@ -888,6 +888,7 @@ T minNonZero(const T& val_1, const T& val_2)
 static
 int getNumberOfCPUs_()
 {
+#ifndef OPENCV_SEMIHOSTING
     /*
      * Logic here is to try different methods of getting CPU counts and return
      * the minimum most value as it has high probablity of being right and safe.
@@ -979,6 +980,9 @@ int getNumberOfCPUs_()
 #endif
 
     return ncpus != 0 ? ncpus : 1;
+#else //  OPENCV_SEMIHOSTING
+    return 1;
+#endif //OPENCV_SEMIHOSTING
 }
 
 int getNumberOfCPUs()

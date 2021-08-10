@@ -35,6 +35,10 @@ cv::MediaFrame::IAdapter* cv::MediaFrame::getAdapter() const {
     return m->adapter.get();
 }
 
+void cv::MediaFrame::serialize(cv::gapi::s11n::IOStream& os) const {
+    return m->adapter->serialize(os);
+}
+
 cv::MediaFrame::View::View(Ptrs&& ptrs, Strides&& strs, Callback &&cb)
     : ptr   (std::move(ptrs))
     , stride(std::move(strs))

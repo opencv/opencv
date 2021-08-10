@@ -464,6 +464,23 @@ class Arguments(NewOpenCVTests):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpRange(not_convertible)
 
+    def test_reserved_keywords_are_transformed(self):
+        default_lambda_value = 2
+        default_from_value = 3
+        format_str = "arg={}, lambda={}, from={}"
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(20), format_str.format(20, default_lambda_value, default_from_value)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(10, lambda_=10), format_str.format(10, 10, default_from_value)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(10, from_=10), format_str.format(10, default_lambda_value, 10)
+        )
+        self.assertEqual(
+            cv.utils.testReservedKeywordConversion(20, lambda_=-4, from_=12), format_str.format(20, -4, 12)
+        )
+
 
 class SamplesFindFile(NewOpenCVTests):
 

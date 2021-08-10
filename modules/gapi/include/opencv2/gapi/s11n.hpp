@@ -13,6 +13,13 @@
 #include <opencv2/gapi/s11n/base.hpp>
 #include <opencv2/gapi/gcomputation.hpp>
 #include <opencv2/gapi/rmat.hpp>
+#include <opencv2/gapi/media.hpp>
+#include <opencv2/gapi/util/util.hpp>
+
+// FIXME: caused by deserialize_runarg
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#pragma warning(disable: 4702)
+#endif
 
 namespace cv {
 namespace gapi {
@@ -34,8 +41,8 @@ namespace detail {
     template<typename... Types>
     cv::GCompileArgs getCompileArgs(const std::vector<char> &bytes);
 
-    template<typename RMatAdapterType>
-    cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &bytes);
+    template<typename... AdapterType>
+    cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes);
 } // namespace detail
 
 /** @brief Serialize a graph represented by GComputation into an array of bytes.
@@ -133,19 +140,18 @@ type deserialize(const std::vector<char> &bytes) {
 }
 
 /**
- * @brief Deserialize GRunArgs including RMat objects if any from a byte array.
+ * @brief Deserialize GRunArgs including RMat and MediaFrame objects if any from a byte array.
  *
- * RMat adapter type is specified in the template.
- * @note To be used properly specified adapter type must overload its serialize() and
- * deserialize() methods.
+ * Adapter types are specified in the template.
+ * @note To be used properly specified adapter types must overload their deserialize() method.
  * @param bytes vector of bytes to deserialize GRunArgs object from.
- * @return GRunArgs including RMat objects if any.
- * @see RMat
+ * @return GRunArgs including RMat and MediaFrame objects if any.
+ * @see RMat MediaFrame
  */
-template<typename T, typename RMatAdapterType> inline
+template<typename T, typename AtLeastOneAdapterT, typename... AdapterTypes> inline
 typename std::enable_if<std::is_same<T, GRunArgs>::value, GRunArgs>::
 type deserialize(const std::vector<char> &bytes) {
-    return detail::getRunArgsWithRMats<RMatAdapterType>(bytes);
+    return detail::getRunArgsWithAdapters<AtLeastOneAdapterT, AdapterTypes...>(bytes);
 }
 } // namespace gapi
 } // namespace cv
@@ -399,16 +405,39 @@ static cv::util::optional<GCompileArg> exec(const std::string& tag, cv::gapi::s1
 }
 };
 
-template<typename T> struct deserialize_runarg;
+template<typename ...T>
+struct deserialize_arg_with_adapter;
 
-template<typename RMatAdapterType>
+template<typename RA, typename TA>
+struct deserialize_arg_with_adapter<RA, TA> {
+static GRunArg exec(cv::gapi::s11n::IIStream& is) {
+    std::unique_ptr<TA> ptr(new TA);
+    ptr->deserialize(is);
+    return GRunArg { RA(std::move(ptr)) };
+}
+};
+
+template<typename RA>
+struct deserialize_arg_with_adapter<RA, void> {
+static GRunArg exec(cv::gapi::s11n::IIStream&) {
+    GAPI_Assert(false && "No suitable adapter class found during RMat/MediaFrame deserialization. "
+                         "Please, make sure you've passed them in cv::gapi::deserialize() template");
+    return GRunArg{};
+}
+};
+
+template<typename... Types>
 struct deserialize_runarg {
 static GRunArg exec(cv::gapi::s11n::IIStream& is, uint32_t idx) {
     if (idx == GRunArg::index_of<RMat>()) {
-        auto ptr = std::make_shared<RMatAdapterType>();
-        ptr->deserialize(is);
-        return GRunArg { RMat(std::move(ptr)) };
-    } else { // non-RMat arg - use default deserialization
+        // Type or void (if not found)
+        using TA = typename cv::util::find_adapter_impl<RMat::Adapter, Types...>::type;
+        return deserialize_arg_with_adapter<RMat, TA>::exec(is);
+    } else if (idx == GRunArg::index_of<MediaFrame>()) {
+        // Type or void (if not found)
+        using TA = typename cv::util::find_adapter_impl<MediaFrame::IAdapter, Types...>::type;
+        return deserialize_arg_with_adapter<MediaFrame, TA>::exec(is);
+    } else { // not an adapter holding type runarg - use default deserialization
         GRunArg arg;
         getRunArgByIdx(is, arg, idx);
         return arg;
@@ -451,8 +480,8 @@ cv::GCompileArgs getCompileArgs(const std::vector<char> &sArgs) {
     return args;
 }
 
-template<typename RMatAdapterType>
-cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &bytes) {
+template<typename... AdapterTypes>
+cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes) {
     std::unique_ptr<cv::gapi::s11n::IIStream> pIs = cv::gapi::s11n::detail::getInStream(bytes);
     cv::gapi::s11n::IIStream& is = *pIs;
     cv::GRunArgs args;
@@ -462,7 +491,7 @@ cv::GRunArgs getRunArgsWithRMats(const std::vector<char> &bytes) {
     for (uint32_t i = 0; i < sz; ++i) {
         uint32_t idx = 0;
         is >> idx;
-        args.push_back(cv::gapi::detail::deserialize_runarg<RMatAdapterType>::exec(is, idx));
+        args.push_back(cv::gapi::detail::deserialize_runarg<AdapterTypes...>::exec(is, idx));
     }
 
     return args;

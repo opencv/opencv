@@ -91,8 +91,8 @@ a new header with the new boundaries:
 Mat D (A, Rect(10, 10, 100, 100) ); // using a rectangle
 Mat E = A(Range::all(), Range(1,3)); // using row and column boundaries
 @endcode
-Now you may ask -- if the matrix itself may belong to multiple *Mat* objects who takes responsibility
-for cleaning it up when it's no longer needed. The short answer is: the last object that used it.
+Now you may ask -- if the matrix itself may belong to multiple *Mat* objects, who takes responsibility
+for cleaning it up when it's no longer needed? The short answer is: the last object that used it.
 This is handled by using a reference counting mechanism. Whenever somebody copies a header of a
 *Mat* object, a counter is increased for the matrix. Whenever a header is cleaned, this counter
 is decreased. When the counter reaches zero the matrix is freed. Sometimes you will want to copy
@@ -102,12 +102,12 @@ Mat F = A.clone();
 Mat G;
 A.copyTo(G);
 @endcode
-Now modifying *F* or *G* will not affect the matrix pointed by the *A*'s header. What you need to
+Now modifying *F* or *G* will not affect the matrix pointed to by the *A*'s header. What you need to
 remember from all this is that:
 
 -   Output image allocation for OpenCV functions is automatic (unless specified otherwise).
 -   You do not need to think about memory management with OpenCV's C++ interface.
--   The assignment operator and the copy constructor only copies the header.
+-   The assignment operator and the copy constructor only copy the header.
 -   The underlying matrix of an image may be copied using the @ref cv::Mat::clone() and @ref cv::Mat::copyTo()
     functions.
 
@@ -122,10 +122,10 @@ of these allows us to create many shades of gray.
 For *colorful* ways we have a lot more methods to choose from. Each of them breaks it down to three
 or four basic components and we can use the combination of these to create the others. The most
 popular one is RGB, mainly because this is also how our eye builds up colors. Its base colors are
-red, green and blue. To code the transparency of a color sometimes a fourth element: alpha (A) is
+red, green and blue. To code the transparency of a color sometimes a fourth element, alpha (A), is
 added.
 
-There are, however, many other color systems each with their own advantages:
+There are, however, many other color systems, each with their own advantages:
 
 -   RGB is the most common as our eyes use something similar, however keep in mind that OpenCV standard display
     system composes colors using the BGR color space (red and blue channels are swapped places).
@@ -139,11 +139,11 @@ There are, however, many other color systems each with their own advantages:
 Each of the building components has its own valid domains. This leads to the data type used. How
 we store a component defines the control we have over its domain. The smallest data type possible is
 *char*, which means one byte or 8 bits. This may be unsigned (so can store values from 0 to 255) or
-signed (values from -127 to +127). Although in case of three components this already gives 16
-million possible colors to represent (like in case of RGB) we may acquire an even finer control by
+signed (values from -127 to +127). Although this width, in the case of three components (like RGB), already gives 16
+million possible colors to represent, we may acquire an even finer control by
 using the float (4 byte = 32 bit) or double (8 byte = 64 bit) data types for each component.
 Nevertheless, remember that increasing the size of a component also increases the size of the whole
-picture in the memory.
+picture in memory.
 
 Creating a Mat object explicitly
 ----------------------------------

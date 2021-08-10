@@ -1481,8 +1481,8 @@ function(ocv_target_link_libraries target)
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
-        set(LINK_MODE "${dep}")
       endif()
+      set(LINK_MODE "${dep}")
     else()
       if(BUILD_opencv_world)
         if(OPENCV_MODULE_${dep}_IS_PART_OF_WORLD)
@@ -1978,4 +1978,4 @@ endif()
 #
 # Include configuration override settings
 #
-include(cmake/vars/EnableModeVars.cmake)
+include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")
