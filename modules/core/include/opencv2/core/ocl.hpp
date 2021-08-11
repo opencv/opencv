@@ -235,7 +235,11 @@ public:
 
     /**
      * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
-     */
+     *
+     * @note Ownership of the passed device is passed to OpenCV on success.
+     * The caller should additionally call `clRetainDevice` on it if it intends
+     * to continue using the device.
+      */
     static Device fromHandle(void* d);
 
     struct Impl;
