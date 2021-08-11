@@ -202,8 +202,15 @@ if __name__ == '__main__':
     img_names = [cv.samples.findFile(img_name) for img_name in img_names]
 
     stitcher = Stitcher(img_names, **args_dict)
-    stitcher.stitch()
+    panorama = stitcher.stitch()
 
-    cv.imshow(args.output, stitcher.dst)
+    cv.imwrite(args.output, panorama)
+
+    zoom_x = 600.0 / panorama.shape[1]
+    dst = cv.normalize(src=panorama, dst=None, alpha=255.,
+                       norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+    dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
+
+    cv.imshow(args.output, dst)
     cv.waitKey()
     cv.destroyAllWindows()

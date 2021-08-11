@@ -53,10 +53,10 @@ class TestStitcher(unittest.TestCase):
     def test_stitcher_aquaduct(self):
         #self.settings["timelapse"] = "as_is"
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **self.settings)
-        stitcher.stitch()
+        result = stitcher.stitch()
 
         max_image_shape_derivation = 3
-        np.testing.assert_allclose(stitcher.result.shape[:2],
+        np.testing.assert_allclose(result.shape[:2],
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
 
@@ -71,10 +71,10 @@ class TestStitcher(unittest.TestCase):
         stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
                               "boat3.jpg", "boat4.jpg",
                               "boat1.jpg", "boat6.jpg"], **self.settings)
-        stitcher.stitch()
+        result = stitcher.stitch()
 
         max_image_shape_derivation = 600
-        np.testing.assert_allclose(stitcher.result.shape[:2],
+        np.testing.assert_allclose(result.shape[:2],
                                     (14488,  7556),
                                     atol=max_image_shape_derivation)
 
@@ -89,10 +89,10 @@ class TestStitcher(unittest.TestCase):
         stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
                               "boat3.jpg", "boat4.jpg",
                               "boat1.jpg", "boat6.jpg"], **self.settings)
-        stitcher.stitch()
+        result = stitcher.stitch()
 
         max_image_shape_derivation = 600
-        np.testing.assert_allclose(stitcher.result.shape[:2],
+        np.testing.assert_allclose(result.shape[:2],
                                     (7400, 12340),
                                     atol=max_image_shape_derivation)
 
@@ -106,10 +106,10 @@ class TestStitcher(unittest.TestCase):
         stitcher = Stitcher(["budapest1.jpg", "budapest2.jpg",
                              "budapest3.jpg", "budapest4.jpg",
                              "budapest5.jpg", "budapest6.jpg"], **self.settings)
-        stitcher.stitch()
+        result = stitcher.stitch()
 
         max_image_shape_derivation = 30
-        np.testing.assert_allclose(stitcher.result.shape[:2],
+        np.testing.assert_allclose(result.shape[:2],
                                    (1155, 2310),
                                    atol=max_image_shape_derivation)
 
