@@ -112,12 +112,6 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS void enableModelDiagnostics(bool isDiagnosticsMode);
 
-    /**
-     * @brief Skip model import after diagnostic run in readNet() functions.
-     * @param[in] skip Indicates whether to skip the import.
-     */
-    CV_EXPORTS void skipModelImport(bool skip);
-
     /** @brief This class provides all data needed to initialize layer.
      *
      * It includes dictionary with scalar params (which can be read by using Dict interface),

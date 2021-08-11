@@ -94,57 +94,6 @@ static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
 static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
 
-bool DNN_DIAGNOSTICS_RUN = false;
-bool DNN_SKIP_REAL_IMPORT = false;
-
-void enableModelDiagnostics(bool isDiagnosticsMode)
-{
-    DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
-
-    if (DNN_DIAGNOSTICS_RUN)
-    {
-        detail::NotImplemented::Register();
-    }
-    else
-    {
-        detail::NotImplemented::unRegister();
-    }
-}
-
-void skipModelImport(bool skip)
-{
-    DNN_SKIP_REAL_IMPORT = skip;
-}
-
-bool detail::LayerHandler::addMissing(const std::string& name, const std::string& type)
-{
-    cv::AutoLock lock(getLayerFactoryMutex());
-    auto& registeredLayers = getLayerFactoryImpl();
-
-    // If we didn't add it, but can create it, it's custom and not missing.
-    if (layers.find(type) == layers.end() && registeredLayers.find(type) != registeredLayers.end())
-    {
-        return false;
-    }
-
-    if (layers.insert(type).second)
-    {
-        CV_LOG_ERROR(NULL, "DNN: Node='" << name << "' of type='"<< type << "' is not supported.");
-    }
-
-    return true;
-}
-
-LayerParams detail::LayerHandler::getNotImplementedParams(const std::string& name, const std::string& op)
-{
-    LayerParams lp;
-    lp.name = name;
-    lp.type = "NotImplemented";
-    lp.set("type", op);
-
-    return lp;
-}
-
 using std::vector;
 using std::map;
 using std::make_pair;
