@@ -22,8 +22,7 @@ class Subsetter:
                pairwise_matches):
 
         indices = self.get_indices_to_keep(features, pairwise_matches)
-        indices_to_delete = self.get_indices_to_delete(len(features),
-                                                       indices)
+        indices_to_delete = self.get_indices_to_delete(len(features), indices)
 
         feature_subset = Subsetter.subset_list(features, indices)
 
@@ -32,20 +31,15 @@ class Subsetter:
                                                         indices_to_delete)
         matches_subset = Subsetter.__matrix_rows_to_list(matches_matrix_subset)
 
-        if self.save_file:
-            with open(self.save_file, 'w') as filehandler:
-                filehandler.write(self.get_matches_graph_dot_file(
-                    img_names,
-                    pairwise_matches
-                    ))
-
+        self.save_matches_graph_dot_file(img_names, pairwise_matches)
         return indices, feature_subset, matches_subset
 
     def get_indices_to_keep(self, features, pairwise_matches):
         indices = cv.detail.leaveBiggestComponent(features,
                                                   pairwise_matches,
                                                   self.confidence_threshold)
-        return [int(idx) for idx in list(indices[:, 0])]
+        numpy_column_to_list = [int(idx) for idx in list(indices[:, 0])]
+        return numpy_column_to_list
 
     def get_indices_to_delete(self, list_lenght, indices_to_keep):
         return list(set(range(list_lenght)) - set(indices_to_keep))
@@ -64,13 +58,6 @@ class Subsetter:
 
         return matrix_to_subset
 
-    def get_matches_graph_dot_file(self, img_names, pairwise_matches):
-        return cv.detail.matchesGraphAsString(
-            img_names,
-            pairwise_matches,
-            self.confidence_threshold
-            )
-
     def __delete_index_from_matrix(matrix, idx):
         mask = np.ones(matrix.shape[0], bool)
         mask[idx] = 0
@@ -78,3 +65,18 @@ class Subsetter:
 
     def __matrix_rows_to_list(matrix):
         return list(chain.from_iterable(matrix.tolist()))
+
+    def save_matches_graph_dot_file(self, img_names, pairwise_matches):
+        if self.save_file:
+            with open(self.save_file, 'w') as filehandler:
+                filehandler.write(self.get_matches_graph_dot_file(
+                    img_names,
+                    pairwise_matches
+                    ))
+
+    def get_matches_graph_dot_file(self, img_names, pairwise_matches):
+        return cv.detail.matchesGraphAsString(
+            img_names,
+            pairwise_matches,
+            self.confidence_threshold
+            )
