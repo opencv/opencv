@@ -254,7 +254,7 @@ class TestStitcher(unittest.TestCase):
     def test_composition(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
         ir = ImageRegistration()
-        indices, cameras = ir.register(["s1.jpg", "s2.jpg"], [img1, img2])
+        indices, cameras, scale = ir.register(["s1.jpg", "s2.jpg"], [img1, img2])
 
 
 

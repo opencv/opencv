@@ -1,3 +1,5 @@
+import statistics
+
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
 from stitching_detailed.subsetter import Subsetter
@@ -31,7 +33,8 @@ class ImageRegistration:
         cameras = self.estimate_camera_parameters(features, matches)
         cameras = self.adjust_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
-        return indices, cameras
+        scale = self.estimate_scale(cameras)
+        return indices, cameras, scale
 
     def find_features(self, images):
         return [self.finder.detect_features(img) for img in images]
@@ -50,3 +53,7 @@ class ImageRegistration:
 
     def perform_wave_correction(self, cameras):
         return self.wave_corrector.correct(cameras)
+
+    def estimate_scale(self, cameras):
+        focals = [cam.focal for cam in cameras]
+        return statistics.median(focals)

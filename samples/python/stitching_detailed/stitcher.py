@@ -30,9 +30,9 @@ class Stitcher:
         args = self.args
         img_names = self.img_names
 
-        work_imgs = []
-        images = []
         full_img_sizes = []
+        work_imgs = []
+        seam_imgs = []
         compose_imgs = []
 
         work_megapix_scaler = ImageToMegapixScaler(args.work_megapix)
@@ -43,8 +43,15 @@ class Stitcher:
             full_img = read_image(img)
             full_img_sizes.append((full_img.shape[1], full_img.shape[0]))
             work_imgs.append(work_megapix_scaler.set_scale_and_downscale(full_img))
+            seam_imgs.append(seam_megapix_scaler.set_scale_and_downscale(full_img))
             compose_imgs.append(compose_megapix_scaler.set_scale_and_downscale(full_img))
-            images.append(seam_megapix_scaler.set_scale_and_downscale(full_img))
+
+        seam_work_aspect = (seam_megapix_scaler.scale /
+                            work_megapix_scaler.scale)
+
+        compose_work_aspect = (compose_megapix_scaler.scale /
+                               work_megapix_scaler.scale)
+
 
 # =============================================================================
 # REGISTRATION PART
@@ -52,19 +59,14 @@ class Stitcher:
 
 
         image_registration = get_image_registration_object(args)
-        indices, cameras = image_registration.register(img_names, work_imgs)
-        seam_work_aspect = (seam_megapix_scaler.scale /
-                            work_megapix_scaler.scale)
+        indices, cameras, scale = image_registration.register(img_names,
+                                                              work_imgs)
 
         img_names = Subsetter.subset_list(img_names, indices)
-        images = Subsetter.subset_list(images, indices)
+        seam_imgs = Subsetter.subset_list(seam_imgs, indices)
+        compose_imgs = Subsetter.subset_list(compose_imgs, indices)
         full_img_sizes = Subsetter.subset_list(full_img_sizes, indices)
 
-
-        import statistics
-        focals = [cam.focal for cam in cameras]
-        focals.sort()
-        warped_image_scale = statistics.median(focals)
 
 # =============================================================================
 # COMPOSITION PART
@@ -75,8 +77,8 @@ class Stitcher:
         warp_type = args.warp
         result_name = args.output
 
-        image_composition.warper.set_scale(warp_type, warped_image_scale * seam_work_aspect)
-        images_warped, masks_warped, corners = image_composition.warp_images(images,
+        image_composition.warper.set_scale(warp_type, scale * seam_work_aspect)
+        images_warped, masks_warped, corners = image_composition.warp_images(seam_imgs,
                                                                              cameras,
                                                                              seam_work_aspect)
 
@@ -85,10 +87,8 @@ class Stitcher:
 
         corners = []
         sizes = []
-        img = compose_imgs[0]
-        compose_work_aspect = compose_megapix_scaler.scale / work_megapix_scaler.scale
-        warped_image_scale *= compose_work_aspect
-        image_composition.warper.set_scale(warp_type, warped_image_scale)
+        scale *= compose_work_aspect
+        image_composition.warper.set_scale(warp_type, scale)
         warper = image_composition.warper.warper
         for i in range(0, len(img_names)):
             cameras[i].focal *= compose_work_aspect
