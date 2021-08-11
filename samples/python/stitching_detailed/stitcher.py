@@ -77,26 +77,16 @@ class Stitcher:
         warp_type = args.warp
         result_name = args.output
 
-        image_composition.warper.set_scale(warp_type, panorama_scale * seam_work_aspect)
         images_warped, masks_warped, corners = image_composition.warp_images(seam_imgs,
                                                                              cameras,
+                                                                             panorama_scale,
                                                                              seam_work_aspect)
 
         seam_masks = image_composition.find_seam_masks(images_warped, masks_warped, corners)
         image_composition.estimate_exposure_errors(images_warped, masks_warped, corners)
 
-        corners = []
-        sizes = []
-        panorama_scale *= compose_work_aspect
-        image_composition.warper.set_scale(warp_type, panorama_scale)
-        for i in range(0, len(img_names)):
-            sz = (int(round(full_img_sizes[i][0] * compose_megapix_scaler.scale)),
-                  int(round(full_img_sizes[i][1] * compose_megapix_scaler.scale)))
-            roi = image_composition.warper.warp_roi(*sz, cameras[i], compose_work_aspect)
-            corners.append(roi[0:2])
-            sizes.append(roi[2:4])
-
-        images_warped, masks_warped, corners = image_composition.warp_images(compose_imgs,cameras,compose_work_aspect)
+        images_warped, masks_warped, corners = image_composition.warp_images(compose_imgs,cameras,panorama_scale,compose_work_aspect)
+        corners, sizes = image_composition.warp_rois(cameras, full_img_sizes, compose_megapix_scaler.scale, compose_work_aspect)
         images_warped = image_composition.compensate_exposure_errors(images_warped, masks_warped, corners)
         seam_masks = image_composition.resize_seam_masks_to_original_resolution(seam_masks, masks_warped)
         if image_composition.timelapser.do_timelapse:

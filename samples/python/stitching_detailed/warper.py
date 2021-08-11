@@ -16,10 +16,11 @@ class Warper:
     DEFAULT_WARP_TYPE = 'spherical'
 
     def __init__(self, warper_type=DEFAULT_WARP_TYPE, scale=1):
+        self.warper_type = warper_type
         self.warper = cv.PyRotationWarper(warper_type, scale)
 
-    def set_scale(self, warper_type, scale):
-        self.warper = cv.PyRotationWarper(warper_type, scale)
+    def set_scale(self, scale):
+        self.warper = cv.PyRotationWarper(self.warper_type, scale)
 
     def warp_image(self, image, camera, aspect=1, mask=False):
         if mask:
@@ -36,10 +37,10 @@ class Warper:
                                                 border_mode)
         return corner, warped_image
 
-    def warp_roi(self, height, width, camera, aspect=1):
-        img_size = (height, width)
+    def warp_roi(self, width, height, camera, aspect=1):
+        roi = (width, height)
         K = Warper.get_K(camera, aspect)
-        return self.warper.warpRoi(img_size, K, camera.R)
+        return self.warper.warpRoi(roi, K, camera.R)
 
     def get_K(camera, aspect=1):
         K = camera.K().astype(np.float32)

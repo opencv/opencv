@@ -36,10 +36,11 @@ class ImageComposition:
         final_pano = self.blend_images(imgs, corners, sizes, seam_masks)
         return final_pano
 
-    def warp_images(self, imgs, cameras, aspect=1):
+    def warp_images(self, imgs, cameras, scale=1, aspect=1):
         imgs_warped = []
         masks_warped = []
         corners = []
+        self.warper.set_scale(scale*aspect)
         for img, camera in zip(imgs, cameras):
             corner, img_warped = self.warper.warp_image(img, camera, aspect)
             imgs_warped.append(img_warped)
@@ -76,3 +77,14 @@ class ImageComposition:
         for img, corner, seam_mask in zip(imgs, corners, seam_masks):
             self.blender.feed(img, seam_mask, corner)
         return self.blender.blend()
+
+    def warp_rois(self, cameras, full_img_sizes, compose_scale, compose_work_aspect):
+        corners = []
+        sizes = []
+        for size, camera in zip(full_img_sizes, cameras):
+            sz = (int(round(size[0] * compose_scale)),
+                  int(round(size[1] * compose_scale)))
+            roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
+            corners.append(roi[0:2])
+            sizes.append(roi[2:4])
+        return corners, sizes
