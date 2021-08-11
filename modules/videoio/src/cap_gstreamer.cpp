@@ -516,6 +516,15 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
             src.copyTo(dst);
             return true;
         }
+        else if (format == "BGRA" || format == "RGBA" || format == "BGRX" || format == "RGBX")
+        {
+            CV_CheckEQ((int)n_planes, 1, "");
+            size_t step = GST_VIDEO_INFO_PLANE_STRIDE(&info, 0);
+            CV_CheckGE(step, (size_t)frame_width, "");
+            Mat src(sz, CV_8UC4, map_info.data + GST_VIDEO_INFO_PLANE_OFFSET(&info, 0), step);
+            src.copyTo(dst);
+            return true;
+        }
         else if (format == "UYVY" || format == "YUY2" || format == "YVYU")
         {
             CV_CheckEQ((int)n_planes, 1, "");
@@ -1008,7 +1017,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
 
-    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8, GRAY16_LE, GRAY16_BE}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, BGRA, RGBA, BGRx, RGBx, GRAY8, GRAY16_LE, GRAY16_BE}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
 
     if (manualpipeline)
     {

@@ -62,6 +62,10 @@ TEST_P(videoio_gstreamer, read_check)
 
 static const Param test_data[] = {
     make_tuple("video/x-raw, format=BGR"  , Size(640, 480), Size(640, 480), COLOR_BGR2RGB),
+    make_tuple("video/x-raw, format=BGRA" , Size(640, 480), Size(640, 480), COLOR_BGRA2RGB),
+    make_tuple("video/x-raw, format=RGBA" , Size(640, 480), Size(640, 480), COLOR_RGBA2RGB),
+    make_tuple("video/x-raw, format=BGRx" , Size(640, 480), Size(640, 480), COLOR_BGRA2RGB),
+    make_tuple("video/x-raw, format=RGBx" , Size(640, 480), Size(640, 480), COLOR_RGBA2RGB),
     make_tuple("video/x-raw, format=GRAY8", Size(640, 480), Size(640, 480), COLOR_GRAY2RGB),
     make_tuple("video/x-raw, format=UYVY" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_UYVY),
     make_tuple("video/x-raw, format=YUY2" , Size(640, 480), Size(640, 480), COLOR_YUV2RGB_YUY2),
