@@ -107,7 +107,7 @@ class TestStitcher(unittest.TestCase):
                              "budapest5.jpg", "budapest6.jpg"], **self.settings)
         stitcher.stitch()
 
-        max_image_shape_derivation = 20
+        max_image_shape_derivation = 30
         np.testing.assert_allclose(stitcher.result.shape[:2],
                                    (1155, 2310),
                                    atol=max_image_shape_derivation)

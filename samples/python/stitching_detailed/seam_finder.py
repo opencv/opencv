@@ -20,3 +20,10 @@ class SeamFinder:
         """https://docs.opencv.org/master/d0/dd5/classcv_1_1detail_1_1DpSeamFinder.html#a7914624907986f7a94dd424209a8a609"""  # noqa
         imgs_float = [img.astype(np.float32) for img in imgs]
         return self.finder.find(imgs_float, corners, masks)
+
+    def resize(seam_mask, mask):
+        dilated_mask = cv.dilate(seam_mask, None)
+        resized_seam_mask = cv.resize(dilated_mask, (mask.shape[1],
+                                                     mask.shape[0]),
+                                      0, 0, cv.INTER_LINEAR_EXACT)
+        return cv.bitwise_and(resized_seam_mask, mask)

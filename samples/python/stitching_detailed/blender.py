@@ -35,9 +35,9 @@ class Blender:
 
         self.blender.prepare(dst_sz)
 
-    def feed(self, *args):
+    def feed(self, img, seam_mask, corner):
         """https://docs.opencv.org/master/d6/d4a/classcv_1_1detail_1_1Blender.html#a64837308bcf4e414a6219beff6cbe37a"""  # noqa
-        self.blender.feed(*args)
+        self.blender.feed(cv.UMat(img.astype(np.int16)), seam_mask, corner)
 
     def blend(self):
         """https://docs.opencv.org/master/d6/d4a/classcv_1_1detail_1_1Blender.html#aa0a91ce0d6046d3a63e0123cbb1b5c00"""  # noqa

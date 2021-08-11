@@ -64,7 +64,7 @@ class ImageComposition:
                 in enumerate(zip(imgs, masks, corners))]
 
     def resize_seam_masks_to_original_resolution(self, seam_masks, masks):
-        return [self.seam_finder.resize(seam_mask, mask)
+        return [SeamFinder.resize(seam_mask, mask)
                 for seam_mask, mask in zip(seam_masks, masks)]
 
     def create_timelapse(self, img_names, imgs, corners):

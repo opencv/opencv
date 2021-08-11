@@ -34,6 +34,7 @@ class Timelapser:
 
     def process_frame(self, img, corner):
         mask = np.ones((img.shape[0], img.shape[1]), np.uint8)
+        img = img.astype(np.int16)
         self.timelapser.process(img, mask, corner)
 
     def get_frame(self):
