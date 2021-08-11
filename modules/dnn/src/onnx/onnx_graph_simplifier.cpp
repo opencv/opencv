@@ -572,7 +572,8 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
 Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
-        tensor_proto.double_data().empty() && tensor_proto.int64_data().empty())
+        tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&
+        tensor_proto.int32_data().empty())
         return Mat();
 
     opencv_onnx::TensorProto_DataType datatype = tensor_proto.data_type();
@@ -639,6 +640,24 @@ Mat getMatFromTensor(opencv_onnx::TensorProto& tensor_proto)
 #endif
             const int64_t* src = reinterpret_cast<const int64_t*>(val);
             convertInt64ToInt32(src, dst, blob.total());
+        }
+    }
+    else if (datatype == opencv_onnx::TensorProto_DataType_INT8 ||
+             datatype == opencv_onnx::TensorProto_DataType_UINT8)
+    {
+        // TODO : Add support for uint8 weights and acitvations. For now, converting uint8 tensors to int8.
+        int offset = datatype == opencv_onnx::TensorProto_DataType_INT8 ? 0 : -128;
+        int depth = datatype == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S : CV_8U;
+
+        if (!tensor_proto.int32_data().empty())
+        {
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+            Mat(sizes, CV_32SC1, (void*)field.data()).convertTo(blob, CV_8S, 1.0, offset);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+            Mat(sizes, depth, val).convertTo(blob, CV_8S, 1.0, offset);
         }
     }
     else
