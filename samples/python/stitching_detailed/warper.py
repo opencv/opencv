@@ -36,6 +36,11 @@ class Warper:
                                                 border_mode)
         return corner, warped_image
 
+    def warp_roi(self, height, width, camera, aspect=1):
+        img_size = (height, width)
+        K = Warper.get_K(camera, aspect)
+        return self.warper.warpRoi(img_size, K, camera.R)
+
     def get_K(camera, aspect=1):
         K = camera.K().astype(np.float32)
         """ Modification of intrinsic parameters needed if cameras were

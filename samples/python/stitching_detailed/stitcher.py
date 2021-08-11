@@ -59,7 +59,7 @@ class Stitcher:
 
 
         image_registration = get_image_registration_object(args)
-        indices, cameras, scale = image_registration.register(img_names,
+        indices, cameras, panorama_scale = image_registration.register(img_names,
                                                               work_imgs)
 
         img_names = Subsetter.subset_list(img_names, indices)
@@ -77,7 +77,7 @@ class Stitcher:
         warp_type = args.warp
         result_name = args.output
 
-        image_composition.warper.set_scale(warp_type, scale * seam_work_aspect)
+        image_composition.warper.set_scale(warp_type, panorama_scale * seam_work_aspect)
         images_warped, masks_warped, corners = image_composition.warp_images(seam_imgs,
                                                                              cameras,
                                                                              seam_work_aspect)
@@ -87,13 +87,12 @@ class Stitcher:
 
         corners = []
         sizes = []
-        scale *= compose_work_aspect
-        image_composition.warper.set_scale(warp_type, scale)
-        warper = image_composition.warper.warper
+        panorama_scale *= compose_work_aspect
+        image_composition.warper.set_scale(warp_type, panorama_scale)
         for i in range(0, len(img_names)):
             sz = (int(round(full_img_sizes[i][0] * compose_megapix_scaler.scale)),
                   int(round(full_img_sizes[i][1] * compose_megapix_scaler.scale)))
-            roi = warper.warpRoi(sz, Warper.get_K(cameras[i], compose_work_aspect), cameras[i].R)
+            roi = image_composition.warper.warp_roi(*sz, cameras[i], compose_work_aspect)
             corners.append(roi[0:2])
             sizes.append(roi[2:4])
 
