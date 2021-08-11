@@ -91,17 +91,13 @@ class Stitcher:
         image_composition.warper.set_scale(warp_type, scale)
         warper = image_composition.warper.warper
         for i in range(0, len(img_names)):
-            cameras[i].focal *= compose_work_aspect
-            cameras[i].ppx *= compose_work_aspect
-            cameras[i].ppy *= compose_work_aspect
             sz = (int(round(full_img_sizes[i][0] * compose_megapix_scaler.scale)),
                   int(round(full_img_sizes[i][1] * compose_megapix_scaler.scale)))
-            K = cameras[i].K().astype(np.float32)
-            roi = warper.warpRoi(sz, K, cameras[i].R)
+            roi = warper.warpRoi(sz, Warper.get_K(cameras[i], compose_work_aspect), cameras[i].R)
             corners.append(roi[0:2])
             sizes.append(roi[2:4])
 
-        images_warped, masks_warped, corners = image_composition.warp_images(compose_imgs,cameras)
+        images_warped, masks_warped, corners = image_composition.warp_images(compose_imgs,cameras,compose_work_aspect)
         images_warped = image_composition.compensate_exposure_errors(images_warped, masks_warped, corners)
         seam_masks = image_composition.resize_seam_masks_to_original_resolution(seam_masks, masks_warped)
         if image_composition.timelapser.do_timelapse:

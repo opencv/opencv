@@ -17,6 +17,7 @@ from stitching_detailed.camera_estimator import CameraEstimator
 from stitching_detailed.camera_adjuster import CameraAdjuster
 from stitching_detailed.camera_wave_corrector import WaveCorrector
 from stitching_detailed.image_registration import ImageRegistration
+from stitching_detailed.warper import Warper
 # %%
 
 # Eine Klasse erstellen, die von unittest.TestCase erbt
@@ -164,7 +165,7 @@ class TestStitcher(unittest.TestCase):
             np.array([[False,  True], [True, False]])
             ))
 
-    def test_equality_of_focals(self):
+    def test_cameras_for_refactoring(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
         detector = FeatureDetector("orb")
         features = [detector.detect_features(img1),
@@ -182,6 +183,17 @@ class TestStitcher(unittest.TestCase):
 
         self.assertEqual(cameras_adjusted[0].focal,
                          cameras_wave_corrected[0].focal)
+
+        # it doesn't matter if the cameras are modified and K() is called
+        # or if K() is called and modified
+        camera = cameras_wave_corrected[0]
+        k1 = Warper.get_K(camera, 0.5)
+        camera.focal *= 0.5
+        camera.ppx *= 0.5
+        camera.ppy *= 0.5
+        k2 = camera.K().astype(np.float32)
+        self.assertTrue(np.array_equal(k1, k2))
+
 
     def test_subsetting(self):
         img1, img2 = cv.imread("s1.jpg"), cv.imread("s2.jpg")
