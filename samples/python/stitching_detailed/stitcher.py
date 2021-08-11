@@ -73,30 +73,19 @@ class Stitcher:
 # =============================================================================
 
         image_composition = get_image_composition_object(args)
-
-        warp_type = args.warp
-        result_name = args.output
-
-        images_warped, masks_warped, corners = image_composition.warp_images(seam_imgs,
-                                                                             cameras,
-                                                                             panorama_scale,
-                                                                             seam_work_aspect)
-
-        seam_masks = image_composition.find_seam_masks(images_warped, masks_warped, corners)
-        image_composition.estimate_exposure_errors(images_warped, masks_warped, corners)
-
-        images_warped, masks_warped, corners = image_composition.warp_images(compose_imgs,cameras,panorama_scale,compose_work_aspect)
-        corners, sizes = image_composition.warp_rois(cameras, full_img_sizes, compose_megapix_scaler.scale, compose_work_aspect)
-        images_warped = image_composition.compensate_exposure_errors(images_warped, masks_warped, corners)
-        seam_masks = image_composition.resize_seam_masks_to_original_resolution(seam_masks, masks_warped)
-        if image_composition.timelapser.do_timelapse:
-            image_composition.create_timelapse(img_names, images_warped, corners)
-        if not image_composition.timelapser.do_timelapse:
-            self.result = image_composition.blend_images(images_warped, corners, sizes, seam_masks)
-            cv.imwrite(result_name, self.result)
-            zoom_x = 600.0 / self.result.shape[1]
-            dst = cv.normalize(src=self.result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-            self.dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
+        self.result = image_composition.compose(img_names,
+                                                full_img_sizes,
+                                                compose_imgs,
+                                                seam_imgs,
+                                                cameras,
+                                                panorama_scale,
+                                                compose_megapix_scaler.scale,
+                                                compose_work_aspect,
+                                                seam_work_aspect)
+        cv.imwrite(args.output, self.result)
+        zoom_x = 600.0 / self.result.shape[1]
+        dst = cv.normalize(src=self.result, dst=None, alpha=255., norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+        self.dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
 
         print("Done")
 
