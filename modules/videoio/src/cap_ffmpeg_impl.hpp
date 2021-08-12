@@ -186,8 +186,8 @@ extern "C" {
 #endif
 
 #if USE_AV_INTERRUPT_CALLBACK
-#define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
-#define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS 30000
 
 #ifdef _WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
@@ -534,6 +534,8 @@ struct CvCapture_FFMPEG
     AVDictionary *dict;
 #endif
 #if USE_AV_INTERRUPT_CALLBACK
+    int open_timeout_ms;
+    int read_timeout_ms;
     AVInterruptCallbackMetadata interrupt_metadata;
 #endif
 
@@ -567,6 +569,11 @@ void CvCapture_FFMPEG::init()
     avcodec = 0;
     frame_number = 0;
     eps_zero = 0.000025;
+
+#if USE_AV_INTERRUPT_CALLBACK
+    open_timeout_ms = LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS;
+    read_timeout_ms = LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS;
+#endif
 
     rotation_angle = 0;
 
@@ -923,7 +930,7 @@ bool CvCapture_FFMPEG::open( const char* _filename )
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = open_timeout_ms;
     get_monotonic_time(&interrupt_metadata.value);
 
     ic = avformat_alloc_context();
@@ -1227,7 +1234,7 @@ bool CvCapture_FFMPEG::grabFrame()
 #if USE_AV_INTERRUPT_CALLBACK
     // activate interrupt callback
     get_monotonic_time(&interrupt_metadata.value);
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = read_timeout_ms;
 #endif
 
     // get the next frame
@@ -1483,6 +1490,12 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 #else
         return 0;
 #endif
+#if USE_AV_INTERRUPT_CALLBACK
+    case CV_FFMPEG_CAP_PROP_OPEN_TIMEOUT_MSEC:
+        return static_cast<double>(open_timeout_ms);
+    case CV_FFMPEG_CAP_PROP_READ_TIMEOUT_MSEC:
+        return static_cast<double>(read_timeout_ms);
+#endif // USE_AV_INTERRUPT_CALLBACK
     default:
         break;
     }
@@ -1677,6 +1690,14 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         return false;
 #endif
         break;
+#if USE_AV_INTERRUPT_CALLBACK
+    case CV_FFMPEG_CAP_PROP_OPEN_TIMEOUT_MSEC:
+        open_timeout_ms = (int)value;
+        break;
+    case CV_FFMPEG_CAP_PROP_READ_TIMEOUT_MSEC:
+        read_timeout_ms = (int)value;
+        break;
+#endif  // USE_AV_INTERRUPT_CALLBACK
     default:
         return false;
     }
@@ -3114,7 +3135,7 @@ bool InputMediaStream_FFMPEG::open(const char* fileName, int* codec, int* chroma
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS;
     get_monotonic_time(&interrupt_metadata.value);
 
     ctx_ = avformat_alloc_context();
@@ -3241,7 +3262,7 @@ bool InputMediaStream_FFMPEG::read(unsigned char** data, int* size, int* endOfFi
 #if USE_AV_INTERRUPT_CALLBACK
     // activate interrupt callback
     get_monotonic_time(&interrupt_metadata.value);
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS;
 #endif
 
     // free last packet if exist
