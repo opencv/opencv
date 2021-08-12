@@ -32,3 +32,7 @@ if(WITH_PLAIDML)
       set(HAVE_PLAIDML TRUE)
   endif()
 endif()
+
+if(NOT TARGET VPL::dispatcher)
+  include("${CMAKE_CURRENT_LIST_DIR}/detectOneVPL.cmake")
+endif()
