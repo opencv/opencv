@@ -462,7 +462,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+    GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
 
     // 2. Direct metadata version
     /**

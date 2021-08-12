@@ -39,6 +39,14 @@ public:
     GAPI_WRAP cv::GArray<cv::GMat> at(const std::string& name);
 };
 
+class GComputation
+{
+public:
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback);
+    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args);
+    GAPI_WRAP GStreamingCompiled compileStreaming();
+};
+
 namespace gapi
 {
 namespace wip
