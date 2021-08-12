@@ -87,7 +87,7 @@ def preprocess(image_path):
 
 if __name__ == '__main__':
     img_path = "data/human_image.jpg"
-    # load mobilenetv2 use cv.dnn
+    # load PPSeg Model use cv.dnn
     net = cv.dnn.readNetFromONNX('humanseg_hrnet18_tiny.onnx')
     # read and preprocess image file
     im = preprocess(img_path)
