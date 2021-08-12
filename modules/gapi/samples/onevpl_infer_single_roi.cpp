@@ -34,29 +34,6 @@ std::string get_weights_path(const std::string &model_path) {
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
-
-cv::util::optional<cv::Rect> parse_roi(const std::string &rc) {
-    cv::Rect rv;
-    char delim[3];
-
-    std::stringstream is(rc);
-    is >> rv.x >> delim[0] >> rv.y >> delim[1] >> rv.width >> delim[2] >> rv.height;
-    if (is.bad()) {
-        return cv::util::optional<cv::Rect>(); // empty value
-    }
-    const auto is_delim = [](char c) {
-        return c == ',';
-    };
-    if (!std::all_of(std::begin(delim), std::end(delim), is_delim)) {
-        return cv::util::optional<cv::Rect>(); // empty value
-
-    }
-    if (rv.x < 0 || rv.y < 0 || rv.width <= 0 || rv.height <= 0) {
-        return cv::util::optional<cv::Rect>(); // empty value
-    }
-    return cv::util::make_optional(std::move(rv));
-}
-
 } // anonymous namespace
 
 namespace custom {
@@ -224,6 +201,7 @@ int main(int argc, char *argv[]) {
 
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
+    (void)frame_descr;
 
     // Now build the graph
     cv::GFrame in;
