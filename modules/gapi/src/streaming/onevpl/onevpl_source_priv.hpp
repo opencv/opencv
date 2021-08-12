@@ -14,7 +14,7 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
-#include <opencv2/gapi/streaming/oneVPL/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
 
 #ifdef HAVE_ONEVPL
 #if (MFX_VERSION >= 2000)

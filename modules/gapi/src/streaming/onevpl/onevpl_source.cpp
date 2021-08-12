@@ -4,9 +4,9 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#include <opencv2/gapi/streaming/oneVPL/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
 
-#include "streaming/oneVPL/onevpl_source_priv.hpp"
+#include "streaming/onevpl/onevpl_source_priv.hpp"
 
 namespace cv {
 namespace gapi {
