@@ -476,6 +476,7 @@ bool GStreamerCapture::retrieveFrame(int, OutputArray dst)
     //     video/x-bayer             -> 8bit, 1 channel
     //     image/jpeg                -> 8bit, mjpeg: buffer_size x 1 x 1
     //     video/x-raw, format=GRAY16_LE (BE) -> 16 bit, 1 channel
+    //     video/x-raw, format={BGRA, RGBA, BGRx, RGBx} -> 8bit, 4 channels
     // bayer data is never decoded, the user is responsible for that
     Size sz = Size(frame_width, frame_height);
     guint n_planes = GST_VIDEO_INFO_N_PLANES(&info);
@@ -1017,7 +1018,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     gst_app_sink_set_emit_signals (GST_APP_SINK(sink.get()), FALSE);
 
 
-    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, BGRA, RGBA, BGRx, RGBx, GRAY8, GRAY16_LE, GRAY16_BE}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
+    caps.attach(gst_caps_from_string("video/x-raw, format=(string){BGR, GRAY8}; video/x-bayer,format=(string){rggb,bggr,grbg,gbrg}; image/jpeg"));
 
     if (manualpipeline)
     {
@@ -1026,7 +1027,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         sink_pad.attach(gst_element_get_static_pad(sink, "sink"));
         peer_caps.attach(gst_pad_peer_query_caps(sink_pad, NULL));
         if (!gst_caps_can_intersect(caps, peer_caps)) {
-            caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420}"));
+            caps.attach(gst_caps_from_string("video/x-raw, format=(string){UYVY,YUY2,YVYU,NV12,NV21,YV12,I420,BGRA,RGBA,BGRx,RGBx,GRAY16_LE,GRAY16_BE}"));
             CV_Assert(caps);
         }
     }
