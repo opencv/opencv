@@ -2223,7 +2223,7 @@ enlarge an image, it will generally look best with c#INTER_CUBIC (slow) or #INTE
 @param src input image.
 @param dst output image; it has the size dsize (when it is non-zero) or the size computed from
 src.size(), fx, and fy; the type of dst is the same as of src.
-@param dsize output image size; if it equals zero, it is computed as:
+@param dsize output image size; if it equals zero (`None` in Python), it is computed as:
  \f[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\f]
  Either dsize or both fx and fy must be non-zero.
 @param fx scale factor along the horizontal axis; when it equals 0, it is computed as
