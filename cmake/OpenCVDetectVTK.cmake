@@ -1,34 +1,34 @@
-# VTK 9.0
 if(NOT VTK_FOUND)
-  find_package(VTK 9 QUIET NAMES vtk COMPONENTS
-    FiltersExtraction
-    FiltersSources
-    FiltersTexture
-    IOExport
-    IOGeometry
-    IOPLY
-    InteractionStyle
-    RenderingCore
-    RenderingLOD
-    RenderingOpenGL2
-    NO_MODULE)
-endif()
-
-# VTK 6.x components
-if(NOT VTK_FOUND)
-  find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
-  IF(VTK_FOUND)
-    IF(VTK_RENDERING_BACKEND) #in vtk 7, the rendering backend is exported as a var.
-      find_package(VTK QUIET COMPONENTS vtkRendering${VTK_RENDERING_BACKEND} vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport vtkIOGeometry NO_MODULE)
-    ELSE(VTK_RENDERING_BACKEND)
-      find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
-    ENDIF(VTK_RENDERING_BACKEND)
-  ENDIF(VTK_FOUND)
-endif()
-
-# VTK 5.x components
-if(NOT VTK_FOUND)
-  find_package(VTK QUIET COMPONENTS vtkCommon NO_MODULE)
+  find_package(VTK QUIET NAMES vtk VTK)
+  if(VTK_FOUND)
+    if(VTK_VERSION VERSION_EQUAL "9") # VTK 9.0
+      find_package(VTK 9 QUIET NAMES vtk COMPONENTS
+              FiltersExtraction
+              FiltersSources
+              FiltersTexture
+              IOExport
+              IOGeometry
+              IOPLY
+              InteractionStyle
+              RenderingCore
+              RenderingLOD
+              RenderingOpenGL2
+              NO_MODULE)
+    elseif(VTK_VERSION VERSION_GREATER "5") # VTK 6.x components
+      find_package(VTK QUIET COMPONENTS vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+      IF(VTK_FOUND)
+        IF(VTK_RENDERING_BACKEND) #in vtk 7, the rendering backend is exported as a var.
+          find_package(VTK QUIET COMPONENTS vtkRendering${VTK_RENDERING_BACKEND} vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport vtkIOGeometry NO_MODULE)
+        ELSE(VTK_RENDERING_BACKEND)
+          find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
+        ENDIF(VTK_RENDERING_BACKEND)
+      ENDIF(VTK_FOUND)
+    elseif(VTK_VERSION VERSION_EQUAL "5") # VTK 5.x components
+      find_package(VTK QUIET COMPONENTS vtkCommon NO_MODULE)
+    else()
+      set(VTK_FOUND FALSE)
+    endif()
+  endif()
 endif()
 
 if(NOT VTK_FOUND)

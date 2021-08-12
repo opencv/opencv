@@ -235,7 +235,11 @@ public:
 
     /**
      * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
-     */
+     *
+     * @note Ownership of the passed device is passed to OpenCV on success.
+     * The caller should additionally call `clRetainDevice` on it if it intends
+     * to continue using the device.
+      */
     static Device fromHandle(void* d);
 
     struct Impl;
@@ -826,11 +830,13 @@ public:
     OpenCLExecutionContext cloneWithNewQueue() const;
 
     /** @brief Creates OpenCL execution context
-     * OpenCV will check if available OpenCL platform has platformName name, then assign context to
-     * OpenCV and call `clRetainContext` function. The deviceID device will be used as target device and
-     * new command queue will be created.
+     * OpenCV will check if available OpenCL platform has platformName name,
+     * then assign context to OpenCV.
+     * The deviceID device will be used as target device and a new command queue will be created.
      *
-     * @note Lifetime of passed handles is transferred to OpenCV wrappers on success
+     * @note On success, ownership of one reference of the context and device is taken.
+     * The caller should additionally call `clRetainContext` and/or `clRetainDevice`
+     * to increase the reference count if it wishes to continue using them.
      *
      * @param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
      * @param platformID ID of platform attached context was created for (cl_platform_id)

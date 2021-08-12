@@ -112,6 +112,7 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
+    testONNXModels("conv_asymmetric_pads");
 }
 
 TEST_P(Test_ONNX_layers, Convolution_variable_weight)
@@ -707,6 +708,26 @@ TEST_P(Test_ONNX_layers, LSTM)
 TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_hidden)
+{
+    testONNXModels("hidden_lstm", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
+{
+    testONNXModels("hidden_lstm_bi", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, GRU)
+{
+    testONNXModels("gru", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, GRU_bidirectional)
+{
+    testONNXModels("gru_bi", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)

@@ -13,5 +13,3 @@ if(WITH_WIN32UI)
     ocv_add_external_target(win32ui "" "${__libs}" "HAVE_WIN32UI")
   endif()
 endif()
-
-set(HAVE_WIN32UI "${HAVE_WIN32UI}" PARENT_SCOPE)  # informational

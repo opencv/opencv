@@ -1,6 +1,8 @@
 Contours Hierarchy {#tutorial_js_contours_hierarchy}
 ==================
 
+@prev_tutorial{tutorial_js_contours_more_functions}
+
 Goal
 ----
 
