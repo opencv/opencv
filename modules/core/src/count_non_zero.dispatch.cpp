@@ -132,7 +132,9 @@ int countNonZero(InputArray _src)
 #endif
 
 #ifdef HAVE_OPENCL
-    CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
+    CV_OCL_RUN_(_src.isUMat() &&
+                _src.dims() <= 2 &&
+                _src.getUMat().u->currAllocator == ocl::getOpenCLAllocator(),
                 ocl_countNonZero(_src, res),
                 res)
 #endif
