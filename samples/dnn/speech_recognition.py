@@ -5,7 +5,7 @@ import os
 import soundfile as sf # Temporary import to load audio files
 
 '''
- You can download the converted onnx model from https://drive.google.com/file/d/1s_zOpwzhFfvx6wg2JsDK28WJ_ifSfWD_/view?usp=sharing
+ You can download the converted onnx model from https://drive.google.com/drive/folders/1wLtxyao4ItAg8tt4Sb63zt6qXzhcQoR6?usp=sharing
  or convert the model yourself.
 
  You can get the original pre-trained Jasper model from NVIDIA : https://ngc.nvidia.com/catalog/models/nvidia:jasper_pyt_onnx_fp16_amp/files
@@ -44,8 +44,19 @@ import soundfile as sf # Temporary import to load audio files
             init.raw_data = np.frombuffer(init.raw_data, count=np.product(init.dims), dtype=np.float16).astype(np.float32).tobytes()
             model.graph.initializer.insert(i,init)
         ```
+    
+     6. Add an additional reshape node to handle the inconsistant input from python and c++ of openCV.
+        see https://github.com/opencv/opencv/issues/19091
+        Make & insert a new node with 'Reshape' operation & required initializer
+        ```
+            tensor = numpy_helper.from_array(np.array([0,64,-1]),name='shape_reshape')
+            model.graph.initializer.insert(0,tensor)
+            node = onnx.helper.make_node(op_type='Reshape',inputs=['input__0','shape_reshape'], outputs=['input_reshaped'], name='reshape__0')
+            model.graph.node.insert(0,node)
+            model.graph.node[1].input[0] = 'input_reshaped'
+        ```
 
-     6. Finally save the model
+     7. Finally save the model
         ```
         with open('jasper_dynamic_input_float.onnx','wb') as f:
             onnx.save_model(model,f)
@@ -414,7 +425,7 @@ if __name__ == '__main__':
     try:
         audio = sf.read(args.input_audio)
         X=audio[0]
-        seq_len=np.array([X.shape[0]],dtype=np.int32)
+        seq_len=np.array([X.shape[0]], dtype=np.int32)
     except:
         raise Exception(f"Soundfile cannot read {args.input_audio}. Try a different format")
 
@@ -425,18 +436,22 @@ if __name__ == '__main__':
 
     # Get Filterbank Features
     feature_extractor = FilterbankFeatures()
-    features = feature_extractor.calculate_features(x=X,seq_len=seq_len)
+    features = feature_extractor.calculate_features(x=X, seq_len=seq_len)
 
     # Show spectogram if required
     if args.show_spectrogram:
         img = cv.normalize(src=features[0], dst=None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-        img = cv.applyColorMap(img,cv.COLORMAP_JET)
-        cv.imshow('spectogram',img)
+        img = cv.applyColorMap(img, cv.COLORMAP_JET)
+        cv.imshow('spectogram', img)
         cv.waitKey(0)
 
     # Initialize decoder
     decoder = Decoder()
 
+    # This is a workaround https://github.com/opencv/opencv/issues/19091
+    # expanding 1 dimentions allows us to pass it to the network
+    # from python. This should be resolved in the future.
+    features = np.expand_dims(features,axis=3)
     # make prediction
     net.setInput(features)
     output = net.forward()
@@ -448,7 +463,7 @@ if __name__ == '__main__':
     if args.output:
         with open(args.output,'w') as f:
             f.write(prediction)
-        print("Done")
+        print("Transcript was written to {}".format(args.output))
     else:
         print(prediction)
     cv.destroyAllWindows()
