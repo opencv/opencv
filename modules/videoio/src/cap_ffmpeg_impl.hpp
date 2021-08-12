@@ -1491,9 +1491,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return 0;
 #endif
 #if USE_AV_INTERRUPT_CALLBACK
-    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+    case CV_FFMPEG_CAP_PROP_OPEN_TIMEOUT_MSEC:
         return static_cast<double>(open_timeout_ms);
-    case CAP_PROP_READ_TIMEOUT_MSEC:
+    case CV_FFMPEG_CAP_PROP_READ_TIMEOUT_MSEC:
         return static_cast<double>(read_timeout_ms);
 #endif // USE_AV_INTERRUPT_CALLBACK
     default:
@@ -1691,10 +1691,10 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
 #endif
         break;
 #if USE_AV_INTERRUPT_CALLBACK
-    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+    case CV_FFMPEG_CAP_PROP_OPEN_TIMEOUT_MSEC:
         open_timeout_ms = (int)value;
         break;
-    case CAP_PROP_READ_TIMEOUT_MSEC:
+    case CV_FFMPEG_CAP_PROP_READ_TIMEOUT_MSEC:
         read_timeout_ms = (int)value;
         break;
 #endif  // USE_AV_INTERRUPT_CALLBACK
