@@ -32,12 +32,13 @@ namespace wip {
 struct OneVPLSource::Priv
 {
     explicit Priv(const std::string& file_path);
-    ~Priv() = default;
+    ~Priv();
 
     bool pull(cv::gapi::wip::Data& data);
     GMetaArg descr_of() const;
 private:
     Priv();
+    mfxLoader mfx_handle;
     bool description_is_valid;
 };
 } // namespace wip

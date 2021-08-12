@@ -29,14 +29,22 @@ GMetaArg OneVPLSource::Priv::descr_of() const {
 namespace cv {
 namespace gapi {
 namespace wip {
-OneVPLSource::Priv::Priv()
+OneVPLSource::Priv::Priv() :
+    mfx_handle(MFXLoad())
 {
+    GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
     description_is_valid = false;
 }
 
 OneVPLSource::Priv::Priv(const std::string&) :
     OneVPLSource::Priv()
 {
+}
+
+OneVPLSource::Priv::~Priv()
+{
+    GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
+    MFXUnload(mfx_handle);
 }
 
 bool OneVPLSource::Priv::pull(cv::gapi::wip::Data&)
