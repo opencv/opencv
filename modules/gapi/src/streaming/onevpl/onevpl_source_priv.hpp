@@ -46,10 +46,17 @@ private:
 } // namespace cv
 
 #else // HAVE_ONEVPL
+
+namespace cv {
+namespace gapi {
+namespace wip {
 struct OneVPLSource::Priv final
 {
     bool pull(cv::gapi::wip::Data& data) override;
     GMetaArg descr_of() const override;
 };
+} // namespace wip
+} // namespace gapi
+} // namespace cv
 #endif // HAVE_ONEVPL
 #endif // OPENCV_GAPI_STREAMING_ONEVPL_ONEVPL_SOURCE_PRIV_HPP
