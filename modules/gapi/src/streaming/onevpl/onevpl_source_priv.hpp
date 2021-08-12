@@ -52,8 +52,8 @@ namespace gapi {
 namespace wip {
 struct OneVPLSource::Priv final
 {
-    bool pull(cv::gapi::wip::Data& data) override;
-    GMetaArg descr_of() const override;
+    bool pull(cv::gapi::wip::Data&);
+    GMetaArg descr_of() const;
 };
 } // namespace wip
 } // namespace gapi

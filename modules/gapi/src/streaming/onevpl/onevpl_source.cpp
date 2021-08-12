@@ -21,8 +21,8 @@ OneVPLSource::OneVPLSource(const std::string& filePath) :
     }
 }
 #else
-OneVPLSource::OneVPLSource(const std::string& filePath) {
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_ONEVPL=ON`")
+OneVPLSource::OneVPLSource(const std::string&) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 #endif
 
