@@ -7,21 +7,30 @@
 #include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
 
 #include "streaming/onevpl/onevpl_source_priv.hpp"
-
+#include "streaming/onevpl/onevpl_file_data_provider.hpp"
 namespace cv {
 namespace gapi {
 namespace wip {
 
 #ifdef HAVE_ONEVPL
-OneVPLSource::OneVPLSource(const std::string& filePath) :
-    OneVPLSource(std::unique_ptr<Priv>(new OneVPLSource::Priv(filePath))) {
+OneVPLSource::OneVPLSource(const std::string& filePath, const onevpl_params_container_t& cfg_params) :
+    OneVPLSource(std::unique_ptr<Priv>(new OneVPLSource::Priv(std::make_shared<FileDataProvider>(filePath),
+                                                              cfg_params))) {
 
     if (filePath.empty()) {
         util::throw_error(std::logic_error("Cannot create 'OneVPLSource' on empty source file name"));
     }
 }
+
+OneVPLSource::OneVPLSource(std::shared_ptr<IDataProvider> source, const onevpl_params_container_t& cfg_params) :
+     OneVPLSource(std::unique_ptr<IPriv>(new OneVPLSource::Priv(source, cfg_params))) {
+}
 #else
-OneVPLSource::OneVPLSource(const std::string&) {
+OneVPLSource::OneVPLSource(const std::string&, const onevpl_params_container_t&) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+
+OneVPLSource::OneVPLSource(std::shared_ptr<IDataProvider>, const onevpl_params_container_t&) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 #endif

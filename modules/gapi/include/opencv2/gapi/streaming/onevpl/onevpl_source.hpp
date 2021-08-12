@@ -10,17 +10,24 @@
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/streaming/onevpl/onevpl_cfg_params.hpp>
+#include <opencv2/gapi/streaming/onevpl/onevpl_data_provider_interface.hpp>
 
 namespace cv {
 namespace gapi {
 namespace wip {
+
+using onevpl_params_container_t = std::vector<oneVPL_cfg_param>;
 
 class GAPI_EXPORTS OneVPLSource : public IStreamSource
 {
 public:
     struct Priv;
 
-    explicit OneVPLSource(const std::string& filePath);
+    OneVPLSource(const std::string& filePath,
+                 const onevpl_params_container_t& cfg_params = onevpl_params_container_t{});
+    OneVPLSource(std::shared_ptr<IDataProvider> source,
+                 const onevpl_params_container_t& cfg_params = onevpl_params_container_t{});
     ~OneVPLSource() override;
 
     bool pull(cv::gapi::wip::Data& data) override;
@@ -32,9 +39,9 @@ private:
 };
 
 template<class... Args>
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(const std::string& filePath, Args&&... args)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_vpl_src(Args&&... args)
 {
-    return make_src<OneVPLSource>(filePath, std::forward<Args>(args)...);
+    return make_src<OneVPLSource>(std::forward<Args>(args)...);
 }
 
 } // namespace wip

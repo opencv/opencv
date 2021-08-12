@@ -31,7 +31,8 @@ namespace wip {
 
 struct OneVPLSource::Priv
 {
-    explicit Priv(const std::string& file_path);
+    explicit Priv(std::shared_ptr<IDataProvider> provider,
+                  const std::vector<oneVPL_cfg_param>& params);
     ~Priv();
 
     bool pull(cv::gapi::wip::Data& data);

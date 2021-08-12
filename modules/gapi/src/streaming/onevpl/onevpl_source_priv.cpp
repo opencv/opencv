@@ -36,7 +36,7 @@ OneVPLSource::Priv::Priv() :
     description_is_valid = false;
 }
 
-OneVPLSource::Priv::Priv(const std::string&) :
+OneVPLSource::Priv::Priv(std::shared_ptr<IDataProvider>, const std::vector<oneVPL_cfg_param>&) :
     OneVPLSource::Priv()
 {
 }
