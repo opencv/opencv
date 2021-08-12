@@ -2571,6 +2571,12 @@ struct Net::Impl : public detail::NetImplBase
 
                 if (layer->supportBackend(preferableBackend))
                 {
+                    if (ld.type == "Const") {
+                        ml::Operand fake_operand;
+                        Ptr<WebnnBackendNode> fake_input_node = Ptr<WebnnBackendNode>(new WebnnBackendNode(fake_operand));
+                        fake_input_node->net = net;
+                        inputNodes.push_back(fake_input_node);
+                    }
                     node = layer->initWebnn(ld.inputBlobsWrappers, inputNodes);
                     for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                     {

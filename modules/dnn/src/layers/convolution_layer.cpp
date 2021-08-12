@@ -348,16 +348,16 @@ public:
         if (backendId == DNN_BACKEND_VKCOM)
             return ksize == 2;
 #endif
-// #ifdef HAVE_WEBNN
-//         if (backendId == DNN_BACKEND_WEBNN)
-//         {
-//             if (ksize != 2)
-//             {
-//                 CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
-//             }
-//             return ksize == 2;
-//         }
-// #endif
+#ifdef HAVE_WEBNN
+        if (backendId == DNN_BACKEND_WEBNN)
+        {
+            if (ksize != 2)
+            {
+                CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
+            }
+            return ksize == 2;
+        }
+#endif
         return false;
     }
 
@@ -918,43 +918,42 @@ public:
             CV_Assert(webnnWeights);
         // const int inpCn = weightsMat.total()/(kernel_size[0]*kernel_size[1]*numOutput);
         const int group = blobs.size() - hasBias();
-        const int inpGroupCn = blobs[0].size[1];
-        // const int group = inpCn / inpGroupCn;
-        // std::cout<<"Group: "<<group<<std::endl;
-        // std::cout<<"padMode:"<<padMode<<std::endl;
-        // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
-        std::vector<int32_t> kernel_shape;
-        if (group != 1)
-        {
-            kernel_shape.push_back(group);
-        }
-        kernel_shape.push_back(numOutput / group);
-        kernel_shape.push_back(inpGroupCn);
-        std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
+        // const int inpGroupCn = blobs[0].size[1];
+        // // const int group = inpCn / inpGroupCn;
+        // const int group = 1;
+        // // std::cout<<"Group: "<<group<<std::endl;
+        // // std::cout<<"padMode:"<<padMode<<std::endl;
+        // // std::cout<<"inpGroupCn: "<<inpGroupCn<<std::endl;
+        // std::vector<int32_t> kernel_shape;
+        // if (group != 1)
+        // {
+        //     kernel_shape.push_back(group);
+        // }
+        // kernel_shape.push_back(numOutput / group);
+        // kernel_shape.push_back(inpGroupCn);
+        // std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
 
         if (nodes.size() == 1)
         {
-            // std::cout<<"fusedWeights: "<<fusedWeights<<std::endl;
-            webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
-            // std::cout<<"blobs: "<< blobs[0].total()<<" "<<blobs[0].elemSize()<<" "<<sizeof(float)<<std::endl;
+            webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(blobs[0]), blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
             if (fusedWeights)
             {
                 if (weightsMat.isContinuous())
                 {
-                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(weightsMat), weightsMat.data, weightsMat.total()*weightsMat.elemSize(), ml::OperandType::Float32);
                 }
                 else
                 {
                     Mat newWeights;
                     Mat cvWeights = weightsMat.colRange(0, blobs[0].total() / numOutput);
                     cvWeights.copyTo(newWeights);
-                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
+                    webnnWeights = webnn::BuildConstant(webnnGraphBuilder, webnn::getShape(newWeights), newWeights.data, newWeights.total()*newWeights.elemSize(), ml::OperandType::Float32);
                 }
             }
         }
         else
         {
-            webnnWeights  = webnnGraphBuilder.Reshape(webnnWeights, kernel_shape.data(), kernel_shape.size());
+            // webnnWeights  = webnnGraphBuilder.Reshape(webnnWeights, kernel_shape.data(), kernel_shape.size());
         }
 
         ml::AutoPad pad_type = ml::AutoPad::Explicit;
@@ -986,7 +985,6 @@ public:
             options.paddingCount = Padding.size();
             options.padding = Padding.data();
         }
-        // std::cout<<"Padding: "<<Padding[0]<<" "<<Padding[1]<<" "<<Padding[2]<<" "<<Padding[3]<<" "<<std::endl;
         std::vector<int32_t> Dilations(dilations.begin(), dilations.end());
         if (!Dilations.empty())
         {
@@ -1001,11 +999,13 @@ public:
             ml::Operand webnnBias = nullptr;
             if (nodes.size() == 3)
             {
-                webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, kernel_shape.data(), kernel_shape.size());
+                std::vector<int32_t> bias_shape = {1, numOutput / group, 1, 1};
+                webnnBias = webnnGraphBuilder.Reshape(nodes[2].dynamicCast<WebnnBackendNode>()->operand, bias_shape.data(), bias_shape.size());
             }
             else
             {
-                webnnBias = webnn::BuildConstant(webnnGraphBuilder, kernel_shape, biasvec.data(), biasvec.size()*sizeof(float), ml::OperandType::Float32);
+                
+                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput / group, 1, 1}, biasvec.data(), biasvec.size()*sizeof(float), ml::OperandType::Float32);
             }
             operand = webnnGraphBuilder.Add(operand, webnnBias);
         }
