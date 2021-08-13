@@ -936,13 +936,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
             use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
         }
 #if USE_AV_INTERRUPT_CALLBACK
-        if (params.has(CAP_PROP_OPEN_TIMEOUT))
+        if (params.has(CAP_PROP_OPEN_TIMEOUT_MSEC))
         {
-            open_timeout = params.get<int>(CAP_PROP_OPEN_TIMEOUT);
+            open_timeout = params.get<int>(CAP_PROP_OPEN_TIMEOUT_MSEC);
         }
         if (params.has(CAP_PROP_READ_TIMEOUT))
         {
-            read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT);
+            read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT_MSEC);
         }
 #endif
         if (params.warnUnusedParameters())
