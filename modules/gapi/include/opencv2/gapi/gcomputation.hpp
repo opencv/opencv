@@ -440,8 +440,8 @@ public:
     GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     /// @private -- Exclude this function from OpenCV documentation
-    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
-                                                        GCompileArgs                   &&args = {});
+    GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                              GCompileArgs                   &&args = {});
 
     /**
      * @brief Compile the computation for streaming mode.

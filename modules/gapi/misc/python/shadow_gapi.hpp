@@ -42,9 +42,11 @@ public:
 class GComputation
 {
 public:
-    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback);
-    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args);
     GAPI_WRAP GStreamingCompiled compileStreaming();
+    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args);
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback);
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                        GCompileArgs                   &&args);
 };
 
 namespace gapi
