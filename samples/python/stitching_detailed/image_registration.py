@@ -24,17 +24,17 @@ class ImageRegistration:
         self.camera_adjuster = camera_adjuster
         self.wave_corrector = wave_corrector
 
-    def register(self, img_names, images):
-        features = self.find_features(images)
+    def register(self, img_data):
+        features = self.find_features(img_data.work_imgs)
         matches = self.match_features(features)
-        indices, features, matches = self.subset(
-            img_names, features, matches
+        img_data, features, matches = self.subset(
+            img_data, features, matches
             )
         cameras = self.estimate_camera_parameters(features, matches)
         cameras = self.adjust_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
         scale = self.estimate_scale(cameras)
-        return indices, cameras, scale
+        return img_data, cameras, scale
 
     def find_features(self, images):
         return [self.finder.detect_features(img) for img in images]
@@ -42,8 +42,13 @@ class ImageRegistration:
     def match_features(self, features):
         return self.matcher.match_features(features)
 
-    def subset(self, img_names, features, matches):
-        return self.subsetter.subset(img_names, features, matches)
+    def subset(self, img_data, features, matches):
+        self.subsetter.save_matches_graph_dot_file(img_data.img_names, matches)
+        indices = self.subsetter.get_indices_to_keep(features, matches)
+        img_data.subset(indices)
+        features = Subsetter.subset_list(features, indices)
+        matches = Subsetter.subset_matches(matches, indices)
+        return img_data, features, matches
 
     def estimate_camera_parameters(self, features, matches):
         return self.camera_estimator.estimate(features, matches)

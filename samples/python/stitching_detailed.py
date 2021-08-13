@@ -200,7 +200,7 @@ __doc__ += '\n' + parser.format_help()
 
 if __name__ == '__main__':
     print(__doc__)
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
     args_dict = vars(args)
     img_names = args_dict.pop("img_names")
     img_names = [cv.samples.findFile(img_name) for img_name in img_names]

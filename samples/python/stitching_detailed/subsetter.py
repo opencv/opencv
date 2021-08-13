@@ -1,4 +1,5 @@
 from itertools import chain
+import math
 import cv2 as cv
 import numpy as np
 
@@ -16,24 +17,6 @@ class Subsetter:
         self.confidence_threshold = confidence_threshold
         self.save_file = matches_graph_dot_file
 
-    def subset(self,
-               img_names,
-               features,
-               pairwise_matches):
-
-        indices = self.get_indices_to_keep(features, pairwise_matches)
-        indices_to_delete = self.get_indices_to_delete(len(features), indices)
-
-        feature_subset = Subsetter.subset_list(features, indices)
-
-        matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
-        matches_matrix_subset = Subsetter.subset_matrix(matches_matrix,
-                                                        indices_to_delete)
-        matches_subset = Subsetter.__matrix_rows_to_list(matches_matrix_subset)
-
-        self.save_matches_graph_dot_file(img_names, pairwise_matches)
-        return indices, feature_subset, matches_subset
-
     def get_indices_to_keep(self, features, pairwise_matches):
         indices = cv.detail.leaveBiggestComponent(features,
                                                   pairwise_matches,
@@ -41,15 +24,30 @@ class Subsetter:
         indices_as_list = [int(idx) for idx in list(indices[:, 0])]
         return indices_as_list
 
-    def get_indices_to_delete(self, list_lenght, indices_to_keep):
-        return list(set(range(list_lenght)) - set(indices_to_keep))
-
     @staticmethod
     def subset_list(list_to_subset, indices):
         return [list_to_subset[i] for i in indices]
 
     @staticmethod
-    def subset_matrix(matrix_to_subset, indices_to_delete):
+    def subset_matches(pairwise_matches, indices):
+        indices_to_delete = Subsetter.get_indices_to_delete(
+            math.sqrt(len(pairwise_matches)),
+            indices
+            )
+
+        matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
+        matches_matrix_subset = Subsetter.__subset_matrix(matches_matrix,
+                                                          indices_to_delete)
+        matches_subset = Subsetter.__matrix_rows_to_list(matches_matrix_subset)
+
+        return matches_subset
+
+    @staticmethod
+    def get_indices_to_delete(nr_elements, indices_to_keep):
+        return list(set(range(int(nr_elements))) - set(indices_to_keep))
+
+    @staticmethod
+    def __subset_matrix(matrix_to_subset, indices_to_delete):
         for idx, idx_to_delete in enumerate(indices_to_delete):
             matrix_to_subset = Subsetter.__delete_index_from_matrix(
                 matrix_to_subset,

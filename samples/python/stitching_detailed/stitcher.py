@@ -22,18 +22,43 @@ class Stitcher:
 
     def __init__(self, img_names, **kwargs):
         self.img_names = img_names
-        settings = Stitcher.DEFAULT_SETTINGS.copy()
-        settings.update(kwargs)
-        self.settings = SimpleNamespace(**settings)
+        self.set_settings(kwargs)
 
     def stitch(self):
         image_data = self.get_image_data_object()
         image_registration = self.get_image_registration_object()
-        indices, cameras, panorama_scale = image_registration.register(image_data.img_names,
-                                                                       image_data.work_imgs)
-        image_data.subset(indices)
+        image_data, cameras, panorama_scale = image_registration.register(image_data)
         image_composition = self.get_image_composition_object()
         return image_composition.compose(image_data, cameras, panorama_scale)
+
+    DEFAULT_SETTINGS = {
+         "try_cuda": False,
+         "work_megapix": ImageData.DEFAULT_WORK_MEGAPIX,
+         "features": FeatureDetector.DEFAULT_DETECTOR,
+         "matcher": FeatureMatcher.DEFAULT_MATCHER,
+         "rangewidth": FeatureMatcher.DEFAULT_RANGE_WIDTH,
+         "estimator": CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
+         "match_conf": None,
+         "conf_thresh": Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
+         "ba": CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
+         "ba_refine_mask": CameraAdjuster.DEFAULT_REFINEMENT_MASK,
+         "wave_correct": WaveCorrector.DEFAULT_WAVE_CORRECTION,
+         "save_graph": Subsetter.DEFAULT_MATCHES_GRAPH_DOT_FILE,
+         "warp": Warper.DEFAULT_WARP_TYPE,
+         "seam_megapix": ImageData.DEFAULT_SEAM_MEGAPIX,
+         "seam": SeamFinder.DEFAULT_SEAM_FINDER,
+         "compose_megapix": ImageData.DEFAULT_COMPOSE_MEGAPIX,
+         "expos_comp": ExposureErrorCompensator.DEFAULT_COMPENSATOR,
+         "expos_comp_nr_feeds": ExposureErrorCompensator.DEFAULT_NR_FEEDS,
+         "expos_comp_block_size": ExposureErrorCompensator.DEFAULT_BLOCK_SIZE,
+         "blend": Blender.DEFAULT_BLENDER,
+         "blend_strength": Blender.DEFAULT_BLEND_STRENGTH,
+         "timelapse": Timelapser.DEFAULT_TIMELAPSE}
+
+    def set_settings(self, kwargs):
+        settings = Stitcher.DEFAULT_SETTINGS.copy()
+        settings.update(kwargs)
+        self.settings = SimpleNamespace(**settings)
 
     def get_image_data_object(self):
         return ImageData(self.img_names,
@@ -82,27 +107,3 @@ class Stitcher:
                                 compensator,
                                 blender,
                                 timelapser)
-
-    DEFAULT_SETTINGS = {
-         "try_cuda": False,
-         "work_megapix": ImageData.DEFAULT_WORK_MEGAPIX,
-         "features": FeatureDetector.DEFAULT_DETECTOR,
-         "matcher": FeatureMatcher.DEFAULT_MATCHER,
-         "rangewidth": FeatureMatcher.DEFAULT_RANGE_WIDTH,
-         "estimator": CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
-         "match_conf": None,
-         "conf_thresh": Subsetter.DEFAULT_CONFIDENCE_THRESHOLD,
-         "ba": CameraAdjuster.DEFAULT_CAMERA_ADJUSTER,
-         "ba_refine_mask": CameraAdjuster.DEFAULT_REFINEMENT_MASK,
-         "wave_correct": WaveCorrector.DEFAULT_WAVE_CORRECTION,
-         "save_graph": Subsetter.DEFAULT_MATCHES_GRAPH_DOT_FILE,
-         "warp": Warper.DEFAULT_WARP_TYPE,
-         "seam_megapix": ImageData.DEFAULT_SEAM_MEGAPIX,
-         "seam": SeamFinder.DEFAULT_SEAM_FINDER,
-         "compose_megapix": ImageData.DEFAULT_COMPOSE_MEGAPIX,
-         "expos_comp": ExposureErrorCompensator.DEFAULT_COMPENSATOR,
-         "expos_comp_nr_feeds": ExposureErrorCompensator.DEFAULT_NR_FEEDS,
-         "expos_comp_block_size": ExposureErrorCompensator.DEFAULT_BLOCK_SIZE,
-         "blend": Blender.DEFAULT_BLENDER,
-         "blend_strength": Blender.DEFAULT_BLEND_STRENGTH,
-         "timelapse": Timelapser.DEFAULT_TIMELAPSE}

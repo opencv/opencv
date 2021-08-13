@@ -96,11 +96,7 @@ class TestImageRegistration(unittest.TestCase):
         self.assertEqual(subsetted_image_names,
                          ['boat1.jpg', 'boat2.jpg', 'boat3.jpg'])
 
-        subset = subsetter.subset(img_names,
-                                  features,
-                                  pairwise_matches)
-
-        indices, feature_subset, matches_subset = subset
+        matches_subset = subsetter.subset_matches(pairwise_matches, indices)
         # FeatureMatcher.get_confidence_matrix(pairwise_matches)
         # FeatureMatcher.get_confidence_matrix(subsetted_matches)
         self.assertEqual(pairwise_matches[13].confidence,
