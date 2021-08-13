@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "sparse_block_matrix.hpp"
+#include "opencv2/3d/detail/pose_graph.hpp"
 
 // matrix form of conjugation
 static const cv::Matx44d M_Conj{ 1,  0,  0,  0,

@@ -13,7 +13,6 @@
 
 #include "opencv2/3d/detail/pose_graph.hpp"
 #include "opencv2/3d/detail/kinfu_frame.hpp"
-#include "opencv2/3d/detail/submap.hpp"
 
 /**
   @defgroup _3d 3D vision functionality
