@@ -174,6 +174,13 @@ set(gapi_srcs
     src/utils/itt.cpp
     )
 
+if(HAVE_GAPI_ONEVPL)
+    list(APPEND gapi_srcs
+        src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
+        src/streaming/onevpl/accelerators/surface/surface.cpp
+    )
+endif()
+
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
 
 ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
