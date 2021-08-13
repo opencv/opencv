@@ -6,7 +6,7 @@ Using OpenCV with gdb-powered IDEs {#tutorial_linux_gdb_pretty_printer}
 
 |    |    |
 | -: | :- |
-| Original author | Smirnov Egor |
+| Original author | Egor Smirnov |
 | Compatibility | OpenCV >= 4.0 |
 
 @tableofcontents

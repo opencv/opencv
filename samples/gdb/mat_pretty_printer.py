@@ -1,14 +1,9 @@
-import sys
-import time
+import gdb
 import numpy as np
 from enum import Enum
 
 np.set_printoptions(suppress=True)  # prevent numpy exponential notation on print, default False
 # np.set_printoptions(threshold=sys.maxsize)
-
-
-def make_type(depth, cn):
-    return depth.value + ((cn - 1) << 3)
 
 
 def conv(obj, t):
@@ -38,8 +33,8 @@ class MagicMasks(Enum):
 
 
 class Depth(Enum):
-    CV_8U  = 0
-    CV_8S  = 1
+    CV_8U = 0
+    CV_8S = 1
     CV_16U = 2
     CV_16S = 3
     CV_32S = 4
@@ -48,54 +43,14 @@ class Depth(Enum):
     CV_16F = 7
 
 
-class Type(Enum):
-    CV_8UC1 = make_type(Depth.CV_8U, 1)
-    CV_8UC2 = make_type(Depth.CV_8U, 2)
-    CV_8UC3 = make_type(Depth.CV_8U, 3)
-    CV_8UC4 = make_type(Depth.CV_8U, 4)
-    # CV_8UC(n) = make_type(Depth.CV_8U, (n))
+def create_enum(n):
+    def make_type(depth, cn):
+        return depth.value + ((cn - 1) << 3)
+    defs = [(f'{depth.name}C{i}', make_type(depth, i)) for depth in Depth for i in range(1, n + 1)]
+    return Enum('Type', defs)
 
-    CV_8SC1 = make_type(Depth.CV_8S, 1)
-    CV_8SC2 = make_type(Depth.CV_8S, 2)
-    CV_8SC3 = make_type(Depth.CV_8S, 3)
-    CV_8SC4 = make_type(Depth.CV_8S, 4)
-    # CV_8SC(n) = make_type(Depth.CV_8S, (n))
 
-    CV_16UC1 = make_type(Depth.CV_16U, 1)
-    CV_16UC2 = make_type(Depth.CV_16U, 2)
-    CV_16UC3 = make_type(Depth.CV_16U, 3)
-    CV_16UC4 = make_type(Depth.CV_16U, 4)
-    # CV_16UC(n) = make_type(Depth.CV_16U, (n))
-
-    CV_16SC1 = make_type(Depth.CV_16S, 1)
-    CV_16SC2 = make_type(Depth.CV_16S, 2)
-    CV_16SC3 = make_type(Depth.CV_16S, 3)
-    CV_16SC4 = make_type(Depth.CV_16S, 4)
-    # CV_16SC(n) = make_type(Depth.CV_16S, (n))
-
-    CV_32SC1 = make_type(Depth.CV_32S, 1)
-    CV_32SC2 = make_type(Depth.CV_32S, 2)
-    CV_32SC3 = make_type(Depth.CV_32S, 3)
-    CV_32SC4 = make_type(Depth.CV_32S, 4)
-    # CV_32SC(n) = make_type(Depth.CV_32S, (n))
-
-    CV_32FC1 = make_type(Depth.CV_32F, 1)
-    CV_32FC2 = make_type(Depth.CV_32F, 2)
-    CV_32FC3 = make_type(Depth.CV_32F, 3)
-    CV_32FC4 = make_type(Depth.CV_32F, 4)
-    # CV_32FC(n) = make_type(Depth.CV_32F, (n))
-
-    CV_64FC1 = make_type(Depth.CV_64F, 1)
-    CV_64FC2 = make_type(Depth.CV_64F, 2)
-    CV_64FC3 = make_type(Depth.CV_64F, 3)
-    CV_64FC4 = make_type(Depth.CV_64F, 4)
-    # CV_64FC(n) = make_type(Depth.CV_64F, (n))
-
-    CV_16FC1 = make_type(Depth.CV_16F, 1)
-    CV_16FC2 = make_type(Depth.CV_16F, 2)
-    CV_16FC3 = make_type(Depth.CV_16F, 3)
-    CV_16FC4 = make_type(Depth.CV_16F, 4)
-    # CV_16FC(n) = make_type(Depth.CV_16F, (n))
+Type = create_enum(512)
 
 
 class Flags:
@@ -121,7 +76,7 @@ class Flags:
         elif depth == Depth.CV_64F:
             ret = (np.float64, 'double')
         elif depth == Depth.CV_16F:
-            ret = (np.float16, 'float16')  # TODO: fix
+            ret = (np.float16, 'float16')
 
         return ret
 
@@ -140,7 +95,7 @@ class Flags:
     def __init__(self, flags):
         self.flags = flags
 
-    def __iter__(self): 
+    def __iter__(self):
         return iter({
                         'type': stri(self.type().name),
                         'is_continuous': booli(self.is_continuous()),
@@ -148,7 +103,7 @@ class Flags:
                     }.items())
 
 
-class Size(object):
+class Size:
     def __init__(self, ptr):
         self.ptr = ptr
 
@@ -156,17 +111,10 @@ class Size(object):
         return int((self.ptr - 1).dereference())
 
     def to_numpy(self):
-        return np.array(list(map(int, to_list(self.ptr, range(self.dims())))), dtype=np.int64)
-
-    def total(self):
-        return np.prod(self.to_numpy())
+        return np.array([int(self.ptr[i]) for i in range(self.dims())], dtype=np.int64)
 
     def __iter__(self):
         return iter({'size': stri(self.to_numpy())}.items())
-
-
-def to_list(ptr, it):
-    return [(ptr + i).dereference() for i in it]
 
 
 class Mat:
@@ -174,11 +122,15 @@ class Mat:
         (dtype, ctype) = flags.dtype()
         elsize = np.dtype(dtype).itemsize
 
-        dataptr = int(m['data'])
+        ptr = m['data']
+        dataptr = int(ptr)
         length = (int(m['dataend']) - dataptr) // elsize
         start = (int(m['datastart']) - dataptr) // elsize
 
-        ptr = m['data']
+        if length == 0:
+            self.mat = np.array([])
+            self.view = self.mat
+            return
 
         if dtype != np.float16:
             ctype = gdb.lookup_type(ctype)
@@ -190,32 +142,33 @@ class Mat:
             self.mat = np.array([ptr[i] for i in range(length)], dtype=np.uint16)
             self.mat = self.mat.view(np.float16)
 
-        steps = np.asarray(list(map(int, to_list(m['step']['p'], range(size.dims())))), dtype=np.int64)
+        steps = np.asarray([int(m['step']['p'][i]) for i in range(size.dims())], dtype=np.int64)
         self.view = np.lib.stride_tricks.as_strided(self.mat[start:], shape=size.to_numpy(), strides=steps)
 
     def __iter__(self):
         return iter({'data': stri(self.view)}.items())
 
 
-class MatPrinter(object):
+class MatPrinter:
     """Print a cv::Mat"""
 
     def __init__(self, mat):
         self.mat = mat
 
-    def children(self):
+    def views(self):
         m = self.mat
 
         flags = Flags(int(m['flags']))
         size = Size(m['size']['p'])
         data = Mat(m, size, flags)
 
-        # add views
         for x in [flags, size, data]:
             for k, v in x:
-                yield  'view_' + k, v
+                yield 'view_' + k, v
 
-        # add old children
+    def real(self):
+        m = self.mat
+
         for field in m.type.fields():
             k = field.name
             v = m[k]
@@ -223,6 +176,10 @@ class MatPrinter(object):
 
         # TODO: add an enum in interface.h with all cv::Mat element types and use that instead
         # yield 'test', gdb.parse_and_eval(f'(cv::MatTypes)0')
+
+    def children(self):  # TODO: hide real members under new child somehow
+        yield from self.views()
+        yield from self.real()
 
 
 def get_type(val):
