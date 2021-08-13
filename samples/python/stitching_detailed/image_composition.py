@@ -40,7 +40,7 @@ class ImageComposition:
         seam_masks = self.resize_seam_masks_to_original_resolution(seam_masks,
                                                                    masks)
         if self.timelapser.do_timelapse:
-            self.create_timelapse(img_names, imgs, corners)
+            self.create_timelapse(img_names, imgs, corners, sizes)
 
         final_pano = self.blend_images(imgs, corners, sizes, seam_masks)
         return final_pano
@@ -77,7 +77,8 @@ class ImageComposition:
         return [SeamFinder.resize(seam_mask, mask)
                 for seam_mask, mask in zip(seam_masks, masks)]
 
-    def create_timelapse(self, img_names, imgs, corners):
+    def create_timelapse(self, img_names, imgs, corners, sizes):
+        self.timelapser.initialize(corners, sizes)
         for img_name, img, corner in zip(img_names, imgs, corners):
             self.timelapser.process_and_save_frame(img_name, img, corner)
 
