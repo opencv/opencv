@@ -58,6 +58,13 @@ parser.add_argument(
     type=str, dest='features'
 )
 parser.add_argument(
+    '--n_features', action='store',
+    default=500,
+    help="Type of features used for images matching. "
+         "The default is 500.",
+    type=int, dest='n_features'
+)
+parser.add_argument(
     '--matcher', action='store', default=FeatureMatcher.DEFAULT_MATCHER,
     help="Matcher used for pairwise image matching. "
          "The default is '%s'." % FeatureMatcher.DEFAULT_MATCHER,

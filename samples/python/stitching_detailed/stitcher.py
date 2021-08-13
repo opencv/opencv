@@ -35,6 +35,7 @@ class Stitcher:
          "try_cuda": False,
          "work_megapix": ImageData.DEFAULT_WORK_MEGAPIX,
          "features": FeatureDetector.DEFAULT_DETECTOR,
+         "n_features": 500,
          "matcher": FeatureMatcher.DEFAULT_MATCHER,
          "rangewidth": FeatureMatcher.DEFAULT_RANGE_WIDTH,
          "estimator": CameraEstimator.DEFAULT_CAMERA_ESTIMATOR,
@@ -72,7 +73,8 @@ class Stitcher:
                 self.settings.features
                 )
 
-        finder = FeatureDetector(self.settings.features)
+        finder = FeatureDetector(self.settings.features,
+                                 nfeatures=self.settings.n_features)
         matcher = FeatureMatcher(self.settings.matcher,
                                  self.settings.rangewidth,
                                  try_use_gpu=self.settings.try_cuda,
