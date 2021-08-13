@@ -6,8 +6,9 @@ if (NOT TARGET ade )
   find_package(ade 0.1.0 REQUIRED)
 endif()
 
-if(NOT TARGET VPL::dispatcher)
-  include("${CMAKE_CURRENT_LIST_DIR}/detectOneVPL.cmake")
+if (WITH_GAPI_ONEVPL)
+    find_package(VPL)
+    set(HAVE_GAPI_ONEVPL TRUE)
 endif()
 
 set(FLUID_TARGET fluid)
