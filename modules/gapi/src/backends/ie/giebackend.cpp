@@ -537,6 +537,24 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
     }
     GAPI_Assert(false);
 }
+
+
+static void setBlob(InferenceEngine::InferRequest&        req,
+                    cv::gapi::ie::detail::ParamDesc::Kind kind,
+                    const std::string&                    layer_name,
+                    IE::Blob::Ptr                         blob) {
+    // NB: In case importNetwork preprocessing must be
+    // passed as SetBlob argument.
+    if (kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+        req.SetBlob(layer_name, blob);
+    } else {
+        GAPI_Assert(kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
+        IE::PreProcessInfo info;
+        info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        req.SetBlob(layer_name, blob, info);
+    }
+}
+
 } // anonymous namespace
 
 std::vector<InferenceEngine::InferRequest> cv::gimpl::ie::IECompiled::createInferRequests() {
@@ -907,7 +925,7 @@ struct Infer: public cv::detail::KernelTag {
 
                     configureInputInfo(ii, mm);
                     if (uu.params.layer_names_to_reshape.find(input_name) !=
-                            uu.params.layer_names_to_reshape.end()) {
+                        uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm, input_reshape_table);
                     }
                     ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
@@ -950,17 +968,10 @@ struct Infer: public cv::detail::KernelTag {
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            // NB: In case importNetwork preprocessing must be
-                            // passed as SetBlob argument.
-                            if (ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                                req.SetBlob(ctx->uu.params.input_names[i], this_blob);
-                            } else {
-                                IE::PreProcessInfo info;
-                                info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
-                                req.SetBlob(ctx->uu.params.input_names[i],
-                                            this_blob,
-                                            info);
-                            }
+                            setBlob(req,
+                                    ctx->uu.params.kind,
+                                    ctx->uu.params.input_names[i],
+                                    this_blob);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
@@ -1040,20 +1051,11 @@ struct InferROI: public cv::detail::KernelTag {
                         auto&& this_roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
 
                         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
-
-                        // NB: In case importNetwork preprocessing must be
-                        // passed as SetBlob argument.
-                        if (ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                            req.SetBlob(*(ctx->uu.params.input_names.begin()),
-                                    IE::make_shared_blob(this_blob, toIE(this_roi)));
-                        } else {
-                            IE::PreProcessInfo info;
-                            info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
-                            req.SetBlob(*(ctx->uu.params.input_names.begin()),
-                                    IE::make_shared_blob(this_blob, toIE(this_roi)),
-                                    info);
-                        }
-
+                        setBlob(req,
+                                ctx->uu.params.kind,
+                                *(ctx->uu.params.input_names.begin()),
+                                IE::make_shared_blob(this_blob,
+                                                     toIE(this_roi)));
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         req.StartAsync();
@@ -1154,15 +1156,10 @@ struct InferList: public cv::detail::KernelTag {
                 cv::gimpl::ie::RequestPool::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
                         IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        // NB: In case importNetwork preprocessing must be
-                        // passed as SetBlob argument.
-                        if (ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                            req.SetBlob(ctx->uu.params.input_names[0u], roi_blob);
-                        } else {
-                            IE::PreProcessInfo info;
-                            info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
-                            req.SetBlob(ctx->uu.params.input_names[0u], roi_blob, info);
-                        }
+                        setBlob(req,
+                                ctx->uu.params.kind,
+                                ctx->uu.params.input_names[0u],
+                                roi_blob);
                         req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, pos)
@@ -1317,18 +1314,10 @@ struct InferList2: public cv::detail::KernelTag {
                                 GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
-
-                            // NB: In case importNetwork preprocessing must be
-                            // passed as SetBlob argument.
-                            if (ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                                req.SetBlob(ctx->uu.params.input_names[in_idx], this_blob);
-                            } else {
-                                IE::PreProcessInfo info;
-                                info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
-                                req.SetBlob(ctx->uu.params.input_names[in_idx],
-                                            this_blob,
-                                            info);
-                            }
+                            setBlob(req,
+                                    ctx->uu.params.kind,
+                                    ctx->uu.params.input_names[in_idx],
+                                    this_blob);
                         }
                         req.StartAsync();
                     },
