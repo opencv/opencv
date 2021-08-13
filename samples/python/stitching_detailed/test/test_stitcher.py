@@ -68,6 +68,7 @@ class TestStitcher(unittest.TestCase):
                     "estimator": "affine",
                     "ba": "affine",
                     "warp": "affine",
+                    "wave_correct": "no",
                     "conf_thresh": 0.3}
 
         stitcher = Stitcher(["budapest1.jpg", "budapest2.jpg",

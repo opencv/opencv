@@ -38,8 +38,8 @@ class Subsetter:
         indices = cv.detail.leaveBiggestComponent(features,
                                                   pairwise_matches,
                                                   self.confidence_threshold)
-        numpy_column_to_list = [int(idx) for idx in list(indices[:, 0])]
-        return numpy_column_to_list
+        indices_as_list = [int(idx) for idx in list(indices[:, 0])]
+        return indices_as_list
 
     def get_indices_to_delete(self, list_lenght, indices_to_keep):
         return list(set(range(list_lenght)) - set(indices_to_keep))
