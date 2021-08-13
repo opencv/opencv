@@ -940,7 +940,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
         {
             open_timeout = params.get<int>(CAP_PROP_OPEN_TIMEOUT_MSEC);
         }
-        if (params.has(CAP_PROP_READ_TIMEOUT))
+        if (params.has(CAP_PROP_READ_TIMEOUT_MSEC))
         {
             read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT_MSEC);
         }
