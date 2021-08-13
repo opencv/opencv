@@ -456,7 +456,7 @@ public:
             // Retrieve all prior bboxes
             std::vector<util::NormalizedBBox> priorBBoxes;
             std::vector<std::vector<float> > priorVariances;
-            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, priorBBoxes, priorVariances);
+            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, _varianceEncodedInTarget, priorBBoxes, priorVariances);
 
             // Decode all loc predictions to bboxes
             util::NormalizedBBox clipBounds;
@@ -750,7 +750,7 @@ public:
         CV_Assert(prior_bboxes.size() == prior_variances.size());
         CV_Assert(prior_bboxes.size() == bboxes.size());
         size_t num_bboxes = prior_bboxes.size();
-        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4);
+        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4 || variance_encoded_in_target);
         decode_bboxes.clear(); decode_bboxes.resize(num_bboxes);
         if(variance_encoded_in_target)
         {
@@ -802,12 +802,13 @@ public:
     }
 
     // Get prior bounding boxes from prior_data
-    //    prior_data: 1 x 2 x num_priors * 4 x 1 blob.
+    //    prior_data: 1 x 1 x num_priors * 4 x 1 blob or 1 x 2 x num_priors * 4 x 1 blob.
     //    num_priors: number of priors.
     //    prior_bboxes: stores all the prior bboxes in the format of util::NormalizedBBox.
     //    prior_variances: stores all the variances needed by prior bboxes.
     static void GetPriorBBoxes(const float* priorData, const int& numPriors,
-                        bool normalized_bbox, std::vector<util::NormalizedBBox>& priorBBoxes,
+                        bool normalized_bbox, bool variance_encoded_in_target,
+                        std::vector<util::NormalizedBBox>& priorBBoxes,
                         std::vector<std::vector<float> >& priorVariances)
     {
         priorBBoxes.clear(); priorBBoxes.resize(numPriors);
@@ -823,13 +824,16 @@ public:
             bbox.set_size(BBoxSize(bbox, normalized_bbox));
         }
 
-        for (int i = 0; i < numPriors; ++i)
+        if (!variance_encoded_in_target)
         {
-            int startIdx = (numPriors + i) * 4;
-            // not needed here: priorVariances[i].clear();
-            for (int j = 0; j < 4; ++j)
+            for (int i = 0; i < numPriors; ++i)
             {
-                priorVariances[i].push_back(priorData[startIdx + j]);
+                int startIdx = (numPriors + i) * 4;
+                // not needed here: priorVariances[i].clear();
+                for (int j = 0; j < 4; ++j)
+                {
+                    priorVariances[i].push_back(priorData[startIdx + j]);
+                }
             }
         }
     }
