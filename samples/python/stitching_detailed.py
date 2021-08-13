@@ -15,6 +15,7 @@ import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
 
+from stitching_detailed.image_data import ImageData
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
 from stitching_detailed.subsetter import Subsetter
@@ -43,8 +44,9 @@ parser.add_argument(
     type=bool, dest='try_cuda'
 )
 parser.add_argument(
-    '--work_megapix', action='store', default=0.6,
-    help="Resolution for image registration step. The default is 0.6 Mpx",
+    '--work_megapix', action='store', default=ImageData.DEFAULT_WORK_MEGAPIX,
+    help="Resolution for image registration step. "
+    "The default is %s Mpx" % ImageData.DEFAULT_WORK_MEGAPIX,
     type=float, dest='work_megapix'
 )
 parser.add_argument(
@@ -128,8 +130,9 @@ parser.add_argument(
     type=str, dest='warp'
 )
 parser.add_argument(
-    '--seam_megapix', action='store', default=0.1,
-    help="Resolution for seam estimation step. The default is 0.1 Mpx.",
+    '--seam_megapix', action='store', default=ImageData.DEFAULT_SEAM_MEGAPIX,
+    help="Resolution for seam estimation step. "
+    "The default is %s Mpx." % ImageData.DEFAULT_SEAM_MEGAPIX,
     type=float, dest='seam_megapix'
 )
 parser.add_argument(
@@ -140,9 +143,10 @@ parser.add_argument(
     type=str, dest='seam'
 )
 parser.add_argument(
-    '--compose_megapix', action='store', default=-1,
+    '--compose_megapix', action='store',
+    default=ImageData.DEFAULT_COMPOSE_MEGAPIX,
     help="Resolution for compositing step. Use -1 for original resolution. "
-         "The default is -1",
+         "The default is %s" % ImageData.DEFAULT_COMPOSE_MEGAPIX,
     type=float, dest='compose_megapix'
 )
 parser.add_argument(
