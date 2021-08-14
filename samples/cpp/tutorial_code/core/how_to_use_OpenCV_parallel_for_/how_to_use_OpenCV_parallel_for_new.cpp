@@ -57,7 +57,7 @@ namespace
         // Taking care of edge values
         // Make border = kernel.rows / 2;
 
-        int ksize = kernel.rows, sz = kernel.rows / 2;
+        int sz = kernel.rows / 2;
         copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
 
         //! [convolution-parallel-cxx11]
@@ -307,13 +307,24 @@ int main(int argc, char *argv[])
     conv_parallel(src, dst, kernel);
 
     t = ((double)getTickCount() - t) / getTickFrequency();
-    cout << " Parallel Implementation: " << t << "s" << endl
+    cout << " Parallel Implementation: " << t << "s" << endl;
+
+    imshow("Output", dst);
+    waitKey(0);
+
+    t = (double)getTickCount();
+
+    conv_parallel_row_split(src, dst, kernel);
+
+    t = ((double)getTickCount() - t) / getTickFrequency();
+    cout << " Parallel Implementation(Row Split): " << t << "s" << endl
          << endl;
 
     imshow("Output", dst);
     waitKey(0);
-    imwrite("src.png", src);
-    imwrite("dst.png", dst);
+
+    // imwrite("src.png", src);
+    // imwrite("dst.png", dst);
 
     return 0;
 }

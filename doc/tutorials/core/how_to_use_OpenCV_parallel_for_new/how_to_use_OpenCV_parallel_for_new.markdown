@@ -39,7 +39,6 @@ Race conditions occur when more than one thread try to write *or* read and write
 Based on that, we can broadly classify algorithms into two categories:-
 1. Algorithms in which only a single thread writes data to a particular memory location.
     * In *convolution*, for example, even though multiple  threads may read from a pixel at a particular time, only a single thread *writes* to a particular pixel.
-    <!-- * Some other example. -->
 <!-- <br> -->
 
 2. Algorithms in which multiple threads may write to a single memory location.
@@ -49,13 +48,15 @@ Based on that, we can broadly classify algorithms into two categories:-
 Convolution
 -----------
 
-We will use the example of performing a convolution to demonstrate the use of parallel_for_ to parallelize the computation. This is an example of an algorithm which does not lead to a race condition.
+We will use the example of performing a convolution to demonstrate the use of `parallel_for_` to parallelize the computation. This is an example of an algorithm which does not lead to a race condition.
 
 Theory
 ------
 Convolution is a simple mathematical operation widely used in image processing. Here, we slide a smaller matrix, called the *kernel*, over an image and a sum of the product of pixel values and corresponding values in the kernel gives us the value of the particular pixel in the output (called the anchor point of the kernel).  Based on the values in the kernel, we get different results.
 In the example below, we use a 3x3 kernel (anchored at its center) and convolve over a 5x5 matrix to produce a 3x3 matrix. The size of the output can be altered by padding the input with suitable values.
-![Convolution Animation](images/convolution-example-matrix2.gif)
+![Convolution Animation](images/convolution-example-matrix.gif)
+
+
 For more information about different kernels and what they do, look [here](https://docs.opencv.org/4.5.2/d7/da8/tutorial_table_of_content_imgproc.html).
 
 For the purpose of this tutorial, we will implement the simplest form of the function which takes a grayscale image (1 channel) and an odd length square kernel and produces an output image.
@@ -66,7 +67,6 @@ The operation will not be performed in-place.
 Pseudocode
 -----------
 
-```
     InputImage src, OutputImage dst, kernel(size n)
     makeborder(src, n/2)
     for each pixel (i, j) strictly inside borders, do:
@@ -78,7 +78,7 @@ Pseudocode
 
         dst[i][j] := value
     }
-```
+
 For an *n-sized kernel*, we will add a border of size *n/2* to handle edge cases.
 We then run two loops to move along the kernel and add the products to sum
 
@@ -139,37 +139,34 @@ Results
 The resulting time taken for execution of the two implementations on a
 * *512x512 input* with a *5x5 kernel*:
 
-    ```
-    This program shows how to use the OpenCV parallel_for_ function and
-    compares the performance of the sequential and parallel implementations for a
-    convolution operation
-    Usage:
-    ./a.out [image_path -- default lena.jpg]
+        This program shows how to use the OpenCV parallel_for_ function and
+        compares the performance of the sequential and parallel implementations for a
+        convolution operation
+        Usage:
+        ./a.out [image_path -- default lena.jpg]
 
-    Sequential Implementation: 0.0953564s
-    Parallel Implementation: 0.0246762s
-    ```
+        Sequential Implementation: 0.0953564s
+        Parallel Implementation: 0.0246762s
+        Parallel Implentatation(Row Split): 0.0248722s
 
-</br>
+<br>
 
 * *512x512 input with a 3x3 kernel*
 
-    ```
-    This program shows how to use the OpenCV parallel_for_ function and
-    compares the performance of the sequential and parallel implementations for a
-    convolution operation
-    Usage:
-    ./a.out [image_path -- default lena.jpg]
+        This program shows how to use the OpenCV parallel_for_ function and
+        compares the performance of the sequential and parallel implementations for a
+        convolution operation
+        Usage:
+        ./a.out [image_path -- default lena.jpg]
 
-    Sequential Implementation: 0.0301325s
-    Parallel Implementation: 0.0117053s
-    ```
+        Sequential Implementation: 0.0301325s
+        Parallel Implementation: 0.0117053s
+        Parallel Implementation(Row Split): 0.0117894s
 
 The performance of the parallel implementation depends of the type of CPU you have. For instance, on 4 cores - 8 threads CPU, runtime may be 6x to 7x faster than a sequential implementation. There are many factors to explain why we do not achieve a speed-up of 8x:
-
-*   the overhead to create and manage the threads,
-*   background processes running in parallel,
-*   the difference between 4 hardware cores with 2 logical threads for each core and 8 hardware cores.
+    * the overhead to create and manage the threads,
+    * background processes running in parallel,
+    * the difference between 4 hardware cores with 2 logical threads for each core and 8 hardware cores.
 
 In the tutorial, we used a horizontal gradient filter(as shown in the animation above), which produces an image highlighting the vertical edges.
 
