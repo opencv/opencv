@@ -20,9 +20,9 @@ enum
     MERGED_ODOMETRY = RGBD_ODOMETRY + ICP_ODOMETRY
 };
 
-const int sobelSize = 3;
-const double sobelScale = 1./8.;
-int normalWinSize = 5;
+static const int sobelSize = 3;
+static const double sobelScale = 1./8.;
+static const int normalWinSize = 5;
 static const RgbdNormals::RgbdNormalsMethod normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
 
 static
@@ -2438,7 +2438,7 @@ bool FastICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame,
 
 //
 
-Ptr<Odometry> Odometry::createFromName(const String& odometryType)
+Ptr<Odometry> Odometry::createFromName(const std::string& odometryType)
 {
     if (odometryType == "RgbdOdometry")
         return RgbdOdometry::create();

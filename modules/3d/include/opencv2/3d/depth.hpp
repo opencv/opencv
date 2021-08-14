@@ -65,8 +65,8 @@ public:
     CV_WRAP virtual int getWindowSize() const = 0;
     CV_WRAP virtual void setWindowSize(int val) = 0;
     CV_WRAP virtual int getDepth() const = 0;
-    CV_WRAP virtual cv::Mat getK() const = 0;
-    CV_WRAP virtual void setK(const cv::Mat &val) = 0;
+    CV_WRAP virtual Mat getK() const = 0;
+    CV_WRAP virtual void setK(const Mat &val) = 0;
     CV_WRAP virtual RgbdNormals::RgbdNormalsMethod getMethod() const = 0;
     CV_WRAP virtual void setMethod(RgbdNormals::RgbdNormalsMethod val) = 0;
 };
@@ -210,16 +210,16 @@ public:
     CV_WRAP static Ptr<OdometryFrame> create(InputArray image = noArray(), InputArray depth = noArray(),
                                              InputArray  mask = noArray(), InputArray normals = noArray(), int ID = -1);
 
-    CV_WRAP virtual void setImage(InputArray  _image) = 0;
-    CV_WRAP virtual void getImage(OutputArray _image) = 0;
-    CV_WRAP virtual void setDepth(InputArray  _depth) = 0;
-    CV_WRAP virtual void getDepth(OutputArray _depth) = 0;
-    CV_WRAP virtual void setMask(InputArray  _mask) = 0;
-    CV_WRAP virtual void getMask(OutputArray _mask) = 0;
-    CV_WRAP virtual void setNormals(InputArray  _normals) = 0;
-    CV_WRAP virtual void getNormals(OutputArray _normals) = 0;
+    CV_WRAP virtual void setImage(InputArray  image) = 0;
+    CV_WRAP virtual void getImage(OutputArray image) = 0;
+    CV_WRAP virtual void setDepth(InputArray  depth) = 0;
+    CV_WRAP virtual void getDepth(OutputArray depth) = 0;
+    CV_WRAP virtual void setMask(InputArray  mask) = 0;
+    CV_WRAP virtual void getMask(OutputArray mask) = 0;
+    CV_WRAP virtual void setNormals(InputArray  normals) = 0;
+    CV_WRAP virtual void getNormals(OutputArray normals) = 0;
 
-    CV_WRAP virtual void setPyramidLevels(size_t _nLevels) = 0;
+    CV_WRAP virtual void setPyramidLevels(size_t nLevels) = 0;
     CV_WRAP virtual size_t getPyramidLevels(OdometryFrame::OdometryFramePyramidType pyrType) = 0;
 
     CV_WRAP virtual void setPyramidAt(InputArray  pyrImage, OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
@@ -247,7 +247,7 @@ public:
     * "RgbdOdometry", "ICPOdometry", "RgbdICPOdometry", "FastICPOdometry".
     * @param odometryType algorithm's name
     */
-    CV_WRAP static Ptr<Odometry> createFromName(const String& odometryType);
+    CV_WRAP static Ptr<Odometry> createFromName(const std::string& odometryType);
 
     /** Method to compute a transformation from the source frame to the destination one.
      * Some odometry algorithms do not used some data of frames (eg. ICP does not use images).
@@ -290,8 +290,8 @@ public:
     */
     CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
-    CV_WRAP virtual cv::Matx33f getCameraMatrix() const = 0;
-    CV_WRAP virtual void setCameraMatrix(const cv::Matx33f& val) = 0;
+    CV_WRAP virtual Matx33f getCameraMatrix() const = 0;
+    CV_WRAP virtual void setCameraMatrix(const Matx33f& val) = 0;
     CV_WRAP virtual Odometry::OdometryTransformType getTransformType() const = 0;
     CV_WRAP virtual void setTransformType(Odometry::OdometryTransformType val) = 0;
     CV_WRAP virtual void getIterationCounts(OutputArray val) const = 0;
@@ -336,7 +336,7 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart (from 0 to 1)
      * @param transformType Class of transformation
      */
-    CV_WRAP static Ptr<RgbdOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
                                             float minDepth = 0.f,
                                             float maxDepth = 4.f,
                                             float maxDepthDiff = 0.07f,
@@ -374,7 +374,7 @@ public:
      * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<ICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
+    CV_WRAP static Ptr<ICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
                                            float minDepth = 0.f,
                                            float maxDepth = 4.f,
                                            float maxDepthDiff = 0.07f,
@@ -412,7 +412,7 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level], default is 10 per each level
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<RgbdICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
                                                float minDepth = 0.f,
                                                float maxDepth = 4.f,
                                                float maxDepthDiff = 0.07f,
@@ -464,7 +464,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    CV_WRAP static Ptr<FastICPOdometry> create(const cv::Matx33f& cameraMatrix = cv::Matx33f::eye(),
+    CV_WRAP static Ptr<FastICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
                                                float maxDistDiff = 0.07f,
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,

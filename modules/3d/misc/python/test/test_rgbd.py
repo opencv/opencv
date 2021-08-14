@@ -13,7 +13,7 @@ class rgbd_test(NewOpenCVTests):
 
     def test_computeRgbdPlane(self):
 
-        depth_image = self.get_sample('/cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
+        depth_image = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH)
         if depth_image is None:
             raise unittest.SkipTest("Missing files with test data")
 
