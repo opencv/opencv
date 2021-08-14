@@ -572,6 +572,22 @@ reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_mean')
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+reduced = tf.reduce_max(inp, axis=[1, 2], keepdims=True)
+save(inp, reduced, 'reduce_max')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 4], 'ReduceMax')
+out = tf.reduce_max([inp, inp * 2], axis=0)
+save(inp, out, 'max_pool_by_axis')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_max(inp, axis=-1)
+save(inp, out, 'reduce_max_channel')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_max(inp, axis=-1, keep_dims=True)
+save(inp, out, ('reduce_max_channel', 'keep_dims'), is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 reduced = tf.reduce_sum(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_sum')
 ################################################################################
