@@ -26,7 +26,7 @@ namespace cv
 class CV_EXPORTS_W RgbdNormals
 {
 public:
-    enum RGBD_NORMALS_METHOD
+    enum RgbdNormalsMethod
     {
       RGBD_NORMALS_METHOD_FALS = 0,
       RGBD_NORMALS_METHOD_LINEMOD = 1,
@@ -45,7 +45,7 @@ public:
      * @param method one of the methods to use: RGBD_NORMALS_METHOD_SRI, RGBD_NORMALS_METHOD_FALS
      */
     CV_WRAP static Ptr<RgbdNormals> create(int rows = 0, int cols = 0, int depth = 0, InputArray K = noArray(), int window_size = 5,
-                                           int method = RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+                                           RgbdNormals::RgbdNormalsMethod method = RgbdNormals::RgbdNormalsMethod::RGBD_NORMALS_METHOD_FALS);
 
     /** Given a set of 3d points in a depth image, compute the normals at each point.
      * @param points a rows x cols x 3 matrix of CV_32F/CV64F or a rows x cols x 1 CV_U16S
@@ -67,8 +67,8 @@ public:
     CV_WRAP virtual int getDepth() const = 0;
     CV_WRAP virtual cv::Mat getK() const = 0;
     CV_WRAP virtual void setK(const cv::Mat &val) = 0;
-    CV_WRAP virtual int getMethod() const = 0;
-    CV_WRAP virtual void setMethod(int val) = 0;
+    CV_WRAP virtual RgbdNormals::RgbdNormalsMethod getMethod() const = 0;
+    CV_WRAP virtual void setMethod(RgbdNormals::RgbdNormalsMethod val) = 0;
 };
 
 
@@ -140,7 +140,7 @@ CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double 
 CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
                             OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
 
-enum RGBD_PLANE_METHOD
+enum RgbdPlaneMethod
 {
     RGBD_PLANE_METHOD_DEFAULT
 };
@@ -164,7 +164,7 @@ CV_EXPORTS_W void findPlanes(InputArray points3d, InputArray normals, OutputArra
                              int block_size = 40, int min_size = 40*40, double threshold = 0.01,
                              double sensor_error_a = 0, double sensor_error_b = 0,
                              double sensor_error_c = 0,
-                             int method = RGBD_PLANE_METHOD_DEFAULT);
+                             RgbdPlaneMethod method = RGBD_PLANE_METHOD_DEFAULT);
 
 /** Object that contains a frame data that is possibly needed for the Odometry.
  * It's used for the efficiency (to pass precomputed/cached data of the frame that participates
@@ -182,7 +182,7 @@ public:
      * @param CACHE_DEPTH The frame will be generated from depth image
      * @param CACHE_PTS The frame will be built from point cloud
      */
-    enum
+    enum OdometryFrameCacheType
     {
       CACHE_SRC = 1, CACHE_DST = 2, CACHE_ALL = CACHE_SRC + CACHE_DST
     };
@@ -198,7 +198,7 @@ public:
     * @param PYR_NORM  The pyramid of normals
     * @param PYR_NORMMASK The pyramid of normals masks
     */
-    enum
+    enum OdometryFramePyramidType
     {
         PYR_IMAGE = 0, PYR_DEPTH = 1, PYR_MASK = 2, PYR_CLOUD = 3, PYR_DIX = 4, PYR_DIY = 5, PYR_TEXMASK = 6, PYR_NORM = 7, PYR_NORMMASK = 8,
         N_PYRAMIDS
@@ -220,10 +220,10 @@ public:
     CV_WRAP virtual void getNormals(OutputArray _normals) = 0;
 
     CV_WRAP virtual void setPyramidLevels(size_t _nLevels) = 0;
-    CV_WRAP virtual size_t getPyramidLevels(int pyrType) = 0;
+    CV_WRAP virtual size_t getPyramidLevels(OdometryFrame::OdometryFramePyramidType pyrType) = 0;
 
-    CV_WRAP virtual void setPyramidAt(InputArray  _pyrImage, int pyrType, size_t level) = 0;
-    CV_WRAP virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) = 0;
+    CV_WRAP virtual void setPyramidAt(InputArray  pyrImage, OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
+    CV_WRAP virtual void getPyramidAt(OutputArray pyrImage, OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
 
     CV_PROP int ID;
 };
@@ -236,7 +236,7 @@ class CV_EXPORTS_W Odometry
 public:
 
     /** A class of transformation*/
-    enum
+    enum OdometryTransformType
     {
       ROTATION = 1, TRANSLATION = 2, RIGID_BODY_MOTION = 4
     };
@@ -281,7 +281,7 @@ public:
      * @param frame The odometry which will process the frame.
      * @param cacheType The cache type: CACHE_SRC, CACHE_DST or CACHE_ALL.
      */
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const = 0;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const = 0;
 
     /** Create odometry frame for current Odometry implementation
      * @param image Image data of the frame (CV_8UC1)
@@ -292,8 +292,8 @@ public:
 
     CV_WRAP virtual cv::Matx33f getCameraMatrix() const = 0;
     CV_WRAP virtual void setCameraMatrix(const cv::Matx33f& val) = 0;
-    CV_WRAP virtual int getTransformType() const = 0;
-    CV_WRAP virtual void setTransformType(int val) = 0;
+    CV_WRAP virtual Odometry::OdometryTransformType getTransformType() const = 0;
+    CV_WRAP virtual void setTransformType(Odometry::OdometryTransformType val) = 0;
     CV_WRAP virtual void getIterationCounts(OutputArray val) const = 0;
     CV_WRAP virtual void setIterationCounts(InputArray val) = 0;
     /** For each pyramid level the pixels will be filtered out if they have gradient magnitude less than minGradientMagnitudes[level].
@@ -343,16 +343,16 @@ public:
                                             InputArray iterCounts = noArray(),
                                             InputArray minGradientMagnitudes = noArray(),
                                             float maxPointsPart = 0.07f,
-                                            int transformType = Odometry::RIGID_BODY_MOTION);
+                                            Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
-    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual void   setMinDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepth() const = 0;
-    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual void   setMaxDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepthDiff() const = 0;
-    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual void   setMaxDepthDiff(double val) = 0;
     CV_WRAP virtual double getMaxPointsPart() const = 0;
-    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
+    CV_WRAP virtual void   setMaxPointsPart(double val) = 0;
 
 };
 
@@ -380,16 +380,16 @@ public:
                                            float maxDepthDiff = 0.07f,
                                            float maxPointsPart = 0.07f,
                                            InputArray iterCounts = noArray(),
-                                           int transformType = Odometry::RIGID_BODY_MOTION);
+                                           Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
-    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual void   setMinDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepth() const = 0;
-    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual void   setMaxDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepthDiff() const = 0;
-    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual void   setMaxDepthDiff(double val) = 0;
     CV_WRAP virtual double getMaxPointsPart() const = 0;
-    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
+    CV_WRAP virtual void   setMaxPointsPart(double val) = 0;
     CV_WRAP virtual Ptr<RgbdNormals> getNormalsComputer() const = 0;
 };
 
@@ -419,16 +419,16 @@ public:
                                                float maxPointsPart = 0.07f,
                                                InputArray iterCounts = noArray(),
                                                InputArray minGradientMagnitudes = noArray(),
-                                               int transformType = Odometry::RIGID_BODY_MOTION);
+                                               Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
-    CV_WRAP virtual void setMinDepth(double val) = 0;
+    CV_WRAP virtual void   setMinDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepth() const = 0;
-    CV_WRAP virtual void setMaxDepth(double val) = 0;
+    CV_WRAP virtual void   setMaxDepth(double val) = 0;
     CV_WRAP virtual double getMaxDepthDiff() const = 0;
-    CV_WRAP virtual void setMaxDepthDiff(double val) = 0;
+    CV_WRAP virtual void   setMaxDepthDiff(double val) = 0;
     CV_WRAP virtual double getMaxPointsPart() const = 0;
-    CV_WRAP virtual void setMaxPointsPart(double val) = 0;
+    CV_WRAP virtual void   setMaxPointsPart(double val) = 0;
 
     CV_WRAP virtual Ptr<RgbdNormals> getNormalsComputer() const = 0;
 };
@@ -475,19 +475,19 @@ public:
                                                float truncateThreshold = 0.f);
 
     CV_WRAP virtual double getMaxDistDiff() const = 0;
-    CV_WRAP virtual void setMaxDistDiff(float val) = 0;
-    CV_WRAP virtual float getAngleThreshold() const = 0;
-    CV_WRAP virtual void setAngleThreshold(float f) = 0;
-    CV_WRAP virtual float getSigmaDepth() const = 0;
-    CV_WRAP virtual void setSigmaDepth(float f) = 0;
-    CV_WRAP virtual float getSigmaSpatial() const = 0;
-    CV_WRAP virtual void setSigmaSpatial(float f) = 0;
-    CV_WRAP virtual int getKernelSize() const = 0;
-    CV_WRAP virtual void setKernelSize(int f) = 0;
-    CV_WRAP virtual float getDepthFactor() const = 0;
-    CV_WRAP virtual void setDepthFactor(float _depthFactor) = 0;
-    CV_WRAP virtual float getTruncateThreshold() const = 0;
-    CV_WRAP virtual void setTruncateThreshold(float _truncateThreshold) = 0;
+    CV_WRAP virtual void   setMaxDistDiff(float val) = 0;
+    CV_WRAP virtual float  getAngleThreshold() const = 0;
+    CV_WRAP virtual void   setAngleThreshold(float f) = 0;
+    CV_WRAP virtual float  getSigmaDepth() const = 0;
+    CV_WRAP virtual void   setSigmaDepth(float f) = 0;
+    CV_WRAP virtual float  getSigmaSpatial() const = 0;
+    CV_WRAP virtual void   setSigmaSpatial(float f) = 0;
+    CV_WRAP virtual int    getKernelSize() const = 0;
+    CV_WRAP virtual void   setKernelSize(int f) = 0;
+    CV_WRAP virtual float  getDepthFactor() const = 0;
+    CV_WRAP virtual void   setDepthFactor(float depthFactor) = 0;
+    CV_WRAP virtual float  getTruncateThreshold() const = 0;
+    CV_WRAP virtual void   setTruncateThreshold(float truncateThreshold) = 0;
 
 };
 

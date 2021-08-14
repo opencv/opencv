@@ -130,7 +130,7 @@ class RgbdNormalsImpl : public RgbdNormals
 public:
     static const int dtype = cv::traits::Depth<T>::value;
 
-    RgbdNormalsImpl(int _rows, int _cols, int _windowSize, const Mat& _K, RgbdNormals::RGBD_NORMALS_METHOD _method) :
+    RgbdNormalsImpl(int _rows, int _cols, int _windowSize, const Mat& _K, RgbdNormals::RgbdNormalsMethod _method) :
         rows(_rows),
         cols(_cols),
         windowSize(_windowSize),
@@ -182,11 +182,11 @@ public:
     {
         K = val; cacheIsDirty = true;
     }
-    virtual int getMethod() const CV_OVERRIDE
+    virtual RgbdNormalsMethod getMethod() const CV_OVERRIDE
     {
         return method;
     }
-    virtual void setMethod(int val) CV_OVERRIDE
+    virtual void setMethod(RgbdNormalsMethod val) CV_OVERRIDE
     {
         method = val; cacheIsDirty = true;
     }
@@ -245,7 +245,7 @@ public:
     int rows, cols;
     Mat K, K_ori;
     int windowSize;
-    int method;
+    RgbdNormalsMethod method;
     mutable bool cacheIsDirty;
 };
 
@@ -734,7 +734,7 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K, int windowSize, int method)
+Ptr<RgbdNormals> RgbdNormals::create(int rows, int cols, int depth, InputArray K, int windowSize, RgbdNormalsMethod method)
 {
     CV_Assert(rows > 0 && cols > 0 && (depth == CV_32F || depth == CV_64F));
     CV_Assert(windowSize == 1 || windowSize == 3 || windowSize == 5 || windowSize == 7);

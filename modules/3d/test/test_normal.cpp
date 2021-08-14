@@ -156,7 +156,7 @@ public:
         Mat_<unsigned char> plane_mask;
         for (unsigned char i = 0; i < 3; ++i)
         {
-            RgbdNormals::RGBD_NORMALS_METHOD method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;;
+            RgbdNormals::RgbdNormalsMethod method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;;
             // inner vector: whether it's 1 plane or 3 planes
             // outer vector: float or double
             std::vector<std::vector<float> > errors(2);

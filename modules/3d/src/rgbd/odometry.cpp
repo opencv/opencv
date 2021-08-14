@@ -23,7 +23,7 @@ enum
 const int sobelSize = 3;
 const double sobelScale = 1./8.;
 int normalWinSize = 5;
-int normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+static const RgbdNormals::RgbdNormalsMethod normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
 
 static
 void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vector<Matx33f>& pyramidCameraMatrix)
@@ -1071,7 +1071,7 @@ struct OdometryFrameImpl : public OdometryFrame
         }
     }
 
-    virtual size_t getPyramidLevels(int what = PYR_IMAGE) CV_OVERRIDE
+    virtual size_t getPyramidLevels(OdometryFramePyramidType what = PYR_IMAGE) CV_OVERRIDE
     {
         if (what < N_PYRAMIDS)
             return pyramids[what].size();
@@ -1079,13 +1079,13 @@ struct OdometryFrameImpl : public OdometryFrame
             return 0;
     }
 
-    virtual void setPyramidAt(InputArray  _pyrImage, int pyrType, size_t level) CV_OVERRIDE
+    virtual void setPyramidAt(InputArray  _pyrImage, OdometryFramePyramidType pyrType, size_t level) CV_OVERRIDE
     {
         TMat img = getTMat<TMat>(_pyrImage);
         pyramids[pyrType][level] = img;
     }
 
-    virtual void getPyramidAt(OutputArray _pyrImage, int pyrType, size_t level) CV_OVERRIDE
+    virtual void getPyramidAt(OutputArray _pyrImage, OdometryFramePyramidType pyrType, size_t level) CV_OVERRIDE
     {
         TMat img;
         img = pyramids[pyrType][level];
@@ -1149,7 +1149,7 @@ public:
     OdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
                  InputArray _iterCounts = noArray(),
                  InputArray _minGradientMagnitudes = noArray(),
-                 int _transformType = Odometry::RIGID_BODY_MOTION)
+                 Odometry::OdometryTransformType _transformType = Odometry::RIGID_BODY_MOTION)
     {
         setTransformType(_transformType);
         setMaxTranslation(defaultMaxTranslation);
@@ -1181,7 +1181,7 @@ public:
         return computeImpl(srcFrame, dstFrame, Rt, initRt);
     }
 
-    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int /*cacheType*/) const CV_OVERRIDE
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType /*cacheType*/) const CV_OVERRIDE
     {
         if (!frame)
             CV_Error(Error::StsBadArg, "Null frame pointer.");
@@ -1198,11 +1198,11 @@ public:
         cameraMatrix = val;
     }
 
-    virtual int getTransformType() const CV_OVERRIDE
+    virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
     {
         return transformType;
     }
-    virtual void setTransformType(int val) CV_OVERRIDE
+    virtual void setTransformType(Odometry::OdometryTransformType val) CV_OVERRIDE
     {
         transformType = val;
     }
@@ -1281,7 +1281,7 @@ public:
 
     double maxTranslation, maxRotation;
 
-    int transformType;
+    Odometry::OdometryTransformType transformType;
 
     Matx33f cameraMatrix;
     std::vector<int> iterCounts;
@@ -1322,7 +1322,7 @@ public:
                      InputArray _iterCounts = noArray(),
                      InputArray _minGradientMagnitudes = noArray(),
                      float _maxPointsPart = defaultMaxPointsPart,
-                     int _transformType = Odometry::RIGID_BODY_MOTION) :
+                     Odometry::OdometryTransformType _transformType = Odometry::RIGID_BODY_MOTION) :
         OdometryImpl(_cameraMatrix, _iterCounts, _minGradientMagnitudes, _transformType)
     {
         setMinDepth(_minDepth);
@@ -1333,7 +1333,7 @@ public:
 
     virtual ~RgbdOdometryImpl() { }
 
-    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
@@ -1395,11 +1395,11 @@ public:
     {
         OdometryImpl::setCameraMatrix(val);
     }
-    virtual int getTransformType() const CV_OVERRIDE
+    virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
     {
         return OdometryImpl::getTransformType();
     }
-    virtual void setTransformType(int val) CV_OVERRIDE
+    virtual void setTransformType(Odometry::OdometryTransformType val) CV_OVERRIDE
     {
         OdometryImpl::setTransformType(val);
     }
@@ -1446,7 +1446,7 @@ protected:
 Ptr<RgbdOdometry> RgbdOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
                                        float _maxDepthDiff, InputArray _iterCounts,
                                        InputArray _minGradientMagnitudes, float _maxPointsPart,
-                                       int _transformType)
+                                       Odometry::OdometryTransformType _transformType)
 {
     return makePtr<RgbdOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _iterCounts, _minGradientMagnitudes, _maxPointsPart, _transformType);
 }
@@ -1458,7 +1458,7 @@ Ptr<OdometryFrame> RgbdOdometryImpl::makeOdometryFrame(InputArray _image, InputA
 }
 
 
-Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const
 {
     OdometryImpl::prepareFrameCache(frame, cacheType);
 
@@ -1567,7 +1567,8 @@ public:
                     float _maxDepth = defaultMaxDepth,
                     float _maxDepthDiff = defaultMaxDepthDiff,
                     float _maxPointsPart = defaultMaxPointsPart,
-                    InputArray _iterCounts = noArray(), int _transformType = Odometry::RIGID_BODY_MOTION) :
+                    InputArray _iterCounts = noArray(),
+                    Odometry::OdometryTransformType _transformType = Odometry::RIGID_BODY_MOTION) :
         OdometryImpl(_cameraMatrix, _iterCounts, noArray(), _transformType)
     {
         setMinDepth(_minDepth);
@@ -1576,7 +1577,7 @@ public:
         setMaxPointsPart(_maxPointsPart);
     }
 
-    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
@@ -1638,11 +1639,11 @@ public:
     {
         OdometryImpl::setCameraMatrix(val);
     }
-    virtual int getTransformType() const CV_OVERRIDE
+    virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
     {
         return OdometryImpl::getTransformType();
     }
-    virtual void setTransformType(int val) CV_OVERRIDE
+    virtual void setTransformType(Odometry::OdometryTransformType val) CV_OVERRIDE
     {
         OdometryImpl::setTransformType(val);
     }
@@ -1695,7 +1696,7 @@ protected:
 
 Ptr<ICPOdometry> ICPOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
                                      float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
-                                     int _transformType)
+                                     Odometry::OdometryTransformType _transformType)
 {
     return makePtr<ICPOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _transformType);
 }
@@ -1707,7 +1708,7 @@ Ptr<OdometryFrame> ICPOdometryImpl::makeOdometryFrame(InputArray _image, InputAr
 }
 
 
-Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const
 {
     OdometryImpl::prepareFrameCache(frame, cacheType);
 
@@ -1834,7 +1835,7 @@ public:
                         float _maxPointsPart = defaultMaxPointsPart,
                         InputArray _iterCounts = noArray(),
                         InputArray _minGradientMagnitudes = noArray(),
-                        int _transformType = Odometry::RIGID_BODY_MOTION) :
+                        Odometry::OdometryTransformType _transformType = Odometry::RIGID_BODY_MOTION) :
         OdometryImpl(_cameraMatrix, _iterCounts, _minGradientMagnitudes, _transformType)
     {
         setMinDepth(_minDepth);
@@ -1843,7 +1844,7 @@ public:
         setMaxPointsPart(_maxPointsPart);
     }
 
-    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
@@ -1905,11 +1906,11 @@ public:
     {
         OdometryImpl::setCameraMatrix(val);
     }
-    virtual int getTransformType() const CV_OVERRIDE
+    virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
     {
         return OdometryImpl::getTransformType();
     }
-    virtual void setTransformType(int val) CV_OVERRIDE
+    virtual void setTransformType(Odometry::OdometryTransformType val) CV_OVERRIDE
     {
         OdometryImpl::setTransformType(val);
     }
@@ -1964,7 +1965,7 @@ protected:
 Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
                                              float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
                                              InputArray _minGradientMagnitudes,
-                                             int _transformType)
+                                             Odometry::OdometryTransformType _transformType)
 {
     return makePtr<RgbdICPOdometryImpl>(_cameraMatrix, _minDepth, _maxDepth, _maxDepthDiff, _maxPointsPart, _iterCounts, _minGradientMagnitudes, _transformType);
 }
@@ -1976,7 +1977,7 @@ Ptr<OdometryFrame> RgbdICPOdometryImpl::makeOdometryFrame(InputArray _image, Inp
 }
 
 
-Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const
 {
     OdometryImpl::prepareFrameCache(frame, cacheType);
 
@@ -2142,7 +2143,7 @@ public:
         setTruncateThreshold(_truncateThreshold);
     }
 
-    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const CV_OVERRIDE;
+    virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const CV_OVERRIDE;
 
     virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const CV_OVERRIDE;
 
@@ -2248,11 +2249,11 @@ public:
     {
         OdometryImpl::setMaxRotation(val);
     }
-    virtual int getTransformType() const CV_OVERRIDE
+    virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
     {
         return Odometry::RIGID_BODY_MOTION;
     }
-    virtual void setTransformType(int val) CV_OVERRIDE
+    virtual void setTransformType(Odometry::OdometryTransformType val) CV_OVERRIDE
     {
         if (val != Odometry::RIGID_BODY_MOTION)
             CV_Error(CV_StsBadArg, "Rigid Body Motion is the only accepted transformation type for this odometry method");
@@ -2275,7 +2276,7 @@ protected:
                              const Mat& initRt) const CV_OVERRIDE;
 
     template<typename TMat>
-    Size prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const;
+    Size prepareFrameCacheT(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     float maxDistDiff;
@@ -2316,7 +2317,7 @@ Ptr<OdometryFrame> FastICPOdometryImpl::makeOdometryFrame(InputArray _image, Inp
 }
 
 template<typename TMat>
-Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cacheType) const
+Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const
 {
     OdometryImpl::prepareFrameCache(frame, cacheType);
 
@@ -2372,7 +2373,7 @@ Size FastICPOdometryImpl::prepareFrameCacheT(Ptr<OdometryFrame> frame, int cache
     return depth.size();
 }
 
-Size FastICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, int cacheType) const
+Size FastICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const
 {
     auto oclFrame = frame.dynamicCast<OdometryFrameImpl<UMat>>();
     auto cpuFrame = frame.dynamicCast<OdometryFrameImpl<Mat>>();

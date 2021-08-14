@@ -474,7 +474,7 @@ private:
 
 void findPlanes(InputArray points3d_in, InputArray normals_in, OutputArray mask_out, OutputArray plane_coefficients_out,
                 int block_size, int min_size, double threshold, double sensor_error_a, double sensor_error_b, double sensor_error_c,
-                int method)
+                RgbdPlaneMethod method)
 {
     CV_Assert(method == RGBD_PLANE_METHOD_DEFAULT);
 
