@@ -320,18 +320,18 @@ try:
             comp.compileStreaming(cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
 
 
-        def test_compile_streaming_gin(self):
+        def test_compile_streaming_descr_of(self):
             g_in = cv.GMat()
             comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
             img = np.zeros((3,300,300), dtype=np.float32)
-            comp.compileStreaming(cv.gin(img))
+            comp.compileStreaming(cv.gapi.descr_of(img))
 
 
-        def test_compile_streaming_gin_and_args(self):
+        def test_compile_streaming_descr_of_and_args(self):
             g_in = cv.GMat()
             comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
             img = np.zeros((3,300,300), dtype=np.float32)
-            comp.compileStreaming(cv.gin(img),
+            comp.compileStreaming(cv.gapi.descr_of(img),
                     cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
 
 
