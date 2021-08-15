@@ -1373,7 +1373,9 @@ public:
 
     /**
      * @brief Set the decoding method of translating the network output into string
-     * @param[in] decodeType The decoding method of translating the network output into string: {'CTC-greedy': greedy decoding for the output of CTC-based methods}
+     * @param[in] decodeType The decoding method of translating the network output into string, currently supported type:
+     *    - `"CTC-greedy"` greedy decoding for the output of CTC-based methods
+     *    - `"CTC-prefix-beam-search"` Prefix beam search decoding for the output of CTC-based methods
      */
     CV_WRAP
     TextRecognitionModel& setDecodeType(const std::string& decodeType);
@@ -1384,6 +1386,15 @@ public:
      */
     CV_WRAP
     const std::string& getDecodeType() const;
+
+    /**
+     * @brief Set the decoding method options for `"CTC-prefix-beam-search"` decode usage
+     * @param[in] beamSize Beam size for search
+     * @param[in] vocPruneSize Parameter to optimize big vocabulary search,
+     * only take top @p vocPruneSize tokens in each search step, @p vocPruneSize <= 0 stands for disable this prune.
+     */
+    CV_WRAP
+    TextRecognitionModel& setDecodeOptsCTCPrefixBeamSearch(int beamSize, int vocPruneSize = 0);
 
     /**
      * @brief Set the vocabulary for recognition.
