@@ -437,11 +437,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
-
-    /// @private -- Exclude this function from OpenCV documentation
-    GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
-                                              GCompileArgs                   &&args = {});
+    GAPI_WRAP GStreamingCompiled compileStreaming(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     /**
      * @brief Compile the computation for streaming mode.
@@ -462,7 +458,11 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args = {});
+
+    /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
+                                                  GCompileArgs                   &&args = {});
 
     // 2. Direct metadata version
     /**

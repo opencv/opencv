@@ -5,8 +5,9 @@ namespace cv
 {
 struct GAPI_EXPORTS_W_SIMPLE GCompileArg
 {
-    GAPI_WRAP GCompileArg(gapi::GKernelPackage pkg);
-    GAPI_WRAP GCompileArg(gapi::GNetPackage pkg);
+    GAPI_WRAP GCompileArg(gapi::GKernelPackage arg);
+    GAPI_WRAP GCompileArg(gapi::GNetPackage arg);
+    GAPI_WRAP GCompileArg(gapi::streaming::queue_capacity arg);
 };
 
 class GAPI_EXPORTS_W_SIMPLE GInferInputs
@@ -37,16 +38,6 @@ class GAPI_EXPORTS_W_SIMPLE GInferListOutputs
 public:
     GAPI_WRAP GInferListOutputs();
     GAPI_WRAP cv::GArray<cv::GMat> at(const std::string& name);
-};
-
-class GComputation
-{
-public:
-    GAPI_WRAP GStreamingCompiled compileStreaming();
-    GAPI_WRAP GStreamingCompiled compileStreaming(GCompileArgs &&args);
-    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback);
-    GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
-                                                        GCompileArgs                   &&args);
 };
 
 namespace gapi
