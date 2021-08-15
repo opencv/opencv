@@ -174,11 +174,11 @@ public:
     {
         windowSize = val; cacheIsDirty = true;
     }
-    virtual cv::Mat getK() const CV_OVERRIDE
+    virtual void getK(OutputArray val) const CV_OVERRIDE
     {
-        return K;
+        K.copyTo(val);
     }
-    virtual void setK(const cv::Mat& val) CV_OVERRIDE
+    virtual void setK(InputArray val) CV_OVERRIDE
     {
         K = val; cacheIsDirty = true;
     }

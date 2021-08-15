@@ -65,8 +65,8 @@ public:
     CV_WRAP virtual int getWindowSize() const = 0;
     CV_WRAP virtual void setWindowSize(int val) = 0;
     CV_WRAP virtual int getDepth() const = 0;
-    CV_WRAP virtual Mat getK() const = 0;
-    CV_WRAP virtual void setK(const Mat &val) = 0;
+    CV_WRAP virtual void getK(OutputArray val) const = 0;
+    CV_WRAP virtual void setK(InputArray val) = 0;
     CV_WRAP virtual RgbdNormals::RgbdNormalsMethod getMethod() const = 0;
     CV_WRAP virtual void setMethod(RgbdNormals::RgbdNormalsMethod val) = 0;
 };
