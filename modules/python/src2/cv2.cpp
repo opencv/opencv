@@ -49,6 +49,8 @@
 
 static PyObject* opencv_error = NULL;
 
+static PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
+
 class ArgInfo
 {
 public:
@@ -638,10 +640,20 @@ static bool isBool(PyObject* obj) CV_NOEXCEPT
     return PyArray_IsScalar(obj, Bool) || PyBool_Check(obj);
 }
 
+template <typename T>
+static std::string pycv_dumpArray(const T* arr, int n)
+{
+    std::ostringstream out;
+    out << "[";
+    for (int i = 0; i < n; ++i)
+        out << " " << arr[i];
+    out << " ]";
+    return out.str();
+}
+
 // special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 {
-    bool allowND = true;
     if(!o || o == Py_None)
     {
         if( !m.data )
@@ -727,12 +739,29 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return false;
     }
 
-    int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1];
     size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);
+
+    CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
+
     bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
+    {
+        bool wrapChannels = false;
+        PyObject* pyobj_wrap_channels = PyObject_GetAttrString(o, "wrap_channels");
+        if (pyobj_wrap_channels)
+        {
+            if (!pyopencv_to_safe(pyobj_wrap_channels, wrapChannels, ArgInfo("cv.Mat.wrap_channels", 0)))
+            {
+                // TODO extra message
+                Py_DECREF(pyobj_wrap_channels);
+                return false;
+            }
+            Py_DECREF(pyobj_wrap_channels);
+        }
+        ismultichannel = wrapChannels && ndims >= 1;
+    }
 
     for( int i = ndims-1; i >= 0 && !needcopy; i-- )
     {
@@ -746,14 +775,26 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             needcopy = true;
     }
 
-    if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
-        needcopy = true;
+    if (ismultichannel)
+    {
+        int channels = ndims >= 1 ? (int)_sizes[ndims - 1] : 1;
+        if (channels > CV_CN_MAX)
+        {
+            failmsg("%s unable to wrap channels, too high (%d > CV_CN_MAX=%d)", info.name, (int)channels, (int)CV_CN_MAX);
+            return false;
+        }
+        ndims--;
+        type |= CV_MAKETYPE(0, channels);
+
+        if (ndims >= 1 && _strides[ndims - 1] != (npy_intp)elemsize*_sizes[ndims])
+            needcopy = true;
+    }
 
     if (needcopy)
     {
         if (info.outputarg)
         {
-            failmsg("Layout of the output array %s is incompatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
+            failmsg("Layout of the output array %s is incompatible with cv::Mat", info.name);
             return false;
         }
 
@@ -768,6 +809,9 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
         _strides = PyArray_STRIDES(oarr);
     }
+
+    int size[CV_MAX_DIM+1] = {};
+    size_t step[CV_MAX_DIM+1] = {};
 
     // Normalize strides in case NPY_RELAXED_STRIDES is set
     size_t default_step = elemsize;
@@ -787,23 +831,16 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     }
 
     // handle degenerate case
+    // FIXIT: Don't force 1D for Scalars
     if( ndims == 0) {
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
     }
 
-    if( ismultichannel )
-    {
-        ndims--;
-        type |= CV_MAKETYPE(0, size[2]);
-    }
-
-    if( ndims > 2 && !allowND )
-    {
-        failmsg("%s has more than 2 dimensions", info.name);
-        return false;
-    }
+#if 1
+    CV_LOG_DEBUG(NULL, "Construct Mat: ndims=" << ndims << " size=" << pycv_dumpArray(size, ndims) << "  step=" << pycv_dumpArray(step, ndims) << "  type=" << cv::typeToString(type));
+#endif
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
@@ -2183,7 +2220,24 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
+static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
+{
+    CV_LOG_DEBUG(NULL, cv::format("pycvRegisterMatType %p %p\n", self, value));
+
+    if (0 == PyType_Check(value))
+    {
+        PyErr_SetString(PyExc_TypeError, "Type argument is expected");
+        return NULL;
+    }
+
+    Py_INCREF(value);
+    pyopencv_Mat_TypePtr = (PyTypeObject*)value;
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef special_methods[] = {
+  {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
