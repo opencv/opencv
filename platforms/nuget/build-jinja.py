@@ -62,7 +62,6 @@ def create_nuspec():
         html = render_template('OpenCVNuget.nuspec', context)
         f.write(html)
 
-    targets_from = UP_PATH + '\\opencv\\platforms\\nuget\\templates\\OpenCVNuget.targets'
     targets_from = UP_PATH + r'\opencv\platforms\nuget\templates\OpenCVNuget.targets'
     targets_to = UP_PATH + r'\build\install\OpenCVNuget.targets'
 
