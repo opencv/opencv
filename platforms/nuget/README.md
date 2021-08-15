@@ -8,8 +8,8 @@ The workflow is defined in the `nuget-package-creation.yml` file. You can simply
 ## Running Github actions
 - You need to first create the workflow on your fork of opencv repository
 - Under Actions tab, you can see All Workflows, under which you should now be able to see `nuget build (nupkg) creation`
-- Click on "Run Workflow", choose a branch, input the comma-seperated values for MSVC Compiler versions (e.g. "vc16" or "vc15, vc16")
+- Click on "Run Workflow", choose a branch, input the value for MSVC Compiler version (e.g. "vc14" or "vc15" or "vc16")
 - Click on the green "Run Workflow" button
 
 ## Build generates and serves output nupkg
-- Once the workflow action is succesful, all build files are generated and the Nuget package (nupkg) is now compiled into one final file, which can be downloaded from the "Action Articats"
+- Once the workflow action is succesful, all build files are generated and the Nuget package (nupkg) is now compiled into one final file, which can be downloaded from the "Action Artifacts"

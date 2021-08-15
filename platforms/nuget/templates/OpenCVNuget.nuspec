@@ -24,6 +24,7 @@
 		{% for arch in params.architectures -%}
 		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\lib\**\opencv_world*.lib" target="build\native\{{ arch }}\{{ msvc }}.0\lib" />
 		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\bin\**\opencv_world*.dll" target="build\native\{{ arch }}\{{ msvc }}.0\bin" />
+		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\bin\**\*ffmpeg*.dll" target="build\native\{{ arch }}\{{ msvc }}.0\bin" />
 
 		{% endfor -%}
 		{% endfor -%}
