@@ -1162,7 +1162,7 @@ public:
     virtual ~OdometryImpl() { }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+                         InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const CV_OVERRIDE
     {
         Ptr<OdometryFrame> srcFrame = makeOdometryFrame(srcImage, srcDepth, srcMask);
         Ptr<OdometryFrame> dstFrame = makeOdometryFrame(dstImage, dstDepth, dstMask);
@@ -1170,7 +1170,8 @@ public:
         return compute(srcFrame, dstFrame, Rt, initRt);
     }
 
-    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                         OutputArray Rt, InputArray initRt) const CV_OVERRIDE
     {
         Size srcSize = prepareFrameCache(srcFrame, OdometryFrame::CACHE_SRC);
         Size dstSize = prepareFrameCache(dstFrame, OdometryFrame::CACHE_DST);
@@ -1277,7 +1278,7 @@ public:
     }
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                             const Mat& initRt) const = 0;
+                             InputArray initRt) const = 0;
 
     double maxTranslation, maxRotation;
 
@@ -1421,12 +1422,13 @@ public:
     }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+                         InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
     }
 
-    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                         OutputArray Rt, InputArray initRt) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
     }
@@ -1434,7 +1436,7 @@ public:
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                             const Mat& initRt) const CV_OVERRIDE;
+                             InputArray initRt) const CV_OVERRIDE;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
@@ -1540,9 +1542,9 @@ Size RgbdOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame
 }
 
 
-bool RgbdOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
+bool RgbdOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, InputArray initRt) const
 {
-    return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, RGBD_ODOMETRY, transformType);
+    return RGBDICPOdometryImpl(Rt, initRt.getMat(), srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, RGBD_ODOMETRY, transformType);
 }
 
 //
@@ -1670,12 +1672,13 @@ public:
     }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+                         InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
     }
 
-    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                         OutputArray Rt, InputArray initRt) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
     }
@@ -1683,7 +1686,7 @@ public:
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                             const Mat& initRt) const CV_OVERRIDE;
+                             InputArray initRt) const CV_OVERRIDE;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
@@ -1805,9 +1808,9 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame:
 }
 
 
-bool ICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
+bool ICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, InputArray initRt) const
 {
-    return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, ICP_ODOMETRY, transformType);
+    return RGBDICPOdometryImpl(Rt, initRt.getMat(), srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts, maxTranslation, maxRotation, ICP_ODOMETRY, transformType);
 }
 
 //
@@ -1937,12 +1940,13 @@ public:
     }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+                         InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
     }
 
-    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                         OutputArray Rt, InputArray initRt) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
     }
@@ -1950,7 +1954,7 @@ public:
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                             const Mat& initRt) const CV_OVERRIDE;
+                             InputArray initRt) const CV_OVERRIDE;
 
     // Some params have commented desired type. It's due to AlgorithmInfo::addParams does not support it now.
     /*float*/
@@ -2098,9 +2102,9 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFr
 }
 
 
-bool RgbdICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, const Mat& initRt) const
+bool RgbdICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt, InputArray initRt) const
 {
-    return RGBDICPOdometryImpl(Rt, initRt, srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts,  maxTranslation, maxRotation, MERGED_ODOMETRY, transformType);
+    return RGBDICPOdometryImpl(Rt, initRt.getMat(), srcFrame, dstFrame, cameraMatrix, (float)maxDepthDiff, iterCounts,  maxTranslation, maxRotation, MERGED_ODOMETRY, transformType);
 }
 
 //
@@ -2260,12 +2264,13 @@ public:
     }
 
     virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                         InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const CV_OVERRIDE
+                         InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcImage, srcDepth, srcMask, dstImage, dstDepth, dstMask, Rt, initRt);
     }
 
-    virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt) const CV_OVERRIDE
+    virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                         OutputArray Rt, InputArray initRt) const CV_OVERRIDE
     {
         return OdometryImpl::compute(srcFrame, dstFrame, Rt, initRt);
     }
@@ -2273,7 +2278,7 @@ public:
 protected:
 
     virtual bool computeImpl(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame, OutputArray Rt,
-                             const Mat& initRt) const CV_OVERRIDE;
+                             InputArray initRt) const CV_OVERRIDE;
 
     template<typename TMat>
     Size prepareFrameCacheT(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const;
@@ -2394,7 +2399,7 @@ Size FastICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFr
 
 bool FastICPOdometryImpl::computeImpl(const Ptr<OdometryFrame>& srcFrame,
                                       const Ptr<OdometryFrame>& dstFrame,
-                                      OutputArray Rt, const Mat& /*initRt*/) const
+                                      OutputArray Rt, InputArray /*initRt*/) const
 {
     Intr intr(cameraMatrix);
     Ptr<kinfu::ICP> icp = kinfu::makeICP(intr,

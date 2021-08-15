@@ -268,12 +268,13 @@ public:
      * @param initRt Initial transformation from the source frame to the destination one (optional)
      */
     CV_WRAP virtual bool compute(InputArray srcImage, InputArray srcDepth, InputArray srcMask, InputArray dstImage, InputArray dstDepth,
-                                 InputArray dstMask, OutputArray Rt, const Mat& initRt = Mat()) const = 0;
+                                 InputArray dstMask, OutputArray Rt, InputArray initRt = noArray()) const = 0;
 
     /** One more method to compute a transformation from the source frame to the destination one.
      * It is designed to save on computing the frame data (image pyramids, normals, etc.).
      */
-    CV_WRAP_AS(compute2) virtual bool compute(Ptr<OdometryFrame> srcFrame, Ptr<OdometryFrame> dstFrame, OutputArray Rt, const Mat& initRt = Mat()) const = 0;
+    CV_WRAP_AS(compute2) virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+                                              OutputArray Rt, InputArray initRt = noArray()) const = 0;
 
     /** Prepare a cache for the frame. The function checks the precomputed/passed data (throws the error if this data
      * does not satisfy) and computes all remaining cache data needed for the frame. Returned size is a resolution
