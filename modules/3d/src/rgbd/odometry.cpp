@@ -1010,13 +1010,13 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
 }
 
 void warpFrame(InputArray image, InputArray depth, InputArray mask,
-               const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+               InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
                OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
 {
     if (image.type() == CV_8UC1)
-        warpFrameImpl<uchar>(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
+        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
     else if (image.type() == CV_8UC3)
-        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt, cameraMatrix, distCoeff, warpedImage, warpedDepth, warpedMask);
+        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
     else
         CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
 }
@@ -1774,10 +1774,11 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame:
             }
             else
             {
+                Matx33f K; normalsComputer->getK(K);
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
-                   norm(Matx33f(normalsComputer->getK()), cameraMatrix) > FLT_EPSILON)
+                   norm(K, cameraMatrix) > FLT_EPSILON)
                     normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),
@@ -2061,10 +2062,11 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFr
             }
             else
             {
+                Matx33f K; normalsComputer->getK(K);
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
-                   norm(Matx33f(normalsComputer->getK()), cameraMatrix) > FLT_EPSILON)
+                   norm(K, cameraMatrix) > FLT_EPSILON)
                     normalsComputer = RgbdNormals::create(depth.rows,
                                                           depth.cols,
                                                           depth.depth(),

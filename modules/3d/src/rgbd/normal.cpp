@@ -180,7 +180,7 @@ public:
     }
     virtual void setK(InputArray val) CV_OVERRIDE
     {
-        K = val; cacheIsDirty = true;
+        K = val.getMat(); cacheIsDirty = true;
     }
     virtual RgbdNormalsMethod getMethod() const CV_OVERRIDE
     {

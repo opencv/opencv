@@ -137,7 +137,7 @@ CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double 
  * @param warpedDepth The warped depth.
  * @param warpedMask The warped mask.
  */
-CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+CV_EXPORTS_W void warpFrame(InputArray image, InputArray depth, InputArray mask, InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
                             OutputArray warpedImage, OutputArray warpedDepth = noArray(), OutputArray warpedMask = noArray());
 
 enum RgbdPlaneMethod
