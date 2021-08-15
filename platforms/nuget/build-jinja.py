@@ -36,8 +36,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="OpenCV CPP create nuget spec script ",
                                      usage='')
     # Main arguments
-    parser.add_argument("--package_name", required=False, help="Package name. e.g.: OpenCV.CPP")
-    parser.add_argument("--package_version", required=False, help="Package version. e.g: 1.0.0")
     parser.add_argument("--build_directory", required=False, help="Path to the build directory where DLL & lib files exist. e.g: C:\some-folder")
 
     return parser.parse_args()
