@@ -80,12 +80,31 @@ static void sigmoid(const Mat &src, Mat &dst)
     cv::pow(1 + dst, -1, dst);
 }
 
+typedef void (*ActivationFunction)(const Mat &src, Mat &dst);
+static ActivationFunction get_activation_function(const String& activation) {
+    // most used activations for PyTorch and TF : Tanh, Sigmoid
+    // if you need to support more optional activations use std::map instead
+    if (activation == "Tanh")
+    {
+        return tanh;
+    }
+    else if (activation == "Sigmoid")
+    {
+        return sigmoid;
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented,
+                 cv::format("Activation function [%s] for layer LSTM  is not supported", activation.c_str()));
+    }
+}
+
 class LSTMLayerImpl CV_FINAL : public LSTMLayer
 {
     int numTimeStamps, numSamples;
     bool allocated;
 
-    MatShape outTailShape;                 //shape of single output sample
+    MatShape outTailShape;  //shape of single output sample
     MatShape outTsShape;    //shape of N output samples
 
     bool useTimestampDim;
@@ -94,6 +113,10 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
+
+    ActivationFunction f_activation;
+    ActivationFunction g_activation;
+    ActivationFunction h_activation;
 
 public:
 
@@ -144,6 +167,20 @@ public:
         usePeephole = params.get<bool>("use_peephole", false);
         reverse = params.get<bool>("reverse", false);
         CV_Assert(!reverse || !bidirectional);
+
+        // read activations
+        DictValue activations = params.get<DictValue>("activations", "");
+        if (activations.size() == 1) // if activations wasn't specified use default
+        {
+            f_activation = sigmoid;
+            g_activation = tanh;
+            h_activation = tanh;
+        } else {
+            CV_Assert(activations.size() == 3);
+            f_activation = get_activation_function(activations.getStringValue(0));
+            g_activation = get_activation_function(activations.getStringValue(1));
+            h_activation = get_activation_function(activations.getStringValue(2));
+        }
 
         allocated = false;
         outTailShape.clear();
@@ -339,15 +376,15 @@ public:
                     Mat gatesIF = gates.colRange(0, 2*numOut);
                     gemm(cInternal, blobs[5], 1, gateI, 1, gateI);
                     gemm(cInternal, blobs[6], 1, gateF, 1, gateF);
-                    sigmoid(gatesIF, gatesIF);
+                    f_activation(gatesIF, gatesIF);
                 }
                 else
                 {
                     Mat gatesIFO = gates.colRange(0, 3*numOut);
-                    sigmoid(gatesIFO, gatesIFO);
+                    f_activation(gatesIFO, gatesIFO);
                 }
 
-                tanh(gateG, gateG);
+                g_activation(gateG, gateG);
 
                 //compute c_t
                 multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
@@ -362,11 +399,11 @@ public:
                 if (usePeephole)
                 {
                     gemm(cInternal, blobs[7], 1, gateO, 1, gateO);
-                    sigmoid(gateO, gateO);
+                    f_activation(gateO, gateO);
                 }
 
                 //compute h_t
-                tanh(cInternal, hInternal);
+                h_activation(cInternal, hInternal);
                 multiply(gateO, hInternal, hInternal);
 
                 //save results in output blobs
