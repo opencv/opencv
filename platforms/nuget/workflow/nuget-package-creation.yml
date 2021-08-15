@@ -1,4 +1,4 @@
-name: nuget build (nupkg) checks
+name: nuget build (nupkg) creation
 
 on:
   workflow_dispatch:
