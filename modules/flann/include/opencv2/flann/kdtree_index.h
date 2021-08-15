@@ -445,10 +445,11 @@ private:
     {
         int i;
         BranchSt branch;
-
         int checkCount = 0;
-        Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
         DynamicBitset checked(size_);
+
+        // Priority queue storing intermediate branches in the best-bin-first search
+        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
@@ -464,8 +465,6 @@ private:
                         epsError, heap, checked, false);
         }
 
-        delete heap;
-
         CV_Assert(result.full());
     }
 
@@ -476,7 +475,7 @@ private:
      *  at least "mindistsq".
      */
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
-                     float epsError, Heap<BranchSt>* heap, DynamicBitset& checked, bool explore_all_trees = false)
+                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, DynamicBitset& checked, bool explore_all_trees = false)
     {
         if (result_set.worstDist()<mindist) {
             //			printf("Ignoring branch, too far\n");

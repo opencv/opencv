@@ -528,7 +528,7 @@ public:
         }
         else {
             // Priority queue storing intermediate branches in the best-bin-first search
-            Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
+            const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
 
             int checks = 0;
             for (int i=0; i<trees_; ++i) {
@@ -542,8 +542,6 @@ public:
                 KMeansNodePtr node = branch.node;
                 findNN(node, result, vec, checks, maxChecks, heap);
             }
-            delete heap;
-
             CV_Assert(result.full());
         }
     }
@@ -1529,7 +1527,7 @@ private:
 
 
     void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap)
+                const cv::Ptr<Heap<BranchSt>>& heap)
     {
         // Ignore those clusters that are too far away
         {
@@ -1577,7 +1575,7 @@ private:
      *     distances = array with the distances to each child node.
      * Returns:
      */
-    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, Heap<BranchSt>* heap)
+    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, const cv::Ptr<Heap<BranchSt>>& heap)
     {
 
         int best_index = 0;
