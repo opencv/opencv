@@ -402,17 +402,6 @@ int counterOfValid(Mat points)
 
 void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
 {
-    auto normalCheck = [](Vec4f& vector, const int*)
-    {
-        if (!cvIsNaN(vector[0]))
-        {
-            float length = vector[0] * vector[0] +
-                vector[1] * vector[1] +
-                vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
-        }
-    };
-
     Settings settings(isHashTSDF, false);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
@@ -442,6 +431,17 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     normals = unormals.getMat(af);
     points  = upoints.getMat(af);
 
+    auto normalCheck = [](Vec4f& vector, const int*)
+    {
+        if (!cvIsNaN(vector[0]))
+        {
+            float length = vector[0] * vector[0] +
+                vector[1] * vector[1] +
+                vector[2] * vector[2];
+            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+        }
+    };
+
     if (parallelCheck)
         normals.forEach<Vec4f>(normalCheck);
     else
@@ -465,8 +465,6 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         if (display)
             displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
     }
-
-    points.release(); normals.release();
 }
 
 void valid_points_test(bool isHashTSDF)
@@ -488,6 +486,8 @@ void valid_points_test(bool isHashTSDF)
     patchNaNs(points);
     anfas = counterOfValid(points);
 
+    ASSERT_NE(anfas, 0) << "There is no points in anfas";
+
     if (display)
         displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
@@ -497,15 +497,16 @@ void valid_points_test(bool isHashTSDF)
     patchNaNs(points);
     profile = counterOfValid(points);
 
-    if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+    ASSERT_NE(profile, 0) << "There is no points in profile";
+
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
 
-    ASSERT_NE(profile, 0) << "There is no points in profile";
-    ASSERT_NE(anfas, 0) << "There is no points in anfas";
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
+
+    if (display)
+        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 }
 
 TEST(TSDF_GPU, raycast_normals)      { normal_test(false, true, false, false); }
