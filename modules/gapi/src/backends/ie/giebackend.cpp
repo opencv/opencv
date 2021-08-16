@@ -915,7 +915,7 @@ struct Infer: public cv::detail::KernelTag {
                     && "Known input layers count doesn't match input meta count");
 
         // NB: Configuring input precision and network reshape must be done
-        // only for loadNetwork way.
+        // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -1004,7 +1004,7 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(2u == in_metas.size());
 
         // NB: Configuring input precision and network reshape must be done
-        // only for loadNetwork way.
+        // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
             const auto &input_name = uu.params.input_names.at(0);
@@ -1091,7 +1091,7 @@ struct InferList: public cv::detail::KernelTag {
                     && "Known input layers count doesn't match input meta count");
 
         // NB: Configuring input precision and network reshape must be done
-        // only for loadNetwork way.
+        // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             std::size_t idx = 1u;
             for (auto &&input_name : uu.params.input_names) {
@@ -1234,7 +1234,7 @@ struct InferList2: public cv::detail::KernelTag {
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
                 // NB: Configuring input precision and network reshape must be done
-                // only for loadNetwork way.
+                // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
                     // This is a cv::Rect -- configure the IE preprocessing
                     configureInputInfo(ii, mm_0);
