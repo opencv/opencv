@@ -25,7 +25,7 @@ class ImageRegistration:
         self.wave_corrector = wave_corrector
 
     def register(self, img_data):
-        features = self.find_features(img_data.work_imgs)
+        features = self.find_features(img_data.get_work_images())
         matches = self.match_features(features)
         img_data, features, matches = self.subset(
             img_data, features, matches
@@ -45,7 +45,7 @@ class ImageRegistration:
     def subset(self, img_data, features, matches):
         self.subsetter.save_matches_graph_dot_file(img_data.img_names, matches)
         indices = self.subsetter.get_indices_to_keep(features, matches)
-        img_data.subset(indices)
+        img_data.update_indices(indices)
         features = Subsetter.subset_list(features, indices)
         matches = Subsetter.subset_matches(matches, indices)
         return img_data, features, matches

@@ -17,31 +17,54 @@ class ImageData:
                  compose_megapix=DEFAULT_COMPOSE_MEGAPIX):
 
         self.img_names = img_names
-        self.work_imgs = []
-        self.seam_imgs = []
-        self.compose_imgs = []
-
         self.work_megapix_scaler = ImageToMegapixScaler(work_megapix)
         self.seam_megapix_scaler = ImageToMegapixScaler(seam_megapix)
         self.compose_megapix_scaler = ImageToMegapixScaler(compose_megapix)
+        self.indices = list(range(len(self.img_names)))
 
-        for img in img_names:
-            full_img = ImageData.read_image(img)
-            self.work_imgs.append(self.work_megapix_scaler.set_scale_and_downscale(full_img))
-            self.seam_imgs.append(self.seam_megapix_scaler.set_scale_and_downscale(full_img))
-            self.compose_imgs.append(self.compose_megapix_scaler.set_scale_and_downscale(full_img))
+    def get_work_images(self):
+        return self.downscale_full_images(self.work_megapix_scaler)
 
-        self.seam_work_aspect = (self.seam_megapix_scaler.scale /
-                                 self.work_megapix_scaler.scale)
+    def get_seam_images(self):
+        return self.downscale_full_images(self.seam_megapix_scaler)
 
-        self.compose_work_aspect = (self.compose_megapix_scaler.scale /
-                                    self.work_megapix_scaler.scale)
+    def get_compose_images(self):
+        return self.downscale_full_images(self.compose_megapix_scaler)
 
-    def subset(self, indices):
-        self.img_names = Subsetter.subset_list(self.img_names, indices)
-        self.seam_imgs = Subsetter.subset_list(self.seam_imgs, indices)
-        self.compose_imgs = Subsetter.subset_list(self.compose_imgs, indices)
+    def downscale_full_images(self, scaler):
+        full_images = self.get_full_images()
+        return [scaler.set_scale_and_downscale(img) for img in full_images]
 
+    def get_full_images(self):
+        return [self.read_image(img)
+                for idx, img in enumerate(self.img_names)
+                if idx in self.indices]
+
+    def update_indices(self, indices):
+        self.indices = indices
+
+    def get_seam_work_aspect(self):
+        return self.__get_scaler_aspect(self.seam_megapix_scaler,
+                                        self.work_megapix_scaler)
+
+    def get_compose_work_aspect(self):
+        return self.__get_scaler_aspect(self.compose_megapix_scaler,
+                                        self.work_megapix_scaler)
+
+    @staticmethod
+    def __get_scaler_aspect(scaler1, scaler2):
+        return (ImageData.__check_scale(scaler1.scale) /
+                ImageData.__check_scale(scaler2.scale))
+
+    @staticmethod
+    def __check_scale(scale):
+        if scale is not None:
+            return scale
+        else:
+            raise TypeError("Scale not set yet! Have you created the images "
+                            "using the get_xxx_imgages() yet?")
+
+    @staticmethod
     def read_image(img_name):
         img = cv.imread(img_name)
         if img is None:

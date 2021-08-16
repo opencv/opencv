@@ -4,6 +4,7 @@
 # But not these files...
 !.gitignore
 !test_stitcher.py
+!test_img_data.py
 !test_registration.py
 !test_composition.py
 !SAMPLE_IMAGES_TO_DOWNLOAD.txt

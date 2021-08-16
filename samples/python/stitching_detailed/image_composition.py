@@ -23,22 +23,15 @@ class ImageComposition:
         self.timelapser = timelapser
 
     def compose(self, img_data, cameras, panorama_scale):
-        img_names = img_data.img_names
-        compose_imgs = img_data.compose_imgs
-        seam_imgs = img_data.seam_imgs
-        compose_scale = img_data.compose_megapix_scaler.scale
-        compose_work_aspect = img_data.compose_work_aspect
-        seam_work_aspect = img_data.seam_work_aspect
-
-        imgs, masks, corners = self.warp_images(seam_imgs, cameras, panorama_scale, seam_work_aspect)
+        imgs, masks, corners = self.warp_images(img_data.get_seam_images(), cameras, panorama_scale, img_data.get_seam_work_aspect())
         seam_masks = self.find_seam_masks(imgs, masks, corners)
         self.estimate_exposure_errors(imgs, masks, corners)
-        imgs, masks, corners = self.warp_images(compose_imgs, cameras, panorama_scale, compose_work_aspect)
+        imgs, masks, corners = self.warp_images(img_data.get_compose_images(), cameras, panorama_scale, img_data.get_compose_work_aspect())
         imgs = self.compensate_exposure_errors(imgs, masks, corners)
         seam_masks = self.resize_seam_masks_to_original_resolution(seam_masks,
                                                                    masks)
         if self.timelapser.do_timelapse:
-            self.create_timelapse(img_names, imgs, corners)
+            self.create_timelapse(img_data.img_names, imgs, corners)
 
         final_pano = self.blend_images(imgs, corners, seam_masks)
         return final_pano
