@@ -5,7 +5,8 @@
 #ifndef __OPENCV_DNN_COMMON_HPP__
 #define __OPENCV_DNN_COMMON_HPP__
 
-#include <set>
+#include <unordered_set>
+#include <unordered_map>
 
 #include <opencv2/dnn.hpp>
 
@@ -56,11 +57,15 @@ Net readNetDiagnostic(Args&& ... args)
 class LayerHandler
 {
 public:
-    bool addMissing(const std::string& name, const std::string& type);
+    void addMissing(const std::string& name, const std::string& type);
+    bool contains(const std::string& type) const;
+    void printMissing();
 
 protected:
     LayerParams getNotImplementedParams(const std::string& name, const std::string& op);
-    std::set<std::string> layers;
+
+private:
+    std::unordered_map<std::string, std::unordered_set<std::string>> layers;
 };
 
 struct NetImplBase

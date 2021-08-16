@@ -4,6 +4,8 @@
 
 #include "precomp.hpp"
 
+#include <sstream>
+
 #include <opencv2/dnn/layer_reg.private.hpp>
 #include <opencv2/dnn/utils/debug_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -33,7 +35,7 @@ void skipModelImport(bool skip)
     DNN_SKIP_REAL_IMPORT = skip;
 }
 
-bool detail::LayerHandler::addMissing(const std::string& name, const std::string& type)
+void detail::LayerHandler::addMissing(const std::string& name, const std::string& type)
 {
     cv::AutoLock lock(getLayerFactoryMutex());
     auto& registeredLayers = getLayerFactoryImpl();
@@ -41,15 +43,38 @@ bool detail::LayerHandler::addMissing(const std::string& name, const std::string
     // If we didn't add it, but can create it, it's custom and not missing.
     if (layers.find(type) == layers.end() && registeredLayers.find(type) != registeredLayers.end())
     {
-        return false;
+        return;
     }
 
-    if (layers.insert(type).second)
+    layers[type].insert(name);
+}
+
+bool detail::LayerHandler::contains(const std::string& type) const
+{
+    return layers.find(type) != layers.end();
+}
+
+void detail::LayerHandler::printMissing()
+{
+    if (layers.empty())
     {
-        CV_LOG_ERROR(NULL, "DNN: Node='" << name << "':\nType='"<< type << "' is not supported.");
+        return;
     }
 
-    return true;
+    std::stringstream ss;
+    ss << "DNN: Not supported types:\n";
+    for (const auto& type_names : layers)
+    {
+        const auto& type = type_names.first;
+        ss << "Type='" << type << "', affected nodes:\n[";
+        for (const auto& name : type_names.second)
+        {
+            ss << "'" << name << "', ";
+        }
+        ss.seekp(-2, std::ios_base::end);
+        ss << "]\n";
+    }
+    CV_LOG_ERROR(NULL, ss.str());
 }
 
 LayerParams detail::LayerHandler::getNotImplementedParams(const std::string& name, const std::string& op)

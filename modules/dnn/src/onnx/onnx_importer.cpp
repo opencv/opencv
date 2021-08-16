@@ -41,6 +41,8 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
+class ONNXLayerHandler;
+
 class ONNXImporter
 {
     opencv_onnx::ModelProto model_proto;
@@ -69,7 +71,7 @@ public:
     void populateNet();
 
 protected:
-    detail::LayerHandler layerHandler;
+    std::unique_ptr<ONNXLayerHandler> layerHandler;
     Net& dstNet;
 
     opencv_onnx::GraphProto graph_proto;
@@ -87,6 +89,7 @@ protected:
     void handleNode(const opencv_onnx::NodeProto& node_proto);
 
 private:
+    friend class ONNXLayerHandler;
     typedef void (ONNXImporter::*ONNXImporterNodeParser)(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     typedef std::map<std::string, ONNXImporterNodeParser> DispatchMap;
 
@@ -140,8 +143,37 @@ private:
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 };
 
+class ONNXLayerHandler : public detail::LayerHandler
+{
+public:
+    explicit ONNXLayerHandler(ONNXImporter* importer_);
+
+    void fillRegistry(const opencv_onnx::GraphProto& net);
+
+protected:
+    ONNXImporter* importer;
+};
+
+ONNXLayerHandler::ONNXLayerHandler(ONNXImporter* importer_) : importer(importer_){}
+
+void ONNXLayerHandler::fillRegistry(const opencv_onnx::GraphProto &net)
+{
+    int layersSize = net.node_size();
+    for (int li = 0; li < layersSize; li++) {
+        const opencv_onnx::NodeProto &node_proto = net.node(li);
+        const std::string& name = node_proto.output(0);
+        const std::string& type = node_proto.op_type();
+        if (importer->dispatch.find(type) == importer->dispatch.end())
+        {
+            addMissing(name, type);
+        }
+    }
+    printMissing();
+}
+
 ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
-    : layerHandler(), dstNet(net), dispatch(buildDispatchMap())
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new ONNXLayerHandler(this) : nullptr),
+        dstNet(net), dispatch(buildDispatchMap())
 {
     hasDynamicShapes = false;
     CV_Assert(onnxFile);
@@ -162,7 +194,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
 }
 
 ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
-    : layerHandler(), dstNet(net), dispatch(buildDispatchMap())
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new ONNXLayerHandler(this) : nullptr), dstNet(net), dispatch(buildDispatchMap())
 {
     hasDynamicShapes = false;
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
@@ -517,16 +549,8 @@ void ONNXImporter::populateNet()
     dstNet.setInputsNames(netInputs);
 
     if (DNN_DIAGNOSTICS_RUN) {
-        for (int li = 0; li < layersSize; li++) {
-            const opencv_onnx::NodeProto &node_proto = graph_proto.node(li);
-            std::string name = node_proto.output(0);
-            std::string type = node_proto.op_type();
-            if (dispatch.find(type) == dispatch.end())
-            {
-                layerHandler.addMissing(name, type);
-            }
-        }
         CV_LOG_INFO(NULL, "DNN/ONNX: start diagnostic run!");
+        layerHandler->fillRegistry(graph_proto);
     }
 
     for(int li = 0; li < layersSize; li++)

@@ -2453,7 +2453,7 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
 }
 
 TFImporter::TFImporter(Net& net, const char *model, const char *config)
-    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
         dstNet(net), dispatch(buildDispatchMap())
 {
     if (model && model[0])
@@ -2932,11 +2932,12 @@ void TFLayerHandler::fillRegistry(const tensorflow::GraphDef& net)
             addMissing(name, type);
         }
     }
+    printMissing();
 };
 
 bool TFLayerHandler::handleMissing(const tensorflow::NodeDef& layer)
 {
-    bool missing = addMissing(layer.name(), layer.op());
+    bool missing = !contains(layer.op());
 
     if (missing)
     {
