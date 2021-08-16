@@ -171,7 +171,7 @@ set(gapi_srcs
     src/utils/itt.cpp
     )
 
-if(HAVE_ONEVPL)
+if(HAVE_GAPI_ONEVPL)
     list(APPEND gapi_srcs
         src/streaming/onevpl/onevpl_file_data_provider.cpp
         src/streaming/onevpl/onevpl_cfg_params.cpp

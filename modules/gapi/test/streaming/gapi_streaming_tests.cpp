@@ -26,6 +26,16 @@
 #include <opencv2/gapi/streaming/format.hpp>
 
 #include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
+
+#ifdef HAVE_ONEVPL
+
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif
+
+#include <vpl/mfx.h>
+#endif // HAVE_ONEVPL
+
 namespace opencv_test
 {
 namespace

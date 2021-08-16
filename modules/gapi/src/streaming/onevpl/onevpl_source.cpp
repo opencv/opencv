@@ -23,7 +23,7 @@ OneVPLSource::OneVPLSource(const std::string& filePath, const onevpl_params_cont
 }
 
 OneVPLSource::OneVPLSource(std::shared_ptr<IDataProvider> source, const onevpl_params_container_t& cfg_params) :
-     OneVPLSource(std::unique_ptr<IPriv>(new OneVPLSource::Priv(source, cfg_params))) {
+     OneVPLSource(std::unique_ptr<Priv>(new OneVPLSource::Priv(source, cfg_params))) {
 }
 #else
 OneVPLSource::OneVPLSource(const std::string&, const onevpl_params_container_t&) {
