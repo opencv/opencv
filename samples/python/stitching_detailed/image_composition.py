@@ -35,7 +35,9 @@ class ImageComposition:
         seam_masks = self.find_seam_masks(imgs, masks, corners)
         self.estimate_exposure_errors(imgs, masks, corners)
         imgs, masks, corners = self.warp_images(compose_imgs, cameras, panorama_scale, compose_work_aspect)
-        corners, sizes = self.warp_rois(cameras, img_sizes, compose_scale, compose_work_aspect)
+        corners2, sizes = self.warp_rois(cameras, img_sizes, compose_scale, compose_work_aspect)
+        assert [(img.shape[1], img.shape[0]) for img in imgs] == sizes
+        assert corners == corners2
         imgs = self.compensate_exposure_errors(imgs, masks, corners)
         seam_masks = self.resize_seam_masks_to_original_resolution(seam_masks,
                                                                    masks)
