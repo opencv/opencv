@@ -326,7 +326,7 @@ public:
     RgbdOdometry() { }
 
     /** Creates RgbdOdometry object
-     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
+     * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -366,7 +366,7 @@ public:
     ICPOdometry() { }
 
     /** Creates new ICPOdometry object
-     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
+     * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -402,7 +402,7 @@ public:
     RgbdICPOdometry() { }
 
     /** Creates RgbdICPOdometry object
-     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
+     * @param cameraMatrix Camera matrix
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -452,7 +452,7 @@ public:
     FastICPOdometry() { }
 
     /** Creates FastICPOdometry object
-     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
+     * @param cameraMatrix Camera matrix
      * @param maxDistDiff Correspondences between pixels of two given frames will be filtered out
      *                    if their depth difference is larger than maxDepthDiff (in meters)
      * @param angleThreshold Correspondence will be filtered out
