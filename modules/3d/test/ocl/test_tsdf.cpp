@@ -143,6 +143,10 @@ struct SemisphereScene : Scene
         Range range(0, frame.rows);
         parallel_for_(range, RenderInvoker<SemisphereScene>(frame, pose, reproj, depthFactor, onlySemisphere));
 
+        Scalar s = sum(frame);
+
+        CV_Assert(s.dot(s) > 0);
+
         return std::move(frame);
     }
 
