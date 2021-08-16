@@ -24,7 +24,6 @@ class ImageComposition:
 
     def compose(self, img_data, cameras, panorama_scale):
         img_names = img_data.img_names
-        img_sizes = img_data.full_img_sizes
         compose_imgs = img_data.compose_imgs
         seam_imgs = img_data.seam_imgs
         compose_scale = img_data.compose_megapix_scaler.scale
@@ -35,16 +34,13 @@ class ImageComposition:
         seam_masks = self.find_seam_masks(imgs, masks, corners)
         self.estimate_exposure_errors(imgs, masks, corners)
         imgs, masks, corners = self.warp_images(compose_imgs, cameras, panorama_scale, compose_work_aspect)
-        corners2, sizes = self.warp_rois(cameras, img_sizes, compose_scale, compose_work_aspect)
-        assert [(img.shape[1], img.shape[0]) for img in imgs] == sizes
-        assert corners == corners2
         imgs = self.compensate_exposure_errors(imgs, masks, corners)
         seam_masks = self.resize_seam_masks_to_original_resolution(seam_masks,
                                                                    masks)
         if self.timelapser.do_timelapse:
-            self.create_timelapse(img_names, imgs, corners, sizes)
+            self.create_timelapse(img_names, imgs, corners)
 
-        final_pano = self.blend_images(imgs, corners, sizes, seam_masks)
+        final_pano = self.blend_images(imgs, corners, seam_masks)
         return final_pano
 
     def warp_images(self, imgs, cameras, scale=1, aspect=1):
@@ -79,24 +75,17 @@ class ImageComposition:
         return [SeamFinder.resize(seam_mask, mask)
                 for seam_mask, mask in zip(seam_masks, masks)]
 
-    def create_timelapse(self, img_names, imgs, corners, sizes):
-        self.timelapser.initialize(corners, sizes)
+    def create_timelapse(self, img_names, imgs, corners):
+        self.timelapser.initialize(corners, self.__get_sizes(imgs))
         for img_name, img, corner in zip(img_names, imgs, corners):
             self.timelapser.process_and_save_frame(img_name, img, corner)
 
-    def blend_images(self, imgs, corners, sizes, seam_masks):
-        self.blender.prepare(corners, sizes)
+    def blend_images(self, imgs, corners, seam_masks):
+        self.blender.prepare(corners, self.__get_sizes(imgs))
         for img, corner, seam_mask in zip(imgs, corners, seam_masks):
             self.blender.feed(img, seam_mask, corner)
         return self.blender.blend()
 
-    def warp_rois(self, cameras, full_img_sizes, compose_scale, compose_work_aspect):
-        corners = []
-        sizes = []
-        for size, camera in zip(full_img_sizes, cameras):
-            sz = (int(round(size[0] * compose_scale)),
-                  int(round(size[1] * compose_scale)))
-            roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
-            corners.append(roi[0:2])
-            sizes.append(roi[2:4])
-        return corners, sizes
+    @staticmethod
+    def __get_sizes(imgs):
+        return [(img.shape[1], img.shape[0]) for img in imgs]

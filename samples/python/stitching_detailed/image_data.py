@@ -17,7 +17,6 @@ class ImageData:
                  compose_megapix=DEFAULT_COMPOSE_MEGAPIX):
 
         self.img_names = img_names
-        self.full_img_sizes = []
         self.work_imgs = []
         self.seam_imgs = []
         self.compose_imgs = []
@@ -28,7 +27,6 @@ class ImageData:
 
         for img in img_names:
             full_img = ImageData.read_image(img)
-            self.full_img_sizes.append((full_img.shape[1], full_img.shape[0]))
             self.work_imgs.append(self.work_megapix_scaler.set_scale_and_downscale(full_img))
             self.seam_imgs.append(self.seam_megapix_scaler.set_scale_and_downscale(full_img))
             self.compose_imgs.append(self.compose_megapix_scaler.set_scale_and_downscale(full_img))
@@ -43,7 +41,6 @@ class ImageData:
         self.img_names = Subsetter.subset_list(self.img_names, indices)
         self.seam_imgs = Subsetter.subset_list(self.seam_imgs, indices)
         self.compose_imgs = Subsetter.subset_list(self.compose_imgs, indices)
-        self.full_img_sizes = Subsetter.subset_list(self.full_img_sizes, indices)
 
     def read_image(img_name):
         img = cv.imread(img_name)
