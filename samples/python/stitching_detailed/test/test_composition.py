@@ -36,7 +36,7 @@ class TestImageComposition(unittest.TestCase):
         stitcher = Stitcher(["s1.jpg", "s2.jpg"], **{"timelapse": "as_is"})
         stitcher.stitch()
 
-        frame1, frame2 = cv.imread("fixed_s1.jpg"), cv.imread("fixed_s2.jpg")
+        frame1 = cv.imread("fixed_s1.jpg")
 
         max_image_shape_derivation = 3
         np.testing.assert_allclose(frame1.shape[:2],
@@ -45,9 +45,6 @@ class TestImageComposition(unittest.TestCase):
 
         left = cv.cvtColor(frame1[:, :1300, ], cv.COLOR_BGR2GRAY)
         right = cv.cvtColor(frame1[:, 1300:, ], cv.COLOR_BGR2GRAY)
-
-        cv.imwrite("test.png", left)
-        cv.imwrite("test2.png", right)
 
         self.assertGreater(cv.countNonZero(left), 800000)
         self.assertEqual(cv.countNonZero(right), 0)

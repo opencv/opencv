@@ -30,7 +30,7 @@ class Timelapser:
 
     def process_and_save_frame(self, img_name, img, corner):
         self.process_frame(img, corner)
-        self.save_frame(self.get_fixed_filename(img_name), self.get_frame())
+        cv.imwrite(self.get_fixed_filename(img_name), self.get_frame())
 
     def process_frame(self, img, corner):
         mask = np.ones((img.shape[0], img.shape[1]), np.uint8)
@@ -39,9 +39,6 @@ class Timelapser:
 
     def get_frame(self):
         return self.timelapser.getDst()
-
-    def save_frame(self, filename, frame):
-        cv.imwrite(filename, frame)
 
     def get_fixed_filename(self, img_name):
         pos_s = img_name.rfind("/")

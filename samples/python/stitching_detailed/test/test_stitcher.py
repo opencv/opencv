@@ -25,7 +25,7 @@ class TestStitcher(unittest.TestCase):
                                    atol=max_image_shape_derivation)
         self.assertEqual(stitcher.settings.n_features, 250)
 
-    @unittest.skip("skip boat test (high resuolution ran >30s)")
+    #@unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat1(self):
         settings = {"warp": "fisheye",
                     "wave_correct": "no",
@@ -45,7 +45,7 @@ class TestStitcher(unittest.TestCase):
                                    (14488,  7556),
                                    atol=max_image_shape_derivation)
 
-    @unittest.skip("skip boat test (high resuolution ran >30s)")
+    #@unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat2(self):
         settings = {"warp": "compressedPlaneA2B1",
                     "seam": "dp_colorgrad",
