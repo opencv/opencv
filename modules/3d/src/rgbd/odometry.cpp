@@ -1141,12 +1141,13 @@ public:
     static const float defaultMaxRotation;
     static const float defaultMinGradientMagnitude;
     static const std::vector<int> defaultIterCounts;
+    static const cv::Matx33f defaultCameraMatrix;
     static const float defaultMinDepth;
     static const float defaultMaxDepth;
     static const float defaultMaxDepthDiff;
     static const float defaultMaxPointsPart;
 
-    OdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
+    OdometryImpl(InputArray _cameraMatrix = noArray(),
                  InputArray _iterCounts = noArray(),
                  InputArray _minGradientMagnitudes = noArray(),
                  Odometry::OdometryTransformType _transformType = Odometry::RIGID_BODY_MOTION)
@@ -1190,13 +1191,22 @@ public:
         return Size();
     }
 
-    virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
+    virtual void getCameraMatrix(OutputArray val) const CV_OVERRIDE
     {
-        return cameraMatrix;
+        cameraMatrix.copyTo(val);
     }
-    virtual void setCameraMatrix(const Matx33f& val) CV_OVERRIDE
+    virtual void setCameraMatrix(InputArray val) CV_OVERRIDE
     {
-        cameraMatrix = val;
+        if (val.empty())
+        {
+            cameraMatrix = defaultCameraMatrix;
+        }
+        else
+        {
+            CV_Assert(val.rows() == 3 && val.cols() == 3 && val.channels() == 1);
+            CV_Assert(val.type() == CV_32F);
+            val.copyTo(cameraMatrix);
+        }
     }
 
     virtual Odometry::OdometryTransformType getTransformType() const CV_OVERRIDE
@@ -1293,6 +1303,7 @@ const float OdometryImpl::defaultMaxTranslation = 0.15f;
 const float OdometryImpl::defaultMaxRotation = 15.f;
 const float OdometryImpl::defaultMinGradientMagnitude = 10.f;
 const std::vector<int> OdometryImpl::defaultIterCounts = { 7, 7, 7, 10 };
+const cv::Matx33f OdometryImpl::defaultCameraMatrix = { /* fx, 0, cx*/ 525.f, 0, 319.5f, /* 0, fy, cy */ 0, 525.f, 239.5f, /**/ 0, 0, 1.f };
 const float OdometryImpl::defaultMinDepth = 0.f;
 const float OdometryImpl::defaultMaxDepth = 4.f;
 const float OdometryImpl::defaultMaxDepthDiff = 0.07f;
@@ -1316,7 +1327,7 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart
      * @param transformType Class of transformation
      */
-    RgbdOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
+    RgbdOdometryImpl(InputArray _cameraMatrix = noArray(),
                      float _minDepth = defaultMinDepth,
                      float _maxDepth = defaultMaxDepth,
                      float _maxDepthDiff = defaultMaxDepthDiff,
@@ -1388,11 +1399,11 @@ public:
     {
         OdometryImpl::setMinGradientMagnitudes(val);
     }
-    virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
+    virtual void getCameraMatrix(OutputArray val) const CV_OVERRIDE
     {
-        return OdometryImpl::getCameraMatrix();
+        OdometryImpl::getCameraMatrix(val);
     }
-    virtual void setCameraMatrix(const Matx33f& val) CV_OVERRIDE
+    virtual void setCameraMatrix(InputArray val) CV_OVERRIDE
     {
         OdometryImpl::setCameraMatrix(val);
     }
@@ -1445,7 +1456,7 @@ protected:
     double maxPointsPart;
 };
 
-Ptr<RgbdOdometry> RgbdOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
+Ptr<RgbdOdometry> RgbdOdometry::create(InputArray _cameraMatrix, float _minDepth, float _maxDepth,
                                        float _maxDepthDiff, InputArray _iterCounts,
                                        InputArray _minGradientMagnitudes, float _maxPointsPart,
                                        Odometry::OdometryTransformType _transformType)
@@ -1564,7 +1575,7 @@ public:
      * @param iterCounts Count of iterations on each pyramid level.
      * @param transformType Class of trasformation
      */
-    ICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
+    ICPOdometryImpl(InputArray _cameraMatrix = noArray(),
                     float _minDepth = defaultMinDepth,
                     float _maxDepth = defaultMaxDepth,
                     float _maxDepthDiff = defaultMaxDepthDiff,
@@ -1633,11 +1644,11 @@ public:
     {
         CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
     }
-    virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
+    virtual void getCameraMatrix(OutputArray val) const CV_OVERRIDE
     {
-        return OdometryImpl::getCameraMatrix();
+        OdometryImpl::getCameraMatrix(val);
     }
-    virtual void setCameraMatrix(const Matx33f& val) CV_OVERRIDE
+    virtual void setCameraMatrix(InputArray val) CV_OVERRIDE
     {
         OdometryImpl::setCameraMatrix(val);
     }
@@ -1697,7 +1708,7 @@ protected:
     mutable Ptr<RgbdNormals> normalsComputer;
 };
 
-Ptr<ICPOdometry> ICPOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
+Ptr<ICPOdometry> ICPOdometry::create(InputArray _cameraMatrix, float _minDepth, float _maxDepth,
                                      float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
                                      Odometry::OdometryTransformType _transformType)
 {
@@ -1774,7 +1785,9 @@ Size ICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame:
             }
             else
             {
-                Matx33f K; normalsComputer->getK(K);
+                Matx33f K;
+                if (!normalsComputer.empty())
+                    normalsComputer->getK(K);
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
@@ -1832,7 +1845,7 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level].
      * @param transformType Class of trasformation
      */
-    RgbdICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
+    RgbdICPOdometryImpl(InputArray _cameraMatrix = noArray(),
                         float _minDepth = defaultMinDepth,
                         float _maxDepth = defaultMaxDepth,
                         float _maxDepthDiff = defaultMaxDepthDiff,
@@ -1902,11 +1915,11 @@ public:
     {
         OdometryImpl::setMinGradientMagnitudes(val);
     }
-    virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
+    virtual void getCameraMatrix(OutputArray val) const CV_OVERRIDE
     {
-        return OdometryImpl::getCameraMatrix();
+        OdometryImpl::getCameraMatrix(val);
     }
-    virtual void setCameraMatrix(const Matx33f& val) CV_OVERRIDE
+    virtual void setCameraMatrix(InputArray val) CV_OVERRIDE
     {
         OdometryImpl::setCameraMatrix(val);
     }
@@ -1967,7 +1980,7 @@ protected:
 };
 
 
-Ptr<RgbdICPOdometry> RgbdICPOdometry::create(const Matx33f& _cameraMatrix, float _minDepth, float _maxDepth,
+Ptr<RgbdICPOdometry> RgbdICPOdometry::create(InputArray _cameraMatrix, float _minDepth, float _maxDepth,
                                              float _maxDepthDiff, float _maxPointsPart, InputArray _iterCounts,
                                              InputArray _minGradientMagnitudes,
                                              Odometry::OdometryTransformType _transformType)
@@ -2062,7 +2075,9 @@ Size RgbdICPOdometryImpl::prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFr
             }
             else
             {
-                Matx33f K; normalsComputer->getK(K);
+                Matx33f K;
+                if (!normalsComputer.empty())
+                    normalsComputer->getK(K);
                 if(normalsComputer.empty() ||
                    normalsComputer->getRows() != depth.rows ||
                    normalsComputer->getCols() != depth.cols ||
@@ -2129,7 +2144,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    FastICPOdometryImpl(const Matx33f& _cameraMatrix = Matx33f::eye(),
+    FastICPOdometryImpl(InputArray _cameraMatrix = noArray(),
                         float _maxDistDiff = 0.1f,
                         float _angleThreshold = (float)(30. * CV_PI / 180.),
                         float _sigmaDepth = 0.04f,
@@ -2231,11 +2246,11 @@ public:
     {
         CV_Error(Error::StsNotImplemented, "This Odometry class does not use minGradientMagnitudes");
     }
-    virtual cv::Matx33f getCameraMatrix() const CV_OVERRIDE
+    virtual void getCameraMatrix(OutputArray val) const CV_OVERRIDE
     {
-        return OdometryImpl::getCameraMatrix();
+        OdometryImpl::getCameraMatrix(val);
     }
-    virtual void setCameraMatrix(const Matx33f& val) CV_OVERRIDE
+    virtual void setCameraMatrix(InputArray val) CV_OVERRIDE
     {
         OdometryImpl::setCameraMatrix(val);
     }
@@ -2303,7 +2318,7 @@ protected:
 
 using namespace cv::kinfu;
 
-Ptr<FastICPOdometry> FastICPOdometry::create(const Matx33f& _cameraMatrix,
+Ptr<FastICPOdometry> FastICPOdometry::create(InputArray _cameraMatrix,
                                              float _maxDistDiff,
                                              float _angleThreshold,
                                              float _sigmaDepth,

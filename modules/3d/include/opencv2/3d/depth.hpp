@@ -291,8 +291,8 @@ public:
     */
     CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
-    CV_WRAP virtual Matx33f getCameraMatrix() const = 0;
-    CV_WRAP virtual void setCameraMatrix(const Matx33f& val) = 0;
+    CV_WRAP virtual void getCameraMatrix(OutputArray val) const = 0;
+    CV_WRAP virtual void setCameraMatrix(InputArray val) = 0;
     CV_WRAP virtual Odometry::OdometryTransformType getTransformType() const = 0;
     CV_WRAP virtual void setTransformType(Odometry::OdometryTransformType val) = 0;
     CV_WRAP virtual void getIterationCounts(OutputArray val) const = 0;
@@ -326,7 +326,7 @@ public:
     RgbdOdometry() { }
 
     /** Creates RgbdOdometry object
-     * @param cameraMatrix Camera matrix
+     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -337,7 +337,7 @@ public:
      * @param maxPointsPart The method uses a random pixels subset of size frameWidth x frameHeight x pointsPart (from 0 to 1)
      * @param transformType Class of transformation
      */
-    CV_WRAP static Ptr<RgbdOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdOdometry> create(InputArray cameraMatrix = noArray(),
                                             float minDepth = 0.f,
                                             float maxDepth = 4.f,
                                             float maxDepthDiff = 0.07f,
@@ -366,7 +366,7 @@ public:
     ICPOdometry() { }
 
     /** Creates new ICPOdometry object
-     * @param cameraMatrix Camera matrix
+     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -375,7 +375,7 @@ public:
      * @param iterCounts Count of iterations on each pyramid level, defaults are [7, 7, 7, 10]
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<ICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<ICPOdometry> create(InputArray cameraMatrix = noArray(),
                                            float minDepth = 0.f,
                                            float maxDepth = 4.f,
                                            float maxDepthDiff = 0.07f,
@@ -402,7 +402,7 @@ public:
     RgbdICPOdometry() { }
 
     /** Creates RgbdICPOdometry object
-     * @param cameraMatrix Camera matrix
+     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
      * @param minDepth Pixels with depth less than minDepth will not be used (in meters)
      * @param maxDepth Pixels with depth larger than maxDepth will not be used (in meters)
      * @param maxDepthDiff Correspondences between pixels of two given frames will be filtered out
@@ -413,7 +413,7 @@ public:
      *                              if they have gradient magnitude less than minGradientMagnitudes[level], default is 10 per each level
      * @param transformType Class of trasformation
      */
-    CV_WRAP static Ptr<RgbdICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<RgbdICPOdometry> create(InputArray cameraMatrix = noArray(),
                                                float minDepth = 0.f,
                                                float maxDepth = 4.f,
                                                float maxDepthDiff = 0.07f,
@@ -452,7 +452,7 @@ public:
     FastICPOdometry() { }
 
     /** Creates FastICPOdometry object
-     * @param cameraMatrix Camera matrix
+     * @param cameraMatrix Camera matrix, default is [fx = fy = 525.0, cx = 319.5, cy = 239.5]
      * @param maxDistDiff Correspondences between pixels of two given frames will be filtered out
      *                    if their depth difference is larger than maxDepthDiff (in meters)
      * @param angleThreshold Correspondence will be filtered out
@@ -465,7 +465,7 @@ public:
      * @param truncateThreshold Threshold for depth truncation in meters
      *        All depth values beyond this threshold will be set to zero
      */
-    CV_WRAP static Ptr<FastICPOdometry> create(const Matx33f& cameraMatrix = Matx33f::eye(),
+    CV_WRAP static Ptr<FastICPOdometry> create(InputArray cameraMatrix = noArray(),
                                                float maxDistDiff = 0.07f,
                                                float angleThreshold = (float)(30. * CV_PI / 180.),
                                                float sigmaDepth = 0.04f,
