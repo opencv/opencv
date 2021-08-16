@@ -63,7 +63,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
 
     // create preallocate surface memory: empty for test
     std::shared_ptr<void> associated_memory {};
-    auto surf = Surface::create_surface(std::move(handle), out_buf_ptr);
+    auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check self consistency
     EXPECT_EQ(surf->get_locks_count(), 0);
@@ -149,6 +149,26 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
 
     // workspace memory must be freed
     EXPECT_TRUE(preallocated_memory_ptr.get() == nullptr);
+}
+
+TEST(OneVPL_Source_CPUFrameAdapter, Init)
+{
+    // create raw MFX handle
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+    mfxFrameSurface1 *mfx_core_handle = handle.get();
+
+    // create preallocate surface memory: empty for test
+    std::shared_ptr<void> associated_memory {};
+    auto surf = Surface::create_surface(std::move(handle), associated_memory);
+
+    // check consistency
+    EXPECT_EQ(surf->get_locks_count(), 0);
+    {
+        VPLMediaFrameCPUAdapter adapter(surf);
+        EXPECT_EQ(surf->get_locks_count(), 1);
+    }
+    EXPECT_EQ(surf->get_locks_count(), 0);
 }
 }
 } // namespace opencv_test

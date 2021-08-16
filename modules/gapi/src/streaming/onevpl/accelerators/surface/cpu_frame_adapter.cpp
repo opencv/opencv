@@ -45,7 +45,7 @@ VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
 
 cv::GFrameDesc VPLMediaFrameCPUAdapter::meta() const {
     GFrameDesc desc;
-    const Surface::info_t info = parent_surface_ptr->get_info();
+    const Surface::info_t& info = parent_surface_ptr->get_info();
     switch(info.FourCC)
     {
         case MFX_FOURCC_I420:
