@@ -10,6 +10,8 @@
 #include <atomic>
 #include <memory>
 
+#include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
+
 #ifdef HAVE_ONEVPL
 #if (MFX_VERSION >= 2000)
 #include <vpl/mfxdispatcher.h>
@@ -32,19 +34,20 @@ public:
     using info_t = mfxFrameInfo;
     using data_t = mfxFrameData;
 
-    static std::shared_ptr<Surface> create_surface(std::unique_ptr<handle_t>&& surf,
+    // GAPI_EXPORTS for tests
+    GAPI_EXPORTS static std::shared_ptr<Surface> create_surface(std::unique_ptr<handle_t>&& surf,
                                                    std::shared_ptr<void> accociated_memory);
-    ~Surface();
+    GAPI_EXPORTS ~Surface();
 
-    handle_t* get_handle() const;
-    const info_t& get_info() const;
-    const data_t& get_data() const;
+    GAPI_EXPORTS handle_t* get_handle() const;
+    GAPI_EXPORTS const info_t& get_info() const;
+    GAPI_EXPORTS const data_t& get_data() const;
 
-    size_t get_locks_count() const;
+    GAPI_EXPORTS size_t get_locks_count() const;
 
     // it had better to implement RAII
-    size_t obtain_lock();
-    size_t release_lock();
+    GAPI_EXPORTS size_t obtain_lock();
+    GAPI_EXPORTS size_t release_lock();
 private:
     Surface(std::unique_ptr<handle_t>&& surf, std::shared_ptr<void> accociated_memory);
 };

@@ -9,7 +9,7 @@
 
 #include "../common/gapi_tests_common.hpp"
 
-#include <thread> // sleep_for (Delay)
+#include <future>
 
 #include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
@@ -28,34 +28,17 @@
 #include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
 
 #ifdef HAVE_ONEVPL
-//#include <../src/backends/common/gbackend.hpp> // asView
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
+#include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
+
 namespace opencv_test
 {
 namespace
 {
-TEST(OneVPL_Source_Surface, Init)
+TEST(OneVPL_Source_Surface, InitSurface)
 {
-    // create raw MFX handle
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-    mfxFrameSurface1 *mfx_core_handle = handle.get();
+    using namespace cv::gapi::wip;
 
-    // create preallocate surface memory: empty for test
-    std::shared_ptr<void> associated_memory {};
-    auto surf = Surface::create_surface(std::move(handle), out_buf_ptr);
-
-    // check self consistency
-    EXPECT_EQ(surf->get_handle(), mfx_core_handle);
-    EXPECT_EQ(surf->get_locks_count(), 0);
-    EXPECT_EQ(surf->obtain_lock(), 0);
-    EXPECT_EQ(surf->get_locks_count(), 1);
-    EXPECT_EQ(surf->release_lock(), 1);
-    EXPECT_EQ(surf->get_locks_count(), 0);
-}
-
-TEST(OneVPL_Source_Surface, ConcurrentLock)
-{
     // create raw MFX handle
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
     memset(handle.get(), 0, sizeof(mfxFrameSurface1));
@@ -66,31 +49,60 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check self consistency
+    EXPECT_EQ(reinterpret_cast<void*>(surf->get_handle()),
+              reinterpret_cast<void*>(mfx_core_handle));
+    EXPECT_EQ(surf->get_locks_count(), 0);
+    EXPECT_EQ(surf->obtain_lock(), 0);
+    EXPECT_EQ(surf->get_locks_count(), 1);
+    EXPECT_EQ(surf->release_lock(), 1);
+    EXPECT_EQ(surf->get_locks_count(), 0);
+}
+
+TEST(OneVPL_Source_Surface, ConcurrentLock)
+{
+    using namespace cv::gapi::wip;
+
+    // create raw MFX handle
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
+    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+
+    // create preallocate surface memory: empty for test
+    std::shared_ptr<void> associated_memory {};
+    auto surf = Surface::create_surface(std::move(handle), associated_memory);
+
+    // check self consistency
     EXPECT_EQ(surf->get_locks_count(), 0);
 
-    size_t lock_counter = 100000;
+    // MFX internal limitation: do not exceede U16 range
+    // so I16 is using here
+    int16_t lock_counter = std::numeric_limits<int16_t>::max() - 1;
     std::promise<void> barrier;
     std::future<void> sync = barrier.get_future();
+
+
     std::thread worker_thread([&barrier, surf, lock_counter] () {
         barrier.set_value();
 
         // concurrent lock
-        for (size_t i = 0; i < lock_counter; i ++) {
+        for (int16_t i = 0; i < lock_counter; i ++) {
             surf->obtain_lock();
         }
     });
-
     sync.wait();
+
     // concurrent lock
-    for (size_t i = 0; i < lock_counter; i ++) {
+    for (int16_t i = 0; i < lock_counter; i ++) {
             surf->obtain_lock();
     }
+
     worker_thread.join();
     EXPECT_EQ(surf->get_locks_count(), lock_counter * 2);
 }
 
 TEST(OneVPL_Source_Surface, MemoryLifeTime)
 {
+    using namespace cv::gapi::wip;
+
     // create preallocate surface memory
     std::unique_ptr<char> preallocated_memory_ptr(new char);
     std::shared_ptr<void> associated_memory (preallocated_memory_ptr.get(),
@@ -106,14 +118,15 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     std::generate(surfaces.begin(), surfaces.end(), [surface_num, associated_memory](){
         std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
         memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-        return Surface::create_surface(std::move(handle), associated_memory));
+        return Surface::create_surface(std::move(handle), associated_memory);
     });
 
     // destroy surfaces
     {
         std::thread deleter_thread([&surfaces]() {
             surfaces.clear();
-        }).join();
+        });
+        deleter_thread.join();
     }
 
     // workspace memory must be alive
@@ -127,14 +140,14 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     std::generate(surfaces.begin(), surfaces.end(), [surface_num_plus_one, associated_memory](){
         std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
         memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-        return Surface::create_surface(std::move(handle), associated_memory));
+        return Surface::create_surface(std::move(handle), associated_memory);
     });
 
     // remember one surface
     std::shared_ptr<Surface> last_surface = surfaces.back();
 
     // destroy another surfaces
-    surface.clear();
+    surfaces.clear();
 
     // destroy associated_memory
     associated_memory.reset();
@@ -151,12 +164,13 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     EXPECT_TRUE(preallocated_memory_ptr.get() == nullptr);
 }
 
-TEST(OneVPL_Source_CPUFrameAdapter, Init)
+TEST(OneVPL_Source_CPUFrameAdapter, InitFrameAdapter)
 {
+    using namespace cv::gapi::wip;
+
     // create raw MFX handle
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
     memset(handle.get(), 0, sizeof(mfxFrameSurface1));
-    mfxFrameSurface1 *mfx_core_handle = handle.get();
 
     // create preallocate surface memory: empty for test
     std::shared_ptr<void> associated_memory {};
@@ -164,6 +178,7 @@ TEST(OneVPL_Source_CPUFrameAdapter, Init)
 
     // check consistency
     EXPECT_EQ(surf->get_locks_count(), 0);
+
     {
         VPLMediaFrameCPUAdapter adapter(surf);
         EXPECT_EQ(surf->get_locks_count(), 1);
