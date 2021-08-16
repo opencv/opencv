@@ -11,9 +11,6 @@
 #include "opencv2/3d/depth.hpp"
 #include "opencv2/3d/volume.hpp"
 
-#include "opencv2/3d/detail/pose_graph.hpp"
-#include "opencv2/3d/detail/kinfu_frame.hpp"
-
 /**
   @defgroup _3d 3D vision functionality
 

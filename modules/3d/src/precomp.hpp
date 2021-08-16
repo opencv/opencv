@@ -63,6 +63,9 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
+#include "opencv2/3d/detail/pose_graph.hpp"
+#include "opencv2/3d/detail/kinfu_frame.hpp"
+
 #include <atomic>
 #include <functional>
 #include <limits>
