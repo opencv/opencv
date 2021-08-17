@@ -566,6 +566,29 @@ models = [
         sha='40deb324ddba7db4117568e1e3911e7a771fb260',
         filename='onnx/data/output_resnet50v1.pb'),
     Model(
+        name='ResNet50-Int8 (ONNX)',
+        url='https://github.com/onnx/models/raw/master/vision/classification/resnet/model/resnet50-v1-12-int8.tar.gz',
+        sha='2ff2a58f4a27362ee6234915452e86287cdcf269',
+        filename='resnet50-v1-12-int8.tar.gz'),
+    Model(
+        name='ResNet50-Int8 (ONNX)',
+        archive='resnet50-v1-12-int8.tar.gz',
+        member='resnet50-v1-12-int8/resnet50-v1-12-int8.onnx',
+        sha='5fbeac70e1a3af3253c21e0e4008a784aa61929f',
+        filename='onnx/models/resnet50_int8.onnx'),
+    Model(
+        name='ResNet50-Int8 (ONNX)',
+        archive='resnet50-v1-12-int8.tar.gz',
+        member='resnet50-v1-12-int8/test_data_set_0/input_0.pb',
+        sha='0946521c8afcfea9340390298a41fb11496b3556',
+        filename='onnx/data/input_resnet50_int8.pb'),
+    Model(
+        name='ResNet50-Int8 (ONNX)',
+        archive='resnet50-v1-12-int8.tar.gz',
+        member='resnet50-v1-12-int8/test_data_set_0/output_0.pb',
+        sha='6d45d2f06150e9045631c7928093728b07c8b12d',
+        filename='onnx/data/output_resnet50_int8.pb'),
+    Model(
         name='ssd_mobilenet_v1_ppn_coco (TensorFlow)',
         url='http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_ppn_shared_box_predictor_300x300_coco14_sync_2018_07_03.tar.gz',
         sha='549ae0fd82c202786abe53c306b191c578599c44',
