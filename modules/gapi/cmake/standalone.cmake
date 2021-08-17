@@ -6,6 +6,13 @@ if (NOT TARGET ade )
   find_package(ade 0.1.0 REQUIRED)
 endif()
 
+if (WITH_GAPI_ONEVPL)
+    find_package(VPL)
+    if(VPL_FOUND)
+        set(HAVE_GAPI_ONEVPL TRUE)
+    endif()
+endif()
+
 set(FLUID_TARGET fluid)
 set(FLUID_ROOT "${CMAKE_CURRENT_LIST_DIR}/../")
 
