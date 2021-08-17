@@ -163,6 +163,10 @@ set(gapi_srcs
     src/backends/ie/bindings_ie.cpp
     src/backends/python/gpythonbackend.cpp
 
+    # Streaming source
+    src/streaming/onevpl/onevpl_source.cpp
+    src/streaming/onevpl/onevpl_source_priv.cpp
+
     # Utils (ITT tracing)
     src/utils/itt.cpp
     )
@@ -234,6 +238,17 @@ if(HAVE_PLAIDML)
   ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${PLAIDML_INCLUDE_DIRS})
 endif()
 
+if(HAVE_GAPI_ONEVPL)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_ONEVPL)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+  endif()
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
+  ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
+  if(HAVE_D3D11 AND HAVE_OPENCL)
+    ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+  endif()
+endif()
 
 if(WIN32)
   # Required for htonl/ntohl on Windows
