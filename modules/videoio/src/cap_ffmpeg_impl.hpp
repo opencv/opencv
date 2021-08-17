@@ -1303,7 +1303,7 @@ bool CvCapture_FFMPEG::fixSideData() {
 #else
     CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #endif
-    if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
+    if ((eVideoCodec == CV_CODEC(CODEC_ID_H264)
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
     && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
         || eVideoCodec == CV_CODEC(CODEC_ID_H265)
@@ -1311,8 +1311,8 @@ bool CvCapture_FFMPEG::fixSideData() {
     && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
         || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
 #endif
-        && ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
-        packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1)
+        ) && (ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
+        packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1))
     {
         return true;
     }
@@ -1385,9 +1385,16 @@ bool CvCapture_FFMPEG::grabFrame()
         }
 
         if (restartRtspFileWrite) {
-            if (!oFile || packet.flags == 1) {
+            if (packet.flags == 1) {
                 if (oFile)
                     fclose(oFile);
+                //const int iExt = strlen(filenameOut);
+                if (ic->streams[video_stream]->codec->codec->id == AV_CODEC_ID_H264)
+                    strcat(filenameOut, ".h264");
+                else if (ic->streams[video_stream]->codec->codec->id == AV_CODEC_ID_HEVC)
+                    strcat(filenameOut, ".h264");
+                else
+                    strcat(filenameOut, ".h264");
                 oFile = fopen(filenameOut, "wb");
                 if (!oFile)
                     return false;
@@ -1614,7 +1621,7 @@ void CvCapture_FFMPEG::writeToFile(const char* _filenameOut) {
         if (filenameOut)
             delete[] filenameOut;
         const int sz = strlen(_filenameOut) + 1;
-        filenameOut = new char[sz];
+        filenameOut = new char[sz + 5];
         memcpy(filenameOut, _filenameOut, sz);
 }
 

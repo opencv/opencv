@@ -194,7 +194,7 @@ TEST_P(videoio_writeToFile, write)
     const string ext = get<2>(GetParam());
     const bool rawRead = get<3>(GetParam());
     const string fileName = path + "." + ext;
-    const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext.c_str()).c_str());
+    const string fileNameOut = tempfile("test_container_stream");
 
     // Write encoded video read using VideoCapture.writeToFile() to a tmp file
     {
