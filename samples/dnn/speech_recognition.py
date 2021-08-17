@@ -390,6 +390,28 @@ class Decoder:
         hypotheses.append(hypothesis)
         return hypotheses
 
+def predict(features, net, decoder):
+    '''
+        Passes the features through the Jasper model and decodes the output to english transcripts.
+        args:
+            features : input features, calculated using FilterbankFeatures class
+            net : Jasper model dnn.net object
+            decoder : Decoder object
+        return : Predicted text
+    '''
+    # This is a workaround https://github.com/opencv/opencv/issues/19091
+    # expanding 1 dimentions allows us to pass it to the network
+    # from python. This should be resolved in the future.
+    features = np.expand_dims(features,axis=3)
+
+    # make prediction
+    net.setInput(features)
+    output = net.forward()
+
+    # decode output to transcript
+    prediction = decoder.decode(output[0])
+    return prediction[0]
+
 if __name__ == '__main__':
 
     # Computation backends supported by layers
@@ -399,7 +421,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='This script runs Jasper Speech recognition model',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--input_audio', type=str, required=True, help='Path to input audio file.')
+    parser.add_argument('--input_audio', type=str, required=True, help='Path to input audio file. OR Path to a txt file with relative path to multiple audio files in different lines')
     parser.add_argument('--show_spectrogram', action='store_true', help='Whether to show a spectrogram of the input audio.')
     parser.add_argument('--model', type=str, default='jasper.onnx', help='Path to the onnx file of Jasper. default="jasper.onnx"')
     parser.add_argument('--output', type=str, help='Path to file where recognized audio transcript must be saved. Leave this to print on console.')
@@ -420,27 +442,44 @@ if __name__ == '__main__':
         raise OSError("Input audio file does not exist")
     if not os.path.isfile(args.model):
         raise OSError("Jasper model file does not exist")
+    if args.input_audio.endswith('.txt'):
+        with open(args.input_audio) as f:
+            content = f.readlines()
+            content = [x.strip() for x in content]
+            audio_file_paths = content
+        for audio_file_path in audio_file_paths:
+            if not os.path.isfile(audio_file_path):
+                raise OSError("Audio file({audio_file_path}) does not exist")
+    else:
+        audio_file_paths = [args.input_audio]
+    audio_file_paths = [os.path.abspath(x) for x in audio_file_paths]
 
-    # Read audio File
+    # Read audio Files
+    features = []
     try:
-        audio = sf.read(args.input_audio)
-        X=audio[0]
-        seq_len=np.array([X.shape[0]], dtype=np.int32)
+        for audio_file_path in audio_file_paths:
+            audio = sf.read(audio_file_path)
+            # If audio is stereo, just take one channel.
+            X = audio[0] if audio[0].ndim==1 else audio[0][:,0]
+            features.append(X)
     except:
         raise Exception(f"Soundfile cannot read {args.input_audio}. Try a different format")
+
+    # Get Filterbank Features
+    feature_extractor = FilterbankFeatures()
+    for i in range(len(features)):
+        X = features[i]
+        seq_len = np.array([X.shape[0]], dtype=np.int32)
+        features[i] = feature_extractor.calculate_features(x=X, seq_len=seq_len)
 
     # Load Network
     net = cv.dnn.readNetFromONNX(args.model)
     net.setPreferableBackend(args.backend)
     net.setPreferableTarget(args.target)
 
-    # Get Filterbank Features
-    feature_extractor = FilterbankFeatures()
-    features = feature_extractor.calculate_features(x=X, seq_len=seq_len)
-
     # Show spectogram if required
-    if args.show_spectrogram:
-        img = cv.normalize(src=features[0], dst=None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+    if args.show_spectrogram and not args.input_audio.endswith('.txt'):
+        img = cv.normalize(src=features[0][0], dst=None, alpha=0, beta=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
         img = cv.applyColorMap(img, cv.COLORMAP_JET)
         cv.imshow('spectogram', img)
         cv.waitKey(0)
@@ -448,21 +487,19 @@ if __name__ == '__main__':
     # Initialize decoder
     decoder = Decoder()
 
-    # This is a workaround https://github.com/opencv/opencv/issues/19091
-    # expanding 1 dimentions allows us to pass it to the network
-    # from python. This should be resolved in the future.
-    features = np.expand_dims(features,axis=3)
-    # make prediction
-    net.setInput(features)
-    output = net.forward()
-
-    # decode output to transcript
-    prediction = decoder.decode(output[0])
+    # Make prediction
+    prediction = []
+    print("Predicting...")
+    for feature in features:
+        print(f"\rAudio file {len(prediction)+1}/{len(features)}", end='')
+        prediction.append(predict(feature, net, decoder))
+    print("")
 
     # save transcript if required
     if args.output:
         with open(args.output,'w') as f:
-            f.write(prediction)
+            for pred in prediction:
+                f.write(pred+'\n')
         print("Transcript was written to {}".format(args.output))
     else:
         print(prediction)
