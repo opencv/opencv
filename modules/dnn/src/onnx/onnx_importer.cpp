@@ -177,6 +177,7 @@ private:
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustom               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     const DispatchMap dispatch;
@@ -641,7 +642,8 @@ const std::set<String>& ONNXImporter::getSupportedTypes()
         "Dropout",
         "Identity",
         "Crop",
-        "Normalize"
+        "Normalize",
+        "CumSum"
     };
     return layerTypes;
 }
@@ -2399,6 +2401,23 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "CumSum";
+
+    // Get axis.
+    const std::string& input1 = node_proto.input(1);
+
+    if (constBlobs.find(input1) != constBlobs.end())
+    {
+        Mat axis_blob = getBlob(input1);
+        CV_Assert(axis_blob.total() == 1u);
+        layerParams.set("axis", axis_blob.at<int>(0));
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseCustom(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     for (int j = 0; j < node_proto.input_size(); j++) {
@@ -2456,6 +2475,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
     dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
+    dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["Custom"] = &ONNXImporter::parseCustom;
 
     return dispatch;

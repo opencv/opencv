@@ -1362,6 +1362,15 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     expectNoFallbacksFromIE(net);
 }
 
+TEST_P(Test_ONNX_layers, CumSum)
+{
+    testONNXModels("cumsum_1d_exclusive_1");
+    testONNXModels("cumsum_1d_reverse");
+    testONNXModels("cumsum_1d_exclusive_1_reverse");
+    testONNXModels("cumsum_2d_dim_1");
+    testONNXModels("cumsum_3d_dim_2");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

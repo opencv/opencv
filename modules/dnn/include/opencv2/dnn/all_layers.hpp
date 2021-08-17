@@ -723,6 +723,15 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS CumSumLayer : public Layer
+    {
+    public:
+        int exclusive;
+        int reverse;
+
+        static Ptr<CumSumLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
