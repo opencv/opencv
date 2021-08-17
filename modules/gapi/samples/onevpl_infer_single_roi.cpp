@@ -201,7 +201,6 @@ int main(int argc, char *argv[]) {
 
     cv::GMetaArg descr = cap->descr_of();
     auto frame_descr = cv::util::get<cv::GFrameDesc>(descr);
-    (void)frame_descr;
 
     // Now build the graph
     cv::GFrame in;
@@ -230,17 +229,18 @@ int main(int argc, char *argv[]) {
     int framesCount = 0;
     cv::TickMeter t;
     cv::VideoWriter writer;
+    if (!output.empty() && !writer.isOpened()) {
+        const auto sz = cv::Size{frame_descr.size.width, frame_descr.size.height};
+        writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
+        CV_Assert(writer.isOpened());
+    }
+
     cv::Mat outMat;
     t.start();
     while (pipeline.pull(cv::gout(outMat))) {
         cv::imshow("Out", outMat);
         cv::waitKey(1);
         if (!output.empty()) {
-            if (!writer.isOpened()) {
-                const auto sz = cv::Size{outMat.cols, outMat.rows};
-                writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
-                CV_Assert(writer.isOpened());
-            }
             writer << outMat;
         }
         framesCount++;

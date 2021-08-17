@@ -8,7 +8,9 @@ endif()
 
 if (WITH_GAPI_ONEVPL)
     find_package(VPL)
-    set(HAVE_GAPI_ONEVPL TRUE)
+    if(VPL_FOUND)
+        set(HAVE_GAPI_ONEVPL TRUE)
+    endif()
 endif()
 
 set(FLUID_TARGET fluid)
