@@ -45,6 +45,10 @@ foreach(fname ${PYTHON_LOADER_FILES})
   endif()
 endforeach()
 
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E touch "py.typed"
+    WORKING_DIRECTORY "${__loader_path}/cv2"
+)
 
 
 if(WIN32)
