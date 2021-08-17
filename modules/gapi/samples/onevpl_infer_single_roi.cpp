@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
-        cap = cv::gapi::wip::make_vpl_src(file_path);
+        cap = cv::gapi::wip::make_vpl_src(file_path, source_cfgs);
         std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
