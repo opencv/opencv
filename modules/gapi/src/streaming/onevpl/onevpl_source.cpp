@@ -40,8 +40,7 @@ OneVPLSource::OneVPLSource(std::unique_ptr<Priv>&& impl) :
     m_priv(std::move(impl)) {
 }
 
-OneVPLSource::~OneVPLSource() {
-}
+OneVPLSource::~OneVPLSource() = default;
 
 bool OneVPLSource::pull(cv::gapi::wip::Data& data)
 {

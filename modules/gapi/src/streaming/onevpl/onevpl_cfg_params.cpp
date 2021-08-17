@@ -38,8 +38,7 @@ oneVPL_cfg_param::oneVPL_cfg_param (const std::string& param_name, value_t&& par
     m_priv(new Priv(param_name, std::move(param_value), is_major_param)) {
 }
 
-oneVPL_cfg_param::~oneVPL_cfg_param() {
-}
+oneVPL_cfg_param::~oneVPL_cfg_param() = default;
 
 oneVPL_cfg_param& oneVPL_cfg_param::operator=(const oneVPL_cfg_param& src) {
     if (this != &src) {

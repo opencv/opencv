@@ -7,8 +7,7 @@ DataProviderSystemErrorException::DataProviderSystemErrorException(int error_cod
     reason = desription + ", error: " + std::to_string(error_code) + ", desctiption: " + strerror(error_code);
 }
 
-DataProviderSystemErrorException::~DataProviderSystemErrorException() {
-}
+DataProviderSystemErrorException::~DataProviderSystemErrorException() = default;
 
 const char* DataProviderSystemErrorException::what() const noexcept {
     return reason.c_str();
