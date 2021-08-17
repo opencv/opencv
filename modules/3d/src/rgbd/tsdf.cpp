@@ -957,6 +957,33 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
 
     if(!k.run(2, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
+
+    //DEBUG
+    {
+        Scalar s = cv::sum(depth);
+        double minv, maxv;
+        cv::minMaxLoc(depth, &minv, &maxv);
+        CV_LOG_INFO(NULL, "depth sum/min/max: " << s << " / " << minv << " / " << maxv);
+    }
+    {
+        Scalar s = cv::sum(pixNorms);
+        double minv, maxv;
+        cv::minMaxLoc(pixNorms, &minv, &maxv);
+        CV_LOG_INFO(NULL, "pixNorms sum/min/max: " << s << " / " << minv << " / " << maxv);
+    }
+    {
+        Scalar s = cv::sum(volume);
+        CV_LOG_INFO(NULL, "volume sum: " << s);
+    }
+    CV_LOG_INFO(NULL, "vol2cam: " << vol2cam.matrix);
+    CV_LOG_INFO(NULL, "voxelSize: " << voxelSize);
+    CV_LOG_INFO(NULL, "volResGpu: " << volResGpu);
+    CV_LOG_INFO(NULL, "volDims: " << volDims);
+    CV_LOG_INFO(NULL, "intr: fx/y, cx/y" << fxy << " " << cxy);
+    CV_LOG_INFO(NULL, "dfac: " << dfac);
+    CV_LOG_INFO(NULL, "truncDist: " << truncDist);
+    CV_LOG_INFO(NULL, "maxWeight: " << maxWeight);
+    CV_LOG_INFO(NULL, "volResolution: " << volResolution);
 }
 
 

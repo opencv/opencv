@@ -143,10 +143,6 @@ struct SemisphereScene : Scene
         Range range(0, frame.rows);
         parallel_for_(range, RenderInvoker<SemisphereScene>(frame, pose, reproj, depthFactor, onlySemisphere));
 
-        Scalar s = sum(frame);
-
-        CV_Assert(s.dot(s) > 0);
-
         return std::move(frame);
     }
 
@@ -502,7 +498,6 @@ void valid_points_test(bool isHashTSDF)
     profile = counterOfValid(points);
 
     ASSERT_NE(profile, 0) << "There is no points in profile";
-
 
     // TODO: why profile == 2*anfas ?
     float percentValidity = float(anfas) / float(profile);
