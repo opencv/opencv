@@ -31,7 +31,7 @@ __kernel void integrate(__global const char * depthptr,
                         int depth_step, int depth_offset,
                         int depth_rows, int depth_cols,
                         __global struct TsdfVoxel * volumeptr,
-                        const float16 vol2camMatrix,
+                        __global const float * vol2camptr,
                         const float voxelSize,
                         const int4 volResolution4,
                         const int4 volDims4,
@@ -54,9 +54,10 @@ __kernel void integrate(__global const char * depthptr,
     const int3 volDims = volDims4.xyz;
     const float2 limits = (float2)(depth_cols-1, depth_rows-1);
 
-    const float4 vol2cam0 = vol2camMatrix.s0123;
-    const float4 vol2cam1 = vol2camMatrix.s4567;
-    const float4 vol2cam2 = vol2camMatrix.s89ab;
+    __global const float* vm = vol2camptr;
+    const float4 vol2cam0 = vload4(0, vm);
+    const float4 vol2cam1 = vload4(1, vm);
+    const float4 vol2cam2 = vload4(2, vm);
 
     const float truncDistInv = 1.f/truncDist;
 

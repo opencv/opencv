@@ -921,7 +921,10 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     if(k.empty())
         throw std::runtime_error("Failed to create kernel: " + errorStr);
 
+    UMat vol2camGpu;
     Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
+    Mat(vol2cam.matrix).copyTo(vol2camGpu);
+
     float dfac = 1.f/depthFactor;
     Vec4i volResGpu(volResolution.x, volResolution.y, volResolution.z);
     Intr intrinsics(_intrinsics);
@@ -939,8 +942,7 @@ void TSDFVolumeGPU::integrate(InputArray _depth, float depthFactor,
     // Use sampler for depth (mask needed)
     k.args(ocl::KernelArg::ReadOnly(depth),
            ocl::KernelArg::PtrReadWrite(volume),
-           ocl::KernelArg::Constant(vol2cam.matrix.val,
-                                    sizeof(vol2cam.matrix.val)),
+           ocl::KernelArg::PtrReadOnly(vol2camGpu),
            voxelSize,
            volResGpu.val,
            volDims.val,
