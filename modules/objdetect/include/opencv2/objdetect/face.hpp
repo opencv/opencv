@@ -90,9 +90,9 @@ public:
     /** @brief Calculating the distance between two face features
      *  @param _face_feature1 the first input feature
      *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
-     *  @param distype defining the similarity with optional values "norml2" or "cosine"
+     *  @param dis_type defining the similarity with optional values "norml2" or "cosine"
      */
-    CV_WRAP virtual double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const = 0;
+    CV_WRAP virtual double faceMatch(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizer::cosine) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
      *  @param onnx_path the path of the onnx model used for face recognition

@@ -40,7 +40,7 @@ public:
         net.setInput(inputBolb);
         net.forward(_face_feature);
     };
-    double faceMatch(InputArray _face_feature1, InputArray _face_feature2, const distype& dis_type) const override
+    double faceMatch(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
         face_feature1 /= norm(face_feature1);
