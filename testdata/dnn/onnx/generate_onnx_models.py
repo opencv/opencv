@@ -4,6 +4,8 @@ from torch.autograd import Variable, Function
 import torch.nn.init as init
 import torch.nn as nn
 import torch.nn.functional as F
+import tensorflow as tf # version 2.5.0
+import tf2onnx # version 1.9.1
 import numpy as np
 import os.path
 import onnx
@@ -1379,3 +1381,49 @@ class NormalizeFusion(nn.Module):
 x = Variable(torch.randn([2, 3]))
 model = NormalizeFusion()
 save_data_and_model("normalize_fusion", x, model)
+
+class CumSum(nn.Module):
+    def __init__(self, dim):
+        super(CumSum, self).__init__()
+        self._dim = dim
+
+    def forward(self, x):
+        return torch.cumsum(x, self._dim)
+
+x = torch.randn(2, 3)
+save_data_and_model("cumsum_2d_dim_1", x, CumSum(dim=1), version=11)
+
+x = torch.randn(2, 3, 4)
+save_data_and_model("cumsum_3d_dim_2", x, CumSum(dim=2), version=11)
+
+# tf2onnx models
+def save_data_and_tf_function(tf_function, name, input):
+    input = input.astype(np.float32)
+    np.save(os.path.join("data", "input_" + name + ".npy"), input)
+    output = tf_function(input)
+    np.save(os.path.join("data", "output_" + name + ".npy"), output)
+    cumsum_model = tf2onnx.convert.from_function(
+        function=tf_function,
+        input_signature=[tf.TensorSpec([], tf.float32)],
+        opset=14)[0]
+    onnx.save(cumsum_model, os.path.join("models", name + ".onnx"))
+
+x = np.random.rand(3)
+
+@tf.function
+def cumsum_exclusive_1d(x):
+    return tf.cumsum(x, exclusive=True, reverse=False)
+
+save_data_and_tf_function(cumsum_exclusive_1d, "cumsum_1d_exclusive_1", x)
+
+@tf.function
+def cumsum_reverse(x):
+    return tf.cumsum(x, exclusive=False, reverse=True)
+
+save_data_and_tf_function(cumsum_reverse, "cumsum_1d_reverse", x)
+
+@tf.function
+def cumsum_exclusive_1d_reverse(x):
+    return tf.cumsum(x, exclusive=True, reverse=True)
+
+save_data_and_tf_function(cumsum_exclusive_1d_reverse, "cumsum_1d_exclusive_1_reverse", x)
