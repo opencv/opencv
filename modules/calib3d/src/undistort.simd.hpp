@@ -303,9 +303,9 @@ private:
     double s3;
     double s4;
 #if CV_SIMD_64F
-    double s_x[2*v_float64::nlanes];
-    double s_y[2*v_float64::nlanes];
-    double s_w[2*v_float64::nlanes];
+    double s_x[2*v_float64::max_nlanes];
+    double s_y[2*v_float64::max_nlanes];
+    double s_w[2*v_float64::max_nlanes];
 #endif
 };
 }

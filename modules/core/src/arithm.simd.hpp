@@ -392,11 +392,11 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     typedef OP<T1, Tvec> op;
 #if CV_SIMD
     typedef bin_loader<OP, T1, Tvec> ldr;
-    enum {wide_step = Tvec::nlanes};
+    int wide_step = Tvec::nlanes;
     #if !CV_NEON && CV_SIMD_WIDTH == 16
-        enum {wide_step_l = wide_step * 2};
+        int wide_step_l = wide_step * 2;
     #else
-        enum {wide_step_l = wide_step};
+        int wide_step_l = wide_step;
     #endif
 #endif // CV_SIMD
 
@@ -640,7 +640,7 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(ushort), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    enum {step = Tvec::nlanes};
+    enum {step = Tvec::max_nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
@@ -654,7 +654,7 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(unsigned), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    enum {step = Tvec::nlanes};
+    enum {step = Tvec::max_nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
@@ -670,7 +670,7 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(double), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    enum {step = Tvec::nlanes};
+    enum {step = Tvec::max_nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
@@ -697,7 +697,7 @@ static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     typedef OP<T1, Tvec> op;
 #if CV_SIMD
     typedef cmp_loader_n<sizeof(T1), OP, T1, Tvec> ldr;
-    enum {wide_step = Tvec::nlanes * sizeof(T1)};
+    enum {wide_step = Tvec::max_nlanes * sizeof(T1)};
 #endif // CV_SIMD
 
     step1 /= sizeof(T1);
@@ -1007,7 +1007,7 @@ template<template<typename T1, typename T2, typename Tvec> class OP, typename T2
 struct scalar_loader_n<sizeof(int), OP, int, T2, v_int32>
 {
     typedef OP<int, T2, v_int32> op;
-    enum {step = v_int32::nlanes};
+    enum {step = v_int32::max_nlanes};
 
     static inline void l(const int* src1, const int* src2, const T2* scalar, int* dst)
     {
@@ -1062,7 +1062,7 @@ template<template<typename T1, typename T2, typename Tvec> class OP, typename T2
 struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
 {
     typedef OP<float, T2, v_float32> op;
-    enum {step = v_float32::nlanes};
+    enum {step = v_float32::max_nlanes};
 
     static inline void l(const float* src1, const float* src2, const T2* scalar, float* dst)
     {
@@ -1098,7 +1098,7 @@ struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
 {
     typedef OP<int, float, v_int32> op;
     typedef OP<double, double, v_float64> op64;
-    enum {step = v_int32::nlanes};
+    enum {step = v_int32::max_nlanes};
 
     static inline void l(const int* src1, const int* src2, const double* scalar, int* dst)
     {
@@ -1162,7 +1162,7 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
 {
     typedef OP<float, float, v_float32> op;
     typedef OP<double, double, v_float64> op64;
-    enum {step = v_float32::nlanes};
+    enum {step = v_float32::max_nlanes};
 
     static inline void l(const float* src1, const float* src2, const double* scalar, float* dst)
     {
@@ -1219,7 +1219,7 @@ template<template<typename T1, typename T2, typename Tvec> class OP>
 struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
 {
     typedef OP<double, double, v_float64> op;
-    enum {step = v_float64::nlanes};
+    enum {step = v_float64::max_nlanes};
 
     static inline void l(const double* src1, const double* src2, const double* scalar, double* dst)
     {

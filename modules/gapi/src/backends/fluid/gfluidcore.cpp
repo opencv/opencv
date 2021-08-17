@@ -306,7 +306,7 @@ CV_ALWAYS_INLINE void absdiff_store(float out[], const v_float32& a, const v_flo
 template<typename T, typename VT>
 CV_ALWAYS_INLINE int absdiff_impl(const T in1[], const T in2[], T out[], int length)
 {
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
+    constexpr int nlanes = static_cast<int>(VT::max_nlanes);
 
     if (length < nlanes)
         return 0;
@@ -366,7 +366,7 @@ CV_ALWAYS_INLINE int absdiff_simd(const T in1[], const T in2[], T out[], int len
 template<typename T, typename VT>
 CV_ALWAYS_INLINE int add_simd_sametype(const T in1[], const T in2[], T out[], int length)
 {
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
+    constexpr int nlanes = static_cast<int>(VT::max_nlanes);
 
     if (length < nlanes)
         return 0;
@@ -421,7 +421,7 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
     }
     else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
     {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+        int nlanes = v_uint8::nlanes;
 
         if (length < nlanes)
             return 0;
@@ -453,7 +453,7 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
     }
     else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
     {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+        int nlanes = v_uint8::nlanes;
 
         if (length < nlanes)
             return 0;
@@ -496,7 +496,7 @@ CV_ALWAYS_INLINE int add_simd(const SRC in1[], const SRC in2[], DST out[], int l
 template<typename T, typename VT>
 CV_ALWAYS_INLINE int sub_simd_sametype(const T in1[], const T in2[], T out[], int length)
 {
-    constexpr int nlanes = static_cast<int>(VT::nlanes);
+    constexpr int nlanes = static_cast<int>(VT::max_nlanes);
 
     if (length < nlanes)
         return 0;
@@ -551,7 +551,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
     }
     else if (std::is_same<SRC, short>::value && std::is_same<DST, uchar>::value)
     {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+        constexpr int nlanes = static_cast<int>(v_uint8::max_nlanes);
 
         if (length < nlanes)
             return 0;
@@ -583,7 +583,7 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
     }
     else if (std::is_same<SRC, float>::value && std::is_same<DST, uchar>::value)
     {
-        constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+        constexpr int nlanes = static_cast<int>(v_uint8::max_nlanes);
 
         if (length < nlanes)
             return 0;
@@ -992,8 +992,8 @@ CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4(const T in[], T out[],
     static_assert((std::is_same<T, ushort>::value) || (std::is_same<T, short>::value),
                   "This templated overload is only for short or ushort type combinations.");
 
-    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes) :
-                                                              static_cast<int>(v_int16::nlanes);
+    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::max_nlanes) :
+                                                              static_cast<int>(v_int16::max_nlanes);
     if (length < nlanes)
         return 0;
 
@@ -1023,7 +1023,7 @@ template<>
 CV_ALWAYS_INLINE int absdiffc_simd_c1c2c4<uchar>(const uchar in[], uchar out[],
                                                  const v_float32& s, const int length)
 {
-    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+    constexpr int nlanes = static_cast<int>(v_uint8::max_nlanes);
 
     if (length < nlanes)
         return 0;
@@ -1059,7 +1059,7 @@ CV_ALWAYS_INLINE void absdiffc_short_store_c3(short* out_ptr, const v_int32& c1,
                                               const v_int32& c4, const v_int32& c5,
                                               const v_int32& c6)
 {
-    constexpr int nlanes = static_cast<int>(v_int16::nlanes);
+    constexpr int nlanes = static_cast<int>(v_int16::max_nlanes);
     vx_store(out_ptr, v_pack(c1, c2));
     vx_store(out_ptr + nlanes, v_pack(c3, c4));
     vx_store(out_ptr + 2*nlanes, v_pack(c5, c6));
@@ -1070,7 +1070,7 @@ CV_ALWAYS_INLINE void absdiffc_short_store_c3(ushort* out_ptr, const v_int32& c1
                                               const v_int32& c4, const v_int32& c5,
                                               const v_int32& c6)
 {
-    constexpr int nlanes = static_cast<int>(v_uint16::nlanes);
+    constexpr int nlanes = static_cast<int>(v_uint16::max_nlanes);
     vx_store(out_ptr, v_pack_u(c1, c2));
     vx_store(out_ptr + nlanes, v_pack_u(c3, c4));
     vx_store(out_ptr + 2*nlanes, v_pack_u(c5, c6));
@@ -1084,8 +1084,8 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl(const T in[], T out[],
     static_assert((std::is_same<T, ushort>::value) || (std::is_same<T, short>::value),
                   "This templated overload is only for short or ushort type combinations.");
 
-    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::nlanes):
-                                                              static_cast<int>(v_int16::nlanes);
+    constexpr int nlanes = (std::is_same<T, ushort>::value) ? static_cast<int>(v_uint16::max_nlanes):
+                                                              static_cast<int>(v_int16::max_nlanes);
 
     if (length < 3 * nlanes)
         return 0;
@@ -1125,7 +1125,7 @@ CV_ALWAYS_INLINE int absdiffc_simd_c3_impl<uchar>(const uchar in[], uchar out[],
                                                   const v_float32& s1, const v_float32& s2,
                                                   const v_float32& s3, const int length)
 {
-    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+    constexpr int nlanes = static_cast<int>(v_uint8::max_nlanes);
 
     if (length < 3 * nlanes)
         return 0;
@@ -1370,7 +1370,7 @@ GAPI_FLUID_KERNEL(GFluidAbsDiffC, cv::gapi::core::GAbsDiffC, true)
     static void initScratch(const GMatDesc&, const GScalarDesc&, Buffer& scratch)
     {
 #if CV_SIMD
-        constexpr int buflen = static_cast<int>(v_float32::nlanes) + 2; // buffer size
+        constexpr int buflen = static_cast<int>(v_float32::max_nlanes) + 2; // buffer size
 #else
         constexpr int buflen = 4;
 #endif

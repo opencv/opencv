@@ -73,7 +73,7 @@ struct v_uint8x16
 {
     typedef uchar lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_uint8x16() {}
@@ -99,7 +99,7 @@ struct v_int8x16
 {
     typedef schar lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_int8x16() {}
@@ -125,7 +125,7 @@ struct v_uint16x8
 {
     typedef ushort lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_uint16x8() {}
@@ -148,7 +148,7 @@ struct v_int16x8
 {
     typedef short lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_int16x8() {}
@@ -171,7 +171,7 @@ struct v_uint32x4
 {
     typedef unsigned lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_uint32x4() {}
@@ -193,7 +193,7 @@ struct v_int32x4
 {
     typedef int lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_int32x4() {}
@@ -215,7 +215,7 @@ struct v_float32x4
 {
     typedef float lane_type;
     typedef __m128 vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_float32x4() {}
@@ -237,7 +237,7 @@ struct v_uint64x2
 {
     typedef uint64 lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_uint64x2() {}
@@ -265,7 +265,7 @@ struct v_int64x2
 {
     typedef int64 lane_type;
     typedef __m128i vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_int64x2() {}
@@ -293,7 +293,7 @@ struct v_float64x2
 {
     typedef double lane_type;
     typedef __m128d vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     /* coverity[uninit_ctor]: suppress warning */
     v_float64x2() {}

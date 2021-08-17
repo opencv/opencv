@@ -139,7 +139,7 @@ inline int64 _v256_extract_epi64(const __m256i& a)
 struct v_uint8x32
 {
     typedef uchar lane_type;
-    enum { nlanes = 32 };
+    enum { nlanes = 32, max_nlanes = 32 };
     __m256i val;
 
     explicit v_uint8x32(__m256i v) : val(v) {}
@@ -168,7 +168,7 @@ struct v_uint8x32
 struct v_int8x32
 {
     typedef schar lane_type;
-    enum { nlanes = 32 };
+    enum { nlanes = 32, max_nlanes = 32 };
     __m256i val;
 
     explicit v_int8x32(__m256i v) : val(v) {}
@@ -194,7 +194,7 @@ struct v_int8x32
 struct v_uint16x16
 {
     typedef ushort lane_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
     __m256i val;
 
     explicit v_uint16x16(__m256i v) : val(v) {}
@@ -216,7 +216,7 @@ struct v_uint16x16
 struct v_int16x16
 {
     typedef short lane_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
     __m256i val;
 
     explicit v_int16x16(__m256i v) : val(v) {}
@@ -237,7 +237,7 @@ struct v_int16x16
 struct v_uint32x8
 {
     typedef unsigned lane_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
     __m256i val;
 
     explicit v_uint32x8(__m256i v) : val(v) {}
@@ -256,7 +256,7 @@ struct v_uint32x8
 struct v_int32x8
 {
     typedef int lane_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
     __m256i val;
 
     explicit v_int32x8(__m256i v) : val(v) {}
@@ -274,7 +274,7 @@ struct v_int32x8
 struct v_float32x8
 {
     typedef float lane_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
     __m256 val;
 
     explicit v_float32x8(__m256 v) : val(v) {}
@@ -292,7 +292,7 @@ struct v_float32x8
 struct v_uint64x4
 {
     typedef uint64 lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
     __m256i val;
 
     explicit v_uint64x4(__m256i v) : val(v) {}
@@ -316,7 +316,7 @@ struct v_uint64x4
 struct v_int64x4
 {
     typedef int64 lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
     __m256i val;
 
     explicit v_int64x4(__m256i v) : val(v) {}
@@ -340,7 +340,7 @@ struct v_int64x4
 struct v_float64x4
 {
     typedef double lane_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
     __m256d val;
 
     explicit v_float64x4(__m256d v) : val(v) {}

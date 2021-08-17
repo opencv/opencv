@@ -39,7 +39,7 @@ struct v_uint8x16
 {
     typedef uchar lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
 
     v_uint8x16() {}
     explicit v_uint8x16(v128_t v) : val(v) {}
@@ -62,7 +62,7 @@ struct v_int8x16
 {
     typedef schar lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 16 };
+    enum { nlanes = 16, max_nlanes = 16 };
 
     v_int8x16() {}
     explicit v_int8x16(v128_t v) : val(v) {}
@@ -85,7 +85,7 @@ struct v_uint16x8
 {
     typedef ushort lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
 
     v_uint16x8() {}
     explicit v_uint16x8(v128_t v) : val(v) {}
@@ -107,7 +107,7 @@ struct v_int16x8
 {
     typedef short lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 8 };
+    enum { nlanes = 8, max_nlanes = 8 };
 
     v_int16x8() {}
     explicit v_int16x8(v128_t v) : val(v) {}
@@ -129,7 +129,7 @@ struct v_uint32x4
 {
     typedef unsigned lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     v_uint32x4() {}
     explicit v_uint32x4(v128_t v) : val(v) {}
@@ -151,7 +151,7 @@ struct v_int32x4
 {
     typedef int lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     v_int32x4() {}
     explicit v_int32x4(v128_t v) : val(v) {}
@@ -173,7 +173,7 @@ struct v_float32x4
 {
     typedef float lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 4 };
+    enum { nlanes = 4, max_nlanes = 4 };
 
     v_float32x4() {}
     explicit v_float32x4(v128_t v) : val(v) {}
@@ -195,7 +195,7 @@ struct v_uint64x2
 {
     typedef uint64 lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     v_uint64x2() {}
     explicit v_uint64x2(v128_t v) : val(v) {}
@@ -217,7 +217,7 @@ struct v_int64x2
 {
     typedef int64 lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     v_int64x2() {}
     explicit v_int64x2(v128_t v) : val(v) {}
@@ -239,7 +239,7 @@ struct v_float64x2
 {
     typedef double lane_type;
     typedef v128_t vector_type;
-    enum { nlanes = 2 };
+    enum { nlanes = 2, max_nlanes = 2 };
 
     v_float64x2() {}
     explicit v_float64x2(v128_t v) : val(v) {}

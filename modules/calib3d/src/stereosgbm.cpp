@@ -1583,7 +1583,7 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
     utils::BufferArea aux_area;
     PixType* clipTab;
 #if CV_SIMD
-    short idx_row[v_int16::nlanes];
+    short idx_row[v_int16::max_nlanes];
 #endif
     SGBM3WayMainLoop(const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, int stripe_size, int _stripe_overlap);
     void operator () (const Range& range) const CV_OVERRIDE;

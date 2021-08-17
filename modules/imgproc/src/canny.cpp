@@ -307,10 +307,10 @@ public:
         low(_low), high(_high), aperture_size(_aperture_size), L2gradient(_L2gradient)
     {
 #if CV_SIMD
-        for(int i = 0; i < v_int8::nlanes; ++i)
+        for(int i = 0; i < v_int8::max_nlanes; ++i)
         {
             smask[i] = 0;
-            smask[i + v_int8::nlanes] = (schar)-1;
+            smask[i + v_int8::max_nlanes] = (schar)-1;
         }
         if (true)
             _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
@@ -552,7 +552,7 @@ public:
                     while (v_check_any(v_cmp))
                     {
                         int l = v_scan_forward(v_cmp);
-                        v_cmp &= vx_load(smask + v_int8::nlanes - 1 - l);
+                        v_cmp &= vx_load(smask + v_int8::max_nlanes - 1 - l);
                         int k = j + l;
 
                         int m = _mag_a[k];
@@ -694,7 +694,7 @@ private:
     int cn;
     mutable Mutex mutex;
 #if CV_SIMD
-    schar smask[2*v_int8::nlanes];
+    schar smask[2*v_int8::max_nlanes];
 #endif
 };
 

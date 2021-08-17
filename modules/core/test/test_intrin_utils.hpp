@@ -86,7 +86,7 @@ template <typename R> struct Data
 
     Data()
     {
-        for (int i = 0; i < R::nlanes; ++i)
+        for (int i = 0; i < R::max_nlanes; ++i)
             d[i] = (LaneType)(i + 1);
     }
     Data(LaneType val)
@@ -99,7 +99,7 @@ template <typename R> struct Data
     }
     operator R ()
     {
-        return initializer<R::nlanes>().init(*this);
+        return initializer<R::max_nlanes>().init(*this);
     }
     Data<R> & operator=(const R & r)
     {
@@ -118,7 +118,7 @@ template <typename R> struct Data
             d[i] += (LaneType)m;
         return *this;
     }
-    void fill(LaneType val, int s, int c = R::nlanes)
+    void fill(LaneType val, int s, int c = R::max_nlanes)
     {
         for (int i = s; i < c; ++i)
             d[i] = val;
@@ -143,7 +143,7 @@ template <typename R> struct Data
     }
     LaneType & operator[](int i)
     {
-        CV_CheckGE(i, 0, ""); CV_CheckLT(i, (int)R::nlanes, "");
+        CV_CheckGE(i, 0, ""); CV_CheckLT(i, (int)R::max_nlanes, "");
         return d[i];
     }
     int_type as_int(int i) const
@@ -198,7 +198,7 @@ template <typename R> struct Data
                 return false;
         return true;
     }
-    LaneType d[R::nlanes];
+    LaneType d[R::max_nlanes];
 };
 
 template<typename R> struct AlignedData
@@ -1478,7 +1478,7 @@ template<typename R> struct TheTest
         printf("test_loadstore_fp16_f32 ...\n");
         AlignedData<v_uint16> data; data.a.clear();
         data.a.d[0] = 0x3c00; // 1.0
-        data.a.d[R::nlanes - 1] = (unsigned short)0xc000; // -2.0
+        data.a.d[R::max_nlanes - 1] = (unsigned short)0xc000; // -2.0
         AlignedData<v_float32> data_f32; data_f32.a.clear();
         AlignedData<v_uint16> out;
 
@@ -1486,11 +1486,11 @@ template<typename R> struct TheTest
         R r2(r1);
         EXPECT_EQ(1.0f, r1.get0());
         v_store(data_f32.a.d, r2);
-        EXPECT_EQ(-2.0f, data_f32.a.d[R::nlanes - 1]);
+        EXPECT_EQ(-2.0f, data_f32.a.d[R::max_nlanes - 1]);
 
         out.a.clear();
         v_pack_store((cv::float16_t*)out.a.d, r2);
-        for (int i = 0; i < R::nlanes; ++i)
+        for (int i = 0; i < R::max_nlanes; ++i)
         {
             EXPECT_EQ(data.a[i], out.a[i]) << "i=" << i;
         }
@@ -1623,7 +1623,7 @@ void test_hal_intrin_uint8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_pack<9>().test_pack<10>().test_pack<13>().test_pack<15>()
@@ -1663,7 +1663,7 @@ void test_hal_intrin_int8()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<8>().test_extract<15>()
         .test_rotate<0>().test_rotate<1>().test_rotate<8>().test_rotate<15>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1700,7 +1700,7 @@ void test_hal_intrin_uint16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1737,7 +1737,7 @@ void test_hal_intrin_int16()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<4>().test_extract<7>()
         .test_rotate<0>().test_rotate<1>().test_rotate<4>().test_rotate<7>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1770,8 +1770,8 @@ void test_hal_intrin_uint32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::max_nlanes - 1>()
         .test_transpose()
         ;
 }
@@ -1803,8 +1803,8 @@ void test_hal_intrin_int32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::max_nlanes - 1>()
         .test_float_cvt32()
         .test_float_cvt64()
         .test_transpose()
@@ -1828,7 +1828,7 @@ void test_hal_intrin_uint64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         ;
 }
@@ -1848,7 +1848,7 @@ void test_hal_intrin_int64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
         .test_cvt64_double()
         ;
@@ -1882,8 +1882,8 @@ void test_hal_intrin_float32()
         .test_reverse()
         .test_extract<0>().test_extract<1>().test_extract<2>().test_extract<3>()
         .test_rotate<0>().test_rotate<1>().test_rotate<2>().test_rotate<3>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
-        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
+        .test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::max_nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
         .test_rotate<4>().test_rotate<5>().test_rotate<6>().test_rotate<7>()
@@ -1912,7 +1912,7 @@ void test_hal_intrin_float64()
         .test_reverse()
         .test_extract<0>().test_extract<1>()
         .test_rotate<0>().test_rotate<1>()
-        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::nlanes - 1>()
+        .test_extract_n<0>().test_extract_n<1>().test_extract_n<R::max_nlanes - 1>()
         //.test_broadcast_element<0>().test_broadcast_element<1>().test_broadcast_element<R::nlanes - 1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()

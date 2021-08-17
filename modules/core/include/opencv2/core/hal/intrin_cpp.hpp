@@ -369,7 +369,7 @@ template<typename _Tp, int n> struct v_reg
 {
 //! @cond IGNORED
     typedef _Tp lane_type;
-    enum { nlanes = n };
+    enum { nlanes = n, max_nlanes = n };
 // !@endcond
 
     /** @brief Constructor

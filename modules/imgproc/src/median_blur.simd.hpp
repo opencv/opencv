@@ -558,7 +558,7 @@ struct MinMaxVec8u
 {
     typedef uchar value_type;
     typedef v_uint8x16 arg_type;
-    enum { SIZE = v_uint8x16::nlanes };
+    enum { SIZE = v_uint8x16::max_nlanes };
     arg_type load(const uchar* ptr) { return v_load(ptr); }
     void store(uchar* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -586,7 +586,7 @@ struct MinMaxVec16u
 {
     typedef ushort value_type;
     typedef v_uint16x8 arg_type;
-    enum { SIZE = v_uint16x8::nlanes };
+    enum { SIZE = v_uint16x8::max_nlanes };
     arg_type load(const ushort* ptr) { return v_load(ptr); }
     void store(ushort* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -614,7 +614,7 @@ struct MinMaxVec16s
 {
     typedef short value_type;
     typedef v_int16x8 arg_type;
-    enum { SIZE = v_int16x8::nlanes };
+    enum { SIZE = v_int16x8::max_nlanes };
     arg_type load(const short* ptr) { return v_load(ptr); }
     void store(short* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -642,7 +642,7 @@ struct MinMaxVec32f
 {
     typedef float value_type;
     typedef v_float32x4 arg_type;
-    enum { SIZE = v_float32x4::nlanes };
+    enum { SIZE = v_float32x4::max_nlanes };
     arg_type load(const float* ptr) { return v_load(ptr); }
     void store(float* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
