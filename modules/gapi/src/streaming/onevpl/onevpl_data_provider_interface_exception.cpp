@@ -1,3 +1,6 @@
+#include <errno.h>
+#include <string.h>
+
 #include <opencv2/gapi/streaming/onevpl/onevpl_data_provider_interface.hpp>
 
 namespace cv {
