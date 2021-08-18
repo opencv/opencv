@@ -15,13 +15,14 @@ TEMPLATE_ENVIRONMENT = Environment(
 VERSION_PATH = str(Path(PATH).parents[1]) + "/modules/core/include/opencv2/core/version.hpp"
 version_file = Path(VERSION_PATH).read_text()
 
-version_major = version_file.split("CV_VERSION_MAJOR")[1].split("\n")[0]
-version_minor = version_file.split("CV_VERSION_MINOR")[1].split("\n")[0]
-version_revision = version_file.split("CV_VERSION_REVISION")[1].split("\n")[0]
+version_major = version_file.split("CV_VERSION_MAJOR")[1].split("\n")[0].replace(" ", "")
+version_minor = version_file.split("CV_VERSION_MINOR")[1].split("\n")[0].replace(" ", "")
+version_revision = version_file.split("CV_VERSION_REVISION")[1].split("\n")[0].replace(" ", "")
 
 version_string = f'{version_major}.{version_minor}.{version_revision}'
+version_string_raw = f'{version_major}{version_minor}{version_revision}'
 
-params = {
+params_nuspec = {
 'id': 'OpenCVNuget',
 'version': version_string,
 'description': 'OpenCV Nuget Package for C++',
@@ -32,10 +33,16 @@ params = {
 'directory': '',
 }
 
+params_targets = {
+'version': version_string_raw,
+}
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="OpenCV CPP create nuget spec script ",
                                      usage='')
     # Main arguments
+    parser.add_argument("--package_name", required=False, help="Package name. e.g.: OpenCV.CPP")
+    parser.add_argument("--package_version", required=False, help="Package version. e.g: 1.0.0")
     parser.add_argument("--build_directory", required=False, help="Path to the build directory where DLL & lib files exist. e.g: C:\some-folder")
 
     return parser.parse_args()
@@ -43,37 +50,40 @@ def parse_arguments():
 def render_template(template_filename, context):
     return TEMPLATE_ENVIRONMENT.get_template(template_filename).render(context)
 
-def create_nuspec():
+def create_nuspec_targets():
     # Write the nuspec file
     FILE_PATH = str(Path(PATH).parents[2])
     
     context = {
-        'params': params
+        'params': params_nuspec
     }
     UP_PATH = os.path.dirname(PATH)
     UP_PATH = os.path.dirname(UP_PATH)
     UP_PATH = os.path.dirname(UP_PATH)
+    fname_nuspec = UP_PATH + r'\build\install\opencv.nuspec'
 
-    fname = UP_PATH + r'\build\install\opencv.nuspec'
-
-    with open(fname, 'w') as f:
+    with open(fname_nuspec, 'w') as f:
         html = render_template('OpenCVNuget.nuspec', context)
         f.write(html)
 
-    targets_from = UP_PATH + r'\opencv\platforms\nuget\templates\OpenCVNuget.targets'
-    targets_to = UP_PATH + r'\build\install\OpenCVNuget.targets'
-
     # Write the targets file
-    copyfile(targets_from, targets_to)
+    context = {
+        'params': params_targets
+    }
+    fname_targets = UP_PATH + r'\build\install\OpenCVNuget.targets'
     
+    with open(fname_targets, 'w') as f:
+        html = render_template('OpenCVNuget.targets', context)
+        f.write(html)
+
 def main():
     # Parse arguments
     args = parse_arguments()
     if args.package_version is not None:
-        params['compilers'] = args.package_version.split(',')
+        params_nuspec['compilers'] = args.package_version.split(',')
     if args.build_directory is not None:
-        params['directory'] = args.build_directory
+        params_nuspec['directory'] = args.build_directory
     # Create template files
-    create_nuspec()
+    create_nuspec_targets()
 if __name__ == "__main__":
     main()

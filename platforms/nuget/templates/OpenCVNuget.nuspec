@@ -14,7 +14,7 @@
 			{{ params.tags }}
 		</tags>
 		<authors>
-			{{ params.authors}}
+			{{ params.authors }}
 		</authors>
 	</metadata>
 	<files>

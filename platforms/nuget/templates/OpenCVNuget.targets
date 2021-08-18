@@ -13,21 +13,21 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalLibraryDirectories>$(MSBuildThisFileDirectory)$(Platform)\vc$(VisualStudioVersion)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world*$(LibraryType).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_world{{ params.version }}$(LibraryType).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)\x64\vc$(VisualStudioVersion)\bin\opencv_world*$(LibraryType).dll">
-      <Link>opencv_world*$(LibraryType).dll</Link>
+    <None Include="$(MSBuildThisFileDirectory)$(Platform)\vc$(VisualStudioVersion)\bin\opencv_world{{ params.version }}$(LibraryType).dll">
+      <Link>opencv_world{{ params.version }}$(LibraryType).dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)\x64\vc$(VisualStudioVersion)\bin\*ffmpeg*.dll">
-      <Link>*ffmpeg*.dll</Link>
+    <None Include="$(MSBuildThisFileDirectory)$(Platform)\vc$(VisualStudioVersion)\bin\opencv_videoio_ffmpeg{{ params.version }}_64.dll">
+      <Link>opencv_videoio_ffmpeg{{ params.version }}_64.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </None>
