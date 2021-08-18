@@ -12,6 +12,20 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
+namespace util {
+struct variant_comparator : cv::util::static_visitor<bool, variant_comparator> {
+    variant_comparator(const oneVPL_cfg_param::value_t& rhs_value) :
+        rhs(rhs_value) {}
+
+    template<typename ValueType>
+    bool visit(const ValueType& lhs) {
+        return lhs < cv::util::get<ValueType>(rhs);
+    }
+private:
+    const oneVPL_cfg_param::value_t& rhs;
+};
+}
+
 struct oneVPL_cfg_param::Priv {
     Priv(const std::string& param_name, oneVPL_cfg_param::value_t&& param_value, bool is_major_param) :
         name(param_name), value(std::forward<value_t>(param_value)), major_flag(is_major_param) {
@@ -27,6 +41,37 @@ struct oneVPL_cfg_param::Priv {
 
     bool is_major_impl() const {
         return major_flag;
+    }
+
+    // comparison implementation
+    bool operator< (const Priv& src) const {
+        // implement default pair comparison
+        if (get_name_impl() < src.get_name_impl()) {
+            return true;
+        } else if (get_name_impl() > src.get_name_impl()) {
+            return false;
+        }
+
+        //TODO implement operator < for cv::util::variant
+        const oneVPL_cfg_param::value_t& lvar = get_value_impl();
+        const oneVPL_cfg_param::value_t& rvar = src.get_value_impl();
+        if (lvar.index() < rvar.index()) {
+            return true;
+        } else if (lvar.index() > rvar.index()) {
+            return false;
+        }
+
+        util::variant_comparator comp(rvar);
+        return cv::util::visit(comp, lvar);
+    }
+
+    bool operator==(const Priv& src) const {
+        return (get_name_impl() == src.get_name_impl())
+                && (get_value_impl() == src.get_value_impl());
+    }
+
+    bool operator!=(const Priv& src) const {
+        return !(*this == src);
     }
 
     oneVPL_cfg_param::name_t name;
@@ -74,47 +119,17 @@ bool oneVPL_cfg_param::is_major() const {
     return m_priv->is_major_impl();
 }
 
-struct variant_comparator : cv::util::static_visitor<bool, variant_comparator> {
-    variant_comparator(const oneVPL_cfg_param::value_t& rhs_value) :
-        rhs(rhs_value) {}
-
-    template<typename ValueType>
-    bool visit(const ValueType& lhs) {
-        return lhs < cv::util::get<ValueType>(rhs);
-    }
-private:
-    const oneVPL_cfg_param::value_t& rhs;
-};
-
 bool oneVPL_cfg_param::operator< (const oneVPL_cfg_param& src) const {
-    // implement default pair comparison
-    if (get_name() < src.get_name()) {
-        return true;
-    } else if (get_name() > src.get_name()) {
-        return false;
-    }
-
-    //TODO implement operator < for cv::util::variant
-    const oneVPL_cfg_param::value_t& lvar = get_value();
-    const oneVPL_cfg_param::value_t& rvar = src.get_value();
-    if (lvar.index() < rvar.index()) {
-        return true;
-    } else if (lvar.index() > rvar.index()) {
-        return false;
-    }
-
-    variant_comparator comp(rvar);
-    return cv::util::visit(comp, lvar);
+    return *m_priv < *src.m_priv;
 }
 
 bool oneVPL_cfg_param::operator==(const oneVPL_cfg_param& src) const {
-    return (get_name() == src.get_name()) && (get_value() == src.get_value());
+    return *m_priv == *src.m_priv;
 }
 
 bool oneVPL_cfg_param::operator!=(const oneVPL_cfg_param& src) const {
-    return !(*this == src);
+    return *m_priv != *src.m_priv;
 }
-
 } // namespace wip
 } // namespace gapi
 } // namespace cv
