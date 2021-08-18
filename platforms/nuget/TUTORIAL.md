@@ -5,9 +5,9 @@ This tutorial takes you through downloading the .nupkg file and setting it up in
 
 - You can download the package from
     - The releases section on Github
-    https://github.com/opencv/opencv/releases
+    (https://github.com/opencv/opencv/releases)
     - The releases section on OpenCV website
-    https://opencv.org/releases/
+    (https://opencv.org/releases/)
 - Ensure that you have the correct package based on your Visual Studio or Microsoft Visual C++ Version. Currently supported versions are:
     - Visual Studio 2019 - msvc 16.0
     - Visual Studio 2018 - msvc 15.0
