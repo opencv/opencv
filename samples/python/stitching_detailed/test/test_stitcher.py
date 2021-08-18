@@ -15,15 +15,13 @@ from stitching_detailed.stitcher import Stitcher
 class TestStitcher(unittest.TestCase):
 
     def test_stitcher_aquaduct(self):
-        stitcher = Stitcher(["s1.jpg", "s2.jpg"], n_features=250)
-        result = stitcher.stitch()
+        result = Stitcher.stitch(["s1.jpg", "s2.jpg"], n_features=250)
         cv.imwrite("result.jpg", result)
 
         max_image_shape_derivation = 3
         np.testing.assert_allclose(result.shape[:2],
                                    (700, 1811),
                                    atol=max_image_shape_derivation)
-        self.assertEqual(stitcher.settings.n_features, 250)
 
     @unittest.skip("skip boat test (high resuolution ran >30s)")
     def test_stitcher_boat1(self):
@@ -33,11 +31,10 @@ class TestStitcher(unittest.TestCase):
                     "expos_comp": "no",
                     "conf_thresh": 0.3}
 
-        stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
-                             "boat3.jpg", "boat4.jpg",
-                             "boat1.jpg", "boat6.jpg"], **settings)
+        result = Stitcher.stitch(["boat5.jpg", "boat2.jpg",
+                                  "boat3.jpg", "boat4.jpg",
+                                  "boat1.jpg", "boat6.jpg"], **settings)
 
-        result = stitcher.stitch()
         cv.imwrite("boat_fisheye.jpg", result)
 
         max_image_shape_derivation = 600
@@ -52,11 +49,10 @@ class TestStitcher(unittest.TestCase):
                     "expos_comp": "channel_blocks",
                     "conf_thresh": 0.3}
 
-        stitcher = Stitcher(["boat5.jpg", "boat2.jpg",
-                             "boat3.jpg", "boat4.jpg",
-                             "boat1.jpg", "boat6.jpg"], **settings)
+        result = Stitcher.stitch(["boat5.jpg", "boat2.jpg",
+                                  "boat3.jpg", "boat4.jpg",
+                                  "boat1.jpg", "boat6.jpg"], **settings)
 
-        result = stitcher.stitch()
         cv.imwrite("boat_plane.jpg", result)
 
         max_image_shape_derivation = 600
@@ -67,13 +63,12 @@ class TestStitcher(unittest.TestCase):
     def test_stitcher_boat_aquaduct_subset(self):
         settings = {"compose_megapix": 1}
 
-        stitcher = Stitcher(["boat5.jpg",
-                             "s1.jpg", "s2.jpg",
-                             "boat2.jpg",
-                             "boat3.jpg", "boat4.jpg",
-                             "boat1.jpg", "boat6.jpg"], **settings)
+        result = Stitcher.stitch(["boat5.jpg",
+                                  "s1.jpg", "s2.jpg",
+                                  "boat2.jpg",
+                                  "boat3.jpg", "boat4.jpg",
+                                  "boat1.jpg", "boat6.jpg"], **settings)
 
-        result = stitcher.stitch()
         cv.imwrite("subset_low_res.jpg", result)
 
         max_image_shape_derivation = 100
@@ -89,11 +84,11 @@ class TestStitcher(unittest.TestCase):
                     "wave_correct": "no",
                     "conf_thresh": 0.3}
 
-        stitcher = Stitcher(["budapest1.jpg", "budapest2.jpg",
-                             "budapest3.jpg", "budapest4.jpg",
-                             "budapest5.jpg", "budapest6.jpg"], **settings)
+        result = Stitcher.stitch(["budapest1.jpg", "budapest2.jpg",
+                                  "budapest3.jpg", "budapest4.jpg",
+                                  "budapest5.jpg", "budapest6.jpg"],
+                                 **settings)
 
-        result = stitcher.stitch()
         cv.imwrite("budapest.jpg", result)
 
         max_image_shape_derivation = 30

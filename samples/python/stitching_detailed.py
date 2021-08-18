@@ -15,7 +15,6 @@ import numpy as np
 
 from stitching_detailed.stitcher import Stitcher
 
-from stitching_detailed.image_data import ImageData
 from stitching_detailed.feature_detector import FeatureDetector
 from stitching_detailed.feature_matcher import FeatureMatcher
 from stitching_detailed.subsetter import Subsetter
@@ -44,9 +43,9 @@ parser.add_argument(
     type=bool, dest='try_cuda'
 )
 parser.add_argument(
-    '--work_megapix', action='store', default=ImageData.DEFAULT_WORK_MEGAPIX,
+    '--work_megapix', action='store', default=0.6,
     help="Resolution for image registration step. "
-    "The default is %s Mpx" % ImageData.DEFAULT_WORK_MEGAPIX,
+    "The default is %s Mpx" % 0.6,
     type=float, dest='work_megapix'
 )
 parser.add_argument(
@@ -137,9 +136,9 @@ parser.add_argument(
     type=str, dest='warp'
 )
 parser.add_argument(
-    '--seam_megapix', action='store', default=ImageData.DEFAULT_SEAM_MEGAPIX,
+    '--seam_megapix', action='store', default=0.1,
     help="Resolution for seam estimation step. "
-    "The default is %s Mpx." % ImageData.DEFAULT_SEAM_MEGAPIX,
+    "The default is %s Mpx." % 0.1,
     type=float, dest='seam_megapix'
 )
 parser.add_argument(
@@ -151,9 +150,9 @@ parser.add_argument(
 )
 parser.add_argument(
     '--compose_megapix', action='store',
-    default=ImageData.DEFAULT_COMPOSE_MEGAPIX,
+    default=-1,
     help="Resolution for compositing step. Use -1 for original resolution. "
-         "The default is %s" % ImageData.DEFAULT_COMPOSE_MEGAPIX,
+         "The default is %s" % -1,
     type=float, dest='compose_megapix'
 )
 parser.add_argument(
@@ -212,16 +211,15 @@ if __name__ == '__main__':
     img_names = args_dict.pop("img_names")
     img_names = [cv.samples.findFile(img_name) for img_name in img_names]
 
-    stitcher = Stitcher(img_names, **args_dict)
-    panorama = stitcher.stitch()
+    panorama = Stitcher.stitch(img_names, **args_dict)
 
     cv.imwrite(args.output, panorama)
 
     zoom_x = 600.0 / panorama.shape[1]
-    dst = cv.normalize(src=panorama, dst=None, alpha=255.,
-                       norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-    dst = cv.resize(dst, dsize=None, fx=zoom_x, fy=zoom_x)
+    preview = cv.normalize(src=panorama, dst=None, alpha=255.,
+                           norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+    preview = cv.resize(preview, dsize=None, fx=zoom_x, fy=zoom_x)
 
-    cv.imshow(args.output, dst)
+    cv.imshow(args.output, preview)
     cv.waitKey()
     cv.destroyAllWindows()

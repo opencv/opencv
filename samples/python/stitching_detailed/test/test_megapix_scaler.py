@@ -8,7 +8,6 @@ import cv2 as cv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..')))
 
-from stitching_detailed.image_data import ImageData
 from stitching_detailed.image_to_megapix_scaler import ImageToMegapixScaler
 #%%
 
@@ -40,34 +39,6 @@ class TestImageData(unittest.TestCase):
         _ = scaler.set_scale_and_downscale(img2)
 
         self.assertIsNot(scaler.scale, scaler.get_scale(img2))
-
-    def test_image_reading(self):
-        image_data = ImageData(["s1.jpg", "s2.jpg"])
-        img_shapes = [img.shape for img in image_data.get_full_images()]
-        self.assertEqual(img_shapes, [(700, 1246, 3), (700, 1385, 3)])
-
-    def test_image_downscaling(self):
-        image_data = ImageData(["s1.jpg", "s2.jpg"])
-        img_shapes = [img.shape for img in image_data.get_work_images()]
-        self.assertEqual(img_shapes, [(581, 1033, 3), (581, 1149, 3)])
-
-    def test_scaler_aspects(self):
-        image_data = ImageData(["s1.jpg", "s2.jpg"])
-        _ = image_data.get_seam_images()
-        _ = image_data.get_work_images()
-
-        seam_work_aspect = image_data.get_seam_work_aspect()
-
-        self.assertEqual(seam_work_aspect, 0.408248290463863)
-        with self.assertRaises(TypeError) as cm:
-            image_data.get_compose_work_aspect()
-        self.assertTrue(str(cm.exception).startswith("Scale not set yet!"))
-
-    def test_subsetting_indices(self):
-        image_data = ImageData(["s1.jpg", "s2.jpg"])
-        image_data.update_indices([0])
-        img_shapes = [img.shape for img in image_data.get_full_images()]
-        self.assertEqual(img_shapes, [(700, 1246, 3)])
 
 
 def starttest():

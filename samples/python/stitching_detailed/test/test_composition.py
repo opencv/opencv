@@ -19,23 +19,19 @@ class TestImageComposition(unittest.TestCase):
         img = increase_brightness(img, value=25)
         cv.imwrite("s1_bright.jpg", img)
 
-        stitcher = Stitcher(["s1_bright.jpg", "s2.jpg"],
-                            expos_comp="no",
-                            blend="no")
+        result = Stitcher.stitch(["s1_bright.jpg", "s2.jpg"],
+                                 expos_comp="no",
+                                 blend="no")
 
-        result = stitcher.stitch()
         cv.imwrite("without_exposure_comp.jpg", result)
 
-        stitcher = Stitcher(["s1_bright.jpg", "s2.jpg"],
-                            blend="no")
+        result = Stitcher.stitch(["s1_bright.jpg", "s2.jpg"],
+                                 blend="no")
 
-        result = stitcher.stitch()
         cv.imwrite("with_exposure_comp.jpg", result)
 
     def test_timelapse(self):
-        stitcher = Stitcher(["s1.jpg", "s2.jpg"], **{"timelapse": "as_is"})
-        stitcher.stitch()
-
+        _ = Stitcher.stitch(["s1.jpg", "s2.jpg"], timelapse="as_is")
         frame1 = cv.imread("fixed_s1.jpg")
 
         max_image_shape_derivation = 3
@@ -48,6 +44,7 @@ class TestImageComposition(unittest.TestCase):
 
         self.assertGreater(cv.countNonZero(left), 800000)
         self.assertEqual(cv.countNonZero(right), 0)
+
 
 def increase_brightness(img, value=30):
     hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
