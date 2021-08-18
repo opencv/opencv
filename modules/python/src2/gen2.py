@@ -5,6 +5,7 @@ import hdr_parser, sys, re, os
 from string import Template
 from pprint import pprint
 from collections import namedtuple, defaultdict
+from itertools import chain
 
 if sys.version_info[0] >= 3:
     from io import StringIO
@@ -610,7 +611,7 @@ def convert_ctype_name_to_pytype_name(typename, codegen):
     # class/enum types might have their namespace prefixes missing
     # example: Boost -> ml_Boost
     typename = typename.replace("::", "_")
-    for name in codegen.classes.keys() + codegen.enums.keys() + stub_type_aliases.keys():
+    for name in chain(codegen.classes.keys(), codegen.enums.keys(), stub_type_aliases.keys()):
         if name.endswith('_' + typename):
             return name
     return typename
