@@ -6,8 +6,10 @@
 
 #ifndef GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #define GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
-#include <stdexcept>
+#include <exception>
 #include <string>
+
+#include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
 
 namespace cv {
 namespace gapi {
