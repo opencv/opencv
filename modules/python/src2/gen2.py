@@ -1675,7 +1675,7 @@ class PythonWrapperGenerator(object):
                 global_func_stubs[func.name].append(stub)
             self.gen_namespace(ns_name)
             self.code_ns_init.write('CVPY_MODULE("{}", {});\n'.format(ns_name[2:], normalize_class_name(ns_name)))
-        
+
         # functions from different modules could have name collisions in the stub file
         for _, func_stubs in sorted(global_func_stubs.items()):
             decorator = "@overload\n" if len(func_stubs) > 1 else ""
