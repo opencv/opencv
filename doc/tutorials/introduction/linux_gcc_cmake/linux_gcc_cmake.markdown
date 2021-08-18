@@ -1,7 +1,7 @@
 Using OpenCV with gcc and CMake {#tutorial_linux_gcc_cmake}
 ===============================
 
-@prev_tutorial{tutorial_linux_install}
+@prev_tutorial{tutorial_linux_gdb_pretty_printer}
 @next_tutorial{tutorial_linux_eclipse}
 
 |    |    |
