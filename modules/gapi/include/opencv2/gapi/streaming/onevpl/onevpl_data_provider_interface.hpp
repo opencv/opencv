@@ -29,7 +29,7 @@ private:
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
 
-    ~IDataProvider() {};
+    virtual ~IDataProvider() {};
     virtual size_t provide_data(size_t out_data_bytes_size, void* out_data) = 0;
     virtual bool empty() const = 0;
 };
