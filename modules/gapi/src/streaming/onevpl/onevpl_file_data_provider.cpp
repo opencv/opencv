@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2021 Intel Corporation
+#include <errno.h>
 
 #include "streaming/onevpl/onevpl_file_data_provider.hpp"
 
