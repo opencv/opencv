@@ -615,6 +615,25 @@ TEST_P(Test_Model, TextRecognition)
     testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
 }
 
+TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
+{
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    std::string imgPath = _tf("text_rec_test.png");
+    std::string weightPath = _tf("onnx/models/crnn.onnx", false);
+    std::string seq = "welcome";
+
+    Size size{100, 32};
+    double scale = 1.0 / 127.5;
+    Scalar mean = Scalar(127.5);
+    std::string decodeType = "CTC-prefix-beam-search";
+    std::vector<std::string> vocabulary = {"0","1","2","3","4","5","6","7","8","9",
+                                           "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z"};
+
+    testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
+}
+
 TEST_P(Test_Model, TextDetectionByDB)
 {
     if (target == DNN_TARGET_OPENCL_FP16)

@@ -914,11 +914,12 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
+        bool useRVV;
         int blk_size_cn;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false), useAVX512(false)
+              biasvec_(0), reluslope_(0), activ_(0), is1x1_(false), useAVX(false), useAVX2(false), useAVX512(false), useRVV(false)
             , blk_size_cn(0)
         {}
 
@@ -976,6 +977,7 @@ public:
             p.useAVX    = checkHardwareSupport(CPU_AVX)  && isConv2D;
             p.useAVX2   = checkHardwareSupport(CPU_AVX2) && isConv2D;
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
+            p.useRVV   = checkHardwareSupport(CPU_RVV) && isConv2D;
 
             int kernel_d = isConv3D? kernel_size[0] : 1;
             int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];
@@ -1173,6 +1175,13 @@ public:
                         #if CV_TRY_AVX
                             if(useAVX)
                                 opt_AVX::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
+                            else
+                        #endif
+                        #if CV_TRY_RVV
+                            if(useRVV)
+                                opt_RVV::fastDepthwiseConv(wptr, kernel_h, kernel_w,
                                     stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
                                     biasptr, relu, inptr_, height, width, outptr_, out_d, outH, outW);
                             else
@@ -1544,6 +1553,12 @@ public:
                     #if CV_TRY_AVX
                         if(useAVX)
                             opt_AVX::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                         outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
+                        else
+                    #endif
+                    #if CV_TRY_RVV
+                        if(useRVV)
+                            opt_RVV::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                          outShape, bsz, vsz, vsz_a, relu, cn0 == 0);
                         else
                     #endif
@@ -2297,6 +2312,7 @@ public:
             useAVX = checkHardwareSupport(CPU_AVX);
             useAVX2 = checkHardwareSupport(CPU_AVX2);
             useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            useRVV = checkHardwareSupport(CPU_RVV);
         }
 
         void operator()(const Range& range_) const CV_OVERRIDE
@@ -2327,6 +2343,12 @@ public:
         #if CV_TRY_AVX
             if( useAVX )
                 opt_AVX::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+            else
+        #endif
+        #if CV_TRY_RVV
+            if( useRVV ) {
+                opt_RVV::fastGEMM( aptr, astep, bptr, bstep, cptr, cstep, mmax, kmax, nmax );
+            }
             else
         #endif
             for( m = 0; m < mmax; m += 2 )
@@ -2427,6 +2449,7 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
+        bool useRVV;
     };
 
     class Col2ImInvoker : public cv::ParallelLoopBody
