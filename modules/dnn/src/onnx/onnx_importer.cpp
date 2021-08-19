@@ -179,6 +179,7 @@ private:
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustom               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantDequant         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -263,6 +264,10 @@ static DictValue parse(const ::google::protobuf::RepeatedField< ::google::protob
     return DictValue::arrayInt(&dst[0], src.size());
 }
 
+static DictValue parseStr(const ::google::protobuf::RepeatedPtrField< ::std::string>& src) {
+    return DictValue::arrayString(src.begin(), static_cast<int>(src.size()));
+}
+
 LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_proto)
 {
     LayerParams lp;
@@ -321,6 +326,10 @@ LayerParams ONNXImporter::getLayerParams(const opencv_onnx::NodeProto& node_prot
             {
                 CV_Assert(attribute_proto.ints_size() == 1 || attribute_proto.ints_size() == 2 || attribute_proto.ints_size() == 3);
                 lp.set("dilation", parse(attribute_proto.ints()));
+            }
+            else if(attribute_name == "activations" && node_proto.op_type() == "LSTM")
+            {
+                lp.set(attribute_name, parseStr(attribute_proto.strings()));
             }
             else if (attribute_proto.has_i())
             {
@@ -676,6 +685,7 @@ const std::set<String>& ONNXImporter::getSupportedTypes()
         "Identity",
         "Crop",
         "Normalize",
+        "CumSum",
         "QuantizeLinear",
         "DequantizeLinear",
         "QLinearConv",
@@ -1234,18 +1244,32 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     lstmParams.name += "/lstm";
 
     // https://pytorch.org/docs/stable/nn.html#lstm
-    CV_Assert(node_proto.input_size() == 7);
+    CV_Assert(node_proto.input_size() >= 7);
     Mat Wx = getBlob(node_proto, 1);
     Mat Wh = getBlob(node_proto, 2);
     Mat b = getBlob(node_proto, 3);
-    Mat h0 = getBlob(node_proto, 5);
-    Mat c0 = getBlob(node_proto, 6);
-
-    b = b.reshape(1, b.size[0]);
 
     const int numHidden = lstmParams.get<int>("hidden_size");
     const int numDirs = Wx.size[0];  // Is 1 for forward only and 2 for bidirectional LSTM.
     const int numFeatures = Wx.size[2];
+
+    Mat h0, c0;
+    if (!node_proto.input(5).empty()) {
+        h0 = getBlob(node_proto, 5);
+        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    } else {
+        // initial_h attribute can be empty in case of keras2onnx producer. fill it with zeros
+        h0 = Mat::zeros(numDirs * numFeatures, numHidden, CV_32FC1);
+    }
+    if (!node_proto.input(6).empty()) {
+        c0 = getBlob(node_proto, 6);
+        c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    } else {
+        // initial_c attribute can be empty in case of keras2onnx producer. fill it with zeros
+        c0 = Mat::zeros(numDirs * numFeatures, numHidden, CV_32FC1);
+    }
+
+    b = b.reshape(1, b.size[0]);
     Mat bx = b.colRange(0, b.cols / 2);
     Mat bh = b.colRange(b.cols / 2, b.cols);
     b = bx + bh;
@@ -1273,8 +1297,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     }
     Wx = Wx.reshape(1, Wx.size[0] * Wx.size[1]);
     Wh = Wh.reshape(1, Wh.size[0] * Wh.size[1]);
-    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+
 
     lstmParams.blobs.resize(5);
     lstmParams.blobs[0] = Wh;
@@ -1282,6 +1305,9 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     lstmParams.blobs[2] = b;
     lstmParams.blobs[3] = h0;
     lstmParams.blobs[4] = c0;
+
+    // read direction attribute
+    lstmParams.set("reverse", lstmParams.get<String>("direction", "") == "reverse");
     lstmParams.set("bidirectional", lstmParams.get<String>("direction", "") == "bidirectional");
 
     node_proto.set_output(0, lstmParams.name);  // set different name so output shapes will be registered on that name
@@ -2452,6 +2478,23 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "CumSum";
+
+    // Get axis.
+    const std::string& input1 = node_proto.input(1);
+
+    if (constBlobs.find(input1) != constBlobs.end())
+    {
+        Mat axis_blob = getBlob(input1);
+        CV_Assert(axis_blob.total() == 1u);
+        layerParams.set("axis", axis_blob.at<int>(0));
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseCustom(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     for (int j = 0; j < node_proto.input_size(); j++) {
@@ -2881,6 +2924,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
     dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
+    dispatch["CumSum"] = &ONNXImporter::parseCumSum;
     dispatch["Custom"] = &ONNXImporter::parseCustom;
     dispatch["QuantizeLinear"] = dispatch["DequantizeLinear"] = &ONNXImporter::parseQuantDequant;
     dispatch["QLinearConv"] = &ONNXImporter::parseQConv;

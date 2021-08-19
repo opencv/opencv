@@ -258,6 +258,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ConvolutionLayerInt8 : public BaseConvolutionLayer
+    {
+    public:
+        int input_zp, output_zp;
+        float output_sc;
+        static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DeconvolutionLayer : public BaseConvolutionLayer
     {
     public:
@@ -300,6 +308,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PoolingLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS PoolingLayerInt8 : public PoolingLayer
+    {
+    public:
+        int input_zp, output_zp;
+        static Ptr<PoolingLayerInt8> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS SoftmaxLayer : public Layer
     {
     public:
@@ -308,11 +323,26 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SoftmaxLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS SoftmaxLayerInt8 : public SoftmaxLayer
+    {
+    public:
+        float output_sc;
+        int output_zp;
+        static Ptr<SoftmaxLayerInt8> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
         int axis;
         static Ptr<InnerProductLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS InnerProductLayerInt8 : public InnerProductLayer
+    {
+    public:
+        int output_zp;
+        static Ptr<InnerProductLayerInt8> create(const LayerParams& params);
     };
 
     class CV_EXPORTS MVNLayer : public Layer
@@ -341,6 +371,22 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<FlattenLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS QuantizeLayer : public Layer
+    {
+    public:
+        float scale;
+        int zeropoint;
+        static Ptr<QuantizeLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS DequantizeLayer : public Layer
+    {
+    public:
+        float scale;
+        int zeropoint;
+        static Ptr<DequantizeLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ConcatLayer : public Layer
     {
     public:
@@ -352,6 +398,7 @@ CV__DNN_INLINE_NS_BEGIN
          * Details: https://github.com/torch/nn/blob/master/doc/containers.md#depthconcat
          */
         bool padding;
+        int paddingValue;
 
         static Ptr<ConcatLayer> create(const LayerParams &params);
     };
@@ -459,7 +506,11 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const = 0;
+                                  size_t outPlaneSize, int cn0, int cn1) const {};
+        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
+                                  size_t outPlaneSize, int cn0, int cn1) const {};
+        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
+                                  size_t outPlaneSize, int cn0, int cn1) const {};
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
@@ -542,6 +593,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ExpLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
+    {
+    public:
+        static Ptr<ActivationLayerInt8> create(const LayerParams &params);
+    };
+
     /* Layers used in semantic segmentation */
 
     class CV_EXPORTS CropLayer : public Layer
@@ -563,6 +620,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<EltwiseLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS EltwiseLayerInt8 : public Layer
+    {
+    public:
+        static Ptr<EltwiseLayerInt8> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS BatchNormLayer : public ActivationLayer
     {
     public:
@@ -570,6 +633,14 @@ CV__DNN_INLINE_NS_BEGIN
         float epsilon;
 
         static Ptr<BatchNormLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS BatchNormLayerInt8 : public BatchNormLayer
+    {
+    public:
+        float input_sc, output_sc;
+        int input_zp, output_zp;
+        static Ptr<BatchNormLayerInt8> create(const LayerParams &params);
     };
 
     class CV_EXPORTS MaxUnpoolLayer : public Layer
@@ -591,7 +662,21 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ScaleLayerInt8 : public ScaleLayer
+    {
+    public:
+        float output_sc;
+        int output_zp;
+        static Ptr<ScaleLayerInt8> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ShiftLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS ShiftLayerInt8 : public Layer
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
@@ -721,6 +806,15 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CumSumLayer : public Layer
+    {
+    public:
+        int exclusive;
+        int reverse;
+
+        static Ptr<CumSumLayer> create(const LayerParams& params);
     };
 
 //! @}
