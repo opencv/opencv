@@ -69,20 +69,23 @@ public:
         num_split = params.get<int>("num_split", 0);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
+        initComplete = false;
+
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
+            int size = axis > 0 ? axis + 1 : 1;
             sliceRanges.resize(indicesValue.size() + 1,
-                               std::vector<Range>(axis + 1, Range::all()));
+                               std::vector<Range>(size, Range::all()));
             int prevSlice = 0;
             for (int i = 0; i < indicesValue.size(); ++i)
             {
-                sliceRanges[i][axis].start = prevSlice;
-                sliceRanges[i][axis].end = indicesValue.get<int>(i);
-                prevSlice = sliceRanges[i][axis].end;
+                sliceRanges[i][size - 1].start = prevSlice;
+                sliceRanges[i][size - 1].end = indicesValue.get<int>(i);
+                prevSlice = sliceRanges[i][size - 1].end;
             }
-            sliceRanges.back()[axis].start = prevSlice;
+            sliceRanges.back()[size - 1].start = prevSlice;
         }
         else if (params.has("begin"))
         {
@@ -97,7 +100,6 @@ public:
             {
                 int start = begins.get<int>(i);
                 int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
-                CV_Assert(start >= 0);
 
                 sliceRanges[0][i].start = start;
                 if (params.has("size"))
@@ -146,6 +148,29 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    void setAxisFromShape(const MatShape& inpShape)
+    {
+        int n = inpShape[axis];
+        bool axisNeg = (axis < 0);
+        axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
+
+        for (std::vector<Range>& ranges : sliceRanges){
+            if (axisNeg)
+            {
+                ranges.insert(ranges.begin(), axis, Range::all());
+            }
+            Range& range = ranges.back();
+
+            if (range.start >= 0)
+            {
+                continue;
+            }
+
+            CV_Assert(n != 0);
+            range.start = (n + range.start) % n;
+        }
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                             const int requiredOutputs,
                             std::vector<MatShape> &outputs,
@@ -153,6 +178,13 @@ public:
     {
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
+
+        if (!initComplete)
+        {
+            initComplete = true;
+            SliceLayerImpl* that = const_cast<SliceLayerImpl*>(this); // No guarantee it's safe.
+            that->setAxisFromShape(inpShape);
+        }
 
         if (!sliceRanges.empty())
         {
@@ -643,6 +675,7 @@ private:
     }
 
 protected:
+    mutable bool initComplete;
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
     bool hasDynamicShapes;
