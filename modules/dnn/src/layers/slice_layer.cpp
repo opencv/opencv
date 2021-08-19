@@ -531,7 +531,12 @@ public:
             {
                 std::vector<int> inpIdx(dimsNum, 0);
                 std::vector<int> outIdx(dimsNum, 0);
-                getSliceRecursive(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                if (inpMat.type() == CV_16S)
+                    getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else if (inpMat.type() == CV_8S)
+                    getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else
+                    getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
             }
         }
     }
@@ -647,8 +652,20 @@ public:
     }
 #endif
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        const int numOutputs = scales[1].size();
+        for (int i = 0; i < numOutputs; i++)
+        {
+            if (scales[1][i] != scales[0][0])
+             return false;
+        }
+        return true;
+    }
 
 private:
+    template <typename T>
     void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
                            const std::vector<Range> &sliceRanges,
                            const std::vector<int> &sliceSteps, int dim, int dimsNum,
@@ -658,8 +675,6 @@ private:
         int end = sliceRanges[dim].end;
         int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
 
-        const bool is32F = inpMat.depth() == CV_32F;
-
         // TODO optimization is required (for 2D tail case at least)
         for (int k = begin, j = 0; k < end; k += step, j++)
         {
@@ -667,14 +682,9 @@ private:
             outIdx[dim] = j;
 
             if (dim + 1 < dimsNum)
-                getSliceRecursive(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
+                getSliceRecursive<T>(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
             else
-            {
-                if (is32F)
-                    outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
-                else
-                    outputs.at<short>(outIdx.data()) = inpMat.at<short>(inpIdx.data());  // 16F emulation
-            }
+                outputs.at<T>(outIdx.data()) = inpMat.at<T>(inpIdx.data());
         }
     }
 

@@ -409,6 +409,18 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
+
+        params.blobs.clear();
+        params.blobs.push_back(origin_weights);
+        params.blobs.push_back(origin_bias);
+        return true;
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {

@@ -70,6 +70,7 @@ public:
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
         padding = params.get<bool>("padding", false);
+        paddingValue = params.get<int>("padding_value", 0);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -119,13 +120,14 @@ public:
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
     }
 
+    template <class T>
     class ChannelConcatInvoker : public ParallelLoopBody
     {
     public:
         std::vector<Mat>* inputs;
         Mat* output;
         int nstripes;
-        std::vector<const float*> chptrs;
+        std::vector<const T*> chptrs;
 
         static void run(std::vector<Mat>& inputs, Mat& output, int nstripes)
         {
@@ -139,14 +141,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -157,7 +159,7 @@ public:
                 for( int j = 0; j < batchsz; j++ )
                     for( int k = 0; k < inp.size[1]; k++ )
                     {
-                        const float* ptr = inp.ptr<float>(j, k);
+                        const T* ptr = inp.ptr<T>(j, k);
                         cc.chptrs[ofs + j*nchannels + k] = ptr;
                     }
                 ofs += inp.size[1];
@@ -176,8 +178,8 @@ public:
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(total, r.end*stripeSize);
-            const float** ptrs = (const float**)&chptrs[0];
-            float* outptr = output->ptr<float>();
+            const T** ptrs = (const T**)&chptrs[0];
+            T* outptr = output->ptr<T>();
             size_t blockSize0 = 1 << 16;
 
             for( size_t ofs0 = stripeStart; ofs0 < stripeEnd; )
@@ -248,7 +250,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
+                   inputs_arr.depth() != CV_8S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -259,12 +262,15 @@ public:
         Mat& outMat = outputs[0];
 
         if (padding)
-            outMat.setTo(0);
+            outMat.setTo(paddingValue);
 
         if( cAxis == 1 && outMat.dims == 4 && !padding)
         {
             int nstripes = getNumThreads();
-            ChannelConcatInvoker::run(inputs, outMat, nstripes);
+            if (outMat.type() == CV_8S)
+                ChannelConcatInvoker<int8_t>::run(inputs, outMat, nstripes);
+            else
+                ChannelConcatInvoker<float>::run(inputs, outMat, nstripes);
         }
         else
         {
@@ -394,6 +400,14 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        if (padding)
+            params.set("padding_value", zeropoints[1][0]);
+        return true;
+    }
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

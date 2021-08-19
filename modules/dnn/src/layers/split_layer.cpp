@@ -117,6 +117,17 @@ public:
     }
 #endif
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        const int numOutputs = scales[1].size();
+        for (int i = 0; i < numOutputs; i++)
+        {
+            if (scales[1][i] != scales[0][0])
+             return false;
+        }
+        return true;
+    }
 };
 
 Ptr<SplitLayer> SplitLayer::create(const LayerParams& params)

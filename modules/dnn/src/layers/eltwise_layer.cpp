@@ -864,6 +864,37 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        if (op == SUM)
+        {
+            std::vector<float> newCoeffs;
+            float offset = zeropoints[1][0];
+            float out_sc = scales[1][0];
+            for (int i = 0; i < scales[0].size(); i++)
+            {
+                float coeff = coeffs.empty() ? 1.f : coeffs[i];
+                float newcoeff = (scales[0][i] * coeff) / out_sc;
+                newCoeffs.push_back(newcoeff);
+                offset -= (newcoeff * zeropoints[0][i]);
+            }
+            params.set("coeff", DictValue::arrayReal(newCoeffs.data(), newCoeffs.size()));
+            params.set("offset", offset);
+            return true;
+        }
+        else if (op == PROD)
+        {
+            std::vector<float> newCoeffs = scales[0];
+            newCoeffs[0] /= scales[1][0];
+            params.set("coeff", DictValue::arrayReal(newCoeffs.data(), newCoeffs.size()));
+            params.set("offset", zeropoints[1][0]);
+            params.set("input_zeropoints", DictValue::arrayInt(zeropoints[0].data(), zeropoints[0].size()));
+            return true;
+        }
+        return op == MAX;
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
