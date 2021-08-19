@@ -242,5 +242,51 @@ The universal intrinsics set provides element wise binary and unary operations.
             */
 
 
-<!-- ## Demonstration -->
-<!-- In the following section, we will vectorize a simple convolution function and compare the results to a scalar implementation. -->
+## Demonstration
+In the following section, we will vectorize a simple convolution function for single channel and compare the results to a scalar implementation.
+@note The implementation can be improved for faster results. However, further improvements may make the tutorial complicated.
+
+You may learn more about convolution from the previous tutorial. We use the same naive implementation from the previous tutorial and compare it to the vectorized version.
+
+### Vectorizing Convolution
+
+We will first implement a 1-D convolution and then vectorize it. The 2-D vectorized convolution will perform 1-D convolution across the rows to produce the correct results.
+
+#### 1-D Convolution: Scalar
+@snippet univ_intrin.cpp convolution-1D-scalar
+
+1. We first set up variables and make a border on both sides of the src matrix, to take care of edge cases.
+    @snippet univ_intrin.cpp convolution-1D-border
+
+2. For the main loop, we select an index *i* and offset it on both sides along with the kernel, using the k variable. We store the value in *value* and add it to the *dst* matrix.
+    @snippet univ_intrin.cpp convolution-1D-scalar-main
+
+#### 1-D Convolution: Vector
+
+We will now look at the vectorized version of 1-D convolution.
+@snippet univ_intrin.cpp convolution-1D-vector
+
+1. In our case, the kernel is a float. Since the kernel's datatype is the largest, we convert src to float32, forming *src_32*. We also make a border like we did for the naive case.
+    @snippet univ_intrin.cpp convolution-1D-convert
+
+2. We create an array(called kernel wide) of `v_float32` of size *ksize*. Each row of the kernel_wide array contains one value of the kernel spread across the register.
+    @snippet univ_intrin.cpp convolution-1D-kernel
+
+3. Now, for each column *i* in the *src* vector, we need to calculate the sum of the product of the corresponding window around *i*.
+    @snippet univ_intrin.cpp convolution-1D-main
+
+    * We declare a pointer to the src_32 and run a loop for each column, *step* columns at a time, where *step* is v_float32().nlanes;
+        @snippet univ_intrin.cpp convolution-1D-main-h1
+
+    * We first declare a *sum* register with zeros. A window is shifted from *i - sz* to *i + sz* and its product with the kernel_wide array is added to the *sum* register.
+        @snippet univ_intrin.cpp convolution-1D-main-h2
+
+    * Since the length might not be divisible by steps, we take care of the remaining values directly. The number of *tail* values will always be less than *step* and will not affect the performance significantly. We store all the values to *ans* which is a float pointer. We can also directly store them in a `Mat` object
+        @snippet univ_intrin.cpp convolution-1D-main-h3
+
+
+@note The function parameters also include *row*, *rowk* and *len*. These values are used when using the function as an intermediate step of 2-D convolution
+
+### Results
+
+We see a 2x speed up in the vectorized 1-D convolution, over the naive implementation. This speed up will vary according to the SIMD capabilities of your CPU.
