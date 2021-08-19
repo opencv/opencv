@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import hdr_parser, sys, re, os
+import hdr_parser, sys, re
 from string import Template
-from pprint import pprint
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 from itertools import chain
 
 if sys.version_info[0] >= 3:
     from io import StringIO
 else:
     from cStringIO import StringIO
+    from itertools import ifilter as filter
 
 import textwrap
 
@@ -31,7 +31,7 @@ else:
 
         def prefixed_lines():
             for line in text.splitlines(True):
-                yield (prefix + line if predicate(line) else line)
+                yield prefix + line if predicate(line) else line
         return ''.join(prefixed_lines())
 
 
@@ -211,6 +211,7 @@ from typing import (
     Any,
     Dict,
     Optional,
+    Callable,
     overload,
     Sequence,
     Tuple,
@@ -219,38 +220,62 @@ from typing import (
 
 """
 
-stub_init_classes = ("dnn_DictValue", "Feature2D", "GArray", "GOpaque", "GCompileArg", "GRunArg")
+STUB_FORWARD_DECLARED_CLASSES = (
+    "dnn_DictValue", "Feature2D", "GCompileArg", "GRunArg", "GOpaqueT", "GArrayT", "GScalar", "GTypeInfo",
+    "GMetaArg", "GMat",
+    "gapi_wip_draw_Text", "gapi_wip_draw_Circle", "gapi_wip_draw_Image", "gapi_wip_draw_Line",
+    "gapi_wip_draw_Rect", "gapi_wip_draw_Mosaic", "gapi_wip_draw_Poly",
+)
 
-stub_type_aliases = {
-    "Mat": "np.ndarray",
-    "MatShape": "Sequence[int]",
-    "Point": "Sequence[int]",
-    "Point2d": "Sequence[float]",
-    "Point2f": "Sequence[float]",
-    "Range": "Sequence[int]",
-    "Rect": "Sequence[int]",
-    "Rect2d": "Sequence[float]",
-    "RotatedRect": "Sequence[Any]",
-    "Scalar": "Sequence[float]",
-    "Size": "Sequence[int]",
-    "Size2f": "Sequence[float]",
-    "TermCriteria": "Sequence[Any]",
-    "uchar": "int",
-    "Vec2i": "Sequence[int]",
-    "Vec3i": "Sequence[int]",
-    "Vec4f": "Sequence[float]",
-    "Vec6f": "Sequence[float]",
-    # more typedefs
-    "DescriptorExtractor": "Feature2D",
-    "FeatureDetector": "Feature2D",
-    "GCompileArgs": "Sequence[GCompileArg]",
-    "GRunArgs": "Sequence[GRunArg]",
-    "LayerId": "dnn_DictValue",
-    "flann_IndexParams": "Dict[str, Union[bool, int, float, str]]",
-    "flann_SearchParams": "Dict[str, Union[bool, int, float, str]]",
-    "cvflann_flann_distance_t": "int",
-    "cvflann_flann_algorithm_t": "int",
-}
+STUB_TYPE_ALIASES = OrderedDict((
+    ("Mat", "np.ndarray"),
+    ("MatShape", "Sequence[int]"),
+    ("Point", "Sequence[int]"),
+    ("Point2d", "Sequence[float]"),
+    ("Point2f", "Sequence[float]"),
+    ("Range", "Sequence[int]"),
+    ("Rect", "Sequence[int]"),
+    ("Rect2i", "Sequence[int]"),
+    ("Rect2d", "Sequence[float]"),
+    ("RotatedRect", "Sequence[Any]"),
+    ("Scalar", "Sequence[float]"),
+    ("Size", "Sequence[int]"),
+    ("Size2f", "Sequence[float]"),
+    ("TermCriteria", "Sequence[Any]"),
+    ("uchar", "int"),
+    ("Vec2i", "Sequence[int]"),
+    ("Vec3i", "Sequence[int]"),
+    ("Vec4f", "Sequence[float]"),
+    ("Vec6f", "Sequence[float]"),
+    ("DescriptorExtractor", "Feature2D"),
+    ("FeatureDetector", "Feature2D"),
+    ("GMat2", "Tuple[GMat, GMat]"),
+    ("GOpaque", "GOpaqueT"),
+    ("GArray", "GArrayT"),
+    ("GCompileArgs", "Sequence[GCompileArg]"),
+    ("GTypesInfo", "Sequence[GTypeInfo]"),
+    ("GRunArgs", "Sequence[GRunArg]"),
+    ("GMetaArgs", "Sequence[GMetaArg]"),
+    ("GProtoArg", "Union[GScalar, GMat, GOpaque, GArray]"),
+    ("GProtoArgs", "Sequence[GProtoArg]"),
+    ("GProtoInputArgs", "GProtoArgs"),
+    ("GProtoOutputArgs", "GProtoArgs"),
+    ("GOptRunArg", "Union[None, Mat, Scalar, GOpaque, Sequence[Any]]"),
+    ("GOptRunArgs", "Sequence[GOptRunArg]"),
+    ("detail_ExtractArgsCallback", "Callable[[GTypesInfo], GRunArgs]"),
+    ("detail_ExtractMetaCallback", "Callable[[GTypesInfo], GMetaArgs]"),
+    ("Prim", "Union[gapi_wip_draw_Text, gapi_wip_draw_Circle, gapi_wip_draw_Image, gapi_wip_draw_Line, "
+             "gapi_wip_draw_Rect, gapi_wip_draw_Mosaic, gapi_wip_draw_Poly]"),
+    ("Prims", "Sequence[Prim]"),
+    ("LayerId", "dnn_DictValue"),
+    ("flann_IndexParams", "Dict[str, Union[bool, int, float, str]]"),
+    ("IndexParams", "flann_IndexParams"),
+    ("flann_SearchParams", "Dict[str, Union[bool, int, float, str]]"),
+    ("SearchParams", "flann_SearchParams"),
+    ("cvflann_flann_distance_t", "int"),
+    ("cvflann_flann_algorithm_t", "int"),
+))
+
 
 class FormatStrings:
     string = 's'
@@ -267,9 +292,9 @@ class FormatStrings:
     double = 'd'
     object = 'O'
 
+
 ArgTypeInfo = namedtuple('ArgTypeInfo',
-                        ['atype', 'format_str', 'default_value',
-                         'strict_conversion'])
+                         ['atype', 'format_str', 'default_value', 'strict_conversion'])
 # strict_conversion is False by default
 ArgTypeInfo.__new__.__defaults__ = (False,)
 
@@ -516,6 +541,7 @@ def handle_ptr(tp):
         tp = 'Ptr<' + "::".join(tp.split('_')[1:]) + '>'
     return tp
 
+
 CTYPE_TO_PYTYPE_MAP = {
     "char": "str",
     "String": "str",
@@ -529,14 +555,14 @@ CTYPE_TO_PYTYPE_MAP = {
     "vector_uchar": "np.ndarray",
 }
 
-
-PREFIXES_TO_REMOVE = ("cv::", "std::")
+PREFIXES_TO_REMOVE = ("cv::", "cv_", "std::", "std_")
 
 
 def normalize_ctype_name(typename):
     for prefix_to_remove in PREFIXES_TO_REMOVE:
         if typename.startswith(prefix_to_remove):
             typename = typename[len(prefix_to_remove):]
+    typename = typename.replace("::", "_")
     if typename.endswith('&'):
         typename = typename[:-1]
     return typename.strip()
@@ -568,11 +594,71 @@ def get_template_instantiation_type(typename):
     return (typename.split("<", 1)[-1])[:-1]
 
 
+def replace_template_parameters_with_placeholders(string):
+    """ Replaces template parameters with `format` placeholders for all template instantiations in provided string.
+    Only outermost template parameters are replaced.
+
+    >>> replace_template_parameters_with_placeholders("cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>")
+    ('cv::util::variant<{}>', ('cv::GRunArgs, cv::GOptRunArgs',))
+    >>> replace_template_parameters_with_placeholders("vector<Point<int>>")
+    ('vector<{}>', ('Point<int>',))
+    >>> replace_template_parameters_with_placeholders("vector<Point<int>>, vector<float>")
+    ('vector<{}>, vector<{}>', ('Point<int>', 'float'))
+    >>> replace_template_parameters_with_placeholders("string without templates")
+    ('string without templates', ())
+    """
+    template_brackets_indices = []
+    template_instantiations_count = 0
+    template_start_index = 0
+    for i, c in enumerate(string):
+        if c == "<":
+            template_instantiations_count += 1
+            if template_instantiations_count == 1:
+                template_start_index = i + 1  # + 1 - because left bound is included in substring range
+        elif c == ">":
+            template_instantiations_count -= 1
+            assert template_instantiations_count >= 0, "Provided string is ill-formed. There are more '>' than '<'."
+            if template_instantiations_count == 0:
+                template_brackets_indices.append((template_start_index, i))
+    assert template_instantiations_count == 0, "Provided string is ill-formed. There are more '<' than '>'."
+    template_args = []
+    # Reversed loop is required to preserve template start/end indices
+    for i, j in reversed(template_brackets_indices):
+        template_args.insert(0, string[i:j])
+        string = string[:i] + "{}" + string[j:]
+    return string, tuple(template_args)
+
+
+def convert_template_arguments_to_pytypes_arguments(template_args_str, codegen):
+    pytypes = []
+    # If template arguments string contains types that are also templates - replace it with format placeholder
+    # and than reconstruct original type. It covers the cases when inner template types have several template params.
+    # e.g. std::tuple<std::variant<int, Point<int>, int, std::vector<int>>
+    template_args_str, templated_args_types = replace_template_parameters_with_placeholders(template_args_str)
+    template_index = 0
+    for template_arg in template_args_str.split(","):
+        template_arg = template_arg.strip()
+        if is_template_class_instantiation(template_arg):
+            template_arg = template_arg.format(templated_args_types[template_index])
+            template_index += 1
+        pytypes.append(convert_ctype_name_to_pytype_name(template_arg, codegen))
+    return pytypes
+
+
 def convert_ctype_name_to_pytype_name(typename, codegen):
+    original_ctype_name = typename
     typename = normalize_ctype_name(typename.strip())
+
+    # If typename is one of the built-in Python types
+    if typename in ("float", "int", "bool"):
+        return typename
+
     pytype = CTYPE_TO_PYTYPE_MAP.get(typename)
     if pytype is not None:
         return pytype
+
+    if typename in STUB_TYPE_ALIASES:
+        return typename
 
     # GAPI types
     if typename.startswith("GArray_") or typename.startswith("GArray<"):
@@ -581,6 +667,11 @@ def convert_ctype_name_to_pytype_name(typename, codegen):
         return "GOpaque"
     if typename.endswith("_Ptr"):
         return convert_ctype_name_to_pytype_name(typename[:-4], codegen)
+    if typename.startswith("util_variant"):
+        variant_types = get_template_instantiation_type(typename)
+        return "Union[{}]".format(
+            ", ".join(convert_template_arguments_to_pytypes_arguments(variant_types, codegen))
+        )
 
     if is_sequence_type(typename):
         if is_template_class_instantiation(typename):
@@ -595,26 +686,34 @@ def convert_ctype_name_to_pytype_name(typename, codegen):
                 typename.split("_", 1)[-1], codegen
             )
         return "Sequence[{}]".format(sequence_pytype)
+
     if is_pointer_type(typename):
         if typename.endswith("*"):
             return convert_ctype_name_to_pytype_name(typename[:-1], codegen)
         else:
             return convert_ctype_name_to_pytype_name(get_template_instantiation_type(typename), codegen)
+
     if is_tuple(typename):
         tuple_types = get_template_instantiation_type(typename)
-        pytuple_types = []
-        for tuple_type in tuple_types.split(","):
-            tuple_type = tuple_type.strip()
-            pytuple_types.append(convert_ctype_name_to_pytype_name(tuple_type, codegen))
-        return "Tuple[{}]".format(", ".join(pytuple_type for pytuple_type in pytuple_types))
+        return "Tuple[{}]".format(", ".join(
+            convert_template_arguments_to_pytypes_arguments(tuple_types, codegen)
+        ))
+
+    # If typename is a known class or enum name - use it
+    if typename in chain(codegen.classes.keys(), codegen.enums.keys()):
+        return typename
 
     # class/enum types might have their namespace prefixes missing
     # example: Boost -> ml_Boost
-    typename = typename.replace("::", "_")
-    for name in chain(codegen.classes.keys(), codegen.enums.keys(), stub_type_aliases.keys()):
-        if name.endswith('_' + typename):
-            return name
-    return typename
+    # In case we should find class/enum type that ends with `typename`, but there is no exact match
+    known_typename = next(filter(
+        lambda name: name.endswith(typename), chain(codegen.classes.keys(), codegen.enums.keys())
+    ), None)
+
+    assert known_typename is not None, \
+        "Can't find a Python type alternative for {}. Search name: {}".format(original_ctype_name, typename)
+
+    return known_typename
 
 
 class ArgInfo(object):
@@ -877,14 +976,6 @@ class FuncVariant(object):
         self.py_outlist = outlist
 
     def generate_stub(self, codegen, is_static=False):
-        def normalize_arg_name(aname):
-            if aname.startswith("std::move("):
-                assert aname.endswith(")")
-                aname = aname[10:-1]
-            if aname in python_reserved_keywords:
-                aname += "_"
-            return aname
-
         # Function might have return type and output args
         if len(self.py_outlist) > 1:
             return_type = "Tuple[{}]".format(
@@ -915,7 +1006,6 @@ class FuncVariant(object):
                 continue
             if (not arg_info.inputarg) and (not arg_info.isbig()):
                 continue
-            arg_name = normalize_arg_name(arg_info.name)
             arg_type = convert_ctype_name_to_pytype_name(arg_info.tp, codegen)
             arg_default = " = ..." if arg_info.defval else ""
             if not arg_info.inputarg:
@@ -925,15 +1015,14 @@ class FuncVariant(object):
                     arg_type = "Optional[{}]".format(arg_type)
                     if not arg_info.defval:
                         arg_default = " = None"
-                outarr_list.append("{}: {}{}".format(arg_name, arg_type, arg_default))
+                outarr_list.append("{}: {}{}".format(arg_info.name, arg_type, arg_default))
             else:
                 if arg_info.defval and outarr_list:
-                    arglist += outarr_list
+                    arglist.extend(outarr_list)
                     outarr_list = []
-                arglist.append("{}: {}{}".format(arg_name, arg_type, arg_default))
+                arglist.append("{}: {}{}".format(arg_info.name, arg_type, arg_default))
         if outarr_list:
-            arglist += outarr_list
-            outarr_list = []
+            arglist.extend(outarr_list)
         annotated_args = ", ".join(arglist)
 
         # `self` argument without type annotations is required for non-static class methods
@@ -1606,10 +1695,10 @@ class PythonWrapperGenerator(object):
 
         # initial classes and type aliases
         self.code_stubs.write("\n")
-        for classname in stub_init_classes:
+        for classname in STUB_FORWARD_DECLARED_CLASSES:
             self.code_stubs.write("class {}: ...\n\n\n".format(classname))
-        for alias, type in sorted(stub_type_aliases.items()):
-            self.code_stubs.write("{} = {}\n".format(alias, type))
+        for alias_name, alias_type in STUB_TYPE_ALIASES.items():
+            self.code_stubs.write("{} = {}\n".format(alias_name, alias_type))
         self.code_stubs.write("\n\n")
 
         # step 2: generate code for the classes and their methods
@@ -1677,7 +1766,7 @@ class PythonWrapperGenerator(object):
             self.code_ns_init.write('CVPY_MODULE("{}", {});\n'.format(ns_name[2:], normalize_class_name(ns_name)))
 
         # functions from different modules could have name collisions in the stub file
-        for _, func_stubs in sorted(global_func_stubs.items()):
+        for func_stubs in global_func_stubs.values():
             decorator = "@overload\n" if len(func_stubs) > 1 else ""
             for stub in func_stubs:
                 if decorator and (not stub.startswith(decorator)):
