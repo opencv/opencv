@@ -71,6 +71,7 @@ public:
         : dstNet(net), utilNet(), dispatch(buildDispatchMap())
     {
         hasDynamicShapes = false;
+        netWasQuantized = false;
         CV_Assert(onnxFile);
         CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
 
@@ -92,6 +93,7 @@ public:
         : dstNet(net), utilNet(), dispatch(buildDispatchMap())
     {
         hasDynamicShapes = false;
+        netWasQuantized = false;
         CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
 
         struct _Buf : public std::streambuf
@@ -125,6 +127,7 @@ protected:
 
     std::map<std::string, MatShape> outShapes;  // List of internal blobs shapes.
     bool hasDynamicShapes;  // Whether the model has inputs with dynamic shapes
+    bool netWasQuantized; // Whether the model has quantized layers.
     typedef std::map<std::string, MatShape>::iterator IterShape_t;
 
     std::map<std::string, LayerInfo> layer_id;
@@ -433,15 +436,9 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
 {
     int id;
     if (DNN_DIAGNOSTICS_RUN)
-        id = utilNet.addLayer(layerParams.name, layerParams.type, layerParams);
-    else
-        id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
-    /* TODO:
-    if (DNN_DIAGNOSTICS_RUN)
         id = utilNet.addLayer(layerParams.name, layerParams.type, depth, layerParams);
     else
         id = dstNet.addLayer(layerParams.name, layerParams.type, depth, layerParams);
-    */
     for (int i = 0; i < node_proto.output_size(); ++i)
     {
         layer_id.insert(std::make_pair(node_proto.output(i), LayerInfo(id, i)));
@@ -610,7 +607,8 @@ void ONNXImporter::populateNet()
         const opencv_onnx::NodeProto& node_proto = graph_proto.node(li);
         handleNode(node_proto);
     }
-
+    // TODO :
+    // dstNet.impl->netWasQuantized = netWasQuantized;
     CV_LOG_DEBUG(NULL, "DNN/ONNX: import completed!");
 }
 
@@ -2518,6 +2516,7 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     layerParams.set("scales", DictValue::arrayReal(scales.ptr<float>(), 1));
     layerParams.set("zeropoints", DictValue::arrayInt(zeropoints.ptr<int8_t>(), 1));
     addLayer(layerParams, node_proto, (node_proto.op_type() == "QuantizeLinear") ? CV_8S : CV_32F);
+    netWasQuantized = true;
 }
 
 void ONNXImporter::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2668,8 +2667,7 @@ void ONNXImporter::parseQEltwise(LayerParams& layerParams, const opencv_onnx::No
                 constParams.set("zeropoints", DictValue::arrayInt(inp_1_zp.ptr<int8_t>(), 1));
                 constParams.blobs.push_back(blob);
 
-                int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
-                //int id = dstNet.addLayer(constParams.name, constParams.type, CV_8S, constParams);
+                int id = dstNet.addLayer(constParams.name, constParams.type, CV_8S, constParams);
                 layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
                 outShapes[constParams.name] = shape(blob);
                 node_proto.set_input(constId, constParams.name);
