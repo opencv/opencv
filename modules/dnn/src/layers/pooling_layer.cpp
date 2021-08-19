@@ -1327,6 +1327,23 @@ public:
         return true;
     }
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        if (type == MAX && !computeMaxIdx)
+        {
+            return true;
+        }
+        else if (type == AVE || type == SUM)
+        {
+            float multiplier = scales[0][0] / scales[1][0];
+            params.set("multiplier", multiplier);
+            params.set("input_zeropoint", zeropoints[0][0]);
+            return true;
+        }
+        return false;
+    }
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
