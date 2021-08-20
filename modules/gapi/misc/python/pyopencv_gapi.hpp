@@ -206,6 +206,7 @@ bool pyopencv_to(PyObject* obj, cv::GMetaArg& value, const ArgInfo&)
     }
     else
     {
+        failmsg("Unsupported cv::GMetaArg type");
         return false;
     }
     return true;
