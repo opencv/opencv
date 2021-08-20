@@ -44,7 +44,7 @@ import soundfile as sf # Temporary import to load audio files
             init.raw_data = np.frombuffer(init.raw_data, count=np.product(init.dims), dtype=np.float16).astype(np.float32).tobytes()
             model.graph.initializer.insert(i,init)
         ```
-    
+
      6. Add an additional reshape node to handle the inconsistant input from python and c++ of openCV.
         see https://github.com/opencv/opencv/issues/19091
         Make & insert a new node with 'Reshape' operation & required initializer
@@ -409,7 +409,7 @@ def predict(features, net, decoder):
     output = net.forward()
 
     # decode output to transcript
-    prediction = decoder.decode(output[0])
+    prediction = decoder.decode(output.squeeze(0))
     return prediction[0]
 
 if __name__ == '__main__':
