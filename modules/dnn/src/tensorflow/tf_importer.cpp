@@ -2953,14 +2953,14 @@ void TFLayerHandler::fillRegistry(const tensorflow::GraphDef& net)
 
 bool TFLayerHandler::handleMissing(const tensorflow::NodeDef& layer)
 {
-    bool missing = !contains(layer.op());
+    bool unsupported = contains(layer.op());
 
-    if (missing)
+    if (unsupported)
     {
         handleFailed(layer);
     }
 
-    return missing;
+    return unsupported;
 }
 
 void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
