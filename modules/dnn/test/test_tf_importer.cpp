@@ -13,6 +13,7 @@ Test for Tensorflow models loading
 #include "npy_blob.hpp"
 
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include <opencv2/dnn/utils/debug_utils.hpp>
 
 namespace opencv_test
 {
@@ -605,11 +606,13 @@ public:
     Test_TensorFlow_diagnostics()
     {
         enableModelDiagnostics(true);
+        skipModelImport(true);
     }
 
     ~Test_TensorFlow_diagnostics()
     {
         enableModelDiagnostics(false);
+        skipModelImport(false);
     }
 
     void runFailingTensorFlowNet(const std::string& prefix, bool hasText = false)

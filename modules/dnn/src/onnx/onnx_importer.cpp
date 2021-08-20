@@ -41,6 +41,8 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
+class ONNXLayerHandler;
+
 class ONNXImporter
 {
     opencv_onnx::ModelProto model_proto;
@@ -61,60 +63,16 @@ class ONNXImporter
     void addConstant(const std::string& name, const Mat& blob);
     void addLayer(LayerParams& layerParams,
                   const opencv_onnx::NodeProto& node_proto);
-    static const std::set<String>& getSupportedTypes();
 
 public:
-
-    ONNXImporter(Net& net, const char *onnxFile)
-        : dstNet(net), utilNet(), dispatch(buildDispatchMap())
-    {
-        hasDynamicShapes = false;
-        CV_Assert(onnxFile);
-        CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
-
-        std::fstream input(onnxFile, std::ios::in | std::ios::binary);
-        if (!input)
-        {
-            CV_Error(Error::StsBadArg, cv::format("Can't read ONNX file: %s", onnxFile));
-        }
-
-        if (!model_proto.ParseFromIstream(&input))
-        {
-            CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
-        }
-
-        populateNet();
-    }
-
-    ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
-        : dstNet(net), utilNet(), dispatch(buildDispatchMap())
-    {
-        hasDynamicShapes = false;
-        CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
-
-        struct _Buf : public std::streambuf
-        {
-            _Buf(const char* buffer, size_t sizeBuffer)
-            {
-                char* p = const_cast<char*>(buffer);
-                setg(p, p, p + sizeBuffer);
-            }
-        };
-
-        _Buf buf(buffer, sizeBuffer);
-        std::istream input(&buf);
-
-        if (!model_proto.ParseFromIstream(&input))
-            CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
-
-        populateNet();
-    }
+    ONNXImporter(Net& net, const char *onnxFile);
+    ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer);
 
     void populateNet();
 
 protected:
+    std::unique_ptr<ONNXLayerHandler> layerHandler;
     Net& dstNet;
-    Net utilNet;
 
     opencv_onnx::GraphProto graph_proto;
     std::string framework_name;
@@ -131,8 +89,12 @@ protected:
     void handleNode(const opencv_onnx::NodeProto& node_proto);
 
 private:
+    friend class ONNXLayerHandler;
     typedef void (ONNXImporter::*ONNXImporterNodeParser)(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     typedef std::map<std::string, ONNXImporterNodeParser> DispatchMap;
+
+    const DispatchMap dispatch;
+    static const DispatchMap buildDispatchMap();
 
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -178,11 +140,83 @@ private:
     void parseSoftMax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseCustom               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
-    const DispatchMap dispatch;
-    static const DispatchMap buildDispatchMap();
+    void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 };
+
+class ONNXLayerHandler : public detail::LayerHandler
+{
+public:
+    explicit ONNXLayerHandler(ONNXImporter* importer_);
+
+    void fillRegistry(const opencv_onnx::GraphProto& net);
+
+protected:
+    ONNXImporter* importer;
+};
+
+ONNXLayerHandler::ONNXLayerHandler(ONNXImporter* importer_) : importer(importer_){}
+
+void ONNXLayerHandler::fillRegistry(const opencv_onnx::GraphProto &net)
+{
+    int layersSize = net.node_size();
+    for (int li = 0; li < layersSize; li++) {
+        const opencv_onnx::NodeProto &node_proto = net.node(li);
+        const std::string& name = node_proto.output(0);
+        const std::string& type = node_proto.op_type();
+        if (importer->dispatch.find(type) == importer->dispatch.end())
+        {
+            addMissing(name, type);
+        }
+    }
+    printMissing();
+}
+
+ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new ONNXLayerHandler(this) : nullptr),
+        dstNet(net), dispatch(buildDispatchMap())
+{
+    hasDynamicShapes = false;
+    CV_Assert(onnxFile);
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFile);
+
+    std::fstream input(onnxFile, std::ios::in | std::ios::binary);
+    if (!input)
+    {
+        CV_Error(Error::StsBadArg, cv::format("Can't read ONNX file: %s", onnxFile));
+    }
+
+    if (!model_proto.ParseFromIstream(&input))
+    {
+        CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
+    }
+
+    populateNet();
+}
+
+ONNXImporter::ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer)
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new ONNXLayerHandler(this) : nullptr), dstNet(net), dispatch(buildDispatchMap())
+{
+    hasDynamicShapes = false;
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: processing in-memory ONNX model (" << sizeBuffer << " bytes)");
+
+    struct _Buf : public std::streambuf
+            {
+        _Buf(const char* buffer, size_t sizeBuffer)
+        {
+            char* p = const_cast<char*>(buffer);
+            setg(p, p, p + sizeBuffer);
+        }
+            };
+
+    _Buf buf(buffer, sizeBuffer);
+    std::istream input(&buf);
+
+    if (!model_proto.ParseFromIstream(&input))
+        CV_Error(Error::StsUnsupportedFormat, "Failed to parse onnx model from in-memory byte array.");
+
+    populateNet();
+}
 
 inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, const String& newKey)
 {
@@ -422,11 +456,7 @@ Mat ONNXImporter::getBlob(const std::string& input_name)
 void ONNXImporter::addLayer(LayerParams& layerParams,
                             const opencv_onnx::NodeProto& node_proto)
 {
-    int id;
-    if (DNN_DIAGNOSTICS_RUN)
-        id = utilNet.addLayer(layerParams.name, layerParams.type, layerParams);
-    else
-        id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
+    int id = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
     for (int i = 0; i < node_proto.output_size(); ++i)
     {
         layer_id.insert(std::make_pair(node_proto.output(i), LayerInfo(id, i)));
@@ -439,10 +469,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
         const std::string& input_name = node_proto.input(j);
         IterLayerId_t layerId = layer_id.find(input_name);
         if (layerId != layer_id.end()) {
-            if (DNN_DIAGNOSTICS_RUN)
-                utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
-            else
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
+            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, inpNum);
             ++inpNum;
             // Collect input shapes.
             IterShape_t shapeIt = outShapes.find(input_name);
@@ -451,11 +478,7 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
         }
     }
     // Compute shape of output blob for this layer.
-    Ptr<Layer> layer;
-    if (DNN_DIAGNOSTICS_RUN)
-        layer = utilNet.getLayer(id);
-    else
-        layer = dstNet.getLayer(id);  // FIXIT: avoid instantiation of layers during the import stage
+    Ptr<Layer> layer = dstNet.getLayer(id);  // FIXIT: avoid instantiation of layers during the import stage
     layer->getMemoryShapes(layerInpShapes, 0, layerOutShapes, layerInternalShapes);
     for (int i = 0; i < node_proto.output_size() && i < (int)layerOutShapes.size(); ++i)
     {
@@ -532,35 +555,11 @@ void ONNXImporter::populateNet()
             layer_id.insert(std::make_pair(name, LayerInfo(0, netInputs.size() - 1)));
         }
     }
-    utilNet.setInputsNames(netInputs);
     dstNet.setInputsNames(netInputs);
 
     if (DNN_DIAGNOSTICS_RUN) {
-        auto &supportedTypes = getSupportedTypes();
-        for (int li = 0; li < layersSize; li++) {
-            const opencv_onnx::NodeProto &node_proto = graph_proto.node(li);
-            std::string name = node_proto.output(0);
-            std::string layer_type = node_proto.op_type();
-            auto registered = supportedTypes.find(layer_type);
-            if (registered == supportedTypes.end()) {
-                CV_LOG_ERROR(NULL, "DNN/ONNX: NOTE: Potential problem with creating node " << name<< " with type " << layer_type << ".\n Type "
-                    << layer_type << " IS NOT SUPPORTED!\n"
-                );
-            }
-        }
-        auto oldConstBlobs = constBlobs;
-        auto oldOutShapes = outShapes;
-        auto oldLayerId = layer_id;
         CV_LOG_INFO(NULL, "DNN/ONNX: start diagnostic run!");
-        for (int li = 0; li < layersSize; li++) {
-            const opencv_onnx::NodeProto &node_proto = graph_proto.node(li);
-            handleNode(node_proto);
-        }
-        CV_LOG_INFO(NULL, "DNN/ONNX: diagnostic run completed!");
-        constBlobs = oldConstBlobs;
-        outShapes = oldOutShapes;
-        layer_id = oldLayerId;
-        enableModelDiagnostics(false);
+        layerHandler->fillRegistry(graph_proto);
     }
 
     for(int li = 0; li < layersSize; li++)
@@ -569,83 +568,7 @@ void ONNXImporter::populateNet()
         handleNode(node_proto);
     }
 
-    CV_LOG_DEBUG(NULL, "DNN/ONNX: import completed!");
-}
-
-const std::set<String>& ONNXImporter::getSupportedTypes()
-{
-    static const std::set<String> layerTypes = {
-        "MaxPool",
-        "AveragePool",
-        "GlobalAveragePool",
-        "GlobalMaxPool",
-        "ReduceMean",
-        "ReduceSum",
-        "ReduceMax",
-        "Slice",
-        "Split",
-        "Add",
-        "Sum",
-        "Sub",
-        "Pow",
-        "Max",
-        "Neg",
-        "Constant",
-        "LSTM",
-        "GRU",
-        "ImageScaler",
-        "Clip",
-        "LeakyRelu",
-        "Relu",
-        "Elu",
-        "Tanh",
-        "PRelu",
-        "LRN",
-        "InstanceNormalization",
-        "BatchNormalization",
-        "Gemm",
-        "MatMul",
-        "Mul",
-        "Div",
-        "Conv",
-        "ConvTranspose",
-        "Transpose",
-        "Squeeze",
-        "Flatten",
-        "Unsqueeze",
-        "Expand",
-        "Reshape",
-        "Pad",
-        "Shape",
-        "Cast",
-        "ConstantOfShape",
-        "ConstantFill",
-        "Gather",
-        "Concat",
-        "Resize",
-        "Upsample",
-        "SoftMax",
-        "Softmax",
-        "LogSoftmax",
-        "DetectionOutput",
-        "Interp",
-        "CropAndResize",
-        "ROIPooling",
-        "PSROIPooling",
-        "ChannelsPReLU",
-        "Sigmoid",
-        "Swish",
-        "Mish",
-        "AbsVal",
-        "BNLL",
-        "MaxUnpool",
-        "Dropout",
-        "Identity",
-        "Crop",
-        "Normalize",
-        "CumSum"
-    };
-    return layerTypes;
+    CV_LOG_DEBUG(NULL, (DNN_DIAGNOSTICS_RUN ? "DNN/ONNX: diagnostic run completed!" : "DNN/ONNX: import completed!"));
 }
 
 void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
@@ -673,7 +596,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
         }
         else
         {
-            parseCustom(layerParams, node_proto);
+            parseCustomLayer(layerParams, node_proto);
         }
     }
     catch (const cv::Exception& e)
@@ -683,6 +606,7 @@ void ONNXImporter::handleNode(const opencv_onnx::NodeProto& node_proto)
             CV_LOG_ERROR(NULL, "DNN/ONNX: Potential problem during processing node with " << node_proto.input_size() << " inputs and " << node_proto.output_size() << " outputs: "
                     << cv::format("[%s]:(%s)", layer_type.c_str(), name.c_str()) << "\n" << e.msg
             );
+            cv::AutoLock lock(getLayerFactoryMutex());
             auto registeredLayers = getLayerFactoryImpl();
             if (registeredLayers.find(layerParams.type) != registeredLayers.end())
             {
@@ -1068,11 +992,7 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
                 constParams.name = layerParams.name + "/const";
                 constParams.type = "Const";
                 constParams.blobs.push_back((isSub ? -1 : 1) * blob);
-                int id;
-                if (DNN_DIAGNOSTICS_RUN)
-                    id = utilNet.addLayer(constParams.name, constParams.type, constParams);
-                else
-                    id = dstNet.addLayer(constParams.name, constParams.type, constParams);
+                int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
                 layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
                 outShapes[constParams.name] = shape(blob);
 
@@ -1117,19 +1037,12 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
             powerParams.type = "Power";
             powerParams.set("scale", -1);
 
-            int id;
             //Create Power layer
-            if (DNN_DIAGNOSTICS_RUN)
-                id = utilNet.addLayer(powerParams.name, powerParams.type, powerParams);
-            else
-                id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
+            int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
             //Connect to input
             IterLayerId_t layerId = layer_id.find(node_proto.input(1));
             CV_Assert(layerId != layer_id.end());
-            if (DNN_DIAGNOSTICS_RUN)
-                utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-            else
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
             //Add shape
             layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
             outShapes[powerParams.name] = outShapes[node_proto.input(1)];
@@ -1404,18 +1317,11 @@ void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const op
     layerParams.erase("epsilon");
 
     //Create MVN layer
-    int id;
-    if (DNN_DIAGNOSTICS_RUN)
-        id = utilNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
-    else
-        id = dstNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
+    int id = dstNet.addLayer(mvnParams.name, mvnParams.type, mvnParams);
     //Connect to input
     IterLayerId_t layerId = layer_id.find(node_proto.input(0));
     CV_Assert(layerId != layer_id.end());
-    if (DNN_DIAGNOSTICS_RUN)
-        utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-    else
-        dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+    dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
     //Add shape
     layer_id.insert(std::make_pair(mvnParams.name, LayerInfo(id, 0)));
     outShapes[mvnParams.name] = outShapes[node_proto.input(0)];
@@ -1621,19 +1527,12 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
             powerParams.type = "Power";
             powerParams.set("power", -1);
 
-            int id;
             //Create Power layer
-            if (DNN_DIAGNOSTICS_RUN)
-                id = utilNet.addLayer(powerParams.name, powerParams.type, powerParams);
-            else
-                id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
+            int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
             //Connect to input
             IterLayerId_t layerId = layer_id.find(node_proto.input(1));
             CV_Assert(layerId != layer_id.end());
-            if (DNN_DIAGNOSTICS_RUN)
-                utilNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-            else
-                dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
             //Add shape
             layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
             outShapes[powerParams.name] = outShapes[node_proto.input(1)];
@@ -2418,7 +2317,7 @@ void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseCustom(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     for (int j = 0; j < node_proto.input_size(); j++) {
         if (layer_id.find(node_proto.input(j)) == layer_id.end())
@@ -2476,23 +2375,18 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["SoftMax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
-    dispatch["Custom"] = &ONNXImporter::parseCustom;
 
     return dispatch;
 }
 
 Net readNetFromONNX(const String& onnxFile)
 {
-    Net net;
-    ONNXImporter onnxImporter(net, onnxFile.c_str());
-    return net;
+    return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
 {
-    Net net;
-    ONNXImporter onnxImporter(net, buffer, sizeBuffer);
-    return net;
+    return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
 Net readNetFromONNX(const std::vector<uchar>& buffer)

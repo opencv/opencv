@@ -94,22 +94,6 @@ static bool DNN_CHECK_NAN_INF = utils::getConfigurationParameterBool("OPENCV_DNN
 static bool DNN_CHECK_NAN_INF_DUMP = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_DUMP", false);
 static bool DNN_CHECK_NAN_INF_RAISE_ERROR = utils::getConfigurationParameterBool("OPENCV_DNN_CHECK_NAN_INF_RAISE_ERROR", false);
 
-bool DNN_DIAGNOSTICS_RUN = false;
-
-void enableModelDiagnostics(bool isDiagnosticsMode)
-{
-    DNN_DIAGNOSTICS_RUN = isDiagnosticsMode;
-
-    if (DNN_DIAGNOSTICS_RUN)
-    {
-        detail::NotImplemented::Register();
-    }
-    else
-    {
-        detail::NotImplemented::unRegister();
-    }
-}
-
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -5662,7 +5646,7 @@ bool Layer::updateMemoryShapes(const std::vector<MatShape> &inputs)
 }
 //////////////////////////////////////////////////////////////////////////
 
-static Mutex& getLayerFactoryMutex()
+Mutex& getLayerFactoryMutex()
 {
     static Mutex* volatile instance = NULL;
     if (instance == NULL)
