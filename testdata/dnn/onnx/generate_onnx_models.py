@@ -555,6 +555,23 @@ save_data_and_model("split_3", input, model)
 model = Split(dim=0, split_size_sections=[1, 1])
 save_data_and_model("split_4", input, model)
 
+class SplitSizes(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SplitSizes, self).__init__()
+
+    def forward(self, x):
+        a, b, c, d = torch.split(x, [2, 3, 5, 10], 0)
+        a = torch.mul(a, 2)
+        b = torch.mul(b, 3)
+        c = torch.mul(c, 5)
+        d = torch.mul(d, 10)
+        tup = (a, b, c, d)
+        return torch.cat(tup)
+
+model = SplitSizes()
+input_ = Variable(torch.tensor(list(range(20)), dtype=torch.float32))
+save_data_and_model("split_sizes", input_, model)
+
 class SplitMax(nn.Module):
 
     def __init__(self):
