@@ -1142,23 +1142,27 @@ Example for load_deinterleave:
     output: a = {1, 3, 5, 7, 9, 11, 13, 15}
     output: b = {2, 4, 6, 8,10, 12, 14, 16}
 */
-static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& a, vfloat32m2_t& b)
+static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& a, vfloat32m2_t& b, int vl)
 {
-    int vl = 8;
-    uint32_t masks[] = {1,1,1,1,0,0,0,0};
-    vuint32m2_t vm = vle32_v_u32m2(masks,vl);
-    vbool16_t mask01 = vmseq_vx_u32m2_b16 (vm, 0, vl);
-    vbool16_t mask10 = vmseq_vx_u32m2_b16 (vm, 1, vl);
-    vfloat32m2_t ta = vle32_v_f32m2(ptr, vl), tb = vle32_v_f32m2(ptr+8, vl);
-    uint idx[] = {0,2,4,6,1,3,5,7};
-    uint idxa[] = {0,0,0,0,0,1,2,3}, idxb[] = {4,5,6,7,0,0,0,0};
-    vuint32m2_t vidxa = vle32_v_u32m2(idxa, 8), vidxb = vle32_v_u32m2(idxb, 8);
-    vuint32m2_t vidx = vle32_v_u32m2(idx, 8);
-    vfloat32m2_t high = vfmv_v_f_f32m2(0, 8), low = vfmv_v_f_f32m2(0, 8);
-    high = vrgather_vv_f32m2(ta, vidx, 8);
-    low = vrgather_vv_f32m2(tb, vidx, 8);
-    a = vrgather_vv_f32m2_m(mask01, high, low, vidxa, 8);
-    b = vrgather_vv_f32m2_m(mask10, low, high, vidxb, 8);
+    vuint64m4_t mask = vmv_v_x_u64m4(1,vl*2);
+    vuint32m4_t mask_re = vreinterpret_v_u64m4_u32m4(mask);
+    vbool8_t mask0 = vmseq_vx_u32m4_b8 (mask_re, 1, vl*2);
+    vbool8_t mask1 = vmseq_vx_u32m4_b8 (mask_re, 0, vl*2);
+    vfloat32m4_t tempa = vundefined_f32m4(), tempb = vundefined_f32m4();
+    vfloat32m4_t vw = vle32_v_f32m4(ptr, vl*2);
+    tempa = vcompress_vm_f32m4(mask0, tempa, vw, vl*2);
+    tempb = vcompress_vm_f32m4(mask1, tempb, vw, vl*2);
+    /* The following instructions have not to be supported by the GNU toolchain.
+       So we temporarily use store and load instead.
+    // a = vlmul_trunc_v_f32m4_f32m2(tempa);
+    // b = vlmul_trunc_v_f32m4_f32m2(tempb);
+    */
+    float* buffer = (float*)malloc(sizeof(float32_t)*vl*2);
+    vse32_v_f32m4(buffer, tempa, vl);
+    a = vle32_v_f32m2(buffer, vl);
+    vse32_v_f32m4(buffer, tempb, vl);
+    b = vle32_v_f32m2(buffer, vl);
+    free(buffer);
 }
 
 void fastDepthwiseConv( const float* wptr,
@@ -1172,7 +1176,7 @@ void fastDepthwiseConv( const float* wptr,
                      float* outptr_,
                      int out_d, int outH, int outW )
 {
-    int vl = 8;
+    int vl = vsetvlmax_e32m2();
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                 w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
                 w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
@@ -1211,17 +1215,11 @@ void fastDepthwiseConv( const float* wptr,
 
         if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
         {
-            const int VECSZ = 8;
-            vfloat32m2_t vw00 = vfmv_v_f_f32m2(w00, vl), vw01 = vfmv_v_f_f32m2(w01, vl), vw02 = vfmv_v_f_f32m2(w02, vl),
-                      vw10 = vfmv_v_f_f32m2(w10, vl), vw11 = vfmv_v_f_f32m2(w11, vl), vw12 = vfmv_v_f_f32m2(w12, vl),
-                      vw20 = vfmv_v_f_f32m2(w20, vl), vw21 = vfmv_v_f_f32m2(w21, vl), vw22 = vfmv_v_f_f32m2(w22, vl);
-            vfloat32m2_t vbias = vfmv_v_f_f32m2(bias, vl), vrc = vfmv_v_f_f32m2(relu_coeff, vl);
-
             if( stride_w == 1 )
-                for( ; out_j < outW1; out_j += VECSZ )
+                for( ; out_j < outW1; out_j += vl )
                 {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
+                    if (out_j + vl > outW1)
+                        vl = outW1 - out_j;
                     int in_j = out_j * stride_w - pad_l;
                     vfloat32m2_t v00 = vle32_v_f32m2(imgptr0 + in_j, vl),
                            v01 = vle32_v_f32m2(imgptr0 + in_j + dilation_w, vl),
@@ -1233,57 +1231,59 @@ void fastDepthwiseConv( const float* wptr,
                            v21 = vle32_v_f32m2(imgptr2 + in_j + dilation_w, vl),
                            v22 = vle32_v_f32m2(imgptr2 + in_j + dilation_w*2, vl);
 
-                    vfloat32m2_t vout0 = vfmacc_vv_f32m2(vbias, v00, vw00, vl);
-                    vfloat32m2_t vout1 = vfmul_vv_f32m2(v01, vw01, vl);
-                    vfloat32m2_t vout2 = vfmul_vv_f32m2(v02, vw02, vl);
+                    vfloat32m2_t vout0 = vfmul_vf_f32m2(v00, w00, vl);
+                    vfloat32m2_t vout1 = vfmul_vf_f32m2(v01, w01, vl);
+                    vfloat32m2_t vout2 = vfmul_vf_f32m2(v02, w02, vl);
+                    vout0 = vfadd_vf_f32m2(vout0, bias, vl);
 
-                    vout0 = vfmacc_vv_f32m2(vout0, v10, vw10, vl);
-                    vout1 = vfmacc_vv_f32m2(vout1, v11, vw11, vl);
-                    vout2 = vfmacc_vv_f32m2(vout2, v12, vw12, vl);
+                    vout0 = vfmacc_vf_f32m2(vout0, w10, v10, vl);
+                    vout1 = vfmacc_vf_f32m2(vout1, w11, v11, vl);
+                    vout2 = vfmacc_vf_f32m2(vout2, w12, v12, vl);
 
-                    vout0 = vfmacc_vv_f32m2(vout0, v20, vw20, vl);
-                    vout1 = vfmacc_vv_f32m2(vout1, v21, vw21, vl);
-                    vout2 = vfmacc_vv_f32m2(vout2, v22, vw22, vl);
+                    vout0 = vfmacc_vf_f32m2(vout0, w20, v20, vl);
+                    vout1 = vfmacc_vf_f32m2(vout1, w21, v21, vl);
+                    vout2 = vfmacc_vf_f32m2(vout2, w22, v22, vl);
 
                     vout0 = vfadd_vv_f32m2(vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
                     if (relu)
                     {
                         vbool16_t m = vmfgt_vf_f32m2_b16(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m2(m, vfmul_vv_f32m2(vout0, vrc, vl), vout0, vl);
+                        vout0 = vmerge_vvm_f32m2(m, vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, vl);
                     }
                     vse32_v_f32m2(outptr + out_j, vout0, vl);
                 }
-            else
-                for( ; out_j < outW1; out_j += VECSZ )
+            else //stride_w == 2 && dilation_w == 1
+                for( ; out_j < outW1; out_j += vl )
                 {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
+                    if (out_j + vl > outW1)
+                        vl = outW1 - out_j;
                     int in_j = out_j * stride_w - pad_l;
                     vfloat32m2_t v00, v01, v02, v10, v11, v12, v20, v21, v22, unused;
-                    vfloat32m2_load_deinterleave(imgptr0 + in_j, v00, v01);
-                    vfloat32m2_load_deinterleave(imgptr0 + in_j + 2, v02, unused);
-                    vfloat32m2_load_deinterleave(imgptr1 + in_j, v10, v11);
-                    vfloat32m2_load_deinterleave(imgptr1 + in_j + 2, v12, unused);
-                    vfloat32m2_load_deinterleave(imgptr2 + in_j, v20, v21);
-                    vfloat32m2_load_deinterleave(imgptr2 + in_j + 2, v22, unused);
+                    vfloat32m2_load_deinterleave(imgptr0 + in_j, v00, v01, vl);
+                    vfloat32m2_load_deinterleave(imgptr0 + in_j + 2, v02, unused, vl);
+                    vfloat32m2_load_deinterleave(imgptr1 + in_j, v10, v11, vl);
+                    vfloat32m2_load_deinterleave(imgptr1 + in_j + 2, v12, unused, vl);
+                    vfloat32m2_load_deinterleave(imgptr2 + in_j, v20, v21, vl);
+                    vfloat32m2_load_deinterleave(imgptr2 + in_j + 2, v22, unused, vl);
 
-                    vfloat32m2_t vout0 = vfmacc_vv_f32m2(vbias, v00, vw00, vl);
-                    vfloat32m2_t vout1 = vfmul_vv_f32m2(v01, vw01, vl);
-                    vfloat32m2_t vout2 = vfmul_vv_f32m2(v02, vw02, vl);
+                    vfloat32m2_t vout0 = vfmul_vf_f32m2(v00, w00, vl);
+                    vfloat32m2_t vout1 = vfmul_vf_f32m2(v01, w01, vl);
+                    vfloat32m2_t vout2 = vfmul_vf_f32m2(v02, w02, vl);
+                    vout0 = vfadd_vf_f32m2(vout0, bias, vl);
 
-                    vout0 = vfmacc_vv_f32m2(vout0, v10, vw10, vl);
-                    vout1 = vfmacc_vv_f32m2(vout1, v11, vw11, vl);
-                    vout2 = vfmacc_vv_f32m2(vout2, v12, vw12, vl);
+                    vout0 = vfmacc_vf_f32m2(vout0, w10, v10, vl);
+                    vout1 = vfmacc_vf_f32m2(vout1, w11, v11, vl);
+                    vout2 = vfmacc_vf_f32m2(vout2, w12, v12, vl);
 
-                    vout0 = vfmacc_vv_f32m2(vout0, v20, vw20, vl);
-                    vout1 = vfmacc_vv_f32m2(vout1, v21, vw21, vl);
-                    vout2 = vfmacc_vv_f32m2(vout2, v22, vw22, vl);
+                    vout0 = vfmacc_vf_f32m2(vout0, w20, v20, vl);
+                    vout1 = vfmacc_vf_f32m2(vout1, w21, v21, vl);
+                    vout2 = vfmacc_vf_f32m2(vout2, w22, v22, vl);
 
                     vout0 = vfadd_vv_f32m2(vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
                     if (relu)
                     {
                         vbool16_t m = vmfgt_vf_f32m2_b16(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m2(m, vfmul_vv_f32m2(vout0, vrc, vl), vout0, vl);
+                        vout0 = vmerge_vvm_f32m2(m, vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, vl);
                     }
                     vse32_v_f32m2(outptr + out_j, vout0, vl);
                 }
