@@ -80,79 +80,40 @@ namespace
         copyMakeBorder(src_32, src_32, 0, 0, sz, sz, BORDER_REPLICATE);
         //! [convolution-1D-convert]
 
-        //! [convolution-1D-kernel]
-        v_float32 kernel_wide[ksize];
-        int step = kernel_wide[0].nlanes;
-        for (int i = 0; i < ksize; i++)
-            kernel_wide[i] = vx_setall_f32(kernel.ptr<float>(rowk)[i]);
-
-        // For example:
-
-        // kernel = {1, 0, -1} ksize = 3
-        // kernel_wide: [ksize x nlanes]
-        //     | 1| 1|...| 1| 1|
-        //     | 0| 0|...| 0| 0|
-        //     |-1|-1|...|-1|-1|
-
-        //! [convolution-1D-kernel]
 
         //! [convolution-1D-main]
         //! [convolution-1D-main-h1]
-        float *sptr = src_32.ptr<float>(row);
-        int i;
-        for (i = 0; i + step < len; i += step)
+        int step = v_float32().nlanes;
+        float *sptr = src_32.ptr<float>(row), *kptr = kernel.ptr<float>(rowk);
+        for (int k = 0; k < ksize; k++)
         {
-            //! [convolution-1D-main-h1]
-            //! [convolution-1D-main-h2]
-            v_float32 sum = vx_setzero_f32();
-            for (int k = -sz; k <= sz; k++)
+        //! [convolution-1D-main-h1]
+        //! [convolution-1D-main-h2]
+            v_float32 kernel_wide = vx_setall_f32(kptr[k]);
+            int i;
+            for (i = 0; i + step < len; i += step)
             {
-                v_float32 window = vx_load(sptr + i + sz + k);
-                sum += kernel_wide[k + sz] * window;
+                v_float32 window = vx_load(sptr + i + k);
+                v_float32 sum = vx_load(ans + i) + kernel_wide * window;
+                v_store(ans + i, sum);
             }
-
-            v_store(ans + i, sum);
-        }
-
-        // For example:
-        // kernel: {k1, k2, k3}
-        //             idx:   i
-        // src:           ...|a1|a2|a3|a4|...
-
-        // kernel_wide:      |k1|k1|k1|k1|
-        //                 |k2|k2|k2|k2|
-        //                 |k3|k3|k3|k3|
-
-        // iter1:
-        // sum =  |0|0|0|0| + |a0|a1|a2|a3| * |k1|k1|k1|k1|
-        //     =  |a0 * k1|a1 * k1|a2 * k1|a3 * k1|
-        // iter2:
-        // sum =  sum + |a1|a2|a3|a4| * |k2|k2|k2|k2|
-        //     =  |a0 * k1 + a1 * k2|a1 * k1 + a2 * k2|a2 * k1 + a3 * k2|a3 * k1 + a4 * k2|
-        // iter3:
-        // sum =  sum + |a2|a3|a4|a5| * |k3|k3|k3|k3|
-        //     =  |a0*k1 + a1*k2 + a2*k3|a1*k1 + a2*k2 + a3*k3|a2*k1 + a3*k2 + a4*k3|a3*k1 + a4*k2 + a5*k3|
-
-        // We can see that sum holds the results for convolution for 4 consecutive values, starting from i
-
         //! [convolution-1D-main-h2]
 
         //! [convolution-1D-main-h3]
-        for (; i < len; i++)
-        {
-            float value = 0;
-            for (int k = -sz; k <= sz; k++)
-                value += src_32.at<float>(row, i + k + sz) * kernel.at<float>(rowk, k + sz);
-
-            *(ans + i) = value;
-        }
+            for (; i < len; i++)
+            {
+                *(ans + i) += sptr[i + k]*kptr[k];
+            }
         //! [convolution-1D-main-h3]
+        }
         //! [convolution-1D-main]
     }
     //! [convolution-1D-vector]
 
+    //! [convolution-2D]
     void convolute_simd(Mat src, Mat &dst, Mat kernel)
     {
+        //! [convolution-2D-init]
         int rows = src.rows, cols = src.cols;
         int ksize = kernel.rows, sz = ksize / 2;
         dst = Mat(rows, cols, CV_32FC1);
@@ -160,39 +121,34 @@ namespace
         copyMakeBorder(src, src, sz, sz, 0, 0, BORDER_REPLICATE);
 
         int step = v_float32().nlanes;
+        //! [convolution-2D-init]
+
+        //! [convolution-2D-main]
         for (int i = 0; i < rows; i++)
         {
-            float ans[ksize][cols];
-            int j;
-            for (j = -sz; j <= sz; j++)
-                conv1dsimd(src, kernel, ans[j + sz], i + j + sz, j + sz, cols);
-
-            for (j = 0; j + step < cols; j += step)
+            for (int k = 0; k < ksize; k++)
             {
-                v_float32 sum = vx_setzero_f32();
-                for (int k = 0; k < ksize; k++)
+                float ans[cols] = {0};
+                conv1dsimd(src, kernel, ans, i + k, k, cols);
+                int j;
+                for (j = 0; j + step < cols; j += step)
                 {
-                    sum += vx_load(&ans[k][j]);
+                    v_float32 sum = vx_load(&dst.ptr<float>(i)[j]) + vx_load(&ans[j]);
+                    v_store(&dst.ptr<float>(i)[j], sum);
                 }
 
-                v_store(&dst.ptr<float>(i)[j], sum);
-            }
-
-            for (; j < cols; j++)
-            {
-                float val = 0;
-                for (int k = 0; k < ksize; k++)
-                {
-                    val += ans[k][j];
-                }
-
-                dst.ptr<float>(i)[j] = val;
+                for (; j < cols; j++)
+                    dst.ptr<float>(i)[j] += ans[j];
             }
         }
+        //! [convolution-2D-main]
 
+        //! [convolution-2D-conv]
         const int alpha = 1;
         dst.convertTo(dst, CV_8UC1, alpha);
+        //! [convolution-2D-conv]
     }
+    //! [convolution-2D]
 
     static void help(char *progName)
     {
@@ -244,11 +200,9 @@ int main(int argc, char *argv[])
     namedWindow("Output", 1);
     imshow("Input", src);
 
-    kernel = (Mat_<float>(3, 3) << 1, 2, 1,
-              2, 3, 2,
-              1, 2, 1);
-
-    kernel /= 15;
+    kernel = (Mat_<float>(3, 3) << 1, 0, -1,
+                                   2, 0, -2,
+                                   1, 0, -1);
 
     t = (double)getTickCount();
 
