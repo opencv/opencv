@@ -265,7 +265,7 @@ namespace gapi { namespace own {
 GAPI_EXPORTS GMatDesc descr_of(const RMat &mat);
 
 #if !defined(GAPI_STANDALONE)
-GAPI_EXPORTS GMatDesc descr_of(const cv::Mat &mat);
+GAPI_EXPORTS_W GMatDesc descr_of(const cv::Mat &mat);
 #else
 using gapi::own::descr_of;
 #endif

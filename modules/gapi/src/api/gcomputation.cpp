@@ -131,16 +131,16 @@ cv::GStreamingCompiled cv::GComputation::compileStreaming(GMetaArgs &&metas, GCo
 cv::GStreamingCompiled cv::GComputation::compileStreaming(GCompileArgs &&args)
 {
     // NB: Used by python bridge
-    if (!m_priv->m_info)
-    {
-        m_priv->m_info = collectGraphInfo(*m_priv);
-    }
+    //if (!m_priv->m_info)
+    //{
+        //m_priv->m_info = collectGraphInfo(*m_priv);
+    //}
 
     cv::gimpl::GCompiler comp(*this, {}, std::move(args));
     auto compiled = comp.compileStreaming();
 
-    compiled.priv().setInInfo(m_priv->m_info->inputs);
-    compiled.priv().setOutInfo(m_priv->m_info->outputs);
+    //compiled.priv().setInInfo(m_priv->m_info->inputs);
+    //compiled.priv().setOutInfo(m_priv->m_info->outputs);
 
     return compiled;
 }

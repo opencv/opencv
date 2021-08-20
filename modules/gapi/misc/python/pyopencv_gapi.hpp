@@ -211,10 +211,35 @@ bool pyopencv_to(PyObject* obj, cv::GMetaArg& value, const ArgInfo&)
     return true;
 }
 
+// #FIXME: Is it possible to implement pyopencv_from/pyopencv_to for generic
+// cv::variant<Types...> ?
+template <>
+PyObject* pyopencv_from(const cv::GMetaArg& value)
+{
+    switch (value.index()) {
+        case cv::GMetaArg::index_of<cv::GMatDesc>():
+            return pyopencv_from(cv::util::get<cv::GMatDesc>(value));
+        case cv::GMetaArg::index_of<cv::GScalarDesc>():
+            return pyopencv_from(cv::util::get<cv::GScalarDesc>(value));
+        case cv::GMetaArg::index_of<cv::GArrayDesc>():
+            return pyopencv_from(cv::util::get<cv::GArrayDesc>(value));
+        case cv::GMetaArg::index_of<cv::GOpaqueDesc>():
+            return pyopencv_from(cv::util::get<cv::GOpaqueDesc>(value));
+    }
+    PyErr_SetString(PyExc_TypeError, "Unsupported GMetaArg type");
+    return NULL;
+}
+
 template <>
 bool pyopencv_to(PyObject* obj, cv::GMetaArgs& value, const ArgInfo& info)
 {
     return pyopencv_to_generic_vec(obj, value, info);
+}
+
+template <>
+PyObject* pyopencv_from(const cv::GMetaArgs& value)
+{
+    return pyopencv_from_generic_vec(value);
 }
 
 template <>

@@ -356,7 +356,7 @@ public:
      *
      * @sa @ref gapi_compile_args
      */
-    GCompiled compile(GMetaArgs &&in_metas, GCompileArgs &&args = {});
+    GAPI_WRAP GCompiled compile(GMetaArgs &&in_metas, GCompileArgs &&args = {});
 
     // 2. Syntax sugar - variadic list of metas, no extra compile args
     // FIXME: SFINAE looks ugly in the generated documentation

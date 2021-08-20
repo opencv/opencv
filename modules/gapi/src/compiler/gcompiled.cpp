@@ -172,3 +172,10 @@ void cv::GCompiled::prepareForNewStream()
 {
     m_priv->prepareForNewStream();
 }
+
+cv::GRunArgs cv::GCompiled::run(const cv::detail::ExtractArgsCallback  &callback,
+                                GCompileArgs                         &&args)
+{
+    std::cout << "HHHHHHHHHHHHH" << std::endl;
+    return {};
+}

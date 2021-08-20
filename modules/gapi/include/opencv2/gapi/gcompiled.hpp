@@ -63,7 +63,7 @@ namespace cv {
  *
  * @sa GStreamingCompiled
  */
-class GAPI_EXPORTS GCompiled
+class GAPI_EXPORTS_W_SIMPLE GCompiled
 {
 public:
     /// @private
@@ -72,7 +72,7 @@ public:
     /**
      * @brief Constructs an empty object
      */
-    GCompiled();
+    GAPI_WRAP GCompiled();
 
     /**
      * @brief Run the compiled computation, a generic version.
@@ -173,7 +173,7 @@ public:
      * metadata vector passed to reshape() (if that call was
      * successful).
      */
-    const GMetaArgs& metas() const; // Meta passed to compile()
+    GAPI_WRAP const GMetaArgs& metas() const; // Meta passed to compile()
 
     /**
      * @brief Vector of metadata descriptions of graph outputs
@@ -186,14 +186,14 @@ public:
      * cv::GComputiation graph with different input metas may return
      * different values in this vector.
      */
-    const GMetaArgs& outMetas() const;
+    GAPI_WRAP const GMetaArgs& outMetas() const;
 
     /**
      * @brief Check if the underlying backends support reshape or not.
      *
      * @return true if supported, false otherwise.
      */
-    bool canReshape() const;
+    GAPI_WRAP bool canReshape() const;
 
     /**
      * @brief Reshape a compiled graph to support new image
@@ -206,7 +206,7 @@ public:
      * @param args compilation arguments to use.
      */
     // FIXME: Why it requires compile args?
-    void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
+    GAPI_WRAP void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
 
     /**
      * @brief Prepare inner kernels states for a new video-stream.
@@ -220,6 +220,10 @@ public:
      * their internal states to a new video stream.
      */
     void prepareForNewStream();
+
+    /// @private -- Exclude this function from OpenCV documentation
+    GAPI_WRAP GRunArgs run(const cv::detail::ExtractArgsCallback  &callback,
+                                 GCompileArgs                    &&args = {});
 
 protected:
     /// @private

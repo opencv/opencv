@@ -39,9 +39,9 @@ class GAPI_EXPORTS GCompiler
 public:
     // Metas may be empty in case when graph compiling for streaming
     // In this case graph get metas from first frame
-    explicit GCompiler(const GComputation &c,
-                             GMetaArgs    &&metas,
-                             GCompileArgs &&args);
+    GCompiler(const GComputation &c,
+                    GMetaArgs    &&metas,
+                    GCompileArgs &&args);
 
     // The method which does everything...
     GCompiled compile();

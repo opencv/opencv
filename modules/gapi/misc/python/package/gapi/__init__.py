@@ -36,11 +36,6 @@ def gin(*args):
     return [*args]
 
 
-@register('cv2.gapi')
-def descr_of(*args):
-    return [*args]
-
-
 @register('cv2')
 class GOpaque():
     # NB: Inheritance from c++ class cause segfault.

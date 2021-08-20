@@ -83,6 +83,8 @@ protected:
 
     void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
 
+    cv::GTypesInfo out_info;
+
 public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
     void run(cv::gimpl::GRuntimeArgs &&args);
