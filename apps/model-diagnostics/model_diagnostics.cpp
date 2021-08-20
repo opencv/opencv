@@ -4,6 +4,7 @@ USAGE:
 **************************************************/
 #include <opencv2/dnn.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
+#include <opencv2/dnn/utils/debug_utils.hpp>
 
 #include <iostream>
 
@@ -57,6 +58,7 @@ int main( int argc, const char** argv )
     CV_Assert(!model.empty());
 
     enableModelDiagnostics(true);
+    skipModelImport(true);
     redirectError(diagnosticsErrorCallback, NULL);
 
     Net ocvNet = readNet(model, config, frameworkId);
