@@ -744,58 +744,66 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                int ma, int na, int nb )
 {
     int n = 0;
-    size_t vl = 8;
-    size_t mvl0 = 8;
-    size_t mvl1 = 8;
-    for( ; n < nb; n += 16 )
+    int vl = vsetvlmax_e32m4();
+    int mvl = vl;
+    for( ; n < nb; n += vl )
     {
-        if ( n + 16 > nb) {
-            mvl0 = nb - n;
-            mvl1 = (nb - n -8) > 0 ? (nb - n -8) : 0;
+        if ( n + vl > nb) {
+            mvl = nb - n;
         }
 
-        for( int m = 0; m < ma; m += 4 )
+        for( int m = 0; m < ma; m += 7 )
         {
             const float* aptr0 = aptr + astep*m;
             const float* aptr1 = aptr + astep*std::min(m+1, ma-1);
             const float* aptr2 = aptr + astep*std::min(m+2, ma-1);
             const float* aptr3 = aptr + astep*std::min(m+3, ma-1);
+            const float* aptr4 = aptr + astep*std::min(m+4, ma-1);
+            const float* aptr5 = aptr + astep*std::min(m+5, ma-1);
+            const float* aptr6 = aptr + astep*std::min(m+6, ma-1);
 
             float* cptr0 = cptr + cstep*m;
             float* cptr1 = cptr + cstep*std::min(m+1, ma-1);
             float* cptr2 = cptr + cstep*std::min(m+2, ma-1);
             float* cptr3 = cptr + cstep*std::min(m+3, ma-1);
+            float* cptr4 = cptr + cstep*std::min(m+4, ma-1);
+            float* cptr5 = cptr + cstep*std::min(m+5, ma-1);
+            float* cptr6 = cptr + cstep*std::min(m+6, ma-1);
 
-            vfloat32m2_t d00 = vfmv_v_f_f32m2(0, vl), d01 = vfmv_v_f_f32m2(0, vl);
-            vfloat32m2_t d10 = vfmv_v_f_f32m2(0, vl), d11 = vfmv_v_f_f32m2(0, vl);
-            vfloat32m2_t d20 = vfmv_v_f_f32m2(0, vl), d21 = vfmv_v_f_f32m2(0, vl);
-            vfloat32m2_t d30 = vfmv_v_f_f32m2(0, vl), d31 = vfmv_v_f_f32m2(0, vl);
+            vfloat32m4_t d0 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d1 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d2 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d3 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d4 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d5 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d6 = vfmv_v_f_f32m4(0, vl);
 
             for( int k = 0; k < na; k++ )
             {
-                vfloat32m2_t a0 = vfmv_v_f_f32m2(aptr0[k], vl);
-                vfloat32m2_t a1 = vfmv_v_f_f32m2(aptr1[k], vl);
-                vfloat32m2_t a2 = vfmv_v_f_f32m2(aptr2[k], vl);
-                vfloat32m2_t a3 = vfmv_v_f_f32m2(aptr3[k], vl);
-                vfloat32m2_t b0 = vle32_v_f32m2(bptr + k*bstep + n, mvl0);
-                vfloat32m2_t b1 = vle32_v_f32m2(bptr + k*bstep + n + 8, mvl1);
-                d00 = vfmacc_vv_f32m2(d00, a0, b0, mvl0);
-                d01 = vfmacc_vv_f32m2(d01, a0, b1, mvl1);
-                d10 = vfmacc_vv_f32m2(d10, a1, b0, mvl0);
-                d11 = vfmacc_vv_f32m2(d11, a1, b1, mvl1);
-                d20 = vfmacc_vv_f32m2(d20, a2, b0, mvl0);
-                d21 = vfmacc_vv_f32m2(d21, a2, b1, mvl1);
-                d30 = vfmacc_vv_f32m2(d30, a3, b0, mvl0);
-                d31 = vfmacc_vv_f32m2(d31, a3, b1, mvl1);
+                float32_t a0 = aptr0[k];
+                float32_t a1 = aptr1[k];
+                float32_t a2 = aptr2[k];
+                float32_t a3 = aptr3[k];
+                float32_t a4 = aptr4[k];
+                float32_t a5 = aptr5[k];
+                float32_t a6 = aptr6[k];
+
+                vfloat32m4_t b = vle32_v_f32m4(bptr + k*bstep + n, mvl);
+                d0 = vfmacc_vf_f32m4(d0, a0, b, mvl);
+                d1 = vfmacc_vf_f32m4(d1, a1, b, mvl);
+                d2 = vfmacc_vf_f32m4(d2, a2, b, mvl);
+                d3 = vfmacc_vf_f32m4(d3, a3, b, mvl);
+                d4 = vfmacc_vf_f32m4(d4, a4, b, mvl);
+                d5 = vfmacc_vf_f32m4(d5, a5, b, mvl);
+                d6 = vfmacc_vf_f32m4(d6, a6, b, mvl);
             }
-            vse32_v_f32m2(cptr0 + n, d00, mvl0);
-            vse32_v_f32m2(cptr1 + n, d10, mvl0);
-            vse32_v_f32m2(cptr2 + n, d20, mvl0);
-            vse32_v_f32m2(cptr3 + n, d30, mvl0);
-            vse32_v_f32m2(cptr0 + n + 8, d01, mvl1);
-            vse32_v_f32m2(cptr1 + n + 8, d11, mvl1);
-            vse32_v_f32m2(cptr2 + n + 8, d21, mvl1);
-            vse32_v_f32m2(cptr3 + n + 8, d31, mvl1);
+            vse32_v_f32m4(cptr0 + n, d0, mvl);
+            vse32_v_f32m4(cptr1 + n, d1, mvl);
+            vse32_v_f32m4(cptr2 + n, d2, mvl);
+            vse32_v_f32m4(cptr3 + n, d3, mvl);
+            vse32_v_f32m4(cptr4 + n, d4, mvl);
+            vse32_v_f32m4(cptr5 + n, d5, mvl);
+            vse32_v_f32m4(cptr6 + n, d6, mvl);
         }
     }
 }
