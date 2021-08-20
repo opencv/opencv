@@ -700,6 +700,11 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     testONNXModels("split_max");
 }
 
+TEST_P(Test_ONNX_layers, LSTM_Activations)
+{
+    testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
@@ -1355,6 +1360,15 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     normAssert(ref1, out, "", l1, lInf);
 
     expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_layers, CumSum)
+{
+    testONNXModels("cumsum_1d_exclusive_1");
+    testONNXModels("cumsum_1d_reverse");
+    testONNXModels("cumsum_1d_exclusive_1_reverse");
+    testONNXModels("cumsum_2d_dim_1");
+    testONNXModels("cumsum_3d_dim_2");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

@@ -666,7 +666,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["PriorBox"] = &TFImporter::parsePriorBox;
     dispatch["Softmax"] = &TFImporter::parseSoftmax;
     dispatch["CropAndResize"] = &TFImporter::parseCropAndResize;
-    dispatch["Mean"] = dispatch["Sum"] = &TFImporter::parseMean;
+    dispatch["Mean"] = dispatch["Sum"] = dispatch["Max"] = &TFImporter::parseMean;
     dispatch["Pack"] = &TFImporter::parsePack;
     dispatch["ClipByValue"] = &TFImporter::parseClipByValue;
     dispatch["LeakyRelu"] = &TFImporter::parseLeakyRelu;
@@ -676,6 +676,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     return dispatch;
 }
 
+// "Conv2D" "SpaceToBatchND" "DepthwiseConv2dNative" "Pad" "MirrorPad" "Conv3D"
 void TFImporter::parseConvolution(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer_, LayerParams& layerParams)
 {
     tensorflow::NodeDef layer = layer_;
@@ -895,6 +896,7 @@ void TFImporter::parseConvolution(tensorflow::GraphDef& net, const tensorflow::N
         data_layouts[name] = DATA_LAYOUT_NHWC;
 }
 
+// "BiasAdd" "Add" "AddV2" "Sub" "AddN"
 void TFImporter::parseBias(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1106,6 +1108,7 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
     }
 }
 
+// "Flatten" "Squeeze"
 void TFImporter::parseFlatten(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1264,6 +1267,7 @@ void TFImporter::parseLrn(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
 }
 
+// "Concat" "ConcatV2"
 void TFImporter::parseConcat(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1314,6 +1318,7 @@ void TFImporter::parseConcat(tensorflow::GraphDef& net, const tensorflow::NodeDe
     }
 }
 
+// "MaxPool" "MaxPool3D"
 void TFImporter::parseMaxPool(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1335,6 +1340,7 @@ void TFImporter::parseMaxPool(tensorflow::GraphDef& net, const tensorflow::NodeD
     connectToAllBlobs(layer_id, dstNet, parsePin(inputName), id, num_inputs);
 }
 
+// "AvgPool" "AvgPool3D"
 void TFImporter::parseAvgPool(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1521,6 +1527,7 @@ void TFImporter::parseStridedSlice(tensorflow::GraphDef& net, const tensorflow::
     connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
 }
 
+// "Mul" "RealDiv"
 void TFImporter::parseMul(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
@@ -1678,6 +1685,7 @@ void TFImporter::parseMul(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     }
 }
 
+// "FusedBatchNorm" "FusedBatchNormV3"
 void TFImporter::parseFusedBatchNorm(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     // op: "FusedBatchNorm"
@@ -1937,6 +1945,7 @@ void TFImporter::parseBlockLSTM(tensorflow::GraphDef& net, const tensorflow::Nod
     data_layouts[name] = DATA_LAYOUT_UNKNOWN;
 }
 
+// "ResizeNearestNeighbor" "ResizeBilinear" "FusedResizeAndPadConv2D"
 void TFImporter::parseResize(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer_, LayerParams& layerParams)
 {
     tensorflow::NodeDef layer = layer_;
@@ -2125,6 +2134,7 @@ void TFImporter::parseCropAndResize(tensorflow::GraphDef& net, const tensorflow:
     connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
 }
 
+// "Mean" "Sum" "Max"
 void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     // Computes the mean of elements across dimensions of a tensor.
@@ -2143,7 +2153,12 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
     const std::string& name = layer.name();
     const std::string& type = layer.op();
     const int num_inputs = layer.input_size();
+    std::string pool_type = cv::toLowerCase(type);
 
+    if (pool_type == "mean")
+    {
+        pool_type = "ave";
+    }
     CV_CheckGT(num_inputs, 0, "");
 
     Mat indices = getTensorContent(getConstBlob(layer, value_id, 1));
@@ -2180,7 +2195,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         LayerParams avgLp;
         std::string avgName = name + "/avg";
         CV_Assert(layer_id.find(avgName) == layer_id.end());
-        avgLp.set("pool", type == "Mean" ? "ave" : "sum");
+        avgLp.set("pool", pool_type);
         // pooling kernel H x 1
         avgLp.set("global_pooling_h", true);
         avgLp.set("kernel_w", 1);
@@ -2221,7 +2236,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         int axis = toNCHW(indices.at<int>(0));
         if (axis == 2 || axis == 3)
         {
-            layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+            layerParams.set("pool", pool_type);
             layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
             layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
             int id = dstNet.addLayer(name, "Pooling", layerParams);
@@ -2253,7 +2268,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
             Pin inpId = parsePin(layer.input(0));
             addPermuteLayer(order, name + "/nhwc", inpId);
 
-            layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+            layerParams.set("pool", pool_type);
             layerParams.set("kernel_h", 1);
             layerParams.set("global_pooling_w", true);
             int id = dstNet.addLayer(name, "Pooling", layerParams);
@@ -2283,7 +2298,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         if (indices.total() != 2 || indices.at<int>(0) != 1 || indices.at<int>(1) != 2)
             CV_Error(Error::StsNotImplemented, "Unsupported mode of reduce_mean or reduce_sum operation.");
 
-        layerParams.set("pool", type == "Mean" ? "ave" : "sum");
+        layerParams.set("pool", pool_type);
         layerParams.set("global_pooling", true);
         int id = dstNet.addLayer(name, "Pooling", layerParams);
         layer_id[name] = id;
@@ -2387,6 +2402,7 @@ void TFImporter::parseLeakyRelu(tensorflow::GraphDef& net, const tensorflow::Nod
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
 }
 
+// "Abs" "Tanh" "Sigmoid" "Relu" "Elu" "Exp" "Identity" "Relu6"
 void TFImporter::parseActivation(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();

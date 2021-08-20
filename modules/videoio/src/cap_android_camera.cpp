@@ -304,8 +304,8 @@ public:
         AImage_getPlaneRowStride(image.get(), 0, &yStride);
         AImage_getPlaneRowStride(image.get(), 1, &uvStride);
         AImage_getPlaneData(image.get(), 0, &yPixel, &yLen);
-        AImage_getPlaneData(image.get(), 1, &vPixel, &vLen);
-        AImage_getPlaneData(image.get(), 2, &uPixel, &uLen);
+        AImage_getPlaneData(image.get(), 1, &uPixel, &uLen);
+        AImage_getPlaneData(image.get(), 2, &vPixel, &vLen);
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
 
         if ( (uvPixelStride == 2) && (vPixel == uPixel + 1) && (yLen == frameWidth * frameHeight) && (uLen == ((yLen / 2) - 1)) && (vLen == uLen) ) {
@@ -313,7 +313,7 @@ public:
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
             }
-        } else if ( (uvPixelStride == 1) && (vPixel = uPixel + uLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
+        } else if ( (uvPixelStride == 1) && (vPixel == uPixel + uLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420Planar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_YV12;
