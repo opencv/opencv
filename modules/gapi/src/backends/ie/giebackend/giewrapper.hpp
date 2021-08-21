@@ -29,9 +29,6 @@ namespace wrap {
 GAPI_EXPORTS std::vector<std::string> getExtensions(const GIEParam& params);
 GAPI_EXPORTS IE::CNNNetwork readNetwork(const GIEParam& params);
 
-IE::InputsDataMap  toInputsDataMap (const IE::ConstInputsDataMap& inputs);
-IE::OutputsDataMap toOutputsDataMap(const IE::ConstOutputsDataMap& outputs);
-
 #if INF_ENGINE_RELEASE < 2019020000  // < 2019.R2
 using Plugin = IE::InferencePlugin;
 GAPI_EXPORTS IE::InferencePlugin getPlugin(const GIEParam& params);
