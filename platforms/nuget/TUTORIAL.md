@@ -5,9 +5,7 @@ This tutorial takes you through downloading the .nupkg file and setting it up in
 
 - You can download the package from
     - The releases section on Github
-    (https://github.com/opencv/opencv/releases)
-    - The releases section on OpenCV website
-    (https://opencv.org/releases/)
+    (https://github.com/AdityaMulgundkar/opencv-nuget/releases)
 - Ensure that you have the correct package based on your Visual Studio or Microsoft Visual C++ Version. Currently supported versions are:
     - Visual Studio 2019 - msvc 16.0
     - Visual Studio 2018 - msvc 15.0
@@ -15,25 +13,34 @@ This tutorial takes you through downloading the .nupkg file and setting it up in
 
 ## Setting up a local Package Source in the Visual Studio IDE
 
-- Make sure you have a *Source* directory, such as your Downloads folder setup, where you can keep all your .nupkg files
+- Make sure you have a **Source** directory, such as your Downloads folder (or create a new folder such as C:\nuget-packages) setup, where you can keep all your .nupkg files
 - Start Visual Studio IDE
-- Create a new *Console App* Project
-- In the *Solution Manager*, right-click on References and select *Manage NuGet Packages*
-- A new NuGet window opens; click on the *settings icon* in the top right corner of the window
-- A new pop-up window appears with Package Sources selected and shown to the user
+- Click on Tool > Options
+- Browse to Nuget Package Manager > Package Sources 
 - Click on the Green button on the top right corner to add a new source
-- You can name the new source anything, and select the *Source* directory on your computer
+![Adding Offline package sources](https://imgur.com/0p8dv1D.png)
+- You can name the new source anything, and select the **Source** directory on your computer
 - Once you have selected a directory, you can click on *Update*, then click on OK to close the pop-up window
 
 
 ## Browsing and selecting the newly added offline package(s) for installation
 
-- You can now choose the newly added Offline directory from the dropdown on the top right corner (before the settings button)
-- In the already opened NuGet window, you can select *Browse* option on the top left corner
-- You can now see all your offline packages in the *Browse* section, click on OpenCVNuget and select *Install*
-- On the prompt window, click OK to agree and install the *OpenCVNuget* package
+- In the NuGet window, change package source to *All* in order to see online as well as the recently added offline packages
+- Browse and install the *OpenCVNuget* package
+![Adding Offline package sources](https://imgur.com/dnz0nF3.png)
 
 ## Getting started with your new project
 
 - You can now import OpenCV directly in your C++ project.
-`#include <opencv/core/core.hpp>`
+```
+#include <opencv/core/core.hpp>
+#include <opencv/core/highgui.hpp>
+#include <iostream>
+
+int main()
+{
+    cv::Mat img = cv::imread("<path to image>");
+    cv::imshow("a", img);
+    cv::waitKey();
+}
+```
