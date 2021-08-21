@@ -86,7 +86,7 @@ set_target_properties(${the_module} PROPERTIES
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
                       PREFIX ""
                       OUTPUT_NAME cv2
-                      SUFFIX ${CVPY_SUFFIX})
+                      SUFFIX "${CVPY_SUFFIX}")
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")

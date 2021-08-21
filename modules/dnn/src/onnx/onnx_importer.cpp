@@ -946,7 +946,7 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
         std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
         for (int i = 1; i < splits.size() - 1; ++i)
         {
-            slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i - 1);
+            slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i);
         }
         layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
     }
