@@ -652,6 +652,7 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
+    testONNXModels("split_sizes");
 }
 
 TEST_P(Test_ONNX_layers, Slice)
