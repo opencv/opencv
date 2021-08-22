@@ -58,7 +58,11 @@
 namespace cv
 {
 
+CV__DEBUG_NS_BEGIN
+
 class CV_EXPORTS _OutputArray;
+
+CV__DEBUG_NS_END
 
 //! @addtogroup core_basic
 //! @{

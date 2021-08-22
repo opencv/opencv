@@ -9,6 +9,11 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/3d.hpp"
+#include <opencv2/core/utils/logger.hpp>
+
+#ifdef HAVE_OPENCL
+#include <opencv2/core/ocl.hpp>
+#endif
 
 namespace cvtest
 {

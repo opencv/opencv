@@ -190,14 +190,14 @@ Mat ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat
     float av = static_cast<float>(rng.uniform(-fovy/2 * cov, fovy/2 * cov) * CV_PI / 180);
 
     Point3f p;
-    p.z = cos(ah) * d1;
-    p.x = sin(ah) * d1;
-    p.y = p.z * tan(av);
+    p.z = std::cos(ah) * d1;
+    p.x = std::sin(ah) * d1;
+    p.y = p.z * std::tan(av);
 
     Point3f pb1, pb2;
     generateBasis(pb1, pb2);
 
-    float cbHalfWidth = static_cast<float>(norm(p) * sin( std::min(fovx, fovy) * 0.5 * CV_PI / 180));
+    float cbHalfWidth = static_cast<float>(norm(p) * std::sin( std::min(fovx, fovy) * 0.5 * CV_PI / 180));
     float cbHalfHeight = cbHalfWidth * patternSize.height / patternSize.width;
 
     float cbHalfWidthEx  =  cbHalfWidth * ( patternSize.width + 1) / patternSize.width;
@@ -255,9 +255,9 @@ Mat ChessBoardGenerator::operator ()(const Mat& bg, const Mat& camMat, const Mat
     float av = static_cast<float>(rng.uniform(-fovy/2 * cov, fovy/2 * cov) * CV_PI / 180);
 
     Point3f p;
-    p.z = cos(ah) * d1;
-    p.x = sin(ah) * d1;
-    p.y = p.z * tan(av);
+    p.z = std::cos(ah) * d1;
+    p.x = std::sin(ah) * d1;
+    p.y = p.z * std::tan(av);
 
     Point3f pb1, pb2;
     generateBasis(pb1, pb2);

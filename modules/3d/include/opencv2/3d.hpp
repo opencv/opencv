@@ -8,6 +8,9 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/types_c.h"
 
+#include "opencv2/3d/depth.hpp"
+#include "opencv2/3d/volume.hpp"
+
 /**
   @defgroup _3d 3D vision functionality
 

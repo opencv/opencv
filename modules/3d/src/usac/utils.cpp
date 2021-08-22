@@ -128,7 +128,7 @@ Matx33d Math::getSkewSymmetric(const Vec3d &v) {
 Matx33d Math::rotVec2RotMat (const Vec3d &v) {
     const double phi = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
     const double x = v[0] / phi, y = v[1] / phi, z = v[2] / phi;
-    const double a = sin(phi), b = cos(phi);
+    const double a = std::sin(phi), b = std::cos(phi);
     // R = I + sin(phi) * skew(v) + (1 - cos(phi) * skew(v)^2
     return Matx33d((b - 1)*y*y + (b - 1)*z*z + 1, -a*z - x*y*(b - 1), a*y - x*z*(b - 1),
      a*z - x*y*(b - 1), (b - 1)*x*x + (b - 1)*z*z + 1, -a*x - y*z*(b - 1),
@@ -144,10 +144,10 @@ Vec3d Math::rotMat2RotVec (const Matx33d &R) {
                                              R(0,2)-R(2,0),
                                              R(1,0)-R(0,1));
     } else if (3 - FLT_EPSILON > trace && trace > -1 + FLT_EPSILON) {
-        double theta = acos((trace - 1) / 2);
-        rot_vec = (theta / (2 * sin(theta))) * Vec3d(R(2,1)-R(1,2),
-                                                     R(0,2)-R(2,0),
-                                                     R(1,0)-R(0,1));
+        double theta = std::acos((trace - 1) / 2);
+        rot_vec = (theta / (2 * std::sin(theta))) * Vec3d(R(2,1)-R(1,2),
+                                                          R(0,2)-R(2,0),
+                                                          R(1,0)-R(0,1));
     } else {
         int a;
         if (R(0,0) > R(1,1))
