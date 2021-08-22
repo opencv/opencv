@@ -67,6 +67,8 @@ class Builder:
         self.options = options
         self.build_dir = check_dir(options.build_dir, create=True)
         self.opencv_dir = check_dir(options.opencv_dir)
+        print('-----------------------------------------------------------')
+        print('options.opencv_dir:', options.opencv_dir)
         self.emscripten_dir = check_dir(options.emscripten_dir)
 
     def get_toolchain_file(self):
@@ -84,6 +86,7 @@ class Builder:
                "-DCMAKE_BUILD_TYPE=Release",
                "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
                "-DCPU_BASELINE=''",
+               "-DCMAKE_INSTALL_PREFIX=/usr/local",
                "-DCPU_DISPATCH=''",
                "-DCV_TRACE=OFF",
                "-DBUILD_SHARED_LIBS=OFF",
@@ -136,10 +139,11 @@ class Builder:
                "-DBUILD_opencv_js=ON",
                "-DBUILD_opencv_python2=OFF",
                "-DBUILD_opencv_python3=OFF",
-               "-DBUILD_EXAMPLES=OFF",
+               "-DBUILD_EXAMPLES=ON",
                "-DBUILD_PACKAGE=OFF",
-               "-DBUILD_TESTS=OFF",
-               "-DBUILD_PERF_TESTS=OFF"]
+               "-DBUILD_TESTS=ON",
+               "-DBUILD_PERF_TESTS=ON",
+               "-DWITH_WEBNN=ON"]
         if self.options.cmake_option:
             cmd += self.options.cmake_option
         if self.options.build_doc:
@@ -169,7 +173,7 @@ class Builder:
         return cmd
 
     def get_build_flags(self):
-        flags = ""
+        flags = "-s USE_WEBNN=1 "
         if self.options.build_wasm:
             flags += "-s WASM=1 "
         elif self.options.disable_wasm:

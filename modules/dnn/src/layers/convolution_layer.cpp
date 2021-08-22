@@ -1004,8 +1004,9 @@ public:
             }
             else
             {
-                
-                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput / group, 1, 1}, biasvec.data(), biasvec.size()*sizeof(float), ml::OperandType::Float32);
+                // std::cout<<"mumOutput size: "<< numOutput <<std::endl;
+                // std::cout<<"bias size: "<<biasvec.size()<<std::endl;
+                webnnBias = webnn::BuildConstant(webnnGraphBuilder, {1, numOutput / group, 1, 1}, biasvec.data(), (numOutput / group) * sizeof(float), ml::OperandType::Float32);
             }
             operand = webnnGraphBuilder.Add(operand, webnnBias);
         }

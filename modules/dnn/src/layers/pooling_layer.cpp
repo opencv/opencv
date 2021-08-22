@@ -657,7 +657,7 @@ public:
 #ifdef HAVE_WEBNN
     virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
+        // std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
         Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
         auto& webnnInpOperand = node->operand;
         auto& webnnGraphBuilder = node->net->builder;
@@ -675,6 +675,7 @@ public:
         } else if (padMode == "SAME") {
             options.autoPad = ml::AutoPad::SameUpper;
         }
+        // std::cout << "padMode: " << padMode << std::endl;
         options.windowDimensions = kernelSize;
         options.strides = Strides;
         options.padding = Padding;

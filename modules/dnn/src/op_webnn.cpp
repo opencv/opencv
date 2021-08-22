@@ -58,9 +58,13 @@ WebnnNet::WebnnNet()
     hasNetOwner = false;
     device_name = "CPU";
 
+#ifdef __EMSCRIPTEN__
+    context = ml::Context(emscripten_webnn_create_context());
+#else
     WebnnProcTable backendProcs = webnn_native::GetProcs();
     webnnProcSetProcs(&backendProcs);
     context = ml::Context(webnn_native::CreateContext());
+#endif
     builder = ::ml::CreateGraphBuilder(context);
     namedOperands = ::ml::CreateNamedOperands();
 }
@@ -168,7 +172,9 @@ void WebnnNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers
         const std::string& name = outs[i]->name;
         ml::ArrayBufferView& output = outputs[i];
         output.buffer = outs[i]->host->data;
+        // std::cout<<"host data size: "<<outs[i]->host->total()*outs[i]->host->elemSize()<<std::endl;
         output.byteLength = outs[i]->size;
+        // std::cout<<"outs[i]->size: "<< outs[i]->size << std::endl;
         named_outputs.Set(name.c_str(), &output);
     }
     ml::ComputeGraphStatus status = graph.Compute(named_inputs, named_outputs);

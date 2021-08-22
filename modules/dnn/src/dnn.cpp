@@ -4976,7 +4976,9 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     MatShape prevShape = shape(impl->netInputLayer->inputsData[pin.oid]);
     bool oldShape = prevShape == blobShape;
 
-    blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
+    // blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
+    impl->netInputLayer->inputsData.emplace(impl->netInputLayer->inputsData.begin()+pin.oid, blob_);
+    impl->netInputLayer->inputsData.erase(impl->netInputLayer->inputsData.begin()+pin.oid+1);
     if (!oldShape) {
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
         if (impl->hasDynamicShapes)
