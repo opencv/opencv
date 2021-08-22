@@ -244,7 +244,7 @@ The universal intrinsics set provides element wise binary and unary operations.
 
 ## Demonstration
 In the following section, we will vectorize a simple convolution function for single channel and compare the results to a scalar implementation.
-@note Not all algorithms are improved by vectorization. In fact, in certain cases, the compiler may make improvements to the code automatically, thus producing faster results for scalar implementations.
+@note Not all algorithms are improved by manual vectorization. In fact, in certain cases, the compiler may *autovectorize* the code, thus producing faster results for scalar implementations.
 
 You may learn more about convolution from the previous tutorial. We use the same naive implementation from the previous tutorial and compare it to the vectorized version.
 
@@ -271,13 +271,13 @@ We will now look at the vectorized version of 1-D convolution.
 1. In our case, the kernel is a float. Since the kernel's datatype is the largest, we convert src to float32, forming *src_32*. We also make a border like we did for the naive case.
     @snippet univ_intrin.cpp convolution-1D-convert
 
-2. Now, for each column row in the *kernel*, we calculate the element wise product of all windows of length `step`. We add these values to the already stored values in ans
+2. Now, for each column in the *kernel*, we calculate the scalar product of the value with all *window* vectors of length `step`. We add these values to the already stored values in ans
     @snippet univ_intrin.cpp convolution-1D-main
 
     * We declare a pointer to the src_32 and kernel and run a loop for each kernel element
         @snippet univ_intrin.cpp convolution-1D-main-h1
 
-    * We first declare a load a register with the current kernel element. A window is shifted from *0* to *len - step* and its product with the kernel_wide array is added to the values stored in *ans*. We store the values back into *ans*
+    * We load a register with the current kernel element. A window is shifted from *0* to *len - step* and its product with the kernel_wide array is added to the values stored in *ans*. We store the values back into *ans*
         @snippet univ_intrin.cpp convolution-1D-main-h2
 
     * Since the length might not be divisible by steps, we take care of the remaining values directly. The number of *tail* values will always be less than *step* and will not affect the performance significantly. We store all the values to *ans* which is a float pointer. We can also directly store them in a `Mat` object
