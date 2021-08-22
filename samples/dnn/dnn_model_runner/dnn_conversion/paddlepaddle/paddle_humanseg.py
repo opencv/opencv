@@ -1,7 +1,7 @@
 import os
 import paddlehub.vision.transforms as T
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 
 
 def get_color_map_list(num_classes):
@@ -87,7 +87,7 @@ def preprocess(image_path):
 
 if __name__ == '__main__':
     img_path = "data/human_image.jpg"
-    # load mobilenetv2 use cv.dnn
+    # load PPSeg Model use cv.dnn
     net = cv.dnn.readNetFromONNX('humanseg_hrnet18_tiny.onnx')
     # read and preprocess image file
     im = preprocess(img_path)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     folder_path = "data"
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-    file_path = os.path.join(folder_path, '%s.png' % "result_test_human")
+    file_path = os.path.join(folder_path, '%s.jpg' % "result_test_human")
     result_color = visualize(img_path, result)
     cv.imwrite(file_path, result_color)
     print('%s saved' % file_path)
