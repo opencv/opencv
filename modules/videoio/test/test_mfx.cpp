@@ -122,6 +122,7 @@ TEST_P(videoio_mfx, read_write_raw)
     EXPECT_EQ(FRAME_SIZE.height, cap.get(CAP_PROP_FRAME_HEIGHT));
     for (int i = 0; i < FRAME_COUNT; ++i)
     {
+        SCOPED_TRACE(i);
         ASSERT_TRUE(cap.read(frame));
         ASSERT_FALSE(frame.empty());
         ASSERT_EQ(FRAME_SIZE.width, frame.cols);
@@ -133,10 +134,7 @@ TEST_P(videoio_mfx, read_write_raw)
         EXPECT_EQ(goodFrame.channels(), frame.channels());
         EXPECT_EQ(goodFrame.type(), frame.type());
         double psnr = cvtest::PSNR(goodFrame, frame);
-        if (fourcc == VideoWriter::fourcc('M', 'P', 'G', '2'))
-            EXPECT_GT(psnr, 31); // experimentally chosen value
-        else
-            EXPECT_GT(psnr, 33); // experimentally chosen value
+        EXPECT_GT(psnr, 28); // experimentally chosen value
         goodFrames.pop();
     }
     EXPECT_FALSE(cap.read(frame));
