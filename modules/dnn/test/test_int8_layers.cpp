@@ -583,7 +583,7 @@ TEST_P(Test_Int8_nets, ResNet50)
     Mat blob = blobFromImage(inp, 1.0, Size(224, 224), Scalar(), false);
     Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
 
-    float l1 = 3e-4, lInf = 0.035;
+    float l1 = 3e-4, lInf = 0.04;
     testClassificationNet(net, blob, ref, l1, lInf);
 }
 
@@ -714,7 +714,7 @@ TEST_P(Test_Int8_nets, MobileNet_v1_SSD_PPN)
     Mat blob = blobFromImage(inp, 1.0, Size(300, 300), Scalar(), true, false);
     Mat ref = blobFromNPY(_tf("tensorflow/ssd_mobilenet_v1_ppn_coco.detection_out.npy"));
 
-    float confThreshold = 0.51, scoreDiff = 0.04, iouDiff = 0.06;
+    float confThreshold = 0.51, scoreDiff = 0.05, iouDiff = 0.06;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -815,7 +815,7 @@ TEST_P(Test_Int8_nets, FasterRCNN_resnet50)
     Mat blob = blobFromImage(inp, 1.0, Size(800, 600), Scalar(), true, false);
     Mat ref = blobFromNPY(_tf("tensorflow/faster_rcnn_resnet50_coco_2018_01_28.detection_out.npy"));
 
-    float confThreshold = 0.5, scoreDiff = 0.025, iouDiff = 0.15;
+    float confThreshold = 0.5, scoreDiff = 0.05, iouDiff = 0.15;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 

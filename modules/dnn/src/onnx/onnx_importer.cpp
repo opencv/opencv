@@ -508,14 +508,15 @@ void ONNXImporter::checkQuantizedLayer(const opencv_onnx::NodeProto& node_proto,
                                        LayerParams& params, int& depth)
 {
     // Quantized nodes have input and output names ending with 'quantized'
-    int len = node_proto.input(0).length();
+    std::string inpName = node_proto.input(0);
+    int len = inpName.length();
     if (len <= 9)
         return;
 
-    if (node_proto.input(0).substr(len - 9) == "quantized")
+    if (inpName.substr(len - 9) == "quantized")
     {
         depth = CV_8S;
-        std::string inpName = node_proto.input(0).substr(0, len - 9);
+        inpName = inpName.substr(0, len - 9);
         Mat scale = getBlob(inpName + "scale");
         Mat zeropoint = getBlob(inpName + "zero_point");
         params.set("scales", DictValue::arrayReal(scale.ptr<float>(), 1));
@@ -2627,7 +2628,7 @@ void ONNXImporter::parseQRelu(LayerParams& layerParams, const opencv_onnx::NodeP
         {
             float x = inp_sc*(i - inp_zp);
             float y = x >= 0.f ? x : slope*x;
-            int quantized = out_zp + (int)std::round(y/out_sc);
+            int quantized = out_zp + cvRound(y/out_sc);
             table[i+128] = saturate_cast<int8_t>(quantized);
         }
         layerParams.blobs.push_back(lookUpTable);
@@ -2656,7 +2657,7 @@ void ONNXImporter::parseQSigmoid(LayerParams& layerParams, const opencv_onnx::No
     {
         float x = inp_sc*(i - inp_zp);
         float y = 1.f/(1.f + std::exp(-x));
-        int quantized = out_zp + (int)std::round(y/out_sc);
+        int quantized = out_zp + cvRound(y/out_sc);
         table[i+128] = saturate_cast<int8_t>(quantized);
     }
 
