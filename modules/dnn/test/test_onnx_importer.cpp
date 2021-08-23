@@ -554,7 +554,7 @@ TEST_P(Test_ONNX_layers, DynamicResize)
 
 TEST_P(Test_ONNX_layers, Resize_HumanSeg)
 {
-    testONNXModels("resize_humanseg");
+    testONNXModels("resize_humanseg"); 
     testONNXModels("resize_opset11");
 }
 
