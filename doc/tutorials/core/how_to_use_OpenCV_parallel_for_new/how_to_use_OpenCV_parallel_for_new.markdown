@@ -129,7 +129,7 @@ For example, we can either
 
 To set the number of threads, you can use: @ref cv::setNumThreads. You can also specify the number of splitting using the nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)` or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the workload only on two threads.
 
-@note C++ 11 standard allows to simplify the parallel implementation by get rid of the `ParallelMandelbrot` class and replacing it with lambda expression:
+@note C++ 11 standard allows to simplify the parallel implementation by get rid of the `parallelConvolution` class and replacing it with lambda expression:
 
 @snippet how_to_use_OpenCV_parallel_for_new.cpp convolution-parallel-cxx11
 
@@ -163,7 +163,7 @@ The resulting time taken for execution of the two implementations on a
         Parallel Implementation: 0.0117053s
         Parallel Implementation(Row Split): 0.0117894s
 
-The performance of the parallel implementation depends of the type of CPU you have. For instance, on 4 cores - 8 threads CPU, runtime may be 6x to 7x faster than a sequential implementation. There are many factors to explain why we do not achieve a speed-up of 8x:
+The performance of the parallel implementation depends on the type of CPU you have. For instance, on 4 cores - 8 threads CPU, runtime may be 6x to 7x faster than a sequential implementation. There are many factors to explain why we do not achieve a speed-up of 8x:
     * the overhead to create and manage the threads,
     * background processes running in parallel,
     * the difference between 4 hardware cores with 2 logical threads for each core and 8 hardware cores.

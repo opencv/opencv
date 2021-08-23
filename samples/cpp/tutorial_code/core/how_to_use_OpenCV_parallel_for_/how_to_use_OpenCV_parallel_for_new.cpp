@@ -230,8 +230,8 @@ namespace
         copyMakeBorder(src, src, sz, sz, sz, sz, BORDER_REPLICATE);
 
         //! [convolution-parallel-function-row]
-        parallelConvolution obj(src, dst, kernel);
-        parallel_for_(Range(0, rows * cols), obj);
+        parallelConvolutionRowSplit obj(src, dst, kernel);
+        parallel_for_(Range(0, rows), obj);
         //! [convolution-parallel-function-row]
     }
 

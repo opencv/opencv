@@ -146,7 +146,7 @@ Now that we know how registers work, let us look at the functions used for filli
             float ptr[4];
             v_store(ptr, reg); // store the first 128 bits(interpreted as 4x32-bit floats) of reg into ptr.
 <br>
-@note Registers containing values of a type may lead to wrong interpretation during storage. For example: if **ptr** is a pointer to a 32-bit float and reg is a register containing 32-bit integers,  the values in ptr may not be as intended. You may cast the registers into the proper type before carrying out operations.
+@note Ensure **ptr** has the same type as register. You can also cast the register into the proper type before carrying out operations. Simply typecasting the pointer to a particular type will lead wrong interpretation of data.
 
 ### Binary and Unary Operators
 
