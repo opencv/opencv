@@ -462,7 +462,7 @@ public:
 
     /// @private -- Exclude this function from OpenCV documentation
     GAPI_WRAP GStreamingCompiled compileStreaming(const cv::detail::ExtractMetaCallback &callback,
-                                                  GCompileArgs                   &&args = {});
+                                                        GCompileArgs                   &&args = {});
 
     // 2. Direct metadata version
     /**
