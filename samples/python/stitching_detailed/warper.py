@@ -22,6 +22,27 @@ class Warper:
     def set_scale(self, scale):
         self.warper = cv.PyRotationWarper(self.warper_type, scale)
 
+    def warp_images_and_image_masks(self, imgs, cameras, aspect):
+        images_warped = []
+        masks_warped = []
+        corners = []
+
+        for img, camera in zip(imgs, cameras):
+            img_warped, mask_warped, corner = self.warp_image_and_image_mask(
+                img, camera, aspect
+                )
+            images_warped.append(img_warped)
+            corners.append(corner)
+            masks_warped.append(mask_warped)
+
+        return images_warped, masks_warped, corners
+
+    def warp_image_and_image_mask(self, img, camera, aspect):
+        corner, img_warped = self.warp_image(img, camera, aspect)
+        mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
+        _, mask_warped = self.warp_image(mask, camera, aspect, mask=True)
+        return img_warped, mask_warped, corner
+
     def warp_image(self, image, camera, aspect=1, mask=False):
         if mask:
             interp_mode = cv.INTER_NEAREST

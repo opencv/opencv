@@ -15,7 +15,8 @@ from stitching_detailed.stitcher import Stitcher
 class TestStitcher(unittest.TestCase):
 
     def test_stitcher_aquaduct(self):
-        result = Stitcher.stitch(["s1.jpg", "s2.jpg"], n_features=250)
+        stitcher = Stitcher(n_features=250)
+        result = stitcher.stitch(["s1.jpg", "s2.jpg"])
         cv.imwrite("result.jpg", result)
 
         max_image_shape_derivation = 3
@@ -31,9 +32,10 @@ class TestStitcher(unittest.TestCase):
                     "expos_comp": "no",
                     "conf_thresh": 0.3}
 
-        result = Stitcher.stitch(["boat5.jpg", "boat2.jpg",
+        stitcher = Stitcher(**settings)
+        result = stitcher.stitch(["boat5.jpg", "boat2.jpg",
                                   "boat3.jpg", "boat4.jpg",
-                                  "boat1.jpg", "boat6.jpg"], **settings)
+                                  "boat1.jpg", "boat6.jpg"])
 
         cv.imwrite("boat_fisheye.jpg", result)
 
@@ -49,9 +51,10 @@ class TestStitcher(unittest.TestCase):
                     "expos_comp": "channel_blocks",
                     "conf_thresh": 0.3}
 
-        result = Stitcher.stitch(["boat5.jpg", "boat2.jpg",
+        stitcher = Stitcher(**settings)
+        result = stitcher.stitch(["boat5.jpg", "boat2.jpg",
                                   "boat3.jpg", "boat4.jpg",
-                                  "boat1.jpg", "boat6.jpg"], **settings)
+                                  "boat1.jpg", "boat6.jpg"])
 
         cv.imwrite("boat_plane.jpg", result)
 
@@ -63,12 +66,12 @@ class TestStitcher(unittest.TestCase):
     def test_stitcher_boat_aquaduct_subset(self):
         settings = {"compose_megapix": 1}
 
-        result = Stitcher.stitch(["boat5.jpg",
+        stitcher = Stitcher(**settings)
+        result = stitcher.stitch(["boat5.jpg",
                                   "s1.jpg", "s2.jpg",
                                   "boat2.jpg",
                                   "boat3.jpg", "boat4.jpg",
-                                  "boat1.jpg", "boat6.jpg"], **settings)
-
+                                  "boat1.jpg", "boat6.jpg"])
         cv.imwrite("subset_low_res.jpg", result)
 
         max_image_shape_derivation = 100
@@ -84,10 +87,10 @@ class TestStitcher(unittest.TestCase):
                     "wave_correct": "no",
                     "conf_thresh": 0.3}
 
-        result = Stitcher.stitch(["budapest1.jpg", "budapest2.jpg",
+        stitcher = Stitcher(**settings)
+        result = stitcher.stitch(["budapest1.jpg", "budapest2.jpg",
                                   "budapest3.jpg", "budapest4.jpg",
-                                  "budapest5.jpg", "budapest6.jpg"],
-                                 **settings)
+                                  "budapest5.jpg", "budapest6.jpg"])
 
         cv.imwrite("budapest.jpg", result)
 

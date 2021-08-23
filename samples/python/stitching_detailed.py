@@ -211,7 +211,8 @@ if __name__ == '__main__':
     img_names = args_dict.pop("img_names")
     img_names = [cv.samples.findFile(img_name) for img_name in img_names]
 
-    panorama = Stitcher.stitch(img_names, **args_dict)
+    stitcher = Stitcher(**args_dict)
+    panorama = stitcher.stitch(img_names)
 
     cv.imwrite(args.output, panorama)
 

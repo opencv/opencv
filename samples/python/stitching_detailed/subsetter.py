@@ -22,6 +22,11 @@ class Subsetter:
                                                   pairwise_matches,
                                                   self.confidence_threshold)
         indices_as_list = [int(idx) for idx in list(indices[:, 0])]
+
+        if len(indices_as_list) < 2:
+            print("Need more images")
+            exit()
+
         return indices_as_list
 
     @staticmethod
