@@ -79,11 +79,11 @@ int solve_deg3(double a, double b, double c, double d,
 
   if (D <= 0) {
     // Three real roots
-    double theta = acos(R / sqrt(-Q3));
-    double sqrt_Q = sqrt(-Q);
-    x0 = 2 * sqrt_Q * cos(theta             / 3.0) - b_a_3;
-    x1 = 2 * sqrt_Q * cos((theta + 2 * CV_PI)/ 3.0) - b_a_3;
-    x2 = 2 * sqrt_Q * cos((theta + 4 * CV_PI)/ 3.0) - b_a_3;
+    double theta = std::acos(R / std::sqrt(-Q3));
+    double sqrt_Q = std::sqrt(-Q);
+    x0 = 2 * sqrt_Q * std::cos(theta             / 3.0) - b_a_3;
+    x1 = 2 * sqrt_Q * std::cos((theta + 2 * CV_PI)/ 3.0) - b_a_3;
+    x2 = 2 * sqrt_Q * std::cos((theta + 4 * CV_PI)/ 3.0) - b_a_3;
 
     return 3;
   }

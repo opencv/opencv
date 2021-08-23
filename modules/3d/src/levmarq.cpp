@@ -146,11 +146,11 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
     Mat mask = _mask.getMat();
     Mat param0 = _param0.getMat();
     Mat x, xd, r, rd, J, A, Ap, v, temp_d, d, Am, vm, dm;
-    int ptype = param0.type();
+    int p0type = param0.type();
     int maxIters = termcrit.type & TermCriteria::COUNT ? termcrit.maxCount : 1000;
     double epsx = termcrit.type & TermCriteria::EPS ? termcrit.epsilon : 0, epsf = epsx;
 
-    CV_Assert( (param0.cols == 1 || param0.rows == 1) && (ptype == CV_32F || ptype == CV_64F));
+    CV_Assert( (param0.cols == 1 || param0.rows == 1) && (p0type == CV_32F || p0type == CV_64F));
     CV_Assert( cb || cb_alt );
 
     int lx = param0.rows + param0.cols - 1;
@@ -278,7 +278,7 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
     if( param0.size() != x.size() )
         transpose(x, x);
 
-    x.convertTo(param0, ptype);
+    x.convertTo(param0, p0type);
     if( iter == maxIters )
         iter = -iter;
 

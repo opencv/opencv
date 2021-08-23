@@ -23,7 +23,7 @@ namespace details {
 /////////////////////////////////////////////////////////////////////////////
 static const float CORNERS_SEARCH = 0.5F;                       // percentage of the edge length to the next corner used to find new corners
 static const float MAX_ANGLE = float(48.0/180.0*CV_PI);          // max angle between line segments supposed to be straight
-static const float MIN_COS_ANGLE = float(cos(35.0/180*CV_PI));   // min cos angle between board edges
+static const float MIN_COS_ANGLE = float(std::cos(35.0/180*CV_PI));   // min cos angle between board edges
 static const float MIN_RESPONSE_RATIO = 0.1F;
 static const float ELLIPSE_WIDTH = 0.35F;                       // width of the search ellipse in percentage of its length
 static const float RAD2DEG = float(180.0/CV_PI);
@@ -303,7 +303,7 @@ int testPointSymmetry(const cv::Mat &mat,cv::Point2f pt,float dist,float max_err
     for (int angle_i = 0; angle_i < 10; angle_i++)
     {
         double angle = angle_i * (CV_PI * 0.1);
-        cv::Point2f n(float(cos(angle)),float(-sin(angle)));
+        cv::Point2f n(float(std::cos(angle)),float(-std::sin(angle)));
         center1 = pt+dist*n;
         if(!image_rect.contains(center1))
             return false;
@@ -792,8 +792,8 @@ Ellipse::Ellipse(const cv::Point2f &_center, const cv::Size2f &_axes, float _ang
     center(_center),
     axes(_axes),
     angle(_angle),
-    cosf(cos(-_angle)),
-    sinf(sin(-_angle))
+    cosf(std::cos(-_angle)),
+    sinf(std::sin(-_angle))
 {
 }
 
@@ -1296,18 +1296,18 @@ float Chessboard::Board::getAngle()const
         cv::Point3f ptx(1,0,0);
         val = float(ptx.dot(pt)/cv::norm(pt));
         if(val < 0)
-            val = -acos(val);
+            val = -std::acos(val);
         else
-            val = acos(val);
+            val = std::acos(val);
     }
     else
     {
         cv::Point3f ptx(0,1,0);
         val = float(ptx.dot(pt)/cv::norm(pt));
         if(val < 0)
-            val = float(-acos(val)+CV_PI/2);
+            val = float(-std::acos(val)+CV_PI/2);
         else
-            val = float(acos(val)+CV_PI/2);
+            val = float(std::acos(val)+CV_PI/2);
     }
     return val;
 }
@@ -1942,8 +1942,8 @@ bool Chessboard::Board::init(const std::vector<cv::Point2f> points)
     // set initial cell colors
     Point2f pt1 = *(cells[0]->top_right)-*(cells[0]->bottom_left);
     pt1 /= cv::norm(pt1);
-    cv::Point2f pt2(cos(white_angle),-sin(white_angle));
-    cv::Point2f pt3(cos(black_angle),-sin(black_angle));
+    cv::Point2f pt2(std::cos(white_angle),-std::sin(white_angle));
+    cv::Point2f pt3(std::cos(black_angle),-std::sin(black_angle));
     if(fabs(pt1.dot(pt2)) < fabs(pt1.dot(pt3)))
     {
         cells[0]->black = false;
@@ -2071,7 +2071,7 @@ Ellipse Chessboard::Board::estimateSearchArea(cv::Mat _H,int row, int col,float 
     cv::Point2f p02(pt2-pt);
     float norm1 = float(cv::norm(p01));
     float norm2 = float(cv::norm(p02));
-    float angle = float(acos(p01.dot(p02)/norm1/norm2));
+    float angle = float(std::acos(p01.dot(p02)/norm1/norm2));
     cv::Size2f axes(norm1,norm2);
     return Ellipse(pt,axes,angle);
 }
@@ -2095,7 +2095,7 @@ bool Chessboard::Board::estimateSearchArea(const cv::Point2f &p1,const cv::Point
     }
     float norm = float(cv::norm(n));
     n = n/norm;
-    float angle = acos(n.x);
+    float angle = std::acos(n.x);
     if(n.y > 0)
         angle = float(2.0F*CV_PI-angle);
     n = p4-p3;
@@ -3540,8 +3540,8 @@ Chessboard::BState Chessboard::generateBoards(cv::flann::Index &flann_index,cons
 
     // use angles to filter out points
     std::vector<cv::KeyPoint> points;
-    cv::Vec2f n1(cos(white_angle),-sin(white_angle));
-    cv::Vec2f n2(cos(black_angle),-sin(black_angle));
+    cv::Vec2f n1(std::cos(white_angle),-std::sin(white_angle));
+    cv::Vec2f n2(std::cos(black_angle),-std::sin(black_angle));
     std::vector<cv::KeyPoint>::const_iterator iter1 = kpoints.begin()+1; // first point is center
     for(;iter1 != kpoints.end();++iter1)
     {

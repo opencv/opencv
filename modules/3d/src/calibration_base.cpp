@@ -181,8 +181,8 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
         }
         else
         {
-            double c = cos(theta);
-            double s = sin(theta);
+            double c = std::cos(theta);
+            double s = std::sin(theta);
             double c1 = 1. - c;
             double itheta = theta ? 1./theta : 0.;
 
@@ -244,7 +244,7 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
         s = std::sqrt((r.x*r.x + r.y*r.y + r.z*r.z)*0.25);
         c = (R(0, 0) + R(1, 1) + R(2, 2) - 1)*0.5;
         c = c > 1. ? 1. : c < -1. ? -1. : c;
-        theta = acos(c);
+        theta = std::acos(c);
 
         if( s < 1e-5 )
         {
@@ -1047,9 +1047,9 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
 
     // calculate the euler angle
     Vec3d eulerAngles(
-        acos(Qx(1, 1)) * (Qx(1, 2) >= 0 ? 1 : -1) * (180.0 / CV_PI),
-        acos(Qy(0, 0)) * (Qy(2, 0) >= 0 ? 1 : -1) * (180.0 / CV_PI),
-        acos(Qz(0, 0)) * (Qz(0, 1) >= 0 ? 1 : -1) * (180.0 / CV_PI));
+        std::acos(Qx(1, 1)) * (Qx(1, 2) >= 0 ? 1 : -1) * (180.0 / CV_PI),
+        std::acos(Qy(0, 0)) * (Qy(2, 0) >= 0 ? 1 : -1) * (180.0 / CV_PI),
+        std::acos(Qz(0, 0)) * (Qz(0, 1) >= 0 ? 1 : -1) * (180.0 / CV_PI));
 
     /* Calculate orthogonal matrix. */
     /*
