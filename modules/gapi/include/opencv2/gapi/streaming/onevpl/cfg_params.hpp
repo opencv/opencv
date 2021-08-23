@@ -19,7 +19,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-struct GAPI_EXPORTS cfg_param {
+struct GAPI_EXPORTS CfgParam {
     using name_t = std::string;
     using value_t = cv::util::variant<uint8_t, int8_t,
                                       uint16_t, int16_t,
@@ -29,9 +29,18 @@ struct GAPI_EXPORTS cfg_param {
                                       double_t,
                                       void*,
                                       std::string>;
+
+    /**
+     * Create onevpl source configuration parameter.
+     *
+     *@param name           name of parameter.
+     *@param value          value of parameter.
+     *@param is_major       TRUE if parameter MUST be provided by OneVPL implementation, FALSE for optional (for resolve multiple available implementations).
+     *
+     */
     template<typename ValueType>
-    static cfg_param create(const std::string& name, ValueType&& value, bool is_major = true) {
-        cfg_param param(name, cfg_param::value_t(std::forward<ValueType>(value)), is_major);
+    static CfgParam create(const std::string& name, ValueType&& value, bool is_major = true) {
+        CfgParam param(name, CfgParam::value_t(std::forward<ValueType>(value)), is_major);
         return param;
     }
 
@@ -40,17 +49,17 @@ struct GAPI_EXPORTS cfg_param {
     const name_t& get_name() const;
     const value_t& get_value() const;
     bool is_major() const;
-    bool operator==(const cfg_param& src) const;
-    bool operator< (const cfg_param& src) const;
-    bool operator!=(const cfg_param& src) const;
+    bool operator==(const CfgParam& rhs) const;
+    bool operator< (const CfgParam& rhs) const;
+    bool operator!=(const CfgParam& rhs) const;
 
-    cfg_param& operator=(const cfg_param& src);
-    cfg_param& operator=(cfg_param&& src);
-    cfg_param(const cfg_param& src);
-    cfg_param(cfg_param&& src);
-    ~cfg_param();
+    CfgParam& operator=(const CfgParam& src);
+    CfgParam& operator=(CfgParam&& src);
+    CfgParam(const CfgParam& src);
+    CfgParam(CfgParam&& src);
+    ~CfgParam();
 private:
-    cfg_param(const std::string& param_name, value_t&& param_value, bool is_major_param);
+    CfgParam(const std::string& param_name, value_t&& param_value, bool is_major_param);
     std::shared_ptr<Priv> m_priv;
 };
 

@@ -20,7 +20,7 @@ struct FileDataProvider : public IDataProvider {
     FileDataProvider(const std::string& file_path);
     ~FileDataProvider();
 
-    size_t provide_data(size_t out_data_bytes_size, void* out_data) override;
+    size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
     bool empty() const override;
 private:
     file_ptr source_handle;

@@ -17,7 +17,7 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-using params_container_t = std::vector<cfg_param>;
+using CfgParams = std::vector<CfgParam>;
 
 class GAPI_EXPORTS GSource : public IStreamSource
 {
@@ -25,9 +25,9 @@ public:
     struct Priv;
 
     GSource(const std::string& filePath,
-                 const params_container_t& cfg_params = params_container_t{});
+            const CfgParams& cfg_params = CfgParams{});
     GSource(std::shared_ptr<IDataProvider> source,
-                 const params_container_t& cfg_params = params_container_t{});
+            const CfgParams& cfg_params = CfgParams{});
     ~GSource() override;
 
     bool pull(cv::gapi::wip::Data& data) override;

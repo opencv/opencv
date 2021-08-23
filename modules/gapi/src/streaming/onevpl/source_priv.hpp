@@ -33,7 +33,7 @@ namespace onevpl {
 struct GSource::Priv
 {
     explicit Priv(std::shared_ptr<IDataProvider> provider,
-                  const std::vector<cfg_param>& params);
+                  const std::vector<CfgParam>& params);
     ~Priv();
 
     bool pull(cv::gapi::wip::Data& data);

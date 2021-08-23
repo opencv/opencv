@@ -14,24 +14,24 @@ namespace wip {
 namespace onevpl {
 
 #ifdef HAVE_ONEVPL
-GSource::GSource(const std::string& filePath, const params_container_t& cfg_params) :
+GSource::GSource(const std::string& filePath, const CfgParams& cfg_params) :
     GSource(std::unique_ptr<Priv>(new GSource::Priv(std::make_shared<FileDataProvider>(filePath),
-                                                              cfg_params))) {
+                                                    cfg_params))) {
 
     if (filePath.empty()) {
         util::throw_error(std::logic_error("Cannot create 'GSource' on empty source file name"));
     }
 }
 
-GSource::GSource(std::shared_ptr<IDataProvider> source, const params_container_t& cfg_params) :
+GSource::GSource(std::shared_ptr<IDataProvider> source, const CfgParams& cfg_params) :
      GSource(std::unique_ptr<Priv>(new GSource::Priv(source, cfg_params))) {
 }
 #else
-GSource::GSource(const std::string&, const params_container_t&) {
+GSource::GSource(const std::string&, const CfgParams&) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
-GSource::GSource(std::shared_ptr<IDataProvider>, const params_container_t&) {
+GSource::GSource(std::shared_ptr<IDataProvider>, const CfgParams&) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 #endif

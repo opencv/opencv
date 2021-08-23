@@ -38,7 +38,7 @@ GSource::Priv::Priv() :
     description_is_valid = false;
 }
 
-GSource::Priv::Priv(std::shared_ptr<IDataProvider>, const std::vector<cfg_param>&) :
+GSource::Priv::Priv(std::shared_ptr<IDataProvider>, const std::vector<CfgParam>&) :
     GSource::Priv()
 {
 }

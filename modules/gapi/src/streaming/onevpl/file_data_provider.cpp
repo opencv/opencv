@@ -22,7 +22,7 @@ FileDataProvider::FileDataProvider(const std::string& file_path) :
 
 FileDataProvider::~FileDataProvider() = default;
 
-size_t FileDataProvider::provide_data(size_t out_data_bytes_size, void* out_data) {
+size_t FileDataProvider::fetch_data(size_t out_data_bytes_size, void* out_data) {
     if (empty()) {
         return 0;
     }
@@ -32,7 +32,7 @@ size_t FileDataProvider::provide_data(size_t out_data_bytes_size, void* out_data
         if (feof(source_handle.get())) {
             source_handle.reset();
         } else {
-            throw DataProviderSystemErrorException (errno, "FileDataProvider::provide_data error read");
+            throw DataProviderSystemErrorException (errno, "FileDataProvider::fetch_data error read");
         }
     }
     return ret;

@@ -29,11 +29,39 @@ private:
     std::string reason;
 };
 
+/**
+ * @brief The Data provider interface allows to customize extraction of video data stream used by
+ * gapi::streaming::wip::onevpl::GSource instead of reading stream from file (by default).
+ *
+ * Implementation constructor MUST provide entire valid object.
+ * If error happens implementation SHOULD throw `DataProviderException` kind exceptions
+ *
+ * @note Implementation MUST manage stream resources by itself to avoid any kind of leask.
+ * For implementation example please see `StreamDataProvider` in `tests/streaming/gapi_streaming_tests.cpp`
+ */
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
 
     virtual ~IDataProvider() {};
-    virtual size_t provide_data(size_t out_data_bytes_size, void* out_data) = 0;
+
+    /**
+     * The function is used by onevpl::GSource to extract binary data stream from @ref IDataProvider
+     * implementation.
+     *
+     * It MUST throw `DataProviderException` kind exceptions in fail cases.
+     * It MUST return 0 in EOF which considered as not-fail case.
+     *
+     * @param out_data_bytes_size the available capacity of @ref out_data buffer.
+     * @param out_data the output consumer buffer with capacity @ref out_data_bytes_size.
+     * @return fetched bytes count.
+     */
+    virtual size_t fetch_data(size_t out_data_bytes_size, void* out_data) = 0;
+
+    /**
+     * The function is used by onevpl::GSource to check more binary data availability.
+     *
+     * It MUST return TRUE in case of EOF and NO_THROW exceptions.
+     */
     virtual bool empty() const = 0;
 };
 } // namespace onevpl
