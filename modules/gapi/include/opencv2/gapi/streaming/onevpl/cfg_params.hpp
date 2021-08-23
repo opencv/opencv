@@ -4,8 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#ifndef OPENCV_GAPI_STREAMING_ONEVPL_ONEVPL_CFG_PARAMS_HPP
-#define OPENCV_GAPI_STREAMING_ONEVPL_ONEVPL_CFG_PARAMS_HPP
+#ifndef OPENCV_GAPI_STREAMING_ONEVPL_CFG_PARAMS_HPP
+#define OPENCV_GAPI_STREAMING_ONEVPL_CFG_PARAMS_HPP
 
 #include <map>
 #include <memory>
@@ -17,8 +17,9 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
-struct GAPI_EXPORTS oneVPL_cfg_param {
+struct GAPI_EXPORTS cfg_param {
     using name_t = std::string;
     using value_t = cv::util::variant<uint8_t, int8_t,
                                       uint16_t, int16_t,
@@ -29,8 +30,8 @@ struct GAPI_EXPORTS oneVPL_cfg_param {
                                       void*,
                                       std::string>;
     template<typename ValueType>
-    static oneVPL_cfg_param create(const std::string& name, ValueType&& value, bool is_major = true) {
-        oneVPL_cfg_param param(name, oneVPL_cfg_param::value_t(std::forward<ValueType>(value)), is_major);
+    static cfg_param create(const std::string& name, ValueType&& value, bool is_major = true) {
+        cfg_param param(name, cfg_param::value_t(std::forward<ValueType>(value)), is_major);
         return param;
     }
 
@@ -39,22 +40,23 @@ struct GAPI_EXPORTS oneVPL_cfg_param {
     const name_t& get_name() const;
     const value_t& get_value() const;
     bool is_major() const;
-    bool operator==(const oneVPL_cfg_param& src) const;
-    bool operator< (const oneVPL_cfg_param& src) const;
-    bool operator!=(const oneVPL_cfg_param& src) const;
+    bool operator==(const cfg_param& src) const;
+    bool operator< (const cfg_param& src) const;
+    bool operator!=(const cfg_param& src) const;
 
-    oneVPL_cfg_param& operator=(const oneVPL_cfg_param& src);
-    oneVPL_cfg_param& operator=(oneVPL_cfg_param&& src);
-    oneVPL_cfg_param(const oneVPL_cfg_param& src);
-    oneVPL_cfg_param(oneVPL_cfg_param&& src);
-    ~oneVPL_cfg_param();
+    cfg_param& operator=(const cfg_param& src);
+    cfg_param& operator=(cfg_param&& src);
+    cfg_param(const cfg_param& src);
+    cfg_param(cfg_param&& src);
+    ~cfg_param();
 private:
-    oneVPL_cfg_param(const std::string& param_name, value_t&& param_value, bool is_major_param);
+    cfg_param(const std::string& param_name, value_t&& param_value, bool is_major_param);
     std::shared_ptr<Priv> m_priv;
 };
 
+} //namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_STREAMING_ONEVPL_ONEVPL_CFG_PARAMS_HPP
+#endif // OPENCV_GAPI_STREAMING_ONEVPL_CFG_PARAMS_HPP

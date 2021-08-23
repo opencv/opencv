@@ -9,7 +9,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/render.hpp>
-#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/source.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
 
 const std::string about =
@@ -157,7 +157,7 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
 } // namespace custom
 
 namespace cfg {
-typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &line);
+typename cv::gapi::wip::onevpl::cfg_param create_from_string(const std::string &line);
 }
 
 int main(int argc, char *argv[]) {
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
 
     // get oneVPL cfg params from cmd
     std::stringstream params_list(cmd.get<std::string>("cfg_params"));
-    std::vector<cv::gapi::wip::oneVPL_cfg_param> source_cfgs;
+    std::vector<cv::gapi::wip::onevpl::cfg_param> source_cfgs;
     try {
         std::string line;
         while (std::getline(params_list, line, ';')) {
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
-        cap = cv::gapi::wip::make_vpl_src(file_path, source_cfgs);
+        cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
@@ -272,22 +272,22 @@ int main(int argc, char *argv[]) {
 
 
 namespace cfg {
-typename cv::gapi::wip::oneVPL_cfg_param create_from_string(const std::string &line) {
+typename cv::gapi::wip::onevpl::cfg_param create_from_string(const std::string &line) {
     using namespace cv::gapi::wip;
 
     if (line.empty()) {
-        throw std::runtime_error("Cannot parse oneVPL_cfg_param from emply line");
+        throw std::runtime_error("Cannot parse cfg_param from emply line");
     }
 
     std::string::size_type name_endline_pos = line.find(':');
     if (name_endline_pos == std::string::npos) {
-        throw std::runtime_error("Cannot parse oneVPL_cfg_param from: " + line +
+        throw std::runtime_error("Cannot parse cfg_param from: " + line +
                                  "\nExpected separator \":\"");
     }
 
     std::string name = line.substr(0, name_endline_pos);
     std::string value = line.substr(name_endline_pos + 1);
 
-    return cv::gapi::wip::oneVPL_cfg_param::create(name, value);
+    return cv::gapi::wip::onevpl::cfg_param::create(name, value);
 }
 }

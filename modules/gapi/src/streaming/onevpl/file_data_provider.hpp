@@ -8,12 +8,12 @@
 #define GAPI_STREAMING_ONEVPL_ONEVPL_FILE_DATA_PROVIDER_HPP
 #include <stdio.h>
 
-#include <opencv2/gapi/streaming/onevpl/onevpl_data_provider_interface.hpp>
+#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 
 namespace cv {
 namespace gapi {
 namespace wip {
-
+namespace onevpl {
 struct FileDataProvider : public IDataProvider {
 
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
@@ -25,6 +25,7 @@ struct FileDataProvider : public IDataProvider {
 private:
     file_ptr source_handle;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

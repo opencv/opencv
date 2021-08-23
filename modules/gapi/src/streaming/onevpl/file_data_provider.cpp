@@ -5,11 +5,12 @@
 // Copyright (C) 2021 Intel Corporation
 #include <errno.h>
 
-#include "streaming/onevpl/onevpl_file_data_provider.hpp"
+#include "streaming/onevpl/file_data_provider.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 FileDataProvider::FileDataProvider(const std::string& file_path) :
     source_handle(fopen(file_path.c_str(), "rb"), &fclose) {
@@ -40,6 +41,7 @@ size_t FileDataProvider::provide_data(size_t out_data_bytes_size, void* out_data
 bool FileDataProvider::empty() const {
     return !source_handle;
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

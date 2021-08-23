@@ -14,6 +14,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 struct GAPI_EXPORTS DataProviderException : public std::exception {
     virtual ~DataProviderException() {};
@@ -35,6 +36,7 @@ struct GAPI_EXPORTS IDataProvider {
     virtual size_t provide_data(size_t out_data_bytes_size, void* out_data) = 0;
     virtual bool empty() const = 0;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

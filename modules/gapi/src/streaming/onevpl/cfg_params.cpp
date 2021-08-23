@@ -6,15 +6,16 @@
 
 #include <opencv2/gapi/util/throw.hpp>
 
-#include <opencv2/gapi/streaming/onevpl/onevpl_cfg_params.hpp>
+#include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 namespace util {
 struct variant_comparator : cv::util::static_visitor<bool, variant_comparator> {
-    variant_comparator(const oneVPL_cfg_param::value_t& rhs_value) :
+    variant_comparator(const cfg_param::value_t& rhs_value) :
         rhs(rhs_value) {}
 
     template<typename ValueType>
@@ -22,20 +23,20 @@ struct variant_comparator : cv::util::static_visitor<bool, variant_comparator> {
         return lhs < cv::util::get<ValueType>(rhs);
     }
 private:
-    const oneVPL_cfg_param::value_t& rhs;
+    const cfg_param::value_t& rhs;
 };
-}
+} // namespace util
 
-struct oneVPL_cfg_param::Priv {
-    Priv(const std::string& param_name, oneVPL_cfg_param::value_t&& param_value, bool is_major_param) :
+struct cfg_param::Priv {
+    Priv(const std::string& param_name, cfg_param::value_t&& param_value, bool is_major_param) :
         name(param_name), value(std::forward<value_t>(param_value)), major_flag(is_major_param) {
     }
 
-    const oneVPL_cfg_param::name_t& get_name_impl() const {
+    const cfg_param::name_t& get_name_impl() const {
         return name;
     }
 
-    const oneVPL_cfg_param::value_t& get_value_impl() const {
+    const cfg_param::value_t& get_value_impl() const {
         return value;
     }
 
@@ -53,8 +54,8 @@ struct oneVPL_cfg_param::Priv {
         }
 
         //TODO implement operator < for cv::util::variant
-        const oneVPL_cfg_param::value_t& lvar = get_value_impl();
-        const oneVPL_cfg_param::value_t& rvar = src.get_value_impl();
+        const cfg_param::value_t& lvar = get_value_impl();
+        const cfg_param::value_t& rvar = src.get_value_impl();
         if (lvar.index() < rvar.index()) {
             return true;
         } else if (lvar.index() > rvar.index()) {
@@ -74,62 +75,63 @@ struct oneVPL_cfg_param::Priv {
         return !(*this == src);
     }
 
-    oneVPL_cfg_param::name_t name;
-    oneVPL_cfg_param::value_t value;
+    cfg_param::name_t name;
+    cfg_param::value_t value;
     bool major_flag;
 };
 
-oneVPL_cfg_param::oneVPL_cfg_param (const std::string& param_name, value_t&& param_value, bool is_major_param) :
+cfg_param::cfg_param (const std::string& param_name, value_t&& param_value, bool is_major_param) :
     m_priv(new Priv(param_name, std::move(param_value), is_major_param)) {
 }
 
-oneVPL_cfg_param::~oneVPL_cfg_param() = default;
+cfg_param::~cfg_param() = default;
 
-oneVPL_cfg_param& oneVPL_cfg_param::operator=(const oneVPL_cfg_param& src) {
+cfg_param& cfg_param::operator=(const cfg_param& src) {
     if (this != &src) {
         m_priv = src.m_priv;
     }
     return *this;
 }
 
-oneVPL_cfg_param& oneVPL_cfg_param::operator=(oneVPL_cfg_param&& src) {
+cfg_param& cfg_param::operator=(cfg_param&& src) {
     if (this != &src) {
         m_priv = std::move(src.m_priv);
     }
     return *this;
 }
 
-oneVPL_cfg_param::oneVPL_cfg_param(const oneVPL_cfg_param& src) :
+cfg_param::cfg_param(const cfg_param& src) :
     m_priv(src.m_priv) {
 }
 
-oneVPL_cfg_param::oneVPL_cfg_param(oneVPL_cfg_param&& src) :
+cfg_param::cfg_param(cfg_param&& src) :
     m_priv(std::move(src.m_priv)) {
 }
 
-const oneVPL_cfg_param::name_t& oneVPL_cfg_param::get_name() const {
+const cfg_param::name_t& cfg_param::get_name() const {
     return m_priv->get_name_impl();
 }
 
-const oneVPL_cfg_param::value_t& oneVPL_cfg_param::get_value() const {
+const cfg_param::value_t& cfg_param::get_value() const {
     return m_priv->get_value_impl();
 }
 
-bool oneVPL_cfg_param::is_major() const {
+bool cfg_param::is_major() const {
     return m_priv->is_major_impl();
 }
 
-bool oneVPL_cfg_param::operator< (const oneVPL_cfg_param& src) const {
+bool cfg_param::operator< (const cfg_param& src) const {
     return *m_priv < *src.m_priv;
 }
 
-bool oneVPL_cfg_param::operator==(const oneVPL_cfg_param& src) const {
+bool cfg_param::operator==(const cfg_param& src) const {
     return *m_priv == *src.m_priv;
 }
 
-bool oneVPL_cfg_param::operator!=(const oneVPL_cfg_param& src) const {
+bool cfg_param::operator!=(const cfg_param& src) const {
     return *m_priv != *src.m_priv;
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
