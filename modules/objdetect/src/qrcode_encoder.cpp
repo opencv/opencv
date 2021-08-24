@@ -13,12 +13,10 @@ using std::vector;
 const int MAX_PAYLOAD_LEN = 8896;
 const int MAX_FORMAT_LENGTH = 15;
 const int MAX_VERSION_LENGTH = 18;
-const int ERROR_MODE_OCCUR = 99999;
 const int MODE_BITS_NUM = 4;
 const uint8_t INVALID_REGION_VALUE = 110;
 
 static void decToBin(const int dec_number, const int total_bits, std::vector<uint8_t> &bin_number);
-static int eccLevelToCode(int level);
 static uint8_t gfPow(uint8_t x, int power);
 static uint8_t gfMul(const uint8_t x, const uint8_t y);
 static void gfPolyMul(const vector<uint8_t> &p, const vector<uint8_t> &q, vector<uint8_t> &product);
@@ -39,38 +37,6 @@ static void writeDecNumber(const int dec_number, const int total_bits, vector<ui
     std::vector<uint8_t> bin_number(total_bits);
     decToBin(dec_number, total_bits, bin_number);
     output_bits.insert(output_bits.end(), bin_number.begin(), bin_number.end());
-}
-
-static int eccLevelToCode(int level)
-{
-    switch (level)
-    {
-        case CORRECT_LEVEL_L:
-            return 0b01;
-        case CORRECT_LEVEL_M:
-            return 0b00;
-        case CORRECT_LEVEL_Q:
-            return 0b11;
-        case CORRECT_LEVEL_H:
-            return 0b10;
-    }
-    CV_Error( Error::StsBadArg,
-        "Error correction level is incorrect. Available levels are"
-        "CORRECT_LEVEL_L, CORRECT_LEVEL_M, CORRECT_LEVEL_Q, CORRECT_LEVEL_H." );
-}
-
-struct AutoEncodePerBlock
-{
-    int block_load_len;
-    vector<uint8_t>	block_load;
-    int encoding_mode;
-    AutoEncodePerBlock();
-};
-
-AutoEncodePerBlock::AutoEncodePerBlock()
-{
-    block_load_len = encoding_mode = 0;
-    block_load.reserve(MAX_PAYLOAD_LEN);
 }
 
 static uint8_t gfPow(uint8_t x, int power)
@@ -154,6 +120,27 @@ static int getBits(const int bits, const vector<uint8_t> &payload, int &pay_inde
     return result;
 }
 
+static int mapSymbol(char c)
+{
+    if (c >= '0' && c <= '9')
+        return (int)(c - '0');
+    if (c >= 'A' && c <= 'Z')
+        return (int)(c - 'A') + 10;
+    switch (c)
+    {
+        case ' ': return 36 + 0;
+        case '$': return 36 + 1;
+        case '%': return 36 + 2;
+        case '*': return 36 + 3;
+        case '+': return 36 + 4;
+        case '-': return 36 + 5;
+        case '.': return 36 + 6;
+        case '/': return 36 + 7;
+        case ':': return 36 + 8;
+    }
+    return -1;
+}
+
 QRCodeEncoder::QRCodeEncoder()
 {
     // nothing
@@ -167,23 +154,20 @@ QRCodeEncoder::~QRCodeEncoder()
 QRCodeEncoder::Params::Params()
 {
     version = 0;
-    correction_level = 0;
-    mode = -1;
+    correction_level = CORRECT_LEVEL_L;
+    mode = MODE_AUTO;
     structure_number = 1;
 }
 
 class QRCodeEncoderImpl : public QRCodeEncoder
 {
 public:
-    // QRCodeEncoderImpl() {};
-    // virtual ~QRCodeEncoderImpl() {};
-    QRCodeEncoderImpl(const QRCodeEncoder::Params& parameters)
-        : params(parameters)
+    QRCodeEncoderImpl(const QRCodeEncoder::Params& parameters) : params(parameters)
     {
-        version_level = params.version;
-        ecc_level = params.correction_level;
-        mode_type = params.mode;
-        struct_num = params.structure_number;
+        version_level = parameters.version;
+        ecc_level = parameters.correction_level;
+        mode_type = parameters.mode;
+        struct_num = parameters.structure_number;
     }
 
     void encode(String encoded_info, OutputArray qrcode) CV_OVERRIDE;
@@ -191,15 +175,14 @@ public:
     QRCodeEncoder::Params params;
 protected:
     int version_level;
-    int ecc_level;
-    int mode_type;
+    CorrectionLevel ecc_level;
+    EncodeMode mode_type;
     int struct_num;
     int version_size;
     int mask_type;
-    Size output_size;
+    uint32_t eci_assignment_number;
     vector<uint8_t> format;
     vector<uint8_t> version_reserved;
-    std::string input_info;
     vector<uint8_t>	payload;
     vector<uint8_t>	rearranged_data;
     Mat original;
@@ -212,13 +195,18 @@ protected:
     Ptr<VersionInfo> version_info;
     Ptr<BlockParams> cur_ecc_params;
 
+    bool isNumeric(const std::string& input);
+    bool isAlphaNumeric(const std::string& input);
     bool encodeByte(const std::string& input, vector<uint8_t> &output);
     bool encodeAlpha(const std::string& input, vector<uint8_t> &output);
     bool encodeNumeric(const std::string& input, vector<uint8_t> &output);
+    bool encodeECI(const std::string& input, vector<uint8_t> &output);
+    bool encodeKanji(const std::string& input, vector<uint8_t> &output);
     bool encodeAuto(const std::string& input, vector<uint8_t> &output);
-    bool encodeStructure(const std::string& input, vector<uint8_t> &payload);
+    bool encodeStructure(const std::string& input, vector<uint8_t> &output);
+    int eccLevelToCode(CorrectionLevel level);
     void padBitStream();
-    bool stringToBits();
+    bool stringToBits(const std::string& input_info);
     void eccGenerate(vector<vector<uint8_t> > &data_blocks, vector<vector<uint8_t> > &ecc_blocks);
     void rearrangeBlocks(const vector<vector<uint8_t> > &data_blocks, const vector<vector<uint8_t> > &ecc_blocks);
     void writeReservedArea();
@@ -230,14 +218,30 @@ protected:
     void fillReserved(const vector<uint8_t> &format_array, Mat &masked);
     void maskData(const int mask_type_num, Mat &masked);
     void findAutoMaskType();
-    QREncodeMode fncModeSelect(const std::string& input);
     bool estimateVersion(const int input_length, vector<int> &possible_version);
-    bool generateBlock(const std::string &input, int mode, AutoEncodePerBlock &block);
     int versionAuto(const std::string &input_str);
     int findVersionCapacity(const int input_length, const int ecc, const int version_begin, const int version_end);
-    void generatingProcess(Mat &qrcode);
+    void generatingProcess(const std::string& input, Mat &qrcode);
     void generateQR(const std::string& input);
 };
+
+int QRCodeEncoderImpl::eccLevelToCode(CorrectionLevel level)
+{
+    switch (level)
+    {
+        case CORRECT_LEVEL_L:
+            return 0b01;
+        case CORRECT_LEVEL_M:
+            return 0b00;
+        case CORRECT_LEVEL_Q:
+            return 0b11;
+        case CORRECT_LEVEL_H:
+            return 0b10;
+    }
+    CV_Error( Error::StsBadArg,
+        "Error correction level is incorrect. Available levels are"
+        "CORRECT_LEVEL_L, CORRECT_LEVEL_M, CORRECT_LEVEL_Q, CORRECT_LEVEL_H." );
+}
 
 int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc, const int version_begin, const int version_end)
 {
@@ -245,14 +249,13 @@ int QRCodeEncoderImpl::findVersionCapacity(const int input_length, const int ecc
     const int byte_len = 8;
     version_index = -1;
 
-    Ptr<BlockParams> tmp_ecc_params;
     for (int i = version_begin; i < version_end; i++)
     {
-        tmp_ecc_params = makePtr<BlockParams>(version_info_database[i].ecc[ecc]);
+        Ptr<BlockParams> tmp_ecc_params = makePtr<BlockParams>(version_info_database[i].ecc[ecc]);
         data_codewords = tmp_ecc_params->data_codewords_in_G1 * tmp_ecc_params->num_blocks_in_G1 +
                          tmp_ecc_params->data_codewords_in_G2 * tmp_ecc_params->num_blocks_in_G2;
 
-        if (data_codewords * byte_len > input_length)
+        if (data_codewords * byte_len >= input_length)
         {
             version_index = i;
             break;
@@ -324,7 +327,6 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
 
 void QRCodeEncoderImpl::generateQR(const std::string &input)
 {
-    int v = version_level;
     if (struct_num > 1)
     {
         parity = 0;
@@ -339,16 +341,22 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         total_num = (uint8_t) struct_num - 1;
     }
     int segment_len = (int) ceil((int) input.length() / struct_num);
-    Mat qrcode;
+
     for (int i = 0; i < struct_num; i++)
     {
         sequence_num = (uint8_t) i;
         int segment_begin = i * segment_len;
         int segemnt_end = min((i + 1) * segment_len, (int) input.length()) - 1;
-        input_info = input.substr(segment_begin, segemnt_end - segment_begin + 1);
-        version_level = (v > 0 ? v : versionAuto(input_info));
+        std::string input_info = input.substr(segment_begin, segemnt_end - segment_begin + 1);
+        int v = versionAuto(input_info);
+        if (version_level == 0)
+            version_level = v;
+        else if (version_level < v)
+            CV_Error(Error::StsBadArg, "The given version is not suitable for the given input string length ");
+
         payload.clear();
         payload.reserve(MAX_PAYLOAD_LEN);
+        final_qrcodes.clear();
         format = vector<uint8_t> (15, 255);
         version_reserved = vector<uint8_t> (18, 255);
         version_size = (21 + (version_level - 1) * 4);
@@ -356,8 +364,8 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         cur_ecc_params = makePtr<BlockParams>(version_info->ecc[ecc_level]);
         original = Mat(Size(version_size, version_size), CV_8UC1, Scalar(255));
         masked_data = original.clone();
-        qrcode = masked_data.clone();
-        generatingProcess(qrcode);
+        Mat qrcode = masked_data.clone();
+        generatingProcess(input_info, qrcode);
         final_qrcodes.push_back(qrcode);
     }
 }
@@ -419,7 +427,7 @@ void QRCodeEncoderImpl::versionInfoGenerate(const int version_level_num, vector<
 
 bool QRCodeEncoderImpl::encodeAlpha(const std::string& input, vector<uint8_t>& output)
 {
-    writeDecNumber(QR_MODE_ALPHANUMERIC, MODE_BITS_NUM, output);
+    writeDecNumber(MODE_ALPHANUMERIC, MODE_BITS_NUM, output);
 
     int length_bits_num = 13;
     if (version_level < 10)
@@ -430,16 +438,13 @@ bool QRCodeEncoderImpl::encodeAlpha(const std::string& input, vector<uint8_t>& o
     int str_len = int(input.length());
     writeDecNumber(str_len, length_bits_num, output);
 
-    std::string alpha_map =
-        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
     const int alpha_symbol_bits = 11;
     const int residual_bits = 6;
     for (int i = 0; i < str_len - 1; i += 2)
     {
-        int index_1 = (int)alpha_map.find(input[i]);
-        int index_2 = (int)alpha_map.find(input[i + 1]);
-        if(i + 1 >= str_len)
-            break;
+        int index_1 = mapSymbol(input[i]);
+        int index_2 = mapSymbol(input[i + 1]);
+
         if(index_1 == -1 || (index_2 == -1 && i + 1 < str_len))
             return false;
         int alpha = index_1 * 45 + index_2;
@@ -448,7 +453,7 @@ bool QRCodeEncoderImpl::encodeAlpha(const std::string& input, vector<uint8_t>& o
     }
     if (str_len % 2 != 0)
     {
-        int index_residual_elem = (int)alpha_map.find(*input.rbegin());
+        int index_residual_elem = mapSymbol(*input.rbegin());
         if(index_residual_elem == -1)
             return false;
 
@@ -459,7 +464,7 @@ bool QRCodeEncoderImpl::encodeAlpha(const std::string& input, vector<uint8_t>& o
 
 bool QRCodeEncoderImpl::encodeByte(const std::string& input, vector<uint8_t>& output)
 {
-    writeDecNumber(QR_MODE_BYTE, MODE_BITS_NUM, output);
+    writeDecNumber(MODE_BYTE, MODE_BITS_NUM, output);
 
     int length_bits_num = 8;
     if (version_level > 9)
@@ -471,14 +476,14 @@ bool QRCodeEncoderImpl::encodeByte(const std::string& input, vector<uint8_t>& ou
     const int byte_symbol_bits = 8;
     for (int i = 0; i < str_len; i++)
     {
-        writeDecNumber(int(input[i]), byte_symbol_bits, output);
+        writeDecNumber(uint8_t(input[i]), byte_symbol_bits, output);
     }
     return true;
 }
 
 bool QRCodeEncoderImpl::encodeNumeric(const std::string& input,vector<uint8_t>& output)
 {
-    writeDecNumber(QR_MODE_NUMERIC, MODE_BITS_NUM, output);
+    writeDecNumber(MODE_NUMERIC, MODE_BITS_NUM, output);
 
     int length_bits_num = 10;
     if (version_level >= 27)
@@ -526,11 +531,86 @@ bool QRCodeEncoderImpl::encodeNumeric(const std::string& input,vector<uint8_t>& 
     return true;
 }
 
+bool QRCodeEncoderImpl::encodeECI(const std::string& input, vector<uint8_t>& output)
+{
+    writeDecNumber(MODE_ECI, MODE_BITS_NUM, output);
+    const uint32_t assign_value_range[3] = {127, 16383, 999999};
+
+    // by adding other ECI modes `eci_assignment_number` can be moved to algorithm parameters
+    eci_assignment_number = ECI_UTF8; // utf-8
+    int codewords = 1;
+    if(eci_assignment_number > assign_value_range[2])
+        return false;
+    if (eci_assignment_number > assign_value_range[1])
+        codewords = 3;
+    else if (eci_assignment_number > assign_value_range[0])
+        codewords = 2;
+
+    const int bits = 8;
+    switch (codewords)
+    {
+        case 1:
+            writeDecNumber(0, codewords, output);
+            writeDecNumber(eci_assignment_number, codewords * bits - 1, output);
+            break;
+        case 2:
+            writeDecNumber(2, codewords, output);
+            writeDecNumber(eci_assignment_number, codewords * bits - 2, output);
+            break;
+        case 3:
+            writeDecNumber(6, codewords, output);
+            writeDecNumber(eci_assignment_number, codewords * bits - 3, output);
+            break;
+    }
+
+    encodeByte(input, output);
+    return true;
+}
+
+bool QRCodeEncoderImpl::encodeKanji(const std::string& input, vector<uint8_t>& output)
+{
+    writeDecNumber(MODE_KANJI, MODE_BITS_NUM, output);
+
+    int length_bits_num = 8;
+    if (version_level >= 10)
+        length_bits_num = 10;
+    else if (version_level >= 27)
+        length_bits_num = 12;
+
+    int str_len = int(input.length()) / 2;
+    writeDecNumber(str_len, length_bits_num, output);
+
+    const int kanji_symbol_bits = 13;
+    int i = 0;
+    while(i < str_len * 2)
+    {
+        uint16_t high_byte = (uint16_t)(input[i] & 0xff);
+        uint16_t low_byte = (uint16_t)(input[i+1] & 0xff);
+        uint16_t per_char = (high_byte << 8) + (low_byte);
+
+        if(0x8140 <= per_char && per_char <= 0x9FFC)
+        {
+            per_char -= 0x8140;
+        }
+        else if(0xE040 <= per_char && per_char <= 0xEBBF)
+        {
+            per_char -= 0xC140;
+        }
+        uint16_t new_high = per_char >> 8;
+        uint16_t result = new_high * 0xC0;
+        result += (per_char & 0xFF);
+
+        writeDecNumber(result, kanji_symbol_bits, output);
+        i += 2;
+    }
+    return true;
+}
+
 bool QRCodeEncoderImpl::encodeStructure(const std::string& input, vector<uint8_t>& output)
 {
     const int num_field = 4;
     const int checksum_field = 8;
-    writeDecNumber(QR_MODE_STRUCTURED_APPEND, MODE_BITS_NUM, output);
+    writeDecNumber(MODE_STRUCTURED_APPEND, MODE_BITS_NUM, output);
     writeDecNumber(sequence_num, num_field, output);
     writeDecNumber(total_num, num_field, output);
     writeDecNumber(parity, checksum_field, output);
@@ -538,132 +618,34 @@ bool QRCodeEncoderImpl::encodeStructure(const std::string& input, vector<uint8_t
     return encodeAuto(input, output);
 }
 
-bool QRCodeEncoderImpl::generateBlock(const std::string& input, int mode, struct AutoEncodePerBlock& block)
+bool QRCodeEncoderImpl::isNumeric(const std::string& input)
 {
-    block.block_load_len = 0;
-    block.encoding_mode = mode;
-    block.block_load.clear();
-    bool result = true;
-    switch (mode)
+    for (size_t i = 0; i < input.length(); i++)
     {
-        case QR_MODE_NUMERIC:
-            result = encodeNumeric(input, block.block_load);
-            break;
-        case QR_MODE_ALPHANUMERIC:
-            result = encodeAlpha(input, block.block_load);
-            break;
-        case QR_MODE_BYTE:
-            result = encodeByte(input, block.block_load);
-            break;
+        if (input[i] < '0' || input[i] > '9')
+            return false;
     }
-    block.block_load_len = (int)block.block_load.size();
-    return result;
+    return true;
 }
 
-struct EncodingMethods
+bool QRCodeEncoderImpl::isAlphaNumeric(const std::string& input)
 {
-    int len;
-    vector<AutoEncodePerBlock> blocks;
-    EncodingMethods()
+    for (size_t i = 0; i < input.length(); i++)
     {
-        len = 0;
-        blocks.clear();
+        if (mapSymbol(input[i]) == -1)
+            return false;
     }
-    int sum_len()
-    {
-        int bits_len = 0;
-        for (size_t i = 0; i < blocks.size(); i++)
-        {
-            bits_len += (int)blocks[i].block_load.size();
-        }
-        return bits_len;
-    }
-};
+    return true;
+}
 
 bool QRCodeEncoderImpl::encodeAuto(const std::string& input, vector<uint8_t>& output)
 {
-    std::string mode_char_set[2];
-    mode_char_set[0] = "0123456789";
-    mode_char_set[1] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
-    vector<EncodingMethods> strategy;
-    AutoEncodePerBlock last_method;
-    EncodingMethods head;
-    strategy.push_back(head);
-    size_t len = input.length();
-    std::string cur_string = "";
-    for (size_t i = 0; i < len; i++)
-    {
-        cur_string += char (input[i]);
-        if (strategy.size() == 1)
-        {
-            EncodingMethods tmp;
-            if ((int)mode_char_set[0].find(input[i]) != -1)
-            {
-                generateBlock(cur_string, QR_MODE_NUMERIC, last_method);
-            }
-            else if ((int)mode_char_set[1].find(input[i]) != -1)
-            {
-                generateBlock(cur_string, QR_MODE_ALPHANUMERIC, last_method);
-            }
-            else
-            {
-                generateBlock(cur_string, QR_MODE_BYTE, last_method);
-            }
-            tmp.blocks.push_back(last_method);
-            tmp.len = tmp.sum_len();
-            strategy.push_back(tmp);
-        }
-        else
-        {
-            size_t str_len = cur_string.length();
-            EncodingMethods previous;
-            EncodingMethods new_method;
-            new_method.len = ERROR_MODE_OCCUR;
-            for (size_t j = 0; j < str_len; j++)
-            {
-                previous = strategy[j];
-                std::string sub_string = cur_string.substr(j, str_len - j);
-                const int blocks_num = 3;
-                AutoEncodePerBlock blocks[blocks_num];
-                if (!generateBlock(sub_string, QR_MODE_NUMERIC, blocks[0]))
-                {
-                    blocks[0].block_load_len = ERROR_MODE_OCCUR;
-                }
-                if (!generateBlock(sub_string, QR_MODE_ALPHANUMERIC, blocks[1]))
-                {
-                    blocks[1].block_load_len = ERROR_MODE_OCCUR;
-                }
-                generateBlock(sub_string, QR_MODE_BYTE, blocks[2]);
-                int index = 0;
-                int min_len = ERROR_MODE_OCCUR;
-                for (int tmp_index = 0; tmp_index < blocks_num; tmp_index++)
-                {
-                    if (blocks[tmp_index].block_load_len + previous.len < min_len)
-                    {
-                        index = tmp_index;
-                        min_len = blocks[tmp_index].block_load_len + previous.len;
-                    }
-                }
-                previous.blocks.push_back(blocks[index]);
-                previous.len = previous.sum_len();
-
-                if(previous.len < new_method.len)
-                {
-                    new_method = previous;
-                }
-            }
-            strategy.push_back(new_method);
-        }
-    }
-    EncodingMethods result = strategy[strategy.size() - 1];
-    for (size_t i = 0; i < result.blocks.size(); i++)
-    {
-        AutoEncodePerBlock result_block = result.blocks[i];
-        for (int j = 0; j < result_block.block_load_len; j++)
-        {
-            output.push_back(result_block.block_load[j]);
-        }
-    }
+    if (isNumeric(input))
+        encodeNumeric(input, output);
+    else if (isAlphaNumeric(input))
+        encodeAlpha(input, output);
+    else
+        encodeByte(input, output);
     return true;
 }
 
@@ -707,18 +689,22 @@ void QRCodeEncoderImpl::padBitStream()
     }
 }
 
-bool QRCodeEncoderImpl::stringToBits()
+bool QRCodeEncoderImpl::stringToBits(const std::string& input_info)
 {
     switch (mode_type)
     {
-        case QR_MODE_NUMERIC:
+        case MODE_NUMERIC:
             return encodeNumeric(input_info, payload);
-        case QR_MODE_ALPHANUMERIC:
+        case MODE_ALPHANUMERIC:
             return encodeAlpha(input_info, payload);
-        case QR_MODE_STRUCTURED_APPEND:
+        case MODE_STRUCTURED_APPEND:
             return encodeStructure(input_info, payload);
-        case QR_MODE_BYTE:
+        case MODE_BYTE:
             return encodeByte(input_info, payload);
+        case MODE_ECI:
+            return encodeECI(input_info, payload);
+        case MODE_KANJI:
+            return encodeKanji(input_info, payload);
         default:
             return encodeAuto(input_info, payload);
     }
@@ -1224,10 +1210,10 @@ void QRCodeEncoderImpl::structureFinalMessage()
     fillReserved(format, masked_data);
 }
 
-void QRCodeEncoderImpl::generatingProcess(Mat& final_result)
+void QRCodeEncoderImpl::generatingProcess(const std::string& input, Mat& final_result)
 {
     vector<vector<uint8_t> > data_blocks, ecc_blocks;
-    if (!stringToBits())
+    if (!stringToBits(input))
     {
         return;
     }
@@ -1244,8 +1230,8 @@ void QRCodeEncoderImpl::encode(String input, OutputArray output)
 {
     if (output.kind() != _InputArray::MAT)
         CV_Error(Error::StsBadArg, "Output should be cv::Mat");
-    CV_Check(mode_type, mode_type != QR_MODE_STRUCTURED_APPEND, "For structure append mode please call encodeStructuredAppend() method");
-    CV_Check(struct_num, struct_num == 1, "For structure append mode please call encodeStructuredAppend() method");
+    CV_Check((int)mode_type, mode_type != MODE_STRUCTURED_APPEND, "For structured append mode please call encodeStructuredAppend() method");
+    CV_Check(struct_num, struct_num == 1, "For structured append mode please call encodeStructuredAppend() method");
     generateQR(input);
     CV_Assert(!final_qrcodes.empty());
     output.assign(final_qrcodes[0]);
@@ -1255,7 +1241,7 @@ void QRCodeEncoderImpl::encodeStructuredAppend(String input, OutputArrayOfArrays
 {
     if (output.kind() != _InputArray::STD_VECTOR_MAT)
         CV_Error(Error::StsBadArg, "Output should be vector of cv::Mat");
-    mode_type = QR_MODE_STRUCTURED_APPEND;
+    mode_type = MODE_STRUCTURED_APPEND;
     generateQR(input);
     CV_Assert(!final_qrcodes.empty());
     output.create((int)final_qrcodes.size(), 1, final_qrcodes[0].type());

@@ -32,6 +32,7 @@ struct VersionInfo
 /** numeric_mode;
     alpha_mode;
     byte_mode;
+    kanji mode;
 */
 struct ECLevelCapacity
 {
@@ -857,5 +858,3 @@ static const uint8_t gf_log[256] = {
         0x74, 0xd6, 0xf4, 0xea, 0xa8, 0x50, 0x58, 0xaf
 };
 }
-
-
