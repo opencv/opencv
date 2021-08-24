@@ -90,9 +90,7 @@ class houghcircles_test(NewOpenCVTests):
 
         circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT_ALT, 1, 10, np.array([]), 300, 0.9, 1, 30)
 
-        self.assertEqual(circles.shape[0], 1)
-        self.assertEqual(circles.shape[1], 18)
-        self.assertEqual(circles.shape[2], 3)
+        self.assertEqual(circles.shape, (1, 18, 3))
 
         circles = circles[0]
 
