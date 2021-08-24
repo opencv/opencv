@@ -261,6 +261,7 @@ try:
                 if curr_frame_number == max_num_frames:
                     break
 
+
         def test_desync(self):
             path = self.find_file('cv/video/768x576.avi', [os.environ['OPENCV_TEST_DATA_PATH']])
 
@@ -305,6 +306,49 @@ try:
             self.assertLess(0, proc_num_frames)
             self.assertLess(desync_out_counter, out_counter)
             self.assertLess(0, none_counter)
+
+
+        def test_compile_streaming_empty(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            comp.compileStreaming()
+
+
+        def test_compile_streaming_args(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            comp.compileStreaming(cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
+
+
+        def test_compile_streaming_descr_of(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            img = np.zeros((3,300,300), dtype=np.float32)
+            comp.compileStreaming(cv.gapi.descr_of(img))
+
+
+        def test_compile_streaming_descr_of_and_args(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            img = np.zeros((3,300,300), dtype=np.float32)
+            comp.compileStreaming(cv.gapi.descr_of(img),
+                    cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
+
+
+        def test_compile_streaming_meta(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            img = np.zeros((3,300,300), dtype=np.float32)
+            comp.compileStreaming([cv.GMatDesc(cv.CV_8U, 3, (300, 300))])
+
+
+        def test_compile_streaming_meta_and_args(self):
+            g_in = cv.GMat()
+            comp = cv.GComputation(g_in, cv.gapi.medianBlur(g_in, 3))
+            img = np.zeros((3,300,300), dtype=np.float32)
+            comp.compileStreaming([cv.GMatDesc(cv.CV_8U, 3, (300, 300))],
+                    cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
+
 
 
 except unittest.SkipTest as e:

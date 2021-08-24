@@ -295,3 +295,5 @@ cv.gapi.wip.draw.Line = cv.gapi_wip_draw_Line
 cv.gapi.wip.draw.Mosaic = cv.gapi_wip_draw_Mosaic
 cv.gapi.wip.draw.Image = cv.gapi_wip_draw_Image
 cv.gapi.wip.draw.Poly = cv.gapi_wip_draw_Poly
+
+cv.gapi.streaming.queue_capacity = cv.gapi_streaming_queue_capacity
