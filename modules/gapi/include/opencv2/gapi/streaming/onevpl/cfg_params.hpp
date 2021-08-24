@@ -26,10 +26,10 @@ namespace onevpl {
  * onevpl::GSource inner logic to create or find oneVPL particular implementation
  * (software/hardware, specific API version and etc.).
  *
- * @note Because oneVPL may provide several implementations which are satisfying with @ref CfgParam `s
- * criteria it is possible to configure `preferred` parameters. This kind of CfgParams are created
+ * @note Because oneVPL may provide several implementations which are satisfying with multiple (or single one) @ref CfgParam
+ * criteria therefore it is possible to configure `preferred` parameters. This kind of CfgParams are created
  * using `is_major = false` argument in @ref CfgParam::create method and are not used by creating oneVPL particular implementations.
- * Instead they fill out a `score table` to select preferrable implementation from available list. Implementation are satisfying
+ * Instead they fill out a "score table" to select preferrable implementation from available list. Implementation are satisfying
  * with most of these optional params would be chosen.
  * If no one optional CfgParam params were present then first of available oneVPL implementation would be applied.
  * Please get on https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_func.html?highlight=mfxcreateconfig#mfxsetconfigfilterproperty
