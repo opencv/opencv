@@ -540,13 +540,26 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         CV_XADD(&(u->refcount), 1);
         CV_XADD(&(u->urefcount), 1);
     }
-    hdr.flags = flags;
-    setSize(hdr, dims, size.p, step.p);
-    finalizeHdr(hdr);
-    hdr.u = new_u;
-    hdr.offset = 0; //data - datastart;
-    hdr.addref();
-    return hdr;
+    try
+    {
+        hdr.flags = flags;
+        setSize(hdr, dims, size.p, step.p);
+        finalizeHdr(hdr);
+        hdr.u = new_u;
+        hdr.offset = 0; //data - datastart;
+        hdr.addref();
+        return hdr;
+    }
+    catch(...)
+    {
+        if (u != NULL)
+        {
+            CV_XADD(&(u->refcount), -1);
+            CV_XADD(&(u->urefcount), -1);
+        }
+        new_u->currAllocator->deallocate(new_u);
+        throw;
+    }
 }
 
 void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
@@ -692,18 +705,17 @@ UMat::UMat(const UMat& m, const Rect& roi)
     offset += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( u )
-        CV_XADD(&(u->urefcount), 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
     updateContinuityFlag();
 
+    addref();
     if( rows <= 0 || cols <= 0 )
     {
-        release();
         rows = cols = 0;
+        release();
     }
 }
 
@@ -969,24 +981,29 @@ Mat UMat::getMat(int accessFlags) const
     // TODO Support ACCESS_READ (ACCESS_WRITE) without unnecessary data transfers
     accessFlags |= ACCESS_RW;
     UMatDataAutoLock autolock(u);
-    if(CV_XADD(&u->refcount, 1) == 0)
-        u->currAllocator->map(u, accessFlags);
-    if (u->data != 0)
+    try
     {
-        Mat hdr(dims, size.p, type(), u->data + offset, step.p);
-        hdr.flags = flags;
-        hdr.u = u;
-        hdr.datastart = u->data;
-        hdr.data = u->data + offset;
-        hdr.datalimit = hdr.dataend = u->data + u->size;
-        return hdr;
+        if(CV_XADD(&u->refcount, 1) == 0)
+            u->currAllocator->map(u, accessFlags);
+        if (u->data != 0)
+        {
+            Mat hdr(dims, size.p, type(), u->data + offset, step.p);
+            hdr.flags = flags;
+            hdr.u = u;
+            hdr.datastart = u->data;
+            hdr.data = u->data + offset;
+            hdr.datalimit = hdr.dataend = u->data + u->size;
+            return hdr;
+        }
     }
-    else
+    catch(...)
     {
         CV_XADD(&u->refcount, -1);
-        CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
-        return Mat();
+        throw;
     }
+    CV_XADD(&u->refcount, -1);
+    CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
+    return Mat();
 }
 
 void* UMat::handle(int accessFlags) const
