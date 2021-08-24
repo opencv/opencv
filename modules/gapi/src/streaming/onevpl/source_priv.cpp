@@ -21,6 +21,7 @@ bool GSource::Priv::pull(cv::gapi::wip::Data&) {
 GMetaArg GSource::Priv::descr_of() const {
     return {};
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -51,8 +51,8 @@ struct GAPI_EXPORTS IDataProvider {
      * It MUST throw `DataProviderException` kind exceptions in fail cases.
      * It MUST return 0 in EOF which considered as not-fail case.
      *
-     * @param out_data_bytes_size the available capacity of @ref out_data buffer.
-     * @param out_data the output consumer buffer with capacity @ref out_data_bytes_size.
+     * @param out_data_bytes_size the available capacity of out_data buffer.
+     * @param out_data the output consumer buffer with capacity out_data_bytes_size.
      * @return fetched bytes count.
      */
     virtual size_t fetch_data(size_t out_data_bytes_size, void* out_data) = 0;
@@ -61,6 +61,8 @@ struct GAPI_EXPORTS IDataProvider {
      * The function is used by onevpl::GSource to check more binary data availability.
      *
      * It MUST return TRUE in case of EOF and NO_THROW exceptions.
+     *
+     * @return boolean value which detects end of stream
      */
     virtual bool empty() const = 0;
 };
