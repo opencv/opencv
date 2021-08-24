@@ -19,6 +19,18 @@ namespace wip {
 namespace onevpl {
 using CfgParams = std::vector<CfgParam>;
 
+/**
+ * @brief G-API streaming source based on OneVPL implementation.
+ *
+ * This class implements IStreamSource interface.
+ * Its constructor takes source file path (in usual way) or @ref onevpl::IDataProvider
+ * interface implementation (for not file-based sources). It also allows to pass-through
+ * oneVPL configuration parameters by using several @ref onevpl::CfgParam.
+ *
+ * @note stream sources are passed to G-API via shared pointers, so
+ *  please gapi::make_onevpl_src<> to create objects and ptr() to pass a
+ *  GSource to cv::gin().
+ */
 class GAPI_EXPORTS GSource : public IStreamSource
 {
 public:

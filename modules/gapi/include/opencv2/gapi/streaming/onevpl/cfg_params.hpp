@@ -19,6 +19,23 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+/**
+ * @brief Public class is using for creation of onevpl::GSource instances.
+ *
+ * Class members availaible through methods @ref CfgParam::get_name() and @ref CfgParam::get_value() are used by
+ * onevpl::GSource inner logic to create or find oneVPL particular implementation
+ * (software/hardware, specific API version and etc.).
+ *
+ * @note Because oneVPL may provide several implementations which are satisfying with @ref CfgParam `s
+ * criteria it is possible to configure `preferred` parameters. This kind of CfgParams are created
+ * using `is_major = false` argument in @ref CfgParam::create method and are not used by creating oneVPL particular implementations.
+ * Instead they fill out a `score table` to select preferrable implementation from available list. Implementation are satisfying
+ * with most of these optional params would be chosen.
+ * If no one optional CfgParam params were present then first of available oneVPL implementation would be applied.
+ * Please get on https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_func.html?highlight=mfxcreateconfig#mfxsetconfigfilterproperty
+ * for using OneVPL configuration. In this schema `mfxU8 *name` represents @ref CfgParam::get_name() and
+ * `mfxVariant value` is @ref CfgParam::get_value()
+ */
 struct GAPI_EXPORTS CfgParam {
     using name_t = std::string;
     using value_t = cv::util::variant<uint8_t, int8_t,
@@ -31,11 +48,11 @@ struct GAPI_EXPORTS CfgParam {
                                       std::string>;
 
     /**
-     * Create onevpl source configuration parameter.
+     * Create onevp::GSource configuration parameter.
      *
      *@param name           name of parameter.
      *@param value          value of parameter.
-     *@param is_major       TRUE if parameter MUST be provided by OneVPL implementation, FALSE for optional (for resolve multiple available implementations).
+     *@param is_major       TRUE if parameter MUST be provided by OneVPL inner implementation, FALSE for optional (for resolve multiple available implementations).
      *
      */
     template<typename ValueType>

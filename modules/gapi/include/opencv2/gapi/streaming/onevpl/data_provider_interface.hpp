@@ -30,14 +30,14 @@ private:
 };
 
 /**
- * @brief The Data provider interface allows to customize extraction of video data stream used by
- * gapi::streaming::wip::onevpl::GSource instead of reading stream from file (by default).
+ * @brief Public interface allows to customize extraction of video stream data
+ * used by onevpl::GSource instead of reading stream from file (by default).
  *
- * Implementation constructor MUST provide entire valid object.
- * If error happens implementation SHOULD throw `DataProviderException` kind exceptions
+ * Interface implementation constructor MUST provide consistency and creates fully operable object.
+ * If error happened implementation MUST throw `DataProviderException` kind exceptions
  *
- * @note Implementation MUST manage stream resources by itself to avoid any kind of leask.
- * For implementation example please see `StreamDataProvider` in `tests/streaming/gapi_streaming_tests.cpp`
+ * @note Interface implementation MUST manage stream and other constructed resources by itself to avoid any kind of leak.
+ * For simple interface implementation example please see `StreamDataProvider` in `tests/streaming/gapi_streaming_tests.cpp`
  */
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
