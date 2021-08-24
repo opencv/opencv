@@ -25,7 +25,7 @@
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
 
-#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
