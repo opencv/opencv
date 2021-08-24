@@ -11,6 +11,31 @@
 using namespace std;
 using namespace cv;
 
+static float estimateBitrate(int codecId, size_t pixelNum, float fps)
+{
+    float bitrate = 0.f;
+    const float mp = pixelNum / 1000000.f;
+    if (codecId == MFX_CODEC_MPEG2)
+    {
+        bitrate = (mp * 43) * fps + 360;
+    }
+    else if (codecId == MFX_CODEC_AVC)
+    {
+        bitrate = (mp * 140 + 19) * pow(fps, 0.60f);
+    }
+    else if (codecId == MFX_CODEC_HEVC)
+    {
+        bitrate = (mp * 63 + 45) * pow(fps, 0.60f);
+    }
+    else
+    {
+        MSG(cerr << "MFX encoder Bitrate estimation FAILED" << endl);
+    }
+    DBG(cout << "MFX encoder Bitrate estimation (" << mp << " MP x " << fps << " fps): " << bitrate << endl);
+    return bitrate;
+
+}
+
 static size_t getBitrateDivisor()
 {
     static const size_t res = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_MFX_BITRATE_DIVISOR", 300);
@@ -85,13 +110,12 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
 
     // Init encoder
 
-    const float magicNumber = codecId == MFX_CODEC_MPEG2 ? 5 : 42;
     encoder = new MFXVideoENCODE(*session);
     mfxVideoParam params;
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = saturate_cast<mfxU16>((frameSize.area() * fps) / (magicNumber * getBitrateDivisor())); // TODO: set in options
+    params.mfx.TargetKbps = saturate_cast<mfxU16>(estimateBitrate(codecId, frameSize.area(), (float)fps) * 300 / getBitrateDivisor()); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;

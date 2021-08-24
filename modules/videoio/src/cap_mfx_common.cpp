@@ -14,11 +14,13 @@
 using namespace std;
 using namespace cv;
 
+#ifndef HAVE_ONEVPL
 static mfxIMPL getImpl()
 {
     static const size_t res = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_MFX_IMPL", MFX_IMPL_AUTO_ANY);
     return (mfxIMPL)res;
 }
+#endif
 
 static size_t getExtraSurfaceNum()
 {
