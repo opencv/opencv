@@ -388,9 +388,11 @@ namespace streaming {
  * In the streaming mode the pipeline steps are connected with queues
  * and this compile argument controls every queue's size.
  */
-struct GAPI_EXPORTS queue_capacity
+struct GAPI_EXPORTS_W_SIMPLE queue_capacity
 {
+    GAPI_WRAP
     explicit queue_capacity(size_t cap = 1) : capacity(cap) { };
+    GAPI_PROP_RW
     size_t capacity;
 };
 /** @} */
