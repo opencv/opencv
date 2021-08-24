@@ -7,19 +7,21 @@
 #include <algorithm>
 #include <sstream>
 
-#include "streaming/onevpl/onevpl_source_priv.hpp"
+#include "streaming/onevpl/source_priv.hpp"
 #include "logger.hpp"
 
 #ifndef HAVE_ONEVPL
 namespace cv {
 namespace gapi {
 namespace wip {
-bool OneVPLSource::Priv::pull(cv::gapi::wip::Data&) {
+namespace onevpl {
+bool GSource::Priv::pull(cv::gapi::wip::Data&) {
     return true;
 }
-GMetaArg OneVPLSource::Priv::descr_of() const {
+GMetaArg GSource::Priv::descr_of() const {
     return {};
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
@@ -29,33 +31,35 @@ GMetaArg OneVPLSource::Priv::descr_of() const {
 namespace cv {
 namespace gapi {
 namespace wip {
-OneVPLSource::Priv::Priv() :
+namespace onevpl {
+GSource::Priv::Priv() :
     mfx_handle(MFXLoad())
 {
     GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
     description_is_valid = false;
 }
 
-OneVPLSource::Priv::Priv(const std::string&) :
-    OneVPLSource::Priv()
+GSource::Priv::Priv(std::shared_ptr<IDataProvider>, const std::vector<CfgParam>&) :
+    GSource::Priv()
 {
 }
 
-OneVPLSource::Priv::~Priv()
+GSource::Priv::~Priv()
 {
     GAPI_LOG_INFO(nullptr, "Unload MFX handle: " << mfx_handle);
     MFXUnload(mfx_handle);
 }
 
-bool OneVPLSource::Priv::pull(cv::gapi::wip::Data&)
+bool GSource::Priv::pull(cv::gapi::wip::Data&)
 {
     return false;
 }
 
-GMetaArg OneVPLSource::Priv::descr_of() const
+GMetaArg GSource::Priv::descr_of() const
 {
     return {};
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

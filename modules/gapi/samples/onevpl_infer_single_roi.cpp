@@ -9,7 +9,7 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
 #include <opencv2/gapi/render.hpp>
-#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/source.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
 
 const std::string about =
@@ -19,7 +19,8 @@ const std::string keys =
     "{ input        |                                           | Path to the input demultiplexed video file }"
     "{ output       |                                           | Path to the output RAW video file. Use .avi extension }"
     "{ facem        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
-    "{ faced        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }";
+    "{ cfg_params   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }";
+
 
 namespace {
 std::string get_weights_path(const std::string &model_path) {
@@ -155,6 +156,10 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
 
 } // namespace custom
 
+namespace cfg {
+typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line);
+}
+
 int main(int argc, char *argv[]) {
 
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -178,10 +183,22 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // get oneVPL cfg params from cmd
+    std::stringstream params_list(cmd.get<std::string>("cfg_params"));
+    std::vector<cv::gapi::wip::onevpl::CfgParam> source_cfgs;
+    try {
+        std::string line;
+        while (std::getline(params_list, line, ';')) {
+            source_cfgs.push_back(cfg::create_from_string(line));
+        }
+    } catch (const std::exception& ex) {
+        std::cerr << "Invalid cfg parameter: " << ex.what() << std::endl;
+        return -1;
+    }
+
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
-        get_weights_path(face_model_path),   // path to weights
-        cmd.get<std::string>("faced"),   // device specifier
+        get_weights_path(face_model_path)   // path to weights
     };
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
@@ -192,7 +209,7 @@ int main(int argc, char *argv[]) {
     // Create source
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
-        cap = cv::gapi::wip::make_vpl_src(file_path);
+        cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
         std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
     } catch (const std::exception& ex) {
         std::cerr << "Cannot create source: " << ex.what() << std::endl;
@@ -213,7 +230,7 @@ int main(int argc, char *argv[]) {
 
     cv::GStreamingCompiled pipeline;
     try {
-        pipeline  = cv::GComputation(cv::GIn(in), cv::GOut(out))
+        pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
                 .compileStreaming(cv::compile_args(kernels, networks));
     } catch (const std::exception& ex) {
         std::cerr << "Exception occured during pipeline construction: " << ex.what() << std::endl;
@@ -251,4 +268,26 @@ int main(int argc, char *argv[]) {
     std::cout << "framesCount: " << framesCount << std::endl;
 
     return 0;
+}
+
+
+namespace cfg {
+typename cv::gapi::wip::onevpl::CfgParam create_from_string(const std::string &line) {
+    using namespace cv::gapi::wip;
+
+    if (line.empty()) {
+        throw std::runtime_error("Cannot parse CfgParam from emply line");
+    }
+
+    std::string::size_type name_endline_pos = line.find(':');
+    if (name_endline_pos == std::string::npos) {
+        throw std::runtime_error("Cannot parse CfgParam from: " + line +
+                                 "\nExpected separator \":\"");
+    }
+
+    std::string name = line.substr(0, name_endline_pos);
+    std::string value = line.substr(name_endline_pos + 1);
+
+    return cv::gapi::wip::onevpl::CfgParam::create(name, value);
+}
 }
