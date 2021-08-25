@@ -231,8 +231,12 @@ STUB_TYPE_ALIASES = OrderedDict((
     ("Mat", "np.ndarray"),
     ("MatShape", "Sequence[int]"),
     ("Point", "Sequence[int]"),
-    ("Point2d", "Sequence[float]"),
+    ("Point2i", "Sequence[int]"),
     ("Point2f", "Sequence[float]"),
+    ("Point2d", "Sequence[float]"),
+    ("Point3i", "Sequence[int]"),
+    ("Point3f", "Sequence[float]"),
+    ("Point3d", "Sequence[float]"),
     ("Range", "Sequence[int]"),
     ("Rect", "Sequence[int]"),
     ("Rect2i", "Sequence[int]"),
@@ -243,9 +247,16 @@ STUB_TYPE_ALIASES = OrderedDict((
     ("Size2f", "Sequence[float]"),
     ("TermCriteria", "Sequence[Any]"),
     ("uchar", "int"),
+    ("unsigned", "int"),
     ("Vec2i", "Sequence[int]"),
+    ("Vec2f", "Sequence[float]"),
+    ("Vec2d", "Sequence[float]"),
     ("Vec3i", "Sequence[int]"),
+    ("Vec3f", "Sequence[float]"),
+    ("Vec3d", "Sequence[float]"),
+    ("Vec4i", "Sequence[int]"),
     ("Vec4f", "Sequence[float]"),
+    ("Vec4d", "Sequence[float]"),
     ("Vec6f", "Sequence[float]"),
     ("DescriptorExtractor", "Feature2D"),
     ("FeatureDetector", "Feature2D"),
@@ -274,6 +285,10 @@ STUB_TYPE_ALIASES = OrderedDict((
     ("SearchParams", "flann_SearchParams"),
     ("cvflann_flann_distance_t", "int"),
     ("cvflann_flann_algorithm_t", "int"),
+    ("Matx33f", "np.ndarray"),
+    ("Matx33d", "np.ndarray"),
+    ("Matx44f", "np.ndarray"),
+    ("Matx44d", "np.ndarray"),
 ))
 
 
@@ -569,7 +584,7 @@ def normalize_ctype_name(typename):
 
 
 def is_tuple(typename):
-    return typename.startswith("tuple")
+    return typename.startswith("tuple") or typename.startswith("pair")
 
 
 def is_sequence_type(typename):
@@ -665,13 +680,17 @@ def convert_ctype_name_to_pytype_name(typename, codegen):
         return "GArray"
     if typename.startswith("GOpaque_") or typename.startswith("GOpaque<"):
         return "GOpaque"
-    if typename.endswith("_Ptr"):
-        return convert_ctype_name_to_pytype_name(typename[:-4], codegen)
     if typename.startswith("util_variant"):
         variant_types = get_template_instantiation_type(typename)
         return "Union[{}]".format(
             ", ".join(convert_template_arguments_to_pytypes_arguments(variant_types, codegen))
         )
+
+    # Non-standard pointer types
+    if typename.endswith("_Ptr"):
+        return convert_ctype_name_to_pytype_name(typename[:-4], codegen)
+    elif typename.endswith("Ptr"):
+        return convert_ctype_name_to_pytype_name(typename[:-3], codegen)
 
     if is_sequence_type(typename):
         if is_template_class_instantiation(typename):
@@ -690,8 +709,10 @@ def convert_ctype_name_to_pytype_name(typename, codegen):
     if is_pointer_type(typename):
         if typename.endswith("*"):
             return convert_ctype_name_to_pytype_name(typename[:-1], codegen)
-        else:
+        elif is_template_class_instantiation(typename):
             return convert_ctype_name_to_pytype_name(get_template_instantiation_type(typename), codegen)
+        else:
+            return convert_ctype_name_to_pytype_name(typename.split("_", 1)[-1], codegen)
 
     if is_tuple(typename):
         tuple_types = get_template_instantiation_type(typename)
