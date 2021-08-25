@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import cv2 as cv
 
-from .image_to_megapix_scaler import ImageToMegapixScaler
+from .megapix_downscaler import MegapixDownscaler
 from .feature_detector import FeatureDetector
 from .feature_matcher import FeatureMatcher
 from .subsetter import Subsetter
@@ -48,9 +48,9 @@ class Stitcher:
         args.update(kwargs)
         args = SimpleNamespace(**args)
 
-        self.work_scaler = ImageToMegapixScaler(args.work_megapix)
-        self.seam_scaler = ImageToMegapixScaler(args.seam_megapix)
-        self.compose_scaler = ImageToMegapixScaler(args.compose_megapix)
+        self.work_scaler = MegapixDownscaler(args.work_megapix)
+        self.seam_scaler = MegapixDownscaler(args.seam_megapix)
+        self.compose_scaler = MegapixDownscaler(args.compose_megapix)
 
         self.finder = \
             FeatureDetector(args.features, nfeatures=args.n_features)
@@ -166,9 +166,7 @@ class Stitcher:
         return self.wave_corrector.correct(cameras)
 
     def estimate_final_panorama_dimensions(self, cameras, full_img_sizes):
-        self.compose_scaler.set_downscale_scale_by_resolution(
-            full_img_sizes[0][1] * full_img_sizes[0][0]
-            )
+        self.compose_scaler.set_scale_by_img_size(full_img_sizes[0])
 
         compose_work_aspect = self.get_compose_work_aspect()
 
@@ -237,7 +235,9 @@ class Stitcher:
 
     @staticmethod
     def resize(img, scaler):
-        return scaler.set_scale_if_not_set_and_downscale(img)
+        if not scaler.is_scale_set:
+            scaler.set_scale_by_img_size(img.shape)
+        return scaler.resize(img)
 
     @staticmethod
     def get_image_size(img):
