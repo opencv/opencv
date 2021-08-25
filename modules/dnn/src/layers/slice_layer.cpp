@@ -154,7 +154,8 @@ public:
         bool axisNeg = (axis < 0);
         axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
 
-        for (std::vector<Range>& ranges : sliceRanges){
+        for (size_t i = 0; i < sliceRanges.size(); ++i){
+            std::vector<Range>& ranges = sliceRanges[i];
             if (axisNeg)
             {
                 ranges.insert(ranges.begin(), axis, Range::all());
