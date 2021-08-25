@@ -118,4 +118,4 @@ void VPLMediaFrameCPUAdapter::deserialize(cv::gapi::s11n::IIStream&) {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif HAVE_ONEVPL
+#endif // HAVE_ONEVPL
