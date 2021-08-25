@@ -94,7 +94,7 @@ class TestStitcher(unittest.TestCase):
 
         cv.imwrite("budapest.jpg", result)
 
-        max_image_shape_derivation = 30
+        max_image_shape_derivation = 50
         np.testing.assert_allclose(result.shape[:2],
                                    (1155, 2310),
                                    atol=max_image_shape_derivation)

@@ -137,10 +137,16 @@ class Stitcher:
         for name in img_names:
             full_img = Stitcher.read_image(name)
             size = self.get_image_size(full_img)
+
+            if not self.work_scaler.is_scale_set:
+                self.work_scaler.set_scale_by_img_size(size)
+            if not self.seam_scaler.is_scale_set:
+                self.seam_scaler.set_scale_by_img_size(size)
+
             sizes.append(size)
             work_img = self.resize(full_img, size, self.work_scaler)
             features.append(self.finder.detect_features(work_img))
-            imgs.append(self.resize(full_img, size, self.seam_scaler))
+            imgs.append(self.resize(work_img, size, self.seam_scaler))
 
         return sizes, imgs, features
 
@@ -238,8 +244,6 @@ class Stitcher:
 
     @staticmethod
     def resize(img, size, scaler):
-        if not scaler.is_scale_set:
-            scaler.set_scale_by_img_size(img.shape)
         scaled_size = scaler.get_scaled_img_size(size)
         return scaler.resize(img, scaled_size)
 
