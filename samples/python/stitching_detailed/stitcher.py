@@ -149,7 +149,6 @@ class Stitcher:
 
     def estimate_final_panorama_dimensions(self, cameras):
         self.compose_scaler.set_scale_by_img_size(self._img_sizes[0])
-
         compose_work_aspect = self.get_compose_work_aspect()
 
         focals = [cam.focal for cam in cameras]
@@ -162,8 +161,7 @@ class Stitcher:
 
         self.warper.set_scale(panorama_scale)
         for size, camera in zip(self._img_sizes, cameras):
-            sz = (int(round(size[0] * self.compose_scaler.scale)),
-                  int(round(size[1] * self.compose_scaler.scale)))
+            sz = self.compose_scaler.get_scaled_img_size(size)
             roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
             panorama_corners.append(roi[0:2])
             panorama_sizes.append(roi[2:4])
