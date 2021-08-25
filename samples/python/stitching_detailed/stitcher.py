@@ -90,10 +90,9 @@ class Stitcher:
         self.initialize_composition(panorama_corners, panorama_sizes)
 
         imgs = self.resize_low_resolution(imgs)
-        imgs, masks, corners = \
-            self.warp_low_resolution_images(imgs, cameras, panorama_scale)
-        self.estimate_exposure_errors(imgs, masks, corners)
-        seam_masks = self.find_seam_masks(imgs, masks, corners)
+        imgs = self.warp_low_resolution_images(imgs, cameras)
+        self.estimate_exposure_errors(imgs)
+        seam_masks = self.find_seam_masks(imgs)
 
         imgs = self.resize_final_resolution()
         imgs = self.warp_final_resolution_images(imgs, cameras)
@@ -179,43 +178,43 @@ class Stitcher:
 
         return panorama_scale, panorama_corners, panorama_sizes
 
+    def estimate_final_panorama_scale(self, cameras):
+        focals = [cam.focal for cam in cameras]
+        panorama_scale = statistics.median(focals)
+        return panorama_scale
+
     def initialize_composition(self, corners, sizes):
         if self.timelapser.do_timelapse:
             self.timelapser.initialize(corners, sizes)
         else:
             self.blender.prepare(corners, sizes)
 
-    def warp_low_resolution_images(self, imgs, cameras, panorama_scale):
-        """
-        panorama_scale determined on final resolution
-        cameras determined on medium resolution
-        """
-        self.warper.set_scale(panorama_scale * self.get_seam_compose_aspect())
-
-        images_warped, masks_warped, corners = \
-            self.warper.warp_images_and_image_masks(
-                imgs, cameras, self.get_seam_work_aspect())
-
-        self.warper.set_scale(panorama_scale)
-        return images_warped, masks_warped, corners
-
-    def estimate_exposure_errors(self, imgs, masks, corners):
-        self.compensator.feed(corners, imgs, masks)
-
-    def find_seam_masks(self, imgs, masks, corners):
-        return self.seam_finder.find(imgs, corners, masks)
+    def warp_low_resolution_images(self, imgs, cameras):
+        return list(self.warp_images(self.low_scaler, imgs, cameras))
 
     def warp_final_resolution_images(self, imgs, cameras):
+        return self.warp_images(self.final_scaler, imgs, cameras)
+
+    def warp_images(self, scaler, imgs, cameras):
         self._masks = []
         self._corners = []
+        panorama_scale = self.estimate_final_panorama_scale(cameras)
+        self.warper.set_scale(panorama_scale *
+                              scaler.get_aspect_to(self.medium_scaler))
         for img, camera in zip(imgs, cameras):
             img, mask, corner = \
                 self.warper.warp_image_and_image_mask(
-                    img, camera, self.get_compose_work_aspect()
+                    img, camera, scaler.get_aspect_to(self.medium_scaler)
                     )
             self._masks.append(mask)
             self._corners.append(corner)
             yield img
+
+    def estimate_exposure_errors(self, imgs):
+        self.compensator.feed(self._corners, imgs, self._masks)
+
+    def find_seam_masks(self, imgs):
+        return self.seam_finder.find(imgs, self._corners, self._masks)
 
     def compensate_exposure_errors(self, imgs):
         for idx, img in enumerate(imgs):
