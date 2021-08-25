@@ -644,7 +644,7 @@ public:
         CV_Assert(plugin_api_->v0.Writer_write);
         if (CV_ERROR_OK != plugin_api_->v0.Writer_write(writer_, img.data, (int)img.step[0], img.cols, img.rows, img.channels()))
         {
-            CV_Error(Error::StsError, "Video I/O: Can't write frame by plugin '" << plugin_api_->api_header.api_description << "'");
+            CV_Error_(Error::StsError, ("Video I/O: Can't write frame by plugin '%s'", plugin_api_->api_header.api_description));
         }
     }
     int getCaptureDomain() const CV_OVERRIDE
