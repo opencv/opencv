@@ -28,13 +28,6 @@ class MegapixScaler:
         height = int(round(img_size[1] * self.scale))
         return (width, height)
 
-    def resize(self, img, dsize):
-        if self.is_scale_set:
-            return cv.resize(img, dsize, interpolation=cv.INTER_LINEAR_EXACT)
-        else:
-            print("Scale not set")
-            exit()
-
     def get_aspect_to(self, scaler):
         if self.is_scale_set and scaler.is_scale_set:
             return self.scale / scaler.scale

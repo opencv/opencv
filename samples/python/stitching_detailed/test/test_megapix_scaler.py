@@ -38,15 +38,6 @@ class TestScaler(unittest.TestCase):
 
         size = scaler.get_scaled_img_size(self.size)
         self.assertEqual(size, (1033, 581))
-
-    def test_resizing_of_scaler(self):
-        scaler = MegapixScaler(0.6)
-        scaler.set_scale_by_img_size(self.size)
-        size = scaler.get_scaled_img_size(self.size)
-
-        resized = scaler.resize(self.img, size)
-
-        self.assertEqual(resized.shape, (581, 1033, 3))
         # 581*1033 = 600173 px = ~0.6 MP
 
     def test_get_aspect(self):
