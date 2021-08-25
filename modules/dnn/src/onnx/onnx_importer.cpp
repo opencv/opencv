@@ -1459,10 +1459,9 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
             broadAxis = i;
         }
 
-        // TODO: broadAxis <= 1?
         if (broadAxis != -1)
         {
-            opencv_onnx::NodeProto concat_node_proto = node_proto; // TODO: clear in/out?
+            opencv_onnx::NodeProto concat_node_proto = node_proto;
             const std::string& input1 = concat_node_proto.input(1);
 
             expandMid(layerParams, concat_node_proto, input1, outShape[broadAxis], broadAxis);
