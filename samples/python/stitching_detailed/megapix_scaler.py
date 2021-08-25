@@ -24,8 +24,8 @@ class MegapixScaler:
         self.is_scale_set = True
 
     def get_scaled_img_size(self, img_size):
-        width = int(img_size[0] * self.scale)
-        height = int(img_size[1] * self.scale)
+        width = int(round(img_size[0] * self.scale))
+        height = int(round(img_size[1] * self.scale))
         return (width, height)
 
     def resize(self, img, dsize):

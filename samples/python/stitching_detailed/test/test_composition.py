@@ -19,19 +19,19 @@ class TestImageComposition(unittest.TestCase):
         img = increase_brightness(img, value=25)
         cv.imwrite("s1_bright.jpg", img)
 
-        result = Stitcher.stitch(["s1_bright.jpg", "s2.jpg"],
-                                 expos_comp="no",
-                                 blend="no")
+        stitcher = Stitcher(expos_comp="no", blend="no")
+        result = stitcher.stitch(["s1_bright.jpg", "s2.jpg"])
 
         cv.imwrite("without_exposure_comp.jpg", result)
 
-        result = Stitcher.stitch(["s1_bright.jpg", "s2.jpg"],
-                                 blend="no")
+        stitcher = Stitcher(blend="no")
+        result = stitcher.stitch(["s1_bright.jpg", "s2.jpg"])
 
         cv.imwrite("with_exposure_comp.jpg", result)
 
     def test_timelapse(self):
-        _ = Stitcher.stitch(["s1.jpg", "s2.jpg"], timelapse="as_is")
+        stitcher = Stitcher(expos_comp="no", blend="no")
+        _ = stitcher.stitch(["s1.jpg", "s2.jpg"])
         frame1 = cv.imread("fixed_s1.jpg")
 
         max_image_shape_derivation = 3

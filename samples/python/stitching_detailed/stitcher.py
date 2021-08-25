@@ -77,7 +77,7 @@ class Stitcher:
     def stitch(self, img_names):
         self._img_names = img_names
 
-        imgs = self.resize_medium_resolution(self.input_images())
+        imgs = self.resize_medium_resolution()
         features = self.find_features(imgs)
         matches = self.match_features(features)
         imgs, features, matches = self.subset(imgs, features, matches)
@@ -95,44 +95,11 @@ class Stitcher:
         self.estimate_exposure_errors(imgs, masks, corners)
         seam_masks = self.find_seam_masks(imgs, masks, corners)
 
-        imgs = self.resize_final_resolution(self.input_images())
+        imgs = self.resize_final_resolution()
         imgs = self.warp_final_resolution_images(imgs, cameras)
         imgs = self.compensate_exposure_errors(imgs)
         seam_masks = self.resize_seam_masks(seam_masks)
         self.blend_images(imgs, seam_masks)
-
-        del self._masks
-
-        return self.create_final_panorama()
-
-    def stitching_pipeline(self, img_names):
-        self._img_names = img_names
-
-        imgs = self.resize_medium_resolution(self.input_images())
-        features = self.find_features(imgs)
-        matches = self.match_features(features)
-        imgs, features, matches = self.subset(imgs, features, matches)
-        cameras = self.estimate_camera_parameters(features, matches)
-        cameras = self.refine_camera_parameters(features, matches, cameras)
-        cameras = self.perform_wave_correction(cameras)
-        panorama_scale, panorama_corners, panorama_sizes = \
-            self.estimate_final_panorama_dimensions(cameras)
-
-        self.initialize_composition(panorama_corners, panorama_sizes)
-
-        imgs = self.resize_low_resolution(imgs)
-        imgs, masks, corners = \
-            self.warp_low_resolution_images(imgs, cameras, panorama_scale)
-        self.estimate_exposure_errors(imgs, masks, corners)
-        seam_masks = self.find_seam_masks(imgs, masks, corners)
-
-        imgs = self.resize_final_resolution(self.input_images())
-        imgs = self.warp_final_resolution_images(imgs, cameras)
-        imgs = self.compensate_exposure_errors(imgs)
-        seam_masks = self.resize_seam_masks(seam_masks)
-        self.blend_images(imgs, seam_masks)
-
-        del self._masks
 
         return self.create_final_panorama()
 
@@ -141,10 +108,10 @@ class Stitcher:
             img = Stitcher.read_image(name)
             yield img
 
-    def resize_medium_resolution(self, imgs):
+    def resize_medium_resolution(self):
         self._img_sizes = []
         medium_imgs = []
-        for img in imgs:
+        for img in self.input_images():
             size = Stitcher.get_image_size(img)
             if not self.work_scaler.is_scale_set:
                 self.work_scaler.set_scale_by_img_size(size)
@@ -239,8 +206,8 @@ class Stitcher:
     def find_seam_masks(self, imgs, masks, corners):
         return self.seam_finder.find(imgs, corners, masks)
 
-    def resize_final_resolution(self, imgs):
-        for idx, img in enumerate(imgs):
+    def resize_final_resolution(self):
+        for idx, img in enumerate(self.input_images()):
             img = self.resize(img, self._img_sizes[idx], self.compose_scaler)
             yield img
 
@@ -304,3 +271,6 @@ class Stitcher:
     def get_image_size(img):
         """(width, height)"""
         return (img.shape[1], img.shape[0])
+
+    def collect_garbage(self):
+        del self._img_names, self._img_sizes, self._corners, self._masks
