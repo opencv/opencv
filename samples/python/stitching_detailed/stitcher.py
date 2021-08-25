@@ -51,22 +51,18 @@ class Stitcher:
         self.work_scaler = MegapixDownscaler(args.work_megapix)
         self.seam_scaler = MegapixDownscaler(args.seam_megapix)
         self.compose_scaler = MegapixDownscaler(args.compose_megapix)
-
         self.finder = \
             FeatureDetector(args.features, nfeatures=args.n_features)
-
         if args.match_conf is None:
             args.match_conf = FeatureMatcher.get_default_match_conf(
                 args.features
                 )
-
         self.matcher = FeatureMatcher(args.matcher,
                                       args.rangewidth,
                                       try_use_gpu=args.try_cuda,
                                       match_conf=args.match_conf)
         self.subsetter = \
             Subsetter(args.conf_thresh, args.save_graph)
-
         self.camera_estimator = CameraEstimator(args.estimator)
         self.camera_adjuster = CameraAdjuster(args.ba, args.ba_refine_mask)
         self.wave_corrector = WaveCorrector(args.wave_correct)
@@ -74,7 +70,6 @@ class Stitcher:
         self.compensator = \
             ExposureErrorCompensator(args.expos_comp, args.expos_comp_nr_feeds,
                                      args.expos_comp_block_size)
-
         self.seam_finder = SeamFinder(args.seam)
         self.blender = Blender(args.blend, args.blend_strength)
         self.timelapser = Timelapser(args.timelapse)
@@ -87,49 +82,59 @@ class Stitcher:
         matches = self.match_features(features)
         imgs, features, matches = self.subset(imgs, features, matches)
         cameras = self.estimate_camera_parameters(features, matches)
-        cameras = self.adjust_camera_parameters(features, matches, cameras)
+        cameras = self.refine_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
-
         panorama_scale, panorama_corners, panorama_sizes = \
             self.estimate_final_panorama_dimensions(cameras)
 
         self.initialize_composition(panorama_corners, panorama_sizes)
 
         imgs = self.resize_low_resolution(imgs)
-
         imgs, masks, corners = \
             self.warp_low_resolution_images(imgs, cameras, panorama_scale)
-
         self.estimate_exposure_errors(imgs, masks, corners)
-
         seam_masks = self.find_seam_masks(imgs, masks, corners)
 
-        del imgs
+        imgs = self.resize_final_resolution(self.input_images())
+        imgs = self.warp_final_resolution_images(imgs, cameras)
+        imgs = self.compensate_exposure_errors(imgs)
+        seam_masks = self.resize_seam_masks(seam_masks)
+        self.blend_images(imgs, seam_masks)
 
-        for idx, (name, camera, seam_mask) in enumerate(
-                zip(img_names, cameras, seam_masks)):
+        del self._masks
 
-            full_img = Stitcher.read_image(name)
-            img = self.resize(full_img,
-                              self._img_sizes[idx],
-                              self.compose_scaler)
+        return self.create_final_panorama()
 
-            img, mask, corner = \
-                self.warper.warp_image_and_image_mask(
-                    img, camera, self.get_compose_work_aspect()
-                    )
+    def stitching_pipeline(self, img_names):
+        self._img_names = img_names
 
-            self.compensator.apply(idx, corner, img, mask)
+        imgs = self.resize_medium_resolution(self.input_images())
+        features = self.find_features(imgs)
+        matches = self.match_features(features)
+        imgs, features, matches = self.subset(imgs, features, matches)
+        cameras = self.estimate_camera_parameters(features, matches)
+        cameras = self.refine_camera_parameters(features, matches, cameras)
+        cameras = self.perform_wave_correction(cameras)
+        panorama_scale, panorama_corners, panorama_sizes = \
+            self.estimate_final_panorama_dimensions(cameras)
 
-            seam_mask = SeamFinder.resize(seam_mask, mask)
+        self.initialize_composition(panorama_corners, panorama_sizes)
 
-            if self.timelapser.do_timelapse:
-                self.timelapser.process_and_save_frame(name, img, corner)
-            else:
-                self.blender.feed(img, seam_mask, corner)
+        imgs = self.resize_low_resolution(imgs)
+        imgs, masks, corners = \
+            self.warp_low_resolution_images(imgs, cameras, panorama_scale)
+        self.estimate_exposure_errors(imgs, masks, corners)
+        seam_masks = self.find_seam_masks(imgs, masks, corners)
 
-        if not self.timelapser.do_timelapse:
-            return self.blender.blend()
+        imgs = self.resize_final_resolution(self.input_images())
+        imgs = self.warp_final_resolution_images(imgs, cameras)
+        imgs = self.compensate_exposure_errors(imgs)
+        seam_masks = self.resize_seam_masks(seam_masks)
+        self.blend_images(imgs, seam_masks)
+
+        del self._masks
+
+        return self.create_final_panorama()
 
     def input_images(self):
         for name in self._img_names:
@@ -147,14 +152,6 @@ class Stitcher:
             img = self.resize(img, size, self.work_scaler)
             medium_imgs.append(img)
         return medium_imgs
-
-    def resize_low_resolution(self, imgs):
-        low_imgs = []
-        self.seam_scaler.set_scale_by_img_size(self._img_sizes[0])
-        for idx, img in enumerate(imgs):
-            img = self.resize(img, self._img_sizes[idx], self.seam_scaler)
-            low_imgs.append(img)
-        return low_imgs
 
     def match_features(self, features):
         return self.matcher.match_features(features)
@@ -177,7 +174,7 @@ class Stitcher:
     def estimate_camera_parameters(self, features, matches):
         return self.camera_estimator.estimate(features, matches)
 
-    def adjust_camera_parameters(self, features, matches, cameras):
+    def refine_camera_parameters(self, features, matches, cameras):
         return self.camera_adjuster.adjust(features, matches, cameras)
 
     def perform_wave_correction(self, cameras):
@@ -212,6 +209,14 @@ class Stitcher:
         else:
             self.blender.prepare(corners, sizes)
 
+    def resize_low_resolution(self, imgs):
+        low_imgs = []
+        self.seam_scaler.set_scale_by_img_size(self._img_sizes[0])
+        for idx, img in enumerate(imgs):
+            img = self.resize(img, self._img_sizes[idx], self.seam_scaler)
+            low_imgs.append(img)
+        return low_imgs
+
     def warp_low_resolution_images(self, imgs, cameras, panorama_scale):
         """
         panorama_scale determined on compose resolution
@@ -233,6 +238,45 @@ class Stitcher:
 
     def find_seam_masks(self, imgs, masks, corners):
         return self.seam_finder.find(imgs, corners, masks)
+
+    def resize_final_resolution(self, imgs):
+        for idx, img in enumerate(imgs):
+            img = self.resize(img, self._img_sizes[idx], self.compose_scaler)
+            yield img
+
+    def warp_final_resolution_images(self, imgs, cameras):
+        self._masks = []
+        self._corners = []
+        for img, camera in zip(imgs, cameras):
+            img, mask, corner = \
+                self.warper.warp_image_and_image_mask(
+                    img, camera, self.get_compose_work_aspect()
+                    )
+            self._masks.append(mask)
+            self._corners.append(corner)
+            yield img
+
+    def compensate_exposure_errors(self, imgs):
+        for idx, img in enumerate(imgs):
+            yield self.compensator.apply(idx, self._corners[idx],
+                                         img, self._masks[idx])
+
+    def resize_seam_masks(self, seam_masks):
+        for idx, seam_mask in enumerate(seam_masks):
+            yield SeamFinder.resize(seam_mask, self._masks[idx])
+
+    def blend_images(self, imgs, seam_masks):
+        for idx, (img, seam_mask) in enumerate(zip(imgs, seam_masks)):
+            if self.timelapser.do_timelapse:
+                self.timelapser.process_and_save_frame(self._img_names[idx],
+                                                       img,
+                                                       self._corners[idx])
+            else:
+                self.blender.feed(img, seam_mask, self._corners[idx])
+
+    def create_final_panorama(self):
+        if not self.timelapser.do_timelapse:
+            return self.blender.blend()
 
     def get_compose_work_aspect(self):
         return self.compose_scaler.get_aspect_to(self.work_scaler)
