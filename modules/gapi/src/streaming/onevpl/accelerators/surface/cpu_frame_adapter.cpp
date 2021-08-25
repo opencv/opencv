@@ -101,19 +101,16 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
 }
 
 cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
-    GAPI_Assert(false && CV_Func
-                         "is not implemented");
+    GAPI_Assert("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
     return {};
 }
 
 void VPLMediaFrameCPUAdapter::serialize(cv::gapi::s11n::IOStream&) {
-    GAPI_Assert(false && CV_Func
-                         "is not implemented");
+    GAPI_Assert("VPLMediaFrameCPUAdapter::serialize() is not implemented");
 }
 
 void VPLMediaFrameCPUAdapter::deserialize(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert(false && CV_Func
-                         "is not implemented");
+    GAPI_Assert("VPLMediaFrameCPUAdapter::deserialize() is not implemented");
 }
 } // namespace wip
 } // namespace gapi
