@@ -48,6 +48,8 @@ class Stitcher:
         args.update(kwargs)
         args = SimpleNamespace(**args)
 
+        self.full_img_sizes = []
+
         self.work_scaler = MegapixDownscaler(args.work_megapix)
         self.seam_scaler = MegapixDownscaler(args.seam_megapix)
         self.compose_scaler = MegapixDownscaler(args.compose_megapix)
@@ -80,22 +82,27 @@ class Stitcher:
         self.timelapser = Timelapser(args.timelapse)
 
     def stitch(self, img_names):
-        full_img_sizes, imgs, features = \
-            self.get_sizes_resize_images_and_find_features(img_names)
+        imgs = Stitcher.input_images(img_names)
+
+        imgs = self.resize_medium_resolution(imgs)
+
+        features = self.find_features(imgs)
 
         matches = self.match_features(features)
 
-        img_names, full_img_sizes, imgs, features, matches = \
-            self.subset(img_names, full_img_sizes, imgs, features, matches)
+        img_names, imgs, features, matches = \
+            self.subset(img_names, imgs, features, matches)
 
         cameras = self.estimate_camera_parameters(features, matches)
         cameras = self.adjust_camera_parameters(features, matches, cameras)
         cameras = self.perform_wave_correction(cameras)
 
         panorama_scale, panorama_corners, panorama_sizes = \
-            self.estimate_final_panorama_dimensions(cameras, full_img_sizes)
+            self.estimate_final_panorama_dimensions(cameras)
 
         self.initialize_composition(panorama_corners, panorama_sizes)
+
+        imgs = self.resize_low_resolution(imgs)
 
         imgs, masks, corners = \
             self.warp_low_resolution_images(imgs, cameras, panorama_scale)
@@ -109,7 +116,7 @@ class Stitcher:
 
             full_img = Stitcher.read_image(name)
             img = self.resize(full_img,
-                              full_img_sizes[idx],
+                              self.full_img_sizes[idx],
                               self.compose_scaler)
 
             img, mask, corner = \
@@ -129,41 +136,47 @@ class Stitcher:
         if not self.timelapser.do_timelapse:
             return self.blender.blend()
 
-    def get_sizes_resize_images_and_find_features(self, img_names):
-        sizes = []
-        imgs = []
-        features = []
-
+    def input_images(img_names):
         for name in img_names:
-            full_img = Stitcher.read_image(name)
-            size = self.get_image_size(full_img)
+            img = Stitcher.read_image(name)
+            yield img
 
+    def resize_medium_resolution(self, imgs):
+        medium_imgs = []
+        for img in imgs:
+            size = Stitcher.get_image_size(img)
             if not self.work_scaler.is_scale_set:
                 self.work_scaler.set_scale_by_img_size(size)
-            if not self.seam_scaler.is_scale_set:
-                self.seam_scaler.set_scale_by_img_size(size)
+            self.full_img_sizes.append(size)
+            img = self.resize(img, size, self.work_scaler)
+            medium_imgs.append(img)
+        return medium_imgs
 
-            sizes.append(size)
-            work_img = self.resize(full_img, size, self.work_scaler)
-            features.append(self.finder.detect_features(work_img))
-            imgs.append(self.resize(work_img, size, self.seam_scaler))
-
-        return sizes, imgs, features
+    def resize_low_resolution(self, imgs):
+        low_imgs = []
+        self.seam_scaler.set_scale_by_img_size(self.full_img_sizes[0])
+        for idx, img in enumerate(imgs):
+            img = self.resize(img, self.full_img_sizes[idx], self.seam_scaler)
+            low_imgs.append(img)
+        return low_imgs
 
     def match_features(self, features):
         return self.matcher.match_features(features)
 
-    def subset(self, names, sizes, imgs, features, matches):
+    def find_features(self, imgs):
+        return [self.finder.detect_features(img) for img in imgs]
+
+    def subset(self, names, imgs, features, matches):
         self.subsetter.save_matches_graph_dot_file(names, matches)
         indices = self.subsetter.get_indices_to_keep(features, matches)
 
+        self.full_img_sizes = Subsetter.subset_list(self.full_img_sizes, indices)
         names = Subsetter.subset_list(names, indices)
-        sizes = Subsetter.subset_list(sizes, indices)
         imgs = Subsetter.subset_list(imgs, indices)
         features = Subsetter.subset_list(features, indices)
         matches = Subsetter.subset_matches(matches, indices)
 
-        return names, sizes, imgs, features, matches
+        return names, imgs, features, matches
 
     def estimate_camera_parameters(self, features, matches):
         return self.camera_estimator.estimate(features, matches)
@@ -174,8 +187,8 @@ class Stitcher:
     def perform_wave_correction(self, cameras):
         return self.wave_corrector.correct(cameras)
 
-    def estimate_final_panorama_dimensions(self, cameras, full_img_sizes):
-        self.compose_scaler.set_scale_by_img_size(full_img_sizes[0])
+    def estimate_final_panorama_dimensions(self, cameras):
+        self.compose_scaler.set_scale_by_img_size(self.full_img_sizes[0])
 
         compose_work_aspect = self.get_compose_work_aspect()
 
@@ -188,7 +201,7 @@ class Stitcher:
         panorama_sizes = []
 
         self.warper.set_scale(panorama_scale)
-        for size, camera in zip(full_img_sizes, cameras):
+        for size, camera in zip(self.full_img_sizes, cameras):
             sz = (int(round(size[0] * self.compose_scaler.scale)),
                   int(round(size[1] * self.compose_scaler.scale)))
             roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
