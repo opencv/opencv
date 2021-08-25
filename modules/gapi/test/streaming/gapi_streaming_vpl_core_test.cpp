@@ -40,8 +40,7 @@ TEST(OneVPL_Source_Surface, InitSurface)
     using namespace cv::gapi::wip;
 
     // create raw MFX handle
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
     mfxFrameSurface1 *mfx_core_handle = handle.get();
 
     // create preallocate surface memory: empty for test
@@ -63,8 +62,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     using namespace cv::gapi::wip;
 
     // create raw MFX handle
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
 
     // create preallocate surface memory: empty for test
     std::shared_ptr<void> associated_memory {};
@@ -116,8 +114,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     constexpr size_t surface_num = 10000;
     std::vector<std::shared_ptr<Surface>> surfaces(surface_num);
     std::generate(surfaces.begin(), surfaces.end(), [surface_num, associated_memory](){
-        std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-        memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+        std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
         return Surface::create_surface(std::move(handle), associated_memory);
     });
 
@@ -138,8 +135,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     constexpr size_t surface_num_plus_one = 10001;
     surfaces.resize(surface_num_plus_one);
     std::generate(surfaces.begin(), surfaces.end(), [surface_num_plus_one, associated_memory](){
-        std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-        memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+        std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
         return Surface::create_surface(std::move(handle), associated_memory);
     });
 
@@ -169,8 +165,7 @@ TEST(OneVPL_Source_CPUFrameAdapter, InitFrameAdapter)
     using namespace cv::gapi::wip;
 
     // create raw MFX handle
-    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
-    memset(handle.get(), 0, sizeof(mfxFrameSurface1));
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
 
     // create preallocate surface memory: empty for test
     std::shared_ptr<void> associated_memory {};

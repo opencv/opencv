@@ -21,7 +21,7 @@ class Surface;
 class VPLMediaFrameCPUAdapter : public cv::MediaFrame::IAdapter {
 public:
     // GAPI_EXPORTS for tests
-    GAPI_EXPORTS VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> assoc_surface);
+    GAPI_EXPORTS explicit VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> assoc_surface);
     GAPI_EXPORTS ~VPLMediaFrameCPUAdapter();
     cv::GFrameDesc meta() const override;
     MediaFrame::View access(MediaFrame::Access) override;

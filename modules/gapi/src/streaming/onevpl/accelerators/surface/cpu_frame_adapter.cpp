@@ -26,13 +26,10 @@ VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surfac
     GAPI_Assert(parent_surface_ptr && "Surface is nullptr");
     parent_surface_ptr->obtain_lock();
 
-
-    const Surface::info_t& info = parent_surface_ptr->get_info();
-    const Surface::data_t& data = parent_surface_ptr->get_data();
-
     GAPI_LOG_DEBUG(nullptr, "surface: " << parent_surface_ptr->get_handle() <<
-                            ", w: " << info.Width << ", h: " << info.Height <<
-                            ", p: " << data.Pitch);
+                            ", w: " << parent_surface_ptr->get_info().Width <<
+                            ", h: " << parent_surface_ptr->get_info().Height <<
+                            ", p: " << parent_surface_ptr->get_data().Pitch);
 }
 
 VPLMediaFrameCPUAdapter::~VPLMediaFrameCPUAdapter() {
@@ -104,16 +101,19 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
 }
 
 cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
-    GAPI_Assert("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
+    GAPI_Assert(false && CV_Func
+                         "is not implemented");
     return {};
 }
 
 void VPLMediaFrameCPUAdapter::serialize(cv::gapi::s11n::IOStream&) {
-    GAPI_Assert("VPLMediaFrameCPUAdapter::serialize() is not implemented");
+    GAPI_Assert(false && CV_Func
+                         "is not implemented");
 }
 
 void VPLMediaFrameCPUAdapter::deserialize(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert("VPLMediaFrameCPUAdapter::deserialize() is not implemented");
+    GAPI_Assert(false && CV_Func
+                         "is not implemented");
 }
 } // namespace wip
 } // namespace gapi
