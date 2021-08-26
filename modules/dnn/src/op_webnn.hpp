@@ -1,9 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-//
-// Copyright (C) 2018-2019, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
 
 #ifndef __OPENCV_DNN_OP_WEBNN_HPP__
 #define __OPENCV_DNN_OP_WEBNN_HPP__
@@ -61,7 +58,7 @@ ml::Operand BuildConstant(const ml::GraphBuilder& builder,
                               ml::OperandType type);
 
 struct Pool2dOptions {
-      public:
+    public:
         std::vector<int32_t> windowDimensions;
         std::vector<int32_t> padding;
         std::vector<int32_t> strides;
@@ -91,7 +88,7 @@ struct Pool2dOptions {
             return &mOptions;
         }
 
-      private:
+    private:
         ml::Pool2dOptions mOptions;
     };
 }

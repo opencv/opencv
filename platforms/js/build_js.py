@@ -142,8 +142,7 @@ class Builder:
                "-DBUILD_EXAMPLES=ON",
                "-DBUILD_PACKAGE=OFF",
                "-DBUILD_TESTS=ON",
-               "-DBUILD_PERF_TESTS=ON",
-               "-DWITH_WEBNN=ON"]
+               "-DBUILD_PERF_TESTS=ON"]
         if self.options.cmake_option:
             cmd += self.options.cmake_option
         if self.options.build_doc:
@@ -165,6 +164,9 @@ class Builder:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=ON")
         else:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=OFF")
+        
+        if self.options.webnn:
+            cmd.append("-DWITH_WEBNN=ON")
 
         flags = self.get_build_flags()
         if flags:
@@ -173,7 +175,7 @@ class Builder:
         return cmd
 
     def get_build_flags(self):
-        flags = "-s USE_WEBNN=1 "
+        flags = ""
         if self.options.build_wasm:
             flags += "-s WASM=1 "
         elif self.options.disable_wasm:
@@ -188,6 +190,8 @@ class Builder:
             flags += "-msimd128 "
         if self.options.build_flags:
             flags += self.options.build_flags
+        if self.options.webnn:
+            flags += "-s USE_WEBNN=1 "
         return flags
 
     def config(self):
@@ -247,6 +251,7 @@ if __name__ == "__main__":
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
                         help="Specify configuration file with own list of exported into JS functions")
+    parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
 
     args = parser.parse_args()
 

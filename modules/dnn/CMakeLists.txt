@@ -136,9 +136,9 @@ endif()
 
 set(webnn_srcs "")
 if(HAVE_WEBNN)
-	list(APPEND include_dirs ${WEBNN_HEADER_DIRS})
+  list(APPEND include_dirs ${WEBNN_HEADER_DIRS})
   list(APPEND include_dirs ${WEBNN_INCLUDE_DIRS})
-	list(APPEND libs -Wl,--whole-archive ${WEBNN_LIBRARIES} -Wl,--no-whole-archive)
+  list(APPEND libs -Wl,--whole-archive ${WEBNN_LIBRARIES} -Wl,--no-whole-archive)
   list(APPEND webnn_srcs $ENV{WEBNN_NATIVE_DIR}/gen/src/webnn/webnn_cpp.cpp)
 endif()
 
