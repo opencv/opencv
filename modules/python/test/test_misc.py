@@ -482,6 +482,17 @@ class Arguments(NewOpenCVTests):
         )
 
 
+class CanUsePurePythonModuleFunction(NewOpenCVTests):
+    def test_can_get_ocv_version(self):
+        import sys
+        if sys.version_info[:2] < (3, 0):
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        self.assertEqual(cv.misc.get_ocv_version(), cv.__version__,
+                         "Can't get package version using Python misc module")
+
+
+
 class SamplesFindFile(NewOpenCVTests):
 
     def test_ExistedFile(self):

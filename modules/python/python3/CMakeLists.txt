@@ -11,9 +11,13 @@ if(PYTHON3_LIMITED_API
   set(PYTHON3_LIMITED_API OFF)
 endif()
 
+add_subdirectory(extra_modules)
+
 set(the_description "The python3 bindings")
 set(MODULE_NAME python3)
 set(MODULE_INSTALL_SUBDIR python3)
+
+message(STATUS "Extra Python modules ${PYTHON_EXTRA_MODULES_LIST}")
 
 set(PYTHON PYTHON3)
 

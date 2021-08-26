@@ -1,6 +1,28 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
+function(add_python_files_for_module module_path is_files_added)
+  file(GLOB_RECURSE extra_py_files
+       RELATIVE "${module_path}"
+       # Plain Python code
+       "${module_path}/*.py"
+       # Type annotations
+       "${module_path}/*.pyi"
+  )
+  message(STATUS "Extra Py files for ${module_path}: ${extra_py_files}")
+  if(extra_py_files)
+    set(${is_files_added} TRUE PARENT_SCOPE)
+    list(SORT extra_py_files)
+    foreach(filename ${extra_py_files})
+      get_filename_component(__dir "${filename}" DIRECTORY)
+      configure_file("${module_path}/${filename}" "${__loader_path}/cv2/_extra_py_code/${filename}" COPYONLY)
+      install(FILES "${module_path}/${filename}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/_extra_py_code/${__dir}/" COMPONENT python)
+    endforeach()
+  else()
+    set(${is_files_added} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
 
 include_directories(SYSTEM
@@ -225,22 +247,19 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
         AND EXISTS "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package"
     )
       set(__base "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package")
-      file(GLOB_RECURSE extra_py_files
-          RELATIVE "${__base}"
-          "${__base}/**/*.py"
-      )
-      if(extra_py_files)
-        list(SORT extra_py_files)
-        foreach(f ${extra_py_files})
-          get_filename_component(__dir "${f}" DIRECTORY)
-          configure_file("${__base}/${f}" "${__loader_path}/cv2/_extra_py_code/${f}" COPYONLY)
-          install(FILES "${__base}/${f}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/_extra_py_code/${__dir}/" COMPONENT python)
-        endforeach()
-      else()
-        message(WARNING "Module ${m} has no .py files in misc/python/package")
+      add_python_files_for_module(${__base} ${m}_added)
+      if(NOT ${m}_added)
+        message(WARNING "Module ${m} has no .py or .pyi files in misc/python/package")
       endif()
     endif()
   endforeach(m)
+
+  if(OCV_PYTHON_EXTRA_MODULES)
+    add_python_files_for_module(${OCV_PYTHON_EXTRA_MODULES_PATH} ocv_py_modules_added)
+    if(NOT ocv_py_modules_added)
+      message(FATAL_ERROR "Can't add pure Python modules from ${OCV_PYTHON_EXTRA_MODULES_PATH}. There is no .py or .pyi files")
+    endif()
+  endif()
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)
