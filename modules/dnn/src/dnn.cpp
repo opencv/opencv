@@ -2463,10 +2463,6 @@ struct Net::Impl : public detail::NetImplBase
             {
                 // For test use. when not using WebNN, the test case will fail
                 // with the following code.
-<<<<<<< HEAD
-=======
-
->>>>>>> Fix the build issue
                 CV_LOG_WARNING(NULL, "Layer " + ld.type + " name " + ld.name + " is unsupported by WebNN backend.");
 
                 addWebnnOutputs(ld);
@@ -4979,7 +4975,7 @@ void Net::setInput(InputArray blob, const String& name, double scalefactor, cons
     MatShape prevShape = shape(impl->netInputLayer->inputsData[pin.oid]);
     bool oldShape = prevShape == blobShape;
 
-    blob_.copyTo(impl->nPetInputLayer->inputsData[pin.oid]);
+    blob_.copyTo(impl->netInputLayer->inputsData[pin.oid]);
     if (!oldShape) {
         ld.outputBlobs[pin.oid] = impl->netInputLayer->inputsData[pin.oid];
         if (impl->hasDynamicShapes)
