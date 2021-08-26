@@ -354,8 +354,9 @@ public:
             if (ksize != 2)
             {
                 CV_LOG_WARNING(NULL, "WebNN only supports Conv2d.");
+                return false;
             }
-            return ksize == 2;
+            return true;
         }
 #endif
         return false;
