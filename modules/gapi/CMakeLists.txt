@@ -164,8 +164,11 @@ set(gapi_srcs
     src/backends/python/gpythonbackend.cpp
 
     # Streaming source
-    src/streaming/onevpl/onevpl_source.cpp
-    src/streaming/onevpl/onevpl_source_priv.cpp
+    src/streaming/onevpl/source.cpp
+    src/streaming/onevpl/source_priv.cpp
+    src/streaming/onevpl/file_data_provider.cpp
+    src/streaming/onevpl/cfg_params.cpp
+    src/streaming/onevpl/data_provider_interface_exception.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp

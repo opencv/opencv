@@ -1257,8 +1257,11 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     else if (config->tested)
         return false;
 
-    int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
-    top.zeros(4, sz, (use_half_) ? CV_16SC1 : CV_32FC1);
+    //int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
+    CV_CheckEQ(top.total(), (size_t)numImages * num_output_ * output_h_ * output_w_, "");
+    CV_CheckTypeEQ(top.type(), (use_half_) ? CV_16SC1 : CV_32FC1, "");
+    top.setTo(Scalar::all(0));
+
     bool saved_tuned = tuned_;
     tuned_ = false;
     convolve(bottom, top, weight, bias, numImages, config);
