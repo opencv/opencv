@@ -43,6 +43,7 @@
 #include "opencv2/photo.hpp"
 
 #include "seamless_cloning.hpp"
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -67,6 +68,15 @@ static Mat checkMask(InputArray _mask, Size size)
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
     CV_INSTRUMENT_REGION();
+    int src_emp = _src.empty();
+    int dst_emp = _dst.empty();
+    int mask_emp = _mask.empty();
+    if (src_emp == 1)
+        cout << "Path of Source image is invalid" << endl;
+    if (dst_emp == 1)
+        cout << "Path of Destination image is invalid" << endl;
+    if (mask_emp == 1)
+        cout << "Path of Mask image is invalid" << endl;
 
     const Mat src  = _src.getMat();
     const Mat dest = _dst.getMat();
