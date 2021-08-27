@@ -62,7 +62,7 @@ struct GAPI_EXPORTS IDataProvider {
      *
      * It MUST return TRUE in case of EOF and NO_THROW exceptions.
      *
-     * @return boolean value which detects end of stream
+     * @return boolean value which detects end of stream.
      */
     virtual bool empty() const = 0;
 };

@@ -80,7 +80,7 @@ private:
     std::shared_ptr<Priv> m_priv;
 };
 
-} //namespace onevpl
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
