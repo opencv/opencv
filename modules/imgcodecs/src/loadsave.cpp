@@ -389,6 +389,12 @@ imread_( const String& filename, int flags, Mat& mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
+    try
+    {
+        std::ifstream infile(filename);
+        if (!filename.good())
+            throw std::runtime_error("File path is incorrect!!");
+    }
 
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
