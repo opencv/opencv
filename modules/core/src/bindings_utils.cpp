@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 #include "opencv2/core/bindings_utils.hpp"
 #include <sstream>
+#include <iomanip>
 
 namespace cv { namespace utils {
 
@@ -206,6 +207,52 @@ CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argume
         ss << " ERROR: exception occurred, dump is non-complete";  // need to properly support different kinds
     }
     return ss.str();
+}
+
+static inline std::ostream& operator<<(std::ostream& os, const cv::Rect& rect)
+{
+    return os << "[x=" << rect.x << ", y=" << rect.y << ", w=" << rect.width << ", h=" << rect.height << ']';
+}
+
+template <class T, class Formatter>
+static inline String dumpVector(const std::vector<T>& vec, Formatter format)
+{
+    std::ostringstream oss("[", std::ios::ate);
+    if (!vec.empty())
+    {
+        oss << format << vec[0];
+        for (std::size_t i = 1; i < vec.size(); ++i)
+        {
+            oss << ", " << format << vec[i];
+        }
+    }
+    oss << "]";
+    return oss.str();
+}
+
+static inline std::ostream& noFormat(std::ostream& os)
+{
+    return os;
+}
+
+static inline std::ostream& floatFormat(std::ostream& os)
+{
+    return os << std::fixed << std::setprecision(2);
+}
+
+String dumpVectorOfInt(const std::vector<int>& vec)
+{
+    return dumpVector(vec, &noFormat);
+}
+
+String dumpVectorOfDouble(const std::vector<double>& vec)
+{
+    return dumpVector(vec, &floatFormat);
+}
+
+String dumpVectorOfRect(const std::vector<Rect>& vec)
+{
+    return dumpVector(vec, &noFormat);
 }
 
 }} // namespace
