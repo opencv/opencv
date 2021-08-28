@@ -1399,8 +1399,8 @@ OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint16x8, v_uint32x4, vuint32m1_t, unsigned, u1
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int16x8, v_int32x4, vint32m1_t, int, i16, i32, 8, wredsum)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint32x4, v_uint64x2, vuint64m1_t, unsigned, u32, u64, 4, wredsumu)
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int32x4, v_int64x2, vint64m1_t, int, i32, i64, 4, wredsum)
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint64x2, v_uint64x2, vuint64m1_t, uint64, u64, u64, 4, redsum)
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int64x2, v_int64x2, vint64m1_t, int64, i64, i64, 4, redsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_uint64x2, v_uint64x2, vuint64m1_t, uint64, u64, u64, 2, redsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM(v_int64x2, v_int64x2, vint64m1_t, int64, i64, i64, 2, redsum)
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(_Tpvec, _wTpvec, _nwTpvec, scalartype, suffix, wsuffix, vl, red) \
 inline scalartype v_reduce_sum(const _Tpvec& a)  \
@@ -1411,9 +1411,9 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
     return (scalartype)(_wTpvec(res).get0()); \
 }
 
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32x4, v_float32x4, vfloat32m1_t, float, f32, f32, 8, fredsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32x4, v_float32x4, vfloat32m1_t, float, f32, f32, 4, fredsum)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64x2, v_float64x2, vfloat64m1_t, double, f64, f64, 4, fredsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64x2, v_float64x2, vfloat64m1_t, double, f64, f64, 2, fredsum)
 #endif
 
 
