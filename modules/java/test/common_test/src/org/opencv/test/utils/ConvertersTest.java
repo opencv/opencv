@@ -28,9 +28,9 @@ public class ConvertersTest extends OpenCVTestCase {
         byte value1 = 2;
         byte value2 = 4;
         byte value3 = 3;
-        truth.add(new Byte(value1));
-        truth.add(new Byte(value2));
-        truth.add(new Byte(value3));
+        truth.add(Byte.valueOf(value1));
+        truth.add(Byte.valueOf(value2));
+        truth.add(Byte.valueOf(value3));
         assertEquals(truth, bs);
     }
 
@@ -248,9 +248,9 @@ public class ConvertersTest extends OpenCVTestCase {
         byte value1 = 2;
         byte value2 = 4;
         byte value3 = 3;
-        truth.add(new Byte(value1));
-        truth.add(new Byte(value2));
-        truth.add(new Byte(value3));
+        truth.add(Byte.valueOf(value1));
+        truth.add(Byte.valueOf(value2));
+        truth.add(Byte.valueOf(value3));
         assertEquals(truth, bs);
     }
 
@@ -276,10 +276,10 @@ public class ConvertersTest extends OpenCVTestCase {
         byte value2 = 2;
         byte value3 = 3;
         byte value4 = 4;
-        bytes.add(new Byte(value1));
-        bytes.add(new Byte(value2));
-        bytes.add(new Byte(value3));
-        bytes.add(new Byte(value4));
+        bytes.add(Byte.valueOf(value1));
+        bytes.add(Byte.valueOf(value2));
+        bytes.add(Byte.valueOf(value3));
+        bytes.add(Byte.valueOf(value4));
 
         dst = Converters.vector_char_to_Mat(bytes);
         truth = new Mat(4, 1, CvType.CV_8SC1);
@@ -499,10 +499,10 @@ public class ConvertersTest extends OpenCVTestCase {
         byte value2 = 2;
         byte value3 = 3;
         byte value4 = 4;
-        bytes.add(new Byte(value1));
-        bytes.add(new Byte(value2));
-        bytes.add(new Byte(value3));
-        bytes.add(new Byte(value4));
+        bytes.add(Byte.valueOf(value1));
+        bytes.add(Byte.valueOf(value2));
+        bytes.add(Byte.valueOf(value3));
+        bytes.add(Byte.valueOf(value4));
 
         dst = Converters.vector_uchar_to_Mat(bytes);
         truth = new Mat(4, 1, CvType.CV_8UC1);
