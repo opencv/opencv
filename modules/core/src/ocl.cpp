@@ -3453,19 +3453,33 @@ struct Kernel::Impl
 
     void cleanupUMats()
     {
+        bool exceptionOccurred = false;
         for( int i = 0; i < MAX_ARRS; i++ )
+        {
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
                 {
                     u[i]->flags |= UMatData::ASYNC_CLEANUP;
-                    u[i]->currAllocator->deallocate(u[i]);
+                    try
+                    {
+                        u[i]->currAllocator->deallocate(u[i]);
+                    }
+                    catch(const std::exception& exc)
+                    {
+                        // limited by legacy before C++11, therefore log and
+                        // remember some exception occurred to throw below
+                        CV_LOG_ERROR(NULL, "OCL: Unexpected C++ exception in OpenCL Kernel::Impl::cleanupUMats(): " << exc.what());
+                        exceptionOccurred = true;
+                    }
                 }
                 u[i] = 0;
             }
+        }
         nu = 0;
         haveTempDstUMats = false;
         haveTempSrcUMats = false;
+        CV_Assert(!exceptionOccurred);
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -3496,8 +3510,16 @@ struct Kernel::Impl
     void finit(cl_event e)
     {
         CV_UNUSED(e);
-        cleanupUMats();
         isInProgress = false;
+        try
+        {
+            cleanupUMats();
+        }
+        catch(...)
+        {
+            release();
+            throw;
+        }
         release();
     }
 
