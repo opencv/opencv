@@ -228,7 +228,7 @@ bool find4QuadCornerSubpix(InputArray _img, InputOutputArray _corners, Size regi
         Point2f dir1 = quad_corners[1] - quad_corners[0];
         Point2f origin2 = quad_corners[2];
         Point2f dir2 = quad_corners[3] - quad_corners[2];
-        double angle = acos(dir1.dot(dir2)/(norm(dir1)*norm(dir2)));
+        double angle = std::acos(dir1.dot(dir2)/(norm(dir1)*norm(dir2)));
         if(cvIsNaN(angle) || cvIsInf(angle) || angle < 0.5 || angle > CV_PI - 0.5) continue;
 
         findLinesCrossPoint(origin1, dir1, origin2, dir2, corners[i]);

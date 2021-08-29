@@ -613,24 +613,24 @@ Mat dls::skewsymm(const Mat * X1)
 Mat dls::rotx(const double t)
 {
     // rotx: rotation about y-axis
-    double ct = cos(t);
-    double st = sin(t);
+    double ct = std::cos(t);
+    double st = std::sin(t);
     return (Mat_<double>(3,3) << 1, 0, 0, 0, ct, -st, 0, st, ct);
 }
 
 Mat dls::roty(const double t)
 {
     // roty: rotation about y-axis
-    double ct = cos(t);
-    double st = sin(t);
+    double ct = std::cos(t);
+    double st = std::sin(t);
     return (Mat_<double>(3,3) << ct, 0, st, 0, 1, 0, -st, 0, ct);
 }
 
 Mat dls::rotz(const double t)
 {
     // rotz: rotation about y-axis
-    double ct = cos(t);
-    double st = sin(t);
+    double ct = std::cos(t);
+    double st = std::sin(t);
     return (Mat_<double>(3,3) << ct, -st, 0, st, ct, 0, 0, 0, 1);
 }
 

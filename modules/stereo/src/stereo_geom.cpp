@@ -147,7 +147,7 @@ void stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     Mat ww = t.cross(Mat(3, 1, CV_64F, _uu)), wR;
     double nw = norm(ww, NORM_L2);
     if (nw > 0.0)
-        ww *= acos(fabs(c)/nt)/nw;
+        ww *= std::acos(fabs(c)/nt)/nw;
     Rodrigues(ww, wR);
 
     Mat Ri;
@@ -607,7 +607,7 @@ float rectify3Collinear( InputArray _cameraMatrix1, InputArray _distCoeffs1,
     Mat_<double> ww = t12.cross(uu), wR;
     double nw = norm(ww, NORM_L2);
     CV_Assert(fabs(nw) > 0);
-    ww *= acos(fabs(c)/nt)/nw;
+    ww *= std::acos(fabs(c)/nt)/nw;
     Rodrigues(ww, wR);
 
     // now rotate camera 3 to make its optical axis parallel to cameras 1 and 2.
