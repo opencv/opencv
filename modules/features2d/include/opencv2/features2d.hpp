@@ -1490,8 +1490,8 @@ public:
 
     /** @brief Computes and returns score of two BoW vector.
 
-    @param bowVectors1 Input BoW vector 2.
-    @param bowVectors2 Input BoW vector 1.
+    @param bowVector1 Input BoW vector 2.
+    @param bowVector2 Input BoW vector 1.
     @return Score between two BoW vectors.
      */
     virtual double score( BOWVector& bowVector1, BOWVector& bowVector2 );
