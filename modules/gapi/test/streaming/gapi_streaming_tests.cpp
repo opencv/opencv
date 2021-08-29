@@ -292,7 +292,7 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
 
     size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
         data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
-        return data_stream.gcount();
+        return (size_t)data_stream.gcount();
     }
     bool empty() const override {
         return data_stream.eof() || data_stream.bad();
