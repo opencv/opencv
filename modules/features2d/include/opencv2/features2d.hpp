@@ -50,6 +50,8 @@
 #include "opencv2/flann/miniflann.hpp"
 #endif
 
+#include <map>
+
 /**
   @defgroup features2d 2D Features Framework
   @{
@@ -1441,12 +1443,58 @@ class CV_EXPORTS_W DBOWTrainer : public BOWTrainer
 public:
     /** @brief The constructor.
     */
-    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const NormTypes scoringType=NORM_L2,
+    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const NormTypes scoringType=NORM_L1,
                       const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
     virtual ~DBOWTrainer();
 
     CV_WRAP virtual Mat cluster() CV_OVERRIDE;
     CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
+
+    /** @brief Class for BoW Vector manipulation.
+     *
+     * Inherits from std::map, which maps the given word ID to similarity.
+     */
+    class BOWVector : public std::map<unsigned, double>
+    {
+    public:
+        BOWVector();
+        virtual ~BOWVector();
+
+        /** @brief Adds weight to a word weight existing in the vector, or creates a new word with the given weight.
+
+        @param id Query wordIdx
+        @param weight weight to create the word with, or to add to existing word
+         */
+        void addWeight(int id, double weight);
+
+        /** @brief Adds a word with a weight to the vector only if this does not exist yet
+
+        @param id Query wordIdx
+        @param weight weight to assign to the word if this does not exist
+         */
+        void addIfNotExist(int id, double weight);
+
+        /** @brief Normalizes the weights in the BoW vector.
+
+        @param normType norm type
+         */
+        void normalize(NormTypes normType);
+    };
+
+    /** @brief Transforms a set of descriptors into a BoW vector.
+
+    @param descriptors Input descriptors.
+    @param bowVector Output BoW vector.
+     */
+    virtual void transform( const Mat& descriptors, BOWVector& bowVector);
+
+    /** @brief Computes and returns score of two BoW vector.
+
+    @param bowVectors1 Input BoW vector 2.
+    @param bowVectors2 Input BoW vector 1.
+    @return Score between two BoW vectors.
+     */
+    virtual double score( BOWVector& bowVector1, BOWVector& bowVector2 );
 
 protected:
     struct Node
@@ -1469,7 +1517,7 @@ protected:
     int attempts;
     int flags;
     std::vector<Node> nodes;
-    std::vector<Node> words;
+    std::vector<Node*> words;
 
     /** @brief Recursively clustering descriptors at each level in the vocabulary tree.
 
@@ -1479,16 +1527,17 @@ protected:
      */
     CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level );
 
-    /** @brief Set weights for nodes.
+    /** @brief Sets weights for nodes.
      */
     CV_WRAP virtual void setWeights();
 
-    /** @brief Return most likely wordIdx to the given feature.
+    /** @brief Finds the most likely wordIdx and weight with the given descriptors.
 
     @param descriptors Input descriptors.
-    @param word Output word index.
+    @param wordIdx Output word index.
+    @param weight Output weight.
      */
-    CV_WRAP virtual void transform( const Mat& descriptors, unsigned& word);
+    CV_WRAP virtual void transform( const Mat& descriptors, unsigned& wordIdx, double& weight);
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.

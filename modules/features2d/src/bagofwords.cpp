@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
+
 
 namespace cv
 {
@@ -157,7 +157,7 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
             if (it->childs.empty())
             {
                 it->wordIdx = (unsigned)words.size();
-                words.push_back(*it);
+                words.push_back(&(*it));
             }
         }
     }
@@ -238,7 +238,8 @@ void DBOWTrainer::setWeights()
         {
             cv::Mat descriptor = descriptors[i].row(j);
             unsigned wordIdx;
-            transform(descriptor, wordIdx);
+            double weight;
+            transform(descriptor, wordIdx, weight);
 
             if (!visited[wordIdx])
             {
@@ -250,10 +251,10 @@ void DBOWTrainer::setWeights()
 
     for (int i = 0; i < nWords; i++)
         if (cnt[i] > 0)
-            words[i].weight = log((double)nDescriptors / (double)cnt[i]);
+            words[i]->weight = log((double)nDescriptors / (double)cnt[i]);
 }
 
-void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx)
+void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx, double& weight )
 {
     std::vector<unsigned> childs;
     std::vector<unsigned>::const_iterator child;
@@ -279,6 +280,114 @@ void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx)
     } while (!nodes[returnIdx].childs.empty());
 
     wordIdx = nodes[returnIdx].wordIdx;
+    weight = nodes[returnIdx].weight;
+}
+
+DBOWTrainer::BOWVector::BOWVector()
+{}
+
+DBOWTrainer::BOWVector::~BOWVector()
+{}
+
+void DBOWTrainer::BOWVector::addWeight( int id, double weight )
+{
+    BOWVector::iterator it = this->lower_bound(id);
+
+    if (it != this->end() && !(this->key_comp()(id, it->first)))
+        it->second += weight;
+    else
+        this->insert(it, BOWVector::value_type(id, weight));
+}
+
+void DBOWTrainer::BOWVector::addIfNotExist( int id, double weight )
+{
+    BOWVector::iterator it = this->lower_bound(id);
+
+    if (it == this->end() || (this->key_comp()(id, it->first)))
+        this->insert(it, BOWVector::value_type(id, weight));
+}
+
+void DBOWTrainer::BOWVector::normalize( NormTypes normType )
+{
+    double norm = 0.0;
+    BOWVector::iterator it;
+
+    if (normType == 2)
+    {
+        // L1 norm
+        for (it = begin(); it != end(); ++it)
+            norm += fabs(it->second);
+    }
+    else
+    {
+        // L2 norm
+        for (it = begin(); it != end(); ++it)
+            norm += it->second * it->second;
+        norm = sqrt(norm);
+    }
+
+    if (norm > 0.0)
+    {
+        for(it = begin(); it != end(); ++it)
+            it->second /= norm;
+    }
+}
+
+void DBOWTrainer::transform( const Mat& _descriptor, BOWVector& bowVector )
+{
+    bowVector.clear();
+
+    if (words.empty()) return;
+
+    for (int i = 0; i < _descriptor.rows; i++)
+    {
+        unsigned wordIdx;
+        double weight;
+        transform(_descriptor.row(i), wordIdx, weight);
+        if (weight > 0) bowVector.addWeight(wordIdx, weight);
+    }
+
+    bowVector.normalize(scoringType);
+}
+
+double DBOWTrainer::score( BOWVector& bowVector1, BOWVector& bowVector2 )
+{
+    std::vector<double> weights1, weights2;
+    BOWVector::const_iterator it1, it2;
+    it1 = bowVector1.begin();
+    it2 = bowVector2.begin();
+
+    // Find common elements between bowVector1 and bowVector2
+    while (it1 != bowVector1.end() && it2 != bowVector2.end())
+    {
+        if (it1->first < it2->first) ++it1;
+        else if (it2->first < it1->first) ++it2;
+        else
+        {
+            weights1.push_back(it1->second);
+            weights2.push_back(it2->second);
+            ++it1; ++it2;
+        }
+    }
+
+    double score = 0.0;
+
+    switch (scoringType)
+    {
+        // Please refer to *Scalable Recognition with a Vocabulary Tree*, CVPR 2006.
+        case NORM_L1:
+            for (int i = 0; i < (int)weights1.size(); i++)
+                score += fabs(weights1[i] - weights2[i]) - fabs(weights1[i]) - fabs(weights2[i]);
+            score = -score/2.0;
+            break;
+
+        default:
+            for (int i = 0; i < (int)weights1.size(); i++)
+                score += weights1[i] * weights2[i];
+            score = (score >= 1 ? 1.0 : 1.0 - sqrt(1.0 - score));
+            break;
+    }
+    return score;
 }
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor,
