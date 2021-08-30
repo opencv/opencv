@@ -276,6 +276,11 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 static const bool display = false;
 static const bool parallelCheck = false;
 
+enum vtype
+{
+    TSDF = 0, HASHTSDF = 1, COLOREDTSDF = 2
+};
+
 class Settings
 {
 public:
@@ -288,7 +293,7 @@ public:
     Ptr<Scene> scene;
     std::vector<Affine3f> poses;
 
-    Settings(bool useHashTSDF, bool onlySemisphere)
+    Settings(vtype volume_type, bool onlySemisphere)
     {
         frameSize = Size(640, 480);
 
@@ -326,12 +331,12 @@ public:
 
         VolumeParams::VolumeKind volumeKind = VolumeParams::VolumeKind::TSDF;
 
-        if (useHashTSDF)
+        if (volume_type == vtype::HASHTSDF)
         {
             volumeKind = VolumeParams::VolumeKind::HASHTSDF;
             truncateThreshold = 4.f;
         }
-        else
+        else if (volume_type == vtype::TSDF)
         {
             volSize = 3.f;
             volumeDims = Vec3i::all(128); //number of voxels
@@ -339,6 +344,10 @@ public:
             tsdf_trunc_dist = 2 * voxelSize; // 0.04f in meters
 
             raycast_step_factor = 0.75f;  //in voxel sizes
+        }
+        else if (volume_type == vtype::COLOREDTSDF)
+        {
+            volumeKind = VolumeParams::VolumeKind::COLOREDTSDF;
         }
 
         volume = makeVolume(volumeKind, voxelSize, volumePose.matrix,
@@ -397,7 +406,7 @@ int counterOfValid(Mat points)
     return count;
 }
 
-void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
+void normal_test(vtype volume_type, bool isRaycast, bool isFetchPointsNormals, bool isFetchNormals)
 {
     auto normalCheck = [](Vec4f& vector, const int*)
     {
@@ -410,7 +419,7 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
         }
     };
 
-    Settings settings(isHashTSDF, false);
+    Settings settings(volume_type, false);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _tmpnormals;
@@ -464,9 +473,9 @@ void normal_test(bool isHashTSDF, bool isRaycast, bool isFetchPointsNormals, boo
     points.release(); normals.release();
 }
 
-void valid_points_test(bool isHashTSDF)
+void valid_points_test(vtype volume_type)
 {
-    Settings settings(isHashTSDF, true);
+    Settings settings(volume_type, true);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
     UMat _points, _normals, _newPoints, _newNormals;
@@ -515,56 +524,56 @@ TEST(HashTSDF, valid_points) { valid_points_test(true); }
 TEST(TSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, true, false, false);
+    normal_test(vtype::TSDF, true, false, false);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(TSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, false, true, false);
+    normal_test(vtype::TSDF, false, true, false);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(TSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(false, false, false, true);
+    normal_test(vtype::TSDF, false, false, true);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(TSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(false);
+    valid_points_test(vtype::TSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, raycast_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(true, true, false, false);
+    normal_test(vtype::HASHTSDF, true, false, false);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, fetch_points_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(true, false, true, false);
+    normal_test(vtype::HASHTSDF, false, true, false);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, fetch_normals)
 {
     cv::ocl::setUseOpenCL(false);
-    normal_test(true, false, false, true);
+    normal_test(vtype::HASHTSDF, false, false, true);
     cv::ocl::setUseOpenCL(true);
 }
 
 TEST(HashTSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
-    valid_points_test(true);
+    valid_points_test(vtype::HASHTSDF);
     cv::ocl::setUseOpenCL(true);
 }
 #endif
