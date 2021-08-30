@@ -8,6 +8,8 @@
 using namespace std;
 using namespace cv;
 
+const int N = 1e5, K = 2e3;
+
 namespace
 {
 
@@ -128,7 +130,7 @@ namespace
         {
             for (int k = 0; k < ksize; k++)
             {
-                float ans[cols] = {0};
+                float ans[N] = {0};
                 conv1dsimd(src, kernel, ans, i + k, k, cols);
                 int j;
                 for (j = 0; j + step < cols; j += step)
@@ -166,7 +168,6 @@ int main(int argc, char *argv[])
 {
 
     //  1-D Convolution  //
-    const int N = 1e5, K = 2e3;
     Mat vsrc(1, N, CV_8UC1), k(1, K, CV_32FC1), vdst;
     RNG rng(time(0));
     rng.RNG::fill(vsrc, RNG::UNIFORM, Scalar(0), Scalar(255));
@@ -178,7 +179,7 @@ int main(int argc, char *argv[])
     cout << " Sequential 1-D convolution implementation: " << t << "s" << endl;
 
     t = (double)getTickCount();
-    float ans[vsrc.cols] = {0};
+    float ans[N] = {0};
     conv1dsimd(vsrc, k, ans);
     t = ((double)getTickCount() - t) / getTickFrequency();
     cout << " Vectorized 1-D convolution implementation: " << t << "s" << endl;
