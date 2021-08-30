@@ -381,6 +381,7 @@ double DBOWTrainer::score( BOWVector& bowVector1, BOWVector& bowVector2 )
             score = -score/2.0;
             break;
 
+        case NORM_L2:
         default:
             for (int i = 0; i < (int)weights1.size(); i++)
                 score += weights1[i] * weights2[i];
@@ -388,6 +389,114 @@ double DBOWTrainer::score( BOWVector& bowVector1, BOWVector& bowVector2 )
             break;
     }
     return score;
+}
+
+void DBOWTrainer::save( const std::string &fn )
+{
+    FileStorage fs(fn.c_str(), FileStorage::WRITE);
+    if (!fs.isOpened()) throw std::string("Fail to open file ") + fn;
+
+    std::vector<unsigned> parents, childs;
+    std::vector<unsigned>::const_iterator child;
+    std::vector<Node*>::const_iterator word;
+
+    fs << "vocabulary" << "{";
+    fs << "clusterCountPerLevel" << clusterCountPerLevel;
+    fs << "level" << level;
+    fs << "scoringType" << scoringType;
+
+    parents.push_back(0);
+
+    // Write node data
+    fs << "nodes" << "[";
+    while (!parents.empty())
+    {
+        const Node& parent = nodes[parents.back()];
+        parents.pop_back();
+        childs = parent.childs;
+
+        for (child = childs.begin(); child != childs.end(); child++)
+        {
+            const Node& node = nodes[*child];
+
+            fs << "{:";
+            fs << "nodeIdx" << (int)node.idx;
+            fs << "parentIdx" << (int)parent.idx;
+            fs << "weight" << (double)node.weight;
+            fs << "descriptor" << node.descriptor;
+            fs << "}";
+
+            if (!node.childs.empty())
+                parents.push_back(*child);
+        }
+    }
+    fs << "]";
+
+    // Write word data
+    fs << "words" << "[";
+    for (word = words.begin(); word != words.end(); word++)
+    {
+        unsigned idx = word - words.begin();
+        fs << "{:";
+        fs << "wordIdx" << (int)idx;
+        fs << "nodeIdx" << (int)(*word)->idx;
+        fs << "}";
+    }
+
+    fs << "]";
+    fs << "}";
+    fs.release();
+}
+
+void DBOWTrainer::load( const std::string &fn )
+{
+    FileStorage fs(fn.c_str(), FileStorage::READ);
+    if (!fs.isOpened()) throw std::string("Fail to open file ") + fn;
+
+    nodes.clear();
+    words.clear();
+
+    FileNode fsVoc, fsNodes, fsWords;
+    fsVoc = fs["vocabulary"];
+    fsNodes = fsVoc["nodes"];
+    fsWords = fsVoc["words"];
+
+    fsVoc["clusterCountPerLevel"] >> clusterCountPerLevel;
+    fsVoc["level"] >> level;
+    fsVoc["scoringType"] >> scoringType;
+
+    // Read nodes
+    nodes.resize(fsNodes.size() + 1);
+    nodes[0].idx = 0;
+
+    for (unsigned i = 0; i < fsNodes.size(); ++i)
+    {
+        Mat descriptor;
+        unsigned idx = (int)fsNodes[i]["nodeIdx"];
+        unsigned parent = (int)fsNodes[i]["parentIdx"];
+        double weight = (double)fsNodes[i]["weight"];
+        fsNodes[i]["descriptor"] >> descriptor;
+
+        nodes[idx].idx = idx;
+        nodes[idx].parent = parent;
+        nodes[idx].weight = weight;
+        nodes[idx].descriptor = descriptor;
+        nodes[parent].childs.push_back(idx);
+    }
+
+    // Read words
+    words.resize(fsWords.size());
+
+    for(unsigned int i = 0; i < fsWords.size(); ++i)
+    {
+        unsigned idx = (int)fsWords[i]["nodeIdx"];
+        unsigned wordIdx = (int)fsWords[i]["wordIdx"];
+
+        nodes[idx].wordIdx = wordIdx;
+        words[wordIdx] = &nodes[idx];
+    }
+
+    fs.release();
 }
 
 BOWImgDescriptorExtractor::BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& _dextractor,

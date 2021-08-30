@@ -1450,6 +1450,18 @@ public:
     CV_WRAP virtual Mat cluster() CV_OVERRIDE;
     CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
 
+    /** @brief Saves vocabulary to file.
+
+    @param fn File name, better in *.json.
+     */
+    virtual void save( const std::string &fn );
+
+    /** @brief Loads vocabulary from file.
+
+    @param fn File name, better in *.json.
+     */
+    virtual void load( const std::string &fn );
+
     /** @brief Class for BoW Vector manipulation.
      *
      * Inherits from std::map, which maps the given word ID to similarity.
