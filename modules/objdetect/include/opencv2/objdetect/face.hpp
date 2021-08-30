@@ -15,10 +15,10 @@ namespace cv
 
 /** @brief DNN-based face detector, model download link: https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx.
  */
-class CV_EXPORTS_W FaceDetector
+class CV_EXPORTS_W FaceDetectorYN
 {
 public:
-    virtual ~FaceDetector() {};
+    virtual ~FaceDetectorYN() {};
 
     CV_WRAP virtual void setInputSize(const Size& input_size) = 0;
 
@@ -53,7 +53,7 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetector> create(const String& model,
+    CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
                                             const String& config,
                                             const Size& input_size,
                                             float score_threshold = 0.9,

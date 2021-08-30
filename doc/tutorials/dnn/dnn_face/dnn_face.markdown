@@ -12,7 +12,7 @@
 
 ## Introduction
 
-In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#Models). The usage of `DNNFaceDetector` and `DNNFaceRecognizer` are presented in [Usage](#Usage).
+In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#Models). The usage of `FaceDetectorYN` and `FaceRecognizer` are presented in [Usage](#Usage).
 
 ## Models
 
@@ -37,15 +37,15 @@ There are two models (ONNX format) pre-trained and required for this module:
 ### DNNFaceDetector
 
 ```cpp
-// Initialize FaceDetector
-Ptr<FaceDetector> faceDetector = FaceDetector::create(onnx_path, "", image.size(), score_thresh, nms_thresh, top_k);
+// Initialize FaceDetectorYN
+Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(onnx_path, "", image.size(), score_thresh, nms_thresh, top_k);
 
 // Forward
 Mat faces;
 faceDetector->detect(image, faces);
 ```
 
-The detection output `faces` is a two-dimension array, whose rows are the detected face instances, columns are the location of a face and 5 facial landmarks. The format of each row is as follows:
+The detection output `faces` is a two-dimension array of type CV_32F, whose rows are the detected face instances, columns are the location of a face and 5 facial landmarks. The format of each row is as follows:
 
 ```
 x1, y1, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rcm, y_rcm, x_lcm, y_lcm
@@ -90,6 +90,6 @@ For example, two faces have same identity if the cosine distance is greater than
 
 ## Acknowledgement
 
-Thanks [Prof. Yu](https://github.com/ShiqiYu/) for training and providing the face detection model.
+Thanks [Professor Shiqi Yu](https://github.com/ShiqiYu/) and [his master student Yuantao Feng](https://github.com/fengyuentau) for training and providing the face detection model.
 
 Thanks [Professor Deng](http://www.whdeng.cn/) and [PhD Candidate Zhong](https://github.com/zhongyy/) for training and providing the face recognition model.

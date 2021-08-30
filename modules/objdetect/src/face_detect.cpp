@@ -13,10 +13,10 @@
 namespace cv
 {
 
-class FaceDetectorImpl : public FaceDetector
+class FaceDetectorYNImpl : public FaceDetectorYN
 {
 public:
-    FaceDetectorImpl(const String& model,
+    FaceDetectorYNImpl(const String& model,
                      const String& config,
                      const Size& input_size,
                      float score_threshold,
@@ -179,18 +179,17 @@ private:
 
         // Decode from deltas and priors
         const std::vector<float> variance = {0.1, 0.2};
-        Mat faces;
         float* loc_v = (float*)(loc.data);
         float* conf_v = (float*)(conf.data);
         float* iou_v = (float*)(iou.data);
+        Mat faces;
+        // (tl_x, tl_y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rcm_x, rcm_y, lcm_x, lcm_y, score)
+        // 'tl': top left point of the bounding box
+        // 're': right eye, 'le': left eye
+        // 'nt':  nose tip
+        // 'rcm': right corner of mouth, 'lcm': left corner of mouth
+        Mat face(1, 15, CV_32FC1);
         for (size_t i = 0; i < priors.size(); ++i) {
-            // (tl_x, tl_y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rcm_x, rcm_y, lcm_x, lcm_y, score)
-            // 'tl': top left point of the bounding box
-            // 're': right eye, 'le': left eye
-            // 'nt':  nose tip
-            // 'rcm': right corner of mouth, 'lcm': left corner of mouth
-            Mat face(1, 15, CV_32FC1);
-
             // Get score
             float clsScore = conf_v[i*2+1];
             float iouScore = iou_v[i];
@@ -273,7 +272,7 @@ private:
     std::vector<Rect2f> priors;
 };
 
-Ptr<FaceDetector> FaceDetector::create(const String& model,
+Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
                                        const String& config,
                                        const Size& input_size,
                                        const float score_threshold,
@@ -282,7 +281,7 @@ Ptr<FaceDetector> FaceDetector::create(const String& model,
                                        const int backend_id,
                                        const int target_id)
 {
-    return makePtr<FaceDetectorImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
+    return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
 }
 
 } // namespace cv

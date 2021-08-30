@@ -15,7 +15,7 @@ img1 = cv.imread(args.input1)
 img2 = cv.imread(args.input2)
 
 # Instantiaate face detector and recognizer
-detector = cv.FaceDetector.create(
+detector = cv.FaceDetectorYN.create(
     args.face_detection_model,
     "",
     (img1.shape[1], img1.shape[0])
