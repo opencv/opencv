@@ -88,12 +88,80 @@ struct RenderInvoker : ParallelLoopBody
     bool onlySemisphere;
 };
 
+
+template<class Scene>
+struct RenderColorInvoker : ParallelLoopBody
+{
+    RenderColorInvoker(Mat_<Vec3f>& _frame, Affine3f _pose,
+        Reprojector _reproj, float _depthFactor, bool _onlySemisphere)
+        : ParallelLoopBody(),
+        frame(_frame),
+        pose(_pose),
+        reproj(_reproj),
+        depthFactor(_depthFactor),
+        onlySemisphere(_onlySemisphere)
+    { }
+
+    virtual void operator ()(const cv::Range& r) const
+    {
+        for (int y = r.start; y < r.end; y++)
+        {
+            Vec3f* frameRow = frame[y];
+            for (int x = 0; x < frame.cols; x++)
+            {
+                Vec3f pix = 0;
+
+                Point3f orig = pose.translation();
+                // direction through pixel
+                Point3f screenVec = reproj(Point3f((float)x, (float)y, 1.f));
+                Point3f dir = normalize(Vec3f(pose.rotation() * screenVec));
+                // screen space axis
+                dir.y = -dir.y;
+
+                const float maxDepth = 20.f;
+                const float maxSteps = 256;
+                float t = 0.f;
+                for (int step = 0; step < maxSteps && t < maxDepth; step++)
+                {
+                    Point3f p = orig + dir * t;
+                    float d = Scene::map(p, onlySemisphere);
+                    if (d < 0.000001f)
+                    {
+                        float m = 0.25f;
+                        float p0 = float(abs(fmod(p.x, m)) > m / 2.f);
+                        float p1 = float(abs(fmod(p.y, m)) > m / 2.f);
+                        float p2 = float(abs(fmod(p.z, m)) > m / 2.f);
+
+                        pix[0] = p0 + p1;
+                        pix[1] = p1 + p2;
+                        pix[2] = p0 + p2;
+
+                        pix *= 128.f;
+                        break;
+                    }
+                    t += d;
+                }
+
+                frameRow[x] = pix;
+            }
+        }
+    }
+
+    Mat_<Vec3f>& frame;
+    Affine3f pose;
+    Reprojector reproj;
+    float depthFactor;
+    bool onlySemisphere;
+};
+
 struct Scene
 {
     virtual ~Scene() {}
     static Ptr<Scene> create(Size sz, Matx33f _intr, float _depthFactor, bool onlySemisphere);
     virtual Mat depth(Affine3f pose) = 0;
+    virtual Mat rgb(Affine3f pose) = 0;
     virtual std::vector<Affine3f> getPoses() = 0;
+
 };
 
 struct SemisphereScene : Scene
@@ -143,6 +211,17 @@ struct SemisphereScene : Scene
         return std::move(frame);
     }
 
+    Mat rgb(Affine3f pose) override
+    {
+        Mat_<Vec3f> frame(frameSize);
+        Reprojector reproj(intr);
+
+        Range range(0, frame.rows);
+        parallel_for_(range, RenderColorInvoker<SemisphereScene>(frame, pose, reproj, depthFactor, onlySemisphere));
+
+        return std::move(frame);
+    }
+
     std::vector<Affine3f> getPoses() override
     {
         std::vector<Affine3f> poses;
@@ -168,12 +247,16 @@ Ptr<Scene> Scene::create(Size sz, Matx33f _intr, float _depthFactor, bool _onlyS
     return makePtr<SemisphereScene>(sz, _intr, _depthFactor, _onlySemisphere);
 }
 
+
+
+
 // this is a temporary solution
 // ----------------------------
 
 typedef cv::Vec4f ptype;
 typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
+typedef Points Colors;
 typedef Size2i Size;
 
 template<int p>
@@ -214,14 +297,21 @@ inline Point3f normalize(const Vec3f& v)
     return v * (nv ? 1. / nv : 0.);
 }
 
-void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
+void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose, InputArray _colors = noArray())
 {
     Size sz = _points.size();
     image.create(sz, CV_8UC4);
 
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
-
+    Colors colors;
+    bool useColors = false;
+    if (&_colors != &noArray())
+    {
+        useColors = true;
+        colors = _colors.getMat();
+    }
+    
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -233,39 +323,49 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
                 const ptype* nrmRow = normals[y];
+                const ptype* clrRow;
+
+                if (useColors)
+                    clrRow = colors[y];
 
                 for (int x = 0; x < sz.width; x++)
                 {
                     Point3f p = fromPtype(ptsRow[x]);
                     Point3f n = fromPtype(nrmRow[x]);
-
+                    
                     Vec4b color;
-
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                    if (useColors)
                     {
-                        color = Vec4b(0, 32, 0, 0);
+                        Point3f c = fromPtype(clrRow[x]);
+                        color = Vec4b(c.x, c.y, c.z, 0);
                     }
                     else
                     {
-                        const float Ka = 0.3f;  //ambient coeff
-                        const float Kd = 0.5f;  //diffuse coeff
-                        const float Ks = 0.2f;  //specular coeff
-                        const int   sp = 20;  //specular power
+                        if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                        {
+                            color = Vec4b(0, 32, 0, 0);
+                        }
+                        else
+                        {
+                            const float Ka = 0.3f;  //ambient coeff
+                            const float Kd = 0.5f;  //diffuse coeff
+                            const float Ks = 0.2f;  //specular coeff
+                            const int   sp = 20;  //specular power
 
-                        const float Ax = 1.f;   //ambient color,  can be RGB
-                        const float Dx = 1.f;   //diffuse color,  can be RGB
-                        const float Sx = 1.f;   //specular color, can be RGB
-                        const float Lx = 1.f;   //light color
+                            const float Ax = 1.f;   //ambient color,  can be RGB
+                            const float Dx = 1.f;   //diffuse color,  can be RGB
+                            const float Sx = 1.f;   //specular color, can be RGB
+                            const float Lx = 1.f;   //light color
 
-                        Point3f l = normalize(lightPose.translation() - Vec3f(p));
-                        Point3f v = normalize(-Vec3f(p));
-                        Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
+                            Point3f l = normalize(lightPose.translation() - Vec3f(p));
+                            Point3f v = normalize(-Vec3f(p));
+                            Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
 
-                        uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
-                            Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
-                        color = Vec4b(ix, ix, ix, 0);
+                            uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
+                                Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
+                            color = Vec4b(ix, ix, ix, 0);
+                        }
                     }
-
                     imgRow[x] = color;
                 }
             }
@@ -359,12 +459,16 @@ public:
     }
 };
 
-void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose)
+void displayImage(Mat depth, Mat points, Mat normals, float depthFactor, Vec3f lightPose, Mat colors = Mat())
 {
     Mat image;
     patchNaNs(points);
     imshow("depth", depth * (1.f / depthFactor / 4.f));
-    renderPointsNormals(points, normals, image, lightPose);
+    if (colors.empty())
+        renderPointsNormals(points, normals, image, lightPose);
+    else
+        renderPointsNormals(points, normals, image, lightPose, colors);
+
     imshow("render", image);
     waitKey(2000);
 }
@@ -478,20 +582,33 @@ void valid_points_test(vtype volume_type)
     Settings settings(volume_type, true);
 
     Mat depth = settings.scene->depth(settings.poses[0]);
-    UMat _points, _normals, _newPoints, _newNormals;
+    UMat _points, _normals, _colors, _newPoints, _newNormals, _newColors;
     AccessFlag af = ACCESS_READ;
-    Mat  points, normals;
+    Mat  points, normals, colors;
     int anfas, profile;
 
-    settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
-    settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+    if (volume_type == vtype::COLOREDTSDF)
+    {
+        Mat rgb = settings.scene->rgb(settings.poses[0]);
+        settings.volume->integrate(depth, rgb, settings.depthFactor, settings.poses[0].matrix, settings.intr,settings.intr);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals, _colors);
+        colors = _colors.getMat(af);
+    }
+    else
+    {
+        settings.volume->integrate(depth, settings.depthFactor, settings.poses[0].matrix, settings.intr);
+        settings.volume->raycast(settings.poses[0].matrix, settings.intr, settings.frameSize, _points, _normals);
+    }
     normals = _normals.getMat(af);
     points = _points.getMat(af);
     patchNaNs(points);
     anfas = counterOfValid(points);
 
     if (display)
-        displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
+        if (volume_type == vtype::COLOREDTSDF)
+            displayImage(depth, points, normals, settings.depthFactor, settings.lightPose, colors);
+        else
+            displayImage(depth, points, normals, settings.depthFactor, settings.lightPose);
 
     settings.volume->raycast(settings.poses[17].matrix, settings.intr, settings.frameSize, _newPoints, _newNormals);
     normals = _newNormals.getMat(af);
@@ -574,6 +691,13 @@ TEST(HashTSDF_CPU, valid_points)
 {
     cv::ocl::setUseOpenCL(false);
     valid_points_test(vtype::HASHTSDF);
+    cv::ocl::setUseOpenCL(true);
+}
+
+TEST(ColoredTSDF_CPU, valid_points)
+{
+    cv::ocl::setUseOpenCL(false);
+    valid_points_test(vtype::COLOREDTSDF);
     cv::ocl::setUseOpenCL(true);
 }
 #endif
