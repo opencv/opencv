@@ -4055,6 +4055,9 @@ int Net::addLayer(const String &name, const String &type, const int &dtype, Laye
     if (params.get<bool>("has_dynamic_shapes", false))
         impl->hasDynamicShapes = true;
 
+    if (dtype == CV_8S)
+        impl->netWasQuantized = true;
+
     return id;
 }
 
