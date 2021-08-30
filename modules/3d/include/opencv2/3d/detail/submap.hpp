@@ -68,6 +68,9 @@ public:
         return float(visible_blocks) / float(allocate_blocks);
     }
 
+    // Adding new Edge for Loop Closure Detection. Return true or false to indicate whether adding success.
+    bool addEdgeToSubmap(const int tarSubmapID, const Affine3f& tarPose);
+
     //! TODO: Possibly useless
     virtual void setStartFrameId(int _startFrameId) { startFrameId = _startFrameId; };
     virtual void setStopFrameId(int _stopFrameId) { stopFrameId = _stopFrameId; };
@@ -124,6 +127,27 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f
     }
 }
 
+template<typename MatType>
+bool Submap<MatType>::addEdgeToSubmap(const int tarSubmapID, const Affine3f& tarPose)
+{
+    auto iter = constraints.find(tarSubmapID);
+
+    // if there is NO edge of currSubmap to tarSubmap.
+    if(iter == constraints.end())
+    {
+        // Frome pose to tarPose transformation
+        Affine3f estimatePose = tarPose * pose.inv();
+
+        // Create new Edge.
+        PoseConstraint& preConstrain = getConstraint(tarSubmapID);
+        preConstrain.accumulatePose(estimatePose, 1);
+
+        return true;
+    } else
+    {
+        return false;
+    }
+}
 
 /**
  * @brief: Manages all the created submaps for a particular scene
@@ -172,6 +196,8 @@ public:
 
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
     bool updateMap(int _frameId, Ptr<OdometryFrame> _frame);
+
+    bool addEdgeToCurrentSubmap(const int currentSubmapID, const int tarSubmapID);
 
     Ptr<detail::PoseGraph> MapToPoseGraph();
     void PoseGraphToMap(const Ptr<detail::PoseGraph>& updatedPoseGraph);
@@ -380,6 +406,15 @@ bool SubmapManager<MatType>::shouldChangeCurrSubmap(int _frameId, int toSubmapId
         return true;
 
     return false;
+}
+
+template<typename MatType>
+bool SubmapManager<MatType>::addEdgeToCurrentSubmap(const int currentSubmapID, const int tarSubmapID)
+{
+    Ptr<SubmapT> currentSubmap = getSubmap(currentSubmapID);
+    Ptr<SubmapT> tarSubmap = getSubmap(tarSubmapID);
+
+    return currentSubmap->addEdgeToSubmap(tarSubmapID, tarSubmap->pose);
 }
 
 template<typename MatType>
