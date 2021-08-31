@@ -71,13 +71,13 @@ int main(int argc, char ** argv)
     faceRecognizer->alignCrop(image2, faces_2.row(0), aligned_face2);
 
     Mat feature1, feature2;
-    faceRecognizer->faceFeature(aligned_face1, feature1);
+    faceRecognizer->feature(aligned_face1, feature1);
     feature1 = feature1.clone();
-    faceRecognizer->faceFeature(aligned_face2, feature2);
+    faceRecognizer->feature(aligned_face2, feature2);
     feature2 = feature2.clone();
 
-    double cos_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::cosine);
-    double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::norml2);
+    double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
+    double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
 
     if(cos_score >= cosine_similar_thresh)
     {

@@ -67,7 +67,7 @@ faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
 
 // Run feature extraction with given aligned_face (cv::Mat)
 Mat feature;
-faceRecognizer->faceFeature(aligned_face, feature);
+faceRecognizer->feature(aligned_face, feature);
 feature = feature.clone();
 ```
 
@@ -75,9 +75,9 @@ After obtaining face features *feature1* and *feature2* of two facial images, ru
 
 ```cpp
 // Calculating the discrepancy between two face features by using cosine distance.
-double cos_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::cosine);
+double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
 // Calculating the discrepancy between two face features by using normL2 distance.
-double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::norml2);
+double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
 ```
 
 For example, two faces have same identity if the cosine distance is greater than or equal to 0.34, or the normL2 distance is less than or equal to 1.32.

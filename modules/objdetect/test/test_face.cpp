@@ -158,9 +158,9 @@ TEST(Objdetect_face_recognition, regression)
     float l2norm_similar_thresh = 1.272;
 
     // Load ground truth labels
-    std::ifstream ifs(findDataFile("dnn_face/face_recognition/cascades_label.txt", true).c_str());
+    std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt", true).c_str());
     CV_Assert(ifs.is_open());
-
+    
     std::set<String> fSet;
     std::map<String, Mat> featureMap;
     std::map<std::pair<String, String>, int> gtMap;
@@ -183,13 +183,13 @@ TEST(Objdetect_face_recognition, regression)
     String detect_model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(250, 250), score_thresh, nms_thresh);
 
-    String recog_model = findDataFile("dnn_face/face_recognition/face_recognizer_fast.onnx", true);
+    String recog_model = findDataFile("../dnn/onnx/models/face_recognizer_fast.onnx", true);
     Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(recog_model, "");
 
     // Detect and match
     for (auto fname: fSet)
     {
-        String imagePath = findDataFile("cascadeandhog/images/" + fname, true);
+        String imagePath = findDataFile("dnn_face/recognition/" + fname, true);
         Mat image = imread(imagePath);
 
         Mat faces;
@@ -199,7 +199,7 @@ TEST(Objdetect_face_recognition, regression)
         faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
 
         Mat feature;
-        faceRecognizer->faceFeature(aligned_face, feature);
+        faceRecognizer->feature(aligned_face, feature);
 
         featureMap[fname] = feature.clone();
     }
@@ -210,8 +210,8 @@ TEST(Objdetect_face_recognition, regression)
         Mat feature2 = featureMap[item.first.second];
         int label = item.second;
 
-        double cos_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::cosine);
-        double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::norml2);
+        double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
+        double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
 
         EXPECT_TRUE(label == 0 ? cos_score <= cosine_similar_thresh : cos_score > cosine_similar_thresh) << "Cosine match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< cos_score <<";Thresh: "<< cosine_similar_thresh <<").";
         EXPECT_TRUE(label == 0 ? L2_score > l2norm_similar_thresh : L2_score <= l2norm_similar_thresh) << "L2norm match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< L2_score <<";Thresh: "<< l2norm_similar_thresh <<").";

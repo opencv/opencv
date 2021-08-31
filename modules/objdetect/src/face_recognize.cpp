@@ -34,21 +34,21 @@ public:
         Mat warp_mat = getSimilarityTransformMatrix(src_point);
         warpAffine(_src_img, _aligned_img, warp_mat, Size(112, 112), INTER_LINEAR);
     };
-    void faceFeature(InputArray _aligned_img, OutputArray _face_feature) override
+    void feature(InputArray _aligned_img, OutputArray _face_feature) override
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
         net.setInput(inputBolb);
         net.forward(_face_feature);
     };
-    double faceMatch(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
+    double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
         face_feature1 /= norm(face_feature1);
         face_feature2 /= norm(face_feature2);
 
-        if(dis_type == distype::cosine){
+        if(dis_type == DisType::COSINE){
             return sum(face_feature1.mul(face_feature2))[0];
-        }else if(dis_type == distype::norml2){
+        }else if(dis_type == DisType::NORM_L2){
             return norm(face_feature1, face_feature2);
         }else{
             throw std::invalid_argument("invalid parameter " + dis_type);
