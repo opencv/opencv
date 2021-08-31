@@ -436,7 +436,7 @@ void DBOWTrainer::save( const std::string &fn )
     fs << "words" << "[";
     for (word = words.begin(); word != words.end(); word++)
     {
-        unsigned idx = word - words.begin();
+        unsigned idx = (int)(word - words.begin());
         fs << "{:";
         fs << "wordIdx" << (int)idx;
         fs << "nodeIdx" << (int)(*word)->idx;
