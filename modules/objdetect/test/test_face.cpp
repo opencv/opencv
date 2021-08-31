@@ -72,14 +72,14 @@ TEST(Objdetect_face_detect, regression)
     int numCoords = 4 + 2 * numLM;
 
     // Load ground truth labels
-    std::map<String, Mat> gt = blobFromTXT(findDataFile("dnn_face/face_detection/cascades_label.txt", true), numCoords);
+    std::map<String, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt", true), numCoords);
     // for (auto item: gt)
     // {
     //     std::cout << item.first << " " << item.second.size() << std::endl;
     // }
 
     // Initialize detector
-    String model = findDataFile("dnn_face/face_detection/yunet.onnx", true);
+    String model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7);
 
@@ -180,7 +180,7 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    String detect_model = findDataFile("dnn_face/face_detection/yunet.onnx", true);
+    String detect_model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(250, 250), score_thresh, nms_thresh);
 
     String recog_model = findDataFile("dnn_face/face_recognition/face_recognizer_fast.onnx", true);
