@@ -2865,8 +2865,8 @@ described below.
 therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
 length.
 @param method Method for computing an essential matrix.
--   **RANSAC** for the RANSAC algorithm.
--   **LMEDS** for the LMedS algorithm.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
 @param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
 confidence (probability) that the estimated matrix is correct.
 @param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
