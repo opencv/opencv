@@ -147,6 +147,15 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
     nodes.push_back(Node(0));
     kmeansStep( _descriptors , 0, 1);
 
+    createWords();
+    setWeights();
+
+    // returns an empty Mat
+    return Mat();
+}
+
+void DBOWTrainer::createWords()
+{
     // Create words (nodes that are leaves) from nodes
     words.resize(0);
     if (!nodes.empty())
@@ -161,10 +170,6 @@ Mat DBOWTrainer::cluster( const Mat& _descriptors )
             }
         }
     }
-
-    setWeights();
-
-    return Mat();
 }
 
 void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_level )
@@ -256,6 +261,9 @@ void DBOWTrainer::setWeights()
 
 void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx, double& weight )
 {
+    cv::Mat descriptor = _descriptor;
+    if (descriptor.type() != CV_32FC1) descriptor.convertTo(descriptor, CV_32FC1);
+
     std::vector<unsigned> childs;
     std::vector<unsigned>::const_iterator child;
     unsigned returnIdx = 0;
@@ -265,11 +273,14 @@ void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx, double& 
         childs = nodes[returnIdx].childs;
         returnIdx = childs[0];
 
-        double minDistance = norm(_descriptor, nodes[returnIdx].descriptor, scoringType);
+        double minDistance = norm(descriptor, nodes[returnIdx].descriptor, scoringType);
 
         for (child = childs.begin() + 1; child != childs.end(); child++)
         {
-            double distance = norm(_descriptor, nodes[*child].descriptor, scoringType);
+            // Compute distance between two descriptors with given scoring type
+            double distance = norm(descriptor, nodes[*child].descriptor, scoringType);
+
+            // Update minDistance and returnIdx if this descriptor has shorter distance
             if (distance < minDistance)
             {
                 minDistance = distance;

@@ -1509,6 +1509,8 @@ public:
     virtual double score( BOWVector& bowVector1, BOWVector& bowVector2 );
 
 protected:
+    /** @brief Structure for Node in tree.
+     */
     struct Node
     {
         unsigned idx;
@@ -1536,8 +1538,13 @@ protected:
     @param descriptors Descriptors to cluster. Each row of the descriptors matrix is a descriptor.
     @param parent parent node index.
     @param current_level current level in the vocabulary tree.
+    @see cv::kmeans
      */
     CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level );
+
+    /** @brief Create words from nodes.
+     */
+    CV_WRAP virtual void createWords();
 
     /** @brief Sets weights for nodes.
      */
@@ -1545,11 +1552,11 @@ protected:
 
     /** @brief Finds the most likely wordIdx and weight with the given descriptors.
 
-    @param descriptors Input descriptors.
+    @param descriptor Input descriptors.
     @param wordIdx Output word index.
     @param weight Output weight.
      */
-    CV_WRAP virtual void transform( const Mat& descriptors, unsigned& wordIdx, double& weight);
+    CV_WRAP virtual void transform( const Mat& descriptor, unsigned& wordIdx, double& weight);
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.
