@@ -159,8 +159,8 @@ private:
                         float s_kx = min_size[j] / img_w;
                         float s_ky = min_size[j] / img_h;
 
-                        float cx = (_w + 0.5) * steps[i] / img_w;
-                        float cy = (_h + 0.5) * steps[i] / img_h;
+                        float cx = (_w + 0.5f) * steps[i] / img_w;
+                        float cy = (_h + 0.5f) * steps[i] / img_h;
 
                         Rect2f prior = { cx, cy, s_kx, s_ky };
                         priors.push_back(prior);
@@ -178,7 +178,7 @@ private:
         Mat iou = output_blobs[2];
 
         // Decode from deltas and priors
-        const std::vector<float> variance = {0.1, 0.2};
+        const std::vector<float> variance = {0.1f, 0.2f};
         float* loc_v = (float*)(loc.data);
         float* conf_v = (float*)(conf.data);
         float* iou_v = (float*)(iou.data);
@@ -237,10 +237,10 @@ private:
             std::vector<float> faceScores;
             for (int rIdx = 0; rIdx < faces.rows; rIdx++)
             {
-                faceBoxes.push_back(Rect2i(faces.at<float>(rIdx, 0),
-                                           faces.at<float>(rIdx, 1),
-                                           faces.at<float>(rIdx, 2),
-                                           faces.at<float>(rIdx, 3)));
+                faceBoxes.push_back(Rect2i(int(faces.at<float>(rIdx, 0)),
+                                           int(faces.at<float>(rIdx, 1)),
+                                           int(faces.at<float>(rIdx, 2)),
+                                           int(faces.at<float>(rIdx, 3))));
                 faceScores.push_back(faces.at<float>(rIdx, 14));
             }
 

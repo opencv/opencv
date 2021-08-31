@@ -44,7 +44,7 @@ public:
     CV_WRAP virtual int detect(InputArray image, OutputArray faces) = 0;
 
     /** @brief Creates an instance of this class with given parameters
-     * 
+     *
      *  @param onnx_path the path to the downloaded ONNX model
      *  @param input_size the size of the input image
      *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value

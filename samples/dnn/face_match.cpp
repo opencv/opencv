@@ -43,7 +43,7 @@ int main(int argc, char ** argv)
 
     // Initialize FaceDetector
     Ptr<FaceDetectorYN> faceDetector;
-    
+
     faceDetector = FaceDetectorYN::create(det_onnx_path, "", image1.size(), score_thresh, nms_thresh, top_k);
     Mat faces_1;
     faceDetector->detect(image1, faces_1);
@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
 
     double cos_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::cosine);
     double L2_score = faceRecognizer->faceMatch(feature1, feature2, FaceRecognizer::distype::norml2);
-    
+
     if(cos_score >= cosine_similar_thresh)
     {
         std::cout << "They have the same identity;";
@@ -98,6 +98,6 @@ int main(int argc, char ** argv)
         std::cout << "They have different identities.";
     }
     std::cout << " NormL2 Distance: " << L2_score << ", threshold: " << l2norm_similar_thresh << ". (lower value means higher similarity, min 0.0)\n";
-    
+
     return 0;
 }

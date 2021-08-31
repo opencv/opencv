@@ -164,7 +164,7 @@ TEST(Objdetect_face_recognition, regression)
     std::set<String> fSet;
     std::map<String, Mat> featureMap;
     std::map<std::pair<String, String>, int> gtMap;
-   
+
 
     for (String line, key; getline(ifs, line);)
     {
@@ -197,7 +197,7 @@ TEST(Objdetect_face_recognition, regression)
 
         Mat aligned_face;
         faceRecognizer->alignCrop(image, faces.row(0), aligned_face);
-        
+
         Mat feature;
         faceRecognizer->faceFeature(aligned_face, feature);
 
