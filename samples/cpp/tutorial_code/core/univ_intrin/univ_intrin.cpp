@@ -8,7 +8,7 @@
 using namespace std;
 using namespace cv;
 
-const int N = 1e5, K = 2e3;
+const int N = 100005, K = 2000;
 
 namespace
 {
@@ -60,7 +60,7 @@ namespace
             for (int k = -sz; k <= sz; k++)
                 value += src.ptr<uchar>(0)[i + k + sz] * kernel.ptr<float>(0)[k + sz];
 
-            dst.ptr<uchar>(0)[i] = value;
+            dst.ptr<uchar>(0)[i] = saturate_cast<uchar>(value);
         }
         //! [convolution-1D-scalar-main]
     }
