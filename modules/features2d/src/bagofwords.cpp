@@ -197,6 +197,7 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
             groups[labels.at<int>(i)].push_back(i);
     }
 
+    vocabulary.convertTo(vocabulary, descriptors[0].type());
     for (int i = 0; i < vocabulary.rows; i++)
     {
         unsigned idx = (unsigned)nodes.size();
@@ -261,8 +262,7 @@ void DBOWTrainer::setWeights()
 
 void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx, double& weight )
 {
-    cv::Mat descriptor = _descriptor;
-    if (descriptor.type() != CV_32FC1) descriptor.convertTo(descriptor, CV_32FC1);
+    CV_Assert( _descriptor.type() == nodes[0].descriptor.type() );
 
     std::vector<unsigned> childs;
     std::vector<unsigned>::const_iterator child;
@@ -273,12 +273,12 @@ void DBOWTrainer::transform( const Mat& _descriptor, unsigned& wordIdx, double& 
         childs = nodes[returnIdx].childs;
         returnIdx = childs[0];
 
-        double minDistance = norm(descriptor, nodes[returnIdx].descriptor, scoringType);
+        int minDistance = (int)norm(_descriptor, nodes[returnIdx].descriptor, scoringType);
 
         for (child = childs.begin() + 1; child != childs.end(); child++)
         {
             // Compute distance between two descriptors with given scoring type
-            double distance = norm(descriptor, nodes[*child].descriptor, scoringType);
+            int distance = (int)norm(_descriptor, nodes[*child].descriptor, scoringType);
 
             // Update minDistance and returnIdx if this descriptor has shorter distance
             if (distance < minDistance)
@@ -407,6 +407,7 @@ void DBOWTrainer::save( const std::string &fn )
     FileStorage fs(fn.c_str(), FileStorage::WRITE);
     if (!fs.isOpened()) throw std::string("Fail to open file ") + fn;
 
+    int desLength = descriptors[0].cols;
     std::vector<unsigned> parents, childs;
     std::vector<unsigned>::const_iterator child;
     std::vector<Node*>::const_iterator word;
@@ -415,6 +416,7 @@ void DBOWTrainer::save( const std::string &fn )
     fs << "clusterCountPerLevel" << clusterCountPerLevel;
     fs << "level" << level;
     fs << "scoringType" << scoringType;
+    fs << "desLength" << desLength;
 
     parents.push_back(0);
 
@@ -430,11 +432,17 @@ void DBOWTrainer::save( const std::string &fn )
         {
             const Node& node = nodes[*child];
 
+            // Convert descriptor to string for faster reading
+            std::stringstream ss;
+            const uchar *p = node.descriptor.ptr<uchar>();
+            for (int i = 0; i < desLength; i++, p++)
+                ss << (int)*p << " ";
+
             fs << "{:";
             fs << "nodeIdx" << (int)node.idx;
             fs << "parentIdx" << (int)parent.idx;
             fs << "weight" << (double)node.weight;
-            fs << "descriptor" << node.descriptor;
+            fs << "descriptor" << ss.str();
             fs << "}";
 
             if (!node.childs.empty())
@@ -467,6 +475,7 @@ void DBOWTrainer::load( const std::string &fn )
     nodes.clear();
     words.clear();
 
+    int desLength;
     FileNode fsVoc, fsNodes, fsWords;
     fsVoc = fs["vocabulary"];
     fsNodes = fsVoc["nodes"];
@@ -475,6 +484,7 @@ void DBOWTrainer::load( const std::string &fn )
     fsVoc["clusterCountPerLevel"] >> clusterCountPerLevel;
     fsVoc["level"] >> level;
     fsVoc["scoringType"] >> scoringType;
+    fsVoc["desLength"] >> desLength;
 
     // Read nodes
     nodes.resize(fsNodes.size() + 1);
@@ -482,17 +492,27 @@ void DBOWTrainer::load( const std::string &fn )
 
     for (unsigned i = 0; i < fsNodes.size(); ++i)
     {
-        Mat descriptor;
         unsigned idx = (int)fsNodes[i]["nodeIdx"];
         unsigned parent = (int)fsNodes[i]["parentIdx"];
         double weight = (double)fsNodes[i]["weight"];
-        fsNodes[i]["descriptor"] >> descriptor;
+        std::string desStr = fsNodes[i]["descriptor"];
 
         nodes[idx].idx = idx;
         nodes[idx].parent = parent;
         nodes[idx].weight = weight;
-        nodes[idx].descriptor = descriptor;
         nodes[parent].childs.push_back(idx);
+
+        // Parse string to descriptor for faster reading
+        nodes[idx].descriptor.create(1, desLength, CV_8U);
+        uchar *p = nodes[idx].descriptor.ptr<uchar>();
+        std::stringstream ss(desStr);
+        for (int j = 0; j < desLength; j++, p++)
+        {
+            int n;
+            ss >> n;
+
+            if (!ss.fail()) *p = (uchar)n;
+        }
     }
 
     // Read words
