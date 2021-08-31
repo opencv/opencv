@@ -203,7 +203,7 @@ void DBOWTrainer::kmeansStep( const Mat& _descriptors, int parent, int current_l
     if (current_level < level)
     {
         std::vector<unsigned> childs = nodes[parent].childs;
-        for (int i = 0; i < clusterCountPerLevel; i++)
+        for (int i = 0; i < vocabulary.rows; i++)
         {
             unsigned child = childs[i];
             std::vector<cv::Mat> childDescriptors;
