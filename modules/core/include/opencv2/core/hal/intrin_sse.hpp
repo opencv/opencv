@@ -3392,6 +3392,16 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& v)
     return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
 
+#define OPENCV_HAL_IMPL_SSE_BROADCAST_LAST(_Tpvec)     \
+inline _Tpvec v_broadcast_last_element(_Tpvec v)       \
+{                                                      \
+    return v_broadcast_element<_Tpvec::nlanes - 1>(v); \
+}
+
+OPENCV_HAL_IMPL_SSE_BROADCAST_LAST(v_int32x4)
+OPENCV_HAL_IMPL_SSE_BROADCAST_LAST(v_uint32x4)
+OPENCV_HAL_IMPL_SSE_BROADCAST_LAST(v_float32x4)
+
 ////////////// FP16 support ///////////////////////////
 
 inline v_float32x4 v_load_expand(const float16_t* ptr)

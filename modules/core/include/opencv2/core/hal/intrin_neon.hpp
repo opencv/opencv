@@ -1932,6 +1932,25 @@ OPENCV_HAL_IMPL_NEON_BROADCAST(v_float32x4, float, f32)
 OPENCV_HAL_IMPL_NEON_BROADCAST(v_float64x2, double, f64)
 #endif
 
+#define OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(_Tpvec)      \
+inline _Tpvec v_broadcast_last_element(_Tpvec v)         \
+{                                                        \
+  return v_broadcast_element<_Tpvec::nlanes - 1>(v);     \
+}
+
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_uint8x16)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_int8x16)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_uint16x8)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_int16x8)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_uint32x4)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_int32x4)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_uint64x2)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_int64x2)
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_float32x4)
+#if CV_SIMD128_64F
+OPENCV_HAL_IMPL_NEON_BROADCAST_LAST(v_float64x2)
+#endif
+
 #if CV_SIMD128_64F
 inline v_int32x4 v_round(const v_float32x4& a)
 {

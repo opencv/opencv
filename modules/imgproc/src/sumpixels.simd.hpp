@@ -138,7 +138,7 @@ struct Integral_SIMD<uchar, int, double>
                     v_expand(el8, el4l, el4h);
                     el4l += prev;
                     el4h += el4l;
-                    prev = v_broadcast_element<v_int32::max_nlanes - 1>(el4h);
+                    prev = v_broadcast_last_element(el4h);
 #endif
                     v_store(sum_row + j                  , el4l + vx_load(prev_sum_row + j                  ));
                     v_store(sum_row + j + v_int32::nlanes, el4h + vx_load(prev_sum_row + j + v_int32::nlanes));
@@ -201,8 +201,8 @@ struct Integral_SIMD<uchar, int, double>
                     el4l_2 += prev_2;
                     el4h_1 += el4l_1;
                     el4h_2 += el4l_2;
-                    prev_1 = v_broadcast_element<v_int32::max_nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_int32::max_nlanes - 1>(el4h_2);
+                    prev_1 = v_broadcast_last_element(el4h_1);
+                    prev_2 = v_broadcast_last_element(el4h_2);
 #endif
                     v_int32 el4_1, el4_2, el4_3, el4_4;
                     v_zip(el4l_1, el4l_2, el4_1, el4_2);
@@ -295,9 +295,9 @@ struct Integral_SIMD<uchar, int, double>
                     el4h_1 += el4l_1;
                     el4h_2 += el4l_2;
                     el4h_3 += el4l_3;
-                    prev_1 = v_broadcast_element<v_int32::max_nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_int32::max_nlanes - 1>(el4h_2);
-                    prev_3 = v_broadcast_element<v_int32::max_nlanes - 1>(el4h_3);
+                    prev_1 = v_broadcast_last_element(el4h_1);
+                    prev_2 = v_broadcast_last_element(el4h_2);
+                    prev_3 = v_broadcast_last_element(el4h_3);
 #endif
                     v_store_interleave(row_cache                      , el4l_1, el4l_2, el4l_3);
                     v_store_interleave(row_cache + v_int32::nlanes * 3, el4h_1, el4h_2, el4h_3);
@@ -451,7 +451,7 @@ struct Integral_SIMD<uchar, float, double>
                     v_expand(el8, el4li, el4hi);
                     el4l = v_cvt_f32(el4li) + prev;
                     el4h = v_cvt_f32(el4hi) + el4l;
-                    prev = v_broadcast_element<v_float32::max_nlanes - 1>(el4h);
+                    prev = v_broadcast_last_element(el4h);
 #endif
                     v_store(sum_row + j                    , el4l + vx_load(prev_sum_row + j                    ));
                     v_store(sum_row + j + v_float32::nlanes, el4h + vx_load(prev_sum_row + j + v_float32::nlanes));
@@ -515,8 +515,8 @@ struct Integral_SIMD<uchar, float, double>
                     el4l_2 = v_cvt_f32(el4li_2) + prev_2;
                     el4h_1 = v_cvt_f32(el4hi_1) + el4l_1;
                     el4h_2 = v_cvt_f32(el4hi_2) + el4l_2;
-                    prev_1 = v_broadcast_element<v_float32::max_nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_float32::max_nlanes - 1>(el4h_2);
+                    prev_1 = v_broadcast_last_element(el4h_1);
+                    prev_2 = v_broadcast_last_element(el4h_2);
 #endif
                     v_float32 el4_1, el4_2, el4_3, el4_4;
                     v_zip(el4l_1, el4l_2, el4_1, el4_2);
@@ -609,9 +609,9 @@ struct Integral_SIMD<uchar, float, double>
                     el4h_1 = v_cvt_f32(el4hi_1) + el4l_1;
                     el4h_2 = v_cvt_f32(el4hi_2) + el4l_2;
                     el4h_3 = v_cvt_f32(el4hi_3) + el4l_3;
-                    prev_1 = v_broadcast_element<v_float32::max_nlanes - 1>(el4h_1);
-                    prev_2 = v_broadcast_element<v_float32::max_nlanes - 1>(el4h_2);
-                    prev_3 = v_broadcast_element<v_float32::max_nlanes - 1>(el4h_3);
+                    prev_1 = v_broadcast_last_element(el4h_1);
+                    prev_2 = v_broadcast_last_element(el4h_2);
+                    prev_3 = v_broadcast_last_element(el4h_3);
 #endif
                     v_store_interleave(row_cache                        , el4l_1, el4l_2, el4l_3);
                     v_store_interleave(row_cache + v_float32::nlanes * 3, el4h_1, el4h_2, el4h_3);
@@ -781,8 +781,7 @@ struct Integral_SIMD<uchar, double, double>
                     el4lh = v_cvt_f64_high(el4li) + prev;
                     el4hl = v_cvt_f64(el4hi) + el4ll;
                     el4hh = v_cvt_f64_high(el4hi) + el4lh;
-                    prev = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh));
-//                    prev = v_broadcast_element<v_float64::nlanes - 1>(el4hh);
+                    prev = v_broadcast_last_element(el4hh);
 #endif
                     v_store(sum_row + j                        , el4ll + vx_load(prev_sum_row + j                        ));
                     v_store(sum_row + j + v_float64::nlanes    , el4lh + vx_load(prev_sum_row + j + v_float64::nlanes    ));
@@ -861,10 +860,8 @@ struct Integral_SIMD<uchar, double, double>
                     el4hl_2 = v_cvt_f64(el4hi_2) + el4ll_2;
                     el4hh_1 = v_cvt_f64_high(el4hi_1) + el4lh_1;
                     el4hh_2 = v_cvt_f64_high(el4hi_2) + el4lh_2;
-                    prev_1 = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh_1));
-                    prev_2 = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh_2));
-//                    prev_1 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_1);
-//                    prev_2 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_2);
+                    prev_1 = v_broadcast_last_element(el4hh_1);
+                    prev_2 = v_broadcast_last_element(el4hh_2);
 #endif
                     v_float64 el4_1, el4_2, el4_3, el4_4, el4_5, el4_6, el4_7, el4_8;
                     v_zip(el4ll_1, el4ll_2, el4_1, el4_2);
@@ -983,12 +980,9 @@ struct Integral_SIMD<uchar, double, double>
                     el4hh_1 = v_cvt_f64_high(el4hi_1) + el4lh_1;
                     el4hh_2 = v_cvt_f64_high(el4hi_2) + el4lh_2;
                     el4hh_3 = v_cvt_f64_high(el4hi_3) + el4lh_3;
-                    prev_1 = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh_1));
-                    prev_2 = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh_2));
-                    prev_3 = vx_setall_f64(v_extract_n<v_float64::max_nlanes - 1>(el4hh_3));
-//                    prev_1 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_1);
-//                    prev_2 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_2);
-//                    prev_3 = v_broadcast_element<v_float64::nlanes - 1>(el4hh_3);
+                    prev_1 = v_broadcast_last_element(el4hh_1);
+                    prev_2 = v_broadcast_last_element(el4hh_2);
+                    prev_3 = v_broadcast_last_element(el4hh_3);
 #endif
                     v_store_interleave(row_cache                        , el4ll_1, el4ll_2, el4ll_3);
                     v_store_interleave(row_cache + v_float64::nlanes * 3, el4lh_1, el4lh_2, el4lh_3);

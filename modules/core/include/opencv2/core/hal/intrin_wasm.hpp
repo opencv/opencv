@@ -2750,6 +2750,15 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& a)
     return v_setall_f32(v_extract_n<i>(a));
 }
 
+#define OPECV_HAL_IMPL_WASM_BROADCAST_LAST(_Tpvec)     \
+inline _Tpvec v_broadcast_last_element(_Tpvec v)       \
+{                                                      \
+    return v_broadcast_element<_Tpvec::nlanes - 1>(v); \
+}
+
+OPECV_HAL_IMPL_WASM_BROADCAST_LAST(v_uint32x4)
+OPECV_HAL_IMPL_WASM_BROADCAST_LAST(v_int32x4)
+OPECV_HAL_IMPL_WASM_BROADCAST_LAST(v_float32x4)
 
 ////////////// FP16 support ///////////////////////////
 

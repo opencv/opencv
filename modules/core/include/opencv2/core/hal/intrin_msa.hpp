@@ -1836,6 +1836,16 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& a)
     return v_setall_f32(v_extract_n<i>(a));
 }
 
+#define OPENCV_HAL_IMPL_MSA_BROADCAST_LAST(_Tpvec)     \
+inline _Tpvec v_broadcast_last_element(_Tpvec v)       \
+{                                                      \
+    return v_broadcast_element<_Tpvec::nlanes - 1>(v); \
+}
+
+OPENCV_HAL_IMPL_MSA_BROADCAST_LAST(v_uint32x4)
+OPENCV_HAL_IMPL_MSA_BROADCAST_LAST(v_int32x4)
+OPENCV_HAL_IMPL_MSA_BROADCAST_LAST(v_float32x4)
+
 ////// FP16 support ///////
 #if CV_FP16
 inline v_float32x4 v_load_expand(const float16_t* ptr)

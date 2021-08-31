@@ -558,7 +558,10 @@ struct MinMaxVec8u
 {
     typedef uchar value_type;
     typedef v_uint8x16 arg_type;
-    enum { SIZE = v_uint8x16::max_nlanes };
+    static int get_SIZE()
+    {
+        return v_uint8x16::nlanes;
+    }
     arg_type load(const uchar* ptr) { return v_load(ptr); }
     void store(uchar* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -569,7 +572,10 @@ struct MinMaxVec8u
     }
 #if CV_SIMD_WIDTH > 16
     typedef v_uint8 warg_type;
-    enum { WSIZE = v_uint8::nlanes };
+    static int get_SIZE()
+    {
+        return v_uint8::nlanes;
+    }
     warg_type wload(const uchar* ptr) { return vx_load(ptr); }
     void store(uchar* ptr, const warg_type &val) { v_store(ptr, val); }
     void operator()(warg_type& a, warg_type& b) const
@@ -586,7 +592,10 @@ struct MinMaxVec16u
 {
     typedef ushort value_type;
     typedef v_uint16x8 arg_type;
-    enum { SIZE = v_uint16x8::max_nlanes };
+    static int get_SIZE()
+    {
+        return v_uint16x8::nlanes;
+    }
     arg_type load(const ushort* ptr) { return v_load(ptr); }
     void store(ushort* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -597,7 +606,10 @@ struct MinMaxVec16u
     }
 #if CV_SIMD_WIDTH > 16
     typedef v_uint16 warg_type;
-    enum { WSIZE = v_uint16::nlanes };
+    static int get_SIZE()
+    {
+        return v_uint16::nlanes;
+    }
     warg_type wload(const ushort* ptr) { return vx_load(ptr); }
     void store(ushort* ptr, const warg_type &val) { v_store(ptr, val); }
     void operator()(warg_type& a, warg_type& b) const
@@ -614,7 +626,10 @@ struct MinMaxVec16s
 {
     typedef short value_type;
     typedef v_int16x8 arg_type;
-    enum { SIZE = v_int16x8::max_nlanes };
+    static int get_SIZE()
+    {
+        return v_int16x8::nlanes;
+    }
     arg_type load(const short* ptr) { return v_load(ptr); }
     void store(short* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -625,7 +640,10 @@ struct MinMaxVec16s
     }
 #if CV_SIMD_WIDTH > 16
     typedef v_int16 warg_type;
-    enum { WSIZE = v_int16::nlanes };
+    static int get_WSIZE()
+    {
+        return v_int::nlanes;
+    }
     warg_type wload(const short* ptr) { return vx_load(ptr); }
     void store(short* ptr, const warg_type &val) { v_store(ptr, val); }
     void operator()(warg_type& a, warg_type& b) const
@@ -642,7 +660,10 @@ struct MinMaxVec32f
 {
     typedef float value_type;
     typedef v_float32x4 arg_type;
-    enum { SIZE = v_float32x4::max_nlanes };
+    static int get_SIZE()
+    {
+        return v_float32x4::nlanes;
+    }
     arg_type load(const float* ptr) { return v_load(ptr); }
     void store(float* ptr, const arg_type &val) { v_store(ptr, val); }
     void operator()(arg_type& a, arg_type& b) const
@@ -653,7 +674,10 @@ struct MinMaxVec32f
     }
 #if CV_SIMD_WIDTH > 16
     typedef v_float32 warg_type;
-    enum { WSIZE = v_float32::nlanes };
+    static int get_WSIZE()
+    {
+        return v_float32::nlanes;
+    }
     warg_type wload(const float* ptr) { return vx_load(ptr); }
     void store(float* ptr, const warg_type &val) { v_store(ptr, val); }
     void operator()(warg_type& a, warg_type& b) const
@@ -748,7 +772,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     break;
 
 #if CV_SIMD_WIDTH > 16
-                for( ; j <= size.width - VecOp::WSIZE - cn; j += VecOp::WSIZE )
+                for( ; j <= size.width - VecOp::get_WSIZE() - cn; j += VecOp::get_WSIZE() )
                 {
                     WVT p0 = vop.wload(row0+j-cn), p1 = vop.wload(row0+j), p2 = vop.wload(row0+j+cn);
                     WVT p3 = vop.wload(row1+j-cn), p4 = vop.wload(row1+j), p5 = vop.wload(row1+j+cn);
@@ -762,7 +786,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     vop.store(dst+j, p4);
                 }
 #endif
-                for( ; j <= size.width - VecOp::SIZE - cn; j += VecOp::SIZE )
+                for( ; j <= size.width - VecOp::get_SIZE() - cn; j += VecOp::get_SIZE() )
                 {
                     VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
                     VT p3 = vop.load(row1+j-cn), p4 = vop.load(row1+j), p5 = vop.load(row1+j+cn);
@@ -863,7 +887,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     break;
 
 #if CV_SIMD_WIDTH > 16
-                for( ; j <= size.width - VecOp::WSIZE - cn*2; j += VecOp::WSIZE )
+                for( ; j <= size.width - VecOp::get_WSIZE() - cn*2; j += VecOp::get_WSIZE() )
                 {
                     WVT p[25];
                     for( k = 0; k < 5; k++ )
@@ -900,7 +924,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     vop.store(dst+j, p[12]);
                 }
 #endif
-                for( ; j <= size.width - VecOp::SIZE - cn*2; j += VecOp::SIZE )
+                for( ; j <= size.width - VecOp::get_SIZE() - cn*2; j += VecOp::get_SIZE() )
                 {
                     VT p[25];
                     for( k = 0; k < 5; k++ )
