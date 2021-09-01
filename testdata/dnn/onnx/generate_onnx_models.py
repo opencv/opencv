@@ -4,6 +4,7 @@ from torch.autograd import Variable, Function
 import torch.nn.init as init
 import torch.nn as nn
 import torch.nn.functional as F
+import paddle # version 2.1.1
 import numpy as np
 import os.path
 import onnx
@@ -1373,3 +1374,26 @@ class NormalizeFusion(nn.Module):
 x = Variable(torch.randn([2, 3]))
 model = NormalizeFusion()
 save_data_and_model("normalize_fusion", x, model)
+
+#paddle2onnx model
+class Resize_HumanSeg(paddle.nn.Layer):
+    def __init__(self, ):
+        super(Resize_HumanSeg, self).__init__()
+
+    def forward(self, x0):
+        x1 = paddle.nn.functional.interpolate(x0,size=[6,8],mode='bilinear',align_corners=False)
+        return x1
+
+def save_data_and_paddle_model(model, name, input_data):
+    model.eval()
+    np.save(os.path.join("data", "input_" + name + ".npy"), input_data.numpy())
+    output = model(input_data)
+    np.save(os.path.join("data", "output_" + name + ".npy"), output.numpy())
+    inputs = [paddle.static.InputSpec(shape=input_data.shape, dtype="float32")]
+    paddle.onnx.export(model, "models/" + name,
+                       input_spec=inputs,
+                       opset_version=11)
+
+input_shape = [1, 2, 3, 4]
+x = paddle.rand(input_shape, dtype="float32")
+save_data_and_paddle_model(Resize_HumanSeg(), "resize_humanseg", x)
