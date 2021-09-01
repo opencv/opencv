@@ -1,4 +1,4 @@
-# DNN-based Face Detection And Recognition
+# DNN-based Face Detection And Recognition {#tutorial_dnn_face}
 
 @tableofcontents
 
@@ -8,7 +8,7 @@
 | | |
 | -: | :- |
 | Original Author | Chengrui Wang, Yuantao Feng |
-| Compatibility | OpenCV >= 4.5 |
+| Compatibility | OpenCV >= 4.5.1 |
 
 ## Introduction
 

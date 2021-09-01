@@ -210,8 +210,8 @@ TEST(Objdetect_face_recognition, regression)
         Mat feature2 = featureMap[item.first.second];
         int label = item.second;
 
-        double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
-        double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
+        double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::FR_COSINE);
+        double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::FR_NORM_L2);
 
         EXPECT_TRUE(label == 0 ? cos_score <= cosine_similar_thresh : cos_score > cosine_similar_thresh) << "Cosine match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< cos_score <<";Thresh: "<< cosine_similar_thresh <<").";
         EXPECT_TRUE(label == 0 ? L2_score > l2norm_similar_thresh : L2_score <= l2norm_similar_thresh) << "L2norm match result of images " << item.first.first << " and " << item.first.second << " is different from ground truth (score: "<< L2_score <<";Thresh: "<< l2norm_similar_thresh <<").";

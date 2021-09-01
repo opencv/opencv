@@ -45,7 +45,8 @@ public:
 
     /** @brief Creates an instance of this class with given parameters
      *
-     *  @param onnx_path the path to the downloaded ONNX model
+     *  @param model the path to the requested model
+     *  @param config the path to the config file for compability, which is not requested for ONNX models
      *  @param input_size the size of the input image
      *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value
      *  @param nms_threshold the threshold to suppress bounding boxes of IoU bigger than the given value
@@ -54,13 +55,13 @@ public:
      *  @param target_id the id of target device
      */
     CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
-                                            const String& config,
-                                            const Size& input_size,
-                                            float score_threshold = 0.9,
-                                            float nms_threshold = 0.3,
-                                            int top_k = 5000,
-                                            int backend_id = 0,
-                                            int target_id = 0);
+                                              const String& config,
+                                              const Size& input_size,
+                                              float score_threshold = 0.9,
+                                              float nms_threshold = 0.3,
+                                              int top_k = 5000,
+                                              int backend_id = 0,
+                                              int target_id = 0);
 };
 
 /** @brief DNN-based face recognizer, model download link: https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view.
@@ -72,7 +73,7 @@ public:
 
     /** @brief Definition of distance used for calculating the distance between two face features
      */
-    enum DisType { COSINE=0, NORM_L2=1 };
+    enum DisType { FR_COSINE=0, FR_NORM_L2=1 };
 
     /** @brief Aligning image to put face on the standard position
      *  @param src_img input image
@@ -90,12 +91,13 @@ public:
     /** @brief Calculating the distance between two face features
      *  @param _face_feature1 the first input feature
      *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
-     *  @param dis_type defining the similarity with optional values "norml2" or "cosine"
+     *  @param dis_type defining the similarity with optional values "FR_OSINE" or "FR_NORM_L2"
      */
-    CV_WRAP virtual double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizer::COSINE) const = 0;
+    CV_WRAP virtual double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizer::FR_COSINE) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
-     *  @param onnx_path the path of the onnx model used for face recognition
+     *  @param model the path of the onnx model used for face recognition
+     *  @param config the path to the config file for compability, which is not requested for ONNX models
      */
     CV_WRAP static Ptr<FaceRecognizer> create(const String& model, const String& config);
 };

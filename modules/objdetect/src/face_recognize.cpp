@@ -46,9 +46,9 @@ public:
         face_feature1 /= norm(face_feature1);
         face_feature2 /= norm(face_feature2);
 
-        if(dis_type == DisType::COSINE){
+        if(dis_type == DisType::FR_COSINE){
             return sum(face_feature1.mul(face_feature2))[0];
-        }else if(dis_type == DisType::NORM_L2){
+        }else if(dis_type == DisType::FR_NORM_L2){
             return norm(face_feature1, face_feature2);
         }else{
             throw std::invalid_argument("invalid parameter " + std::to_string(dis_type));

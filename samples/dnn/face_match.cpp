@@ -76,8 +76,8 @@ int main(int argc, char ** argv)
     faceRecognizer->feature(aligned_face2, feature2);
     feature2 = feature2.clone();
 
-    double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::COSINE);
-    double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
+    double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::FR_COSINE);
+    double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::FR_NORM_L2);
 
     if(cos_score >= cosine_similar_thresh)
     {
