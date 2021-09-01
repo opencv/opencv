@@ -552,6 +552,11 @@ TEST_P(Test_ONNX_layers, DynamicResize)
     testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, Resize_HumanSeg)
+{
+    testONNXModels("resize_humanseg");
+}
+
 TEST_P(Test_ONNX_layers, Div)
 {
     const String model =  _tf("models/div.onnx");
