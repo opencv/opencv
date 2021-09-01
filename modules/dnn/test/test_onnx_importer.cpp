@@ -284,6 +284,7 @@ TEST_P(Test_ONNX_layers, Scale)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("scale");
+    testONNXModels("scale_broadcast", npy, 0, 0, false, true, 3);
 }
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)
@@ -831,6 +832,7 @@ TEST_P(Test_ONNX_layers, DynamicAxes)
     testONNXModels("resize_opset11_torch1.6_dynamic_axes");
     testONNXModels("average_pooling_dynamic_axes");
     testONNXModels("maxpooling_sigmoid_dynamic_axes");
+    testONNXModels("dynamic_batch");
 }
 
 TEST_P(Test_ONNX_layers, MaxPool1d)
