@@ -284,6 +284,7 @@ TEST_P(Test_ONNX_layers, Scale)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("scale");
+    testONNXModels("scale_broadcast", npy, 0, 0, false, true, 3);
     testONNXModels("scale_broadcast_mid", npy, 0, 0, false, true, 2);
 }
 
@@ -552,6 +553,11 @@ TEST_P(Test_ONNX_layers, DynamicResize)
     testONNXModels("dynamic_resize_scale_9", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_scale_10", npy, 0, 0, false, true, 2);
     testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
+}
+
+TEST_P(Test_ONNX_layers, Resize_HumanSeg)
+{
+    testONNXModels("resize_humanseg");
 }
 
 TEST_P(Test_ONNX_layers, Div)
@@ -831,6 +837,7 @@ TEST_P(Test_ONNX_layers, DynamicAxes)
     testONNXModels("resize_opset11_torch1.6_dynamic_axes");
     testONNXModels("average_pooling_dynamic_axes");
     testONNXModels("maxpooling_sigmoid_dynamic_axes");
+    testONNXModels("dynamic_batch");
 }
 
 TEST_P(Test_ONNX_layers, MaxPool1d)

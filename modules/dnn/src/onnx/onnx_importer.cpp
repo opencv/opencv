@@ -508,7 +508,8 @@ void ONNXImporter::populateNet()
         for (int j = 0; j < inpShape.size(); ++j)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
-            if (!tensorShape.dim(j).dim_param().empty())
+            // NHW, NCHW(NHWC), NCDHW(NDHWC); do not set this flag if only N is dynamic
+            if (!tensorShape.dim(j).dim_param().empty() && !(j == 0 && inpShape.size() >= 3))
                 hasDynamicShapes = true;
         }
         if (!inpShape.empty() && !hasDynamicShapes)
@@ -2130,7 +2131,7 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
         layerParams.set("align_corners", interp_mode == "align_corners");
         if (layerParams.get<String>("mode") == "linear")
         {
-            layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+            layerParams.set("mode", interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel" ?
                                     "opencv_linear" : "bilinear");
         }
     }
