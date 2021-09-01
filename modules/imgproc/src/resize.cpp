@@ -59,6 +59,10 @@
 #include "opencv2/core/softfloat.hpp"
 #include "fixedpoint.inl.hpp"
 
+#ifdef __ARM_FEATURE_SVE
+#include <arm_sve.h>
+#endif
+
 using namespace cv;
 
 namespace
@@ -1796,8 +1800,73 @@ struct HResizeLinearVecU8_X4
     }
 };
 
+#ifdef __ARM_FEATURE_SVE
+// Accuracy test at: ./bin/opencv_test_imgproc --gtest_filter="Imgproc_Resize*"
+struct HResizeLinearVec_16u32f_SVE
+{
+    int operator()(const ushort** src, float** dst, int count, const int* xofs,
+		   const float* alpha, int, int, int cn, int, int xmax ) const
+    {
+	svbool_t allLanes = svptrue_b32();
+	const int nlanes = svcntw();
+	const int len0 = xmax & -nlanes;
+	int dx=0, k =0;
+	for(; k <= count-2; k+=2 )
+	    {
+		const ushort *S0 = src[k];
+		const ushort *S1 = src[k+1];
+		float *D0 = dst[k];
+		float *D1 = dst[k+1];
+		
+		for(dx = 0;dx < len0; dx += nlanes)
+		    {
+			svint32_t vsx = svld1(allLanes, &xofs[dx]);
+			svfloat32_t vS00 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S0, vsx));
+			svfloat32_t vS01 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S0 + cn, vsx));
+			svfloat32_t vS10 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S1, vsx));
+			svfloat32_t vS11 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S1 + cn, vsx));
+			
+			svfloat32_t vD0 = svadd_x(allLanes,
+						  svmul_x(allLanes, vS00, alpha[dx * 2]),
+						  svmul_x(allLanes, vS01, alpha[dx * 2 + 1]));
+			svst1(allLanes, &D0[dx], vD0);
+			svfloat32_t vD1 = svadd_x(allLanes,
+						  svmul_x(allLanes, vS10, alpha[dx * 2]),
+						  svmul_x(allLanes, vS11, alpha[dx * 2 + 1]));
+			svst1(allLanes, &D1[dx], vD1);
+			
+		    }
+	    }
+	
+	for(; k < count; k++ )
+	    {
+		const ushort *S = src[k];
+		float *D = dst[k];
+		
+		for(dx = 0;dx < len0; dx += nlanes)
+		    {
+			svint32_t vsx = svld1(allLanes, &xofs[dx]);
+			svfloat32_t vS0 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S, vsx));
+			svfloat32_t vS1 = svcvt_f32_z(allLanes, svld1uh_gather_index_s32 (allLanes, S + cn, vsx));
+			svfloat32_t vD = svadd_x(allLanes,
+						 svmul_x(allLanes, vS0, alpha[dx * 2]),
+						 svmul_x(allLanes, vS1, alpha[dx * 2 + 1]));
+			svst1(allLanes, &D[dx], vD);
+			
+		    }
+	    }
+	return dx;
+    }
+};
+#endif /* __ARM_FEATURE_SVE */
+
 typedef HResizeLinearVec_X4<float,float,float,v_float32x4> HResizeLinearVec_32f;
+#ifdef __ARM_FEATURE_SVE
+typedef HResizeLinearVec_16u32f_SVE HResizeLinearVec_16u32f;
+#else /* __ARM_FEATURE_SVE */
 typedef HResizeLinearVec_X4<ushort,float,float,v_float32x4> HResizeLinearVec_16u32f;
+#endif /* __ARM_FEATURE_SVE */
+
 typedef HResizeLinearVec_X4<short,float,float,v_float32x4> HResizeLinearVec_16s32f;
 typedef HResizeLinearVecU8_X4 HResizeLinearVec_8u32s;
 
