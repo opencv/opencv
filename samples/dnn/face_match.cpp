@@ -35,8 +35,8 @@ int main(int argc, char ** argv)
     Mat image1 = imread(image1_path);
     Mat image2 = imread(image2_path);
 
-    float score_thresh = 0.9;
-    float nms_thresh = 0.3;
+    float score_thresh = 0.9f;
+    float nms_thresh = 0.3f;
     double cosine_similar_thresh = 0.34;
     double l2norm_similar_thresh = 1.32;
     int top_k = 5000;

@@ -65,7 +65,7 @@ typedef testing::TestWithParam<String> Objdetect_face_detect;
 TEST(Objdetect_face_detect, regression)
 {
     // Pre-set params
-    float scoreThreshold = 0.7;
+    float scoreThreshold = 0.7f;
     double matchThreshold = 0.9;
     double l2disThreshold = 5;
     int numLM = 5;
@@ -81,7 +81,7 @@ TEST(Objdetect_face_detect, regression)
     // Initialize detector
     String model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
-    faceDetector->setScoreThreshold(0.7);
+    faceDetector->setScoreThreshold(0.7f);
 
     // Detect and match
     for (auto item: gt)
@@ -152,15 +152,15 @@ typedef testing::TestWithParam<String> Objdetect_face_recognition;
 TEST(Objdetect_face_recognition, regression)
 {
     // Pre-set params
-    float score_thresh = 0.9;
-    float nms_thresh = 0.3;
-    float cosine_similar_thresh = 0.363;
-    float l2norm_similar_thresh = 1.272;
+    float score_thresh = 0.9f;
+    float nms_thresh = 0.3f;
+    float cosine_similar_thresh = 0.363f;
+    float l2norm_similar_thresh = 1.272f;
 
     // Load ground truth labels
     std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt", true).c_str());
     CV_Assert(ifs.is_open());
-    
+
     std::set<String> fSet;
     std::map<String, Mat> featureMap;
     std::map<std::pair<String, String>, int> gtMap;

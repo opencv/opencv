@@ -20,13 +20,13 @@ static Mat visualize(Mat input, Mat faces, int thickness=2)
              << "score: " << faces.at<float>(i, 14) << "\n";
 
         // Draw bounding box
-        rectangle(output, Rect2i(faces.at<float>(i, 0), faces.at<float>(i, 1), faces.at<float>(i, 2), faces.at<float>(i, 3)), Scalar(0, 255, 0), thickness);
+        rectangle(output, Rect2i(int(faces.at<float>(i, 0)), int(faces.at<float>(i, 1)), int(faces.at<float>(i, 2)), int(faces.at<float>(i, 3))), Scalar(0, 255, 0), thickness);
         // Draw landmarks
-        circle(output, Point2i(faces.at<float>(i, 4),  faces.at<float>(i, 5)),  2, Scalar(255,   0,   0), thickness);
-        circle(output, Point2i(faces.at<float>(i, 6),  faces.at<float>(i, 7)),  2, Scalar(  0,   0, 255), thickness);
-        circle(output, Point2i(faces.at<float>(i, 8),  faces.at<float>(i, 9)),  2, Scalar(  0, 255,   0), thickness);
-        circle(output, Point2i(faces.at<float>(i, 10), faces.at<float>(i, 11)), 2, Scalar(255,   0, 255), thickness);
-        circle(output, Point2i(faces.at<float>(i, 12), faces.at<float>(i, 13)), 2, Scalar(  0, 255, 255), thickness);
+        circle(output, Point2i(int(faces.at<float>(i, 4)),  int(faces.at<float>(i, 5))),  2, Scalar(255,   0,   0), thickness);
+        circle(output, Point2i(int(faces.at<float>(i, 6)),  int(faces.at<float>(i, 7))),  2, Scalar(  0,   0, 255), thickness);
+        circle(output, Point2i(int(faces.at<float>(i, 8)),  int(faces.at<float>(i, 9))),  2, Scalar(  0, 255,   0), thickness);
+        circle(output, Point2i(int(faces.at<float>(i, 10)), int(faces.at<float>(i, 11))), 2, Scalar(255,   0, 255), thickness);
+        circle(output, Point2i(int(faces.at<float>(i, 12)), int(faces.at<float>(i, 13))), 2, Scalar(  0, 255, 255), thickness);
     }
     return output;
 }

@@ -285,5 +285,3 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
 }
 
 } // namespace cv
-
-

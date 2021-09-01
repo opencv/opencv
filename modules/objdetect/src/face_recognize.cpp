@@ -51,14 +51,14 @@ public:
         }else if(dis_type == DisType::NORM_L2){
             return norm(face_feature1, face_feature2);
         }else{
-            throw std::invalid_argument("invalid parameter " + dis_type);
+            throw std::invalid_argument("invalid parameter " + std::to_string(dis_type));
         }
 
     };
 
 private:
     Mat getSimilarityTransformMatrix(float src[5][2]) const {
-        float dst[5][2] = { 38.2946f, 51.6963f, 73.5318f, 51.5014f, 56.0252f, 71.7366f, 41.5493f, 92.3655f, 70.7299f, 92.2041f };
+        float dst[5][2] = { {38.2946f, 51.6963f}, {73.5318f, 51.5014f}, {56.0252f, 71.7366f}, {41.5493f, 92.3655f}, {70.7299f, 92.2041f} };
         float avg0 = (src[0][0] + src[1][0] + src[2][0] + src[3][0] + src[4][0]) / 5;
         float avg1 = (src[0][1] + src[1][1] + src[2][1] + src[3][1] + src[4][1]) / 5;
         //Compute mean of src and dst.
@@ -99,7 +99,7 @@ private:
         double detA = A00 * A11 - A01 * A10;
         if (detA < 0)
             d[1] = -1;
-        double T[3][3] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 };
+        double T[3][3] = { {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0} };
         Mat s, u, vt, v;
         SVD::compute(A, s, u, vt);
         Mat S(s.rows, s.rows, s.type());
@@ -113,8 +113,8 @@ private:
             rank += 1;
         if (s.ptr<double>(1)[0]>tol)
             rank += 1;
-        double arr_u[2][2] = { u.ptr<double>(0)[0], u.ptr<double>(0)[1], u.ptr<double>(1)[0], u.ptr<double>(1)[1] };
-        double arr_vt[2][2] = { vt.ptr<double>(0)[0], vt.ptr<double>(0)[1], vt.ptr<double>(1)[0], vt.ptr<double>(1)[1] };
+        double arr_u[2][2] = { {u.ptr<double>(0)[0], u.ptr<double>(0)[1]}, {u.ptr<double>(1)[0], u.ptr<double>(1)[1]} };
+        double arr_vt[2][2] = { {vt.ptr<double>(0)[0], vt.ptr<double>(0)[1]}, {vt.ptr<double>(1)[0], vt.ptr<double>(1)[1]} };
         double det_u = arr_u[0][0] * arr_u[1][1] - arr_u[0][1] * arr_u[1][0];
         double det_vt = arr_vt[0][0] * arr_vt[1][1] - arr_vt[0][1] * arr_vt[1][0];
         if (rank == 1)
