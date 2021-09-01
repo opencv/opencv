@@ -58,6 +58,30 @@ namespace cv
 namespace dnn
 {
 
+void sliceRangesFromShape(const MatShape& inpShape, int& axis, std::vector<std::vector<cv::Range>>& sliceRanges)
+{
+    int n = inpShape[axis];
+    bool axisNeg = (axis < 0);
+    axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
+
+    for (size_t i = 0; i < sliceRanges.size(); ++i){
+        std::vector<Range>& ranges = sliceRanges[i];
+        if (axisNeg)
+        {
+            ranges.insert(ranges.begin(), axis, Range::all());
+        }
+        Range& range = ranges.back();
+
+        if (range.start >= 0)
+        {
+            continue;
+        }
+
+        CV_Assert(n != 0);
+        range.start = (n + range.start) % n;
+    }
+}
+
 class SliceLayerImpl : public SliceLayer
 {
 public:
@@ -69,7 +93,6 @@ public:
         num_split = params.get<int>("num_split", 0);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
-        initComplete = false;
 
         if (params.has("slice_point"))
         {
@@ -148,30 +171,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    void setAxisFromShape(const MatShape& inpShape)
-    {
-        int n = inpShape[axis];
-        bool axisNeg = (axis < 0);
-        axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
-
-        for (size_t i = 0; i < sliceRanges.size(); ++i){
-            std::vector<Range>& ranges = sliceRanges[i];
-            if (axisNeg)
-            {
-                ranges.insert(ranges.begin(), axis, Range::all());
-            }
-            Range& range = ranges.back();
-
-            if (range.start >= 0)
-            {
-                continue;
-            }
-
-            CV_Assert(n != 0);
-            range.start = (n + range.start) % n;
-        }
-    }
-
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                             const int requiredOutputs,
                             std::vector<MatShape> &outputs,
@@ -180,23 +179,20 @@ public:
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
 
-        if (!initComplete)
-        {
-            initComplete = true;
-            SliceLayerImpl* that = const_cast<SliceLayerImpl*>(this); // No guarantee it's safe.
-            that->setAxisFromShape(inpShape);
-        }
+        int axis_rw = axis;
+        std::vector<std::vector<cv::Range>> sliceRanges_rw = sliceRanges;
+        sliceRangesFromShape(inpShape, axis_rw, sliceRanges_rw);
 
-        if (!sliceRanges.empty())
+        if (!sliceRanges_rw.empty())
         {
-            outputs.resize(sliceRanges.size(), inpShape);
+            outputs.resize(sliceRanges_rw.size(), inpShape);
             for (int i = 0; i < outputs.size(); ++i)
             {
-                CV_Assert(sliceRanges[i].size() <= inpShape.size());
-                for (int j = 0; j < sliceRanges[i].size(); ++j)
+                CV_Assert(sliceRanges_rw[i].size() <= inpShape.size());
+                for (int j = 0; j < sliceRanges_rw[i].size(); ++j)
                 {
                     if (shapesInitialized || inpShape[j] > 0)
-                        outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
+                        outputs[i][j] = normalize_axis_range(sliceRanges_rw[i][j], inpShape[j]).size();
 
                     if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
                         outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
@@ -205,10 +201,10 @@ public:
         }
         else  // Divide input blob on equal parts by axis.
         {
-            CV_Assert(0 <= axis && axis < inpShape.size());
+            CV_Assert(0 <= axis_rw && axis_rw < inpShape.size());
             int splits = num_split ? num_split : requiredOutputs;
-            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
-            inpShape[axis] /= splits;
+            CV_Assert(splits > 0 && inpShape[axis_rw] % splits == 0);
+            inpShape[axis_rw] /= splits;
             outputs.resize(splits, inpShape);
         }
         return false;
@@ -233,6 +229,7 @@ public:
         CV_Assert(inputs.size() == 1);
         const MatSize& inpShape = inputs[0].size;
 
+        sliceRangesFromShape(shape(inputs[0]), axis, sliceRanges);
         finalSliceRanges = sliceRanges;
 
         if (sliceRanges.empty())
@@ -676,7 +673,6 @@ private:
     }
 
 protected:
-    mutable bool initComplete;
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
     bool hasDynamicShapes;
