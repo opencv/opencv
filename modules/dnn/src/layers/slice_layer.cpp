@@ -58,7 +58,7 @@ namespace cv
 namespace dnn
 {
 
-void sliceRangesFromShape(const MatShape& inpShape, int& axis, std::vector<std::vector<cv::Range>>& sliceRanges)
+void sliceRangesFromShape(const MatShape& inpShape, int& axis, std::vector<std::vector<cv::Range> >& sliceRanges)
 {
     int n = inpShape[axis];
     bool axisNeg = (axis < 0);
@@ -180,7 +180,7 @@ public:
         MatShape inpShape = inputs[0];
 
         int axis_rw = axis;
-        std::vector<std::vector<cv::Range>> sliceRanges_rw = sliceRanges;
+        std::vector<std::vector<cv::Range> > sliceRanges_rw = sliceRanges;
         sliceRangesFromShape(inpShape, axis_rw, sliceRanges_rw);
 
         if (!sliceRanges_rw.empty())
