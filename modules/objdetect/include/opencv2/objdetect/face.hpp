@@ -66,10 +66,10 @@ public:
 
 /** @brief DNN-based face recognizer, model download link: https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view.
  */
-class CV_EXPORTS_W FaceRecognizer
+class CV_EXPORTS_W FaceRecognizerSF
 {
 public:
-    virtual ~FaceRecognizer() {};
+    virtual ~FaceRecognizerSF() {};
 
     /** @brief Definition of distance used for calculating the distance between two face features
      */
@@ -93,13 +93,13 @@ public:
      *  @param _face_feature2 the second input feature of the same size and the same type as _face_feature1
      *  @param dis_type defining the similarity with optional values "FR_OSINE" or "FR_NORM_L2"
      */
-    CV_WRAP virtual double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizer::FR_COSINE) const = 0;
+    CV_WRAP virtual double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE) const = 0;
 
     /** @brief Creates an instance of this class with given parameters
      *  @param model the path of the onnx model used for face recognition
      *  @param config the path to the config file for compability, which is not requested for ONNX models
      */
-    CV_WRAP static Ptr<FaceRecognizer> create(const String& model, const String& config);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config);
 };
 
 } // namespace cv

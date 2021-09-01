@@ -13,10 +13,10 @@
 namespace cv
 {
 
-class FaceRecognizerImpl : public FaceRecognizer
+class FaceRecognizerSFImpl : public FaceRecognizerSF
 {
 public:
-    FaceRecognizerImpl(const String& model, const String& config)
+    FaceRecognizerSFImpl(const String& model, const String& config)
     {
         net = dnn::readNet(model, config);
     };
@@ -176,9 +176,9 @@ private:
     dnn::Net net;
 };
 
-Ptr<FaceRecognizer> FaceRecognizer::create(const String& model, const String& config)
+Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config)
 {
-    return makePtr<FaceRecognizerImpl>(model, config);
+    return makePtr<FaceRecognizerSFImpl>(model, config);
 }
 
 } // namespace cv
