@@ -5,6 +5,9 @@
 #include "test_precomp.hpp"
 #include <opencv2/3d/detail/pose_graph.hpp>
 
+//DEBUG
+#include <opencv2/core/dualquaternion.hpp>
+
 namespace opencv_test { namespace {
 
 using namespace cv;
@@ -147,6 +150,240 @@ TEST( PoseGraph, sphereG2O )
     throw SkipTestException("Build with Eigen required for pose graph optimization");
 #endif
 }
+
+// ------------------------------------------------------------------------------------------
+
+
+
+struct Mesh
+{
+    std::vector<Point3f> pts;
+    std::vector<Vec2i> lines;
+
+    Mesh join(const Mesh& m2) const
+    {
+        Mesh mo;
+
+        size_t sz1 = this->pts.size();
+        std::copy(this->pts.begin(), this->pts.end(), std::back_inserter(mo.pts));
+        std::copy(m2.pts.begin(), m2.pts.end(), std::back_inserter(mo.pts));
+
+        std::copy(this->lines.begin(), this->lines.end(), std::back_inserter(mo.lines));
+        std::transform(m2.lines.begin(), m2.lines.end(), std::back_inserter(mo.lines),
+                       [sz1](Vec2i ab) { return Vec2i(ab[0] + sz1, ab[1] + sz1); });
+
+        return mo;
+    }
+
+    Mesh transform(Affine3f a, float scale = 1.f) const
+    {
+        Mesh out;
+        out.lines = this->lines;
+        for (Point3f p : this->pts)
+        {
+            out.pts.push_back(a * (p * scale));
+        }
+        return out;
+    }
+
+    // 0-2 - min, 3-5 - max
+    Vec6f getBoundingBox() const
+    {
+        float maxv = std::numeric_limits<float>::max();
+        Vec3f xmin(maxv, maxv, maxv), xmax(-maxv, -maxv, -maxv);
+        for (Point3f p : this->pts)
+        {
+            xmin[0] = min(p.x, xmin[0]); xmin[1] = min(p.y, xmin[1]); xmin[2] = min(p.z, xmin[2]);
+            xmax[0] = max(p.x, xmax[0]); xmax[1] = max(p.y, xmax[1]); xmax[2] = max(p.z, xmax[2]);
+        }
+        return Vec6f(xmin[0], xmin[1], xmin[2], xmax[0], xmax[1], xmax[2]);
+    }
+};
+
+
+Mesh seg7(int d)
+{
+    const std::vector<Point3f> pt = { {0, 0, 0}, {0, 1, 0},
+                                      {1, 0, 0}, {1, 1, 0},
+                                      {2, 0, 0}, {2, 1, 0} };
+
+    std::vector<Mesh> seg(7);
+    seg[0].pts = { pt[0], pt[1] };
+    seg[1].pts = { pt[1], pt[3] };
+    seg[2].pts = { pt[3], pt[5] };
+    seg[3].pts = { pt[5], pt[4] };
+    seg[4].pts = { pt[4], pt[2] };
+    seg[5].pts = { pt[2], pt[0] };
+    seg[6].pts = { pt[2], pt[3] };
+    for (int i = 0; i < 7; i++)
+        seg[i].lines = { {0, 1} };
+
+    vector<Mesh> digits = {
+        seg[0].join(seg[1]).join(seg[2]).join(seg[3]).join(seg[4]).join(seg[5]), // 0
+        seg[1].join(seg[2]), // 1
+        seg[0].join(seg[1]).join(seg[3]).join(seg[4]).join(seg[6]), // 2
+        seg[0].join(seg[1]).join(seg[2]).join(seg[3]).join(seg[6]), // 3
+        seg[1].join(seg[2]).join(seg[5]).join(seg[6]), // 4
+        seg[0].join(seg[2]).join(seg[3]).join(seg[5]).join(seg[6]), // 5
+        seg[0].join(seg[2]).join(seg[3]).join(seg[4]).join(seg[5]).join(seg[6]), // 6
+        seg[0].join(seg[1]).join(seg[2]), // 7
+        seg[0].join(seg[1]).join(seg[2]).join(seg[3]).join(seg[4]).join(seg[5]).join(seg[6]), // 8
+        seg[0].join(seg[1]).join(seg[2]).join(seg[3]).join(seg[5]).join(seg[6]), // 9
+        seg[6], // -
+    };
+
+    return digits[d];
+}
+
+Mesh drawId(int x)
+{
+    vector<int> digits;
+    do
+    {
+        digits.push_back(x % 10);
+        x /= 10;
+    }
+    while (x > 0);
+    float spacing = 0.2f;
+    Mesh m;
+    for (int i = 0; i < digits.size(); i++)
+    {
+        Mesh digit = seg7(digits[digits.size() - 1 - i]);
+        Vec6f bb = digit.getBoundingBox();
+        digit = digit.transform(Affine3f().translate(-Vec3f(0, bb[1], 0)));
+        Vec3f tr;
+        if (m.pts.empty())
+            tr = Vec3f();
+        else
+            tr = Vec3f(0, (m.getBoundingBox()[4] + spacing), 0);
+        m = m.join(digit.transform( Affine3f().translate(tr) ));
+    }
+    return m;
+}
+
+
+Mesh drawFromTo(int f, int t)
+{
+    Mesh m;
+
+    Mesh df = drawId(f);
+    Mesh dp = seg7(10);
+    Mesh dt = drawId(t);
+
+    float spacing = 0.2f;
+    m = m.join(df).join(dp.transform(Affine3f().translate(Vec3f(0, df.getBoundingBox()[4] + spacing, 0))))
+                  .join(dt.transform(Affine3f().translate(Vec3f(0, df.getBoundingBox()[4] + 2*spacing + 1, 0))));
+
+    return m;
+}
+
+Mesh drawPoseGraph(Ptr<detail::PoseGraph> pg)
+{
+    Mesh marker;
+    marker.pts = { {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0} };
+    marker.lines = { {0, 1}, {0, 2}, {0, 3}, {1, 4} };
+
+    Mesh allMeshes;
+    Affine3f margin = Affine3f().translate(Vec3f(0.1f, 0.1f, 0));
+    std::vector<size_t> ids = pg->getNodesIds();
+    for (const size_t& id : ids)
+    {
+        Affine3f pose = pg->getNodePose(id);
+
+        Mesh m = marker.join(drawId(id).transform(margin, 0.25f)).transform(pose);
+        allMeshes = allMeshes.join(m);
+    }
+
+    // edges
+    margin = Affine3f().translate(Vec3f(0.05f, 0.05f, 0));
+    for (int i = 0; i < pg->getNumEdges(); i++)
+    {
+        Affine3f pose = pg->getEdgePose(i);
+        size_t sid = pg->getEdgeStart(i);
+        size_t did = pg->getEdgeEnd(i);
+        Affine3f spose = pg->getNodePose(sid);
+        Affine3f dpose = spose * pose;
+
+        Mesh m = marker.join(drawFromTo(sid, did).transform(margin, 0.125f)).transform(dpose);
+        allMeshes = allMeshes.join(m);
+    }
+
+    return allMeshes;
+}
+
+void writeObj(const std::string& fname, const Mesh& m)
+{
+    // Write edge-only model of how nodes are located in space
+    std::fstream of(fname, std::fstream::out);
+    for (const Point3f& d : m.pts)
+    {
+        of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+    }
+
+    for (const Vec2i& v : m.lines)
+    {
+        of << "l " << v[0] + 1 << " " << v[1] + 1 << std::endl;
+    }
+
+    of.close();
+}
+
+TEST(PoseGraph, simple)
+{
+    Ptr<detail::PoseGraph> pg = detail::PoseGraph::create();
+
+    DualQuatf true0(1, 0, 0, 0, 0, 0, 0, 0);
+    DualQuatf true1 = DualQuatf::createFromPitch(CV_PI / 3.0f, 10.0f, Vec3f(1, 1.5f, 1.2f), Vec3f());
+
+    DualQuatf pose0 = true0;
+    vector<DualQuatf> noise(7);
+    for (int i = 0; i < noise.size(); i++)
+    {
+        float angle = cv::theRNG().uniform(-1.f, 1.f);
+        float shift = cv::theRNG().uniform(-2.f, 2.f);
+        Matx31f axis = Vec3f::randu(0.f, 1.f), moment = Vec3f::randu(0.f, 1.f);
+        noise[i] = DualQuatf::createFromPitch(angle, shift,
+                                              Vec3f(axis(0), axis(1), axis(2)),
+                                              Vec3f(moment(0), moment(1), moment(2)));
+    }
+
+    DualQuatf pose1 = noise[0] * true1;
+
+    DualQuatf diff = true1 * true0.inv();
+    vector<DualQuatf> cfrom = { diff, diff * noise[1], noise[2] * diff };
+    DualQuatf diffInv = diff.inv();
+    vector<DualQuatf> cto = { diffInv, diffInv * noise[3], noise[4] * diffInv };
+
+    pg->addNode(123, pose0.toAffine3(), true);
+    pg->addNode(456, pose1.toAffine3(), false);
+
+    Matx66f info = Matx66f::eye();
+    for (int i = 0; i < 3; i++)
+    {
+        pg->addEdge(123, 456, cfrom[i].toAffine3(), info);
+        pg->addEdge(456, 123, cto[i].toAffine3(), info);
+    }
+
+    Mesh allMeshes = drawPoseGraph(pg);
+
+    // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
+    if (cvtest::debugLevel > 0)
+    {
+        writeObj("pg_simple_in.obj", allMeshes);
+    }
+
+    int iters = pg->optimize();
+
+    Mesh after = drawPoseGraph(pg);
+
+    // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
+    if (cvtest::debugLevel > 0)
+    {
+        writeObj("pg_simple_out.obj", after);
+    }
+
+}
+
 
 
 }} // namespace
