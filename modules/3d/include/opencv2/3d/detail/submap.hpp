@@ -101,7 +101,6 @@ public:
     //! TODO: Should we support submaps for regular volumes?
     static constexpr int FRAME_VISIBILITY_THRESHOLD = 5;
 
-    //! TODO: Add support for GPU arrays (UMat)
     Ptr<OdometryFrame> frame;
 
     std::shared_ptr<Volume> volume;
@@ -303,7 +302,9 @@ bool SubmapManager<MatType>::shouldCreateSubmap(int currFrameId)
     Ptr<SubmapT> currSubmap = getSubmap(currSubmapId);
     float ratio             = currSubmap->calcVisibilityRatio(currFrameId);
 
-    if (ratio < 0.2f)
+    //DEBUG
+    // if (ratio < 0.2f)
+    if (ratio < 0.5f)
         return true;
     return false;
 }
