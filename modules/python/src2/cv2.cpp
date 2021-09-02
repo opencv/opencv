@@ -1778,7 +1778,7 @@ private:
 
         const NPY_TYPES target_type = asNumpyType<UnderlyingArrayType>();
         const int cols = DType::channels;
-        PyObject* array;
+        PyObject* array = NULL;
         if (cols == 1)
         {
             npy_intp dims = static_cast<npy_intp>(value.size());
@@ -1796,14 +1796,16 @@ private:
             String shape;
             if (cols > 1)
             {
-                shape = cv::format("(%d x %d)", static_cast<int>(value.size()), cols);
+                shape = format("(%d x %d)", static_cast<int>(value.size()), cols);
             }
             else
             {
-                shape = cv::format("(%d)", static_cast<int>(value.size()));
+                shape = format("(%d)", static_cast<int>(value.size()));
             }
-            CV_Error_(Error::StsError, ("Can't allocate NumPy array for vector with dtype=%d shape=%s",
-                    static_cast<int>(target_type), static_cast<int>(value.size()), shape.c_str()));
+            const String error_message = format("Can't allocate NumPy array for vector with dtype=%d and shape=%s",
+                                                static_cast<int>(target_type), shape.c_str());
+            emit_failmsg(PyExc_MemoryError, error_message.c_str());
+            return array;
         }
         // Fill the array
         PyArrayObject* array_obj = reinterpret_cast<PyArrayObject*>(array);
