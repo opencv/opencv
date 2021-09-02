@@ -218,7 +218,7 @@ class dnn_test(NewOpenCVTests):
         model.setInputParams(scale, size, mean)
         out, _ = model.detect(frame)
 
-        self.assertTrue(type(out) == list)
+        self.assertTrue(type(out) == tuple, msg='actual type {}'.format(str(type(out))))
         self.assertTrue(np.array(out).shape == (2, 4, 2))
 
 
