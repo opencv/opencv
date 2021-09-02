@@ -158,7 +158,7 @@ inline Quat<T> DualQuat<T>::getRotation(QuatAssumeType assumeUnit) const
 template <typename T>
 inline Vec<T, 3> DualQuat<T>::getTranslation(QuatAssumeType assumeUnit) const
 {
-    Quat<T> trans = 2.0 * (getDualPart() * getRealPart().inv(assumeUnit));
+    Quat<T> trans = T(2.0) * (getDualPart() * getRealPart().inv(assumeUnit));
     return Vec<T, 3>{trans[1], trans[2], trans[3]};
 }
 
