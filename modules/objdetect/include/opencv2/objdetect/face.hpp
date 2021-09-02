@@ -57,8 +57,8 @@ public:
     CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
                                               const String& config,
                                               const Size& input_size,
-                                              float score_threshold = 0.9,
-                                              float nms_threshold = 0.3,
+                                              float score_threshold = 0.9f,
+                                              float nms_threshold = 0.3f,
                                               int top_k = 5000,
                                               int backend_id = 0,
                                               int target_id = 0);
