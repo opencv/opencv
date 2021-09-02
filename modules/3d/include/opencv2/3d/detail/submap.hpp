@@ -9,6 +9,9 @@
 #include <opencv2/core/affine.hpp>
 #include "opencv2/3d/detail/pose_graph.hpp"
 
+//DEBUG
+#include "opencv2/core/dualquaternion.hpp"
+
 #include <type_traits>
 #include <vector>
 #include <map>
@@ -32,10 +35,15 @@ public:
 
         void accumulatePose(const Affine3f& _pose, int _weight = 1)
         {
-            Matx44f accPose = estimatedPose.matrix * weight + _pose.matrix * _weight;
-            weight         += _weight;
-            accPose        /= float(weight);
-            estimatedPose   = Affine3f(accPose);
+            //DEBUG
+            //Matx44f accPose = estimatedPose.matrix * weight + _pose.matrix * _weight;
+            //weight         += _weight;
+            //accPose        /= float(weight);
+            //estimatedPose   = Affine3f(accPose);
+            DualQuatf accPose = DualQuatf::createFromAffine3(estimatedPose) * float(weight) + DualQuatf::createFromAffine3(_pose) * float(_weight);
+            weight += _weight;
+            accPose = accPose / float(weight);
+            estimatedPose = accPose.toAffine3();
         }
     };
     typedef std::map<int, PoseConstraint> Constraints;
@@ -383,20 +391,21 @@ int SubmapManager<MatType>::estimateConstraint(int fromSubmapId, int toSubmapId,
     }
 
     int localInliers = 0;
-    Matx44f inlierConstraint;
+    //DEBUG
+    DualQuatf inlierConstraint;
     for (int i = 0; i < int(weights.size()); i++)
     {
         if (weights[i] > INLIER_WEIGHT_THRESH)
         {
             localInliers++;
             if (i == int(weights.size() - 1))
-                inlierConstraint += prevConstraint.matrix;
+                inlierConstraint += DualQuatf::createFromMat(prevConstraint.matrix);
             else
-                inlierConstraint += fromSubmapData.constraints[i].matrix;
+                inlierConstraint += DualQuatf::createFromMat(fromSubmapData.constraints[i].matrix);
         }
     }
-    inlierConstraint /= float(max(localInliers, 1));
-    inlierPose = Affine3f(inlierConstraint);
+    inlierConstraint = inlierConstraint * 1.0f/float(max(localInliers, 1));
+    inlierPose = inlierConstraint.toAffine3();
     inliers    = localInliers;
 
     if (inliers >= MIN_INLIERS)
