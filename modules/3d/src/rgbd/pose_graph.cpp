@@ -277,6 +277,16 @@ public:
         return edges[i].targetNodeId;
     }
 
+    virtual Affine3d getEdgePose(size_t i) const CV_OVERRIDE
+    {
+        return edges[i].pose.getAffine();
+    }
+    virtual Matx66f getEdgeInfo(size_t i) const CV_OVERRIDE
+    {
+        Matx66f s = edges[i].sqrtInfo;
+        return s * s;
+    }
+
     virtual size_t getNumEdges() const CV_OVERRIDE
     {
         return edges.size();
