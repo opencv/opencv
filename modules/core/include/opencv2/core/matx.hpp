@@ -142,22 +142,22 @@ public:
 
     Matx(std::initializer_list<_Tp>); //!< initialize from an initializer list
 
-    static Matx all(_Tp alpha);
-    static Matx zeros();
-    static Matx ones();
-    static Matx eye();
-    static Matx diag(const diag_type& d);
+    CV_NODISCARD_STD static Matx all(_Tp alpha);
+    CV_NODISCARD_STD static Matx zeros();
+    CV_NODISCARD_STD static Matx ones();
+    CV_NODISCARD_STD static Matx eye();
+    CV_NODISCARD_STD static Matx diag(const diag_type& d);
     /** @brief Generates uniformly distributed random numbers
     @param a Range boundary.
     @param b The other range boundary (boundaries don't have to be ordered, the lower boundary is inclusive,
     the upper one is exclusive).
      */
-    static Matx randu(_Tp a, _Tp b);
+    CV_NODISCARD_STD static Matx randu(_Tp a, _Tp b);
     /** @brief Generates normally distributed random numbers
     @param a Mean value.
     @param b Standard deviation.
      */
-    static Matx randn(_Tp a, _Tp b);
+    CV_NODISCARD_STD static Matx randn(_Tp a, _Tp b);
 
     //! dot product computed with the default precision
     _Tp dot(const Matx<_Tp, m, n>& v) const;

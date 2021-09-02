@@ -1437,26 +1437,13 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
-        size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
         if (kernel.empty())
             return false;
 
-        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-        if (workgroupSize_used != simd_size)
-        {
-            std::cerr << "OpenCV(ocl4dnn): The OpenCL compiler chose a simd size (" << workgroupSize_used << ") that " << std::endl;
-            std::cerr << "                 does not equal the size (" << simd_size << ") kernel source required." << std::endl;
-            std::cerr << "                 Skip this kernel " << kernel_name_ << std::endl;
-            unloadProgram(kernel_name_);
-            return false;
-        }
-        else
-        {
-            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, KERNEL_TYPE_GEMM_LIKE));
-            return true;
-        }
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                    true, KERNEL_TYPE_GEMM_LIKE));
+        return true;
     }
     else
         return false;
@@ -1502,26 +1489,13 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
-        size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
         if (kernel.empty())
             return false;
 
-        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-        if (workgroupSize_used != simd_size)
-        {
-            std::cerr << "OpenCV(ocl4dnn): The OpenCL compiler chose a simd size (" << workgroupSize_used << ") that " << std::endl;
-            std::cerr << "                 does not equal the size (" << simd_size << ") kernel source required." << std::endl;
-            std::cerr << "                 Skip this kernel " << kernel_name_ << std::endl;
-            unloadProgram(kernel_name_);
-            return false;
-        }
-        else
-        {
-            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, KERNEL_TYPE_INTEL_IDLF));
-            return true;
-        }
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                    true, KERNEL_TYPE_INTEL_IDLF));
+        return true;
     }
     else
         return false;

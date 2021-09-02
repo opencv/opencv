@@ -517,8 +517,8 @@ try:
 
             comp = cv.GComputation(cv.GIn(g_arr0, g_arr1), cv.GOut(g_out))
 
-            arr0 = [(2, 2), 2.0]
-            arr1 = [3,    'str']
+            arr0 = ((2, 2), 2.0)
+            arr1 = (3,    'str')
 
             out = comp.apply(cv.gin(arr0, arr1),
                              args=cv.gapi.compile_args(cv.gapi.kernels(GConcatImpl)))
