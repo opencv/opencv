@@ -112,10 +112,11 @@ public:
 
         if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
         {
-           if (inputs[0].data != outputs[0].data)
-           {
-               inputs[0].copyTo(outputs[0]);
-           }
+            // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
+            if (inputs[0].data != outputs[0].data)
+            {
+                inputs[0].copyTo(outputs[0]);
+            }
             return;
         }
 
