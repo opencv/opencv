@@ -17,13 +17,13 @@ class FaceDetectorYNImpl : public FaceDetectorYN
 {
 public:
     FaceDetectorYNImpl(const String& model,
-                     const String& config,
-                     const Size& input_size,
-                     float score_threshold,
-                     float nms_threshold,
-                     int top_k,
-                     int backend_id,
-                     int target_id)
+                       const String& config,
+                       const Size& input_size,
+                       float score_threshold,
+                       float nms_threshold,
+                       int top_k,
+                       int backend_id,
+                       int target_id)
     {
         net = dnn::readNet(model, config);
         CV_Assert(!net.empty());
@@ -273,13 +273,13 @@ private:
 };
 
 Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
-                                       const String& config,
-                                       const Size& input_size,
-                                       const float score_threshold,
-                                       const float nms_threshold,
-                                       const int top_k,
-                                       const int backend_id,
-                                       const int target_id)
+                                           const String& config,
+                                           const Size& input_size,
+                                           const float score_threshold,
+                                           const float nms_threshold,
+                                           const int top_k,
+                                           const int backend_id,
+                                           const int target_id)
 {
     return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
 }

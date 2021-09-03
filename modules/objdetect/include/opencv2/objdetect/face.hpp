@@ -98,8 +98,10 @@ public:
     /** @brief Creates an instance of this class with given parameters
      *  @param model the path of the onnx model used for face recognition
      *  @param config the path to the config file for compability, which is not requested for ONNX models
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
 };
 
 } // namespace cv
