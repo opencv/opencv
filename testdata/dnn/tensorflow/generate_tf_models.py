@@ -1019,6 +1019,14 @@ wi = shape_input[2] / 2
 input_down = tf.image.resize(conv, size=[hi, wi], method=0, name='resize_down')
 save(inp, input_down, 'resize_bilinear_down')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, None, None, 3], 'input')
+biased = tf.nn.bias_add(inp, [1, 2, 3], data_format='NHWC')
+resized1 = tf.image.resize(biased, [5, 6])
+concat = tf.concat([resized1, biased], 3)
+# blob = np.random.standard_normal([1, 5, 6, 3]).astype(tf.float32.as_numpy_dtype())
+# writeBlob(blob, 'resize_concat_optimization_in')
+save(inp, concat, 'resize_concat_optimization', optimize=False, is_gen_data=False)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
