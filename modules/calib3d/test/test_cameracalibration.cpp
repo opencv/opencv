@@ -2144,9 +2144,15 @@ TEST(CV_RecoverPoseTest, regression_15341)
     const Mat cameraMatrix = Mat::eye(3, 3, CV_64F);
 
     // camera matrix with focal lengths 0.5 and 0.6 respectively and principal point = (100, 200)
-    double cameraMatrix2Data[] = { 0.5, 0.6, 1, 0, 100, 200, 0, 0, 1 };
+    double cameraMatrix2Data[] = { 0.5, 0, 100,
+                                   0, 0.6, 200,
+                                   0, 0, 1 };
     const Mat cameraMatrix2( 3, 3, CV_64F, cameraMatrix2Data );
-    const Mat zeroDistCoeffs = Mat::zeros(1, 5, CV_64F);
+
+    // zero and nonzero distortion coefficients
+    double nonZeroDistCoeffsData[] = { 0.01, 0.0001, 0, 0, 1e-04, 0.2, 0.02, 0.0002 }; // k1, k2, p1, p2, k3, k4, k5, k6
+    vector<Mat> distCoeffsList = {Mat::zeros(1, 5, CV_64F), Mat{1, 8, CV_64F, nonZeroDistCoeffsData}};
+    const auto &zeroDistCoeffs = distCoeffsList[0];
 
     int Inliers = 0;
 
@@ -2164,11 +2170,14 @@ TEST(CV_RecoverPoseTest, regression_15341)
             Mat E, E2, R, t;
 
             // Check pose when camera matrices are different.
-            E = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix2, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
-            Inliers = recoverPose(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix2, zeroDistCoeffs, E2, R, t, RANSAC, 0.999, 1.0, mask);
-            EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
-                "Two big difference between the same essential matrices computed using different functions with different cameras, testcase " << testcase;
-            EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function failed with different cameras, testcase " << testcase;
+            for (const auto &distCoeffs: distCoeffsList)
+            {
+                E = findEssentialMat(points1, points2, cameraMatrix, distCoeffs, cameraMatrix2, distCoeffs, RANSAC, 0.999, 1.0, mask);
+                recoverPose(points1, points2, cameraMatrix, distCoeffs, cameraMatrix2, distCoeffs, E2, R, t, RANSAC, 0.999, 1.0, mask);
+                EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
+                    "Two big difference between the same essential matrices computed using different functions with different cameras, testcase " << testcase;
+                EXPECT_EQ(0, (int)mask[13]) << "Detecting outliers in function failed with different cameras, testcase " << testcase;
+            }
 
             // Check pose when camera matrices are the same.
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
@@ -2200,11 +2209,14 @@ TEST(CV_RecoverPoseTest, regression_15341)
             Mat E, E2, R, t;
 
             // Check pose when camera matrices are different.
-            E = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix2, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
-            Inliers = recoverPose(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix2, zeroDistCoeffs, E2, R, t, RANSAC, 0.999, 1.0, mask);
-            EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
-                "Two big difference between the same essential matrices computed using different functions with different cameras, testcase " << testcase;
-            EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function failed with different cameras, testcase " << testcase;
+            for (const auto &distCoeffs: distCoeffsList)
+            {
+                E = findEssentialMat(points1, points2, cameraMatrix, distCoeffs, cameraMatrix2, distCoeffs, RANSAC, 0.999, 1.0, mask);
+                recoverPose(points1, points2, cameraMatrix, distCoeffs, cameraMatrix2, distCoeffs, E2, R, t, RANSAC, 0.999, 1.0, mask);
+                EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
+                    "Two big difference between the same essential matrices computed using different functions with different cameras, testcase " << testcase;
+                EXPECT_EQ(0, (int)mask.at<unsigned char>(13)) << "Detecting outliers in function failed with different cameras, testcase " << testcase;
+            }
 
             // Check pose when camera matrices are the same.
             E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);

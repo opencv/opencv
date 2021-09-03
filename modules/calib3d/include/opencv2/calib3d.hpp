@@ -2856,7 +2856,7 @@ floating-point (single or double precision).
 @ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
 @param distCoeffs2 Input/output vector of distortion coefficients, the same as in
 @ref calibrateCamera.
-@param E The input essential matrix.
+@param E The output essential matrix.
 @param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
 that performs a change of basis from the first camera's coordinate system to the second camera's
 coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
