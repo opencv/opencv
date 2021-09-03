@@ -1125,6 +1125,11 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_down)
     runTensorFlowNet("resize_bilinear_down");
 }
 
+TEST_P(Test_TensorFlow_layers, resize_concat_optimization)
+{
+    runTensorFlowNet("resize_concat_optimization");
+}
+
 TEST_P(Test_TensorFlow_layers, tf2_dense)
 {
     runTensorFlowNet("tf2_dense");
