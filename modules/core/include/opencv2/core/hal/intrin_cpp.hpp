@@ -2419,6 +2419,19 @@ inline v_reg<_Tp, n> v_broadcast_element(const v_reg<_Tp, n>& a)
     return v_reg<_Tp, n>::all(a.s[i]);
 }
 
+/** @brief Broadcast last element of vector
+Scheme:
+@code
+{ v[0] v[1] v[2] ... v[SZ] } => { v[SZ], v[SZ], v[SZ] ... v[SZ] }
+@endcode
+Supported types: 32-bit integers and floats (s32/u32/f32)
+*/
+template<typename _Tp, int n>
+inline v_reg<_Tp, n> v_broadcast_last_element(const v_reg<_Tp, n>& a)
+{
+   return v_reg<_Tp, n>::all(a.get(_Tp::nlanes - 1));
+}
+
 /** @brief Round elements
 
 Rounds each value. Input type is float vector ==> output type is int vector.

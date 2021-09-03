@@ -392,11 +392,11 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     typedef OP<T1, Tvec> op;
 #if CV_SIMD
     typedef bin_loader<OP, T1, Tvec> ldr;
-    int wide_step = Tvec::nlanes;
+    enum {wide_step = Tvec::nlanes};
     #if !CV_NEON && CV_SIMD_WIDTH == 16
-        int wide_step_l = wide_step * 2;
+        enum {wide_step_l = wide_step * 2};
     #else
-        int wide_step_l = wide_step;
+        enum {wide_step_l = wide_step};
     #endif
 #endif // CV_SIMD
 
@@ -640,15 +640,12 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(ushort), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    static int get_step()
-    {
-        return Tvec::nlanes;
-    }
+    enum {step = Tvec::nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
         Tvec c0 = op::r(vx_load(src1), vx_load(src2));
-        Tvec c1 = op::r(vx_load(src1 + get_step()), vx_load(src2 + get_step()));
+        Tvec c1 = op::r(vx_load(src1 + step), vx_load(src2 + step));
         v_store(dst, v_pack_b(v_reinterpret_as_u16(c0), v_reinterpret_as_u16(c1)));
     }
 };
@@ -657,17 +654,14 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(unsigned), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    static int get_step()
-    {
-        return Tvec::nlanes;
-    }
+    enum {step = Tvec::nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
         v_uint32 c0 = v_reinterpret_as_u32(op::r(vx_load(src1), vx_load(src2)));
-        v_uint32 c1 = v_reinterpret_as_u32(op::r(vx_load(src1 + get_step()), vx_load(src2 + get_step())));
-        v_uint32 c2 = v_reinterpret_as_u32(op::r(vx_load(src1 + get_step() * 2), vx_load(src2 + get_step() * 2)));
-        v_uint32 c3 = v_reinterpret_as_u32(op::r(vx_load(src1 + get_step() * 3), vx_load(src2 + get_step() * 3)));
+        v_uint32 c1 = v_reinterpret_as_u32(op::r(vx_load(src1 + step), vx_load(src2 + step)));
+        v_uint32 c2 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
+        v_uint32 c3 = v_reinterpret_as_u32(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
         v_store(dst, v_pack_b(c0, c1, c2, c3));
     }
 };
@@ -676,22 +670,19 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 struct cmp_loader_n<sizeof(double), OP, T1, Tvec>
 {
     typedef OP<T1, Tvec> op;
-    static int get_step()
-    {
-        return Tvec::nlanes;
-    }
+    enum {step = Tvec::nlanes};
 
     static inline void l(const T1* src1, const T1* src2, uchar* dst)
     {
         v_uint64 c0 = v_reinterpret_as_u64(op::r(vx_load(src1), vx_load(src2)));
-        v_uint64 c1 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step()), vx_load(src2 + get_step())));
-        v_uint64 c2 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 2), vx_load(src2 + get_step() * 2)));
-        v_uint64 c3 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 3), vx_load(src2 + get_step() * 3)));
+        v_uint64 c1 = v_reinterpret_as_u64(op::r(vx_load(src1 + step), vx_load(src2 + step)));
+        v_uint64 c2 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 2), vx_load(src2 + step * 2)));
+        v_uint64 c3 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 3), vx_load(src2 + step * 3)));
 
-        v_uint64 c4 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 4), vx_load(src2 + get_step() * 4)));
-        v_uint64 c5 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 5), vx_load(src2 + get_step() * 5)));
-        v_uint64 c6 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 6), vx_load(src2 + get_step() * 6)));
-        v_uint64 c7 = v_reinterpret_as_u64(op::r(vx_load(src1 + get_step() * 7), vx_load(src2 + get_step() * 7)));
+        v_uint64 c4 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 4), vx_load(src2 + step * 4)));
+        v_uint64 c5 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 5), vx_load(src2 + step * 5)));
+        v_uint64 c6 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 6), vx_load(src2 + step * 6)));
+        v_uint64 c7 = v_reinterpret_as_u64(op::r(vx_load(src1 + step * 7), vx_load(src2 + step * 7)));
         v_store(dst, v_pack_b(c0, c1, c2, c3, c4, c5, c6, c7));
     }
 };
@@ -706,7 +697,7 @@ static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     typedef OP<T1, Tvec> op;
 #if CV_SIMD
     typedef cmp_loader_n<sizeof(T1), OP, T1, Tvec> ldr;
-    int wide_step = Tvec::nlanes * sizeof(T1);
+    enum {wide_step = Tvec::nlanes * sizeof(T1)};
 #endif // CV_SIMD
 
     step1 /= sizeof(T1);
@@ -1016,17 +1007,14 @@ template<template<typename T1, typename T2, typename Tvec> class OP, typename T2
 struct scalar_loader_n<sizeof(int), OP, int, T2, v_int32>
 {
     typedef OP<int, T2, v_int32> op;
-    static int get_step()
-    {
-        return v_int32::nlanes;
-    }
+    enum {step = v_int32::nlanes};
 
     static inline void l(const int* src1, const int* src2, const T2* scalar, int* dst)
     {
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
-        v_int32 v_src1s = vx_load(src1 + get_step());
-        v_int32 v_src2s = vx_load(src2 + get_step());
+        v_int32 v_src1s = vx_load(src1 + step);
+        v_int32 v_src2s = vx_load(src2 + step);
 
         v_float32 f0, f1, f2, f3;
         f0 = v_cvt_f32(v_reinterpret_as_s32(v_src1));
@@ -1044,13 +1032,13 @@ struct scalar_loader_n<sizeof(int), OP, int, T2, v_int32>
         r1 = op::pre(v_src2s, r1);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 
     static inline void l(const int* src1, const T2* scalar, int* dst)
     {
         v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src1s = vx_load(src1 + get_step());
+        v_int32 v_src1s = vx_load(src1 + step);
 
         v_float32 f0, f1;
         f0 = v_cvt_f32(v_src1);
@@ -1066,7 +1054,7 @@ struct scalar_loader_n<sizeof(int), OP, int, T2, v_int32>
         r1 = op::pre(v_src1s, r1);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 };
 
@@ -1074,35 +1062,32 @@ template<template<typename T1, typename T2, typename Tvec> class OP, typename T2
 struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
 {
     typedef OP<float, T2, v_float32> op;
-    static int get_step()
-    {
-        return v_float32::nlanes;
-    }
+    enum {step = v_float32::nlanes};
 
     static inline void l(const float* src1, const float* src2, const T2* scalar, float* dst)
     {
         v_float32 v_src1 = vx_load(src1);
         v_float32 v_src2 = vx_load(src2);
-        v_float32 v_src1s = vx_load(src1 + get_step());
-        v_float32 v_src2s = vx_load(src2 + get_step());
+        v_float32 v_src1s = vx_load(src1 + step);
+        v_float32 v_src2s = vx_load(src2 + step);
 
         v_float32 r0 = op::r(v_src1, v_src2, scalar);
         v_float32 r1 = op::r(v_src1s, v_src2s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 
     static inline void l(const float* src1, const T2* scalar, float* dst)
     {
         v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src1s = vx_load(src1 + get_step());
+        v_float32 v_src1s = vx_load(src1 + step);
 
         v_float32 r0 = op::r(v_src1, scalar);
         v_float32 r1 = op::r(v_src1s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 };
 #endif // CV_SIMD
@@ -1113,17 +1098,14 @@ struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
 {
     typedef OP<int, float, v_int32> op;
     typedef OP<double, double, v_float64> op64;
-    static int get_step()
-    {
-        return v_int32::nlanes;
-    }
+    enum {step = v_int32::nlanes};
 
     static inline void l(const int* src1, const int* src2, const double* scalar, int* dst)
     {
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
-        v_int32 v_src1s = vx_load(src1 + get_step());
-        v_int32 v_src2s = vx_load(src2 + get_step());
+        v_int32 v_src1s = vx_load(src1 + step);
+        v_int32 v_src2s = vx_load(src2 + step);
 
         v_int32 r0 = r(v_src1, v_src2, scalar);
         v_int32 r1 = r(v_src1s, v_src2s, scalar);
@@ -1132,12 +1114,12 @@ struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
         r1 = op::pre(v_src2s, r1);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
     static inline void l(const int* src1, const double* scalar, int* dst)
     {
         v_int32 v_src1 = vx_load(src1);
-        v_int32 v_src1s = vx_load(src1 + get_step());
+        v_int32 v_src1s = vx_load(src1 + step);
 
         v_int32 r0 = r(v_src1, scalar);
         v_int32 r1 = r(v_src1s, scalar);
@@ -1146,7 +1128,7 @@ struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
         r1 = op::pre(v_src1s, r1);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 
     static inline v_int32 r(const v_int32& a, const v_int32& b, const double* scalar)
@@ -1180,34 +1162,31 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
 {
     typedef OP<float, float, v_float32> op;
     typedef OP<double, double, v_float64> op64;
-    static int get_step()
-    {
-        return v_float32::nlanes;
-    }
+    enum {step=v_float32::nlanes};
 
     static inline void l(const float* src1, const float* src2, const double* scalar, float* dst)
     {
         v_float32 v_src1 = vx_load(src1);
         v_float32 v_src2 = vx_load(src2);
-        v_float32 v_src1s = vx_load(src1 + get_step());
-        v_float32 v_src2s = vx_load(src2 + get_step());
+        v_float32 v_src1s = vx_load(src1 + step);
+        v_float32 v_src2s = vx_load(src2 + step);
 
         v_float32 r0 = r(v_src1, v_src2, scalar);
         v_float32 r1 = r(v_src1s, v_src2s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
     static inline void l(const float* src1, const double* scalar, float* dst)
     {
         v_float32 v_src1 = vx_load(src1);
-        v_float32 v_src1s = vx_load(src1 + get_step());
+        v_float32 v_src1s = vx_load(src1 + step);
 
         v_float32 r0 = r(v_src1, scalar);
         v_float32 r1 = r(v_src1s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 
     static inline v_float32 r(const v_float32& a, const v_float32& b, const double* scalar)
@@ -1240,34 +1219,31 @@ template<template<typename T1, typename T2, typename Tvec> class OP>
 struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
 {
     typedef OP<double, double, v_float64> op;
-    static int get_step()
-    {
-        return v_float64::nlanes;
-    }
+    enum {step=v_float64::nlanes};
 
     static inline void l(const double* src1, const double* src2, const double* scalar, double* dst)
     {
         v_float64 v_src1 = vx_load(src1);
         v_float64 v_src2 = vx_load(src2);
-        v_float64 v_src1s = vx_load(src1 + get_step());
-        v_float64 v_src2s = vx_load(src2 + get_step());
+        v_float64 v_src1s = vx_load(src1 + step);
+        v_float64 v_src2s = vx_load(src2 + step);
 
         v_float64 r0 = op::r(v_src1, v_src2, scalar);
         v_float64 r1 = op::r(v_src1s, v_src2s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
     static inline void l(const double* src1, const double* scalar, double* dst)
     {
         v_float64 v_src1 = vx_load(src1);
-        v_float64 v_src1s = vx_load(src1 + get_step());
+        v_float64 v_src1s = vx_load(src1 + step);
 
         v_float64 r0 = op::r(v_src1, scalar);
         v_float64 r1 = op::r(v_src1s, scalar);
 
         v_store(dst, r0);
-        v_store(dst + get_step(), r1);
+        v_store(dst + step, r1);
     }
 };
 #endif // CV_SIMD_64F

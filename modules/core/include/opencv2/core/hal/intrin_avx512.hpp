@@ -2286,6 +2286,17 @@ template<int i>
 inline v_float32x16 v_broadcast_element(const v_float32x16 &a)
 { return v_reinterpret_as_f32(v_broadcast_element<i>(v_reinterpret_as_u32(a))); }
 
+template<int i>
+inline v_float64x8 v_broadcast_element(const v_float64x8& v)
+{
+    double arr[8];
+    v_store(arr, v);
+    double tmp = arr[i];
+    arr[0] = tmp; arr[1] = tmp; arr[2] = tmp; arr[3] = tmp;
+    arr[4] = tmp; arr[5] = tmp; arr[6] = tmp; arr[7] = tmp;
+    return v512_load(arr);
+}
+
 #define OPENCV_HAL_IMPL_AVX512_BROADCAST_LAST(_Tpvec) \
 inline _Tpvec v_broadcast_last_element(_Tpvec v)      \
 {                                                     \
@@ -2295,6 +2306,7 @@ inline _Tpvec v_broadcast_last_element(_Tpvec v)      \
 OPENCV_HAL_IMPL_AVX512_BROADCAST_LAST(v_uint32x16)
 OPENCV_HAL_IMPL_AVX512_BROADCAST_LAST(v_int32x16)
 OPENCV_HAL_IMPL_AVX512_BROADCAST_LAST(v_float32x16)
+OPENCV_HAL_IMPL_AVX512_BROADCAST_LAST(v_float64x8)
 
 ///////////////////// load deinterleave /////////////////////////////
 
