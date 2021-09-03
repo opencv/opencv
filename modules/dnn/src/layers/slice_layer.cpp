@@ -60,9 +60,10 @@ namespace dnn
 
 void sliceRangesFromShape(const MatShape& inpShape, int& axis, std::vector<std::vector<cv::Range> >& sliceRanges)
 {
-    int n = inpShape[axis];
+    CV_Assert(inpShape.size() > 0);
     bool axisNeg = (axis < 0);
     axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
+    int n = inpShape[axis];
 
     for (size_t i = 0; i < sliceRanges.size(); ++i){
         std::vector<Range>& ranges = sliceRanges[i];
