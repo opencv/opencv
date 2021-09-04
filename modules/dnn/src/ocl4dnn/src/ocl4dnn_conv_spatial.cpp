@@ -270,17 +270,21 @@ void OCL4DNNConvSpatial<Dtype>::setFusionDefine(ocl4dnnFusedActiv_t fused_activ,
 }
 
 template<typename Dtype>
-void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx)
+void OCL4DNNConvSpatial<Dtype>::setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, int fused_eltwise_offset, ocl::Kernel &kernel, cl_uint &argIdx)
 {
     if (fused_eltwise)
-        kernel.set(argIdx++, (cl_mem)bottom_data2_.handle(ACCESS_READ));
+    {
+        kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom_data2_));
+        if (fused_eltwise_offset >= 0)
+            kernel.set(argIdx++, fused_eltwise_offset);
+    }
 
     switch (fused_activ) {
         case OCL4DNN_CONV_FUSED_ACTIV_RELU:
             kernel.set(argIdx++, (float)negative_slope_);
             break;
         case OCL4DNN_CONV_FUSED_ACTIV_PRELU:
-            kernel.set(argIdx++, (cl_mem)negative_slope_umat_.handle(ACCESS_READ));
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(negative_slope_umat_));
             break;
         case OCL4DNN_CONV_FUSED_ACTIV_POWER:
             kernel.set(argIdx++, (float)power_);
@@ -895,10 +899,12 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
     if (config->kernelType == KERNEL_TYPE_INTEL_IDLF) {
         if (!swizzleWeight(weight, config->workItem_output[2], false))
             return false;
+#if 0
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
         size_t total_top_size = top_dim_ * numImages;
+#endif
         for (int32_t g = 0; g < group_; ++g) {
             bias_offset = M_ * g;
             int32_t image_offset = width_ * height_ * (channels_ / group_) * g;
@@ -910,72 +916,22 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
+            setFusionArg(fused_activ_, fused_eltwise_, output_image_offset, kernel, argIdx);
 
-            UMat img_buffer;
-            if (image_offset)
-            {
-                CreateSubBuffer(bottom, img_buffer, image_offset,
-                                total_bottom_size - image_offset, false);
-                if (img_buffer.empty())
-                    return false;
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
+            kernel.set(argIdx++, image_offset);
 
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(img_buffer));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-            }
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
+            kernel.set(argIdx++, kernel_offset);
 
-            UMat kernel_buffer;
-            if (kernel_offset)
-            {
-                CreateSubBuffer(swizzled_weights_umat, kernel_buffer, kernel_offset,
-                                total_kernel_size - kernel_offset, false);
-                if (kernel_buffer.empty())
-                    return false;
-
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(kernel_buffer));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
-            }
-
-            UMat bias_buffer;
             if (bias_term_)
             {
-                if (bias_offset)
-                {
-                    CreateSubBuffer(bias, bias_buffer, bias_offset,
-                                    total_bias_size - bias_offset, false);
-                    if (bias_buffer.empty())
-                        return false;
-
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias_buffer));
-                }
-                else
-                {
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
-                }
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                kernel.set(argIdx++, bias_offset);
             }
 
-            UMat out_buffer;
-            if (output_image_offset)
-            {
-                CreateSubBuffer(top, out_buffer, output_image_offset,
-                                total_top_size - output_image_offset, true);
-                if (out_buffer.empty())
-                    return false;
-
-                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
-                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
-                kernel.set(argIdx++, (int)(top.offset / element_size));
-            }
+            kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+            kernel.set(argIdx++, (int)(top.offset / element_size) + output_image_offset);
 
             kernel.set(argIdx++, (uint16_t)width_);
             kernel.set(argIdx++, (uint16_t)height_);
@@ -1005,7 +961,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
+            setFusionArg(fused_activ_, fused_eltwise_, -1, kernel, argIdx);
 
             UMat img_buffer;
             if (image_offset)
@@ -1112,7 +1068,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             return false;
 
         cl_uint argIdx = 0;
-        setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
+        setFusionArg(fused_activ_, fused_eltwise_, -1, kernel, argIdx);
         kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
         kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
         if (bias_term_)
@@ -1152,7 +1108,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                     return false;
 
                 cl_uint argIdx = 0;
-                setFusionArg(fused_activ_, fused_eltwise_, kernel, argIdx);
+                setFusionArg(fused_activ_, fused_eltwise_, -1, kernel, argIdx);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
                 kernel.set(argIdx++, image_offset);
                 kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(weight));
