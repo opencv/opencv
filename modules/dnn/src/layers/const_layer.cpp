@@ -112,6 +112,15 @@ public:
     }
 #endif
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        Mat quantizedBlob;
+        blobs[0].convertTo(quantizedBlob, CV_8S, 1.f/scales[1][0], zeropoints[1][0]);
+        params.blobs.clear();
+        params.blobs.push_back(quantizedBlob);
+        return true;
+    }
 };
 
 Ptr<Layer> ConstLayer::create(const LayerParams& params)

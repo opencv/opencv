@@ -49,8 +49,6 @@ except AttributeError:
     print("AKAZE not available")
 
 SEAM_FIND_CHOICES = OrderedDict()
-SEAM_FIND_CHOICES['gc_color'] = cv.detail_GraphCutSeamFinder('COST_COLOR')
-SEAM_FIND_CHOICES['gc_colorgrad'] = cv.detail_GraphCutSeamFinder('COST_COLOR_GRAD')
 SEAM_FIND_CHOICES['dp_color'] = cv.detail_DpSeamFinder('COLOR')
 SEAM_FIND_CHOICES['dp_colorgrad'] = cv.detail_DpSeamFinder('COLOR_GRAD')
 SEAM_FIND_CHOICES['voronoi'] = cv.detail.SeamFinder_createDefault(cv.detail.SeamFinder_VORONOI_SEAM)
@@ -79,7 +77,10 @@ WARP_CHOICES = (
     'transverseMercator',
 )
 
-WAVE_CORRECT_CHOICES = ('horiz', 'no', 'vert',)
+WAVE_CORRECT_CHOICES = OrderedDict()
+WAVE_CORRECT_CHOICES['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
+WAVE_CORRECT_CHOICES['no'] = None
+WAVE_CORRECT_CHOICES['vert'] = cv.detail.WAVE_CORRECT_VERT
 
 BLEND_CHOICES = ('multiband', 'feather', 'no',)
 
@@ -147,9 +148,9 @@ parser.add_argument(
     type=str, dest='ba_refine_mask'
 )
 parser.add_argument(
-    '--wave_correct', action='store', default=WAVE_CORRECT_CHOICES[0],
-    help="Perform wave effect correction. The default is '%s'" % WAVE_CORRECT_CHOICES[0],
-    choices=WAVE_CORRECT_CHOICES,
+    '--wave_correct', action='store', default=list(WAVE_CORRECT_CHOICES.keys())[0],
+    help="Perform wave effect correction. The default is '%s'" % list(WAVE_CORRECT_CHOICES.keys())[0],
+    choices=WAVE_CORRECT_CHOICES.keys(),
     type=str, dest='wave_correct'
 )
 parser.add_argument(
@@ -279,11 +280,7 @@ def main():
     compose_megapix = args.compose_megapix
     conf_thresh = args.conf_thresh
     ba_refine_mask = args.ba_refine_mask
-    wave_correct = args.wave_correct
-    if wave_correct == 'no':
-        do_wave_correct = False
-    else:
-        do_wave_correct = True
+    wave_correct = WAVE_CORRECT_CHOICES[args.wave_correct]
     if args.save_graph is None:
         save_graph = False
     else:
@@ -343,7 +340,7 @@ def main():
         with open(args.save_graph, 'w') as fh:
             fh.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
 
-    indices = cv.detail.leaveBiggestComponent(features, p, 0.3)
+    indices = cv.detail.leaveBiggestComponent(features, p, conf_thresh)
     img_subset = []
     img_names_subset = []
     full_img_sizes_subset = []
@@ -393,11 +390,11 @@ def main():
         warped_image_scale = focals[len(focals) // 2]
     else:
         warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
-    if do_wave_correct:
+    if wave_correct is not None:
         rmats = []
         for cam in cameras:
             rmats.append(np.copy(cam.R))
-        rmats = cv.detail.waveCorrect(rmats, cv.detail.WAVE_CORRECT_HORIZ)
+        rmats = cv.detail.waveCorrect(rmats, wave_correct)
         for idx, cam in enumerate(cameras):
             cam.R = rmats[idx]
     corners = []
@@ -433,7 +430,7 @@ def main():
     compensator.feed(corners=corners, images=images_warped, masks=masks_warped)
 
     seam_finder = SEAM_FIND_CHOICES[args.seam]
-    seam_finder.find(images_warped_f, corners, masks_warped)
+    masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
     compose_scale = 1
     corners = []
     sizes = []
@@ -453,7 +450,8 @@ def main():
                 cameras[i].focal *= compose_work_aspect
                 cameras[i].ppx *= compose_work_aspect
                 cameras[i].ppy *= compose_work_aspect
-                sz = (full_img_sizes[i][0] * compose_scale, full_img_sizes[i][1] * compose_scale)
+                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                      int(round(full_img_sizes[i][1] * compose_scale)))
                 K = cameras[i].K().astype(np.float32)
                 roi = warper.warpRoi(sz, K, cameras[i].R)
                 corners.append(roi[0:2])

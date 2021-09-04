@@ -538,9 +538,9 @@ int main( int argc, char** argv )
         if( mode == CAPTURING )
         {
             if(undistortImage)
-                msg = format( "%d/%d Undist", (int)imagePoints.size(), nframes );
+                msg = cv::format( "%d/%d Undist", (int)imagePoints.size(), nframes );
             else
-                msg = format( "%d/%d", (int)imagePoints.size(), nframes );
+                msg = cv::format( "%d/%d", (int)imagePoints.size(), nframes );
         }
 
         putText( view, msg, textOrigin, 1, 1,

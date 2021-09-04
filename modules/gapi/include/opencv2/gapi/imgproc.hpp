@@ -47,6 +47,10 @@ void validateFindingContoursMeta(const int depth, const int chan, const int mode
 
 namespace cv { namespace gapi {
 
+/**
+ * @brief This namespace contains G-API Operation Types for OpenCV
+ * ImgProc module functionality.
+ */
 namespace imgproc {
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
@@ -1341,7 +1345,7 @@ Output image is 8-bit unsigned 3-channel image @ref CV_8UC3.
 @param src input image: 8-bit unsigned 3-channel image @ref CV_8UC3.
 @sa RGB2BGR
 */
-GAPI_EXPORTS GMat BGR2RGB(const GMat& src);
+GAPI_EXPORTS_W GMat BGR2RGB(const GMat& src);
 
 /** @brief Converts an image from RGB color space to gray-scaled.
 

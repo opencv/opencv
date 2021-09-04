@@ -11,6 +11,7 @@
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/core/utils/filesystem.private.hpp"
 
 namespace cv { namespace samples {
 
@@ -49,6 +50,7 @@ CV_EXPORTS void addSamplesDataSearchSubDirectory(const cv::String& subdir)
 
 cv::String findFile(const cv::String& relative_path, bool required, bool silentMode)
 {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_LOG_DEBUG(NULL, cv::format("cv::samples::findFile('%s', %s)", relative_path.c_str(), required ? "true" : "false"));
     cv::String result = cv::utils::findDataFile(relative_path,
                                                 "OPENCV_SAMPLES_DATA_PATH",
@@ -61,6 +63,12 @@ cv::String findFile(const cv::String& relative_path, bool required, bool silentM
     if (result.empty() && required)
         CV_Error(cv::Error::StsError, cv::format("OpenCV samples: Can't find required data file: %s", relative_path.c_str()));
     return result;
+#else
+    CV_UNUSED(relative_path);
+    CV_UNUSED(required);
+    CV_UNUSED(silentMode);
+    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+#endif
 }
 
 

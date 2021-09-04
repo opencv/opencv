@@ -56,6 +56,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include <ImfFrameBuffer.h>
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
@@ -63,6 +64,7 @@
 #include <ImfStandardAttributes.h>
 #include <half.h>
 #include "grfmt_exr.hpp"
+#include "OpenEXRConfig.h"
 
 #if defined _WIN32
 
@@ -156,6 +158,10 @@ bool  ExrDecoder::readHeader()
     else
     {
         m_green = channels.findChannel( "Y" );
+        if( !m_green )
+        {
+            m_green = channels.findChannel( "Z" ); // Distance of the front of a sample from the viewer
+        }
         if( m_green )
         {
             m_ischroma = true;
@@ -648,12 +654,14 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
             case IMWRITE_EXR_COMPRESSION_B44A:
                 header.compression() = B44A_COMPRESSION;
                 break;
+#if ((OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR) >= (2 * 1000 + 2)) // available since version 2.2.0
             case IMWRITE_EXR_COMPRESSION_DWAA:
                 header.compression() = DWAA_COMPRESSION;
                 break;
             case IMWRITE_EXR_COMPRESSION_DWAB:
                 header.compression() = DWAB_COMPRESSION;
                 break;
+#endif
             default:
                 CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
             }

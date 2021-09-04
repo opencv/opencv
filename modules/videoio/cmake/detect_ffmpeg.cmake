@@ -14,11 +14,6 @@ if(NOT HAVE_FFMPEG AND WIN32 AND NOT ARM AND NOT OPENCV_FFMPEG_SKIP_DOWNLOAD)
   download_win_ffmpeg(FFMPEG_CMAKE_SCRIPT)
   if(FFMPEG_CMAKE_SCRIPT)
     include("${FFMPEG_CMAKE_SCRIPT}")
-    set(FFMPEG_libavcodec_VERSION ${FFMPEG_libavcodec_VERSION} PARENT_SCOPE) # info
-    set(FFMPEG_libavformat_VERSION ${FFMPEG_libavformat_VERSION} PARENT_SCOPE) # info
-    set(FFMPEG_libavutil_VERSION ${FFMPEG_libavutil_VERSION} PARENT_SCOPE) # info
-    set(FFMPEG_libswscale_VERSION ${FFMPEG_libswscale_VERSION} PARENT_SCOPE) # info
-    set(FFMPEG_libavresample_VERSION ${FFMPEG_libavresample_VERSION} PARENT_SCOPE) # info
     set(HAVE_FFMPEG TRUE)
     set(HAVE_FFMPEG_WRAPPER TRUE)
   endif()
@@ -99,6 +94,36 @@ if(HAVE_FFMPEG_WRAPPER)
   ocv_add_external_target(ffmpeg "" "" "HAVE_FFMPEG_WRAPPER")
 elseif(HAVE_FFMPEG)
   ocv_add_external_target(ffmpeg "${FFMPEG_INCLUDE_DIRS}" "${FFMPEG_LIBRARIES}" "HAVE_FFMPEG")
-endif()
+  set(__builtin_defines "")
+  set(__builtin_include_dirs "")
+  set(__builtin_libs "")
+  set(__plugin_defines "")
+  set(__plugin_include_dirs "")
+  set(__plugin_libs "")
+  if(HAVE_OPENCL)
+    set(__opencl_dirs "")
+    if(OPENCL_INCLUDE_DIRS)
+      set(__opencl_dirs "${OPENCL_INCLUDE_DIRS}")
+    elseif(OPENCL_INCLUDE_DIR)
+      set(__opencl_dirs "${OPENCL_INCLUDE_DIR}")
+    else()
+      set(__opencl_dirs "${OpenCV_SOURCE_DIR}/3rdparty/include/opencl/1.2")
+    endif()
+    # extra dependencies for buildin code (OpenCL dir is required for extensions like cl_d3d11.h)
+    # buildin HAVE_OPENCL is already defined through cvconfig.h
+    list(APPEND __builtin_include_dirs "${__opencl_dirs}")
 
-set(HAVE_FFMPEG ${HAVE_FFMPEG} PARENT_SCOPE)
+    # extra dependencies for
+    list(APPEND __plugin_defines "HAVE_OPENCL")
+    list(APPEND __plugin_include_dirs "${__opencl_dirs}")
+  endif()
+
+  # TODO: libva, d3d11
+
+  if(__builtin_include_dirs OR __builtin_include_defines OR __builtin_include_libs)
+    ocv_add_external_target(ffmpeg.builtin_deps "${__builtin_include_dirs}" "${__builtin_include_libs}" "${__builtin_defines}")
+  endif()
+  if(VIDEOIO_ENABLE_PLUGINS AND __plugin_include_dirs OR __plugin_include_defines OR __plugin_include_libs)
+    ocv_add_external_target(ffmpeg.plugin_deps "${__plugin_include_dirs}" "${__plugin_include_libs}" "${__plugin_defines}")
+  endif()
+endif()

@@ -522,6 +522,15 @@ GAPI_OCL_KERNEL(GOCLConvertTo, cv::gapi::core::GConvertTo)
     }
 };
 
+
+GAPI_OCL_KERNEL(GOCLTranspose, cv::gapi::core::GTranspose)
+{
+    static void run(const cv::UMat& in,  cv::UMat& out)
+    {
+        cv::transpose(in, out);
+    }
+};
+
 cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
@@ -586,6 +595,7 @@ cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
          , GOCLConcatVert
          , GOCLLUT
          , GOCLConvertTo
+         , GOCLTranspose
          >();
     return pkg;
 }

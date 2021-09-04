@@ -112,6 +112,7 @@ TEST_P(Test_ONNX_layers, MaxPooling_2)
 TEST_P(Test_ONNX_layers, Convolution)
 {
     testONNXModels("convolution");
+    testONNXModels("conv_asymmetric_pads");
 }
 
 TEST_P(Test_ONNX_layers, Convolution_variable_weight)
@@ -300,6 +301,7 @@ TEST_P(Test_ONNX_layers, Scale)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("scale");
+    testONNXModels("scale_broadcast", npy, 0, 0, false, true, 3);
 }
 
 TEST_P(Test_ONNX_layers, ReduceMean3D)
@@ -349,6 +351,7 @@ TEST_P(Test_ONNX_layers, Concatenation)
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     }
     testONNXModels("concatenation");
+    testONNXModels("concat_const_blobs");
 }
 
 TEST_P(Test_ONNX_layers, Eltwise3D)
@@ -485,8 +488,6 @@ TEST_P(Test_ONNX_layers, MatMul)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported
 
     testONNXModels("matmul_2d");
     testONNXModels("matmul_3d");
@@ -586,6 +587,11 @@ TEST_P(Test_ONNX_layers, DynamicResize)
     testONNXModels("dynamic_resize_scale_11", npy, 0, 0, false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, Resize_HumanSeg)
+{
+    testONNXModels("resize_humanseg");
+}
+
 TEST_P(Test_ONNX_layers, Div)
 {
     const String model =  _tf("models/div.onnx");
@@ -652,6 +658,7 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
+    testONNXModels("split_sizes");
 }
 
 TEST_P(Test_ONNX_layers, Slice)
@@ -700,6 +707,11 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     testONNXModels("split_max");
 }
 
+TEST_P(Test_ONNX_layers, LSTM_Activations)
+{
+    testONNXModels("lstm_cntk_tanh", pb, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, LSTM)
 {
     testONNXModels("lstm", npy, 0, 0, false, false);
@@ -708,6 +720,26 @@ TEST_P(Test_ONNX_layers, LSTM)
 TEST_P(Test_ONNX_layers, LSTM_bidirectional)
 {
     testONNXModels("lstm_bidirectional", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_hidden)
+{
+    testONNXModels("hidden_lstm", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
+{
+    testONNXModels("hidden_lstm_bi", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, GRU)
+{
+    testONNXModels("gru", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, GRU_bidirectional)
+{
+    testONNXModels("gru_bi", npy, 0, 0, false, false);
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
@@ -735,8 +767,6 @@ TEST_P(Test_ONNX_layers, MatmulWithTwoInputs)
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2020040000)
     applyTestTag(CV_TEST_TAG_DNN_SKIP_IE);
 #endif
-    if (backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("matmul_with_two_inputs");
 }
 
@@ -857,6 +887,7 @@ TEST_P(Test_ONNX_layers, DynamicAxes)
     testONNXModels("resize_opset11_torch1.6_dynamic_axes");
     testONNXModels("average_pooling_dynamic_axes");
     testONNXModels("maxpooling_sigmoid_dynamic_axes");
+    testONNXModels("dynamic_batch");
 }
 
 TEST_P(Test_ONNX_layers, MaxPool1d)
@@ -1337,6 +1368,15 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
     normAssert(ref1, out, "", l1, lInf);
 
     expectNoFallbacksFromIE(net);
+}
+
+TEST_P(Test_ONNX_layers, CumSum)
+{
+    testONNXModels("cumsum_1d_exclusive_1");
+    testONNXModels("cumsum_1d_reverse");
+    testONNXModels("cumsum_1d_exclusive_1_reverse");
+    testONNXModels("cumsum_2d_dim_1");
+    testONNXModels("cumsum_3d_dim_2");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

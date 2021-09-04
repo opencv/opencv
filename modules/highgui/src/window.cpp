@@ -40,20 +40,186 @@
 //M*/
 
 #include "precomp.hpp"
-#include <map>
+#include "backend.hpp"
+
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 // in later times, use this file as a dispatcher to implementations like cvcap.cpp
 
+
+using namespace cv;
+using namespace cv::highgui_backend;
+
+namespace cv {
+
+Mutex& getWindowMutex()
+{
+    static Mutex* g_window_mutex = new Mutex();
+    return *g_window_mutex;
+}
+
+namespace impl {
+
+typedef std::map<std::string, highgui_backend::UIWindowBase::Ptr> WindowsMap_t;
+static WindowsMap_t& getWindowsMap()
+{
+    static WindowsMap_t g_windowsMap;
+    return g_windowsMap;
+}
+
+static std::shared_ptr<UIWindow> findWindow_(const std::string& name)
+{
+    cv::AutoLock lock(cv::getWindowMutex());
+    auto& windowsMap = getWindowsMap();
+    auto i = windowsMap.find(name);
+    if (i != windowsMap.end())
+    {
+        const auto& ui_base = i->second;
+        if (ui_base)
+        {
+            if (!ui_base->isActive())
+            {
+                windowsMap.erase(i);
+                return std::shared_ptr<UIWindow>();
+            }
+            auto window = std::dynamic_pointer_cast<UIWindow>(ui_base);
+            return window;
+        }
+    }
+    return std::shared_ptr<UIWindow>();
+}
+
+static void cleanupTrackbarCallbacksWithData_();  // forward declaration
+
+static void cleanupClosedWindows_()
+{
+    cv::AutoLock lock(cv::getWindowMutex());
+    auto& windowsMap = getWindowsMap();
+    for (auto it = windowsMap.begin(); it != windowsMap.end();)
+    {
+        const auto& ui_base = it->second;
+        bool erase = (!ui_base || !ui_base->isActive());
+        if (erase)
+        {
+            it = windowsMap.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    cleanupTrackbarCallbacksWithData_();
+}
+
+// Just to support deprecated API, to be removed
+struct TrackbarCallbackWithData
+{
+    std::weak_ptr<UITrackbar> trackbar_;
+    int* data_;
+    TrackbarCallback callback_;
+    void* userdata_;
+
+    TrackbarCallbackWithData(int* data, TrackbarCallback callback, void* userdata)
+        : data_(data)
+        , callback_(callback), userdata_(userdata)
+    {
+        // trackbar_ is initialized separatelly
+    }
+
+    ~TrackbarCallbackWithData()
+    {
+        CV_LOG_DEBUG(NULL, "UI/Trackbar: Cleanup deprecated TrackbarCallbackWithData");
+    }
+
+    void onChange(int pos)
+    {
+        if (data_)
+            *data_ = pos;
+        if (callback_)
+            callback_(pos, userdata_);
+    }
+
+    static void onChangeCallback(int pos, void* userdata)
+    {
+        TrackbarCallbackWithData* thiz = (TrackbarCallbackWithData*)userdata;
+        CV_Assert(thiz);
+        return thiz->onChange(pos);
+    }
+};
+
+typedef std::vector< std::shared_ptr<TrackbarCallbackWithData> > TrackbarCallbacksWithData_t;
+static TrackbarCallbacksWithData_t& getTrackbarCallbacksWithData()
+{
+    static TrackbarCallbacksWithData_t g_trackbarCallbacksWithData;
+    return g_trackbarCallbacksWithData;
+}
+
+static void cleanupTrackbarCallbacksWithData_()
+{
+    cv::AutoLock lock(cv::getWindowMutex());
+    auto& callbacks = getTrackbarCallbacksWithData();
+    for (auto it = callbacks.begin(); it != callbacks.end();)
+    {
+        const auto& cb = *it;
+        bool erase = (!cb || cb->trackbar_.expired());
+        if (erase)
+        {
+            it = callbacks.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+}}  // namespace cv::impl
+
+using namespace cv::impl;
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+static void deprecateNotFoundNoOpBehavior()
+{
+    CV_LOG_ONCE_WARNING(NULL, "This no-op behavior is deprecated. Future versions of OpenCV will trigger exception in this case");
+}
+#define CV_NOT_FOUND_DEPRECATION deprecateNotFoundNoOpBehavior()
+#endif
+
 CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_value)
 {
+    CV_TRACE_FUNCTION();
+    CV_Assert(name);
+
+    {
+        auto window = findWindow_(name);
+        if (window)
+        {
+            /*bool res = */window->setProperty(prop_id, prop_value);
+            return;
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     switch(prop_id)
     {
     //change between fullscreen or not.
     case CV_WND_PROP_FULLSCREEN:
 
-        if (!name || (prop_value!=CV_WINDOW_NORMAL && prop_value!=CV_WINDOW_FULLSCREEN))//bad argument
+        if (prop_value != CV_WINDOW_NORMAL && prop_value != CV_WINDOW_FULLSCREEN)  // bad argument
             break;
 
         #if defined (HAVE_QT)
@@ -93,7 +259,9 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
     break;
 
     case cv::WND_PROP_VSYNC:
-        #if defined (HAVE_WIN32UI)
+        #if defined (HAVE_QT)
+            // nothing
+        #elif defined (HAVE_WIN32UI)
             cvSetPropVsync_W32(name, (prop_value != 0));
         #else
             // not implemented yet for other toolkits
@@ -102,14 +270,39 @@ CV_IMPL void cvSetWindowProperty(const char* name, int prop_id, double prop_valu
 
     default:;
     }
+#endif
 }
 
 /* return -1 if error */
 CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 {
-    if (!name)
-        return -1;
+    CV_TRACE_FUNCTION();
+    CV_Assert(name);
 
+    {
+        auto window = findWindow_(name);
+        if (window)
+        {
+            double v = window->getProperty(prop_id);
+            if (cvIsNaN(v))
+                return -1;
+            return v;
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return -1;
+#else
     switch(prop_id)
     {
     case CV_WND_PROP_FULLSCREEN:
@@ -191,7 +384,9 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     break;
 
     case cv::WND_PROP_VSYNC:
-        #if defined (HAVE_WIN32UI)
+        #if defined (HAVE_QT)
+            return -1;
+        #elif defined (HAVE_WIN32UI)
             return cvGetPropVsync_W32(name);
         #else
             return -1;
@@ -201,12 +396,35 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     default:
         return -1;
     }
+#endif
 }
 
 cv::Rect cvGetWindowImageRect(const char* name)
 {
-    if (!name)
-        return cv::Rect(-1, -1, -1, -1);
+    CV_TRACE_FUNCTION();
+    CV_Assert(name);
+
+    {
+        auto window = findWindow_(name);
+        if (window)
+        {
+            return window->getImageRect();
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << name << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return Rect(-1, -1, -1, -1);
+#else
 
     #if defined (HAVE_QT)
         return cvGetWindowRect_QT(name);
@@ -217,8 +435,10 @@ cv::Rect cvGetWindowImageRect(const char* name)
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(name);
     #else
-        return cv::Rect(-1, -1, -1, -1);
+        return Rect(-1, -1, -1, -1);
     #endif
+
+#endif
 }
 
 cv::Rect cv::getWindowImageRect(const String& winname)
@@ -230,25 +450,105 @@ cv::Rect cv::getWindowImageRect(const String& winname)
 void cv::namedWindow( const String& winname, int flags )
 {
     CV_TRACE_FUNCTION();
+    CV_Assert(!winname.empty());
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        cleanupClosedWindows_();
+        auto& windowsMap = getWindowsMap();
+        auto i = windowsMap.find(winname);
+        if (i != windowsMap.end())
+        {
+            auto ui_base = i->second;
+            if (ui_base)
+            {
+                auto window = std::dynamic_pointer_cast<UIWindow>(ui_base);
+                if (!window)
+                {
+                    CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create window: '" << winname << "'");
+                }
+                return;
+            }
+        }
+        auto backend = getCurrentUIBackend();
+        if (backend)
+        {
+            auto window = backend->createWindow(winname, flags);
+            if (!window)
+            {
+                CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create window: '" << winname << "'");
+                return;
+            }
+            windowsMap.emplace(winname, window);
+            return;
+        }
+    }
+
     cvNamedWindow( winname.c_str(), flags );
 }
 
 void cv::destroyWindow( const String& winname )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        auto window = findWindow_(winname);
+        if (window)
+        {
+            window->destroy();
+            cleanupClosedWindows_();
+            return;
+        }
+    }
+
     cvDestroyWindow( winname.c_str() );
 }
 
 void cv::destroyAllWindows()
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto backend = getCurrentUIBackend();
+        if (backend)
+        {
+            backend->destroyAllWindows();
+            cleanupClosedWindows_();
+            return;
+        }
+    }
+
     cvDestroyAllWindows();
 }
 
 void cv::resizeWindow( const String& winname, int width, int height )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        auto window = findWindow_(winname);
+        if (window)
+        {
+            return window->resize(width, height);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvResizeWindow( winname.c_str(), width, height );
+#endif
 }
 
 void cv::resizeWindow(const String& winname, const cv::Size& size)
@@ -260,7 +560,70 @@ void cv::resizeWindow(const String& winname, const cv::Size& size)
 void cv::moveWindow( const String& winname, int x, int y )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        auto window = findWindow_(winname);
+        if (window)
+        {
+            return window->move(x, y);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvMoveWindow( winname.c_str(), x, y );
+#endif
+}
+
+void cv::setWindowTitle(const String& winname, const String& title)
+{
+    CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winname);
+        if (window)
+        {
+            return window->setTitle(title);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#elif defined(HAVE_WIN32UI)
+    return setWindowTitle_W32(winname, title);
+#elif defined (HAVE_GTK)
+    return setWindowTitle_GTK(winname, title);
+#elif defined (HAVE_QT)
+    return setWindowTitle_QT(winname, title);
+#elif defined (HAVE_COCOA)
+    return setWindowTitle_COCOA(winname, title);
+#else
+    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
+        "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
+        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
+#endif
 }
 
 void cv::setWindowProperty(const String& winname, int prop_id, double prop_value)
@@ -278,6 +641,16 @@ double cv::getWindowProperty(const String& winname, int prop_id)
 int cv::waitKeyEx(int delay)
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto backend = getCurrentUIBackend();
+        if (backend)
+        {
+            return backend->waitKeyEx(delay);
+        }
+    }
+
     return cvWaitKey(delay);
 }
 
@@ -297,55 +670,251 @@ int cv::waitKey(int delay)
     return (code != -1) ? (code & 0xff) : -1;
 }
 
-#if defined(HAVE_WIN32UI)
-// pollKey() implemented in window_w32.cpp
-#elif defined(HAVE_GTK) || defined(HAVE_COCOA) || defined(HAVE_QT) || (defined (WINRT) && !defined (WINRT_8_0))
-// pollKey() fallback implementation
+/*
+ * process until queue is empty but don't wait.
+ */
 int cv::pollKey()
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto backend = getCurrentUIBackend();
+        if (backend)
+        {
+            return backend->pollKey();
+        }
+    }
+
+#if defined(HAVE_WIN32UI)
+    return pollKey_W32();
+#else
     // fallback. please implement a proper polling function
     return cvWaitKey(1);
-}
 #endif
+}
 
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)
 {
     CV_TRACE_FUNCTION();
+
+    CV_LOG_IF_WARNING(NULL, value, "UI/Trackbar(" << trackbarName << "@" << winName << "): Using 'value' pointer is unsafe and deprecated. Use NULL as value pointer. "
+            "To fetch trackbar value setup callback.");
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winName);
+        if (window)
+        {
+            if (value)
+            {
+                auto cb = std::make_shared<TrackbarCallbackWithData>(value, callback, userdata);
+                auto trackbar = window->createTrackbar(trackbarName, count, TrackbarCallbackWithData::onChangeCallback, cb.get());
+                if (!trackbar)
+                {
+                    CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create trackbar: '" << trackbarName << "'@'" << winName << "'");
+                    return 0;
+                }
+                cb->trackbar_ = trackbar;
+                getTrackbarCallbacksWithData().emplace_back(cb);
+                getWindowsMap().emplace(trackbar->getID(), trackbar);
+                trackbar->setPos(*value);
+                return 1;
+            }
+            else
+            {
+                auto trackbar = window->createTrackbar(trackbarName, count, callback, userdata);
+                if (!trackbar)
+                {
+                    CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create trackbar: '" << trackbarName << "'@'" << winName << "'");
+                    return 0;
+                }
+                getWindowsMap().emplace(trackbar->getID(), trackbar);
+                return 1;
+            }
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return 0;
+#else
     return cvCreateTrackbar2(trackbarName.c_str(), winName.c_str(),
                              value, count, callback, userdata);
+#endif
 }
 
 void cv::setTrackbarPos( const String& trackbarName, const String& winName, int value )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winName);
+        if (window)
+        {
+            auto trackbar = window->findTrackbar(trackbarName);
+            CV_Assert(trackbar);
+            return trackbar->setPos(value);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarPos(trackbarName.c_str(), winName.c_str(), value );
+#endif
 }
 
 void cv::setTrackbarMax(const String& trackbarName, const String& winName, int maxval)
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winName);
+        if (window)
+        {
+            auto trackbar = window->findTrackbar(trackbarName);
+            CV_Assert(trackbar);
+            Range old_range = trackbar->getRange();
+            Range range(std::min(old_range.start, maxval), maxval);
+            return trackbar->setRange(range);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarMax(trackbarName.c_str(), winName.c_str(), maxval);
+#endif
 }
 
 void cv::setTrackbarMin(const String& trackbarName, const String& winName, int minval)
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winName);
+        if (window)
+        {
+            auto trackbar = window->findTrackbar(trackbarName);
+            CV_Assert(trackbar);
+            Range old_range = trackbar->getRange();
+            Range range(minval, std::max(minval, old_range.end));
+            return trackbar->setRange(range);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetTrackbarMin(trackbarName.c_str(), winName.c_str(), minval);
+#endif
 }
 
 int cv::getTrackbarPos( const String& trackbarName, const String& winName )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(winName);
+        if (window)
+        {
+            auto trackbar = window->findTrackbar(trackbarName);
+            CV_Assert(trackbar);
+            return trackbar->getPos();
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return -1;
+#else
     return cvGetTrackbarPos(trackbarName.c_str(), winName.c_str());
+#endif
 }
 
 void cv::setMouseCallback( const String& windowName, MouseCallback onMouse, void* param)
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        auto window = findWindow_(windowName);
+        if (window)
+        {
+            return window->setMouseCallback(onMouse, param);
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << windowName << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
     cvSetMouseCallback(windowName.c_str(), onMouse, param);
+#endif
 }
 
 int cv::getMouseWheelDelta( int flags )
@@ -399,6 +968,39 @@ namespace
 void cv::imshow( const String& winname, InputArray _img )
 {
     CV_TRACE_FUNCTION();
+
+    {
+        cv::AutoLock lock(cv::getWindowMutex());
+        cleanupClosedWindows_();
+        auto& windowsMap = getWindowsMap();
+        auto i = windowsMap.find(winname);
+        if (i != windowsMap.end())
+        {
+            auto ui_base = i->second;
+            if (ui_base)
+            {
+                auto window = std::dynamic_pointer_cast<UIWindow>(ui_base);
+                if (!window)
+                {
+                    CV_LOG_ERROR(NULL, "OpenCV/UI: invalid window name: '" << winname << "'");
+                }
+                return window->imshow(_img);
+            }
+        }
+        auto backend = getCurrentUIBackend();
+        if (backend)
+        {
+            auto window = backend->createWindow(winname, WINDOW_AUTOSIZE);
+            if (!window)
+            {
+                CV_LOG_ERROR(NULL, "OpenCV/UI: Can't create window: '" << winname << "'");
+                return;
+            }
+            windowsMap.emplace(winname, window);
+            return window->imshow(_img);
+        }
+    }
+
     const Size size = _img.size();
 #ifndef HAVE_OPENGL
     CV_Assert(size.width>0 && size.height>0);
@@ -642,13 +1244,6 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 // version with a more capable one without a need to recompile dependent
 // applications or libraries.
 
-void cv::setWindowTitle(const String&, const String&)
-{
-    CV_Error(Error::StsNotImplemented, "The function is not implemented. "
-        "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
-        "If you are on Ubuntu or Debian, install libgtk2.0-dev and pkg-config, then re-run cmake or configure script");
-}
-
 #define CV_NO_GUI_ERROR(funcname) \
     cv::error(cv::Error::StsError, \
     "The function is not implemented. " \
@@ -797,11 +1392,6 @@ CV_IMPL void cvSaveWindowParameters(const char* )
 CV_IMPL int cvCreateButton(const char*, void (*)(int, void*), void*, int, int)
 {
     CV_NO_GUI_ERROR("cvCreateButton");
-}
-
-int cv::pollKey()
-{
-    CV_NO_GUI_ERROR("cv::pollKey()");
 }
 
 #endif

@@ -13,6 +13,7 @@ Test for Tensorflow models loading
 #include "npy_blob.hpp"
 
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
+#include <opencv2/dnn/utils/debug_utils.hpp>
 
 namespace opencv_test
 {
@@ -128,6 +129,13 @@ TEST_P(Test_TensorFlow_layers, reduce_mean)
     runTensorFlowNet("global_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_max)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    runTensorFlowNet("max_pool_by_axis");
+}
+
 TEST_P(Test_TensorFlow_layers, reduce_sum)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
@@ -135,9 +143,19 @@ TEST_P(Test_TensorFlow_layers, reduce_sum)
     runTensorFlowNet("sum_pool_by_axis");
 }
 
+TEST_P(Test_TensorFlow_layers, reduce_max_channel)
+{
+    runTensorFlowNet("reduce_max_channel");
+}
+
 TEST_P(Test_TensorFlow_layers, reduce_sum_channel)
 {
     runTensorFlowNet("reduce_sum_channel");
+}
+
+TEST_P(Test_TensorFlow_layers, reduce_max_channel_keep_dims)
+{
+    runTensorFlowNet("reduce_max_channel", false, 0.0, 0.0, false, "_keep_dims");
 }
 
 TEST_P(Test_TensorFlow_layers, reduce_sum_channel_keep_dims)
@@ -201,6 +219,16 @@ TEST_P(Test_TensorFlow_layers, padding)
     }
 #endif
     runTensorFlowNet("keras_pad_concat");
+}
+
+TEST_P(Test_TensorFlow_layers, padding_asymmetric)
+{
+    runTensorFlowNet("conv2d_asymmetric_pads_nchw");
+    runTensorFlowNet("conv2d_asymmetric_pads_nhwc");
+    runTensorFlowNet("max_pool2d_asymmetric_pads_nchw");
+    runTensorFlowNet("max_pool2d_asymmetric_pads_nhwc");
+    runTensorFlowNet("conv2d_backprop_input_asymmetric_pads_nchw");
+    runTensorFlowNet("conv2d_backprop_input_asymmetric_pads_nhwc");
 }
 
 TEST_P(Test_TensorFlow_layers, padding_same)
@@ -385,6 +413,11 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_mean)
     runTensorFlowNet("reduce_mean");  // an average pooling over all spatial dimensions.
 }
 
+TEST_P(Test_TensorFlow_layers, pooling_reduce_max)
+{
+    runTensorFlowNet("reduce_max");  // a MAX pooling over all spatial dimensions.
+}
+
 TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
 {
     runTensorFlowNet("reduce_sum");  // a SUM pooling over all spatial dimensions.
@@ -567,6 +600,41 @@ TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 
     runTensorFlowNet("l2_normalize_3d");
 }
+
+class Test_TensorFlow_diagnostics : public DNNTestLayer {
+public:
+    Test_TensorFlow_diagnostics()
+    {
+        enableModelDiagnostics(true);
+        skipModelImport(true);
+    }
+
+    ~Test_TensorFlow_diagnostics()
+    {
+        enableModelDiagnostics(false);
+        skipModelImport(false);
+    }
+
+    void runFailingTensorFlowNet(const std::string& prefix, bool hasText = false)
+    {
+        std::string netPath = path(prefix + "_net.pb");
+        std::string netConfig = (hasText ? path(prefix + "_net.pbtxt") : "");
+
+        Net net = readNetFromTensorflow(netPath, netConfig);
+    }
+};
+
+TEST_P(Test_TensorFlow_diagnostics, not_implemented_layer)
+{
+    runFailingTensorFlowNet("not_implemented_layer");
+}
+
+TEST_P(Test_TensorFlow_diagnostics, broken_parameters)
+{
+    runFailingTensorFlowNet("broken_layer");
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TensorFlow_diagnostics, dnnBackendsAndTargets());
 
 class Test_TensorFlow_nets : public DNNTestLayer {};
 

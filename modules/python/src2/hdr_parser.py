@@ -832,6 +832,7 @@ class CppHeaderParser(object):
                     ("GAPI_EXPORTS_W_SIMPLE","CV_EXPORTS_W_SIMPLE"),
                     ("GAPI_WRAP", "CV_WRAP"),
                     ("GAPI_PROP", "CV_PROP"),
+                    ("GAPI_PROP_RW", "CV_PROP_RW"),
                     ('defined(GAPI_STANDALONE)', '0'),
                 ])
 
@@ -978,7 +979,8 @@ class CppHeaderParser(object):
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
                                     _, _, _, gpumat_decl = self.parse_stmt(stmt, token, mat="cuda::GpuMat", docstring=docstring)
-                                    decls.append(gpumat_decl)
+                                    if gpumat_decl != decl:
+                                        decls.append(gpumat_decl)
 
                             if self._generate_umat_decls:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
@@ -987,7 +989,8 @@ class CppHeaderParser(object):
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
                                     _, _, _, umat_decl = self.parse_stmt(stmt, token, mat="UMat", docstring=docstring)
-                                    decls.append(umat_decl)
+                                    if umat_decl != decl:
+                                        decls.append(umat_decl)
 
                         docstring = ""
                     if stmt_type == "namespace":

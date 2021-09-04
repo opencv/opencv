@@ -183,8 +183,8 @@ extern "C" {
 #endif
 
 #if USE_AV_INTERRUPT_CALLBACK
-#define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
-#define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS 30000
 
 #ifdef _WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
@@ -476,6 +476,7 @@ struct CvCapture_FFMPEG
     bool setProperty(int, double);
     bool grabFrame();
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
     void init();
@@ -522,6 +523,8 @@ struct CvCapture_FFMPEG
 
     AVDictionary *dict;
 #if USE_AV_INTERRUPT_CALLBACK
+    int open_timeout;
+    int read_timeout;
     AVInterruptCallbackMetadata interrupt_metadata;
 #endif
 
@@ -537,6 +540,7 @@ struct CvCapture_FFMPEG
 #endif
     VideoAccelerationType va_type;
     int hw_device;
+    int use_opencl;
 };
 
 void CvCapture_FFMPEG::init()
@@ -567,6 +571,11 @@ void CvCapture_FFMPEG::init()
 #endif
     dict = NULL;
 
+#if USE_AV_INTERRUPT_CALLBACK
+    open_timeout = LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS;
+    read_timeout = LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS;
+#endif
+
     rawMode = false;
     rawModeInitialized = false;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
@@ -574,6 +583,7 @@ void CvCapture_FFMPEG::init()
     bsfc = NULL;
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
+    use_opencl = 0;
 }
 
 
@@ -922,6 +932,19 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                 return false;
             }
         }
+        if (params.has(CAP_PROP_HW_ACCELERATION_USE_OPENCL)) {
+            use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
+        }
+#if USE_AV_INTERRUPT_CALLBACK
+        if (params.has(CAP_PROP_OPEN_TIMEOUT_MSEC))
+        {
+            open_timeout = params.get<int>(CAP_PROP_OPEN_TIMEOUT_MSEC);
+        }
+        if (params.has(CAP_PROP_READ_TIMEOUT_MSEC))
+        {
+            read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT_MSEC);
+        }
+#endif
         if (params.warnUnusedParameters())
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
@@ -931,7 +954,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = open_timeout;
     get_monotonic_time(&interrupt_metadata.value);
 
     ic = avformat_alloc_context();
@@ -1051,7 +1074,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                     if (codec) {
                         if (hw_pix_fmt != AV_PIX_FMT_NONE)
                             enc->get_format = hw_get_format_callback; // set callback to select HW pixel format, not SW format
-                        enc->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname());
+                        enc->hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
                         if (!enc->hw_device_ctx)
                         {
                             CV_LOG_DEBUG(NULL, "FFMPEG: ... can't create H/W device: '" << accel_iter.hw_type_device_string() << "'");
@@ -1276,7 +1299,7 @@ bool CvCapture_FFMPEG::grabFrame()
 #if USE_AV_INTERRUPT_CALLBACK
     // activate interrupt callback
     get_monotonic_time(&interrupt_metadata.value);
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = read_timeout;
 #endif
 
 #if USE_AV_SEND_FRAME_API
@@ -1476,6 +1499,22 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     return true;
 }
 
+bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
+{
+#if USE_AV_HW_CODECS
+    // check that we have HW frame in GPU memory
+    if (!picture || !picture->hw_frames_ctx) {
+        return false;
+    }
+
+    // GPU color conversion NV12->BGRA, from GPU media buffer to GPU OpenCL buffer
+    return hw_copy_frame_to_umat(video_st->codec->hw_device_ctx, picture, output);
+#else
+    CV_UNUSED(output);
+    return false;
+#endif
+}
+
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st ) return 0;
@@ -1549,6 +1588,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return static_cast<double>(va_type);
     case CAP_PROP_HW_DEVICE:
         return static_cast<double>(hw_device);
+    case CAP_PROP_HW_ACCELERATION_USE_OPENCL:
+        return static_cast<double>(use_opencl);
 #endif  // USE_AV_HW_CODECS
     default:
         break;
@@ -1752,6 +1793,7 @@ struct CvVideoWriter_FFMPEG
                double fps, int width, int height, const VideoWriterParameters& params );
     void close();
     bool writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin );
+    bool writeHWFrame(cv::InputArray input);
     double getProperty(int propId) const;
 
     void init();
@@ -1774,6 +1816,7 @@ struct CvVideoWriter_FFMPEG
     struct SwsContext *img_convert_ctx;
     VideoAccelerationType va_type;
     int               hw_device;
+    int               use_opencl;
 };
 
 static const char * icvFFMPEGErrStr(int err)
@@ -1836,6 +1879,7 @@ void CvVideoWriter_FFMPEG::init()
     frame_idx = 0;
     va_type = VIDEO_ACCELERATION_NONE;
     hw_device = -1;
+    use_opencl = 0;
     ok = false;
 }
 
@@ -2210,6 +2254,41 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     return ret;
 }
 
+bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
+#if USE_AV_HW_CODECS
+    if (!video_st->codec->hw_frames_ctx)
+        return false;
+
+    // Get hardware frame from frame pool
+    AVFrame* hw_frame = av_frame_alloc();
+    if (!hw_frame) {
+        return false;
+    }
+    if (av_hwframe_get_buffer(video_st->codec->hw_frames_ctx, hw_frame, 0) < 0) {
+        av_frame_free(&hw_frame);
+        return false;
+    }
+
+    // GPU to GPU copy
+    if (!hw_copy_umat_to_frame(video_st->codec->hw_device_ctx, input, hw_frame)) {
+        av_frame_free(&hw_frame);
+        return false;
+    }
+
+    // encode
+    hw_frame->pts = frame_idx;
+    icv_av_write_frame_FFMPEG( oc, video_st, outbuf, outbuf_size, hw_frame, frame_idx);
+    frame_idx++;
+
+    av_frame_free(&hw_frame);
+
+    return true;
+#else
+    CV_UNUSED(input);
+    return false;
+#endif
+}
+
 double CvVideoWriter_FFMPEG::getProperty(int propId) const
 {
     CV_UNUSED(propId);
@@ -2221,6 +2300,10 @@ double CvVideoWriter_FFMPEG::getProperty(int propId) const
     else if (propId == VIDEOWRITER_PROP_HW_DEVICE)
     {
         return static_cast<double>(hw_device);
+    }
+    else if (propId == VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL)
+    {
+        return static_cast<double>(use_opencl);
     }
 #endif
     return 0;
@@ -2374,6 +2457,9 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of VIDEOWRITER_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
             return false;
         }
+    }
+    if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL)) {
+        use_opencl = params.get<int>(VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL);
     }
 
     if (params.warnUnusedParameters())
@@ -2638,7 +2724,7 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
             if (!codec)
                 continue;
 
-            hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname());
+            hw_device_ctx = hw_create_device(hw_type, hw_device, accel_iter.device_subname(), use_opencl != 0);
             if (!hw_device_ctx)
                 continue;
         }

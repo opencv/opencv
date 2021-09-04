@@ -1403,6 +1403,23 @@ TEST_P(KMeans3DTest, AccuracyTest)
     kmeansTestBody(in_vector, sz, type, K, flags, getCompileArgs());
 }
 
+TEST_P(TransposeTest, Test)
+{
+    // G-API code //////////////////////////////////////////////////////////////
+    cv::GMat in;
+    auto out = cv::gapi::transpose(in);
+
+    cv::GComputation c(in, out);
+    c.apply(in_mat1, out_mat_gapi, getCompileArgs());
+    // OpenCV code /////////////////////////////////////////////////////////////
+    {
+        cv::transpose(in_mat1, out_mat_ocv);
+    }
+    // Comparison //////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_ocv, out_mat_gapi));
+    }
+}
 // PLEASE DO NOT PUT NEW ACCURACY TESTS BELOW THIS POINT! //////////////////////
 
 TEST_P(BackendOutputAllocationTest, EmptyOutput)

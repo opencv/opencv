@@ -70,7 +70,7 @@ void randu(InputOutputArray dst)
         cv::randu(dst, -128, 128);
     else if (dst.depth() == CV_16U)
         cv::randu(dst, 0, 1024);
-    else if (dst.depth() == CV_32F || dst.depth() == CV_64F)
+    else if (dst.depth() == CV_32F || dst.depth() == CV_64F || dst.depth() == CV_16F)
         cv::randu(dst, -1.0, 1.0);
     else if (dst.depth() == CV_16S || dst.depth() == CV_32S)
         cv::randu(dst, -4096, 4096);

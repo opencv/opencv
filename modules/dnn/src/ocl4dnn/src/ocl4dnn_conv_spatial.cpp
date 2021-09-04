@@ -1257,8 +1257,11 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
     else if (config->tested)
         return false;
 
-    int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
-    top.zeros(4, sz, (use_half_) ? CV_16SC1 : CV_32FC1);
+    //int32_t sz[4] = {numImages, num_output_, output_h_, output_w_};
+    CV_CheckEQ(top.total(), (size_t)numImages * num_output_ * output_h_ * output_w_, "");
+    CV_CheckTypeEQ(top.type(), (use_half_) ? CV_16SC1 : CV_32FC1, "");
+    top.setTo(Scalar::all(0));
+
     bool saved_tuned = tuned_;
     tuned_ = false;
     convolve(bottom, top, weight, bias, numImages, config);
@@ -1434,26 +1437,13 @@ bool OCL4DNNConvSpatial<float>::createGEMMLikeConvKernel(int32_t blockM,
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
-        size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
         if (kernel.empty())
             return false;
 
-        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-        if (workgroupSize_used != simd_size)
-        {
-            std::cerr << "OpenCV(ocl4dnn): The OpenCL compiler chose a simd size (" << workgroupSize_used << ") that " << std::endl;
-            std::cerr << "                 does not equal the size (" << simd_size << ") kernel source required." << std::endl;
-            std::cerr << "                 Skip this kernel " << kernel_name_ << std::endl;
-            unloadProgram(kernel_name_);
-            return false;
-        }
-        else
-        {
-            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, KERNEL_TYPE_GEMM_LIKE));
-            return true;
-        }
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                    true, KERNEL_TYPE_GEMM_LIKE));
+        return true;
     }
     else
         return false;
@@ -1499,26 +1489,13 @@ bool OCL4DNNConvSpatial<float>::createIDLFKernel(int32_t blockWidth,
     ocl::Program program = compileKernel();
     if (program.ptr())
     {
-        size_t workgroupSize_used;
         ocl::Kernel kernel(kernel_name_.c_str(), program);
         if (kernel.empty())
             return false;
 
-        workgroupSize_used = kernel.preferedWorkGroupSizeMultiple();
-        if (workgroupSize_used != simd_size)
-        {
-            std::cerr << "OpenCV(ocl4dnn): The OpenCL compiler chose a simd size (" << workgroupSize_used << ") that " << std::endl;
-            std::cerr << "                 does not equal the size (" << simd_size << ") kernel source required." << std::endl;
-            std::cerr << "                 Skip this kernel " << kernel_name_ << std::endl;
-            unloadProgram(kernel_name_);
-            return false;
-        }
-        else
-        {
-            kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
-                                                        true, KERNEL_TYPE_INTEL_IDLF));
-            return true;
-        }
+        kernelQueue.push_back(makePtr<kernelConfig>(kernel_name_, &global_size[0], &local_size[0], &workItemOutput[0],
+                                                    true, KERNEL_TYPE_INTEL_IDLF));
+        return true;
     }
     else
         return false;

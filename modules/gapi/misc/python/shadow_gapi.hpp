@@ -3,65 +3,81 @@
 
 namespace cv
 {
-   struct GAPI_EXPORTS_W_SIMPLE GCompileArg { };
+struct GAPI_EXPORTS_W_SIMPLE GCompileArg
+{
+    GAPI_WRAP GCompileArg(gapi::GKernelPackage arg);
+    GAPI_WRAP GCompileArg(gapi::GNetPackage arg);
+    GAPI_WRAP GCompileArg(gapi::streaming::queue_capacity arg);
+};
 
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage pkg);
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GNetPackage pkg);
-   GAPI_EXPORTS_W GCompileArgs compile_args(gapi::GKernelPackage kernels, gapi::GNetPackage nets);
+class GAPI_EXPORTS_W_SIMPLE GInferInputs
+{
+public:
+    GAPI_WRAP GInferInputs();
+    GAPI_WRAP GInferInputs& setInput(const std::string& name, const cv::GMat&   value);
+    GAPI_WRAP GInferInputs& setInput(const std::string& name, const cv::GFrame& value);
+};
 
-   // NB: This classes doesn't exist in *.so
-   // HACK: Mark them as a class to force python wrapper generate code for this entities
-   class GAPI_EXPORTS_W_SIMPLE GProtoArg { };
-   class GAPI_EXPORTS_W_SIMPLE GProtoInputArgs { };
-   class GAPI_EXPORTS_W_SIMPLE GProtoOutputArgs { };
-   class GAPI_EXPORTS_W_SIMPLE GRunArg { };
-   class GAPI_EXPORTS_W_SIMPLE GMetaArg { GAPI_WRAP GMetaArg(); };
+class GAPI_EXPORTS_W_SIMPLE GInferListInputs
+{
+public:
+    GAPI_WRAP GInferListInputs();
+    GAPI_WRAP GInferListInputs setInput(const std::string& name, const cv::GArray<cv::GMat>& value);
+    GAPI_WRAP GInferListInputs setInput(const std::string& name, const cv::GArray<cv::Rect>& value);
+};
 
-   using GProtoInputArgs  = GIOProtoArgs<In_Tag>;
-   using GProtoOutputArgs = GIOProtoArgs<Out_Tag>;
+class GAPI_EXPORTS_W_SIMPLE GInferOutputs
+{
+public:
+    GAPI_WRAP GInferOutputs();
+    GAPI_WRAP cv::GMat at(const std::string& name);
+};
 
-   class GAPI_EXPORTS_W_SIMPLE GInferInputs
-   {
-   public:
-       GAPI_WRAP GInferInputs();
-       GAPI_WRAP void setInput(const std::string& name, const cv::GMat&   value);
-       GAPI_WRAP void setInput(const std::string& name, const cv::GFrame& value);
-   };
+class GAPI_EXPORTS_W_SIMPLE GInferListOutputs
+{
+public:
+    GAPI_WRAP GInferListOutputs();
+    GAPI_WRAP cv::GArray<cv::GMat> at(const std::string& name);
+};
 
-   class GAPI_EXPORTS_W_SIMPLE GInferListInputs
-   {
-   public:
-       GAPI_WRAP GInferListInputs();
-       GAPI_WRAP void setInput(const std::string& name, const cv::GArray<cv::GMat>& value);
-       GAPI_WRAP void setInput(const std::string& name, const cv::GArray<cv::Rect>& value);
-   };
+namespace gapi
+{
+namespace wip
+{
+class GAPI_EXPORTS_W IStreamSource { };
+namespace draw
+{
+    // NB: These render primitives are partially wrapped in shadow file
+    // because cv::Rect conflicts with cv::gapi::wip::draw::Rect in python generator
+    // and cv::Rect2i breaks standalone mode.
+    struct Rect
+    {
+        GAPI_WRAP Rect(const cv::Rect2i& rect_,
+                       const cv::Scalar& color_,
+                       int thick_ = 1,
+                       int lt_ = 8,
+                       int shift_ = 0);
+    };
 
-   class GAPI_EXPORTS_W_SIMPLE GInferOutputs
-   {
-   public:
-       GAPI_WRAP GInferOutputs();
-       GAPI_WRAP cv::GMat at(const std::string& name);
-   };
+    struct Mosaic
+    {
+        GAPI_WRAP Mosaic(const cv::Rect2i& mos_, int cellSz_, int decim_);
+    };
+} // namespace draw
+} // namespace wip
+namespace streaming
+{
+    // FIXME: Extend to work with an arbitrary G-type.
+    cv::GOpaque<int64_t> GAPI_EXPORTS_W timestamp(cv::GMat);
+    cv::GOpaque<int64_t> GAPI_EXPORTS_W seqNo(cv::GMat);
+    cv::GOpaque<int64_t> GAPI_EXPORTS_W seq_id(cv::GMat);
 
-   class GAPI_EXPORTS_W_SIMPLE GInferListOutputs
-   {
-   public:
-       GAPI_WRAP GInferListOutputs();
-       GAPI_WRAP cv::GArray<cv::GMat> at(const std::string& name);
-   };
+    GAPI_EXPORTS_W cv::GMat desync(const cv::GMat &g);
+} // namespace streaming
+} // namespace gapi
 
-   namespace detail
-   {
-       struct GAPI_EXPORTS_W_SIMPLE ExtractArgsCallback { };
-       struct GAPI_EXPORTS_W_SIMPLE ExtractMetaCallback { };
-   } // namespace detail
-
-   namespace gapi
-   {
-       GAPI_EXPORTS_W gapi::GNetPackage networks(const cv::gapi::ie::PyParams& params);
-       namespace wip
-       {
-           class GAPI_EXPORTS_W IStreamSource { };
-       } // namespace wip
-   } // namespace gapi
+namespace detail
+{
+    gapi::GNetParam GAPI_EXPORTS_W strip(gapi::ie::PyParams params);
+} // namespace detail
 } // namespace cv

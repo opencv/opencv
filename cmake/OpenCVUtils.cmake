@@ -866,7 +866,9 @@ macro(ocv_check_modules define)
       foreach(flag ${${define}_LDFLAGS})
         if(flag MATCHES "^-L(.*)")
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
-        elseif(IS_ABSOLUTE "${flag}")
+        elseif(IS_ABSOLUTE "${flag}"
+            OR flag STREQUAL "-lstdc++"
+        )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
           set(_lib "${CMAKE_MATCH_1}")
@@ -1479,8 +1481,8 @@ function(ocv_target_link_libraries target)
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
-        set(LINK_MODE "${dep}")
       endif()
+      set(LINK_MODE "${dep}")
     else()
       if(BUILD_opencv_world)
         if(OPENCV_MODULE_${dep}_IS_PART_OF_WORLD)
@@ -1578,24 +1580,41 @@ endfunction()
 
 
 function(ocv_add_external_target name inc link def)
-  if(BUILD_SHARED_LIBS)
+  if(BUILD_SHARED_LIBS AND link)
     set(imp IMPORTED)
   endif()
   add_library(ocv.3rdparty.${name} INTERFACE ${imp})
-  set_target_properties(ocv.3rdparty.${name} PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${inc}"
-    INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${inc}"
-    INTERFACE_COMPILE_DEFINITIONS "${def}")
-  # When cmake version is greater than or equal to 3.11, INTERFACE_LINK_LIBRARIES no longer applies to interface library
-  # See https://github.com/opencv/opencv/pull/18658
-  if (CMAKE_VERSION VERSION_LESS 3.11)
-    set_target_properties(ocv.3rdparty.${name} PROPERTIES
-      INTERFACE_LINK_LIBRARIES "${link}")
-  else()
-    target_link_libraries(ocv.3rdparty.${name} INTERFACE ${link})
+  if(def)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.11.0"))  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/1264 : eliminates "Cannot specify compile definitions for imported target" error message
+      target_compile_definitions(ocv.3rdparty.${name} INTERFACE "${def}")
+    else()
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES INTERFACE_COMPILE_DEFINITIONS "${def}")
+    endif()
   endif()
-  #
-  if(NOT BUILD_SHARED_LIBS)
+  if(inc)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.11.0"))  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/1264 : eliminates "Cannot specify compile definitions for imported target" error message
+      target_include_directories(ocv.3rdparty.${name} SYSTEM INTERFACE "$<BUILD_INTERFACE:${inc}>")
+    else()
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${inc}>"
+          INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${inc}>"
+      )
+    endif()
+  endif()
+  if(link)
+    # When cmake version is greater than or equal to 3.11, INTERFACE_LINK_LIBRARIES no longer applies to interface library
+    # See https://github.com/opencv/opencv/pull/18658
+    if(CMAKE_VERSION VERSION_LESS 3.11)
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${link}")
+    else()
+      target_link_libraries(ocv.3rdparty.${name} INTERFACE ${link})
+    endif()
+  endif()
+  # to install used target only upgrade CMake
+  if(NOT BUILD_SHARED_LIBS
+      AND CMAKE_VERSION VERSION_LESS "3.13.0"  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+  )
     install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
   endif()
 endfunction()
@@ -1954,3 +1973,9 @@ if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
 else()
   ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
 endif()
+
+
+#
+# Include configuration override settings
+#
+include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")

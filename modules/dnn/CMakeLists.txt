@@ -8,7 +8,8 @@ endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
-ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
+ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV)
+ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
@@ -176,16 +177,20 @@ ocv_add_perf_tests(${INF_ENGINE_TARGET}
     FILES Include ${perf_hdrs}
 )
 
-ocv_option(${the_module}_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
-ocv_option(${the_module}_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
+ocv_option(OPENCV_DNN_PERF_CAFFE "Add performance tests of Caffe framework" OFF)
+ocv_option(OPENCV_DNN_PERF_CLCAFFE "Add performance tests of clCaffe framework" OFF)
 if(BUILD_PERF_TESTS)
-  if (${the_module}_PERF_CAFFE)
+  if (OPENCV_DNN_PERF_CAFFE
+      OR ${the_module}_PERF_CAFFE  # compatibility for deprecated option
+  )
     find_package(Caffe QUIET)
     if (Caffe_FOUND)
       add_definitions(-DHAVE_CAFFE=1)
       ocv_target_link_libraries(opencv_perf_dnn caffe)
     endif()
-  elseif(${the_module}_PERF_CLCAFFE)
+  elseif(OPENCV_DNN_PERF_CLCAFFE
+         OR ${the_module}_PERF_CAFFE  # compatibility for deprecated option
+  )
     find_package(Caffe QUIET)
     if (Caffe_FOUND)
       add_definitions(-DHAVE_CLCAFFE=1)
