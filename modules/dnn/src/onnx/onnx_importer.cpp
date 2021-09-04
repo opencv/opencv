@@ -534,7 +534,8 @@ void ONNXImporter::populateNet()
         for (int j = 0; j < inpShape.size(); ++j)
         {
             inpShape[j] = tensorShape.dim(j).dim_value();
-            if (!tensorShape.dim(j).dim_param().empty())
+            // NHW, NCHW(NHWC), NCDHW(NDHWC); do not set this flag if only N is dynamic
+            if (!tensorShape.dim(j).dim_param().empty() && !(j == 0 && inpShape.size() >= 3))
                 hasDynamicShapes = true;
         }
         if (!inpShape.empty() && !hasDynamicShapes)
@@ -1540,6 +1541,16 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
             //Replace input to Power
             node_proto.set_input(1, powerParams.name);
         }
+
+        const MatShape& broadShape = outShapes[node_proto.input(1)];
+        const size_t outShapeSize = outShapes[node_proto.input(0)].size();
+        const size_t diff = outShapeSize - broadShape.size();
+
+        size_t axis;
+        for (axis = diff; axis < broadShape.size() && broadShape[axis - diff] == 1; ++axis) {}
+
+        CV_Assert(axis != outShapeSize);
+        layerParams.set("axis", static_cast<int>(axis));
         layerParams.type = "Scale";
     }
     addLayer(layerParams, node_proto);
@@ -2185,7 +2196,7 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
         layerParams.set("align_corners", interp_mode == "align_corners");
         if (layerParams.get<String>("mode") == "linear")
         {
-            layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
+            layerParams.set("mode", interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel" ?
                                     "opencv_linear" : "bilinear");
         }
     }

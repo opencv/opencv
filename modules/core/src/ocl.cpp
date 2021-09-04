@@ -3677,6 +3677,8 @@ bool Kernel::empty() const
 
 static cv::String dumpValue(size_t sz, const void* p)
 {
+    if (!p)
+        return "NULL";
     if (sz == 4)
         return cv::format("%d / %uu / 0x%08x / %g", *(int*)p, *(int*)p, *(int*)p, *(float*)p);
     if (sz == 8)
