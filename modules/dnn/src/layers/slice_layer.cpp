@@ -482,7 +482,7 @@ public:
                     ocl::KernelArg::PtrReadOnly(input),
                     ocl::KernelArg::PtrWriteOnly(output)
                 )
-                .run(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
+                .run_(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
             if (!ret)
                 return false;
         }  // for outputs.size()

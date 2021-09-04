@@ -3160,6 +3160,14 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
+bool Kernel::run_(int dims, size_t _globalsize[], size_t _localsize[],
+                  bool sync, const Queue& q)
+{
+    CV_Assert(p);
+    return p->run(dims, _globalsize, _localsize, sync, NULL, q);
+}
+
+
 static bool isRaiseErrorOnReuseAsyncKernel()
 {
     static bool initialized = false;
