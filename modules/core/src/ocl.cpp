@@ -76,8 +76,11 @@
 #undef CV__ALLOCATOR_STATS_LOG
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
+#define CV_OPENCL_SHOW_BUILD_OPTIONS             0
+#define CV_OPENCL_SHOW_BUILD_KERNELS             0
 
 #define CV_OPENCL_SHOW_RUN_KERNELS               0
+#define CV_OPENCL_SYNC_RUN_KERNELS               0
 #define CV_OPENCL_TRACE_CHECK                    0
 
 #define CV_OPENCL_VALIDATE_BINARY_PROGRAMS       1
@@ -2983,6 +2986,8 @@ static cv::String dumpValue(size_t sz, const void* p)
 {
     if (!p)
         return "NULL";
+    if (sz == 2)
+        return cv::format("%d / %uu / 0x%04x", *(short*)p, *(unsigned short*)p, *(short*)p);
     if (sz == 4)
         return cv::format("%d / %uu / 0x%08x / %g", *(int*)p, *(int*)p, *(int*)p, *(float*)p);
     if (sz == 8)
@@ -3194,6 +3199,10 @@ bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
             CV_Assert(0);
         return false;  // OpenCV 5.0: raise error
     }
+
+#if CV_OPENCL_SYNC_RUN_KERNELS
+    sync = true;
+#endif
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)
@@ -3625,7 +3634,28 @@ struct Program::Impl
             if (!param_buildExtraOptions.empty())
                 buildflags = joinBuildOptions(buildflags, param_buildExtraOptions);
         }
+#if CV_OPENCL_SHOW_BUILD_OPTIONS
+        CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' options:" << buildflags);
+#endif
         compile(ctx, src_, errmsg);
+#if CV_OPENCL_SHOW_BUILD_KERNELS
+        if (handle)
+        {
+            size_t retsz = 0;
+            char kernels_buffer[4096] = {0};
+            cl_int result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clGetProgramInfo(CL_PROGRAM_KERNEL_NAMES: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
+            if (result == CL_SUCCESS && retsz < sizeof(kernels_buffer))
+            {
+                kernels_buffer[retsz] = 0;
+                CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' kernels: '" << kernels_buffer << "'");
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' can't retrieve kernel names!");
+            }
+        }
+#endif
     }
 
     bool compile(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
@@ -3857,7 +3887,6 @@ struct Program::Impl
                 CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
             }
 #endif
-
         }
         return handle != NULL;
     }
