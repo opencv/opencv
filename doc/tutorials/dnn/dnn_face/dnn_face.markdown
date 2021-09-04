@@ -26,11 +26,11 @@ There are two models (ONNX format) pre-trained and required for this module:
 
     | Database | Accuracy | Threshold (normL2) | Threshold (cosine) |
     | -------- | -------- | ------------------ | ------------------ |
-    | LFW      | 99.60%   | 1.272              | 0.363              |
-    | CALFW    | 93.95%   | 1.320              | 0.340              |
-    | CPLFW    | 91.05%   | 1.450              | 0.275              |
-    | AgeDB-30 | 94.90%   | 1.446              | 0.277              |
-    | CFP-FP   | 94.80%   | 1.571              | 0.212              |
+    | LFW      | 99.60%   | 1.128              | 0.363              |
+    | CALFW    | 93.95%   | 1.149              | 0.340              |
+    | CPLFW    | 91.05%   | 1.204              | 0.275              |
+    | AgeDB-30 | 94.90%   | 1.202              | 0.277              |
+    | CFP-FP   | 94.80%   | 1.253              | 0.212              |
 
 ## Usage
 

@@ -155,7 +155,7 @@ TEST(Objdetect_face_recognition, regression)
     float score_thresh = 0.9f;
     float nms_thresh = 0.3f;
     float cosine_similar_thresh = 0.363f;
-    float l2norm_similar_thresh = 1.272f;
+    float l2norm_similar_thresh = 1.128f;
 
     // Load ground truth labels
     std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt", true).c_str());
@@ -181,7 +181,7 @@ TEST(Objdetect_face_recognition, regression)
 
     // Initialize detector
     String detect_model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
-    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(250, 250), score_thresh, nms_thresh);
+    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
     String recog_model = findDataFile("../dnn/onnx/models/face_recognizer_fast.onnx", true);
     Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
