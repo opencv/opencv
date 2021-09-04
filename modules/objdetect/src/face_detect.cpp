@@ -31,8 +31,8 @@ public:
         net.setPreferableBackend(backend_id);
         net.setPreferableTarget(target_id);
 
-        img_w = input_size.width;
-        img_h = input_size.height;
+        inputW = input_size.width;
+        inputH = input_size.height;
 
         scoreThreshold = score_threshold;
         nmsThreshold = nms_threshold;
@@ -43,16 +43,16 @@ public:
 
     void setInputSize(const Size& input_size) override
     {
-        img_w = input_size.width;
-        img_h = input_size.height;
+        inputW = input_size.width;
+        inputH = input_size.height;
         generatePriors();
     }
 
     Size getInputSize() override
     {
         Size input_size;
-        input_size.width = img_w;
-        input_size.height = img_h;
+        input_size.width = inputW;
+        input_size.height = inputH;
         return input_size;
     }
 
@@ -93,6 +93,7 @@ public:
         {
             return 0;
         }
+        CV_CheckEQ(input_image.size(), Size(inputW, inputH), "Size does not match. Call setInputSize(size) if input size does not match the preset size");
 
         // Build blob from input image
         Mat input_blob = dnn::blobFromImage(input_image);
@@ -113,7 +114,7 @@ private:
     {
         // Calculate shapes of different scales according to the shape of input image
         Size feature_map_2nd = {
-            int(int((img_w+1)/2)/2), int(int((img_h+1)/2)/2)
+            int(int((inputW+1)/2)/2), int(int((inputH+1)/2)/2)
         };
         Size feature_map_3rd = {
             int(feature_map_2nd.width/2), int(feature_map_2nd.height/2)
@@ -156,11 +157,11 @@ private:
                 {
                     for (size_t j = 0; j < min_size.size(); ++j)
                     {
-                        float s_kx = min_size[j] / img_w;
-                        float s_ky = min_size[j] / img_h;
+                        float s_kx = min_size[j] / inputW;
+                        float s_ky = min_size[j] / inputH;
 
-                        float cx = (_w + 0.5f) * steps[i] / img_w;
-                        float cy = (_h + 0.5f) * steps[i] / img_h;
+                        float cx = (_w + 0.5f) * steps[i] / inputW;
+                        float cy = (_h + 0.5f) * steps[i] / inputH;
 
                         Rect2f prior = { cx, cy, s_kx, s_ky };
                         priors.push_back(prior);
@@ -204,10 +205,10 @@ private:
             face.at<float>(0, 14) = score;
 
             // Get bounding box
-            float cx = (priors[i].x + loc_v[i*14+0] * variance[0] * priors[i].width)  * img_w;
-            float cy = (priors[i].y + loc_v[i*14+1] * variance[0] * priors[i].height) * img_h;
-            float w  = priors[i].width  * exp(loc_v[i*14+2] * variance[0]) * img_w;
-            float h  = priors[i].height * exp(loc_v[i*14+3] * variance[1]) * img_h;
+            float cx = (priors[i].x + loc_v[i*14+0] * variance[0] * priors[i].width)  * inputW;
+            float cy = (priors[i].y + loc_v[i*14+1] * variance[0] * priors[i].height) * inputH;
+            float w  = priors[i].width  * exp(loc_v[i*14+2] * variance[0]) * inputW;
+            float h  = priors[i].height * exp(loc_v[i*14+3] * variance[1]) * inputH;
             float x1 = cx - w / 2;
             float y1 = cy - h / 2;
             face.at<float>(0, 0) = x1;
@@ -216,16 +217,16 @@ private:
             face.at<float>(0, 3) = h;
 
             // Get landmarks
-            face.at<float>(0, 4) = (priors[i].x + loc_v[i*14+ 4] * variance[0] * priors[i].width)  * img_w;  // right eye, x
-            face.at<float>(0, 5) = (priors[i].y + loc_v[i*14+ 5] * variance[0] * priors[i].height) * img_h;  // right eye, y
-            face.at<float>(0, 6) = (priors[i].x + loc_v[i*14+ 6] * variance[0] * priors[i].width)  * img_w;  // left eye, x
-            face.at<float>(0, 7) = (priors[i].y + loc_v[i*14+ 7] * variance[0] * priors[i].height) * img_h;  // left eye, y
-            face.at<float>(0, 8) = (priors[i].x + loc_v[i*14+ 8] * variance[0] * priors[i].width)  * img_w;  // nose tip, x
-            face.at<float>(0, 9) = (priors[i].y + loc_v[i*14+ 9] * variance[0] * priors[i].height) * img_h;  // nose tip, y
-            face.at<float>(0, 10) = (priors[i].x + loc_v[i*14+10] * variance[0] * priors[i].width)  * img_w; // right corner of mouth, x
-            face.at<float>(0, 11) = (priors[i].y + loc_v[i*14+11] * variance[0] * priors[i].height) * img_h; // right corner of mouth, y
-            face.at<float>(0, 12) = (priors[i].x + loc_v[i*14+12] * variance[0] * priors[i].width)  * img_w; // left corner of mouth, x
-            face.at<float>(0, 13) = (priors[i].y + loc_v[i*14+13] * variance[0] * priors[i].height) * img_h; // left corner of mouth, y
+            face.at<float>(0, 4) = (priors[i].x + loc_v[i*14+ 4] * variance[0] * priors[i].width)  * inputW;  // right eye, x
+            face.at<float>(0, 5) = (priors[i].y + loc_v[i*14+ 5] * variance[0] * priors[i].height) * inputH;  // right eye, y
+            face.at<float>(0, 6) = (priors[i].x + loc_v[i*14+ 6] * variance[0] * priors[i].width)  * inputW;  // left eye, x
+            face.at<float>(0, 7) = (priors[i].y + loc_v[i*14+ 7] * variance[0] * priors[i].height) * inputH;  // left eye, y
+            face.at<float>(0, 8) = (priors[i].x + loc_v[i*14+ 8] * variance[0] * priors[i].width)  * inputW;  // nose tip, x
+            face.at<float>(0, 9) = (priors[i].y + loc_v[i*14+ 9] * variance[0] * priors[i].height) * inputH;  // nose tip, y
+            face.at<float>(0, 10) = (priors[i].x + loc_v[i*14+10] * variance[0] * priors[i].width)  * inputW; // right corner of mouth, x
+            face.at<float>(0, 11) = (priors[i].y + loc_v[i*14+11] * variance[0] * priors[i].height) * inputH; // right corner of mouth, y
+            face.at<float>(0, 12) = (priors[i].x + loc_v[i*14+12] * variance[0] * priors[i].width)  * inputW; // left corner of mouth, x
+            face.at<float>(0, 13) = (priors[i].y + loc_v[i*14+13] * variance[0] * priors[i].height) * inputH; // left corner of mouth, y
 
             faces.push_back(face);
         }
@@ -263,8 +264,8 @@ private:
 private:
     dnn::Net net;
 
-    int img_w;
-    int img_h;
+    int inputW;
+    int inputH;
     float scoreThreshold;
     float nmsThreshold;
     int topK;
