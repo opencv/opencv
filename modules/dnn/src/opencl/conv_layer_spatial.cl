@@ -74,18 +74,22 @@
     (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
 } while(0)
 #define ELTWISE_DATA_ARG __global Dtype* eltwise_data,
+#define ELTWISE_DATA_ARG_WITH_OFFSET __global Dtype* eltwise_ptr, int eltwise_offset,
 #else
 #define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { \
     const Dtype _x_ = (_data_); \
     (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
 } while(0)
 #define ELTWISE_DATA_ARG
+#define ELTWISE_DATA_ARG_WITH_OFFSET
 #endif
 
 #if APPLY_BIAS
 #define BIAS_KERNEL_ARG __global Dtype * biases_base,
+#define BIAS_KERNEL_ARG_WITH_OFFSET __global Dtype * biases_base_ptr, int biases_base_offset,
 #else
 #define BIAS_KERNEL_ARG
+#define BIAS_KERNEL_ARG_WITH_OFFSET
 #endif
 
 #define __CAT(x, y) x##y
@@ -223,19 +227,28 @@ __attribute__((reqd_work_group_size(1, 1, SIMD_SIZE)))
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 __kernel void
 convolve_simd(
-    ELTWISE_DATA_ARG
+    ELTWISE_DATA_ARG_WITH_OFFSET
     FUSED_ARG
-    __global Dtype* inputs,
-    __global Dtype* weights,
-    BIAS_KERNEL_ARG
-    __global Dtype* outputs_base,
-    const int outputs_offset,
+    __global Dtype* inputs_ptr, const int inputs_offset,
+    __global Dtype* weights_ptr, const int weights_offset,
+    BIAS_KERNEL_ARG_WITH_OFFSET
+    __global Dtype* outputs_base, const int outputs_offset,
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
     const ushort output_height)
 {
+  __global Dtype* inputs = inputs_ptr + inputs_offset;
+  __global Dtype* weights = weights_ptr + weights_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
   __global Dtype* outputs = outputs_base + outputs_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
   unsigned int oc = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
   unsigned int or = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
   unsigned int fm = get_global_id(2);                    // fm = Feature Map = od = Output Depth
