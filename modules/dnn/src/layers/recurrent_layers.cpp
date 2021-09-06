@@ -365,7 +365,7 @@ public:
                 Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
                 Mat xCurr = xTs.rowRange(curRowRange);
 
-#ifdef CV_TRY_AVX2
+#if CV_TRY_AVX2
                 if (useAVX2 && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX2::fastGEMM1T(
@@ -380,7 +380,7 @@ public:
                     }
                 else
 #endif
-#ifdef CV_TRY_AVX
+#if CV_TRY_AVX
                 if (useAVX && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX::fastGEMM1T(
@@ -400,7 +400,7 @@ public:
                     gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
                 }
 
-#ifdef CV_TRY_AVX2
+#if CV_TRY_AVX2
                 if (useAVX2 && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX2::fastGEMM1T(
@@ -415,7 +415,7 @@ public:
                     }
                 else
 #endif
-#ifdef CV_TRY_AVX
+#if CV_TRY_AVX
                 if (useAVX && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX::fastGEMM1T(
