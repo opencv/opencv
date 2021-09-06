@@ -229,7 +229,7 @@ void run_rgb2gray_impl(uchar out[], const uchar in[], int width,
     GAPI_Assert(rc + gc + bc >= USHRT_MAX);
 
 #if CV_SIMD
-    const int nlanes = v_uint8::nlanes;
+    constexpr int nlanes = v_uint8::nlanes;
     if (width >= nlanes)
     {
         for (int w=0; w < width; )
@@ -1097,7 +1097,7 @@ static void run_sepfilter3x3_any2short(DST out[], const SRC *in[], int width, in
 
     for (int l=0; l < length;)
     {
-        const int nlanes = v_uint16::nlanes;
+        constexpr int nlanes = v_uint16::nlanes;
 
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
@@ -1181,7 +1181,7 @@ static void run_sepfilter3x3_any2char(uchar out[], const SRC *in[], int width, i
 
     for (int l=0; l < length;)
     {
-        const int nlanes = v_uint8::nlanes;
+        constexpr int nlanes = v_uint8::nlanes;
 
         // main part of row
         for (; l <= length - nlanes; l += nlanes)
@@ -1284,7 +1284,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
     {
         for (int l=0; l < length;)
         {
-            const int nlanes = v_uint16::nlanes;
+            constexpr int nlanes = v_uint16::nlanes;
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -1311,7 +1311,7 @@ static void run_sepfilter3x3_char2short(short out[], const uchar *in[], int widt
 
     for (int l=0; l < length;)
     {
-        const int nlanes = v_uint16::nlanes;
+        constexpr int nlanes = v_uint16::nlanes;
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
@@ -1549,7 +1549,7 @@ static void run_sepfilter5x5_any2char(uchar out[], const SRC *in[], int width, i
 
     // vertical pass
 
-    const int nlanes = v_uint8::nlanes;
+    constexpr int nlanes = v_uint8::nlanes;
 
     for (int l = 0; l < length;)
     {
@@ -1647,7 +1647,7 @@ static void run_sepfilter5x5_any2short(DST out[], const SRC *in[], int width, in
 
     // vertical pass
 
-    const int nlanes = v_int16::nlanes;
+    constexpr int nlanes = v_int16::nlanes;
     for (int l = 0; l < length;)
     {
         //GAPI_Assert(length >= nlanes);
@@ -1819,7 +1819,7 @@ static void run_sepfilter5x5_char2short(short out[], const uchar *in[], int widt
     // this kernel (Fluid does rows consequently: y=y0, y0+1, ...)
     int k0 = (y == y0) ? 0 : 4;
 
-    const int nlanes = v_int16::nlanes;
+    constexpr int nlanes = v_int16::nlanes;
 
     for (int k = k0; k < kyLen; ++k)
     {
@@ -2106,7 +2106,7 @@ static void run_filter2d_3x3_any2short(DST out[], const SRC *in[], int width, in
 
     for (int l=0; l < length;)
     {
-        static constexpr int nlanes = v_int16::max_nlanes;
+        static constexpr int nlanes = v_int16::nlanes;
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
@@ -2172,7 +2172,7 @@ static void run_filter2d_3x3_any2char(uchar out[], const SRC *in[], int width, i
 
     for (int l=0; l < length;)
     {
-        static const int nlanes = v_uint8::nlanes;
+        static constexpr int nlanes = v_uint8::nlanes;
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)
@@ -2467,7 +2467,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                const int nlanes = VT::nlanes;
+                constexpr int nlanes = VT::nlanes;
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2503,7 +2503,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                const int nlanes = VT::nlanes;
+                constexpr int nlanes = VT::nlanes;
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2537,7 +2537,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
 
         for (int l=0; l < length;)
         {
-            const int nlanes = VT::nlanes;
+            constexpr int nlanes = VT::nlanes;
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -2575,7 +2575,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                const int nlanes = VT::nlanes;
+                constexpr int nlanes = VT::nlanes;
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2611,7 +2611,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
         {
             for (int l=0; l < length;)
             {
-                const int nlanes = VT::nlanes;
+                constexpr int nlanes = VT::nlanes;
 
                 // main part of output row
                 for (; l <= length - nlanes; l += nlanes)
@@ -2645,7 +2645,7 @@ static void run_morphology3x3_simd(T out[], const T *in[], int width, int chan,
 
         for (int l=0; l < length;)
         {
-            const int nlanes = VT::nlanes;
+            constexpr int nlanes = VT::nlanes;
 
             // main part of output row
             for (; l <= length - nlanes; l += nlanes)
@@ -2808,7 +2808,7 @@ static void run_medblur3x3_simd(T out[], const T *in[], int width, int chan)
 
     for (int l=0; l < length;)
     {
-        const int nlanes = VT::nlanes;
+        constexpr int nlanes = VT::nlanes;
 
         // main part of output row
         for (; l <= length - nlanes; l += nlanes)

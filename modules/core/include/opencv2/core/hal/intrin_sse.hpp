@@ -3392,16 +3392,6 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& v)
     return v_float32x4(_mm_shuffle_ps(v.val, v.val, _MM_SHUFFLE((char)i,(char)i,(char)i,(char)i)));
 }
 
-/* template<int i>
-inline v_float64x2 v_broadcast_element(const v_float64x2& v)
-{
-    __m128i tmp = (__m128d) v.val;
-    tmp = _mm_shuffle_epi32(tmp, _MM_SHUFFLE(2*i + 1, 2*i,
-                                             2*i + 1, 2*i));
-    __m128d tmp2 = (__m128i) tmp;
-    return v_float64x2(tmp2);
-} */
-
 template<int i>
 inline v_float64x2 v_broadcast_element(const v_float64x2& v)
 {
