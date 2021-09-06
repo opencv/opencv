@@ -3067,6 +3067,61 @@ inline int v_scan_forward(const v_int64x8& a) { return trailingZeros32(v_signmas
 inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
+CV_ALWAYS_INLINE v_int16x32 v_mulhrs(const v_int16x32& a, const v_int16x32& b)
+{
+    return v_int16x32(_mm512_mulhrs_epi16(a.val, b.val));
+}
+
+CV_ALWAYS_INLINE v_int16x32 v_mulhrs(const v_int16x32& a, short b)
+{
+    return v_mulhrs(a, v512_setall_s16(b));
+}
+
+CV_ALWAYS_INLINE __m512i v512_insert_epi16(__m512i& target, const ushort x, const int index)
+{
+    return _mm512_mask_set1_epi16(target, 1UL << index, x);
+}
+
+namespace {
+    template<int chanNum>
+    CV_ALWAYS_INLINE void v_gather_channel(v_int16x32& vec, const uchar src[], const short* index, const int channel, const int pos)
+    {
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + channel]), 0);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos) + channel]), 1);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + channel]), 2);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos) + channel]), 3);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + channel]), 4);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos) + channel]), 5);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + channel]), 6);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos) + channel]), 7);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 8) + pos) + channel]), 8);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 9) + pos) + channel]), 9);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 10) + pos) + channel]), 10);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 11) + pos) + channel]), 11);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 12) + pos) + channel]), 12);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 13) + pos) + channel]), 13);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 14) + pos) + channel]), 14);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 15) + pos) + channel]), 15);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 16) + pos) + channel]), 16);
+
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 17) + pos) + channel]), 17);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 18) + pos) + channel]), 18);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 19) + pos) + channel]), 19);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 20) + pos) + channel]), 20);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 21) + pos) + channel]), 21);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 22) + pos) + channel]), 22);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 23) + pos) + channel]), 23);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 24) + pos) + channel]), 24);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 25) + pos) + channel]), 25);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 26) + pos) + channel]), 26);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 27) + pos) + channel]), 27);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 28) + pos) + channel]), 28);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 29) + pos) + channel]), 29);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 30) + pos) + channel]), 30);
+        vec.val = v512_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 31) + pos) + channel]), 31);
+    }
+}  // namespace
+
 inline void v512_cleanup() { _mm256_zeroall(); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END

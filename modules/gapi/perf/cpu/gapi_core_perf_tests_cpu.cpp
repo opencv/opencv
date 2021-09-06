@@ -321,7 +321,7 @@ INSTANTIATE_TEST_CASE_P(TransposePerfTestCPU, TransposePerfTest,
 
 INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
     Combine(Values(AbsExact().to_compare_f()),
-        Values(CV_8UC1, CV_16UC1, CV_16SC1),
+        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
         Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
         Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(cv::Size(64, 64),

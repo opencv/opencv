@@ -2949,109 +2949,425 @@ GAPI_FLUID_KERNEL(GFluidPhase, cv::gapi::core::GPhase, false)
     }
 };
 
+CV_ALWAYS_INLINE void vertical_anyLPI(const uchar* src0, const uchar* src1,
+                                      uchar* tmp, const int inLength,
+                                      const short beta) {
+    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+
+    const int half_nlanes = nlanes/2;
+    int w = 0;
+    for (;;) {
+        for (; w <= inLength - nlanes; w += nlanes) {
+            v_int16 s0 = v_reinterpret_as_s16(vx_load_expand(&src0[w]));
+            v_int16 s1 = v_reinterpret_as_s16(vx_load_expand(&src1[w]));
+            v_int16 s2 = v_reinterpret_as_s16(vx_load_expand(&src0[w + half_nlanes]));
+            v_int16 s3 = v_reinterpret_as_s16(vx_load_expand(&src1[w + half_nlanes]));
+            v_int16 res1 = v_mulhrs(s0 - s1, beta) + s1;
+            v_int16 res2 = v_mulhrs(s2 - s3, beta) + s3;
+
+            vx_store(tmp + w, v_pack_u(res1, res2));
+        }
+
+        if (w < inLength) {
+            w = inLength - nlanes;
+            continue;
+        }
+        break;
+    }
+}
+
+template<int chanNum>
+CV_ALWAYS_INLINE void horizontal_anyLPI(uint8_t* dst,
+                                        const uchar* src, const short mapsx[],
+                                        const short alpha[], const int width) {
+    constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
+    const int half_nlanes = nlanes/2;
+
+    v_int16 t0, t1, t2, t3;
+    int x = 0;
+
+    for (; width >= nlanes;) {
+        for (; x <= width - nlanes && x >= 0; x += nlanes) {
+            v_int16 a00 = vx_load(&alpha[x]);
+            v_int16 a01 = vx_load(&alpha[x + half_nlanes]);
+
+            v_gather_channel<chanNum>(t0, src, &mapsx[x], 0, 0);
+            v_gather_channel<chanNum>(t1, src, &mapsx[x], 0, 1);
+            v_gather_channel<chanNum>(t2, src, &mapsx[x + half_nlanes], 0, 0);
+            v_gather_channel<chanNum>(t3, src, &mapsx[x + half_nlanes], 0, 1);
+            v_int16 r1 = v_mulhrs(t0 - t1, a00) + t1;
+            v_int16 r2 = v_mulhrs(t2 - t3, a01) + t3;
+            v_uint8 res1 = v_pack_u(r1, r2);
+
+            v_gather_channel<chanNum>(t0, src, &mapsx[x], 1, 0);
+            v_gather_channel<chanNum>(t1, src, &mapsx[x], 1, 1);
+            v_gather_channel<chanNum>(t2, src, &mapsx[x + half_nlanes], 1, 0);
+            v_gather_channel<chanNum>(t3, src, &mapsx[x + half_nlanes], 1, 1);
+            v_int16 r3 = v_mulhrs(t0 - t1, a00) + t1;
+            v_int16 r4 = v_mulhrs(t2 - t3, a01) + t3;
+            v_uint8 res2 = v_pack_u(r3, r4);
+
+            v_gather_channel<chanNum>(t0, src, &mapsx[x], 2, 0);
+            v_gather_channel<chanNum>(t1, src, &mapsx[x], 2, 1);
+            v_gather_channel<chanNum>(t2, src, &mapsx[x + half_nlanes], 2, 0);
+            v_gather_channel<chanNum>(t3, src, &mapsx[x + half_nlanes], 2, 1);
+            v_int16 r5 = v_mulhrs(t0 - t1, a00) + t1;
+            v_int16 r6 = v_mulhrs(t2 - t3, a01) + t3;
+            v_uint8 res3 = v_pack_u(r5, r6);
+
+            v_store_interleave(&dst[3*x], res1, res2, res3);
+        }
+
+        if (x < width) {
+            x = width - nlanes;
+            continue;
+        }
+        break;
+    }
+}
+
+template<int chanNum>
+CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_(uint8_t* dst[],
+                                              const uint8_t* src0[],
+                                              const uint8_t* src1[],
+                                              const short    alpha[],
+                                              const short* /*clone*/,  // 4 clones of alpha
+                                              const short    mapsx[],
+                                              const short    beta[],
+                                                  uint8_t    tmp[],
+                                              const Size&    inSz,
+                                              const Size&    outSz,
+                                              const int      lpi) {
+    bool xRatioEq = inSz.width == outSz.width;
+    bool yRatioEq = inSz.height == outSz.height;
+
+    if (!xRatioEq && !yRatioEq) {
+        int inLength = inSz.width * chanNum;
+
+        for (int l = 0; l < lpi; ++l) {
+            short beta0 = beta[l];
+            const uchar* s0 = src0[l];
+            const uchar* s1 = src1[l];
+
+            // vertical pass
+            vertical_anyLPI(s0, s1, tmp, inLength, beta0);
+
+            // horizontal pass
+            horizontal_anyLPI<chanNum>(dst[l], tmp, mapsx, alpha, outSz.width);
+        }
+    } else if (!xRatioEq) {
+        GAPI_DbgAssert(yRatioEq);
+
+        for (int l = 0; l < lpi; ++l) {
+            const uchar* src = src0[l];
+
+            // horizontal pass
+            horizontal_anyLPI<chanNum>(dst[l], src, mapsx, alpha, outSz.width);
+        }
+    } else if (!yRatioEq) {
+        GAPI_DbgAssert(xRatioEq);
+        int inLength = inSz.width*chanNum;  // == outSz.width
+
+        for (int l = 0; l < lpi; ++l) {
+            short beta0 = beta[l];
+            const uchar* s0 = src0[l];
+            const uchar* s1 = src1[l];
+
+            // vertical pass
+            vertical_anyLPI(s0, s1, dst[l], inLength, beta0);
+        }
+    } else {
+        GAPI_DbgAssert(xRatioEq && yRatioEq);
+        int length = inSz.width;  // == outSz.width
+
+        for (int l = 0; l < lpi; ++l) {
+            memcpy(dst[l], src0[l], length);
+        }
+    }
+}
+
+template<typename T, typename Mapper, int chanNum>
+struct linearScratchDesc {
+    using alpha_t = typename Mapper::alpha_type;
+    using index_t = typename Mapper::index_type;
+
+    alpha_t* alpha;
+    alpha_t* clone;
+    index_t* mapsx;
+    alpha_t* beta;
+    index_t* mapsy;
+    T*       tmp;
+
+    linearScratchDesc(int /*inW*/, int /*inH*/, int outW, int outH,  void* data) {
+        alpha = reinterpret_cast<alpha_t*>(data);
+        clone = reinterpret_cast<alpha_t*>(alpha + outW);
+        mapsx = reinterpret_cast<index_t*>(clone + outW*4);
+        beta  = reinterpret_cast<alpha_t*>(mapsx + outW);
+        mapsy = reinterpret_cast<index_t*>(beta  + outH);
+        tmp   = reinterpret_cast<T*>      (mapsy + outH*2);
+    }
+
+    static int bufSize(int inW, int /*inH*/, int outW, int outH, int lpi) {
+        auto size = outW * sizeof(alpha_t)     +
+                    outW * sizeof(alpha_t) * 4 +  // alpha clones // previous alpha is redundant?
+                    outW * sizeof(index_t)     +
+                    outH * sizeof(alpha_t)     +
+                    outH * sizeof(index_t) * 2 +
+                     inW * sizeof(T) * lpi * chanNum;
+
+        return static_cast<int>(size);
+    }
+};
+static inline double invRatio(int inSz, int outSz) {
+    return static_cast<double>(outSz) / inSz;
+}
+
+static inline double ratio(int inSz, int outSz) {
+    return 1 / invRatio(inSz, outSz);
+}
+
+template<typename T, typename Mapper, int chanNum = 1>
+static inline void initScratchLinear(const cv::GMatDesc& in,
+                                     const         Size& outSz,
+                                     cv::gapi::fluid::Buffer& scratch,
+                                     int  lpi) {
+    using alpha_type = typename Mapper::alpha_type;
+    static const auto unity = Mapper::unity;
+
+    auto inSz = in.size;
+    auto sbufsize = linearScratchDesc<T, Mapper, chanNum>::bufSize(inSz.width, inSz.height, outSz.width, outSz.height, lpi);
+
+    Size scratch_size{sbufsize, 1};
+
+    cv::GMatDesc desc;
+    desc.chan = 1;
+    desc.depth = CV_8UC1;
+    desc.size = scratch_size;
+
+    cv::gapi::fluid::Buffer buffer(desc);
+    scratch = std::move(buffer);
+
+    double hRatio = ratio(in.size.width, outSz.width);
+    double vRatio = ratio(in.size.height, outSz.height);
+
+    linearScratchDesc<T, Mapper, chanNum> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+
+    auto *alpha = scr.alpha;
+    auto *clone = scr.clone;
+    auto *index = scr.mapsx;
+
+    for (int x = 0; x < outSz.width; x++) {
+        auto map = Mapper::map(hRatio, 0, in.size.width, x);
+        auto alpha0 = map.alpha0;
+        auto index0 = map.index0;
+
+        // TRICK:
+        // Algorithm takes pair of input pixels, sx0'th and sx1'th,
+        // and compute result as alpha0*src[sx0] + alpha1*src[sx1].
+        // By definition: sx1 == sx0 + 1 either sx1 == sx0, and
+        // alpha0 + alpha1 == unity (scaled appropriately).
+        // Here we modify formulas for alpha0 and sx1: by assuming
+        // that sx1 == sx0 + 1 always, and patching alpha0 so that
+        // result remains intact.
+        // Note that we need in.size.width >= 2, for both sx0 and
+        // sx0+1 were indexing pixels inside the input's width.
+        if (map.index1 != map.index0 + 1) {
+            GAPI_DbgAssert(map.index1 == map.index0);
+            GAPI_DbgAssert(in.size.width >= 2);
+            if (map.index0 < in.size.width-1) {
+                // sx1=sx0+1 fits inside row,
+                // make sure alpha0=unity and alpha1=0,
+                // so that result equals src[sx0]*unity
+                alpha0 = saturate_cast<alpha_type>(unity);
+            } else {
+                // shift sx0 to left by 1 pixel,
+                // and make sure that alpha0=0 and alpha1==1,
+                // so that result equals to src[sx0+1]*unity
+                alpha0 = 0;
+                index0--;
+            }
+        }
+
+        alpha[x] = alpha0;
+        index[x] = index0;
+
+        for (int l = 0; l < 4; l++) {
+            clone[4*x + l] = alpha0;
+        }
+    }
+
+    auto *beta    = scr.beta;
+    auto *index_y = scr.mapsy;
+
+    for (int y = 0; y < outSz.height; y++) {
+        auto mapY = Mapper::map(vRatio, 0, in.size.height, y);
+        beta[y] = mapY.alpha0;
+        index_y[y] = mapY.index0;
+        index_y[outSz.height + y] = mapY.index1;
+    }
+}
+
+template<typename F, typename I>
+struct MapperUnit {
+    F alpha0, alpha1;
+    I index0, index1;
+};
+
+constexpr static const int ONE = 1 << 15;
+inline static uint8_t calc(short alpha0, uint8_t src0, short alpha1, uint8_t src1) {
+    constexpr static const int half = 1 << 14;
+    return (src0 * alpha0 + src1 * alpha1 + half) >> 15;
+}
+struct Mapper {
+    typedef short alpha_type;
+    typedef short index_type;
+    constexpr static const int unity = ONE;
+
+    typedef MapperUnit<short, short> Unit;
+
+    static inline Unit map(double ratio, int start, int max, int outCoord) {
+        float f = static_cast<float>((outCoord + 0.5) * ratio - 0.5);
+        int s = cvFloor(f);
+        f -= s;
+
+        Unit u;
+
+        u.index0 = std::max(s - start, 0);
+        u.index1 = ((f == 0.0) || s + 1 >= max) ? s - start : s - start + 1;
+
+        u.alpha0 = saturate_cast<short>(ONE * (1.0f - f));
+        u.alpha1 = saturate_cast<short>(ONE * f);
+
+        return u;
+    }
+};
+
+template<typename T, class Mapper, int numChan>
+static void calcRowLinearC(const cv::gapi::fluid::View  & in,
+                           cv::gapi::fluid::Buffer& out,
+                           cv::gapi::fluid::Buffer& scratch) {
+    using alpha_type = typename Mapper::alpha_type;
+
+    auto  inSz =  in.meta().size;
+    auto outSz = out.meta().size;
+
+    auto inY  = in.y();
+    int outY = out.y();
+    int lpi = out.lpi();
+
+    GAPI_DbgAssert(outY + lpi <= outSz.height);
+    GAPI_DbgAssert(lpi <= 4);
+
+    linearScratchDesc<T, Mapper, numChan> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+
+    const auto *alpha = scr.alpha;
+    const auto *clone = scr.clone;
+    const auto *mapsx = scr.mapsx;
+    const auto *beta_0 = scr.beta;
+    const auto *mapsy = scr.mapsy;
+    auto *tmp         = scr.tmp;
+
+    const auto *beta = beta_0 + outY;
+    const T *src0[4];
+    const T *src1[4];
+    T* dst[4];
+
+    for (int l = 0; l < lpi; l++) {
+        auto index0 = mapsy[outY + l] - inY;
+        auto index1 = mapsy[outSz.height + outY + l] - inY;
+        src0[l] = in.InLine<const T>(index0);
+        src1[l] = in.InLine<const T>(index1);
+        dst[l] = out.OutLine<T>(l);
+    }
+
+#if CV_SIMD
+    // the number of u8 in a 128-bit simd vector
+    int nlanesU8 = 16;
+#if CV_SIMD256
+    // the number of u8 in a 256-bit simd vector
+    nlanesU8 = 32;
+#endif
+#if CV_SIMD512
+    // the number of u8 in a 512-bit simd vector
+    nlanesU8 = 64;
+#endif
+    if (inSz.width >= nlanesU8 && outSz.width >= nlanesU8) {
+        calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
+                                         reinterpret_cast<const uint8_t**>(src0),
+                                         reinterpret_cast<const uint8_t**>(src1),
+                                         reinterpret_cast<const short*>(alpha),
+                                         reinterpret_cast<const short*>(clone),
+                                         reinterpret_cast<const short*>(mapsx),
+                                         reinterpret_cast<const short*>(beta),
+                                         reinterpret_cast<uint8_t*>(tmp),
+                                         inSz, outSz, lpi);
+        return;
+    }
+#endif  // CV_SIMD
+
+    int length = out.length();
+    for (int l = 0; l < lpi; l++) {
+        constexpr static const auto unity = Mapper::unity;
+
+        auto beta0 =                                   beta[l];
+        auto beta1 = saturate_cast<alpha_type>(unity - beta[l]);
+
+        for (int x = 0; x < length; x++) {
+            auto alpha0 =                                   alpha[x];
+            auto alpha1 = saturate_cast<alpha_type>(unity - alpha[x]);
+            auto sx0 = mapsx[x];
+            auto sx1 = sx0 + 1;
+
+            for (int c = 0; c < numChan; c++) {
+                auto idx0 = numChan*sx0 + c;
+                auto idx1 = numChan*sx1 + c;
+                T tmp0 = calc(beta0, src0[l][idx0], beta1, src1[l][idx0]);
+                T tmp1 = calc(beta0, src0[l][idx1], beta1, src1[l][idx1]);
+                dst[l][3*x + c] = calc(alpha0, tmp0, alpha1, tmp1);
+            }
+        }
+    }
+}
+
 GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
 {
     static const int Window = 1;
+    static const int LPI = 4;
     static const auto Kind = GFluidKernel::Kind::Resize;
 
     constexpr static const int INTER_RESIZE_COEF_BITS = 11;
     constexpr static const int INTER_RESIZE_COEF_SCALE = 1 << INTER_RESIZE_COEF_BITS;
     constexpr static const short ONE = INTER_RESIZE_COEF_SCALE;
 
-    struct ResizeUnit
+   static void initScratch(const cv::GMatDesc& in,
+                           cv::Size outSz, double /*fx*/, double /*fy*/, int /*interp*/,
+                           cv::gapi::fluid::Buffer &scratch)
     {
-        short alpha0;
-        short alpha1;
-        int   s0;
-        int   s1;
-    };
-
-    static ResizeUnit map(double ratio, int start, int max, int outCoord)
-    {
-        float f = static_cast<float>((outCoord + 0.5f) * ratio - 0.5f);
-        int s = cvFloor(f);
-        f -= s;
-
-        ResizeUnit ru;
-
-        ru.s0 = std::max(s - start, 0);
-        ru.s1 = ((f == 0.0) || s + 1 >= max) ? s - start : s - start + 1;
-
-        ru.alpha0 = saturate_cast<short>((1.0f - f) * INTER_RESIZE_COEF_SCALE);
-        ru.alpha1 = saturate_cast<short>((f) * INTER_RESIZE_COEF_SCALE);
-
-        return ru;
-    }
-
-    static void initScratch(const cv::GMatDesc& in,
-                            cv::Size outSz, double fx, double fy, int /*interp*/,
-                            cv::gapi::fluid::Buffer &scratch)
-    {
-        GAPI_Assert(in.depth == CV_8U && in.chan == 3);
-
-        if (outSz.area() == 0)
-        {
-            outSz.width  = static_cast<int>(round(in.size.width  * fx));
-            outSz.height = static_cast<int>(round(in.size.height * fy));
-        }
-
-        cv::Size scratch_size{static_cast<int>(outSz.width * sizeof(ResizeUnit)), 1};
-
-        cv::GMatDesc desc;
-        desc.chan  = 1;
-        desc.depth = CV_8UC1;
-        desc.size  = scratch_size;
-
-        cv::gapi::fluid::Buffer buffer(desc);
-        scratch = std::move(buffer);
-
-        ResizeUnit* mapX = scratch.OutLine<ResizeUnit>();
-        double hRatio = (double)in.size.width / outSz.width;
-
-        for (int x = 0, w = outSz.width; x < w; x++)
-        {
-            mapX[x] = map(hRatio, 0, in.size.width, x);
-        }
+       if (in.chan == 3)
+       {
+           initScratchLinear<uchar, Mapper, 3>(in, outSz, scratch, LPI);
+       }
+       else if (in.chan == 4)
+       {
+           initScratchLinear<uchar, Mapper, 4>(in, outSz, scratch, LPI);
+       }
     }
 
     static void resetScratch(cv::gapi::fluid::Buffer& /*scratch*/)
     {}
 
     static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/, double /*fy*/, int /*interp*/,
-                    cv::gapi::fluid::Buffer& out, cv::gapi::fluid::Buffer &scratch)
-    {
-        double vRatio = (double)in.meta().size.height / out.meta().size.height;
-        auto mapY = map(vRatio, in.y(), in.meta().size.height, out.y());
-
-        auto beta0 = mapY.alpha0;
-        auto beta1 = mapY.alpha1;
-
-        const auto src0 = in.InLine <unsigned char>(mapY.s0);
-        const auto src1 = in.InLine <unsigned char>(mapY.s1);
-
-        auto dst = out.OutLine<unsigned char>();
-
-        ResizeUnit* mapX = scratch.OutLine<ResizeUnit>();
-
-        for (int x = 0; x < out.length(); x++)
+                    cv::gapi::fluid::Buffer& out,
+                    cv::gapi::fluid::Buffer& scratch) {
+        int channels = in.meta().chan;
+        constexpr int numChan = 3;
+        if (channels == 3)
         {
-            short alpha0 = mapX[x].alpha0;
-            short alpha1 = mapX[x].alpha1;
-            int sx0 = mapX[x].s0;
-            int sx1 = mapX[x].s1;
-
-            int res00 = src0[3*sx0    ]*alpha0 + src0[3*(sx1)    ]*alpha1;
-            int res10 = src1[3*sx0    ]*alpha0 + src1[3*(sx1)    ]*alpha1;
-
-            int res01 = src0[3*sx0 + 1]*alpha0 + src0[3*(sx1) + 1]*alpha1;
-            int res11 = src1[3*sx0 + 1]*alpha0 + src1[3*(sx1) + 1]*alpha1;
-
-            int res02 = src0[3*sx0 + 2]*alpha0 + src0[3*(sx1) + 2]*alpha1;
-            int res12 = src1[3*sx0 + 2]*alpha0 + src1[3*(sx1) + 2]*alpha1;
-
-            dst[3*x    ] = uchar(( ((beta0 * (res00 >> 4)) >> 16) + ((beta1 * (res10 >> 4)) >> 16) + 2)>>2);
-            dst[3*x + 1] = uchar(( ((beta0 * (res01 >> 4)) >> 16) + ((beta1 * (res11 >> 4)) >> 16) + 2)>>2);
-            dst[3*x + 2] = uchar(( ((beta0 * (res02 >> 4)) >> 16) + ((beta1 * (res12 >> 4)) >> 16) + 2)>>2);
+            calcRowLinearC<uint8_t, Mapper, 3>(in, out, scratch);
+        }
+        else if (channels == 4)
+        {
+            calcRowLinearC<uint8_t, Mapper, 4>(in, out, scratch);
         }
     }
 };

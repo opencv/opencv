@@ -2093,7 +2093,9 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
+
     auto out = cv::gapi::resize(in, sz_out, 0.0, 0.0, interp);
+
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:

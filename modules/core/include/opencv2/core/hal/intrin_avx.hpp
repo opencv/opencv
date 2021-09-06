@@ -3154,6 +3154,39 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
 // end of FP16
 //
 
+CV_ALWAYS_INLINE v_int16x16 v_mulhrs(const v_int16x16& a, const v_int16x16& b)
+{
+    return v_int16x16(_mm256_mulhrs_epi16(a.val, b.val));
+}
+
+CV_ALWAYS_INLINE v_int16x16 v_mulhrs(const v_int16x16& a, short b)
+{
+    return v_mulhrs(a, v256_setall_s16(b));
+}
+
+namespace {
+    template<int chanNum>
+    CV_ALWAYS_INLINE void v_gather_channel(v_int16x16& vec, const uchar src[], const short* index, const int channel, const int pos)
+    {
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + channel]), 0);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos) + channel]), 1);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + channel]), 2);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos) + channel]), 3);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + channel]), 4);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos) + channel]), 5);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + channel]), 6);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos) + channel]), 7);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 8) + pos) + channel]), 8);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 9) + pos) + channel]), 9);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 10) + pos) + channel]), 10);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 11) + pos) + channel]), 11);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 12) + pos) + channel]), 12);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 13) + pos) + channel]), 13);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 14) + pos) + channel]), 14);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 15) + pos) + channel]), 15);
+    }
+}  // namespace
+
 inline void v256_cleanup() { _mm256_zeroall(); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
