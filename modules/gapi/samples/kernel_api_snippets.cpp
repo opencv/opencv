@@ -129,7 +129,7 @@ GAPI_OCV_KERNEL(GCPUFilter2D, GFilter2D)
 
 int main(int, char *[])
 {
-    std::cout << "This sample is non-complete. It is used as code snippents in documentation." << std::endl;
+    std::cout << "This sample is non-complete. It is used as code snippents in documentation." << "\n";
 
 cv::Mat conv_kernel_mat;
 

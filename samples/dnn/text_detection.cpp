@@ -121,7 +121,7 @@ int main(int argc, char** argv)
             break;
         }
 
-        std::cout << frame.size << std::endl;
+        std::cout << frame.size << "\n";
 
         // Detection
         std::vector< std::vector<Point> > detResults;
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
                 fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
                 std::string recognitionResult = recognizer.recognize(cropped);
-                std::cout << i << ": '" << recognitionResult << "'" << std::endl;
+                std::cout << i << ": '" << recognitionResult << "'" << "\n";
 
                 putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1.5, Scalar(0, 0, 255), 2);
             }

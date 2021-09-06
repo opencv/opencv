@@ -108,9 +108,9 @@ int main(int argc, char** argv)
     rtrees->predict(data->getSamples(), predict_labels);
 
     cv::Mat variable_importance = rtrees->getVarImportance();
-    std::cout << "Estimated variable importance" << std::endl;
+    std::cout << "Estimated variable importance" << "\n";
     for (int i = 0; i < variable_importance.rows; i++) {
-        std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << std::endl;
+        std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << "\n";
     }
     return 0;
 }

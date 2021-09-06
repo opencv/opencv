@@ -164,7 +164,7 @@ PERF_TEST_P_(Conv3D, conv3d)
         << "IN=" << divUp(input.total() * input.elemSize(), 1u<<10) << " Kb " << netInputShape
         << "    OUT=" << divUp(output.total() * output.elemSize(), 1u<<10) << " Kb " << shape(output)
         << "    Weights(parameters): " << divUp(weightsMemory, 1u<<10) << " Kb"
-        << "    MFLOPS=" << flops * 1e-6 << std::endl;
+        << "    MFLOPS=" << flops * 1e-6 << "\n";
 
     TEST_CYCLE()
     {

@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
         std::cout << "Will run inference for static region "
                   << opt_roi.value()
                   << " only"
-                  << std::endl;
+                  << "\n";
         cv::GMat in;
         cv::GOpaque<cv::Rect> in_roi;
         auto blob = cv::gapi::infer<custom::FaceDetector>(in_roi, in);
@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     } else {
         // Automatically detect ROI to infer. Make it output parameter
         std::cout << "ROI is not set or invalid. Locating it automatically"
-                  << std::endl;
+                  << "\n";
         cv::GMat in;
         cv::GOpaque<cv::Rect> roi = custom::LocateROI::on(in);
         auto blob = cv::gapi::infer<custom::FaceDetector>(roi, in);

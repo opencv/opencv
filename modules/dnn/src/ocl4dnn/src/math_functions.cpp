@@ -153,19 +153,19 @@ static bool ocl4dnnFastImageGEMM(const CBLAS_TRANSPOSE TransA,
                                  const size_t max_image_size)
 {
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_IMAGE_32_1 || gemm_type == GEMM_TYPE_FAST_IMAGE_32_2 ||
-             gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE, true) << "Invalid fast image gemm type." << std::endl;
+             gemm_type == GEMM_TYPE_FAST_IMAGE_B_IMAGE, true) << "Invalid fast image gemm type." << "\n";
 
     bool halfPrecisionMode = (A.depth() == CV_16S);
 
     if (is_image_a)
     {
-        CHECK_EQ(offA, 0) << "Invalid input image offset." << std::endl;
+        CHECK_EQ(offA, 0) << "Invalid input image offset." << "\n";
         return false;
     }
 
     if (is_image_b)
     {
-        CHECK_EQ(offB, 0) << "Invalid input image offset." << std::endl;
+        CHECK_EQ(offB, 0) << "Invalid input image offset." << "\n";
         return false;
     }
 
@@ -436,7 +436,7 @@ static bool ocl4dnnFastBufferGEMM(const CBLAS_TRANSPOSE TransA,
                                   const int32_t offC, enum gemm_type_t gemm_type)
 {
     CHECK_EQ(gemm_type == GEMM_TYPE_FAST_BUFFER, true)
-             << "Invalid fast buffer gemm type." << std::endl;
+             << "Invalid fast buffer gemm type." << "\n";
 
     bool halfPrecisionMode = (A.depth() == CV_16S);
 

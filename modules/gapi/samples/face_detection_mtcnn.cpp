@@ -686,7 +686,7 @@ int main(int argc, char* argv[]) {
         mtcnn_args += cv::compile_args(cv::gapi::streaming::queue_capacity{ streaming_queue_capacity });
     auto pipeline_mtcnn = graph_mtcnn.compileStreaming(std::move(mtcnn_args));
 
-    std::cout << "Reading " << input_file_name << std::endl;
+    std::cout << "Reading " << input_file_name << "\n";
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
 
@@ -703,7 +703,7 @@ int main(int argc, char* argv[]) {
     int frames = 0;
     while (pipeline_mtcnn.pull(cv::gout(image, out_faces))) {
         frames++;
-        std::cout << "Final Faces Size " << out_faces.size() << std::endl;
+        std::cout << "Final Faces Size " << out_faces.size() << "\n";
         std::vector<vis::rectPoints> data;
         // show the image with faces in it
         for (const auto& out_face : out_faces) {
@@ -728,6 +728,6 @@ int main(int argc, char* argv[]) {
     }
     tm.stop();
     std::cout << "Processed " << frames << " frames"
-        << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+        << " (" << frames / tm.getTimeSec() << " FPS)" << "\n";
     return 0;
 }

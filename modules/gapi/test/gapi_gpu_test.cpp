@@ -105,7 +105,7 @@ namespace cv
                     }
                     if (!errmsg.empty())
                     {
-                        std::cout << "OpenCL program build log:" << std::endl << errmsg << std::endl;
+                        std::cout << "OpenCL program build log:" << "\n" << errmsg << "\n";
                     }
 
                     cv::ocl::Kernel kernel("symm_7x7_test", program);

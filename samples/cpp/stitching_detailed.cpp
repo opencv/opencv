@@ -24,7 +24,7 @@
 
 #define ENABLE_LOG 1
 #define LOG(msg) std::cout << msg
-#define LOGLN(msg) std::cout << msg << std::endl
+#define LOGLN(msg) std::cout << msg << "\n"
 
 using namespace std;
 using namespace cv;

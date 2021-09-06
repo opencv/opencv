@@ -12,7 +12,7 @@
 #endif
 
 #ifndef DUMP_MESSAGE_STDOUT
-#define DUMP_MESSAGE_STDOUT(...) do { std::cout << __VA_ARGS__ << std::endl; } while (false)
+#define DUMP_MESSAGE_STDOUT(...) do { std::cout << __VA_ARGS__ << "\n"; } while (false)
 #endif
 
 namespace cv {

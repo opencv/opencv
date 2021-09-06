@@ -292,8 +292,8 @@ TEST(usac_Fundamental, regression_19639)
     };
     Mat y(7, 1, CV_64FC2, y_);
 
-    //std::cout << x << std::endl;
-    //std::cout << y << std::endl;
+    //std::cout << x << "\n";
+    //std::cout << y << "\n";
 
     Mat m = cv::findFundamentalMat(x, y, USAC_MAGSAC, 3, 0.99);
     EXPECT_TRUE(m.empty());

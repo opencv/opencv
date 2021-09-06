@@ -293,7 +293,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
             std::cout << "Input: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
-            std::cout << "]  ocv_mat=" << inputsMap[it.first].size << " of " << typeToString(inputsMap[it.first].type()) << std::endl;
+            std::cout << "]  ocv_mat=" << inputsMap[it.first].size << " of " << typeToString(inputsMap[it.first].type()) << "\n";
         }
     }
     infRequest.SetInput(inputBlobs);
@@ -311,7 +311,7 @@ void runIE(Target target, const std::string& xmlPath, const std::string& binPath
             std::cout << "Output: '" << it.first << "' precison=" << desc.getPrecision() << " dims=" << dims.size() << " [";
             for (auto d : dims)
                 std::cout << " " << d;
-            std::cout << "]  ocv_mat=" << outputsMap[it.first].size << " of " << typeToString(outputsMap[it.first].type()) << std::endl;
+            std::cout << "]  ocv_mat=" << outputsMap[it.first].size << " of " << typeToString(outputsMap[it.first].type()) << "\n";
         }
     }
     infRequest.SetOutput(outputBlobs);
@@ -335,9 +335,9 @@ void runCV(Backend backendId, Target targetId, const std::string& xmlPath, const
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
     if (cvtest::debugLevel > 0)
     {
-        std::cout << "OpenCV output names: " << outNames.size() << std::endl;
+        std::cout << "OpenCV output names: " << outNames.size() << "\n";
         for (auto name : outNames)
-            std::cout << "- " << name << std::endl;
+            std::cout << "- " << name << "\n";
     }
     std::vector<Mat> outs;
     net.forward(outs, outNames);

@@ -20,7 +20,7 @@ static bool readFromNode(cv::FileNode node, T& value)
 static bool checkAssertion(bool value, const std::string& msg)
 {
     if(!value)
-        std::cerr << "Error: " << msg << std::endl;
+        std::cerr << "Error: " << msg << "\n";
 
     return value;
 }
@@ -32,13 +32,13 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 
     if(!reader.isOpened()) {
         std::cerr << "Warning: Unable to open " << inputFileName <<
-                     " Application started with default advanced parameters" << std::endl;
+                     " Application started with default advanced parameters" << "\n";
         return true;
     }
 
     readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
     if (readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLength)) {
-        std::cout << "DEPRECATION: Parameter 'charuco_square_lenght' has been deprecated (typo). Use 'charuco_square_length' instead." << std::endl;
+        std::cout << "DEPRECATION: Parameter 'charuco_square_lenght' has been deprecated (typo). Use 'charuco_square_length' instead." << "\n";
     }
     readFromNode(reader["charuco_square_length"], mCapParams.charucoSquareLength);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);

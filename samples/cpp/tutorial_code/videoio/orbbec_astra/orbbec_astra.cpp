@@ -12,7 +12,7 @@
 using namespace cv;
 using std::cout;
 using std::cerr;
-using std::endl;
+using "\n";
 
 
 // Stores frames along with their timestamps

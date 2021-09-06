@@ -200,7 +200,7 @@ nocamera:
         if (cmd.has("cpu_mode"))
         {
             ocl::setUseOpenCL(false);
-            std::cout << "OpenCL was disabled" << std::endl;
+            std::cout << "OpenCL was disabled" << "\n";
         }
         for(int i = 0; i <= LOOP_NUM; i ++)
         {

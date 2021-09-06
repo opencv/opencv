@@ -547,7 +547,7 @@ void cv::gimpl::FluidAgent::debug(std::ostream &os)
     {
         out_buf->debug(os);
     }
-    std::cout << "}}" << std::endl;
+    std::cout << "}}" << "\n";
 }
 
 // GCPUExcecutable implementation //////////////////////////////////////////////
@@ -855,7 +855,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
     }
 
     // Actually initialize Fluid buffers
-    GAPI_LOG_INFO(NULL, "Initializing " << m_num_int_buffers << " fluid buffer(s)" << std::endl);
+    GAPI_LOG_INFO(NULL, "Initializing " << m_num_int_buffers << " fluid buffer(s)" << "\n");
 
     // After buffers are allocated, repack: ...
     for (auto &agent : m_agents)
@@ -905,7 +905,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
     const std::size_t num_scratch = m_scratch_users.size();
     if (num_scratch)
     {
-        GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << std::endl);
+        GAPI_LOG_INFO(NULL, "Initializing " << num_scratch << " scratch buffer(s)" << "\n");
         std::size_t last_scratch_id = 0;
 
         for (auto i : m_scratch_users)

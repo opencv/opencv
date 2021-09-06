@@ -81,7 +81,7 @@ int main(void)
     d_value.setTo(cv::Scalar(0));
     d_value.colRange(10, 50).setTo(cv::Scalar(15));
     auto count = thrust::count(GpuMatBeginItr<int>(d_value), GpuMatEndItr<int>(d_value), 15);
-    std::cout << count << std::endl;
+    std::cout << count << "\n";
   }
   //! [count_value]
 

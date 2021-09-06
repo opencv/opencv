@@ -2265,7 +2265,7 @@ int Chessboard::Board::detectMarkers(cv::InputArray image)
                 cell->marker = noise-signal > (noise-reference)*0.5;
             if(cell->marker)
                 count++;
-            // std::cout << x << "/" << y << " signal " << signal << " noise " << noise << " reference " << reference  << " has marker " << int(cell->marker) << std::endl;
+            // std::cout << x << "/" << y << " signal " << signal << " noise " << noise << " reference " << reference  << " has marker " << int(cell->marker) << "\n";
         }
     }
     return count;
@@ -3379,7 +3379,7 @@ cv::Scalar Chessboard::Board::calcEdgeSharpness(cv::InputArray _img,float rise_d
     }
     if(count == 0)
     {
-        std::cout  <<"calcEdgeSharpness: checkerboard too small for calculation." << std::endl;
+        std::cout  <<"calcEdgeSharpness: checkerboard too small for calculation." << "\n";
         return cv::Scalar::all(9999);
     }
     sharpness = sharpness/float(count);

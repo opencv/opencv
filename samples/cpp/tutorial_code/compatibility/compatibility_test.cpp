@@ -14,6 +14,6 @@ int main(int /*argc*/, const char** /*argv*/)
     std::cout
         << (int)CV_LOAD_IMAGE_GRAYSCALE
         << (int)CV_CAP_FFMPEG
-        << std::endl;
+        << "\n";
     return 0;
 }

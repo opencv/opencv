@@ -77,7 +77,7 @@ int main( int argc, const char** argv )
     image = imread(samples::findFile(inputImage), IMREAD_GRAYSCALE);
     if(image.empty())
     {
-        std::cerr << "Cannot read image file: " << inputImage << std::endl;
+        std::cerr << "Cannot read image file: " << inputImage << "\n";
         return -1;
     }
 

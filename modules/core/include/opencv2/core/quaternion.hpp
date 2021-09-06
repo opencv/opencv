@@ -201,9 +201,9 @@ template <typename _Tp> std::ostream& operator<<(std::ostream&, const Quat<_Tp>&
  * Three ways to get an element in Quaternion
  * ```
  * Quatf q(1,2,3,4);
- * std::cout << q.w << std::endl; // w=1, x=2, y=3, z=4
- * std::cout << q[0] << std::endl; // q[0]=1, q[1]=2, q[2]=3, q[3]=4
- * std::cout << q.at(0) << std::endl;
+ * std::cout << q.w << "\n"; // w=1, x=2, y=3, z=4
+ * std::cout << q[0] << "\n"; // q[0]=1, q[1]=2, q[2]=3, q[3]=4
+ * std::cout << q.at(0) << "\n";
  * ```
  */
 template <typename _Tp>
@@ -1194,7 +1194,7 @@ public:
      * For example
      * ```
      * Quatd q{1, 2, 3, 4};
-     * std::cout << -q << std::endl; // [-1, -2, -3, -4]
+     * std::cout << -q << "\n"; // [-1, -2, -3, -4]
      * ```
      */
     Quat<_Tp> operator-() const;
@@ -1213,7 +1213,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
-     * std::cout << p + q << std::endl; //[6, 8, 10, 12]
+     * std::cout << p + q << "\n"; //[6, 8, 10, 12]
      * ```
      */
     Quat<_Tp> operator+(const Quat<_Tp>&) const;
@@ -1227,7 +1227,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
      * p += q; // equivalent to p = p + q
-     * std::cout << p << std::endl; //[6, 8, 10, 12]
+     * std::cout << p << "\n"; //[6, 8, 10, 12]
      *
      * ```
      */
@@ -1241,7 +1241,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
-     * std::cout << p - q << std::endl; //[-4, -4, -4, -4]
+     * std::cout << p - q << "\n"; //[-4, -4, -4, -4]
      * ```
      */
     Quat<_Tp> operator-(const Quat<_Tp>&) const;
@@ -1255,7 +1255,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
      * p -= q; // equivalent to p = p - q
-     * std::cout << p << std::endl; //[-4, -4, -4, -4]
+     * std::cout << p << "\n"; //[-4, -4, -4, -4]
      *
      * ```
      */
@@ -1281,7 +1281,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
      * p *= q; // equivalent to p = p * q
-     * std::cout << p << std::endl; //[-60, 12, 30, 24]
+     * std::cout << p << "\n"; //[-60, 12, 30, 24]
      * ```
      */
     Quat<_Tp>& operator*=(const Quat<_Tp>&);
@@ -1305,7 +1305,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * double s = 2.0;
      * p *= s; // equivalent to p = p * s
-     * std::cout << p << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * std::cout << p << "\n"; //[2.0, 4.0, 6.0, 8.0]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1330,7 +1330,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
-     * std::cout << p * q << std::endl; //[-60, 12, 30, 24]
+     * std::cout << p * q << "\n"; //[-60, 12, 30, 24]
      * ```
      */
     Quat<_Tp> operator*(const Quat<_Tp>&) const;
@@ -1354,7 +1354,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * double s = 2.0;
      * p /= s; // equivalent to p = p / s
-     * std::cout << p << std::endl; //[0.5, 1, 1.5, 2]
+     * std::cout << p << "\n"; //[0.5, 1, 1.5, 2]
      * ```
      * @note the type of scalar should be equal to this quaternion.
      */
@@ -1377,7 +1377,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
-     * std::cout << p / q << std::endl; // equivalent to p * q.inv()
+     * std::cout << p / q << "\n"; // equivalent to p * q.inv()
      * ```
      */
     Quat<_Tp> operator/(const Quat<_Tp>&) const;
@@ -1401,7 +1401,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * double s = 2.0;;
      * p /= s; // equivalent to p = p / s
-     * std::cout << p << std::endl; //[0.5, 1.0, 1.5, 2.0]
+     * std::cout << p << "\n"; //[0.5, 1.0, 1.5, 2.0]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1425,7 +1425,7 @@ public:
      * Quatd p{1, 2, 3, 4};
      * Quatd q{5, 6, 7, 8};
      * p /= q; // equivalent to p = p * q.inv()
-     * std::cout << p << std::endl;
+     * std::cout << p << "\n";
      * ```
      */
     Quat<_Tp>& operator/=(const Quat<_Tp>&);
@@ -1442,7 +1442,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double scalar = 2.0;
-     * std::cout << scalar - p << std::endl; //[1.0, -2, -3, -4]
+     * std::cout << scalar - p << "\n"; //[1.0, -2, -3, -4]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1457,7 +1457,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double scalar = 2.0;
-     * std::cout << p - scalar << std::endl; //[-1.0, 2, 3, 4]
+     * std::cout << p - scalar << "\n"; //[-1.0, 2, 3, 4]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1472,7 +1472,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double scalar = 2.0;
-     * std::cout << scalar + p << std::endl; //[3.0, 2, 3, 4]
+     * std::cout << scalar + p << "\n"; //[3.0, 2, 3, 4]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1487,7 +1487,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double scalar = 2.0;
-     * std::cout << p + scalar << std::endl; //[3.0, 2, 3, 4]
+     * std::cout << p + scalar << "\n"; //[3.0, 2, 3, 4]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1512,7 +1512,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double s = 2.0;
-     * std::cout << s * p << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * std::cout << s * p << "\n"; //[2.0, 4.0, 6.0, 8.0]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */
@@ -1537,7 +1537,7 @@ public:
      * ```
      * Quatd p{1, 2, 3, 4};
      * double s = 2.0;
-     * std::cout << p * s << std::endl; //[2.0, 4.0, 6.0, 8.0]
+     * std::cout << p * s << "\n"; //[2.0, 4.0, 6.0, 8.0]
      * ```
      * @note the type of scalar should be equal to the quaternion.
      */

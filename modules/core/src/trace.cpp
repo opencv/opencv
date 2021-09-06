@@ -238,9 +238,9 @@ Region::LocationExtraData::LocationExtraData(const LocationStaticStorage& locati
     static int g_location_id_counter = 0;
     global_location_id = CV_XADD(&g_location_id_counter, 1) + 1;
     CV_LOG("Register location: " << global_location_id << " (" << (void*)&location << ")"
-            << std::endl << "    file: " << location.filename
-            << std::endl << "    line: " << location.line
-            << std::endl << "    name: " << location.name);
+            << "\n" << "    file: " << location.filename
+            << "\n" << "    line: " << location.line
+            << "\n" << "    name: " << location.name);
 #ifdef OPENCV_WITH_ITT
     if (isITTEnabled())
     {
@@ -735,13 +735,13 @@ void TraceManagerThreadLocal::dumpStack(std::ostream& out, bool onlyFunctions) c
         {
             if (!onlyFunctions || (location->flags & REGION_FLAG_FUNCTION))
             {
-                ss << _spaces(4*depth) << location->name << std::endl;
+                ss << _spaces(4*depth) << location->name << "\n";
                 depth++;
             }
         }
         else
         {
-            ss << _spaces(4*depth) << "<unknown>" << std::endl;
+            ss << _spaces(4*depth) << "<unknown>" << "\n";
             depth++;
         }
     }
@@ -758,8 +758,8 @@ public:
         out(filename.c_str(), std::ios::trunc),
         name(filename)
     {
-        out << "#description: OpenCV trace file" << std::endl;
-        out << "#version: 1.0" << std::endl;
+        out << "#description: OpenCV trace file" << "\n";
+        out << "#version: 1.0" << "\n";
     }
     ~AsyncTraceStorage()
     {
@@ -787,8 +787,8 @@ public:
         out(filename.c_str(), std::ios::trunc),
         name(filename)
     {
-        out << "#description: OpenCV trace file" << std::endl;
-        out << "#version: 1.0" << std::endl;
+        out << "#description: OpenCV trace file" << "\n";
+        out << "#version: 1.0" << "\n";
     }
     ~SyncTraceStorage()
     {

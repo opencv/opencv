@@ -141,7 +141,7 @@ TEST(undistortPoints, regression_14583)
                         camera_distort, cv::Mat(), camera_interior);
 
     EXPECT_NEAR(distort_pt.at<Vec2f>(0)[0], undistort_pt.at<Vec2f>(0)[0], col / 2)
-        << "distort point: " << distort_pt << std::endl
+        << "distort point: " << distort_pt << "\n"
         << "undistort point: " << undistort_pt;
 }
 

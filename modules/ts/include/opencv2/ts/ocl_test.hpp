@@ -99,7 +99,7 @@ do \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
     EXPECT_LE(TestUtils::checkNorm2(mat1, mat2), eps) \
-        << "Size: " << mat1.size() << std::endl; \
+        << "Size: " << mat1.size() << "\n"; \
 } while ((void)0, 0)
 
 #define EXPECT_MAT_NEAR_RELATIVE(mat1, mat2, eps) \
@@ -108,7 +108,7 @@ do \
     ASSERT_EQ((mat1).type(), (mat2).type()); \
     ASSERT_EQ((mat1).size(), (mat2).size()); \
     EXPECT_LE(TestUtils::checkNormRelative((mat1), (mat2)), eps) \
-        << "Size: " << (mat1).size() << std::endl; \
+        << "Size: " << (mat1).size() << "\n"; \
 } while ((void)0, 0)
 
 #define EXPECT_MAT_N_DIFF(mat1, mat2, num) \
@@ -119,7 +119,7 @@ do \
     Mat diff; \
     absdiff(mat1, mat2, diff); \
     EXPECT_LE(countNonZero(diff.reshape(1)), num) \
-    << "Size: " << mat1.size() << std::endl; \
+    << "Size: " << mat1.size() << "\n"; \
 } while ((void)0, 0)
 
 #define OCL_EXPECT_MAT_N_DIFF(name, eps) \
@@ -134,11 +134,11 @@ do \
         mask(cv::Rect(1, 1, mask.cols - 2, mask.rows - 2)).setTo(0); \
     cv::threshold(diff, binary, (double)eps, 255, cv::THRESH_BINARY); \
     EXPECT_LE(countNonZero(binary.reshape(1)), (int)(binary.cols*binary.rows*5/1000)) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
     binary.convertTo(binary_8, mask.type()); \
     binary_8 = binary_8 & mask; \
     EXPECT_LE(countNonZero(binary_8.reshape(1)), (int)((binary_8.cols+binary_8.rows)/100)) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
 } while ((void)0, 0)
 
 #define OCL_EXPECT_MATS_NEAR(name, eps) \
@@ -147,7 +147,7 @@ do \
     ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
     ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
     EXPECT_LE(TestUtils::checkNorm2(name ## _roi, u ## name ## _roi), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
     Point _offset; \
     Size _wholeSize; \
     u ## name ## _roi.locateROI(_wholeSize, _offset); \
@@ -156,7 +156,7 @@ do \
     ASSERT_EQ(name.type(), u ## name.type()); \
     ASSERT_EQ(name.size(), u ## name.size()); \
     EXPECT_LE(TestUtils::checkNorm2(name, u ## name, _mask), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
 } while ((void)0, 0)
 
 #define OCL_EXPECT_MATS_NEAR_RELATIVE(name, eps) \
@@ -165,7 +165,7 @@ do \
     ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
     ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
     EXPECT_LE(TestUtils::checkNormRelative(name ## _roi, u ## name ## _roi), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
     Point _offset; \
     Size _wholeSize; \
     name ## _roi.locateROI(_wholeSize, _offset); \
@@ -174,7 +174,7 @@ do \
     ASSERT_EQ(name.type(), u ## name.type()); \
     ASSERT_EQ(name.size(), u ## name.size()); \
     EXPECT_LE(TestUtils::checkNormRelative(name, u ## name, _mask), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
 } while ((void)0, 0)
 
 //for sparse matrix
@@ -184,7 +184,7 @@ do \
     ASSERT_EQ(name ## _roi.type(), u ## name ## _roi.type()); \
     ASSERT_EQ(name ## _roi.size(), u ## name ## _roi.size()); \
     EXPECT_LE(TestUtils::checkNormRelativeSparse(name ## _roi, u ## name ## _roi), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
     Point _offset; \
     Size _wholeSize; \
     name ## _roi.locateROI(_wholeSize, _offset); \
@@ -193,7 +193,7 @@ do \
     ASSERT_EQ(name.type(), u ## name.type()); \
     ASSERT_EQ(name.size(), u ## name.size()); \
     EXPECT_LE(TestUtils::checkNormRelativeSparse(name, u ## name, _mask), eps) \
-        << "Size: " << name ## _roi.size() << std::endl; \
+        << "Size: " << name ## _roi.size() << "\n"; \
 } while ((void)0, 0)
 
 #undef EXPECT_MAT_SIMILAR
@@ -203,7 +203,7 @@ do \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
     EXPECT_LE(checkSimilarity(mat1, mat2), eps) \
-        << "Size: " << mat1.size() << std::endl; \
+        << "Size: " << mat1.size() << "\n"; \
 } while ((void)0, 0)
 
 using perf::MatDepth;

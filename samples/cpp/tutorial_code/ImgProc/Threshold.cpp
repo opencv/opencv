@@ -58,7 +58,7 @@ int main( int argc, char** argv )
 
     if (src.empty())
     {
-        cout << "Cannot read the image: " << imageName << std::endl;
+        cout << "Cannot read the image: " << imageName << "\n";
         return -1;
     }
 

@@ -58,12 +58,12 @@ namespace internal {
 void assertSupportedConfiguration(bool parametersSupported)
 {
     if (!isSupportedConfiguration()) {
-        std::cerr << "internal error: attempted to use an unavailable function" << std::endl;
+        std::cerr << "internal error: attempted to use an unavailable function" << "\n";
         std::abort();
     }
 
     if (!parametersSupported) {
-        std::cerr << "internal error: attempted to use a function with unsupported parameters" << std::endl;
+        std::cerr << "internal error: attempted to use a function with unsupported parameters" << "\n";
         std::abort();
     }
 }

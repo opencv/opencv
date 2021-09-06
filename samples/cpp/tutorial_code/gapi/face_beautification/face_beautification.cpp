@@ -801,7 +801,7 @@ int main(int argc, char** argv)
 //! [str_loop]
         }
         std::cout << "Processed " << frames << " frames in " << avg.elapsed()
-                  << " (" << avg.fps(frames) << " FPS)" << std::endl;
+                  << " (" << avg.fps(frames) << " FPS)" << "\n";
     }
     else // serial mode:
     {
@@ -816,7 +816,7 @@ int main(int argc, char** argv)
 //! [bef_cap]
         else if (!cap.open(0))
         {
-            std::cout << "No input available" << std::endl;
+            std::cout << "No input available" << "\n";
             return 1;
         }
         if (flgPerformance == true)
@@ -889,7 +889,7 @@ int main(int argc, char** argv)
         }
 //! [bef_loop]
         std::cout << "Processed " << frames << " frames in " << avg.elapsed()
-                  << " (" << avg.fps(frames) << " FPS)" << std::endl;
+                  << " (" << avg.fps(frames) << " FPS)" << "\n";
     }
     return 0;
 }
@@ -899,7 +899,7 @@ int main()
 {
     std::cerr << "This tutorial code requires G-API module "
                  "with Inference Engine backend to run"
-              << std::endl;
+              << "\n";
     return 1;
 }
 #endif  // HAVE_OPECV_GAPI

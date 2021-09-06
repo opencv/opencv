@@ -207,7 +207,7 @@ void BaseHoughLineTest::run_test(int type, const char* xml_name)
 #else
     FileStorage fs(xml, FileStorage::READ);
     FileNode node = fs[test_case_name];
-    ASSERT_FALSE(node.empty()) << "Missing test data: " << test_case_name << std::endl << "XML: " << xml;
+    ASSERT_FALSE(node.empty()) << "Missing test data: " << test_case_name << "\n" << "XML: " << xml;
 
     Mat exp_lines_;
     read(fs[test_case_name], exp_lines_, Mat());

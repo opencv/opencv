@@ -594,7 +594,7 @@ MultiPartInputFile::Data::chunkOffsetReconstruction(OPENEXR_IMF_INTERNAL_NAMESPA
                 OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::read <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (is, levelx);
                 OPENEXR_IMF_INTERNAL_NAMESPACE::Xdr::read <OPENEXR_IMF_INTERNAL_NAMESPACE::StreamIO> (is, levely);
                 
-                //std::cout << "chunk_start for " << tilex <<',' << tiley << ',' << levelx << ' ' << levely << ':' << chunk_start << std::endl;
+                //std::cout << "chunk_start for " << tilex <<',' << tiley << ',' << levelx << ' ' << levely << ':' << chunk_start << "\n";
                     
                 
                 if(!tileOffsets[partNumber])
@@ -650,7 +650,7 @@ MultiPartInputFile::Data::chunkOffsetReconstruction(OPENEXR_IMF_INTERNAL_NAMESPA
                 }
                 
                 parts[partNumber]->chunkOffsets[y_coordinate]=chunk_start;
-                //std::cout << "chunk_start for " << y_coordinate << ':' << chunk_start << std::endl;
+                //std::cout << "chunk_start for " << y_coordinate << ':' << chunk_start << "\n";
                 
                 if(header.type()==DEEPSCANLINE)
                 {
@@ -678,7 +678,7 @@ MultiPartInputFile::Data::chunkOffsetReconstruction(OPENEXR_IMF_INTERNAL_NAMESPA
             
             chunk_start+=size_of_chunk;
             
-            //std::cout << " next chunk +"<<size_of_chunk << " = " << chunk_start << std::endl;
+            //std::cout << " next chunk +"<<size_of_chunk << " = " << chunk_start << "\n";
             
             is.seekg(chunk_start);
             

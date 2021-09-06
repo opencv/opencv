@@ -111,15 +111,15 @@ public:
                     if (!(0 <= index && index < outPlaneTotal))
                     {
                         std::cerr
-                            << "i_n=" << i_n << std::endl
-                            << "i_c=" << i_c << std::endl
-                            << "i_wh=" << i_wh << std::endl
-                            << "index=" << index << std::endl
-                            << "maxval=" << inptr[i_wh] << std::endl
-                            << "outPlaneTotal=" << outPlaneTotal << std::endl
-                            << "input.size=" << input.size << std::endl
-                            << "indices.size=" << indices.size << std::endl
-                            << "outBlob=" << outBlob.size << std::endl
+                            << "i_n=" << i_n << "\n"
+                            << "i_c=" << i_c << "\n"
+                            << "i_wh=" << i_wh << "\n"
+                            << "index=" << index << "\n"
+                            << "maxval=" << inptr[i_wh] << "\n"
+                            << "outPlaneTotal=" << outPlaneTotal << "\n"
+                            << "input.size=" << input.size << "\n"
+                            << "indices.size=" << indices.size << "\n"
+                            << "outBlob=" << outBlob.size << "\n"
                             ;
                         CV_Assert(0 <= index && index < outPlaneTotal);
                     }

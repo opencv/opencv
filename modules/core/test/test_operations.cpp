@@ -474,7 +474,7 @@ bool CV_OperationsTest::TestSubMatAccess()
         T_bs(Range(0,3),Range(0,1)) = 1.0*Mat(cdir.cross(ydir));
         T_bs(Range(0,3),Range(3,4)) = 1.0*Mat(fpt);
         T_bs(3,3) = 1.0;
-        //std::cout << "[Nav Grok] S frame =" << std::endl << T_bs << std::endl;
+        //std::cout << "[Nav Grok] S frame =" << "\n" << T_bs << "\n";
 
         // set up display coords, really just the S frame
         std::vector<float>coords;
@@ -482,7 +482,7 @@ bool CV_OperationsTest::TestSubMatAccess()
         for (int i=0; i<16; i++)
         {
             coords.push_back(T_bs(i));
-            //std::cout << T_bs1(i) << std::endl;
+            //std::cout << T_bs1(i) << "\n";
         }
         CV_Assert( cvtest::norm(coords, T_bs.reshape(1,1), NORM_INF) == 0 );
     }
@@ -1429,7 +1429,7 @@ PARAM_TEST_CASE(sortIdx, MatDepth, SortRowCol, SortOrder, Size, bool)
         {
             int nextIdx = idx((int)i);
             T value = values(nextIdx);
-            ASSERT_EQ(false, processed[nextIdx]) << "Indexes must be unique. i=" << i << " idx=" << nextIdx << std::endl << idx;
+            ASSERT_EQ(false, processed[nextIdx]) << "Indexes must be unique. i=" << i << " idx=" << nextIdx << "\n" << idx;
             processed[nextIdx] = true;
             if ((flags & SORT_DESCENDING) == SORT_DESCENDING)
                 ASSERT_GE(prevValue, value) << "i=" << i << " prevIdx=" << prevIdx << " idx=" << nextIdx;
@@ -1510,13 +1510,13 @@ TEST(Core_sortIdx, regression_8941)
     cv::Mat result;
     cv::sortIdx(src.col(0), result, CV_SORT_EVERY_COLUMN | CV_SORT_ASCENDING);
 #if 0
-    std::cout << src.col(0) << std::endl;
-    std::cout << result << std::endl;
+    std::cout << src.col(0) << "\n";
+    std::cout << result << "\n";
 #endif
     ASSERT_EQ(expected.size(), result.size());
     EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
-        "result=" << std::endl << result << std::endl <<
-        "expected=" << std::endl << expected;
+        "result=" << "\n" << result << "\n" <<
+        "expected=" << "\n" << expected;
 }
 
 TEST(Core_Mat, augmentation_operations_9688)

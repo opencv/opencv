@@ -93,9 +93,9 @@ public:
         {
             #ifndef NDEBUG
             if (!std::strcmp(type, "INFO"))
-                std::cout << sstream.str() << std::endl;
+                std::cout << sstream.str() << "\n";
             else
-                std::cerr << sstream.str() << std::endl;
+                std::cerr << sstream.str() << "\n";
             #endif
         }
     }

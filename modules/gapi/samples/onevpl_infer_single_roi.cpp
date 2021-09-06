@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
     if (!output.empty()) {
         auto ext = output.find_last_of(".");
         if (ext == std::string::npos || (output.substr(ext + 1) != "avi")) {
-            std::cerr << "Output file should have *.avi extension for output video" << std::endl;
+            std::cerr << "Output file should have *.avi extension for output video" << "\n";
             return -1;
         }
     }
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
             source_cfgs.push_back(cfg::create_from_string(line));
         }
     } catch (const std::exception& ex) {
-        std::cerr << "Invalid cfg parameter: " << ex.what() << std::endl;
+        std::cerr << "Invalid cfg parameter: " << ex.what() << "\n";
         return -1;
     }
 
@@ -210,9 +210,9 @@ int main(int argc, char *argv[]) {
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     try {
         cap = cv::gapi::wip::make_onevpl_src(file_path, source_cfgs);
-        std::cout << "oneVPL source desription: " << cap->descr_of() << std::endl;
+        std::cout << "oneVPL source desription: " << cap->descr_of() << "\n";
     } catch (const std::exception& ex) {
-        std::cerr << "Cannot create source: " << ex.what() << std::endl;
+        std::cerr << "Cannot create source: " << ex.what() << "\n";
         return -1;
     }
 
@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
         pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
                 .compileStreaming(cv::compile_args(kernels, networks));
     } catch (const std::exception& ex) {
-        std::cerr << "Exception occured during pipeline construction: " << ex.what() << std::endl;
+        std::cerr << "Exception occured during pipeline construction: " << ex.what() << "\n";
         return -1;
     }
     // The execution part
@@ -263,9 +263,9 @@ int main(int argc, char *argv[]) {
         framesCount++;
     }
     t.stop();
-    std::cout << "Elapsed time: " << t.getTimeSec() << std::endl;
-    std::cout << "FPS: " << framesCount /  t.getTimeSec() << std::endl;
-    std::cout << "framesCount: " << framesCount << std::endl;
+    std::cout << "Elapsed time: " << t.getTimeSec() << "\n";
+    std::cout << "FPS: " << framesCount /  t.getTimeSec() << "\n";
+    std::cout << "framesCount: " << framesCount << "\n";
 
     return 0;
 }

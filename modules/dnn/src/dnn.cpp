@@ -3224,14 +3224,14 @@ struct Net::Impl : public detail::NetImplBase
                                 m = u.getMat(ACCESS_READ);
                             if (!checkRange(m))
                             {
-                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << "\n";
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << "\n";
                                 fail = true;
                             }
                             else if (!checkRange(m, true, NULL, -1e6, 1e6))
                             {
-                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << "\n";
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << "\n";
                                 fail = true;
                             }
                         }
@@ -3245,8 +3245,8 @@ struct Net::Impl : public detail::NetImplBase
                                     convertFp16(u, m);
                                 else
                                     m = u.getMat(ACCESS_READ);
-                                std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                                std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << "\n";
                             }
                             for (size_t i = 0; i < umat_outputBlobs.size(); ++i)
                             {
@@ -3256,8 +3256,8 @@ struct Net::Impl : public detail::NetImplBase
                                     convertFp16(u, m);
                                 else
                                     m = u.getMat(ACCESS_READ);
-                                std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                                std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << "\n";
                             }
                             for (size_t i = 0; i < umat_internalBlobs.size(); ++i)
                             {
@@ -3267,8 +3267,8 @@ struct Net::Impl : public detail::NetImplBase
                                     convertFp16(u, m);
                                 else
                                     m = u.getMat(ACCESS_READ);
-                                std::cout << "INTERNAL " << i << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << cv::typeToString(u.type()) << " " << m.reshape(1, 1) << std::endl;
+                                std::cout << "INTERNAL " << i << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << cv::typeToString(u.type()) << " " << m.reshape(1, 1) << "\n";
                             }
                             if (DNN_CHECK_NAN_INF_RAISE_ERROR)
                                 CV_Assert(!fail);
@@ -3300,14 +3300,14 @@ struct Net::Impl : public detail::NetImplBase
                             const Mat& m = ld.outputBlobs[i];
                             if (!checkRange(m))
                             {
-                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << "\n";
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << "\n";
                                 fail = true;
                             }
                             else if (!checkRange(m, true, NULL, -1e6, 1e6))
                             {
-                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                                std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                                std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << "\n";
+                                std::cerr << "output id=" << i << " output shape=" << shape(m) << "\n";
                                 fail = true;
                             }
                         }
@@ -3318,24 +3318,24 @@ struct Net::Impl : public detail::NetImplBase
                                 const Mat* pM = ld.inputBlobs[i];
                                 if (!pM)
                                 {
-                                    std::cout << "INPUT " << i << " is NULL" << std::endl;
+                                    std::cout << "INPUT " << i << " is NULL" << "\n";
                                     continue;
                                 }
                                 const Mat& m = *pM;
-                                std::cout << "INPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                                std::cout << "INPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << "\n";
                             }
                             for (size_t i = 0; i < ld.outputBlobs.size(); ++i)
                             {
                                 const Mat& m = ld.outputBlobs[i];
-                                std::cout << "OUTPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                                std::cout << "OUTPUT " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << "\n";
                             }
                             for (size_t i = 0; i < ld.internals.size(); ++i)
                             {
                                 const Mat& m = ld.internals[i];
-                                std::cout << "INTERNAL " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << std::endl;
-                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << std::endl;
+                                std::cout << "INTERNAL " << i << " " << cv::typeToString(m.type()) << " " << shape(m) << "\n";
+                                if (DNN_CHECK_NAN_INF_DUMP) std::cout << m.reshape(1, 1) << "\n";
                             }
                             if (DNN_CHECK_NAN_INF_RAISE_ERROR)
                                 CV_Assert(!fail);
@@ -3739,12 +3739,12 @@ struct Net::Impl : public detail::NetImplBase
         catch (const std::exception& e)
         {
             std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
-            out << "Exception: " << e.what() << std::endl;
+            out << "Exception: " << e.what() << "\n";
         }
         catch (...)
         {
             std::ofstream out((dumpFileName + ".error").c_str(), std::ios::out);
-            out << "Can't dump: unknown exception" << std::endl;
+            out << "Can't dump: unknown exception" << "\n";
         }
 #endif
     }

@@ -1129,9 +1129,9 @@ static void check_resize_area(const Mat& expected, const Mat& actual, double tol
                 int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
                 int cmin = MAX(dx - radius, 0), cmax = MIN(dx + radius, dsize.width);
 
-                std::cout << "Abs diff:" << std::endl << diff << std::endl;
-                std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
-                std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                std::cout << "Abs diff:" << "\n" << diff << "\n";
+                std::cout << "actual result:\n" << actual(Range(rmin, rmax), Range(cmin, cmax)) << "\n";
+                std::cout << "expected result:\n" << expected(Range(rmin, rmax), Range(cmin, cmax)) << "\n";
 
                 next = false;
             }

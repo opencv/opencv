@@ -214,7 +214,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
         }
     }
 
-    os << "}" << std::endl;
+    os << "}" << "\n";
 }
 
 void dumpDot(ade::passes::PassContext &ctx, std::ostream& os)
@@ -234,7 +234,7 @@ void dumpDotToFile(ade::passes::PassContext &ctx, const std::string& dump_path)
     if (dump_file.is_open())
     {
         dumpDot(ctx, dump_file);
-        dump_file << std::endl;
+        dump_file << "\n";
     }
 }
 

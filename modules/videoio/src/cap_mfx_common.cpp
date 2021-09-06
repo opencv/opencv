@@ -153,7 +153,7 @@ mfxFrameSurface1 *SurfacePool::getFreeSurface()
         sleep_ms(10);
     }
     while((cv::getTickCount() - start) / cv::getTickFrequency() < getPoolTimeoutSec()); // seconds
-    DBG(cout << "No free surface!" << std::endl);
+    DBG(cout << "No free surface!" << "\n");
     return 0;
 }
 
@@ -162,7 +162,7 @@ mfxFrameSurface1 *SurfacePool::getFreeSurface()
 ReadBitstream::ReadBitstream(const char *filename, size_t maxSize) : drain(false)
 {
     input.open(filename, std::ios::in | std::ios::binary);
-    DBG(cout << "Open " << filename << " -> " << input.is_open() << std::endl);
+    DBG(cout << "Open " << filename << " -> " << input.is_open() << "\n");
     memset(&stream, 0, sizeof(stream));
     stream.MaxLength = (mfxU32)maxSize;
     stream.Data = new mfxU8[stream.MaxLength];
@@ -207,7 +207,7 @@ bool ReadBitstream::read()
 WriteBitstream::WriteBitstream(const char * filename, size_t maxSize)
 {
     output.open(filename, std::ios::out | std::ios::binary);
-    DBG(cout << "BS Open " << filename << " -> " << output.is_open() << std::endl);
+    DBG(cout << "BS Open " << filename << " -> " << output.is_open() << "\n");
     memset(&stream, 0, sizeof(stream));
     stream.MaxLength = (mfxU32)maxSize;
     stream.Data = new mfxU8[stream.MaxLength];

@@ -308,21 +308,21 @@ bool calib::calibDataController::saveCurrentCameraParameters() const
 void calib::calibDataController::printParametersToConsole(std::ostream &output) const
 {
     const char* border = "---------------------------------------------------";
-    output << border << std::endl;
+    output << border << "\n";
     output << "Frames used for calibration: " << std::max(mCalibData->objectPoints.size(), mCalibData->allCharucoCorners.size())
-           << " \t RMS = " << mCalibData->totalAvgErr << std::endl;
+           << " \t RMS = " << mCalibData->totalAvgErr << "\n";
     if(mCalibData->cameraMatrix.at<double>(0,0) == mCalibData->cameraMatrix.at<double>(1,1))
-        output << "F = " << mCalibData->cameraMatrix.at<double>(1,1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(1) << std::endl;
+        output << "F = " << mCalibData->cameraMatrix.at<double>(1,1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(1) << "\n";
     else
         output << "Fx = " << mCalibData->cameraMatrix.at<double>(0,0) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(0) << " \t "
-               << "Fy = " << mCalibData->cameraMatrix.at<double>(1,1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(1) << std::endl;
+               << "Fy = " << mCalibData->cameraMatrix.at<double>(1,1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(1) << "\n";
     output << "Cx = " << mCalibData->cameraMatrix.at<double>(0,2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(2) << " \t"
-           << "Cy = " << mCalibData->cameraMatrix.at<double>(1,2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(3) << std::endl;
-    output << "K1 = " << mCalibData->distCoeffs.at<double>(0) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(4) << std::endl;
-    output << "K2 = " << mCalibData->distCoeffs.at<double>(1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(5) << std::endl;
-    output << "K3 = " << mCalibData->distCoeffs.at<double>(4) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(8) << std::endl;
-    output << "TD1 = " << mCalibData->distCoeffs.at<double>(2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(6) << std::endl;
-    output << "TD2 = " << mCalibData->distCoeffs.at<double>(3) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(7) << std::endl;
+           << "Cy = " << mCalibData->cameraMatrix.at<double>(1,2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(3) << "\n";
+    output << "K1 = " << mCalibData->distCoeffs.at<double>(0) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(4) << "\n";
+    output << "K2 = " << mCalibData->distCoeffs.at<double>(1) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(5) << "\n";
+    output << "K3 = " << mCalibData->distCoeffs.at<double>(4) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(8) << "\n";
+    output << "TD1 = " << mCalibData->distCoeffs.at<double>(2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(6) << "\n";
+    output << "TD2 = " << mCalibData->distCoeffs.at<double>(3) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(7) << "\n";
 }
 
 void calib::calibDataController::updateUndistortMap()

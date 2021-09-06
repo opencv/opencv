@@ -53,7 +53,7 @@ GAPI_FLUID_KERNEL(FAddSimple, TAddSimple, false)
             out[i] = in1[i] + in2[i];
         }
 
-        // std::cout << "}}} " << std::endl;;
+        // std::cout << "}}} " << "\n";;
     }
 };
 
@@ -77,7 +77,7 @@ GAPI_FLUID_KERNEL(FAddCSimple, TAddCSimple, false)
                 //FIXME: it seems that over kernels might need it as well
                 out_row[i] = cv::gapi::own::saturate<uint8_t>(in_row[i] + cval);
             }
-            //std::cout << std::endl;
+            //std::cout << "\n";
         }
     }
 };
@@ -101,7 +101,7 @@ GAPI_FLUID_KERNEL(FAddScalar, TAddScalar, false)
                 std::cout << std::setw(4) << int(in_row[i]);
                 out_row[i] = static_cast<uint8_t>(in_row[i] + cval[0]);
             }
-            std::cout << std::endl;
+            std::cout << "\n";
         }
     }
 };
@@ -125,7 +125,7 @@ GAPI_FLUID_KERNEL(FAddScalarToMat, TAddScalarToMat, false)
                 std::cout << std::setw(4) << int(in_row[i]);
                 out_row[i] = static_cast<uint8_t>(in_row[i] + cval[0]);
             }
-            std::cout << std::endl;
+            std::cout << "\n";
         }
     }
 };
@@ -289,17 +289,17 @@ GAPI_FLUID_KERNEL(FId7x7, TId7x7, false)
             // std::cout << "Id7x7 " << l << " of " << lpi << " {{{\n";
             // std::cout << "  a - "; a.debug(std::cout);
             // std::cout << "  o - "; o.debug(std::cout);
-            // std::cout << "}}} " << std::endl;;
+            // std::cout << "}}} " << "\n";;
 
-            // // std::cout << "Id7x7 at " << a.y() << "/L" << l <<  " {{{" << std::endl;
+            // // std::cout << "Id7x7 at " << a.y() << "/L" << l <<  " {{{" << "\n";
             // for (int j = 0; j < Window; j++)
             // {
             //     // std::cout << std::setw(2) << j-(Window-1)/2 << ": ";
             //     for (int i = 0, w = a.length(); i < w; i++)
             //         std::cout << std::setw(4) << int(in[j][i]);
-            //     std::cout << std::endl;
+            //     std::cout << "\n";
             // }
-            // std::cout << "}}}" << std::endl;
+            // std::cout << "}}}" << "\n";
 
             for (int i = 0, w = a.length(); i < w; i++)
                 out[i] = in[(Window-1)/2][i];
@@ -374,7 +374,7 @@ static void split3Row(const cv::gapi::fluid::View   &in,
         // std::cout << "  1 - "; o1.debug(std::cout);
         // std::cout << "  2 - "; o2.debug(std::cout);
         // std::cout << "  3 - "; o3.debug(std::cout);
-        // std::cout << "}}} " << std::endl;;
+        // std::cout << "}}} " << "\n";;
 
         const uint8_t* in_rgb = in.InLine<uint8_t>(l);
               uint8_t* out_r  = o1.OutLine<uint8_t>(l);
@@ -444,7 +444,7 @@ GAPI_FLUID_KERNEL(FSum2MatsAndScalar, TSum2MatsAndScalar, false)
                 std::cout << std::setw(4) << int(in_row2[i]);
                 out_row[i] = static_cast<uint8_t>(in_row1[i] + in_row2[i] + cval[0]);
             }
-            std::cout << std::endl;
+            std::cout << "\n";
         }
     }
 };

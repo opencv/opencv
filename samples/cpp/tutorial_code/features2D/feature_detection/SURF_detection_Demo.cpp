@@ -8,7 +8,7 @@
 using namespace cv;
 using namespace cv::xfeatures2d;
 using std::cout;
-using std::endl;
+using "\n";
 
 int main( int argc, char* argv[] )
 {
@@ -40,7 +40,7 @@ int main( int argc, char* argv[] )
 #else
 int main()
 {
-    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << std::endl;
+    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << "\n";
     return 0;
 }
 #endif

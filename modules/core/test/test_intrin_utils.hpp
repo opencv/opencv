@@ -1935,7 +1935,7 @@ void test_hal_intrin_float16()
 #endif
         ;
 #else
-    std::cout << "SKIP: CV_FP16 is not available" << std::endl;
+    std::cout << "SKIP: CV_FP16 is not available" << "\n";
 #endif
 }
 

@@ -207,13 +207,13 @@ namespace cvtest
         if (device < 0)
         {
             cvtest::DeviceManager::instance().loadAll();
-            std::cout << "Run tests on all supported CUDA devices \n" << std::endl;
+            std::cout << "Run tests on all supported CUDA devices \n" << "\n";
         }
         else
         {
             cvtest::DeviceManager::instance().load(device);
             cv::cuda::DeviceInfo info(device);
-            std::cout << "Run tests on CUDA device " << device << " [" << info.name() << "] \n" << std::endl;
+            std::cout << "Run tests on CUDA device " << device << " [" << info.name() << "] \n" << "\n";
         }
     }
 

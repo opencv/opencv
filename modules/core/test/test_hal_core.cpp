@@ -182,8 +182,8 @@ TEST_P(HAL, mat_decomp)
             EXPECT_TRUE(solveStatus);
             min_ocv_t = std::min(min_ocv_t, t);
         }
-        //std::cout << "x: " << Mat(x.t()) << std::endl;
-        //std::cout << "x0: " << Mat(x0.t()) << std::endl;
+        //std::cout << "x: " << Mat(x.t()) << "\n";
+        //std::cout << "x0: " << Mat(x0.t()) << "\n";
 
         EXPECT_LE(cvtest::norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
             << "x:  " << Mat(x.t())

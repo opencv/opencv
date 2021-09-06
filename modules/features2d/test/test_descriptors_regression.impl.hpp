@@ -97,9 +97,9 @@ protected:
 #if 0
             if (dist > 0)
             {
-                std::cout << "i=" << y << " fail_count=" << failed_count << " dist=" << dist << std::endl;
-                std::cout << "valid: " << validDescriptors.row(y) << std::endl;
-                std::cout << " calc: " << calcDescriptors.row(y) << std::endl;
+                std::cout << "i=" << y << " fail_count=" << failed_count << " dist=" << dist << "\n";
+                std::cout << "valid: " << validDescriptors.row(y) << "\n";
+                std::cout << " calc: " << calcDescriptors.row(y) << "\n";
             }
 #endif
         }
@@ -107,11 +107,11 @@ protected:
         float exact_percents = (100 * (float)exact_count / validDescriptors.rows);
         float failed_percents = (100 * (float)failed_count / validDescriptors.rows);
         std::stringstream ss;
-        ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << std::endl
-                << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << std::endl
+        ss << "Exact count (dist == 0): " << exact_count << " (" << (int)exact_percents << "%)" << "\n"
+                << "Failed count (dist > " << maxDist << "): " << failed_count << " (" << (int)failed_percents << "%)" << "\n"
                 << "Max distance between valid and computed descriptors (" << validDescriptors.size() << "): " << curMaxDist;
         EXPECT_LE(failed_percents, 20.0f);
-        std::cout << ss.str() << std::endl;
+        std::cout << ss.str() << "\n";
     }
 
     void emptyDataTest()
@@ -211,7 +211,7 @@ protected:
             int diff = abs((int)calcKeypoints.size() - (int)keypoints.size());
             if (diff > 0)
             {
-                std::cout << "Keypoints difference: " << diff << std::endl;
+                std::cout << "Keypoints difference: " << diff << "\n";
                 EXPECT_LE(diff, (int)(keypoints.size() * 0.03f));
             }
         }

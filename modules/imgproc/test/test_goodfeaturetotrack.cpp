@@ -48,7 +48,7 @@ enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
 #if 0   //set 1 to switch ON debug message
     #define TEST_MESSAGE( message )   std::cout << message;
-    #define TEST_MESSAGEL( message, val)   std::cout << message << val << std::endl;
+    #define TEST_MESSAGEL( message, val)   std::cout << message << val << "\n";
 #else
     #define TEST_MESSAGE( message )
     #define TEST_MESSAGEL( message, val)

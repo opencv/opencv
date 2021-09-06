@@ -35,7 +35,7 @@ int main(void)
 
     // Run calc Hist
     for(int i=0; i < no_runs; i++){
-        std::cout << "Running iteration # "<< i << std::endl;
+        std::cout << "Running iteration # "<< i << "\n";
         cv::calcHist(&src_new, imgCount, channels, mask, hist, dims, hist_sizes, ranges);
     }
 

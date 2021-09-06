@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
     cv::TickMeter tm;
     cv::Mat out_frame;
     std::size_t frames = 0u;
-    std::cout << "Reading " << input << std::endl;
+    std::cout << "Reading " << input << "\n";
 
     if (run_trad) {
         cv::Mat in_frame;
@@ -211,6 +211,6 @@ int main(int argc, char *argv[])
     }
 
     std::cout << "Processed " << frames << " frames"
-              << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+              << " (" << frames / tm.getTimeSec() << " FPS)" << "\n";
     return 0;
 }

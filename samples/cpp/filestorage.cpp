@@ -8,7 +8,7 @@
 
 using std::string;
 using std::cout;
-using std::endl;
+using "\n";
 using std::cerr;
 using std::ostream;
 using namespace cv;

@@ -126,8 +126,8 @@ int gdal2opencv( const GDALDataType& gdalType, const int& channels ){
             return CV_64FC(channels);
 
         default:
-            std::cout << "Unknown GDAL Data Type" << std::endl;
-            std::cout << "Type: " << GDALGetDataTypeName(gdalType) << std::endl;
+            std::cout << "Unknown GDAL Data Type" << "\n";
+            std::cout << "Type: " << GDALGetDataTypeName(gdalType) << "\n";
             return -1;
     }
 }
@@ -200,8 +200,8 @@ double range_cast( const GDALDataType& gdalType,
         return value;
     }
 
-    std::cout << GDALGetDataTypeName( gdalType ) << std::endl;
-    std::cout << "warning: unknown range cast requested." << std::endl;
+    std::cout << GDALGetDataTypeName( gdalType ) << "\n";
+    std::cout << "warning: unknown range cast requested." << "\n";
     return (value);
 }
 

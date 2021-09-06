@@ -197,7 +197,7 @@ static inline std::string toString(const MatShape& shape, const String& name = "
 }
 static inline void print(const MatShape& shape, const String& name = "")
 {
-    std::cout << toString(shape, name) << std::endl;
+    std::cout << toString(shape, name) << "\n";
 }
 static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
 {

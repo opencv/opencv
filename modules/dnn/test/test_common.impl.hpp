@@ -134,8 +134,8 @@ void normAssertDetections(
         if (!matched)
         {
             std::cout << cv::format("Unmatched prediction: class %d score %f box ",
-                                    testClassId, testScore) << testBox << std::endl;
-            std::cout << "Highest IoU: " << topIoU << std::endl;
+                                    testClassId, testScore) << testBox << "\n";
+            std::cout << "Highest IoU: " << topIoU << "\n";
         }
         EXPECT_TRUE(matched) << comment;
     }
@@ -148,7 +148,7 @@ void normAssertDetections(
             std::cout << cv::format("Unmatched reference: class %d score %f box ",
                                     refClassIds[i], refScores[i]) << refBoxes[i]
                 << " IoU diff: " << refBoxesIoUDiff[i]
-                << std::endl;
+                << "\n";
             EXPECT_LE(refScores[i], confThreshold) << comment;
         }
     }
@@ -207,8 +207,8 @@ void normAssertTextDetections(
             }
         }
         if (!matched) {
-            std::cout << cv::format("Unmatched-det:") << testPoly << std::endl;
-            std::cout << "Highest IoU: " << topIoU << std::endl;
+            std::cout << cv::format("Unmatched-det:") << testPoly << "\n";
+            std::cout << "Highest IoU: " << topIoU << "\n";
         }
         EXPECT_TRUE(matched) << comment;
     }
@@ -217,7 +217,7 @@ void normAssertTextDetections(
     for (uint i = 0; i < gtPolys.size(); ++i)
     {
         if (!matchedRefBoxes[i]) {
-            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << std::endl;
+            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << "\n";
         }
         EXPECT_TRUE(matchedRefBoxes[i]);
     }

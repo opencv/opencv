@@ -243,7 +243,7 @@ int main(int argc, char** argv)
 
         if (!va::openDisplay())
             throw std::runtime_error("Failed to open VA display for CL-VA interoperability");
-        std::cout << "VA display opened successfully" << std::endl;
+        std::cout << "VA display opened successfully" << "\n";
 
         checkIfAvailableYUV420();
 
@@ -254,11 +254,11 @@ int main(int argc, char** argv)
 
         float time = run(infile, outfile1, outfile2, doInterop);
 
-        std::cout << "Interop " << (doInterop ? "ON " : "OFF") << ": processing time, msec: " << time << std::endl;
+        std::cout << "Interop " << (doInterop ? "ON " : "OFF") << ": processing time, msec: " << time << "\n";
     }
     catch (const std::exception& ex)
     {
-        std::cerr << "ERROR: " << ex.what() << std::endl;
+        std::cerr << "ERROR: " << ex.what() << "\n";
     }
 
     va::closeDisplay();

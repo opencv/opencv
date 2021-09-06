@@ -450,7 +450,7 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
       if(distsbuf[0] > maxRectifiedDistance)
       {
 #ifdef DEBUG_CIRCLES
-        std::cout << "Pattern not detected: too large rectified distance" << std::endl;
+        std::cout << "Pattern not detected: too large rectified distance" << "\n";
 #endif
         centers.clear();
         return;
@@ -1563,7 +1563,7 @@ void CirclesGridFinder::getCornerSegments(const std::vector<std::vector<size_t> 
   if (!isClockwise)
   {
 #ifdef DEBUG_CIRCLES
-    std::cout << "Corners are counterclockwise" << std::endl;
+    std::cout << "Corners are counterclockwise" << "\n";
 #endif
     std::reverse(segments.begin(), segments.end());
     std::reverse(cornerIndices.begin(), cornerIndices.end());

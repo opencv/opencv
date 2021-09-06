@@ -103,7 +103,7 @@ GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
 
         std::cout << "Detections:";
         for (auto &&rc : in_obj_rcs) std::cout << ' ' << rc;
-        std::cout << std::endl;
+        std::cout << "\n";
     }
 };
 

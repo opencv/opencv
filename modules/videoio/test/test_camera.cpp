@@ -64,10 +64,10 @@ TEST(DISABLED_videoio_camera, basic)
 {
     VideoCapture capture(0);
     ASSERT_TRUE(capture.isOpened());
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     test_readFrames(capture);
     capture.release();
 }
@@ -85,10 +85,10 @@ TEST(DISABLED_videoio_camera, dshow_convert_rgb_persistency)
     capture.set(CAP_PROP_FPS, 31);
     capture.set(CAP_PROP_CHANNEL, 1);
     capture.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('Y', '1', '6', ' '));
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     ASSERT_DOUBLE_EQ(capture.get(CAP_PROP_CONVERT_RGB), 0);
     capture.release();
 }
@@ -98,12 +98,12 @@ TEST(DISABLED_videoio_camera, v4l_read_mjpg)
     VideoCapture capture(CAP_V4L2);
     ASSERT_TRUE(capture.isOpened());
     ASSERT_TRUE(capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G')));
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     int fourcc = (int)capture.get(CAP_PROP_FOURCC);
-    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << "\n";
     test_readFrames(capture);
     capture.release();
 }
@@ -115,12 +115,12 @@ TEST(DISABLED_videoio_camera, v4l_open_mjpg)
         CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G')
     });
     ASSERT_TRUE(capture.isOpened());
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     int fourcc = (int)capture.get(CAP_PROP_FOURCC);
-    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << "\n";
     test_readFrames(capture);
     capture.release();
 }
@@ -133,12 +133,12 @@ TEST(DISABLED_videoio_camera, v4l_open_mjpg_1280x720)
         CAP_PROP_FRAME_HEIGHT, 720,
     });
     ASSERT_TRUE(capture.isOpened());
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     int fourcc = (int)capture.get(CAP_PROP_FOURCC);
-    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << "\n";
     test_readFrames(capture);
     capture.release();
 }
@@ -149,10 +149,10 @@ TEST(DISABLED_videoio_camera, channel6)
     VideoCapture capture(0);
     ASSERT_TRUE(capture.isOpened());
     capture.set(CAP_PROP_CHANNEL, 6);
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     test_readFrames(capture);
     capture.release();
 }
@@ -161,19 +161,19 @@ TEST(DISABLED_videoio_camera, v4l_read_framesize)
 {
     VideoCapture capture(CAP_V4L2);
     ASSERT_TRUE(capture.isOpened());
-    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << "\n";
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     int fourcc = (int)capture.get(CAP_PROP_FOURCC);
-    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << "\n";
     test_readFrames(capture, 30);
 
     EXPECT_TRUE(capture.set(CAP_PROP_FRAME_WIDTH, 640));
     EXPECT_TRUE(capture.set(CAP_PROP_FRAME_HEIGHT, 480));
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     Mat frame640x480;
     test_readFrames(capture, 30, &frame640x480);
     EXPECT_EQ(640, frame640x480.cols);
@@ -181,9 +181,9 @@ TEST(DISABLED_videoio_camera, v4l_read_framesize)
 
     EXPECT_TRUE(capture.set(CAP_PROP_FRAME_WIDTH, 1280));
     EXPECT_TRUE(capture.set(CAP_PROP_FRAME_HEIGHT, 720));
-    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
-    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
-    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << "\n";
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << "\n";
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << "\n";
     Mat frame1280x720;
     test_readFrames(capture, 30, &frame1280x720);
     EXPECT_EQ(1280, frame1280x720.cols);
@@ -218,7 +218,7 @@ TEST(DISABLED_videoio_camera, waitAny_V4L)
     {
         const auto& name = cameraNames[i];
         int fps = (int)utils::getConfigurationParameterSizeT(cv::format("OPENCV_TEST_CAMERA%d_FPS", (int)i).c_str(), (i & 1) ? fpsDefaultOdd : fpsDefaultEven);
-        std::cout << "Camera[" << i << "] = '" << name << "', fps=" << fps << std::endl;
+        std::cout << "Camera[" << i << "] = '" << name << "', fps=" << fps << "\n";
         VideoCapture cap(name, CAP_V4L);
         ASSERT_TRUE(cap.isOpened()) << name;
         EXPECT_TRUE(cap.set(CAP_PROP_FRAME_WIDTH, frameSize.width)) << name;
@@ -242,7 +242,7 @@ TEST(DISABLED_videoio_camera, waitAny_V4L)
             EXPECT_FALSE(cameraReady.empty());
             for (int idx : cameraReady)
             {
-                //std::cout << "Reading frame from camera: " << idx << std::endl;
+                //std::cout << "Reading frame from camera: " << idx << "\n";
                 ASSERT_TRUE(idx >= 0 && (size_t)idx < cameras.size()) << idx;
                 VideoCapture& c = cameras[idx];
                 Mat frame;

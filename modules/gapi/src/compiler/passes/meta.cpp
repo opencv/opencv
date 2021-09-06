@@ -101,7 +101,7 @@ void cv::gimpl::passes::inferMeta(ade::passes::PassContext &ctx, bool meta_is_in
                 //{
                 //    GAPI_LOG_INFO(NULL,
                 //                  "!!! Output object has an initialized meta - "
-                //                  "how it is possible today?" << std::endl; );
+                //                  "how it is possible today?" << "\n"; );
                 //    if (output_meta != out_metas.at(output_port))
                 //    {
                 //      util::throw_error(std::logic_error("Fatal: meta mismatch"));

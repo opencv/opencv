@@ -150,7 +150,7 @@ OCL_PERF_TEST_P(StitchingWarpersFixture, StitchingWarpers_Warp,
     namedWindow("dst", WINDOW_NORMAL);
     imshow("src", src);
     imshow("dst", dst);
-    std::cout << dst.size() << " " << dst.size().area() << std::endl;
+    std::cout << dst.size() << " " << dst.size().area() << "\n";
     cv::waitKey();
 #endif
 

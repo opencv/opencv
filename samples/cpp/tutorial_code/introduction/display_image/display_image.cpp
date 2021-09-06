@@ -18,7 +18,7 @@ int main()
     //! [empty]
     if(img.empty())
     {
-        std::cout << "Could not read the image: " << image_path << std::endl;
+        std::cout << "Could not read the image: " << image_path << "\n";
         return 1;
     }
     //! [empty]

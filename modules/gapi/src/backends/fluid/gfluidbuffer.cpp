@@ -725,7 +725,7 @@ void fluid::debugBufferPriv(const fluid::Buffer& buffer, std::ostream &os)
        << ", r: [";
     for (const auto &v : p.m_views) { os << &v->priv() << ":" << v->y() << " "; }
     os << "], avail: " << buffer.linesReady()
-       << std::endl;
+       << "\n";
 }
 
 void fluid::Buffer::debug(std::ostream &os) const

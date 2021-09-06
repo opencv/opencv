@@ -616,7 +616,7 @@ public:
      * For example
      * ```
      * DualQuatd q{1, 2, 3, 4, 5, 6, 7, 8};
-     * std::cout << -q << std::endl; // [-1, -2, -3, -4, -5, -6, -7, -8]
+     * std::cout << -q << "\n"; // [-1, -2, -3, -4, -5, -6, -7, -8]
      * ```
      */
     DualQuat<_Tp> operator-() const;
@@ -635,7 +635,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
-     * std::cout << p - q << std::endl; //[-4, -4, -4, -4, 4, -4, -4, -4]
+     * std::cout << p - q << "\n"; //[-4, -4, -4, -4, 4, -4, -4, -4]
      * ```
      */
     DualQuat<_Tp> operator-(const DualQuat<_Tp>&) const;
@@ -649,7 +649,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
      * p -= q; // equivalent to p = p - q
-     * std::cout << p << std::endl; //[-4, -4, -4, -4, 4, -4, -4, -4]
+     * std::cout << p << "\n"; //[-4, -4, -4, -4, 4, -4, -4, -4]
      *
      * ```
      */
@@ -663,7 +663,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
-     * std::cout << p + q << std::endl; //[6, 8, 10, 12, 14, 16, 18, 20]
+     * std::cout << p + q << "\n"; //[6, 8, 10, 12, 14, 16, 18, 20]
      * ```
      */
     DualQuat<_Tp> operator+(const DualQuat<_Tp>&) const;
@@ -677,7 +677,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
      * p += q; // equivalent to p = p + q
-     * std::cout << p << std::endl; //[6, 8, 10, 12, 14, 16, 18, 20]
+     * std::cout << p << "\n"; //[6, 8, 10, 12, 14, 16, 18, 20]
      *
      * ```
      */
@@ -703,7 +703,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
      * p *= q;
-     * std::cout << p << std::endl; //[-60, 12, 30, 24, -216, 80, 124, 120]
+     * std::cout << p << "\n"; //[-60, 12, 30, 24, -216, 80, 124, 120]
      * ```
      */
     DualQuat<_Tp>& operator*=(const DualQuat<_Tp>&);
@@ -727,7 +727,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double s = 2.0;
      * p *= s;
-     * std::cout << p << std::endl; //[2, 4, 6, 8, 10, 12, 14, 16]
+     * std::cout << p << "\n"; //[2, 4, 6, 8, 10, 12, 14, 16]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -753,7 +753,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
-     * std::cout << p * q << std::endl; //[-60, 12, 30, 24, -216, 80, 124, 120]
+     * std::cout << p * q << "\n"; //[-60, 12, 30, 24, -216, 80, 124, 120]
      * ```
      */
     DualQuat<_Tp> operator*(const DualQuat<_Tp>&) const;
@@ -777,7 +777,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double s = 2.0;
      * p /= s; // equivalent to p = p / s
-     * std::cout << p << std::endl; //[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
+     * std::cout << p << "\n"; //[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
      * ```
      * @note the type of scalar should be equal to this dual quaternion.
      */
@@ -800,7 +800,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
-     * std::cout << p / q << std::endl; // equivalent to p * q.inv()
+     * std::cout << p / q << "\n"; // equivalent to p * q.inv()
      * ```
      */
     DualQuat<_Tp> operator/(const DualQuat<_Tp>&) const;
@@ -823,7 +823,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * DualQuatd q{5, 6, 7, 8, 9, 10, 11, 12};
      * p /= q; // equivalent to p = p * q.inv()
-     * std::cout << p << std::endl;
+     * std::cout << p << "\n";
      * ```
      */
     DualQuat<_Tp>& operator/=(const DualQuat<_Tp>&);
@@ -847,7 +847,7 @@ public:
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double s = 2.0;;
      * p /= s; // equivalent to p = p / s
-     * std::cout << p << std::endl; //[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+     * std::cout << p << "\n"; //[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -861,7 +861,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double scalar = 2.0;
-     * std::cout << scalar + p << std::endl; //[3.0, 2, 3, 4, 5, 6, 7, 8]
+     * std::cout << scalar + p << "\n"; //[3.0, 2, 3, 4, 5, 6, 7, 8]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -876,7 +876,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double scalar = 2.0;
-     * std::cout << p + scalar << std::endl; //[3.0, 2, 3, 4, 5, 6, 7, 8]
+     * std::cout << p + scalar << "\n"; //[3.0, 2, 3, 4, 5, 6, 7, 8]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -901,7 +901,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double s = 2.0;
-     * std::cout << s * p << std::endl; //[2, 4, 6, 8, 10, 12, 14, 16]
+     * std::cout << s * p << "\n"; //[2, 4, 6, 8, 10, 12, 14, 16]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -916,7 +916,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double scalar = 2.0;
-     * std::cout << p - scalar << std::endl; //[-1, 2, 3, 4, 5, 6, 7, 8]
+     * std::cout << p - scalar << "\n"; //[-1, 2, 3, 4, 5, 6, 7, 8]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -931,7 +931,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double scalar = 2.0;
-     * std::cout << scalar - p << std::endl; //[1.0, -2, -3, -4, -5, -6, -7, -8]
+     * std::cout << scalar - p << "\n"; //[1.0, -2, -3, -4, -5, -6, -7, -8]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */
@@ -956,7 +956,7 @@ public:
      * ```
      * DualQuatd p{1, 2, 3, 4, 5, 6, 7, 8};
      * double s = 2.0;
-     * std::cout << p * s << std::endl; //[2, 4, 6, 8, 10, 12, 14, 16]
+     * std::cout << p * s << "\n"; //[2, 4, 6, 8, 10, 12, 14, 16]
      * ```
      * @note the type of scalar should be equal to the dual quaternion.
      */

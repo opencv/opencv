@@ -308,8 +308,8 @@ void CV_ImageWarpBaseTest::validate_results() const
                 int rmin = MAX(dy - radius, 0), rmax = MIN(dy + radius, dsize.height);
                 int cmin = MAX(dx / cn - radius, 0), cmax = MIN(dx / cn + radius, dsize.width);
 
-                std::cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
-                std::cout << "reference result:\n" << reference_dst(Range(rmin, rmax), Range(cmin, cmax)) << std::endl;
+                std::cout << "opencv result:\n" << dst(Range(rmin, rmax), Range(cmin, cmax)) << "\n";
+                std::cout << "reference result:\n" << reference_dst(Range(rmin, rmax), Range(cmin, cmax)) << "\n";
 
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 return;

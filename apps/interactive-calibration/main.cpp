@@ -48,7 +48,7 @@ bool calib::showOverlayMessage(const std::string& message)
     cv::displayOverlay(mainWindowName, message, OVERLAY_DELAY);
     return true;
 #else
-    std::cout << message << std::endl;
+    std::cout << message << "\n";
     return false;
 #endif
 }
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
         parser.printMessage();
         return 0;
     }
-    std::cout << consoleHelp << std::endl;
+    std::cout << consoleHelp << "\n";
     parametersController paramsController;
 
     if(!paramsController.loadFromParser(parser))
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
         }
     }
     catch (const std::runtime_error& exp) {
-        std::cout << exp.what() << std::endl;
+        std::cout << exp.what() << "\n";
     }
 
     return 0;

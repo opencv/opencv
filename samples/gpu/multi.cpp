@@ -14,7 +14,7 @@
 
 int main()
 {
-    std::cout << "CUDA support is required (OpenCV CMake parameter 'WITH_CUDA' must be true)." << std::endl;
+    std::cout << "CUDA support is required (OpenCV CMake parameter 'WITH_CUDA' must be true)." << "\n";
     return 0;
 }
 

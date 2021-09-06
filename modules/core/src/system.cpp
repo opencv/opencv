@@ -316,13 +316,13 @@ void Exception::formatMessage()
         size_t prev_pos = 0;
         while (pos != cv::String::npos)
         {
-           ss << "> " << err.substr(prev_pos, pos - prev_pos) << std::endl;
+           ss << "> " << err.substr(prev_pos, pos - prev_pos) << "\n";
            prev_pos = pos + 1;
            pos = err.find('\n', prev_pos);
         }
         ss << "> " << err.substr(prev_pos);
         if (err[err.size() - 1] != '\n')
-            ss << std::endl;
+            ss << "\n";
         err = ss.str();
     }
     if (func.size() > 0)
@@ -2443,7 +2443,7 @@ public:
         ippStatus = ippGetCpuFeatures(&cpuFeatures, NULL);
         if(ippStatus < 0)
         {
-            std::cerr << "ERROR: IPP cannot detect CPU features, IPP was disabled " << std::endl;
+            std::cerr << "ERROR: IPP cannot detect CPU features, IPP was disabled " << "\n";
             useIPP = false;
             return;
         }
@@ -2481,7 +2481,7 @@ public:
 
             if(env == "disabled")
             {
-                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << "\n";
                 useIPP = false;
             }
             else if(env == "sse42")
@@ -2495,7 +2495,7 @@ public:
 #endif
 #endif
             else
-                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)" << std::endl;
+                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)" << "\n";
 
             // Trim unsupported features
             ippFeatures &= cpuFeatures;

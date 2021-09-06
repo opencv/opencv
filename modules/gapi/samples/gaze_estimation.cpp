@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
     std::vector<cv::Mat> out_poses;
     std::vector<cv::Mat> out_gazes;
     std::size_t frames = 0u;
-    std::cout << "Reading " << input_file_name << std::endl;
+    std::cout << "Reading " << input_file_name << "\n";
 
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name));
     pipeline.start();
@@ -427,6 +427,6 @@ int main(int argc, char *argv[])
     }
     tm.stop();
     std::cout << "Processed " << frames << " frames"
-              << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+              << " (" << frames / tm.getTimeSec() << " FPS)" << "\n";
     return 0;
 }

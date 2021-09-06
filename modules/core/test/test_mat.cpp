@@ -369,8 +369,8 @@ TEST(Core_PCA, accuracy)
                 << cv::format("max diff is %g at (i=%d, j=%d) (%g vs %g)\n",
                         mval, mloc.y, mloc.x, rPCA.eigenvectors.at<float>(mloc.y, mloc.x),
                         subEvec.at<float>(mloc.y, mloc.x))
-                << "r0=" << r0 << std::endl
-                << "r1=" << r1 << std::endl
+                << "r0=" << r0 << "\n"
+                << "r1=" << r1 << "\n"
                 << "err1=" << err1 << " err2=" << err2
             ;
         }
@@ -1464,8 +1464,8 @@ TEST(Core_Mat_vector, copyTo_roi_column)
 
     std::vector<uchar> dst2;
     src.copyTo(dst2);
-    std::cout << "src = " << src << std::endl;
-    std::cout << "dst = " << Mat(dst2) << std::endl;
+    std::cout << "src = " << src << "\n";
+    std::cout << "dst = " << Mat(dst2) << "\n";
     EXPECT_EQ((size_t)5, dst2.size());
     EXPECT_EQ(1, (int)dst2[0]);
     EXPECT_EQ(3, (int)dst2[1]);
@@ -1494,8 +1494,8 @@ TEST(Core_Mat_vector, copyTo_roi_row)
 
     std::vector<uchar> dst2;
     src.copyTo(dst2);
-    std::cout << "src = " << src << std::endl;
-    std::cout << "dst = " << Mat(dst2) << std::endl;
+    std::cout << "src = " << src << "\n";
+    std::cout << "dst = " << Mat(dst2) << "\n";
     EXPECT_EQ((size_t)5, dst2.size());
     EXPECT_EQ(1, (int)dst2[0]);
     EXPECT_EQ(2, (int)dst2[1]);
@@ -1638,7 +1638,7 @@ TEST(Mat, regression_10507_mat_setTo)
                 }
             }
         }
-        EXPECT_EQ(nans, cn * (sz.area() - 2)) << "A=" << A << std::endl << "mask=" << test_mask << std::endl;
+        EXPECT_EQ(nans, cn * (sz.area() - 2)) << "A=" << A << "\n" << "mask=" << test_mask << "\n";
     }
 }
 
@@ -1672,8 +1672,8 @@ TEST(Core_Mat_array, copyTo_roi_column)
 
     std::array<uchar, 5> dst1;
     src.copyTo(dst1);
-    std::cout << "src = " << src << std::endl;
-    std::cout << "dst = " << Mat(dst1) << std::endl;
+    std::cout << "src = " << src << "\n";
+    std::cout << "dst = " << Mat(dst1) << "\n";
     EXPECT_EQ((size_t)5, dst1.size());
     EXPECT_EQ(1, (int)dst1[0]);
     EXPECT_EQ(3, (int)dst1[1]);
@@ -1702,8 +1702,8 @@ TEST(Core_Mat_array, copyTo_roi_row)
 
     std::array<uchar, 5> dst2;
     src.copyTo(dst2);
-    std::cout << "src = " << src << std::endl;
-    std::cout << "dst = " << Mat(dst2) << std::endl;
+    std::cout << "src = " << src << "\n";
+    std::cout << "dst = " << Mat(dst2) << "\n";
     EXPECT_EQ(1, (int)dst2[0]);
     EXPECT_EQ(2, (int)dst2[1]);
     EXPECT_EQ(3, (int)dst2[2]);
@@ -1812,7 +1812,7 @@ BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
     {
         result.push_back(tail);
         std::cout << "i = " << i << "  result = " << result.size() << "   used = " << (uint64)result.total()*result.elemSize()*(1.0 / (1 << 20)) << " Mb"
-            << "   allocated=" << (uint64)(result.datalimit - result.datastart)*(1.0 / (1 << 20)) << " Mb" << std::endl;
+            << "   allocated=" << (uint64)(result.datalimit - result.datastart)*(1.0 / (1 << 20)) << " Mb" << "\n";
     }
     for (int i = 0; i < 15; i++)
     {
@@ -2004,9 +2004,9 @@ class TestInputArrayRangeChecking {
 
     static void banner(cv::_InputArray ia, const char *label, const char *name)
     {
-        std::cout << std::endl
+        std::cout << "\n"
                   << label << " = " << name << ", Kind: " << kind2str(ia)
-                  << std::endl;
+                  << "\n";
     }
 
     template<typename I, typename F>
@@ -2170,8 +2170,8 @@ TEST(Core_MatExpr, issue_13926)
                9, 10, 11, 12,
                13, 14, 15, 16);
 
-    EXPECT_GE(1e-6, cvtest::norm(M1*M2, M1*M1, NORM_INF)) << Mat(M1*M2) << std::endl << Mat(M1*M1);
-    EXPECT_GE(1e-6, cvtest::norm(M2*M1, M2*M2, NORM_INF)) << Mat(M2*M1) << std::endl << Mat(M2*M2);
+    EXPECT_GE(1e-6, cvtest::norm(M1*M2, M1*M1, NORM_INF)) << Mat(M1*M2) << "\n" << Mat(M1*M1);
+    EXPECT_GE(1e-6, cvtest::norm(M2*M1, M2*M2, NORM_INF)) << Mat(M2*M1) << "\n" << Mat(M2*M2);
 }
 
 TEST(Core_MatExpr, issue_16655)

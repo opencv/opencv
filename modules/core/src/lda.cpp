@@ -1095,7 +1095,7 @@ void LDA::lda(InputArrayOfArrays _src, InputArray _lbls) {
     if (N < D) {
         std::cout << "Warning: Less observations than feature dimension given!"
                   << "Computation will probably fail."
-                  << std::endl;
+                  << "\n";
     }
     // clip number of components to be a valid number
     if ((_num_components <= 0) || (_num_components >= C)) {

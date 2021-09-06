@@ -95,12 +95,12 @@ TEST(Calib3d_Affine3f, accuracy_rvec)
 
         //double s = (double)cv::getTickCount();
         cv::Affine3<T>::Vec3 va = cv::Affine3<T>(R).rvec();
-        //std::cout << "M:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << std::endl;
+        //std::cout << "M:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << "\n";
 
         cv::Affine3<T>::Vec3 vo;
         //s = (double)cv::getTickCount();
         cv::Rodrigues(R, vo);
-        //std::cout << "O:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << std::endl;
+        //std::cout << "O:" <<(cv::getTickCount() - s)*1000/cv::getTickFrequency() << "\n";
 
         ASSERT_LT(cvtest::norm(va, vo, cv::NORM_L2), 1e-9);
     }

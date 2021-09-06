@@ -524,7 +524,7 @@ public:
             if (cvIsNaN(iouDiff))
             {
                 if (b == 0)
-                    std::cout << "Skip accuracy checks" << std::endl;
+                    std::cout << "Skip accuracy checks" << "\n";
                 continue;
             }
 

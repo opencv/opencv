@@ -2326,7 +2326,7 @@ public:
 
         // double ref_max_value, ref_min_value;
         // minMaxLoc(outputReference.reshape(1, 1), &ref_min_value, &ref_max_value);
-        // std::cout << "reference range: " << ref_min_value << ' ' << ref_max_value << std::endl;
+        // std::cout << "reference range: " << ref_min_value << ' ' << ref_max_value << "\n";
 
         double default_l1, default_lInf;
         DNNTestLayer::getDefaultThresholds(backendId, targetId, &default_l1, &default_lInf);

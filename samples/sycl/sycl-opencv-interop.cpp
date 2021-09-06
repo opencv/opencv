@@ -97,7 +97,7 @@ void App::initSYCL()
             }
             catch (const cl::sycl::exception& e)
             {
-                std::cerr << "SYCL exception: " << e.what() << std::endl;
+                std::cerr << "SYCL exception: " << e.what() << "\n";
             }
         }
     });
@@ -106,11 +106,11 @@ void App::initSYCL()
     auto platform = device.get_platform();
     std::cout << "SYCL device: " << device.get_info<info::device::name>()
         << " @ " << device.get_info<info::device::driver_version>()
-        << " (platform: " << platform.get_info<info::platform::name>() << ")" << std::endl;
+        << " (platform: " << platform.get_info<info::platform::name>() << ")" << "\n";
 
     if (device.is_host())
     {
-        std::cerr << "SYCL can't select OpenCL device. Host is used for computations, interoperability is not available" << std::endl;
+        std::cerr << "SYCL can't select OpenCL device. Host is used for computations, interoperability is not available" << "\n";
     }
     else
     {
@@ -127,9 +127,9 @@ void App::initSYCL()
         }
         catch (const cv::Exception& e)
         {
-            std::cerr << "OpenCV: Can't bind SYCL OpenCL context/device/queue: " << e.what() << std::endl;
+            std::cerr << "OpenCV: Can't bind SYCL OpenCL context/device/queue: " << e.what() << "\n";
         }
-        std::cout << "OpenCV uses OpenCL: " << (cv::ocl::useOpenCL() ? "True" : "False") << std::endl;
+        std::cout << "OpenCV uses OpenCL: " << (cv::ocl::useOpenCL() ? "True" : "False") << "\n";
     }
 } // initSYCL()
 
@@ -204,13 +204,13 @@ Mat App::process_frame_reference(const cv::Mat& frame)
 
 int App::run()
 {
-    std::cout << "Initializing..." << std::endl;
+    std::cout << "Initializing..." << "\n";
 
     initSYCL();
     initVideoSource();
 
-    std::cout << "Press ESC to exit" << std::endl;
-    std::cout << "      'p' to toggle ON/OFF processing" << std::endl;
+    std::cout << "Press ESC to exit" << "\n";
+    std::cout << "      'p' to toggle ON/OFF processing" << "\n";
 
     m_running = true;
     m_process = true;
@@ -248,7 +248,7 @@ int App::run()
             double diffInf = cv::norm(reference_result, m_frameGray, NORM_INF);
             if (diffInf > 0)
             {
-                std::cerr << "Result is not accurate. diffInf=" << diffInf << std::endl;
+                std::cerr << "Result is not accurate. diffInf=" << diffInf << "\n";
                 imwrite("reference.png", reference_result);
                 imwrite("actual.png", m_frameGray);
             }
@@ -260,7 +260,7 @@ int App::run()
         msg << "Frame " << processedFrames << " (" << m_frame.size
             << ")   Time: " << cv::format("%.2f", timer.getTimeMilli()) << " msec"
             << " (process: " << (m_process ? "True" : "False") << ")";
-        std::cout << msg.str() << std::endl;
+        std::cout << msg.str() << "\n";
         putText(img_to_show, msg.str(), Point(5, 150), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
 
         if (m_show_ui)
@@ -286,7 +286,7 @@ int App::run()
             }
             catch (const std::exception& e)
             {
-                std::cerr << "ERROR(OpenCV UI): " << e.what() << std::endl;
+                std::cerr << "ERROR(OpenCV UI): " << e.what() << "\n";
                 if (processedFrames > 0)
                     throw;
                 m_show_ui = false;  // UI is not available
@@ -332,18 +332,18 @@ int main(int argc, char** argv)
     }
     catch (const cv::Exception& e)
     {
-        std::cout << "FATAL: OpenCV error: " << e.what() << std::endl;
+        std::cout << "FATAL: OpenCV error: " << e.what() << "\n";
         return 1;
     }
     catch (const std::exception& e)
     {
-        std::cout << "FATAL: C++ error: " << e.what() << std::endl;
+        std::cout << "FATAL: C++ error: " << e.what() << "\n";
         return 1;
     }
 
     catch (...)
     {
-        std::cout << "FATAL: unknown C++ exception" << std::endl;
+        std::cout << "FATAL: unknown C++ exception" << "\n";
         return 1;
     }
 

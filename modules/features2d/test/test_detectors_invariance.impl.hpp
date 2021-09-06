@@ -144,7 +144,7 @@ TEST_P(DetectorRotationInvariance, rotation)
             << ", keypoints = " << keypoints1.size()
             << ", keyPointMatchesRatio = " << keyPointMatchesRatio
             << ", angleInliersRatio = " << (keyPointMatchesCount ? (static_cast<float>(angleInliersCount) / keyPointMatchesCount) : 0)
-            << std::endl;
+            << "\n";
 #endif
     }
 }
@@ -207,7 +207,7 @@ TEST_P(DetectorScaleInvariance, scale)
             << "scale = " << scale
             << ", keyPointMatchesRatio = " << keyPointMatchesRatio
             << ", scaleInliersRatio = " << (keyPointMatchesCount ? static_cast<float>(scaleInliersCount) / keyPointMatchesCount : 0)
-            << std::endl;
+            << "\n";
 #endif
     }
 }

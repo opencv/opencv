@@ -222,8 +222,8 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
             if (!warn_)
             {
                 std::cerr
-                    << "OpenCV(ocl4dnn): Kernel configuration cache directory doesn't exist: " << cache_path_ << std::endl
-                    << std::endl;
+                    << "OpenCV(ocl4dnn): Kernel configuration cache directory doesn't exist: " << cache_path_ << "\n"
+                    << "\n";
                 warn_ = true;
             }
         }
@@ -770,7 +770,7 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
 
         if (!oclk_copy_weight.run(3, global_work_size_copy, NULL, false))
         {
-            std::cout << "Swizzle kernel run failed." << std::endl;
+            std::cout << "Swizzle kernel run failed." << "\n";
             return false;
         }
     } else {
@@ -865,7 +865,7 @@ void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_bu
                                 CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
     if (err)
     {
-        std::cout << "Failed to create sub buffer." << std::endl;
+        std::cout << "Failed to create sub buffer." << "\n";
         return;
     }
 
@@ -983,7 +983,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             kernel.set(argIdx++, (uint16_t)output_h_);
             if (!kernel.run(3, config->global_work_size, config->local_work_size, false))
             {
-                std::cout << "IDLF kernel run failed." << std::endl;
+                std::cout << "IDLF kernel run failed." << "\n";
                 return false;
             }
         }
@@ -1102,7 +1102,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
 
             if (!kernel.run(3, global_size, config->local_work_size, false))
             {
-                std::cout << "GEMM like kernel run failed." << std::endl;
+                std::cout << "GEMM like kernel run failed." << "\n";
                 return false;
             }
         }
@@ -1131,7 +1131,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
 
         if (!kernel.run(3, global_size, NULL, false))
         {
-            std::cout << "DWCONV kernel run failed." << std::endl;
+            std::cout << "DWCONV kernel run failed." << "\n";
             return false;
         }
     } else {
@@ -1175,7 +1175,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                                 (config->use_null_local) ? NULL : config->local_work_size,
                                 false))
                 {
-                    std::cout << "Basic kernel run failed." << std::endl;
+                    std::cout << "Basic kernel run failed." << "\n";
                     return false;
                 }
             }
@@ -1200,7 +1200,7 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
         static int warn_ = 0;
         if (!warn_)
         {
-            std::cout << "OpenCV(ocl4dnn): Can't get OpenCL default queue for auto-tuning." << std::endl;
+            std::cout << "OpenCV(ocl4dnn): Can't get OpenCL default queue for auto-tuning." << "\n";
             warn_ = true;
         }
         return 1e6;
@@ -1344,11 +1344,11 @@ bool OCL4DNNConvSpatial<float>::verifyResult(const UMat &bottom,
                 roi.height = std::min(roi.height, 16);
                 roi.x = std::max(0, std::min(slice_size - roi.width, error_slice_offset - roi.width/2));
                 roi.y = std::max(0, std::min(n_outputs - roi.height, error_slice - roi.height/2));
-                std::cout << "roi = " << roi << " errors=" << errors << std::endl;
-                std::cout << "mat_top = " << shape(mat_top) << std::endl
-                          << mat_top.reshape(1, 1).reshape(1, n_outputs)(roi) << std::endl;
-                std::cout << "verify_top = " << shape(mat_verify_top) << std::endl
-                          << mat_verify_top.reshape(1, 1).reshape(1, n_outputs)(roi) << std::endl;
+                std::cout << "roi = " << roi << " errors=" << errors << "\n";
+                std::cout << "mat_top = " << shape(mat_top) << "\n"
+                          << mat_top.reshape(1, 1).reshape(1, n_outputs)(roi) << "\n";
+                std::cout << "verify_top = " << shape(mat_verify_top) << "\n"
+                          << mat_verify_top.reshape(1, 1).reshape(1, n_outputs)(roi) << "\n";
             }
             catch (const std::exception& e)
             {
@@ -1408,7 +1408,7 @@ ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
     {
         std::cout << "Failed to compile kernel: " << kernel_name_
                   << ", buildflags: " << options
-                  << ", errmsg: " << errmsg << std::endl;
+                  << ", errmsg: " << errmsg << "\n";
     }
     return program;
 }
@@ -1993,7 +1993,7 @@ bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int typ
     {
         if (z == 1)
             z = 16;
-        CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << std::endl;
+        CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << "\n";
     }
     kernelQueue.clear();
     createConvolutionKernel(type, x, y, z);
@@ -2003,7 +2003,7 @@ bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int typ
             << " y = " << y
             << " z = " << z
             << " type = " << type
-            << std::endl;
+            << "\n";
         return false;
     }
     bestKernelConfig = kernelQueue[0];
@@ -2038,8 +2038,8 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
             static int warn_ = 0;
             if (!warn_)
             {
-                std::cout << "OpenCV(ocl4dnn): consider to specify kernel configuration cache directory " << std::endl
-                          << "                 via OPENCV_OCL4DNN_CONFIG_PATH parameter." << std::endl;
+                std::cout << "OpenCV(ocl4dnn): consider to specify kernel configuration cache directory " << "\n"
+                          << "                 via OPENCV_OCL4DNN_CONFIG_PATH parameter." << "\n";
                 warn_ = true;
             }
         }

@@ -754,7 +754,7 @@ public:
     {
         if (cv::norm(in1, in2, NORM_INF) != 0)
         {
-            std::cout << "AbsExact error: G-API output and reference output matrixes are not bitexact equal."  << std::endl;
+            std::cout << "AbsExact error: G-API output and reference output matrixes are not bitexact equal."  << "\n";
             return false;
         }
         else
@@ -776,8 +776,8 @@ public:
     {
         if (cv::norm(in1, in2, NORM_INF) > _tol)
         {
-            std::cout << "AbsTolerance error: Number of different pixels in " << std::endl;
-            std::cout << "G-API output and reference output matrixes exceeds " << _tol << " pixels threshold." << std::endl;
+            std::cout << "AbsTolerance error: Number of different pixels in " << "\n";
+            std::cout << "G-API output and reference output matrixes exceeds " << _tol << " pixels threshold." << "\n";
             return false;
         }
         else
@@ -808,7 +808,7 @@ public:
             {
                 std::cout << "Tolerance_FloatRel_IntAbs error: err=" << err
                           << "  tolerance=" << tolerance
-                          << "  depth=" << cv::typeToString(depth) << std::endl;
+                          << "  depth=" << cv::typeToString(depth) << "\n";
                 return false;
             }
             else
@@ -842,7 +842,7 @@ public:
         {
             std::cout << "AbsSimilarPoints error: err_points=" << err_points
                       << "  max_err_points=" << max_err_points << " (total=" << in1.total() << ")"
-                      << "  diff_tolerance=" << _tol << std::endl;
+                      << "  diff_tolerance=" << _tol << "\n";
             return false;
         }
         else
@@ -871,7 +871,7 @@ public:
             double err_Inf = cv::norm(in1, in2, NORM_INF);
             if (err_Inf > _inf_tol)
             {
-                std::cout << "ToleranceFilter error: err_Inf=" << err_Inf << "  tolerance=" << _inf_tol << std::endl;
+                std::cout << "ToleranceFilter error: err_Inf=" << err_Inf << "  tolerance=" << _inf_tol << "\n";
                 return false;
             }
             double err = cv::norm(in1, in2, NORM_L2 | NORM_RELATIVE);
@@ -880,7 +880,7 @@ public:
             {
                 std::cout << "ToleranceFilter error: err=" << err << "  tolerance=" << tolerance
                           << "  depth=" << cv::depthToString(depth)
-                          << std::endl;
+                          << "\n";
                 return false;
             }
         }
@@ -908,14 +908,14 @@ public:
             if (err_Inf > _inf_tol)
             {
                 std::cout << "ToleranceColor error: err_Inf=" << err_Inf
-                          << "  tolerance=" << _inf_tol << std::endl;
+                          << "  tolerance=" << _inf_tol << "\n";
                 return false;
             }
             double err = cv::norm(in1, in2, NORM_L1 | NORM_RELATIVE);
             if (err > _tol)
             {
                 std::cout << "ToleranceColor error: err=" << err
-                          << "  tolerance=" << _tol << std::endl;
+                          << "  tolerance=" << _tol << "\n";
                 return false;
             }
         }
@@ -940,7 +940,7 @@ public:
         if (abs_err > _tol)
         {
             std::cout << "AbsToleranceScalar error: abs_err=" << abs_err << "  tolerance=" << _tol
-                      << " in1[0]" << in1[0] << " in2[0]" << in2[0] << std::endl;
+                      << " in1[0]" << in1[0] << " in2[0]" << in2[0] << "\n";
             return false;
         }
         else
@@ -980,7 +980,7 @@ public:
                       << " in1.x="      << in1.x      << " in2.x="      << in2.x
                       << " in1.y="      << in1.y      << " in2.y="      << in2.y
                       << " in1.width="  << in1.width  << " in2.width="  << in2.width
-                      << " in1.height=" << in1.height << " in2.height=" << in2.height << std::endl;
+                      << " in1.height=" << in1.height << " in2.height=" << in2.height << "\n";
             return false;
         }
         else
@@ -1007,7 +1007,7 @@ public:
         if (cv::norm(in1, in2, NORM_INF, cv::noArray()) != 0)
         {
             std::cout << "AbsExact error: G-API output and reference output vectors are not"
-                         " bitexact equal." << std::endl;
+                         " bitexact equal." << "\n";
             return false;
         }
         else
@@ -1040,7 +1040,7 @@ public:
             {
                 std::cout << " in1[" << i << "]=" << in1[i] << " in2[" << i << "]=" << in2[i];
             }
-            std::cout << std::endl;
+            std::cout << "\n";
             return false;
         }
         else

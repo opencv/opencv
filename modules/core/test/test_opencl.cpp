@@ -153,10 +153,10 @@ TEST_P(OCL_OpenCLExecutionContext_P, multipleBindAndExecute)
 
     try
     {
-        std::cout << "ctx2..." << std::endl;
+        std::cout << "ctx2..." << "\n";
         ctx2.bind();
         executeUMatCall();
-        std::cout << "ctx..." << std::endl;
+        std::cout << "ctx..." << "\n";
         ctx.bind();
         executeUMatCall();
     }

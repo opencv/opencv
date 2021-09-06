@@ -104,7 +104,7 @@ public:
         r = m_pD3D10Dev->CreateTexture2D(&desc, NULL, &m_pSurface);
         if (FAILED(r))
         {
-            std::cerr << "Can't create texture with input image" << std::endl;
+            std::cerr << "Can't create texture with input image" << "\n";
             return EXIT_FAILURE;
         }
 
@@ -262,7 +262,7 @@ public:
 
         catch (const cv::Exception& e)
         {
-            std::cerr << "Exception: " << e.what() << std::endl;
+            std::cerr << "Exception: " << e.what() << "\n";
             return 10;
         }
 

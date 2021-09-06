@@ -2392,9 +2392,9 @@ void testDivide(bool isUMat, double scale, bool largeSize, bool tailProcessing, 
 
     if (::testing::Test::HasFailure())
     {
-        std::cout << "src1 = " << std::endl << src1 << std::endl;
-        std::cout << "src2 = " << std::endl << src2 << std::endl;
-        std::cout << "dst = " << std::endl << dst << std::endl;
+        std::cout << "src1 = " << "\n" << src1 << "\n";
+        std::cout << "src2 = " << "\n" << src2 << "\n";
+        std::cout << "dst = " << "\n" << dst << "\n";
     }
 }
 

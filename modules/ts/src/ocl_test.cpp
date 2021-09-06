@@ -140,9 +140,9 @@ void TestUtils::showDiff(InputArray _src, InputArray _gold, InputArray _actual, 
     if (alwaysShow || cv::countNonZero(diff_thresh.reshape(1)) > 0)
     {
 #if 0
-        std::cout << "Source: " << std::endl << src << std::endl;
-        std::cout << "Expected: " << std::endl << gold << std::endl;
-        std::cout << "Actual: " << std::endl << actual << std::endl;
+        std::cout << "Source: " << "\n" << src << "\n";
+        std::cout << "Expected: " << "\n" << gold << "\n";
+        std::cout << "Actual: " << "\n" << actual << "\n";
 #endif
 
         namedWindow("src", WINDOW_NORMAL);

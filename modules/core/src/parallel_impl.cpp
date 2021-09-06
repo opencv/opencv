@@ -682,7 +682,7 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
             }
 #ifdef CV_PROFILE_THREADS
             threads_stat[0].threadFree = getTickCount();
-            std::cout << "Job: sz=" << range.size() << " nstripes=" << nstripes << "    Time: " << (threads_stat[0].threadFree - jobSubmitTime) / tickFreq * 1e6 << " usec" << std::endl;
+            std::cout << "Job: sz=" << range.size() << " nstripes=" << nstripes << "    Time: " << (threads_stat[0].threadFree - jobSubmitTime) / tickFreq * 1e6 << " usec" << "\n";
             for (int i = 0; i < (int)threads.size() + 1; i++)
             {
                 threads_stat[i].dump(i - 1, jobSubmitTime, tickFreq);

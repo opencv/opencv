@@ -46,7 +46,7 @@
 #include <iostream>
 
 using std::cout;
-using std::endl;
+using "\n";
 
 /****************************************************************************************\
 *                        Stochastic Gradient Descent SVM Classifier                      *

@@ -5,7 +5,7 @@
 #include <iostream>
 
 using namespace cv;
-using std::cout; using std::cerr; using std::endl;
+using std::cout; using std::cerr; using "\n";
 
 int main(int, char**)
 {
@@ -46,7 +46,7 @@ int main(int, char**)
                  << "    Average FPS: " << cv::format("%9.1f", (double)getTickFrequency() * N / (t1 - t0))
                  << "    Average time per frame: " << cv::format("%9.2f ms", (double)(t1 - t0) * 1000.0f / (N * getTickFrequency()))
                  << "    Average processing time: " << cv::format("%9.2f ms", (double)(processingTime) * 1000.0f / (N * getTickFrequency()))
-                 << std::endl;
+                 << "\n";
             t0 = t1;
             processingTime = 0;
         }

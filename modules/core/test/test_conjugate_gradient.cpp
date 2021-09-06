@@ -47,10 +47,10 @@ static void mytest(cv::Ptr<cv::ConjGradSolver> solver,cv::Ptr<cv::MinProblemSolv
     solver->setFunction(ptr_F);
     //int ndim=MAX(step.cols,step.rows);
     double res=solver->minimize(x);
-    std::cout<<"res:\n\t"<<res<<std::endl;
-    std::cout<<"x:\n\t"<<x<<std::endl;
-    std::cout<<"etalon_res:\n\t"<<etalon_res<<std::endl;
-    std::cout<<"etalon_x:\n\t"<<etalon_x<<std::endl;
+    std::cout<<"res:\n\t"<<res<<"\n";
+    std::cout<<"x:\n\t"<<x<<"\n";
+    std::cout<<"etalon_res:\n\t"<<etalon_res<<"\n";
+    std::cout<<"etalon_x:\n\t"<<etalon_x<<"\n";
     double tol = 1e-2;
     ASSERT_TRUE(std::abs(res-etalon_res)<tol);
     /*for(cv::Mat_<double>::iterator it1=x.begin<double>(),it2=etalon_x.begin<double>();it1!=x.end<double>();it1++,it2++){

@@ -60,10 +60,10 @@ int main(int argc, char **argv)
     }
     catch (cv::Exception &ee)
     {
-        std::cerr << "Exception: " << ee.what() << std::endl;
-        std::cout << "Can't load the network by using the flowing files:" << std::endl;
-        std::cout << "modelTxt: " << modelTxt << std::endl;
-        std::cout << "modelBin: " << modelBin << std::endl;
+        std::cerr << "Exception: " << ee.what() << "\n";
+        std::cout << "Can't load the network by using the flowing files:" << "\n";
+        std::cout << "modelTxt: " << modelTxt << "\n";
+        std::cout << "modelBin: " << modelBin << "\n";
         return 1;
     }
 

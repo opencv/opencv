@@ -729,7 +729,7 @@ TEST(UMat, BufferPoolGrowing)
         c->freeAllReservedBuffers();
     }
     else
-        std::cout << "Skipped, no OpenCL" << std::endl;
+        std::cout << "Skipped, no OpenCL" << "\n";
 }
 #endif
 
@@ -803,8 +803,8 @@ bool CV_UMatTest::TestUMat()
         urb = ub(roi);
 
         /*std::cout << "==============================================\nbefore op (CPU):\n";
-        std::cout << "ra: " << ra << std::endl;
-        std::cout << "rb: " << rb << std::endl;*/
+        std::cout << "ra: " << ra << "\n";
+        std::cout << "rb: " << rb << "\n";*/
 
         ra.copyTo(ura);
         rb.copyTo(urb);
@@ -814,16 +814,16 @@ bool CV_UMatTest::TestUMat()
         urb.copyTo(rb);
 
         /*std::cout << "==============================================\nbefore op (GPU):\n";
-        std::cout << "ra: " << ra << std::endl;
-        std::cout << "rb: " << rb << std::endl;*/
+        std::cout << "ra: " << ra << "\n";
+        std::cout << "rb: " << rb << "\n";*/
 
         cv::max(ra, rb, rc);
         cv::max(ura, urb, urc);
         urc.copyTo(rc0);
 
         /*std::cout << "==============================================\nafter op:\n";
-        std::cout << "rc: " << rc << std::endl;
-        std::cout << "rc0: " << rc0 << std::endl;*/
+        std::cout << "rc: " << rc << "\n";
+        std::cout << "rc0: " << rc0 << "\n";*/
 
         CHECK_DIFF(rc0, rc);
 
@@ -843,8 +843,8 @@ bool CV_UMatTest::TestUMat()
         urc.copyTo(rc0);
 
         /*std::cout << "==============================================\nafter op:\n";
-        std::cout << "ra: " << rc0 << std::endl;
-        std::cout << "rc: " << rc << std::endl;*/
+        std::cout << "ra: " << rc0 << "\n";
+        std::cout << "rc: " << rc << "\n";*/
 
         CHECK_DIFF(rc0, rc);
 
@@ -913,8 +913,8 @@ TEST(Core_UMat, getUMat)
         double err = cvtest::norm(m, ref, NORM_INF);
         if (err > 0)
         {
-            std::cout << "m: " << std::endl << m << std::endl;
-            std::cout << "ref: " << std::endl << ref << std::endl;
+            std::cout << "m: " << "\n" << m << "\n";
+            std::cout << "ref: " << "\n" << ref << "\n";
         }
         EXPECT_EQ(0., err);
     }
@@ -1105,9 +1105,9 @@ TEST(UMat, unmap_in_class)
                 m.convertTo(dst, CV_32FC1);
                 // some additional CPU-based per-pixel processing into dst
                 intermediateResult = dst.getUMat(ACCESS_READ); // this violates lifetime of base(dst) / derived (intermediateResult) objects. Use copyTo?
-                std::cout << "data processed..." << std::endl;
+                std::cout << "data processed..." << "\n";
             } // problem is here: dst::~Mat()
-            std::cout << "leave ProcessData()" << std::endl;
+            std::cout << "leave ProcessData()" << "\n";
         }
         UMat getResult() const { return intermediateResult; }
     protected:
@@ -1137,10 +1137,10 @@ TEST(UMat, map_unmap_counting)
 {
     if (!cv::ocl::useOpenCL())
     {
-        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        std::cout << "OpenCL is not enabled. Skip test" << "\n";
         return;
     }
-    std::cout << "Host memory: " << cv::ocl::Device::getDefault().hostUnifiedMemory() << std::endl;
+    std::cout << "Host memory: " << cv::ocl::Device::getDefault().hostUnifiedMemory() << "\n";
     Mat m(Size(10, 10), CV_8UC1, Scalar::all(0));
     UMat um = m.getUMat(ACCESS_RW);
     {
@@ -1150,7 +1150,7 @@ TEST(UMat, map_unmap_counting)
     }
     void* h = NULL;
     EXPECT_NO_THROW(h = um.handle(ACCESS_RW));
-    std::cout << "Handle: " << h << std::endl;
+    std::cout << "Handle: " << h << "\n";
 }
 
 
@@ -1185,7 +1185,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_1_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())
     {
-        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        std::cout << "OpenCL is not enabled. Skip test" << "\n";
         return;
     }
     for (int j = 0; j < 100; j++)
@@ -1221,7 +1221,7 @@ OCL_TEST(UMat, DISABLED_OCL_ThreadSafe_CleanupCallback_2_VeryLongTest)
 {
     if (!cv::ocl::useOpenCL())
     {
-        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        std::cout << "OpenCL is not enabled. Skip test" << "\n";
         return;
     }
     for (int j = 0; j < 100; j++)
@@ -1424,7 +1424,7 @@ TEST(UMat, exceptions_refcounts_issue_20594)
     if (!cv::ocl::useOpenCL())
     {
         // skip test, difficult to create exception scenario without OpenCL
-        std::cout << "OpenCL is not enabled. Skip test" << std::endl;
+        std::cout << "OpenCL is not enabled. Skip test" << "\n";
         return;
     }
 

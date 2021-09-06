@@ -147,7 +147,7 @@ using std::string;
 using std::stringstream;
 using std::cout;
 using std::cerr;
-using std::endl;
+using "\n";
 using std::min;
 using std::max;
 using std::numeric_limits;

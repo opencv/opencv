@@ -19,7 +19,7 @@ int main( int argc, char** argv )
 
     if( image.empty() ) // Check for invalid input
     {
-        cout << "Could not open or find the image" << std::endl ;
+        cout << "Could not open or find the image" << "\n" ;
         return -1;
     }
 

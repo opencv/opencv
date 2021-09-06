@@ -186,7 +186,7 @@ Step2. Setting Parameters
 Step3. Inference
 ```cpp
     std::string recognitionResult = recognizer.recognize(image);
-    std::cout << "'" << recognitionResult << "'" << std::endl;
+    std::cout << "'" << recognitionResult << "'" << "\n";
 ```
 
 Input image:

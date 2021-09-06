@@ -9236,7 +9236,7 @@ class NativeArray {
       GTEST_SUPPRESS_UNREACHABLE_CODE_WARNING_BELOW_(statement); \
     } \
     catch (const std::exception& e) { \
-      std::cerr << "Exception message: " << e.what() << std::endl; \
+      std::cerr << "Exception message: " << e.what() << "\n"; \
       goto GTEST_CONCAT_TOKEN_(gtest_label_testnothrow_, __LINE__); \
     } \
     catch (...) { \
@@ -11756,7 +11756,7 @@ class RangeGenerator : public ParamGeneratorInterface<T> {
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const int other_index =
           CheckedDowncastToActualType<const Iterator>(&other)->index_;
       return index_ == other_index;
@@ -11854,7 +11854,7 @@ class ValuesInIteratorRangeGenerator : public ParamGeneratorInterface<T> {
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       return iterator_ ==
           CheckedDowncastToActualType<const Iterator>(&other)->iterator_;
     }
@@ -12092,11 +12092,11 @@ class ParameterizedTestCaseInfo : public ParameterizedTestCaseInfoBase {
           GTEST_CHECK_(IsValidParamName(param_name))
               << "Parameterized test name '" << param_name
               << "' is invalid, in " << file
-              << " line " << line << std::endl;
+              << " line " << line << "\n";
 
           GTEST_CHECK_(test_param_names.count(param_name) == 0)
               << "Duplicate parameterized test name '" << param_name
-              << "', in " << file << " line " << line << std::endl;
+              << "', in " << file << " line " << line << "\n";
 
           test_param_names.insert(param_name);
 
@@ -15867,7 +15867,7 @@ class CartesianProductGenerator2
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -15990,7 +15990,7 @@ class CartesianProductGenerator3
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -16131,7 +16131,7 @@ class CartesianProductGenerator4
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -16289,7 +16289,7 @@ class CartesianProductGenerator5
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -16466,7 +16466,7 @@ class CartesianProductGenerator6
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -16660,7 +16660,7 @@ class CartesianProductGenerator7
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -16873,7 +16873,7 @@ class CartesianProductGenerator8
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -17102,7 +17102,7 @@ class CartesianProductGenerator9
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their
@@ -17349,7 +17349,7 @@ class CartesianProductGenerator10
       // iterator is of the same type and we can downcast.
       GTEST_CHECK_(BaseGenerator() == other.BaseGenerator())
           << "The program attempted to compare iterators "
-          << "from different generators." << std::endl;
+          << "from different generators." << "\n";
       const Iterator* typed_other =
           CheckedDowncastToActualType<const Iterator>(&other);
       // We must report iterators equal if they both point beyond their

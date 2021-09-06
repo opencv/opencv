@@ -596,12 +596,12 @@ TEST_F(fisheyeTest, stereoRectify)
 
     if (::testing::Test::HasFailure())
     {
-        std::cout << "Actual values are:" << std::endl
-            << "R1 =" << std::endl << R1 << std::endl
-            << "R2 =" << std::endl << R2 << std::endl
-            << "P1 =" << std::endl << P1 << std::endl
-            << "P2 =" << std::endl << P2 << std::endl
-            << "Q =" << std::endl << Q << std::endl;
+        std::cout << "Actual values are:" << "\n"
+            << "R1 =" << "\n" << R1 << "\n"
+            << "R2 =" << "\n" << R2 << "\n"
+            << "P1 =" << "\n" << P1 << "\n"
+            << "P2 =" << "\n" << P2 << "\n"
+            << "Q =" << "\n" << Q << "\n";
     }
 
     if (cvtest::debugLevel == 0)

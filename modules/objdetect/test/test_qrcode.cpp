@@ -290,9 +290,9 @@ TEST_P(Objdetect_QRCode, regression)
         }
         std::cerr
             << "Not found results for '" << name_current_image
-            << "' image in config file:" << dataset_config << std::endl
+            << "' image in config file:" << dataset_config << "\n"
             << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
-            << std::endl;
+            << "\n";
     }
 }
 
@@ -357,9 +357,9 @@ TEST_P(Objdetect_QRCode_Close, regression)
         }
         std::cerr
             << "Not found results for '" << name_current_image
-            << "' image in config file:" << dataset_config << std::endl
+            << "' image in config file:" << dataset_config << "\n"
             << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
-            << std::endl;
+            << "\n";
     }
 }
 
@@ -424,9 +424,9 @@ TEST_P(Objdetect_QRCode_Monitor, regression)
         }
         std::cerr
             << "Not found results for '" << name_current_image
-            << "' image in config file:" << dataset_config << std::endl
+            << "' image in config file:" << dataset_config << "\n"
             << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
-            << std::endl;
+            << "\n";
     }
 }
 
@@ -486,9 +486,9 @@ TEST_P(Objdetect_QRCode_Curved, regression)
         }
         std::cerr
             << "Not found results for '" << name_current_image
-            << "' image in config file:" << dataset_config << std::endl
+            << "' image in config file:" << dataset_config << "\n"
             << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
-            << std::endl;
+            << "\n";
     }
 }
 
@@ -574,9 +574,9 @@ TEST_P(Objdetect_QRCode_Multi, regression)
         }
         std::cerr
             << "Not found results for '" << name_current_image
-            << "' image in config file:" << dataset_config << std::endl
+            << "' image in config file:" << dataset_config << "\n"
             << "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data."
-            << std::endl;
+            << "\n";
     }
 }
 

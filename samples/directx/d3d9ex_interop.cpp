@@ -78,7 +78,7 @@ public:
         r = m_pD3D9DevEx->CreateOffscreenPlainSurface(m_width, m_height, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pSurface, NULL);
         if (FAILED(r))
         {
-            std::cerr << "Can't create surface for result" << std::endl;
+            std::cerr << "Can't create surface for result" << "\n";
             return EXIT_FAILURE;
         }
 
@@ -228,7 +228,7 @@ public:
 
         catch (const cv::Exception& e)
         {
-            std::cerr << "Exception: " << e.what() << std::endl;
+            std::cerr << "Exception: " << e.what() << "\n";
             return 10;
         }
 

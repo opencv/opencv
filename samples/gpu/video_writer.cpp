@@ -16,7 +16,7 @@ int main(int argc, const char* argv[])
 {
     if (argc != 2)
     {
-        std::cerr << "Usage : video_writer <input video file>" << std::endl;
+        std::cerr << "Usage : video_writer <input video file>" << "\n";
         return -1;
     }
 
@@ -26,7 +26,7 @@ int main(int argc, const char* argv[])
 
     if (!reader.isOpened())
     {
-        std::cerr << "Can't open input video file" << std::endl;
+        std::cerr << "Can't open input video file" << "\n";
         return -1;
     }
 
@@ -44,21 +44,21 @@ int main(int argc, const char* argv[])
 
     for (int i = 1;; ++i)
     {
-        std::cout << "Read " << i << " frame" << std::endl;
+        std::cout << "Read " << i << " frame" << "\n";
 
         reader >> frame;
 
         if (frame.empty())
         {
-            std::cout << "Stop" << std::endl;
+            std::cout << "Stop" << "\n";
             break;
         }
 
         if (!writer.isOpened())
         {
-            std::cout << "Frame Size : " << frame.cols << "x" << frame.rows << std::endl;
+            std::cout << "Frame Size : " << frame.cols << "x" << frame.rows << "\n";
 
-            std::cout << "Open CPU Writer" << std::endl;
+            std::cout << "Open CPU Writer" << "\n";
 
             if (!writer.open("output_cpu.avi", cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), FPS, frame.size()))
                 return -1;
@@ -66,7 +66,7 @@ int main(int argc, const char* argv[])
 
         if (d_writer.empty())
         {
-            std::cout << "Open CUDA Writer" << std::endl;
+            std::cout << "Open CUDA Writer" << "\n";
 
             const cv::String outputFilename = "output_gpu.avi";
             d_writer = cv::cudacodec::createVideoWriter(outputFilename, frame.size(), FPS);
@@ -74,7 +74,7 @@ int main(int argc, const char* argv[])
 
         d_frame.upload(frame);
 
-        std::cout << "Write " << i << " frame" << std::endl;
+        std::cout << "Write " << i << " frame" << "\n";
 
         tm.reset(); tm.start();
         writer.write(frame);
@@ -87,7 +87,7 @@ int main(int argc, const char* argv[])
         gpu_times.push_back(tm.getTimeMilli());
     }
 
-    std::cout << std::endl << "Results:" << std::endl;
+    std::cout << "\n" << "Results:" << "\n";
 
     std::sort(cpu_times.begin(), cpu_times.end());
     std::sort(gpu_times.begin(), gpu_times.end());
@@ -95,8 +95,8 @@ int main(int argc, const char* argv[])
     double cpu_avg = std::accumulate(cpu_times.begin(), cpu_times.end(), 0.0) / cpu_times.size();
     double gpu_avg = std::accumulate(gpu_times.begin(), gpu_times.end(), 0.0) / gpu_times.size();
 
-    std::cout << "CPU [XVID] : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << std::endl;
-    std::cout << "GPU [H264] : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << std::endl;
+    std::cout << "CPU [XVID] : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << "\n";
+    std::cout << "GPU [H264] : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << "\n";
 
     return 0;
 }
@@ -105,7 +105,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without CUDA Video encoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video encoding support\n" << "\n";
     return 0;
 }
 

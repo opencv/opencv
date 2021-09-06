@@ -118,7 +118,7 @@ inline std::ostream& operator <<(std::ostream& out, const LshStats& stats)
     << std::setiosflags(std::ios::left) << stats.bucket_size_max_;
 
     // Display the histogram
-    out << std::endl << std::setw(w) << std::setiosflags(std::ios::right) << "histogram : "
+    out << "\n" << std::setw(w) << std::setiosflags(std::ios::right) << "histogram : "
     << std::setiosflags(std::ios::left);
     for (std::vector<std::vector<unsigned int> >::const_iterator iterator = stats.size_histogram_.begin(), end =
              stats.size_histogram_.end(); iterator != end; ++iterator) out << (*iterator)[0] << "-" << (*iterator)[1] << ": " << (*iterator)[2] << ",  ";
@@ -384,11 +384,11 @@ inline LshTable<unsigned char>::LshTable(unsigned int feature_size, unsigned int
         size_t bcount = 0;
         BOOST_FOREACH(size_t mask_block, mask_){
             out << std::setw(sizeof(size_t) * CHAR_BIT / 4) << std::setfill('0') << std::hex << mask_block
-                << std::endl;
+                << "\n";
             bcount += __builtin_popcountll(mask_block);
         }
-        out << "bit count : " << std::dec << bcount << std::endl;
-        out << "mask size : " << mask_.size() << std::endl;
+        out << "bit count : " << std::dec << bcount << "\n";
+        out << "mask size : " << mask_.size() << "\n";
         return out;
     }
 #endif
@@ -475,7 +475,7 @@ inline LshStats LshTable<unsigned char>::getStats() const
 
     //  BOOST_FOREACH(int size, stats.bucket_sizes_)
     //          std::cout << size << " ";
-    //  std::cout << std::endl;
+    //  std::cout << "\n";
     stats.bucket_size_median_ = stats.bucket_sizes_[stats.bucket_sizes_.size() / 2];
     stats.bucket_size_min_ = stats.bucket_sizes_.front();
     stats.bucket_size_max_ = stats.bucket_sizes_.back();

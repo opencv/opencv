@@ -1690,7 +1690,7 @@ int CV_FitLineTest::validate_test_results( int test_case_idx )
     int k, max_k = 0;
     double vec_diff = 0, t;
 
-    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << std::endl;
+    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << "\n";
 
     for( k = 0; k < dims*2; k++ )
     {
@@ -2325,7 +2325,7 @@ bool checkMinAreaRect(const RotatedRect& rr, const Mat& c, double eps = 0.5f)
     }
 
     if (nfailed)
-        std::cout << "nfailed=" << nfailed << " (total=" << N << ")   maxError=" << maxError << std::endl;
+        std::cout << "nfailed=" << nfailed << " (total=" << N << ")   maxError=" << maxError << "\n";
     return nfailed == 0;
 }
 

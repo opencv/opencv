@@ -24,18 +24,18 @@ std::string currentParallelFrameworkSafe()
 using namespace cv;
 int main()
 {
-    std::cout << "OpenCV builtin parallel framework: '" << currentParallelFrameworkSafe() << "' (nthreads=" << getNumThreads() << ")" << std::endl;
+    std::cout << "OpenCV builtin parallel framework: '" << currentParallelFrameworkSafe() << "' (nthreads=" << getNumThreads() << ")" << "\n";
 
     //! [tbb_backend]
     cv::parallel::setParallelForBackend(std::make_shared<cv::parallel::tbb::ParallelForBackend>());
     //! [tbb_backend]
 
-    std::cout << "New parallel backend: '" << currentParallelFrameworkSafe() << "'" << "' (nthreads=" << getNumThreads() << ")" << std::endl;
+    std::cout << "New parallel backend: '" << currentParallelFrameworkSafe() << "'" << "' (nthreads=" << getNumThreads() << ")" << "\n";
 
     parallel_for_(Range(0, 20), [&](const Range range)
     {
         std::ostringstream out;
-        out << "Thread " << getThreadNum() << "(opencv=" << utils::getThreadID() << "): range " << range.start << "-" << range.end << std::endl;
+        out << "Thread " << getThreadNum() << "(opencv=" << utils::getThreadID() << "): range " << range.start << "-" << range.end << "\n";
         std::cout << out.str() << std::flush;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

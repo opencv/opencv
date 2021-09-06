@@ -63,7 +63,7 @@ protected:
         //int frameID = (int)cap.get(CAP_PROP_POS_FRAMES);
         Mat img;
         ASSERT_NO_THROW(cap >> img);
-        //std::cout << "idx=" << idx << " img=" << img.size() << " frameID=" << frameID << std::endl;
+        //std::cout << "idx=" << idx << " img=" << img.size() << " frameID=" << frameID << "\n";
         ASSERT_FALSE(img.empty()) << "idx=" << idx;
         checkFrameContent(img, idx);
     }
@@ -73,7 +73,7 @@ protected:
         ASSERT_NO_THROW(canSeek = cap.set(CAP_PROP_POS_FRAMES, idx));
         if (!canSeek)
         {
-            std::cout << "Seek to frame '" << idx << "' is not supported. SKIP." << std::endl;
+            std::cout << "Seek to frame '" << idx << "' is not supported. SKIP." << "\n";
             return;
         }
         EXPECT_EQ(idx, (int)cap.get(CAP_PROP_POS_FRAMES));
@@ -91,7 +91,7 @@ public:
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
         {
-            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << "\n";
             return;
         }
         int n_frames = -1;
@@ -103,7 +103,7 @@ public:
         }
         else
         {
-            std::cout << "CAP_PROP_FRAME_COUNT is not supported by backend. Assume 50 frames." << std::endl;
+            std::cout << "CAP_PROP_FRAME_COUNT is not supported by backend. Assume 50 frames." << "\n";
             n_frames = 50;
         }
 
@@ -127,7 +127,7 @@ public:
         EXPECT_NO_THROW(canSeek = cap.set(CAP_PROP_POS_FRAMES, 0));
         if (!canSeek)
         {
-            std::cout << "Seek to frame '0' is not supported. SKIP all 'seek' tests." << std::endl;
+            std::cout << "Seek to frame '0' is not supported. SKIP all 'seek' tests." << "\n";
             return;
         }
 
@@ -184,7 +184,7 @@ public:
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())
         {
-            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+            std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << "\n";
             return;
         }
 
@@ -199,7 +199,7 @@ public:
         if (fps_prop > 0)
             EXPECT_NEAR(fps_prop, bunny_param.getFps(), 1);
         else
-            std::cout << "FPS is not available. SKIP check." << std::endl;
+            std::cout << "FPS is not available. SKIP check." << "\n";
 
         int count_prop = 0;
         EXPECT_NO_THROW(count_prop = (int)cap.get(CAP_PROP_FRAME_COUNT));
@@ -231,7 +231,7 @@ public:
             EXPECT_NEAR(bunny_param.getCount(), count_actual, 1);
         }
         else
-            std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << std::endl;
+            std::cout << "Frames counter is not available. Actual frames: " << count_actual << ". SKIP check." << "\n";
     }
 
     void doTimestampTest()
@@ -261,7 +261,7 @@ public:
             ASSERT_NO_THROW(cap >> img);
             EXPECT_NO_THROW(timestamp = cap.get(CAP_PROP_POS_MSEC));
             if (cvtest::debugLevel > 0)
-                std::cout << "i = " << i << ": timestamp = " << timestamp << std::endl;
+                std::cout << "i = " << i << ": timestamp = " << timestamp << "\n";
             const double frame_period = 1000.f/bunny_param.getFps();
             // NOTE: eps == frame_period, because videoCapture returns frame begining timestamp or frame end
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
@@ -629,7 +629,7 @@ TEST_P(safe_capture, frames_independency)
     EXPECT_NO_THROW(cap.open(video_file, apiPref));
     if (!cap.isOpened())
     {
-        std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << std::endl;
+        std::cout << "SKIP test: backend " << apiPref << " can't open the video: " << video_file << "\n";
         return;
     }
 
@@ -733,7 +733,7 @@ TEST_P(videocapture_acceleration, read)
     {
         ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
     }
-    std::cout << "VideoCapture " << backend_name << ":" << actual_va << std::endl << std::flush;
+    std::cout << "VideoCapture " << backend_name << ":" << actual_va << "\n" << std::flush;
 
     double min_psnr_original = 1000;
     for (int i = 0; i < frameNum; i++)
@@ -788,7 +788,7 @@ TEST_P(videocapture_acceleration, read)
     std::cout << "VideoCapture with acceleration = " << cv::format("%-6s @ %-10s", actual_va_str.c_str(), backend_name.c_str())
             << " on " << filename
             << " with PSNR-original = " << min_psnr_original
-            << std::endl << std::flush;
+            << "\n" << std::flush;
     EXPECT_GE(min_psnr_original, psnr_threshold);
 }
 
@@ -916,7 +916,7 @@ TEST_P(videowriter_acceleration, write)
         {
             ASSERT_EQ((int)actual_va, (int)va_type) << "actual_va=" << actual_va << ", va_type=" << va_type;
         }
-        std::cout << "VideoWriter " << backend_name << ":" << actual_va << std::endl << std::flush;
+        std::cout << "VideoWriter " << backend_name << ":" << actual_va << "\n" << std::flush;
 
         Mat frame(sz, CV_8UC3);
         for (int i = 0; i < frameNum; ++i) {
@@ -936,7 +936,7 @@ TEST_P(videowriter_acceleration, write)
     ofile.seekg(0, std::ios::end);
     int64 fileSize = (int64)ofile.tellg();
     ASSERT_GT(fileSize, 0);
-    std::cout << "File size: " << fileSize << std::endl;
+    std::cout << "File size: " << fileSize << "\n";
 
     // Read video and check PSNR on every frame
     {
@@ -977,7 +977,7 @@ TEST_P(videowriter_acceleration, write)
                     << " on codec=" << codecid << " (." << extension << ")"
                     << ", bitrate = " << fileSize / (frameNum / fps)
                     << ", with PSNR-original = " << min_psnr
-                    << std::endl << std::flush;
+                    << "\n" << std::flush;
         }
         remove(filename.c_str());
     }

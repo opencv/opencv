@@ -477,7 +477,7 @@ struct TorchImporter
         String nnName;
 
         if (dbgPrint)
-            std::cout << "Class: " << className << std::endl;
+            std::cout << "Class: " << className << "\n";
 
         int type;
         if ( (type = parseTensorType(className)) >= 0 ) //is Tensor

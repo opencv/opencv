@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     else if (!dataset.compare("HAND")) {  midx = 2; npairs = 20; nparts = 22; }
     else
     {
-        std::cerr << "Can't interpret dataset parameter: " << dataset << std::endl;
+        std::cerr << "Can't interpret dataset parameter: " << dataset << "\n";
         exit(-1);
     }
 
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     Mat img = imread(imageFile);
     if (img.empty())
     {
-        std::cerr << "Can't read image from the file: " << imageFile << std::endl;
+        std::cerr << "Can't read image from the file: " << imageFile << "\n";
         exit(-1);
     }
 

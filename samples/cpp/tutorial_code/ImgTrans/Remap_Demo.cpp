@@ -26,7 +26,7 @@ int main(int argc, const char** argv)
     Mat src = imread( samples::findFile( filename ), IMREAD_COLOR );
     if (src.empty())
     {
-        std::cout << "Cannot read image: " << filename << std::endl;
+        std::cout << "Cannot read image: " << filename << "\n";
         return -1;
     }
     //! [Load]

@@ -340,7 +340,7 @@ TEST(Fluid, MultipleOutRowsTest)
                         cv::compile_args(fluidTestPackage));
     cc(in_mat, out_mat);
 
-    std::cout << out_mat << std::endl;
+    std::cout << out_mat << "\n";
 
     cv::Mat ocv_ref = in_mat + 1 + 2;
     EXPECT_EQ(0, cvtest::norm(ocv_ref, out_mat, NORM_INF));
@@ -369,7 +369,7 @@ TEST(Fluid, LPIWindow)
     auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage));
     cc(in_mat, out_mat);
 
-    //std::cout << out_mat << std::endl;
+    //std::cout << out_mat << "\n";
 
     // OpenCV reference
     cv::Mat ocv_ref = eyes[0]+eyes[1]+eyes[2];

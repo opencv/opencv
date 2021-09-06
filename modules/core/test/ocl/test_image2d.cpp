@@ -21,7 +21,7 @@ TEST(Image2D, createAliasEmptyUMat)
         EXPECT_FALSE(cv::ocl::Image2D::canCreateAlias(um));
     }
     else
-        std::cout << "OpenCL runtime not found. Test skipped." << std::endl;
+        std::cout << "OpenCL runtime not found. Test skipped." << "\n";
 }
 
 TEST(Image2D, createImage2DWithEmptyUMat)
@@ -32,7 +32,7 @@ TEST(Image2D, createImage2DWithEmptyUMat)
         EXPECT_ANY_THROW(cv::ocl::Image2D image(um));
     }
     else
-        std::cout << "OpenCL runtime not found. Test skipped." << std::endl;
+        std::cout << "OpenCL runtime not found. Test skipped." << "\n";
 }
 
 TEST(Image2D, createAlias)
@@ -56,11 +56,11 @@ TEST(Image2D, createAlias)
                 EXPECT_NO_THROW(cv::ocl::Image2D image(um, false, true));
             }
             else
-                std::cout << "Impossible to create alias for selected image. Test skipped." << std::endl;
+                std::cout << "Impossible to create alias for selected image. Test skipped." << "\n";
         }
     }
     else
-        std::cout << "OpenCL runtime not found. Test skipped" << std::endl;
+        std::cout << "OpenCL runtime not found. Test skipped" << "\n";
 }
 
 TEST(Image2D, turnOffOpenCL)
@@ -82,13 +82,13 @@ TEST(Image2D, turnOffOpenCL)
             EXPECT_NO_THROW(cv::ocl::Image2D image(um));
         }
         else
-            std::cout << "CV_8UC1 is not supported for OpenCL images. Test skipped." << std::endl;
+            std::cout << "CV_8UC1 is not supported for OpenCL images. Test skipped." << "\n";
     
         // reset state to the previous one
         cv::ocl::setUseOpenCL(useOCL);
     }
     else
-        std::cout << "OpenCL runtime not found. Test skipped." << std::endl;
+        std::cout << "OpenCL runtime not found. Test skipped." << "\n";
 }
 
 } } // namespace opencv_test::ocl

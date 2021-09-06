@@ -145,7 +145,7 @@ TEST_P(videoio_container, read)
         ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
     }
 
-    std::cout << "Checking extracted video stream: " << fileNameOut << " (size: " << totalBytes << " bytes)" << std::endl;
+    std::cout << "Checking extracted video stream: " << fileNameOut << " (size: " << totalBytes << " bytes)" << "\n";
 
     // Check decoded frames read from original media are equal to frames decoded from tmp file
     {
@@ -411,7 +411,7 @@ TEST(videoio, mp4_orientation_meta_auto)
 
     VideoCapture cap;
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
-    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << "\n";
 
     cap.set(CAP_PROP_ORIENTATION_AUTO, true);
     if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
@@ -442,7 +442,7 @@ TEST(videoio, mp4_orientation_no_rotation)
     VideoCapture cap;
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     cap.set(CAP_PROP_ORIENTATION_AUTO, 0);
-    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << "\n";
     ASSERT_FALSE(cap.get(CAP_PROP_ORIENTATION_AUTO));
 
     Size actual;

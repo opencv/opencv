@@ -63,8 +63,8 @@ int main( int argc, char** argv )
 
   if( src.empty() )
   {
-    std::cout << "Could not open or find the image!\n" << std::endl;
-    std::cout << "Usage: " << argv[0] << " <Input image>" << std::endl;
+    std::cout << "Could not open or find the image!\n" << "\n";
+    std::cout << "Usage: " << argv[0] << " <Input image>" << "\n";
     return -1;
   }
   //![load]

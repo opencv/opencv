@@ -673,7 +673,7 @@ int App::initVideoSource()
 
     catch (const std::exception& e)
     {
-        cerr << "ERROR: " << e.what() << std::endl;
+        cerr << "ERROR: " << e.what() << "\n";
         return -1;
     }
 

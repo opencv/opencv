@@ -196,7 +196,7 @@ TEST(GraphMeta, Streaming_AccessDesync) {
         }
     }
     // Visually report that everything is really ok
-    std::cout << sync_ids.size() << " vs " << desync_ids.size() << std::endl;
+    std::cout << sync_ids.size() << " vs " << desync_ids.size() << "\n";
 
     // Desync path should generate less objects than the synchronized one
     EXPECT_GE(sync_ids.size(), desync_ids.size());

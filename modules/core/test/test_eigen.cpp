@@ -408,9 +408,9 @@ static void testEigen(const Mat_<T>& src, const Mat_<T>& expected_eigenvalues, b
         cv::eigenNonSymmetric(src, eigenvalues, eigenvectors);
     }
 #if 0
-    std::cout << "src = " << src << std::endl;
-    std::cout << "eigenvalues.t() = " << eigenvalues.t() << std::endl;
-    std::cout << "eigenvectors = " << eigenvectors << std::endl;
+    std::cout << "src = " << src << "\n";
+    std::cout << "eigenvalues.t() = " << eigenvalues.t() << "\n";
+    std::cout << "eigenvectors = " << eigenvectors << "\n";
 #endif
     ASSERT_EQ(type, eigenvalues0.type());
     ASSERT_EQ(type, eigenvalues.type());
@@ -429,8 +429,8 @@ static void testEigen(const Mat_<T>& src, const Mat_<T>& expected_eigenvalues, b
         Mat lhs = src*eigenvectors.row(i).t();
         Mat rhs = eigenvalues.at<T>(i)*eigenvectors.row(i).t();
         EXPECT_LT(cvtest::norm(lhs, rhs, NORM_INF), eps)
-                << "i=" << i << " eigenvalue=" << eigenvalues.at<T>(i) << std::endl
-                << "lhs=" << lhs.t() << std::endl
+                << "i=" << i << " eigenvalue=" << eigenvalues.at<T>(i) << "\n"
+                << "lhs=" << lhs.t() << "\n"
                 << "rhs=" << rhs.t();
     }
 }
@@ -530,7 +530,7 @@ TEST(Core_EigenNonSymmetric, convergence)
     try
     {
         cv::eigenNonSymmetric(m, eigenvalues, eigenvectors);
-        std::cout << Mat(eigenvalues.t()) << std::endl;
+        std::cout << Mat(eigenvalues.t()) << "\n";
     }
     catch (const cv::Exception& e)
     {

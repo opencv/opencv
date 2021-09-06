@@ -117,7 +117,7 @@ int main(int argc, const char** argv)
         }
 
         double fps = cv::getTickFrequency() / (cv::getTickCount() - start);
-        std::cout << "FPS : " << fps << std::endl;
+        std::cout << "FPS : " << fps << "\n";
 
         d_fgimg.create(d_frame.size(), d_frame.type());
         d_fgimg.setTo(Scalar::all(0));

@@ -239,7 +239,7 @@ void CV_DescriptorMatcherTest::matchTest( const Mat& query, const Mat& train )
             for( size_t i = 0; i < matches.size(); i++ )
             {
                 DMatch& match = matches[i];
-                //std::cout << match.distance << std::endl;
+                //std::cout << match.distance << "\n";
 
                 if( match.queryIdx != (int)i || match.trainIdx != (int)i || std::abs(match.distance) > FLT_EPSILON )
                 {

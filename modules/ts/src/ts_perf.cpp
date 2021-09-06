@@ -369,22 +369,22 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
     cv::minMaxIdx(actual, &actual_min, &actual_max);
 
     ASSERT_NEAR(expect_min, actual_min, eps)
-            << argname << " has unexpected minimal value" << std::endl;
+            << argname << " has unexpected minimal value" << "\n";
     ASSERT_NEAR(expect_max, actual_max, eps)
-            << argname << " has unexpected maximal value" << std::endl;
+            << argname << " has unexpected maximal value" << "\n";
 
     cv::FileNode last = node["last"];
     double actual_last = getElem(actual, actual.size.p[0] - 1, actual.size.p[1] - 1, actual.channels() - 1);
     int expect_cols = (int)last["x"] + 1;
     int expect_rows = (int)last["y"] + 1;
     ASSERT_EQ(expect_cols, actual.size.p[1])
-            << argname << " has unexpected number of columns" << std::endl;
+            << argname << " has unexpected number of columns" << "\n";
     ASSERT_EQ(expect_rows, actual.size.p[0])
-            << argname << " has unexpected number of rows" << std::endl;
+            << argname << " has unexpected number of rows" << "\n";
 
     double expect_last = (double)last["val"];
     ASSERT_NEAR(expect_last, actual_last, eps)
-            << argname << " has unexpected value of the last element" << std::endl;
+            << argname << " has unexpected value of the last element" << "\n";
 
     cv::FileNode rng1 = node["rng1"];
     int x1 = rng1["x"];
@@ -397,7 +397,7 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
     double actual_rng1 = getElem(actual, y1, x1, cn1);
 
     ASSERT_NEAR(expect_rng1, actual_rng1, eps)
-            << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << std::endl;
+            << argname << " has unexpected value of the ["<< x1 << ":" << y1 << ":" << cn1 <<"] element" << "\n";
 
     cv::FileNode rng2 = node["rng2"];
     int x2 = rng2["x"];
@@ -408,7 +408,7 @@ void Regression::verify(cv::FileNode node, cv::Mat actual, double eps, std::stri
     double actual_rng2 = getElem(actual, y2, x2, cn2);
 
     ASSERT_NEAR(expect_rng2, actual_rng2, eps)
-            << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << std::endl;
+            << argname << " has unexpected value of the ["<< x2 << ":" << y2 << ":" << cn2 <<"] element" << "\n";
 }
 
 void Regression::write(cv::InputArray array)
@@ -507,7 +507,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (!cv::checkRange(diff, true, 0, 0, eps))
                     {
                         if(expected.total() * expected.channels() < 12)
-                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+                            std::cout << " Expected: " << "\n" << expected << "\n" << " Actual:" << "\n" << actual << "\n";
 
                         double max;
                         cv::minMaxIdx(diff.reshape(1), 0, &max);
@@ -523,7 +523,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         if(expected.total() * expected.channels() < 12)
-                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+                            std::cout << " Expected: " << "\n" << expected << "\n" << " Actual:" << "\n" << actual << "\n";
 
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
                                << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps << " in " << violations << " points";
@@ -564,7 +564,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (!cv::checkRange(diff, true, 0, 0, eps))
                     {
                         if(expected.total() * expected.channels() < 12)
-                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+                            std::cout << " Expected: " << "\n" << expected << "\n" << " Actual:" << "\n" << actual << "\n";
 
                         double max;
                         cv::minMaxIdx(diff.reshape(1), 0, &max);
@@ -580,7 +580,7 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     if (violations > 0)
                     {
                         if(expected.total() * expected.channels() < 12)
-                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+                            std::cout << " Expected: " << "\n" << expected << "\n" << " Actual:" << "\n" << actual << "\n";
 
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
                                << "\" and expected value is greater than " << eps << " in " << violations << " points";
@@ -690,20 +690,20 @@ static void loadPerfValidationResults(const std::string& fileName)
         {
             if (infile.eof())
                 break; // it is OK
-            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << std::endl;
+            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << "\n";
             return;
         }
         infile.ignore(1);
         if (!(std::getline(infile, name)))
         {
-            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << std::endl;
+            std::cout << "ERROR: Can't load performance validation results from " << fileName << "!" << "\n";
             return;
         }
         if (!name.empty() && name[name.size() - 1] == '\r') // CRLF processing on Linux
             name.resize(name.size() - 1);
         perf_validation_results[name] = value;
     }
-    std::cout << "Performance validation results loaded from " << fileName << " (" << perf_validation_results.size() << " entries)" << std::endl;
+    std::cout << "Performance validation results loaded from " << fileName << " (" << perf_validation_results.size() << " entries)" << "\n";
 }
 
 static void savePerfValidationResult(const std::string& name, float value)
@@ -720,10 +720,10 @@ static void savePerfValidationResults()
         for (i = perf_validation_results.begin(); i != perf_validation_results.end(); ++i)
         {
             outfile << i->second << ';';
-            outfile << i->first << std::endl;
+            outfile << i->first << "\n";
         }
         outfile.close();
-        std::cout << "Performance validation results saved (" << perf_validation_results.size() << " entries)" << std::endl;
+        std::cout << "Performance validation results saved (" << perf_validation_results.size() << " entries)" << "\n";
     }
 }
 
@@ -1224,7 +1224,7 @@ int64 TestBase::_calibrate()
             SetUp();
             declare.iterations(1000);
             minIters = nIters = 1000;
-            for(int iters = 0; next() && startTimer(); iters++, stopTimer()) { /*std::cout << iters << nIters << std::endl;*/ }
+            for(int iters = 0; next() && startTimer(); iters++, stopTimer()) { /*std::cout << iters << nIters << "\n";*/ }
         }
     };
 
@@ -1382,7 +1382,7 @@ bool TestBase::next()
             assert(getCurrentPerformanceStrategy() == PERF_STRATEGY_SIMPLE);
             if (totalTime - lastActivityPrintTime >= cv::getTickFrequency() * 10)
             {
-                std::cout << '.' << std::endl;
+                std::cout << '.' << "\n";
                 lastActivityPrintTime = totalTime;
             }
             if (currentIter >= nIters)

@@ -63,7 +63,7 @@ protected:
     void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
     {
         ArrayTest::dump_test_case(test_case_idx, out);
-        *out << "border=" << border << std::endl;
+        *out << "border=" << border << "\n";
     }
 
 };
@@ -696,7 +696,7 @@ protected:
     void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
     {
         CV_FilterBaseTest::dump_test_case(test_case_idx, out);
-        *out << "smooth_type=" << smooth_type << std::endl;
+        *out << "smooth_type=" << smooth_type << "\n";
     }
 };
 
@@ -812,7 +812,7 @@ protected:
     void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
     {
         CV_SmoothBaseTest::dump_test_case(test_case_idx, out);
-        *out << "kernel=(" << param1 << ", " << param2 << ") sigma=" << sigma << std::endl;
+        *out << "kernel=(" << param1 << ", " << param2 << ") sigma=" << sigma << "\n";
     }
 };
 

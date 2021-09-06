@@ -75,7 +75,7 @@ int main(int argc, char** argv)
 
             if (frame.empty())
             {
-                cerr << "Can't capture frame: " << i << std::endl;
+                cerr << "Can't capture frame: " << i << "\n";
                 break;
             }
 

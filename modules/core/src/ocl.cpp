@@ -154,7 +154,7 @@ static bool isRaiseError()
 static inline
 void traceOpenCLCheck(cl_int status, const char* message)
 {
-    std::cout << "OpenCV(OpenCL:" << status << "): " << message << std::endl << std::flush;
+    std::cout << "OpenCV(OpenCL:" << status << "): " << message << "\n" << std::flush;
 }
 #define CV_OCL_TRACE_CHECK_RESULT(status, message) traceOpenCLCheck(status, message)
 #else
@@ -358,7 +358,7 @@ struct OpenCLBinaryCacheConfigurator
                     }
                     catch (const cv::Exception& e)
                     {
-                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_ << std::endl << e.what());
+                        CV_LOG_WARNING(NULL, "Can't create OpenCL program cache lock: " << cache_lock_filename_ << "\n" << e.what());
                     }
                     catch (...)
                     {
@@ -380,7 +380,7 @@ struct OpenCLBinaryCacheConfigurator
             }
             catch (const cv::Exception& e)
             {
-                CV_LOG_WARNING(NULL, "Can't prepare OpenCL program cache: " << cache_path_ << std::endl << e.what());
+                CV_LOG_WARNING(NULL, "Can't prepare OpenCL program cache: " << cache_path_ << "\n" << e.what());
                 clear();
             }
         } while (0);
@@ -437,7 +437,7 @@ struct OpenCLBinaryCacheConfigurator
             }
             catch (const cv::Exception& e)
             {
-                CV_LOG_ERROR(NULL, "Can't create OpenCL program cache directory for context: " << target_directory << std::endl << e.what());
+                CV_LOG_ERROR(NULL, "Can't create OpenCL program cache directory for context: " << target_directory << "\n" << e.what());
             }
         }
         target_directory = result ? target_directory : std::string();
@@ -484,7 +484,7 @@ struct OpenCLBinaryCacheConfigurator
                         }
                         catch (const cv::Exception& e)
                         {
-                            CV_LOG_ERROR(NULL, "Exception during removal of obsolete OpenCL cache directory: " << path << std::endl << e.what());
+                            CV_LOG_ERROR(NULL, "Exception during removal of obsolete OpenCL cache directory: " << path << "\n" << e.what());
                         }
                     }
                 }
@@ -1619,7 +1619,7 @@ struct Device::Impl
 #define CL_DEVICE_SPIR_VERSIONS                     0x40E0
 #endif
             cv::String spir_versions = getStrProp(CL_DEVICE_SPIR_VERSIONS);
-            std::cout << spir_versions << std::endl;
+            std::cout << spir_versions << "\n";
         }
 #endif
     }
@@ -2253,13 +2253,13 @@ not_found:
         return NULL; // suppress messages on stderr
 
     std::ostringstream msg;
-    msg << "ERROR: Requested OpenCL device not found, check configuration: '" << configuration << "'" << std::endl
-        << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
+    msg << "ERROR: Requested OpenCL device not found, check configuration: '" << configuration << "'" << "\n"
+        << "    Platform: " << (platform.length() == 0 ? "any" : platform) << "\n"
         << "    Device types:";
     for (size_t t = 0; t < deviceTypes.size(); t++)
         msg << ' ' << deviceTypes[t];
 
-    msg << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName);
+    msg << "\n" << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName);
 
     CV_LOG_ERROR(NULL, msg.str());
     return NULL;
@@ -4400,7 +4400,7 @@ struct Program::Impl
             catch (const cv::Exception& e)
             {
                 CV_UNUSED(e);
-                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname << std::endl << e.what());
+                CV_LOG_VERBOSE(NULL, 0, "Can't load OpenCL binary: " + fname << "\n" << e.what());
             }
             catch (...)
             {
@@ -4452,7 +4452,7 @@ struct Program::Impl
             }
             catch (const cv::Exception& e)
             {
-                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname << std::endl << e.what());
+                CV_LOG_WARNING(NULL, "Can't save OpenCL binary into cache: " + fname << "\n" << e.what());
             }
             catch (...)
             {

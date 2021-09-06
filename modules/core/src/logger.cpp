@@ -187,12 +187,12 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     std::ostringstream ss;
     switch (logLevel)
     {
-    case LOG_LEVEL_FATAL:   ss << "[FATAL:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_ERROR:   ss << "[ERROR:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_WARNING: ss << "[ WARN:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_INFO:    ss << "[ INFO:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_DEBUG:   ss << "[DEBUG:" << threadID << "] " << message << std::endl; break;
-    case LOG_LEVEL_VERBOSE: ss << message << std::endl; break;
+    case LOG_LEVEL_FATAL:   ss << "[FATAL:" << threadID << "] " << message << "\n"; break;
+    case LOG_LEVEL_ERROR:   ss << "[ERROR:" << threadID << "] " << message << "\n"; break;
+    case LOG_LEVEL_WARNING: ss << "[ WARN:" << threadID << "] " << message << "\n"; break;
+    case LOG_LEVEL_INFO:    ss << "[ INFO:" << threadID << "] " << message << "\n"; break;
+    case LOG_LEVEL_DEBUG:   ss << "[DEBUG:" << threadID << "] " << message << "\n"; break;
+    case LOG_LEVEL_VERBOSE: ss << message << "\n"; break;
     case LOG_LEVEL_SILENT: return;  // avoid compiler warning about incomplete switch
     case ENUM_LOG_LEVEL_FORCE_INT: return;  // avoid compiler warning about incomplete switch
     }

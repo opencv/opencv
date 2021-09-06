@@ -97,13 +97,13 @@ int main(void)
         DrawTravelMap(img, posCity, next);
         imshow("Map", img);
         int k = waitKey(10);
-        std::cout << "i=" << i << " changesApplied=" << changesApplied << " temp=" << currentTemperature << " result=" << ts_system.energy() << std::endl;
+        std::cout << "i=" << i << " changesApplied=" << changesApplied << " temp=" << currentTemperature << " result=" << ts_system.energy() << "\n";
         if (k == 27 || k == 'q' || k == 'Q')
             return 0;
         if (changesApplied == 0)
             zeroChanges++;
     }
-    std::cout << "Done" << std::endl;
+    std::cout << "Done" << "\n";
     waitKey(0);
     return 0;
 }

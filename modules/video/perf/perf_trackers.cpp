@@ -45,7 +45,7 @@ void Tracking::runTrackingTest(const Ptr<Tracker>& tracker, const TrackingParams
     // c.set(CAP_PROP_POS_FRAMES, startFrame);
 #else
     if (startFrame)
-        std::cout << "startFrame = " << startFrame << std::endl;
+        std::cout << "startFrame = " << startFrame << "\n";
     for (int i = 0; i < startFrame; i++)
     {
         Mat dummy_frame;
@@ -64,7 +64,7 @@ void Tracking::runTrackingTest(const Ptr<Tracker>& tracker, const TrackingParams
         frames.push_back(frame);
     }
 
-    std::cout << "frame size = " << frames[0].size() << std::endl;
+    std::cout << "frame size = " << frames[0].size() << "\n";
 
     PERF_SAMPLE_BEGIN();
     {

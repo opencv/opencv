@@ -569,10 +569,10 @@ struct IntelligentScissorsMB::Impl
 #if 0  // debug
         Rect wholeImage(0, 0, src_size.width, src_size.height);
         Rect roi = Rect(start_point.x - 5, start_point.y - 5, 11, 11) & wholeImage;
-        std::cout << roi << std::endl;
-        std::cout << gradient_magnitude(roi) << std::endl;
-        std::cout << gradient_direction(roi) << std::endl;
-        std::cout << non_edge_feature(roi) << std::endl;
+        std::cout << roi << "\n";
+        std::cout << gradient_magnitude(roi) << "\n";
+        std::cout << gradient_direction(roi) << "\n";
+        std::cout << non_edge_feature(roi) << "\n";
 #endif
 
         optimalPathsMap.release();

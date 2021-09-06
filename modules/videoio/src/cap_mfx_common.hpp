@@ -122,42 +122,42 @@ inline std::ostream & operator<<(std::ostream &out, mfxStatus s) {
 }
 
 inline std::ostream & operator<<(std::ostream &out, const mfxInfoMFX &info) {
-    out << "InfoMFX:" << std::endl
-        << "| Codec: " << FourCC(info.CodecId) << " / " << info.CodecProfile << " / " << info.CodecLevel << std::endl
-        << "| DecodedOrder: " << info.DecodedOrder << std::endl
-        << "| TimeStampCalc: " << info.TimeStampCalc << std::endl
+    out << "InfoMFX:" << "\n"
+        << "| Codec: " << FourCC(info.CodecId) << " / " << info.CodecProfile << " / " << info.CodecLevel << "\n"
+        << "| DecodedOrder: " << info.DecodedOrder << "\n"
+        << "| TimeStampCalc: " << info.TimeStampCalc << "\n"
            ;
     return out;
 }
 
 inline std::ostream & operator<<(std::ostream & out, const mfxFrameInfo & info) {
-    out << "FrameInfo: " << std::endl
-        << "| FourCC: " << FourCC(info.FourCC) << std::endl
-        << "| Size: " << info.Width << "x" << info.Height << std::endl
-        << "| ROI: " << "(" << info.CropX << ";" << info.CropY << ") " << info.CropW << "x" << info.CropH << std::endl
-        << "| BitDepth(L/C): " << info.BitDepthLuma << " / " << info.BitDepthChroma << std::endl
-        << "| Shift: " << info.Shift << std::endl
-        << "| TemporalID: " << info.FrameId.TemporalId << std::endl
-        << "| FrameRate: " << info.FrameRateExtN << "/" << info.FrameRateExtD << std::endl
-        << "| AspectRatio: " << info.AspectRatioW << "x" << info.AspectRatioH << std::endl
-        << "| PicStruct: " << info.PicStruct << std::endl
-        << "| ChromaFormat: " << info.ChromaFormat << std::endl
+    out << "FrameInfo: " << "\n"
+        << "| FourCC: " << FourCC(info.FourCC) << "\n"
+        << "| Size: " << info.Width << "x" << info.Height << "\n"
+        << "| ROI: " << "(" << info.CropX << ";" << info.CropY << ") " << info.CropW << "x" << info.CropH << "\n"
+        << "| BitDepth(L/C): " << info.BitDepthLuma << " / " << info.BitDepthChroma << "\n"
+        << "| Shift: " << info.Shift << "\n"
+        << "| TemporalID: " << info.FrameId.TemporalId << "\n"
+        << "| FrameRate: " << info.FrameRateExtN << "/" << info.FrameRateExtD << "\n"
+        << "| AspectRatio: " << info.AspectRatioW << "x" << info.AspectRatioH << "\n"
+        << "| PicStruct: " << info.PicStruct << "\n"
+        << "| ChromaFormat: " << info.ChromaFormat << "\n"
            ;
     return out;
 }
 
 inline std::ostream & operator<<(std::ostream &out, const mfxFrameData &data) {
-    out << "FrameData:" << std::endl
-        << "| NumExtParam: " << data.NumExtParam << std::endl
-        << "| MemType: " << data.MemType << std::endl
-        << "| PitchHigh: " << data.PitchHigh << std::endl
-        << "| TimeStamp: " << data.TimeStamp << std::endl
-        << "| FrameOrder: " << data.FrameOrder << std::endl
-        << "| Locked: " << data.Locked << std::endl
-        << "| Pitch: " << data.PitchHigh << ", " << data.PitchLow << std::endl
-        << "| Y: " << (void*)data.Y << std::endl
-        << "| U: " << (void*)data.U << std::endl
-        << "| V: " << (void*)data.V << std::endl
+    out << "FrameData:" << "\n"
+        << "| NumExtParam: " << data.NumExtParam << "\n"
+        << "| MemType: " << data.MemType << "\n"
+        << "| PitchHigh: " << data.PitchHigh << "\n"
+        << "| TimeStamp: " << data.TimeStamp << "\n"
+        << "| FrameOrder: " << data.FrameOrder << "\n"
+        << "| Locked: " << data.Locked << "\n"
+        << "| Pitch: " << data.PitchHigh << ", " << data.PitchLow << "\n"
+        << "| Y: " << (void*)data.Y << "\n"
+        << "| U: " << (void*)data.U << "\n"
+        << "| V: " << (void*)data.V << "\n"
            ;
     return out;
 }
@@ -276,7 +276,7 @@ public:
         mfxFrameAllocRequest request;
         memset(&request, 0, sizeof(request));
         mfxStatus res = instance->QueryIOSurf(&params, &request);
-        DBG(std::cout << "MFX QueryIOSurf: " << res << std::endl);
+        DBG(std::cout << "MFX QueryIOSurf: " << res << "\n");
         if (res < MFX_ERR_NONE)
             return 0;
         return _create(request, params);

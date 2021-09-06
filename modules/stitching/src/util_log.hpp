@@ -44,8 +44,8 @@
 #define LOG(msg) LOG_(1, msg)
 #define LOG_CHAT(msg) LOG_(0, msg)
 
-#define LOGLN(msg) LOG(msg << std::endl)
-#define LOGLN_CHAT(msg) LOG_CHAT(msg << std::endl)
+#define LOGLN(msg) LOG(msg << "\n")
+#define LOGLN_CHAT(msg) LOG_CHAT(msg << "\n")
 
 //#if DEBUG_LOG_CHAT
 //  #define LOG_CHAT(msg) LOG(msg)

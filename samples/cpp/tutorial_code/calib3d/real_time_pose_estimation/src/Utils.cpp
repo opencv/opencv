@@ -332,8 +332,8 @@ void createFeatures(const std::string &featureName, int numKeypoints, cv::Ptr<cv
         detector = cv::xfeatures2d::SURF::create(100, 4, 3, true);   //extended=true
         descriptor = cv::xfeatures2d::SURF::create(100, 4, 3, true); //extended=true
 #else
-        std::cout << "xfeatures2d module is not available or nonfree is not enabled." << std::endl;
-        std::cout << "Default to ORB." << std::endl;
+        std::cout << "xfeatures2d module is not available or nonfree is not enabled." << "\n";
+        std::cout << "Default to ORB." << "\n";
         detector = cv::ORB::create(numKeypoints);
         descriptor = cv::ORB::create(numKeypoints);
 #endif
@@ -344,8 +344,8 @@ void createFeatures(const std::string &featureName, int numKeypoints, cv::Ptr<cv
         detector = cv::KAZE::create();
         descriptor = cv::xfeatures2d::BoostDesc::create();
 #else
-        std::cout << "xfeatures2d module is not available." << std::endl;
-        std::cout << "Default to ORB." << std::endl;
+        std::cout << "xfeatures2d module is not available." << "\n";
+        std::cout << "Default to ORB." << "\n";
         detector = cv::ORB::create(numKeypoints);
         descriptor = cv::ORB::create(numKeypoints);
 #endif
@@ -356,8 +356,8 @@ void createFeatures(const std::string &featureName, int numKeypoints, cv::Ptr<cv
         detector = cv::KAZE::create();
         descriptor = cv::xfeatures2d::VGG::create();
 #else
-        std::cout << "xfeatures2d module is not available." << std::endl;
-        std::cout << "Default to ORB." << std::endl;
+        std::cout << "xfeatures2d module is not available." << "\n";
+        std::cout << "Default to ORB." << "\n";
         detector = cv::ORB::create(numKeypoints);
         descriptor = cv::ORB::create(numKeypoints);
 #endif

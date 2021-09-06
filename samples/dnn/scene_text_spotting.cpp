@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 
     // Input data
     Mat frame = imread(samples::findFile(parser.get<String>("inputImage")));
-    std::cout << frame.size << std::endl;
+    std::cout << frame.size << "\n";
 
     // Inference
     std::vector< std::vector<Point> > detResults;
@@ -129,13 +129,13 @@ int main(int argc, char** argv)
             fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
 
             std::string recognitionResult = recognizer.recognize(cropped);
-            std::cout << i << ": '" << recognitionResult << "'" << std::endl;
+            std::cout << i << ": '" << recognitionResult << "'" << "\n";
 
             putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
         polylines(frame, contours, true, Scalar(0, 255, 0), 2);
     } else {
-        std::cout << "No Text Detected." << std::endl;
+        std::cout << "No Text Detected." << "\n";
     }
     imshow(winName, frame);
     waitKey();

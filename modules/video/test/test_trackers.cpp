@@ -86,11 +86,11 @@ TEST(GOTURN, memory_usage)
     string ground_truth_bb;
     for (int nframes = 0; nframes < 15; ++nframes)
     {
-        std::cout << "Frame: " << nframes << std::endl;
+        std::cout << "Frame: " << nframes << "\n";
         video >> frame;
         bool res = tracker->update(frame, roi);
         ASSERT_TRUE(res);
-        std::cout << "Predicted ROI: " << roi << std::endl;
+        std::cout << "Predicted ROI: " << roi << "\n";
     }
 }
 
@@ -118,11 +118,11 @@ TEST(DaSiamRPN, memory_usage)
     string ground_truth_bb;
     for (int nframes = 0; nframes < 15; ++nframes)
     {
-        std::cout << "Frame: " << nframes << std::endl;
+        std::cout << "Frame: " << nframes << "\n";
         video >> frame;
         bool res = tracker->update(frame, roi);
         ASSERT_TRUE(res);
-        std::cout << "Predicted ROI: " << roi << std::endl;
+        std::cout << "Predicted ROI: " << roi << "\n";
     }
 }
 

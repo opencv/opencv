@@ -98,9 +98,9 @@ TEST(Core_Async, AsyncThread_Simple)
         try {
             p.setValue(m);
         } catch (const std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << "\n";
         } catch (...) {
-            std::cout << "Unknown C++ exception" << std::endl;
+            std::cout << "Unknown C++ exception" << "\n";
         }
     });
 
@@ -138,11 +138,11 @@ TEST(Core_Async, AsyncThread_DetachedResult)
             if (e.code == Error::StsError)
                 exception_ok = true;
             else
-                std::cout << e.what() << std::endl;
+                std::cout << e.what() << "\n";
         } catch (const std::exception& e) {
-            std::cout << e.what() << std::endl;
+            std::cout << e.what() << "\n";
         } catch (...) {
-            std::cout << "Unknown C++ exception" << std::endl;
+            std::cout << "Unknown C++ exception" << "\n";
         }
     });
     t.join();

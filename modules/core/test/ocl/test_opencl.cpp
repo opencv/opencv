@@ -20,7 +20,7 @@ static void testOpenCLKernel(cv::ocl::Kernel& k)
             (int)5
         ).runProfiling(2, globalSize, localSize);
     ASSERT_GE(kernel_time, (int64)0);
-    std::cout << "Kernel time: " << (kernel_time * 1e-6) << " ms" << std::endl;
+    std::cout << "Kernel time: " << (kernel_time * 1e-6) << " ms" << "\n";
     cv::Mat res, reference(src.size(), CV_8UC1, cv::Scalar::all(105));
     dst.copyTo(res);
     EXPECT_EQ(0, cvtest::norm(reference, res, cv::NORM_INF));
@@ -64,7 +64,7 @@ TEST(OpenCL, support_binary_programs)
         cv::ocl::Kernel k("test_kernel", program);
         EXPECT_FALSE(k.empty());
         program.getBinary(program_binary_code);
-        std::cout << "Program binary size: " << program_binary_code.size() << " bytes" << std::endl;
+        std::cout << "Program binary size: " << program_binary_code.size() << " bytes" << "\n";
     }
 
     cv::ocl::Kernel k;
@@ -104,7 +104,7 @@ TEST(OpenCL, support_SPIR_programs)
         size_t pos = (size_t)f.tellg();
         f.seekg(0, std::fstream::end);
         size_t fileSize = (size_t)f.tellg();
-        std::cout << "Program SPIR size: " << fileSize << " bytes" << std::endl;
+        std::cout << "Program SPIR size: " << fileSize << " bytes" << "\n";
         f.seekg(pos, std::fstream::beg);
         program_binary_code.resize(fileSize);
         f.read(&program_binary_code[0], fileSize);

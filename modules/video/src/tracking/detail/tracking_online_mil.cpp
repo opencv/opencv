@@ -262,7 +262,7 @@ void ClfOnlineStump::init()
 
 void ClfOnlineStump::update(const Mat& posx, const Mat& negx, const Mat_<float>& /*posw*/, const Mat_<float>& /*negw*/)
 {
-    //std::cout << " ClfOnlineStump::update" << _ind << std::endl;
+    //std::cout << " ClfOnlineStump::update" << _ind << "\n";
     float posmu = 0.0, negmu = 0.0;
     if (posx.cols > 0)
         posmu = float(mean(posx.col(_ind))[0]);

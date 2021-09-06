@@ -281,10 +281,10 @@ int main(int argc, char *argv[])
     std::vector<cv::Mat> out_numbers;
     std::size_t frames = 0u;
 
-    std::cout << "Reading " << input << std::endl;
+    std::cout << "Reading " << input << "\n";
 
     if (cmd.get<bool>("ser")) {
-        std::cout << "Going serial..." << std::endl;
+        std::cout << "Going serial..." << "\n";
         cv::VideoCapture cap(input);
 
         auto cc = pp.compile(cv::GMatDesc{CV_8U,3,cv::Size(1920,1080)},
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
             if (!no_show) cv::imshow("Out", frame);
         }
     } else {
-        std::cout << "Going pipelined..." << std::endl;
+        std::cout << "Going pipelined..." << "\n";
 
         auto cc = pp.compileStreaming(cv::GMatDesc{CV_8U,3,cv::Size(1920,1080)},
                                       cv::compile_args(kernels, networks));
@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
         }
         cc.stop();
     }
-    std::cout << "Processed " << frames << " frames in " << avg.elapsed() << std::endl;
+    std::cout << "Processed " << frames << " frames in " << avg.elapsed() << "\n";
 
     return 0;
 }
@@ -345,7 +345,7 @@ int main()
 {
     std::cerr << "This tutorial code requires G-API module "
                  "with Inference Engine backend to run"
-              << std::endl;
+              << "\n";
     return 1;
 }
 #endif  // HAVE_OPECV_GAPI

@@ -366,7 +366,7 @@ struct FileLock::Impl
         l.l_whence = SEEK_SET;
         l.l_start = 0;
         l.l_len = 0;
-        DBG(std::cout << "Lock..." << std::endl);
+        DBG(std::cout << "Lock..." << "\n");
         bool res = -1 != ::fcntl(handle, F_SETLKW, &l);
         return res;
     }
@@ -378,7 +378,7 @@ struct FileLock::Impl
         l.l_whence = SEEK_SET;
         l.l_start = 0;
         l.l_len = 0;
-        DBG(std::cout << "Unlock..." << std::endl);
+        DBG(std::cout << "Unlock..." << "\n");
         bool res = -1 != ::fcntl(handle, F_SETLK, &l);
         return res;
     }
@@ -391,7 +391,7 @@ struct FileLock::Impl
         l.l_whence = SEEK_SET;
         l.l_start = 0;
         l.l_len = 0;
-        DBG(std::cout << "Lock read..." << std::endl);
+        DBG(std::cout << "Lock read..." << "\n");
         bool res = -1 != ::fcntl(handle, F_SETLKW, &l);
         return res;
     }

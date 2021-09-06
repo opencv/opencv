@@ -30,7 +30,7 @@ int main()
     cv::Mat imgIn = cv::imread("input.jpg", cv::IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
-        std::cout << "ERROR : Image cannot be loaded..!!" << std::endl;
+        std::cout << "ERROR : Image cannot be loaded..!!" << "\n";
         return -1;
     }
 
@@ -102,6 +102,6 @@ void calcGST(const cv::GMat& inputImg, cv::GMat& imgCoherencyOut, cv::GMat& imgO
 #include <iostream>
 int main()
 {
-    std::cerr << "This tutorial code requires G-API module to run" << std::endl;
+    std::cerr << "This tutorial code requires G-API module to run" << "\n";
 }
 #endif  // HAVE_OPECV_GAPI

@@ -60,10 +60,10 @@ public:
 
         net.forward(outputLayer); // warmup
 
-        std::cout << "Memory consumption:" << std::endl;
-        std::cout << "    Weights(parameters): " << divUp(weightsMemory, 1u<<20) << " Mb" << std::endl;
-        std::cout << "    Blobs: " << divUp(blobsMemory, 1u<<20) << " Mb" << std::endl;
-        std::cout << "Calculation complexity: " << flops * 1e-9 << " GFlops" << std::endl;
+        std::cout << "Memory consumption:" << "\n";
+        std::cout << "    Weights(parameters): " << divUp(weightsMemory, 1u<<20) << " Mb" << "\n";
+        std::cout << "    Blobs: " << divUp(blobsMemory, 1u<<20) << " Mb" << "\n";
+        std::cout << "Calculation complexity: " << flops * 1e-9 << " GFlops" << "\n";
 
         PERF_SAMPLE_BEGIN()
             net.forward();

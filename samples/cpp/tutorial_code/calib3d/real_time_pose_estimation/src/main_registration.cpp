@@ -113,11 +113,11 @@ int main(int argc, char *argv[])
         featureName = parser.has("feature") ? parser.get<string>("feature") : featureName;
     }
 
-    std::cout << "Input image: " << img_path << std::endl;
-    std::cout << "CAD model: " << ply_read_path << std::endl;
-    std::cout << "Output training file: " << write_path << std::endl;
-    std::cout << "Feature: " << featureName << std::endl;
-    std::cout << "Number of keypoints for ORB: " << numKeyPoints << std::endl;
+    std::cout << "Input image: " << img_path << "\n";
+    std::cout << "CAD model: " << ply_read_path << "\n";
+    std::cout << "Output training file: " << write_path << "\n";
+    std::cout << "Feature: " << featureName << "\n";
+    std::cout << "Number of keypoints for ORB: " << numKeyPoints << "\n";
 
     // load a mesh given the *.ply file path
     mesh.load(ply_read_path);

@@ -69,7 +69,7 @@ int main(int argc, const char* argv[])
 
     if (!cpu_times.empty() && !gpu_times.empty())
     {
-        std::cout << std::endl << "Results:" << std::endl;
+        std::cout << "\n" << "Results:" << "\n";
 
         std::sort(cpu_times.begin(), cpu_times.end());
         std::sort(gpu_times.begin(), gpu_times.end());
@@ -77,8 +77,8 @@ int main(int argc, const char* argv[])
         double cpu_avg = std::accumulate(cpu_times.begin(), cpu_times.end(), 0.0) / cpu_times.size();
         double gpu_avg = std::accumulate(gpu_times.begin(), gpu_times.end(), 0.0) / gpu_times.size();
 
-        std::cout << "CPU : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << " Frames " << cpu_frame_count << std::endl;
-        std::cout << "GPU : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << " Frames " << gpu_frame_count << std::endl;
+        std::cout << "CPU : Avg : " << cpu_avg << " ms FPS : " << 1000.0 / cpu_avg << " Frames " << cpu_frame_count << "\n";
+        std::cout << "GPU : Avg : " << gpu_avg << " ms FPS : " << 1000.0 / gpu_avg << " Frames " << gpu_frame_count << "\n";
     }
 
     return 0;
@@ -88,7 +88,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without CUDA Video decoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video decoding support\n" << "\n";
     return 0;
 }
 

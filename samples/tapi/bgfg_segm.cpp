@@ -96,8 +96,8 @@ int main(int argc, const char** argv)
         }
 
         double fps = getTickFrequency() / (getTickCount() - start);
-        std::cout << "FPS : " << fps << std::endl;
-        std::cout << fgimg.size() << std::endl;
+        std::cout << "FPS : " << fps << "\n";
+        std::cout << fgimg.size() << "\n";
         fgimg.setTo(Scalar::all(0));
         frame.copyTo(fgimg, fgmask);
 

@@ -123,21 +123,21 @@ int main(int argc, char *argv[])
         displayFilteredPose = parser.has("displayFiltered") ? parser.get<bool>("displayFiltered") : displayFilteredPose;
     }
 
-    std::cout << "Video: " << video_read_path << std::endl;
-    std::cout << "Training data: " << yml_read_path << std::endl;
-    std::cout << "CAD model: " << ply_read_path << std::endl;
-    std::cout << "Ratio test threshold: " << ratioTest << std::endl;
-    std::cout << "Fast match(no symmetry test)?: " << fast_match << std::endl;
-    std::cout << "RANSAC number of iterations: " << iterationsCount << std::endl;
-    std::cout << "RANSAC reprojection error: " << reprojectionError << std::endl;
-    std::cout << "RANSAC confidence threshold: " << confidence << std::endl;
-    std::cout << "Kalman number of inliers: " << minInliersKalman << std::endl;
-    std::cout << "PnP method: " << pnpMethod << std::endl;
-    std::cout << "Feature: " << featureName << std::endl;
-    std::cout << "Number of keypoints for ORB: " << numKeyPoints << std::endl;
-    std::cout << "Use FLANN-based matching? " << useFLANN << std::endl;
-    std::cout << "Save directory: " << saveDirectory << std::endl;
-    std::cout << "Display filtered pose from Kalman filter? " << displayFilteredPose << std::endl;
+    std::cout << "Video: " << video_read_path << "\n";
+    std::cout << "Training data: " << yml_read_path << "\n";
+    std::cout << "CAD model: " << ply_read_path << "\n";
+    std::cout << "Ratio test threshold: " << ratioTest << "\n";
+    std::cout << "Fast match(no symmetry test)?: " << fast_match << "\n";
+    std::cout << "RANSAC number of iterations: " << iterationsCount << "\n";
+    std::cout << "RANSAC reprojection error: " << reprojectionError << "\n";
+    std::cout << "RANSAC confidence threshold: " << confidence << "\n";
+    std::cout << "Kalman number of inliers: " << minInliersKalman << "\n";
+    std::cout << "PnP method: " << pnpMethod << "\n";
+    std::cout << "Feature: " << featureName << "\n";
+    std::cout << "Number of keypoints for ORB: " << numKeyPoints << "\n";
+    std::cout << "Use FLANN-based matching? " << useFLANN << "\n";
+    std::cout << "Save directory: " << saveDirectory << "\n";
+    std::cout << "Display filtered pose from Kalman filter? " << displayFilteredPose << "\n";
 
     PnPProblem pnp_detection(params_WEBCAM);
     PnPProblem pnp_detection_est(params_WEBCAM);
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
     {
         if (!cv::utils::fs::exists(saveDirectory))
         {
-            std::cout << "Create directory: " << saveDirectory << std::endl;
+            std::cout << "Create directory: " << saveDirectory << "\n";
             cv::utils::fs::createDirectories(saveDirectory);
         }
     }

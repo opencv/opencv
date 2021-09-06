@@ -34,7 +34,7 @@ PERF_TEST(VideoCapture_Camera, waitAny_V4L)
     {
         const auto& name = cameraNames[i];
         int fps = (int)utils::getConfigurationParameterSizeT(cv::format("OPENCV_TEST_CAMERA%d_FPS", (int)i).c_str(), (i & 1) ? fpsDefaultOdd : fpsDefaultEven);
-        std::cout << "Camera[" << i << "] = '" << name << "', fps=" << fps << std::endl;
+        std::cout << "Camera[" << i << "] = '" << name << "', fps=" << fps << "\n";
         VideoCapture cap(name, CAP_V4L);
         ASSERT_TRUE(cap.isOpened()) << name;
         EXPECT_TRUE(cap.set(CAP_PROP_FRAME_WIDTH, frameSize.width)) << name;

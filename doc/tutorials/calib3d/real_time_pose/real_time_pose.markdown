@@ -226,7 +226,7 @@ Here is explained in detail the code for the real time application:
 
     if(!cap.isOpened())                  // check if we succeeded
     {
-       std::cout << "Could not open the camera device" << std::endl;
+       std::cout << "Could not open the camera device" << "\n";
        return -1;
     }
     @endcode

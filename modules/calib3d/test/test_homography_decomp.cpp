@@ -160,8 +160,8 @@ TEST(Calib3d_DecomposeHomography, issue_4978)
     {
         // check: det(R) = 1
         EXPECT_TRUE(std::fabs(cv::determinant(rotations[i]) - 1.0) < 0.01)
-            << "R: det=" << cv::determinant(rotations[0]) << std::endl << rotations[i] << std::endl
-            << "T:" << std::endl << translations[i] << std::endl;
+            << "R: det=" << cv::determinant(rotations[0]) << "\n" << rotations[i] << "\n"
+            << "T:" << "\n" << translations[i] << "\n";
     }
 }
 

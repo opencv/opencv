@@ -297,7 +297,7 @@ static void printStats(const std::string& methodName, const std::vector<double>&
               << "Max rvec error: " << max_rvec_diff << ", Mean rvec error: " << mean_rvec_diff
               << ", Std rvec error: " << std_rvec_diff << "\n"
               << "Max tvec error: " << max_tvec_diff << ", Mean tvec error: " << mean_tvec_diff
-              << ", Std tvec error: " << std_tvec_diff << std::endl;
+              << ", Std tvec error: " << std_tvec_diff << "\n";
 }
 
 static void loadDataset(std::vector<Mat>& R_target2cam, std::vector<Mat>& t_target2cam,
@@ -640,7 +640,7 @@ void CV_CalibrateHandEyeTest::run(int)
 
     for (size_t idx = 0; idx < methods.size(); idx++)
     {
-        std::cout << std::endl;
+        std::cout << "\n";
         printStats(getMethodName(methods[idx]), vec_rvec_diff[idx], vec_tvec_diff[idx]);
         printStats("(noise) " + getMethodName(methods[idx]), vec_rvec_diff_noise[idx], vec_tvec_diff_noise[idx]);
     }

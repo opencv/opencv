@@ -2455,7 +2455,7 @@ bool QRDecode::straightDecodingProcess()
     if (!decodingProcess())    { return false; }
     return true;
 #else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
+    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << "\n";
     return false;
 #endif
 }
@@ -2469,7 +2469,7 @@ bool QRDecode::curvedDecodingProcess()
     if (!decodingProcess())    { return false; }
     return true;
 #else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
+    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << "\n";
     return false;
 #endif
 }

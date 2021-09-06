@@ -2445,8 +2445,8 @@ TEST(Core_SolvePoly, regression_5599)
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
         EXPECT_EQ(4u, r.total());
-        //std::cout << "Preciseness = " << prec << std::endl;
-        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        //std::cout << "Preciseness = " << prec << "\n";
+        //std::cout << "roots:\n" << r << "\n" << "\n";
         ASSERT_EQ(CV_32FC2, r.type());
         checkRoot<float>(r, 1, 0);
         checkRoot<float>(r, -1, 0);
@@ -2461,8 +2461,8 @@ TEST(Core_SolvePoly, regression_5599)
         prec = cv::solvePoly(coefs, r);
         EXPECT_LE(prec, 1e-6);
         EXPECT_EQ(2u, r.total());
-        //std::cout << "Preciseness = " << prec << std::endl;
-        //std::cout << "roots:\n" << r << "\n" << std::endl;
+        //std::cout << "Preciseness = " << prec << "\n";
+        //std::cout << "roots:\n" << r << "\n" << "\n";
         ASSERT_EQ(CV_32FC2, r.type());
         checkRoot<float>(r, 1, 0);
         checkRoot<float>(r, 1, 0);
@@ -2731,11 +2731,11 @@ TEST(Core_Invert, small)
 
     cv::Mat b = a.t()*a;
     cv::Mat c, i = Mat_<float>::eye(3, 3);
-    cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << std::endl;
+    cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << "\n";
     ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
-    cv::invert(b, c, cv::DECOMP_SVD); //std::cout << b*c << std::endl;
+    cv::invert(b, c, cv::DECOMP_SVD); //std::cout << b*c << "\n";
     ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
-    cv::invert(b, c, cv::DECOMP_CHOLESKY); //std::cout << b*c << std::endl;
+    cv::invert(b, c, cv::DECOMP_CHOLESKY); //std::cout << b*c << "\n";
     ASSERT_LT( cvtest::norm(b*c, i, CV_C), 0.1 );
 }
 
@@ -3174,7 +3174,7 @@ TEST(Core_Solve, regression_11888)
     EXPECT_LE(cvtest::norm(iA*A, Matx<float, 2, 2>::eye(), NORM_L2), 1e-3);
     EXPECT_ANY_THROW({
        /*cv::Matx<float, 2, 1> xLU =*/ A.solve(b, DECOMP_LU);
-       std::cout << "FATAL ERROR" << std::endl;
+       std::cout << "FATAL ERROR" << "\n";
     });
 }
 

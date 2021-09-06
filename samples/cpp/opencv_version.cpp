@@ -22,11 +22,11 @@ int main(int argc, const char* argv[])
     }
     else if (parser.has("build"))
     {
-        std::cout << cv::getBuildInformation() << std::endl;
+        std::cout << cv::getBuildInformation() << "\n";
     }
     else
     {
-        std::cout << "Welcome to OpenCV " << CV_VERSION << std::endl;
+        std::cout << "Welcome to OpenCV " << CV_VERSION << "\n";
     }
     return 0;
 }

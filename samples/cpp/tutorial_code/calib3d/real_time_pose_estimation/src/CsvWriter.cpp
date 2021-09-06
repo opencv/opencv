@@ -19,7 +19,7 @@ void CsvWriter::writeXYZ(const vector<Point3f> &list_points3d)
         string y = FloatToString(list_points3d[i].y);
         string z = FloatToString(list_points3d[i].z);
 
-        _file << x << _separator << y << _separator << z << std::endl;
+        _file << x << _separator << y << _separator << z << "\n";
     }
 }
 
@@ -40,6 +40,6 @@ void CsvWriter::writeUVXYZ(const vector<Point3f> &list_points3d, const vector<Po
             string descriptor_str = FloatToString(descriptors.at<float>((int)i,j));
             _file << _separator << descriptor_str;
         }
-        _file << std::endl;
+        _file << "\n";
     }
 }

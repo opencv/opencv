@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
 
 int main()
 {
-    std::cerr << "OpenCV was built without xfeatures2d module" << std::endl;
+    std::cerr << "OpenCV was built without xfeatures2d module" << "\n";
     return 0;
 }
 

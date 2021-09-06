@@ -1991,7 +1991,7 @@ TEST(Imgproc_ColorBayerVNG_Strict, regression)
         if (reference.depth() != dst.depth() || reference.channels() != dst.channels() ||
             reference.size() != dst.size())
         {
-            std::cout << reference(Rect(0, 0, 5, 5)) << std::endl << std::endl << std::endl;
+            std::cout << reference(Rect(0, 0, 5, 5)) << "\n" << "\n" << "\n";
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
             ts->printf(cvtest::TS::SUMMARY, "\nReference channels: %d\n"
                 "Actual channels: %d\n", reference.channels(), dst.channels());
@@ -2075,9 +2075,9 @@ static void validateResult(const Mat& reference, const Mat& actual, const Mat& s
                 {
                     cv::Mat lab;
                     cv::cvtColor(src, lab, mode);
-                    std::cout << "lab: " << lab(cv::Rect(y, x / cn, 1, 1)) << std::endl;
+                    std::cout << "lab: " << lab(cv::Rect(y, x / cn, 1, 1)) << "\n";
                 }
-                std::cout << "src: " << src(cv::Rect(y, x / cn, 1, 1)) << std::endl;
+                std::cout << "src: " << src(cv::Rect(y, x / cn, 1, 1)) << "\n";
 
                 ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                 ts->set_gtest_status();

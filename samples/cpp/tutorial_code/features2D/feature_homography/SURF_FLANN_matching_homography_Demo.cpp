@@ -10,7 +10,7 @@
 using namespace cv;
 using namespace cv::xfeatures2d;
 using std::cout;
-using std::endl;
+using "\n";
 
 const char* keys =
         "{ help h |                  | Print help message. }"
@@ -101,7 +101,7 @@ int main( int argc, char* argv[] )
 #else
 int main()
 {
-    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << std::endl;
+    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << "\n";
     return 0;
 }
 #endif

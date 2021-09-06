@@ -36,7 +36,7 @@ GAPI_FLUID_KERNEL(FCopy, TCopy, false)
             //std::cout << std::setw(4) << int(in_row[i]);
             out_row[i] = in_row[i];
         }
-        //std::cout << std::endl;
+        //std::cout << "\n";
     }
 };
 

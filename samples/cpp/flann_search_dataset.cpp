@@ -11,7 +11,7 @@
 
 using namespace cv;
 using std::cout;
-using std::endl;
+using "\n";
 
 #define _ORB_
 

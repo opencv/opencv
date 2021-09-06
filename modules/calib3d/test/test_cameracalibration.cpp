@@ -656,8 +656,8 @@ void CV_CameraCalibrationTest::run( int start_from )
             if( cv::norm(rotMatrs[i], goodRotMatrs[i], NORM_INF) > 0.05 )
             {
                 printf("rot mats for frame #%d are very different\n", i);
-                std::cout << "curr:\n" << rotMatrs[i] << std::endl;
-                std::cout << "good:\n" << goodRotMatrs[i] << std::endl;
+                std::cout << "curr:\n" << rotMatrs[i] << "\n";
+                std::cout << "good:\n" << goodRotMatrs[i] << "\n";
 
                 code = TS::FAIL_BAD_ACCURACY;
                 break;
@@ -1533,14 +1533,14 @@ void CV_StereoCalibrationTest::run( int )
         mask = mask.col(0) | mask.col(1) | mask.col(2);
         int numFailed = countNonZero(mask);
 #if 0
-        std::cout << "numFailed=" << numFailed << std::endl;
+        std::cout << "numFailed=" << numFailed << "\n";
         for (int i = 0; i < triangulatedPoints.rows; i++)
         {
             if (mask.at<uchar>(i))
             {
                 // failed points usually have 'w'~0 (points4d[3])
-                std::cout << "i=" << i << " triangulatePoints=" << triangulatedPoints.row(i) << " reprojectedPoints=" << reprojectedPoints.row(i) << std::endl <<
-                    "     points4d=" << points4d.col(i).t() << " projectedPoints_1=" << projectedPoints_1.col(i).t() << " disparities=" << disparities.col(i).t() << std::endl;
+                std::cout << "i=" << i << " triangulatePoints=" << triangulatedPoints.row(i) << " reprojectedPoints=" << reprojectedPoints.row(i) << "\n" <<
+                    "     points4d=" << points4d.col(i).t() << " projectedPoints_1=" << projectedPoints_1.col(i).t() << " disparities=" << disparities.col(i).t() << "\n";
             }
         }
 #endif

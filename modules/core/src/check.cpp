@@ -60,11 +60,11 @@ template<typename T> static CV_NORETURN
 void check_failed_auto_(const T& v1, const T& v2, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << std::endl
-        << "    '" << ctx.p1_str << "' is " << v1 << std::endl;
+    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << "\n"
+        << "    '" << ctx.p1_str << "' is " << v1 << "\n";
     if (ctx.testOp != TEST_CUSTOM && ctx.testOp < CV__LAST_TEST_OP)
     {
-        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
+        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << "\n";
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2;
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
@@ -72,11 +72,11 @@ void check_failed_auto_(const T& v1, const T& v2, const CheckContext& ctx)
 void check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << std::endl
-        << "    '" << ctx.p1_str << "' is " << v1 << " (" << depthToString(v1) << ")" << std::endl;
+    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << "\n"
+        << "    '" << ctx.p1_str << "' is " << v1 << " (" << depthToString(v1) << ")" << "\n";
     if (ctx.testOp != TEST_CUSTOM && ctx.testOp < CV__LAST_TEST_OP)
     {
-        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
+        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << "\n";
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2 << " (" << depthToString(v2) << ")";
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
@@ -84,11 +84,11 @@ void check_failed_MatDepth(const int v1, const int v2, const CheckContext& ctx)
 void check_failed_MatType(const int v1, const int v2, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << std::endl
-        << "    '" << ctx.p1_str << "' is " << v1 << " (" << typeToString(v1) << ")" << std::endl;
+    ss  << ctx.message << " (expected: '" << ctx.p1_str << " " << getTestOpMath(ctx.testOp) << " " << ctx.p2_str << "'), where" << "\n"
+        << "    '" << ctx.p1_str << "' is " << v1 << " (" << typeToString(v1) << ")" << "\n";
     if (ctx.testOp != TEST_CUSTOM && ctx.testOp < CV__LAST_TEST_OP)
     {
-        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << std::endl;
+        ss << "must be " << getTestOpPhraseStr(ctx.testOp) << "\n";
     }
     ss  << "    '" << ctx.p2_str << "' is " << v2 << " (" << typeToString(v2) << ")";
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
@@ -123,27 +123,27 @@ template<typename T> static CV_NORETURN
 void check_failed_auto_(const T& v, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << ":" << std::endl
-        << "    '" << ctx.p2_str << "'" << std::endl
-        << "where" << std::endl
+    ss  << ctx.message << ":" << "\n"
+        << "    '" << ctx.p2_str << "'" << "\n"
+        << "where" << "\n"
         << "    '" << ctx.p1_str << "' is " << v;
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatDepth(const int v, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << ":" << std::endl
-        << "    '" << ctx.p2_str << "'" << std::endl
-        << "where" << std::endl
+    ss  << ctx.message << ":" << "\n"
+        << "    '" << ctx.p2_str << "'" << "\n"
+        << "where" << "\n"
         << "    '" << ctx.p1_str << "' is " << v << " (" << depthToString(v) << ")";
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_MatType(const int v, const CheckContext& ctx)
 {
     std::stringstream ss;
-    ss  << ctx.message << ":" << std::endl
-        << "    '" << ctx.p2_str << "'" << std::endl
-        << "where" << std::endl
+    ss  << ctx.message << ":" << "\n"
+        << "    '" << ctx.p2_str << "'" << "\n"
+        << "where" << "\n"
         << "    '" << ctx.p1_str << "' is " << v << " (" << typeToString(v) << ")";
     cv::error(cv::Error::StsError, ss.str(), ctx.func, ctx.file, ctx.line);
 }

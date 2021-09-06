@@ -191,7 +191,7 @@ bool PxMDecoder::readHeader()
     }
     catch (...)
     {
-        std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
+        std::cerr << "PXM::readHeader(): unknown C++ exception" << "\n" << std::flush;
         throw;
     }
 
@@ -364,7 +364,7 @@ bool PxMDecoder::readData( Mat& img )
     }
     catch (...)
     {
-        std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
+        std::cerr << "PXM::readData(): unknown exception" << "\n" << std::flush;
         throw;
     }
 

@@ -248,14 +248,14 @@ public:
             sliceSteps[0].resize(inputs[0].dims, 1);
 
 #if 0
-        std::cout << "DEBUG: DNN/Slice: " << outputs.size() << " inpShape=" << inpShape << std::endl;
+        std::cout << "DEBUG: DNN/Slice: " << outputs.size() << " inpShape=" << inpShape << "\n";
         for (int i = 0; i < outputs.size(); ++i)
         {
             for (int j = 0; j < finalSliceRanges[i].size(); ++j)
             {
                 std::cout << finalSliceRanges[i][j];
             }
-            std::cout << std::endl;
+            std::cout << "\n";
         }
 #endif
     }

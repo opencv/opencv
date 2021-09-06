@@ -249,7 +249,7 @@ public:
                 std::cout << b << ", " << class_id << ", " << conf << "f, "
                           << box.x << "f, " << box.y << "f, "
                           << box.x + box.width << "f, " << box.y + box.height << "f,"
-                          << std::endl;
+                          << "\n";
 #endif
 
             }
@@ -257,7 +257,7 @@ public:
             if (cvIsNaN(iouDiff))
             {
                 if (b == 0)
-                    std::cout << "Skip accuracy checks" << std::endl;
+                    std::cout << "Skip accuracy checks" << "\n";
                 continue;
             }
 

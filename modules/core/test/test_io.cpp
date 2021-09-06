@@ -449,11 +449,11 @@ BIGDATA_TEST(Core_InputOutput, huge)
 {
     RNG& rng = theRNG();
     int N = 1000, M = 1200000;
-    std::cout << "Allocating..." << std::endl;
+    std::cout << "Allocating..." << "\n";
     Mat mat(M, N, CV_32F);
-    std::cout << "Initializing..." << std::endl;
+    std::cout << "Initializing..." << "\n";
     rng.fill(mat, RNG::UNIFORM, 0, 1);
-    std::cout << "Writing..." << std::endl;
+    std::cout << "Writing..." << "\n";
     {
         FileStorage fs(cv::tempfile(".xml"), FileStorage::WRITE);
         fs << "mat" << mat;
@@ -680,7 +680,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
 
                 EXPECT_EQ(reference_data, test_data);
             }
-            std::cout << "Storage size: " << sz << std::endl;
+            std::cout << "Storage size: " << sz << "\n";
             EXPECT_LE(sz, (size_t)6000);
         }
         {   /* read */
@@ -1867,7 +1867,7 @@ static void test_20279(FileStorage& fs)
     // produces CV_16S output: convertFp16(m32fc1, m16fc1);
     m32fc1.convertTo(m16fc1, CV_16FC1);
     EXPECT_EQ(CV_16FC1, m16fc1.type()) << typeToString(m16fc1.type());
-    //std::cout << m16fc1 << std::endl;
+    //std::cout << m16fc1 << "\n";
 
     Mat m32fc3(4, 3, CV_32FC3, Scalar::all(0));
     for (size_t i = 0; i < m32fc3.total(); i++)
@@ -1878,13 +1878,13 @@ static void test_20279(FileStorage& fs)
     Mat m16fc3;
     m32fc3.convertTo(m16fc3, CV_16FC3);
     EXPECT_EQ(CV_16FC3, m16fc3.type()) << typeToString(m16fc3.type());
-    //std::cout << m16fc3 << std::endl;
+    //std::cout << m16fc3 << "\n";
 
     fs << "m16fc1" << m16fc1;
     fs << "m16fc3" << m16fc3;
 
     string content = fs.releaseAndGetString();
-    if (cvtest::debugLevel > 0) std::cout << content << std::endl;
+    if (cvtest::debugLevel > 0) std::cout << content << "\n";
 
     FileStorage fs_read(content, FileStorage::READ + FileStorage::MEMORY);
     Mat m16fc1_result;

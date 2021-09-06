@@ -160,13 +160,13 @@ int d3d_app(int argc, char** argv, std::string& title)
 
     catch (const cv::Exception& e)
     {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        std::cerr << "Exception: " << e.what() << "\n";
         return 10;
     }
 
     catch (...)
     {
-        std::cerr << "FATAL ERROR: Unknown exception" << std::endl;
+        std::cerr << "FATAL ERROR: Unknown exception" << "\n";
         return 11;
     }
 }

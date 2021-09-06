@@ -166,7 +166,7 @@ public:
 
         if (setup_pixel_format() != 0)
         {
-            std::cerr << "Can't setup pixel format" << std::endl;
+            std::cerr << "Can't setup pixel format" << "\n";
             return EXIT_FAILURE;
         }
 
@@ -327,7 +327,7 @@ public:
 
         catch (const cv::Exception& e)
         {
-            std::cerr << "Exception: " << e.what() << std::endl;
+            std::cerr << "Exception: " << e.what() << "\n";
             return 10;
         }
 

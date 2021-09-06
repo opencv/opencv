@@ -84,7 +84,7 @@ void GIsland::debug() const
     for (const auto& nh : m_out_ops) stream << nh << "; ";
     stream << "\n  contents: ";
     for (const auto& nh : m_all) stream << nh << "; ";
-    stream << "\n}}" << std::endl;
+    stream << "\n}}" << "\n";
     GAPI_LOG_INFO(NULL, stream.str());
 }
 

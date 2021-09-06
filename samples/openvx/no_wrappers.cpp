@@ -366,12 +366,12 @@ int main(int argc, char *argv[])
     }
     else if(modeString == "map")
     {
-        std::cerr << modeString << " is not implemented in this sample" << std::endl;
+        std::cerr << modeString << " is not implemented in this sample" << "\n";
         return -1;
     }
     else
     {
-        std::cerr << modeString << ": unknown memory mode" << std::endl;
+        std::cerr << modeString << ": unknown memory mode" << "\n";
         return -1;
     }
 

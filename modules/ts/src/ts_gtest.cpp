@@ -10427,13 +10427,13 @@ GTestLog::GTestLog(GTestLogSeverity severity, const char* file, int line)
       severity == GTEST_INFO ?    "[  INFO ]" :
       severity == GTEST_WARNING ? "[WARNING]" :
       severity == GTEST_ERROR ?   "[ ERROR ]" : "[ FATAL ]";
-  GetStream() << ::std::endl << marker << " "
+  GetStream() << ::"\n" << marker << " "
               << FormatFileLocation(file, line).c_str() << ": ";
 }
 
 // Flushes the buffers and, if severity is GTEST_FATAL, aborts the program.
 GTestLog::~GTestLog() {
-  GetStream() << ::std::endl;
+  GetStream() << ::"\n";
   if (severity_ == GTEST_FATAL) {
     fflush(stderr);
     posix::Abort();
@@ -11281,7 +11281,7 @@ std::ostream& operator<<(std::ostream& os, const TestPartResult& result) {
       << (result.type() == TestPartResult::kSuccess ? "Success" :
           result.type() == TestPartResult::kFatalFailure ? "Fatal failure" :
           "Non-fatal failure") << ":\n"
-      << result.message() << std::endl;
+      << result.message() << "\n";
 }
 
 // Appends a TestPartResult to the array.

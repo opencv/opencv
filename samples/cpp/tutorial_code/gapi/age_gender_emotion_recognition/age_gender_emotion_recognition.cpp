@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
     Avg avg;
     std::size_t frames = 0u;            // Frame counter (not produced by the graph)
 
-    std::cout << "Reading " << input << std::endl;
+    std::cout << "Reading " << input << "\n";
     // Duplicate huge portions of the code in if/else branches in the sake of
     // better documentation snippets
     if (!be_serial) {
@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
         //! [Run_Serial]
     }
     std::cout << "Processed " << frames << " frames in " << avg.elapsed()
-              << " (" << avg.fps(frames) << " FPS)" << std::endl;
+              << " (" << avg.fps(frames) << " FPS)" << "\n";
     return 0;
 }
 #else
@@ -404,7 +404,7 @@ int main()
 {
     std::cerr << "This tutorial code requires G-API module "
                  "with Inference Engine backend to run"
-              << std::endl;
+              << "\n";
     return 1;
 }
 #endif  // HAVE_OPECV_GAPI

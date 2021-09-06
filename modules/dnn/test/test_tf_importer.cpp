@@ -48,7 +48,7 @@ TEST(Test_TensorFlow, read_inception)
     net.setInput(inputBlob, "input");
     Mat out = net.forward("softmax2");
 
-    std::cout << out.dims << std::endl;
+    std::cout << out.dims << "\n";
 }
 
 TEST(Test_TensorFlow, inception_accuracy)

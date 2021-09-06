@@ -536,12 +536,12 @@ void InfEngineNgraphNet::init(Target targetId)
             catch (const std::exception& e)
             {
                 std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
-                out << "Exception: " << e.what() << std::endl;
+                out << "Exception: " << e.what() << "\n";
             }
             catch (...)
             {
                 std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
-                out << "Can't dump: unknown exception" << std::endl;
+                out << "Can't dump: unknown exception" << "\n";
             }
 #endif
         }

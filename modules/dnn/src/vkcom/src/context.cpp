@@ -80,7 +80,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
         const char*                                 pMessage,
         void*                                       pUserData)
 {
-        std::cout << "Debug Report: " << pLayerPrefix << ":" << pMessage << std::endl;
+        std::cout << "Debug Report: " << pLayerPrefix << ":" << pMessage << "\n";
         return VK_FALSE;
 }
 

@@ -90,7 +90,7 @@
 
 #define DUMP_MESSAGE_STDOUT(msg) \
     do { \
-        std::cout << msg << std::endl; \
+        std::cout << msg << "\n"; \
     } while (false)
 
 #include "opencv2/core/opencl/opencl_info.hpp"
@@ -425,7 +425,7 @@ int BaseTest::update_progress( int progress, int test_case_idx, int count, doubl
 
 void BaseTest::dump_test_case(int test_case_idx, std::ostream* out)
 {
-    *out << "test_case_idx = " << test_case_idx << std::endl;
+    *out << "test_case_idx = " << test_case_idx << "\n";
 }
 
 
@@ -1023,7 +1023,7 @@ static std::string findData(const std::string& relative_path, bool required, boo
                     static bool checkOptionalFlag = cv::utils::getConfigurationParameterBool("OPENCV_TEST_CHECK_OPTIONAL_DATA", false);
                     if (checkOptionalFlag)
                     {
-                        std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << std::endl;
+                        std::cout << "TEST ERROR: Don't use 'optional' findData() for " << relative_path << "\n";
                         CV_Assert(required || result_.empty());
                     }
                 }
@@ -1102,7 +1102,7 @@ inline static void recordPropertyVerbose(const std::string & property,
                                          const std::string & build_value = std::string())
 {
     ::testing::Test::RecordProperty(property, value);
-    std::cout << msg << ": " << (value.empty() ? std::string("N/A") : value) << std::endl;
+    std::cout << msg << ": " << (value.empty() ? std::string("N/A") : value) << "\n";
     if (!build_value.empty())
     {
         ::testing::Test::RecordProperty(property + "_build", build_value);
@@ -1119,7 +1119,7 @@ inline static void recordPropertyVerbose(const std::string & property,
 
 void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
 {
-    std::cout << "CTEST_FULL_OUTPUT" << std::endl; // Tell CTest not to discard any output
+    std::cout << "CTEST_FULL_OUTPUT" << "\n"; // Tell CTest not to discard any output
     recordPropertyVerbose("cv_version", "OpenCV version", cv::getVersionString(), CV_VERSION);
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
@@ -1130,7 +1130,7 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
         ::testing::Test::RecordProperty("cv_parallel_framework", parallelFramework);
         int threads = testThreads > 0 ? testThreads : cv::getNumThreads();
         ::testing::Test::RecordProperty("cv_parallel_threads", threads);
-        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
+        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << "\n";
     }
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
 #ifdef HAVE_IPP

@@ -640,7 +640,7 @@ int main(int argc, char *argv[])
                                     >();
     auto pipeline = graph.compileStreaming(cv::compile_args(kernels, networks));
 
-    std::cout << "Reading " << input_file_name << std::endl;
+    std::cout << "Reading " << input_file_name << "\n";
 
     // Input stream
     auto in_src = cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input_file_name);
@@ -693,6 +693,6 @@ int main(int argc, char *argv[])
     }
     tm.stop();
     std::cout << "Processed " << frames << " frames"
-              << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+              << " (" << frames / tm.getTimeSec() << " FPS)" << "\n";
     return 0;
 }

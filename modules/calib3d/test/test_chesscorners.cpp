@@ -683,8 +683,8 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, regression_18713)
 
     if (cvtest::debugLevel > 0)
     {
-        std::cout << Mat(candidates) << std::endl;
-        std::cout << Mat(result) << std::endl;
+        std::cout << Mat(candidates) << "\n";
+        std::cout << Mat(result) << "\n";
         Mat img(Size(400, 300), CV_8UC3, Scalar::all(0));
 
         std::vector< Point2f > centers;

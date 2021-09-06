@@ -85,7 +85,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
     vector<KeyPoint> keypoints0;
     Mat descriptors0;
     featureDetector->detect(image0, keypoints0, mask0);
-    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
+    std::cout << "Keypoints: " << keypoints0.size() << "\n";
     EXPECT_GE(keypoints0.size(), 15u);
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
 
@@ -124,7 +124,7 @@ TEST_P(DescriptorRotationInvariance, rotation)
             << "angle = " << angle
             << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
-            << std::endl;
+            << "\n";
 #endif
     }
 }
@@ -134,7 +134,7 @@ TEST_P(DescriptorScaleInvariance, scale)
 {
     vector<KeyPoint> keypoints0;
     featureDetector->detect(image0, keypoints0);
-    std::cout << "Keypoints: " << keypoints0.size() << std::endl;
+    std::cout << "Keypoints: " << keypoints0.size() << "\n";
     EXPECT_GE(keypoints0.size(), 15u);
     Mat descriptors0;
     descriptorExtractor->compute(image0, keypoints0, descriptors0);
@@ -179,7 +179,7 @@ TEST_P(DescriptorScaleInvariance, scale)
             << "scale = " << scale
             << ", inliers = " << descInliersCount
             << ", descInliersRatio = " << static_cast<float>(descInliersCount) / keypoints0.size()
-            << std::endl;
+            << "\n";
 #endif
     }
 }

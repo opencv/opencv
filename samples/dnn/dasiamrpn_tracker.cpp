@@ -72,11 +72,11 @@ int run(int argc, char** argv)
     }
     catch (const cv::Exception& ee)
     {
-        std::cerr << "Exception: " << ee.what() << std::endl;
-        std::cout << "Can't load the network by using the following files:" << std::endl;
-        std::cout << "siamRPN : " << net << std::endl;
-        std::cout << "siamKernelCL1 : " << kernel_cls1 << std::endl;
-        std::cout << "siamKernelR1 : " << kernel_r1 << std::endl;
+        std::cerr << "Exception: " << ee.what() << "\n";
+        std::cout << "Can't load the network by using the following files:" << "\n";
+        std::cout << "siamRPN : " << net << "\n";
+        std::cout << "siamKernelCL1 : " << kernel_cls1 << "\n";
+        std::cout << "siamKernelR1 : " << kernel_r1 << "\n";
         return 2;
     }
 
@@ -89,10 +89,10 @@ int run(int argc, char** argv)
     if (inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1))
     {
         int c = inputName.empty() ? 0 : inputName[0] - '0';
-        std::cout << "Trying to open camera #" << c << " ..." << std::endl;
+        std::cout << "Trying to open camera #" << c << " ..." << "\n";
         if (!cap.open(c))
         {
-            std::cout << "Capture from camera #" << c << " didn't work. Specify -i=<video> parameter to read from video file" << std::endl;
+            std::cout << "Capture from camera #" << c << " didn't work. Specify -i=<video> parameter to read from video file" << "\n";
             return 2;
         }
     }
@@ -101,7 +101,7 @@ int run(int argc, char** argv)
         inputName = samples::findFileOrKeep(inputName);
         if (!cap.open(inputName))
         {
-            std::cout << "Could not open: " << inputName << std::endl;
+            std::cout << "Could not open: " << inputName << "\n";
             return 2;
         }
     }
@@ -111,7 +111,7 @@ int run(int argc, char** argv)
     cap >> image;
     if (image.empty())
     {
-        std::cerr << "Can't capture frame!" << std::endl;
+        std::cerr << "Can't capture frame!" << "\n";
         return 2;
     }
 
@@ -120,7 +120,7 @@ int run(int argc, char** argv)
     putText(image_select, "And Press the ENTER key.", Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
     Rect selectRect = selectROI(winName, image_select);
-    std::cout << "ROI=" << selectRect << std::endl;
+    std::cout << "ROI=" << selectRect << "\n";
 
     tracker->init(image, selectRect);
 
@@ -131,7 +131,7 @@ int run(int argc, char** argv)
         cap >> image;
         if (image.empty())
         {
-            std::cerr << "Can't capture frame " << count << ". End of video stream?" << std::endl;
+            std::cerr << "Can't capture frame " << count << ". End of video stream?" << "\n";
             break;
         }
 
@@ -147,7 +147,7 @@ int run(int argc, char** argv)
             ": predicted score=" << score <<
             "  rect=" << rect <<
             "  time=" << tickMeter.getTimeMilli() << "ms" <<
-            std::endl;
+            "\n";
 
         Mat render_image = image.clone();
 
@@ -170,7 +170,7 @@ int run(int argc, char** argv)
             break;
     }
 
-    std::cout << "Exit" << std::endl;
+    std::cout << "Exit" << "\n";
     return 0;
 }
 
@@ -183,7 +183,7 @@ int main(int argc, char **argv)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "FATAL: C++ exception: " << e.what() << std::endl;
+        std::cerr << "FATAL: C++ exception: " << e.what() << "\n";
         return 1;
     }
 }

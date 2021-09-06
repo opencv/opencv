@@ -101,7 +101,7 @@ public:
             }
             std::string tags_str = os.str();
             if (!tags.empty())
-                std::cout << "TEST: Run tests with tags: " << tags_str << std::endl;
+                std::cout << "TEST: Run tests with tags: " << tags_str << "\n";
             ::testing::Test::RecordProperty("test_tags", os_direct.str());
         }
         {
@@ -114,7 +114,7 @@ public:
             }
             std::string tags_str = os.str();
             if (!tags.empty())
-                std::cout << "TEST: Skip tests with tags: " << tags_str << std::endl;
+                std::cout << "TEST: Skip tests with tags: " << tags_str << "\n";
             ::testing::Test::RecordProperty("test_tags_skip", os_direct.str());
         }
         {
@@ -127,7 +127,7 @@ public:
             }
             std::string tags_str = os.str();
             if (!tags.empty())
-                std::cout << "TEST: Force tests with tags: " << tags_str << std::endl;
+                std::cout << "TEST: Force tests with tags: " << tags_str << "\n";
             ::testing::Test::RecordProperty("test_tags_force", os_direct.str());
         }
     }
@@ -162,7 +162,7 @@ public:
     {
         if (currentDirectTestTags.empty() && currentImpliedTestTags.empty())
         {
-            if (printTestTag) std::cout << "[     TAGS ] No tags" << std::endl;
+            if (printTestTag) std::cout << "[     TAGS ] No tags" << "\n";
             return;
         }
         std::ostringstream os;
@@ -187,7 +187,7 @@ public:
             }
             os << ")";
         }
-        if (printTestTag) std::cout << "[     TAGS ] " << os.str() << std::endl;
+        if (printTestTag) std::cout << "[     TAGS ] " << os.str() << "\n";
         ::testing::Test::RecordProperty("tags", os_direct.str());
         ::testing::Test::RecordProperty("tags_implied", os_implied.str());
     }
@@ -196,7 +196,7 @@ public:
     {
         if (!skipped_tests.empty())
         {
-            std::cout << "[ SKIPSTAT ] " << skipped_tests.size() << " tests skipped" << std::endl;
+            std::cout << "[ SKIPSTAT ] " << skipped_tests.size() << " tests skipped" << "\n";
             const std::vector<std::string>& skipTags = getTestTagsSkipList();
             const std::map<std::string, int>& counts = getTestTagsSkipCounts();
             const std::map<std::string, int>& countsExtra = getTestTagsSkipExtraCounts();
@@ -213,11 +213,11 @@ public:
                 if (i2 != countsExtra.end()) c2 = i2->second;
                 if (c2 > 0)
                 {
-                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests (" << c2 << " times in extra skip list)" << std::endl;
+                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests (" << c2 << " times in extra skip list)" << "\n";
                 }
                 else if (c1 > 0)
                 {
-                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests" << std::endl;
+                    std::cout << "[ SKIPSTAT ] TAG='" << *i << "' skip " << c1 << " tests" << "\n";
                 }
             }
         }
@@ -232,7 +232,7 @@ public:
             {
                 const ::testing::TestInfo* test_info = skipped_tests[i];
                 if (!test_info) continue;
-                std::cout << "- " << test_info->test_case_name() << "." << test_info->name() << std::endl;
+                std::cout << "- " << test_info->test_case_name() << "." << test_info->name() << "\n";
             }
         }*/
     }
@@ -477,7 +477,7 @@ void activateTestTags(const cv::CommandLineParser& parser)
                 }
                 if (!found)
                 {
-                    std::cerr << "Can't re-enable tag '" << tag << "' - it is not in the skip list" << std::endl;
+                    std::cerr << "Can't re-enable tag '" << tag << "' - it is not in the skip list" << "\n";
                 }
             }
         }

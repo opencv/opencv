@@ -89,8 +89,8 @@ TEST(ML_RTrees, 11142_sample_weights_classification)
     Ptr<TrainData> trainDataWithWeights = TrainData::create(data, ml::ROW_SAMPLE, labels, Mat(), Mat(), weights );
     rt->train(data, ml::ROW_SAMPLE, labels);
     double error_with_weights = round(rt->getOOBError());
-    std::cout << error_without_weights << std::endl;
-    std::cout << error_with_weights << std::endl;
+    std::cout << error_without_weights << "\n";
+    std::cout << error_with_weights << "\n";
     // error with weights should be larger than error without weights
     EXPECT_GE(error_with_weights, error_without_weights);
 }

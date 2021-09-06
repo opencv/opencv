@@ -114,7 +114,7 @@ void DrawResults(cv::Mat &frame,
                     1,
                     cv::Scalar(0, 0, 255));
 
-        std::cout << emotions[emo_id] << " at " << rc << std::endl;
+        std::cout << emotions[emo_id] << " at " << rc << "\n";
     }
 }
 } // anonymous namespace

@@ -228,10 +228,10 @@ void printTensor(const tensorflow::TensorProto &tensor)
 
 void printLayerAttr(const tensorflow::NodeDef &layer)
 {
-    std::cout << std::endl << layer.name() << ":" << layer.op();
+    std::cout << "\n" << layer.name() << ":" << layer.op();
     for (int ii = 0; ii < layer.input_size(); ii++)
         std::cout << "(" << layer.input(ii) << ")";
-    std::cout << std::endl;
+    std::cout << "\n";
     google::protobuf::Map<std::string, tensorflow::AttrValue> attr
             = layer.attr();
     for (google::protobuf::Map<std::string, tensorflow::AttrValue>::const_iterator ai = attr.begin();
@@ -250,7 +250,7 @@ void printLayerAttr(const tensorflow::NodeDef &layer)
             printList(ai->second.list());
         else
             printTensor(ai->second.tensor());
-        std::cout << std::endl;
+        std::cout << "\n";
     }
 }
 #endif

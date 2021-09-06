@@ -306,7 +306,7 @@ exceptions, if needed: :
     catch (const cv::Exception& e)
     {
         const char* err_msg = e.what();
-        std::cout << "exception caught: " << err_msg << std::endl;
+        std::cout << "exception caught: " << err_msg << "\n";
     }
 ```
 

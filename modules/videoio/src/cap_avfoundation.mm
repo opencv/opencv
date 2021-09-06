@@ -259,7 +259,7 @@ CvCaptureCAM::CvCaptureCAM(int cameraNum) {
     camNum = cameraNum;
 
     if (!startCaptureDevice(camNum)) {
-        std::cout << "Warning, camera failed to properly initialize!" << std::endl;
+        std::cout << "Warning, camera failed to properly initialize!" << "\n";
         started = 0;
     } else {
         started = 1;
@@ -304,7 +304,7 @@ IplImage* CvCaptureCAM::retrieveFrame(int) {
 
 IplImage* CvCaptureCAM::queryFrame() {
     while (!grabFrame()) {
-        std::cout << "WARNING: Couldn't grab new frame from camera!!!" << std::endl;
+        std::cout << "WARNING: Couldn't grab new frame from camera!!!" << "\n";
         /*
              cout << "Attempting to restart camera; set capture property DISABLE_AUTO_RESTART to disable." << endl;
              stopCaptureDevice();
@@ -337,7 +337,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     NSArray* devices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
             arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
     if ([devices count] == 0) {
-        std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
+        std::cout << "AV Foundation didn't find any attached Video Input Devices!" << "\n";
         [localpool drain];
         return 0;
     }
@@ -345,7 +345,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     if (cameraNum >= 0) {
         camNum = cameraNum % [devices count];
         if (camNum != cameraNum) {
-            std::cout << "Warning: Max Camera Num is " << [devices count]-1 << "; Using camera " << camNum << std::endl;
+            std::cout << "Warning: Max Camera Num is " << [devices count]-1 << "; Using camera " << camNum << "\n";
         }
         device = [devices objectAtIndex:camNum];
     } else {
@@ -1255,7 +1255,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const char* filename, int
     int cc2 = CV_FOURCC(cc[0], cc[1], cc[2], cc[3]);
     if (cc2!=fourcc) {
         std::cout << "WARNING: Didn't properly encode FourCC. Expected " << fourcc
-            << " but got " << cc2 << "." << std::endl;
+            << " but got " << cc2 << "." << "\n";
         //exception;
     }
 
@@ -1366,7 +1366,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     BOOL success = FALSE;
 
     if (iplimage->height!=movieSize.height || iplimage->width!=movieSize.width){
-        std::cout<<"Frame size does not match video size."<<std::endl;
+        std::cout<<"Frame size does not match video size."<<"\n";
         [localpool drain];
         return false;
     }

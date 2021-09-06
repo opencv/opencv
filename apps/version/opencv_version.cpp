@@ -21,7 +21,7 @@ CV_EXPORTS const char* currentParallelFramework();
 
 static void dumpHWFeatures(bool showAll = false)
 {
-    std::cout << "OpenCV's HW features list:" << std::endl;
+    std::cout << "OpenCV's HW features list:" << "\n";
     int count = 0;
     for (int i = 0; i < CV_HARDWARE_MAX_FEATURE; i++)
     {
@@ -36,7 +36,7 @@ static void dumpHWFeatures(bool showAll = false)
             printf("    ID=%3d (%s) -> %s\n", i, name.c_str(), enabled ? "ON" : "N/A");
         }
     }
-    std::cout << "Total available: " << count << std::endl;
+    std::cout << "Total available: " << count << "\n";
 }
 
 static void dumpParallelFramework()
@@ -45,7 +45,7 @@ static void dumpParallelFramework()
     if (parallelFramework)
     {
         int threads = cv::getNumThreads();
-        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
+        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << "\n";
     }
 }
 
@@ -73,11 +73,11 @@ int main(int argc, const char** argv)
 
     if (parser.has("verbose"))
     {
-        std::cout << cv::getBuildInformation().c_str() << std::endl;
+        std::cout << cv::getBuildInformation().c_str() << "\n";
     }
     else
     {
-        std::cout << CV_VERSION << std::endl;
+        std::cout << CV_VERSION << "\n";
     }
 
     if (parser.has("opencl"))
@@ -96,7 +96,7 @@ int main(int argc, const char** argv)
     }
 
 #else
-    std::cout << cv::getBuildInformation().c_str() << std::endl;
+    std::cout << cv::getBuildInformation().c_str() << "\n";
     cv::dumpOpenCLInformation();
     dumpHWFeatures();
     dumpParallelFramework();

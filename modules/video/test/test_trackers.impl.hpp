@@ -222,7 +222,7 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
     c.set(CAP_PROP_POS_FRAMES, startFrame);
 #else
     if (startFrame)
-        std::cout << "startFrame = " << startFrame << std::endl;
+        std::cout << "startFrame = " << startFrame << "\n";
     for (int i = 0; i < startFrame; i++)
     {
         Mat dummy_frame;
@@ -240,7 +240,7 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
         if (!initialized)
         {
             tracker->init(frame, currentBB);
-            std::cout << "frame size = " << frame.size() << std::endl;
+            std::cout << "frame size = " << frame.size() << "\n";
             initialized = true;
         }
         else if (initialized)

@@ -96,7 +96,7 @@ int main(int argc, char** argv)
         String testImgPath;
         while (std::getline(testList, testImgPath)) {
             String imgPath = evalDataPath + "/test_images/" + testImgPath;
-            std::cout << "Image Path: " << imgPath << std::endl;
+            std::cout << "Image Path: " << imgPath << "\n";
 
             Mat frame = imread(samples::findFile(imgPath), IMREAD_COLOR);
             CV_Assert(!frame.empty());
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
             // load groundtruth
             String imgName = testImgPath.substr(0, testImgPath.length() - 4);
             String gtPath = evalDataPath + "/test_gts/" + imgName + ".txt";
-            // std::cout << gtPath << std::endl;
+            // std::cout << gtPath << "\n";
             std::ifstream gtFile;
             gtFile.open(gtPath);
             CV_Assert(gtFile.is_open());

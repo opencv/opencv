@@ -100,7 +100,7 @@ inline void print_params(const IndexParams& params, std::ostream& stream)
     IndexParams::const_iterator it;
 
     for(it=params.begin(); it!=params.end(); ++it) {
-        stream << it->first << " : " << it->second << std::endl;
+        stream << it->first << " : " << it->second << "\n";
     }
 }
 

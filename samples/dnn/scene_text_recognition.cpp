@@ -100,8 +100,8 @@ int main(int argc, char** argv)
 
             cntAll++;
         }
-        std::cout << "Accuracy(%): " << (double)(cntRight) / (double)(cntAll) << std::endl;
-        std::cout << "Average Inference Time(ms): " << timer.getTimeMilli() / (double)(cntAll) << std::endl;
+        std::cout << "Accuracy(%): " << (double)(cntRight) / (double)(cntAll) << "\n";
+        std::cout << "Average Inference Time(ms): " << timer.getTimeMilli() / (double)(cntAll) << "\n";
     }
     else
     {
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
         std::string recognitionResult = recognizer.recognize(frame);
 
         imshow(winName, frame);
-        std::cout << "Predition: '" << recognitionResult << "'" << std::endl;
+        std::cout << "Predition: '" << recognitionResult << "'" << "\n";
         waitKey();
     }
 

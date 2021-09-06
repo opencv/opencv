@@ -187,12 +187,12 @@ int ovxDemo(std::string inputPath, UserMemoryMode mode)
     }
     catch (const ivx::RuntimeError& e)
     {
-        std::cerr << "Error: code = " << e.status() << ", message = " << e.what() << std::endl;
+        std::cerr << "Error: code = " << e.status() << ", message = " << e.what() << "\n";
         return e.status();
     }
     catch (const ivx::WrapperError& e)
     {
-        std::cerr << "Error: message = " << e.what() << std::endl;
+        std::cerr << "Error: message = " << e.what() << "\n";
         return -1;
     }
 
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        std::cerr << modeString << ": unknown memory mode" << std::endl;
+        std::cerr << modeString << ": unknown memory mode" << "\n";
         return -1;
     }
 

@@ -47,7 +47,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     // create keypoints XML
     FileStorage fs(xml, FileStorage::WRITE);
     ASSERT_TRUE(fs.isOpened()) << xml;
-    std::cout << "Creating keypoints XML..." << std::endl;
+    std::cout << "Creating keypoints XML..." << "\n";
 
     mpt = Mat(calcKeypoints.size(), 2, CV_32F);
     msize = Mat(calcKeypoints.size(), 1, CV_32F);
@@ -159,7 +159,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
             badPointCount++;
     }
     float badKeypointsRatio = (float)badPointCount / (float)commonPointCount;
-    std::cout << "badKeypointsRatio: " << badKeypointsRatio << std::endl;
+    std::cout << "badKeypointsRatio: " << badKeypointsRatio << "\n";
     ASSERT_LT( badKeypointsRatio , maxBadKeypointsRatio ) << "Bad accuracy!";
 
     // Calc and compare descriptors. This uses validKeypoints for extraction.
@@ -177,7 +177,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
             badDescriptorCount++;
     }
     float badDescriptorRatio = (float)badDescriptorCount / (float)validKeypoints.size();
-    std::cout << "badDescriptorRatio: " << badDescriptorRatio << std::endl;
+    std::cout << "badDescriptorRatio: " << badDescriptorRatio << "\n";
     ASSERT_LT( badDescriptorRatio, maxBadDescriptorRatio ) << "Too many descriptors mismatched.";
 #endif
 }
