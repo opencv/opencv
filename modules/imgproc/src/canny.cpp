@@ -250,13 +250,13 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
             return false;
     }
 
-    int PIX_PER_WI = 8;
+    const int PIX_PER_WI = 8;
     /*
         stage2:
             hysteresis (add weak edges if they are connected with strong edges)
     */
 
-    const int sizey = (int) (lSizeY / PIX_PER_WI) != 0 ? (lSizeY / PIX_PER_WI) : 1;
+    const int sizey = ((int) (lSizeY / PIX_PER_WI)) != 0 ? lSizeY / PIX_PER_WI : 1;
 
     size_t globalsize[2] = { (size_t)size.width, ((size_t)size.height + PIX_PER_WI - 1) / PIX_PER_WI }, localsize[2] = { (size_t)lSizeX, (size_t)sizey };
 
@@ -314,7 +314,7 @@ public:
             _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
         else
 #endif
-        _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
+            _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
         map = _map;
         map.row(0).setTo(1);
         map.row(src.rows + 1).setTo(1);
@@ -338,7 +338,7 @@ public:
             _map.create(src.rows + 2, (int)alignSize((size_t)(src.cols + CV_SIMD_WIDTH + 1), CV_SIMD_WIDTH), CV_8UC1);
         else
 #endif
-        _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
+            _map.create(src.rows + 2, src.cols + 2,  CV_8UC1);
         map = _map;
         map.row(0).setTo(1);
         map.row(src.rows + 1).setTo(1);
