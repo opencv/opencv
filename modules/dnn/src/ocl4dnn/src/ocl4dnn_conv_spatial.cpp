@@ -769,12 +769,11 @@ bool OCL4DNNConvSpatial<Dtype>::swizzleWeight(const UMat &weight,
             swizzled_factor
         );
 
-        size_t global_work_size_copy[3] = {
-            (size_t) (alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_), 1, 1 };
+        size_t global_work_size_copy[1] = { (size_t)(alignSize(num_output_, swizzled_factor) * channels * kernel_w_ * kernel_h_) };
 
-        if (!oclk_copy_weight.run(3, global_work_size_copy, NULL, false))
+        if (!oclk_copy_weight.run_(1, global_work_size_copy, NULL, false))
         {
-            std::cout << "Swizzle kernel run failed." << std::endl;
+            CV_LOG_ERROR(NULL, "DNN/OpenCL: Swizzle kernel run failed");
             return false;
         }
     } else {
@@ -937,7 +936,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             kernel.set(argIdx++, (uint16_t)height_);
             kernel.set(argIdx++, (uint16_t)output_w_);
             kernel.set(argIdx++, (uint16_t)output_h_);
-            if (!kernel.run(3, config->global_work_size, config->local_work_size, false))
+            if (!kernel.run_(3, config->global_work_size, config->local_work_size, false))
             {
                 std::cout << "IDLF kernel run failed." << std::endl;
                 return false;
@@ -1056,7 +1055,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             gy = alignSize(gy, blockK);
             size_t global_size[3] = { gx, gy, config->global_work_size[2] };
 
-            if (!kernel.run(3, global_size, config->local_work_size, false))
+            if (!kernel.run_(3, global_size, config->local_work_size, false))
             {
                 std::cout << "GEMM like kernel run failed." << std::endl;
                 return false;
@@ -1085,9 +1084,9 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         global_size[1] = output_h_;
         global_size[2] = num_output_ * num_;
 
-        if (!kernel.run(3, global_size, NULL, false))
+        if (!kernel.run_(3, global_size, NULL, false))
         {
-            std::cout << "DWCONV kernel run failed." << std::endl;
+            CV_LOG_ERROR(NULL, "DNN/OpenCL: DWCONV kernel run failed");
             return false;
         }
     } else {
@@ -1127,11 +1126,11 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 kernel.set(argIdx++, (uint16_t)output_h_);
                 kernel.set(argIdx++, (uint16_t)pad_w_);
                 kernel.set(argIdx++, (uint16_t)pad_h_);
-                if (!kernel.run(3, config->global_work_size,
+                if (!kernel.run_(3, config->global_work_size,
                                 (config->use_null_local) ? NULL : config->local_work_size,
                                 false))
                 {
-                    std::cout << "Basic kernel run failed." << std::endl;
+                    CV_LOG_ERROR(NULL, "DNN/OpenCL: Basic kernel run failed");
                     return false;
                 }
             }
