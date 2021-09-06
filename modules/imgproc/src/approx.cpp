@@ -697,14 +697,17 @@ void cv::approxPolyDP( InputArray _curve, OutputArray _approxCurve,
     AutoBuffer<Point> _buf(npoints);
     AutoBuffer<Range> _stack(npoints);
     Point* buf = _buf.data();
-    int nout = 0;
+    const int nout = [](){
+        if( depth == CV_32S )
+            return approxPolyDP_(curve.ptr<Point>(), npoints, buf, closed, epsilon, _stack);
+        else if( depth == CV_32F )
+            return approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, _stack);
+        else {
+            CV_Error( CV_StsUnsupportedFormat, "" );
+            return 0;
+        }
+    }();
 
-    if( depth == CV_32S )
-        nout = approxPolyDP_(curve.ptr<Point>(), npoints, buf, closed, epsilon, _stack);
-    else if( depth == CV_32F )
-        nout = approxPolyDP_(curve.ptr<Point2f>(), npoints, (Point2f*)buf, closed, epsilon, _stack);
-    else
-        CV_Error( CV_StsUnsupportedFormat, "" );
 
     Mat(nout, 1, CV_MAKETYPE(depth, 2), buf).copyTo(_approxCurve);
 }
@@ -788,7 +791,7 @@ cvApproxPoly( const void* array, int header_size,
                       CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
 
             {
-            int npoints = src_seq->total, nout = 0;
+            int npoints = src_seq->total;
             _buf.allocate(npoints*2);
             cv::Point *src = _buf.data(), *dst = src + npoints;
             bool closed = CV_IS_SEQ_CLOSED(src_seq);
@@ -798,13 +801,17 @@ cvApproxPoly( const void* array, int header_size,
             else
                 cvCvtSeqToArray(src_seq, src);
 
-            if( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 )
-                nout = cv::approxPolyDP_(src, npoints, dst, closed, parameter, stack);
-            else if( CV_SEQ_ELTYPE(src_seq) == CV_32FC2 )
-                nout = cv::approxPolyDP_((cv::Point2f*)src, npoints,
-                                         (cv::Point2f*)dst, closed, parameter, stack);
-            else
-                CV_Error( CV_StsUnsupportedFormat, "" );
+            const int nout = []() {
+                if( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 )
+                    return cv::approxPolyDP_(src, npoints, dst, closed, parameter, stack);
+                else if( CV_SEQ_ELTYPE(src_seq) == CV_32FC2 )
+                    return cv::approxPolyDP_((cv::Point2f*)src, npoints,
+                                            (cv::Point2f*)dst, closed, parameter, stack);
+                else {
+                    CV_Error( CV_StsUnsupportedFormat, "" );
+                    return 0;
+                }
+            }();
 
             contour = cvCreateSeq( src_seq->flags, header_size,
                                   src_seq->elem_size, storage );

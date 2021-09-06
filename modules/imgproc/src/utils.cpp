@@ -46,7 +46,6 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
 {
     CV_Assert( arr != 0 && contour_header != 0 && block != 0 );
 
-    int eltype;
     CvMat hdr;
     CvMat* mat = (CvMat*)arr;
 
@@ -56,7 +55,7 @@ CV_IMPL CvSeq* cvPointSeqFromMat( int seq_kind, const CvArr* arr,
     if( CV_MAT_CN(mat->type) == 1 && mat->width == 2 )
         mat = cvReshape(mat, &hdr, 2);
 
-    eltype = CV_MAT_TYPE( mat->type );
+    const int eltype = CV_MAT_TYPE( mat->type );
     if( eltype != CV_32SC2 && eltype != CV_32FC2 )
         CV_Error( CV_StsUnsupportedFormat,
         "The matrix can not be converted to point sequence because of "
