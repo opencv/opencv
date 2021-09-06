@@ -557,6 +557,16 @@ void fastGEMM1T( const float* vec, const float* weights,
 {
     int i = 0;
 
+    uint32_t tailMaskArray[15];
+    for (int i = 0; i < 8; i++) {
+        tailMaskArray[i] = 0;
+    }
+    for (int i = 8; i < 15; i++) {
+        tailMaskArray[i] = 0xffffffffUL;
+    }
+
+    __m256 tailMask = _mm256_loadu_ps(reinterpret_cast<float*>(tailMaskArray) + (vecsize % 8));
+
     for( ; i <= nvecs - 8; i += 8 )
     {
         const float* wptr = weights + i*wstep;
@@ -565,18 +575,36 @@ void fastGEMM1T( const float* vec, const float* weights,
                vs4 = _mm256_setzero_ps(), vs5 = _mm256_setzero_ps(),
                vs6 = _mm256_setzero_ps(), vs7 = _mm256_setzero_ps();
 
-        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        int k = 0;
+        for( ; k <= vecsize-8; k += 8, wptr += 8 )
         {
-            __m256 v = _mm256_load_ps(vec + k);
+            __m256 v = _mm256_loadu_ps(vec + k);
 
-            vs0 = _mm256_fmadd_ps(_mm256_load_ps(wptr), v, vs0);
-            vs1 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep), v, vs1);
-            vs2 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*2), v, vs2);
-            vs3 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*3), v, vs3);
-            vs4 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*4), v, vs4);
-            vs5 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*5), v, vs5);
-            vs6 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*6), v, vs6);
-            vs7 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*7), v, vs7);
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+            vs1 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep), v, vs1);
+            vs2 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*2), v, vs2);
+            vs3 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*3), v, vs3);
+            vs4 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*4), v, vs4);
+            vs5 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*5), v, vs5);
+            vs6 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*6), v, vs6);
+            vs7 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*7), v, vs7);
+        }
+
+        if (k != vecsize) {
+            // Tail
+            k = vecsize - 8;
+            wptr = weights + i * wstep + vecsize - 8;
+            __m256 v = _mm256_loadu_ps(vec + k);
+            v = _mm256_and_ps(v, tailMask);
+
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+            vs1 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep), v, vs1);
+            vs2 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 2), v, vs2);
+            vs3 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 3), v, vs3);
+            vs4 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 4), v, vs4);
+            vs5 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 5), v, vs5);
+            vs6 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 6), v, vs6);
+            vs7 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 7), v, vs7);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs1), _mm256_hadd_ps(vs2, vs3));
@@ -598,10 +626,20 @@ void fastGEMM1T( const float* vec, const float* weights,
         const float* wptr = weights + i*wstep;
         __m256 vs0 = _mm256_setzero_ps();
 
-        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        int k = 0;
+        for( ; k <= vecsize-8; k += 8, wptr += 8 )
         {
             __m256 v = _mm256_load_ps(vec + k);
-            vs0 = _mm256_fmadd_ps(_mm256_load_ps(wptr), v, vs0);
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+        }
+
+        if (k != vecsize) {
+            // Tail
+            k = vecsize - 8;
+            wptr = weights + i * wstep + vecsize - 8;
+            __m256 v = _mm256_loadu_ps(vec + k);
+            v = _mm256_and_ps(v, tailMask);
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs0), vs0);
@@ -612,7 +650,6 @@ void fastGEMM1T( const float* vec, const float* weights,
 
     _mm256_zeroupper();
 }
-
 
 void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                size_t bstep, float* cptr, size_t cstep,

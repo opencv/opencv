@@ -46,6 +46,8 @@
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include "layers_common.hpp"
+
 namespace cv
 {
 namespace dnn
@@ -118,10 +120,14 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     ActivationFunction g_activation;
     ActivationFunction h_activation;
 
+    bool useAVX, useAVX2;
+
 public:
 
     LSTMLayerImpl(const LayerParams& params)
-        : numTimeStamps(0), numSamples(0)
+        : numTimeStamps(0), numSamples(0),
+          useAVX2(checkHardwareSupport(CPU_AVX2)),
+          useAVX(checkHardwareSupport(CPU_AVX))
     {
         setParamsFrom(params);
 
@@ -359,9 +365,72 @@ public:
                 Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
                 Mat xCurr = xTs.rowRange(curRowRange);
 
-                gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
+#ifdef CV_TRY_AVX2
+                if (useAVX2 && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_AVX2::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                else
+#endif
+#ifdef CV_TRY_AVX
+                if (useAVX && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_AVX::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                else
+#endif
+                {
+                    gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
+                    gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
+                }
+
+#ifdef CV_TRY_AVX2
+                if (useAVX2 && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_AVX2::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                else
+#endif
+#ifdef CV_TRY_AVX
+                if (useAVX && hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F && Wh.cols >= 8)
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_AVX::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                else
+#endif
                 gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
-                gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
 
                 Mat gateI = gates.colRange(0*numOut, 1*numOut);
                 Mat gateF = gates.colRange(1*numOut, 2*numOut);
