@@ -25,3 +25,4 @@ build
 node_modules
 CMakeSettings.json
 xcuserdata/
+CMakeCache.txt
