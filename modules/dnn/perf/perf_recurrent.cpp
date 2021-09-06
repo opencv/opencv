@@ -52,9 +52,9 @@ PERF_TEST_P_(Layer_LSTM, lstm) {
     lp.set("produce_cell_output", false);
     lp.set("use_timestamp_dim", true);
 
-    Mat weightH(params.hiddenSize*4, params.hiddenSize, CV_32FC1, cv::Scalar(0));
-    Mat weightX(params.hiddenSize*4, params.inputSize, CV_32FC1, cv::Scalar(0));
-    Mat bias(params.hiddenSize*4, 1, CV_32FC1, cv::Scalar(0));
+    Mat weightH(params.hiddenSize * 4, params.hiddenSize, CV_32FC1, cv::Scalar(0));
+    Mat weightX(params.hiddenSize * 4, params.inputSize, CV_32FC1, cv::Scalar(0));
+    Mat bias(params.hiddenSize * 4, 1, CV_32FC1, cv::Scalar(0));
     Mat hInternal(params.nrSteps, params.hiddenSize, CV_32FC1, cv::Scalar(0));
     Mat cInternal(params.nrSteps, params.hiddenSize, CV_32FC1, cv::Scalar(0));
     lp.blobs.push_back(weightH);
@@ -63,7 +63,10 @@ PERF_TEST_P_(Layer_LSTM, lstm) {
     lp.blobs.push_back(hInternal);
     lp.blobs.push_back(cInternal);
 
-    std::vector<int> inputDims{ params.nrSamples, params.nrSteps, params.inputSize };
+    std::vector<int> inputDims;
+    inputDims.push_back(params.nrSamples);
+    inputDims.push_back(params.nrSteps);
+    inputDims.push_back(params.inputSize);
     Mat input(inputDims.size(), inputDims.data(), CV_32FC1);
     input = cv::Scalar(0);
 
