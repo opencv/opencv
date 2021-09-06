@@ -945,9 +945,11 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
     } else if (config->kernelType == KERNEL_TYPE_GEMM_LIKE) {
         if (!swizzleWeight(weight, config->workItem_output[1], true))
             return false;
+#if 0
         size_t total_bottom_size = bottom_dim_ * numImages;
         size_t total_kernel_size = kernel_h_ * kernel_w_ * channels_ * M_;
         size_t total_bias_size = M_ * group_;
+#endif
         size_t total_top_size = top_dim_ * numImages;
         for (int32_t g = 0; g < group_; ++g) {
             bias_offset = M_ * g;
@@ -960,72 +962,25 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 return false;
 
             cl_uint argIdx = 0;
-            setFusionArg(fused_activ_, fused_eltwise_, -1, kernel, argIdx);
+            setFusionArg(fused_activ_, fused_eltwise_, output_image_offset, kernel, argIdx);
 
-            UMat img_buffer;
-            if (image_offset)
-            {
-                CreateSubBuffer(bottom, img_buffer, image_offset,
-                                total_bottom_size - image_offset, false);
-                if (img_buffer.empty())
-                    return false;
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
+            kernel.set(argIdx++, (int)image_offset);
+            kernel.set(argIdx++, (int)(bottom.total() - image_offset));
 
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(img_buffer));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bottom));
-            }
+            kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
+            kernel.set(argIdx++, (int)kernel_offset);
+            kernel.set(argIdx++, (int)(swizzled_weights_umat.total() - kernel_offset));
 
-            UMat kernel_buffer;
-            if (kernel_offset)
-            {
-                CreateSubBuffer(swizzled_weights_umat, kernel_buffer, kernel_offset,
-                                total_kernel_size - kernel_offset, false);
-                if (kernel_buffer.empty())
-                    return false;
-
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(kernel_buffer));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(swizzled_weights_umat));
-            }
-
-            UMat bias_buffer;
             if (bias_term_)
             {
-                if (bias_offset)
-                {
-                    CreateSubBuffer(bias, bias_buffer, bias_offset,
-                                    total_bias_size - bias_offset, false);
-                    if (bias_buffer.empty())
-                        return false;
-
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias_buffer));
-                }
-                else
-                {
-                    kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
-                }
+                kernel.set(argIdx++, ocl::KernelArg::PtrReadOnly(bias));
+                kernel.set(argIdx++, (int)bias_offset);
             }
 
-            UMat out_buffer;
-            if (output_image_offset)
-            {
-                CreateSubBuffer(top, out_buffer, output_image_offset,
-                                total_top_size - output_image_offset, true);
-                if (out_buffer.empty())
-                    return false;
-
-                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(out_buffer));
-                kernel.set(argIdx++, (int)(out_buffer.offset / element_size));
-            }
-            else
-            {
-                kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
-                kernel.set(argIdx++, (int)(top.offset / element_size));
-            }
+            kernel.set(argIdx++, ocl::KernelArg::PtrWriteOnly(top));
+            kernel.set(argIdx++, (int)(top.offset / element_size) + output_image_offset);
+            kernel.set(argIdx++, (int)total_top_size - (int)(top.offset / element_size));
 
             kernel.set(argIdx++, (uint16_t)width_);
             kernel.set(argIdx++, (uint16_t)height_);
