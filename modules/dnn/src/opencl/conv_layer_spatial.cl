@@ -401,13 +401,12 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 #define ROW_PITCH input_width
 
 #define GEMM_LIKE_KERNEL_ARGS     \
-    ELTWISE_DATA_ARG              \
+    ELTWISE_DATA_ARG_WITH_OFFSET  \
     FUSED_ARG                     \
-    const __global Dtype *src0,   \
-    const __global Dtype *src1,   \
-    BIAS_KERNEL_ARG               \
-    __global Dtype *dst_base,     \
-    const int dst_offset,         \
+    const __global Dtype *src0_ptr, const unsigned int src0_offset, const unsigned int src0_limit, \
+    const __global Dtype *src1_ptr, const unsigned int src1_offset, const unsigned int src1_limit, \
+    BIAS_KERNEL_ARG_WITH_OFFSET   \
+    __global Dtype *dst_base, const unsigned int dst_offset, const unsigned int dst_limit, \
     const ushort input_width,     \
     const ushort input_height,    \
     const ushort output_width,    \
@@ -437,7 +436,17 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -460,6 +469,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     }
     typedef CAT( Dtype, KERNEL_WIDTH ) Dtype_t;
 
+// U_GEMM_LIKE_CONV_k11x11_cn3_g1_s4x4_d1x1_b1_in240x240_p0x0_num1_M96_activ1_eltwise0_FP32_5_1_8_32_SIMD8 doesn't run properly (src0_read out of bounds)
+// Test: DNNTestNetwork.AlexNet/0 (to run all kernels use OPENCV_OCL4DNN_FORCE_AUTO_TUNING=1)
+#if 0 // INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+  #define OPTIMIZE_READ 1
+#else
+  #define OPTIMIZE_READ 0
+#endif
+
     // True for all threads if filter_width is multiple of TILE_N
     // else, true for all but right-most column of threads.
     if( TILE_N_LAST == 0 || global_x < WIDTH1 / TILE_N )
@@ -476,7 +493,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -496,7 +513,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
             curr_y = saved_y;
 #endif
 
@@ -514,11 +531,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
                 // ...
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+#if OPTIMIZE_READ
   #if KERNEL_WIDTH == 3
                 Dtype_t blockA00 = vload3(0, src0_read);
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
   #else
+    #if 0 // debug
+                if ((int)(src0_read - src0) >= src0_limit - KERNEL_WIDTH)
+                {
+                    printf("CATCH: src0_read-src0: %d   limit=%d   curr_y,curr_x=%d,%d\n", (int)(src0_read - src0), src0_limit, curr_y, curr_x);
+                }
+    #endif
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
   #endif
@@ -639,7 +662,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -659,14 +682,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
             curr_y = saved_y;
 #endif
             do
             {
                 // Load atile and interleaved btile.
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+#if OPTIMIZE_READ
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
 #else
@@ -803,7 +826,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             }
         }
     }
-#endif
+#endif  // TILE_N_LAST > 0
 }
 #endif
 #ifdef GEMM_LIKE_CONV_32_2
@@ -826,7 +849,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1388,7 +1421,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1574,7 +1617,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
