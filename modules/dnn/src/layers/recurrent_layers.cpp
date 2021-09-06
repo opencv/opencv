@@ -126,8 +126,8 @@ public:
 
     LSTMLayerImpl(const LayerParams& params)
         : numTimeStamps(0), numSamples(0),
-          useAVX2(checkHardwareSupport(CPU_AVX2)),
-          useAVX(checkHardwareSupport(CPU_AVX))
+          useAVX(checkHardwareSupport(CPU_AVX)),
+          useAVX2(checkHardwareSupport(CPU_AVX2))
     {
         setParamsFrom(params);
 
