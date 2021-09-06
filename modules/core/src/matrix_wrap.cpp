@@ -1157,7 +1157,7 @@ bool _OutputArray::fixedType() const
     return (flags & FIXED_TYPE) == FIXED_TYPE;
 }
 
-void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
+void _OutputArray::create(Size _sz, const int mtype, int i, bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
     _InputArray::KindFlag k = kind();
     if( k == MAT && i < 0 && !allowTransposed && fixedDepthMask == 0 )

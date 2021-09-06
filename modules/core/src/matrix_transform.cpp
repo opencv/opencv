@@ -728,7 +728,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     CV_OCL_RUN( _dst.isUMat(), ocl_flip(_src, _dst, flip_mode))
 
     Mat src = _src.getMat();
-    int type = src.type();
+    const int type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
 
@@ -745,7 +745,7 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+void rotate(InputArray _src, OutputArray _dst, const int rotateMode)
 {
     CV_Assert(_src.dims() <= 2);
 

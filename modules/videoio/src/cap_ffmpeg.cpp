@@ -142,14 +142,19 @@ protected:
             return;
         }
 
-        cv::RotateFlags flag;
-        if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
-            flag = cv::ROTATE_90_CLOCKWISE;
-        } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
-            flag = cv::ROTATE_90_COUNTERCLOCKWISE;
-        } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
-            flag = cv::ROTATE_180;
-        } else { // Unsupported rotation
+        const cv::RotateFlags flag = []()
+        {
+            if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
+                return cv::ROTATE_90_CLOCKWISE;
+            } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
+                return cv::ROTATE_90_COUNTERCLOCKWISE;
+            } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
+                return cv::ROTATE_180;
+            } else { // Unsupported rotation
+                return -1;
+            }
+        }();
+        if(flag == -1) {
             return;
         }
 

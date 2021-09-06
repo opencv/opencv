@@ -40,11 +40,9 @@ int main(int argc, char** argv)
         help(argv);
         return 0;
     }
-    std::string filename = parser.get<std::string>("@input");
-    int response_idx;
-    std::string typespec;
-    response_idx = parser.get<int>("r");
-    typespec = parser.get<std::string>("ts");
+    const std::string filename = parser.get<std::string>("@input");
+    const int response_idx = parser.get<int>("r");
+    const std::string typespec = parser.get<std::string>("ts");
     if( filename.empty() || !parser.check() )
     {
         parser.printErrors();

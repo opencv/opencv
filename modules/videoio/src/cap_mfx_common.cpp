@@ -191,7 +191,7 @@ bool ReadBitstream::read()
     input.read((char*)(stream.Data + stream.DataLength), stream.MaxLength - stream.DataLength);
     if (input.eof() || input.good())
     {
-        mfxU32 bytesRead = (mfxU32)input.gcount();
+        const mfxU32 bytesRead = (mfxU32)input.gcount();
         if (bytesRead > 0)
         {
             stream.DataLength += bytesRead;
