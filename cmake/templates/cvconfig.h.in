@@ -59,6 +59,9 @@
 /* Vulkan support */
 #cmakedefine HAVE_VULKAN
 
+/* Webnn support */
+#cmakedefine HAVE_WEBNN
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
