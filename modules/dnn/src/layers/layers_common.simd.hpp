@@ -550,6 +550,12 @@ void fastDepthwiseConv( const float* wptr,
     _mm256_zeroupper();
 }
 
+// Used to generate the mask used when calculating tails
+static const uint32_t tailMaskArray[15] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL
+};
+
 // dst = vec * weights^t + bias
 // Requires that vecsize is at least 8 or equal to 0 to avoid memory access problems.  Does not require alignment.
 void fastGEMM1T( const float* vec, const float* weights,
@@ -558,15 +564,8 @@ void fastGEMM1T( const float* vec, const float* weights,
 {
     int i = 0;
 
-    uint32_t tailMaskArray[15];
-    for (int i = 0; i < 8; i++) {
-        tailMaskArray[i] = 0;
-    }
-    for (int i = 8; i < 15; i++) {
-        tailMaskArray[i] = 0xffffffffUL;
-    }
 
-    __m256 tailMask = _mm256_loadu_ps(reinterpret_cast<float*>(tailMaskArray) + (vecsize % 8));
+    __m256 tailMask = _mm256_loadu_ps(reinterpret_cast<const float*>(tailMaskArray) + (vecsize % 8));
 
     for( ; i <= nvecs - 8; i += 8 )
     {
@@ -598,14 +597,14 @@ void fastGEMM1T( const float* vec, const float* weights,
             __m256 v = _mm256_loadu_ps(vec + k);
             v = _mm256_and_ps(v, tailMask);
 
-            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
-            vs1 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep), v, vs1);
-            vs2 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 2), v, vs2);
-            vs3 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 3), v, vs3);
-            vs4 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 4), v, vs4);
-            vs5 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 5), v, vs5);
-            vs6 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 6), v, vs6);
-            vs7 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep * 7), v, vs7);
+            vs0 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr), tailMask), v, vs0);
+            vs1 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep), tailMask), v, vs1);
+            vs2 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 2), tailMask), v, vs2);
+            vs3 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 3), tailMask), v, vs3);
+            vs4 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 4), tailMask), v, vs4);
+            vs5 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 5), tailMask), v, vs5);
+            vs6 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 6), tailMask), v, vs6);
+            vs7 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 7), tailMask), v, vs7);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs1), _mm256_hadd_ps(vs2, vs3));
@@ -640,7 +639,7 @@ void fastGEMM1T( const float* vec, const float* weights,
             wptr = weights + i * wstep + vecsize - 8;
             __m256 v = _mm256_loadu_ps(vec + k);
             v = _mm256_and_ps(v, tailMask);
-            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+            vs0 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr), tailMask), v, vs0);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs0), vs0);
