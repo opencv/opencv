@@ -1233,7 +1233,15 @@ void hlineSmoothONa_yzy_a<uint16_t, ufixedpoint32>(const uint16_t* src, int cn, 
     for (; i <= lencn - VECSZ * 2; i += VECSZ * 2, src += VECSZ * 2, dst += VECSZ * 2)
     {
         v_uint32 v_res0, v_res1;
-        v_mul_expand(vx_load(src + pre_shift * cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + pre_shift))), v_res0, v_res1);
+        if (*(m + pre_shift) == ufixedpoint32::fromRaw(1 << 16))
+        {
+            v_res0 = vx_load_expand(src + pre_shift * cn) << 16;
+            v_res1 = vx_load_expand(src + pre_shift * cn + VECSZ) << 16;
+        }
+        else
+        {
+            v_mul_expand(vx_load(src + pre_shift * cn), vx_setall_u16((uint16_t) *((uint32_t*)(m + pre_shift))), v_res0, v_res1);
+        }
         for (int j = 0; j < pre_shift; j ++)
         {
             v_uint16 v_weight = vx_setall_u16((uint16_t) *((uint32_t*)(m + j)));
