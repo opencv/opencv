@@ -551,6 +551,7 @@ void fastDepthwiseConv( const float* wptr,
 }
 
 // dst = vec * weights^t + bias
+// Requires that vecsize is at least 8 or equal to 0 to avoid memory access problems.  Does not require alignment.
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize )
