@@ -12,9 +12,8 @@ Vectorizing your code using Universal Intrinsics {#tutorial_univ_intrin}
 Goal
 ----
 
-The goal of this tutorial is to provide a guide to using the Universal Intrinsics feature to vectorize your C++ code for a faster runtime.
+The goal of this tutorial is to provide a guide to using the @ref core_hal_intrin feature to vectorize your C++ code for a faster runtime.
 We'll briefly look into _SIMD intrinsics_ and how to work with wide _registers_, followed by a tutorial on the basic operations using wide registers.
-The tutorial will only demonstrate basic operations. To know more about Universal Intrinsics, visit the [documentation](https://docs.opencv.org/4.5.3/df/d91/group__core__hal__intrin.html).
 
 Theory
 ------
@@ -97,7 +96,6 @@ There are **two types** of registers:
     * 64-bit floats in 512 bit register:
 
             v_float64x8 reg2                     // reg2.nlanes = 8
-
 
 ### Load and Store operations
 
@@ -241,14 +239,13 @@ The universal intrinsics set provides element wise binary and unary operations.
                 It is common to set all values of b to 0. Thus, v_select will give values of "a" or 0 based on the mask.
             */
 
-
 ## Demonstration
 In the following section, we will vectorize a simple convolution function for single channel and compare the results to a scalar implementation.
 @note Not all algorithms are improved by manual vectorization. In fact, in certain cases, the compiler may *autovectorize* the code, thus producing faster results for scalar implementations.
 
 You may learn more about convolution from the previous tutorial. We use the same naive implementation from the previous tutorial and compare it to the vectorized version.
 
-The full tutorial code is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/univ_intrin/univ_intrin.cpp).
+The full tutorial code is [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/univ_intrin/univ_intrin.cpp).
 
 ### Vectorizing Convolution
 

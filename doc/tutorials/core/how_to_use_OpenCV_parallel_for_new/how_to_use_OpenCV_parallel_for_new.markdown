@@ -14,7 +14,7 @@ Goal
 ----
 
 The goal of this tutorial is to demonstrate the use of the OpenCV `parallel_for_` framework to easily parallelize your code. To illustrate the concept, we will write a program to perform convolution operation over an image.
-The full tutorial code is [here](https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_new.cpp).
+The full tutorial code is [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/how_to_use_OpenCV_parallel_for_/how_to_use_OpenCV_parallel_for_new.cpp).
 
 Precondition
 ----
@@ -24,26 +24,22 @@ The first precondition is to have OpenCV built with a parallel framework.
 In OpenCV 4.5, the following parallel frameworks are available in that order:
 
 *   Intel Threading Building Blocks (3rdparty library, should be explicitly enabled)
-*   C= Parallel C/C++ Programming Language Extension (3rdparty library, should be explicitly enabled)
 *   OpenMP (integrated to compiler, should be explicitly enabled)
 *   APPLE GCD (system wide, used automatically (APPLE only))
 *   Windows RT concurrency (system wide, used automatically (Windows RT only))
 *   Windows concurrency (part of runtime, used automatically (Windows only - MSVC++ >= 10))
 *   Pthreads
 
-As you can see, several parallel frameworks can be used in the OpenCV library. Some parallel libraries(e.g. TBB, C=) are third party libraries and have to be explicitly enabled in CMake before building, while others are automatically available with the platform (e.g. APPLE GCD).
-
+As you can see, several parallel frameworks can be used in the OpenCV library. Some parallel libraries are third party libraries and have to be explicitly enabled in CMake before building, while others are automatically available with the platform (e.g. APPLE GCD).
 
 ### Race Conditions
 Race conditions occur when more than one thread try to write *or* read and write to a particular memory location simultaneously.
 Based on that, we can broadly classify algorithms into two categories:-
 1. Algorithms in which only a single thread writes data to a particular memory location.
     * In *convolution*, for example, even though multiple  threads may read from a pixel at a particular time, only a single thread *writes* to a particular pixel.
-<!-- <br> -->
 
 2. Algorithms in which multiple threads may write to a single memory location.
     * Finding contours, features, etc. Such algorithms may require each thread to add data to a global variable simultaneously. For example, when detecting features, each thread will add features of their respective parts of the image to a common vector, thus creating a race condition.
-
 
 Convolution
 -----------
@@ -56,13 +52,11 @@ Convolution is a simple mathematical operation widely used in image processing. 
 In the example below, we use a 3x3 kernel (anchored at its center) and convolve over a 5x5 matrix to produce a 3x3 matrix. The size of the output can be altered by padding the input with suitable values.
 ![Convolution Animation](images/convolution-example-matrix.gif)
 
-
-For more information about different kernels and what they do, look [here](https://docs.opencv.org/4.5.2/d7/da8/tutorial_table_of_content_imgproc.html).
+For more information about different kernels and what they do, look [here](https://en.wikipedia.org/wiki/Kernel_(image_processing))
 
 For the purpose of this tutorial, we will implement the simplest form of the function which takes a grayscale image (1 channel) and an odd length square kernel and produces an output image.
 The operation will not be performed in-place.
 @note We can store a few of the relevant pixels temporarily to make sure we use the original values during the convolution and then do it in-place. However, the purpose of this tutorial is to introduce parallel_for_ function and an inplace implementation may be too complicated.
-
 
 Pseudocode
 -----------
@@ -126,7 +120,6 @@ For example, we can either
 
 @note In our case, both implementations perform similarly. Some cases may allow better memory access patterns or other performance benefits.
 
-
 To set the number of threads, you can use: @ref cv::setNumThreads. You can also specify the number of splitting using the nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)` or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the workload only on two threads.
 
 @note C++ 11 standard allows to simplify the parallel implementation by get rid of the `parallelConvolution` class and replacing it with lambda expression:
@@ -147,7 +140,7 @@ The resulting time taken for execution of the two implementations on a
 
         Sequential Implementation: 0.0953564s
         Parallel Implementation: 0.0246762s
-        Parallel Implentatation(Row Split): 0.0248722s
+        Parallel Implementation(Row Split): 0.0248722s
 
 <br>
 
@@ -170,4 +163,4 @@ The performance of the parallel implementation depends on the type of CPU you ha
 
 In the tutorial, we used a horizontal gradient filter(as shown in the animation above), which produces an image highlighting the vertical edges.
 
-![result image](images/resimg.png)
+![result image](images/resimg.jpg)
