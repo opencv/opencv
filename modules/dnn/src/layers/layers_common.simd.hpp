@@ -651,6 +651,7 @@ void fastGEMM1T( const float* vec, const float* weights,
     _mm256_zeroupper();
 }
 
+
 void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                size_t bstep, float* cptr, size_t cstep,
                int ma, int na, int nb )
