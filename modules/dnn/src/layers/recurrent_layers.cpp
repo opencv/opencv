@@ -125,9 +125,13 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
 public:
 
     LSTMLayerImpl(const LayerParams& params)
-        : numTimeStamps(0), numSamples(0),
-          useAVX(checkHardwareSupport(CPU_AVX)),
-          useAVX2(checkHardwareSupport(CPU_AVX2))
+        : numTimeStamps(0), numSamples(0)
+#if CV_TRY_AVX
+          , useAVX(checkHardwareSupport(CPU_AVX))
+#endif
+#if CV_TRY_AVX2
+          , useAVX2(checkHardwareSupport(CPU_AVX2))
+#endif
     {
         setParamsFrom(params);
 
@@ -430,7 +434,9 @@ public:
                     }
                 else
 #endif
-                gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
+                {
+                    gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
+                }
 
                 Mat gateI = gates.colRange(0*numOut, 1*numOut);
                 Mat gateF = gates.colRange(1*numOut, 2*numOut);
