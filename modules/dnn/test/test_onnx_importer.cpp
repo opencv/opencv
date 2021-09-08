@@ -997,11 +997,7 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise)
 
 TEST_P(Test_ONNX_layers, Quantized_Eltwise_Scalar)
 {
-    // Unsupported
-    EXPECT_THROW(
-    {
-        testONNXModels("quantized_eltwise_scalars");
-    }, cv::Exception);
+    testONNXModels("quantized_eltwise_scalar");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Eltwise_Broadcast)
@@ -1011,22 +1007,22 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise_Broadcast)
 
 TEST_P(Test_ONNX_layers, Quantized_LeakyReLU)
 {
-    testONNXModels("quantized_leaky_relu", npy, 0.01, 0.2);
+    testONNXModels("quantized_leaky_relu");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Sigmoid)
 {
-    testONNXModels("quantized_sigmoid", npy, 0.01, 0.1);
+    testONNXModels("quantized_sigmoid");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MaxPool)
 {
-    testONNXModels("quantized_maxpool", npy, 0.02, 0.2);
+    testONNXModels("quantized_maxpool");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_AvgPool)
 {
-    testONNXModels("quantized_avgpool", npy, 0.04, 0.2);
+    testONNXModels("quantized_avgpool");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Split)
@@ -1036,17 +1032,17 @@ TEST_P(Test_ONNX_layers, Quantized_Split)
 
 TEST_P(Test_ONNX_layers, Quantized_Pad)
 {
-    testONNXModels("quantized_padding", npy, 0.002, 0.008);
+    testONNXModels("quantized_padding");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Reshape)
 {
-    testONNXModels("quantized_reshape", npy, 0.02, 0.08);
+    testONNXModels("quantized_reshape");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Transpose)
 {
-    testONNXModels("quantized_transpose", npy, 0.03, 0.031);
+    testONNXModels("quantized_transpose");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Squeeze)
@@ -1061,26 +1057,20 @@ TEST_P(Test_ONNX_layers, Quantized_Unsqueeze)
 
 TEST_P(Test_ONNX_layers, Quantized_Resize)
 {
-    // Unsupported
-    EXPECT_THROW(
-    {
-        testONNXModels("quantized_resize_nearest");
-        testONNXModels("quantized_resize_bilinear");
-    }, cv::Exception);
+    testONNXModels("quantized_resize_nearest");
+    testONNXModels("quantized_resize_bilinear", npy, 1e-4, 0.003);
+    testONNXModels("quantized_resize_bilinear_align", npy, 2e-4, 0.003);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Concat)
 {
-    // Unsupported
-    EXPECT_THROW(
-    {
-        testONNXModels("quantized_concat");
-    }, cv::Exception);
+    testONNXModels("quantized_concat");
+    testONNXModels("quantized_concat_const_blob");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
-    testONNXModels("quantized_constant", npy, 0.002, 0.006);
+    testONNXModels("quantized_constant", npy, 0.002, 0.008);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
@@ -1217,6 +1207,11 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
 
     // output range: [-67; 75], after Softmax [0, 0.98]
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
+}
+
+TEST_P(Test_ONNX_nets, ResNet50_Int8)
+{
+    testONNXModels("resnet50_int8", pb, default_l1, default_lInf, true);
 }
 
 TEST_P(Test_ONNX_nets, ResNet101_DUC_HDC)
