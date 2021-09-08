@@ -712,9 +712,9 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int depth = cvtest::randInt(rng) % 2;
+    int allowed_depths[] = {CV_8U, CV_16U, CV_32F};
+    int depth = allowed_depths[cvtest::randInt(rng) % sizeof(allowed_depths) / sizeof(allowed_depths[0])];
     int cn = CV_MAT_CN(types[INPUT][0]);
-    depth = depth == 0 ? CV_8U : CV_32F;
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth,cn);
     anchor.x = cvtest::randInt(rng)%(max_aperture_size/2+1);
     anchor.y = cvtest::randInt(rng)%(max_aperture_size/2+1);
@@ -827,7 +827,7 @@ CV_GaussianBlurTest::CV_GaussianBlurTest() : CV_SmoothBaseTest()
 double CV_GaussianBlurTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth <= CV_8S ? 8 : 1e-5;
+    return depth < CV_32F ? 8 : 1e-5;
 }
 
 
