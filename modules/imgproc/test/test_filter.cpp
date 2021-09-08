@@ -692,6 +692,7 @@ protected:
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     double get_success_error_level( int test_case_idx, int i, int j );
     const char* smooth_type;
+    vector<int> allowed_depths;
 
     void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
     {
@@ -704,6 +705,7 @@ protected:
 CV_SmoothBaseTest::CV_SmoothBaseTest() : CV_FilterBaseTest( true )
 {
     smooth_type = "";
+    allowed_depths = {CV_8U, CV_32F};
 }
 
 
@@ -712,8 +714,7 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
 {
     RNG& rng = ts->get_rng();
     CV_FilterBaseTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    int allowed_depths[] = {CV_8U, CV_16U, CV_32F};
-    int depth = allowed_depths[cvtest::randInt(rng) % sizeof(allowed_depths) / sizeof(allowed_depths[0])];
+    int depth = allowed_depths[cvtest::randInt(rng) % allowed_depths.size()];
     int cn = CV_MAT_CN(types[INPUT][0]);
     types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_MAKETYPE(depth,cn);
     anchor.x = cvtest::randInt(rng)%(max_aperture_size/2+1);
@@ -821,6 +822,7 @@ CV_GaussianBlurTest::CV_GaussianBlurTest() : CV_SmoothBaseTest()
 {
     sigma = 0.;
     smooth_type = "Gaussian";
+    allowed_depths = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
 }
 
 
