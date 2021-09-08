@@ -24,11 +24,6 @@
 
 #ifdef HAVE_OPENCL
 
-#include <sstream>
-#include "opencl_kernels_core.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
-#include "opencv2/core/opencl/runtime/opencl_core.hpp"
-
 namespace cv
 {
 
@@ -37,14 +32,15 @@ static bool intel_gpu_gemm(
     UMat B, Size sizeB,
     UMat D, Size sizeD,
     double alpha, double beta,
-    bool atrans, bool btrans)
+    bool atrans, bool btrans,
+    bool& isPropagatedC2D
+)
 {
     CV_UNUSED(sizeB);
 
     int M = sizeD.height, N = sizeD.width, K = ((atrans)? sizeA.height : sizeA.width);
 
     std::string kernelName;
-    bool ret = true;
 
     size_t lx = 8, ly = 4;
     size_t dx = 4, dy = 8;
@@ -110,7 +106,8 @@ static bool intel_gpu_gemm(
                (int)(D.step / sizeof(float))
         );
 
-        ret = k.run(2, global, local, false, q);
+        bool ret = k.run(2, global, local, false, q);
+        return ret;
     }
     else
     {
@@ -132,12 +129,16 @@ static bool intel_gpu_gemm(
                     (int) start_index,                          // 14 start_index
                     stride);
 
-            ret = k.run(2, global, local, false, q);
-            if (!ret) return ret;
+            bool ret = k.run(2, global, local, false, q);
+            if (!ret)
+            {
+                if (start_index != 0)
+                    isPropagatedC2D = false;  // D array content is changed, need to rewrite
+                return false;
+            }
         }
+        return true;
     }
-
-    return ret;
 }
 
 } // namespace cv
