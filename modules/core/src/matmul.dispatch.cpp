@@ -221,10 +221,15 @@ static bool ocl_gemm( InputArray matA, InputArray matB, double alpha,
         // fallback on generic OpenCL code
     }
 
+    if (sizeD.width < 8 || sizeD.height < 8)
+        return false;
+
     String opts;
 
-    int max_wg_size = (int)dev.maxWorkGroupSize();
-    int block_size = (max_wg_size / (32*cn) < 32) ? (max_wg_size / (16*cn) < 16) ? (max_wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
+    int wg_size = (int)dev.maxWorkGroupSize();
+    int sizeDmin = std::min(sizeD.width, sizeD.height);
+    wg_size = std::min(wg_size, sizeDmin * sizeDmin);
+    int block_size = (wg_size / (32*cn) < 32) ? (wg_size / (16*cn) < 16) ? (wg_size / (8*cn) < 8) ? 1 : 8 : 16 : 32;
 
     if (atrans)
         A = A.t();
