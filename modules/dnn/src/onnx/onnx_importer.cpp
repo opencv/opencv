@@ -1791,14 +1791,19 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     CV_CheckEQ(inpShape.size(), targetShape.size(), "Unsupported Expand op with different dims");
 
     std::vector<int> broadcast_axes;
+    // shapes aren't right-aligned here because targetShape.size() == inpShape.size()
     for (int i = 0; i < targetShape.size(); i++)
     {
         if (targetShape[i] != inpShape[i])
         {
             if (inpShape[i] == 1)
+            {
                 broadcast_axes.push_back(i);
-            else
+            }
+            else if (targetShape[i] != 1)
+            {
                 CV_Error(Error::StsError, format("Could not be broadcast by axis: %d", i));
+            }
         }
     }
 
@@ -1845,7 +1850,7 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     }
     else if (broadcast_axes.empty())
     {
-        return;
+        layerParams.type = "Identity";
     }
     else
         CV_Error(Error::StsNotImplemented, "Unsupported Expand op");

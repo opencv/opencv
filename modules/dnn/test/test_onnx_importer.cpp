@@ -473,6 +473,7 @@ TEST_P(Test_ONNX_layers, MatMulAdd)
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand");
+    testONNXModels("expand_identity");
     testONNXModels("expand_batch");
     testONNXModels("expand_channels");
     testONNXModels("expand_neg_batch");
