@@ -40,45 +40,71 @@ static bool intel_gpu_gemm(
 
     int M = sizeD.height, N = sizeD.width, K = ((atrans)? sizeA.height : sizeA.width);
 
+    if (M < 4 || N < 4 || K < 4)  // vload4
+        return false;
+
+    CV_LOG_VERBOSE(NULL, 0, "M=" << M << " N=" << N << " K=" << K);
+
     std::string kernelName;
 
-    size_t lx = 8, ly = 4;
-    size_t dx = 4, dy = 8;
+    unsigned int lx = 8, ly = 4;
+    unsigned int dx = 4, dy = 8;
 
     if(!atrans && !btrans)
     {
-
         if (M % 32 == 0 && N % 32 == 0 && K % 16 == 0)
         {
             kernelName = "intelblas_gemm_buffer_NN_sp";
         }
         else
         {
+            if (M % 2 != 0)
+                return false;
+            // vload4(0, dst_write0) - 4 cols
+            // multiply by lx: 8
+            if (N % (4*8) != 0)
+                return false;
             kernelName = "intelblas_gemm_buffer_NN";
         }
     }
     else if(atrans && !btrans)
     {
+        if (M % 32 != 0)
+            return false;
+        if (N % 32 != 0)
+            return false;
         kernelName = "intelblas_gemm_buffer_TN";
     }
     else if(!atrans && btrans)
     {
+        if (M % 128 != 0)
+            return false;
+        if (N % 8 != 0)
+            return false;
+        if (K % 512 != 0)
+            return false;
         kernelName = "intelblas_gemm_buffer_NT";
         ly = 16;
         dx = 1;
     }
     else
     {
+        if (M % 32 != 0)
+            return false;
+        if (N % 32 != 0)
+            return false;
+        if (K % 16 != 0)
+            return false;
         kernelName = "intelblas_gemm_buffer_TT";
     }
 
-    const size_t gx = (size_t)(N + dx - 1) / dx;
-    const size_t gy = (size_t)(M + dy - 1) / dy;
+    CV_LOG_DEBUG(NULL, "kernel: " << kernelName << "  (M=" << M << " N=" << N << " K=" << K << ")");
+
+    const size_t gx = divUp((size_t)N, dx);
+    const size_t gy = divUp((size_t)M, dy);
 
     size_t local[] = {lx, ly, 1};
-    size_t global[] = {(gx + lx - 1) / lx * lx, (gy + ly - 1) / ly * ly, 1};
-
-    int stride = (M * N < 1024 * 1024) ? 10000000 : 256;
+    size_t global[] = {roundUp(gx, lx), roundUp(gy, ly), 1};
 
     ocl::Queue q;
     String errmsg;
@@ -111,6 +137,8 @@ static bool intel_gpu_gemm(
     }
     else
     {
+        int stride = (M * N < 1024 * 1024) ? 10000000 : 256;
+
         for(int start_index = 0; start_index < K; start_index += stride)
         {
              ocl::Kernel k(kernelName.c_str(), program);
