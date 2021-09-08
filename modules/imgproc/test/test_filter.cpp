@@ -705,7 +705,7 @@ protected:
 CV_SmoothBaseTest::CV_SmoothBaseTest() : CV_FilterBaseTest( true )
 {
     smooth_type = "";
-    allowed_depths = vector<int>({CV_8U, CV_32F});
+    allowed_depths = vector<int>{CV_8U, CV_32F};
 }
 
 
@@ -822,7 +822,7 @@ CV_GaussianBlurTest::CV_GaussianBlurTest() : CV_SmoothBaseTest()
 {
     sigma = 0.;
     smooth_type = "Gaussian";
-    allowed_depths = vector<int>({CV_8U, CV_16U, CV_16S, CV_32F, CV_64F});
+    allowed_depths = vector<int>{CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
 }
 
 
