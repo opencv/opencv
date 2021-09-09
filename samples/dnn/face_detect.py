@@ -1,7 +1,7 @@
 import argparse
 
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 
 def str2bool(v):
     if v.lower() in ['on', 'yes', 'true', 'y', 't']:
