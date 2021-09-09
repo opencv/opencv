@@ -723,6 +723,12 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     aperture_size.width = anchor.x*2 + 1;
     aperture_size.height = anchor.y*2 + 1;
     sizes[INPUT][1] = aperture_size;
+    cout << "allowed_depths:";
+    for (unsigned int i=0; i<(sizeof(allowed_depths) / sizeof(allowed_depths[0])); i++)
+    {
+        cout << allowed_depths[i] << ",";
+    }
+    cout << " depth:" << depth << ", cn:" << cn << ", MAKETYPE:" << types[INPUT][0] << endl;
 }
 
 
