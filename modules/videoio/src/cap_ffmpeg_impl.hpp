@@ -1591,6 +1591,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_HW_ACCELERATION_USE_OPENCL:
         return static_cast<double>(use_opencl);
 #endif  // USE_AV_HW_CODECS
+    case CAP_PROP_STREAM_OPEN_TIME_USEC:
+        //ic->start_time_realtime is in microseconds
+        return ((double)ic->start_time_realtime);
     default:
         break;
     }
