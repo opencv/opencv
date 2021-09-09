@@ -1593,7 +1593,7 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
 #endif  // USE_AV_HW_CODECS
     case CAP_PROP_STREAM_OPEN_TIME_USEC:
         //ic->start_time_realtime is in microseconds
-        return ((double)ic->start_time_realtime); 
+        return ((double)ic->start_time_realtime);
     default:
         break;
     }
