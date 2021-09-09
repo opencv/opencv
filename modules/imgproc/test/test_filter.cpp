@@ -708,7 +708,6 @@ CV_SmoothBaseTest::CV_SmoothBaseTest() : CV_FilterBaseTest( true )
     int ad_array[] = {CV_8U, CV_32F};
     std::vector<int> allowed_depths_SmoothBaseTest(ad_array, ad_array + sizeof(ad_array) / sizeof(ad_array[0]));
     allowed_depths = allowed_depths_SmoothBaseTest;
-    cout << "allowed_depths set in CV_SmoothBaseTest(), size:" << allowed_depths.size() << endl;
 }
 
 
@@ -725,12 +724,6 @@ void CV_SmoothBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     aperture_size.width = anchor.x*2 + 1;
     aperture_size.height = anchor.y*2 + 1;
     sizes[INPUT][1] = aperture_size;
-    cout << "allowed_depths:";
-    for (unsigned int i=0; i<allowed_depths.size(); i++)
-    {
-        cout << allowed_depths[i] << ",";
-    }
-    cout << " depth:" << depth << ", cn:" << cn << ", MAKETYPE:" << types[INPUT][0] << endl;
 }
 
 
@@ -834,7 +827,6 @@ CV_GaussianBlurTest::CV_GaussianBlurTest() : CV_SmoothBaseTest()
     int ad_array[] = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
     std::vector<int> allowed_depths_GaussianBlurTest(ad_array, ad_array + sizeof(ad_array) / sizeof(ad_array[0]));
     allowed_depths = allowed_depths_GaussianBlurTest;
-    cout << "allowed_depths set in CV_GaussianBlurTest(), size:" << allowed_depths.size() << endl;
 }
 
 
