@@ -705,7 +705,8 @@ protected:
 CV_SmoothBaseTest::CV_SmoothBaseTest() : CV_FilterBaseTest( true )
 {
     smooth_type = "";
-    vector<int> allowed_depths_SmoothBaseTest = {CV_8U, CV_32F};
+    int ad_array[] = {CV_8U, CV_32F};
+    std::vector<int> allowed_depths_SmoothBaseTest(ad_array, ad_array + sizeof(ad_array) / sizeof(ad_array[0]));
     allowed_depths = allowed_depths_SmoothBaseTest;
     cout << "allowed_depths set in CV_SmoothBaseTest(), size:" << allowed_depths.size() << endl;
 }
@@ -830,7 +831,8 @@ CV_GaussianBlurTest::CV_GaussianBlurTest() : CV_SmoothBaseTest()
 {
     sigma = 0.;
     smooth_type = "Gaussian";
-    vector<int> allowed_depths_GaussianBlurTest = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
+    int ad_array[] = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
+    std::vector<int> allowed_depths_GaussianBlurTest(ad_array, ad_array + sizeof(ad_array) / sizeof(ad_array[0]));
     allowed_depths = allowed_depths_GaussianBlurTest;
     cout << "allowed_depths set in CV_GaussianBlurTest(), size:" << allowed_depths.size() << endl;
 }
