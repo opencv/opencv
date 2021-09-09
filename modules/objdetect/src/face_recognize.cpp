@@ -4,8 +4,6 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/imgproc.hpp"
-#include "opencv2/core.hpp"
 #include "opencv2/dnn.hpp"
 
 #include <algorithm>
@@ -16,9 +14,13 @@ namespace cv
 class FaceRecognizerSFImpl : public FaceRecognizerSF
 {
 public:
-    FaceRecognizerSFImpl(const String& model, const String& config)
+    FaceRecognizerSFImpl(const String& model, const String& config, int backend_id, int target_id)
     {
         net = dnn::readNet(model, config);
+        CV_Assert(!net.empty());
+
+        net.setPreferableBackend(backend_id);
+        net.setPreferableTarget(target_id);
     };
     void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
@@ -176,9 +178,9 @@ private:
     dnn::Net net;
 };
 
-Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config)
+Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config, int backend_id, int target_id)
 {
-    return makePtr<FaceRecognizerSFImpl>(model, config);
+    return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
 }
 
 } // namespace cv

@@ -20,18 +20,34 @@ class CV_EXPORTS_W FaceDetectorYN
 public:
     virtual ~FaceDetectorYN() {};
 
+    /** @brief Set the size for the network input, which overwrites the input size of creating model. Call this method when the size of input image does not match the input size when creating model
+     *
+     * @param input_size the size of the input image
+     */
     CV_WRAP virtual void setInputSize(const Size& input_size) = 0;
 
     CV_WRAP virtual Size getInputSize() = 0;
 
+    /** @brief Set the score threshold to filter out bounding boxes of score less than the given value
+     * 
+     * @param score_threshold threshold for filtering out bounding boxes
+     */
     CV_WRAP virtual void setScoreThreshold(float score_threshold) = 0;
 
     CV_WRAP virtual float getScoreThreshold() = 0;
 
+    /** @brief Set the Non-maximum-suppression threshold to suppress bounding boxes that have IoU greater than the given value
+     *
+     * @param nms_threshold threshold for NMS operation
+     */
     CV_WRAP virtual void setNMSThreshold(float nms_threshold) = 0;
 
     CV_WRAP virtual float getNMSThreshold() = 0;
 
+    /** @brief Set the number of bounding boxes preserved before NMS
+     *
+     * @param top_k the number of bounding boxes to preserve from top rank based on score
+     */
     CV_WRAP virtual void setTopK(int top_k) = 0;
 
     CV_WRAP virtual int getTopK() = 0;
@@ -57,8 +73,8 @@ public:
     CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
                                               const String& config,
                                               const Size& input_size,
-                                              float score_threshold = 0.9,
-                                              float nms_threshold = 0.3,
+                                              float score_threshold = 0.9f,
+                                              float nms_threshold = 0.3f,
                                               int top_k = 5000,
                                               int backend_id = 0,
                                               int target_id = 0);
@@ -98,8 +114,10 @@ public:
     /** @brief Creates an instance of this class with given parameters
      *  @param model the path of the onnx model used for face recognition
      *  @param config the path to the config file for compability, which is not requested for ONNX models
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
 };
 
 } // namespace cv

@@ -61,8 +61,8 @@ std::map<String, Mat> blobFromTXT(const String& path, int numCoords)
     return gt;
 }
 
-typedef testing::TestWithParam<String> Objdetect_face_detect;
-TEST(Objdetect_face_detect, regression)
+typedef testing::TestWithParam<String> Objdetect_face_detection;
+TEST(Objdetect_face_detection, regression)
 {
     // Pre-set params
     float scoreThreshold = 0.7f;
@@ -79,7 +79,19 @@ TEST(Objdetect_face_detect, regression)
     // }
 
     // Initialize detector
-    String model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
+    const char* extraTestDataPath =
+#ifdef WINRT
+        NULL;
+#else
+        getenv("OPENCV_DNN_TEST_DATA_PATH");
+#endif
+    // Since search scope is limited to $opencv_extra/testdata/cv,
+    // we need to add extraTestDataPath ($opencv_extra/testdata) to the search path
+    //  to find the ONNX models for CI, which means we need to add OPENCV_DNN_TEST_DATA_PATH=$opencv_extra/testdata
+    //  when testing manually.
+    if (extraTestDataPath)
+        cvtest::addDataSearchPath(extraTestDataPath);
+    String model = findDataFile("dnn/onnx/models/yunet.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
@@ -180,10 +192,22 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    String detect_model = findDataFile("../dnn/onnx/models/yunet.onnx", true);
-    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
+    const char* extraTestDataPath =
+#ifdef WINRT
+        NULL;
+#else
+        getenv("OPENCV_DNN_TEST_DATA_PATH");
+#endif
+    // Since search scope is limited to $opencv_extra/testdata/cv,
+    // we need to add extraTestDataPath ($opencv_extra/testdata) to the search path
+    //  to find the ONNX models for CI, which means we need to add OPENCV_DNN_TEST_DATA_PATH=$opencv_extra/testdata
+    //  when testing manually.
+    if (extraTestDataPath)
+        cvtest::addDataSearchPath(extraTestDataPath);
+    String detect_model = findDataFile("dnn/onnx/models/yunet.onnx", true);
+    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(250, 250), score_thresh, nms_thresh);
 
-    String recog_model = findDataFile("../dnn/onnx/models/face_recognizer_fast.onnx", true);
+    String recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", true);
     Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
 
     // Detect and match

@@ -1,7 +1,7 @@
 import argparse
 
-import cv2 as cv
 import numpy as np
+import cv2 as cv
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--input1', '-i1', type=str, help='Path to the input image1.')
@@ -14,13 +14,13 @@ args = parser.parse_args()
 img1 = cv.imread(args.input1)
 img2 = cv.imread(args.input2)
 
-# Instantiaate face detector and recognizer
+# Instantiate face detector and recognizer
 detector = cv.FaceDetectorYN.create(
     args.face_detection_model,
     "",
     (img1.shape[1], img1.shape[0])
 )
-recognizer = cv.FaceRecognizer.create(
+recognizer = cv.FaceRecognizerSF.create(
     args.face_recognition_model,
     ""
 )
