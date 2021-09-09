@@ -115,7 +115,7 @@ public:
     {
 #ifdef HAVE_DNN_NGRAPH
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD;
+        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD && new_coords == 0;
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -294,7 +294,10 @@ public:
                             int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
                             int p_index = index_sample_offset + index * cell_size + 4;
                             float scale = dstData[p_index];
-                            if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            if (classfix == -1 && scale < .5)
+                            {
+                                scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            }
                             int box_index = index_sample_offset + index * cell_size;
 
                             if (new_coords == 1) {
@@ -306,7 +309,10 @@ public:
                                 dstData[box_index + 3] = (srcData[box_index + 3]) * (srcData[box_index + 3]) * 4 * biasData[2 * a + 1] / hNorm;
 
                                 scale = srcData[p_index];
-                                if (classfix == -1 && scale < thresh) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                                if (classfix == -1 && scale < thresh)
+                                {
+                                    scale = 0;  // if(t0 < 0.5) t0 = 0;
+                                }
 
                                 int class_index = index_sample_offset + index * cell_size + 5;
                                 for (int j = 0; j < classes; ++j) {
@@ -314,7 +320,8 @@ public:
                                     dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
                                 }
                             }
-                            else {
+                            else
+                            {
                                 float x_tmp = (logistic_activate(srcData[box_index + 0]) - 0.5f) * scale_x_y + 0.5f;
                                 float y_tmp = (logistic_activate(srcData[box_index + 1]) - 0.5f) * scale_x_y + 0.5f;
                                 dstData[box_index + 0] = (x + x_tmp) / cols;
