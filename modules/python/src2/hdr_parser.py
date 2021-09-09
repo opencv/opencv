@@ -432,11 +432,18 @@ class CppHeaderParser(object):
         # filter off some common prefixes, which are meaningless for Python wrappers.
         # note that we do not strip "static" prefix, which does matter;
         # it means class methods, not instance methods
-        decl_str = self.batch_replace(decl_str, [("static inline", ""), ("inline", ""), ("explicit ", ""),
-                                                 ("CV_EXPORTS_W", ""), ("CV_EXPORTS", ""), ("CV_CDECL", ""),
-                                                 ("CV_WRAP ", " "), ("CV_INLINE", ""),
-                                                 ("CV_DEPRECATED", ""), ("CV_DEPRECATED_EXTERNAL", "")]).strip()
-
+        decl_str = self.batch_replace(decl_str, [("static inline", ""),
+                                                 ("inline", ""),
+                                                 ("explicit ", ""),
+                                                 ("CV_EXPORTS_W", ""),
+                                                 ("CV_EXPORTS", ""),
+                                                 ("CV_CDECL", ""),
+                                                 ("CV_WRAP ", " "),
+                                                 ("CV_INLINE", ""),
+                                                 ("CV_DEPRECATED", ""),
+                                                 ("CV_DEPRECATED_EXTERNAL", ""),
+                                                 ("CV_NODISCARD_STD", ""),
+                                                 ("CV_NODISCARD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):
             virtual_method = True
