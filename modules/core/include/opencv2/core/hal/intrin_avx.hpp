@@ -198,14 +198,12 @@ struct v_uint16x16
     __m256i val;
 
     explicit v_uint16x16(__m256i v) : val(v) {}
-    v_uint16x16(ushort v0,  ushort v1,  ushort v2,  ushort v3,
-                ushort v4,  ushort v5,  ushort v6,  ushort v7,
-                ushort v8,  ushort v9,  ushort v10, ushort v11,
-                ushort v12, ushort v13, ushort v14, ushort v15)
+    v_uint16x16(ushort *data, int *idx)
     {
-        val = _mm256_setr_epi16((short)v0, (short)v1, (short)v2, (short)v3,
-            (short)v4,  (short)v5,  (short)v6,  (short)v7,  (short)v8,  (short)v9,
-            (short)v10, (short)v11, (short)v12, (short)v13, (short)v14, (short)v15);
+        val = _mm256_setr_epi16((short)data[idx[0]], (short)data[idx[1]], (short)data[idx[2]], (short)data[idx[3]],
+                                (short)data[idx[4]], (short)data[idx[5]], (short)data[idx[6]], (short)data[idx[7]],
+                                (short)data[idx[8]], (short)data[idx[9]], (short)data[idx[10]], (short)data[idx[11]],
+                                (short)data[idx[12]], (short)data[idx[13]], (short)data[idx[14]], (short)data[idx[15]]);
     }
     /* coverity[uninit_ctor]: suppress warning */
     v_uint16x16() {}
@@ -220,13 +218,12 @@ struct v_int16x16
     __m256i val;
 
     explicit v_int16x16(__m256i v) : val(v) {}
-    v_int16x16(short v0,  short v1,  short v2,  short v3,
-               short v4,  short v5,  short v6,  short v7,
-               short v8,  short v9,  short v10, short v11,
-               short v12, short v13, short v14, short v15)
+    v_int16x16(short *data, int *idx)
     {
-        val = _mm256_setr_epi16(v0, v1, v2, v3, v4, v5, v6, v7,
-            v8, v9, v10, v11, v12, v13, v14, v15);
+        val = _mm256_setr_epi16(data[idx[0]], data[idx[1]], data[idx[2]], data[idx[3]],
+                                data[idx[4]], data[idx[5]], data[idx[6]], data[idx[7]],
+                                data[idx[8]], data[idx[9]], data[idx[10]], data[idx[11]],
+                                data[idx[12]], data[idx[13]], data[idx[14]], data[idx[15]]);
     }
     /* coverity[uninit_ctor]: suppress warning */
     v_int16x16() {}

@@ -244,13 +244,12 @@ struct v_uint32x16
     __m512i val;
 
     explicit v_uint32x16(__m512i v) : val(v) {}
-    v_uint32x16(unsigned v0,  unsigned v1,  unsigned v2,  unsigned v3,
-                unsigned v4,  unsigned v5,  unsigned v6,  unsigned v7,
-                unsigned v8,  unsigned v9,  unsigned v10, unsigned v11,
-                unsigned v12, unsigned v13, unsigned v14, unsigned v15)
+    v_uint32x16(unsigned *data, int *idx)
     {
-        val = _mm512_setr_epi32((int)v0,  (int)v1,  (int)v2,  (int)v3, (int)v4,  (int)v5,  (int)v6,  (int)v7,
-                                (int)v8,  (int)v9,  (int)v10, (int)v11, (int)v12, (int)v13, (int)v14, (int)v15);
+        val = _mm512_setr_epi32((int)data[idx[0]], (int)data[idx[1]], (int)data[idx[2]], (int)data[idx[3]],
+                                (int)data[idx[4]], (int)data[idx[5]], (int)data[idx[6]], (int)data[idx[7]],
+                                (int)data[idx[8]], (int)data[idx[9]], (int)data[idx[10]], (int)data[idx[11]],
+                                (int)data[idx[12]], (int)data[idx[13]], (int)data[idx[14]], (int)data[idx[15]]);         
     }
     v_uint32x16() {}
 
@@ -266,10 +265,12 @@ struct v_int32x16
     __m512i val;
 
     explicit v_int32x16(__m512i v) : val(v) {}
-    v_int32x16(int v0, int v1, int v2,  int v3,  int v4,  int v5,  int v6,  int v7,
-               int v8, int v9, int v10, int v11, int v12, int v13, int v14, int v15)
+    v_int32x16(int *data, int *idx)
     {
-        val = _mm512_setr_epi32(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
+        val = _mm512_setr_epi32(data[idx[0]], data[idx[1]], data[idx[2]], data[idx[3]],
+                                data[idx[4]], data[idx[5]], data[idx[6]], data[idx[7]],
+                                data[idx[8]], data[idx[9]], data[idx[10]], data[idx[11]],
+                                data[idx[12]], data[idx[13]], data[idx[14]], data[idx[15]]);         
     }
     v_int32x16() {}
 
@@ -285,10 +286,12 @@ struct v_float32x16
     __m512 val;
 
     explicit v_float32x16(__m512 v) : val(v) {}
-    v_float32x16(float v0, float v1, float v2,  float v3,  float v4,  float v5,  float v6,  float v7,
-                 float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15)
+    v_float32x16(float *data, int *idx)
     {
-        val = _mm512_setr_ps(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15);
+        val = _mm512_setr_ps(data[idx[0]], data[idx[1]], data[idx[2]], data[idx[3]],
+                             data[idx[4]], data[idx[5]], data[idx[6]], data[idx[7]],
+                             data[idx[8]], data[idx[9]], data[idx[10]], data[idx[11]],
+                             data[idx[12]], data[idx[13]], data[idx[14]], data[idx[15]]);
     }
     v_float32x16() {}
 

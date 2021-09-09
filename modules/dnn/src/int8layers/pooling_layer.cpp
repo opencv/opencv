@@ -330,14 +330,16 @@ public:
                                     for (int k = 0; k < kernel_w*kernel_h; k++)
                                     {
                                         int index = ofsptr[k];
-                                        v_int8x16 v0(srcData1[index], srcData1[index + stride_w],
-                                                     srcData1[index + stride_w*2], srcData1[index + stride_w*3],
-                                                     srcData1[index + stride_w*4], srcData1[index + stride_w*5],
-                                                     srcData1[index + stride_w*6], srcData1[index + stride_w*7],
-                                                     srcData1[index + stride_w*8], srcData1[index + stride_w*9],
-                                                     srcData1[index + stride_w*10], srcData1[index + stride_w*11],
-                                                     srcData1[index + stride_w*12], srcData1[index + stride_w*13],
-                                                     srcData1[index + stride_w*14], srcData1[index + stride_w*15]);
+                                        int8_t data[] = {srcData1[index], srcData1[index + stride_w],
+                                                         srcData1[index + stride_w*2], srcData1[index + stride_w*3],
+                                                         srcData1[index + stride_w*4], srcData1[index + stride_w*5],
+                                                         srcData1[index + stride_w*6], srcData1[index + stride_w*7],
+                                                         srcData1[index + stride_w*8], srcData1[index + stride_w*9],
+                                                         srcData1[index + stride_w*10], srcData1[index + stride_w*11],
+                                                         srcData1[index + stride_w*12], srcData1[index + stride_w*13],
+                                                         srcData1[index + stride_w*14], srcData1[index + stride_w*15]};
+                                        int data_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+                                        v_int8x16 v0(data, data_idx);
                                         max_val0 = v_max(max_val0, v0);
                                     }
                             }
@@ -348,14 +350,16 @@ public:
                                     for (int x = xstart; x < xend; ++x)
                                     {
                                         const int index = y * inp_width + x;
-                                        v_int8x16 v0(srcData[index], srcData[index + stride_w],
-                                                     srcData[index + stride_w*2], srcData[index + stride_w*3],
-                                                     srcData[index + stride_w*4], srcData[index + stride_w*5],
-                                                     srcData[index + stride_w*6], srcData[index + stride_w*7],
-                                                     srcData[index + stride_w*8], srcData[index + stride_w*9],
-                                                     srcData[index + stride_w*10], srcData[index + stride_w*11],
-                                                     srcData[index + stride_w*12], srcData[index + stride_w*13],
-                                                     srcData[index + stride_w*14], srcData[index + stride_w*15]);
+                                        int8_t data[] = {srcData[index], srcData[index + stride_w],
+                                                         srcData[index + stride_w*2], srcData[index + stride_w*3],
+                                                         srcData[index + stride_w*4], srcData[index + stride_w*5],
+                                                         srcData[index + stride_w*6], srcData[index + stride_w*7],
+                                                         srcData[index + stride_w*8], srcData[index + stride_w*9],
+                                                         srcData[index + stride_w*10], srcData[index + stride_w*11],
+                                                         srcData[index + stride_w*12], srcData[index + stride_w*13],
+                                                         srcData[index + stride_w*14], srcData[index + stride_w*15]};
+                                        int data_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+                                        v_int8x16 v0(data, data_idx);
                                         max_val0 = v_max(max_val0, v0);
                                     }
                                 }

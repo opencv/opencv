@@ -218,7 +218,9 @@ static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* 
         {
             v_uint8x16 inc = v_setall_u8(v_uint8x16::nlanes);
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
-            v_uint8x16 idxStart(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+            uchar arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            int tmp_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            v_uint8x16 idxStart(arr, tmp_idx);
 
             do
             {
@@ -295,7 +297,9 @@ static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* 
         {
             v_uint8x16 inc = v_setall_u8(v_int8x16::nlanes);
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
-            v_uint8x16 idxStart(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+            uchar arr[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            int tmp_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            v_uint8x16 idxStart(arr, tmp_idx);
 
             do
             {

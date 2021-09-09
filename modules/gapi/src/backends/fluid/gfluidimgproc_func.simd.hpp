@@ -303,10 +303,15 @@ void run_rgb2hsv_impl(uchar out[], const uchar in[], const int sdiv_table[],
         const int vectorStep = 16;
 
         uint8_t ff = 0xff;
-        v_uint8x16 mask1(ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0);
-        v_uint8x16 mask2(0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0);
-        v_uint8x16 mask3(0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0);
-        v_uint8x16 mask4(0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff);
+        uint8_t mask1_arr[] = {ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0};
+        uint8_t mask2_arr[] = {0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0};
+        uint8_t mask3_arr[] = {0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0};
+        uint8_t mask4_arr[] = {0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff, 0, 0, 0, ff};
+        int mask_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+        v_uint8x16 mask1(mask1_arr, mask_idx);
+        v_uint8x16 mask2(mask2_arr, mask_idx);
+        v_uint8x16 mask3(mask3_arr, mask_idx);
+        v_uint8x16 mask4(mask4_arr, mask_idx);
 
         for (int w = 0; w <= 3 * (width - vectorStep); w += 3 * vectorStep)
         {
@@ -952,7 +957,9 @@ void run_rgb2yuv422_impl(uchar out[], const uchar in[], int width)
                          (v2 + v_setall_s16(257 << 2)) >> 3);
 
             uint8_t ff = 0xff;
-            v_uint8x16 mask(ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0);
+            uint8_t mask_arr[] = {ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0, ff, 0};
+            int mask_idx[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+            v_uint8x16 mask(mask_arr, mask_idx);
             v_uint8x16 uu = u & mask;
             v_uint8x16 vv = v & mask;
             // extract even u and v

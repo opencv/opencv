@@ -142,11 +142,13 @@ struct v_uint8x16
 
     v_uint8x16() {}
     explicit v_uint8x16(uint8x16_t v) : val(v) {}
-    v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
-               uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
+    v_uint8x16(uchar *data, int *idx)
     {
-        uchar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
-        val = vld1q_u8(v);
+        uchar arr[] = { data[idx[0]], data[idx[1]], data[idx[2]], data[idx[3]],
+                        data[idx[4]], data[idx[5]], data[idx[6]], data[idx[7]],
+                        data[idx[8]], data[idx[9]], data[idx[10]], data[idx[11]],
+                        data[idx[12]], data[idx[13]], data[idx[14]], data[idx[15]] };
+        val = vld1q_u8(arr);
     }
     uchar get0() const
     {
@@ -163,11 +165,13 @@ struct v_int8x16
 
     v_int8x16() {}
     explicit v_int8x16(int8x16_t v) : val(v) {}
-    v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
-               schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
+    v_int8x16(schar *data, int *idx)
     {
-        schar v[] = {v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15};
-        val = vld1q_s8(v);
+        schar arr[] = { data[idx[0]], data[idx[1]], data[idx[2]], data[idx[3]],
+                        data[idx[4]], data[idx[5]], data[idx[6]], data[idx[7]],
+                        data[idx[8]], data[idx[9]], data[idx[10]], data[idx[11]],
+                        data[idx[12]], data[idx[13]], data[idx[14]], data[idx[15]] };
+        val = vld1q_s8(arr);
     }
     schar get0() const
     {

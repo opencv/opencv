@@ -412,6 +412,14 @@ template<typename _Tp, int n> struct v_reg
         s[12] = s12; s[13] = s13; s[14] = s14; s[15] = s15;
     }
 
+    v_reg(_Tp* data, int* idx)
+    {
+        for (int i = 0; i < n; ++i)
+        {
+            s[i] = data[idx[i]];
+        }
+    }
+
     /** @brief Default constructor
 
     Does not initialize anything*/

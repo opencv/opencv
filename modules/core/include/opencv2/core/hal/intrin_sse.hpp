@@ -78,13 +78,12 @@ struct v_uint8x16
     /* coverity[uninit_ctor]: suppress warning */
     v_uint8x16() {}
     explicit v_uint8x16(__m128i v) : val(v) {}
-    v_uint8x16(uchar v0, uchar v1, uchar v2, uchar v3, uchar v4, uchar v5, uchar v6, uchar v7,
-               uchar v8, uchar v9, uchar v10, uchar v11, uchar v12, uchar v13, uchar v14, uchar v15)
+    v_uint8x16(uchar *data, int *idx)
     {
-        val = _mm_setr_epi8((char)v0, (char)v1, (char)v2, (char)v3,
-                            (char)v4, (char)v5, (char)v6, (char)v7,
-                            (char)v8, (char)v9, (char)v10, (char)v11,
-                            (char)v12, (char)v13, (char)v14, (char)v15);
+        val = _mm_setr_epi8((char)data[idx[0]], (char)data[idx[1]], (char)data[idx[2]], (char)data[idx[3]],
+                            (char)data[idx[4]], (char)data[idx[5]], (char)data[idx[6]], (char)data[idx[7]],
+                            (char)data[idx[8]], (char)data[idx[9]], (char)data[idx[10]], (char)data[idx[11]],
+                            (char)data[idx[12]], (char)data[idx[13]], (char)data[idx[14]], (char)data[idx[15]]);
     }
 
     uchar get0() const
@@ -104,13 +103,12 @@ struct v_int8x16
     /* coverity[uninit_ctor]: suppress warning */
     v_int8x16() {}
     explicit v_int8x16(__m128i v) : val(v) {}
-    v_int8x16(schar v0, schar v1, schar v2, schar v3, schar v4, schar v5, schar v6, schar v7,
-              schar v8, schar v9, schar v10, schar v11, schar v12, schar v13, schar v14, schar v15)
+    v_int8x16(schar *data, int *idx)
     {
-        val = _mm_setr_epi8((char)v0, (char)v1, (char)v2, (char)v3,
-                            (char)v4, (char)v5, (char)v6, (char)v7,
-                            (char)v8, (char)v9, (char)v10, (char)v11,
-                            (char)v12, (char)v13, (char)v14, (char)v15);
+        val = _mm_setr_epi8((char)data[idx[0]], (char)data[idx[1]], (char)data[idx[2]], (char)data[idx[3]],
+                            (char)data[idx[4]], (char)data[idx[5]], (char)data[idx[6]], (char)data[idx[7]],
+                            (char)data[idx[8]], (char)data[idx[9]], (char)data[idx[10]], (char)data[idx[11]],
+                            (char)data[idx[12]], (char)data[idx[13]], (char)data[idx[14]], (char)data[idx[15]]);
     }
 
     schar get0() const
@@ -1959,7 +1957,8 @@ inline v_uint8x16 v_reverse(const v_uint8x16 &a)
 #else
     uchar CV_DECL_ALIGNED(32) d[16];
     v_store_aligned(d, a);
-    return v_uint8x16(d[15], d[14], d[13], d[12], d[11], d[10], d[9], d[8], d[7], d[6], d[5], d[4], d[3], d[2], d[1], d[0]);
+    int reverse_idx[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    return v_uint8x16(d, reverse_idx);
 #endif
 }
 
