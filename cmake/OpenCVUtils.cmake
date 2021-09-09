@@ -1580,6 +1580,19 @@ function(ocv_add_library target)
 endfunction()
 
 
+# Returns the first non-interface target
+function(ocv_get_imported_target imported interface)
+  set(__result "${interface}")
+  get_target_property(__type "${__result}" TYPE)
+  if(__type STREQUAL "INTERFACE_LIBRARY")
+    get_target_property(__libs "${__result}" INTERFACE_LINK_LIBRARIES)
+    list(GET __libs 0 __interface)
+    ocv_get_imported_target(__result "${__interface}")
+  endif()
+  set(${imported} "${__result}" PARENT_SCOPE)
+endfunction()
+
+
 macro(ocv_get_libname var_name)
   get_filename_component(__libname "${ARGN}" NAME)
   # libopencv_core.so.3.3 -> opencv_core
