@@ -136,6 +136,18 @@ input = Variable(torch.randn(1, 2, 10, 10))
 relu = nn.ReLU(inplace=True)
 save_data_and_model("ReLU", input, relu)
 
+class PReLU_slope(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(PReLU_slope, self).__init__()
+
+    def forward(self, x):
+        return nn.PReLU()(x)
+
+model = PReLU_slope()
+input_ = Variable(torch.randn(1, 1, 5, 5, dtype=torch.float32))
+save_data_and_model("PReLU_slope", input_, model, export_params=True)
+simplify('models/PReLU_slope.onnx', False)
+
 
 input = Variable(torch.randn(2, 3))
 dropout = nn.Dropout()
