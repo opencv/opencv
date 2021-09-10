@@ -103,7 +103,7 @@ private:
     void parseSplit                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBias                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePow                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseMinMax                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMinMax               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNeg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
