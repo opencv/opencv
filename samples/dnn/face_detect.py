@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
         # Visualize results in a new window
         if args.vis:
-            cv.namedWindow(input, cv.WINDOW_AUTOSIZE)
+            cv.namedWindow(args.input, cv.WINDOW_AUTOSIZE)
             cv.imshow(args.input, result)
             cv.waitKey(0)
     else: # Omit input to call default camera

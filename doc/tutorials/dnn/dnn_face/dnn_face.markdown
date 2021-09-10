@@ -90,6 +90,6 @@ For example, two faces have same identity if the cosine distance is greater than
 
 ## Acknowledgement
 
-Thanks [Professor Shiqi Yu](https://github.com/ShiqiYu/) and [his master student Yuantao Feng](https://github.com/fengyuentau) for training and providing the face detection model.
+Thanks [Professor Shiqi Yu](https://github.com/ShiqiYu/) and [Yuantao Feng](https://github.com/fengyuentau) for training and providing the face detection model.
 
 Thanks [Professor Deng](http://www.whdeng.cn/), [PhD Candidate Zhong](https://github.com/zhongyy/) and [Master Candidate Wang](https://github.com/crywang/) for training and providing the face recognition model.

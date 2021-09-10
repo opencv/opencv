@@ -29,7 +29,7 @@ public:
     CV_WRAP virtual Size getInputSize() = 0;
 
     /** @brief Set the score threshold to filter out bounding boxes of score less than the given value
-     * 
+     *
      * @param score_threshold threshold for filtering out bounding boxes
      */
     CV_WRAP virtual void setScoreThreshold(float score_threshold) = 0;

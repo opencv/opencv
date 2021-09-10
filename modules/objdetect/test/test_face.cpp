@@ -66,8 +66,8 @@ TEST(Objdetect_face_detection, regression)
 {
     // Pre-set params
     float scoreThreshold = 0.7f;
-    double matchThreshold = 0.9;
-    double l2disThreshold = 5;
+    float matchThreshold = 0.9f;
+    float l2disThreshold = 5.0f;
     int numLM = 5;
     int numCoords = 4 + 2 * numLM;
 
@@ -205,7 +205,7 @@ TEST(Objdetect_face_recognition, regression)
     if (extraTestDataPath)
         cvtest::addDataSearchPath(extraTestDataPath);
     String detect_model = findDataFile("dnn/onnx/models/yunet.onnx", true);
-    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(250, 250), score_thresh, nms_thresh);
+    Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
     String recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", true);
     Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
