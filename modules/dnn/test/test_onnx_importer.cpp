@@ -250,6 +250,11 @@ TEST_P(Test_ONNX_layers, ReLU)
     testONNXModels("ReLU");
 }
 
+TEST_P(Test_ONNX_layers, PReLU)
+{
+    testONNXModels("PReLU_slope");
+}
+
 TEST_P(Test_ONNX_layers, Clip)
 {
     testONNXModels("clip", npy);
