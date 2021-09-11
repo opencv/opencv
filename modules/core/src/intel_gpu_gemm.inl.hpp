@@ -77,11 +77,7 @@ static bool intel_gpu_gemm(
     }
     else if(!atrans && btrans)
     {
-        if (M % 128 != 0)
-            return false;
-        if (N % 8 != 0)
-            return false;
-        if (K % 512 != 0)
+        if (K % 4 != 0)
             return false;
         kernelName = "intelblas_gemm_buffer_NT";
         ly = 16;
