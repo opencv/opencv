@@ -471,7 +471,8 @@ class Builder:
 def main():
 
     dldt_src_url = 'https://github.com/openvinotoolkit/openvino'
-    dldt_src_commit = '2021.4'
+    dldt_src_commit = '2021.4.1'
+    dldt_config = None
     dldt_release = None
 
     build_cache_dir_default = os.environ.get('BUILD_CACHE_DIR', '.build_cache')
@@ -505,7 +506,7 @@ def main():
     parser.add_argument('--dldt_reference_dir', help='DLDT reference git repository (optional)')
     parser.add_argument('--dldt_src_dir', help='DLDT custom source repository (skip git checkout and patching, use for TESTING only)')
 
-    parser.add_argument('--dldt_config', help='Specify DLDT build configuration (defaults to evaluate from DLDT commit/branch)')
+    parser.add_argument('--dldt_config', default=dldt_config, help='Specify DLDT build configuration (defaults to evaluate from DLDT commit/branch)')
 
     parser.add_argument('--override_patch_hashsum', default='', help='(script debug mode)')
 

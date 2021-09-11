@@ -499,8 +499,8 @@ public:
     template<typename... _Tps> inline
     Kernel& args(const _Tps&... kernel_args) { set_args_(0, kernel_args...); return *this; }
 
+    /** @brief Run the OpenCL kernel (globalsize value may be adjusted)
 
-    /** @brief Run the OpenCL kernel.
     @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
     @param globalsize work items for each dimension. It is not the final globalsize passed to
       OpenCL. Each dimension will be adjusted to the nearest integer divisible by the corresponding
@@ -509,12 +509,26 @@ public:
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
+
+    @note Use run_() if your kernel code doesn't support adjusted globalsize.
     */
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
+
+    /** @brief Run the OpenCL kernel
+     *
+     * @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
+     * @param globalsize work items for each dimension. This value is passed to OpenCL without changes.
+     * @param localsize work-group size for each dimension.
+     * @param sync specify whether to wait for OpenCL computation to finish before return.
+     * @param q command queue
+     */
+    bool run_(int dims, size_t globalsize[], size_t localsize[], bool sync, const Queue& q=Queue());
+
     bool runTask(bool sync, const Queue& q=Queue());
 
-    /** @brief Similar to synchronized run() call with returning of kernel execution time
+    /** @brief Similar to synchronized run_() call with returning of kernel execution time
+     *
      * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
      * @return Execution time in nanoseconds or negative number on error
      */
