@@ -1027,6 +1027,11 @@ concat = tf.concat([resized1, biased], 3)
 # writeBlob(blob, 'resize_concat_optimization_in')
 save(inp, concat, 'resize_concat_optimization', optimize=False, is_gen_data=False)
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+sub = inp - 3.0
+sub = 4.0 + sub
+save(inp, sub, prefix + 'bias_add_1', optimize=False)
+################################################################################
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
