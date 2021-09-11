@@ -581,6 +581,18 @@ TEST_P(Test_TensorFlow_layers, l2_normalize)
     runTensorFlowNet("l2_normalize");
 }
 
+TEST_P(Test_TensorFlow_layers, BiasAdd)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
+            && getInferenceEngineVPUType() == CV_DNN_INFERENCE_ENGINE_VPU_TYPE_MYRIAD_X
+    )
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
+    runTensorFlowNet("bias_add_1");
+}
+
 // TODO: fix it and add to l2_normalize
 TEST_P(Test_TensorFlow_layers, l2_normalize_3d)
 {
@@ -1240,6 +1252,11 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_factor_align_corners)
 TEST_P(Test_TensorFlow_layers, resize_bilinear_down)
 {
     runTensorFlowNet("resize_bilinear_down");
+}
+
+TEST_P(Test_TensorFlow_layers, resize_concat_optimization)
+{
+    runTensorFlowNet("resize_concat_optimization");
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_dense)

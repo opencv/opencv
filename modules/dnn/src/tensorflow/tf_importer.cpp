@@ -933,7 +933,12 @@ void TFImporter::parseBias(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         layer_id[name] = id;
 
         // one input only
-        connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        Pin inp0 = parsePin(layer.input(0));
+        if (layer_id.find(inp0.name) != layer_id.end())
+            // First operand is a constant.
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        else
+            connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
     }
     else
     {

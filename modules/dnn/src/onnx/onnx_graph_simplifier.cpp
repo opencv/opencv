@@ -234,6 +234,27 @@ public:
     }
 };
 
+class NormalizeSubgraph2_2 : public NormalizeSubgraphBase
+{
+public:
+    NormalizeSubgraph2_2()
+    {
+        int input = addNodeToMatch("");
+        int norm = addNodeToMatch("ReduceL2", input);
+
+        int min = addNodeToMatch("");
+        int max = addNodeToMatch("");
+        int clip = addNodeToMatch("Clip", norm, min, max);
+
+        int shape = addNodeToMatch("");
+        int expand = addNodeToMatch("Expand", clip, shape);
+
+        addNodeToMatch("Div", input, expand);
+
+        setFusedNode("Normalize", input);
+    }
+};
+
 class NormalizeSubgraph3 : public NormalizeSubgraphBase
 {
 public:
@@ -558,6 +579,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<SoftMaxSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph1>());
     subgraphs.push_back(makePtr<NormalizeSubgraph2>());
+    subgraphs.push_back(makePtr<NormalizeSubgraph2_2>());
     subgraphs.push_back(makePtr<NormalizeSubgraph3>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());

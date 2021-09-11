@@ -120,7 +120,14 @@ public:
         internals_arr.getMatVector(internals);
 
         if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
+        {
+            // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
+            if (inputs[0].data != outputs[0].data)
+            {
+                inputs[0].copyTo(outputs[0]);
+            }
             return;
+        }
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
