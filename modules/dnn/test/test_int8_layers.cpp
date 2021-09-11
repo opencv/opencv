@@ -1127,7 +1127,7 @@ TEST_P(Test_Int8_nets, YOLOv4)
 
     std::string config_file = "yolov4.cfg";
     std::string weights_file = "yolov4.weights";
-    double scoreDiff = 0.1, iouDiff = 0.17;
+    double scoreDiff = 0.15, iouDiff = 0.2;
     {
         SCOPED_TRACE("batch size 1");
         testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);

@@ -1058,8 +1058,8 @@ TEST_P(Test_ONNX_layers, Quantized_Unsqueeze)
 TEST_P(Test_ONNX_layers, Quantized_Resize)
 {
     testONNXModels("quantized_resize_nearest");
-    testONNXModels("quantized_resize_bilinear", npy, 1e-4, 0.003);
-    testONNXModels("quantized_resize_bilinear_align", npy, 2e-4, 0.003);
+    testONNXModels("quantized_resize_bilinear", npy, 2e-4, 0.003);
+    testONNXModels("quantized_resize_bilinear_align", npy, 3e-4, 0.003);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Concat)
