@@ -75,6 +75,4 @@ The resulting file can be found at `data/result_test_human.jpg` .
 
 ### Portrait segmentation visualization
 
-<img src="./data/human_image.jpg" width="50%" height="50%"><img src="./data/result_test_human.jpg" width="50%" height="50%">
-
-* This image comes from [Supervise.ly](https://supervise.ly/) dataset
+<img src="../../../../data/messi5.jpg" width="50%" height="50%"><img src="./data/result_test_human.jpg" width="50%" height="50%">
