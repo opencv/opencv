@@ -10,6 +10,7 @@ import paddle # version 2.1.1
 import numpy as np
 import os.path
 import onnx
+import onnxsim
 import google.protobuf.text_format
 import io
 
@@ -74,6 +75,14 @@ def save_onnx_data_and_model(input, output, name, operation, *args, **kwargs):
     model = onnx.helper.make_model(graph, producer_name=name)
     onnx.save(model, models_files)
 
+def simplify(name, rename=False, **kwargs):
+    model, check = onnxsim.simplify(name, **kwargs)
+    assert check, "couldn't valide"
+    name = name[:-5]
+    if rename:
+        name += '_optimized'
+    onnx.save(model, name + '.onnx')
+
 torch.manual_seed(0)
 np.random.seed(0)
 
@@ -128,6 +137,18 @@ save_data_and_model("two_maxpooling", input, maxpool2)
 input = Variable(torch.randn(1, 2, 10, 10))
 relu = nn.ReLU(inplace=True)
 save_data_and_model("ReLU", input, relu)
+
+class PReLU_slope(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(PReLU_slope, self).__init__()
+
+    def forward(self, x):
+        return nn.PReLU()(x)
+
+model = PReLU_slope()
+input_ = Variable(torch.randn(1, 1, 5, 5, dtype=torch.float32))
+save_data_and_model("PReLU_slope", input_, model, export_params=True)
+simplify('models/PReLU_slope.onnx', False)
 
 
 input = Variable(torch.randn(2, 3))
@@ -414,6 +435,17 @@ model = Slice()
 save_data_and_model("slice", input, model)
 save_data_and_model("slice_opset_11", input, model, version=11)
 
+class SliceStarts(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SliceStarts, self).__init__()
+
+    def forward(self, x):
+        return x[-1:]
+
+model = SliceStarts()
+input_ = Variable(torch.randn(1, 10, dtype=torch.float32))
+save_data_and_model("slice_neg_starts", input_, model)
+
 input_2 = Variable(torch.randn(6, 6))
 custom_slice_list = [
     slice(1, 3, 1),
@@ -574,6 +606,18 @@ class SplitSizes(nn.Module):
 model = SplitSizes()
 input_ = Variable(torch.tensor(list(range(20)), dtype=torch.float32))
 save_data_and_model("split_sizes", input_, model)
+
+class SplitAxis(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SplitAxis, self).__init__()
+
+    def forward(self, x):
+        tup = torch.split(x, 2, -1)
+        return torch.cat(tup, 1)
+
+model = SplitAxis()
+input_ = Variable(torch.randn(1, 10, dtype=torch.float32))
+save_data_and_model("split_neg_axis", input_, model)
 
 class SplitMax(nn.Module):
 
@@ -866,6 +910,32 @@ output = np.mean(x, axis=2, keepdims=True)
 save_onnx_data_and_model(x, output, 'reduce_mean_axis2', 'ReduceMean', axes=(2), keepdims=True)
 
 class Expand(nn.Module):
+    def __init__(self):
+        super(Expand, self).__init__()
+
+    def forward(self, x):
+        return x.expand(1, 3, -1, -1, -1)
+
+input = Variable(torch.randn(1, 3, 2, 4))
+model = Expand()
+model.eval()
+save_data_and_model("expand", input, model, export_params=True, version=12)
+simplify('models/expand.onnx', False)
+
+class ExpandIdentity(nn.Module):
+    def __init__(self):
+        super(ExpandIdentity, self).__init__()
+
+    def forward(self, x):
+        return x.expand(1, 3, -1, -1)
+
+input = Variable(torch.randn(1, 3, 2, 4))
+model = ExpandIdentity()
+model.eval()
+save_data_and_model("expand_identity", input, model, export_params=True, version=12)
+simplify('models/expand_identity.onnx', False)
+
+class Expand(nn.Module):
     def __init__(self, shape):
         super(Expand, self).__init__()
         self.shape = shape
@@ -932,6 +1002,23 @@ class L2Norm(nn.Module):
 model = L2Norm(2, 20)
 x = Variable(torch.randn(1, 2, 3, 4))
 save_data_and_model("reduceL2_subgraph_2", x, model)
+
+class reduceL2_subgraph2_2(nn.Module):
+    def __init__(self):
+        super(reduceL2_subgraph2_2, self).__init__()
+        self.size = torch.Size([1, 3, 2, 4])
+
+    def forward(self, x):
+        norm = torch.norm(x, p=2, dim=1, keepdim=True)
+        clip = torch.clamp(norm, min=0)
+        expand = clip.expand([1, 3, 2, 4])
+        return x / expand
+
+input = Variable(torch.randn(1, 3, 2, 4))
+model = reduceL2_subgraph2_2()
+model.eval()
+save_data_and_model("reduceL2_subgraph2_2", input, model, export_params=True, version=12)
+simplify('models/reduceL2_subgraph2_2.onnx', False)
 
 from torchvision.ops.misc import *
 n = 3
@@ -1172,6 +1259,18 @@ input_0 = Variable(torch.ones(2, 1, 4, 5, dtype=torch.float32))
 input_1 = Variable(torch.ones(1, 4, 1, dtype=torch.float32))
 input_2 = Variable(torch.ones(2, 1, 4, 1, dtype=torch.float32))
 save_data_and_model_multy_inputs("scale_broadcast", model, input_0, input_1, input_2)
+
+class ScaleBroadcastMid(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(ScaleBroadcastMid, self).__init__()
+
+    def forward(self, x0, x1):
+        return torch.mul(x0, x1)
+
+model = ScaleBroadcastMid()
+input_0 = Variable(torch.ones(2, 1, 4, dtype=torch.float32))
+input_1 = Variable(torch.ones(2, 5, 4, dtype=torch.float32))
+save_data_and_model_multy_inputs("scale_broadcast_mid", model, input_0, input_1)
 
 x = Variable(torch.randn(1, 3, 25))
 conv1d = nn.Conv1d(3, 2, kernel_size=3, padding=2, stride=2, dilation=2, bias=False)
