@@ -443,7 +443,7 @@ void ONNXImporter::expandMid(const std::string& prefix, opencv_onnx::NodeProto& 
     for (size_t j = 0; j < n; j++)
     {
         LayerParams copyLP;
-        copyLP.name = format("%s/copy_%d", prefix.c_str(), j);
+        copyLP.name = format("%s/copy_%d", prefix.c_str(), (int)j);
         copyLP.type = "Identity";
         CV_Assert((layer_id.find(copyLP.name) == layer_id.end()) &&
             "Couldn't copy the node: generated name already exists in the graph.");
