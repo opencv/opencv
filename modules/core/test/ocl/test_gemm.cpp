@@ -67,6 +67,8 @@ PARAM_TEST_CASE(Gemm,
 
     double alpha, beta;
 
+    int M, N, K;
+
     TEST_DECLARE_INPUT_PARAMETER(A);
     TEST_DECLARE_INPUT_PARAMETER(B);
     TEST_DECLARE_INPUT_PARAMETER(C);
@@ -90,30 +92,27 @@ PARAM_TEST_CASE(Gemm,
 
     void generateTestData()
     {
-        // set minimum size to 20, since testing less sizes doesn't make sense
-        Size ARoiSize = randomSize(20, MAX_VALUE);
+        M = (int)randomDoubleLog(1, 100);
+        N = (int)randomDoubleLog(1, 100);
+        K = (int)randomDoubleLog(1, 1200);
+
+        M = roundUp(M, 1);
+        N = roundUp(N, 1);
+        K = roundUp(K, 1);
+
+        Size ARoiSize = (atrans) ? Size(M, K) : Size(K, M);
         Border ABorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(A, A_roi, ARoiSize, ABorder, type, -11, 11);
 
-        if (atrans)
-            ARoiSize = Size(ARoiSize.height, ARoiSize.width);
-
-        Size BRoiSize = randomSize(20, MAX_VALUE);
-        if (btrans)
-            BRoiSize.width = ARoiSize.width;
-        else
-            BRoiSize.height = ARoiSize.width;
-
+        Size BRoiSize = (btrans) ? Size(K, N) : Size(N, K);
         Border BBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(B, B_roi, BRoiSize, BBorder, type, -11, 11);
 
-        if (btrans)
-            BRoiSize = Size(BRoiSize.height, BRoiSize.width);
-
-        Size DRoiSize = Size(BRoiSize.width, ARoiSize.height), CRoiSizeT(DRoiSize.height, DRoiSize.width);
+        Size CRoiSize = (ctrans) ? Size(M, N) : Size(N, M);
         Border CBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(C, C_roi, ctrans ? CRoiSizeT : DRoiSize, CBorder, type, -11, 11);
+        randomSubMat(C, C_roi, CRoiSize, CBorder, type, -11, 11);
 
+        Size DRoiSize = Size(N, M);
         Border DBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(D, D_roi, DRoiSize, DBorder, type, -11, 11);
 
@@ -132,11 +131,12 @@ OCL_TEST_P(Gemm, Accuracy)
     for (int i = 0; i < test_loop_times; ++i)
     {
         generateTestData();
+        SCOPED_TRACE(cv::format("i=%d: M=%d N=%d K=%d", i, M, N, K));
 
         OCL_OFF(cv::gemm(A_roi, B_roi, alpha, C_roi, beta, D_roi, flags));
         OCL_ON(cv::gemm(uA_roi, uB_roi, alpha, uC_roi, beta, uD_roi, flags));
 
-        double eps = D_roi.size().area() * 1e-4;
+        double eps = D_roi.size().area() * (1e-5 * K);
         OCL_EXPECT_MATS_NEAR(D, eps);
     }
 }

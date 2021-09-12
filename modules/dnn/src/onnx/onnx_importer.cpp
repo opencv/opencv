@@ -64,6 +64,8 @@ class ONNXImporter
     void addLayer(LayerParams& layerParams,
                   const opencv_onnx::NodeProto& node_proto);
 
+    void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
+                   const std::string& input, size_t n);
 public:
     ONNXImporter(Net& net, const char *onnxFile);
     ONNXImporter(Net& net, const char* buffer, size_t sizeBuffer);
@@ -483,6 +485,37 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
     for (int i = 0; i < node_proto.output_size() && i < (int)layerOutShapes.size(); ++i)
     {
         outShapes[node_proto.output(i)] = layerOutShapes[i];
+    }
+}
+
+/** @brief Make N copies of input layer and set them as input to node_proto.
+ * @param prefix prefix of new layers' names
+ * @param node_proto node which will contain all copies as inputs
+ * @param input name of the node to copy
+ * @param n number of copies
+ */
+void ONNXImporter::expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
+                             const std::string& input, size_t n)
+{
+    std::vector<std::string> input_names;
+    input_names.reserve(n);
+    for (size_t j = 0; j < n; j++)
+    {
+        LayerParams copyLP;
+        copyLP.name = format("%s/copy_%zu", prefix.c_str(), j);
+        copyLP.type = "Identity";
+        CV_Assert((layer_id.find(copyLP.name) == layer_id.end()) &&
+            "Couldn't copy the node: generated name already exists in the graph.");
+        input_names.push_back(copyLP.name);
+
+        node_proto.set_input(0, input);
+        node_proto.set_output(0, copyLP.name);
+        addLayer(copyLP, node_proto);
+    }
+    node_proto.clear_input();
+    for (size_t i = 0; i < input_names.size(); i++)
+    {
+        node_proto.add_input(input_names[i]);
     }
 }
 
@@ -1422,6 +1455,38 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+void findBroadAxis(const MatShape& broadShape, const MatShape& outShape, size_t& axis, int& broadAxis)
+{
+    const size_t diff = outShape.size() - broadShape.size();
+
+    // find the first non-one element of the broadcasting shape
+    axis = 0;
+    for (; axis < broadShape.size() && broadShape[axis] == 1; ++axis) {}
+
+    // find the last non-one element of the broadcasting shape
+    size_t endAxis = broadShape.size();
+    for (; endAxis > axis && broadShape[endAxis - 1] == 1; --endAxis) {}
+
+    // find one between axis and endAxis - as it needs to be broadcasted,
+    // dimensions from the left of axis and from the right of endAxis will be handled by Scale layer
+    broadAxis = -1;
+    for (size_t i = axis; i < endAxis; ++i)
+    {
+        size_t outAxis = i + diff;
+        if (outShape[outAxis] == broadShape[i])
+        {
+            continue;
+        }
+
+        // ensure we need to broadcast only 1 dimension in the middle
+        CV_Assert(broadShape[i] == 1 && broadAxis == -1);
+        broadAxis = static_cast<int>(outAxis);
+    }
+
+    axis += diff;
+}
+
+// "Mul" "Div"
 void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
@@ -1543,13 +1608,31 @@ void ONNXImporter::parseMul(LayerParams& layerParams, const opencv_onnx::NodePro
         }
 
         const MatShape& broadShape = outShapes[node_proto.input(1)];
-        const size_t outShapeSize = outShapes[node_proto.input(0)].size();
-        const size_t diff = outShapeSize - broadShape.size();
+        const MatShape& outShape = outShapes[node_proto.input(0)];
 
-        size_t axis;
-        for (axis = diff; axis < broadShape.size() && broadShape[axis - diff] == 1; ++axis) {}
+        size_t axis = 0;
+        int broadAxis = -1;
+        findBroadAxis(broadShape, outShape, axis, broadAxis);
 
-        CV_Assert(axis != outShapeSize);
+        // if there is a one dimension in the middle that should be broadcasted, broadcast it
+        if (broadAxis != -1)
+        {
+            opencv_onnx::NodeProto concat_node_proto = node_proto;
+            const std::string& input1 = concat_node_proto.input(1);
+
+            expandMid(layerParams.name, concat_node_proto, input1, outShape[broadAxis]);
+
+            LayerParams concatLP;
+            concatLP.name = layerParams.name + "/concat";
+            concatLP.set("axis", broadAxis);
+            concatLP.type = "Concat";
+            concat_node_proto.set_output(0, concatLP.name);
+
+            addLayer(concatLP, concat_node_proto);
+            node_proto.set_input(1, concatLP.name);
+        }
+
+        CV_Assert(axis != outShape.size());
         layerParams.set("axis", static_cast<int>(axis));
         layerParams.type = "Scale";
     }
@@ -1818,12 +1901,11 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     // Unsqueeze and repeat along new axis
     if (targetShape.size() == inpShape.size() + 1)
     {
+        inpShape.insert(inpShape.begin(), targetShape.size() - inpShape.size(), 1);
         for (int i = 0; i < targetShape.size(); i++)
         {
-            if (targetShape[i] == -1 && i < inpShape.size())
+            if (abs(targetShape[i]) == 1)
                 targetShape[i] = inpShape[i];
-            else if (i < inpShape.size() && targetShape[i] != inpShape[i])
-                inpShape.insert(inpShape.begin() + i, 1);
         }
         if (haveVariables)
         {
@@ -1843,14 +1925,19 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     CV_CheckEQ(inpShape.size(), targetShape.size(), "Unsupported Expand op with different dims");
 
     std::vector<int> broadcast_axes;
+    // shapes aren't right-aligned here because targetShape.size() == inpShape.size()
     for (int i = 0; i < targetShape.size(); i++)
     {
         if (targetShape[i] != inpShape[i])
         {
             if (inpShape[i] == 1)
+            {
                 broadcast_axes.push_back(i);
-            else
+            }
+            else if (targetShape[i] != 1)
+            {
                 CV_Error(Error::StsError, format("Could not be broadcast by axis: %d", i));
+            }
         }
     }
 
@@ -1889,30 +1976,15 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     }
     else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
     {
-        String base_name = layerParams.name + "/copy_";
-        std::vector<std::string> input_names;
-        for (int j = 0; j < targetShape[broadcast_axes[0]]; j++)
-        {
-            std::ostringstream ss;
-            ss << j;
-            LayerParams copyLP;
-            copyLP.name = base_name + ss.str();
-            copyLP.type = "Identity";
-            CV_Assert(layer_id.find(copyLP.name) == layer_id.end());
-            input_names.push_back(copyLP.name);
+        expandMid(layerParams.name, node_proto, srcName, targetShape[broadcast_axes[0]]);
 
-            node_proto.set_input(0, srcName);
-            node_proto.set_output(0, copyLP.name);
-            addLayer(copyLP, node_proto);
-        }
-        node_proto.clear_input();
-        for (int i = 0; i < input_names.size(); i++)
-        {
-            node_proto.add_input(input_names[i]);
-        }
         layerParams.set("axis", broadcast_axes[0]);
         layerParams.type = "Concat";
         node_proto.set_output(0, layerParams.name);
+    }
+    else if (broadcast_axes.empty())
+    {
+        layerParams.type = "Identity";
     }
     else
         CV_Error(Error::StsNotImplemented, "Unsupported Expand op");

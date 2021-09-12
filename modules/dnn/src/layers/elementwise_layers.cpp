@@ -1951,7 +1951,7 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
     if (params.blobs[0].total() == 1)
     {
         LayerParams reluParams = params;
-        reluParams.set("negative_slope", params.blobs[0].at<float>(0));
+        reluParams.set("negative_slope", *params.blobs[0].ptr<float>());
         return ReLULayer::create(reluParams);
     }
     Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
