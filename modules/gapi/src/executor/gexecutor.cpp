@@ -411,7 +411,8 @@ bool cv::gimpl::GExecutor::canReshape() const
 {
     // FIXME: Introduce proper reshaping support on GExecutor level
     // for all cases!
-    return (m_ops.size() == 1) && m_ops[0].isl_exec->canReshape();
+    return std::all_of(m_ops.begin(), m_ops.end(),
+                       [](const OpDesc& op) { return op.isl_exec->canReshape(); });
 }
 
 void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
@@ -421,7 +422,10 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     ade::passes::PassContext ctx{g};
     passes::initMeta(ctx, inMetas);
     passes::inferMeta(ctx, true);
-    m_ops[0].isl_exec->reshape(g, args);
+    for (auto& op : m_ops)
+    {
+        op.isl_exec->reshape(g, args);
+    }
 }
 
 void cv::gimpl::GExecutor::prepareForNewStream()
