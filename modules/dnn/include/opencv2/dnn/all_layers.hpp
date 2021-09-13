@@ -610,7 +610,7 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Element wise operation on inputs
 
     Extra optional parameters:
-    - "operation" as string. Values are "sum" (default), "prod", "max", "div"
+    - "operation" as string. Values are "sum" (default), "prod", "max", "div", "min"
     - "coeff" as float array. Specify weights of inputs for SUM operation
     - "output_channels_mode" as string. Values are "same" (default, all input must have the same layout), "input_0", "input_0_truncate", "max_input_channels"
     */
