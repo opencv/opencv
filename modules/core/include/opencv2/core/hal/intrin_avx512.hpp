@@ -3122,6 +3122,98 @@ namespace {
     }
 }  // namespace
 
+CV_ALWAYS_INLINE void v_set_alpha(const short* alpha, v_int16x32& a1, v_int16x32& a2)
+{
+    a1.val = _mm512_setr_epi16(*alpha,       *alpha,       *alpha,       *(alpha + 1), *(alpha + 1), *(alpha + 1),
+                               *(alpha + 2), *(alpha + 2), *(alpha + 2), *(alpha + 3), *(alpha + 3), *(alpha + 3),
+                               *(alpha + 4), *(alpha + 4), *(alpha + 4), *(alpha + 5), *(alpha + 5), *(alpha + 5),
+                               *(alpha + 6), *(alpha + 6), *(alpha + 6), *(alpha + 7), *(alpha + 7), *(alpha + 7),
+                               *(alpha + 8), *(alpha + 8), *(alpha + 8), *(alpha + 9), *(alpha + 9), *(alpha + 9),
+                               *(alpha + 10), *(alpha + 10));
+    a2.val = _mm512_setr_epi16(*(alpha + 10), *(alpha + 11), *(alpha + 11), *(alpha + 11), *(alpha + 12), *(alpha + 12),
+                               *(alpha + 12), *(alpha + 13), *(alpha + 13), *(alpha + 13), *(alpha + 14), *(alpha + 14),
+                               *(alpha + 14), *(alpha + 15), *(alpha + 15), *(alpha + 15), *(alpha + 16), *(alpha + 16),
+                               *(alpha + 16), *(alpha + 17), *(alpha + 17), *(alpha + 17), *(alpha + 18), *(alpha + 18),
+                               *(alpha + 18), *(alpha + 19), *(alpha + 19), *(alpha + 19), *(alpha + 20), *(alpha + 20),
+                               *(alpha + 20), *(alpha + 21));
+}
+
+namespace {
+    template<int chanNum>
+    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x64& vec, const uchar src[], const short* index, const int pos)
+    {
+        CV_Assert("Unsupported number of channel");
+    }
+
+    template<>
+    CV_ALWAYS_INLINE void v_gather_pixel_map<3>(v_uint8x64& vec, const uchar src[], const short* index, const int pos)
+    {
+        constexpr int chanNum = 3;
+#if 0
+        // pixel_1 (rgb)
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*index + pos)]), 0);
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + 2]), 2);
+        // pixel_2 (rgb)
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos)]), 3);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 1) + pos) + 1]), 2);
+        // pixel_3
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 2) + pos)]), 3);
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + 2]), 8);
+        // pixel_4
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos)]), 9);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 3) + pos) + 1]), 5);
+        // pixel_5
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 4) + pos)]), 6);
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + 2]), 14);
+        // pixel_6
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos)]), 15);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 5) + pos) + 1]), 8);
+        // pixel_7
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 6) + pos)]), 9);
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + 2]), 20);
+        // pixel_8
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos)]), 21);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 7) + pos) + 1]), 11);
+        // pixel_9
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 8) + pos)]), 12);
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 8) + pos) + 2]), 26);
+        // pixel_10
+        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 9) + pos)]), 27);
+        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 9) + pos)]), 14);
+#endif
+    }
+
+    template<>
+    CV_ALWAYS_INLINE void v_gather_pixel_map<4>(v_uint8x64& vec, const uchar src[], const short* index, const int pos)
+    {
+        constexpr int chanNum = 4;
+#if 0
+        // pixel_1 (rgbx)
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*index + pos)]), 0);
+
+        // pixel_2 (rgbx)
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 1) + pos)]), 1);
+
+        // pixel_3
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 2) + pos)]), 2);
+
+        // pixel_4
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 3) + pos)]), 3);
+
+        // pixel_5
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 4) + pos)]), 4);
+
+        // pixel_6
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 5) + pos)]), 5);
+
+        // pixel_7
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 6) + pos)]), 6);
+
+        // pixel_8
+        vec.val = _mm256_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 7) + pos)]), 7);
+#endif
+    }
+}  // namespace
 inline void v512_cleanup() { _mm256_zeroall(); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END

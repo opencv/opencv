@@ -2982,12 +2982,42 @@ CV_ALWAYS_INLINE void horizontal_anyLPI(uint8_t* dst,
                                         const short alpha[], const int width) {
     constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
     const int half_nlanes = nlanes/2;
+    constexpr int pixels = nlanes / 3;
 
     v_int16 t0, t1, t2, t3;
     int x = 0;
+#if 1
+    v_uint16 a1, a2, b1, b2;
+    v_uint8 a, b;
+    v_int16 a00, a01;
+    for (; width >= pixels;) {
+        for (; x <= width - pixels; x += pixels) {
+            v_set_alpha(&alpha[x], a00, a01);
+            v_gather_pixel_map<chanNum>(a, src, &mapsx[x], 0);
+            v_gather_pixel_map<chanNum>(b, src, &mapsx[x], 1);
 
+            v_expand(a, a1, a2);
+            v_expand(b, b1, b2);
+            v_int16 a_1 = v_reinterpret_as_s16(a1);
+            v_int16 a_2 = v_reinterpret_as_s16(a2);
+            v_int16 b_1 = v_reinterpret_as_s16(b1);
+            v_int16 b_2 = v_reinterpret_as_s16(b2);
+
+            v_int16 r_1 = v_mulhrs(a_1 - b_1, a00) + b_1;
+            v_int16 r_2 = v_mulhrs(a_2 - b_2, a01) + b_2;
+
+            v_uint8 res = v_pack_u(r_1, r_2);
+            vx_store(&dst[3*x], res);
+        }
+        if (x < width) {
+            x = width - pixels;
+            continue;
+        }
+        break;
+    }
+#else
     for (; width >= nlanes;) {
-        for (; x <= width - nlanes && x >= 0; x += nlanes) {
+        for (; x <= width - nlanes; x += nlanes) {
             v_int16 a00 = vx_load(&alpha[x]);
             v_int16 a01 = vx_load(&alpha[x + half_nlanes]);
 
@@ -3024,6 +3054,14 @@ CV_ALWAYS_INLINE void horizontal_anyLPI(uint8_t* dst,
         }
         break;
     }
+#endif
+#if 0
+    for (int i = 0; i < 192; i++)
+    {
+        std::cout << "  dst[" << i << "] = " << (int)dst[i];
+    }
+    std::cout << std::endl;
+#endif
 }
 
 template<int chanNum>
@@ -3359,8 +3397,8 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
     static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/, double /*fy*/, int /*interp*/,
                     cv::gapi::fluid::Buffer& out,
                     cv::gapi::fluid::Buffer& scratch) {
-        int channels = in.meta().chan;
-        constexpr int numChan = 3;
+        const int channels = in.meta().chan;
+        GAPI_Assert(channels == 3 || channels == 4);
         if (channels == 3)
         {
             calcRowLinearC<uint8_t, Mapper, 3>(in, out, scratch);

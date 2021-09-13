@@ -3469,6 +3469,57 @@ namespace {
     }
 }  // namespace
 
+namespace {
+    template<int chanNum>
+    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
+    {
+        CV_Assert("Unsupported number of channel");
+    }
+
+    template<>
+    CV_ALWAYS_INLINE void v_gather_pixel_map<3>(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
+    {
+        int chanNum = 3;
+        // pixel_1 (rgb)
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*index + pos)]), 0);
+        vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + 2]), 2);
+        // pixel_2 (rgb)
+        vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos)]), 3);
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 1) + pos) + 1]), 2);
+        // pixel_3
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 2) + pos)]), 3);
+        vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + 2]), 8);
+        // pixel_4
+        vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos)]), 9);
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 3) + pos) + 1]), 5);
+        // pixel_5
+        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 4) + pos)]), 6);
+        vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + 2]), 14);
+    }
+
+    template<>
+    CV_ALWAYS_INLINE void v_gather_pixel_map<4>(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
+    {
+        int chanNum = 4;
+
+        // pixel_1 (rgbx)
+        vec.val = _mm_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*index + pos)]), 0);
+        // pixel_2 (rgbx)
+        vec.val = _mm_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 1) + pos)]), 1);
+        // pixel_3
+        vec.val = _mm_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 2) + pos)]), 2);
+        // pixel_4
+        vec.val = _mm_insert_epi32(vec.val, *reinterpret_cast<const int*>(&src[chanNum * (*(index + 3) + pos)]), 3);
+    }
+}  // namespace
+
+CV_ALWAYS_INLINE void v_set_alpha(const short* alpha, v_int16x8& a1, v_int16x8& a2)
+{
+    a1.val = _mm_setr_epi16(*alpha, *alpha, *alpha, *(alpha + 1), *(alpha + 1), *(alpha + 1),
+                            *(alpha + 2), *(alpha + 2));
+    a2.val = _mm_setr_epi16(*(alpha + 2), *(alpha + 3), *(alpha + 3), *(alpha + 3),
+                            *(alpha + 4), *(alpha + 4), *(alpha + 4), 0);
+}
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END

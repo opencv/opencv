@@ -2069,7 +2069,7 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
 
     SANITY_CHECK_NOTHING();
 }
-
+static int counter = 0;
 //------------------------------------------------------------------------------
 
 PERF_TEST_P_(ResizePerfTest, TestPerformance)
@@ -2080,6 +2080,7 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
     cv::Size sz_in = get<3>(GetParam());
     cv::Size sz_out = get<4>(GetParam());
     cv::GCompileArgs compile_args = get<5>(GetParam());
+
 
     in_mat1 = cv::Mat(sz_in, type);
     cv::Scalar mean = cv::Scalar::all(127);
@@ -2093,14 +2094,12 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-
     auto out = cv::gapi::resize(in, sz_out, 0.0, 0.0, interp);
-
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
     auto cc = c.compile(descr_of(gin(in_mat1)),
-                        std::move(compile_args));
+        std::move(compile_args));
     cc(gin(in_mat1), gout(out_mat_gapi));
 
     TEST_CYCLE()
