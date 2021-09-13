@@ -80,7 +80,7 @@ double cos_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::Dis
 double L2_score = faceRecognizer->match(feature1, feature2, FaceRecognizer::DisType::NORM_L2);
 ```
 
-For example, two faces have same identity if the cosine distance is greater than or equal to 0.34, or the normL2 distance is less than or equal to 1.32.
+For example, two faces have same identity if the cosine distance is greater than or equal to 0.363, or the normL2 distance is less than or equal to 1.128.
 
 ## Reference:
 
