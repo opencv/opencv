@@ -2,6 +2,7 @@
 OpenCV Python binary extension loader
 '''
 import os
+import importlib
 import sys
 
 __all__ = []
@@ -15,16 +16,56 @@ except ImportError:
     print('    pip install numpy')
     raise
 
-
-py_code_loader = None
-if sys.version_info[:2] >= (3, 0):
-    try:
-        from . import _extra_py_code as py_code_loader
-    except:
-        pass
-
 # TODO
 # is_x64 = sys.maxsize > 2**32
+
+
+def __load_extra_py_code_for_module(base, name, enable_debug_print=False):
+    module_name = "{}.{}".format(__name__, name)
+    export_module_name = "{}.{}".format(base, name)
+    native_module = sys.modules.pop(module_name, None)
+    try:
+        m = importlib.import_module(module_name)
+    except ImportError as err:
+        if enable_debug_print:
+            print("Can't load Python code for module:", module_name,
+                  ". Reason:", err)
+        # Extension doesn't contain extra py code
+        return False
+
+    if hasattr(m, '__all__'):
+        export_members = {k: getattr(m, k) for k in m.__all__}
+    else:
+        export_members = m.__dict__
+
+    if not hasattr(base, name):
+        setattr(sys.modules[base], name, m)
+    sys.modules[export_module_name] = m
+    # If it is C extension module it is already loaded by cv2 package
+    if native_module:
+        for k, v in native_module.__dict__.items():
+            if enable_debug_print: print('    symbol: {} = {}'.format(k, v))
+            setattr(sys.modules[export_module_name], k, v)
+    return True
+
+
+def __collect_extra_submodules(enable_debug_print=False):
+    def modules_filter(module):
+        return all((
+             # module is not internal
+             not module.startswith("_"),
+             # it is not a file
+             os.path.isdir(os.path.join(_extra_submodules_init_path, module))
+        ))
+    if sys.version_info[0] < 3:
+        if enable_debug_print:
+            print("Extra submodules is loaded only for Python 3")
+        return []
+
+    __INIT_FILE_PATH = os.path.abspath(__file__)
+    _extra_submodules_init_path = os.path.dirname(__INIT_FILE_PATH)
+    return filter(modules_filter, os.listdir(_extra_submodules_init_path))
+
 
 def bootstrap():
     import sys
@@ -107,23 +148,32 @@ def bootstrap():
         # amending of LD_LIBRARY_PATH works for sub-processes only
         os.environ['LD_LIBRARY_PATH'] = ':'.join(l_vars['BINARIES_PATHS']) + ':' + os.environ.get('LD_LIBRARY_PATH', '')
 
-    if DEBUG: print('OpenCV loader: replacing cv2 module')
-    del sys.modules['cv2']
-    import cv2
+    if DEBUG: print("Relink everything from native cv2 module to cv2 package")
+
+    module = sys.modules.pop("cv2")
+
+    extension = importlib.import_module("cv2")
+
+    sys.modules["cv2"] = module
+
+    g_vars.update({item_name: item for item_name, item in extension.__dict__.items()
+                   if item_name not in ["__file__", "__loader__", "__spec__", "__name__", "__package__"]})
 
     sys.path = save_sys_path  # multiprocessing should start from bootstrap code (https://github.com/opencv/opencv/issues/18502)
 
     try:
-        import sys
         del sys.OpenCV_LOADER
-    except:
-        pass
+    except Exception as e:
+        if DEBUG:
+            print("Exception during delete OpenCV_LOADER:", e)
 
     if DEBUG: print('OpenCV loader: binary extension... OK')
 
-    if py_code_loader:
-        py_code_loader.init('cv2')
+    for submodule in __collect_extra_submodules(DEBUG):
+        if __load_extra_py_code_for_module("cv2", submodule, DEBUG):
+            if DEBUG: print("Extra Python code for", submodule, "is loaded")
 
     if DEBUG: print('OpenCV loader: DONE')
+
 
 bootstrap()
