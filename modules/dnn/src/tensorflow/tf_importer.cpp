@@ -595,6 +595,7 @@ private:
     void parseClipByValue        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseLeakyRelu          (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
     void parseActivation         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
+    void parseExpandDims         (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 
     void parseCustomLayer        (tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams);
 };
@@ -672,6 +673,7 @@ const TFImporter::DispatchMap TFImporter::buildDispatchMap()
     dispatch["LeakyRelu"] = &TFImporter::parseLeakyRelu;
     dispatch["Abs"] = dispatch["Tanh"] = dispatch["Sigmoid"] = dispatch["Relu"] =
             dispatch["Elu"] = dispatch["Exp"] = dispatch["Identity"] = dispatch["Relu6"] = &TFImporter::parseActivation;
+    dispatch["ExpandDims"] = &TFImporter::parseExpandDims;
 
     return dispatch;
 }
@@ -1111,6 +1113,74 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
         connect(layer_id, dstNet, parsePin(layer.input(1)), id, 1);
         data_layouts[name] = inpLayout;
     }
+}
+
+void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
+{
+    const std::string& name = layer.name();
+    const int num_inputs = layer.input_size();
+
+    CV_CheckGT(num_inputs, 0, "");
+    Pin inpId = parsePin(layer.input(0));
+    DataLayout inpLayout = getDataLayout(layer.input(0), data_layouts);
+
+    // Get input shape
+    std::vector<MatShape> inShape_, outShape_;
+    int inpIdindex = layer_id.find(inpId.name)->second;
+
+    dstNet.getLayerShapes(netInputShapes, inpIdindex, inShape_, outShape_);
+    MatShape inpShape = outShape_[0];
+    std::vector<int> outShape = inpShape;
+
+    int outShapeSize = outShape.size();
+
+    // 2nd blob is dims tensor
+    int axis = getConstBlob(layer, value_id, 1).int_val().Get(0);
+
+    if(axis == -1)
+    {
+        axis = inpShape.size();
+    }
+
+    CV_Assert(0 <= axis && axis <= inpShape.size());
+
+    if(axis == inpShape.size() && inpShape.size() >= 4)
+    {
+        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+        addPermuteLayer(order, name + "/nhwc", inpId);
+
+        // Convert shape From OpenCV's NCHW to NHWC.
+        if(inpLayout == DATA_LAYOUT_NHWC)
+        {
+            for(int i = 1; i < outShapeSize - 1; i++)
+            {
+                std::swap(outShape[i], outShape[i+1]);
+            }
+        }
+    }
+
+    if(inpLayout == DATA_LAYOUT_NHWC)
+    {
+        // toNCHW
+        axis = (axis != 0)?(axis % outShapeSize + 1):0;
+    }
+
+    outShape.insert(outShape.begin() + axis, 1);
+    outShapeSize += 1;
+
+    if(inpLayout != DATA_LAYOUT_NHWC && outShapeSize <= 5)
+    {
+        for(int i = 1; i < outShapeSize - 1; i++)
+        {
+            std::swap(outShape[outShapeSize - i - 1], outShape[outShapeSize - i]);
+        }
+    }
+
+    layerParams.set("dim", DictValue::arrayInt(&outShape[0], outShape.size()));
+    int id = dstNet.addLayer(name, "Reshape", layerParams);
+    layer_id[name] = id;
+
+    connect(layer_id, dstNet, inpId, id, 0);
 }
 
 // "Flatten" "Squeeze"
