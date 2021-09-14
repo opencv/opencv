@@ -603,6 +603,7 @@ TEST_P(Test_TensorFlow_layers, ExpandDims)
 #endif
 
     runTensorFlowNet("expand_dims_1");
+    runTensorFlowNet("expand_dims_2");
 }
 
 // TODO: fix it and add to l2_normalize
