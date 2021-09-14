@@ -38,23 +38,14 @@ int main( int argc, char** argv )
             points.push_back(pt);
         }
 
-        vector<int> hull;
-        convexHull(Mat(points), hull, true);
+        vector<Point> hull;
+        convexHull(points, hull, true);
 
         img = Scalar::all(0);
         for( i = 0; i < count; i++ )
             circle(img, points[i], 3, Scalar(0, 0, 255), FILLED, LINE_AA);
 
-        int hullcount = (int)hull.size();
-        Point pt0 = points[hull[hullcount-1]];
-
-        for( i = 0; i < hullcount; i++ )
-        {
-            Point pt = points[hull[i]];
-            line(img, pt0, pt, Scalar(0, 255, 0), 1,LINE_AA);
-            pt0 = pt;
-        }
-
+        polylines(img, hull, true, Scalar(0, 255, 0), 1, LINE_AA);
         imshow("hull", img);
 
         char key = (char)waitKey();
