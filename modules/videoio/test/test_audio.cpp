@@ -200,7 +200,7 @@ private:
                 SCOPED_TRACE(cv::format("frame=%d", (int)(videoData.size()+1)));
                 ASSERT_TRUE(cap.retrieve(videoFrame));
                 ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex));
-                ASSERT_LT(abs(cap.get(CAP_PROP_AUDIO_POS) -  cap.get(CAP_PROP_POS_MSEC)/ 1000 * samplePerSecond), audioSamplesTolerance);//(double)(videoData.size()+1)
+                ASSERT_LT(abs(cap.get(CAP_PROP_AUDIO_POS) -  cap.get(CAP_PROP_POS_MSEC)/ 1000 * samplePerSecond), audioSamplesTolerance);
                 ASSERT_LT(abs(audioFrame.cols - samplesPerFrame), audioSamplesTolerance);
                 ASSERT_EQ(audioFrame.type(), CV_16SC1);
                 if (!videoFrame.empty())
