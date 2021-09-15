@@ -757,7 +757,7 @@ protected:
     bool convertFormat;
     MFTIME duration;
     LONGLONG frameStep;
-    int nFrame;
+    LONGLONG nFrame;
     LONGLONG sampleTime;
     LONGLONG audioTime;
     LONGLONG curAudioTime;
@@ -1646,12 +1646,13 @@ bool CvCapture_MSMF::retrieveAudioFrame(int index, cv::OutputArray frame)
                 if (!SUCCEEDED(item->GetBufferByIndex(0, &buf)))
                     break;
             }
-
             if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
                 break;
+            LONGLONG lastSize = bufferAudioData.size();
+            bufferAudioData.resize(lastSize+cursize);
             for (unsigned int i = 0; i < cursize; i++)
             {
-                bufferAudioData.push_back(*(ptr+i));
+                bufferAudioData[lastSize+i]=*(ptr+i);
             }
             CV_TRACE_REGION_NEXT("unlock");
             buf->Unlock();
@@ -1850,7 +1851,7 @@ double CvCapture_MSMF::getProperty( int property_id ) const
             else
                 break;
         case CV_CAP_PROP_POS_FRAMES:
-            return max(nFrame,0);
+            return (double)nFrame;
         case CV_CAP_PROP_POS_MSEC:
             return (double)sampleTime / 1e4;
         case CAP_PROP_AUDIO_POS:
