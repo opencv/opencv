@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 #include <iostream>
 #include <ostream>
+#include <atomic>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
@@ -1387,7 +1388,7 @@ template <class T>
 class DisposedSingletonMark
 {
 private:
-    static bool mark;
+    static std::atomic<bool> mark;
 protected:
     DisposedSingletonMark() {}
     ~DisposedSingletonMark()
@@ -1430,7 +1431,7 @@ private:
 #endif
 };
 
-template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
+template<> std::atomic<bool> DisposedSingletonMark<TlsAbstraction>::mark = false;
 
 static TlsAbstraction& getTlsAbstraction_()
 {
