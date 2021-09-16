@@ -2981,7 +2981,6 @@ CV_ALWAYS_INLINE void horizontal_anyLPI(uint8_t* dst,
                                         const uchar* src, const short mapsx[],
                                         const short alpha[], const int width) {
     constexpr int nlanes = static_cast<int>(v_uint8::nlanes);
-    const int half_nlanes = nlanes/2;
     constexpr int pixels = nlanes / 3;
 
     v_int16 t0, t1, t2, t3;
@@ -3016,6 +3015,7 @@ CV_ALWAYS_INLINE void horizontal_anyLPI(uint8_t* dst,
         break;
     }
 #else
+    const int half_nlanes = nlanes / 2;
     for (; width >= nlanes;) {
         for (; x <= width - nlanes; x += nlanes) {
             v_int16 a00 = vx_load(&alpha[x]);
@@ -3069,7 +3069,7 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_(uint8_t* dst[],
                                               const uint8_t* src0[],
                                               const uint8_t* src1[],
                                               const short    alpha[],
-                                              const short* /*clone*/,  // 4 clones of alpha
+                                              const short* clone,  // 4 clones of alpha
                                               const short    mapsx[],
                                               const short    beta[],
                                                   uint8_t    tmp[],
@@ -3078,21 +3078,194 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_(uint8_t* dst[],
                                               const int      lpi) {
     bool xRatioEq = inSz.width == outSz.width;
     bool yRatioEq = inSz.height == outSz.height;
+    constexpr int nlanes = v_uint8::nlanes;
+    constexpr int half_nlanes = nlanes / 2;
 
     if (!xRatioEq && !yRatioEq) {
         int inLength = inSz.width * chanNum;
 
-        for (int l = 0; l < lpi; ++l) {
-            short beta0 = beta[l];
-            const uchar* s0 = src0[l];
-            const uchar* s1 = src1[l];
+        if (lpi <= 4)
+        {  // if any lpi
+            for (int l = 0; l < lpi; ++l) {
+                short beta0 = beta[l];
+                const uchar* s0 = src0[l];
+                const uchar* s1 = src1[l];
 
+                // vertical pass
+                vertical_anyLPI(s0, s1, tmp, inLength, beta0);
+
+                // horizontal pass
+                horizontal_anyLPI<chanNum>(dst[l], tmp, mapsx, alpha, outSz.width);
+            }
+        }
+#if 0// CV_SIMD128
+        else
+        {
             // vertical pass
-            vertical_anyLPI(s0, s1, tmp, inLength, beta0);
+            GAPI_DbgAssert(inSz.width >= half_nlanes);
+
+            __m128i b0 = _mm_set1_epi16(beta[0]);
+            __m128i b1 = _mm_set1_epi16(beta[1]);
+            __m128i b2 = _mm_set1_epi16(beta[2]);
+            __m128i b3 = _mm_set1_epi16(beta[3]);
+
+            for (int w = 0; w < inSz.width * chanNum; ) {
+                for (; w <= inSz.width * chanNum - half_nlanes && w >= 0; w += half_nlanes) {
+                    //--------------------------------------------
+                    // reworked from: ie_preprocess_data_sse42.cpp
+                    //      function: resize_bilinear_u8
+                    //         label: vertical_pass
+                    //--------------------------------------------
+#ifdef __i386__
+                    __m128i val0lo = _mm_castpd_si128(_mm_loadh_pd(
+                        _mm_load_sd(reinterpret_cast<const double*>(&src0[0][w])),
+                        reinterpret_cast<const double*>(&src0[1][w])));
+                    __m128i val0hi = _mm_castpd_si128(_mm_loadh_pd(
+                        _mm_load_sd(reinterpret_cast<const double*>(&src0[2][w])),
+                        reinterpret_cast<const double*>(&src0[3][w])));
+                    __m128i val1lo = _mm_castpd_si128(_mm_loadh_pd(
+                        _mm_load_sd(reinterpret_cast<const double*>(&src1[0][w])),
+                        reinterpret_cast<const double*>(&src1[1][w])));
+                    __m128i val1hi = _mm_castpd_si128(_mm_loadh_pd(
+                        _mm_load_sd(reinterpret_cast<const double*>(&src1[2][w])),
+                        reinterpret_cast<const double*>(&src1[3][w])));
+#else
+                    __m128i val0lo = _mm_insert_epi64(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&src0[0][w])),
+                        *reinterpret_cast<const int64_t*>(&src0[1][w]), 1);
+                    __m128i val0hi = _mm_insert_epi64(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&src0[2][w])),
+                        *reinterpret_cast<const int64_t*>(&src0[3][w]), 1);
+                    __m128i val1lo = _mm_insert_epi64(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&src1[0][w])),
+                        *reinterpret_cast<const int64_t*>(&src1[1][w]), 1);
+                    __m128i val1hi = _mm_insert_epi64(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&src1[2][w])),
+                        *reinterpret_cast<const int64_t*>(&src1[3][w]), 1);
+#endif
+                    __m128i val0_0 = _mm_cvtepu8_epi16(val0lo);
+                    __m128i val0_2 = _mm_cvtepu8_epi16(val0hi);
+                    __m128i val1_0 = _mm_cvtepu8_epi16(val1lo);
+                    __m128i val1_2 = _mm_cvtepu8_epi16(val1hi);
+
+                    __m128i val0_1 = _mm_unpackhi_epi8(val0lo, _mm_setzero_si128());
+                    __m128i val0_3 = _mm_unpackhi_epi8(val0hi, _mm_setzero_si128());
+                    __m128i val1_1 = _mm_unpackhi_epi8(val1lo, _mm_setzero_si128());
+                    __m128i val1_3 = _mm_unpackhi_epi8(val1hi, _mm_setzero_si128());
+
+                    __m128i t0 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_0, val1_0), b0);
+                    __m128i t1 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_1, val1_1), b1);
+                    __m128i t2 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_2, val1_2), b2);
+                    __m128i t3 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_3, val1_3), b3);
+
+                    __m128i r0 = _mm_add_epi16(val1_0, t0);
+                    __m128i r1 = _mm_add_epi16(val1_1, t1);
+                    __m128i r2 = _mm_add_epi16(val1_2, t2);
+                    __m128i r3 = _mm_add_epi16(val1_3, t3);
+
+                    __m128i q0 = _mm_packus_epi16(r0, r1);
+                    __m128i q1 = _mm_packus_epi16(r2, r3);
+
+                    __m128i q2 = _mm_blend_epi16(q0, _mm_slli_si128(q1, 4), 0xCC /*0b11001100*/);
+                    __m128i q3 = _mm_blend_epi16(_mm_srli_si128(q0, 4), q1, 0xCC /*0b11001100*/);
+
+                    __m128i q4 = _mm_shuffle_epi8(q2, _mm_setr_epi8(0, 8, 4, 12, 1, 9, 5, 13, 2, 10, 6, 14, 3, 11, 7, 15));
+                    __m128i q5 = _mm_shuffle_epi8(q3, _mm_setr_epi8(0, 8, 4, 12, 1, 9, 5, 13, 2, 10, 6, 14, 3, 11, 7, 15));
+
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[4 * w + 0]), q4);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[4 * w + 16]), q5);
+                }
+
+                if (w < inSz.width * chanNum) {
+                    w = inSz.width * chanNum - half_nlanes;
+                }
+            }
 
             // horizontal pass
-            horizontal_anyLPI<chanNum>(dst[l], tmp, mapsx, alpha, outSz.width);
+            GAPI_DbgAssert(outSz.width >= half_nlanes);
+            for (int x = 0; x < outSz.width; ) {
+                for (; x <= outSz.width - half_nlanes && x >= 0; x += half_nlanes) {
+                    //--------------------------------------------
+                    // reworked from: ie_preprocess_data_sse42.cpp
+                    //      function: resize_bilinear_u8
+                    //         label: horizontal_pass
+                    //--------------------------------------------
+
+                    __m128i a10 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&clone[4 * x]));
+                    __m128i a32 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&clone[4 * (x + 2)]));
+                    __m128i a54 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&clone[4 * (x + 4)]));
+                    __m128i a76 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&clone[4 * (x + 6)]));
+
+                    __m128i val_0 = _mm_setzero_si128();
+                    __m128i val_1 = _mm_setzero_si128();
+                    __m128i val_2 = _mm_setzero_si128();
+                    __m128i val_3 = _mm_setzero_si128();
+
+                    for (int c = 0; c < chanNum; c++) {
+                        val_0 = _mm_insert_epi32(val_0, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 0] + c)]), 0);
+                        val_0 = _mm_insert_epi32(val_0, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 0] + 1) + c)]), 1);
+                        val_0 = _mm_insert_epi32(val_0, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 1] + c)]), 2);
+                        val_0 = _mm_insert_epi32(val_0, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1) + c)]), 3);
+
+                        val_1 = _mm_insert_epi32(val_1, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 2] + c)]), 0);
+                        val_1 = _mm_insert_epi32(val_1, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 2] + 1) + c)]), 1);
+                        val_1 = _mm_insert_epi32(val_1, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 3] + c)]), 2);
+                        val_1 = _mm_insert_epi32(val_1, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 3] + 1) + c)]), 3);
+
+                        val_2 = _mm_insert_epi32(val_2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 4] + c)]), 0);
+                        val_2 = _mm_insert_epi32(val_2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 4] + 1) + c)]), 1);
+                        val_2 = _mm_insert_epi32(val_2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 5] + c)]), 2);
+                        val_2 = _mm_insert_epi32(val_2, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 5] + 1) + c)]), 3);
+
+                        val_3 = _mm_insert_epi32(val_3, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 6] + c)]), 0);
+                        val_3 = _mm_insert_epi32(val_3, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 6] + 1) + c)]), 1);
+                        val_3 = _mm_insert_epi32(val_3, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 7] + c)]), 2);
+                        val_3 = _mm_insert_epi32(val_3, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 7] + 1) + c)]), 3);
+
+                        val_0 = _mm_shuffle_epi32(val_0, _MM_SHUFFLE(3, 1, 2, 0));
+                        val_1 = _mm_shuffle_epi32(val_1, _MM_SHUFFLE(3, 1, 2, 0));
+                        val_2 = _mm_shuffle_epi32(val_2, _MM_SHUFFLE(3, 1, 2, 0));
+                        val_3 = _mm_shuffle_epi32(val_3, _MM_SHUFFLE(3, 1, 2, 0));
+
+                        __m128i val0_0 = _mm_cvtepu8_epi16(val_0);
+                        __m128i val0_1 = _mm_cvtepu8_epi16(val_1);
+                        __m128i val0_2 = _mm_cvtepu8_epi16(val_2);
+                        __m128i val0_3 = _mm_cvtepu8_epi16(val_3);
+
+                        __m128i val1_0 = _mm_unpackhi_epi8(val_0, _mm_setzero_si128());
+                        __m128i val1_1 = _mm_unpackhi_epi8(val_1, _mm_setzero_si128());
+                        __m128i val1_2 = _mm_unpackhi_epi8(val_2, _mm_setzero_si128());
+                        __m128i val1_3 = _mm_unpackhi_epi8(val_3, _mm_setzero_si128());
+
+                        __m128i t0 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_0, val1_0), a10);
+                        __m128i t1 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_1, val1_1), a32);
+                        __m128i t2 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_2, val1_2), a54);
+                        __m128i t3 = _mm_mulhrs_epi16(_mm_sub_epi16(val0_3, val1_3), a76);
+
+                        __m128i r0 = _mm_add_epi16(val1_0, t0);
+                        __m128i r1 = _mm_add_epi16(val1_1, t1);
+                        __m128i r2 = _mm_add_epi16(val1_2, t2);
+                        __m128i r3 = _mm_add_epi16(val1_3, t3);
+
+                        __m128i q0 = _mm_packus_epi16(r0, r1);
+                        __m128i q1 = _mm_packus_epi16(r2, r3);
+
+                        __m128i q2 = _mm_shuffle_epi8(q0, _mm_setr_epi8(0, 4, 8, 12, 2, 6, 10, 14, 1, 5, 9, 13, 3, 7, 11, 15));
+                        __m128i q3 = _mm_shuffle_epi8(q1, _mm_setr_epi8(0, 4, 8, 12, 2, 6, 10, 14, 1, 5, 9, 13, 3, 7, 11, 15));
+
+                        __m128i q4 = _mm_blend_epi16(q2, _mm_slli_si128(q3, 4), 0xCC /*0b11001100*/);
+                        __m128i q5 = _mm_blend_epi16(_mm_srli_si128(q2, 4), q3, 0xCC /*0b11001100*/);
+
+                        _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[c][0][x]), q4);
+                        _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[c][1][x]), _mm_srli_si128(q4, 8));
+                        _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[c][2][x]), q5);
+                        _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[c][3][x]), _mm_srli_si128(q5, 8));
+                    }
+                }
+
+                if (x < outSz.width) {
+                    x = outSz.width - half_nlanes;
+                }
+            }
+
         }
+#endif  // CV_SIMD128
     } else if (!xRatioEq) {
         GAPI_DbgAssert(yRatioEq);
 
@@ -3378,27 +3551,42 @@ GAPI_FLUID_KERNEL(GFluidResize, cv::gapi::core::GResize, true)
     constexpr static const short ONE = INTER_RESIZE_COEF_SCALE;
 
    static void initScratch(const cv::GMatDesc& in,
-                           cv::Size outSz, double /*fx*/, double /*fy*/, int /*interp*/,
+                           cv::Size outSz, double fx, double fy, int /*interp*/,
                            cv::gapi::fluid::Buffer &scratch)
     {
+       int outSz_w;
+       int outSz_h;
+       if (outSz.width == 0 || outSz.height == 0)
+       {
+           outSz_w = static_cast<int>(round(in.size.width * fx));
+           outSz_h = static_cast<int>(round(in.size.height * fy));
+       }
+       else
+       {
+           outSz_w = outSz.width;
+           outSz_h = outSz.height;
+       }
+       cv::Size outSize(outSz_w, outSz_h);
+
        if (in.chan == 3)
        {
-           initScratchLinear<uchar, Mapper, 3>(in, outSz, scratch, LPI);
+           initScratchLinear<uchar, Mapper, 3>(in, outSize, scratch, LPI);
        }
        else if (in.chan == 4)
        {
-           initScratchLinear<uchar, Mapper, 4>(in, outSz, scratch, LPI);
+           initScratchLinear<uchar, Mapper, 4>(in, outSize, scratch, LPI);
        }
     }
 
     static void resetScratch(cv::gapi::fluid::Buffer& /*scratch*/)
     {}
 
-    static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/, double /*fy*/, int /*interp*/,
+    static void run(const cv::gapi::fluid::View& in, cv::Size /*sz*/, double /*fx*/, double /*fy*/, int interp,
                     cv::gapi::fluid::Buffer& out,
                     cv::gapi::fluid::Buffer& scratch) {
         const int channels = in.meta().chan;
-        GAPI_Assert(channels == 3 || channels == 4);
+        GAPI_Assert((channels == 3 || channels == 4) && (interp == cv::INTER_LINEAR));
+
         if (channels == 3)
         {
             calcRowLinearC<uint8_t, Mapper, 3>(in, out, scratch);

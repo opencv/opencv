@@ -3479,7 +3479,7 @@ namespace {
     template<>
     CV_ALWAYS_INLINE void v_gather_pixel_map<3>(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
     {
-        int chanNum = 3;
+        const int chanNum = 3;
         // pixel_1 (rgb)
         vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*index + pos)]), 0);
         vec.val = _mm_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + 2]), 2);

@@ -399,9 +399,6 @@ namespace core {
 
     G_TYPED_KERNEL(GResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.core.transform.resize") {
         static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int interp) {
-            // cv::INTER_LINEAR is the only supported interpolation
-            GAPI_Assert(interp == cv::INTER_LINEAR);
-
             if (sz.width != 0 && sz.height != 0)
             {
                 return in.withSize(sz);
