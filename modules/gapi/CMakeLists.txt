@@ -47,12 +47,14 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/s11n/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/gstreamer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/onevpl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
-    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/python/*.hpp"
     )
 
 set(gapi_srcs
@@ -162,7 +164,7 @@ set(gapi_srcs
     src/backends/ie/bindings_ie.cpp
     src/backends/python/gpythonbackend.cpp
 
-    # Streaming source
+    # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
     src/streaming/onevpl/source_priv.cpp
     src/streaming/onevpl/file_data_provider.cpp
@@ -179,9 +181,16 @@ set(gapi_srcs
     src/streaming/onevpl/engine/processing_engine_base.cpp
     src/streaming/onevpl/engine/decode/decode_engine_legacy.cpp
     src/streaming/onevpl/engine/decode/decode_session.cpp
-
     src/streaming/onevpl/cfg_param_device_selector.cpp
     src/streaming/onevpl/device_selector_interface.cpp
+
+    # GStreamer Streaming source
+    src/streaming/gstreamer/gstreamer_pipeline_facade.cpp
+    src/streaming/gstreamer/gstreamerpipeline.cpp
+    src/streaming/gstreamer/gstreamersource.cpp
+    src/streaming/gstreamer/gstreamer_buffer_utils.cpp
+    src/streaming/gstreamer/gstreamer_media_adapter.cpp
+    src/streaming/gstreamer/gstreamerenv.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
@@ -267,6 +276,15 @@ if(HAVE_GAPI_ONEVPL)
   if(HAVE_D3D11 AND HAVE_OPENCL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
+endif()
+
+if(HAVE_GSTREAMER)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_GSTREAMER)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE ocv.3rdparty.gstreamer)
+  endif()
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_GSTREAMER)
+  ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.gstreamer)
 endif()
 
 if(WIN32)
