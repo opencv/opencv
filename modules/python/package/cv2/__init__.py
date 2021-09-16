@@ -25,7 +25,7 @@ def __load_extra_py_code_for_module(base, name, enable_debug_print=False):
     export_module_name = "{}.{}".format(base, name)
     native_module = sys.modules.pop(module_name, None)
     try:
-        m = importlib.import_module(module_name)
+        py_module = importlib.import_module(module_name)
     except ImportError as err:
         if enable_debug_print:
             print("Can't load Python code for module:", module_name,
@@ -33,19 +33,16 @@ def __load_extra_py_code_for_module(base, name, enable_debug_print=False):
         # Extension doesn't contain extra py code
         return False
 
-    if hasattr(m, '__all__'):
-        export_members = {k: getattr(m, k) for k in m.__all__}
-    else:
-        export_members = m.__dict__
-
     if not hasattr(base, name):
-        setattr(sys.modules[base], name, m)
-    sys.modules[export_module_name] = m
+        setattr(sys.modules[base], name, py_module)
+    sys.modules[export_module_name] = py_module
     # If it is C extension module it is already loaded by cv2 package
     if native_module:
-        for k, v in native_module.__dict__.items():
+        setattr(py_module, "_native", native_module)
+        for k, v in filter(lambda kv: not hasattr(py_module, kv[0]),
+                           native_module.__dict__.items()):
             if enable_debug_print: print('    symbol: {} = {}'.format(k, v))
-            setattr(sys.modules[export_module_name], k, v)
+            setattr(py_module, k, v)
     return True
 
 
@@ -150,14 +147,18 @@ def bootstrap():
 
     if DEBUG: print("Relink everything from native cv2 module to cv2 package")
 
-    module = sys.modules.pop("cv2")
+    py_module = sys.modules.pop("cv2")
 
-    extension = importlib.import_module("cv2")
+    native_module = importlib.import_module("cv2")
 
-    sys.modules["cv2"] = module
+    sys.modules["cv2"] = py_module
+    setattr(py_module, "_native", native_module)
 
-    g_vars.update({item_name: item for item_name, item in extension.__dict__.items()
-                   if item_name not in ["__file__", "__loader__", "__spec__", "__name__", "__package__"]})
+    for item_name, item in filter(lambda kv: kv[0] not in ("__file__", "__loader__", "__spec__",
+                                                           "__name__", "__package__"),
+                                  native_module.__dict__.items()):
+        if item_name not in g_vars:
+            g_vars[item_name] = item
 
     sys.path = save_sys_path  # multiprocessing should start from bootstrap code (https://github.com/opencv/opencv/issues/18502)
 
