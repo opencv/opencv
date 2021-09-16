@@ -126,6 +126,7 @@ main = async function() {
     let net = cv.readNet(configPath, modelPath);
     net.setPreferableBackend(6);
     net.setInput(input);
+    net.forward();
     const start = performance.now();
     const result = net.forward();
     const time  = performance.now()-start;
