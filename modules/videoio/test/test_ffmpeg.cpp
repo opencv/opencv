@@ -180,7 +180,7 @@ const videoio_container_params_t videoio_container_params[] =
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
 
-typedef tuple<VideoCaptureAPIs, string, string, bool> videoio_writeToFile_params_t;
+typedef tuple<VideoCaptureAPIs, string, bool> videoio_writeToFile_params_t;
 typedef testing::TestWithParam< videoio_writeToFile_params_t > videoio_writeToFile;
 
 TEST_P(videoio_writeToFile, write)
@@ -191,10 +191,9 @@ TEST_P(videoio_writeToFile, write)
         throw SkipTestException("Backend was not found");
 
     const string path = get<1>(GetParam());
-    const string ext = get<2>(GetParam());
-    const bool rawRead = get<3>(GetParam());
-    const string fileName = path + "." + ext;
-    const string fileNameOut = tempfile(cv::format("test_container_stream.%s", ext.c_str()).c_str());
+    const bool rawRead = get<2>(GetParam());
+    const string fileName = path;
+    const string fileNameOut = tempfile("test_container_stream");
 
     // Write encoded video read using VideoCapture.writeToFile() to a tmp file
     {
@@ -254,10 +253,10 @@ TEST_P(videoio_writeToFile, write)
 
 const videoio_writeToFile_params_t videoio_writeToFile_params[] =
 {
-    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", false),
-    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", true),
-    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", false),
-    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", true),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny.h264", false),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny.h264", true),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny.h265", false),
+    videoio_writeToFile_params_t(CAP_FFMPEG, "video/big_buck_bunny.h265", true),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_writeToFile, testing::ValuesIn(videoio_writeToFile_params));
