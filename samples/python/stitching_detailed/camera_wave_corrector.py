@@ -25,5 +25,4 @@ class WaveCorrector:
             for idx, cam in enumerate(cameras):
                 cam.R = rmats[idx]
             return cameras
-        else:
-            return cameras
+        return cameras

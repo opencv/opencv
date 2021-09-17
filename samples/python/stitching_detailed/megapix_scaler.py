@@ -1,4 +1,3 @@
-import cv2 as cv
 import numpy as np
 
 
@@ -20,8 +19,7 @@ class MegapixScaler:
     def _get_scale_by_resolution(self, resolution):
         if self.megapix > 0:
             return np.sqrt(self.megapix * 1e6 / resolution)
-        else:
-            return 1.0
+        return 1.0
 
     def get_scaled_img_size(self, img_size):
         width = int(round(img_size[0] * self.scale))
@@ -31,6 +29,5 @@ class MegapixScaler:
     def get_aspect_to(self, scaler):
         if self.is_scale_set and scaler.is_scale_set:
             return self.scale / scaler.scale
-        else:
-            print("Scale not set")
-            exit()
+        print("Scale not set")
+        exit()

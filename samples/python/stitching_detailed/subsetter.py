@@ -61,11 +61,13 @@ class Subsetter:
 
         return matrix_to_subset
 
+    @staticmethod
     def __delete_index_from_matrix(matrix, idx):
         mask = np.ones(matrix.shape[0], bool)
         mask[idx] = 0
         return matrix[mask, :][:, mask]
 
+    @staticmethod
     def __matrix_rows_to_list(matrix):
         return list(chain.from_iterable(matrix.tolist()))
 

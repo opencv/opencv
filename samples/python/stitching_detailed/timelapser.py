@@ -40,7 +40,8 @@ class Timelapser:
     def get_frame(self):
         return self.timelapser.getDst()
 
-    def get_fixed_filename(self, img_name):
+    @staticmethod
+    def get_fixed_filename(img_name):
         pos_s = img_name.rfind("/")
         if pos_s == -1:
             fixed_file_name = "fixed_" + img_name

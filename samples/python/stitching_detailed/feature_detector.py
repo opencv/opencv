@@ -30,9 +30,8 @@ class FeatureDetector:
 
     DEFAULT_DETECTOR = list(DETECTOR_CHOICES.keys())[0]
 
-    def __init__(self, detector=DEFAULT_DETECTOR, *args, **kwargs):
-        self.detector = FeatureDetector.DETECTOR_CHOICES[detector](
-            *args, **kwargs)
+    def __init__(self, detector=DEFAULT_DETECTOR, **kwargs):
+        self.detector = FeatureDetector.DETECTOR_CHOICES[detector](**kwargs)
 
     def detect_features(self, img, *args, **kwargs):
         return cv.detail.computeImageFeatures2(self.detector, img,

@@ -9,6 +9,8 @@ class ImageHandler:
         self.medium_scaler = MegapixDownscaler(medium_megapix)
         self.low_scaler = MegapixDownscaler(low_megapix)
         self.final_scaler = MegapixDownscaler(final_megapix)
+        self.img_names = None
+        self.img_sizes = None
 
     def set_img_names(self, img_names):
         self.img_names = img_names

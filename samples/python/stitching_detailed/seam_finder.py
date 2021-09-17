@@ -21,6 +21,7 @@ class SeamFinder:
         imgs_float = [img.astype(np.float32) for img in imgs]
         return self.finder.find(imgs_float, corners, masks)
 
+    @staticmethod
     def resize(seam_mask, mask):
         dilated_mask = cv.dilate(seam_mask, None)
         resized_seam_mask = cv.resize(dilated_mask, (mask.shape[1],

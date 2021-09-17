@@ -4,8 +4,6 @@ import sys
 import time
 import tracemalloc
 
-import cv2 as cv
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..')))
 
@@ -44,7 +42,7 @@ class TestStitcher(unittest.TestCase):
 
         main()
 
-        current_memory_old, peak_memory_old = tracemalloc.get_traced_memory()
+        _, peak_memory_old = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         end = time.time()
         time_needed_old = end - start

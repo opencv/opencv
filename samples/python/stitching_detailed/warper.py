@@ -63,6 +63,7 @@ class Warper:
         K = Warper.get_K(camera, aspect)
         return self.warper.warpRoi(roi, K, camera.R)
 
+    @staticmethod
     def get_K(camera, aspect=1):
         K = camera.K().astype(np.float32)
         """ Modification of intrinsic parameters needed if cameras were

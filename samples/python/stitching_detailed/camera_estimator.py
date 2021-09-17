@@ -11,9 +11,9 @@ class CameraEstimator:
 
     DEFAULT_CAMERA_ESTIMATOR = list(CAMERA_ESTIMATOR_CHOICES.keys())[0]
 
-    def __init__(self, estimator=DEFAULT_CAMERA_ESTIMATOR, *args, **kwargs):
+    def __init__(self, estimator=DEFAULT_CAMERA_ESTIMATOR, **kwargs):
         self.estimator = CameraEstimator.CAMERA_ESTIMATOR_CHOICES[estimator](
-            *args, **kwargs
+            **kwargs
             )
 
     def estimate(self, features, pairwise_matches):
