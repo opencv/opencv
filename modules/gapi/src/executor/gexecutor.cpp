@@ -157,10 +157,14 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         // FIXME:
         // Rework, find a better way to check if there should be
         // a real copy (add a pass to StreamingBackend?)
+        // NB: In case RMat adapter not equal to "RMatAdapter" need to
+        // copy data back to the host as well.
+        // FIXME: Rename "RMatAdapter" to "OpenCVAdapter".
         auto& out_mat = *util::get<cv::Mat*>(g_arg);
         const auto& rmat = mag.template slot<cv::RMat>().at(rc.id);
-        auto mag_data = rmat.get<RMatAdapter>()->data();
-        if (out_mat.data != mag_data) {
+        auto* adapter = rmat.get<RMatAdapter>();
+        if ((adapter != nullptr && out_mat.data != adapter->data()) ||
+            (adapter == nullptr)) {
             auto view = rmat.access(RMat::Access::R);
             asMat(view).copyTo(out_mat);
         }

@@ -14,7 +14,7 @@
 
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
-#include <opencv2/gapi/streaming/onevpl/onevpl_source.hpp>
+#include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #ifdef HAVE_ONEVPL
 #if (MFX_VERSION >= 2000)
@@ -28,10 +28,12 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
-struct OneVPLSource::Priv
+struct GSource::Priv
 {
-    explicit Priv(const std::string& file_path);
+    explicit Priv(std::shared_ptr<IDataProvider> provider,
+                  const std::vector<CfgParam>& params);
     ~Priv();
 
     bool pull(cv::gapi::wip::Data& data);
@@ -41,6 +43,7 @@ private:
     mfxLoader mfx_handle;
     bool description_is_valid;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
@@ -50,11 +53,13 @@ private:
 namespace cv {
 namespace gapi {
 namespace wip {
-struct OneVPLSource::Priv final
+namespace onevpl {
+struct GSource::Priv final
 {
     bool pull(cv::gapi::wip::Data&);
     GMetaArg descr_of() const;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

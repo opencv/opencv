@@ -507,7 +507,7 @@ void ExcludeLayer(tensorflow::GraphDef& net, const int layer_index, const int in
         net.mutable_node()->DeleteSubrange(layer_index, 1);
 }
 
-class LayerHandler;
+class TFLayerHandler;
 
 class TFImporter
 {
@@ -516,8 +516,7 @@ public:
     TFImporter(Net& net, const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0);
 protected:
-    std::unique_ptr<LayerHandler> layerHandler;
-    std::unique_ptr<Net> utilNet;
+    std::unique_ptr<TFLayerHandler> layerHandler;
     Net& dstNet;
     void populateNet();
 
@@ -559,7 +558,7 @@ private:
     void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId);
     void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value = 0.);
 
-    friend class LayerHandler;
+    friend class TFLayerHandler;
     typedef void (TFImporter::*TFImporterNodeParser)(tensorflow::GraphDef&, const tensorflow::NodeDef&, LayerParams&);
     typedef std::map<std::string, TFImporterNodeParser> DispatchMap;
 
@@ -625,18 +624,17 @@ void TFImporter::setPadding(LayerParams &layerParams, const tensorflow::NodeDef 
     layerParams.set("pad_mode", "VALID");
 }
 
-class LayerHandler
+class TFLayerHandler : public detail::LayerHandler
 {
 public:
-    LayerHandler(TFImporter* importer_);
-    ~LayerHandler() = default;
+    explicit TFLayerHandler(TFImporter* importer_);
 
-    bool handleMissing(const opencv_tensorflow::NodeDef& layer);
-    void handleFailed(const opencv_tensorflow::NodeDef& layer);
+    void fillRegistry(const tensorflow::GraphDef& net);
+    bool handleMissing(const tensorflow::NodeDef& layer);
+    void handleFailed(const tensorflow::NodeDef& layer);
 
-private:
+protected:
     TFImporter* importer;
-    std::set<std::string> layers;
 };
 
 const TFImporter::DispatchMap TFImporter::buildDispatchMap()
@@ -935,7 +933,12 @@ void TFImporter::parseBias(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         layer_id[name] = id;
 
         // one input only
-        connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        Pin inp0 = parsePin(layer.input(0));
+        if (layer_id.find(inp0.name) != layer_id.end())
+            // First operand is a constant.
+            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+        else
+            connect(layer_id, dstNet, parsePin(layer.input(1)), id, 0);
     }
     else
     {
@@ -2471,9 +2474,8 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
 }
 
 TFImporter::TFImporter(Net& net, const char *model, const char *config)
-    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new LayerHandler(this) : nullptr),
-        utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
-        dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
+    : layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
+        dstNet(net), dispatch(buildDispatchMap())
 {
     if (model && model[0])
     {
@@ -2494,9 +2496,8 @@ TFImporter::TFImporter(
         const char *dataModel, size_t lenModel,
         const char *dataConfig, size_t lenConfig
 )
-    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new LayerHandler(this) : nullptr),
-       utilNet(DNN_DIAGNOSTICS_RUN ?  new Net : nullptr),
-       dstNet(DNN_DIAGNOSTICS_RUN ? *utilNet : net), dispatch(buildDispatchMap())
+    :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
+       dstNet(net), dispatch(buildDispatchMap())
 {
     if (dataModel != NULL && lenModel > 0)
     {
@@ -2855,6 +2856,11 @@ void TFImporter::populateNet()
     addConstNodes(netBin, value_id, layers_to_ignore);
     addConstNodes(netTxt, value_id, layers_to_ignore);
 
+    if (DNN_DIAGNOSTICS_RUN) {
+        CV_LOG_INFO(NULL, "DNN/TF: start diagnostic run!");
+        layerHandler->fillRegistry(net);
+    }
+
     for (int li = 0; li < layersSize; li++)
     {
         const tensorflow::NodeDef& layer = net.node(li);
@@ -2873,7 +2879,7 @@ void TFImporter::populateNet()
         CV_Assert(!netInputsNames[i].empty());
     }
     dstNet.setInputsNames(netInputsNames);
-    CV_LOG_DEBUG(NULL, "DNN/TF: ===================== Import completed =====================");
+    CV_LOG_DEBUG(NULL, (DNN_DIAGNOSTICS_RUN? "DNN/TF: diagnostic run completed!" : "DNN/TF: import completed!"));
 }
 
 void TFImporter::addPermuteLayer(const int* order, const std::string& permName, Pin& inpId)
@@ -2933,41 +2939,45 @@ void TFImporter::parseNode(const tensorflow::NodeDef& layer)
     }
 }
 
-LayerHandler::LayerHandler(TFImporter* importer_) : importer(importer_) {}
+TFLayerHandler::TFLayerHandler(TFImporter* importer_) : importer(importer_) {}
 
-void LayerHandler::handleFailed(const opencv_tensorflow::NodeDef& layer)
+void TFLayerHandler::fillRegistry(const tensorflow::GraphDef& net)
 {
-    LayerParams lp;
-    lp.name = layer.name();
-    lp.type = "NotImplemented";
-    lp.set("type", layer.op());
+    for (int li = 0; li < net.node_size(); li++) {
+        const tensorflow::NodeDef& layer = net.node(li);
+
+        const std::string& name = layer.name();
+        const std::string& type = layer.op();
+        if (importer->dispatch.find(type) == importer->dispatch.end())
+        {
+            addMissing(name, type);
+        }
+    }
+    printMissing();
+};
+
+bool TFLayerHandler::handleMissing(const tensorflow::NodeDef& layer)
+{
+    bool unsupported = contains(layer.op());
+
+    if (unsupported)
+    {
+        handleFailed(layer);
+    }
+
+    return unsupported;
+}
+
+void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
+{
+    LayerParams lp = getNotImplementedParams(layer.name(), layer.op());
 
     // the layer will be created or its params and type will be replaced
-    int id = importer->dstNet.addLayer(lp.name, "NotImplemented", lp);
+    int id = importer->dstNet.addLayer(lp.name, lp.type, lp);
     if (id != -1) // internal layer failure before the call to addLayer()
     {
         importer->layer_id[lp.name] = id;
     }
-}
-
-bool LayerHandler::handleMissing(const opencv_tensorflow::NodeDef& layer)
-{
-    LayerParams lp;
-    // If we didn't add it, but can create it, it's custom and not missing.
-    if (layers.find(layer.op()) == layers.end() && LayerFactory::createLayerInstance(layer.op(), lp))
-    {
-        return false;
-    }
-
-    if (layers.insert(layer.op()).second)
-    {
-        CV_LOG_ERROR(NULL, "DNN/TF: Node='" << layer.name() << "' of type='"<< layer.op()
-                                            << "' is not supported. This error won't be displayed again.");
-    }
-
-    handleFailed(layer);
-
-    return true;
 }
 
 } // namespace
@@ -2976,17 +2986,13 @@ bool LayerHandler::handleMissing(const opencv_tensorflow::NodeDef& layer)
 
 Net readNetFromTensorflow(const String &model, const String &config)
 {
-    Net net;
-    TFImporter importer(net, model.c_str(), config.c_str());
-    return net;
+    return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str());
 }
 
 Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
                           const char* bufferConfig, size_t lenConfig)
 {
-    Net net;
-    TFImporter importer(net, bufferModel, lenModel, bufferConfig, lenConfig);
-    return net;
+    return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig);
 }
 
 Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>& bufferConfig)

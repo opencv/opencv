@@ -238,7 +238,7 @@ public:
                 kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_weight));
                 kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_bias));
                 kernel.set(6, ocl::KernelArg::PtrWriteOnly(dst));
-                bool ret = kernel.run(2, global, NULL, false);
+                bool ret = kernel.run_(2, global, NULL, false);
                 if (!ret)
                     return false;
             }
