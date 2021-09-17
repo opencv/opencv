@@ -596,6 +596,8 @@ struct CV_EXPORTS MatStep
     size_t& operator[](int i) CV_NOEXCEPT;
     operator size_t() const;
     MatStep& operator = (size_t s);
+    bool operator != (const MatStep &a)const;
+    bool operator == (const MatStep &a)const;
 
     size_t* p;
     size_t buf[2];

@@ -1272,6 +1272,15 @@ inline MatStep& MatStep::operator = (size_t s)
     return *this;
 }
 
+inline bool MatStep::operator != (const MatStep &a) const
+{
+    return p[0] != a.p[0];
+}
+
+inline bool MatStep::operator == (const MatStep &a) const
+{
+    return p[0] == a.p[0];
+}
 
 
 ////////////////////////////// Mat_<_Tp> ////////////////////////////
