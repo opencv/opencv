@@ -53,7 +53,7 @@ class FeatureMatcher:
         match_conf_matrix = np.array(match_confs)
         return match_conf_matrix
 
-    def __array_in_sqare_matrix(array):
+    def _array_in_sqare_matrix(array):
         matrix_dimension = int(math.sqrt(len(array)))
         rows = []
         for i in range(0, len(array), matrix_dimension):

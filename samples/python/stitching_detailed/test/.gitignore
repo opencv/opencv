@@ -3,6 +3,7 @@
 
 # But not these files...
 !.gitignore
+!test_matcher.py
 !test_stitcher.py
 !test_megapix_scaler.py
 !test_registration.py
