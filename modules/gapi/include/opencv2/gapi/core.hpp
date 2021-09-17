@@ -398,7 +398,7 @@ namespace core {
     };
 
     G_TYPED_KERNEL(GResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.core.transform.resize") {
-        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int interp) {
+        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int /*interp*/) {
             if (sz.width != 0 && sz.height != 0)
             {
                 return in.withSize(sz);

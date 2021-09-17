@@ -2071,31 +2071,6 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
 }
 
 //------------------------------------------------------------------------------
-cv::Mat GAPITEST(const cv::Mat& input_frame, cv::GCompileArgs& compile_args, int interp)
-{
-    cv::Mat output_frame;
-
-    cv::GMat in;
-    cv::GMat vga =  cv::gapi::resize(in, cv::Size(), 0.5, 0.5, interp);
-    cv::GMat gray = cv::gapi::BGR2Gray(vga);
-    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
-    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
-    cv::GComputation ac(in, out);
-
-
-    auto cc = ac.compile(descr_of(gin(input_frame)),
-                         std::move(compile_args));
-    //cc(gin(input_frame), gout(output_frame));
-
-    int64 t0 = cv::getTickCount();
-    for (int i = 0; i < 200; i++)
-        cc(gin(input_frame), gout(output_frame));
-    int64 t1 = cv::getTickCount();
-    std::cout << __func__ << "\t seconds:" << (t1 - t0) / cv::getTickFrequency() << std::endl;
-
-    return output_frame;
-}
-
 cv::Mat TraditionalTEST(const cv::Mat& input_frame)
 {
     cv::Mat output_frame;
@@ -2103,16 +2078,11 @@ cv::Mat TraditionalTEST(const cv::Mat& input_frame)
     cv::Mat gray;
     cv::Mat blurred;
 
-    int64 t0 = cv::getTickCount();
-    for (int i = 0; i < 200; i++)
-    {
-        cv::resize(input_frame, vga, cv::Size(), 0.5, 0.5);
-        cv::cvtColor(vga, gray, cv::COLOR_BGR2GRAY);
-        cv::blur(gray, blurred, cv::Size(3, 3));
-        cv::Canny(blurred, output_frame, 32, 128, 3);
-    }
-    int64 t1 = cv::getTickCount();
-    std::cout << __func__ << "\t seconds:" << (t1 - t0) / cv::getTickFrequency() << std::endl;
+    cv::resize(input_frame, vga, cv::Size(), 0.5, 0.5);
+    cv::cvtColor(vga, gray, cv::COLOR_BGR2GRAY);
+    cv::blur(gray, blurred, cv::Size(3, 3));
+    cv::Canny(blurred, output_frame, 32, 128, 3);
+
     return output_frame;
 }
 
@@ -2125,41 +2095,67 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
     cv::Size sz_out = get<4>(GetParam());
     cv::GCompileArgs compile_args = get<5>(GetParam());
 
-
     in_mat1 = cv::Mat(sz_in, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat1, mean, stddev);
-    //out_mat_gapi = cv::Mat(sz_out, type);
-    //out_mat_ocv = cv::Mat(sz_out, type);
-#if 0
+    out_mat_gapi = cv::Mat(sz_out, type);
+    out_mat_ocv = cv::Mat(sz_out, type);
+
     // OpenCV code ///////////////////////////////////////////////////////////
-    cv::resize(in_mat1, out_mat_ocv, cv::Size(), 0.5, 0.5, /*sz_out, 0.0, 0.0,*/interp);
+    cv::resize(in_mat1, out_mat_ocv, sz_out, 0.0, 0.0, interp);
 
     // G-API code //////////////////////////////////////////////////////////////
     cv::GMat in;
-    auto out = cv::gapi::resize(in, cv::Size(), 0.5, 0.5,/*sz_out, 0.0, 0.0,*/ interp);
+    auto out = cv::gapi::resize(in, sz_out, 0.0, 0.0, interp);
     cv::GComputation c(in, out);
 
     // Warm-up graph engine:
     auto cc = c.compile(descr_of(gin(in_mat1)),
-        std::move(compile_args));
+                        std::move(compile_args));
     cc(gin(in_mat1), gout(out_mat_gapi));
 
     TEST_CYCLE()
     {
         cc(gin(in_mat1), gout(out_mat_gapi));
     }
-#else
-    auto pkg = cv::gapi::combine(cv::gapi::core::fluid::kernels(), cv::gapi::imgproc::fluid::kernels());
-    cv::GCompileArgs arg = cv::compile_args(pkg);
-    out_mat_gapi = GAPITEST(in_mat1, arg, interp);
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P_(StackOverflowPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    cv::Size sz_in = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
+
+    in_mat1 = cv::Mat(sz_in, type);
+    cv::Scalar mean = cv::Scalar::all(127);
+    cv::Scalar stddev = cv::Scalar::all(40.f);
+    cv::randn(in_mat1, mean, stddev);
+
+    cv::GMat in;
+    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
+    cv::GMat gray = cv::gapi::BGR2Gray(vga);
+    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
+    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
+    cv::GComputation ac(in, out);
+
+    auto cc = ac.compile(descr_of(gin(in_mat1)),
+                         std::move(compile_args));
+    cc(gin(in_mat1), gout(out_mat_gapi));
     out_mat_ocv = TraditionalTEST(in_mat1);
 
     TEST_CYCLE()
     {
+        cc(gin(in_mat1), gout(out_mat_gapi));
     }
-#endif
 
     // Comparison ////////////////////////////////////////////////////////////
     {
