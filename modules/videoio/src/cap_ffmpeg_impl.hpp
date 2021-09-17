@@ -529,7 +529,6 @@ struct CvCapture_FFMPEG
 
     bool setRaw();
     bool processRawPacket();
-    bool fixSideData();
     bool rawMode;
     bool rawModeInitialized;
     bool sendSideInfo;
@@ -1456,7 +1455,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     {
         AVPacket& p = bsfc ? packet_filtered : packet;
         if (sendSideInfo) {
-            sendSideInfo = false;            
+            sendSideInfo = false;
             *step = ic->streams[video_stream]->codec->extradata_size + p.size;
             sideInfo = new uint8_t[*step];
             memcpy(sideInfo, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
