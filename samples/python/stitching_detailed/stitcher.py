@@ -20,7 +20,7 @@ from .timelapser import Timelapser
 class Stitcher:
     DEFAULT_SETTINGS = {
          "try_cuda": False,
-         "work_megapix": 0.6,
+         "work_megapix": ImageHandler.DEFAULT_MEDIUM_MEGAPIX,
          "features": FeatureDetector.DEFAULT_DETECTOR,
          "n_features": 500,
          "matcher": FeatureMatcher.DEFAULT_MATCHER,
@@ -33,9 +33,9 @@ class Stitcher:
          "wave_correct": WaveCorrector.DEFAULT_WAVE_CORRECTION,
          "save_graph": Subsetter.DEFAULT_MATCHES_GRAPH_DOT_FILE,
          "warp": Warper.DEFAULT_WARP_TYPE,
-         "seam_megapix": 0.1,
+         "seam_megapix": ImageHandler.DEFAULT_LOW_MEGAPIX,
          "seam": SeamFinder.DEFAULT_SEAM_FINDER,
-         "compose_megapix": -1,
+         "compose_megapix": ImageHandler.DEFAULT_FINAL_MEGAPIX,
          "expos_comp": ExposureErrorCompensator.DEFAULT_COMPENSATOR,
          "expos_comp_nr_feeds": ExposureErrorCompensator.DEFAULT_NR_FEEDS,
          "expos_comp_block_size": ExposureErrorCompensator.DEFAULT_BLOCK_SIZE,
@@ -101,7 +101,7 @@ class Stitcher:
         return self.create_final_panorama()
 
     def resize_medium_resolution(self):
-        return self.img_handler.resize_medium_resolution()
+        return list(self.img_handler.resize_to_medium_resolution())
 
     def find_features(self, imgs):
         return [self.finder.detect_features(img) for img in imgs]
@@ -163,8 +163,8 @@ class Stitcher:
         else:
             self.blender.prepare(corners, sizes)
 
-    def resize_low_resolution(self, imgs):
-        return self.img_handler.resize_low_resolution(imgs)
+    def resize_low_resolution(self, imgs=None):
+        return list(self.img_handler.resize_to_low_resolution(imgs))
 
     def warp_low_resolution_images(self, imgs, cameras):
         return list(self.warp_images(self.img_handler.low_scaler, imgs, cameras))
@@ -194,7 +194,7 @@ class Stitcher:
         return self.seam_finder.find(imgs, self._corners, self._masks)
 
     def resize_final_resolution(self):
-        return self.img_handler.resize_final_resolution()
+        return self.img_handler.resize_to_final_resolution()
 
     def compensate_exposure_errors(self, imgs):
         for idx, img in enumerate(imgs):
