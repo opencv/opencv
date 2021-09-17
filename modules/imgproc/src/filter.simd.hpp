@@ -465,6 +465,87 @@ struct RowVec_8u32s
     bool smallValues;
 };
 
+struct RowVec_8u32f
+{
+    RowVec_8u32f() { smallValues = false; }
+    RowVec_8u32f( const Mat& _kernel )
+    {
+        kernel = _kernel;
+        smallValues = true;
+        int k, ksize = kernel.rows + kernel.cols - 1;
+        for( k = 0; k < ksize; k++ )
+        {
+            int v = kernel.ptr<int>()[k];
+            if( v < SHRT_MIN || v > SHRT_MAX )
+            {
+                smallValues = false;
+                break;
+            }
+        }
+    }
+
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
+    {
+        CV_INSTRUMENT_REGION();
+
+        int ksize = kernel.rows + kernel.cols - 1;
+        const float* kx = kernel.ptr<float>();
+        const uchar* S;
+        float* D = (float*)_dst;
+        int i, k;
+
+        i = 0;
+        width *= cn;
+        for( ; i < width - v_uint8::nlanes; i += v_uint8::nlanes )
+        {
+            S = (const uchar*)_src + i;
+            v_uint8 vs = vx_load(S);
+            v_float32 vkx = vx_setall_f32(kx[0]);
+            v_int16 vs_l = v_reinterpret_as_s16(v_expand_low(vs));
+            v_int16 vs_h = v_reinterpret_as_s16(v_expand_high(vs));
+            v_int32 vs_ll = v_expand_low(vs_l);
+            v_int32 vs_lh = v_expand_high(vs_l);
+            v_int32 vs_hl = v_expand_low(vs_h);
+            v_int32 vs_hh = v_expand_high(vs_h);
+            v_float32 fvs_ll = v_cvt_f32(vs_ll);
+            v_float32 fvs_lh = v_cvt_f32(vs_lh);
+            v_float32 fvs_hl = v_cvt_f32(vs_hl);
+            v_float32 fvs_hh = v_cvt_f32(vs_hh);
+            v_float32 s0_ll = fvs_ll * vkx;
+            v_float32 s0_lh = fvs_lh * vkx;
+            v_float32 s0_hl = fvs_hl * vkx;
+            v_float32 s0_hh = fvs_hh * vkx;
+            for( k = 1; k < ksize; k++ )
+            {
+                S += cn;
+                vs = vx_load(S);
+                v_int16 tmp_vs_l = v_reinterpret_as_s16(v_expand_low(vs));
+                v_int16 tmp_vs_h = v_reinterpret_as_s16(v_expand_high(vs));
+                v_int32 tmp_vs_ll = v_expand_low(tmp_vs_l);
+                v_int32 tmp_vs_lh = v_expand_high(tmp_vs_l);
+                v_int32 tmp_vs_hl = v_expand_low(tmp_vs_h);
+                v_int32 tmp_vs_hh = v_expand_high(tmp_vs_h);
+                v_float32 tmp_fvs_ll = v_cvt_f32(tmp_vs_ll);
+                v_float32 tmp_fvs_lh = v_cvt_f32(tmp_vs_lh);
+                v_float32 tmp_fvs_hl = v_cvt_f32(tmp_vs_hl);
+                v_float32 tmp_fvs_hh = v_cvt_f32(tmp_vs_hh);
+                v_float32 tmp = vx_setall_f32(kx[k]);
+                s0_ll = v_muladd(tmp_fvs_ll, tmp, s0_ll);
+                s0_lh = v_muladd(tmp_fvs_lh, tmp, s0_lh);
+                s0_hl = v_muladd(tmp_fvs_hl, tmp, s0_hl);
+                s0_hh = v_muladd(tmp_fvs_hh, tmp, s0_hh);
+            }
+            v_store(D + i, s0_ll);
+            v_store(D + i + v_float32::nlanes, s0_lh);
+            v_store(D + i + 2*v_float32::nlanes, s0_hl);
+            v_store(D + i + 3*v_float32::nlanes, s0_hh);
+        }
+        return i;
+    }
+
+    Mat kernel;
+    bool smallValues;
+};
 
 struct SymmRowSmallVec_8u32s
 {
@@ -2899,7 +2980,8 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         return makePtr<RowFilter<uchar, int, RowVec_8u32s> >
             (kernel, anchor, RowVec_8u32s(kernel));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return makePtr<RowFilter<uchar, float, RowNoVec> >(kernel, anchor);
+        return makePtr<RowFilter<uchar, float, RowVec_8u32f> >
+            (kernel, anchor, RowVec_8u32f(kernel));
     if( sdepth == CV_8U && ddepth == CV_64F )
         return makePtr<RowFilter<uchar, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_32F )
@@ -2908,7 +2990,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         return makePtr<RowFilter<ushort, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16S && ddepth == CV_32F )
         return makePtr<RowFilter<short, float, RowVec_16s32f> >
-                                  (kernel, anchor, RowVec_16s32f(kernel));
+            (kernel, anchor, RowVec_16s32f(kernel));
     if( sdepth == CV_16S && ddepth == CV_64F )
         return makePtr<RowFilter<short, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_32F && ddepth == CV_32F )
