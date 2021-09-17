@@ -408,9 +408,9 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
     return *this;
 }
 
-bool VideoCapture::writeToFile(const char* filename)
+bool VideoCapture::writeToFile(const char* filename, const bool autoDetectExt)
 {
-    return !icap.empty() ? icap->writeToFile(filename) : false;
+    return !icap.empty() ? icap->writeToFile(filename, autoDetectExt) : false;
 }
 
 bool VideoCapture::set(int propId, double value)

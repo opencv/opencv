@@ -867,7 +867,7 @@ public:
     file, especially from container formats avi, mp4 etc.  If the filename provided is invalid, cannot be opened
     or written to, the first call to read()/grab() after calling this function will return false.
      */
-    CV_WRAP virtual bool writeToFile(const char* filename);
+    CV_WRAP virtual bool writeToFile(const char* filename, const bool autoDetectExt = false);
 
     /** @brief Sets a property in the VideoCapture.
 

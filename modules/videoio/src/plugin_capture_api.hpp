@@ -90,7 +90,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_0_api_entries
 
     @note API-CALL 6, API-Version == 0
      */
-    CvResult(CV_API_CALL* Capture_writeToFile)(CvPluginCapture handle, const char* filename);
+    CvResult(CV_API_CALL* Capture_writeToFile)(CvPluginCapture handle, const char* filename, const bool autoDetectExt);
 
     /** @brief Grab frame
 

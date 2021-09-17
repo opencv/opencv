@@ -515,10 +515,10 @@ public:
                 return true;
         return false;
     }
-    bool writeToFile(const char* filename) CV_OVERRIDE
+    bool writeToFile(const char* filename, const bool autoDetectExt = false) CV_OVERRIDE
     {
         if (plugin_api_->v0.Capture_writeToFile)
-            if (CV_ERROR_OK == plugin_api_->v0.Capture_writeToFile(capture_, filename))
+            if (CV_ERROR_OK == plugin_api_->v0.Capture_writeToFile(capture_, filename, autoDetectExt))
                 return true;
         return false;
     }

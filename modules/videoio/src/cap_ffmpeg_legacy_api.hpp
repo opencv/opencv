@@ -28,7 +28,7 @@ typedef struct CvVideoWriter_FFMPEG CvVideoWriter_FFMPEG;
 OPENCV_FFMPEG_API int cvSetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap,
                                                   int prop, double value);
 OPENCV_FFMPEG_API double cvGetCaptureProperty_FFMPEG(struct CvCapture_FFMPEG* cap, int prop);
-OPENCV_FFMPEG_API void cvWriteToFile_FFMPEG(struct CvCapture_FFMPEG* cap, const char* filename);
+OPENCV_FFMPEG_API void cvWriteToFile_FFMPEG(struct CvCapture_FFMPEG* cap, const char* filename, const bool autoDetectExt = false);
 OPENCV_FFMPEG_API int cvGrabFrame_FFMPEG(struct CvCapture_FFMPEG* cap);
 OPENCV_FFMPEG_API int cvRetrieveFrame_FFMPEG(struct CvCapture_FFMPEG* capture, unsigned char** data,
                                              int* step, int* width, int* height, int* cn);

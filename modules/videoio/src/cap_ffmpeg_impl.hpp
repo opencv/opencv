@@ -478,7 +478,7 @@ struct CvCapture_FFMPEG
     bool retrieveFrame(int, unsigned char** data, int* step, int* width, int* height, int* cn);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
-    void writeToFile(const char* _filenameOut);
+    void writeToFile(const char* _filenameOut, const bool _autoDetectExt = false);
 
     void init();
 
@@ -534,6 +534,7 @@ struct CvCapture_FFMPEG
     bool rawModeInitialized;
     bool sendSideInfo;
     uint8_t* sideInfo;
+    bool autoDetectExt;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
@@ -588,6 +589,7 @@ void CvCapture_FFMPEG::init()
     oFile = 0;
     restartRtspFileWrite = false;
     writeSideInfo = false;
+    autoDetectExt = false;
     va_type = cv::VIDEO_ACCELERATION_NONE;  // TODO OpenCV 5.0: change to _ANY?
     hw_device = -1;
     use_opencl = 0;
@@ -1202,7 +1204,7 @@ bool CvCapture_FFMPEG::processRawPacket()
     {
         rawModeInitialized = true;
         if (ic->streams[video_stream]->codec->extradata_size && strcmp(ic->iformat->name,"rtsp") == 0)
-            writeSideInfo = true;
+            sendSideInfo = true;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
         CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
 #else
@@ -1295,30 +1297,6 @@ bool CvCapture_FFMPEG::processRawPacket()
     return packet.data != NULL;
 }
 
-bool CvCapture_FFMPEG::fixSideData() {
-    // for some reason the side info for h264[5] starts uses the 00 00 01 start code instead of 00 00 00 01, the rest of the
-    // start codes seperating the sps from the pps are correct
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
-    CV_CODEC_ID eVideoCodec = ic->streams[video_stream]->codecpar->codec_id;
-#else
-    CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
-#endif
-    if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
-#if LIBAVCODEC_VERSION_MICRO >= 100 \
-    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(57, 24, 102)  // FFmpeg 3.0
-        || eVideoCodec == CV_CODEC(CODEC_ID_H265)
-#elif LIBAVCODEC_VERSION_MICRO < 100 \
-    && LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(55, 34, 1)  // libav v10+
-        || eVideoCodec == CV_CODEC(CODEC_ID_HEVC)
-#endif
-        && ic->streams[video_stream]->codec->extradata_size >= 4 && packet.data[0] == 0 && packet.data[1] == 0 &&
-        packet.data[2] == 0 && packet.data[3] == 0 && packet.data[4] == 0 && packet.data[5] == 0 && packet.data[6] == 1)
-    {
-        return true;
-    }
-    return false;
-}
-
 bool CvCapture_FFMPEG::grabFrame()
 {
     bool valid = false;
@@ -1385,9 +1363,15 @@ bool CvCapture_FFMPEG::grabFrame()
         }
 
         if (restartRtspFileWrite) {
-            if (!oFile || packet.flags == 1) {
+            if (packet.flags == 1) {
                 if (oFile)
                     fclose(oFile);
+                if (autoDetectExt) {
+                    if (ic->streams[video_stream]->codec->codec->id == AV_CODEC_ID_H264)
+                        strcat(filenameOut, ".h264");
+                    else if (ic->streams[video_stream]->codec->codec->id == AV_CODEC_ID_HEVC)
+                        strcat(filenameOut, ".h265");
+                }
                 oFile = fopen(filenameOut, "wb");
                 if (!oFile)
                     return false;
@@ -1400,14 +1384,6 @@ bool CvCapture_FFMPEG::grabFrame()
         if (oFile) {
             if (writeSideInfo) {
                 writeSideInfo = false;
-                if (fixSideData()) {
-                    if (putc(0x00, oFile) == EOF) {
-                        fclose(oFile);
-                        oFile = 0;
-                        return false;
-                    }
-                }
-
                 if (fwrite(ic->streams[video_stream]->codec->extradata, sizeof(*ic->streams[video_stream]->codec->extradata),
                     ic->streams[video_stream]->codec->extradata_size, oFile) < (size_t)ic->streams[video_stream]->codec->extradata_size) {
                     fclose(oFile);
@@ -1479,20 +1455,12 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if (rawMode)
     {
         AVPacket& p = bsfc ? packet_filtered : packet;
-        if (writeSideInfo) {
-            writeSideInfo = false;
+        if (sendSideInfo) {
+            sendSideInfo = false;            
             *step = ic->streams[video_stream]->codec->extradata_size + p.size;
-            const bool appendZeros = fixSideData();
-            if (appendZeros)
-                (*step)++;
             sideInfo = new uint8_t[*step];
-            int iFirstCpy = 0;
-            if (appendZeros) {
-                sideInfo[0] = 0x00;
-                iFirstCpy = 1;
-            }
-            memcpy(&sideInfo[iFirstCpy], ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
-            memcpy(&sideInfo[iFirstCpy + ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
+            memcpy(sideInfo, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
+            memcpy(&sideInfo[ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
             *data = sideInfo;
         }
         else {
@@ -1502,7 +1470,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         *width = *step;
         *height = 1;
         *cn = 1;
-        return p.data != NULL;
+        return *data != NULL;
     }
 
     AVFrame* sw_picture = picture;
@@ -1609,13 +1577,24 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 #endif
 }
 
-void CvCapture_FFMPEG::writeToFile(const char* _filenameOut) {
-        restartRtspFileWrite = true;
-        if (filenameOut)
-            delete[] filenameOut;
-        const int sz = strlen(_filenameOut) + 1;
-        filenameOut = new char[sz];
-        memcpy(filenameOut, _filenameOut, sz);
+void CvCapture_FFMPEG::writeToFile(const char* _filenameOut, const bool _autoDetectExt) {
+    if (_filenameOut && _filenameOut[0] == '\0')
+    {
+        restartRtspFileWrite = false;
+        if (oFile)
+        {
+            fclose(oFile);
+            oFile = 0;
+        }
+        return;
+    }
+    autoDetectExt = _autoDetectExt;
+    restartRtspFileWrite = true;
+    if (filenameOut)
+        delete[] filenameOut;
+    const int sz = strlen(_filenameOut) + 1;
+    filenameOut = new char[sz + 5];
+    memcpy(filenameOut, _filenameOut, sz);
 }
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
@@ -3015,9 +2994,9 @@ double cvGetCaptureProperty_FFMPEG(CvCapture_FFMPEG* capture, int prop_id)
     return capture->getProperty(prop_id);
 }
 
-void cvWriteToFile_FFMPEG(CvCapture_FFMPEG* capture, const char* filename)
+void cvWriteToFile_FFMPEG(CvCapture_FFMPEG* capture, const char* filename, const bool autoDetectExt)
 {
-    capture->writeToFile(filename);
+    capture->writeToFile(filename, autoDetectExt);
 }
 
 int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)

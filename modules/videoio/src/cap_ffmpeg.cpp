@@ -84,11 +84,11 @@ public:
     {
         return ffmpegCapture ? icvSetCaptureProperty_FFMPEG_p(ffmpegCapture, propId, value)!=0 : false;
     }
-    virtual bool writeToFile(const char* filename) CV_OVERRIDE
+    virtual bool writeToFile(const char* filename, const bool autoDetectExt = false) CV_OVERRIDE
     {
         if (!ffmpegCapture)
             return false;
-        icvWriteToFile_FFMPEG_p(ffmpegCapture, filename);
+        icvWriteToFile_FFMPEG_p(ffmpegCapture, filename, autoDetectExt);
         return true;
     }
     virtual bool grabFrame() CV_OVERRIDE
@@ -395,14 +395,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
-CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename)
+CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename, const bool autoDetectExt = false)
 {
     if (!handle)
         return CV_ERROR_FAIL;
     try
     {
         CvCapture_FFMPEG_proxy* instance = (CvCapture_FFMPEG_proxy*)handle;
-        instance->writeToFile(filename);
+        instance->writeToFile(filename, autoDetectExt);
         return CV_ERROR_OK;
     }
     catch (const std::exception& e)

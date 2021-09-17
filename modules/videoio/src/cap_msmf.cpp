@@ -1985,7 +1985,7 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
 }
 
 static
-CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename)
+CvResult CV_API_CALL cv_capture_write_to_file(CvPluginCapture handle, const char* filename, const bool autoDetectExt = false)
 {
     return CV_ERROR_FAIL;
 }
