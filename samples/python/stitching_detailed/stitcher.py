@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import cv2 as cv
 
-from .megapix_downscaler import MegapixDownscaler
+from .image_handler import ImageHandler
 from .feature_detector import FeatureDetector
 from .feature_matcher import FeatureMatcher
 from .subsetter import Subsetter
@@ -48,9 +48,9 @@ class Stitcher:
         args.update(kwargs)
         args = SimpleNamespace(**args)
 
-        self.medium_scaler = MegapixDownscaler(args.work_megapix)
-        self.low_scaler = MegapixDownscaler(args.seam_megapix)
-        self.final_scaler = MegapixDownscaler(args.compose_megapix)
+        self.img_handler = ImageHandler(args.work_megapix,
+                                        args.seam_megapix,
+                                        args.compose_megapix)
         self.finder = \
             FeatureDetector(args.features, nfeatures=args.n_features)
         match_conf = FeatureMatcher.get_match_conf(args.match_conf,
@@ -73,7 +73,7 @@ class Stitcher:
         self.timelapser = Timelapser(args.timelapse)
 
     def stitch(self, img_names):
-        self._img_names = img_names
+        self.img_handler.set_img_names(img_names)
 
         imgs = self.resize_medium_resolution()
         features = self.find_features(imgs)
@@ -101,32 +101,7 @@ class Stitcher:
         return self.create_final_panorama()
 
     def resize_medium_resolution(self):
-        return list(self.resize(self.medium_scaler, set_sizes=True))
-
-    def resize_low_resolution(self, imgs):
-        return list(self.resize(self.low_scaler, imgs))
-
-    def resize_final_resolution(self):
-        return self.resize(self.final_scaler)
-
-    def resize(self, scaler, imgs=None, set_sizes=False):
-        if imgs is None:
-            imgs = self.input_images()
-        if set_sizes:
-            self._img_sizes = []
-        for idx, img in enumerate(imgs):
-            if set_sizes:
-                size = Stitcher.get_image_size(img)
-                self._img_sizes.append(size)
-            if not scaler.is_scale_set:
-                scaler.set_scale_by_img_size(self._img_sizes[0])
-            dsize = scaler.get_scaled_img_size(self._img_sizes[idx])
-            yield cv.resize(img, dsize, interpolation=cv.INTER_LINEAR_EXACT)
-
-    def input_images(self):
-        for name in self._img_names:
-            img = Stitcher.read_image(name)
-            yield img
+        return self.img_handler.resize_medium_resolution()
 
     def find_features(self, imgs):
         return [self.finder.detect_features(img) for img in imgs]
@@ -135,11 +110,12 @@ class Stitcher:
         return self.matcher.match_features(features)
 
     def subset(self, imgs, features, matches):
-        self.subsetter.save_matches_graph_dot_file(self._img_names, matches)
+        self.subsetter.save_matches_graph_dot_file(self.img_handler.img_names,
+                                                   matches)
+
         indices = self.subsetter.get_indices_to_keep(features, matches)
 
-        self._img_sizes = Subsetter.subset_list(self._img_sizes, indices)
-        self._img_names = Subsetter.subset_list(self._img_names, indices)
+        self.img_handler.subset(indices)
         imgs = Subsetter.subset_list(imgs, indices)
         features = Subsetter.subset_list(features, indices)
         matches = Subsetter.subset_matches(matches, indices)
@@ -156,8 +132,8 @@ class Stitcher:
         return self.wave_corrector.correct(cameras)
 
     def estimate_final_panorama_dimensions(self, cameras):
-        self.final_scaler.set_scale_by_img_size(self._img_sizes[0])
-        compose_work_aspect = self.get_compose_work_aspect()
+        self.img_handler.final_scaler.set_scale_by_img_size(self.img_handler.img_sizes[0])
+        compose_work_aspect = self.img_handler.get_compose_work_aspect()
 
         focals = [cam.focal for cam in cameras]
         panorama_scale_determined_on_work_img = statistics.median(focals)
@@ -168,8 +144,8 @@ class Stitcher:
         panorama_sizes = []
 
         self.warper.set_scale(panorama_scale)
-        for size, camera in zip(self._img_sizes, cameras):
-            sz = self.final_scaler.get_scaled_img_size(size)
+        for size, camera in zip(self.img_handler.img_sizes, cameras):
+            sz = self.img_handler.final_scaler.get_scaled_img_size(size)
             roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
             panorama_corners.append(roi[0:2])
             panorama_sizes.append(roi[2:4])
@@ -187,22 +163,25 @@ class Stitcher:
         else:
             self.blender.prepare(corners, sizes)
 
+    def resize_low_resolution(self, imgs):
+        return self.img_handler.resize_low_resolution(imgs)
+
     def warp_low_resolution_images(self, imgs, cameras):
-        return list(self.warp_images(self.low_scaler, imgs, cameras))
+        return list(self.warp_images(self.img_handler.low_scaler, imgs, cameras))
 
     def warp_final_resolution_images(self, imgs, cameras):
-        return self.warp_images(self.final_scaler, imgs, cameras)
+        return self.warp_images(self.img_handler.final_scaler, imgs, cameras)
 
     def warp_images(self, scaler, imgs, cameras):
         self._masks = []
         self._corners = []
         panorama_scale = self.estimate_final_panorama_scale(cameras)
         self.warper.set_scale(panorama_scale *
-                              scaler.get_aspect_to(self.medium_scaler))
+                              scaler.get_aspect_to(self.img_handler.medium_scaler))
         for img, camera in zip(imgs, cameras):
             img, mask, corner = \
                 self.warper.warp_image_and_image_mask(
-                    img, camera, scaler.get_aspect_to(self.medium_scaler)
+                    img, camera, scaler.get_aspect_to(self.img_handler.medium_scaler)
                     )
             self._masks.append(mask)
             self._corners.append(corner)
@@ -213,6 +192,9 @@ class Stitcher:
 
     def find_seam_masks(self, imgs):
         return self.seam_finder.find(imgs, self._corners, self._masks)
+
+    def resize_final_resolution(self):
+        return self.img_handler.resize_final_resolution()
 
     def compensate_exposure_errors(self, imgs):
         for idx, img in enumerate(imgs):
@@ -236,27 +218,5 @@ class Stitcher:
         if not self.timelapser.do_timelapse:
             return self.blender.blend()
 
-    def get_compose_work_aspect(self):
-        return self.final_scaler.get_aspect_to(self.medium_scaler)
-
-    def get_seam_work_aspect(self):
-        return self.low_scaler.get_aspect_to(self.medium_scaler)
-
-    def get_seam_compose_aspect(self):
-        return self.low_scaler.get_aspect_to(self.final_scaler)
-
-    @staticmethod
-    def read_image(img_name):
-        img = cv.imread(img_name)
-        if img is None:
-            print("Cannot read image ", img_name)
-            exit()
-        return img
-
-    @staticmethod
-    def get_image_size(img):
-        """(width, height)"""
-        return (img.shape[1], img.shape[0])
-
     def collect_garbage(self):
-        del self._img_names, self._img_sizes, self._corners, self._masks
+        del self.img_handler.img_names, self.img_handler.img_sizes, self._corners, self._masks
