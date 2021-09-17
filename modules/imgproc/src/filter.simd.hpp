@@ -467,22 +467,8 @@ struct RowVec_8u32s
 
 struct RowVec_8u32f
 {
-    RowVec_8u32f() { smallValues = false; }
-    RowVec_8u32f( const Mat& _kernel )
-    {
-        kernel = _kernel;
-        smallValues = true;
-        int k, ksize = kernel.rows + kernel.cols - 1;
-        for( k = 0; k < ksize; k++ )
-        {
-            int v = kernel.ptr<int>()[k];
-            if( v < SHRT_MIN || v > SHRT_MAX )
-            {
-                smallValues = false;
-                break;
-            }
-        }
-    }
+    RowVec_8u32f() {}
+    RowVec_8u32f( const Mat& _kernel ) { kernel = _kernel; }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
@@ -544,7 +530,6 @@ struct RowVec_8u32f
     }
 
     Mat kernel;
-    bool smallValues;
 };
 
 struct SymmRowSmallVec_8u32s
@@ -2373,6 +2358,7 @@ struct FilterVec_32f
 #else
 
 typedef RowNoVec RowVec_8u32s;
+typedef RowNoVec RowVec_8u32f;
 typedef RowNoVec RowVec_16s32f;
 typedef RowNoVec RowVec_32f;
 typedef SymmRowSmallNoVec SymmRowSmallVec_8u32s;
@@ -2990,7 +2976,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         return makePtr<RowFilter<ushort, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16S && ddepth == CV_32F )
         return makePtr<RowFilter<short, float, RowVec_16s32f> >
-            (kernel, anchor, RowVec_16s32f(kernel));
+                                  (kernel, anchor, RowVec_16s32f(kernel));
     if( sdepth == CV_16S && ddepth == CV_64F )
         return makePtr<RowFilter<short, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_32F && ddepth == CV_32F )
