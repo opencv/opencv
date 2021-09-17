@@ -53,14 +53,12 @@ class Stitcher:
         self.final_scaler = MegapixDownscaler(args.compose_megapix)
         self.finder = \
             FeatureDetector(args.features, nfeatures=args.n_features)
-        if args.match_conf is None:
-            args.match_conf = FeatureMatcher.get_default_match_conf(
-                args.features
-                )
+        match_conf = FeatureMatcher.get_match_conf(args.match_conf,
+                                                   args.features)
         self.matcher = FeatureMatcher(args.matcher,
                                       args.rangewidth,
                                       try_use_gpu=args.try_cuda,
-                                      match_conf=args.match_conf)
+                                      match_conf=match_conf)
         self.subsetter = \
             Subsetter(args.conf_thresh, args.save_graph)
         self.camera_estimator = CameraEstimator(args.estimator)

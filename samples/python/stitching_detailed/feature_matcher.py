@@ -12,6 +12,7 @@ class FeatureMatcher:
     def __init__(self,
                  matcher_type=DEFAULT_MATCHER,
                  range_width=DEFAULT_RANGE_WIDTH,
+
                  *args, **kwargs):
 
         if matcher_type == "affine":
@@ -36,6 +37,13 @@ class FeatureMatcher:
         return pairwise_matches
 
     @staticmethod
+    def get_match_conf(match_conf, feature_detector_type):
+        if match_conf is None:
+            match_conf = \
+                FeatureMatcher.get_default_match_conf(feature_detector_type)
+        return match_conf
+
+    @staticmethod
     def get_default_match_conf(feature_detector_type):
         if feature_detector_type == 'orb':
             return 0.3
@@ -44,7 +52,7 @@ class FeatureMatcher:
 
     @staticmethod
     def get_matches_matrix(pairwise_matches):
-        return FeatureMatcher.__array_in_sqare_matrix(pairwise_matches)
+        return FeatureMatcher._array_in_sqare_matrix(pairwise_matches)
 
     @staticmethod
     def get_confidence_matrix(pairwise_matches):
