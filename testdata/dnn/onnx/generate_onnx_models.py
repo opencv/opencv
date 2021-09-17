@@ -365,6 +365,7 @@ input = Variable(torch.randn(1, 2, 3))
 model = Unsqueeze()
 model.eval()
 save_data_and_model("unsqueeze", input, model)
+save_data_and_model("unsqueeze_opset_13", input, model, version=13)
 
 input = Variable(torch.randn(1, 2, 4, 5))
 deconv_adjpad2d = nn.ConvTranspose2d(2, 3, (3, 2), stride=(1, 2), padding=(1, 2), output_padding=(0, 1))
