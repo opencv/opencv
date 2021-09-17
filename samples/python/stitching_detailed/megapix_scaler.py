@@ -13,15 +13,15 @@ class MegapixScaler:
             self._get_scale_by_resolution(img_size[0] * img_size[1])
             )
 
+    def _set_scale(self, scale):
+        self.scale = scale
+        self.is_scale_set = True
+
     def _get_scale_by_resolution(self, resolution):
         if self.megapix > 0:
             return np.sqrt(self.megapix * 1e6 / resolution)
         else:
             return 1.0
-
-    def _set_scale(self, scale):
-        self.scale = scale
-        self.is_scale_set = True
 
     def get_scaled_img_size(self, img_size):
         width = int(round(img_size[0] * self.scale))
