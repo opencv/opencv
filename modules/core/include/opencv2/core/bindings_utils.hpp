@@ -117,6 +117,12 @@ String dumpRange(const Range& argument)
 }
 
 CV_WRAP static inline
+int testOverwriteNativeMethod(int argument)
+{
+    return argument;
+}
+
+CV_WRAP static inline
 String testReservedKeywordConversion(int positional_argument, int lambda = 2, int from = 3)
 {
     return format("arg=%d, lambda=%d, from=%d", positional_argument, lambda, from);
