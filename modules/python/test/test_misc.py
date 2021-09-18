@@ -4,6 +4,12 @@ from __future__ import print_function
 import ctypes
 from functools import partial
 from collections import namedtuple
+import sys
+
+if sys.version_info[0] < 3:
+    from collections import Sequence
+else:
+    from collections.abc import Sequence
 
 import numpy as np
 import cv2 as cv
@@ -583,6 +589,31 @@ class Arguments(NewOpenCVTests):
                         "Vector of integers should be returned as numpy array. Got: {}".format(type(ints)))
         self.assertEqual(ints.dtype, np.int32, "Vector of integers has wrong elements type")
         self.assertEqual(ints.shape, expected_shape, "Vector of integers has wrong shape.")
+
+
+class CanUsePurePythonModuleFunction(NewOpenCVTests):
+    def test_can_get_ocv_version(self):
+        import sys
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        self.assertEqual(cv.misc.get_ocv_version(), cv.__version__,
+                         "Can't get package version using Python misc module")
+
+    def test_native_method_can_be_patched(self):
+        import sys
+
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        res = cv.utils.testOverwriteNativeMethod(10)
+        self.assertTrue(isinstance(res, Sequence),
+                        msg="Overwritten method should return sequence. "
+                            "Got: {} of type {}".format(res, type(res)))
+        self.assertSequenceEqual(res, (11, 10),
+                                 msg="Failed to overwrite native method")
+        res = cv.utils._native.testOverwriteNativeMethod(123)
+        self.assertEqual(res, 123, msg="Failed to call native method implementation")
 
 
 class SamplesFindFile(NewOpenCVTests):
