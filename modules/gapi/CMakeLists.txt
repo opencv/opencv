@@ -169,6 +169,8 @@ set(gapi_srcs
     src/streaming/onevpl/file_data_provider.cpp
     src/streaming/onevpl/cfg_params.cpp
     src/streaming/onevpl/data_provider_interface_exception.cpp
+    src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
+    src/streaming/onevpl/accelerators/surface/surface.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
