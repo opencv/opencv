@@ -719,8 +719,13 @@ public:
     {
         if (!negativeScales)
         {
-            Mat scales = getTensorContent(inputNodes[1]->attr().at("value").tensor(), /*copy*/false);
-            scales *= -1;
+            Mat scalesRef = getTensorContentRefUnaligned(inputNodes[1]->attr().at("value").tensor());
+            Mat scales = scalesRef.clone() * -1;
+            // FIXME: This breaks the const guarantees of tensor() by writing to scalesRef and is likely to perform an
+            //        unaligned write (hence the separate multiplication above to have this work on ARM).
+            CV_Assert(scalesRef.isContinuous());
+            CV_Assert(scales.isContinuous());
+            memcpy(scalesRef.data, scales.data, scales.total() * scales.elemSize());
         }
     }
 
@@ -832,7 +837,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
     }
 }
 
-Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy)
+Mat getTensorContentRefUnaligned(const tensorflow::TensorProto& tensor)
 {
     const std::string& content = tensor.tensor_content();
     Mat m;
@@ -904,7 +909,15 @@ Mat getTensorContent(const tensorflow::TensorProto &tensor, bool copy)
             CV_Error(Error::StsError, "Tensor's data type is not supported");
             break;
     }
-    return copy ? m.clone() : m;
+
+    return m;
+}
+
+Mat getTensorContent(const tensorflow::TensorProto& tensor)
+{
+    // Always clone m to have it aligned to a multiple of 16 byte and thereby
+    // fulfill the memory alignment guarantees of the costs in getTensorContentRef.
+    return getTensorContentRefUnaligned(tensor).clone();
 }
 
 void releaseTensor(tensorflow::TensorProto* tensor)
