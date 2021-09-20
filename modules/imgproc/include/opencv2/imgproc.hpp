@@ -4396,7 +4396,7 @@ lines are drawn using Gaussian filtering.
 CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
                      int thickness = 1, int lineType = LINE_8, int shift = 0);
 
-/** @brief Draws a arrow segment pointing from the first point to the second one.
+/** @brief Draws an arrow segment pointing from the first point to the second one.
 
 The function cv::arrowedLine draws an arrow between pt1 and pt2 points in the image. See also #line.
 
