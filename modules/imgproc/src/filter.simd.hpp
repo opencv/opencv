@@ -474,57 +474,37 @@ struct RowVec_8u32f
     {
         CV_INSTRUMENT_REGION();
 
-        int ksize = kernel.rows + kernel.cols - 1;
-        const float* kx = kernel.ptr<float>();
-        const uchar* S;
-        float* D = (float*)_dst;
-        int i, k;
-
-        i = 0;
+        int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
+        float* dst = (float*)_dst;
+        const float* _kx = kernel.ptr<float>();
         width *= cn;
         for( ; i < width - v_uint8::nlanes; i += v_uint8::nlanes )
         {
-            S = (const uchar*)_src + i;
-            v_uint8 vs = vx_load(S);
-            v_float32 vkx = vx_setall_f32(kx[0]);
-            v_int16 vs_l = v_reinterpret_as_s16(v_expand_low(vs));
-            v_int16 vs_h = v_reinterpret_as_s16(v_expand_high(vs));
-            v_int32 vs_ll = v_expand_low(vs_l);
-            v_int32 vs_lh = v_expand_high(vs_l);
-            v_int32 vs_hl = v_expand_low(vs_h);
-            v_int32 vs_hh = v_expand_high(vs_h);
-            v_float32 fvs_ll = v_cvt_f32(vs_ll);
-            v_float32 fvs_lh = v_cvt_f32(vs_lh);
-            v_float32 fvs_hl = v_cvt_f32(vs_hl);
-            v_float32 fvs_hh = v_cvt_f32(vs_hh);
-            v_float32 s0_ll = fvs_ll * vkx;
-            v_float32 s0_lh = fvs_lh * vkx;
-            v_float32 s0_hl = fvs_hl * vkx;
-            v_float32 s0_hh = fvs_hh * vkx;
-            for( k = 1; k < ksize; k++ )
+            v_float32 s0 = vx_setzero_f32();
+            v_float32 s1 = vx_setzero_f32();
+            v_float32 s2 = vx_setzero_f32();
+            v_float32 s3 = vx_setzero_f32();
+            k = 0;
+            for( ; k < _ksize ; k++ )
             {
-                S += cn;
-                vs = vx_load(S);
-                v_int16 tmp_vs_l = v_reinterpret_as_s16(v_expand_low(vs));
-                v_int16 tmp_vs_h = v_reinterpret_as_s16(v_expand_high(vs));
-                v_int32 tmp_vs_ll = v_expand_low(tmp_vs_l);
-                v_int32 tmp_vs_lh = v_expand_high(tmp_vs_l);
-                v_int32 tmp_vs_hl = v_expand_low(tmp_vs_h);
-                v_int32 tmp_vs_hh = v_expand_high(tmp_vs_h);
-                v_float32 tmp_fvs_ll = v_cvt_f32(tmp_vs_ll);
-                v_float32 tmp_fvs_lh = v_cvt_f32(tmp_vs_lh);
-                v_float32 tmp_fvs_hl = v_cvt_f32(tmp_vs_hl);
-                v_float32 tmp_fvs_hh = v_cvt_f32(tmp_vs_hh);
-                v_float32 tmp = vx_setall_f32(kx[k]);
-                s0_ll = v_muladd(tmp_fvs_ll, tmp, s0_ll);
-                s0_lh = v_muladd(tmp_fvs_lh, tmp, s0_lh);
-                s0_hl = v_muladd(tmp_fvs_hl, tmp, s0_hl);
-                s0_hh = v_muladd(tmp_fvs_hh, tmp, s0_hh);
+                v_float32 f = vx_setall_f32(_kx[k]);
+                const uchar* src = (const uchar*)_src + i + k * cn;
+                v_uint8 vs = vx_load(src);
+                v_int16 vs_l = v_reinterpret_as_s16(v_expand_low(vs));
+                v_int16 vs_h = v_reinterpret_as_s16(v_expand_high(vs));
+                v_float32 fvs_ll = v_cvt_f32(v_expand_low(vs_l));
+                v_float32 fvs_lh = v_cvt_f32(v_expand_high(vs_l));
+                v_float32 fvs_hl = v_cvt_f32(v_expand_low(vs_h));
+                v_float32 fvs_hh = v_cvt_f32(v_expand_high(vs_h));
+                s0 = v_muladd(fvs_ll, f, s0);
+                s1 = v_muladd(fvs_lh, f, s1);
+                s2 = v_muladd(fvs_hl, f, s2);
+                s3 = v_muladd(fvs_hh, f, s3);
             }
-            v_store(D + i, s0_ll);
-            v_store(D + i + v_float32::nlanes, s0_lh);
-            v_store(D + i + 2*v_float32::nlanes, s0_hl);
-            v_store(D + i + 3*v_float32::nlanes, s0_hh);
+            v_store(dst + i, s0);
+            v_store(dst + i + v_float32::nlanes, s1);
+            v_store(dst + i + 2*v_float32::nlanes, s2);
+            v_store(dst + i + 3*v_float32::nlanes, s3);
         }
         return i;
     }
