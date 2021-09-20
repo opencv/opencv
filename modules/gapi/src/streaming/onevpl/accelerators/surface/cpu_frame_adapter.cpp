@@ -63,7 +63,6 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
     const Surface::data_t& data = parent_surface_ptr->get_data();
     const Surface::info_t& info = parent_surface_ptr->get_info();
     using stride_t = typename cv::MediaFrame::View::Strides::value_type;
-    GAPI_Assert(data.Pitch >= 0 && "Pitch is less than 0");
 
     stride_t pitch = static_cast<stride_t>(data.Pitch);
     switch(info.FourCC) {
