@@ -18,26 +18,15 @@ class Warper:
     def __init__(self, warper_type=DEFAULT_WARP_TYPE, scale=1):
         self.warper_type = warper_type
         self.warper = cv.PyRotationWarper(warper_type, scale)
+        self.scale = scale
 
-    def set_scale(self, scale):
-        self.warper = cv.PyRotationWarper(self.warper_type, scale)
-
-    def warp_images_and_image_masks(self, imgs, cameras, aspect):
-        images_warped = []
-        masks_warped = []
-        corners = []
-
+    def warp_images_and_image_masks(self, imgs, cameras, scale=None, aspect=1):
+        self._update_scale(scale)
         for img, camera in zip(imgs, cameras):
-            img_warped, mask_warped, corner = self.warp_image_and_image_mask(
-                img, camera, aspect
-                )
-            images_warped.append(img_warped)
-            corners.append(corner)
-            masks_warped.append(mask_warped)
+            yield self.warp_image_and_image_mask(img, camera, scale, aspect)
 
-        return images_warped, masks_warped, corners
-
-    def warp_image_and_image_mask(self, img, camera, aspect):
+    def warp_image_and_image_mask(self, img, camera, scale=None, aspect=1):
+        self._update_scale(scale)
         corner, img_warped = self.warp_image(img, camera, aspect)
         mask = 255 * np.ones((img.shape[0], img.shape[1]), np.uint8)
         _, mask_warped = self.warp_image(mask, camera, aspect, mask=True)
@@ -58,10 +47,16 @@ class Warper:
                                                 border_mode)
         return corner, warped_image
 
-    def warp_roi(self, width, height, camera, aspect=1):
+    def warp_roi(self, width, height, camera, scale=None, aspect=1):
+        self._update_scale(scale)
         roi = (width, height)
         K = Warper.get_K(camera, aspect)
         return self.warper.warpRoi(roi, K, camera.R)
+
+    def _update_scale(self, scale):
+        if scale is not None and scale != self.scale:
+            self.warper = cv.PyRotationWarper(self.warper_type, scale)  # setScale not working: https://docs.opencv.org/master/d5/d76/classcv_1_1PyRotationWarper.html#a90b000bb75f95294f9b0b6ec9859eb55
+            self.scale = scale
 
     @staticmethod
     def get_K(camera, aspect=1):

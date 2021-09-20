@@ -25,9 +25,3 @@ class MegapixScaler:
         width = int(round(img_size[0] * self.scale))
         height = int(round(img_size[1] * self.scale))
         return (width, height)
-
-    def get_aspect_to(self, scaler):
-        if self.is_scale_set and scaler.is_scale_set:
-            return self.scale / scaler.scale
-        print("Scale not set")
-        exit()

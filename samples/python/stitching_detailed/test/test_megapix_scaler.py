@@ -40,16 +40,6 @@ class TestScaler(unittest.TestCase):
         self.assertEqual(size, (1033, 581))
         # 581*1033 = 600173 px = ~0.6 MP
 
-    def test_get_aspect(self):
-        scaler1 = MegapixScaler(1)
-        scaler1._set_scale(0.1)
-        scaler2 = MegapixScaler(1)
-        scaler2._set_scale(0.6)
-
-        aspect = scaler1.get_aspect_to(scaler2)
-
-        self.assertEqual(aspect, 0.16666666666666669)
-
     def test_force_of_downscaling(self):
         normal_scaler = MegapixScaler(2)
         downscaler = MegapixDownscaler(2)

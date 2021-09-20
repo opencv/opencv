@@ -1,6 +1,5 @@
 import cv2 as cv
 from .megapix_downscaler import MegapixDownscaler
-from .subsetter import Subsetter
 
 
 class ImageHandler:
@@ -84,15 +83,11 @@ class ImageHandler:
             self.final_scaler.set_scale_by_img_size(first_img_size)
         self.scales_set = True
 
-    def subset(self, indices):
-        self.img_names = Subsetter.subset_list(self.img_names, indices)
-        self.img_sizes = Subsetter.subset_list(self.img_sizes, indices)
+    def get_medium_to_final_ratio(self):
+        return self.final_scaler.scale / self.medium_scaler.scale
 
-    def get_compose_work_aspect(self):
-        return self.final_scaler.get_aspect_to(self.medium_scaler)
+    def get_medium_to_low_ratio(self):
+        return self.low_scaler.scale / self.medium_scaler.scale
 
-    def get_seam_work_aspect(self):
-        return self.low_scaler.get_aspect_to(self.medium_scaler)
-
-    def get_seam_compose_aspect(self):
-        return self.low_scaler.get_aspect_to(self.final_scaler)
+    def get_final_to_low_ratio(self):
+        return self.low_scaler.scale / self.final_scaler.scale

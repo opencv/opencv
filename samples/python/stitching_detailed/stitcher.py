@@ -1,7 +1,4 @@
-import statistics
 from types import SimpleNamespace
-
-import cv2 as cv
 
 from .image_handler import ImageHandler
 from .feature_detector import FeatureDetector
@@ -11,6 +8,7 @@ from .camera_estimator import CameraEstimator
 from .camera_adjuster import CameraAdjuster
 from .camera_wave_corrector import WaveCorrector
 from .warper import Warper
+from .panorama_estimation import estimate_final_panorama_dimensions
 from .exposure_error_compensator import ExposureErrorCompensator
 from .seam_finder import SeamFinder
 from .blender import Blender
@@ -73,7 +71,7 @@ class Stitcher:
         self.timelapser = Timelapser(args.timelapse)
 
     def stitch(self, img_names):
-        self.img_handler.set_img_names(img_names)
+        self.initialize_registration(img_names)
 
         imgs = self.resize_medium_resolution()
         features = self.find_features(imgs)
@@ -88,17 +86,20 @@ class Stitcher:
         self.initialize_composition(panorama_corners, panorama_sizes)
 
         imgs = self.resize_low_resolution(imgs)
-        imgs = self.warp_low_resolution_images(imgs, cameras)
+        imgs = self.warp_low_resolution_images(imgs, cameras, panorama_scale)
         self.estimate_exposure_errors(imgs)
         seam_masks = self.find_seam_masks(imgs)
 
         imgs = self.resize_final_resolution()
-        imgs = self.warp_final_resolution_images(imgs, cameras)
+        imgs = self.warp_final_resolution_images(imgs, cameras, panorama_scale)
         imgs = self.compensate_exposure_errors(imgs)
         seam_masks = self.resize_seam_masks(seam_masks)
         self.blend_images(imgs, seam_masks)
 
         return self.create_final_panorama()
+
+    def initialize_registration(self, img_names):
+        self.img_handler.set_img_names(img_names)
 
     def resize_medium_resolution(self):
         return list(self.img_handler.resize_to_medium_resolution())
@@ -110,16 +111,11 @@ class Stitcher:
         return self.matcher.match_features(features)
 
     def subset(self, imgs, features, matches):
-        self.subsetter.save_matches_graph_dot_file(self.img_handler.img_names,
-                                                   matches)
-
-        indices = self.subsetter.get_indices_to_keep(features, matches)
-
-        self.img_handler.subset(indices)
-        imgs = Subsetter.subset_list(imgs, indices)
-        features = Subsetter.subset_list(features, indices)
-        matches = Subsetter.subset_matches(matches, indices)
-
+        names, sizes, imgs, features, matches = \
+            self.subsetter.subset(self.img_handler.img_names,
+                                  self.img_handler.img_sizes,
+                                  imgs, features, matches)
+        self.img_handler.img_names, self.img_handler.img_sizes = names, sizes
         return imgs, features, matches
 
     def estimate_camera_parameters(self, features, matches):
@@ -132,30 +128,8 @@ class Stitcher:
         return self.wave_corrector.correct(cameras)
 
     def estimate_final_panorama_dimensions(self, cameras):
-        self.img_handler.final_scaler.set_scale_by_img_size(self.img_handler.img_sizes[0])
-        compose_work_aspect = self.img_handler.get_compose_work_aspect()
-
-        focals = [cam.focal for cam in cameras]
-        panorama_scale_determined_on_work_img = statistics.median(focals)
-
-        panorama_scale = (panorama_scale_determined_on_work_img *
-                          compose_work_aspect)
-        panorama_corners = []
-        panorama_sizes = []
-
-        self.warper.set_scale(panorama_scale)
-        for size, camera in zip(self.img_handler.img_sizes, cameras):
-            sz = self.img_handler.final_scaler.get_scaled_img_size(size)
-            roi = self.warper.warp_roi(*sz, camera, compose_work_aspect)
-            panorama_corners.append(roi[0:2])
-            panorama_sizes.append(roi[2:4])
-
-        return panorama_scale, panorama_corners, panorama_sizes
-
-    def estimate_final_panorama_scale(self, cameras):
-        focals = [cam.focal for cam in cameras]
-        panorama_scale = statistics.median(focals)
-        return panorama_scale
+        return estimate_final_panorama_dimensions(cameras, self.warper,
+                                                  self.img_handler)
 
     def initialize_composition(self, corners, sizes):
         if self.timelapser.do_timelapse:
@@ -166,26 +140,25 @@ class Stitcher:
     def resize_low_resolution(self, imgs=None):
         return list(self.img_handler.resize_to_low_resolution(imgs))
 
-    def warp_low_resolution_images(self, imgs, cameras):
-        return list(self.warp_images(self.img_handler.low_scaler, imgs, cameras))
+    def warp_low_resolution_images(self, imgs, cameras, final_scale):
+        camera_aspect = self.img_handler.get_medium_to_low_ratio()
+        scale = final_scale * self.img_handler.get_final_to_low_ratio()
+        return list(self.warp_images(imgs, cameras, scale, camera_aspect))
 
-    def warp_final_resolution_images(self, imgs, cameras):
-        return self.warp_images(self.img_handler.final_scaler, imgs, cameras)
+    def warp_final_resolution_images(self, imgs, cameras, scale):
+        camera_aspect = self.img_handler.get_medium_to_final_ratio()
+        return self.warp_images(imgs, cameras, scale, camera_aspect)
 
-    def warp_images(self, scaler, imgs, cameras):
+    def warp_images(self, imgs, cameras, scale, aspect=1):
         self._masks = []
         self._corners = []
-        panorama_scale = self.estimate_final_panorama_scale(cameras)
-        self.warper.set_scale(panorama_scale *
-                              scaler.get_aspect_to(self.img_handler.medium_scaler))
-        for img, camera in zip(imgs, cameras):
-            img, mask, corner = \
-                self.warper.warp_image_and_image_mask(
-                    img, camera, scaler.get_aspect_to(self.img_handler.medium_scaler)
-                    )
-            self._masks.append(mask)
+        for img_warped, mask_warped, corner in \
+            self.warper.warp_images_and_image_masks(
+                imgs, cameras, scale, aspect
+                ):
+            self._masks.append(mask_warped)
             self._corners.append(corner)
-            yield img
+            yield img_warped
 
     def estimate_exposure_errors(self, imgs):
         self.compensator.feed(self._corners, imgs, self._masks)
@@ -208,9 +181,9 @@ class Stitcher:
     def blend_images(self, imgs, seam_masks):
         for idx, (img, seam_mask) in enumerate(zip(imgs, seam_masks)):
             if self.timelapser.do_timelapse:
-                self.timelapser.process_and_save_frame(self._img_names[idx],
-                                                       img,
-                                                       self._corners[idx])
+                self.timelapser.process_and_save_frame(
+                    self.img_handler.img_names, img, self._corners[idx]
+                    )
             else:
                 self.blender.feed(img, seam_mask, self._corners[idx])
 
@@ -219,4 +192,5 @@ class Stitcher:
             return self.blender.blend()
 
     def collect_garbage(self):
-        del self.img_handler.img_names, self.img_handler.img_sizes, self._corners, self._masks
+        del self.img_handler.img_names, self.img_handler.img_sizes,
+        del self._corners, self._masks

@@ -67,8 +67,8 @@ class TestImageRegistration(unittest.TestCase):
                               matches_graph_dot_file="dot_graph.txt")  # view in https://dreampuf.github.io  # noqa
 
         indices = subsetter.get_indices_to_keep(features, pairwise_matches)
-        indices_to_delete = subsetter.get_indices_to_delete(len(img_names),
-                                                            indices)
+        indices_to_delete = subsetter._get_indices_to_delete(len(img_names),
+                                                             indices)
 
         self.assertEqual(indices, [2, 3, 4])
         self.assertEqual(indices_to_delete, [0, 1])

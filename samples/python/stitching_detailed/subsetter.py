@@ -17,6 +17,28 @@ class Subsetter:
         self.confidence_threshold = confidence_threshold
         self.save_file = matches_graph_dot_file
 
+    def subset(self, img_names, img_sizes, imgs, features, matches):
+        self.save_matches_graph_dot_file(img_names, matches)
+        indices = self.get_indices_to_keep(features, matches)
+
+        img_names = Subsetter.subset_list(img_names, indices)
+        img_sizes = Subsetter.subset_list(img_sizes, indices)
+        imgs = Subsetter.subset_list(imgs, indices)
+        features = Subsetter.subset_list(features, indices)
+        matches = Subsetter.subset_matches(matches, indices)
+        return img_names, img_sizes, imgs, features, matches
+
+    def save_matches_graph_dot_file(self, img_names, pairwise_matches):
+        if self.save_file:
+            with open(self.save_file, 'w') as filehandler:
+                filehandler.write(self.get_matches_graph_dot_file(
+                    img_names, pairwise_matches)
+                    )
+
+    def get_matches_graph_dot_file(self, img_names, pairwise_matches):
+        return cv.detail.matchesGraphAsString(img_names, pairwise_matches,
+                                              self.confidence_threshold)
+
     def get_indices_to_keep(self, features, pairwise_matches):
         indices = cv.detail.leaveBiggestComponent(features,
                                                   pairwise_matches,
@@ -35,26 +57,26 @@ class Subsetter:
 
     @staticmethod
     def subset_matches(pairwise_matches, indices):
-        indices_to_delete = Subsetter.get_indices_to_delete(
+        indices_to_delete = Subsetter._get_indices_to_delete(
             math.sqrt(len(pairwise_matches)),
             indices
             )
 
         matches_matrix = FeatureMatcher.get_matches_matrix(pairwise_matches)
-        matches_matrix_subset = Subsetter.__subset_matrix(matches_matrix,
-                                                          indices_to_delete)
-        matches_subset = Subsetter.__matrix_rows_to_list(matches_matrix_subset)
+        matches_matrix_subset = Subsetter._subset_matrix(matches_matrix,
+                                                         indices_to_delete)
+        matches_subset = Subsetter._matrix_rows_to_list(matches_matrix_subset)
 
         return matches_subset
 
     @staticmethod
-    def get_indices_to_delete(nr_elements, indices_to_keep):
+    def _get_indices_to_delete(nr_elements, indices_to_keep):
         return list(set(range(int(nr_elements))) - set(indices_to_keep))
 
     @staticmethod
-    def __subset_matrix(matrix_to_subset, indices_to_delete):
+    def _subset_matrix(matrix_to_subset, indices_to_delete):
         for idx, idx_to_delete in enumerate(indices_to_delete):
-            matrix_to_subset = Subsetter.__delete_index_from_matrix(
+            matrix_to_subset = Subsetter._delete_index_from_matrix(
                 matrix_to_subset,
                 idx_to_delete-idx  # matrix shape reduced by one at each step
                 )
@@ -62,26 +84,11 @@ class Subsetter:
         return matrix_to_subset
 
     @staticmethod
-    def __delete_index_from_matrix(matrix, idx):
+    def _delete_index_from_matrix(matrix, idx):
         mask = np.ones(matrix.shape[0], bool)
         mask[idx] = 0
         return matrix[mask, :][:, mask]
 
     @staticmethod
-    def __matrix_rows_to_list(matrix):
+    def _matrix_rows_to_list(matrix):
         return list(chain.from_iterable(matrix.tolist()))
-
-    def save_matches_graph_dot_file(self, img_names, pairwise_matches):
-        if self.save_file:
-            with open(self.save_file, 'w') as filehandler:
-                filehandler.write(self.get_matches_graph_dot_file(
-                    img_names,
-                    pairwise_matches
-                    ))
-
-    def get_matches_graph_dot_file(self, img_names, pairwise_matches):
-        return cv.detail.matchesGraphAsString(
-            img_names,
-            pairwise_matches,
-            self.confidence_threshold
-            )

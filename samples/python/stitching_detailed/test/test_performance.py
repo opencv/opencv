@@ -50,7 +50,7 @@ class TestStitcher(unittest.TestCase):
         print(f"Peak was {peak_memory_old / 10**6} MB")
         print(f"Time was {time_needed_old} s")
 
-        self.assertLessEqual(current_memory / 10**6, 0.2)
+        self.assertLessEqual(current_memory / 10**6, 0.25)
         self.assertLessEqual(peak_memory / 10**6, peak_memory_old / 10**6)
         uncertainty_based_on_run = 0.25
         self.assertLessEqual(time_needed - uncertainty_based_on_run,
