@@ -20,6 +20,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 VPLCPUAccelerationPolicy::VPLCPUAccelerationPolicy() {
     GAPI_LOG_INFO(nullptr, "created");
@@ -219,6 +220,7 @@ cv::MediaFrame::AdapterPtr VPLCPUAccelerationPolicy::create_frame_adapter(pool_k
     return cv::MediaFrame::AdapterPtr{new VPLMediaFrameCPUAdapter(*it)};
 #endif // TEST_PERF
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -22,6 +22,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolicy
@@ -47,6 +48,7 @@ struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolic
 private:
     std::map<pool_key_t, pool_t> pool_table;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
