@@ -2,6 +2,8 @@
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "logger.hpp"
 
+#ifdef HAVE_ONEVPL
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -73,3 +75,4 @@ CachedPool::surface_ptr_t CachedPool::find_by_handle(mfxFrameSurface1* handle) {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL
