@@ -46,6 +46,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/fluid/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/gpu/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/infer/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/oak/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/ocl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/own/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/render/*.hpp"
@@ -124,6 +125,9 @@ set(gapi_srcs
     src/backends/fluid/gfluidimgproc.cpp
     src/backends/fluid/gfluidimgproc_func.dispatch.cpp
     src/backends/fluid/gfluidcore.cpp
+
+    # OAK Backend (optional)
+    # add here
 
     # OCL Backend (currently built-in)
     src/backends/ocl/goclbackend.cpp
@@ -232,6 +236,18 @@ if(HAVE_FREETYPE)
   endif()
   ocv_target_link_libraries(${the_module} PRIVATE ${FREETYPE_LIBRARIES})
   ocv_target_include_directories(${the_module} PRIVATE ${FREETYPE_INCLUDE_DIRS})
+endif()
+
+# TODO: standalone mode???
+find_package(depthai)
+if(depthai_FOUND)
+  ocv_target_compile_definitions(${the_module} PRIVATE -DWITH_OAK_BACKEND)
+  ocv_target_link_libraries(${the_module} PRIVATE depthai::core)
+  # FIXME: remove this
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DWITH_OAK_BACKEND)
+    ocv_target_link_libraries(opencv_test_gapi PRIVATE depthai::core)
+  endif()
 endif()
 
 if(HAVE_PLAIDML)
