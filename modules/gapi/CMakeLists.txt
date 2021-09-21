@@ -138,7 +138,7 @@ set(gapi_srcs
     # OAK Backend (optional)
     src/backends/oak/goak.cpp
     src/backends/oak/goakbackend.cpp
-    src/backends/oak/goak_media_adapter.cpp
+    src/backends/oak/goak_memory_adapters.cpp
 
     # OCL Backend (currently built-in)
     src/backends/ocl/goclbackend.cpp
@@ -383,5 +383,11 @@ if(HAVE_OAK)
   endif()
   if(TARGET example_gapi_oak_small_hetero_pipeline)
     ocv_target_compile_definitions(example_gapi_oak_small_hetero_pipeline PRIVATE -DHAVE_OAK)
+  endif()
+  if(TARGET example_gapi_oak_copy)
+    ocv_target_compile_definitions(example_gapi_oak_copy PRIVATE -DHAVE_OAK)
+  endif()
+  if(TARGET example_gapi_oak_basic_infer)
+    ocv_target_compile_definitions(example_gapi_oak_basic_infer PRIVATE -DHAVE_OAK)
   endif()
 endif()

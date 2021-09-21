@@ -4,17 +4,15 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
-#include "oak_media_adapter.hpp"
+#include "oak_memory_adapters.hpp"
 
 namespace cv {
 namespace gapi {
 namespace oak {
 
-OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer) {
+OAKMediaAdapter::OAKMediaAdapter(cv::Size sz, cv::MediaFormat fmt, std::vector<uint8_t>&& buffer)
+: m_sz(sz), m_fmt(fmt), m_buffer(buffer) {
     GAPI_Assert(fmt == cv::MediaFormat::NV12 && "OAKMediaAdapter only supports NV12 format for now");
-    m_sz = sz;
-    m_fmt = fmt;
-    m_buffer = buffer;
 }
 
 MediaFrame::View OAKMediaAdapter::OAKMediaAdapter::access(MediaFrame::Access) {
@@ -26,6 +24,30 @@ MediaFrame::View OAKMediaAdapter::OAKMediaAdapter::access(MediaFrame::Access) {
 }
 
 cv::GFrameDesc OAKMediaAdapter::OAKMediaAdapter::meta() const { return {m_fmt, m_sz}; }
+
+OAKRMatAdapter::OAKRMatAdapter(const cv::Size& size,
+                               int precision,
+                               std::vector<float>&& buffer)
+    : m_size(size), m_precision(precision), m_buffer(buffer) {
+    GAPI_Assert(m_precision == CV_16F);
+
+    std::vector<int> wrapped_dims{1, 1, m_size.width, m_size.height};
+
+    // FIXME: check layout and add strides
+    m_desc = cv::GMatDesc(m_precision, wrapped_dims);
+    m_mat = cv::Mat(static_cast<int>(wrapped_dims.size()),
+                    wrapped_dims.data(),
+                    CV_16FC1, // FIXME: cover other precisions
+                    m_buffer.data());
+}
+
+cv::GMatDesc OAKRMatAdapter::desc() const {
+    return m_desc;
+}
+
+cv::RMat::View OAKRMatAdapter::access(cv::RMat::Access) {
+    return cv::RMat::View{m_desc, m_mat.data};
+}
 
 } // namespace oak
 } // namespace gapi

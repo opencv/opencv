@@ -22,21 +22,11 @@ int main(int argc, char *argv[]) {
 
     const std::string output_name = cmd.get<std::string>("output");
 
-    std::vector<int> h = {1, 0, -1,
-                          2, 0, -2,
-                          1, 0, -1};
-    std::vector<int> v = { 1,  2,  1,
-                           0,  0,  0,
-                          -1, -2, -1};
-    cv::Mat hk(3, 3, CV_32SC1, h.data());
-    cv::Mat vk(3, 3, CV_32SC1, v.data());
-
-    // Heterogeneous pipeline:
-    // OAK camera -> Sobel -> streaming accessor (CPU)
     cv::GFrame in;
-    cv::GFrame sobel = cv::gapi::oak::sobelXY(in, hk, vk);
-    // Default camera and then sobel work only with nv12 format
-    cv::GMat out = cv::gapi::streaming::Y(sobel);
+    // Actually transfers data to host
+    cv::GFrame copy = cv::gapi::oak::copy(in);
+    // Default camera works only with nv12 format
+    cv::GMat out = cv::gapi::streaming::Y(copy);
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{},
                                  cv::gapi::oak::kernels());
