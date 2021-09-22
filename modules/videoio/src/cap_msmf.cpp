@@ -715,6 +715,7 @@ protected:
     bool configureAudioOutput(MediaType newType);
     bool configureVideoOutput(MediaType newType, cv::uint32_t outFormat);
     bool setTime(double time, bool rough);
+    bool setTime(int numberFrame);
     bool configureHW(bool enable);
     bool configureStreams(const cv::VideoCaptureParameters&);
     bool setAudioProperties(const cv::VideoCaptureParameters&);
@@ -1340,13 +1341,11 @@ bool CvCapture_MSMF::grabVideoFrame()
         }
         else if (flags & MF_SOURCE_READERF_ENDOFSTREAM)
         {
-            sampleTime += frameStep;
             CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
         }
         else
         {
             nFrame++;
-            sampleTime += frameStep;
             videoSample->GetSampleDuration(&curVideoTime);
             allTime += curVideoTime;
             if (duration - allTime < curVideoTime)
@@ -1793,6 +1792,29 @@ bool CvCapture_MSMF::setTime(double time, bool rough)
     return false;
 }
 
+bool CvCapture_MSMF::setTime(int numberFrame)
+{
+    if(videoStream == -1)
+        return false;
+    PROPVARIANT var;
+    if (SUCCEEDED(videoFileSource->GetPresentationAttribute((DWORD)MF_SOURCE_READER_MEDIASOURCE, MF_SOURCE_READER_MEDIASOURCE_CHARACTERISTICS, &var)) &&
+        var.vt == VT_UI4 && var.ulVal & MFMEDIASOURCE_CAN_SEEK)
+    {
+        videoSample.Release();
+        PropVariantClear(&var);
+        sampleTime =  0;
+        nFrame =  0;
+        allTime =  0;
+        var.vt = VT_I8;
+        var.hVal.QuadPart = sampleTime;
+        bool resOK = SUCCEEDED(videoFileSource->SetCurrentPosition(GUID_NULL, var));
+        PropVariantClear(&var);
+        while (resOK && nFrame < numberFrame) { resOK = grabFrame(); videoSample.Release(); };
+        return resOK;
+    }
+    return false;
+}
+
 template <typename CtrlT>
 bool CvCapture_MSMF::readComplexPropery(long prop, long & val) const
 {
@@ -2049,7 +2071,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
             break;
         case CV_CAP_PROP_POS_FRAMES:
             if (std::fabs(captureVideoFormat.getFramerate()) > 0)
-                return setTime(value  * 1e7 / captureVideoFormat.getFramerate(), false);
+                return setTime((int)value);
             break;
         case CV_CAP_PROP_POS_MSEC:
                 return setTime(value  * 1e4, false);
