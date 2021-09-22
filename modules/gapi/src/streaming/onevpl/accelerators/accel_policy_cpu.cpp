@@ -30,7 +30,6 @@ VPLCPUAccelerationPolicy::~VPLCPUAccelerationPolicy() {
         pair.second.clear();
         // do not free key here: last surface will release it
     }
-    pool_table.clear();
     GAPI_LOG_INFO(nullptr, "destroyed");
 }
 
@@ -63,6 +62,9 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
 
     GAPI_LOG_DEBUG(nullptr, "page size: " << page_size_bytes << ", preallocated_raw_bytes: " << preallocated_raw_bytes);
     preallocated_pool_memory_ptr = _aligned_malloc(preallocated_raw_bytes, page_size_bytes);
+#else
+    GAPI_Assert(false && "Compatibility is not tested for systems differ than \"_WIN32\". "
+                         "Please feel free to set it up under OPENCV contribution policy");
 #endif
 
     if (!preallocated_pool_memory_ptr) {
@@ -79,7 +81,8 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
         GAPI_LOG_INFO(nullptr, "Released workspace memory: " << ptr);
         ptr = nullptr;
 #else
-        abort(); //not implemented
+        GAPI_Assert(false && "Not implemented for systems differ than \"_WIN32\". "
+                             "Please feel free to set it up under OPENCV contribution policy");
 #endif
 
         });
@@ -105,13 +108,10 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     GAPI_LOG_INFO(nullptr, "New pool allocated, key: " << preallocated_pool_memory_ptr <<
                            ", surface count: " << pool.size() <<
                            ", surface size bytes: " << surface_size_bytes);
-    try {
-        if (!pool_table.emplace(preallocated_pool_memory_ptr, std::move(pool)).second) {
-            throw std::runtime_error(std::string("VPLCPUAccelerationPolicy::create_surface_pool - ") +
-                                     "cannot insert pool, table size: " + std::to_string(pool_table.size()));
-        }
-    } catch (const std::exception&) {
-        throw;
+    if (!pool_table.emplace(preallocated_pool_memory_ptr, std::move(pool)).second) {
+        GAPI_LOG_WARNING(nullptr, "Cannot insert pool, table size: " + std::to_string(pool_table.size()) <<
+                                  ", key: " << preallocated_pool_memory_ptr << " exists");
+        GAPI_Assert(false && "Cannot create pool in VPLCPUAccelerationPolicy");
     }
 
     return preallocated_pool_memory_ptr;
@@ -120,11 +120,9 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
 VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_surface(pool_key_t key) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
-        std::stringstream ss;
-        ss << "key is not found: " << key << ", table size: " << pool_table.size();
-        const std::string& str = ss.str();
-        GAPI_LOG_WARNING(nullptr, str);
-        throw std::runtime_error("VPLCPUAccelerationPolicy::get_free_surface - " + str);
+        throw std::runtime_error("VPLCPUAccelerationPolicy::get_free_surface - "
+                                 "key is not found, table size: " +
+                                 std::to_string(pool_table.size()));
     }
 
     pool_t& requested_pool = pool_it->second;

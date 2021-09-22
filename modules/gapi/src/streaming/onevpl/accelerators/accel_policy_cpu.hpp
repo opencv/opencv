@@ -23,26 +23,26 @@ namespace cv {
 namespace gapi {
 namespace wip {
 
-struct VPLCPUAccelerationPolicy final : public VPLAccelerationPolicy
+// GAPI_EXPORTS for tests
+struct GAPI_EXPORTS VPLCPUAccelerationPolicy final : public VPLAccelerationPolicy
 {
-    // GAPI_EXPORTS for tests
-    GAPI_EXPORTS VPLCPUAccelerationPolicy();
-    GAPI_EXPORTS ~VPLCPUAccelerationPolicy();
+    VPLCPUAccelerationPolicy();
+    ~VPLCPUAccelerationPolicy();
 #ifdef TEST_PERF
     using pool_t = CachedPool;
 #else  // TEST_PERF
     using pool_t = std::vector<surface_ptr_t>;
 #endif // TEST_PERF
 
-    GAPI_EXPORTS void init(session_t session) override;
-    GAPI_EXPORTS void deinit(session_t session) override;
-    GAPI_EXPORTS pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
-    GAPI_EXPORTS surface_weak_ptr_t get_free_surface(pool_key_t key) override;
-    GAPI_EXPORTS size_t get_free_surface_count(pool_key_t key) const override;
-    GAPI_EXPORTS size_t get_surface_count(pool_key_t key) const override;
+    void init(session_t session) override;
+    void deinit(session_t session) override;
+    pool_key_t create_surface_pool(size_t pool_size, size_t surface_size_bytes, surface_ptr_ctr_t creator) override;
+    surface_weak_ptr_t get_free_surface(pool_key_t key) override;
+    size_t get_free_surface_count(pool_key_t key) const override;
+    size_t get_surface_count(pool_key_t key) const override;
 
-    GAPI_EXPORTS cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
-                                                                 mfxFrameSurface1* surface) override;
+    cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
+                                                    mfxFrameSurface1* surface) override;
 
 private:
     std::map<pool_key_t, pool_t> pool_table;

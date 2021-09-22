@@ -62,14 +62,7 @@ CachedPool::surface_ptr_t CachedPool::find_free() {
 
 CachedPool::surface_ptr_t CachedPool::find_by_handle(mfxFrameSurface1* handle) {
     auto it = cache.find(handle);
-    if (it == cache.end()) {
-        std::stringstream ss;
-        ss << "cannot get requested surface from pool, surf: "
-           << handle << ", pool size: " << surfaces.size();
-        const std::string& str = ss.str();
-        GAPI_LOG_WARNING(nullptr, str);
-        throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
-    }
+    GAPI_Assert(it != cache.end() && "Cannot find cached surface from pool. Data corruption is possible");
     return it->second;
 }
 } // namespace wip
