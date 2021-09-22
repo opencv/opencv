@@ -127,7 +127,8 @@ set(gapi_srcs
     src/backends/fluid/gfluidcore.cpp
 
     # OAK Backend (optional)
-    # add here
+    src/backends/oak/goak.cpp
+    src/backends/oak/goakbackend.cpp
 
     # OCL Backend (currently built-in)
     src/backends/ocl/goclbackend.cpp
