@@ -8,7 +8,7 @@
 
 #ifdef WITH_OAK_BACKEND
 
-#include "depthai/depthai.hpp"
+#include <opencv2/gapi/oak/oak.hpp>
 
 namespace opencv_test
 {
@@ -16,38 +16,38 @@ namespace opencv_test
 TEST(OAK, SimpleCamera)
 {
     cv::GFrame in;
-    cv::GArray<uint8_t> h264;
-    h264 = cv::gapi::streaming::encH264(bgr);
+    cv::GArray<uint8_t> h265;
+    h265 = cv::gapi::oak::encode(in);
 
-    auto args = cv::compile_args(cv::gapi::oak::kernels());
+    auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
 
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h264))
-        .compileStreaming(args);
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
     pipeline.start();
 
-    std::vector<uint8_t> out_h264;
+    std::vector<uint8_t> out_h265;
 
-    std::ofstream out_h264_file;
+    std::ofstream out_h265_file;
 
-    cv::GOptRunArgsP pipeline_outs = cv::gout(out_h264);
+    // Open H265 file for writing
+    out_h265_file.open("oak_stream.h265", std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 
-    // Open H264 file for writing
-    out_h264_file.open(opt_h264_out, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+    // Pull 300 frames from the camera
+    uint32_t frames = 300;
+    uint32_t pulled = 0;
 
-    while (pipeline.pull(std::move(pipeline_outs))) {
-        const std::vector<uint8_t> &packet = *out_h264;
-        CV_Assert(!packet.empty());
-        std::cout << "h264: " << packet.size() << " bytes" << std::endl;
-
-        if (out_h264_file.is_open()) {
-            out_h264_file.write(reinterpret_cast<const char*>(packet.data()), packet.size());
-        }
+    while (pulled++ < frames &&
+           pipeline.pull(cv::gout(out_h265))) {
+        std::cout.width(6);  std::cout << std::left << "h265: ";
+        std::cout.width(15); std::cout << std::left << std::to_string(out_h265.size()) +
+                                                       " bytes, ";
+        out_h265_file.write(reinterpret_cast<const char*>(out_h265.data()),
+                                                          out_h265.size());
     }
 }
-
+/*
 namespace {
     class TestMediaBGR final : public cv::MediaFrame::IAdapter {
         cv::Mat m_mat;
@@ -127,7 +127,7 @@ TEST(OAK, SimpleFileHetero)
     cv::Mat out_mat(out_frame.desc().size, CV_8UC3, view.ptr[0], view.stride[0]);
     // add proper check here?
     cv::imwrite("oak_mat.png", out_mat);
-}
+}*/
 
 } // namespace
 
