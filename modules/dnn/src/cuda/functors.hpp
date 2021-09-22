@@ -263,6 +263,21 @@ struct MaxFunctor {
 };
 
 template <class T>
+struct MinFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE MinFunctor() { }
+    CUDA4DNN_DEVICE MinFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T x, T y) {
+        using csl::device::min;
+        return min(x, y);
+    }
+};
+
+template <class T>
 struct SumFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() { }
