@@ -421,29 +421,11 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     passes::initMeta(ctx, inMetas);
     passes::inferMeta(ctx, true);
 
-    // NB: Before reshape islands need to re-init resources for them.
-    auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
-    for (auto nh : sorted.nodes())
+    // NB: Before reshape islands need to re-init resources for every slot.
+    for (auto slot : m_slots)
     {
-        switch (m_gim.metadata(nh).get<NodeKind>().k)
-        {
-        case NodeKind::ISLAND:
-            // NB: Do nothing.
-            break;
-
-        case NodeKind::SLOT:
-            {
-                const auto orig_data_nh
-                    = m_gim.metadata(nh).get<DataSlot>().original_data_node;
-                initResource(nh, orig_data_nh);
-            }
-        break;
-
-        default:
-            GAPI_Assert(false);
-            break;
-        } // switch(kind)
-    } // for(gim nodes)
+        initResource(slot.slot_nh, slot.data_nh);
+    }
 
     for (auto& op : m_ops)
     {
