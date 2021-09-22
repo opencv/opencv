@@ -1213,6 +1213,19 @@ save_data_and_model("reduce_max_axis_0", x, model)
 model = ReduceMax(axes=1)
 save_data_and_model("reduce_max_axis_1", x, model)
 
+class Min(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(Min, self).__init__()
+
+    def forward(self, a, b):
+        return torch.min(a, b)
+
+model = Min()
+input_0 = Variable(torch.randn(2, 3, 4, 5, dtype=torch.float32))
+input_1 = Variable(torch.randn(2, 3, 4, 5, dtype=torch.float32))
+save_data_and_model_multy_inputs("min", model, input_0, input_1, export_params=True)
+simplify('models/min.onnx', False)
+
 class ResizeConv(nn.Module):
     def __init__(
             self,
