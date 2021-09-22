@@ -25,7 +25,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         MAX,
         SUM,
         PRODUCT,
-        DIV
+        DIV,
+        MIN,
     };
 
     class EltwiseOpBase : public CUDABackendNode {
@@ -78,6 +79,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 switch (op)
                 {
                 case EltwiseOpType::MAX: kernels::eltwise_max_2<T>(stream, output, input_x, input_y); break;
+                case EltwiseOpType::MIN: kernels::eltwise_min_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::PRODUCT: kernels::eltwise_prod_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::DIV: kernels::eltwise_div_2<T>(stream, output, input_x, input_y); break;
                 case EltwiseOpType::SUM:
@@ -104,6 +106,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     switch (op)
                     {
                     case EltwiseOpType::MAX: kernels::eltwise_max_2<T>(stream, output, output, input); break;
+                    case EltwiseOpType::MIN: kernels::eltwise_min_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::PRODUCT: kernels::eltwise_prod_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::DIV: kernels::eltwise_div_2<T>(stream, output, output, input); break;
                     case EltwiseOpType::SUM:

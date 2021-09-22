@@ -105,7 +105,7 @@ private:
     void parseSplit                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBias                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePow                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseMax                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseMinMax               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNeg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1105,10 +1105,12 @@ void ONNXImporter::parsePow(LayerParams& layerParams, const opencv_onnx::NodePro
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+// "Min" "Max"
+void ONNXImporter::parseMinMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    const std::string& layer_type = node_proto.op_type();
     layerParams.type = "Eltwise";
-    layerParams.set("operation", "max");
+    layerParams.set("operation", layer_type == "Max" ? "max" : "min");
     addLayer(layerParams, node_proto);
 }
 
@@ -2421,7 +2423,7 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["Split"] = &ONNXImporter::parseSplit;
     dispatch["Add"] = dispatch["Sum"] = dispatch["Sub"] = &ONNXImporter::parseBias;
     dispatch["Pow"] = &ONNXImporter::parsePow;
-    dispatch["Max"] = &ONNXImporter::parseMax;
+    dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseMinMax;
     dispatch["Neg"] = &ONNXImporter::parseNeg;
     dispatch["Constant"] = &ONNXImporter::parseConstant;
     dispatch["LSTM"] = &ONNXImporter::parseLSTM;

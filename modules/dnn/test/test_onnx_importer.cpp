@@ -301,6 +301,11 @@ TEST_P(Test_ONNX_layers, ReduceMax)
     testONNXModels("reduce_max_axis_1");
 }
 
+TEST_P(Test_ONNX_layers, Min)
+{
+    testONNXModels("min", npy, 0, 0, false, true, 2);
+}
+
 TEST_P(Test_ONNX_layers, Scale)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)

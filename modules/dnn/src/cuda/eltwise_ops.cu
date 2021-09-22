@@ -75,6 +75,11 @@ void eltwise_max_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
 }
 
 template <class T>
+void eltwise_min_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
+    eltwise_op<T, MinFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
 void eltwise_sum_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
     eltwise_op<T, SumFunctor<T>>(stream, output, x, y);
 }
@@ -100,11 +105,13 @@ void eltwise_div_2(const Stream& stream, Span<T> output, View<T> x, View<T> y) {
     template void eltwise_sum_coeff_2(const Stream&, Span<__half>, __half, View<__half>, __half, View<__half>);
     template void eltwise_sum_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
     template void eltwise_max_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
+    template void eltwise_min_2(const Stream& stream, Span<__half> output, View<__half> x, View<__half> y);
 #endif
     template void eltwise_div_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
     template void eltwise_prod_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
     template void eltwise_sum_coeff_2(const Stream&, Span<float>, float, View<float>, float, View<float>);
     template void eltwise_sum_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
     template void eltwise_max_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
+    template void eltwise_min_2(const Stream& stream, Span<float> output, View<float> x, View<float> y);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
