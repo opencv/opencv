@@ -1833,10 +1833,8 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
     : CV_HAL_ERROR_NOT_IMPLEMENTED \
 )
 #define TEGRA_CVT2PYUVTOBGR(src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx) \
-( \
     TEGRA_CVT2PYUVTOBGR_EX(src_data, src_step, src_data + src_step * dst_height, src_step, dst_data, dst_step, \
-            dst_width, dst_height, dcn, swapBlue, uIdx); \
-)
+            dst_width, dst_height, dcn, swapBlue, uIdx);
 
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR TEGRA_CVTBGRTOBGR
