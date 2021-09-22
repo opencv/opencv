@@ -6,7 +6,7 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -o, --output - output file (default out.svg)
 -r, --rows - pattern rows (default 11)
 -c, --columns - pattern columns (default 8)
--T, --type - type of pattern, circles, acircles, checkerboard (default circles)
+-T, --type - type of pattern, circles, acircles, checkerboard, radon_checkerboard (default circles)
 -s, --square_size - size of squares in pattern (default 20.0)
 -R, --radius_rate - circles_radius = square_size/radius_rate (default 5.0)
 -u, --units - mm, inches, px, m (default mm)
@@ -70,6 +70,27 @@ class PatternMaker:
                                  height=spacing, fill="black", stroke="none")
                     self.g.append(square)
 
+    @staticmethod
+    def _make_round_rect(x, y, rad, corners=("right", "right", "right", "right")):
+        diam = 2 * rad
+        cw_point = ((0, 0), (diam, 0), (diam, diam), (0, diam))
+        mid_cw_point = ((0, rad), (rad, 0), (diam, rad), (rad, diam))
+        res_str = "M{},{} ".format(x + mid_cw_point[0][0], y + mid_cw_point[0][1])
+        n = len(cw_point)
+        for i in range(n):
+            if corners[i] == "right":
+                res_str += "L{},{} L{},{} ".format(x + cw_point[i][0], y + cw_point[i][1],
+                                                   x + mid_cw_point[(i + 1) % n][0], y + mid_cw_point[(i + 1) % n][1])
+            elif corners[i] == "round":
+                res_str += "A{},{} 0,0,1 {},{} ".format(rad, rad, x + mid_cw_point[(i + 1) % n][0],
+                                                        y + mid_cw_point[(i + 1) % n][1])
+            else:
+                raise TypeError("unknown corner type")
+        return res_str
+
+    def make_radon_checkerboard_pattern(self):
+        pass
+
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
                    viewBox="0 0 %d %d" % (self.width, self.height))
@@ -85,7 +106,7 @@ def main():
                         type=int)
     parser.add_argument("-r", "--rows", help="pattern rows", default="11", action="store", dest="rows", type=int)
     parser.add_argument("-T", "--type", help="type of pattern", default="circles", action="store", dest="p_type",
-                        choices=["circles", "acircles", "checkerboard"])
+                        choices=["circles", "acircles", "checkerboard", "radon_checkerboard"])
     parser.add_argument("-u", "--units", help="length unit", default="mm", action="store", dest="units",
                         choices=["mm", "inches", "px", "m"])
     parser.add_argument("-s", "--square_size", help="size of squares in pattern", default="20.0", action="store",
@@ -124,7 +145,7 @@ def main():
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
-          "checkerboard": pm.make_checkerboard_pattern}
+          "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern}
     mp[p_type]()
     # this should save pattern to output
     pm.save()
