@@ -282,7 +282,7 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestFluid, ResizePerfTest,
         Values(/*cv::INTER_NEAREST,*/ cv::INTER_LINEAR/*, cv::INTER_AREA*/),
         Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(cv::Size(64, 64),
-               cv::Size(30, 30)),
+               cv::Size(32, 32)),
         Values(cv::compile_args(CORE_FLUID))));
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()

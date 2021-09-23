@@ -3456,22 +3456,7 @@ inline v_int16x8 v_mulhrs(const v_int16x8& a, short b) {
 
 namespace {
     template<int chanNum>
-    CV_ALWAYS_INLINE void v_gather_channel(v_int16x8& vec, const uchar src[], const short* index, const int channel, const int pos)
-    {
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + channel]), 0);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos) + channel]), 1);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + channel]), 2);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos) + channel]), 3);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + channel]), 4);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos) + channel]), 5);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + channel]), 6);
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos) + channel]), 7);
-    }
-}  // namespace
-
-namespace {
-    template<int chanNum>
-    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
+    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x16&, const uchar*, const short*, const int)
     {
         CV_Assert("Unsupported number of channel");
     }

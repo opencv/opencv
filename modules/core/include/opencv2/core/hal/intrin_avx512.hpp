@@ -3146,42 +3146,8 @@ namespace {
     }
 
     template<>
-    CV_ALWAYS_INLINE void v_gather_pixel_map<3>(v_uint8x64& vec, const uchar src[], const short* index, const int pos)
-    {
-        constexpr int chanNum = 3;
-#if 0
-        // pixel_1 (rgb)
-        vec.val = _mm_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*index + pos)]), 0);
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + 2]), 2);
-        // pixel_2 (rgb)
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos)]), 3);
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 1) + pos) + 1]), 2);
-        // pixel_3
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 2) + pos)]), 3);
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + 2]), 8);
-        // pixel_4
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos)]), 9);
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 3) + pos) + 1]), 5);
-        // pixel_5
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 4) + pos)]), 6);
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + 2]), 14);
-        // pixel_6
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos)]), 15);
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 5) + pos) + 1]), 8);
-        // pixel_7
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 6) + pos)]), 9);
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + 2]), 20);
-        // pixel_8
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos)]), 21);
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 7) + pos) + 1]), 11);
-        // pixel_9
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 8) + pos)]), 12);
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 8) + pos) + 2]), 26);
-        // pixel_10
-        vec.val = _mm256_insert_epi8(vec.val, *reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 9) + pos)]), 27);
-        vec.val = _mm256_insert_epi16(vec.val, *reinterpret_cast<const ushort*>(&src[chanNum * (*(index + 9) + pos)]), 14);
-#endif
-    }
+    CV_ALWAYS_INLINE void v_gather_pixel_map<3>(v_uint8x64& /*vec*/, const uchar /*src[]*/, const short* /*index*/, const int /*pos*/)
+    {}
 
     template<>
     CV_ALWAYS_INLINE void v_gather_pixel_map<4>(v_uint8x64& vec, const uchar src[], const short* index, const int pos)

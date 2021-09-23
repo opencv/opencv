@@ -3189,7 +3189,7 @@ namespace {
 
 namespace {
     template<int chanNum>
-    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x32& vec, const uchar src[], const short* index, const int pos)
+    CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x32&, const uchar*, const short*, const int)
     {
         CV_Assert("Unsupported number of channel");
     }
