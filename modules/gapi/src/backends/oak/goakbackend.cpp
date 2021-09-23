@@ -4,12 +4,17 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef WITH_OAK_BACKEND
+
+#include <cstring>
+
 #include <api/gbackend_priv.hpp>
 #include <backends/common/gbackend.hpp>
 
 #include "depthai/depthai.hpp"
 
 #include <opencv2/gapi/oak/oak.hpp>
+#include <opencv2/gapi/oak/oak_media_adapter.hpp>
 
 namespace cv { namespace gimpl {
 namespace oak {
@@ -83,8 +88,8 @@ using ConstOAKGraph = ade::ConstTypedGraph
 cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                                         const cv::GCompileArgs &args,
                                         const std::vector<ade::NodeHandle>& nodes,
-                                        const std::vector<cv::gimpl::Data>& ins_data,
-                                        const std::vector<cv::gimpl::Data>& outs_data)
+                                        const std::vector<cv::gimpl::Data>& /*ins_data*/,
+                                        const std::vector<cv::gimpl::Data>& /*outs_data*/)
     : m_g(g), m_gm(m_g), m_args(args) {
 
     // FIXME: change the hard-coded behavior (XLinkIn path)
@@ -100,7 +105,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
     for (const auto& nh : nodes) {
         if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
             auto op = m_gm.metadata(nh).get<Op>();
-            if (op.name() == "org.opencv.oak.enc") {
+            if (std::strcmp(op.name(), "org.opencv.oak.enc") == 0) {
                 auto videoEnc = m_pipeline.create<dai::node::VideoEncoder>();
                 // FIXME: extract kernel arguments here and properly convert them for dai
                 videoEnc->setDefaultProfilePreset(1920, 1080, 30,
@@ -127,14 +132,17 @@ void cv::gimpl::GOAKExecutable::handleStopStream() {
     // FIXME: extend
 }
 
-void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
+void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &,
                                     GIslandExecutable::IOutput &out) {
     // FIXME: extend
     dai::Device device(m_pipeline);
     auto q = device.getOutputQueue("h265", 30, true); // change hard-coded params
     auto h265Packet = q->get<dai::ImgFrame>();
-    //videoFile.write((char*)(h265Packet->getData().data()), h265Packet->getData().size());
+
     // somehow put out data to the appropriate mediaframe
+    auto adapter = cv::util::get<MediaFrame*>(out.get(0))->get<cv::gapi::oak::OAKMediaBGR>();
+    adapter->setParams({1920, 1080}, cv::gapi::oak::OAKFrameFormat::BGR, h265Packet->getData().data());
+    //videoFile.write((char*)(h265Packet->getData().data()), h265Packet->getData().size());
 }
 
 // Built-in kernels for OAK /////////////////////////////////////////////////////
@@ -255,3 +263,10 @@ cv::gapi::GBackend cv::gapi::oak::backend() {
     static cv::gapi::GBackend this_backend(std::make_shared<GOAKBackendImpl>());
     return this_backend;
 }
+
+#else
+
+// fixme: add proper impls with asserts inside
+#error 42
+
+#endif // WITH_OAK_BACKEND

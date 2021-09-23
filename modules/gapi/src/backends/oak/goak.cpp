@@ -22,6 +22,8 @@ cv::gapi::GKernelPackage kernels();
 } // namespace oak
 } // namespace gimpl
 
+#ifdef WITH_OAK_BACKEND
+
 namespace gapi {
 namespace oak {
 
@@ -54,4 +56,11 @@ cv::GMetaArg ColorCamera::descr_of() const {
 
 } // namespace oak
 } // namespace gapi
+
+#else
+
+// fixme: add proper impls with asserts inside
+#error 42
+
+#endif // WITH_OAK_BACKEND
 } // namespace cv

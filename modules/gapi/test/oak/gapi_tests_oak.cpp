@@ -9,6 +9,7 @@
 #ifdef WITH_OAK_BACKEND
 
 #include <opencv2/gapi/oak/oak.hpp>
+#include <opencv2/gapi/oak/oak_media_adapter.hpp>
 
 namespace opencv_test
 {
