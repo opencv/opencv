@@ -30,13 +30,13 @@ struct EncoderConfig {
     // h265 as the default enc type
 };
 
-G_API_OP(GEnc, <GArray<uint8_t>(GFrame, EncoderConfig)>, "org.opencv.oak.enc") {
-    static GArrayDesc outMeta(const GFrameDesc&, const EncoderConfig&) {
-        return cv::empty_array_desc();
+G_API_OP(GEnc, <GFrame(GFrame, EncoderConfig)>, "org.opencv.oak.enc") {
+    static GFrameDesc outMeta(const GFrameDesc&, const EncoderConfig&) {
+        return cv::empty_gframe_desc();
     }
 };
 
-GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& = {});
+GAPI_EXPORTS GFrame encode(const GFrame& in, const EncoderConfig& = {});
 
 // OAK backend & kernels ////////////////////////////////////////////////////////
 GAPI_EXPORTS cv::gapi::GBackend backend();
@@ -59,6 +59,7 @@ public:
 } // namespace oak
 } // namespace gapi
 
+// FIXME: remove
 inline GOptRunArgsP& operator+= (      cv::GOptRunArgsP &lhs,
                                  const cv::GOptRunArgsP &rhs) {
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
@@ -68,6 +69,10 @@ inline GOptRunArgsP& operator+= (      cv::GOptRunArgsP &lhs,
 namespace detail {
 template<> struct CompileArgTag<gapi::oak::ColorCameraParams> {
     static const char* tag() { return "gapi.oak.colorCameraParams"; }
+};
+
+template<> struct CompileArgTag<gapi::oak::EncoderConfig> {
+    static const char* tag() { return "gapi.oak.encoderConfig"; }
 };
 } // namespace detail
 

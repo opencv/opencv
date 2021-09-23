@@ -25,7 +25,7 @@ cv::gapi::GKernelPackage kernels();
 namespace gapi {
 namespace oak {
 
-cv::GArray<uint8_t> encode(const GFrame& in, const EncoderConfig& cfg) {
+cv::GFrame encode(const GFrame& in, const EncoderConfig& cfg) {
     return GEnc::on(in, cfg);
 }
 

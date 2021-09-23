@@ -13,42 +13,6 @@
 namespace opencv_test
 {
 
-TEST(OAK, SimpleCamera)
-{
-    cv::GFrame in;
-    cv::GArray<uint8_t> h265;
-    h265 = cv::gapi::oak::encode(in);
-
-    auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
-
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
-
-    // Graph execution /////////////////////////////////////////////////////////
-    pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
-    pipeline.start();
-
-    std::vector<uint8_t> out_h265;
-
-    std::ofstream out_h265_file;
-
-    // Open H265 file for writing
-    out_h265_file.open("oak_stream.h265", std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
-
-    // Pull 300 frames from the camera
-    uint32_t frames = 300;
-    uint32_t pulled = 0;
-
-    while (pulled++ < frames &&
-           pipeline.pull(cv::gout(out_h265))) {
-        std::cout.width(6);  std::cout << std::left << "h265: ";
-        std::cout.width(15); std::cout << std::left << std::to_string(out_h265.size()) +
-                                                       " bytes, ";
-        out_h265_file.write(reinterpret_cast<const char*>(out_h265.data()),
-                                                          out_h265.size());
-    }
-}
-/*
-namespace {
     class TestMediaBGR final : public cv::MediaFrame::IAdapter {
         cv::Mat m_mat;
 
@@ -66,6 +30,44 @@ namespace {
         }
     };
 
+TEST(OAK, SimpleCamera)
+{
+    cv::GFrame in, h265;
+    h265 = cv::gapi::oak::encode(in);
+
+    auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
+
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
+
+    // Graph execution /////////////////////////////////////////////////////////
+    pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
+    pipeline.start();
+
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<OAKMediaBGR>();
+    //std::vector<uint8_t> out_h265;
+
+    std::ofstream out_h265_file;
+
+    // Open H265 file for writing
+    out_h265_file.open("oak_stream.h265", std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+
+    // Pull 300 frames from the camera
+    uint32_t frames = 300;
+    uint32_t pulled = 0;
+
+    while (pulled++ < frames &&
+           pipeline.pull(cv::gout(out_frame))) {
+               cv::MediaFrame::View view = out_frame.access(cv::MediaFrame::Access::R);
+
+        std::cout.width(6);  std::cout << std::left << "h265: ";
+        //std::cout.width(15); std::cout << std::left << out_frame.desc().size +
+        //                                               " bytes, ";
+        out_h265_file.write(reinterpret_cast<const char*>(view.ptr[0]), out_frame.desc().size.width *
+                                                                        out_frame.desc().size.height * 8 *3);
+    }
+}
+/*
+namespace {
     G_TYPED_KERNEL(TestKernel, <GFrame(GFrame)>, "test.oak.kernel")
     {
         static GFrameDesc outMeta(const GFrameDesc& desc) {
@@ -93,8 +95,8 @@ TEST(OAK, SimpleFile)
 
     cv::Mat bgr = cv::Mat(1920, 1080, CV_8UC3);
     cv::randu(bgr, cv::Scalar::all(0), cv::Scalar::all(255));
-    cv::MediaFrame in_frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
-    cv::MediaFrame out_frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+    cv::MediaFrame in_frame = cv::MediaFrame::Create<OAKMediaBGR>(); // fixme: fill data
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<OAKMediaBGR>();
 
     c.apply(cv::gin(in_frame), cv::gout(out_frame), args);
 
@@ -118,8 +120,8 @@ TEST(OAK, SimpleFileHetero)
 
     cv::Mat bgr = cv::Mat(1920, 1080, CV_8UC3);
     cv::randu(bgr, cv::Scalar::all(0), cv::Scalar::all(255));
-    cv::MediaFrame in_frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
-    cv::MediaFrame out_frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+    cv::MediaFrame in_frame = cv::MediaFrame::Create<OAKMediaBGR>(); // fixme: fill data
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<OAKMediaBGR>();
 
     c.apply(cv::gin(in_frame), cv::gout(out_frame), args);
 
