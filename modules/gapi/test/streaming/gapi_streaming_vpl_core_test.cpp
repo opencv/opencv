@@ -9,6 +9,7 @@
 
 #include "../common/gapi_tests_common.hpp"
 
+#include <chrono>
 #include <future>
 
 #include <opencv2/gapi/cpu/core.hpp>
@@ -30,11 +31,18 @@
 #ifdef HAVE_ONEVPL
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
+#include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
 
 namespace opencv_test
 {
 namespace
 {
+cv::gapi::wip::surface_ptr_t create_test_surface(std::shared_ptr<void> out_buf_ptr,
+                                                 size_t, size_t) {
+    std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
+    return cv::gapi::wip::Surface::create_surface(std::move(handle), out_buf_ptr);
+}
+
 TEST(OneVPL_Source_Surface, InitSurface)
 {
     using namespace cv::gapi::wip;
@@ -160,7 +168,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     EXPECT_TRUE(preallocated_memory_ptr.get() == nullptr);
 }
 
-TEST(OneVPL_Source_CPUFrameAdapter, InitFrameAdapter)
+TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
 {
     using namespace cv::gapi::wip;
 
@@ -179,6 +187,157 @@ TEST(OneVPL_Source_CPUFrameAdapter, InitFrameAdapter)
         EXPECT_EQ(surf->get_locks_count(), 1);
     }
     EXPECT_EQ(surf->get_locks_count(), 0);
+}
+
+TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
+{
+    using cv::gapi::wip::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::VPLAccelerationPolicy;
+
+    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+
+    size_t surface_count = 10;
+    size_t surface_size_bytes = 1024;
+    size_t pool_count = 3;
+    std::vector<VPLAccelerationPolicy::pool_key_t> pool_export_keys;
+    pool_export_keys.reserve(pool_count);
+
+    // create several pools
+    for (size_t i = 0; i < pool_count; i++)
+    {
+        VPLAccelerationPolicy::pool_key_t key =
+                acceleration_policy->create_surface_pool(surface_count,
+                                                         surface_size_bytes,
+                                                         create_test_surface);
+        // check consistency
+        EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
+        EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+
+        pool_export_keys.push_back(key);
+    }
+
+    EXPECT_NO_THROW(acceleration_policy.reset());
+}
+
+TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
+{
+    using cv::gapi::wip::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::VPLAccelerationPolicy;
+    using cv::gapi::wip::Surface;
+
+    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+
+    size_t surface_count = 10;
+    size_t surface_size_bytes = 1024;
+
+    VPLAccelerationPolicy::pool_key_t key =
+                acceleration_policy->create_surface_pool(surface_count,
+                                                         surface_size_bytes,
+                                                         create_test_surface);
+    // check consistency
+    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
+    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+
+    // consume available surfaces
+    std::vector<std::shared_ptr<Surface>> surfaces;
+    surfaces.reserve(surface_count);
+    for (size_t i = 0; i < surface_count; i++) {
+        std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
+        EXPECT_TRUE(surf.get() != nullptr);
+        EXPECT_EQ(surf->obtain_lock(), 0);
+        surfaces.push_back(std::move(surf));
+    }
+
+    // check consistency (no free surfaces)
+    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
+    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), 0);
+
+    // fail consume non-free surfaces
+    for (size_t i = 0; i < surface_count; i++) {
+        EXPECT_THROW(acceleration_policy->get_free_surface(key), std::runtime_error);
+    }
+
+    // release surfaces
+    for (auto& surf : surfaces) {
+        EXPECT_EQ(surf->release_lock(), 1);
+    }
+    surfaces.clear();
+
+    // check consistency
+    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
+    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+
+    //check availability after release
+    for (size_t i = 0; i < surface_count; i++) {
+        std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
+        EXPECT_TRUE(surf.get() != nullptr);
+        EXPECT_EQ(surf->obtain_lock(), 0);
+    }
+}
+
+TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
+{
+    using cv::gapi::wip::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::VPLAccelerationPolicy;
+    using cv::gapi::wip::Surface;
+
+    auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
+
+    size_t surface_count = 10;
+    size_t surface_size_bytes = 1024;
+
+    VPLAccelerationPolicy::pool_key_t key =
+                acceleration_policy->create_surface_pool(surface_count,
+                                                         surface_size_bytes,
+                                                         create_test_surface);
+
+    // check consistency
+    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
+    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+
+    // consume available surfaces
+    std::vector<std::shared_ptr<Surface>> surfaces;
+    surfaces.reserve(surface_count);
+    for (size_t i = 0; i < surface_count; i++) {
+        std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
+        EXPECT_TRUE(surf.get() != nullptr);
+        EXPECT_EQ(surf->obtain_lock(), 0);
+        surfaces.push_back(std::move(surf));
+    }
+
+    std::promise<void> launch_promise;
+    std::future<void> sync = launch_promise.get_future();
+    std::promise<size_t> surface_released_promise;
+    std::future<size_t> released_result = surface_released_promise.get_future();
+    std::thread worker_thread([&launch_promise, &surface_released_promise, &surfaces] () {
+        launch_promise.set_value();
+
+        // concurrent release surfaces
+        size_t surfaces_count = surfaces.size();
+        for (auto& surf : surfaces) {
+            EXPECT_EQ(surf->release_lock(), 1);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        surfaces.clear();
+
+        surface_released_promise.set_value(surfaces_count);
+    });
+    sync.wait();
+
+    // check free surface concurrently
+    std::future_status status;
+    size_t free_surface_count = 0;
+    size_t free_surface_count_prev = 0;
+    do {
+        status = released_result.wait_for(std::chrono::seconds(1));
+        free_surface_count = acceleration_policy->get_free_surface_count(key);
+        EXPECT_TRUE(free_surface_count >= free_surface_count_prev);
+        free_surface_count_prev = free_surface_count;
+    } while (status != std::future_status::ready);
+    std::cerr<< "Ready" << std::endl;
+    free_surface_count = acceleration_policy->get_free_surface_count(key);
+    worker_thread.join();
+    EXPECT_TRUE(free_surface_count >= free_surface_count_prev);
 }
 }
 } // namespace opencv_test
