@@ -171,6 +171,9 @@ set(gapi_srcs
     src/streaming/onevpl/data_provider_interface_exception.cpp
     src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/surface.cpp
+    src/streaming/onevpl/accelerators/surface/surface_pool.cpp
+    src/streaming/onevpl/accelerators/accel_policy_cpu.cpp
+    src/streaming/onevpl/accelerators/accel_policy_dx11.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
@@ -247,6 +250,9 @@ if(HAVE_GAPI_ONEVPL)
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_ONEVPL)
     ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+    if(HAVE_D3D11 AND HAVE_OPENCL)
+        ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
   endif()
   ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_ONEVPL)
   ocv_target_link_libraries(${the_module} PRIVATE ${VPL_IMPORTED_TARGETS})
