@@ -71,8 +71,8 @@ class PatternMaker:
                     self.g.append(square)
 
     @staticmethod
-    def _make_round_rect(x, y, rad, corners=("right", "right", "right", "right")):
-        diam = 2 * rad
+    def _make_round_rect(x, y, diam, corners=("right", "right", "right", "right")):
+        rad = diam / 2
         cw_point = ((0, 0), (diam, 0), (diam, diam), (0, diam))
         mid_cw_point = ((0, rad), (rad, 0), (diam, rad), (rad, diam))
         res_str = "M{},{} ".format(x + mid_cw_point[0][0], y + mid_cw_point[0][1])
@@ -88,8 +88,42 @@ class PatternMaker:
                 raise TypeError("unknown corner type")
         return res_str
 
+    def _get_type(self, x, y):
+        corners = ["right", "right", "right", "right"]
+        is_inside = True
+        if x == 0:
+            corners[0] = "round"
+            corners[3] = "round"
+            is_inside = False
+        if y == 0:
+            corners[0] = "round"
+            corners[1] = "round"
+            is_inside = False
+        if x == self.cols - 1:
+            corners[1] = "round"
+            corners[2] = "round"
+            is_inside = False
+        if y == self.rows - 1:
+            corners[2] = "round"
+            corners[3] = "round"
+            is_inside = False
+        return corners, is_inside
+
     def make_radon_checkerboard_pattern(self):
-        pass
+        spacing = self.square_size
+        xspacing = (self.width - self.cols * self.square_size) / 2.0
+        yspacing = (self.height - self.rows * self.square_size) / 2.0
+        for x in range(0, self.cols):
+            for y in range(0, self.rows):
+                if x % 2 == y % 2:
+                    corner_types, is_inside = self._get_type(x, y)
+                    if is_inside:
+                        square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
+                                     height=spacing, fill="black", stroke="none")
+                    else:
+                        square = SVG("path", d=self._make_round_rect(x * spacing + xspacing, y * spacing + yspacing,
+                                                                     spacing, corner_types), fill="black", stroke="none")
+                    self.g.append(square)
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
