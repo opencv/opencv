@@ -29,33 +29,31 @@ void CachedPool::push_back(surface_ptr_t &&surf) {
 }
 
 CachedPool::surface_ptr_t CachedPool::find_free() {
+    auto it =
+        std::find_if(next_free_it, surfaces.end(),
+                     [](const surface_ptr_t& val) {
+            GAPI_DbgAssert(val && "Pool contains empty surface");
+            return !val->get_locks_count();
+        });
 
-        auto it =
-            std::find_if(next_free_it, surfaces.end(),
-                        [](const surface_ptr_t& val) {
+    // Limitation realloc pool might be a future extension
+    if (it == surfaces.end()) {
+        it = std::find_if(surfaces.begin(), next_free_it,
+                          [](const surface_ptr_t& val) {
                 GAPI_DbgAssert(val && "Pool contains empty surface");
                 return !val->get_locks_count();
             });
-
-        // Limitation realloc pool might be a future extension
-        if (it == surfaces.end()) {
-            it =
-                std::find_if(surfaces.begin(), next_free_it,
-                            [](const surface_ptr_t& val) {
-                    GAPI_DbgAssert(val && "Pool contains empty surface");
-                    return !val->get_locks_count();
-                });
-            if (it == next_free_it) {
-                std::stringstream ss;
-                ss << "cannot get free surface from pool, size: " << surfaces.size();
-                const std::string& str = ss.str();
-                GAPI_LOG_WARNING(nullptr, str);
-                throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
-            }
+        if (it == next_free_it) {
+            std::stringstream ss;
+            ss << "cannot get free surface from pool, size: " << surfaces.size();
+            const std::string& str = ss.str();
+            GAPI_LOG_WARNING(nullptr, str);
+            throw std::runtime_error(std::string(__FUNCTION__) + " - " + str);
         }
+    }
 
-        next_free_it = it;
-        ++next_free_it;
+    next_free_it = it;
+    ++next_free_it;
 
     return *it;
 }
