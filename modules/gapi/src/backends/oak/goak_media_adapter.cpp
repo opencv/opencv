@@ -13,7 +13,7 @@ namespace oak {
 
 class OAKMediaBGR::Priv final {
 public:
-    //Priv() = default;
+    Priv() = default;
     void setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr);
 
     MediaFrame::View access(MediaFrame::Access access);
@@ -46,6 +46,7 @@ MediaFrame::View OAKMediaBGR::access(MediaFrame::Access access) {
 }
 cv::GFrameDesc OAKMediaBGR::meta() const { return m_priv->meta(); }
 
+OAKMediaBGR::OAKMediaBGR() = default;
 OAKMediaBGR::~OAKMediaBGR() = default;
 
 } // namespace oak
