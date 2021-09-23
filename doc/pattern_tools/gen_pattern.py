@@ -13,6 +13,7 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -w, --page_width - page width in units (default 216)
 -h, --page_height - page height in units (default 279)
 -a, --page_size - page size (default A4), supersedes -h -w arguments
+-m, --markers - list of cells with markers for the radon checkerboard
 -H, --help - show help
 """
 
@@ -22,7 +23,7 @@ from svgfig import *
 
 
 class PatternMaker:
-    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height):
+    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers):
         self.cols = cols
         self.rows = rows
         self.output = output
@@ -31,6 +32,7 @@ class PatternMaker:
         self.radius_rate = radius_rate
         self.width = page_width
         self.height = page_height
+        self.markers = markers
         self.g = SVG("g")  # the svg group container
 
     def make_circles_pattern(self):
@@ -124,6 +126,19 @@ class PatternMaker:
                         square = SVG("path", d=self._make_round_rect(x * spacing + xspacing, y * spacing + yspacing,
                                                                      spacing, corner_types), fill="black", stroke="none")
                     self.g.append(square)
+        if self.markers is not None:
+            r = self.square_size * 0.17
+            pattern_width = ((self.cols - 1.0) * spacing) + (2.0 * r)
+            pattern_height = ((self.rows - 1.0) * spacing) + (2.0 * r)
+            x_spacing = (self.width - pattern_width) / 2.0
+            y_spacing = (self.height - pattern_height) / 2.0
+            for x, y in zip(self.markers[::2], self.markers[1::2]):
+                color = "black"
+                if x % 2 == y % 2:
+                    color = "white"
+                dot = SVG("circle", cx=(x * spacing) + x_spacing + r,
+                          cy=(y * spacing) + y_spacing + r, r=r, fill=color, stroke="none")
+                self.g.append(dot)
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
@@ -151,8 +166,10 @@ def main():
                         dest="page_width", type=float)
     parser.add_argument("-h", "--page_height", help="page height in units", default=argparse.SUPPRESS, action="store",
                         dest="page_height", type=float)
-    parser.add_argument("-a", "--page_size", help="page size, superseded if -h and -w are set", default="A4", action="store",
-                        dest="page_size", choices=["A0", "A1", "A2", "A3", "A4", "A5"])
+    parser.add_argument("-a", "--page_size", help="page size, superseded if -h and -w are set", default="A4",
+                        action="store", dest="page_size", choices=["A0", "A1", "A2", "A3", "A4", "A5"])
+    parser.add_argument("-m", "--markers", help="list of cells with markers for the radon checkerboard",
+                        action="store", dest="markers", nargs="+", type=int)
     args = parser.parse_args()
 
     show_help = args.show_help
@@ -176,7 +193,8 @@ def main():
                       "A5": [148, 210]}
         page_width = page_sizes[page_size][0]
         page_height = page_sizes[page_size][1]
-    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height)
+    markers = args.markers
+    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
           "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern}
