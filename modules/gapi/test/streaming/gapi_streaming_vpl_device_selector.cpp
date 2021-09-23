@@ -28,7 +28,8 @@
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>
 #endif
-
+#undef D3D11_NO_HELPERS
+#undef NOMINMAX
 #endif
 #endif
 
