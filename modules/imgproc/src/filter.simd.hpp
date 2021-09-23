@@ -1124,7 +1124,7 @@ struct SymmColumnVec_32f8u
     {
         symmetryType = _symmetryType;
         kernel = _kernel;
-        delta = _delta;
+        delta = (float)_delta;
         CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
     }
 
