@@ -24,12 +24,11 @@ class OAKMediaBGR final : public cv::MediaFrame::IAdapter {
     class Priv;
     std::unique_ptr<Priv> m_priv;
 public:
-    OAKMediaBGR() = default;
     // FIXME: Used by the internal backend only
-    void setParams(cv::Size sz, OAKFrameFormat fmt, unsigned char* data_ptr);
+    void setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr);
     cv::GFrameDesc meta() const override;
     cv::MediaFrame::View access(cv::MediaFrame::Access) override;
-    ~OAKMediaBGR() = default;
+    ~OAKMediaBGR() override;
 };
 
 } // namespace oak

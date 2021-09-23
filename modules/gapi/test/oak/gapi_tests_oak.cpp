@@ -44,7 +44,7 @@ TEST(OAK, SimpleCamera)
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
     pipeline.start();
 
-    cv::MediaFrame out_frame = cv::MediaFrame::Create<OAKMediaBGR>();
+    cv::MediaFrame out_frame = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaBGR>();
     //std::vector<uint8_t> out_h265;
 
     std::ofstream out_h265_file;
