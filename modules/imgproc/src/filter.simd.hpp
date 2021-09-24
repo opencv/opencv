@@ -468,7 +468,7 @@ struct RowVec_8u32s
 struct RowVec_8u32f
 {
     RowVec_8u32f() {}
-    RowVec_8u32f( const Mat& _kernel ) { kernel = _kernel; }
+    RowVec_8u32f( const Mat& _kernel ) : kernel(_kernel) {}
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
@@ -478,7 +478,7 @@ struct RowVec_8u32f
         float* dst = (float*)_dst;
         const float* _kx = kernel.ptr<float>();
         width *= cn;
-        for( ; i < width - v_uint8::nlanes; i += v_uint8::nlanes )
+        for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
         {
             v_float32 s0 = vx_setzero_f32();
             v_float32 s1 = vx_setzero_f32();
@@ -489,17 +489,14 @@ struct RowVec_8u32f
             {
                 v_float32 f = vx_setall_f32(_kx[k]);
                 const uchar* src = (const uchar*)_src + i + k * cn;
-                v_uint8 vs = vx_load(src);
-                v_int16 vs_l = v_reinterpret_as_s16(v_expand_low(vs));
-                v_int16 vs_h = v_reinterpret_as_s16(v_expand_high(vs));
-                v_float32 fvs_ll = v_cvt_f32(v_expand_low(vs_l));
-                v_float32 fvs_lh = v_cvt_f32(v_expand_high(vs_l));
-                v_float32 fvs_hl = v_cvt_f32(v_expand_low(vs_h));
-                v_float32 fvs_hh = v_cvt_f32(v_expand_high(vs_h));
-                s0 = v_muladd(fvs_ll, f, s0);
-                s1 = v_muladd(fvs_lh, f, s1);
-                s2 = v_muladd(fvs_hl, f, s2);
-                s3 = v_muladd(fvs_hh, f, s3);
+                v_float32 vs_ll = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src)));
+                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + v_float32::nlanes)));
+                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 2*v_float32::nlanes)));
+                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 3*v_float32::nlanes)));
+                s0 = v_muladd(vs_ll, f, s0);
+                s1 = v_muladd(vs_lh, f, s1);
+                s2 = v_muladd(vs_hl, f, s2);
+                s3 = v_muladd(vs_hh, f, s3);
             }
             v_store(dst + i, s0);
             v_store(dst + i + v_float32::nlanes, s1);
