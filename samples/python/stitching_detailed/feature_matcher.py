@@ -32,17 +32,30 @@ class FeatureMatcher:
         return pairwise_matches
 
     @staticmethod
-    def get_match_conf(match_conf, feature_detector_type):
-        if match_conf is None:
-            match_conf = \
-                FeatureMatcher.get_default_match_conf(feature_detector_type)
-        return match_conf
+    def draw_matches_matrix(imgs, features, matches, inliers=False, **kwargs):
+        matches_matrix = FeatureMatcher.get_matches_matrix(matches)
+        for idx1, idx2 in FeatureMatcher._get_all_img_combinations(len(imgs)):
+            match = matches_matrix[idx1, idx2]
+            if inliers:
+                kwargs['matchesMask'] = match.getInliers()
+            yield idx1, idx2, FeatureMatcher.draw_matches(
+                imgs[idx1], features[idx1],
+                imgs[idx2], features[idx2],
+                match,
+                **kwargs
+                )
 
     @staticmethod
-    def get_default_match_conf(feature_detector_type):
-        if feature_detector_type == 'orb':
-            return 0.3
-        return 0.65
+    def draw_matches(img1, features1, img2, features2, match1to2, **kwargs):
+        kwargs.setdefault('flags', cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+        keypoints1 = features1.getKeypoints()
+        keypoints2 = features2.getKeypoints()
+        matches = match1to2.getMatches()
+
+        return cv.drawMatches(
+            img1, keypoints1, img2, keypoints2, matches, None, **kwargs
+            )
 
     @staticmethod
     def get_matches_matrix(pairwise_matches):
@@ -62,3 +75,21 @@ class FeatureMatcher:
         for i in range(0, len(array), matrix_dimension):
             rows.append(array[i:i+matrix_dimension])
         return np.array(rows)
+
+    def _get_all_img_combinations(number_imgs):
+        ii, jj = np.triu_indices(number_imgs, k=1)
+        for i, j in zip(ii, jj):
+            yield i, j
+
+    @staticmethod
+    def get_match_conf(match_conf, feature_detector_type):
+        if match_conf is None:
+            match_conf = \
+                FeatureMatcher.get_default_match_conf(feature_detector_type)
+        return match_conf
+
+    @staticmethod
+    def get_default_match_conf(feature_detector_type):
+        if feature_detector_type == 'orb':
+            return 0.3
+        return 0.65
