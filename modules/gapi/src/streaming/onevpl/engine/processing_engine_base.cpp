@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <algorithm>
+
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_interface.hpp"
@@ -25,9 +27,7 @@ ProcessingEngineBase::~ProcessingEngineBase() {
 ProcessingEngineBase::ExecutionStatus ProcessingEngineBase::process(mfxSession session) {
     auto sess_it = sessions.find(session);
     if (sess_it == sessions.end()) {
-
-        // TODO remember the last session status
-        return ExecutionStatus::Processed;
+        return ExecutionStatus::SessionNotFound;
     }
 
     session_ptr processing_session = sess_it->second;
@@ -67,6 +67,7 @@ const char* ProcessingEngineBase::status_to_string(ExecutionStatus status)
     switch(status) {
         case ExecutionStatus::Continue: return "CONTINUE";
         case ExecutionStatus::Processed: return "PROCESSED";
+        case ExecutionStatus::SessionNotFound: return "NOT_FOUND_SESSION";
         case ExecutionStatus::Failed: return "FAILED";
         default:
             return "UNKNOWN";
@@ -113,12 +114,12 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
     if (bs.DataLength + bs.DataOffset > bs.MaxLength) {
         return MFX_ERR_NOT_ENOUGH_BUFFER;
     }
-    for (mfxU32 i = 0; i < bs.DataLength; i++) {
-        *(p0++) = *(p1++);
-    }
+
+    std::copy_n(p0, bs.DataLength, p1);
+
     bs.DataOffset = 0;
     bs.DataLength += static_cast<mfxU32>(data_provider->fetch_data(bs.MaxLength - bs.DataLength,
-                                                                     bs.Data + bs.DataLength));
+                                                                   bs.Data + bs.DataLength));
     if (bs.DataLength == 0)
         return MFX_ERR_MORE_DATA;
 

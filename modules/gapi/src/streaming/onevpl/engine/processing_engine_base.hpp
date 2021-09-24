@@ -25,6 +25,7 @@ public:
     enum class ExecutionStatus {
         Continue,
         Processed,
+        SessionNotFound,
         Failed
     };
     struct ExecutionData {

@@ -60,12 +60,11 @@ surface_ptr_t create_surface_RGB4(mfxFrameInfo frameInfo,
 
     // TODO more intelligent check
     if (out_buf_size <= out_buf_ptr_offset) {
-        GAPI_LOG_WARNING(nullptr, "Not enough buffer, ptr: " << out_buf_ptr <<
-                                  ", size: " << out_buf_size <<
-                                  ", offset: " << out_buf_ptr_offset <<
-                                  ", W: " << surfW <<
-                                  ", H: " << surfH);
-        GAPI_Assert(false && "Invalid offset");
+        throw std::runtime_error(std::string("Insufficient buffer size: ") +
+                                 std::to_string(out_buf_size) + ", buffer offset: " +
+                                 std::to_string(out_buf_ptr_offset) +
+                                 ", expected surface width: " + std::to_string(surfW) +
+                                 ", height: " + std::to_string(surfH));
     }
 
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
@@ -93,12 +92,11 @@ surface_ptr_t create_surface_other(mfxFrameInfo frameInfo,
     // TODO more intelligent check
     if (out_buf_size <=
         out_buf_ptr_offset + (surfW * surfH) + ((surfW / 2) * (surfH / 2))) {
-        GAPI_LOG_WARNING(nullptr, "Not enough buffer, ptr: " << out_buf_ptr <<
-                                  ", size: " << out_buf_size <<
-                                  ", offset: " << out_buf_ptr_offset <<
-                                  ", W: " << surfW <<
-                                  ", H: " << surfH);
-        GAPI_Assert(false && "Invalid offset");
+        throw std::runtime_error(std::string("Insufficient buffer size: ") +
+                                 std::to_string(out_buf_size) + ", buffer offset: " +
+                                 std::to_string(out_buf_ptr_offset) +
+                                 ", expected surface width: " + std::to_string(surfW) +
+                                 ", height: " + std::to_string(surfH));
     }
 
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
@@ -169,8 +167,8 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
 }
 
 void VPLLegacyDecodeEngine::initialize_session(mfxSession mfx_session,
-                                         DecoderParams&& decoder_param,
-                                         std::shared_ptr<onevpl::IDataProvider> provider)
+                                               DecoderParams&& decoder_param,
+                                               std::shared_ptr<onevpl::IDataProvider> provider)
 {
     mfxFrameAllocRequest decRequest = {};
     // Query number required surfaces for decoder
@@ -257,8 +255,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
             } catch (const std::exception& ex) {
-                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
-                                          "Abort");
+                GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
             }
             break;
         }

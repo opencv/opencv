@@ -433,6 +433,11 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     EXPECT_EQ(engine.pipeline_stage_num, 3);
     EXPECT_EQ(engine.get_ready_frames_count(), 1);
 
+    ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::SessionNotFound);
+    EXPECT_EQ(engine.pipeline_stage_num, 3);
+    EXPECT_EQ(engine.get_ready_frames_count(), 1);
+
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);
 }
