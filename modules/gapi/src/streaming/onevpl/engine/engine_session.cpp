@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2021 Intel Corporation
+#ifdef HAVE_ONEVPL
 
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "streaming/onevpl/utils.hpp"
@@ -29,3 +30,4 @@ std::string EngineSession::error_code_to_str() const
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL

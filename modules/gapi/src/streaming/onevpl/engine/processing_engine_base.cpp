@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef HAVE_ONEVPL
+
 #include <algorithm>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
@@ -129,3 +131,4 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL

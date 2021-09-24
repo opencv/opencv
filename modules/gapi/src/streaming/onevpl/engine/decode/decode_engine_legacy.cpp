@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef HAVE_ONEVPL
+
 #include <algorithm>
 #include <exception>
 
@@ -305,3 +307,4 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL

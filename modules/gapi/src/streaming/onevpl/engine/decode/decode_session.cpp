@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef HAVE_ONEVPL
+
 #include <chrono>
 #include <exception>
 
@@ -73,3 +75,4 @@ Data::Meta LegacyDecodeSession::generate_frame_meta() {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL
