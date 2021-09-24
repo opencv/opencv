@@ -36,3 +36,9 @@ class FeatureDetector:
     def detect_features(self, img, *args, **kwargs):
         return cv.detail.computeImageFeatures2(self.detector, img,
                                                *args, **kwargs)
+
+    @staticmethod
+    def draw_keypoints(img, features, **kwargs):
+        kwargs.setdefault('color', (0, 255, 0))
+        keypoints = features.getKeypoints()
+        return cv.drawKeypoints(img, keypoints, None, **kwargs)
