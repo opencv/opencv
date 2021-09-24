@@ -2,6 +2,8 @@ from collections import OrderedDict
 import cv2 as cv
 import numpy as np
 
+from .blender import Blender
+
 
 class SeamFinder:
     """https://docs.opencv.org/master/d7/d09/classcv_1_1detail_1_1SeamFinder.html"""  # noqa
@@ -28,3 +30,64 @@ class SeamFinder:
                                                      mask.shape[0]),
                                       0, 0, cv.INTER_LINEAR_EXACT)
         return cv.bitwise_and(resized_seam_mask, mask)
+
+    @staticmethod
+    def draw_seam_mask(img, seam_mask, color=(0, 0, 0)):
+        seam_mask = cv.UMat.get(seam_mask)
+        overlayed_img = np.copy(img)
+        overlayed_img[seam_mask == 0] = color
+        return overlayed_img
+
+    @staticmethod
+    def draw_seam_lines(panorama, seam_masks, corners, sizes,
+                        color=(0, 0, 255)):
+        blended_masks = SeamFinder.blend_seam_masks(seam_masks, corners, sizes)
+        seam_lines = cv.Canny(np.uint8(blended_masks), 100, 200)
+        panorama_with_seam_lines = panorama.copy()
+        panorama_with_seam_lines[seam_lines == 255] = color
+        return panorama_with_seam_lines
+
+    @staticmethod
+    def draw_seam_polygons(panorama, seam_masks, corners, sizes, alpha=0.5):
+        blended_masks = SeamFinder.blend_seam_masks(seam_masks, corners, sizes)
+        return _add_weighted_image(panorama, blended_masks, alpha)
+
+    @staticmethod
+    def blend_seam_masks(seam_masks, corners, sizes, colors=[
+            (255, 000, 000),      # Blue
+            (000, 000, 255),      # Red
+            (000, 255, 000),      # Green
+            (000, 255, 255),      # Yellow
+            (255, 000, 255),      # Magenta
+            (128, 128, 255),      # Pink
+            (128, 128, 128),      # Gray
+            (000, 000, 128),      # Brown
+            (000, 128, 255)]      # Orange
+            ):
+
+        if len(seam_masks) > len(colors):
+            raise ValueError("Not enough default colors! "
+                             "Pass additional colors to \"colors\" parameter")
+
+        blender = Blender("no")
+        blender.prepare(corners, sizes)
+
+        for idx, (seam_mask, size, corner) in enumerate(
+                zip(seam_masks, sizes, corners)):
+            one_color_img = _create_img_by_size(size, colors[idx])
+            blender.feed(one_color_img, seam_mask, corner)
+
+        return blender.blend()
+
+
+def _create_img_by_size(size, color=(0, 0, 0)):
+    width, height = size
+    img = np.zeros((height, width, 3), np.uint8)
+    img[:] = color
+    return img
+
+
+def _add_weighted_image(img1, img2, alpha):
+    return cv.addWeighted(
+        img1, alpha, img2, (1.0 - alpha), 0.0
+        )
