@@ -430,7 +430,7 @@ class JSWrapperGenerator(object):
         f.write(buf.getvalue())
         f.close()
 
-    def gen_function_binding_with_wrapper(self, func, class_info):
+    def gen_function_binding_with_wrapper(self, func, ns_name, class_info):
 
         binding_text = None
         wrapper_func_text = None
@@ -488,8 +488,22 @@ class JSWrapperGenerator(object):
 
 
             # Wrapper function
-            wrap_func_name = (func.class_name+"_" if class_info != None else "") + func.name.split("::")[-1] + "_wrapper"
-            js_func_name = func.name
+            if ns_name != None and ns_name != "cv":
+                ns_parts = ns_name.split(".")
+                if ns_parts[0] == "cv":
+                    ns_parts = ns_parts[1:]
+                ns_part = "_".join(ns_parts) + "_"
+            else:
+                ns_part = ""
+            if class_info == None:
+                js_func_name = ns_part + func.name
+                wrap_func_name = js_func_name + "_wrapper"
+            else:
+                wrap_func_name = ns_part + func.class_name + "_" + func.name + "_wrapper"
+                js_func_name = func.name
+
+            if js_func_name == "_findHomography1":
+                os.error(ns_name, ns_parts, ns_part)
 
             # TODO: Name functions based wrap directives or based on arguments list
             if index > 0:
@@ -769,7 +783,7 @@ class JSWrapperGenerator(object):
                     continue
 
                 if with_wrapped_functions:
-                    binding, wrapper = self.gen_function_binding_with_wrapper(func, class_info=None)
+                    binding, wrapper = self.gen_function_binding_with_wrapper(func, ns_name, class_info=None)
                     self.bindings += binding
                     self.wrapper_funcs += wrapper
                 else:
@@ -802,7 +816,7 @@ class JSWrapperGenerator(object):
                         class_bindings.append(constructor_template.substitute(signature=', '.join(args)))
                 else:
                     if with_wrapped_functions and (len(method.variants) > 1 or len(method.variants[0].args)>0 or "String" in method.variants[0].rettype):
-                        binding, wrapper = self.gen_function_binding_with_wrapper(method, class_info=class_info)
+                        binding, wrapper = self.gen_function_binding_with_wrapper(method, None, class_info=class_info)
                         self.wrapper_funcs = self.wrapper_funcs + wrapper
                         class_bindings = class_bindings + binding
                     else:
