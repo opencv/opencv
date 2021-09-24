@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GSTREAMING_COMPILED_HPP
@@ -65,6 +65,7 @@ using OptionalOpaqueRef = OptRef<cv::detail::OpaqueRef>;
 using GOptRunArgP = util::variant<
     optional<cv::Mat>*,
     optional<cv::RMat>*,
+    optional<cv::MediaFrame>*,
     optional<cv::Scalar>*,
     cv::detail::OptionalVectorRef,
     cv::detail::OptionalOpaqueRef
@@ -74,6 +75,7 @@ using GOptRunArgsP = std::vector<GOptRunArgP>;
 using GOptRunArg = util::variant<
     optional<cv::Mat>,
     optional<cv::RMat>,
+    optional<cv::MediaFrame>,
     optional<cv::Scalar>,
     optional<cv::detail::VectorRef>,
     optional<cv::detail::OpaqueRef>
@@ -93,6 +95,14 @@ template<typename T> inline GOptRunArgP wrap_opt_arg(optional<std::vector<T> >& 
 
 template<> inline GOptRunArgP wrap_opt_arg(optional<cv::Mat> &m) {
     return GOptRunArgP{&m};
+}
+
+template<> inline GOptRunArgP wrap_opt_arg(optional<cv::RMat> &m) {
+    return GOptRunArgP{&m};
+}
+
+template<> inline GOptRunArgP wrap_opt_arg(optional<cv::MediaFrame> &f) {
+    return GOptRunArgP{&f};
 }
 
 template<> inline GOptRunArgP wrap_opt_arg(optional<cv::Scalar> &s) {
