@@ -186,8 +186,9 @@ void sync_data(cv::gimpl::stream::Result &r, cv::GOptRunArgsP &outputs)
         // FIXME: this conversion should be unified
         switch (out_obj.index())
         {
-            HANDLE_CASE(cv::Scalar); break;
-            HANDLE_CASE(cv::RMat);   break;
+            HANDLE_CASE(cv::Scalar);     break;
+            HANDLE_CASE(cv::RMat);       break;
+            HANDLE_CASE(cv::MediaFrame); break;
 
         case T::index_of<O<cv::Mat>*>(): {
             // Mat: special handling.
