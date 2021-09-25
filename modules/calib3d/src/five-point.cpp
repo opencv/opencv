@@ -402,7 +402,7 @@ protected:
 };
 
 // Find essential matrix given undistorted points and two cameras.
-static Mat findEssentialMat( InputArray _points1, InputArray _points2,
+static Mat findEssentialMat_( InputArray _points1, InputArray _points2,
                              InputArray cameraMatrix1, InputArray cameraMatrix2,
                              int method, double prob, double threshold, OutputArray _mask)
 {
@@ -515,7 +515,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
     Mat _pointsUndistorted1, _pointsUndistorted2;
     undistortPoints(_points1, _pointsUndistorted1, cameraMatrix1, distCoeffs1);
     undistortPoints(_points2, _pointsUndistorted2, cameraMatrix2, distCoeffs2);
-    return findEssentialMat(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2, method, prob, threshold, _mask);
+    return findEssentialMat_(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2, method, prob, threshold, _mask);
 }
 
 cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
@@ -547,7 +547,7 @@ int cv::recoverPose( InputArray _points1, InputArray _points2,
     undistortPoints(_points2, _pointsUndistorted2, cameraMatrix2, distCoeffs2);
 
     // Get essential matrix.
-    Mat _E = findEssentialMat(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2,
+    Mat _E = findEssentialMat_(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2,
                               method, prob, threshold, _mask);
     CV_Assert(_E.cols == 3 && _E.rows == 3);
     E.create(3, 3, _E.type());
