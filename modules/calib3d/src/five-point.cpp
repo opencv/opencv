@@ -401,6 +401,29 @@ protected:
     }
 };
 
+// Find essential matrix given undistorted points and two cameras.
+static Mat findEssentialMat_( InputArray _points1, InputArray _points2,
+                             InputArray cameraMatrix1, InputArray cameraMatrix2,
+                             int method, double prob, double threshold, OutputArray _mask)
+{
+    // Scale the points back. We use "arithmetic mean" between the supplied two camera matrices.
+    // Thanks to such 2-stage procedure RANSAC threshold still makes sense, because the undistorted
+    // and rescaled points have a similar value range to the original ones.
+    Mat _pointsTransformed1, _pointsTransformed2;
+    Mat cm1 = cameraMatrix1.getMat(), cm2 = cameraMatrix2.getMat(), cm0;
+    Mat(cm1 + cm2).convertTo(cm0, CV_64F, 0.5);
+    CV_Assert(cm0.rows == 3 && cm0.cols == 3);
+    CV_Assert(std::abs(cm0.at<double>(2, 0)) < 1e-3 &&
+              std::abs(cm0.at<double>(2, 1)) < 1e-3 &&
+              std::abs(cm0.at<double>(2, 2) - 1.) < 1e-3);
+    Mat affine = cm0.rowRange(0, 2);
+
+    transform(_points1, _pointsTransformed1, affine);
+    transform(_points2, _pointsTransformed2, affine);
+
+    return findEssentialMat(_pointsTransformed1, _pointsTransformed2, cm0, method, prob, threshold, _mask);
+}
+
 }
 
 // Input should be a vector of n 2D points or a Nx2 matrix
@@ -489,25 +512,10 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2,
     CV_INSTRUMENT_REGION();
 
     // Undistort image points, bring them to 3x3 identity "camera matrix"
-    Mat _pointsUntistorted1, _pointsUntistorted2;
-    undistortPoints(_points1, _pointsUntistorted1, cameraMatrix1, distCoeffs1);
-    undistortPoints(_points2, _pointsUntistorted2, cameraMatrix2, distCoeffs2);
-
-    // Scale the points back. We use "arithmetic mean" between the supplied two camera matrices.
-    // Thanks to such 2-stage procedure RANSAC threshold still makes sense, because the undistorted
-    // and rescaled points have a similar value range to the original ones.
-    Mat cm1 = cameraMatrix1.getMat(), cm2 = cameraMatrix2.getMat(), cm0;
-    Mat(cm1 + cm2).convertTo(cm0, CV_64F, 0.5);
-    CV_Assert(cm0.rows == 3 && cm0.cols == 3);
-    CV_Assert(std::abs(cm0.at<double>(2, 0)) < 1e-3 &&
-              std::abs(cm0.at<double>(2, 1)) < 1e-3 &&
-              std::abs(cm0.at<double>(2, 2) - 1.) < 1e-3);
-    Mat affine = cm0.rowRange(0, 2);
-
-    transform(_pointsUntistorted1, _pointsUntistorted1, affine);
-    transform(_pointsUntistorted2, _pointsUntistorted2, affine);
-
-    return findEssentialMat(_pointsUntistorted1, _pointsUntistorted2, cm0, method, prob, threshold, _mask);
+    Mat _pointsUndistorted1, _pointsUndistorted2;
+    undistortPoints(_points1, _pointsUndistorted1, cameraMatrix1, distCoeffs1);
+    undistortPoints(_points2, _pointsUndistorted2, cameraMatrix2, distCoeffs2);
+    return findEssentialMat_(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2, method, prob, threshold, _mask);
 }
 
 cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
@@ -522,6 +530,30 @@ cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
         return ransac_output->getModel();
     } else return Mat();
 
+}
+
+int cv::recoverPose( InputArray _points1, InputArray _points2,
+                            InputArray cameraMatrix1, InputArray distCoeffs1,
+                            InputArray cameraMatrix2, InputArray distCoeffs2,
+                            OutputArray E, OutputArray R, OutputArray t,
+                            int method, double prob, double threshold,
+                            InputOutputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    // Undistort image points, bring them to 3x3 identity "camera matrix"
+    Mat _pointsUndistorted1, _pointsUndistorted2;
+    undistortPoints(_points1, _pointsUndistorted1, cameraMatrix1, distCoeffs1);
+    undistortPoints(_points2, _pointsUndistorted2, cameraMatrix2, distCoeffs2);
+
+    // Get essential matrix.
+    Mat _E = findEssentialMat_(_pointsUndistorted1, _pointsUndistorted2, cameraMatrix1, cameraMatrix2,
+                              method, prob, threshold, _mask);
+    CV_Assert(_E.cols == 3 && _E.rows == 3);
+    E.create(3, 3, _E.type());
+    _E.copyTo(E);
+
+    return recoverPose(_E, _pointsUndistorted1, _pointsUndistorted2, Mat::eye(3,3, CV_64F), R, t, _mask);
 }
 
 int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
