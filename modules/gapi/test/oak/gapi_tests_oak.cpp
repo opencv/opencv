@@ -34,14 +34,14 @@ namespace opencv_test
 TEST(OAK, SimpleCamera)
 {
     cv::GFrame in, h265;
-    h265 = cv::gapi::oak::encode(in);
+    h265 = cv::gapi::oak::encode(in, {});
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
 
-    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
+    auto pipeline = cv::GComputation(std::move(cv::GIn(in)), std::move(cv::GOut(h265))).compileStreaming(std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
-    pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
+    pipeline.setSource(std::move(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>()));
     pipeline.start();
 
     cv::MediaFrame out_frame = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaBGR>();
@@ -56,9 +56,12 @@ TEST(OAK, SimpleCamera)
     uint32_t frames = 300;
     uint32_t pulled = 0;
 
+    std::cout << "before pull" << std::endl;
+
     while (pulled++ < frames &&
-           pipeline.pull(cv::gout(out_frame))) {
-               cv::MediaFrame::View view = out_frame.access(cv::MediaFrame::Access::R);
+           pipeline.pull(std::move(cv::gout(out_frame)))) {
+        std::cout << "pulled!" << std::endl;
+        cv::MediaFrame::View view = out_frame.access(cv::MediaFrame::Access::R);
 
         std::cout.width(6);  std::cout << std::left << "h265: ";
         //std::cout.width(15); std::cout << std::left << out_frame.desc().size +

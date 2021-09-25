@@ -47,7 +47,7 @@ GAPI_EXPORTS_W cv::gapi::GKernelPackage kernels();
 struct GAPI_EXPORTS ColorCameraParams {};
 
 class GAPI_EXPORTS ColorCamera: public cv::gapi::wip::IStreamSource {
-    cv::Mat m_dummy;
+    cv::MediaFrame m_dummy;
 
     virtual bool pull(cv::gapi::wip::Data &data) override;
     virtual GMetaArg descr_of() const override;
@@ -60,11 +60,11 @@ public:
 } // namespace gapi
 
 // FIXME: remove
-inline GOptRunArgsP& operator+= (      cv::GOptRunArgsP &lhs,
-                                 const cv::GOptRunArgsP &rhs) {
-    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
-    return lhs;
-}
+//inline GOptRunArgsP& operator+= (      cv::GOptRunArgsP &lhs,
+//                                 const cv::GOptRunArgsP &rhs) {
+//    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+//    return lhs;
+//}
 
 namespace detail {
 template<> struct CompileArgTag<gapi::oak::ColorCameraParams> {

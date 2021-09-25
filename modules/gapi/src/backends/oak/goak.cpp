@@ -8,6 +8,8 @@
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
 
+#include <opencv2/gapi/oak/oak_media_adapter.hpp>
+
 #include <thread>
 #include <chrono>
 
@@ -39,14 +41,14 @@ cv::gapi::GKernelPackage kernels() {
 // machinery work. The real data comes from the physical camera which
 // is handled by firmware (and so, by the DepthAI library).
 ColorCamera::ColorCamera()
-    : m_dummy(cv::Mat::eye(cv::Size(3840,2160), CV_8UC3)) {
+    : m_dummy(cv::MediaFrame::Create<cv::gapi::oak::OAKMediaBGR>()) {
 }
 
 bool ColorCamera::pull(cv::gapi::wip::Data &data) {
     // FIXME:
     // Avoid passing this formal mat to the pipeline
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    data = m_dummy.clone();
+    data = m_dummy;
     return true;
 }
 

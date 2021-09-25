@@ -35,6 +35,8 @@ class GOAKExecutable final: public GIslandExecutable {
     cv::GCompileArgs m_args;
 
     dai::Pipeline m_pipeline;
+    dai::Device m_device;
+    std::shared_ptr<dai::DataOutputQueue> m_out_queue;
 
 public:
     GOAKExecutable(const ade::Graph& g,
@@ -58,6 +60,7 @@ public:
 
 struct GOAKKernel{
     // FIXME: extend
+    GOAKKernel() = default;
 };
 
 struct OAKComponent
@@ -90,13 +93,15 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                                         const std::vector<ade::NodeHandle>& nodes,
                                         const std::vector<cv::gimpl::Data>& /*ins_data*/,
                                         const std::vector<cv::gimpl::Data>& /*outs_data*/)
-    : m_g(g), m_gm(m_g), m_args(args) {
+    : m_g(g), m_gm(m_g), m_args(args),
+    m_device([this, nodes](){
+            std::cout << "GOAKExecutable" << std::endl;
 
     // FIXME: change the hard-coded behavior (XLinkIn path)
     auto camRgb = m_pipeline.create<dai::node::ColorCamera>();
     // FIXME: extract camera compile arguments here and properly convert them for dai
     camRgb->setBoardSocket(dai::CameraBoardSocket::RGB);
-    camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
+    camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_4_K);
 
     // FIXME: change the hard-coded behavior
     auto xout = m_pipeline.create<dai::node::XLinkOut>();
@@ -106,9 +111,10 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
             auto op = m_gm.metadata(nh).get<Op>();
             if (std::strcmp(op.name(), "org.opencv.oak.enc") == 0) {
+                std::cout << "add encoder" << std::endl;
                 auto videoEnc = m_pipeline.create<dai::node::VideoEncoder>();
                 // FIXME: extract kernel arguments here and properly convert them for dai
-                videoEnc->setDefaultProfilePreset(1920, 1080, 30,
+                videoEnc->setDefaultProfilePreset(3840, 2160, 30,
                                                   dai::VideoEncoderProperties::Profile::H265_MAIN);
                 // FIXME: think about proper linking:
                 // probably, firts need to link in nodes to camera, then
@@ -122,6 +128,9 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
             }
         }
     }
+    return m_pipeline;
+    }()), m_out_queue(m_device.getOutputQueue("h265", 30, true)) {
+    std::cout << "GOAKExecutable end" << std::endl;
 }
 
 void cv::gimpl::GOAKExecutable::handleNewStream() {
@@ -132,17 +141,22 @@ void cv::gimpl::GOAKExecutable::handleStopStream() {
     // FIXME: extend
 }
 
-void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &,
+void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
                                     GIslandExecutable::IOutput &out) {
-    // FIXME: extend
-    dai::Device device(m_pipeline);
-    auto q = device.getOutputQueue("h265", 30, true); // change hard-coded params
-    auto h265Packet = q->get<dai::ImgFrame>();
+                                        std::cout << "GOAKExecutable run" << std::endl;
+    if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in.get())) {
+        std::cout << "end of stream" << std::endl;
+        out.post(cv::gimpl::EndOfStream{});
+    }
+
+    auto h265Packet = m_out_queue->get<dai::ImgFrame>();
+    std::cout << "got data" << std::endl;
 
     // somehow put out data to the appropriate mediaframe
     auto adapter = cv::util::get<MediaFrame*>(out.get(0))->get<cv::gapi::oak::OAKMediaBGR>();
-    adapter->setParams({1920, 1080}, cv::gapi::oak::OAKFrameFormat::BGR, h265Packet->getData().data());
+    adapter->setParams({3840, 2160}, cv::gapi::oak::OAKFrameFormat::BGR, h265Packet->getData().data());
     //videoFile.write((char*)(h265Packet->getData().data()), h265Packet->getData().size());
+    std::cout << "GOAKExecutable run end" << std::endl;
 }
 
 // Built-in kernels for OAK /////////////////////////////////////////////////////

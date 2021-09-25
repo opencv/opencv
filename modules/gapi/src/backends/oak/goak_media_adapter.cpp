@@ -46,7 +46,7 @@ MediaFrame::View OAKMediaBGR::access(MediaFrame::Access access) {
 }
 cv::GFrameDesc OAKMediaBGR::meta() const { return m_priv->meta(); }
 
-OAKMediaBGR::OAKMediaBGR() = default;
+OAKMediaBGR::OAKMediaBGR() : m_priv(new OAKMediaBGR::Priv()) {};
 OAKMediaBGR::~OAKMediaBGR() = default;
 
 } // namespace oak
