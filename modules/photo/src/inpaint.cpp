@@ -308,50 +308,58 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                            FastMarching_solve(i+1,j,i,j+1,f,t));
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
+               cv::Point2f gradT[3];
                for (color=0; color<=2; color++) {
-                  cv::Point2f gradI,gradT,r;
-                  float Ia=0,Jx=0,Jy=0,s=1.0e-20f,w,dst,lev,dir,sat;
-
                   if (CV_MAT_ELEM(*f,uchar,i,j+1)!=INSIDE) {
                      if (CV_MAT_ELEM(*f,uchar,i,j-1)!=INSIDE) {
-                        gradT.x=(float)((CV_MAT_ELEM(*t,float,i,j+1)-CV_MAT_ELEM(*t,float,i,j-1)))*0.5f;
+                        gradT[color].x=(float)((CV_MAT_ELEM(*t,float,i,j+1)-CV_MAT_ELEM(*t,float,i,j-1)))*0.5f;
                      } else {
-                        gradT.x=(float)((CV_MAT_ELEM(*t,float,i,j+1)-CV_MAT_ELEM(*t,float,i,j)));
+                        gradT[color].x=(float)((CV_MAT_ELEM(*t,float,i,j+1)-CV_MAT_ELEM(*t,float,i,j)));
                      }
                   } else {
                      if (CV_MAT_ELEM(*f,uchar,i,j-1)!=INSIDE) {
-                        gradT.x=(float)((CV_MAT_ELEM(*t,float,i,j)-CV_MAT_ELEM(*t,float,i,j-1)));
+                        gradT[color].x=(float)((CV_MAT_ELEM(*t,float,i,j)-CV_MAT_ELEM(*t,float,i,j-1)));
                      } else {
-                        gradT.x=0;
+                        gradT[color].x=0;
                      }
                   }
                   if (CV_MAT_ELEM(*f,uchar,i+1,j)!=INSIDE) {
                      if (CV_MAT_ELEM(*f,uchar,i-1,j)!=INSIDE) {
-                        gradT.y=(float)((CV_MAT_ELEM(*t,float,i+1,j)-CV_MAT_ELEM(*t,float,i-1,j)))*0.5f;
+                        gradT[color].y=(float)((CV_MAT_ELEM(*t,float,i+1,j)-CV_MAT_ELEM(*t,float,i-1,j)))*0.5f;
                      } else {
-                        gradT.y=(float)((CV_MAT_ELEM(*t,float,i+1,j)-CV_MAT_ELEM(*t,float,i,j)));
+                        gradT[color].y=(float)((CV_MAT_ELEM(*t,float,i+1,j)-CV_MAT_ELEM(*t,float,i,j)));
                      }
                   } else {
                      if (CV_MAT_ELEM(*f,uchar,i-1,j)!=INSIDE) {
-                        gradT.y=(float)((CV_MAT_ELEM(*t,float,i,j)-CV_MAT_ELEM(*t,float,i-1,j)));
+                        gradT[color].y=(float)((CV_MAT_ELEM(*t,float,i,j)-CV_MAT_ELEM(*t,float,i-1,j)));
                      } else {
-                        gradT.y=0;
+                        gradT[color].y=0;
                      }
                   }
-                  for (k=i-range; k<=i+range; k++) {
-                     int km=k-1+(k==1),kp=k-1-(k==t->rows-2);
-                     for (l=j-range; l<=j+range; l++) {
-                        int lm=l-1+(l==1),lp=l-1-(l==t->cols-2);
-                        if (k>0&&l>0&&k<t->rows-1&&l<t->cols-1) {
-                           if ((CV_MAT_ELEM(*f,uchar,k,l)!=INSIDE)&&
-                               ((l-j)*(l-j)+(k-i)*(k-i)<=range*range)) {
+               }
+
+               cv::Point2f gradI,r;
+               float Jx[3] = {0,0,0};
+               float Jy[3] = {0,0,0};
+               float Ia[3] = {0,0,0};
+               float s[3] = {1.0e-20f,1.0e-20f,1.0e-20f};
+               float w,dst,lev,dir,sat;
+
+               for (k=i-range; k<=i+range; k++) {
+                  int km=k-1+(k==1),kp=k-1-(k==t->rows-2);
+                  for (l=j-range; l<=j+range; l++) {
+                     int lm=l-1+(l==1),lp=l-1-(l==t->cols-2);
+                     if (k>0&&l>0&&k<t->rows-1&&l<t->cols-1) {
+                        if ((CV_MAT_ELEM(*f,uchar,k,l)!=INSIDE)&&
+                            ((l-j)*(l-j)+(k-i)*(k-i)<=range*range)) {
+                           for (color=0; color<=2; color++) {
                               r.y     = (float)(i-k);
                               r.x     = (float)(j-l);
 
                               dst = (float)(1./(VectorLength(r)*sqrt((double)VectorLength(r))));
                               lev = (float)(1./(1+fabs(CV_MAT_ELEM(*t,float,k,l)-CV_MAT_ELEM(*t,float,i,j))));
 
-                              dir=VectorScalMult(r,gradT);
+                              dir=VectorScalMult(r,gradT[color]);
                               if (fabs(dir)<=0.01) dir=0.000001f;
                               w = (float)fabs(dst*lev*dir);
 
@@ -381,18 +389,18 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                                     gradI.y=0;
                                  }
                               }
-                              Ia += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
-                              Jx -= (float)w * (float)(gradI.x*r.x);
-                              Jy -= (float)w * (float)(gradI.y*r.y);
-                              s  += w;
+                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
+                              Jx[color] -= (float)w * (float)(gradI.x*r.x);
+                              Jy[color] -= (float)w * (float)(gradI.y*r.y);
+                              s[color]  += w;
                            }
                         }
                      }
                   }
-                  sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
-                  {
+               }
+               for (color=0; color<=2; color++) {
+                  sat = (float)((Ia[color]/s[color]+(Jx[color]+Jy[color])/(sqrt(Jx[color]*Jx[color]+Jy[color]*Jy[color])+1.0e-20f)+0.5f));
                   CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>(sat);
-                  }
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -540,17 +548,19 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                            FastMarching_solve(i+1,j,i,j+1,f,t));
                CV_MAT_ELEM(*t,float,i,j) = dist;
 
-               for (color=0; color<=2; color++) {
-                  cv::Point2f gradI,r;
-                  float Ia=0,s=1.0e-20f,w,dst,dir;
+               cv::Point2f gradI,r;
+               float Ia[3]={0,0,0};
+               float s[3]={1.0e-20f,1.0e-20f,1.0e-20f};
+               float w,dst,dir;
 
-                  for (k=i-range; k<=i+range; k++) {
-                     int km=k-1+(k==1),kp=k-1-(k==f->rows-2);
-                     for (l=j-range; l<=j+range; l++) {
-                        int lm=l-1+(l==1),lp=l-1-(l==f->cols-2);
-                        if (k>0&&l>0&&k<f->rows-1&&l<f->cols-1) {
-                           if ((CV_MAT_ELEM(*f,uchar,k,l)!=INSIDE)&&
-                               ((l-j)*(l-j)+(k-i)*(k-i)<=range*range)) {
+               for (k=i-range; k<=i+range; k++) {
+                  int km=k-1+(k==1),kp=k-1-(k==f->rows-2);
+                  for (l=j-range; l<=j+range; l++) {
+                     int lm=l-1+(l==1),lp=l-1-(l==f->cols-2);
+                     if (k>0&&l>0&&k<f->rows-1&&l<f->cols-1) {
+                        if ((CV_MAT_ELEM(*f,uchar,k,l)!=INSIDE)&&
+                            ((l-j)*(l-j)+(k-i)*(k-i)<=range*range)) {
+                           for (color=0; color<=2; color++) {
                               r.y=(float)(k-i);
                               r.x=(float)(l-j);
 
@@ -594,13 +604,15 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                                  dir = (float)fabs(VectorScalMult(r,gradI)/sqrt(VectorLength(r)*VectorLength(gradI)));
                               }
                               w = dst*dir;
-                              Ia += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
-                              s  += w;
+                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
+                              s[color]  += w;
                            }
                         }
                      }
                   }
-                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>((double)Ia/s);
+               }
+               for (color=0; color<=2; color++) {
+                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>((double)Ia[color]/s[color]);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;

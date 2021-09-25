@@ -645,6 +645,7 @@ TEST_P(Test_ONNX_layers, DynamicReshape)
 TEST_P(Test_ONNX_layers, Reshape)
 {
     testONNXModels("unsqueeze");
+    testONNXModels("unsqueeze_opset_13");
 }
 
 TEST_P(Test_ONNX_layers, Squeeze)

@@ -1829,8 +1829,16 @@ void ONNXImporter::parseFlatten(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert(node_proto.input_size() == 1);
-    DictValue axes = layerParams.get("axes");
+    CV_Assert(node_proto.input_size() == 1 || node_proto.input_size() == 2);
+    DictValue axes;
+    if (node_proto.input_size() == 2)
+    {
+        Mat blob = getBlob(node_proto, 1);
+        axes = DictValue::arrayInt(blob.ptr<int>(), blob.total());
+    }
+    else
+        axes = layerParams.get("axes");
+
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
         // Constant input.
