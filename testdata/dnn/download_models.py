@@ -885,6 +885,11 @@ models = [
         sha='d110379b7b86899226b591ad4affc7115f707157',
         filename='yolov4-tiny.weights'),
     Model(
+        name='YOLOv4x-mish',  # https://github.com/opencv/opencv/issues/18975
+        url='https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4x-mish.weights',
+        sha='a6f2879af2241de2e9730d317a55db6afd0af00b',
+        filename='yolov4x-mish.weights'),
+    Model(
         name='GSOC2016-GOTURN',  # https://github.com/opencv/opencv_contrib/issues/941
         downloader=GDrive('1j4UTqVE4EGaUFiK7a5I_CYX7twO9c5br'),
         sha='49776d262993c387542f84d9cd16566840404f26',
