@@ -222,8 +222,8 @@ def main():
                            0.5, (255, 0, 0))
 
             for j in range(4):
-                p1 = (vertices[j][0], vertices[j][1])
-                p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
+                p1 = (int(vertices[j][0]), int(vertices[j][1]))
+                p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
                 cv.line(frame, p1, p2, (0, 255, 0), 1)
 
         # Put efficiency information

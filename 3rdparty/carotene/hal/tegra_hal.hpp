@@ -1778,30 +1778,30 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
     : CV_HAL_ERROR_NOT_IMPLEMENTED \
 )
 
-#define TEGRA_CVT2PYUVTOBGR(src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx) \
+#define TEGRA_CVT2PYUVTOBGR_EX(y_data, y_step, uv_data, uv_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
         dcn == 3 ? \
             uIdx == 0 ? \
                 (swapBlue ? \
                     CAROTENE_NS::yuv420i2rgb(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                             src_data, src_step, \
-                                             src_data + src_step * dst_height, src_step, \
+                                             y_data, y_step, \
+                                             uv_data, uv_step, \
                                              dst_data, dst_step) : \
                     CAROTENE_NS::yuv420i2bgr(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                             src_data, src_step, \
-                                             src_data + src_step * dst_height, src_step, \
+                                             y_data, y_step, \
+                                             uv_data, uv_step, \
                                              dst_data, dst_step)), \
                 CV_HAL_ERROR_OK : \
             uIdx == 1 ? \
                 (swapBlue ? \
                     CAROTENE_NS::yuv420sp2rgb(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                              src_data, src_step, \
-                                              src_data + src_step * dst_height, src_step, \
+                                              y_data, y_step, \
+                                              uv_data, uv_step, \
                                               dst_data, dst_step) : \
                     CAROTENE_NS::yuv420sp2bgr(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                              src_data, src_step, \
-                                              src_data + src_step * dst_height, src_step, \
+                                              y_data, y_step, \
+                                              uv_data, uv_step, \
                                               dst_data, dst_step)), \
                 CV_HAL_ERROR_OK : \
             CV_HAL_ERROR_NOT_IMPLEMENTED : \
@@ -1809,29 +1809,32 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
             uIdx == 0 ? \
                 (swapBlue ? \
                     CAROTENE_NS::yuv420i2rgbx(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                              src_data, src_step, \
-                                              src_data + src_step * dst_height, src_step, \
+                                              y_data, y_step, \
+                                              uv_data, uv_step, \
                                               dst_data, dst_step) : \
                     CAROTENE_NS::yuv420i2bgrx(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                              src_data, src_step, \
-                                              src_data + src_step * dst_height, src_step, \
+                                              y_data, y_step, \
+                                              uv_data, uv_step, \
                                               dst_data, dst_step)), \
                 CV_HAL_ERROR_OK : \
             uIdx == 1 ? \
                 (swapBlue ? \
                     CAROTENE_NS::yuv420sp2rgbx(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                               src_data, src_step, \
-                                               src_data + src_step * dst_height, src_step, \
+                                               y_data, y_step, \
+                                               uv_data, uv_step, \
                                                dst_data, dst_step) : \
                     CAROTENE_NS::yuv420sp2bgrx(CAROTENE_NS::Size2D(dst_width, dst_height), \
-                                               src_data, src_step, \
-                                               src_data + src_step * dst_height, src_step, \
+                                               y_data, y_step, \
+                                               uv_data, uv_step, \
                                                dst_data, dst_step)), \
                 CV_HAL_ERROR_OK : \
             CV_HAL_ERROR_NOT_IMPLEMENTED : \
         CV_HAL_ERROR_NOT_IMPLEMENTED \
     : CV_HAL_ERROR_NOT_IMPLEMENTED \
 )
+#define TEGRA_CVT2PYUVTOBGR(src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx) \
+    TEGRA_CVT2PYUVTOBGR_EX(src_data, src_step, src_data + src_step * dst_height, src_step, dst_data, dst_step, \
+            dst_width, dst_height, dcn, swapBlue, uIdx);
 
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR TEGRA_CVTBGRTOBGR
@@ -1847,6 +1850,8 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #define cv_hal_cvtBGRtoHSV TEGRA_CVTBGRTOHSV
 #undef cv_hal_cvtTwoPlaneYUVtoBGR
 #define cv_hal_cvtTwoPlaneYUVtoBGR TEGRA_CVT2PYUVTOBGR
+#undef cv_hal_cvtTwoPlaneYUVtoBGREx
+#define cv_hal_cvtTwoPlaneYUVtoBGREx TEGRA_CVT2PYUVTOBGR_EX
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 
