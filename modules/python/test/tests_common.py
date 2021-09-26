@@ -10,6 +10,7 @@ import random
 import argparse
 
 import numpy as np
+#sys.OpenCV_LOADER_DEBUG = True
 import cv2 as cv
 
 # Python 3 moved urlopen to urllib.requests
