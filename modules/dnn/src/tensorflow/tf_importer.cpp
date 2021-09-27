@@ -1509,6 +1509,15 @@ void TFImporter::parsePlaceholder(tensorflow::GraphDef& net, const tensorflow::N
             if (dims[0] == -1)  // It's OK to have undetermined batch size
                 dims[0] = 1;
         }
+
+        if (dims.size() == 5 && predictedLayout == DATA_LAYOUT_NDHWC)
+        {
+            std::swap(dims[3], dims[4]);  // NDHWC->NDHCW
+            std::swap(dims[2], dims[3]);  // NDHCW->NDCHW
+            std::swap(dims[1], dims[2]);  // NDCHW->NCDHW
+            if (dims[0] == -1)  // It's OK to have undetermined batch size
+                dims[0] = 1;
+        }
         bool hasNeg = false;
         for (int i = 0; i < dims.size() && !hasNeg; ++i)
         {
