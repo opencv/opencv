@@ -12,3 +12,4 @@ paddlepaddle>=2.0.0
 paddlepaddle-gpu>=2.0.0
 paddlehub>=2.1.0
 paddle2onnx>=0.5.1
+paddleseg>=2.0.0
