@@ -555,7 +555,7 @@ protected:
     std::map<String, int> layer_id;
 
 private:
-    void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId);
+    void addPermuteLayer(const int* order, const std::string& permName, Pin& inpId, int orderSize = 4);
     void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value = 0.);
 
     friend class TFLayerHandler;
@@ -1117,8 +1117,10 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
 
 void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
-    const std::string& name = layer.name();
+      const std::string& name = layer.name();
     const int num_inputs = layer.input_size();
+
+    CV_Assert(!netInputShapes.empty());
 
     CV_CheckGT(num_inputs, 0, "");
     Pin inpId = parsePin(layer.input(0));
@@ -1134,17 +1136,19 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
 
     int outShapeSize = outShape.size();
 
+    CV_Assert(inpShape.size() >= 1);
     // 2nd blob is dims tensor
     int axis = getConstBlob(layer, value_id, 1).int_val().Get(0);
 
-    if(axis == -1)
+    // Convert negative numbers to positive numbers, axis can be in range [-(D+1), D].
+    if(axis < 0)
     {
-        axis = inpShape.size();
+        axis = inpShape.size() + axis + 1;
     }
 
-    CV_Assert(0 <= axis && axis <= inpShape.size());
+    CV_Assert( 0 <= axis && axis <= inpShape.size());
 
-    if(axis == inpShape.size() && inpShape.size() >= 4)
+    if(inpShape.size() == 4 && axis == inpShape.size())
     {
         int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
         addPermuteLayer(order, name + "/nhwc", inpId);
@@ -1152,14 +1156,28 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
         // Convert shape From OpenCV's NCHW to NHWC.
         if(inpLayout == DATA_LAYOUT_NHWC)
         {
-            for(int i = 1; i < outShapeSize - 1; i++)
-            {
-                std::swap(outShape[i], outShape[i+1]);
-            }
+            std::swap(outShape[1], outShape[2]);
+            std::swap(outShape[2], outShape[3]);
         }
     }
 
-    if(inpLayout == DATA_LAYOUT_NHWC)
+    // After ExpendDims, 5-dim data will become 6-dim data, and OpenCV retains 6-dim data as original data layout.
+    // Convert OpenCV's NCDHW to NDHWC first.
+    if (inpShape.size() == 5 && ( inpLayout == DATA_LAYOUT_NDHWC|| inpLayout == DATA_LAYOUT_UNKNOWN ))
+    {
+        int order[] = {0, 2, 3, 4, 1};  // From OpenCV's NCDHW to NDHWC.
+        addPermuteLayer(order, name + "/ndhwc", inpId, 5);
+
+        // Convert shape From OpenCV's NCDHW to NDHWC.
+        if(inpLayout == DATA_LAYOUT_NDHWC)
+        {
+            std::swap(outShape[1], outShape[2]);
+            std::swap(outShape[2], outShape[3]);
+            std::swap(outShape[3], outShape[4]);
+        }
+    }
+
+    if(inpLayout == DATA_LAYOUT_NHWC && outShapeSize == 4)
     {
         // toNCHW
         axis = (axis != 0)?(axis % outShapeSize + 1):0;
@@ -1168,7 +1186,8 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     outShape.insert(outShape.begin() + axis, 1);
     outShapeSize += 1;
 
-    if(inpLayout != DATA_LAYOUT_NHWC && outShapeSize <= 5)
+    // From OpenCV's NCDHW to NDHWC.
+    if((inpLayout != DATA_LAYOUT_NHWC ) && outShapeSize == 5 )
     {
         for(int i = 1; i < outShapeSize - 1; i++)
         {
@@ -1181,6 +1200,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     layer_id[name] = id;
 
     connect(layer_id, dstNet, inpId, id, 0);
+    data_layouts[name] = outShapeSize == 5 ? DATA_LAYOUT_NDHWC : inpLayout;
 }
 
 // "Flatten" "Squeeze"
@@ -2883,13 +2903,7 @@ void TFImporter::populateNet()
             {
                 if (layout != DATA_LAYOUT_UNKNOWN)
                 {
-                    if (it->second == DATA_LAYOUT_UNKNOWN)
-                        it->second = layout;
-                    else if (it->second != layout)
-                    {
-                        it->second = DATA_LAYOUT_UNKNOWN;
-                        layout = DATA_LAYOUT_UNKNOWN;
-                    }
+                    it->second = layout;
                 }
                 else
                     layout = it->second;
@@ -2952,10 +2966,10 @@ void TFImporter::populateNet()
     CV_LOG_DEBUG(NULL, (DNN_DIAGNOSTICS_RUN? "DNN/TF: diagnostic run completed!" : "DNN/TF: import completed!"));
 }
 
-void TFImporter::addPermuteLayer(const int* order, const std::string& permName, Pin& inpId)
+void TFImporter::addPermuteLayer(const int* order, const std::string& permName, Pin& inpId, int orderSize)
 {
     LayerParams permLP;
-    permLP.set("order", DictValue::arrayInt<const int*>(order, 4));
+    permLP.set("order", DictValue::arrayInt<const int*>(order, orderSize));
     CV_Assert(layer_id.find(permName) == layer_id.end());
     int permId = dstNet.addLayer(permName, "Permute", permLP);
     layer_id[permName] = permId;
