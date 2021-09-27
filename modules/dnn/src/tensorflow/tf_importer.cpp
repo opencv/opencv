@@ -124,7 +124,7 @@ void parseTensor(const tensorflow::TensorProto &tensor, Mat &dstBlob)
     dstBlob.create(shape, CV_32F);
     CV_Assert(dstBlob.isContinuous());
 
-    Mat tensorContent = getTensorContent(tensor);
+    Mat tensorContent = getTensorContent(tensor, /*no copy*/false);
     CV_Assert(tensorContent.isContinuous());
     int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());
@@ -2526,7 +2526,7 @@ void TFImporter::kernelFromTensor(const tensorflow::TensorProto &tensor, Mat &ds
     dstBlob.create(shape, CV_32F);
     CV_Assert(dstBlob.isContinuous());
 
-    Mat tensorContent = getTensorContent(tensor);
+    Mat tensorContent = getTensorContent(tensor, /*no copy*/false);
     CV_Assert(tensorContent.isContinuous());
     int size = tensorContent.total();
     CV_Assert(size == (int)dstBlob.total());

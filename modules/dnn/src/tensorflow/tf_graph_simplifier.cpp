@@ -19,6 +19,16 @@ CV__DNN_EXPERIMENTAL_NS_BEGIN
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::MapPair;
 
+static Mat getTensorContentRef_(const tensorflow::TensorProto& tensor);
+static inline
+bool isAlignedMat(const Mat& m)
+{
+    int depth = m.depth();
+    int alignment = CV_ELEM_SIZE1(depth);
+    return (((size_t)m.data) & (alignment - 1)) == 0;
+}
+
+
 class TFNodeWrapper : public ImportNodeWrapper
 {
 public:
@@ -719,13 +729,20 @@ public:
     {
         if (!negativeScales)
         {
-            Mat scalesRef = getTensorContentRefUnaligned(inputNodes[1]->attr().at("value").tensor());
-            Mat scales = scalesRef.clone() * -1;
+            Mat scalesRef = getTensorContentRef_(inputNodes[1]->attr().at("value").tensor());
             // FIXME: This breaks the const guarantees of tensor() by writing to scalesRef and is likely to perform an
             //        unaligned write (hence the separate multiplication above to have this work on ARM).
-            CV_Assert(scalesRef.isContinuous());
-            CV_Assert(scales.isContinuous());
-            memcpy(scalesRef.data, scales.data, scales.total() * scales.elemSize());
+            if (isAlignedMat(scalesRef))
+            {
+                scalesRef *= -1;
+            }
+            else
+            {
+                Mat scales = scalesRef.clone() * -1;
+                CV_Assert(scalesRef.isContinuous());
+                CV_Assert(scales.isContinuous());
+                memcpy(scalesRef.data, scales.data, scales.total() * scales.elemSize());
+            }
         }
     }
 
@@ -837,7 +854,8 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
     }
 }
 
-Mat getTensorContentRefUnaligned(const tensorflow::TensorProto& tensor)
+// NB: returned Mat::data pointer may be unaligned
+Mat getTensorContentRef_(const tensorflow::TensorProto& tensor)
 {
     const std::string& content = tensor.tensor_content();
     Mat m;
@@ -913,11 +931,14 @@ Mat getTensorContentRefUnaligned(const tensorflow::TensorProto& tensor)
     return m;
 }
 
-Mat getTensorContent(const tensorflow::TensorProto& tensor)
+Mat getTensorContent(const tensorflow::TensorProto& tensor, bool forceCopy)
 {
-    // Always clone m to have it aligned to a multiple of 16 byte and thereby
-    // fulfill the memory alignment guarantees of the costs in getTensorContentRef.
-    return getTensorContentRefUnaligned(tensor).clone();
+    // If necessary clone m to have aligned data pointer
+    Mat m = getTensorContentRef_(tensor);
+    if (forceCopy || !isAlignedMat(m))
+        return m.clone();
+    else
+        return m;
 }
 
 void releaseTensor(tensorflow::TensorProto* tensor)
