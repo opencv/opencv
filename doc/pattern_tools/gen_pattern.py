@@ -132,7 +132,7 @@ class PatternMaker:
             pattern_height = ((self.rows - 1.0) * spacing) + (2.0 * r)
             x_spacing = (self.width - pattern_width) / 2.0
             y_spacing = (self.height - pattern_height) / 2.0
-            for x, y in zip(self.markers[::2], self.markers[1::2]):
+            for x, y in self.markers:
                 color = "black"
                 if x % 2 == y % 2:
                     color = "white"
@@ -168,7 +168,9 @@ def main():
                         dest="page_height", type=float)
     parser.add_argument("-a", "--page_size", help="page size, superseded if -h and -w are set", default="A4",
                         action="store", dest="page_size", choices=["A0", "A1", "A2", "A3", "A4", "A5"])
-    parser.add_argument("-m", "--markers", help="list of cells with markers for the radon checkerboard",
+    parser.add_argument("-m", "--markers", help="list of cells with markers for the radon checkerboard. Marker "
+                                                "coordinates as list of numbers: -m 1 2 3 4 means markers in cells "
+                                                "[1, 2] and [3, 4]",
                         action="store", dest="markers", nargs="+", type=int)
     args = parser.parse_args()
 
@@ -193,7 +195,15 @@ def main():
                       "A5": [148, 210]}
         page_width = page_sizes[page_size][0]
         page_height = page_sizes[page_size][1]
-    markers = args.markers
+    if len(args.markers) % 2 == 1:
+        raise ValueError("The length of the markers array={} must be even".format(len(args.markers)))
+    markers = set()
+    for x, y in zip(args.markers[::2], args.markers[1::2]):
+        if x in range(0, columns) and y in range(0, rows):
+            markers.add((x, y))
+        else:
+            raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
+
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
