@@ -170,7 +170,7 @@ CV_EXPORTS_W void findPlanes(InputArray points3d, InputArray normals, OutputArra
  * It's used for the efficiency (to pass precomputed/cached data of the frame that participates
  * in the Odometry processing several times).
  */
-struct CV_EXPORTS_W OdometryFrame
+struct CV_EXPORTS_W _OdometryFrame
 {
 public:
     /** These constants are used to set a type of cache which has to be prepared depending on the frame role:
@@ -204,10 +204,10 @@ public:
         N_PYRAMIDS
     };
 
-    OdometryFrame() : ID(-1) { }
-    virtual ~OdometryFrame() { }
+    _OdometryFrame() : ID(-1) { }
+    virtual ~_OdometryFrame() { }
 
-    CV_WRAP static Ptr<OdometryFrame> create(InputArray image = noArray(), InputArray depth = noArray(),
+    CV_WRAP static Ptr<_OdometryFrame> create(InputArray image = noArray(), InputArray depth = noArray(),
                                              InputArray  mask = noArray(), InputArray normals = noArray(), int ID = -1);
 
     CV_WRAP virtual void setImage(InputArray  image) = 0;
@@ -220,10 +220,10 @@ public:
     CV_WRAP virtual void getNormals(OutputArray normals) = 0;
 
     CV_WRAP virtual void setPyramidLevels(size_t nLevels) = 0;
-    CV_WRAP virtual size_t getPyramidLevels(OdometryFrame::OdometryFramePyramidType pyrType) = 0;
+    CV_WRAP virtual size_t getPyramidLevels(_OdometryFrame::OdometryFramePyramidType pyrType) = 0;
 
-    CV_WRAP virtual void setPyramidAt(InputArray  pyrImage, OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
-    CV_WRAP virtual void getPyramidAt(OutputArray pyrImage, OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
+    CV_WRAP virtual void setPyramidAt(InputArray  pyrImage, _OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
+    CV_WRAP virtual void getPyramidAt(OutputArray pyrImage, _OdometryFrame::OdometryFramePyramidType pyrType, size_t level) = 0;
 
     CV_PROP int ID;
 };
@@ -231,7 +231,7 @@ public:
 
 /** Base class for computation of odometry.
  */
-class CV_EXPORTS_W Odometry
+class CV_EXPORTS_W _Odometry
 {
 public:
 
@@ -241,13 +241,13 @@ public:
       ROTATION = 1, TRANSLATION = 2, RIGID_BODY_MOTION = 4
     };
 
-    virtual ~Odometry() { }
+    virtual ~_Odometry() { }
 
     /** Create a new Odometry object based on its name. Currently supported names are:
     * "RgbdOdometry", "ICPOdometry", "RgbdICPOdometry", "FastICPOdometry".
     * @param odometryType algorithm's name
     */
-    CV_WRAP static Ptr<Odometry> createFromName(const std::string& odometryType);
+    CV_WRAP static Ptr<_Odometry> createFromName(const std::string& odometryType);
 
     /** Method to compute a transformation from the source frame to the destination one.
      * Some odometry algorithms do not used some data of frames (eg. ICP does not use images).
@@ -273,7 +273,7 @@ public:
     /** One more method to compute a transformation from the source frame to the destination one.
      * It is designed to save on computing the frame data (image pyramids, normals, etc.).
      */
-    CV_WRAP_AS(compute2) virtual bool compute(const Ptr<OdometryFrame>& srcFrame, const Ptr<OdometryFrame>& dstFrame,
+    CV_WRAP_AS(compute2) virtual bool compute(const Ptr<_OdometryFrame>& srcFrame, const Ptr<_OdometryFrame>& dstFrame,
                                               OutputArray Rt, InputArray initRt = noArray()) const = 0;
 
     /** Prepare a cache for the frame. The function checks the precomputed/passed data (throws the error if this data
@@ -282,19 +282,19 @@ public:
      * @param frame The odometry which will process the frame.
      * @param cacheType The cache type: CACHE_SRC, CACHE_DST or CACHE_ALL.
      */
-    CV_WRAP virtual Size prepareFrameCache(Ptr<OdometryFrame> frame, OdometryFrame::OdometryFrameCacheType cacheType) const = 0;
+    CV_WRAP virtual Size prepareFrameCache(Ptr<_OdometryFrame> frame, _OdometryFrame::OdometryFrameCacheType cacheType) const = 0;
 
     /** Create odometry frame for current Odometry implementation
      * @param image Image data of the frame (CV_8UC1)
      * @param depth Depth data of the frame (CV_32FC1, in meters)
      * @param mask  Mask that sets which pixels have to be used from the frame (CV_8UC1)
     */
-    CV_WRAP virtual Ptr<OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
+    CV_WRAP virtual Ptr<_OdometryFrame> makeOdometryFrame(InputArray image, InputArray depth, InputArray mask) const = 0;
 
     CV_WRAP virtual void getCameraMatrix(OutputArray val) const = 0;
     CV_WRAP virtual void setCameraMatrix(InputArray val) = 0;
-    CV_WRAP virtual Odometry::OdometryTransformType getTransformType() const = 0;
-    CV_WRAP virtual void setTransformType(Odometry::OdometryTransformType val) = 0;
+    CV_WRAP virtual _Odometry::OdometryTransformType getTransformType() const = 0;
+    CV_WRAP virtual void setTransformType(_Odometry::OdometryTransformType val) = 0;
     CV_WRAP virtual void getIterationCounts(OutputArray val) const = 0;
     CV_WRAP virtual void setIterationCounts(InputArray val) = 0;
     /** For each pyramid level the pixels will be filtered out if they have gradient magnitude less than minGradientMagnitudes[level].
@@ -320,7 +320,7 @@ public:
 /** Odometry based on the paper "Real-Time Visual Odometry from Dense RGB-D Images",
  * F. Steinbucker, J. Strum, D. Cremers, ICCV, 2011.
  */
-class CV_EXPORTS_W RgbdOdometry: public Odometry
+class CV_EXPORTS_W RgbdOdometry: public _Odometry
 {
 public:
     RgbdOdometry() { }
@@ -344,7 +344,7 @@ public:
                                             InputArray iterCounts = noArray(),
                                             InputArray minGradientMagnitudes = noArray(),
                                             float maxPointsPart = 0.07f,
-                                            Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
+                                            _Odometry::OdometryTransformType transformType = _Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
     CV_WRAP virtual void   setMinDepth(double val) = 0;
@@ -360,7 +360,7 @@ public:
 /** Odometry based on the paper "KinectFusion: Real-Time Dense Surface Mapping and Tracking",
  * Richard A. Newcombe, Andrew Fitzgibbon, at al, SIGGRAPH, 2011.
  */
-class CV_EXPORTS_W ICPOdometry: public Odometry
+class CV_EXPORTS_W ICPOdometry: public _Odometry
 {
 public:
     ICPOdometry() { }
@@ -381,7 +381,7 @@ public:
                                            float maxDepthDiff = 0.07f,
                                            float maxPointsPart = 0.07f,
                                            InputArray iterCounts = noArray(),
-                                           Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
+                                           _Odometry::OdometryTransformType transformType = _Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
     CV_WRAP virtual void   setMinDepth(double val) = 0;
@@ -396,7 +396,7 @@ public:
 
 /** Odometry that merges RgbdOdometry and ICPOdometry by minimize sum of their energy functions.
  */
-class CV_EXPORTS_W RgbdICPOdometry: public Odometry
+class CV_EXPORTS_W RgbdICPOdometry: public _Odometry
 {
 public:
     RgbdICPOdometry() { }
@@ -420,7 +420,7 @@ public:
                                                float maxPointsPart = 0.07f,
                                                InputArray iterCounts = noArray(),
                                                InputArray minGradientMagnitudes = noArray(),
-                                               Odometry::OdometryTransformType transformType = Odometry::RIGID_BODY_MOTION);
+                                               _Odometry::OdometryTransformType transformType = _Odometry::RIGID_BODY_MOTION);
 
     CV_WRAP virtual double getMinDepth() const = 0;
     CV_WRAP virtual void   setMinDepth(double val) = 0;
@@ -446,7 +446,7 @@ public:
  * - Initial transform is not supported and always ignored
  * - Supports only 4-float vectors as input type
  */
-class CV_EXPORTS_W FastICPOdometry: public Odometry
+class CV_EXPORTS_W FastICPOdometry: public _Odometry
 {
 public:
     FastICPOdometry() { }

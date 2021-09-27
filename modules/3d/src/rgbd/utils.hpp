@@ -105,6 +105,30 @@ static inline bool isNaN(const cv::v_float32x4& p)
 }
 #endif
 
+template<typename TMat>
+static TMat getTMat(InputArray, int = -1);
+
+template<>
+Mat getTMat<Mat>(InputArray a, int i)
+{
+    return a.getMat(i);
+}
+
+template<>
+UMat getTMat<UMat>(InputArray a, int i)
+{
+    return a.getUMat(i);
+}
+
+template<typename TMat>
+static TMat& getTMatRef(InputOutputArray, int = -1);
+
+template<>
+Mat& getTMatRef<Mat>(InputOutputArray a, int i)
+{
+    return a.getMatRef(i);
+}
+
 inline size_t roundDownPow2(size_t x)
 {
     size_t shift = 0;

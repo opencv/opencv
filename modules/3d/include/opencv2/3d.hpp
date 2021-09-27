@@ -9,6 +9,9 @@
 #include "opencv2/core/types_c.h"
 
 #include "opencv2/3d/depth.hpp"
+#include "opencv2/3d/odometry.hpp"
+#include "opencv2/3d/odometry_frame.hpp"
+#include "opencv2/3d/odometry_settings.hpp"
 #include "opencv2/3d/volume.hpp"
 
 /**
