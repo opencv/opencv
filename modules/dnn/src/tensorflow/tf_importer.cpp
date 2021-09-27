@@ -1117,7 +1117,7 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
 
 void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
-      const std::string& name = layer.name();
+    const std::string& name = layer.name();
     const int num_inputs = layer.input_size();
 
     CV_Assert(!netInputShapes.empty());
