@@ -1,7 +1,7 @@
 if(NOT VTK_FOUND)
   find_package(VTK QUIET NAMES vtk VTK)
   if(VTK_FOUND)
-    if(VTK_VERSION VERSION_EQUAL "9") # VTK 9.0
+    if(NOT (VTK_VERSION VERSION_LESS "9.0.0") AND (VTK_VERSION VERSION_LESS "10.0.0")) # VTK 9.x
       find_package(VTK 9 QUIET NAMES vtk COMPONENTS
               FiltersExtraction
               FiltersSources
