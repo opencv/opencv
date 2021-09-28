@@ -980,7 +980,7 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
 
 void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
-    const Mat& corresps, const Mat& diffs, const double sigma,
+    const Mat& corresps, const Mat& _diffs, const double _sigma,
     double fx, double fy, double sobelScaleIn,
     Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
 {
@@ -993,9 +993,28 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     CV_Assert(Rt.type() == CV_64FC1);
     const double* Rt_ptr = Rt.ptr<const double>();
     
-    const float* diffs_ptr = diffs.ptr<float>();
+    const float* diffs_ptr = _diffs.ptr<float>();
+    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
+    double sigma = _sigma;
+    /*
+    AutoBuffer<float> diffs(correspsCount);
+    float* diffs_ptr = diffs.data();
+
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
 
+    double sigma = 0;
+    for (int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
+    {
+        const Vec4i& c = corresps_ptr[correspIndex];
+        int u0 = c[0], v0 = c[1];
+        int u1 = c[2], v1 = c[3];
+
+        diffs_ptr[correspIndex] = static_cast<float>(static_cast<int>(image0.at<uchar>(v0, u0)) -
+            static_cast<int>(image1.at<uchar>(v1, u1)));
+        sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
+    }
+    sigma = std::sqrt(sigma / correspsCount);
+    */
     std::vector<double> A_buf(transformDim);
     double* A_ptr = &A_buf[0];
 

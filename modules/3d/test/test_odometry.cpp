@@ -304,7 +304,7 @@ void OdometryTest::run()
         Mat resultImage, resultDepth;
         warpFrame(image, depth, calcRvec, calcTvec, K, resultImage, resultDepth);
         imshow("resultImage", resultImage);
-        waitKey();
+        waitKey(100);
 #endif
 
         // compare rotation
