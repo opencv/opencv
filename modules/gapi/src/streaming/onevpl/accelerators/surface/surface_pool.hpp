@@ -17,6 +17,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 class Surface;
 // GAPI_EXPORTS for tests
@@ -38,6 +39,7 @@ private:
     free_surface_iterator_t next_free_it;
     cached_surface_container_t cache;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

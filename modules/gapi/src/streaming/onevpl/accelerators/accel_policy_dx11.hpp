@@ -32,6 +32,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS VPLDX11AccelerationPolicy final: public VPLAccelerationPolicy
@@ -57,6 +58,7 @@ private:
     std::unique_ptr<VPLCPUAccelerationPolicy> adapter;
 #endif
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

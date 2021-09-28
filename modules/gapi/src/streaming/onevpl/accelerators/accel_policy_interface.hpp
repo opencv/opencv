@@ -19,6 +19,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 class Surface;
 struct VPLAccelerationPolicy
@@ -51,6 +52,7 @@ struct VPLAccelerationPolicy
     virtual cv::MediaFrame::AdapterPtr create_frame_adapter(pool_key_t key,
                                                             mfxFrameSurface1* surface) = 0;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -12,6 +12,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 Surface::Surface(std::unique_ptr<handle_t>&& surf, std::shared_ptr<void> associated_memory) :
     workspace_memory_ptr(associated_memory),
@@ -69,6 +70,7 @@ size_t Surface::release_lock() {
                             ", locked times: " << locked_count - 1);
     return locked_count; // return preceding value
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

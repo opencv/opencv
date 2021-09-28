@@ -8,6 +8,7 @@
 #include "streaming/onevpl/accelerators/accel_policy_dx11.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
+#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 #ifdef HAVE_DIRECTX
@@ -27,6 +28,8 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
+
 VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy()
 {
 #ifdef CPU_ACCEL_ADAPTER
@@ -47,7 +50,8 @@ void VPLDX11AccelerationPolicy::init(session_t session) {
     mfxStatus sts = MFXVideoCORE_GetHandle(session, MFX_HANDLE_D3D11_DEVICE, reinterpret_cast<mfxHDL*>(&hw_handle));
     if (sts != MFX_ERR_NONE)
     {
-        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_GetHandle error");
+        throw std::logic_error("Cannot create VPLDX11AccelerationPolicy, MFXVideoCORE_GetHandle error: " +
+                               mfxstatus_to_string(sts));
     }
 
     GAPI_LOG_INFO(nullptr, "VPLDX11AccelerationPolicy initialized, session: " << session);
@@ -106,6 +110,7 @@ cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_
     (void)surface;
     throw std::runtime_error("VPLDX11AccelerationPolicy::create_frame_adapter() is not implemented");
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

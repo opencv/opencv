@@ -16,6 +16,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 class Surface;
 class VPLMediaFrameCPUAdapter : public cv::MediaFrame::IAdapter {
@@ -33,6 +34,7 @@ public:
 private:
     std::shared_ptr<Surface> parent_surface_ptr;
 };
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
