@@ -405,7 +405,7 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
         frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
-        EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
+        EXPECT_EQ(1, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
     }
     EXPECT_LT(0u, frames);
     EXPECT_FALSE(ccomp.running());

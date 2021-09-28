@@ -2602,46 +2602,6 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 }
 #endif
 
-CV_ALWAYS_INLINE v_int16x8 v_mulhrs(const v_int16x8& a, const v_int16x8& b)
-{
-    // Multiply
-    int32x4_t mul_lo = vmull_s16(vget_low_s16(a.val),
-                                 vget_low_s16(b.val));
-    int32x4_t mul_hi = vmull_s16(vget_high_s16(a.val),
-                                 vget_high_s16(b.val));
-
-    // Rounding narrowing shift right
-    // narrow = (int16_t)((mul + 16384) >> 15);
-    int16x4_t narrow_lo = vrshrn_n_s32(mul_lo, 15);
-    int16x4_t narrow_hi = vrshrn_n_s32(mul_hi, 15);
-
-    // Join together
-    return v_int16x8(vcombine_s16(narrow_lo, narrow_hi));
-}
-
-CV_ALWAYS_INLINE v_int16x8 v_mulhrs(const v_int16x8& a, const short b)
-{
-    return v_mulhrs(a, v_setall_s16(b));
-}
-
-namespace {
-    template<int chanNum>
-    CV_ALWAYS_INLINE void v_gather_channel(v_int16x8& vec, const uchar src[], const short* index, const int channel, const int pos)
-    {
-        int16x8_t result = {};
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*index + pos) + channel]), result, 0);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 1) + pos) + channel]), result, 1);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 2) + pos) + channel]), result, 2);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 3) + pos) + channel]), result, 3);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 4) + pos) + channel]), result, 4);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 5) + pos) + channel]), result, 5);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 6) + pos) + channel]), result, 6);
-        result = vsetq_lane_s16(*reinterpret_cast<const uchar*>(&src[chanNum * (*(index + 7) + pos) + channel]), result, 7);
-
-        vec.val = result;
-    }
-}  // namespace
-
 inline void v_cleanup() {}
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END

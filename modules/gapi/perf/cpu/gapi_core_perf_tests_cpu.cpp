@@ -328,8 +328,6 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
                cv::Size(32, 32)),
         Values(cv::compile_args(CORE_CPU))));
 
-//#define IMGPROC_CPU cv::gapi::imgproc::cpu::kernels()
-
 INSTANTIATE_TEST_CASE_P(StackOverflowPerfTestCPU, StackOverflowPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
         Values(CV_8UC3),
@@ -338,8 +336,8 @@ INSTANTIATE_TEST_CASE_P(StackOverflowPerfTestCPU, StackOverflowPerfTest,
 
 INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestCPU, ResizeFxFyPerfTest,
     Combine(Values(AbsExact().to_compare_f()),
-        Values(CV_8UC3),
-        Values(cv::INTER_LINEAR),
+        Values(CV_8UC1, CV_8UC3, CV_16UC1, CV_16SC1),
+        Values(cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_AREA),
         Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(0.5, 0.1),
         Values(0.5, 0.1),

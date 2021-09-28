@@ -2071,20 +2071,6 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
 }
 
 //------------------------------------------------------------------------------
-cv::Mat TraditionalTEST(const cv::Mat& input_frame)
-{
-    cv::Mat output_frame;
-    cv::Mat vga;
-    cv::Mat gray;
-    cv::Mat blurred;
-
-    cv::resize(input_frame, vga, cv::Size(), 0.5, 0.5);
-    cv::cvtColor(vga, gray, cv::COLOR_BGR2GRAY);
-    cv::blur(gray, blurred, cv::Size(3, 3));
-    cv::Canny(blurred, output_frame, 32, 128, 3);
-
-    return output_frame;
-}
 
 PERF_TEST_P_(ResizePerfTest, TestPerformance)
 {
@@ -2140,6 +2126,15 @@ PERF_TEST_P_(StackOverflowPerfTest, TestPerformance)
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat1, mean, stddev);
 
+    cv::Mat cvvga;
+    cv::Mat cvgray;
+    cv::Mat cvblurred;
+
+    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
+    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
+    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
+    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
+
     cv::GMat in;
     cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
     cv::GMat gray = cv::gapi::BGR2Gray(vga);
@@ -2150,7 +2145,6 @@ PERF_TEST_P_(StackOverflowPerfTest, TestPerformance)
     auto cc = ac.compile(descr_of(gin(in_mat1)),
                          std::move(compile_args));
     cc(gin(in_mat1), gout(out_mat_gapi));
-    out_mat_ocv = TraditionalTEST(in_mat1);
 
     TEST_CYCLE()
     {
