@@ -12,6 +12,7 @@
 #include <chrono>
 #include <future>
 
+#include <opencv2/gapi/media.hpp>
 #include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
 
@@ -29,23 +30,88 @@
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #ifdef HAVE_ONEVPL
+#include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+
 #include "streaming/onevpl/accelerators/surface/surface.hpp"
 #include "streaming/onevpl/accelerators/surface/cpu_frame_adapter.hpp"
 #include "streaming/onevpl/accelerators/accel_policy_cpu.hpp"
+#include "streaming/onevpl/engine/processing_engine_base.hpp"
+#include "streaming/onevpl/engine/engine_session.hpp"
 
 namespace opencv_test
 {
 namespace
 {
-cv::gapi::wip::surface_ptr_t create_test_surface(std::shared_ptr<void> out_buf_ptr,
+
+struct EmptyDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
+
+    size_t fetch_data(size_t, void*) override {
+        return 0;
+    }
+    bool empty() const override {
+        return true;
+    }
+};
+
+struct TestProcessingSession : public cv::gapi::wip::onevpl::EngineSession {
+    TestProcessingSession(mfxSession mfx_session) :
+        EngineSession(mfx_session, {}) {
+    }
+};
+
+struct TestProcessingEngine: public cv::gapi::wip::onevpl::ProcessingEngineBase {
+
+    size_t pipeline_stage_num = 0;
+
+    TestProcessingEngine(std::unique_ptr<cv::gapi::wip::onevpl::VPLAccelerationPolicy>&& accel) :
+        cv::gapi::wip::onevpl::ProcessingEngineBase(std::move(accel)) {
+        using cv::gapi::wip::onevpl::EngineSession;
+        create_pipeline(
+            // 0)
+            [this] (EngineSession&) -> ExecutionStatus
+            {
+                pipeline_stage_num = 0;
+                return ExecutionStatus::Continue;
+            },
+            // 1)
+            [this] (EngineSession&) -> ExecutionStatus
+            {
+                pipeline_stage_num = 1;
+                return ExecutionStatus::Continue;
+            },
+            // 2)
+            [this] (EngineSession&) -> ExecutionStatus
+            {
+                pipeline_stage_num = 2;
+                return ExecutionStatus::Continue;
+            },
+            // 3)
+            [this] (EngineSession&) -> ExecutionStatus
+            {
+                pipeline_stage_num = 3;
+                ready_frames.emplace(cv::MediaFrame());
+                return ExecutionStatus::Processed;
+            }
+        );
+    }
+
+    void initialize_session(mfxSession mfx_session,
+                            cv::gapi::wip::onevpl::DecoderParams&&,
+                            std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider>) override {
+
+        register_session<TestProcessingSession>(mfx_session);
+    }
+};
+
+cv::gapi::wip::onevpl::surface_ptr_t create_test_surface(std::shared_ptr<void> out_buf_ptr,
                                                  size_t, size_t) {
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
-    return cv::gapi::wip::Surface::create_surface(std::move(handle), out_buf_ptr);
+    return cv::gapi::wip::onevpl::Surface::create_surface(std::move(handle), out_buf_ptr);
 }
 
 TEST(OneVPL_Source_Surface, InitSurface)
 {
-    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
 
     // create raw MFX handle
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
@@ -67,7 +133,7 @@ TEST(OneVPL_Source_Surface, InitSurface)
 
 TEST(OneVPL_Source_Surface, ConcurrentLock)
 {
-    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
 
     // create raw MFX handle
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
@@ -107,7 +173,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
 
 TEST(OneVPL_Source_Surface, MemoryLifeTime)
 {
-    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
 
     // create preallocate surface memory
     std::unique_ptr<char> preallocated_memory_ptr(new char);
@@ -170,7 +236,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
 
 TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
 {
-    using namespace cv::gapi::wip;
+    using namespace cv::gapi::wip::onevpl;
 
     // create raw MFX handle
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1{});
@@ -191,8 +257,8 @@ TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
 
 TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
 {
-    using cv::gapi::wip::VPLCPUAccelerationPolicy;
-    using cv::gapi::wip::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
 
     auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
 
@@ -221,9 +287,9 @@ TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
 
 TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
 {
-    using cv::gapi::wip::VPLCPUAccelerationPolicy;
-    using cv::gapi::wip::VPLAccelerationPolicy;
-    using cv::gapi::wip::Surface;
+    using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::Surface;
 
     auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
 
@@ -277,9 +343,9 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
 
 TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
 {
-    using cv::gapi::wip::VPLCPUAccelerationPolicy;
-    using cv::gapi::wip::VPLAccelerationPolicy;
-    using cv::gapi::wip::Surface;
+    using cv::gapi::wip::onevpl::VPLCPUAccelerationPolicy;
+    using cv::gapi::wip::onevpl::VPLAccelerationPolicy;
+    using cv::gapi::wip::onevpl::Surface;
 
     auto acceleration_policy = std::make_shared<VPLCPUAccelerationPolicy>();
 
@@ -338,6 +404,42 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
     free_surface_count = acceleration_policy->get_free_surface_count(key);
     worker_thread.join();
     EXPECT_TRUE(free_surface_count >= free_surface_count_prev);
+}
+
+TEST(OneVPL_Source_ProcessingEngine, Init)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::unique_ptr<VPLAccelerationPolicy> accel;
+    TestProcessingEngine engine(std::move(accel));
+
+    mfxSession mfx_session{};
+    engine.initialize_session(mfx_session, DecoderParams{}, std::shared_ptr<IDataProvider>{});
+
+    EXPECT_EQ(engine.get_ready_frames_count(), 0);
+    ProcessingEngineBase::ExecutionStatus ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
+    EXPECT_EQ(engine.pipeline_stage_num, 0);
+
+    ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
+    EXPECT_EQ(engine.pipeline_stage_num, 1);
+
+    ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
+    EXPECT_EQ(engine.pipeline_stage_num, 2);
+
+    ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Processed);
+    EXPECT_EQ(engine.pipeline_stage_num, 3);
+    EXPECT_EQ(engine.get_ready_frames_count(), 1);
+
+    ret = engine.process(mfx_session);
+    EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::SessionNotFound);
+    EXPECT_EQ(engine.pipeline_stage_num, 3);
+    EXPECT_EQ(engine.get_ready_frames_count(), 1);
+
+    cv::gapi::wip::Data frame;
+    engine.get_frame(frame);
 }
 }
 } // namespace opencv_test

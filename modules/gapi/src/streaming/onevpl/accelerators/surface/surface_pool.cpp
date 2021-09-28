@@ -7,6 +7,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 void CachedPool::reserve(size_t size) {
     surfaces.reserve(size);
@@ -63,6 +64,7 @@ CachedPool::surface_ptr_t CachedPool::find_by_handle(mfxFrameSurface1* handle) {
     GAPI_Assert(it != cache.end() && "Cannot find cached surface from pool. Data corruption is possible");
     return it->second;
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

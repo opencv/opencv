@@ -23,6 +23,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 /**
  * @brief Inner class for managing oneVPL surface through interface `mfxFrameSurface1`.
@@ -95,6 +96,7 @@ private:
 
 using surface_ptr_t = std::shared_ptr<Surface>;
 using surface_weak_ptr_t = std::weak_ptr<Surface>;
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv

@@ -19,6 +19,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
+namespace onevpl {
 
 VPLMediaFrameCPUAdapter::VPLMediaFrameCPUAdapter(std::shared_ptr<Surface> surface):
     parent_surface_ptr(surface) {
@@ -111,6 +112,7 @@ void VPLMediaFrameCPUAdapter::serialize(cv::gapi::s11n::IOStream&) {
 void VPLMediaFrameCPUAdapter::deserialize(cv::gapi::s11n::IIStream&) {
     GAPI_Assert("VPLMediaFrameCPUAdapter::deserialize() is not implemented");
 }
+} // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
