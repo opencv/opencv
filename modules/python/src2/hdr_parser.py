@@ -53,13 +53,13 @@ class CppHeaderParser(object):
     def get_macro_arg(self, arg_str, npos):
         npos2 = npos3 = arg_str.find("(", npos)
         if npos2 < 0:
-            print("Error: no arguments for the macro at %d" % (self.lineno,))
+            print("Error: no arguments for the macro at %s:%d" % (self.hname, self.lineno))
             sys.exit(-1)
         balance = 1
         while 1:
             t, npos3 = self.find_next_token(arg_str, ['(', ')'], npos3+1)
             if npos3 < 0:
-                print("Error: no matching ')' in the macro call at %d" % (self.lineno,))
+                print("Error: no matching ')' in the macro call at %s:%d" % (self.hname, self.lineno))
                 sys.exit(-1)
             if t == '(':
                 balance += 1
@@ -161,7 +161,7 @@ class CppHeaderParser(object):
                 angle_stack.append(0)
             elif w == "," or w == '>':
                 if not angle_stack:
-                    print("Error at %d: argument contains ',' or '>' not within template arguments" % (self.lineno,))
+                    print("Error at %s:%d: argument contains ',' or '>' not within template arguments" % (self.hname, self.lineno))
                     sys.exit(-1)
                 if w == ",":
                     arg_type += "_and_"
@@ -191,7 +191,7 @@ class CppHeaderParser(object):
             p1 = arg_name.find("[")
             p2 = arg_name.find("]",p1+1)
             if p2 < 0:
-                print("Error at %d: no closing ]" % (self.lineno,))
+                print("Error at %s:%d: no closing ]" % (self.hname, self.lineno))
                 sys.exit(-1)
             counter_str = arg_name[p1+1:p2].strip()
             if counter_str == "":
