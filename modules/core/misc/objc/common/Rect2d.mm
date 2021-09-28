@@ -64,10 +64,10 @@
 }
 
 - (instancetype)initWithPoint:(Point2d*)point1 point:(Point2d*)point2 {
-    int x = (point1.x < point2.x ? point1.x : point2.x);
-    int y = (point1.y < point2.y ? point1.y : point2.y);
-    int width = (point1.x > point2.x ? point1.x : point2.x) - x;
-    int height = (point1.y > point2.y ? point1.y : point2.y) - y;
+    double x = (point1.x < point2.x ? point1.x : point2.x);
+    double y = (point1.y < point2.y ? point1.y : point2.y);
+    double width = (point1.x > point2.x ? point1.x : point2.x) - x;
+    double height = (point1.y > point2.y ? point1.y : point2.y) - y;
     return [self initWithX:x y:y width:width height:height];
 }
 
