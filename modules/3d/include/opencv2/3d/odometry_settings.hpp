@@ -45,12 +45,9 @@ public:
     virtual float getMinGradientMagnitude() const = 0;
     virtual void setMinGradientMagnitudes(InputArray val) = 0;
     virtual void getMinGradientMagnitudes(OutputArray val) const = 0;
-
-private:
-    Matx33f cameraMatrix;
 };
 
-class OdometrySettings
+class CV_EXPORTS_W OdometrySettings
 {
 public:
     OdometrySettings();

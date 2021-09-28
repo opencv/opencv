@@ -37,12 +37,12 @@ public:
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt, OdometryAlgoType algtype) const = 0;
 };
 
-class Odometry
+class CV_EXPORTS_W Odometry
 {
 private:
     Ptr<OdometryImpl>odometry;
 public:
-    Odometry(OdometryType otype, OdometrySettings settings);
+    CV_WRAP Odometry(OdometryType otype, OdometrySettings settings);
     ~Odometry();
     OdometryFrame createOdometryFrame() { return this->odometry->createOdometryFrame(); };
     bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);

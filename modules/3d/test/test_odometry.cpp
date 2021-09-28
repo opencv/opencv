@@ -116,11 +116,13 @@ void dilateFrame(Mat& image, Mat& depth)
 class OdometryTest
 {
 public:
-    OdometryTest(const Ptr<Odometry>& _odometry,
+    OdometryTest(OdometryType _otype,
+                 OdometryAlgoType _algtype,
                  double _maxError1,
                  double _maxError5,
                  double _idError = DBL_EPSILON) :
-        odometry(_odometry),
+        otype(_otype),
+        algtype(_algtype),
         maxError1(_maxError1),
         maxError5(_maxError5),
         idError(_idError)
@@ -141,9 +143,10 @@ public:
     static void generateRandomTransformation(Mat& R, Mat& t);
 
     void run();
-    void checkUMats();
+    //void checkUMats();
 
-    Ptr<Odometry> odometry;
+    OdometryType otype;
+    OdometryAlgoType algtype;
     double maxError1;
     double maxError5;
     double idError;
@@ -193,7 +196,7 @@ void OdometryTest::generateRandomTransformation(Mat& rvec, Mat& tvec)
     randu(tvec, Scalar(-1000), Scalar(1000));
     normalize(tvec, tvec, rng.uniform(0.008f, maxTranslation));
 }
-
+/*
 void OdometryTest::checkUMats()
 {
     Mat K = getCameraMatrix();
@@ -201,18 +204,22 @@ void OdometryTest::checkUMats()
     Mat image, depth;
     readData(image, depth);
 
-    odometry->setCameraMatrix(K);
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry(otype, ods);
+    OdometryFrame odf = odometry.createOdometryFrame();
 
     Mat calcRt;
 
     UMat uimage, udepth, umask;
     image.copyTo(uimage);
     depth.copyTo(udepth);
+    odf.setImage(uimage);
+    odf.setDepth(udepth);
     Mat(image.size(), CV_8UC1, Scalar(255)).copyTo(umask);
 
-    bool isComputed = odometry->compute(uimage, udepth, umask,
-                                        uimage, udepth, umask,
-                                        calcRt);
+    bool isComputed = odometry.compute(odf, odf, calcRt, algtype);
+
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
     if (diff > idError)
@@ -220,21 +227,33 @@ void OdometryTest::checkUMats()
         FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
     }
 }
-
+*/
 void OdometryTest::run()
 {
     Mat K = getCameraMatrix();
 
     Mat image, depth;
     readData(image, depth);
+    //imshow("img",image);
+    //waitKey(1000);
+    OdometrySettings ods;
+    ods.setCameraMatrix(K);
+    Odometry odometry = Odometry(otype, ods);
+    OdometryFrame odf = odometry.createOdometryFrame();
+    odf.setImage(image);
+    odf.setDepth(depth);
 
-    odometry->setCameraMatrix(K);
+    //Mat tmp;
+    //odf.getGrayImage(tmp);
+    //imshow("img", tmp);
+    //waitKey(1000);
 
     Mat calcRt;
 
     // 1. Try to find Rt between the same frame (try masks also).
     Mat mask(image.size(), CV_8UC1, Scalar(255));
-    bool isComputed = odometry->compute(image, depth, mask, image, depth, mask, calcRt);
+    odometry.prepareFrames(odf, odf);
+    bool isComputed = odometry.compute(odf, odf, calcRt, algtype);
     if(!isComputed)
     {
         FAIL() << "Can not find Rt between the same frame" << std::endl;
@@ -262,7 +281,15 @@ void OdometryTest::run()
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
-        isComputed = odometry->compute(image, depth, mask, warpedImage, warpedDepth, mask, calcRt);
+        OdometryFrame odfSrc = odometry.createOdometryFrame();
+        OdometryFrame odfDst = odometry.createOdometryFrame();
+        odfSrc.setImage(image);
+        odfSrc.setDepth(depth);
+        odfDst.setImage(warpedImage);
+        odfDst.setDepth(warpedDepth);
+
+        odometry.prepareFrames(odfSrc, odfDst);
+        isComputed = odometry.compute(odfSrc, odfDst, calcRt, algtype);
         if(!isComputed)
             continue;
 
@@ -318,89 +345,51 @@ void OdometryTest::run()
 
 TEST(RGBD_Odometry_Rgbd, algorithmic)
 {
-    OdometryTest test(cv::Odometry::createFromName("RgbdOdometry"), 0.99, 0.89);
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
     test.run();
 }
 
 TEST(RGBD_Odometry_ICP, algorithmic)
 {
-    OdometryTest test(cv::Odometry::createFromName("ICPOdometry"), 0.99, 0.99);
+    OdometryTest test(OdometryType::ICP, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
 TEST(RGBD_Odometry_RgbdICP, algorithmic)
 {
-    OdometryTest test(cv::Odometry::createFromName("RgbdICPOdometry"), 0.99, 0.99);
+    OdometryTest test(OdometryType::RGBD, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(cv::Odometry::createFromName("FastICPOdometry"), 0.99, 0.99, FLT_EPSILON);
+    OdometryTest test(OdometryType::ICP, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.run();
 }
 
+/*
 TEST(RGBD_Odometry_Rgbd, UMats)
 {
-    OdometryTest test(cv::Odometry::createFromName("RgbdOdometry"), 0.99, 0.89);
-    test.checkUMats();
+    OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
+    //test.checkUMats();
 }
 
 TEST(RGBD_Odometry_ICP, UMats)
 {
-    OdometryTest test(cv::Odometry::createFromName("ICPOdometry"), 0.99, 0.99);
-    test.checkUMats();
+    OdometryTest test(OdometryType::ICP, OdometryAlgoType::COMMON, 0.99, 0.99);
+    //test.checkUMats();
 }
 
 TEST(RGBD_Odometry_RgbdICP, UMats)
 {
-    OdometryTest test(cv::Odometry::createFromName("RgbdICPOdometry"), 0.99, 0.99);
-    test.checkUMats();
+    OdometryTest test(OdometryType::RGBD, OdometryAlgoType::COMMON, 0.99, 0.99);
+    //test.checkUMats();
 }
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
-    OdometryTest test(cv::Odometry::createFromName("FastICPOdometry"), 0.99, 0.99, FLT_EPSILON);
-    test.checkUMats();
+    OdometryTest test(OdometryType::ICP, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
+    //test.checkUMats();
 }
-
-
-/****************************************************************************************\
-*                                Depth to 3d tests                                       *
-\****************************************************************************************/
-
-TEST(RGBD_DepthTo3d, compute)
-{
-    // K from a VGA Kinect
-    Mat K = OdometryTest::getCameraMatrix();
-
-    // Create a random depth image
-    RNG rng;
-    Mat_<float> depth(480, 640);
-    rng.fill(depth, RNG::UNIFORM, 0, 100);
-
-    // Create some 3d points on the plane
-    int rows = depth.rows, cols = depth.cols;
-    Mat_<Vec3f> points3d;
-    depthTo3d(depth, K, points3d);
-
-    // Make sure the points belong to the plane
-    Mat points = points3d.reshape(1, rows * cols);
-    Mat image_points;
-    Mat rvec;
-    cv::Rodrigues(Mat::eye(3, 3, CV_32F), rvec);
-    Mat tvec = (Mat_<float>(1, 3) << 0, 0, 0);
-    projectPoints(points, rvec, tvec, K, Mat(), image_points);
-    image_points = image_points.reshape(2, rows);
-
-    float avg_diff = 0;
-    for (int y = 0; y < rows; ++y)
-        for (int x = 0; x < cols; ++x)
-            avg_diff += (float)cv::norm(image_points.at<Vec2f>(y, x) - Vec2f((float)x, (float)y));
-
-    // Verify the function works
-    ASSERT_LE(avg_diff / rows / cols, 1e-4) << "Average error for ground truth is: " << (avg_diff / rows / cols);
-}
-
-
+*/
 }} // namespace

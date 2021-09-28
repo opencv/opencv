@@ -50,8 +50,8 @@ OdometryFrame::OdometryFrame(InputArray image)
 	bool allEmpty = image.empty();
 	bool useOcl = image.isUMat();
 	bool isNoArray = (&image == &noArray());
-	//if (useOcl && !allEmpty && !isNoArray)
-	if (useOcl)
+	if (useOcl && !allEmpty && !isNoArray)
+	//if (useOcl)
 		this->odometryFrame = makePtr<OdometryFrameImplTMat<UMat>>(image);
 	else
 		this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>(image);
@@ -69,8 +69,11 @@ void OdometryFrameImplTMat<TMat>::setImage(InputArray _image)
 {
 	this->image = getTMat<TMat>(_image);
 	Mat gray;
-	cvtColor(_image.getMat(), gray, COLOR_BGR2GRAY, 1);
-	gray.convertTo(gray, CV_8UC1);
+    if (_image.channels() != 1)
+        cvtColor(_image, gray, COLOR_BGR2GRAY, 1);
+    else
+        gray = getTMat<Mat>(_image);
+    gray.convertTo(gray, CV_8UC1);
 	this->imageGray = getTMat<TMat>(gray);
 }
 
