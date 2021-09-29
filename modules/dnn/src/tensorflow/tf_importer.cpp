@@ -1156,11 +1156,11 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
         if(axis != outShapeSize)
         {
             int order[] = {0, 2, 1};  // From OpenCV's NHC to NCH.
-            addPermuteLayer(order, name + "/ndhwc", inpId, 3);
+            addPermuteLayer(order, name + "/nhc", inpId, 3);
 
             std::swap(outShape[1], outShape[2]);
         }
-        axis = (axis != 0)?(axis % outShapeSize + 1):0;
+        axis = (axis != 0)?(axis % outShapeSize + 1):2;
     }
 
     if(inpShape.size() == 4)
