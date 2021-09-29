@@ -1148,22 +1148,45 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
 
     CV_Assert( 0 <= axis && axis <= inpShape.size());
 
-    if(inpShape.size() == 4 && axis == inpShape.size())
+    // After ExpendDims, 3-dim data will become 4-dim data, and OpenCV retains 4-dim data as NCHW data layout.
+    // Convert OpenCV's NHC to NCH first.
+    if(outShapeSize == 3)
     {
-        int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-        addPermuteLayer(order, name + "/nhwc", inpId);
-
-        // Convert shape From OpenCV's NCHW to NHWC.
-        if(inpLayout == DATA_LAYOUT_NHWC)
+        // If axis equal to outShapeSize, that mean we expand in Channel dimmension, and do not add permuteLayer.
+        if(axis != outShapeSize)
         {
+            int order[] = {0, 2, 1};  // From OpenCV's NHC to NCH.
+            addPermuteLayer(order, name + "/ndhwc", inpId, 3);
+
             std::swap(outShape[1], outShape[2]);
-            std::swap(outShape[2], outShape[3]);
+        }
+        axis = (axis != 0)?(axis % outShapeSize + 1):0;
+    }
+
+    if(inpShape.size() == 4)
+    {
+        if(axis == inpShape.size())
+        {
+            int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
+            addPermuteLayer(order, name + "/nhwc", inpId);
+
+            // Convert shape From OpenCV's NCHW to NHWC.
+            if(inpLayout == DATA_LAYOUT_NHWC)
+            {
+                std::swap(outShape[1], outShape[2]);
+                std::swap(outShape[2], outShape[3]);
+            }
+        }
+        if(inpLayout == DATA_LAYOUT_NHWC || inpLayout == DATA_LAYOUT_NCHW)
+        {
+            // toNCHW
+            axis = (axis != 0)?(axis % outShapeSize + 1):0;
         }
     }
 
     // After ExpendDims, 5-dim data will become 6-dim data, and OpenCV retains 6-dim data as original data layout.
     // Convert OpenCV's NCDHW to NDHWC first.
-    if (inpShape.size() == 5 && ( inpLayout == DATA_LAYOUT_NDHWC|| inpLayout == DATA_LAYOUT_UNKNOWN ))
+    if (inpShape.size() == 5 && (inpLayout == DATA_LAYOUT_NDHWC || inpLayout == DATA_LAYOUT_UNKNOWN))
     {
         int order[] = {0, 2, 3, 4, 1};  // From OpenCV's NCDHW to NDHWC.
         addPermuteLayer(order, name + "/ndhwc", inpId, 5);
@@ -1177,17 +1200,11 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
         }
     }
 
-    if(inpLayout == DATA_LAYOUT_NHWC && outShapeSize == 4)
-    {
-        // toNCHW
-        axis = (axis != 0)?(axis % outShapeSize + 1):0;
-    }
-
     outShape.insert(outShape.begin() + axis, 1);
     outShapeSize += 1;
 
     // From OpenCV's NCDHW to NDHWC.
-    if((inpLayout != DATA_LAYOUT_NHWC ) && outShapeSize == 5 )
+    if((inpLayout != DATA_LAYOUT_NHWC && inpLayout != DATA_LAYOUT_NCHW) && outShapeSize == 5 )
     {
         for(int i = 1; i < outShapeSize - 1; i++)
         {
@@ -1200,7 +1217,16 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     layer_id[name] = id;
 
     connect(layer_id, dstNet, inpId, id, 0);
-    data_layouts[name] = outShapeSize == 5 ? DATA_LAYOUT_NDHWC : inpLayout;
+
+    if(outShapeSize == 5)
+    {
+        data_layouts[name] = DATA_LAYOUT_NDHWC;
+    }else if(outShapeSize == 4)
+    {
+        data_layouts[name] = DATA_LAYOUT_NCHW;
+    }else{
+        data_layouts[name] = inpLayout;
+    }
 }
 
 // "Flatten" "Squeeze"
@@ -2912,7 +2938,13 @@ void TFImporter::populateNet()
             {
                 if (layout != DATA_LAYOUT_UNKNOWN)
                 {
-                    it->second = layout;
+                    if (it->second == DATA_LAYOUT_UNKNOWN)
+                        it->second = layout;
+                    else if (it->second != layout)
+                    {
+                        it->second = DATA_LAYOUT_UNKNOWN;
+                        layout = DATA_LAYOUT_UNKNOWN;
+                    }
                 }
                 else
                     layout = it->second;
