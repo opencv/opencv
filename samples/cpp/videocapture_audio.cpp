@@ -52,7 +52,7 @@ int main(int argc, char** argv)
         }
         else { break; }
     }
- 
+
     cout << "Number of samples: " << numberOfSamples << endl;
 
     return 0;

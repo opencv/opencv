@@ -42,7 +42,7 @@ int main(int, char**)
                 sysTimeCurr = getTickCount();
             }
         }
-        else 
+        else
         {
             cerr << "Grab error" << endl;
             break;

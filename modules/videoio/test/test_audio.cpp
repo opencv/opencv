@@ -31,7 +31,7 @@ protected:
     }
     void checkAudio()
     {
-        for (int nCh = 0; nCh < audioData.size(); nCh++) 
+        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
             for (unsigned int i = 0; i < validAudioData.size(); i++)
             {
                 EXPECT_LE(fabs(validAudioData[i] - audioData[nCh][i]), epsilon) << "sample index " << i;
@@ -167,7 +167,7 @@ private:
     void readFile()
     {
         ASSERT_TRUE(cap.open(findDataFile(root + fileName + "." + format), backend.second, params));
-        
+
         const int audioBaseIndex = static_cast<int>(cap.get(cv::CAP_PROP_AUDIO_BASE_INDEX));
         const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
         ASSERT_EQ(expectedNumAudioCh, numberOfChannels);
