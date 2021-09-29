@@ -17,7 +17,7 @@ int main(int, char**)
     cap.open(0, CAP_MSMF, params);
     if (!cap.isOpened())
     {
-        cerr << "ERROR! Can't to open file" << endl;
+        cerr << "ERROR! Can't to open microphone" << endl;
         return -1;
     }
 
@@ -41,6 +41,11 @@ int main(int, char**)
                 audioData.push_back(frame);
                 sysTimeCurr = getTickCount();
             }
+        }
+        else 
+        {
+            cerr << "Grab error" << endl;
+            break;
         }
     }
     int numberOfSamles = 0;

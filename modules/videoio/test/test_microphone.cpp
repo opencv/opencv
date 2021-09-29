@@ -23,6 +23,8 @@ TEST(DISABLED_videoio_micro, basic)
     const double cvTickFreq = cv::getTickFrequency();
     int64 sysTimePrev = cv::getTickCount();
     int64 sysTimeCurr = cv::getTickCount();
+
+    cout << "Audio would be captured for the next 10 seconds" << endl;
     while ((sysTimeCurr-sysTimePrev)/cvTickFreq < 10)
     {
         if (cap.grab())

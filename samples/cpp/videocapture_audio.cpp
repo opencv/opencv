@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     }
 
     Mat frame;
-    vector<Mat> audioData;
+    vector<vector<Mat>> audioData;
     VideoCapture cap;
     vector<int> params {    CAP_PROP_AUDIO_STREAM, 0,
                             CAP_PROP_VIDEO_STREAM, -1,
@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     cap.open(file, CAP_MSMF, params);
     if (!cap.isOpened())
     {
-        cerr << "ERROR! Can't to open file" << endl;
+        cerr << "ERROR! Can't to open file: " + file << endl;
         return -1;
     }
 
@@ -37,24 +37,23 @@ int main(int argc, char** argv)
     cout << "CAP_PROP_AUDIO_TOTAL_CHANNELS: " << numberOfChannels << endl;
     cout << "CAP_PROP_AUDIO_TOTAL_STREAMS: " << cap.get(CAP_PROP_AUDIO_TOTAL_STREAMS) << endl;
 
+    int numberOfSamples = 0;
+    audioData.resize(numberOfChannels);
     for (;;)
     {
         if (cap.grab())
         {
-            for(int nCh = 0; nCh < numberOfChannels; nCh++)
+            for (int nCh = 0; nCh < numberOfChannels; nCh++)
             {
                 cap.retrieve(frame, audioBaseIndex+nCh);
-                audioData.push_back(frame);
+                audioData[nCh].push_back(frame);
+                numberOfSamples+=frame.cols;
             }
         }
-        else
-        {
-            int numberOfSamles = 0;
-            for (auto item : audioData)
-                numberOfSamles+=item.cols;
-            cout << "Number of samples: " << numberOfSamles << endl;
-            break;
-        }
+        else { break; }
     }
+ 
+    cout << "Number of samples: " << numberOfSamples << endl;
+
     return 0;
 }

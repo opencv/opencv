@@ -18,50 +18,54 @@ int main(int argc, char** argv)
 
     Mat videoFrame;
     Mat audioFrame;
-    vector<Mat> audioData;
+    vector<vector<Mat>> audioData;
     VideoCapture cap;
     vector<int> params {    CAP_PROP_AUDIO_STREAM, 0,
                             CAP_PROP_VIDEO_STREAM, 0,
-                            CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
+                            CAP_PROP_AUDIO_DATA_DEPTH, CV_16S,
+                            CAP_PROP_AUDIO_SYNC_LAST_FRAME, 1   };
 
     cap.open(file, CAP_MSMF, params);
     if (!cap.isOpened())
     {
-        cerr << "ERROR! Can't to open file" << endl;
+        cerr << "ERROR! Can't to open file: " + file << endl;
         return -1;
     }
 
     const int audioBaseIndex = (int)cap.get(CAP_PROP_AUDIO_BASE_INDEX);
+    const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
     cout << "CAP_PROP_AUDIO_DATA_DEPTH: " << depthToString((int)cap.get(CAP_PROP_AUDIO_DATA_DEPTH)) << endl;
     cout << "CAP_PROP_AUDIO_SAMPLES_PER_SECOND: " << cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND) << endl;
     cout << "CAP_PROP_AUDIO_TOTAL_CHANNELS: " << cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS) << endl;
     cout << "CAP_PROP_AUDIO_TOTAL_STREAMS: " << cap.get(CAP_PROP_AUDIO_TOTAL_STREAMS) << endl;
 
+    int numberOfSamples = 0;
+    int numberOfFrames = 0;
+    audioData.resize(numberOfChannels);
     for (;;)
     {
         if (cap.grab())
         {
             cap.retrieve(videoFrame);
-            cap.retrieve(audioFrame, audioBaseIndex);
+            for (int nCh = 0; nCh < numberOfChannels; nCh++)
+            {
+                cap.retrieve(audioFrame, audioBaseIndex+nCh);
+                if (!audioFrame.empty())
+                    audioData[nCh].push_back(audioFrame);
+                numberOfSamples+=audioFrame.cols;
+            }
             if (!videoFrame.empty())
             {
+                numberOfFrames++;
                 imshow("Live", videoFrame);
                 if (waitKey(5) >= 0)
                     break;
             }
-            if (!audioFrame.empty())
-            {
-                audioData.push_back(audioFrame);
-            }
-        }
-        else
-        {
-            int numberOfSamles = 0;
-            for (auto item : audioData)
-                numberOfSamles+=item.cols;
-            cout << "Number of samples: " << numberOfSamles << endl;
-            break;
-        }
+        } else { break; }
     }
+
+    cout << "Number of audio samples: " << numberOfSamples << endl
+         << " Number of video frames: " << numberOfFrames << endl;
+
     return 0;
 }
