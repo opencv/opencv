@@ -277,8 +277,10 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             // The decoder detected a new sequence header in the bitstream.
             // Video parameters may have changed.
             // In external memory allocation case, might need to reallocate the output surface
-            GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
+            /*GAPI_DbgAssert(false && "VPLLegacyDecodeEngine::process_error - "
                                     "MFX_WRN_VIDEO_PARAM_CHANGED is not processed");
+            */
+            return ExecutionStatus::Continue;
             break;
         case MFX_ERR_INCOMPATIBLE_VIDEO_PARAM:
             // The function detected that video parameters provided by the application

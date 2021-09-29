@@ -19,6 +19,7 @@ const std::string keys =
     "{ input        |                                           | Path to the input demultiplexed video file }"
     "{ output       |                                           | Path to the output RAW video file. Use .avi extension }"
     "{ facem        | face-detection-adas-0001.xml              | Path to OpenVINO IE face detection model (.xml) }"
+    "{ faced        | CPU                                       | Target device for face detection model (e.g. CPU, GPU, VPU, ...) }"
     "{ cfg_params   | <prop name>:<value>;<prop name>:<value>   | Semicolon separated list of oneVPL mfxVariants which is used for configuring source (see `MFXSetConfigFilterProperty` by https://spec.oneapi.io/versions/latest/elements/oneVPL/source/index.html) }";
 
 
@@ -198,7 +199,8 @@ int main(int argc, char *argv[]) {
 
     auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
-        get_weights_path(face_model_path)   // path to weights
+        get_weights_path(face_model_path),   // path to weights
+        cmd.get<std::string>("faced"),   // device specifier
     };
     auto kernels = cv::gapi::kernels
         < custom::OCVLocateROI
