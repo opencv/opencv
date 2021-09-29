@@ -1081,9 +1081,16 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                 kernel.set(argIdx++, (uint16_t)output_h_);
                 kernel.set(argIdx++, (uint16_t)pad_w_);
                 kernel.set(argIdx++, (uint16_t)pad_h_);
-                if (!kernel.run_(3, config->global_work_size,
-                                (config->use_null_local) ? NULL : config->local_work_size,
-                                false))
+
+                size_t wgs = kernel.workGroupSize();
+                if (!wgs)
+                {
+                    CV_LOG_ERROR(NULL, "DNN/OpenCL: Can't query workGroupSize of Basic kernel");
+                    return false;
+                }
+                size_t lws[1] = { wgs };
+                size_t gws[1] = { roundUp((size_t)output_w_ * output_h_ * M_, (unsigned)lws[0]) };
+                if (!kernel.run_(1, gws, lws, false))
                 {
                     CV_LOG_ERROR(NULL, "DNN/OpenCL: Basic kernel run failed");
                     return false;
