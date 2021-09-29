@@ -1146,7 +1146,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
         axis = inpShape.size() + axis + 1;
     }
 
-    CV_Assert( 0 <= axis && axis <= inpShape.size());
+    CV_Assert(0 <= axis && axis <= inpShape.size());
 
     // After ExpendDims, 3-dim data will become 4-dim data, and OpenCV retains 4-dim data as NCHW data layout.
     // Convert OpenCV's NHC to NCH first.
@@ -1156,7 +1156,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
         if(axis != outShapeSize)
         {
             int order[] = {0, 2, 1};  // From OpenCV's NHC to NCH.
-            addPermuteLayer(order, name + "/nhc", inpId, 3);
+            addPermuteLayer(order, name + "/nch", inpId, 3);
 
             std::swap(outShape[1], outShape[2]);
         }
@@ -1204,7 +1204,7 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     outShapeSize += 1;
 
     // From OpenCV's NCDHW to NDHWC.
-    if((inpLayout != DATA_LAYOUT_NHWC && inpLayout != DATA_LAYOUT_NCHW) && outShapeSize == 5 )
+    if((inpLayout != DATA_LAYOUT_NHWC && inpLayout != DATA_LAYOUT_NCHW) && outShapeSize == 5)
     {
         for(int i = 1; i < outShapeSize - 1; i++)
         {
@@ -1221,10 +1221,13 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     if(outShapeSize == 5)
     {
         data_layouts[name] = DATA_LAYOUT_NDHWC;
-    }else if(outShapeSize == 4)
+    }
+    else if(outShapeSize == 4)
     {
         data_layouts[name] = DATA_LAYOUT_NCHW;
-    }else{
+    }
+    else
+    {
         data_layouts[name] = inpLayout;
     }
 }
