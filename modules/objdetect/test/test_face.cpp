@@ -166,8 +166,8 @@ TEST(Objdetect_face_recognition, regression)
     // Pre-set params
     float score_thresh = 0.9f;
     float nms_thresh = 0.3f;
-    float cosine_similar_thresh = 0.363f;
-    float l2norm_similar_thresh = 1.128f;
+    double cosine_similar_thresh = 0.363;
+    double l2norm_similar_thresh = 1.128;
 
     // Load ground truth labels
     std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt", true).c_str());

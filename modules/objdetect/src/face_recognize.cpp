@@ -104,10 +104,6 @@ private:
         double T[3][3] = { {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0} };
         Mat s, u, vt, v;
         SVD::compute(A, s, u, vt);
-        Mat S(s.rows, s.rows, s.type());
-        for (int i = 0; i < 2; i++)
-            S.ptr<double>(i)[i] = s.ptr<double>(i)[0];
-        Mat svd = u * S * vt;
         double smax = s.ptr<double>(0)[0]>s.ptr<double>(1)[0] ? s.ptr<double>(0)[0] : s.ptr<double>(1)[0];
         double tol = smax * 2 * FLT_MIN;
         int rank = 0;

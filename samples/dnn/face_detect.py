@@ -17,7 +17,7 @@ parser.add_argument('--model', '-m', type=str, default='yunet.onnx', help='Path 
 parser.add_argument('--score_threshold', type=float, default=0.9, help='Filtering out faces of score < score_threshold.')
 parser.add_argument('--nms_threshold', type=float, default=0.3, help='Suppress bounding boxes of iou >= nms_threshold.')
 parser.add_argument('--top_k', type=int, default=5000, help='Keep top_k bounding boxes before NMS.')
-parser.add_argument('--save', '-s', type=str, default=False, help='Set true to save results. This flag is invalid when using camera.')
+parser.add_argument('--save', '-s', type=str2bool, default=False, help='Set true to save results. This flag is invalid when using camera.')
 parser.add_argument('--vis', '-v', type=str2bool, default=True, help='Set true to open a window for result visualization. This flag is invalid when using camera.')
 args = parser.parse_args()
 
