@@ -5,7 +5,8 @@ This repository contains extra data for the OpenCV library.
 #### Resources
 * Homepage: http://opencv.org
 * Docs: http://docs.opencv.org
-* Q&A forum: http://answers.opencv.org
+* Q&A forum: https://forum.opencv.org
+  * previous forum (read only): http://answers.opencv.org
 * Issue tracking: https://github.com/opencv/opencv/issues
 
 #### Contributing
