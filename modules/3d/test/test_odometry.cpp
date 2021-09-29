@@ -308,13 +308,16 @@ void OdometryTest::run()
 #endif
 
         // compare rotation
+        // distance between rvec and calcRvec must be lower
+        // than distance between 0 and rvec
         double rdiffnorm = cv::norm(rvec - calcRvec),
                rnorm = cv::norm(rvec);
         double tdiffnorm = cv::norm(tvec - calcTvec),
                tnorm = cv::norm(tvec);
-        if(rdiffnorm < rnorm &&  tdiffnorm < tnorm)
+        
+        if (rdiffnorm < rnorm && tdiffnorm < tnorm)
             better_1time_count++;
-        if(5. * rdiffnorm < rnorm && 5 * tdiffnorm < tnorm)
+        if (5. * rdiffnorm < rnorm && 5 * tdiffnorm < tnorm)
             better_5times_count++;
 
         CV_LOG_INFO(NULL, "Iter " << iter);
