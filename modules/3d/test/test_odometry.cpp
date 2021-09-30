@@ -312,15 +312,22 @@ void OdometryTest::run()
         // compare rotation
         // distance between rvec and calcRvec must be lower
         // than distance between 0 and rvec
-        double rdiffnorm = cv::norm(rvec - calcRvec),
-               rnorm = cv::norm(rvec);
-        double tdiffnorm = cv::norm(tvec - calcTvec),
-               tnorm = cv::norm(tvec);
+        double error = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.3f;
+
+        double rdiffnorm = cv::norm(rvec - calcRvec);
+        //double rnorm = cv::norm(rvec);
+        double rnorm = error;
+        double tdiffnorm = cv::norm(tvec - calcTvec);
+        //double tnorm = cv::norm(tvec);
+        double tnorm = error;
+
         //std::cout << "++++" << std::endl;
         //std::cout << rvec << "\n" << tvec << std::endl;
         //std::cout << calcRvec << "\n" << calcTvec << std::endl;
         //std::cout << rvec - tvec << std::endl;
         //std::cout << calcRvec - calcTvec << std::endl;
+        //std::cout << rdiffnorm << " " << tdiffnorm << std::endl;
+
         if (rdiffnorm < rnorm && tdiffnorm < tnorm)
             better_1time_count++;
         if (5. * rdiffnorm < rnorm && 5 * tdiffnorm < tnorm)
