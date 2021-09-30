@@ -207,6 +207,11 @@ typedef cv::Mat_< ptype > Points;
 typedef Points Normals;
 typedef Points Colors;
 
+typedef cv::Point3f _ptype;
+typedef cv::Mat_< _ptype > _Points;
+typedef _Points _Normals;
+typedef _Points _Colors;
+
 typedef cv::Mat_< depthType > Depth;
 
 void makeFrameFromDepth(InputArray depth, OutputArray pyrPoints, OutputArray pyrNormals,

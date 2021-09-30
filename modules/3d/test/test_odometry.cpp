@@ -259,11 +259,11 @@ void OdometryTest::run()
         FAIL() << "Can not find Rt between the same frame" << std::endl;
     }
     double diff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    std::cout << "diff: " << diff << std::endl;
+    //std::cout << "diff: " << diff << std::endl;
     if(diff > idError)
     {
-        //FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
-        std::cout << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
+        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
+        //std::cout << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
     }
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
@@ -316,9 +316,11 @@ void OdometryTest::run()
                rnorm = cv::norm(rvec);
         double tdiffnorm = cv::norm(tvec - calcTvec),
                tnorm = cv::norm(tvec);
-        std::cout << "++++" << std::endl;
-        std::cout << rvec << "\n" << tvec << std::endl;
-        std::cout << calcRvec << "\n" << calcTvec << std::endl;
+        //std::cout << "++++" << std::endl;
+        //std::cout << rvec << "\n" << tvec << std::endl;
+        //std::cout << calcRvec << "\n" << calcTvec << std::endl;
+        //std::cout << rvec - tvec << std::endl;
+        //std::cout << calcRvec - calcTvec << std::endl;
         if (rdiffnorm < rnorm && tdiffnorm < tnorm)
             better_1time_count++;
         if (5. * rdiffnorm < rnorm && 5 * tdiffnorm < tnorm)

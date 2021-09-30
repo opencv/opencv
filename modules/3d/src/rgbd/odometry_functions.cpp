@@ -1185,7 +1185,7 @@ typedef Matx<float, 6, 7> ABtype;
 struct GetAbInvoker : ParallelLoopBody
 {
     GetAbInvoker(ABtype& _globalAb, Mutex& _mtx,
-        const Points& _oldPts, const Normals& _oldNrm, const Points& _newPts, const Normals& _newNrm,
+        const _Points& _oldPts, const _Normals& _oldNrm, const _Points& _newPts, const _Normals& _newNrm,
         Affine3f _pose, Intr::Projector _proj, float _sqDistanceThresh, float _minCos) :
         ParallelLoopBody(),
         globalSumAb(_globalAb), mtx(_mtx),
@@ -1202,13 +1202,15 @@ struct GetAbInvoker : ParallelLoopBody
 
         for (int y = range.start; y < range.end; y++)
         {
-            const ptype* newPtsRow = newPts[y];
-            const ptype* newNrmRow = newNrm[y];
+            const _ptype* newPtsRow = newPts[y];
+            const _ptype* newNrmRow = newNrm[y];
 
             for (int x = 0; x < newPts.cols; x++)
             {
-                Point3f newP = fromPtype(newPtsRow[x]);
-                Point3f newN = fromPtype(newNrmRow[x]);
+                //Point3f newP = fromPtype(newPtsRow[x]);
+                //Point3f newN = fromPtype(newNrmRow[x]);
+                Point3f newP = newPtsRow[x];
+                Point3f newN = newNrmRow[x];
 
                 Point3f oldP(nan3), oldN(nan3);
 
@@ -1229,26 +1231,26 @@ struct GetAbInvoker : ParallelLoopBody
                 int xi = cvFloor(oldCoords.x), yi = cvFloor(oldCoords.y);
                 float tx = oldCoords.x - xi, ty = oldCoords.y - yi;
 
-                const ptype* prow0 = oldPts[yi + 0];
-                const ptype* prow1 = oldPts[yi + 1];
+                const _ptype* prow0 = oldPts[yi + 0];
+                const _ptype* prow1 = oldPts[yi + 1];
 
-                Point3f p00 = fromPtype(prow0[xi + 0]);
-                Point3f p01 = fromPtype(prow0[xi + 1]);
-                Point3f p10 = fromPtype(prow1[xi + 0]);
-                Point3f p11 = fromPtype(prow1[xi + 1]);
+                Point3f p00 = prow0[xi + 0];
+                Point3f p01 = prow0[xi + 1];
+                Point3f p10 = prow1[xi + 0];
+                Point3f p11 = prow1[xi + 1];
 
                 //do not fix missing data
                 if (!(fastCheck(p00) && fastCheck(p01) &&
                     fastCheck(p10) && fastCheck(p11)))
                     continue;
 
-                const ptype* nrow0 = oldNrm[yi + 0];
-                const ptype* nrow1 = oldNrm[yi + 1];
+                const _ptype* nrow0 = oldNrm[yi + 0];
+                const _ptype* nrow1 = oldNrm[yi + 1];
 
-                Point3f n00 = fromPtype(nrow0[xi + 0]);
-                Point3f n01 = fromPtype(nrow0[xi + 1]);
-                Point3f n10 = fromPtype(nrow1[xi + 0]);
-                Point3f n11 = fromPtype(nrow1[xi + 1]);
+                Point3f n00 = nrow0[xi + 0];
+                Point3f n01 = nrow0[xi + 1];
+                Point3f n10 = nrow1[xi + 0];
+                Point3f n11 = nrow1[xi + 1];
 
                 if (!(fastCheck(n00) && fastCheck(n01) &&
                     fastCheck(n10) && fastCheck(n11)))
@@ -1315,10 +1317,10 @@ struct GetAbInvoker : ParallelLoopBody
 
     ABtype& globalSumAb;
     Mutex& mtx;
-    const Points& oldPts;
-    const Normals& oldNrm;
-    const Points& newPts;
-    const Normals& newNrm;
+    const _Points& oldPts;
+    const _Normals& oldNrm;
+    const _Points& newPts;
+    const _Normals& newNrm;
     Affine3f pose;
     const Intr::Projector proj;
     float sqDistanceThresh;
@@ -1333,8 +1335,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
-    const Points  op(oldPts), on(oldNrm);
-    const Normals np(newPts), nn(newNrm);
+    const _Points  op(oldPts), on(oldNrm);
+    const _Normals np(newPts), nn(newNrm);
     Intr intrinsics(cameraMatrix);
     GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
         intrinsics.scale(level).makeProjector(),
