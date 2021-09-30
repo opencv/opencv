@@ -27,7 +27,7 @@ LegacyDecodeSession::LegacyDecodeSession(mfxSession sess,
     mfx_decoder_param(std::move(decoder_param.param)),
     data_provider(std::move(provider)),
     procesing_surface_ptr(),
-    output_surface_ptr(),
+    sync_queue(),
     decoded_frames_count()
 {
 }
@@ -41,12 +41,13 @@ LegacyDecodeSession::~LegacyDecodeSession()
 void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
     VPLAccelerationPolicy* acceleration_policy = engine.get_accel();
     GAPI_Assert(acceleration_policy && "Empty acceleration_policy");
-    auto old_locked = procesing_surface_ptr.lock();
     try {
         auto cand = acceleration_policy->get_free_surface(decoder_pool_id).lock();
 
         GAPI_LOG_DEBUG(nullptr, "[" << session << "] swap surface"
-                                ", old: " << (old_locked ? old_locked->get_handle() : nullptr) <<
+                                ", old: " << (!procesing_surface_ptr.expired()
+                                              ? procesing_surface_ptr.lock()->get_handle()
+                                              : nullptr) <<
                                 ", new: "<< cand->get_handle());
 
         procesing_surface_ptr = cand;

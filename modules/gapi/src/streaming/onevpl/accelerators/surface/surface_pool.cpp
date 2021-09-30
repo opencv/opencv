@@ -9,11 +9,15 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
+CachedPool::CachedPool(size_t reserved_size/* = 0 */) {
+    reserve(reserved_size);
+}
+
 void CachedPool::reserve(size_t size) {
     surfaces.reserve(size);
 }
 
-size_t CachedPool::size() const {
+size_t CachedPool::total_size() const {
     return surfaces.size();
 }
 
@@ -27,6 +31,17 @@ void CachedPool::push_back(surface_ptr_t &&surf) {
     cache.insert(std::make_pair(surf->get_handle(), surf));
     surfaces.push_back(std::move(surf));
     next_free_it = surfaces.begin();
+}
+
+size_t CachedPool::available_size() const {
+
+    size_t free_surf_count =
+        std::count_if(surfaces.begin(), surfaces.end(),
+                     [](const surface_ptr_t& val) {
+            GAPI_DbgAssert(val && "Pool contains empty surface");
+            return !val->get_locks_count();
+        });
+    return free_surf_count;
 }
 
 CachedPool::surface_ptr_t CachedPool::find_free() {

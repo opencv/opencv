@@ -8,6 +8,7 @@
 #define GAPI_STREAMING_ONVPL_ENGINE_DECODE_DECODE_SESSION_HPP
 #include <stdio.h>
 #include <memory>
+#include <queue>
 
 #include <opencv2/gapi/streaming/meta.hpp>
 
@@ -48,7 +49,9 @@ private:
     mfxFrameAllocRequest request;
 
     std::weak_ptr<Surface> procesing_surface_ptr;
-    mfxFrameSurface1* output_surface_ptr;
+
+    using op_handle_t = std::pair<mfxSyncPoint, mfxFrameSurface1*>;
+    std::queue<op_handle_t> sync_queue;
 
     int64_t decoded_frames_count;
 };
