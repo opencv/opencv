@@ -158,10 +158,14 @@ __kernel void ConvolveBasic(
 )
 {
     __global Dtype* convolved_image = convolved_image_base + convolved_image_base_offset;
-    const int outputX = get_global_id(0);
-    const int outputY = get_global_id(1);
-    const int kernelNum = get_global_id(2) * ZPAR;
-    if (outputX < output_width && outputY < output_height)
+    const int out_idx = get_global_id(0);  // 1D task layout: [output_width * output_height * OUTPUT_Z]
+    const int plane_size = output_width * output_height;
+    const int out_plane_idx = out_idx % plane_size;
+    const int outputZ = out_idx / plane_size;
+    const int outputY = out_plane_idx / output_width;
+    const int outputX = out_plane_idx % output_width;
+    const int kernelNum = outputZ * ZPAR;
+    if (kernelNum < OUTPUT_Z)
     {
         Dtype sum[ZPAR];
         for (int kern = 0; kern < ZPAR; kern++)
