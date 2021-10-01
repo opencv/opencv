@@ -1,6 +1,7 @@
 import cv2 as cv
-from .megapix_downscaler import MegapixDownscaler
 
+from .megapix_downscaler import MegapixDownscaler
+from .stitching_error import StitchingError
 
 class ImageHandler:
 
@@ -14,8 +15,9 @@ class ImageHandler:
                  final_megapix=DEFAULT_FINAL_MEGAPIX):
 
         if medium_megapix <= low_megapix:
-            raise ValueError("Medium resolution megapix need to be greater or "
-                             "equal than low resolution megapix")
+            raise StitchingError("Medium resolution megapix need to be "
+                                 "greater or equal than low resolution "
+                                 "megapix")
 
         self.medium_scaler = MegapixDownscaler(medium_megapix)
         self.low_scaler = MegapixDownscaler(low_megapix)
@@ -71,8 +73,7 @@ class ImageHandler:
     def read_image(img_name):
         img = cv.imread(img_name)
         if img is None:
-            print("Cannot read image ", img_name)
-            exit()
+            raise StitchingError("Cannot read image " + img_name)
         return img
 
     def _set_scaler_scales(self):
