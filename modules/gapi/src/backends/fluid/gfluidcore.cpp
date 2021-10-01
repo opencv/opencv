@@ -19,7 +19,7 @@
 #include <opencv2/gapi/fluid/gfluidkernel.hpp>
 #include <opencv2/gapi/fluid/core.hpp>
 
-#if (CV_SIMD128 && !CV_NEON)
+#if CV_SSE4_1
 #include "gfluidcore_simd_sse42.hpp"
 #endif
 
@@ -3145,7 +3145,7 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
         dst[l] = out.OutLine<T>(l);
     }
 
-#if (CV_SIMD128 && !CV_NEON)
+#if CV_SSE4_1
     const auto* clone = scr.clone;
     auto* tmp = scr.tmp;
 
