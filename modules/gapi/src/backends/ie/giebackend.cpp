@@ -630,6 +630,11 @@ void cv::gimpl::ie::RequestPool::callback(cv::gimpl::ie::RequestPool::Task task,
                                           InferenceEngine::InferRequest& request,
                                           size_t id) {
     task.callback(request);
+    // NB: IE::InferRequest keeps the callback until the new one is set.
+    // Since user's callback might keep resources that should be released,
+    // need to destroy its after execution.
+    // Let's set the empty one to cause the destruction of a callback.
+    request.SetCompletionCallback([](){});
     m_idle_ids.push(id);
 }
 
@@ -831,7 +836,6 @@ static void PostOutputs(InferenceEngine::InferRequest   &request,
         auto output = ctx->output(i);
         ctx->out.meta(output, ctx->input(0).meta);
         ctx->out.post(std::move(output));
-
     }
 }
 
