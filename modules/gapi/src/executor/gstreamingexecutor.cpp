@@ -347,6 +347,10 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
                                  cv::GRunArgs    &in_constants,
                                  cv::GRunArgs    &isl_inputs)
 {
+    // NB: Need to release resources from the previous step, to fetch new ones.
+    // On some systems it might be impossible to allocate new memory
+    // until the old one is released.
+    m_cmd.clear();
     // NOTE: in order to maintain the GRunArg's underlying object
     // lifetime, keep the whole cmd vector (of size == # of inputs)
     // in memory.
