@@ -178,14 +178,14 @@ class Stitcher:
         for idx, seam_mask in enumerate(seam_masks):
             yield SeamFinder.resize(seam_mask, self._masks[idx])
 
-    def blend_images(self, imgs, seam_masks):
-        for idx, (img, seam_mask) in enumerate(zip(imgs, seam_masks)):
+    def blend_images(self, imgs, masks):
+        for idx, (img, mask) in enumerate(zip(imgs, masks)):
             if self.timelapser.do_timelapse:
                 self.timelapser.process_and_save_frame(
-                    self.img_handler.img_names, img, self._corners[idx]
+                    self.img_handler.img_names[idx], img, self._corners[idx]
                     )
             else:
-                self.blender.feed(img, seam_mask, self._corners[idx])
+                self.blender.feed(img, mask, self._corners[idx])
 
     def create_final_panorama(self):
         if not self.timelapser.do_timelapse:

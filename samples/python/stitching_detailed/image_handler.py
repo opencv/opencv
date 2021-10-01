@@ -56,19 +56,19 @@ class ImageHandler:
     def _input_images(self):
         self.img_sizes = []
         for name in self.img_names:
-            img = self._read_image(name)
-            size = self._get_image_size(img)
+            img = self.read_image(name)
+            size = self.get_image_size(img)
             self.img_sizes.append(size)
             self._set_scaler_scales()
             yield img, size
 
     @staticmethod
-    def _get_image_size(img):
+    def get_image_size(img):
         """(width, height)"""
         return (img.shape[1], img.shape[0])
 
     @staticmethod
-    def _read_image(img_name):
+    def read_image(img_name):
         img = cv.imread(img_name)
         if img is None:
             print("Cannot read image ", img_name)

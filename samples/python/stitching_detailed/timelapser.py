@@ -38,7 +38,10 @@ class Timelapser:
         self.timelapser.process(img, mask, corner)
 
     def get_frame(self):
-        return self.timelapser.getDst()
+        frame = self.timelapser.getDst()
+        frame = np.float32(cv.UMat.get(frame))
+        frame = cv.convertScaleAbs(frame)
+        return frame
 
     @staticmethod
     def get_fixed_filename(img_name):

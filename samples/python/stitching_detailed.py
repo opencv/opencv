@@ -219,9 +219,7 @@ if __name__ == '__main__':
     cv.imwrite(args.output, panorama)
 
     zoom_x = 600.0 / panorama.shape[1]
-    preview = cv.normalize(src=panorama, dst=None, alpha=255.,
-                           norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
-    preview = cv.resize(preview, dsize=None, fx=zoom_x, fy=zoom_x)
+    preview = cv.resize(panorama, dsize=None, fx=zoom_x, fy=zoom_x)
 
     cv.imshow(args.output, preview)
     cv.waitKey()

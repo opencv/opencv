@@ -32,10 +32,13 @@ class FeatureMatcher:
         return pairwise_matches
 
     @staticmethod
-    def draw_matches_matrix(imgs, features, matches, inliers=False, **kwargs):
+    def draw_matches_matrix(imgs, features, matches, conf_thresh=1,
+                            inliers=False, **kwargs):
         matches_matrix = FeatureMatcher.get_matches_matrix(matches)
         for idx1, idx2 in FeatureMatcher._get_all_img_combinations(len(imgs)):
             match = matches_matrix[idx1, idx2]
+            if match.confidence < conf_thresh:
+                continue
             if inliers:
                 kwargs['matchesMask'] = match.getInliers()
             yield idx1, idx2, FeatureMatcher.draw_matches(

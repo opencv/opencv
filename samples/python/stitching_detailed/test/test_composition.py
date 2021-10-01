@@ -30,7 +30,7 @@ class TestImageComposition(unittest.TestCase):
         cv.imwrite("with_exposure_comp.jpg", result)
 
     def test_timelapse(self):
-        stitcher = Stitcher(expos_comp="no", blend="no")
+        stitcher = Stitcher(timelapse='as_is')
         _ = stitcher.stitch(["s1.jpg", "s2.jpg"])
         frame1 = cv.imread("fixed_s1.jpg")
 

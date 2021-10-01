@@ -31,11 +31,11 @@ class Subsetter:
     def save_matches_graph_dot_file(self, img_names, pairwise_matches):
         if self.save_file:
             with open(self.save_file, 'w') as filehandler:
-                filehandler.write(self.get_matches_graph_dot_file(
-                    img_names, pairwise_matches)
-                    )
+                filehandler.write(self.get_matches_graph(img_names,
+                                                         pairwise_matches)
+                                  )
 
-    def get_matches_graph_dot_file(self, img_names, pairwise_matches):
+    def get_matches_graph(self, img_names, pairwise_matches):
         return cv.detail.matchesGraphAsString(img_names, pairwise_matches,
                                               self.confidence_threshold)
 

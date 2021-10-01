@@ -40,9 +40,12 @@ class SeamFinder:
 
     @staticmethod
     def draw_seam_lines(panorama, seam_masks, corners, sizes,
-                        color=(0, 0, 255)):
+                        linesize=1, color=(0, 0, 255)):
         blended_masks = SeamFinder.blend_seam_masks(seam_masks, corners, sizes)
         seam_lines = cv.Canny(np.uint8(blended_masks), 100, 200)
+        kernelsize = linesize + linesize - 1
+        kernel = np.ones((kernelsize, kernelsize), np.uint8)
+        seam_lines = cv.dilate(seam_lines, kernel)
         panorama_with_seam_lines = panorama.copy()
         panorama_with_seam_lines[seam_lines == 255] = color
         return panorama_with_seam_lines
