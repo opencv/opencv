@@ -1220,12 +1220,14 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
+/** @example samples/cpp/lsd_lines.cpp
+An example using the LineSegmentDetector
+\image html building_lsd.png "Sample output image" width=434 height=300
+*/
+
 /** @brief Line segment detector class
 
 following the algorithm described at @cite Rafael12 .
-
-@note Implementation has been removed due original code license conflict
-
 */
 class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
@@ -1288,8 +1290,6 @@ to edit those, as to tailor it for their own application.
 @param log_eps Detection threshold: -log10(NFA) \> log_eps. Used only when advance refinement is chosen.
 @param density_th Minimal density of aligned region points in the enclosing rectangle.
 @param n_bins Number of bins in pseudo-ordering of gradient modulus.
-
-@note Implementation has been removed due original code license conflict
  */
 CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetector(
     int refine = LSD_REFINE_STD, double scale = 0.8,
