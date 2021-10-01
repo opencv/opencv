@@ -276,7 +276,6 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
 
     if (normals.empty())
     {
-        //std::cout << "getPyramidLevels : " << frame.getPyramidLevels(OdometryFramePyramidType::PYR_NORM) << std::endl;
         if ( frame.getPyramidLevels(OdometryFramePyramidType::PYR_NORM))
         {
             TMat n0;
@@ -726,7 +725,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         // Run transformation search on current level iteratively.
         for(int iter = 0; iter < iterCounts[level]; iter ++)
         {
-            //std::cout << "iter: " << iter << std::endl;
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
             Mat corresps_rgbd, corresps_icp, diffs_rgbd, diffs_icp;
             double sigma_rgbd, sigma_icp;
@@ -784,7 +782,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
                 dstFrame.getPyramidAt(dstPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                 
-                //std::cout <<"algtype: "<<(int)algtype << std::endl;
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
@@ -793,23 +790,16 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 else
                 {
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
-                    //Affine3f pose = Affine3f(Matx44f(resultRt));
                     cv::Matx66f A;
                     cv::Vec6f b;
-                    //float _distanceThreshold = 0.1f;
-                    //float _angleThreshold = (float)(30. * CV_PI / 180.);
-                    //calcICPLsmMatricesFast(cameraMatrix, srcPyrCloud, srcPyrNormals, dstPyrCloud, dstPyrNormals, transform, level, _distanceThreshold, _angleThreshold, A, b);
-                    calcICPLsmMatricesFast(cameraMatrix, srcPyrCloud, srcPyrNormals, dstPyrCloud, dstPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
+                    calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
                     AtA_icp = Mat(A);
                     AtB_icp = Mat(b);
-                    //std::cout << A << std::endl;
-
                 }
 
                 AtA += AtA_icp;
                 AtB += AtB_icp;
             }
-            //std::cout << AtA << std::endl;
 
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
             if(!solutionExist)
@@ -845,6 +835,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
+
     if(isOk)
     {
         Mat deltaRt;
@@ -1153,7 +1144,6 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt)
 bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x)
 {
     double det = determinant(AtA);
-    //std::cout << AtA<<"\n"<< det << std::endl;
     if (fabs(det) < detThreshold || cvIsNaN(det) || cvIsInf(det))
         return false;
 
@@ -1207,8 +1197,6 @@ struct GetAbInvoker : ParallelLoopBody
 
             for (int x = 0; x < newPts.cols; x++)
             {
-                //Point3f newP = fromPtype(newPtsRow[x]);
-                //Point3f newN = fromPtype(newNrmRow[x]);
                 Point3f newP = newPtsRow[x];
                 Point3f newN = newNrmRow[x];
 
@@ -1216,7 +1204,6 @@ struct GetAbInvoker : ParallelLoopBody
 
                 if (!(fastCheck(newP) && fastCheck(newN)))
                     continue;
-                //std::cout << newP << " " << newN << std::endl;
                 //transform to old coord system
                 newP = pose * newP;
                 newN = pose.rotation() * newN;
@@ -1296,7 +1283,6 @@ struct GetAbInvoker : ParallelLoopBody
                         upperTriangle[pos++] += ab[i] * ab[j];
                     }
                 }
-                //std::cout << "lol" << std::endl;
             }
         }
 
@@ -1310,7 +1296,6 @@ struct GetAbInvoker : ParallelLoopBody
             }
         }
 
-        //std::cout << sumAB << std::endl;
         AutoLock al(mtx);
         globalSumAb += sumAB;
     }
@@ -1343,8 +1328,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         maxDepthDiff * maxDepthDiff, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
-    //parallel_for_(range, invoker, nstripes);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
+    //invoker(range);
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)

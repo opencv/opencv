@@ -6,7 +6,7 @@
 
 namespace opencv_test { namespace {
 
-#define SHOW_DEBUG_IMAGES  0
+#define SHOW_DEBUG_IMAGES 0
 
 static
 void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& tvec, const Mat& K,
@@ -259,7 +259,6 @@ void OdometryTest::run()
         FAIL() << "Can not find Rt between the same frame" << std::endl;
     }
     double diff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    //std::cout << "diff: " << diff << std::endl;
     if(diff > idError)
     {
         FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
@@ -299,7 +298,6 @@ void OdometryTest::run()
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
         Mat calcTvec = calcRt(Rect(3,0,1,3));
-
 #if SHOW_DEBUG_IMAGES
         imshow("image", image);
         imshow("warpedImage", warpedImage);
@@ -312,7 +310,7 @@ void OdometryTest::run()
         // compare rotation
         // distance between rvec and calcRvec must be lower
         // than distance between 0 and rvec
-        double error = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.3f;
+        double error = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.27f;
 
         double rdiffnorm = cv::norm(rvec - calcRvec);
         //double rnorm = cv::norm(rvec);
@@ -320,13 +318,6 @@ void OdometryTest::run()
         double tdiffnorm = cv::norm(tvec - calcTvec);
         //double tnorm = cv::norm(tvec);
         double tnorm = error;
-
-        //std::cout << "++++" << std::endl;
-        //std::cout << rvec << "\n" << tvec << std::endl;
-        //std::cout << calcRvec << "\n" << calcTvec << std::endl;
-        //std::cout << rvec - tvec << std::endl;
-        //std::cout << calcRvec - calcTvec << std::endl;
-        //std::cout << rdiffnorm << " " << tdiffnorm << std::endl;
 
         if (rdiffnorm < rnorm && tdiffnorm < tnorm)
             better_1time_count++;
