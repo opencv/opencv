@@ -41,12 +41,12 @@ cv::gapi::GKernelPackage kernels() {
 // machinery work. The real data comes from the physical camera which
 // is handled by firmware (and so, by the DepthAI library).
 ColorCamera::ColorCamera()
-    : m_dummy(cv::MediaFrame::Create<cv::gapi::oak::OAKMediaBGR>()) {
+    : m_dummy(cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>()) {
 }
 
+// FIXME: rework
 bool ColorCamera::pull(cv::gapi::wip::Data &data) {
-    // FIXME:
-    // Avoid passing this formal mat to the pipeline
+    // FIXME: Avoid passing this formal mat to the pipeline
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     data = m_dummy;
     return true;
@@ -61,8 +61,25 @@ cv::GMetaArg ColorCamera::descr_of() const {
 
 #else
 
-// fixme: add proper impls with asserts inside
-#error 42
+namespace gapi {
+namespace oak {
+cv::GFrame encode(const GFrame& in, const EncoderConfig& cfg) {
+    GAPI_Assert(false && "Built without depthai library support");
+}
+cv::gapi::GKernelPackage kernels() {
+    GAPI_Assert(false && "Built without depthai library support");
+}
+ColorCamera::ColorCamera() {
+    GAPI_Assert(false && "Built without depthai library support");
+}
+bool ColorCamera::pull(cv::gapi::wip::Data &data) {
+    GAPI_Assert(false && "Built without depthai library support");
+}
+cv::GMetaArg ColorCamera::descr_of() const {
+    GAPI_Assert(false && "Built without depthai library support");
+}
+} // namespace oak
+} // namespace gapi
 
 #endif // WITH_OAK_BACKEND
 } // namespace cv

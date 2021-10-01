@@ -11,23 +11,70 @@
 #include <opencv2/gapi/gkernel.hpp>    // GKernelPackage
 #include <opencv2/gapi/gstreaming.hpp> // GOptRunArgsP
 
-// FIXME: remove?
-#include <opencv2/imgproc.hpp>
-#include <opencv2/gapi/core.hpp>
-#include <opencv2/gapi/streaming/meta.hpp>
-#include <opencv2/gapi/infer/parsers.hpp>
-#include <opencv2/gapi/infer.hpp>   // Generic
-
 namespace cv {
 namespace gapi {
 namespace oak {
 
-// TODO: cover all of dai parameters
+// FIXME: copypasted from dai library
 struct EncoderConfig {
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t framerate = 0;
-    // h265 as the default enc type
+    /**
+     * Rate control mode specifies if constant or variable bitrate should be used (H264 / H265)
+     */
+    enum class RateControlMode : int { CBR, VBR };
+
+    /**
+     * Encoding profile, H264, H265 or MJPEG
+     */
+    enum class Profile : int { H264_BASELINE, H264_HIGH, H264_MAIN, H265_MAIN, MJPEG };
+    /**
+     * Specifies prefered bitrate (kb) of compressed output bitstream
+     */
+    std::int32_t bitrate = 8000;
+    /**
+     * Every x number of frames a keyframe will be inserted
+     */
+    std::int32_t keyframeFrequency = 30;
+    /**
+     * Specifies maximum bitrate (kb) of compressed output bitstream
+     */
+    std::int32_t maxBitrate = 8000;
+    /**
+     * Specifies number of B frames to be inserted
+     */
+    std::int32_t numBFrames = 0;
+    /**
+     * This options specifies how many frames are available in this nodes pool (can help if
+     * receiver node is slow at consuming
+     */
+    std::uint32_t numFramesPool = 4;
+    /**
+     * Encoding profile, H264, H265 or MJPEG
+     */
+    Profile profile = Profile::H264_BASELINE;
+    /**
+     * Value between 0-100% (approximates quality)
+     */
+    std::int32_t quality = 80;
+    /**
+     * Lossless mode ([M]JPEG only)
+     */
+    bool lossless = false;
+    /**
+     * Rate control mode specifies if constant or variable bitrate should be used (H264 / H265)
+     */
+    RateControlMode rateCtrlMode = RateControlMode::CBR;
+    /**
+     * Input and compressed output frame width
+     */
+    std::int32_t width = 1920;
+    /**
+     * Input and compressed output frame height
+     */
+    std::int32_t height = 1080;
+    /**
+     * Frame rate
+     */
+    float frameRate = 30.0f;
 };
 
 G_API_OP(GEnc, <GFrame(GFrame, EncoderConfig)>, "org.opencv.oak.enc") {
@@ -58,13 +105,6 @@ public:
 
 } // namespace oak
 } // namespace gapi
-
-// FIXME: remove
-//inline GOptRunArgsP& operator+= (      cv::GOptRunArgsP &lhs,
-//                                 const cv::GOptRunArgsP &rhs) {
-//    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
-//    return lhs;
-//}
 
 namespace detail {
 template<> struct CompileArgTag<gapi::oak::ColorCameraParams> {
