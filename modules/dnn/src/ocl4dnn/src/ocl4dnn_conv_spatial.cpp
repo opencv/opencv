@@ -1034,12 +1034,15 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
         kernel.set(argIdx++, (uint16_t)output_w_);
         kernel.set(argIdx++, (uint16_t)output_h_);
 
-        size_t global_size[3];
-        global_size[0] = output_w_;
-        global_size[1] = output_h_;
-        global_size[2] = num_output_ * num_;
-
-        if (!kernel.run_(3, global_size, NULL, false))
+        size_t wgs = kernel.workGroupSize();
+        if (!wgs)
+        {
+            CV_LOG_ERROR(NULL, "DNN/OpenCL: Can't query workGroupSize of DWCONV kernel");
+            return false;
+        }
+        size_t lws[1] = { wgs };
+        size_t gws[1] = { roundUp((size_t)output_w_ * output_h_ * num_output_ * num_, (unsigned)lws[0]) };
+        if (!kernel.run_(1, gws, lws, false))
         {
             CV_LOG_ERROR(NULL, "DNN/OpenCL: DWCONV kernel run failed");
             return false;
