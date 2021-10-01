@@ -2,6 +2,8 @@ from collections import OrderedDict
 import cv2 as cv
 import numpy as np
 
+from .stitching_error import StitchingError
+
 
 class CameraAdjuster:
     """https://docs.opencv.org/master/d5/d56/classcv_1_1detail_1_1BundleAdjusterBase.html"""  # noqa
@@ -42,7 +44,6 @@ class CameraAdjuster:
                                          pairwise_matches,
                                          estimated_cameras)
         if not b:
-            print("Camera parameters adjusting failed.")
-            exit()
+            raise StitchingError("Camera parameters adjusting failed.")
 
         return cameras

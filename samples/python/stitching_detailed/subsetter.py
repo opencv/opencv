@@ -3,7 +3,8 @@ import math
 import cv2 as cv
 import numpy as np
 
-from stitching_detailed.feature_matcher import FeatureMatcher
+from .feature_matcher import FeatureMatcher
+from .stitching_error import StitchingError
 
 
 class Subsetter:
@@ -46,8 +47,8 @@ class Subsetter:
         indices_as_list = [int(idx) for idx in list(indices[:, 0])]
 
         if len(indices_as_list) < 2:
-            print("Need more images")
-            exit()
+            raise StitchingError("No match exceeds the "
+                                 "given confidence theshold.")
 
         return indices_as_list
 
