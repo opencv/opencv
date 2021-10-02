@@ -1228,6 +1228,9 @@ An example using the LineSegmentDetector
 /** @brief Line segment detector class
 
 following the algorithm described at @cite Rafael12 .
+
+@note Implementation has been removed from OpenCV version 3.4.6 to 3.4.15 and version 4.1.0 to 4.5.3 due original code license conflict.
+restored again after [Computation of a NFA](https://github.com/rafael-grompone-von-gioi/binomial_nfa) code published under the MIT license.
 */
 class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
@@ -1241,8 +1244,8 @@ public:
 
     @param image A grayscale (CV_8UC1) input image. If only a roi needs to be selected, use:
     `lsd_ptr-\>detect(image(roi), lines, ...); lines += Scalar(roi.x, roi.y, roi.x, roi.y);`
-    @param lines A vector of Vec4i or Vec4f elements specifying the beginning and ending point of a line. Where
-    Vec4i/Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly
+    @param lines A vector of Vec4f elements specifying the beginning and ending point of a line. Where
+    Vec4f is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly
     oriented depending on the gradient.
     @param width Vector of widths of the regions, where the lines are found. E.g. Width of line.
     @param prec Vector of precisions with which the lines are found.
