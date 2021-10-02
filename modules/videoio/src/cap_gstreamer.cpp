@@ -221,10 +221,10 @@ private:
         start_loop = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_GSTREAMER_START_MAINLOOP", false);
 
         GSafePtr<GError> err;
-        gst_init_check(NULL, NULL, err.getRef());
-        if (err)
+        gboolean gst_init_res = gst_init_check(NULL, NULL, err.getRef());
+        if (!gst_init_res)
         {
-            CV_WARN("Can't initialize GStreamer: " << err->message);
+            CV_WARN("Can't initialize GStreamer: " << (err ? err->message : "<unknown reason>"));
             isFailed = true;
             return;
         }

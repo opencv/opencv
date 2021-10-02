@@ -188,7 +188,7 @@ implementation below.
 
 This will return a similarity index for each channel of the image. This value is between zero and
 one, where one corresponds to perfect fit. Unfortunately, the many Gaussian blurring is quite
-costly, so while the PSNR may work in a real time like environment (24 frame per second) this will
+costly, so while the PSNR may work in a real time like environment (24 frames per second) this will
 take significantly more than to accomplish similar performance results.
 
 Therefore, the source code presented at the start of the tutorial will perform the PSNR measurement

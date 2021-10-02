@@ -58,7 +58,7 @@
 //
 // - Use find_package() in app/CMakeLists.txt:
 //
-//   find_package(OpenCV 3.4 REQUIRED java)
+//   find_package(OpenCV @OPENCV_VERSION_MAJOR@.@OPENCV_VERSION_MINOR@ REQUIRED java)
 //   ...
 //   target_link_libraries(native-lib ${OpenCV_LIBRARIES})
 //
