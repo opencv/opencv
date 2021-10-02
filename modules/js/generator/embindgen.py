@@ -104,6 +104,9 @@ def makeWhiteList(module_list):
     return wl
 
 white_list = None
+namespace_prefix_override = {
+    'dnn' : ''
+}
 
 # Features to be exported
 export_enums = False
@@ -271,6 +274,8 @@ class FuncVariant(object):
 
 class FuncInfo(object):
     def __init__(self, class_name, name, cname, namespace, isconstructor):
+        self.name_id = '_'.join([namespace] + ([class_name] if class_name else []) + [name])  # unique id for dict key
+
         self.class_name = class_name
         self.name = name
         self.cname = cname
@@ -295,9 +300,9 @@ class JSWrapperGenerator(object):
         self.bindings = []
         self.wrapper_funcs = []
 
-        self.classes = {}
+        self.classes = {}  # FIXIT 'classes' should belong to 'namespaces'
         self.namespaces = {}
-        self.enums = {}
+        self.enums = {}  # FIXIT 'enums' should belong to 'namespaces'
 
         self.parser = hdr_parser.CppHeaderParser()
         self.class_idx = 0
@@ -419,7 +424,8 @@ class JSWrapperGenerator(object):
         else:
             func_map = self.namespaces.setdefault(namespace, Namespace()).funcs
 
-        func = func_map.setdefault(name, FuncInfo(class_name, name, cpp_name, namespace, is_constructor))
+        fi = FuncInfo(class_name, name, cpp_name, namespace, is_constructor)
+        func = func_map.setdefault(fi.name_id, fi)
 
         variant = FuncVariant(class_name, name, decl, is_constructor, is_class_method, is_const_method,
                         is_virtual_method, is_pure_virtual_method, ref_return, const_return)
@@ -493,17 +499,18 @@ class JSWrapperGenerator(object):
                 if ns_parts[0] == "cv":
                     ns_parts = ns_parts[1:]
                 ns_part = "_".join(ns_parts) + "_"
+                ns_id = '_'.join(ns_parts)
+                ns_prefix = namespace_prefix_override.get(ns_id, ns_id)
+                if ns_prefix:
+                    ns_prefix = ns_prefix + '_'
             else:
-                ns_part = ""
+                ns_prefix = ''
             if class_info == None:
-                js_func_name = ns_part + func.name
+                js_func_name = ns_prefix + func.name
                 wrap_func_name = js_func_name + "_wrapper"
             else:
-                wrap_func_name = ns_part + func.class_name + "_" + func.name + "_wrapper"
+                wrap_func_name = ns_prefix + func.class_name + "_" + func.name + "_wrapper"
                 js_func_name = func.name
-
-            if js_func_name == "_findHomography1":
-                os.error(ns_name, ns_parts, ns_part)
 
             # TODO: Name functions based wrap directives or based on arguments list
             if index > 0:
@@ -754,12 +761,22 @@ class JSWrapperGenerator(object):
         # step 2: generate bindings
         # Global functions
         for ns_name, ns in sorted(self.namespaces.items()):
-            if ns_name.split('.')[0] != 'cv':
+            ns_parts = ns_name.split('.')
+            if ns_parts[0] != 'cv':
+                print('Ignore namespace: {}'.format(ns_name))
                 continue
-            for name, func in sorted(ns.funcs.items()):
+            else:
+                ns_parts = ns_parts[1:]
+            ns_id = '_'.join(ns_parts)
+            ns_prefix = namespace_prefix_override.get(ns_id, ns_id)
+            for name_id, func in sorted(ns.funcs.items()):
+                name = func.name
+                if ns_prefix:
+                    name = ns_prefix + '_' + name
                 if name in ignore_list:
                     continue
                 if not name in white_list['']:
+                    #print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
                     continue
 
                 ext_cnst = False
