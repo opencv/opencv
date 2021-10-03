@@ -159,7 +159,7 @@ public:
     enum { VEC_ALIGN = 32, DFT_TYPE = CV_8S };
     Mat weightsMat;
     std::vector<int> biasvec;
-    Mat outputMultiplier;
+    std::vector<float> outputMultiplier;
     Mat activationLUT;
     Ptr<ActivationLayerInt8> activ;
 
@@ -249,10 +249,14 @@ public:
 
         Mat biasMat = blobs[1];
         biasvec.resize(numOutput+2);
-        for(int i = 0; i < numOutput; i++ )
-            biasvec[i] = biasMat.at<int>(i);
 
-        outputMultiplier = blobs[2];
+        Mat outMult = blobs[2];
+        outputMultiplier.resize(numOutput+2);
+        for(int i = 0; i < numOutput; i++ )
+        {
+            biasvec[i] = biasMat.at<int>(i);
+            outputMultiplier[i] = outMult.at<float>(i);
+        }
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -283,16 +287,17 @@ public:
 
         for (int i = 0; i < outCn; ++i)
         {
-            float off = outputMultiplier.at<float>(i) * output_sc;
+            float off = outputMultiplier[i] * output_sc;
             if (!w.empty())
                 off *= w.at<float>(i);
 
             if (!b.empty())
                 biasvec[i] += (int)std::round(b.at<float>(i)/off);
 
-            outputMultiplier.at<float>(i) = off/new_sc;
+            outputMultiplier[i] = off/new_sc;
         }
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
+        outputMultiplier[outCn] = outputMultiplier[outCn+1] = outputMultiplier[outCn-1];
     }
 
     class ParallelConv : public cv::ParallelLoopBody
@@ -315,7 +320,7 @@ public:
         bool useAVX512;
         int blk_size_cn;
         int inpZp, outZp;
-        const float* multiplier;
+        const std::vector<float>* multiplier;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
@@ -323,7 +328,7 @@ public:
             , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0)
         {}
 
-        static void run( const Mat& input, Mat& output, const Mat& weights, const Mat& multipliers,
+        static void run( const Mat& input, Mat& output, const Mat& weights, const std::vector<float>& multipliers,
                          const std::vector<int>& biasvec, const Mat& activLUT,
                          const std::vector<size_t>& kernel_size, const std::vector<size_t>& strides,
                          const std::vector<size_t>& pads_begin, const std::vector<size_t>& pads_end,
@@ -392,7 +397,7 @@ public:
 
             p.inpZp = inp_Zp;
             p.outZp = out_Zp;
-            p.multiplier = multipliers.ptr<float>(0);
+            p.multiplier = &multipliers;
 
             p.ofstab_.resize(karea * ncn);
             int* ofstab = &p.ofstab_[0];
@@ -501,6 +506,7 @@ public:
             const int8_t* wptr_orig_ = weights_->ptr<int8_t>();
             size_t wstep = weights_->step1();
             const int* biasptr_ = &biasvec_->at(0);
+            const float* multptr_ = &multiplier->at(0);
             const int* lutptr_ = !activLUT_->empty() ? activLUT_->ptr<int>() : 0;
             int* data_out0_ = output_->ptr<int>();
             AutoBuffer<int8_t> rowbuf0_;
@@ -539,7 +545,7 @@ public:
                 int startOutCn = (subsampleIdx % ngroups)*outCn;
                 const int8_t* wptr_orig = wptr_orig_ + wstep*startOutCn;
                 const int* biasptr = biasptr_ + startOutCn;
-                const float* multptr = multiplier + startOutCn;
+                const float* multptr = multptr_ + startOutCn;
 
                 for( int cn0 = 0; cn0 < inpCn; cn0 += blk_size_cn )
                 {
