@@ -308,25 +308,23 @@ void OdometryTest::run()
 #endif
 
         // compare rotation
-        // distance between rvec and calcRvec must be lower
-        // than distance between 0 and rvec
-        double error = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.27f;
+        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.27f;
 
-        double rdiffnorm = cv::norm(rvec - calcRvec);
-        //double rnorm = cv::norm(rvec);
-        double rnorm = error;
-        double tdiffnorm = cv::norm(tvec - calcTvec);
-        //double tnorm = cv::norm(tvec);
-        double tnorm = error;
+        Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
+        Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
+        Affine3f src_inv = src.inv();
+        Affine3f diff = res * src_inv;
+        double rdiffnorm = cv::norm(diff.rvec());
+        double tdiffnorm = cv::norm(diff.translation());
 
-        if (rdiffnorm < rnorm && tdiffnorm < tnorm)
+        if (rdiffnorm < possibleError && tdiffnorm < possibleError)
             better_1time_count++;
-        if (5. * rdiffnorm < rnorm && 5 * tdiffnorm < tnorm)
+        if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError)
             better_5times_count++;
 
         CV_LOG_INFO(NULL, "Iter " << iter);
-        CV_LOG_INFO(NULL, "rdiffnorm " << rdiffnorm << "; rnorm " << rnorm);
-        CV_LOG_INFO(NULL, "tdiffnorm " << tdiffnorm << "; tnorm " << tnorm);
+        CV_LOG_INFO(NULL, "rdiffnorm " << rdiffnorm << "; possibleError " << possibleError);
+        CV_LOG_INFO(NULL, "tdiffnorm " << tdiffnorm << "; possibleError " << possibleError);
 
         CV_LOG_INFO(NULL, "better_1time_count " << better_1time_count << "; better_5time_count " << better_5times_count);
     }
