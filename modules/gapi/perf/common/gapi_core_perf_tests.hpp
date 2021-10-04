@@ -81,8 +81,9 @@ namespace opencv_test
                                                          cv::GCompileArgs>> {};
     class TransposePerfTest : public TestPerfParams<tuple<compare_f, cv::Size, MatType, cv::GCompileArgs>> {};
     class ResizePerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, cv::Size, cv::GCompileArgs>> {};
-    class StackOverflowPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
+    class BottlenecksPerfTest : public TestPerfParams<tuple<compare_f, cv::GCompileArgs>> {};
     class ResizeFxFyPerfTest : public TestPerfParams<tuple<compare_f, MatType, int, cv::Size, double, double, cv::GCompileArgs>> {};
+    class StackOverflowPerfTest : public TestPerfParams<tuple<compare_f, MatType, cv::Size, cv::GCompileArgs>> {};
     class ParseSSDBLPerfTest : public TestPerfParams<tuple<cv::Size, float, int, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseSSDPerfTest   : public TestPerfParams<tuple<cv::Size, float, bool, bool, cv::GCompileArgs>>, public ParserSSDTest {};
     class ParseYoloPerfTest  : public TestPerfParams<tuple<cv::Size, float, float, int, cv::GCompileArgs>>, public ParserYoloTest {};

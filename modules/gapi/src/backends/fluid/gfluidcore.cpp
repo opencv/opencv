@@ -3163,7 +3163,7 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
 
         return;
     }
-#endif // CV_SIMD128
+#endif // CV_SSE4_1
     int length = out.length();
     for (int l = 0; l < lpi; l++) {
         constexpr static const auto unity = Mapper::unity;
@@ -3182,7 +3182,7 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
                 auto idx1 = numChan*sx1 + c;
                 T tmp0 = calc(beta0, src0[l][idx0], beta1, src1[l][idx0]);
                 T tmp1 = calc(beta0, src0[l][idx1], beta1, src1[l][idx1]);
-                dst[l][3*x + c] = calc(alpha0, tmp0, alpha1, tmp1);
+                dst[l][numChan * x + c] = calc(alpha0, tmp0, alpha1, tmp1);
             }
         }
     }

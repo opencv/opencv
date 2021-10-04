@@ -328,6 +328,10 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
                cv::Size(32, 32)),
         Values(cv::compile_args(CORE_CPU))));
 
+INSTANTIATE_TEST_CASE_P(BottlenecksPerfTestCPU, BottlenecksPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+       Values(cv::compile_args(CORE_CPU))));
+
 INSTANTIATE_TEST_CASE_P(StackOverflowPerfTestCPU, StackOverflowPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
         Values(CV_8UC3),

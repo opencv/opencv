@@ -353,6 +353,8 @@ TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
         // With constant inputs, the stream is endless so
         // the blocking pull() should never return `false`.
         EXPECT_TRUE(ccomp.pull(cv::gout(out_mat_gapi)));
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
         EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
 
@@ -405,6 +407,8 @@ TEST_P(GAPI_Streaming, SmokeTest_VideoInput_GMat)
         frames++;
         cv::Mat out_mat_ocv;
         opencv_ref(in_mat_gapi, out_mat_ocv);
+        // Fluid's and OpenCV's Resizes aren't bit exact.
+        // So 1% is here because it is max difference between them.
         EXPECT_TRUE(AbsSimilarPoints(0, 1).to_compare_f()(out_mat_gapi, out_mat_ocv));
     }
     EXPECT_LT(0u, frames);
