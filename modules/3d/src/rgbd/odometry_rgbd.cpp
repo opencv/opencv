@@ -4,9 +4,10 @@
 namespace cv
 {
 
-OdometryRGBD::OdometryRGBD(OdometrySettings _settings)
+OdometryRGBD::OdometryRGBD(OdometrySettings _settings, OdometryAlgoType _algtype)
 {
 	this->settings = _settings;
+    this->algtype  = _algtype;
 }
 
 OdometryRGBD::~OdometryRGBD()
@@ -26,7 +27,7 @@ bool OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 	return true;
 }
 
-bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt, OdometryAlgoType algtype) const
+bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
 {
 	//std::cout << "OdometryRGBD::compute()" << std::endl;
 	Matx33f cameraMatrix;
@@ -40,7 +41,7 @@ bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Outpu
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
-		OdometryType::RGBD, OdometryTransformType::RIGID_TRANSFORMATION, algtype);
+		OdometryType::RGBD, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
 	return true;
 }
 

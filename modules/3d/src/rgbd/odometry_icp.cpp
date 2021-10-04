@@ -4,9 +4,10 @@
 namespace cv
 {
 
-OdometryICP::OdometryICP(OdometrySettings _settings)
+OdometryICP::OdometryICP(OdometrySettings _settings, OdometryAlgoType _algtype)
 {
 	this->settings = _settings;
+    this->algtype = _algtype;
 }
 
 OdometryICP::~OdometryICP()
@@ -26,7 +27,7 @@ bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 	return true;
 }
 
-bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt, OdometryAlgoType algtype) const
+bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
 {
 	//std::cout << "OdometryICP::compute()" << std::endl;
 	Matx33f cameraMatrix;
@@ -40,7 +41,7 @@ bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Output
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
-		OdometryType::ICP, OdometryTransformType::RIGID_TRANSFORMATION, algtype);
+		OdometryType::ICP, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
 	return true;
 }
 

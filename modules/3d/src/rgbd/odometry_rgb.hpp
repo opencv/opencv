@@ -9,14 +9,15 @@ class OdometryRGB : public OdometryImpl
 {
 private:
 	OdometrySettings settings;
+    OdometryAlgoType algtype;
 
 public:
-	OdometryRGB(OdometrySettings settings);
+	OdometryRGB(OdometrySettings settings, OdometryAlgoType algtype);
 	~OdometryRGB();
 
 	virtual OdometryFrame createOdometryFrame() override;
 	virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
-	virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt, OdometryAlgoType algtype) const override;
+	virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
 }
 #endif //ODOMETRY_RGB_HPP

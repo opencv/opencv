@@ -9,18 +9,18 @@
 namespace cv
 {
 
-Odometry::Odometry(OdometryType otype, OdometrySettings settings)
+Odometry::Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype)
 {
 	switch (otype)
 	{
 	case OdometryType::ICP:
-		this->odometry = makePtr<OdometryICP>(settings);
+		this->odometry = makePtr<OdometryICP>(settings, algtype);
 		break;
 	case OdometryType::RGB:
-		this->odometry = makePtr<OdometryRGB>(settings);
+		this->odometry = makePtr<OdometryRGB>(settings, algtype);
 		break;
 	case OdometryType::RGBD:
-		this->odometry = makePtr<OdometryRGBD>(settings);
+		this->odometry = makePtr<OdometryRGBD>(settings, algtype);
 		break;
 	default:
 		//CV_Error(Error::StsInternal,
@@ -42,13 +42,7 @@ bool Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 
 bool Odometry::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt)
 {
-	this->odometry->compute(srcFrame, dstFrame, Rt, OdometryAlgoType::COMMON);
-	return true;
-}
-
-bool Odometry::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt, OdometryAlgoType algtype)
-{
-	this->odometry->compute(srcFrame, dstFrame, Rt, algtype);
+	this->odometry->compute(srcFrame, dstFrame, Rt);
 	return true;
 }
 

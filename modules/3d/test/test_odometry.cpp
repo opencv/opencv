@@ -238,7 +238,7 @@ void OdometryTest::run()
     //waitKey(1000);
     OdometrySettings ods;
     ods.setCameraMatrix(K);
-    Odometry odometry = Odometry(otype, ods);
+    Odometry odometry = Odometry(otype, ods, algtype);
     OdometryFrame odf = odometry.createOdometryFrame();
     odf.setImage(image);
     odf.setDepth(depth);
@@ -253,7 +253,7 @@ void OdometryTest::run()
     // 1. Try to find Rt between the same frame (try masks also).
     Mat mask(image.size(), CV_8UC1, Scalar(255));
     odometry.prepareFrames(odf, odf);
-    bool isComputed = odometry.compute(odf, odf, calcRt, algtype);
+    bool isComputed = odometry.compute(odf, odf, calcRt);
     if(!isComputed)
     {
         FAIL() << "Can not find Rt between the same frame" << std::endl;
@@ -290,7 +290,7 @@ void OdometryTest::run()
         odfDst.setDepth(warpedDepth);
 
         odometry.prepareFrames(odfSrc, odfDst);
-        isComputed = odometry.compute(odfSrc, odfDst, calcRt, algtype);
+        isComputed = odometry.compute(odfSrc, odfDst, calcRt);
         if(!isComputed)
             continue;
 
