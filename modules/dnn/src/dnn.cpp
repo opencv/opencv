@@ -4055,6 +4055,9 @@ int Net::addLayer(const String &name, const String &type, const int &dtype, Laye
     if (params.get<bool>("has_dynamic_shapes", false))
         impl->hasDynamicShapes = true;
 
+    if (dtype == CV_8S)
+        impl->netWasQuantized = true;
+
     return id;
 }
 
@@ -4389,7 +4392,7 @@ Net Net::quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtyp
         // Layers with multiple outputs. Number of outputs is equal to number of inputs
         if (ld.type == "Blank" || ld.type == "Dropout" || ld.type == "Identity" || ld.type == "Silence" ||
             ld.type == "Flatten" || ld.type == "Padding" || ld.type == "Permute" || ld.type == "Reshape" ||
-            ld.type == "ReLU6" || ld.type == "Reorg" || ld.type == "ShuffleChannel" ||
+            ld.type == "ReLU6" || ld.type == "Reorg" || ld.type == "ShuffleChannel" || ld.type == "Resize" ||
            (ld.type == "ReLU" && !ld.params.get<float>("negative_slope", 0.f)) /* ReLU with negative slope 0 */)
         {
             for (int i = 0; i < ld.outputBlobs.size(); i++)
