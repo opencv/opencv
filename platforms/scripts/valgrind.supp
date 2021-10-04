@@ -51,7 +51,7 @@
    OpenCV-TLS-getTlsStorage
    Memcheck:Leak
    ...
-   fun:_ZN2cvL13getTlsStorageEv
+   fun:_ZN2cv*L13getTlsStorageEv
 }
 
 {
@@ -159,7 +159,7 @@
    OpenCV-DNN-getLayerFactoryMutex
    Memcheck:Leak
    ...
-   fun:_ZN2cv3dnn*L20getLayerFactoryMutexEv
+   fun:_ZN2cv3dnn*20getLayerFactoryMutexEv
 }
 
 {
