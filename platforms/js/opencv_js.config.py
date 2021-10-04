@@ -55,8 +55,26 @@ features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptor
               'BFMatcher': ['isMaskSupported', 'create'],
               '': ['drawKeypoints', 'drawMatches', 'drawMatchesKnn']}
 
-calib3d = {'': ['findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D', \
-                'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues', \
-                'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM']}
+calib3d = {
+    '': [
+        'findHomography',
+        'calibrateCameraExtended',
+        'drawFrameAxes',
+        'estimateAffine2D',
+        'getDefaultNewCameraMatrix',
+        'initUndistortRectifyMap',
+        'Rodrigues',
+        'solvePnP',
+        'solvePnPRansac',
+        'solvePnPRefineLM',
+        'projectPoints',
+
+        # cv::fisheye namespace
+        'fisheye_initUndistortRectifyMap',
+        'fisheye_projectPoints',
+    ],
+}
 
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, calib3d])
+
+# namespace_prefix_override['dnn'] = ''  # compatibility stuff (enabled by default)
