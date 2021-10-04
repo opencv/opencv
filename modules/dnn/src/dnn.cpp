@@ -2710,7 +2710,19 @@ struct Net::Impl : public detail::NetImplBase
                         // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
                         cuda4dnn::csl::CSLContext context; // assume that initCUDA and EltwiseOp do not use the context during init
                         const auto node = nextData->layerInstance->initCUDA(&context, nextData->inputBlobsWrappers, nextData->outputBlobsWrappers);
-                        const auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
+                        auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
+
+                        // broadcasting not supported in fused ops
+                        auto required_shape = shape(nextData->outputBlobs[0]);
+                        for (int i = 0; i < nextData->inputBlobs.size(); i++)
+                        {
+                            if (shape(*nextData->inputBlobs[i]) != required_shape)
+                            {
+                                eltwiseNode.reset();
+                                break;
+                            }
+                        }
+
                         // CUDA backend uses EltwiseOp when all operands have the same number of channels; otherwise, ShortcutOp is used.
                         // Hence, a successful cast to EltwiseOp implies that the number of channels is same in all operand tensors.
                         if (eltwiseNode.empty() || eltwiseNode->op != cuda4dnn::EltwiseOpType::SUM || !eltwiseNode->coeffs.empty())
