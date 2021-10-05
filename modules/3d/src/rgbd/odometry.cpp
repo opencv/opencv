@@ -23,8 +23,8 @@ Odometry::Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoTy
 		this->odometry = makePtr<OdometryRGBD>(settings, algtype);
 		break;
 	default:
-		//CV_Error(Error::StsInternal,
-		//	"Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
+		CV_Error(Error::StsInternal,
+			"Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
 		break;
 	}
 	
@@ -36,14 +36,12 @@ Odometry::~Odometry()
 
 bool Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	this->odometry->prepareFrames(srcFrame, dstFrame);
-	return true;
+	return this->odometry->prepareFrames(srcFrame, dstFrame);
 }
 
 bool Odometry::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt)
 {
-	this->odometry->compute(srcFrame, dstFrame, Rt);
-	return true;
+	return this->odometry->compute(srcFrame, dstFrame, Rt);
 }
 
 }

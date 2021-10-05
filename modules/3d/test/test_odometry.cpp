@@ -276,6 +276,8 @@ void OdometryTest::run()
     int better_5times_count = 0;
     for(int iter = 0; iter < iterCount; iter++)
     {
+        //std::cout << "iter: " << iter << std::endl;
+        calcRt.zeros(calcRt.size(), calcRt.type());
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
         Mat warpedImage, warpedDepth;
@@ -291,9 +293,10 @@ void OdometryTest::run()
 
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
-        if(!isComputed)
-            continue;
+        //std::cout << calcRt << std::endl;
 
+        if (!isComputed)
+            continue;
         Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
         cv::Rodrigues(calcR, calcRvec);
         calcRvec = calcRvec.reshape(rvec.channels(), rvec.rows);
@@ -312,6 +315,8 @@ void OdometryTest::run()
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
+        //std::cout << "src" << src.rvec() << " " << src.translation() << std::endl;
+        //std::cout << "res" << res.rvec() << " " << res.translation() << std::endl;
         Affine3f src_inv = src.inv();
         Affine3f diff = res * src_inv;
         double rdiffnorm = cv::norm(diff.rvec());

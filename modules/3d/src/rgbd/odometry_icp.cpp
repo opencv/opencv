@@ -16,15 +16,12 @@ OdometryICP::~OdometryICP()
 
 OdometryFrame OdometryICP::createOdometryFrame()
 {
-	//std::cout << "OdometryICP::createOdometryFrame()" << std::endl;
 	return OdometryFrame(Mat());
 }
 
 bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	//std::cout << "OdometryICP::prepareFrames()" << std::endl;
-	prepareICPFrame(srcFrame, dstFrame, this->settings);
-	return true;
+	return prepareICPFrame(srcFrame, dstFrame, this->settings);
 }
 
 bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
@@ -37,12 +34,12 @@ bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Output
 	settings.getIterCounts(miterCounts);
 	for (int i = 0; i < miterCounts.size().height; i++)
 		iterCounts.push_back(miterCounts.at<int>(i));
-	RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
+	bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
 		OdometryType::ICP, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
-	return true;
+    return isCorrect;
 }
 
 }

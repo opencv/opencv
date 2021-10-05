@@ -22,39 +22,33 @@ enum
 
 bool prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
 {
-    //std::cout << "prepareICPFrame()" << std::endl;
+    bool isCorrect1 = prepareRGBFrame(srcFrame, dstFrame, settings);
+    bool isCorrect2 = prepareICPFrame(srcFrame, dstFrame, settings);
 
-    prepareRGBFrame(srcFrame, dstFrame, settings);
-    prepareICPFrame(srcFrame, dstFrame, settings);
-
-    return true;
+    return isCorrect1 && isCorrect2;
 }
 
 bool prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
 {
-    //std::cout << "prepareRGBFrame()" << std::endl;
-
-    prepareRGBFrameBase(srcFrame, settings);
-    prepareRGBFrameBase(dstFrame, settings);
+    bool isCorrect1 = prepareRGBFrameBase(srcFrame, settings);
+    bool isCorrect2 = prepareRGBFrameBase(dstFrame, settings);
     
-    prepareRGBFrameSrc(srcFrame, settings);
-    prepareRGBFrameDst(dstFrame, settings);
+    bool isCorrect3 = prepareRGBFrameSrc(srcFrame, settings);
+    bool isCorrect4 = prepareRGBFrameDst(dstFrame, settings);
 
-	return true;
+	return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
 }
 
 bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
 {
-    //std::cout << "prepareICPFrame()" << std::endl;
+    bool isCorrect1 = prepareICPFrameBase(srcFrame, settings);
+    bool isCorrect2 = prepareICPFrameBase(dstFrame, settings);
 
-    prepareICPFrameBase(srcFrame, settings);
-    prepareICPFrameBase(dstFrame, settings);
+    bool isCorrect3 = prepareICPFrameSrc(srcFrame, settings);
+    isCorrect3 = isCorrect3 && prepareICPFrameDst(srcFrame, settings);
+    bool isCorrect4 = prepareICPFrameDst(dstFrame, settings);
 
-    prepareICPFrameSrc(srcFrame, settings);
-    prepareICPFrameDst(srcFrame, settings);
-    prepareICPFrameDst(dstFrame, settings);
-
-    return true;
+    return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
 }
 
 bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
@@ -802,9 +796,11 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
 
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
-            if(!solutionExist)
+            if (!solutionExist)
+            {
+                //std::cout << AtA << std::endl;
                 break;
-            
+            }
             if(transfromType == OdometryTransformType::ROTATION)
             {
                 Mat tmp(6, 1, CV_64FC1, Scalar(0));
@@ -835,6 +831,9 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
+
+    //std::cout << "isOk: " << isOk << std::endl;
+    //std::cout << resultRt<< std::endl;
 
     if(isOk)
     {
@@ -1330,6 +1329,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     const int nstripes = -1;
     parallel_for_(range, invoker, nstripes);
     //invoker(range);
+
+    //std::cout << sumAB << std::endl;
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)

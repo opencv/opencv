@@ -37,12 +37,12 @@ bool OdometryRGB::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Output
 	settings.getIterCounts(miterCounts);
 	for (int i = 0; i < miterCounts.size().height; i++)
 		iterCounts.push_back(miterCounts.at<int>(i));
-	RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
+    bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
 		OdometryType::RGB, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
-	return true;
+	return isCorrect;
 }
 
 }
