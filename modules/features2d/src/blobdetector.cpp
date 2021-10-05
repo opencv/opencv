@@ -44,6 +44,8 @@
 #include <iterator>
 #include <limits>
 
+#include <opencv2/core/utils/logger.hpp>
+
 // Requires CMake flag: DEBUG_opencv_features2d=ON
 //#define DEBUG_BLOB_DETECTOR
 
@@ -315,6 +317,19 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
 
     if (grayscaleImage.type() != CV_8UC1) {
         CV_Error(Error::StsUnsupportedFormat, "Blob detector only supports 8-bit images!");
+    }
+
+    CV_CheckGT(params.thresholdStep, 0.0f, "");
+    if (params.minThreshold + params.thresholdStep >= params.maxThreshold)
+    {
+        // https://github.com/opencv/opencv/issues/6667
+        CV_LOG_ONCE_INFO(NULL, "SimpleBlobDetector: params.minDistBetweenBlobs is ignored for case with single threshold");
+#if 0  // OpenCV 5.0
+        CV_CheckEQ(params.minRepeatability, 1u, "Incompatible parameters for case with single threshold");
+#else
+        if (params.minRepeatability != 1)
+            CV_LOG_WARNING(NULL, "SimpleBlobDetector: params.minRepeatability=" << params.minRepeatability << " is incompatible for case with single threshold. Empty result is expected.");
+#endif
     }
 
     std::vector < std::vector<Center> > centers;
