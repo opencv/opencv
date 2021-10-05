@@ -654,7 +654,7 @@ void CV_CameraCalibrationTest::run( int start_from )
         for( i = 0; i < numImages; i++ )
         {
             cv::transpose(rotMatrs[i], rotMatrs[i]);
-            if( cv::norm(rotMatrs[i], goodRotMatrs[i], NORM_INF) > 0.05 )
+            if( cv::norm(rotMatrs[i], goodRotMatrs[i], NORM_INF) > 1e-5 )
             {
                 printf("rot mats for frame #%d are very different\n", i);
                 std::cout << "curr:\n" << rotMatrs[i] << std::endl;
