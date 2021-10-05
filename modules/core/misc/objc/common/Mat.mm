@@ -372,6 +372,11 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->mul(*(cv::Mat*)mat.nativePtr))];
 }
 
+- (Mat*)matMul:(Mat*)mat {
+    cv::Mat temp = self.nativeRef * mat.nativeRef;
+    return [Mat fromNative:temp];
+}
+
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(cv::Mat::ones(rows, cols, type))];
 }

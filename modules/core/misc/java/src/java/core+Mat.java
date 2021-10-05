@@ -466,14 +466,30 @@ public class Mat {
     // C++: Mat Mat::mul(Mat m, double scale = 1)
     //
 
-    // javadoc: Mat::mul(m, scale)
+    /**
+     * Element-wise multiplication with scale factor
+     * @param m operand with with which to perform element-wise multiplication
+     * @param scale scale factor
+     */
     public Mat mul(Mat m, double scale) {
         return new Mat(n_mul(nativeObj, m.nativeObj, scale));
     }
 
-    // javadoc: Mat::mul(m)
+    /**
+    * Element-wise multiplication
+    * @param m operand with with which to perform element-wise multiplication
+    */
     public Mat mul(Mat m) {
         return new Mat(n_mul(nativeObj, m.nativeObj));
+    }
+
+    /**
+    * Matrix multiplication
+    * @param m operand with with which to perform matrix multiplication
+    * @see Core#gemm(Mat, Mat, double, Mat, double, Mat, int)
+    */
+    public Mat matMul(Mat m) {
+        return new Mat(n_matMul(nativeObj, m.nativeObj));
     }
 
     //
@@ -1731,6 +1747,8 @@ public class Mat {
     private static native long n_mul(long nativeObj, long m_nativeObj, double scale);
 
     private static native long n_mul(long nativeObj, long m_nativeObj);
+
+    private static native long n_matMul(long nativeObj, long m_nativeObj);
 
     // C++: static Mat Mat::ones(int rows, int cols, int type)
     private static native long n_ones(int rows, int cols, int type);

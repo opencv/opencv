@@ -715,3 +715,9 @@ public extension Mat {
         return MatAt(mat: self, indices: indices)
     }
 }
+
+public extension Mat {
+    static func *(lhs:Mat, rhs: Mat) -> Mat {
+        return lhs.matMul(rhs)
+    }
+}

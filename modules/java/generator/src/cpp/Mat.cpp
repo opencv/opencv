@@ -1372,6 +1372,32 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1mul__JJ
 }
 
 
+//
+// Mat Mat Mat::matMul(Mat m)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1matMul__JJ
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1matMul__JJ
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj)
+{
+    static const char method_name[] = "Mat::n_1matMul__JJ()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        Mat& m = *((Mat*)m_nativeObj);
+        Mat _retval_ = (*me) * m;
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 
 //
 // static Mat Mat::ones(int rows, int cols, int type)
