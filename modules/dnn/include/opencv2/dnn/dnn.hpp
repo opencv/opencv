@@ -1130,6 +1130,39 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
+    /**
+     * @brief Enum of Soft NMS methods.
+     * @see softNMSBoxes
+     */
+    enum class SoftNMSMethod
+    {
+        SOFTNMS_LINEAR = 1,
+        SOFTNMS_GAUSSIAN = 2
+    };
+
+    /** @brief Performs soft non maximum suppression given boxes and corresponding scores.
+     * Reference: https://arxiv.org/abs/1704.04503
+     * @param bboxes a set of bounding boxes to apply Soft NMS.
+     * @param scores a set of corresponding confidences.
+     * @param updated_scores a set of corresponding updated confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param top_k keep at most @p top_k picked indices.
+     * @param sigma parameter of Gaussian weighting.
+     * @param method Gaussian or linear.
+     * @see SoftNMSMethod
+     */
+    CV_EXPORTS_W void softNMSBoxes(const std::vector<Rect>& bboxes,
+                                   const std::vector<float>& scores,
+                                   CV_OUT std::vector<float>& updated_scores,
+                                   const float score_threshold,
+                                   const float nms_threshold,
+                                   CV_OUT std::vector<int>& indices,
+                                   size_t top_k = 0,
+                                   const float sigma = 0.5,
+                                   SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
+
 
      /** @brief This class is presented high-level API for neural networks.
       *
