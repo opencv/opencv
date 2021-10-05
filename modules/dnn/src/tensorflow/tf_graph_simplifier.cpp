@@ -730,8 +730,7 @@ public:
         if (!negativeScales)
         {
             Mat scalesRef = getTensorContentRef_(inputNodes[1]->attr().at("value").tensor());
-            // FIXME: This breaks the const guarantees of tensor() by writing to scalesRef and is likely to perform an
-            //        unaligned write (hence the separate multiplication above to have this work on ARM).
+            // FIXME: This breaks the const guarantees of tensor() by writing to scalesRef
             if (isAlignedMat(scalesRef))
             {
                 scalesRef *= -1;
