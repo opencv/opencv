@@ -47,7 +47,7 @@ enum {
 
 GSource::Priv::Priv() :
     mfx_handle(MFXLoad()),
-    mfx_impl_desription(),
+    mfx_impl_description(),
     mfx_handle_configs(),
     cfg_params(),
     mfx_session(),
@@ -164,7 +164,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider, const std::vector<C
         GAPI_LOG_INFO(nullptr, "Chosen implementation index: " << impl_number);
 
         // release unusable impl descriptions
-        std::swap(mfx_impl_desription, descriptions[impl_number]);
+        std::swap(mfx_impl_description, descriptions[impl_number]);
         for (mfxImplDescription* unusable_impl_descr : descriptions) {
             if (unusable_impl_descr) {
                 MFXDispReleaseImplDescription(mfx_handle, unusable_impl_descr);
@@ -198,13 +198,13 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider, const std::vector<C
             if (!engine) {
 
                 std::unique_ptr<VPLAccelerationPolicy> acceleration = initializeHWAccel();
-                assert(mfx_impl_desription && "mfx_impl_desription must exist");
+                assert(mfx_impl_description && "mfx_impl_description must exist");
 
                 // TODO  Add factory stati method in ProcessingEngineBase
-                if (mfx_impl_desription->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION)
+                if (mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION)
                 {
                     GAPI_Assert(false &&
-                                "GSource mfx_impl_desription->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
+                                "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
                                 " - is not implemented");
                 }
                 else
@@ -370,9 +370,8 @@ const std::vector<CfgParam>& GSource::Priv::getCfgParams() const
 bool GSource::Priv::pull(cv::gapi::wip::Data& data)
 {
     ProcessingEngineBase::ExecutionStatus status = ProcessingEngineBase::ExecutionStatus::Continue;
-    while(!engine->get_ready_frames_count() &&
-          status == ProcessingEngineBase::ExecutionStatus::Continue)
-    {
+    while (0 == engine->get_ready_frames_count() &&
+           status == ProcessingEngineBase::ExecutionStatus::Continue) {
         status = engine->process(mfx_session);
     }
 

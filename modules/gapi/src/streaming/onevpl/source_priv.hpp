@@ -53,7 +53,7 @@ private:
     std::unique_ptr<VPLAccelerationPolicy> initializeHWAccel();
 
     mfxLoader mfx_handle;
-    mfxImplDescription *mfx_impl_desription;
+    mfxImplDescription *mfx_impl_description;
     std::vector<mfxConfig> mfx_handle_configs;
     std::vector<CfgParam> cfg_params;
 

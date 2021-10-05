@@ -241,7 +241,7 @@ const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
                 case MFX_PROFILE_VP8_3:
                     return "MFX_PROFILE_VP8_3";
                 default:
-                    return "<unknown MFX_CODEC_VP9 profile";
+                    return "<unknown MFX_CODEC_VP8 profile";
             }
         }
 

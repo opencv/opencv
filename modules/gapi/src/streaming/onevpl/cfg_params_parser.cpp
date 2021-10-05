@@ -31,7 +31,10 @@ struct ParamCreator<CfgParam> {
 template <>
 struct ParamCreator<mfxVariant> {
     template<typename ValueType>
-    mfxVariant create (const std::string& name, mfxU32 value) {
+    mfxVariant create (const std::string& name, ValueType&& value) {
+        static_assert(std::is_same<typename std::decay<ValueType>::type, mfxU32>::value,
+                      "ParamCreator<mfxVariant> supports mfxU32 at the moment. "
+                      "Feel free to extend for more types");
         return create_impl(name, value);
     }
 private:
@@ -56,7 +59,7 @@ std::vector<ValueType> get_params_from_string(const std::string& str) {
 
         std::string::size_type name_endline_pos = line.find(':');
         if (name_endline_pos == std::string::npos) {
-            throw std::runtime_error("Invalid cannot parse param from string: " + line +
+            throw std::runtime_error("Cannot parse param from string: " + line +
                                      ". Name and value should be separated by \":\"" );
         }
 
