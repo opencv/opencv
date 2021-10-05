@@ -12,11 +12,7 @@
 #include <algorithm>
 
 
-namespace cv
-{
-
-namespace pc
-{
+namespace cv { namespace pc {
 
 std::vector<std::string> split(const std::string &s, char delimiter);
 
@@ -36,7 +32,14 @@ inline std::string trimSpaces(const std::string &input)
     return input.substr(start, end - start);
 }
 
-std::vector<std::string> split(const std::string &s, char delimiter);
+inline std::string getExtension(const std::string& filename)
+{
+    auto pos = filename.find_last_of('.');
+    if (pos == std::string::npos) {
+        return "";
+    }
+    return filename.substr( pos + 1);
+}
 
 template <typename T>
 void swapEndian(T &val)
@@ -52,8 +55,6 @@ void swapEndian(T &val)
     val = dst.val;
 }
 
-}
-
-}
+}} /* namespace cv::pc */
 
 #endif

@@ -2595,8 +2595,8 @@ protected:
 * If the cloud cannot be read, throws an error
 *
 * Currently, the following file formats are supported:
-* -  Wavefront obj file \*.obj
-* -  Polygon File Format \*.ply
+* -  <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file">Wavefront obj file *.obj</a>
+* -  <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">Polygon File Format *.ply</a>
 *
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
@@ -2628,7 +2628,7 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 * @param normals (vector of Point3f) vertex normals of a mesh
 * @param indices (vector of vectors of int) vertex normals of a mesh
 */
-CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArray indices);
+CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices);
 
 /** @brief Saves a mesh to a specified file.
 *
@@ -2640,7 +2640,7 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 * @param normals (vector of Point3f) vertex normals of a mesh
 * @param indices (vector of vectors of int) vertex normals of a mesh
 */
-CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArray indices);
+CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
 
 //! @} _3d

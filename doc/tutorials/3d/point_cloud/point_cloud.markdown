@@ -3,7 +3,7 @@ Point cloud visualisation {#tutorial_point_cloud}
 
 |    |    |
 | -: | :- |
-| Original author | Klepikov Dmitrii |
+| Original author | Dmitrii Klepikov |
 | Compatibility | OpenCV >= 5.0 |
 
 Goal
@@ -17,22 +17,23 @@ In this tutorial you will:
 Requirements
 ------------
 
-For visualisations u need to complile OpenCV library with OpenGL support. For this you should set WITH_OPENGL flag on in cmake
+For visualisations you need to compile OpenCV library with OpenGL support.
+For this you should set WITH_OPENGL flag ON in CMake while building OpenCV from source.
 
 Practice
 -------
 
-Loading and saving of point cloud can be done using loadPointCloud(savePointCloud)
+Loading and saving of point cloud can be done using `cv::loadPointCloud` and `cv::savePointCloud` accordingly.
 
 Currently supported formats are:
-- .OBJ (supported keys are v(which is responcible for point position), vn(normal coordinates) and f(faces of a mesh), other keys are ignored)
-- .PLY (all encoding types(ascii and byte) are supported with limitaion to only float type for data)
+- [.OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (supported keys are v(which is responsible for point position), vn(normal coordinates) and f(faces of a mesh), other keys are ignored)
+- [.PLY](https://en.wikipedia.org/wiki/PLY_(file_format)) (all encoding types(ascii and byte) are supported with limitation to only float type for data)
 
 @code{.py}
 vertices, normals = cv2.loadPointCloud("teapot.obj")
 @endcode
 
-Function loadPointCloud returns vector of points of float (cv::Point3f) and vector of their normals(if specified in source file)
+Function `cv::loadPointCloud` returns vector of points of float (`cv::Point3f`) and vector of their normals(if specified in source file).
 To visualize it you can use functions from viz3d module and it is needed to reinterpret data into another format
 
 @code{.py}
@@ -60,10 +61,9 @@ vertices, normals = cv2.loadPointCloud("teapot.obj")
 
 ![](teapot_grid.jpg)
 
-Other posiible way to draw 3d objects can me a mesh
-For that we use spetial functions to load mesh data and display it
-Here for now only .OBJ files are supported and they should be triangulated before processing (triangulation - process of breaking faces into triangles)
-
+Other possible way to draw 3d objects can be a mesh. 
+For that we use special functions to load mesh data and display it.
+Here for now only .OBJ files are supported and they should be triangulated before processing (triangulation - process of breaking faces into triangles).
 
 @code{.py}
 vertices, _, indices = cv2.loadMesh("../data/teapot.obj")

@@ -1,7 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include <opencv2/core.hpp>
-#include <iostream>
 #include <vector>
-#include <string>
 #include <cstdio>
 
 #include "test_precomp.hpp"
@@ -9,9 +11,9 @@
 
 namespace opencv_test { namespace {
 
-TEST(obj_test, point_cloud_load_tests)
+TEST(PointCloud, LoadObj)
 {
-    std::vector<cv::Point3f> points_1 = {
+    std::vector<cv::Point3f> points_gold = {
         {-5.93915f, -0.13257f, 2.55837f},
         {-5.93915f, 1.86743f, 2.55837f},
         {-5.93915f, -0.13257f, -1.16339f},
@@ -20,7 +22,7 @@ TEST(obj_test, point_cloud_load_tests)
         {0.399941f, 1.86743f, 2.55837f},
         {0.399941f, -0.13257f, -1.16339f},
         {0.399941f, 1.86743f, -1.16339f}};
-    std::vector<cv::Point3f> normals_1 = {
+    std::vector<cv::Point3f> normals_gold = {
         {-1.0000f, 0.0000f, 0.0000f},
         {0.0000f, 0.0000f, -1.0000f},
         {1.0000f, 0.0000f, 0.0000f},
@@ -31,18 +33,16 @@ TEST(obj_test, point_cloud_load_tests)
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "orig.obj";
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points, normals);
 
-    cv::loadPointCloud(original_path, points, normals);
-
-    EXPECT_TRUE(points_1==points);
-    EXPECT_TRUE(normals_1==normals);
+    EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(normals_gold, normals);
 }
 
-TEST(obj_test, point_cloud_load_no_norms_tests)
+TEST(PointCloud, LoadObjNoNormals)
 {
-    std::vector<cv::Point3f> points_1 = {
+    std::vector<cv::Point3f> points_gold = {
         {-5.93915f, -0.13257f, 2.55837f},
         {-5.93915f, 1.86743f, 2.55837f},
         {-5.93915f, -0.13257f, -1.16339f},
@@ -51,98 +51,125 @@ TEST(obj_test, point_cloud_load_no_norms_tests)
         {0.399941f, 1.86743f, 2.55837f},
         {0.399941f, -0.13257f, -1.16339f},
         {0.399941f, 1.86743f, -1.16339f}};
-    std::vector<cv::Point3f> normals_1 = {};
+    std::vector<cv::Point3f> normals_gold = {};
 
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "orig_no_norms.obj";
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    cv::loadPointCloud(folder + "pointcloudio/orig_no_norms.obj", points, normals);
 
-    cv::loadPointCloud(original_path, points, normals);
-
-    EXPECT_TRUE(points_1==points);
-    EXPECT_TRUE(normals_1==normals);
+    EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(normals_gold, normals);
 }
 
-TEST(obj_test, point_cloud_save_tests)
+TEST(PointCloud, SaveObj)
 {
+    std::vector<cv::Point3f> points_gold;
+    std::vector<cv::Point3f> normals_gold;
+
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    auto new_path = tempfile("new.obj");
+
+    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points_gold, normals_gold);
+    cv::savePointCloud(new_path, points_gold, normals_gold);
+
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "orig.obj";
-    std::string new_path = tempfile("new.obj");
+    cv::loadPointCloud(new_path, points, normals);
 
-    cv::loadPointCloud(original_path, points, normals);
-
-    cv::savePointCloud(new_path, points, normals);
-
-    std::vector<cv::Point3f> points_1;
-    std::vector<cv::Point3f> normals_1;
-
-    cv::loadPointCloud(new_path, points_1, normals_1);
-
-    EXPECT_TRUE(normals_1==normals);
-    EXPECT_TRUE(points_1==points);
+    EXPECT_EQ(normals, normals_gold);
+    EXPECT_EQ(points, points_gold);
     std::remove(new_path.c_str());
 }
 
-TEST(ply_test, point_cloud_load_tests)
+TEST(PointCloud, LoadSavePly)
 {
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "orig.ply";
+    auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new.ply");
 
-    cv::loadPointCloud(original_path, points, normals);
-
+    cv::loadPointCloud(folder + "pointcloudio/orig.ply", points, normals);
     cv::savePointCloud(new_path, points, normals);
 
-    std::vector<cv::Point3f> points_1;
-    std::vector<cv::Point3f> normals_1;
+    std::vector<cv::Point3f> points_gold;
+    std::vector<cv::Point3f> normals_gold;
 
-    cv::loadPointCloud(new_path, points_1, normals_1);
+    cv::loadPointCloud(new_path, points_gold, normals_gold);
 
-    EXPECT_TRUE(normals_1==normals);
-    EXPECT_TRUE(points_1==points);
+    EXPECT_EQ(normals_gold, normals);
+    EXPECT_EQ(points_gold, points);
     std::remove(new_path.c_str());
 }
 
-TEST(fake_file_test, point_cloud_load_tests)
+TEST(PointCloud, LoadSaveMeshObj)
+{
+    std::vector<cv::Point3f> points;
+    std::vector<cv::Point3f> normals;
+    std::vector<std::vector<int32_t>> indices;
+
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    std::string new_path = tempfile("new_mesh.obj");
+
+    cv::loadMesh(folder + "pointcloudio/orig.obj", points, normals, indices);
+    cv::saveMesh(new_path, points, normals, indices);
+
+    std::vector<cv::Point3f> points_gold;
+    std::vector<cv::Point3f> normals_gold;
+    std::vector<std::vector<int32_t>> indices_gold;
+
+    cv::loadMesh(new_path, points_gold, normals_gold, indices_gold);
+
+    EXPECT_EQ(normals_gold, normals);
+    EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(indices_gold, indices);
+    std::remove(new_path.c_str());
+}
+
+TEST(PointCloud, LoadSaveMeshPly)
+{
+    std::vector<cv::Point3f> points;
+    std::vector<cv::Point3f> normals;
+    std::vector<std::vector<int32_t>> indices;
+
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    std::string new_path = tempfile("new_mesh.ply");
+
+    cv::loadMesh(folder + "pointcloudio/orig.obj", points, normals, indices);
+    EXPECT_THROW(cv::saveMesh(new_path, points, normals, indices), cv::Exception);
+    EXPECT_THROW(cv::loadMesh(folder + "pointcloudio/orig.ply", points, normals, indices), cv::Exception);
+
+    std::remove(new_path.c_str());
+}
+
+TEST(PointCloud, NonexistentFile)
 {
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "fake.obj";
-
-    EXPECT_THROW(cv::loadPointCloud(original_path, points, normals), cv::Exception);
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    EXPECT_THROW(cv::loadPointCloud(folder + "pointcloudio/fake.obj", points, normals), cv::Exception);
 }
 
-TEST(fake_extention_test, point_cloud_load_tests)
+TEST(PointCloud, LoadBadExtension)
 {
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "fake.fake";
-
-    EXPECT_THROW(cv::loadPointCloud(original_path, points, normals), cv::Exception);
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    EXPECT_THROW(cv::loadPointCloud(folder + "pointcloudio/fake.fake", points, normals), cv::Exception);
 }
 
-TEST(fake_extention_test, point_cloud_save_tests)
+TEST(PointCloud, SaveBadExtension)
 {
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
 
-    std::string folder = std::string(cvtest::TS::ptr()->get_data_path()) + "pointcloudio/";
-    std::string original_path = folder + "fake.fake";
-
-    EXPECT_THROW(cv::savePointCloud(original_path, points, normals), cv::Exception);
+    auto folder = cvtest::TS::ptr()->get_data_path();
+    EXPECT_THROW(cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals), cv::Exception);
 }
 
-}
-}
+}} /* namespace opencv_test */

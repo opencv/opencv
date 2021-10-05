@@ -9,10 +9,9 @@
 #include <opencv2/core/utils/logger.hpp>
 #include "utils.hpp"
 
-namespace cv
-{
-namespace pc
-{
+namespace cv { namespace pc {
+
+std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
 void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
 {
@@ -23,11 +22,9 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     std::ifstream file(m_filename, std::ios::binary);
     if (!file)
     {
-        CV_Error(Error::StsError, "Impossible to open the file !\n");
+        CV_Error(Error::StsError, "Impossible to open the file!\n");
     }
     std::string s;
-
-    std::vector<std::string> unsupported_keys;
 
     while (!file.eof())
     {
@@ -67,17 +64,18 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             indices.push_back(vertexInd);
         }
         else
-            if (std::find(unsupported_keys.begin(), unsupported_keys.end(), key) == unsupported_keys.end())
-            {
-                unsupported_keys.push_back(key);
+        {
+            if (m_unsupportedKeys.find(key) == m_unsupportedKeys.end()) {
+                m_unsupportedKeys.insert(key);
                 CV_LOG_WARNING(NULL, "Key " + key + " not supported");
             }
+        }
     }
 
     file.close();
 }
 
-void ObjEncoder::writeData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
+void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
     if (!file)
@@ -109,6 +107,4 @@ void ObjEncoder::writeData(std::vector<Point3f> &points, std::vector<Point3f> &n
     file.close();
 }
 
-}
-
-}
+}} /* namespace cv::pc */

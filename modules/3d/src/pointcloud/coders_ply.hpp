@@ -10,10 +10,7 @@
 #include <vector>
 #include <string>
 
-namespace cv
-{
-namespace pc
-{
+namespace cv { namespace pc {
 
 enum class DataFormat
 {
@@ -40,12 +37,10 @@ protected:
 class PlyEncoder CV_FINAL : public BasePointCloudEncoder
 {
 public:
-    void writeData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
+    void writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
 };
 
-}
-
-}
+}} /* namespace cv::pc */
 
 #endif

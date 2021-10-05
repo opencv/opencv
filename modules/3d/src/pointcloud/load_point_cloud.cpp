@@ -7,29 +7,23 @@
 #include "coders_base.hpp"
 #include "coders_obj.hpp"
 #include "coders_ply.hpp"
-
-#include "opencv2/core/utils/filesystem.hpp"
+#include "utils.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
 
 #include <memory>
-#include <iostream>
 
-namespace cv
-{
-
-namespace pc
-{
+namespace cv { namespace pc {
 
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 static PointCloudDecoder findDecoder(const String &filename)
 {
-    size_t filename_length = filename.length();
-    if ((filename.substr(filename_length - 4, 4) == ".obj") || (filename.substr(filename_length - 4, 4) == ".OBJ"))
+    auto file_ext = getExtension(filename);
+    if (file_ext == "obj" || file_ext == "OBJ")
     {
         return std::unique_ptr<ObjDecoder>(new ObjDecoder());
     }
-    if ((filename.substr(filename_length - 4, 4) == ".ply") || (filename.substr(filename_length - 4, 4) == ".PLY"))
+    if (file_ext == "ply" || file_ext == "PLY")
     {
         return std::unique_ptr<PlyDecoder>(new PlyDecoder());
     }
@@ -39,12 +33,12 @@ static PointCloudDecoder findDecoder(const String &filename)
 
 static PointCloudEncoder findEncoder(const String &filename)
 {
-    size_t filename_length = filename.length();
-    if ((filename.substr(filename_length - 4, 4) == ".obj") || (filename.substr(filename_length - 4, 4) == ".OBJ"))
+    auto file_ext = getExtension(filename);
+    if (file_ext == "obj" || file_ext == "OBJ")
     {
         return std::unique_ptr<ObjEncoder>(new ObjEncoder());
     }
-    if ((filename.substr(filename_length - 4, 4) == ".ply") || (filename.substr(filename_length - 4, 4) == ".PLY"))
+    if (file_ext == "ply" || file_ext == "PLY")
     {
         return std::unique_ptr<PlyEncoder>(new PlyEncoder());
     }
@@ -59,11 +53,11 @@ static PointCloudEncoder findEncoder(const String &filename)
 void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    pc::PointCloudDecoder decoder;
-
-    decoder = pc::findDecoder(filename);
-    if (!decoder)
-        CV_Error(Error::StsError, "File extention not supported");
+    auto decoder = pc::findDecoder(filename);
+    if (!decoder) {
+        String file_ext = cv::pc::getExtension(filename);
+        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+    }
 
     decoder->setSource(filename);
 
@@ -90,11 +84,11 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_Assert(!vertices.empty());
 
-    pc::PointCloudEncoder encoder;
-
-    encoder = pc::findEncoder(filename);
-    if (!encoder)
-        CV_Error(Error::StsError, "File extention not supported");
+    auto encoder = pc::findEncoder(filename);
+    if (!encoder) {
+        String file_ext = cv::pc::getExtension(filename);
+        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+    }
 
     encoder->setDestination(filename);
 
@@ -105,6 +99,7 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
     }
 
     encoder->writeData(vec_vertices, vec_normals);
+
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
@@ -113,35 +108,39 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 #endif
 }
 
-void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArray indices)
+void loadMesh(const String &filename, OutputArray vertices, OutputArray normals, OutputArrayOfArrays indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    pc::PointCloudDecoder decoder;
-
-    decoder = pc::findDecoder(filename);
+    pc::PointCloudDecoder decoder = pc::findDecoder(filename);
+    String file_ext = cv::pc::getExtension(filename);
+    if (!decoder || (file_ext != "obj" && file_ext != "OBJ")) {
+        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+    }
 
     decoder->setSource(filename);
 
     std::vector<Point3f> vec_vertices;
     std::vector<Point3f> vec_normals;
-    std::vector<std::vector<int32_t>> vec_idices;
+    std::vector<std::vector<int32_t>> vec_indices;
 
-    decoder->readData(vec_vertices, vec_normals, vec_idices);
+    decoder->readData(vec_vertices, vec_normals, vec_indices);
 
-    if (!vec_vertices.empty())
-        Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, &vec_vertices[0]).copyTo(vertices);
-
-    if (!vec_normals.empty())
-        Mat(static_cast<int>(vec_normals.size()), 1, CV_32FC3, &vec_normals[0]).copyTo(normals);
-
-    if (!vec_idices.empty())
-    {
-        Mat mat_indices(static_cast<int>(vec_idices.size()), static_cast<int>(vec_idices[0].size()), CV_32SC1);
-        for (int i = 0; i < mat_indices.rows; ++i)
-            for (int j = 0; j < mat_indices.cols; ++j)
-                mat_indices.at<int32_t>(i, j) = vec_idices.at(i).at(j);
-        mat_indices.copyTo(indices);
+    if (!vec_vertices.empty()) {
+        Mat(1, static_cast<int>(vec_vertices.size()), CV_32FC3, vec_vertices.data()).copyTo(vertices);
     }
+
+    if (!vec_normals.empty()) {
+        Mat(1, static_cast<int>(vec_normals.size()), CV_32FC3, vec_normals.data()).copyTo(normals);
+    }
+
+    if (!vec_indices.empty()) {
+        std::vector<std::vector<int32_t>>& vec = *(std::vector<std::vector<int32_t>>*)indices.getObj();
+        vec.resize(vec_indices.size());
+        for (size_t i = 0; i < vec_indices.size(); ++i) {
+            Mat(1, static_cast<int>(vec_indices[i].size()), CV_32SC1, vec_indices[i].data()).copyTo(vec[i]);
+        }
+    }
+
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
@@ -150,14 +149,16 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
 #endif
 }
 
-void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArray indices)
+void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_Assert(!vertices.empty());
 
-    pc::PointCloudEncoder encoder;
-
-    encoder = pc::findEncoder(filename);
+    auto encoder = pc::findEncoder(filename);
+    String file_ext = cv::pc::getExtension(filename);
+    if (!encoder || (file_ext != "obj" && file_ext != "OBJ")) {
+        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+    }
 
     encoder->setDestination(filename);
 
@@ -166,23 +167,22 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     if (!normals.empty()){
         vec_normals = normals.getMat();
     }
-    std::vector<std::vector<int32_t>> vec_idices;
-    Mat mat_indices(indices.getMat());
-    for (int i = 0; i < mat_indices.rows; ++i)
-    {
-        std::vector<int32_t> faceIndices;
-        for (int j = 0; j < mat_indices.cols; ++j)
-            faceIndices.push_back(mat_indices.at<int32_t>(i, j));
-        vec_idices.push_back(faceIndices);
+
+    std::vector<Mat> mat_indices;
+    indices.getMatVector(mat_indices);
+    std::vector<std::vector<int32_t>> vec_indices(mat_indices.size());
+
+    for (size_t i = 0; i < mat_indices.size(); ++i) {
+        mat_indices[i].copyTo(vec_indices[i]);
     }
 
-    encoder->writeData(vec_vertices, vec_normals, vec_idices);
+    encoder->writeData(vec_vertices, vec_normals, vec_indices);
+
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
     CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
 #endif
-}
 
-}
+}} /* namespace cv::pc */

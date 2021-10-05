@@ -6,28 +6,26 @@
 #define _CODERS_OBJ_H_
 
 #include "coders_base.hpp"
+#include <unordered_set>
 
-namespace cv
-{
-namespace pc
-{
+namespace cv { namespace pc {
 
 class ObjDecoder CV_FINAL : public BasePointCloudDecoder
 {
 public:
     void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
+protected:
+    static std::unordered_set<std::string> m_unsupportedKeys;
 };
 
 class ObjEncoder CV_FINAL : public BasePointCloudEncoder
 {
 public:
-    void writeData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
+    void writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
 };
 
-}
-
-}
+}} /* namespace cv::pc */
 
 #endif

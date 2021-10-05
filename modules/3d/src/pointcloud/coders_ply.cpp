@@ -9,10 +9,7 @@
 #include <string>
 #include <sstream>
 
-namespace cv
-{
-namespace pc
-{
+namespace cv { namespace pc {
 
 void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
 {
@@ -157,7 +154,7 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     }
 }
 
-void PlyEncoder::writeData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
+void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
 {
     CV_UNUSED(indices);
     std::ofstream file(m_filename, std::ios::binary);
@@ -197,6 +194,4 @@ void PlyEncoder::writeData(std::vector<Point3f> &points, std::vector<Point3f> &n
     file.close();
 }
 
-}
-
-}
+}} /* namespace cv::pc */
