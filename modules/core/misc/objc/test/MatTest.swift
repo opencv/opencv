@@ -683,6 +683,16 @@ class MatTests: OpenCVTestCase {
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
+    func testMatMulMat() throws {
+        let m1 = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(2))
+        let m2 = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(3))
+
+        dst = m1.matMul(m2)
+
+        truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(12))
+        try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
+    }
+
     func testOnesIntIntInt() throws {
         dst = Mat.ones(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
 
