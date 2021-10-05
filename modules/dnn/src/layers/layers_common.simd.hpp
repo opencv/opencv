@@ -1178,12 +1178,12 @@ static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& 
     // a = vlmul_trunc_v_f32m4_f32m2(tempa);
     // b = vlmul_trunc_v_f32m4_f32m2(tempb);
     */
-    float* buffer = (float*)malloc(sizeof(float32_t)*vl*2);
+    cv::AutoBuffer<float> cvBuffer(sizeof(float32_t)*vl*2);
+    float* buffer = (float*)cvBuffer.data();
     vse32_v_f32m4(buffer, tempa, vl);
     a = vle32_v_f32m2(buffer, vl);
     vse32_v_f32m4(buffer, tempb, vl);
     b = vle32_v_f32m2(buffer, vl);
-    free(buffer);
 }
 
 void fastDepthwiseConv( const float* wptr,
