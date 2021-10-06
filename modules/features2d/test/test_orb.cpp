@@ -141,5 +141,28 @@ TEST(Features2D_ORB, regression_16197)
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
+BIGDATA_TEST(Features2D_ORB, issue_537) // memory usage: ~2.3 Gb
+{
+    applyTestTag(CV_TEST_TAG_LONG);
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    const int width = 25000;
+    const int height = 25000;
+    Mat img(Size(width, height), CV_8UC1, Scalar::all(0));
+    Ptr<ORB> orbPtr = ORB::create(31);
+    std::vector<KeyPoint> kps;
+    Mat fv;
+
+    const int border = 23, num_lines = 23;
+    cv::Vec2i point1, point2;
+    for (int i = 0; i < num_lines; i++)
+    {
+        point1 = {border + i * 100, border + i * 100};
+        point2 = {width - border - i * 100, height - border * i * 100};
+        cv::line(img, point1, point2, 255, 1, LINE_AA);
+    }
+
+    ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
+}
 
 }} // namespace
