@@ -353,6 +353,12 @@ public:
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
             Mat cOutTs = produceCellOutput ? output[1].reshape(1, numSamplesTotal) : Mat();
 
+#if CV_TRY_AVX2 || CV_TRY_AVX
+            bool canUseAvx = gates.isContinuous() && bias.isContinuous()
+                && Wx.depth() == CV_32F && gates.depth() == CV_32F
+                && bias.depth() == CV_32F && Wx.cols >= 8;
+#endif
+
             int tsStart, tsEnd, tsInc;
             if (reverse || i == 1) {
                 tsStart = numTimeStamps - 1;
@@ -370,7 +376,7 @@ public:
                 Mat xCurr = xTs.rowRange(curRowRange);
 
 #if CV_TRY_AVX2
-                if (useAVX2 && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
+                if (useAVX2 && xCurr.isContinuous() && canUseAvx)
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX2::fastGEMM1T(
                             xCurr.ptr<float>(n),
@@ -385,7 +391,7 @@ public:
                 else
 #endif
 #if CV_TRY_AVX
-                if (useAVX && xCurr.isContinuous() && gates.isContinuous() && bias.isContinuous() && Wx.depth() == CV_32F && xCurr.depth() == CV_32F && gates.depth() == CV_32F && bias.depth() == CV_32F && Wx.cols >= 8)
+                if (useAVX && xCurr.isContinuous() && canUseAvx)
                     for (int n = 0; n < xCurr.rows; n++) {
                         opt_AVX::fastGEMM1T(
                             xCurr.ptr<float>(n),
