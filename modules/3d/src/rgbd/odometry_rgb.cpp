@@ -14,12 +14,6 @@ OdometryRGB::~OdometryRGB()
 {
 }
 
-OdometryFrame OdometryRGB::createOdometryFrame()
-{
-	//std::cout << "OdometryRGB::createOdometryFrame()" << std::endl;
-	return OdometryFrame(Mat());
-}
-
 bool OdometryRGB::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	//std::cout << "OdometryRGB::prepareFrames()" << std::endl;

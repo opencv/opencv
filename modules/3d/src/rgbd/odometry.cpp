@@ -34,6 +34,16 @@ Odometry::~Odometry()
 {
 }
 
+OdometryFrame Odometry::createOdometryFrame()
+{
+    return OdometryFrame(OdometryFrameStoreType::MAT);
+}
+
+OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType)
+{
+    return OdometryFrame(matType);
+}
+
 bool Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	return this->odometry->prepareFrames(srcFrame, dstFrame);

@@ -14,11 +14,6 @@ OdometryICP::~OdometryICP()
 {
 }
 
-OdometryFrame OdometryICP::createOdometryFrame()
-{
-	return OdometryFrame(Mat());
-}
-
 bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	return prepareICPFrame(srcFrame, dstFrame, this->settings);

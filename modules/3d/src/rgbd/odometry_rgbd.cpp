@@ -14,12 +14,6 @@ OdometryRGBD::~OdometryRGBD()
 {
 }
 
-OdometryFrame OdometryRGBD::createOdometryFrame()
-{
-	//std::cout << "OdometryRGBD::createOdometryFrame()" << std::endl;
-	return OdometryFrame(Mat());
-}
-
 bool OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	//std::cout << "OdometryRGBD::prepareFrames()" << std::endl;

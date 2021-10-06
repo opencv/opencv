@@ -143,7 +143,7 @@ public:
     static void generateRandomTransformation(Mat& R, Mat& t);
 
     void run();
-    //void checkUMats();
+    void checkUMats();
 
     OdometryType otype;
     OdometryAlgoType algtype;
@@ -196,7 +196,7 @@ void OdometryTest::generateRandomTransformation(Mat& rvec, Mat& tvec)
     randu(tvec, Scalar(-1000), Scalar(1000));
     normalize(tvec, tvec, rng.uniform(0.008f, maxTranslation));
 }
-/*
+
 void OdometryTest::checkUMats()
 {
     Mat K = getCameraMatrix();
@@ -206,19 +206,21 @@ void OdometryTest::checkUMats()
 
     OdometrySettings ods;
     ods.setCameraMatrix(K);
-    Odometry odometry(otype, ods);
-    OdometryFrame odf = odometry.createOdometryFrame();
+    Odometry odometry = Odometry(otype, ods, algtype);
+    OdometryFrame odf = odometry.createOdometryFrame(OdometryFrameStoreType::UMAT);
 
     Mat calcRt;
 
-    UMat uimage, udepth, umask;
+    UMat uimage, udepth;
     image.copyTo(uimage);
     depth.copyTo(udepth);
     odf.setImage(uimage);
     odf.setDepth(udepth);
-    Mat(image.size(), CV_8UC1, Scalar(255)).copyTo(umask);
+    uimage.release();
+    udepth.release();
 
-    bool isComputed = odometry.compute(odf, odf, calcRt, algtype);
+    odometry.prepareFrames(odf, odf);
+    bool isComputed = odometry.compute(odf, odf, calcRt);
 
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
@@ -226,16 +228,15 @@ void OdometryTest::checkUMats()
     {
         FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
     }
+    
 }
-*/
+
 void OdometryTest::run()
 {
     Mat K = getCameraMatrix();
 
     Mat image, depth;
     readData(image, depth);
-    //imshow("img",image);
-    //waitKey(1000);
     OdometrySettings ods;
     ods.setCameraMatrix(K);
     Odometry odometry = Odometry(otype, ods, algtype);
@@ -371,29 +372,29 @@ TEST(RGBD_Odometry_FastICP, algorithmic)
     test.run();
 }
 
-/*
+
 TEST(RGBD_Odometry_Rgbd, UMats)
 {
     OdometryTest test(OdometryType::RGB, OdometryAlgoType::COMMON, 0.99, 0.89);
-    //test.checkUMats();
+    test.checkUMats();
 }
 
 TEST(RGBD_Odometry_ICP, UMats)
 {
     OdometryTest test(OdometryType::ICP, OdometryAlgoType::COMMON, 0.99, 0.99);
-    //test.checkUMats();
+    test.checkUMats();
 }
 
 TEST(RGBD_Odometry_RgbdICP, UMats)
 {
     OdometryTest test(OdometryType::RGBD, OdometryAlgoType::COMMON, 0.99, 0.99);
-    //test.checkUMats();
+    test.checkUMats();
 }
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
     OdometryTest test(OdometryType::ICP, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
-    //test.checkUMats();
+    test.checkUMats();
 }
-*/
+
 }} // namespace

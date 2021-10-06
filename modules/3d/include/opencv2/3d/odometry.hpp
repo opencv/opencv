@@ -22,8 +22,6 @@ enum class OdometryAlgoType
     FAST = 1
 };
 
-
-
 class OdometryImpl
 {
 private:
@@ -32,7 +30,6 @@ public:
     OdometryImpl() {};
     ~OdometryImpl() {};
 
-    virtual OdometryFrame createOdometryFrame() = 0;
     virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const = 0;
 };
@@ -44,7 +41,8 @@ private:
 public:
     CV_WRAP Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
-    OdometryFrame createOdometryFrame() { return this->odometry->createOdometryFrame(); };
+    OdometryFrame createOdometryFrame();
+    OdometryFrame createOdometryFrame(OdometryFrameStoreType matType);
     bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
     bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt);
 };

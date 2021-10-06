@@ -26,6 +26,12 @@ enum OdometryFramePyramidType
     N_PYRAMIDS
 };
 
+enum OdometryFrameStoreType
+{
+    MAT  = 0,
+    UMAT = 1
+};
+
 class OdometryFrameImpl
 {
 public:
@@ -54,7 +60,7 @@ class OdometryFrame
 private:
     Ptr<OdometryFrameImpl> odometryFrame;
 public:
-    OdometryFrame(InputArray image);
+    OdometryFrame(OdometryFrameStoreType matType);
     ~OdometryFrame() {};
     void setImage(InputArray  image) { this->odometryFrame->setImage(image); }
     void getImage(OutputArray image) const { this->odometryFrame->getImage(image); }

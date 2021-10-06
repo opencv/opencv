@@ -14,7 +14,7 @@ template<typename TMat>
 class OdometryFrameImplTMat : public OdometryFrameImpl
 {
 public:
-	OdometryFrameImplTMat(InputArray image = noArray());
+	OdometryFrameImplTMat();
 	~OdometryFrameImplTMat() {};
 
 	virtual void setImage(InputArray  image) override;
@@ -45,23 +45,18 @@ private:
 	std::vector< std::vector<TMat> > pyramids;
 };
 
-OdometryFrame::OdometryFrame(InputArray image)
+OdometryFrame::OdometryFrame(OdometryFrameStoreType matType)
 {
-	bool allEmpty = image.empty();
-	bool useOcl = image.isUMat();
-	bool isNoArray = (&image == &noArray());
-	if (useOcl && !allEmpty && !isNoArray)
-	//if (useOcl)
-		this->odometryFrame = makePtr<OdometryFrameImplTMat<UMat>>(image);
+	if (matType == OdometryFrameStoreType::UMAT)
+		this->odometryFrame = makePtr<OdometryFrameImplTMat<UMat>>();
 	else
-		this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>(image);
+		this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>();
 };
 
 template<typename TMat>
-OdometryFrameImplTMat<TMat>::OdometryFrameImplTMat(InputArray _image)
+OdometryFrameImplTMat<TMat>::OdometryFrameImplTMat()
 	: pyramids(OdometryFramePyramidType::N_PYRAMIDS)
 {
-	image = getTMat<TMat>(_image);
 };
 
 template<typename TMat>
