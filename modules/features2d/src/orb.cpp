@@ -136,7 +136,7 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
     size_t ptidx, ptsize = pts.size();
 
     const uchar* ptr00 = img.ptr<uchar>();
-    int step = (int)(img.step/img.elemSize1());
+    size_t step = img.step/img.elemSize1();
     int r = blockSize/2;
 
     float scale = 1.f/((1 << 2) * blockSize * 255.f);
