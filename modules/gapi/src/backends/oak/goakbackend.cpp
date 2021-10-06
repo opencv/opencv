@@ -105,20 +105,19 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
 
         // FIXME: change the hard-coded behavior
         auto xout = m_pipeline.create<dai::node::XLinkOut>();
-        m_out_queue_name = "xout";
-        xout->setStreamName(m_out_queue_name);
+        //m_out_queue_name = "xout";
+        xout->setStreamName("xout");
 
         for (const auto& nh : nodes) {
             // FIXME: consider a better solution
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
                 auto op = m_gm.metadata(nh).get<Op>();
-                // FIXME: op name or kernel name?
-                if (std::strcmp(op.name(), "org.opencv.oak.enc") == 0) {
+                if (op.k.name == "org.opencv.oak.enc") {
                     auto videoEnc = m_pipeline.create<dai::node::VideoEncoder>();
                     // FIXME: encoder params is the 2nd arg - consider a better approach here
                     m_enc_config = op.args[1].get<cv::gapi::oak::EncoderConfig>();
                     // FIXME: convert all the parameters to dai
-                    videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
+                    videoEnc->setDefaultProfilePreset(3840, 2160,
                                                       m_enc_config.frameRate,
                                                       dai::VideoEncoderProperties::Profile::H265_MAIN);
                     // FIXME: think about proper linking:
@@ -133,10 +132,11 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                 }
             }
         }
+
         return m_pipeline;
     }()),
     // FIXME: add queue parameters
-    m_out_queue(m_device.getOutputQueue(m_out_queue_name, 30, true)) {}
+    m_out_queue(m_device.getOutputQueue("xout", 30, true)) {}
 
 void cv::gimpl::GOAKExecutable::handleNewStream() {
     // FIXME: implement
@@ -156,9 +156,21 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
 
     // FIXME: consider a better solution
     // FIXME: cover all outputs
-    auto adapter = cv::util::get<MediaFrame*>(out.get(0))->get<cv::gapi::oak::OAKMediaAdapter>();
+    auto out_arg = out.get(0);
+
+    //auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
+    *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
+    auto frame = cv::util::get<MediaFrame*>(out_arg);
+    auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
+
     adapter->setParams({m_enc_config.width, m_enc_config.height},
                         cv::gapi::oak::OAKFrameFormat::BGR, packet->getData().data());
+    if (packet->getData().data() == nullptr) {
+            std::cout << "nullptr in backend" << std::endl;
+        }
+    // ???
+    out.meta(out_arg, {});
+    out.post(std::move(out_arg));
 }
 
 // Built-in kernels for OAK /////////////////////////////////////////////////////

@@ -38,25 +38,29 @@ TEST(OAK, SimpleCamera)
 
     auto args = cv::compile_args(cv::gapi::oak::ColorCameraParams{}, cv::gapi::oak::kernels());
 
-    auto pipeline = cv::GComputation(std::move(cv::GIn(in)), std::move(cv::GOut(h265))).compileStreaming(std::move(args));
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(h265)).compileStreaming(std::move(args));
 
     // Graph execution /////////////////////////////////////////////////////////
-    pipeline.setSource(std::move(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>()));
+    pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::oak::ColorCamera>());
     pipeline.start();
 
-    cv::MediaFrame out_frame = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
+    cv::MediaFrame out_frame;// = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
     std::ofstream out_h265_file;
 
     // Open H265 file for writing
     out_h265_file.open("output.h265", std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 
     // Pull 300 frames from the camera
-    uint32_t frames = 300;
+    uint32_t frames = 30;
     uint32_t pulled = 0;
 
     while (pulled++ < frames &&
-           pipeline.pull(std::move(cv::gout(out_frame)))) {
+           pipeline.pull(cv::gout(out_frame))) {
+        std::cout << "pulled" << std::endl;
         cv::MediaFrame::View view = out_frame.access(cv::MediaFrame::Access::R);
+        if (view.ptr[0] == nullptr) {
+            std::cout << "nullptr" << std::endl;
+        }
         // FIXME: fix (8 * 3) multiplier
         out_h265_file.write(reinterpret_cast<const char*>(view.ptr[0]), out_frame.desc().size.width *
                                                                         out_frame.desc().size.height * 8 * 3);
