@@ -242,16 +242,11 @@ void OdometryTest::run()
     OdometryFrame odf = odometry.createOdometryFrame();
     odf.setImage(image);
     odf.setDepth(depth);
-
-    //Mat tmp;
-    //odf.getGrayImage(tmp);
-    //imshow("img", tmp);
-    //waitKey(1000);
-
     Mat calcRt;
 
     // 1. Try to find Rt between the same frame (try masks also).
     Mat mask(image.size(), CV_8UC1, Scalar(255));
+
     odometry.prepareFrames(odf, odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
     if(!isComputed)
@@ -276,10 +271,10 @@ void OdometryTest::run()
     int better_5times_count = 0;
     for(int iter = 0; iter < iterCount; iter++)
     {
-        //std::cout << "iter: " << iter << std::endl;
         calcRt.zeros(calcRt.size(), calcRt.type());
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
+
         Mat warpedImage, warpedDepth;
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
@@ -293,7 +288,6 @@ void OdometryTest::run()
 
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
-        //std::cout << calcRt << std::endl;
 
         if (!isComputed)
             continue;
@@ -311,19 +305,19 @@ void OdometryTest::run()
 #endif
 
         // compare rotation
-        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.27f;
+        double possibleError = algtype == OdometryAlgoType::COMMON ? 0.09f : 0.015f;
 
         Affine3f src = Affine3f(Vec3f(rvec), Vec3f(tvec));
         Affine3f res = Affine3f(Vec3f(calcRvec), Vec3f(calcTvec));
-        //std::cout << "src" << src.rvec() << " " << src.translation() << std::endl;
-        //std::cout << "res" << res.rvec() << " " << res.translation() << std::endl;
         Affine3f src_inv = src.inv();
         Affine3f diff = res * src_inv;
         double rdiffnorm = cv::norm(diff.rvec());
         double tdiffnorm = cv::norm(diff.translation());
 
         if (rdiffnorm < possibleError && tdiffnorm < possibleError)
+        {
             better_1time_count++;
+        }
         if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError)
             better_5times_count++;
 

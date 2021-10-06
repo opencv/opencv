@@ -108,6 +108,7 @@ OdometrySettingsImplCommon::OdometrySettingsImplCommon()
 	this->sobelScale = defaultSobelScale;
 	this->normalWinSize = defaultNormalWinSize;
 
+    this->angleThreshold = defaultAngleThreshold;
 	this->maxTranslation = defaultMaxTranslation;
 	this->maxRotation = defaultMaxRotation;
 

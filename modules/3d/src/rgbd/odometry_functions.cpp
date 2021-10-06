@@ -798,7 +798,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
             if (!solutionExist)
             {
-                //std::cout << AtA << std::endl;
                 break;
             }
             if(transfromType == OdometryTransformType::ROTATION)
@@ -831,9 +830,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
-
-    //std::cout << "isOk: " << isOk << std::endl;
-    //std::cout << resultRt<< std::endl;
 
     if(isOk)
     {
@@ -1265,7 +1261,6 @@ struct GetAbInvoker : ParallelLoopBody
                 {
                     continue;
                 }
-
                 // build point-wise vector ab = [ A | b ]
 
                 //try to optimize
@@ -1329,8 +1324,6 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     const int nstripes = -1;
     parallel_for_(range, invoker, nstripes);
     //invoker(range);
-
-    //std::cout << sumAB << std::endl;
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)
