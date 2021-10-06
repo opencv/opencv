@@ -1,5 +1,10 @@
+set(VIDEOIO_ENABLE_PLUGINS_DEFAULT ON)
+if(EMSCRIPTEN OR IOS OR WINRT)
+  set(VIDEOIO_ENABLE_PLUGINS_DEFAULT OFF)
+endif()
+
 set(VIDEOIO_PLUGIN_LIST "" CACHE STRING "List of videoio backends to be compiled as plugins (ffmpeg, gstreamer, mfx, msmf or special value 'all')")
-set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building and using of videoio plugins")
+set(VIDEOIO_ENABLE_PLUGINS "${VIDEOIO_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building and using of videoio plugins")
 mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS)
 
 string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
