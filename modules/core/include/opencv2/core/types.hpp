@@ -162,13 +162,13 @@ public:
     //! default constructor
     Point_();
     Point_(_Tp _x, _Tp _y);
-    Point_(const Point_& pt);
-    Point_(Point_&& pt) CV_NOEXCEPT;
+    Point_(const Point_& pt) = default;
+    Point_(Point_&& pt) CV_NOEXCEPT = default;
     Point_(const Size_<_Tp>& sz);
     Point_(const Vec<_Tp, 2>& v);
 
-    Point_& operator = (const Point_& pt);
-    Point_& operator = (Point_&& pt) CV_NOEXCEPT;
+    Point_& operator = (const Point_& pt) = default;
+    Point_& operator = (Point_&& pt) CV_NOEXCEPT = default;
     //! conversion to another data type
     template<typename _Tp2> operator Point_<_Tp2>() const;
 
@@ -244,13 +244,13 @@ public:
     //! default constructor
     Point3_();
     Point3_(_Tp _x, _Tp _y, _Tp _z);
-    Point3_(const Point3_& pt);
-    Point3_(Point3_&& pt) CV_NOEXCEPT;
+    Point3_(const Point3_& pt) = default;
+    Point3_(Point3_&& pt) CV_NOEXCEPT = default;
     explicit Point3_(const Point_<_Tp>& pt);
     Point3_(const Vec<_Tp, 3>& v);
 
-    Point3_& operator = (const Point3_& pt);
-    Point3_& operator = (Point3_&& pt) CV_NOEXCEPT;
+    Point3_& operator = (const Point3_& pt) = default;
+    Point3_& operator = (Point3_&& pt) CV_NOEXCEPT = default;
     //! conversion to another data type
     template<typename _Tp2> operator Point3_<_Tp2>() const;
     //! conversion to cv::Vec<>
@@ -320,12 +320,12 @@ public:
     //! default constructor
     Size_();
     Size_(_Tp _width, _Tp _height);
-    Size_(const Size_& sz);
-    Size_(Size_&& sz) CV_NOEXCEPT;
+    Size_(const Size_& sz) = default;
+    Size_(Size_&& sz) CV_NOEXCEPT = default;
     Size_(const Point_<_Tp>& pt);
 
-    Size_& operator = (const Size_& sz);
-    Size_& operator = (Size_&& sz) CV_NOEXCEPT;
+    Size_& operator = (const Size_& sz) = default;
+    Size_& operator = (Size_&& sz) CV_NOEXCEPT = default;
     //! the area (width*height)
     _Tp area() const;
     //! aspect ratio (width/height)
@@ -425,13 +425,13 @@ public:
     //! default constructor
     Rect_();
     Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
-    Rect_(const Rect_& r);
-    Rect_(Rect_&& r) CV_NOEXCEPT;
+    Rect_(const Rect_& r) = default;
+    Rect_(Rect_&& r) CV_NOEXCEPT = default;
     Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
     Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
 
-    Rect_& operator = ( const Rect_& r );
-    Rect_& operator = ( Rect_&& r ) CV_NOEXCEPT;
+    Rect_& operator = (const Rect_& r) = default;
+    Rect_& operator = (Rect_&& r) CV_NOEXCEPT = default;
     //! the top-left corner
     Point_<_Tp> tl() const;
     //! the bottom-right corner
@@ -1165,34 +1165,12 @@ Point_<_Tp>::Point_(_Tp _x, _Tp _y)
     : x(_x), y(_y) {}
 
 template<typename _Tp> inline
-Point_<_Tp>::Point_(const Point_& pt)
-    : x(pt.x), y(pt.y) {}
-
-template<typename _Tp> inline
-Point_<_Tp>::Point_(Point_&& pt) CV_NOEXCEPT
-    : x(std::move(pt.x)), y(std::move(pt.y)) {}
-
-template<typename _Tp> inline
 Point_<_Tp>::Point_(const Size_<_Tp>& sz)
     : x(sz.width), y(sz.height) {}
 
 template<typename _Tp> inline
 Point_<_Tp>::Point_(const Vec<_Tp,2>& v)
     : x(v[0]), y(v[1]) {}
-
-template<typename _Tp> inline
-Point_<_Tp>& Point_<_Tp>::operator = (const Point_& pt)
-{
-    x = pt.x; y = pt.y;
-    return *this;
-}
-
-template<typename _Tp> inline
-Point_<_Tp>& Point_<_Tp>::operator = (Point_&& pt) CV_NOEXCEPT
-{
-    x = std::move(pt.x); y = std::move(pt.y);
-    return *this;
-}
 
 template<typename _Tp> template<typename _Tp2> inline
 Point_<_Tp>::operator Point_<_Tp2>() const
@@ -1432,14 +1410,6 @@ Point3_<_Tp>::Point3_(_Tp _x, _Tp _y, _Tp _z)
     : x(_x), y(_y), z(_z) {}
 
 template<typename _Tp> inline
-Point3_<_Tp>::Point3_(const Point3_& pt)
-    : x(pt.x), y(pt.y), z(pt.z) {}
-
-template<typename _Tp> inline
-Point3_<_Tp>::Point3_(Point3_&& pt) CV_NOEXCEPT
-    : x(std::move(pt.x)), y(std::move(pt.y)), z(std::move(pt.z)) {}
-
-template<typename _Tp> inline
 Point3_<_Tp>::Point3_(const Point_<_Tp>& pt)
     : x(pt.x), y(pt.y), z(_Tp()) {}
 
@@ -1457,20 +1427,6 @@ template<typename _Tp> inline
 Point3_<_Tp>::operator Vec<_Tp, 3>() const
 {
     return Vec<_Tp, 3>(x, y, z);
-}
-
-template<typename _Tp> inline
-Point3_<_Tp>& Point3_<_Tp>::operator = (const Point3_& pt)
-{
-    x = pt.x; y = pt.y; z = pt.z;
-    return *this;
-}
-
-template<typename _Tp> inline
-Point3_<_Tp>& Point3_<_Tp>::operator = (Point3_&& pt) CV_NOEXCEPT
-{
-    x = std::move(pt.x); y = std::move(pt.y); z = std::move(pt.z);
-    return *this;
 }
 
 template<typename _Tp> inline
@@ -1686,14 +1642,6 @@ Size_<_Tp>::Size_(_Tp _width, _Tp _height)
     : width(_width), height(_height) {}
 
 template<typename _Tp> inline
-Size_<_Tp>::Size_(const Size_& sz)
-    : width(sz.width), height(sz.height) {}
-
-template<typename _Tp> inline
-Size_<_Tp>::Size_(Size_&& sz) CV_NOEXCEPT
-    : width(std::move(sz.width)), height(std::move(sz.height)) {}
-
-template<typename _Tp> inline
 Size_<_Tp>::Size_(const Point_<_Tp>& pt)
     : width(pt.x), height(pt.y) {}
 
@@ -1701,20 +1649,6 @@ template<typename _Tp> template<typename _Tp2> inline
 Size_<_Tp>::operator Size_<_Tp2>() const
 {
     return Size_<_Tp2>(saturate_cast<_Tp2>(width), saturate_cast<_Tp2>(height));
-}
-
-template<typename _Tp> inline
-Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
-{
-    width = sz.width; height = sz.height;
-    return *this;
-}
-
-template<typename _Tp> inline
-Size_<_Tp>& Size_<_Tp>::operator = (Size_<_Tp>&& sz) CV_NOEXCEPT
-{
-    width = std::move(sz.width); height = std::move(sz.height);
-    return *this;
 }
 
 template<typename _Tp> inline
@@ -1828,14 +1762,6 @@ Rect_<_Tp>::Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height)
     : x(_x), y(_y), width(_width), height(_height) {}
 
 template<typename _Tp> inline
-Rect_<_Tp>::Rect_(const Rect_<_Tp>& r)
-    : x(r.x), y(r.y), width(r.width), height(r.height) {}
-
-template<typename _Tp> inline
-Rect_<_Tp>::Rect_(Rect_<_Tp>&& r) CV_NOEXCEPT
-    : x(std::move(r.x)), y(std::move(r.y)), width(std::move(r.width)), height(std::move(r.height)) {}
-
-template<typename _Tp> inline
 Rect_<_Tp>::Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz)
     : x(org.x), y(org.y), width(sz.width), height(sz.height) {}
 
@@ -1846,26 +1772,6 @@ Rect_<_Tp>::Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2)
     y = std::min(pt1.y, pt2.y);
     width = std::max(pt1.x, pt2.x) - x;
     height = std::max(pt1.y, pt2.y) - y;
-}
-
-template<typename _Tp> inline
-Rect_<_Tp>& Rect_<_Tp>::operator = ( const Rect_<_Tp>& r )
-{
-    x = r.x;
-    y = r.y;
-    width = r.width;
-    height = r.height;
-    return *this;
-}
-
-template<typename _Tp> inline
-Rect_<_Tp>& Rect_<_Tp>::operator = ( Rect_<_Tp>&& r ) CV_NOEXCEPT
-{
-    x = std::move(r.x);
-    y = std::move(r.y);
-    width = std::move(r.width);
-    height = std::move(r.height);
-    return *this;
 }
 
 template<typename _Tp> inline
