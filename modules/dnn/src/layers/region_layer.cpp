@@ -125,7 +125,7 @@ public:
 #endif
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
-            return new_coords == 0;
+            return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -437,11 +437,12 @@ public:
 
         config.scale_x_y = scale_x_y;
 
-        config.object_prob_cutoff = (classfix == -1) ? 0.5 : 0.0;
+        config.object_prob_cutoff = (classfix == -1) ? thresh : 0.f;
         config.class_prob_cutoff = thresh;
 
         config.nms_iou_threshold = nmsThreshold;
 
+        config.new_coords = (new_coords == 1);
         return make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(context->stream), blobs[0], config);
     }
 #endif
