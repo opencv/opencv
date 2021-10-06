@@ -22,11 +22,15 @@ static UIFont* getBodoni72() {
 }
 
 static UIFont* getAnySerif() {
+#if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 130000
     if (@available(iOS 13.0, *)) {
         return [UIFont fontWithDescriptor:[[UIFontDescriptor preferredFontDescriptorWithTextStyle:UIFontTextStyleBody] fontDescriptorWithDesign:UIFontDescriptorSystemDesignSerif] size:SIZE];
     } else {
         return nil;
     }
+#else
+    return nil;
+#endif
 }
 
 static UIFont* getSystemFont() {

@@ -22,11 +22,15 @@ static NSFont* getBodoni72() {
 }
 
 static NSFont* getAnySerif() {
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 110000
     if (@available(macOS 11.0, *)) {
         return [NSFont fontWithDescriptor:[[NSFontDescriptor preferredFontDescriptorForTextStyle:NSFontTextStyleBody options:@{}] fontDescriptorWithDesign:NSFontDescriptorSystemDesignSerif] size:SIZE];
     } else {
         return nil;
     }
+#else
+    return nil;
+#endif
 }
 
 static NSFont* getSystemFont() {
