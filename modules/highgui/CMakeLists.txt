@@ -51,6 +51,8 @@ set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
 if(HAVE_QT)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "QT${QT_VERSION_MAJOR}")
+  add_definitions(-DHAVE_QT)
+
   if(QT_VERSION_MAJOR GREATER 4)
     # "Automoc" doesn't work properly with opencv_world build, use QT<ver>_WRAP_CPP() directly
     #set(CMAKE_AUTOMOC ON)
@@ -75,6 +77,7 @@ if(HAVE_QT)
 
     set(qt_deps Core Gui Widgets Test Concurrent)
     if(HAVE_QT_OPENGL)
+      add_definitions(-DHAVE_QT_OPENGL)
       list(APPEND qt_deps OpenGL)
     endif()
 
