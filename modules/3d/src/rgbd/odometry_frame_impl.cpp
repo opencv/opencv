@@ -45,6 +45,11 @@ private:
 	std::vector< std::vector<TMat> > pyramids;
 };
 
+OdometryFrame::OdometryFrame()
+{
+    this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>();
+};
+
 OdometryFrame::OdometryFrame(OdometryFrameStoreType matType)
 {
 	if (matType == OdometryFrameStoreType::UMAT)

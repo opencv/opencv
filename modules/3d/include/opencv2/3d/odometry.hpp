@@ -39,6 +39,7 @@ class CV_EXPORTS_W Odometry
 private:
     Ptr<OdometryImpl>odometry;
 public:
+    CV_WRAP Odometry();
     CV_WRAP Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
     OdometryFrame createOdometryFrame();

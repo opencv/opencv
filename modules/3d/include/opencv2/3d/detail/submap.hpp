@@ -94,7 +94,7 @@ public:
     static constexpr int FRAME_VISIBILITY_THRESHOLD = 5;
 
     //! TODO: Add support for GPU arrays (UMat)
-    Ptr<OdometryFrame> frame;
+    OdometryFrame frame;
 
     std::shared_ptr<Volume> volume;
 };
@@ -115,11 +115,11 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f
     if (!points.needed() && !normals.needed())
     {
         MatType pts, nrm;
-        frame->getPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
-        frame->getPyramidAt(nrm, OdometryFrame::PYR_NORM, 0);
+        frame.getPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
+        frame.getPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM, 0);
         volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
-        frame->setPyramidAt(pts, OdometryFrame::PYR_CLOUD, 0);
-        frame->setPyramidAt(nrm, OdometryFrame::PYR_NORM,  0);
+        frame.setPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
+        frame.setPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM,  0);
     }
     else
     {
@@ -195,7 +195,7 @@ public:
     Ptr<SubmapT> getCurrentSubmap(void) const;
 
     int estimateConstraint(int fromSubmapId, int toSubmapId, int& inliers, Affine3f& inlierPose);
-    bool updateMap(int _frameId, Ptr<OdometryFrame> _frame);
+    bool updateMap(int _frameId, OdometryFrame _frame);
 
     bool addEdgeToCurrentSubmap(const int currentSubmapID, const int tarSubmapID);
 
@@ -418,7 +418,7 @@ bool SubmapManager<MatType>::addEdgeToCurrentSubmap(const int currentSubmapID, c
 }
 
 template<typename MatType>
-bool SubmapManager<MatType>::updateMap(int _frameId, Ptr<OdometryFrame> _frame)
+bool SubmapManager<MatType>::updateMap(int _frameId, OdometryFrame _frame)
 {
     bool mapUpdated = false;
     int changedCurrentMapId = -1;

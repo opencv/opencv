@@ -9,6 +9,12 @@
 namespace cv
 {
 
+Odometry::Odometry()
+{
+    OdometrySettings settings;
+	this->odometry = makePtr<OdometryICP>(settings, OdometryAlgoType::COMMON);
+}
+
 Odometry::Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype)
 {
 	switch (otype)

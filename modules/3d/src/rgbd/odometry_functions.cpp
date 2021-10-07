@@ -749,9 +749,10 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 //}
             }
 
-
-            if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount)
+            //std::cout << corresps_rgbd.rows << " " << corresps_icp.rows << " " << minCorrespsCount << " " << (algtype != OdometryAlgoType::FAST) << std::endl;
+            if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount && algtype != OdometryAlgoType::FAST)
                 break;
+
             const Mat srcPyrCloud;
             srcFrame.getPyramidAt(srcPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
 
@@ -770,7 +771,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 AtA += AtA_rgbd;
                 AtB += AtB_rgbd;
             }
-            if(corresps_icp.rows >= minCorrespsCount)
+            if(corresps_icp.rows >= minCorrespsCount || algtype == OdometryAlgoType::FAST)
             {
                 const Mat dstPyrCloud, dstPyrNormals, srcPyrNormals;
                 dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
@@ -796,6 +797,8 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
 
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
+            //std::cout << "se: " << solutionExist << std::endl;
+            //std::cout << AtA << std::endl;
             if (!solutionExist)
             {
                 break;
