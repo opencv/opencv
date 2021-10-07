@@ -32,7 +32,6 @@ cv::util::any cv::MediaFrame::blobParams() const
 }
 
 cv::MediaFrame::IAdapter* cv::MediaFrame::getAdapter() const {
-    if (m == nullptr) std::cout <<"dead" << std::endl;
     return m->adapter.get();
 }
 

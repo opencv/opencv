@@ -38,7 +38,7 @@ MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
     return MediaFrame::View{cv::MediaFrame::View::Ptrs{const_cast<unsigned char*>(m_data_ptr)},
                             cv::MediaFrame::View::Strides{}};
 }
-cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {}; }
+cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::BGR, m_sz}; }
 
 void OAKMediaAdapter::setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr) {
     m_priv->setParams(sz, fmt, data_ptr);

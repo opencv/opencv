@@ -51,16 +51,17 @@ TEST(OAK, SimpleCamera)
     out_h265_file.open("output.h265", std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 
     // Pull 300 frames from the camera
-    uint32_t frames = 30;
+    uint32_t frames = 60 * 5;
     uint32_t pulled = 0;
 
     while (pulled++ < frames &&
            pipeline.pull(cv::gout(out_frame))) {
-        std::cout << "pulled" << std::endl;
+        //std::cout << "pulled" << std::endl;
         cv::MediaFrame::View view = out_frame.access(cv::MediaFrame::Access::R);
         if (view.ptr[0] == nullptr) {
             std::cout << "nullptr" << std::endl;
         }
+        //std::cout << out_frame.desc().size << std::endl;
         // FIXME: fix (8 * 3) multiplier
         out_h265_file.write(reinterpret_cast<const char*>(view.ptr[0]), out_frame.desc().size.width *
                                                                         out_frame.desc().size.height * 8 * 3);

@@ -101,7 +101,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
         auto camRgb = m_pipeline.create<dai::node::ColorCamera>();
         // FIXME: extract camera compile arguments here and properly convert them for dai
         camRgb->setBoardSocket(dai::CameraBoardSocket::RGB);
-        camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_4_K);
+        camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
 
         // FIXME: change the hard-coded behavior
         auto xout = m_pipeline.create<dai::node::XLinkOut>();
@@ -117,7 +117,7 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                     // FIXME: encoder params is the 2nd arg - consider a better approach here
                     m_enc_config = op.args[1].get<cv::gapi::oak::EncoderConfig>();
                     // FIXME: convert all the parameters to dai
-                    videoEnc->setDefaultProfilePreset(3840, 2160,
+                    videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
                                                       m_enc_config.frameRate,
                                                       dai::VideoEncoderProperties::Profile::H265_MAIN);
                     // FIXME: think about proper linking:
@@ -163,7 +163,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
     auto frame = cv::util::get<MediaFrame*>(out_arg);
     auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
 
-    adapter->setParams({m_enc_config.width, m_enc_config.height},
+    adapter->setParams({m_enc_config.width, m_enc_config.height}, // assert with frame desc
                         cv::gapi::oak::OAKFrameFormat::BGR, packet->getData().data());
     if (packet->getData().data() == nullptr) {
             std::cout << "nullptr in backend" << std::endl;
