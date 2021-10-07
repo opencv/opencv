@@ -141,5 +141,31 @@ TEST(Features2D_ORB, regression_16197)
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
+// https://github.com/opencv/opencv-python/issues/537
+BIGDATA_TEST(Features2D_ORB, regression_opencv_python_537)  // memory usage: ~3 Gb
+{
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG,
+        CV_TEST_TAG_MEMORY_6GB
+    );
+
+    const int width = 25000;
+    const int height = 25000;
+    Mat img(Size(width, height), CV_8UC1, Scalar::all(0));
+
+    const int border = 23, num_lines = 23;
+    for (int i = 0; i < num_lines; i++)
+    {
+        cv::Point2i point1(border + i * 100, border + i * 100);
+        cv::Point2i point2(width - border - i * 100, height - border * i * 100);
+        cv::line(img, point1, point2, 255, 1, LINE_AA);
+    }
+
+    Ptr<ORB> orbPtr = ORB::create(31);
+    std::vector<KeyPoint> kps;
+    Mat fv;
+    ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
+}
 
 }} // namespace
