@@ -167,6 +167,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     channels_   = config.in_shape[dims - spatial_dims - 1];
     num_output_ = config.out_shape[dims - spatial_dims - 1];
     group_ = config.group;
+    CV_CheckGT(group_, 0, "");  // avoid div by zero below
 
     fused_activ_ = OCL4DNN_CONV_FUSED_ACTIV_NONE;
     fused_eltwise_ = false;
