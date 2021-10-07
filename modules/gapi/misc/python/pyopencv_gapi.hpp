@@ -19,6 +19,7 @@ using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
 using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
 using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
+using GStreamerSource_OutputType    = cv::gapi::wip::GStreamerSource::OutputType;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs

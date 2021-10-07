@@ -350,6 +350,35 @@ try:
                     cv.gapi.compile_args(cv.gapi.streaming.queue_capacity(1)))
 
 
+        # FIXME: Add more tests
+        def test_gstreaming_source(self):
+            pipeline = """videotestsrc is-live=true pattern=colors num-buffers=10 !
+                          videorate ! videoscale ! video/x-raw,width=1920,height=1080,
+                          framerate=3/1 ! appsink"""
+
+            g_in = cv.GMat()
+            g_out = cv.gapi.copy(g_in)
+            c = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
+
+            ccomp = c.compileStreaming()
+
+
+            # NB: Skip test in case gstreamer isn't available.
+            try:
+                source = cv.gapi.wip.make_gst_src(pipeline)
+            except:
+                raise TestSkip()
+
+            ccomp.setSource(cv.gin(source))
+            ccomp.start()
+
+            while True:
+                has_frame, output = ccomp.pull()
+                if not has_frame:
+                    break
+                self.assertTrue(output.size != 0)
+
+
 
 except unittest.SkipTest as e:
 
