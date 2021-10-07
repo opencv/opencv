@@ -1523,6 +1523,17 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
 
     if (manualpipeline)
     {
+        if (err)
+        {
+            CV_WARN("error opening writer pipeline: " << err->message);
+            if (encodebin)
+            {
+                gst_element_set_state(encodebin, GST_STATE_NULL);
+            }
+            handleMessage(encodebin);
+            encodebin.release();
+            return false;
+        }
 #if GST_VERSION_MAJOR == 0
         it = gst_bin_iterate_sources(GST_BIN(encodebin.get()));
         if (gst_iterator_next(it, (gpointer *)source.getRef()) != GST_ITERATOR_OK) {
