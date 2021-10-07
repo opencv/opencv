@@ -141,9 +141,15 @@ TEST(Features2D_ORB, regression_16197)
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
-BIGDATA_TEST(Features2D_ORB, issue_537) // memory usage: ~2.3 Gb
+// https://github.com/opencv/opencv-python/issues/537
+BIGDATA_TEST(Features2D_ORB, regression_opencv_python_537)  // memory usage: ~3 Gb
 {
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_6GB);
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG,
+        CV_TEST_TAG_MEMORY_6GB
+    );
+
     const int width = 25000;
     const int height = 25000;
     Mat img(Size(width, height), CV_8UC1, Scalar::all(0));
