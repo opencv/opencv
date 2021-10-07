@@ -136,7 +136,10 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
     size_t ptidx, ptsize = pts.size();
 
     const uchar* ptr00 = img.ptr<uchar>();
-    size_t step = img.step/img.elemSize1();
+    size_t size_t_step = img.step/img.elemSize1();
+    CV_Check(size_t_step, size_t_step + 1 <= INT_MAX, "step in img > INT_MAX");
+    int step = static_cast<int>(size_t_step);
+
     int r = blockSize/2;
 
     float scale = 1.f/((1 << 2) * blockSize * 255.f);
@@ -154,7 +157,8 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
         int y0 = cvRound(pts[ptidx].pt.y);
         int z = pts[ptidx].octave;
 
-        const uchar* ptr0 = ptr00 + (y0 - r + layerinfo[z].y)*step + x0 - r + layerinfo[z].x;
+        size_t offset = (y0 - r + layerinfo[z].y)*size_t_step + (x0 - r + layerinfo[z].x);
+        const uchar* ptr0 = ptr00 + offset;
         int a = 0, b = 0, c = 0;
 
         for( int k = 0; k < blockSize*blockSize; k++ )
