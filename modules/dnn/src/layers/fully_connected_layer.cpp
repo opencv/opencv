@@ -168,7 +168,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false), useRVV(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -191,6 +191,7 @@ public:
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            p.useRVV = checkHardwareSupport(CPU_RVV);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -238,6 +239,11 @@ public:
             #if CV_TRY_AVX
                 if( useAVX )
                     opt_AVX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
+                else
+            #endif
+            #if CV_TRY_RVV
+                if( useRVV )
+                    opt_RVV::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
                 {
@@ -293,6 +299,7 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
+        bool useRVV;
     };
 
 #ifdef HAVE_OPENCL
@@ -610,6 +617,45 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        if (blobs.empty())
+            return false;
+
+        int numOutput = blobs[0].size[0];
+        float inputScale = scales[0][0], outputScale = scales[1][0];
+        int inputZp = zeropoints[0][0];
+
+        Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
+        Mat biasQuantized(1, numOutput, CV_32S);
+        Mat outputMultiplier(1, numOutput, CV_32F);
+
+        double realMin, realMax, weightsScale;
+        for( int i = 0; i < numOutput; i++ )
+        {
+            // Quantize weights
+            cv::minMaxIdx(weightsMat.row(i), &realMin, &realMax);
+            realMin = std::min(realMin, 0.0);
+            realMax = std::max(realMax, 0.0);
+            weightsScale = (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
+            weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
+
+            // Quantize biases
+            float biasScale = inputScale * weightsScale;
+            biasQuantized.at<int>(i) = (int)std::round(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
+
+            // Store multiplier
+            outputMultiplier.at<float>(i) = biasScale / outputScale;
+        }
+
+        params.blobs.clear();
+        params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
+        params.blobs.push_back(biasQuantized);
+        params.blobs.push_back(outputMultiplier);
+        return true;
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

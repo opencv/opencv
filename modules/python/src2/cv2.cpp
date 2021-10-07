@@ -49,6 +49,8 @@
 
 static PyObject* opencv_error = NULL;
 
+static PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
+
 class ArgInfo
 {
 public:
@@ -496,6 +498,33 @@ bool parseSequence(PyObject* obj, RefWrapper<T> (&value)[N], const ArgInfo& info
 }
 } // namespace
 
+namespace traits {
+template <bool Value>
+struct BooleanConstant
+{
+    static const bool value = Value;
+    typedef BooleanConstant<Value> type;
+};
+
+typedef BooleanConstant<true> TrueType;
+typedef BooleanConstant<false> FalseType;
+
+template <class T>
+struct VoidType {
+    typedef void type;
+};
+
+template <class T, class DType = void>
+struct IsRepresentableAsMatDataType : FalseType
+{
+};
+
+template <class T>
+struct IsRepresentableAsMatDataType<T, typename VoidType<typename DataType<T>::channel_type>::type> : TrueType
+{
+};
+} // namespace traits
+
 typedef std::vector<uchar> vector_uchar;
 typedef std::vector<char> vector_char;
 typedef std::vector<int> vector_int;
@@ -611,10 +640,20 @@ static bool isBool(PyObject* obj) CV_NOEXCEPT
     return PyArray_IsScalar(obj, Bool) || PyBool_Check(obj);
 }
 
+template <typename T>
+static std::string pycv_dumpArray(const T* arr, int n)
+{
+    std::ostringstream out;
+    out << "[";
+    for (int i = 0; i < n; ++i)
+        out << " " << arr[i];
+    out << " ]";
+    return out.str();
+}
+
 // special case, when the converter needs full ArgInfo structure
 static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 {
-    bool allowND = true;
     if(!o || o == Py_None)
     {
         if( !m.data )
@@ -700,12 +739,29 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         return false;
     }
 
-    int size[CV_MAX_DIM+1];
-    size_t step[CV_MAX_DIM+1];
     size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);
+
+    CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
+
     bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
+    {
+        bool wrapChannels = false;
+        PyObject* pyobj_wrap_channels = PyObject_GetAttrString(o, "wrap_channels");
+        if (pyobj_wrap_channels)
+        {
+            if (!pyopencv_to_safe(pyobj_wrap_channels, wrapChannels, ArgInfo("cv.Mat.wrap_channels", 0)))
+            {
+                // TODO extra message
+                Py_DECREF(pyobj_wrap_channels);
+                return false;
+            }
+            Py_DECREF(pyobj_wrap_channels);
+        }
+        ismultichannel = wrapChannels && ndims >= 1;
+    }
 
     for( int i = ndims-1; i >= 0 && !needcopy; i-- )
     {
@@ -719,14 +775,26 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             needcopy = true;
     }
 
-    if( ismultichannel && _strides[1] != (npy_intp)elemsize*_sizes[2] )
-        needcopy = true;
+    if (ismultichannel)
+    {
+        int channels = ndims >= 1 ? (int)_sizes[ndims - 1] : 1;
+        if (channels > CV_CN_MAX)
+        {
+            failmsg("%s unable to wrap channels, too high (%d > CV_CN_MAX=%d)", info.name, (int)channels, (int)CV_CN_MAX);
+            return false;
+        }
+        ndims--;
+        type |= CV_MAKETYPE(0, channels);
+
+        if (ndims >= 1 && _strides[ndims - 1] != (npy_intp)elemsize*_sizes[ndims])
+            needcopy = true;
+    }
 
     if (needcopy)
     {
         if (info.outputarg)
         {
-            failmsg("Layout of the output array %s is incompatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
+            failmsg("Layout of the output array %s is incompatible with cv::Mat", info.name);
             return false;
         }
 
@@ -741,6 +809,9 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
         _strides = PyArray_STRIDES(oarr);
     }
+
+    int size[CV_MAX_DIM+1] = {};
+    size_t step[CV_MAX_DIM+1] = {};
 
     // Normalize strides in case NPY_RELAXED_STRIDES is set
     size_t default_step = elemsize;
@@ -760,23 +831,16 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     }
 
     // handle degenerate case
+    // FIXIT: Don't force 1D for Scalars
     if( ndims == 0) {
         size[ndims] = 1;
         step[ndims] = elemsize;
         ndims++;
     }
 
-    if( ismultichannel )
-    {
-        ndims--;
-        type |= CV_MAKETYPE(0, size[2]);
-    }
-
-    if( ndims > 2 && !allowND )
-    {
-        failmsg("%s has more than 2 dimensions", info.name);
-        return false;
-    }
+#if 1
+    CV_LOG_DEBUG(NULL, "Construct Mat: ndims=" << ndims << " size=" << pycv_dumpArray(size, ndims) << "  step=" << pycv_dumpArray(step, ndims) << "  type=" << cv::typeToString(type));
+#endif
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
     m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
@@ -1070,6 +1134,30 @@ bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info)
     int ivalue = (int)PyInt_AsLong(obj);
     value = cv::saturate_cast<uchar>(ivalue);
     return ivalue != -1 || !PyErr_Occurred();
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, char& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be an integer, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = saturate_cast<char>(PyArray_PyIntAsInt(obj));
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
 }
 
 template<>
@@ -1484,356 +1572,11 @@ PyObject* pyopencv_from(const Point3d& p)
     return Py_BuildValue("(ddd)", p.x, p.y, p.z);
 }
 
-template<typename _Tp> struct pyopencvVecConverter
-{
-    typedef typename DataType<_Tp>::channel_type _Cp;
-    static inline bool copyOneItem(PyObject *obj, size_t start, int channels, _Cp * data)
-    {
-        for(size_t j = 0; (int)j < channels; j++ )
-        {
-            SafeSeqItem sub_item_wrap(obj, start + j);
-            PyObject* item_ij = sub_item_wrap.item;
-            if( PyInt_Check(item_ij))
-            {
-                int v = (int)PyInt_AsLong(item_ij);
-                if( v == -1 && PyErr_Occurred() )
-                    return false;
-                data[j] = saturate_cast<_Cp>(v);
-            }
-            else if( PyLong_Check(item_ij))
-            {
-                int v = (int)PyLong_AsLong(item_ij);
-                if( v == -1 && PyErr_Occurred() )
-                    return false;
-                data[j] = saturate_cast<_Cp>(v);
-            }
-            else if( PyFloat_Check(item_ij))
-            {
-                double v = PyFloat_AsDouble(item_ij);
-                if( PyErr_Occurred() )
-                    return false;
-                data[j] = saturate_cast<_Cp>(v);
-            }
-            else
-                return false;
-        }
-        return true;
-    }
-    static bool to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
-    {
-        if(!obj || obj == Py_None)
-            return true;
-        if (PyArray_Check(obj))
-        {
-            Mat m;
-            pyopencv_to(obj, m, info);
-            m.copyTo(value);
-            return true;
-        }
-        else if (PySequence_Check(obj))
-        {
-            const int type = traits::Type<_Tp>::value;
-            const int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-            size_t i, n = PySequence_Size(obj);
-            value.resize(n);
-            for (i = 0; i < n; i++ )
-            {
-                SafeSeqItem item_wrap(obj, i);
-                PyObject* item = item_wrap.item;
-                _Cp* data = (_Cp*)&value[i];
-
-                if( channels == 2 && PyComplex_Check(item) )
-                {
-                    data[0] = saturate_cast<_Cp>(PyComplex_RealAsDouble(item));
-                    data[1] = saturate_cast<_Cp>(PyComplex_ImagAsDouble(item));
-                }
-                else if( channels > 1 )
-                {
-                    if( PyArray_Check(item))
-                    {
-                        Mat src;
-                        pyopencv_to(item, src, info);
-                        if( src.dims != 2 || src.channels() != 1 ||
-                           ((src.cols != 1 || src.rows != channels) &&
-                            (src.cols != channels || src.rows != 1)))
-                            break;
-                        Mat dst(src.rows, src.cols, depth, data);
-                        src.convertTo(dst, type);
-                        if( dst.data != (uchar*)data )
-                            break;
-                    }
-                    else if (PySequence_Check(item))
-                    {
-                        if (!copyOneItem(item, 0, channels, data))
-                            break;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                else if (channels == 1)
-                {
-                    if (!copyOneItem(obj, i, channels, data))
-                        break;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            if (i != n)
-            {
-                failmsg("Can't convert vector element for '%s', index=%d", info.name, i);
-            }
-            return i == n;
-        }
-        failmsg("Can't convert object to vector for '%s', unsupported type", info.name);
-        return false;
-    }
-
-    static PyObject* from(const std::vector<_Tp>& value)
-    {
-        if(value.empty())
-            return PyTuple_New(0);
-        int type = traits::Type<_Tp>::value;
-        int depth = CV_MAT_DEPTH(type), channels = CV_MAT_CN(type);
-        Mat src((int)value.size(), channels, depth, (uchar*)&value[0]);
-        return pyopencv_from(src);
-    }
-};
-
-template<typename _Tp>
-bool pyopencv_to(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
-{
-    return pyopencvVecConverter<_Tp>::to(obj, value, info);
-}
-
-template<typename _Tp>
-PyObject* pyopencv_from(const std::vector<_Tp>& value)
-{
-    return pyopencvVecConverter<_Tp>::from(value);
-}
-
-template<typename _Tp> static inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<_Tp>& value, const ArgInfo& info)
-{
-    if(!obj || obj == Py_None)
-       return true;
-    if (!PySequence_Check(obj))
-        return false;
-    size_t n = PySequence_Size(obj);
-    value.resize(n);
-    for(size_t i = 0; i < n; i++ )
-    {
-        SafeSeqItem item_wrap(obj, i);
-        if(!pyopencv_to(item_wrap.item, value[i], info))
-            return false;
-    }
-    return true;
-}
-
-template<> inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<bool>& value, const ArgInfo& info)
-{
-    if(!obj || obj == Py_None)
-       return true;
-    if (!PySequence_Check(obj))
-        return false;
-    size_t n = PySequence_Size(obj);
-    value.resize(n);
-    for(size_t i = 0; i < n; i++ )
-    {
-        SafeSeqItem item_wrap(obj, i);
-        bool elem{};
-        if(!pyopencv_to(item_wrap.item, elem, info))
-            return false;
-        value[i] = elem;
-    }
-    return true;
-}
-
-template<typename _Tp> static inline PyObject* pyopencv_from_generic_vec(const std::vector<_Tp>& value)
-{
-    int i, n = (int)value.size();
-    PyObject* seq = PyList_New(n);
-    for( i = 0; i < n; i++ )
-    {
-        _Tp elem = value[i];
-        PyObject* item = pyopencv_from(elem);
-        if(!item)
-            break;
-        PyList_SetItem(seq, i, item);
-    }
-    if( i < n )
-    {
-        Py_DECREF(seq);
-        return 0;
-    }
-    return seq;
-}
-
-template<> inline PyObject* pyopencv_from_generic_vec(const std::vector<bool>& value)
-{
-    int i, n = (int)value.size();
-    PyObject* seq = PyList_New(n);
-    for( i = 0; i < n; i++ )
-    {
-        bool elem = value[i];
-        PyObject* item = pyopencv_from(elem);
-        if(!item)
-            break;
-        PyList_SetItem(seq, i, item);
-    }
-    if( i < n )
-    {
-        Py_DECREF(seq);
-        return 0;
-    }
-    return seq;
-}
-
-template<std::size_t I = 0, typename... Tp>
-inline typename std::enable_if<I == sizeof...(Tp), void>::type
-convert_to_python_tuple(const std::tuple<Tp...>&, PyObject*) {  }
-
-template<std::size_t I = 0, typename... Tp>
-inline typename std::enable_if<I < sizeof...(Tp), void>::type
-convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
-{
-    PyObject* item = pyopencv_from(std::get<I>(cpp_tuple));
-
-    if (!item)
-        return;
-
-    PyTuple_SetItem(py_tuple, I, item);
-    convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
-}
-
-
-template<typename... Ts>
-PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
-{
-    size_t size = sizeof...(Ts);
-    PyObject* py_tuple = PyTuple_New(size);
-    convert_to_python_tuple(cpp_tuple, py_tuple);
-    size_t actual_size = PyTuple_Size(py_tuple);
-
-    if (actual_size < size)
-    {
-        Py_DECREF(py_tuple);
-        return NULL;
-    }
-
-    return py_tuple;
-}
-
 template<>
 PyObject* pyopencv_from(const std::pair<int, double>& src)
 {
     return Py_BuildValue("(id)", src.first, src.second);
 }
-
-template<typename _Tp, typename _Tr> struct pyopencvVecConverter<std::pair<_Tp, _Tr> >
-{
-    static bool to(PyObject* obj, std::vector<std::pair<_Tp, _Tr> >& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<std::pair<_Tp, _Tr> >& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<typename _Tp> struct pyopencvVecConverter<std::vector<_Tp> >
-{
-    static bool to(PyObject* obj, std::vector<std::vector<_Tp> >& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<std::vector<_Tp> >& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<Mat>
-{
-    static bool to(PyObject* obj, std::vector<Mat>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<Mat>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<UMat>
-{
-    static bool to(PyObject* obj, std::vector<UMat>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<UMat>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<KeyPoint>
-{
-    static bool to(PyObject* obj, std::vector<KeyPoint>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<KeyPoint>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<DMatch>
-{
-    static bool to(PyObject* obj, std::vector<DMatch>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<DMatch>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<String>
-{
-    static bool to(PyObject* obj, std::vector<String>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-
-    static PyObject* from(const std::vector<String>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
-
-template<> struct pyopencvVecConverter<RotatedRect>
-{
-    static bool to(PyObject* obj, std::vector<RotatedRect>& value, const ArgInfo& info)
-    {
-        return pyopencv_to_generic_vec(obj, value, info);
-    }
-    static PyObject* from(const std::vector<RotatedRect>& value)
-    {
-        return pyopencv_from_generic_vec(value);
-    }
-};
 
 template<>
 bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
@@ -1962,6 +1705,266 @@ PyObject* pyopencv_from(const Moments& m)
                          "nu30", m.nu30, "nu21", m.nu21, "nu12", m.nu12, "nu03", m.nu03);
 }
 
+template <typename Tp>
+struct pyopencvVecConverter;
+
+template <typename Tp>
+bool pyopencv_to(PyObject* obj, std::vector<Tp>& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    return pyopencvVecConverter<Tp>::to(obj, value, info);
+}
+
+template <typename Tp>
+PyObject* pyopencv_from(const std::vector<Tp>& value)
+{
+    return pyopencvVecConverter<Tp>::from(value);
+}
+
+template <typename Tp>
+static bool pyopencv_to_generic_vec(PyObject* obj, std::vector<Tp>& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (!PySequence_Check(obj))
+    {
+        failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
+        return false;
+    }
+    const size_t n = static_cast<size_t>(PySequence_Size(obj));
+    value.resize(n);
+    for (size_t i = 0; i < n; i++)
+    {
+        SafeSeqItem item_wrap(obj, i);
+        if (!pyopencv_to(item_wrap.item, value[i], info))
+        {
+            failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+            return false;
+        }
+    }
+    return true;
+}
+
+template<> inline bool pyopencv_to_generic_vec(PyObject* obj, std::vector<bool>& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (!PySequence_Check(obj))
+    {
+        failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
+        return false;
+    }
+    const size_t n = static_cast<size_t>(PySequence_Size(obj));
+    value.resize(n);
+    for (size_t i = 0; i < n; i++)
+    {
+        SafeSeqItem item_wrap(obj, i);
+        bool elem{};
+        if (!pyopencv_to(item_wrap.item, elem, info))
+        {
+            failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+            return false;
+        }
+        value[i] = elem;
+    }
+    return true;
+}
+
+
+template <typename Tp>
+static PyObject* pyopencv_from_generic_vec(const std::vector<Tp>& value)
+{
+    Py_ssize_t n = static_cast<Py_ssize_t>(value.size());
+    PySafeObject seq(PyTuple_New(n));
+    for (Py_ssize_t i = 0; i < n; i++)
+    {
+        PyObject* item = pyopencv_from(value[i]);
+        // If item can't be assigned - PyTuple_SetItem raises exception and returns -1.
+        if (!item || PyTuple_SetItem(seq, i, item) == -1)
+        {
+            return NULL;
+        }
+    }
+    return seq.release();
+}
+
+template<> inline PyObject* pyopencv_from_generic_vec(const std::vector<bool>& value)
+{
+    Py_ssize_t n = static_cast<Py_ssize_t>(value.size());
+    PySafeObject seq(PyTuple_New(n));
+    for (Py_ssize_t i = 0; i < n; i++)
+    {
+        bool elem = value[i];
+        PyObject* item = pyopencv_from(elem);
+        // If item can't be assigned - PyTuple_SetItem raises exception and returns -1.
+        if (!item || PyTuple_SetItem(seq, i, item) == -1)
+        {
+            return NULL;
+        }
+    }
+    return seq.release();
+}
+
+
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I == sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>&, PyObject*) {  }
+
+template<std::size_t I = 0, typename... Tp>
+inline typename std::enable_if<I < sizeof...(Tp), void>::type
+convert_to_python_tuple(const std::tuple<Tp...>& cpp_tuple, PyObject* py_tuple)
+{
+    PyObject* item = pyopencv_from(std::get<I>(cpp_tuple));
+
+    if (!item)
+        return;
+
+    PyTuple_SetItem(py_tuple, I, item);
+    convert_to_python_tuple<I + 1, Tp...>(cpp_tuple, py_tuple);
+}
+
+
+template<typename... Ts>
+PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
+{
+    size_t size = sizeof...(Ts);
+    PyObject* py_tuple = PyTuple_New(size);
+    convert_to_python_tuple(cpp_tuple, py_tuple);
+    size_t actual_size = PyTuple_Size(py_tuple);
+
+    if (actual_size < size)
+    {
+        Py_DECREF(py_tuple);
+        return NULL;
+    }
+
+    return py_tuple;
+}
+
+template <typename Tp>
+struct pyopencvVecConverter
+{
+    typedef typename std::vector<Tp>::iterator VecIt;
+
+    static bool to(PyObject* obj, std::vector<Tp>& value, const ArgInfo& info)
+    {
+        if (!PyArray_Check(obj))
+        {
+            return pyopencv_to_generic_vec(obj, value, info);
+        }
+        // If user passed an array it is possible to make faster conversions in several cases
+        PyArrayObject* array_obj = reinterpret_cast<PyArrayObject*>(obj);
+        const NPY_TYPES target_type = asNumpyType<Tp>();
+        const NPY_TYPES source_type = static_cast<NPY_TYPES>(PyArray_TYPE(array_obj));
+        if (target_type == NPY_OBJECT)
+        {
+            // Non-planar arrays representing objects (e.g. array of N Rect is an array of shape Nx4) have NPY_OBJECT
+            // as their target type.
+            return pyopencv_to_generic_vec(obj, value, info);
+        }
+        if (PyArray_NDIM(array_obj) > 1)
+        {
+            failmsg("Can't parse %dD array as '%s' vector argument", PyArray_NDIM(array_obj), info.name);
+            return false;
+        }
+        if (target_type != source_type)
+        {
+            // Source type requires conversion
+            // Allowed conversions for target type is handled in the corresponding pyopencv_to function
+            return pyopencv_to_generic_vec(obj, value, info);
+        }
+        // For all other cases, all array data can be directly copied to std::vector data
+        // Simple `memcpy` is not possible because NumPy array can reference a slice of the bigger array:
+        // ```
+        // arr = np.ones((8, 4, 5), dtype=np.int32)
+        // convertible_to_vector_of_int = arr[:, 0, 1]
+        // ```
+        value.resize(static_cast<size_t>(PyArray_SIZE(array_obj)));
+        const npy_intp item_step = PyArray_STRIDE(array_obj, 0) / PyArray_ITEMSIZE(array_obj);
+        const Tp* data_ptr = static_cast<Tp*>(PyArray_DATA(array_obj));
+        for (VecIt it = value.begin(); it != value.end(); ++it, data_ptr += item_step) {
+            *it = *data_ptr;
+        }
+        return true;
+    }
+
+    static PyObject* from(const std::vector<Tp>& value)
+    {
+        if (value.empty())
+        {
+            return PyTuple_New(0);
+        }
+        return from(value, ::traits::IsRepresentableAsMatDataType<Tp>());
+    }
+
+private:
+    static PyObject* from(const std::vector<Tp>& value, ::traits::FalseType)
+    {
+        // Underlying type is not representable as Mat Data Type
+        return pyopencv_from_generic_vec(value);
+    }
+
+    static PyObject* from(const std::vector<Tp>& value, ::traits::TrueType)
+    {
+        // Underlying type is representable as Mat Data Type, so faster return type is available
+        typedef DataType<Tp> DType;
+        typedef typename DType::channel_type UnderlyingArrayType;
+
+        // If Mat is always exposed as NumPy array this code path can be reduced to the following snipped:
+        //        Mat src(value);
+        //        PyObject* array = pyopencv_from(src);
+        //        return PyArray_Squeeze(reinterpret_cast<PyArrayObject*>(array));
+        // This puts unnecessary restrictions on Mat object those might be avoided without losing the performance.
+        // Moreover, this version is a bit faster, because it doesn't create temporary objects with reference counting.
+
+        const NPY_TYPES target_type = asNumpyType<UnderlyingArrayType>();
+        const int cols = DType::channels;
+        PyObject* array = NULL;
+        if (cols == 1)
+        {
+            npy_intp dims = static_cast<npy_intp>(value.size());
+            array = PyArray_SimpleNew(1, &dims, target_type);
+        }
+        else
+        {
+            npy_intp dims[2] = {static_cast<npy_intp>(value.size()), cols};
+            array = PyArray_SimpleNew(2, dims, target_type);
+        }
+        if(!array)
+        {
+            // NumPy arrays with shape (N, 1) and (N) are not equal, so correct error message should distinguish
+            // them too.
+            String shape;
+            if (cols > 1)
+            {
+                shape = format("(%d x %d)", static_cast<int>(value.size()), cols);
+            }
+            else
+            {
+                shape = format("(%d)", static_cast<int>(value.size()));
+            }
+            const String error_message = format("Can't allocate NumPy array for vector with dtype=%d and shape=%s",
+                                                static_cast<int>(target_type), shape.c_str());
+            emit_failmsg(PyExc_MemoryError, error_message.c_str());
+            return array;
+        }
+        // Fill the array
+        PyArrayObject* array_obj = reinterpret_cast<PyArrayObject*>(array);
+        UnderlyingArrayType* array_data = static_cast<UnderlyingArrayType*>(PyArray_DATA(array_obj));
+        // if Tp is representable as Mat DataType, so the following cast is pretty safe...
+        const UnderlyingArrayType* value_data = reinterpret_cast<const UnderlyingArrayType*>(value.data());
+        memcpy(array_data, value_data, sizeof(UnderlyingArrayType) * value.size() * static_cast<size_t>(cols));
+        return array;
+    }
+};
+
 static int OnError(int status, const char *func_name, const char *err_msg, const char *file_name, int line, void *userdata)
 {
     PyGILState_STATE gstate;
@@ -2081,15 +2084,23 @@ static void OnChange(int pos, void *param)
 }
 
 #ifdef HAVE_OPENCV_HIGHGUI
+// workaround for #20408, use nullptr, set value later
+static int _createTrackbar(const String &trackbar_name, const String &window_name, int value, int count,
+                    TrackbarCallback onChange, PyObject* py_callback_info)
+{
+    int n = createTrackbar(trackbar_name, window_name, NULL, count, onChange, py_callback_info);
+    setTrackbarPos(trackbar_name, window_name, value);
+    return n;
+}
 static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
 {
     PyObject *on_change;
     char* trackbar_name;
     char* window_name;
-    int *value = new int;
+    int value;
     int count;
 
-    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, value, &count, &on_change))
+    if (!PyArg_ParseTuple(args, "ssiiO", &trackbar_name, &window_name, &value, &count, &on_change))
         return NULL;
     if (!PyCallable_Check(on_change)) {
         PyErr_SetString(PyExc_TypeError, "on_change must be callable");
@@ -2108,7 +2119,7 @@ static PyObject *pycvCreateTrackbar(PyObject*, PyObject *args)
     {
         registered_callbacks.insert(std::pair<std::string, PyObject*>(name, py_callback_info));
     }
-    ERRWRAP2(createTrackbar(trackbar_name, window_name, value, count, OnChange, py_callback_info));
+    ERRWRAP2(_createTrackbar(trackbar_name, window_name, value, count, OnChange, py_callback_info));
     Py_RETURN_NONE;
 }
 
@@ -2209,7 +2220,24 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
+static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
+{
+    CV_LOG_DEBUG(NULL, cv::format("pycvRegisterMatType %p %p\n", self, value));
+
+    if (0 == PyType_Check(value))
+    {
+        PyErr_SetString(PyExc_TypeError, "Type argument is expected");
+        return NULL;
+    }
+
+    Py_INCREF(value);
+    pyopencv_Mat_TypePtr = (PyTypeObject*)value;
+
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef special_methods[] = {
+  {"_registerMatType", (PyCFunction)(pycvRegisterMatType), METH_O, "_registerMatType(cv.Mat) -> None (Internal)"},
   {"redirectError", CV_PY_FN_WITH_KW(pycvRedirectError), "redirectError(onError) -> None"},
 #ifdef HAVE_OPENCV_HIGHGUI
   {"createTrackbar", (PyCFunction)pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},

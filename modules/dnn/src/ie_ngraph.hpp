@@ -54,7 +54,8 @@ public:
     void setNodePtr(std::shared_ptr<ngraph::Node>* ptr);
 
     void reset();
-private:
+
+//private:
     detail::NetImplBase& netImpl_;
 
     void release();
@@ -89,6 +90,8 @@ private:
     bool hasNetOwner;
     std::vector<std::string> requestedOutputs;
     std::unordered_set<std::shared_ptr<ngraph::Node>> unconnectedNodes;
+
+    std::map<std::string, InferenceEngine::TensorDesc> outputsDesc;
 };
 
 class InfEngineNgraphNode : public BackendNode
@@ -121,12 +124,17 @@ public:
     virtual void copyToHost() CV_OVERRIDE;
     virtual void setHostDirty() CV_OVERRIDE;
 
+    Mat* host;
     InferenceEngine::DataPtr dataPtr;
     InferenceEngine::Blob::Ptr blob;
     AsyncArray futureMat;
 };
 
 InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr);
+InferenceEngine::DataPtr ngraphDataOutputNode(
+        const Ptr<BackendWrapper>& ptr,
+        const InferenceEngine::TensorDesc& description,
+        const std::string name);
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by

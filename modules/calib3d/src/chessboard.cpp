@@ -1707,10 +1707,10 @@ void Chessboard::Board::normalizeOrientation(bool bblack)
                 iter_bottom_left.getCell()->empty() || iter_bottom_right.getCell()->empty())
             return;
 
-        float d1 = pow(top_left->top_left->x,2)+pow(top_left->top_left->y,2);
-        float d2 = pow((*iter_top_right)->x,2)+pow((*iter_top_right)->y,2);
-        float d3 = pow((*iter_bottom_left)->x,2)+pow((*iter_bottom_left)->y,2);
-        float d4 = pow((*iter_bottom_right)->x,2)+pow((*iter_bottom_right)->y,2);
+        float d1 = top_left->top_left->dot(*top_left->top_left);
+        float d2 = (*iter_top_right)->dot(*(*iter_top_right));
+        float d3 = (*iter_bottom_left)->dot(*(*iter_bottom_left));
+        float d4 = (*iter_bottom_right)->dot(*(*iter_bottom_right));
         if(d2 <= d1 && d2 <= d3 && d2 <= d4) // top left is top right
             rotateLeft();
         else if(d3 <= d1 && d3 <= d2 && d3 <= d4) // top left is bottom left

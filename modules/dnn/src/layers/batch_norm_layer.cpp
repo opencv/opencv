@@ -238,7 +238,7 @@ public:
                 kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_weight));
                 kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_bias));
                 kernel.set(6, ocl::KernelArg::PtrWriteOnly(dst));
-                bool ret = kernel.run(2, global, NULL, false);
+                bool ret = kernel.run_(2, global, NULL, false);
                 if (!ret)
                     return false;
             }
@@ -408,6 +408,18 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
+
+        params.blobs.clear();
+        params.blobs.push_back(origin_weights);
+        params.blobs.push_back(origin_bias);
+        return true;
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

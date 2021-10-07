@@ -64,6 +64,31 @@ namespace cv
 namespace dnn
 {
 
+void sliceRangesFromShape(const MatShape& inpShape, int& axis, std::vector<std::vector<cv::Range> >& sliceRanges)
+{
+    CV_Assert(inpShape.size() > 0);
+    bool axisNeg = (axis < 0);
+    axis = (axis + static_cast<int>(inpShape.size())) % inpShape.size();
+    int n = inpShape[axis];
+
+    for (size_t i = 0; i < sliceRanges.size(); ++i){
+        std::vector<Range>& ranges = sliceRanges[i];
+        if (axisNeg)
+        {
+            ranges.insert(ranges.begin(), axis, Range::all());
+        }
+        Range& range = ranges.back();
+
+        if (range.start >= 0)
+        {
+            continue;
+        }
+
+        CV_Assert(n != 0);
+        range.start = (n + range.start) % n;
+    }
+}
+
 class SliceLayerImpl : public SliceLayer
 {
 public:
@@ -75,20 +100,22 @@ public:
         num_split = params.get<int>("num_split", 0);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
+
         if (params.has("slice_point"))
         {
             CV_Assert(!params.has("begin") && !params.has("size") && !params.has("end"));
             const DictValue &indicesValue = params.get("slice_point");
+            int size = axis > 0 ? axis + 1 : 1;
             sliceRanges.resize(indicesValue.size() + 1,
-                               std::vector<Range>(std::max(axis,0) + 1, Range::all()));
+                               std::vector<Range>(size, Range::all()));
             int prevSlice = 0;
             for (int i = 0; i < indicesValue.size(); ++i)
             {
-                sliceRanges[i][axis].start = prevSlice;
-                sliceRanges[i][axis].end = indicesValue.get<int>(i);
-                prevSlice = sliceRanges[i][axis].end;
+                sliceRanges[i][size - 1].start = prevSlice;
+                sliceRanges[i][size - 1].end = indicesValue.get<int>(i);
+                prevSlice = sliceRanges[i][size - 1].end;
             }
-            sliceRanges.back()[axis].start = prevSlice;
+            sliceRanges.back()[size - 1].start = prevSlice;
         }
         else if (params.has("begin"))
         {
@@ -103,7 +130,6 @@ public:
             {
                 int start = begins.get<int>(i);
                 int sizeOrEnd = sizesOrEnds.get<int>(i);  // It may be negative to reverse indexation.
-                CV_Assert(start >= 0);
 
                 sliceRanges[0][i].start = start;
                 if (params.has("size"))
@@ -164,16 +190,20 @@ public:
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
 
-        if (!sliceRanges.empty())
+        int axis_rw = axis;
+        std::vector<std::vector<cv::Range> > sliceRanges_rw = sliceRanges;
+        sliceRangesFromShape(inpShape, axis_rw, sliceRanges_rw);
+
+        if (!sliceRanges_rw.empty())
         {
-            outputs.resize(sliceRanges.size(), inpShape);
+            outputs.resize(sliceRanges_rw.size(), inpShape);
             for (int i = 0; i < outputs.size(); ++i)
             {
-                CV_Assert(sliceRanges[i].size() <= inpShape.size());
-                for (int j = 0; j < sliceRanges[i].size(); ++j)
+                CV_Assert(sliceRanges_rw[i].size() <= inpShape.size());
+                for (int j = 0; j < sliceRanges_rw[i].size(); ++j)
                 {
                     if (shapesInitialized || inpShape[j] > 0)
-                        outputs[i][j] = normalize_axis_range(sliceRanges[i][j], inpShape[j]).size();
+                        outputs[i][j] = normalize_axis_range(sliceRanges_rw[i][j], inpShape[j]).size();
 
                     if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
                         outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
@@ -182,10 +212,10 @@ public:
         }
         else  // Divide input blob on equal parts by axis.
         {
-            CV_Assert(0 <= axis && axis < inpShape.size());
+            CV_Assert(0 <= axis_rw && axis_rw < inpShape.size());
             int splits = num_split ? num_split : requiredOutputs;
-            CV_Assert(splits > 0 && inpShape[axis] % splits == 0);
-            inpShape[axis] /= splits;
+            CV_Assert(splits > 0 && inpShape[axis_rw] % splits == 0);
+            inpShape[axis_rw] /= splits;
             outputs.resize(splits, inpShape);
         }
         return false;
@@ -210,6 +240,7 @@ public:
         CV_Assert(inputs.size() == 1);
         const MatSize& inpShape = inputs[0].size;
 
+        sliceRangesFromShape(shape(inputs[0]), axis, sliceRanges);
         finalSliceRanges = sliceRanges;
 
         if (sliceRanges.empty())
@@ -492,7 +523,7 @@ public:
                     ocl::KernelArg::PtrReadOnly(input),
                     ocl::KernelArg::PtrWriteOnly(output)
                 )
-                .run(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
+                .run_(2, (size_t*)ocl.global_size, (size_t*)ocl.local_size, false);
             if (!ret)
                 return false;
         }  // for outputs.size()
@@ -531,7 +562,12 @@ public:
             {
                 std::vector<int> inpIdx(dimsNum, 0);
                 std::vector<int> outIdx(dimsNum, 0);
-                getSliceRecursive(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                if (inpMat.type() == CV_16S)
+                    getSliceRecursive<int16_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else if (inpMat.type() == CV_8S)
+                    getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                else
+                    getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
             }
         }
     }
@@ -647,8 +683,20 @@ public:
     }
 #endif
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        const int numOutputs = scales[1].size();
+        for (int i = 0; i < numOutputs; i++)
+        {
+            if (scales[1][i] != scales[0][0])
+             return false;
+        }
+        return true;
+    }
 
 private:
+    template <typename T>
     void getSliceRecursive(const Mat &inpMat, std::vector<int> &inpIdx,
                            const std::vector<Range> &sliceRanges,
                            const std::vector<int> &sliceSteps, int dim, int dimsNum,
@@ -658,8 +706,6 @@ private:
         int end = sliceRanges[dim].end;
         int step = !sliceSteps.empty() ? sliceSteps[dim] : 1;
 
-        const bool is32F = inpMat.depth() == CV_32F;
-
         // TODO optimization is required (for 2D tail case at least)
         for (int k = begin, j = 0; k < end; k += step, j++)
         {
@@ -667,14 +713,9 @@ private:
             outIdx[dim] = j;
 
             if (dim + 1 < dimsNum)
-                getSliceRecursive(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
+                getSliceRecursive<T>(inpMat, inpIdx, sliceRanges, sliceSteps, dim + 1, dimsNum, outputs, outIdx);
             else
-            {
-                if (is32F)
-                    outputs.at<float>(outIdx.data()) = inpMat.at<float>(inpIdx.data());
-                else
-                    outputs.at<short>(outIdx.data()) = inpMat.at<short>(inpIdx.data());  // 16F emulation
-            }
+                outputs.at<T>(outIdx.data()) = inpMat.at<T>(inpIdx.data());
         }
     }
 

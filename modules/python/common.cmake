@@ -1,6 +1,31 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
+function(ocv_add_python_files_from_path search_path)
+  file(GLOB_RECURSE extra_py_files
+       RELATIVE "${search_path}"
+       # Plain Python code
+       "${search_path}/*.py"
+       # Type annotations
+       "${search_path}/*.pyi"
+  )
+  message(DEBUG "Extra Py files for ${search_path}: ${extra_py_files}")
+  if(extra_py_files)
+    list(SORT extra_py_files)
+    foreach(filename ${extra_py_files})
+      get_filename_component(module "${filename}" DIRECTORY)
+      if(NOT ${module} IN_LIST extra_modules)
+        list(APPEND extra_modules ${module})
+      endif()
+      configure_file("${search_path}/${filename}" "${__loader_path}/cv2/${filename}" COPYONLY)
+      install(FILES "${search_path}/${filename}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/${module}/" COMPONENT python)
+    endforeach()
+    message(STATUS "Found ${extra_modules} Python modules from ${search_path}")
+  else()
+    message(WARNING "Can't add Python files and modules from ${module_path}. There is no .py or .pyi files")
+  endif()
+endfunction()
+
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
 
 include_directories(SYSTEM
@@ -86,7 +111,7 @@ set_target_properties(${the_module} PROPERTIES
                       ARCHIVE_OUTPUT_NAME ${the_module}  # prevent name conflict for python2/3 outputs
                       PREFIX ""
                       OUTPUT_NAME cv2
-                      SUFFIX ${CVPY_SUFFIX})
+                      SUFFIX "${CVPY_SUFFIX}")
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
@@ -224,23 +249,15 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
     if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";python;" AND HAVE_${m}
         AND EXISTS "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package"
     )
-      set(__base "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package")
-      file(GLOB_RECURSE extra_py_files
-          RELATIVE "${__base}"
-          "${__base}/**/*.py"
-      )
-      if(extra_py_files)
-        list(SORT extra_py_files)
-        foreach(f ${extra_py_files})
-          get_filename_component(__dir "${f}" DIRECTORY)
-          configure_file("${__base}/${f}" "${__loader_path}/cv2/_extra_py_code/${f}" COPYONLY)
-          install(FILES "${__base}/${f}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/_extra_py_code/${__dir}/" COMPONENT python)
-        endforeach()
-      else()
-        message(WARNING "Module ${m} has no .py files in misc/python/package")
-      endif()
+      ocv_add_python_files_from_path("${OPENCV_MODULE_${m}_LOCATION}/misc/python/package")
     endif()
   endforeach(m)
+
+  if(NOT "${OCV_PYTHON_EXTRA_MODULES_PATH}" STREQUAL "")
+    foreach(extra_ocv_py_modules_path ${OCV_PYTHON_EXTRA_MODULES_PATH})
+      ocv_add_python_files_from_path(${extra_ocv_py_modules_path})
+    endforeach()
+  endif()
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)

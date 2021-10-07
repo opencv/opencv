@@ -20,6 +20,3 @@ if(HAVE_MSMF)
   endif()
   ocv_add_external_target(msmf "" "" "${defs}")
 endif()
-
-set(HAVE_MSMF ${HAVE_MSMF} PARENT_SCOPE)
-set(HAVE_MSMF_DXVA ${HAVE_MSMF_DXVA} PARENT_SCOPE)

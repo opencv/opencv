@@ -2,6 +2,7 @@
 
 #include "backends/common/serialization.hpp"
 #include <opencv2/gapi/rmat.hpp>
+#include <opencv2/gapi/media.hpp>
 #include <../src/backends/common/gbackend.hpp> // asView
 
 namespace {
@@ -139,6 +140,29 @@ public:
         return cv::gimpl::asView(m_mat);
     }
     virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
+    virtual void serialize(cv::gapi::s11n::IOStream& os) override {
+        os << m_value << m_str;
+    }
+    virtual void deserialize(cv::gapi::s11n::IIStream& is) override {
+        is >> m_value >> m_str;
+    }
+    int getVal() { return m_value; }
+    std::string getStr() { return m_str; }
+};
+
+class MyMediaFrameAdapter : public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    int m_value;
+    std::string m_str;
+public:
+    MyMediaFrameAdapter() = default;
+    MyMediaFrameAdapter(cv::Mat m, int value, const std::string& str)
+        : m_mat(m), m_value(value), m_str(str)
+    {}
+    virtual cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        return cv::MediaFrame::View({m_mat.data}, {m_mat.step});
+    }
+    virtual cv::GFrameDesc meta() const override { return {cv::MediaFormat::BGR, m_mat.size()}; }
     virtual void serialize(cv::gapi::s11n::IOStream& os) override {
         os << m_value << m_str;
     }
@@ -581,6 +605,17 @@ TEST_F(S11N_Basic, Test_Vector_Of_Strings) {
     EXPECT_EQ("42", des[2]);
 }
 
+TEST_F(S11N_Basic, Test_RunArg) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    auto v = cv::GRunArgs{ cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs>(sargsin);
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[0]);
+
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
 TEST_F(S11N_Basic, Test_RunArg_RMat) {
     cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
     cv::RMat rmat = cv::make_rmat<MyRMatAdapter>(mat, 42, "It actually works");
@@ -612,6 +647,87 @@ TEST_F(S11N_Basic, Test_RunArg_RMat_Scalar_Mat) {
 
     cv::Mat out_mat = cv::util::get<cv::Mat>(out[2]);
     EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
+TEST_F(S11N_Basic, Test_RunArg_MediaFrame) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
+    auto v = cv::GRunArgs{ cv::GRunArg{ frame } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter>(sargsin);
+    cv::MediaFrame out_mat = cv::util::get<cv::MediaFrame>(out[0]);
+    auto adapter = out_mat.get<MyMediaFrameAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+}
+
+TEST_F(S11N_Basic, Test_RunArg_MediaFrame_Scalar_Mat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
+    cv::Scalar sc(111);
+    auto v = cv::GRunArgs{ cv::GRunArg{ frame }, cv::GRunArg{ sc }, cv::GRunArg{ mat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter>(sargsin);
+    cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[0]);
+    auto adapter = out_frame.get<MyMediaFrameAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    cv::Scalar out_sc = cv::util::get<cv::Scalar>(out[1]);
+    EXPECT_EQ(sc, out_sc);
+
+    cv::Mat out_mat = cv::util::get<cv::Mat>(out[2]);
+    EXPECT_EQ(0, cv::norm(mat, out_mat));
+}
+
+TEST_F(S11N_Basic, Test_RunArg_MediaFrame_RMat) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::Mat mat2 = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+
+    auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
+    auto rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
+
+    auto v = cv::GRunArgs{ cv::GRunArg{ frame }, cv::GRunArg{ rmat } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter, MyRMatAdapter>(sargsin);
+
+    cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[0]);
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[1]);
+
+    auto adapter = out_frame.get<MyMediaFrameAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    auto adapter2 = out_rmat.get<MyRMatAdapter>();
+    EXPECT_EQ(24, adapter2->getVal());
+    EXPECT_EQ("Hello there", adapter2->getStr());
+}
+
+TEST_F(S11N_Basic, Test_RunArg_RMat_MediaFrame) {
+    cv::Mat mat = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+    cv::Mat mat2 = cv::Mat::eye(cv::Size(128, 64), CV_8UC3);
+
+    auto frame = cv::MediaFrame::Create<MyMediaFrameAdapter>(mat, 42, "It actually works");
+    auto rmat = cv::make_rmat<MyRMatAdapter>(mat2, 24, "Hello there");
+
+    auto v = cv::GRunArgs{ cv::GRunArg{ rmat }, cv::GRunArg{ frame } };
+
+    const std::vector<char> sargsin = cv::gapi::serialize(v);
+    cv::GRunArgs out = cv::gapi::deserialize<cv::GRunArgs, MyMediaFrameAdapter, MyRMatAdapter>(sargsin);
+
+    cv::RMat out_rmat = cv::util::get<cv::RMat>(out[0]);
+    cv::MediaFrame out_frame = cv::util::get<cv::MediaFrame>(out[1]);
+
+    auto adapter = out_frame.get<MyMediaFrameAdapter>();
+    EXPECT_EQ(42, adapter->getVal());
+    EXPECT_EQ("It actually works", adapter->getStr());
+
+    auto adapter2 = out_rmat.get<MyRMatAdapter>();
+    EXPECT_EQ(24, adapter2->getVal());
+    EXPECT_EQ("Hello there", adapter2->getStr());
 }
 
 namespace {
@@ -754,8 +870,6 @@ TEST_F(S11N_Basic, Test_Deserialize_CompileArgs_RandomOrder) {
     std::vector<char> sArgs = cv::gapi::serialize(
         cv::compile_args(simpleCustomVar, simpleCustomVar2));
     GCompileArgs dArgs = cv::gapi::deserialize<GCompileArgs,
-                                               // Here, types of passed to serialize() arguments
-                                               // are enumerated in reverse order
                                                SimpleCustomType2,
                                                SimpleCustomType>(sArgs);
 

@@ -235,6 +235,15 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual void forward(InputArrayOfArrays inputs, OutputArrayOfArrays outputs, OutputArrayOfArrays internals);
 
+        /** @brief Tries to quantize the given layer and compute the quantization parameters required for fixed point implementation.
+         *  @param[in] scales input and output scales.
+         *  @param[in] zeropoints input and output zeropoints.
+         *  @param[out] params Quantized parameters required for fixed point implementation of that layer.
+         *  @returns True if layer can be quantized.
+         */
+        virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                                 const std::vector<std::vector<int> > &zeropoints, LayerParams& params);
+
         /** @brief Given the @p input blobs, computes the output @p blobs.
          *  @param[in]  inputs  the input blobs.
          *  @param[out] outputs allocated output blobs, which will store results of the computation.
@@ -369,6 +378,16 @@ CV__DNN_INLINE_NS_BEGIN
         virtual void getScaleShift(Mat& scale, Mat& shift) const;
 
         /**
+         * @brief Returns scale and zeropoint of layers
+         * @param[out] scale Output scale
+         * @param[out] zeropoint Output zeropoint
+         *
+         * By default, @p scale is 1 and @p zeropoint is 0.
+         */
+        virtual void getScaleZeropoint(float& scale, int& zeropoint) const;
+
+
+        /**
          * @brief "Deattaches" all the layers, attached to particular layer.
          */
         virtual void unsetAttached();
@@ -453,13 +472,21 @@ CV__DNN_INLINE_NS_BEGIN
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
          *  @param type   typename of the adding layer (type must be registered in LayerRegister).
+         *  @param dtype  datatype of output blobs.
          *  @param params parameters which will be used to initialize the creating layer.
          *  @returns unique identifier of created layer, or -1 if a failure will happen.
          */
+        int addLayer(const String &name, const String &type, const int &dtype, LayerParams &params);
+
+        /** @overload Datatype of output blobs set to default CV_32F */
         int addLayer(const String &name, const String &type, LayerParams &params);
+
         /** @brief Adds new layer and connects its first input to the first output of previously added layer.
          *  @see addLayer()
          */
+        int addLayerToPrev(const String &name, const String &type, const int &dtype, LayerParams &params);
+
+        /** @overload */
         int addLayerToPrev(const String &name, const String &type, LayerParams &params);
 
         /** @brief Converts string name of the layer to the integer identifier.
@@ -550,6 +577,25 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP_AS(forwardAndRetrieve) void forward(CV_OUT std::vector<std::vector<Mat> >& outputBlobs,
                                                     const std::vector<String>& outBlobNames);
+
+        /** @brief Returns a quantized Net from a floating-point Net.
+         *  @param calibData Calibration data to compute the quantization parameters.
+         *  @param inputsDtype Datatype of quantized net's inputs. Can be CV_32F or CV_8S.
+         *  @param outputsDtype Datatype of quantized net's outputs. Can be CV_32F or CV_8S.
+         */
+        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype);
+
+        /** @brief Returns input scale and zeropoint for a quantized Net.
+         *  @param scales output parameter for returning input scales.
+         *  @param zeropoints output parameter for returning input zeropoints.
+         */
+        CV_WRAP void getInputDetails(CV_OUT std::vector<float>& scales, CV_OUT std::vector<int>& zeropoints) const;
+
+        /** @brief Returns output scale and zeropoint for a quantized Net.
+         *  @param scales output parameter for returning output scales.
+         *  @param zeropoints output parameter for returning output zeropoints.
+         */
+        CV_WRAP void getOutputDetails(CV_OUT std::vector<float>& scales, CV_OUT std::vector<int>& zeropoints) const;
 
         /**
          * @brief Compile Halide layers.
@@ -1084,6 +1130,39 @@ CV__DNN_INLINE_NS_BEGIN
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
 
+    /**
+     * @brief Enum of Soft NMS methods.
+     * @see softNMSBoxes
+     */
+    enum class SoftNMSMethod
+    {
+        SOFTNMS_LINEAR = 1,
+        SOFTNMS_GAUSSIAN = 2
+    };
+
+    /** @brief Performs soft non maximum suppression given boxes and corresponding scores.
+     * Reference: https://arxiv.org/abs/1704.04503
+     * @param bboxes a set of bounding boxes to apply Soft NMS.
+     * @param scores a set of corresponding confidences.
+     * @param updated_scores a set of corresponding updated confidences.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param top_k keep at most @p top_k picked indices.
+     * @param sigma parameter of Gaussian weighting.
+     * @param method Gaussian or linear.
+     * @see SoftNMSMethod
+     */
+    CV_EXPORTS_W void softNMSBoxes(const std::vector<Rect>& bboxes,
+                                   const std::vector<float>& scores,
+                                   CV_OUT std::vector<float>& updated_scores,
+                                   const float score_threshold,
+                                   const float nms_threshold,
+                                   CV_OUT std::vector<int>& indices,
+                                   size_t top_k = 0,
+                                   const float sigma = 0.5,
+                                   SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
+
 
      /** @brief This class is presented high-level API for neural networks.
       *
@@ -1373,7 +1452,9 @@ public:
 
     /**
      * @brief Set the decoding method of translating the network output into string
-     * @param[in] decodeType The decoding method of translating the network output into string: {'CTC-greedy': greedy decoding for the output of CTC-based methods}
+     * @param[in] decodeType The decoding method of translating the network output into string, currently supported type:
+     *    - `"CTC-greedy"` greedy decoding for the output of CTC-based methods
+     *    - `"CTC-prefix-beam-search"` Prefix beam search decoding for the output of CTC-based methods
      */
     CV_WRAP
     TextRecognitionModel& setDecodeType(const std::string& decodeType);
@@ -1384,6 +1465,15 @@ public:
      */
     CV_WRAP
     const std::string& getDecodeType() const;
+
+    /**
+     * @brief Set the decoding method options for `"CTC-prefix-beam-search"` decode usage
+     * @param[in] beamSize Beam size for search
+     * @param[in] vocPruneSize Parameter to optimize big vocabulary search,
+     * only take top @p vocPruneSize tokens in each search step, @p vocPruneSize <= 0 stands for disable this prune.
+     */
+    CV_WRAP
+    TextRecognitionModel& setDecodeOptsCTCPrefixBeamSearch(int beamSize, int vocPruneSize = 0);
 
     /**
      * @brief Set the vocabulary for recognition.

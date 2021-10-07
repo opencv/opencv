@@ -60,6 +60,14 @@ of C++.
 
 So this is the basic version of how OpenCV-Python bindings are generated.
 
+@note There is no 1:1 mapping of numpy.ndarray on cv::Mat. For example, cv::Mat has channels field,
+which is emulated as last dimension of numpy.ndarray and implicitly converted.
+However, such implicit conversion has problem with passing of 3D numpy arrays into C++ code
+(the last dimension is implicitly reinterpreted as number of channels).
+Refer to the [issue](https://github.com/opencv/opencv/issues/19091) for workarounds if you need to process 3D arrays or ND-arrays with channels.
+OpenCV 4.5.4+ has `cv.Mat` wrapper derived from `numpy.ndarray` to explicitly handle the channels behavior.
+
+
 How to extend new modules to Python?
 ------------------------------------
 

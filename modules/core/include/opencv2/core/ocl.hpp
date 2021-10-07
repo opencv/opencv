@@ -235,7 +235,11 @@ public:
 
     /**
      * @param d OpenCL handle (cl_device_id). clRetainDevice() is called on success.
-     */
+     *
+     * @note Ownership of the passed device is passed to OpenCV on success.
+     * The caller should additionally call `clRetainDevice` on it if it intends
+     * to continue using the device.
+      */
     static Device fromHandle(void* d);
 
     struct Impl;
@@ -495,8 +499,8 @@ public:
     template<typename... _Tps> inline
     Kernel& args(const _Tps&... kernel_args) { set_args_(0, kernel_args...); return *this; }
 
+    /** @brief Run the OpenCL kernel (globalsize value may be adjusted)
 
-    /** @brief Run the OpenCL kernel.
     @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
     @param globalsize work items for each dimension. It is not the final globalsize passed to
       OpenCL. Each dimension will be adjusted to the nearest integer divisible by the corresponding
@@ -505,12 +509,26 @@ public:
     @param localsize work-group size for each dimension.
     @param sync specify whether to wait for OpenCL computation to finish before return.
     @param q command queue
+
+    @note Use run_() if your kernel code doesn't support adjusted globalsize.
     */
     bool run(int dims, size_t globalsize[],
              size_t localsize[], bool sync, const Queue& q=Queue());
+
+    /** @brief Run the OpenCL kernel
+     *
+     * @param dims the work problem dimensions. It is the length of globalsize and localsize. It can be either 1, 2 or 3.
+     * @param globalsize work items for each dimension. This value is passed to OpenCL without changes.
+     * @param localsize work-group size for each dimension.
+     * @param sync specify whether to wait for OpenCL computation to finish before return.
+     * @param q command queue
+     */
+    bool run_(int dims, size_t globalsize[], size_t localsize[], bool sync, const Queue& q=Queue());
+
     bool runTask(bool sync, const Queue& q=Queue());
 
-    /** @brief Similar to synchronized run() call with returning of kernel execution time
+    /** @brief Similar to synchronized run_() call with returning of kernel execution time
+     *
      * Separate OpenCL command queue may be used (with CL_QUEUE_PROFILING_ENABLE)
      * @return Execution time in nanoseconds or negative number on error
      */
@@ -826,11 +844,13 @@ public:
     OpenCLExecutionContext cloneWithNewQueue() const;
 
     /** @brief Creates OpenCL execution context
-     * OpenCV will check if available OpenCL platform has platformName name, then assign context to
-     * OpenCV and call `clRetainContext` function. The deviceID device will be used as target device and
-     * new command queue will be created.
+     * OpenCV will check if available OpenCL platform has platformName name,
+     * then assign context to OpenCV.
+     * The deviceID device will be used as target device and a new command queue will be created.
      *
-     * @note Lifetime of passed handles is transferred to OpenCV wrappers on success
+     * @note On success, ownership of one reference of the context and device is taken.
+     * The caller should additionally call `clRetainContext` and/or `clRetainDevice`
+     * to increase the reference count if it wishes to continue using them.
      *
      * @param platformName name of OpenCL platform to attach, this string is used to check if platform is available to OpenCV at runtime
      * @param platformID ID of platform attached context was created for (cl_platform_id)
