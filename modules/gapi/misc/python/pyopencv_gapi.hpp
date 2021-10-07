@@ -11,13 +11,14 @@
 #include <opencv2/gapi/python/python.hpp>
 
 // NB: Python wrapper replaces :: with _ for classes
-using gapi_GKernelPackage        = cv::gapi::GKernelPackage;
-using gapi_GNetPackage           = cv::gapi::GNetPackage;
-using gapi_ie_PyParams           = cv::gapi::ie::PyParams;
-using gapi_wip_IStreamSource_Ptr = cv::Ptr<cv::gapi::wip::IStreamSource>;
-using detail_ExtractArgsCallback = cv::detail::ExtractArgsCallback;
-using detail_ExtractMetaCallback = cv::detail::ExtractMetaCallback;
-using vector_GNetParam           = std::vector<cv::gapi::GNetParam>;
+using gapi_GKernelPackage           = cv::gapi::GKernelPackage;
+using gapi_GNetPackage              = cv::gapi::GNetPackage;
+using gapi_ie_PyParams              = cv::gapi::ie::PyParams;
+using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
+using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
+using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
+using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
+using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs
@@ -159,7 +160,7 @@ PyObject* pyopencv_from(const cv::gapi::wip::draw::Prims& value)
 }
 
 template<>
-bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo& info)
+bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo&)
 {
 #define TRY_EXTRACT(Prim)                                                                                  \
     if (PyObject_TypeCheck(obj, reinterpret_cast<PyTypeObject*>(pyopencv_gapi_wip_draw_##Prim##_TypePtr))) \
@@ -175,6 +176,7 @@ bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prim& value, const ArgInfo&
     TRY_EXTRACT(Mosaic)
     TRY_EXTRACT(Image)
     TRY_EXTRACT(Poly)
+#undef TRY_EXTRACT
 
     failmsg("Unsupported primitive type");
     return false;
@@ -185,6 +187,34 @@ bool pyopencv_to(PyObject* obj, cv::gapi::wip::draw::Prims& value, const ArgInfo
 {
     return pyopencv_to_generic_vec(obj, value, info);
 }
+
+template <>
+bool pyopencv_to(PyObject* obj, cv::GMetaArg& value, const ArgInfo&)
+{
+#define TRY_EXTRACT(Meta)                                                    \
+    if (PyObject_TypeCheck(obj,                                              \
+                reinterpret_cast<PyTypeObject*>(pyopencv_##Meta##_TypePtr))) \
+    {                                                                        \
+        value = reinterpret_cast<pyopencv_##Meta##_t*>(obj)->v;              \
+        return true;                                                         \
+    }                                                                        \
+
+    TRY_EXTRACT(GMatDesc)
+    TRY_EXTRACT(GScalarDesc)
+    TRY_EXTRACT(GArrayDesc)
+    TRY_EXTRACT(GOpaqueDesc)
+#undef TRY_EXTRACT
+
+    failmsg("Unsupported cv::GMetaArg type");
+    return false;
+}
+
+template <>
+bool pyopencv_to(PyObject* obj, cv::GMetaArgs& value, const ArgInfo& info)
+{
+    return pyopencv_to_generic_vec(obj, value, info);
+}
+
 
 template<>
 PyObject* pyopencv_from(const cv::GArg& value)
@@ -707,30 +737,12 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
 
 static GMetaArg get_meta_arg(PyObject* obj)
 {
-    if (PyObject_TypeCheck(obj,
-                reinterpret_cast<PyTypeObject*>(pyopencv_GMatDesc_TypePtr)))
-    {
-        return cv::GMetaArg{reinterpret_cast<pyopencv_GMatDesc_t*>(obj)->v};
-    }
-    else if (PyObject_TypeCheck(obj,
-                reinterpret_cast<PyTypeObject*>(pyopencv_GScalarDesc_TypePtr)))
-    {
-        return cv::GMetaArg{reinterpret_cast<pyopencv_GScalarDesc_t*>(obj)->v};
-    }
-    else if (PyObject_TypeCheck(obj,
-                reinterpret_cast<PyTypeObject*>(pyopencv_GArrayDesc_TypePtr)))
-    {
-        return cv::GMetaArg{reinterpret_cast<pyopencv_GArrayDesc_t*>(obj)->v};
-    }
-    else if (PyObject_TypeCheck(obj,
-                reinterpret_cast<PyTypeObject*>(pyopencv_GOpaqueDesc_TypePtr)))
-    {
-        return cv::GMetaArg{reinterpret_cast<pyopencv_GOpaqueDesc_t*>(obj)->v};
-    }
-    else
+    cv::GMetaArg arg;
+    if (!pyopencv_to(obj, arg, ArgInfo("arg", false)))
     {
         util::throw_error(std::logic_error("Unsupported output meta type"));
     }
+    return arg;
 }
 
 static cv::GMetaArgs get_meta_args(PyObject* tuple)

@@ -186,8 +186,9 @@ void sync_data(cv::gimpl::stream::Result &r, cv::GOptRunArgsP &outputs)
         // FIXME: this conversion should be unified
         switch (out_obj.index())
         {
-            HANDLE_CASE(cv::Scalar); break;
-            HANDLE_CASE(cv::RMat);   break;
+            HANDLE_CASE(cv::Scalar);     break;
+            HANDLE_CASE(cv::RMat);       break;
+            HANDLE_CASE(cv::MediaFrame); break;
 
         case T::index_of<O<cv::Mat>*>(): {
             // Mat: special handling.
@@ -346,6 +347,10 @@ bool QueueReader::getInputVector(std::vector<Q*> &in_queues,
                                  cv::GRunArgs    &in_constants,
                                  cv::GRunArgs    &isl_inputs)
 {
+    // NB: Need to release resources from the previous step, to fetch new ones.
+    // On some systems it might be impossible to allocate new memory
+    // until the old one is released.
+    m_cmd.clear();
     // NOTE: in order to maintain the GRunArg's underlying object
     // lifetime, keep the whole cmd vector (of size == # of inputs)
     // in memory.

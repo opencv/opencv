@@ -178,14 +178,17 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
-  # We need pthread's
-  if((UNIX
+  # We need pthread's, unless we have explicitly disabled multi-thread execution.
+  if(NOT OPENCV_DISABLE_THREAD_SUPPORT
+      AND (
+        (UNIX
           AND NOT ANDROID
           AND NOT (APPLE AND CV_CLANG)
           AND NOT EMSCRIPTEN
+        )
+        OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
       )
-      OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
-  )
+  ) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
@@ -403,6 +406,9 @@ if(MSVC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa")
     endif()
   endif()
+
+  # Enable [[attribute]] syntax checking to prevent silent failure: "attribute is ignored in this syntactic position"
+  add_extra_compiler_option("/w15240")
 
   if(NOT ENABLE_NOISY_WARNINGS)
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127) # conditional expression is constant

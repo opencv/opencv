@@ -714,9 +714,27 @@ void Mat::forEach_impl(const Functor& operation) {
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
 #if !defined(_M_CEE)
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
-#endif
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+// Custom (failing) implementation of `std::recursive_mutex`.
+struct Mutex {
+    void lock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
+    void unlock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
+};
+// Stub for cv::AutoLock when threads are disabled.
+struct AutoLock {
+    AutoLock(Mutex &) { }
+};
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
+#endif // !defined(_M_CEE)
 
 
 /** @brief Designed for command line parsing

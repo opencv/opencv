@@ -12,9 +12,15 @@ CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
-//! Register layer types of DNN model.
 typedef std::map<std::string, std::vector<LayerFactory::Constructor> > LayerFactory_Impl;
+
+//! Register layer types of DNN model.
+//!
+//! @note In order to thread-safely access the factory, see getLayerFactoryMutex() function.
 LayerFactory_Impl& getLayerFactoryImpl();
+
+//! Get the mutex guarding @ref LayerFactory_Impl, see getLayerFactoryImpl() function.
+Mutex& getLayerFactoryMutex();
 
 //! @}
 CV__DNN_INLINE_NS_END

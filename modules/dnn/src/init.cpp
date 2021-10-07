@@ -139,6 +139,48 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(FlowWarp,       FlowWarpLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
+
+    CV_DNN_REGISTER_LAYER_CLASS(Quantize,         QuantizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Dequantize,       DequantizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Requantize,       RequantizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ConvolutionInt8,  ConvolutionLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(InnerProductInt8, InnerProductLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(EltwiseInt8,      EltwiseLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(BatchNormInt8,    BatchNormLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(ScaleInt8,        ScaleLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(ShiftInt8,        ShiftLayerInt8);
+
+    CV_DNN_REGISTER_LAYER_CLASS(ReLUInt8,         ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(ReLU6Int8,        ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(SigmoidInt8,      ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(TanHInt8,         ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(SwishInt8,        ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(MishInt8,         ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(ELUInt8,          ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(BNLLInt8,         ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(AbsValInt8,       ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(SoftmaxInt8,      SoftmaxLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(SoftMaxInt8,      SoftmaxLayerInt8);
+
+    CV_DNN_REGISTER_LAYER_CLASS(ConcatInt8,       ConcatLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(FlattenInt8,      FlattenLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(PaddingInt8,      PaddingLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(BlankInt8,        BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DropoutInt8,      BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(IdentityInt8,     BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(SilenceInt8,      BlankLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ConstInt8,        ConstLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ReshapeInt8,      ReshapeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ResizeInt8,       ResizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(SplitInt8,        SplitLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(SliceInt8,        SliceLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(CropInt8,         CropLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(PermuteInt8,      PermuteLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ReorgInt8,        ReorgLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(ShuffleChannelInt8, ShuffleChannelLayer);
 }
 
 CV__DNN_INLINE_NS_END

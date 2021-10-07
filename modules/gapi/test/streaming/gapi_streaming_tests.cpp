@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2020 Intel Corporation
+// Copyright (C) 2019-2021 Intel Corporation
 
 
 #include "../test_precomp.hpp"
@@ -24,6 +24,17 @@
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/gapi/streaming/format.hpp>
+
+#include <opencv2/gapi/streaming/onevpl/source.hpp>
+
+#ifdef HAVE_ONEVPL
+
+#if (MFX_VERSION >= 2000)
+#include <vpl/mfxdispatcher.h>
+#endif
+
+#include <vpl/mfx.h>
+#endif // HAVE_ONEVPL
 
 namespace opencv_test
 {
@@ -273,6 +284,22 @@ void checkPullOverload(const cv::Mat& ref,
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
 }
 
+struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
+
+    StreamDataProvider(std::istream& in) : data_stream (in) {
+        EXPECT_TRUE(in);
+    }
+
+    size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
+        data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
+        return (size_t)data_stream.gcount();
+    }
+    bool empty() const override {
+        return data_stream.eof() || data_stream.bad();
+    }
+private:
+    std::istream& data_stream;
+};
 } // anonymous namespace
 
 TEST_P(GAPI_Streaming, SmokeTest_ConstInput_GMat)
@@ -2212,6 +2239,115 @@ TEST(GAPI_Streaming, TestPythonAPI)
     EXPECT_TRUE(is_over);
 
     cc.stop();
+}
+
+#ifdef HAVE_ONEVPL
+const unsigned char hevc_header[] = {
+ 0x00, 0x00, 0x00, 0x01, 0x40, 0x01, 0x0C, 0x06, 0xFF, 0xFF, 0x01, 0x40, 0x00,
+ 0x00, 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00,
+ 0x00, 0x04, 0x02, 0x10, 0x30, 0x00, 0x00, 0x03, 0x00, 0x10, 0x00, 0x00, 0x03,
+ 0x01, 0xE5, 0x00, 0x00, 0x00, 0x01, 0x42, 0x01, 0x06, 0x01, 0x40, 0x00, 0x00,
+ 0x03, 0x00, 0x80, 0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x78, 0x00, 0x00,
+ 0xA0, 0x10, 0x20, 0x61, 0x63, 0x41, 0x00, 0x86, 0x49, 0x1B, 0x2B, 0x20, 0x00,
+ 0x00, 0x00, 0x01, 0x44, 0x01, 0xC0, 0x71, 0xC0, 0xD9, 0x20, 0x00, 0x00, 0x00,
+ 0x01, 0x26, 0x01, 0xAF, 0x0C
+};
+TEST(OneVPL_Source, Init)
+{
+    using CfgParam = cv::gapi::wip::onevpl::CfgParam;
+
+    std::vector<CfgParam> src_params;
+    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.Impl",
+                                                                               MFX_IMPL_TYPE_HARDWARE));
+    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                                               MFX_ACCEL_MODE_VIA_D3D11, false));
+    src_params.push_back(CfgParam::create<uint32_t>("mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+                                                                               MFX_CODEC_HEVC));
+    std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(hevc_header)),
+                             sizeof(hevc_header)));
+    std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> stream_data_provider = std::make_shared<StreamDataProvider>(stream);
+
+    cv::Ptr<cv::gapi::wip::IStreamSource> cap;
+    bool cap_created = false;
+    try {
+        cap = cv::gapi::wip::make_onevpl_src(stream_data_provider, src_params);
+        cap_created = true;
+    } catch (const std::exception&) {
+    }
+    ASSERT_TRUE(cap_created);
+
+    cv::gapi::wip::Data out;
+    while (cap->pull(out)) {
+        (void)out;
+    }
+    EXPECT_TRUE(stream_data_provider->empty());
+}
+#endif
+
+TEST(GAPI_Streaming, TestDesyncRMat) {
+    cv::GMat in;
+    auto blurred = cv::gapi::blur(in, cv::Size{3,3});
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = in - blurred;
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out)).compileStreaming();
+
+    cv::Size sz(32,32);
+    cv::Mat in_mat(sz, CV_8UC3);
+    cv::randu(in_mat, cv::Scalar::all(0), cv::Scalar(255));
+    pipe.setSource(cv::gin(in_mat));
+    pipe.start();
+
+    cv::optional<cv::RMat> out_desync;
+    cv::optional<cv::RMat> out_rmat;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no RMat handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_rmat)));
+        if (out_rmat) break;
+    }
+}
+
+G_API_OP(GTestBlur, <GFrame(GFrame)>, "test.blur") {
+    static GFrameDesc outMeta(GFrameDesc d) { return d; }
+};
+GAPI_OCV_KERNEL(GOcvTestBlur, GTestBlur) {
+    static void run(const cv::MediaFrame& in, cv::MediaFrame& out) {
+        auto d = in.desc();
+        GAPI_Assert(d.fmt == cv::MediaFormat::BGR);
+        auto view = in.access(cv::MediaFrame::Access::R);
+        cv::Mat mat(d.size, CV_8UC3, view.ptr[0]);
+        cv::Mat blurred;
+        cv::blur(mat, blurred, cv::Size{3,3});
+        out = cv::MediaFrame::Create<TestMediaBGR>(blurred);
+    }
+};
+
+TEST(GAPI_Streaming, TestDesyncMediaFrame) {
+    initTestDataPath();
+    cv::GFrame in;
+    auto blurred = GTestBlur::on(in);
+    auto desynced = cv::gapi::streaming::desync(blurred);
+    auto out = GTestBlur::on(blurred);
+    auto pipe = cv::GComputation(cv::GIn(in), cv::GOut(desynced, out))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<GOcvTestBlur>()));
+
+    std::string filepath = findDataFile("cv/video/768x576.avi");
+    try {
+        pipe.setSource<BGRSource>(filepath);
+    } catch(...) {
+        throw SkipTestException("Video file can not be opened");
+    }
+    pipe.start();
+
+    cv::optional<cv::MediaFrame> out_desync;
+    cv::optional<cv::MediaFrame> out_frame;
+    while (true) {
+        // Initially it throwed "bad variant access" since there was
+        // no MediaFrame handling in wrap_opt_arg
+        EXPECT_NO_THROW(pipe.pull(cv::gout(out_desync, out_frame)));
+        if (out_frame) break;
+    }
 }
 
 } // namespace opencv_test

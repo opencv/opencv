@@ -117,6 +117,65 @@ String dumpRange(const Range& argument)
 }
 
 CV_WRAP static inline
+int testOverwriteNativeMethod(int argument)
+{
+    return argument;
+}
+
+CV_WRAP static inline
+String testReservedKeywordConversion(int positional_argument, int lambda = 2, int from = 3)
+{
+    return format("arg=%d, lambda=%d, from=%d", positional_argument, lambda, from);
+}
+
+CV_EXPORTS_W String dumpVectorOfInt(const std::vector<int>& vec);
+
+CV_EXPORTS_W String dumpVectorOfDouble(const std::vector<double>& vec);
+
+CV_EXPORTS_W String dumpVectorOfRect(const std::vector<Rect>& vec);
+
+CV_WRAP static inline
+void generateVectorOfRect(size_t len, CV_OUT std::vector<Rect>& vec)
+{
+    vec.resize(len);
+    if (len > 0)
+    {
+        RNG rng(12345);
+        Mat tmp(static_cast<int>(len), 1, CV_32SC4);
+        rng.fill(tmp, RNG::UNIFORM, 10, 20);
+        tmp.copyTo(vec);
+    }
+}
+
+CV_WRAP static inline
+void generateVectorOfInt(size_t len, CV_OUT std::vector<int>& vec)
+{
+    vec.resize(len);
+    if (len > 0)
+    {
+        RNG rng(554433);
+        Mat tmp(static_cast<int>(len), 1, CV_32SC1);
+        rng.fill(tmp, RNG::UNIFORM, -10, 10);
+        tmp.copyTo(vec);
+    }
+}
+
+CV_WRAP static inline
+void generateVectorOfMat(size_t len, int rows, int cols, int dtype, CV_OUT std::vector<Mat>& vec)
+{
+    vec.resize(len);
+    if (len > 0)
+    {
+        RNG rng(65431);
+        for (size_t i = 0; i < len; ++i)
+        {
+            vec[i].create(rows, cols, dtype);
+            rng.fill(vec[i], RNG::UNIFORM, 0, 10);
+        }
+    }
+}
+
+CV_WRAP static inline
 void testRaiseGeneralException()
 {
     throw std::runtime_error("exception text");

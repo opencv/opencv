@@ -1,0 +1,3 @@
+downloads/
+*.dll
+ffmpeg_version.cmake

@@ -1489,6 +1489,8 @@ Sample usage of detecting and drawing chessboard corners: :
 the board to make the detection more robust in various environments. Otherwise, if there is no
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
+
+Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
@@ -1545,6 +1547,8 @@ transformation it is beneficial to use round corners for the field corners
 which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
+
+Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
 ![Checkerboard](pics/checkerboard_radon.png)
  */
 CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
@@ -2841,6 +2845,76 @@ can only get the direction of the translation. For this reason, the translation 
 unit length.
  */
 CV_EXPORTS_W void decomposeEssentialMat( InputArray E, OutputArray R1, OutputArray R2, OutputArray t );
+
+/** @brief Recovers the relative camera rotation and the translation from corresponding points in two images from two different cameras, using cheirality check. Returns the number of
+inliers that pass the check.
+
+@param points1 Array of N 2D points from the first image. The point coordinates should be
+floating-point (single or double precision).
+@param points2 Array of the second image points of the same size and format as points1 .
+@param cameraMatrix1 Input/output camera matrix for the first camera, the same as in
+@ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
+@param distCoeffs1 Input/output vector of distortion coefficients, the same as in
+@ref calibrateCamera.
+@param cameraMatrix2 Input/output camera matrix for the first camera, the same as in
+@ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
+@param distCoeffs2 Input/output vector of distortion coefficients, the same as in
+@ref calibrateCamera.
+@param E The output essential matrix.
+@param R Output rotation matrix. Together with the translation vector, this matrix makes up a tuple
+that performs a change of basis from the first camera's coordinate system to the second camera's
+coordinate system. Note that, in general, t can not be used for this tuple, see the parameter
+described below.
+@param t Output translation vector. This vector is obtained by @ref decomposeEssentialMat and
+therefore is only known up to scale, i.e. t is the direction of the translation vector and has unit
+length.
+@param method Method for computing an essential matrix.
+-   @ref RANSAC for the RANSAC algorithm.
+-   @ref LMEDS for the LMedS algorithm.
+@param prob Parameter used for the RANSAC or LMedS methods only. It specifies a desirable level of
+confidence (probability) that the estimated matrix is correct.
+@param threshold Parameter used for RANSAC. It is the maximum distance from a point to an epipolar
+line in pixels, beyond which the point is considered an outlier and is not used for computing the
+final fundamental matrix. It can be set to something like 1-3, depending on the accuracy of the
+point localization, image resolution, and the image noise.
+@param mask Input/output mask for inliers in points1 and points2. If it is not empty, then it marks
+inliers in points1 and points2 for then given essential matrix E. Only these inliers will be used to
+recover pose. In the output mask only inliers which pass the cheirality check.
+
+This function decomposes an essential matrix using @ref decomposeEssentialMat and then verifies
+possible pose hypotheses by doing cheirality check. The cheirality check means that the
+triangulated 3D points should have positive depth. Some details can be found in @cite Nister03.
+
+This function can be used to process the output E and mask from @ref findEssentialMat. In this
+scenario, points1 and points2 are the same input for findEssentialMat.:
+@code
+    // Example. Estimation of fundamental matrix using the RANSAC algorithm
+    int point_count = 100;
+    vector<Point2f> points1(point_count);
+    vector<Point2f> points2(point_count);
+
+    // initialize the points here ...
+    for( int i = 0; i < point_count; i++ )
+    {
+        points1[i] = ...;
+        points2[i] = ...;
+    }
+
+    // Input: camera calibration of both cameras, for example using intrinsic chessboard calibration.
+    Mat cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2;
+
+    // Output: Essential matrix, relative rotation and relative translation.
+    Mat E, R, t, mask;
+
+    recoverPose(points1, points2, cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, E, R, t, mask);
+@endcode
+ */
+CV_EXPORTS_W int recoverPose( InputArray points1, InputArray points2,
+                            InputArray cameraMatrix1, InputArray distCoeffs1,
+                            InputArray cameraMatrix2, InputArray distCoeffs2,
+                            OutputArray E, OutputArray R, OutputArray t,
+                            int method = cv::RANSAC, double prob = 0.999, double threshold = 1.0,
+                            InputOutputArray mask = noArray());
 
 /** @brief Recovers the relative camera rotation and the translation from an estimated essential
 matrix and the corresponding points in two images, using cheirality check. Returns the number of
