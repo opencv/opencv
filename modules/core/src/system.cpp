@@ -1786,6 +1786,13 @@ static void WINAPI opencv_fls_destructor(void* pData)
 #endif // CV_USE_FLS
 #endif // _WIN32
 
+static TlsAbstraction* const g_force_initialization_of_TlsAbstraction
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = getTlsAbstraction();
+
+
 #else  // OPENCV_DISABLE_THREAD_SUPPORT
 
 // no threading (OPENCV_DISABLE_THREAD_SUPPORT=ON)
