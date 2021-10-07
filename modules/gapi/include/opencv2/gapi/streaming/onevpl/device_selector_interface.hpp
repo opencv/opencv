@@ -23,8 +23,12 @@ namespace onevpl {
 
 enum class AccelType : uint8_t {
     HOST,
-    DX11
+    DX11,
+
+    LAST_VALUE = std::numeric_limits<uint8_t>::max()
 };
+
+const char* to_cstring(AccelType type);
 
 struct IDeviceSelector;
 struct GAPI_EXPORTS Device {
@@ -32,10 +36,14 @@ struct GAPI_EXPORTS Device {
     using Ptr = void*;
 
     ~Device();
+    const std::string& get_name() const;
     Ptr get_ptr() const;
     AccelType get_type() const;
 private:
-    Device(Ptr device_ptr, AccelType device_type);
+    Device(Ptr device_ptr, const std::string& device_name,
+           AccelType device_type);
+
+    std::string name;
     Ptr ptr;
     AccelType type;
 };
@@ -58,9 +66,11 @@ struct GAPI_EXPORTS IDeviceSelector {
 
     struct GAPI_EXPORTS Score {
         friend struct IDeviceSelector;
-        using Type = uint16_t;
-        static constexpr Type Max = std::numeric_limits<Type>::max();
-        static constexpr Type Min = std::numeric_limits<Type>::min();
+        using Type = int16_t;
+        static constexpr Type MaxActivePriority = std::numeric_limits<Type>::max();
+        static constexpr Type MinActivePriority = 0;
+        static constexpr Type MaxPassivePriority = MinActivePriority - 1;
+        static constexpr Type MinPassivePriority = std::numeric_limits<Type>::min();
 
         Score(Type val);
         ~Score();
@@ -75,12 +85,11 @@ struct GAPI_EXPORTS IDeviceSelector {
     };
 
     using DeviceScoreTable = std::map<Score, Device>;
+    using DeviceContexts = std::vector<Context>;
 
     virtual ~IDeviceSelector();
     virtual DeviceScoreTable select_devices() const = 0;
-    virtual DeviceScoreTable select_spare_devices() const = 0;
-    virtual Context select_context(const DeviceScoreTable& selected_devices) = 0;
-    virtual Context get_last_context() const = 0;
+    virtual DeviceContexts select_context() = 0;
 protected:
     template<typename Entity, typename ...Args>
     static Entity create(Args &&...args) {

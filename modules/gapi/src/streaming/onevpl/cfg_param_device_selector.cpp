@@ -18,8 +18,13 @@
 // get rid of generate macro max/min/etc from DX side
 #define D3D11_NO_HELPERS
 #define NOMINMAX
+#include <atlbase.h>
 #include <d3d11.h>
 #include <d3d11_4.h>
+#pragma comment(lib, "dxgi")
+#undef D3D11_NO_HELPERS
+#undef NOMINMAX
+
 #include <codecvt>
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
@@ -72,7 +77,7 @@ static mfxVariant cfg_param_to_mfx_variant(const CfgParam& accel_param) {
 
 CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
     IDeviceSelector(),
-    suggested_device(IDeviceSelector::create<Device>(nullptr, AccelType::HOST)),
+    suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
 
     auto accel_mode_it =
@@ -108,19 +113,45 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
                                                 };
             D3D_FEATURE_LEVEL featureLevel;
 
+            CComPtr<IDXGIFactory> adapter_factory;
+            CComPtr<IDXGIAdapter> intel_adapters;
+            {
+                IDXGIFactory* out_factory = nullptr;
+                HRESULT err = CreateDXGIFactory(__uuidof(IDXGIFactory),
+                                                reinterpret_cast<void**>(&out_factory));
+                if (FAILED(err)) {
+                    throw std::runtime_error("Cannot create CreateDXGIFactory, error: " + std::to_string(HRESULT_CODE(err)));
+                }
+                adapter_factory.Attach(out_factory);
+            }
+
+            CComPtr<IDXGIAdapter> intel_adapter;
+            UINT adapter_index = 0;
+            const unsigned int refIntelVendorID = 0x8086;
+            IDXGIAdapter* out_adapter = nullptr;
+
+            while (adapter_factory->EnumAdapters(adapter_index, &out_adapter) != DXGI_ERROR_NOT_FOUND) {
+                DXGI_ADAPTER_DESC desc{};
+                out_adapter->GetDesc(&desc);
+                if (desc.VendorId == refIntelVendorID) {
+                    intel_adapter.Attach(out_adapter);
+                    break;
+                }
+                ++adapter_index;
+            }
+
+            if (!intel_adapter) {
+                throw std::runtime_error("No Intel GPU adapter on aboard");
+            }
+
             // Create the Direct3D 11 API device object and a corresponding context.
-            HRESULT err = D3D11CreateDevice(
-                    nullptr, // Specify nullptr to use the default adapter.
-                    D3D_DRIVER_TYPE_HARDWARE,
-                    nullptr,
-                    creationFlags, // Set set debug and Direct2D compatibility flags.
-                    featureLevels, // List of feature levels this app can support.
-                    ARRAYSIZE(featureLevels),
-                    D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION.
-                    &hw_handle, // Returns the Direct3D device created.
-                    &featureLevel, // Returns feature level of device created.
-                    &device_context // Returns the device immediate context.
-                    );
+            HRESULT err = D3D11CreateDevice(intel_adapter,
+                                            D3D_DRIVER_TYPE_UNKNOWN,
+                                            nullptr, creationFlags,
+                                            featureLevels, ARRAYSIZE(featureLevels),
+                                            D3D11_SDK_VERSION,
+                                            &hw_handle, &featureLevel,
+                                            &device_context);
             if(FAILED(err)) {
                 throw std::logic_error("Cannot create D3D11CreateDevice, error: " + std::to_string(HRESULT_CODE(err)));
             }
@@ -133,11 +164,11 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
                 pD11Multithread->Release();
             }
 
-            suggested_device = IDeviceSelector::create<Device>(hw_handle, AccelType::DX11);
+            suggested_device = IDeviceSelector::create<Device>(hw_handle, "GPU", AccelType::DX11);
             suggested_context = IDeviceSelector::create<Context>(device_context, AccelType::DX11);
 #else
             GAPI_LOG_WARNING(nullptr, "Unavailable \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\""
-                                      "was choosed for current project configuration");
+                                      "was chosen for current project configuration");
             throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
@@ -155,10 +186,11 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 }
 
 CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
+                                               const std::string& device_id,
                                                Context::Ptr ctx_ptr,
                                                const CfgParams& cfg_params) :
     IDeviceSelector(),
-    suggested_device(IDeviceSelector::create<Device>(nullptr, AccelType::HOST)),
+    suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
     auto accel_mode_it =
         std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
@@ -191,7 +223,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
         case MFX_ACCEL_MODE_VIA_D3D11: {
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-            suggested_device = IDeviceSelector::create<Device>(device_ptr, AccelType::DX11);
+            suggested_device = IDeviceSelector::create<Device>(device_ptr, device_id, AccelType::DX11);
             ID3D11Device* dx_device_ptr =
                 reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
             dx_device_ptr->AddRef();
@@ -202,7 +234,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             dx_ctx_ptr->AddRef();
 #else
             GAPI_LOG_WARNING(nullptr, "Unavailable \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\""
-                                      "was choosed for current project configuration");
+                                      "was chosen for current project configuration");
             throw std::logic_error("Unsupported \"mfxImplDescription.AccelerationMode: MFX_ACCEL_MODE_VIA_D3D11\"");
 #endif // HAVE_DIRECTX
 #endif // HAVE_D3D11
@@ -243,7 +275,9 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
             break;
     }
 
-    GAPI_LOG_INFO(nullptr, "release device: " << suggested_device.get_ptr());
+    GAPI_LOG_INFO(nullptr, "release device by name: " <<
+                           suggested_device.get_name() <<
+                           ", ptr: " << suggested_device.get_ptr());
     AccelType dtype = suggested_device.get_type();
     switch(dtype) {
         case AccelType::HOST:
@@ -265,32 +299,17 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
 }
 
 CfgParamDeviceSelector::DeviceScoreTable CfgParamDeviceSelector::select_devices() const {
-    return {std::make_pair(Score::Max, suggested_device)};
+    return {std::make_pair(Score::MaxActivePriority, suggested_device)};
 }
 
-CfgParamDeviceSelector::DeviceScoreTable CfgParamDeviceSelector::select_spare_devices() const {
-    return {};
+CfgParamDeviceSelector::DeviceContexts CfgParamDeviceSelector::select_context() {
+    return {suggested_context};
 }
 
-Context CfgParamDeviceSelector::select_context(const DeviceScoreTable& selected_devices) {
-    GAPI_Assert(selected_devices.size() == 1 && "Implementation must use only single device");
-    GAPI_Assert(selected_devices.begin()->second.get_ptr() == suggested_device.get_ptr() &&
-                   "Implementation must use suggested device ptr");
-    GAPI_Assert(selected_devices.begin()->second.get_type() == suggested_device.get_type() &&
-                   "Implementation must use suggested device type");
-    return suggested_context;
-}
-
-Context CfgParamDeviceSelector::get_last_context() const {
-    return suggested_context;
-}
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-
-#undef D3D11_NO_HELPERS
-#undef NOMINMAX
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL

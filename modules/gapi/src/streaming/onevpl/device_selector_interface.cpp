@@ -11,12 +11,31 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-Device::Device(Ptr device_ptr, AccelType device_type) :
+const char* to_cstring(AccelType type) {
+
+    switch(type) {
+        case AccelType::HOST:
+            return "HOST";
+        case AccelType::DX11:
+            return "DX11";
+        default:
+            GAPI_DbgAssert(false && "Unexpected AccelType");
+            break;
+   }
+   return "UNKNOWN";
+}
+
+Device::Device(Ptr device_ptr, const std::string& device_name, AccelType device_type) :
+    name(device_name),
     ptr(device_ptr),
     type(device_type) {
 }
 
 Device::~Device() {
+}
+
+const std::string& Device::get_name() const {
+    return name;
 }
 
 Device::Ptr Device::get_ptr() const {

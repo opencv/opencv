@@ -58,8 +58,10 @@ GSource::Priv::Priv() :
     GAPI_LOG_INFO(nullptr, "Initialized MFX handle: " << mfx_handle);
 }
 
-GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider, const std::vector<CfgParam>& params) :
-    GSource::Priv()
+GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
+                    const std::vector<CfgParam>& params,
+                    std::shared_ptr<IDeviceSelector>) :
+     GSource::Priv()
 {
     // Enable Config
     if (params.empty())

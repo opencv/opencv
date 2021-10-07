@@ -21,14 +21,14 @@ namespace onevpl {
 struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
     CfgParamDeviceSelector(const CfgParams& params = {});
     CfgParamDeviceSelector(Device::Ptr device_ptr,
+                           const std::string& device_id,
                            Context::Ptr ctx_ptr,
                            const CfgParams& params);
     ~CfgParamDeviceSelector();
 
     DeviceScoreTable select_devices() const override;
-    DeviceScoreTable select_spare_devices() const override;
-    Context select_context(const DeviceScoreTable& selected_devices) override;
-    Context get_last_context() const override;
+    DeviceContexts select_context() override;
+
 private:
     Device suggested_device;
     Context suggested_context;

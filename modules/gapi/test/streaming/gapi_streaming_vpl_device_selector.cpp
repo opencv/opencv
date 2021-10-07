@@ -27,11 +27,11 @@
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
 #include <CL/cl_d3d11.h>
-#endif
+#endif // HAVE_OPENCL
 #undef D3D11_NO_HELPERS
 #undef NOMINMAX
-#endif
-#endif
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
 
 #ifdef HAVE_ONEVPL
 #include <vpl/mfxvideo.h>
@@ -42,7 +42,7 @@ namespace opencv_test
 namespace
 {
 
-void test_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreTable::value_type &scored_device,
+void test_dev_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreTable::value_type &scored_device,
              cv::gapi::wip::onevpl::IDeviceSelector::Score expected_score,
              cv::gapi::wip::onevpl::AccelType expected_type,
              cv::gapi::wip::onevpl::Device::Ptr expected_ptr) {
@@ -51,10 +51,21 @@ void test_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreT
     EXPECT_EQ(std::get<1>(scored_device).get_ptr(), expected_ptr);
 }
 
+void test_ctx_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceContexts::value_type &ctx,
+             cv::gapi::wip::onevpl::AccelType expected_type,
+             cv::gapi::wip::onevpl::Context::Ptr expected_ptr) {
+    EXPECT_EQ(ctx.get_type(), expected_type);
+    EXPECT_EQ(ctx.get_ptr(), expected_ptr);
+}
+
 void test_host_dev_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreTable::value_type &scored_device,
                       cv::gapi::wip::onevpl::IDeviceSelector::Score expected_score) {
-    test_eq(scored_device, expected_score,
+    test_dev_eq(scored_device, expected_score,
             cv::gapi::wip::onevpl::AccelType::HOST, nullptr);
+}
+
+void test_host_ctx_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceContexts::value_type &ctx) {
+    test_ctx_eq(ctx, cv::gapi::wip::onevpl::AccelType::HOST, nullptr);
 }
 
 TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDevice)
@@ -63,164 +74,159 @@ TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDevice)
     CfgParamDeviceSelector selector;
     IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
     EXPECT_EQ(devs.size(), 1);
-    test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::Max);
+    test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority);
 
-    Context ctx = selector.select_context(devs);
-    EXPECT_EQ(ctx.get_ptr(), nullptr);
+    IDeviceSelector::DeviceContexts ctxs = selector.select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    test_host_ctx_eq(*ctxs.begin());
 }
 
-TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceFromCfgParam)
+TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithEmptyCfgParam)
 {
     using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> empty_params;
+    CfgParamDeviceSelector selector(empty_params);
+    IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
+    EXPECT_EQ(devs.size(), 1);
+    test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority);
+    IDeviceSelector::DeviceContexts ctxs = selector.select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    test_host_ctx_eq(*ctxs.begin());
+}
 
-    {
-        std::vector<CfgParam> empty_params;
-        CfgParamDeviceSelector selector(empty_params);
-        IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
-        EXPECT_EQ(devs.size(), 1);
-        test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::Max);
-    }
-    {
-        std::vector<CfgParam> cfg_params_w_no_accel;
-        cfg_params_w_no_accel.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                    MFX_ACCEL_MODE_NA));
-        CfgParamDeviceSelector selector(cfg_params_w_no_accel);
-        IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
-        EXPECT_EQ(devs.size(), 1);
-        test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::Max);
-    }
+TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithAccelNACfgParam)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> cfg_params_w_no_accel;
+    cfg_params_w_no_accel.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                               MFX_ACCEL_MODE_NA));
+    CfgParamDeviceSelector selector(cfg_params_w_no_accel);
+    IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
+    EXPECT_EQ(devs.size(), 1);
+    test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority);
 
-    {
+    IDeviceSelector::DeviceContexts ctxs = selector.select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    test_host_ctx_eq(*ctxs.begin());
+}
+
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-        std::vector<CfgParam> empty_params;
-        CfgParamDeviceSelector selector(empty_params);
-        IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
-        EXPECT_EQ(devs.size(), 1);
-        test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::Max);
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-    }
+TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithEmptyCfgParam_DX11_ENABLED)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> empty_params;
+    CfgParamDeviceSelector selector(empty_params);
+    IDeviceSelector::DeviceScoreTable devs = selector.select_devices();
+    EXPECT_EQ(devs.size(), 1);
+    test_host_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority);
 
-    {
-#ifndef HAVE_DIRECTX
-#ifndef HAVE_D3D11
-        std::vector<CfgParam> cfg_params_w_non_existed_dx11;
-        cfg_params_w_not_existed_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                            MFX_ACCEL_MODE_VIA_D3D11));
-        EXPECT_THROW(CfgParamDeviceSelector{cfg_params_w_non_existed_dx11},
-                     std::logic_error);
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-    }
+    IDeviceSelector::DeviceContexts ctxs = selector.select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    test_host_ctx_eq(*ctxs.begin());
+}
 
-    {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-        std::vector<CfgParam> cfg_params_w_dx11;
-        cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                MFX_ACCEL_MODE_VIA_D3D11));
-        std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
-        EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(cfg_params_w_dx11)));
-        IDeviceSelector::DeviceScoreTable devs = selector_ptr->select_devices();
+TEST(OneVPL_Source_Device_Selector_CfgParam, DefaultDeviceWithDX11AccelCfgParam_DX11_ENABLED)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                           MFX_ACCEL_MODE_VIA_D3D11));
+    std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
+    EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(cfg_params_w_dx11)));
+    IDeviceSelector::DeviceScoreTable devs = selector_ptr->select_devices();
 
-        EXPECT_EQ(devs.size(), 1);
-        test_eq(*devs.begin(), IDeviceSelector::Score::Max, AccelType::DX11,
+    EXPECT_EQ(devs.size(), 1);
+    test_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority,
+                AccelType::DX11,
                 std::get<1>(*devs.begin()).get_ptr() /* compare just type */);
 
-        Context ctx = selector_ptr->select_context(devs);
-        EXPECT_TRUE(ctx.get_ptr());
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-    }
+    IDeviceSelector::DeviceContexts ctxs = selector_ptr->select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    EXPECT_TRUE(ctxs.begin()->get_ptr());
 }
 
-TEST(OneVPL_Source_Device_Selector_CfgParam, PtrDeviceFromCfgParam)
+TEST(OneVPL_Source_Device_Selector_CfgParam, NULLDeviceWithDX11AccelCfgParam_DX11_ENABLED)
 {
     using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                           MFX_ACCEL_MODE_VIA_D3D11));
+    Device::Ptr empty_device_ptr = nullptr;
+    Context::Ptr empty_ctx_ptr = nullptr;
+    EXPECT_THROW(CfgParamDeviceSelector sel(empty_device_ptr, "GPU",
+                                            empty_ctx_ptr,
+                                            cfg_params_w_dx11),
+                 std::logic_error); // empty_device_ptr must be invalid
+}
 
+TEST(OneVPL_Source_Device_Selector_CfgParam, ExternalDeviceWithDX11AccelCfgParam_DX11_ENABLED)
+{
+    using namespace cv::gapi::wip::onevpl;
+    ID3D11Device *device = nullptr;
+    ID3D11DeviceContext* device_context = nullptr;
     {
-        std::vector<CfgParam> empty_params;
-        Device::Ptr empty_device_ptr = nullptr;
-        Context::Ptr empty_ctx_ptr = nullptr;
-        EXPECT_THROW(CfgParamDeviceSelector sel(empty_device_ptr, empty_ctx_ptr,
-                                            empty_params),
-                     std::logic_error); // params must describe device_ptr explicitly
+        UINT flags = 0;
+        D3D_FEATURE_LEVEL features[] = { D3D_FEATURE_LEVEL_11_1,
+                                         D3D_FEATURE_LEVEL_11_0,
+                                       };
+        D3D_FEATURE_LEVEL feature_level;
+
+        // Create the Direct3D 11 API device object and a corresponding context.
+        HRESULT err = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE,
+                                        nullptr, flags,
+                                        features,
+                                        ARRAYSIZE(features), D3D11_SDK_VERSION,
+                                        &device, &feature_level, &device_context);
+        EXPECT_FALSE(FAILED(err));
     }
 
-    {
-#ifndef HAVE_DIRECTX
-#ifndef HAVE_D3D11
-        std::vector<CfgParam> cfg_params_w_non_existed_dx11;
-        cfg_params_w_not_existed_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                            MFX_ACCEL_MODE_VIA_D3D11));
-        EXPECT_THROW(CfgParamDeviceSelector{cfg_params_w_non_existed_dx11},
-                     std::logic_error); // the same as default dx11
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-    }
+    std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
+    std::vector<CfgParam> cfg_params_w_dx11;
+    cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                           MFX_ACCEL_MODE_VIA_D3D11));
+    EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(device, "GPU",
+                                                                  device_context,
+                                                                  cfg_params_w_dx11)));
+    IDeviceSelector::DeviceScoreTable devs = selector_ptr->select_devices();
 
-    {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-        std::vector<CfgParam> cfg_params_w_dx11;
-        cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                MFX_ACCEL_MODE_VIA_D3D11));
-        Device::Ptr empty_device_ptr = nullptr;
-        Context::Ptr empty_ctx_ptr = nullptr;
-        EXPECT_THROW(CfgParamDeviceSelector sel(empty_device_ptr, empty_ctx_ptr,
-                                                cfg_params_w_dx11),
-                     std::logic_error); // empty_device_ptr must be valid
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
-    }
-
-    {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
-        ID3D11Device *device = nullptr;
-        ID3D11DeviceContext* device_context = nullptr;
-        {
-            //Create device
-            UINT creationFlags = 0;//D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-
-            D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_1,
-                                                  D3D_FEATURE_LEVEL_11_0,
-                                                };
-            D3D_FEATURE_LEVEL featureLevel;
-
-            // Create the Direct3D 11 API device object and a corresponding context.
-            HRESULT err = D3D11CreateDevice(
-                    nullptr, // Specify nullptr to use the default adapter.
-                    D3D_DRIVER_TYPE_HARDWARE,
-                    nullptr,
-                    creationFlags, // Set set debug and Direct2D compatibility flags.
-                    featureLevels, // List of feature levels this app can support.
-                    ARRAYSIZE(featureLevels),
-                    D3D11_SDK_VERSION, // Always set this to D3D11_SDK_VERSION.
-                    &device, // Returns the Direct3D device created.
-                    &featureLevel, // Returns feature level of device created.
-                    &device_context // Returns the device immediate context.
-                    );
-            EXPECT_FALSE(FAILED(err));
-        }
-        std::unique_ptr<CfgParamDeviceSelector> selector_ptr;
-        std::vector<CfgParam> cfg_params_w_dx11;
-        cfg_params_w_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
-                                                                MFX_ACCEL_MODE_VIA_D3D11));
-        EXPECT_NO_THROW(selector_ptr.reset(new CfgParamDeviceSelector(device, device_context,
-                                                                      cfg_params_w_dx11)));
-        IDeviceSelector::DeviceScoreTable devs = selector_ptr->select_devices();
-
-        EXPECT_EQ(devs.size(), 1);
-        test_eq(*devs.begin(), IDeviceSelector::Score::Max,
+    EXPECT_EQ(devs.size(), 1);
+    test_dev_eq(*devs.begin(), IDeviceSelector::Score::MaxActivePriority,
                 AccelType::DX11, device);
 
-        Context ctx = selector_ptr->select_context(devs);
-        EXPECT_EQ(ctx.get_ptr(), device_context);
+    IDeviceSelector::DeviceContexts ctxs = selector_ptr->select_context();
+    EXPECT_EQ(ctxs.size(), 1);
+    EXPECT_EQ(reinterpret_cast<ID3D11DeviceContext*>(ctxs.begin()->get_ptr()),
+              device_context);
+}
+
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
-    }
+
+#ifndef HAVE_DIRECTX
+#ifndef HAVE_D3D11
+TEST(OneVPL_Source_Device_Selector_CfgParam, DX11DeviceFromCfgParamWithDX11Disabled)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> cfg_params_w_non_existed_dx11;
+    cfg_params_w_not_existed_dx11.push_back(CfgParam::create<uint32_t>("mfxImplDescription.AccelerationMode",
+                                                                        MFX_ACCEL_MODE_VIA_D3D11));
+    EXPECT_THROW(CfgParamDeviceSelector{cfg_params_w_non_existed_dx11},
+                 std::logic_error);
+}
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+
+TEST(OneVPL_Source_Device_Selector_CfgParam, UnknownPtrDeviceFromCfgParam)
+{
+    using namespace cv::gapi::wip::onevpl;
+    std::vector<CfgParam> empty_params;
+    Device::Ptr empty_device_ptr = nullptr;
+    Context::Ptr empty_ctx_ptr = nullptr;
+    EXPECT_THROW(CfgParamDeviceSelector sel(empty_device_ptr, "",
+                                            empty_ctx_ptr,
+                                            empty_params),
+                 std::logic_error); // params must describe device_ptr explicitly
 }
 }
 } // namespace opencv_test
