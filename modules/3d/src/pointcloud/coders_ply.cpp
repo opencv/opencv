@@ -4,10 +4,10 @@
 
 #include "coders_ply.hpp"
 #include "utils.hpp"
+#include <opencv2/core/utils/logger.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
 
 namespace cv { namespace pc {
 
@@ -18,24 +18,27 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     CV_UNUSED(indices);
 
     std::ifstream file(m_filename, std::ios::binary);
-    parseHeader(file);
-
-    parseBody(file, points, normals);
+    if (parseHeader(file))
+    {
+        parseBody(file, points, normals);
+    }
 }
 
-void PlyDecoder::parseHeader(std::ifstream &file)
+bool PlyDecoder::parseHeader(std::ifstream &file)
 {
     std::string s;
     std::getline(file, s);
     if (trimSpaces(s) != "ply")
     {
-        CV_Error(Error::StsError, "Fail file is not a PLY format");
+        CV_LOG_WARNING(NULL, "Provided file is not in PLY format");
+        return false;
     }
     std::getline(file, s);
     auto splitArr = split(s, ' ');
     if (splitArr[0] != "format")
     {
-        CV_Error(Error::StsError, "Fail no format");
+        CV_LOG_WARNING(NULL, "Provided file doesn't have format");
+        return false;
     }
     if (splitArr[1] == "ascii")
     {
@@ -51,8 +54,10 @@ void PlyDecoder::parseHeader(std::ifstream &file)
     }
     else
     {
-        CV_Error(Error::StsError, "Fail ply file format is not supported");
+        CV_LOG_WARNING(NULL, "Provided PLY file format is not supported");
+        return false;
     }
+
     bool onVertexRead = false;
     while (std::getline(file, s))
     {
@@ -76,18 +81,19 @@ void PlyDecoder::parseHeader(std::ifstream &file)
             if (onVertexRead)
             {
                 auto splitArrElem = split(s, ' ');
-                if (splitArrElem[2] == "x")
+                if (splitArrElem[2] == "x" || splitArrElem[2] == "red" || splitArrElem[2] == "nx")
                 {
-                    CV_Assert(splitArrElem[1] == "float");
+                    if (splitArrElem[1] != "float") {
+                        CV_LOG_WARNING(NULL, "Provided PLY file format '" + splitArrElem[1] + "' is not supported");
+                        return false;
+                    }
                 }
                 if (splitArrElem[2] == "red")
                 {
-                    CV_Assert(splitArrElem[1] == "float");
                     m_hasColour = true;
                 }
                 if (splitArrElem[2] == "nx")
                 {
-                    CV_Assert(splitArrElem[1] == "float");
                     m_hasNormal = true;
                 }
             }
@@ -97,6 +103,7 @@ void PlyDecoder::parseHeader(std::ifstream &file)
             break;
 
     }
+    return true;
 }
 
 template <typename T>
@@ -158,10 +165,11 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
 {
     CV_UNUSED(indices);
     std::ofstream file(m_filename, std::ios::binary);
-    if (!file)
-    {
-        CV_Error(Error::StsError, "Impossible to open the file !\n");
+    if (!file) {
+        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        return;
     }
+
     file << "ply" << std::endl;
     file << "format ascii 1.0" << std::endl;
     file << "comment created by OpenCV" << std::endl;

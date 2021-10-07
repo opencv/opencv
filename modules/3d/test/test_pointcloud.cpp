@@ -51,7 +51,6 @@ TEST(PointCloud, LoadObjNoNormals)
         {0.399941f, 1.86743f, 2.55837f},
         {0.399941f, -0.13257f, -1.16339f},
         {0.399941f, 1.86743f, -1.16339f}};
-    std::vector<cv::Point3f> normals_gold = {};
 
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
@@ -60,7 +59,7 @@ TEST(PointCloud, LoadObjNoNormals)
     cv::loadPointCloud(folder + "pointcloudio/orig_no_norms.obj", points, normals);
 
     EXPECT_EQ(points_gold, points);
-    EXPECT_EQ(normals_gold, normals);
+    EXPECT_TRUE(normals.empty());
 }
 
 TEST(PointCloud, SaveObj)
@@ -126,6 +125,7 @@ TEST(PointCloud, LoadSaveMeshObj)
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);
     EXPECT_EQ(indices_gold, indices);
+    EXPECT_TRUE(!indices.empty());
     std::remove(new_path.c_str());
 }
 
@@ -138,9 +138,16 @@ TEST(PointCloud, LoadSaveMeshPly)
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new_mesh.ply");
 
-    cv::loadMesh(folder + "pointcloudio/orig.obj", points, normals, indices);
-    EXPECT_THROW(cv::saveMesh(new_path, points, normals, indices), cv::Exception);
-    EXPECT_THROW(cv::loadMesh(folder + "pointcloudio/orig.ply", points, normals, indices), cv::Exception);
+    // we don't support meshes in PLY format right now but it should exit silently
+    cv::loadMesh(folder + "pointcloudio/orig.ply", points, normals, indices);
+    EXPECT_TRUE(points.empty());
+    EXPECT_TRUE(normals.empty());
+    EXPECT_TRUE(indices.empty());
+
+    cv::saveMesh(new_path, points, normals, indices);
+    EXPECT_TRUE(points.empty());
+    EXPECT_TRUE(normals.empty());
+    EXPECT_TRUE(indices.empty());
 
     std::remove(new_path.c_str());
 }
@@ -151,7 +158,9 @@ TEST(PointCloud, NonexistentFile)
     std::vector<cv::Point3f> normals;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
-    EXPECT_THROW(cv::loadPointCloud(folder + "pointcloudio/fake.obj", points, normals), cv::Exception);
+    cv::loadPointCloud(folder + "pointcloudio/fake.obj", points, normals);
+    EXPECT_TRUE(points.empty());
+    EXPECT_TRUE(normals.empty());
 }
 
 TEST(PointCloud, LoadBadExtension)
@@ -160,7 +169,9 @@ TEST(PointCloud, LoadBadExtension)
     std::vector<cv::Point3f> normals;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
-    EXPECT_THROW(cv::loadPointCloud(folder + "pointcloudio/fake.fake", points, normals), cv::Exception);
+    cv::loadPointCloud(folder + "pointcloudio/fake.fake", points, normals);
+    EXPECT_TRUE(points.empty());
+    EXPECT_TRUE(normals.empty());
 }
 
 TEST(PointCloud, SaveBadExtension)
@@ -169,7 +180,7 @@ TEST(PointCloud, SaveBadExtension)
     std::vector<cv::Point3f> normals;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
-    EXPECT_THROW(cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals), cv::Exception);
+    cv::savePointCloud(folder + "pointcloudio/fake.fake", points, normals);
 }
 
 }} /* namespace opencv_test */

@@ -4,7 +4,6 @@
 
 #include "coders_obj.hpp"
 #include <fstream>
-#include <sstream>
 #include <iostream>
 #include <opencv2/core/utils/logger.hpp>
 #include "utils.hpp"
@@ -22,7 +21,8 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     std::ifstream file(m_filename, std::ios::binary);
     if (!file)
     {
-        CV_Error(Error::StsError, "Impossible to open the file!\n");
+        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        return;
     }
     std::string s;
 
@@ -78,8 +78,10 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
 void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
-    if (!file)
-        CV_Error(Error::StsError, "Impossible to open the file !\n");
+    if (!file) {
+        CV_LOG_WARNING(NULL, "Impossible to open the file: " + m_filename);
+        return;
+    }
 
     file << "# OBJ file writer" << std::endl;
     file << "o Point_Cloud" << std::endl;

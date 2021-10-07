@@ -25,17 +25,22 @@ inline std::string trimSpaces(const std::string &input)
 {
     size_t start = 0;
     while (start < input.size() && input[start] == ' ')
+    {
         start++;
+    }
     size_t end = input.size();
     while (end > start && (input[end - 1] == ' ' || input[end - 1] == '\n' || input[end - 1] == '\r'))
+    {
         end--;
+    }
     return input.substr(start, end - start);
 }
 
 inline std::string getExtension(const std::string& filename)
 {
     auto pos = filename.find_last_of('.');
-    if (pos == std::string::npos) {
+    if (pos == std::string::npos)
+    {
         return "";
     }
     return filename.substr( pos + 1);

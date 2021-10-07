@@ -25,7 +25,7 @@ public:
     void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
 protected:
-    void parseHeader(std::ifstream &file);
+    bool parseHeader(std::ifstream &file);
     void parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals);
 
     DataFormat m_inputDataFormat;

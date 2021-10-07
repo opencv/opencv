@@ -9,6 +9,7 @@
 #include "coders_ply.hpp"
 #include "utils.hpp"
 #include "opencv2/core/utils/filesystem.private.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 #include <memory>
 
@@ -56,7 +57,8 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     auto decoder = pc::findDecoder(filename);
     if (!decoder) {
         String file_ext = cv::pc::getExtension(filename);
-        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        return;
     }
 
     decoder->setSource(filename);
@@ -75,19 +77,23 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+    CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
 
 void savePointCloud(const String &filename, InputArray vertices, InputArray normals)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    CV_Assert(!vertices.empty());
+    if (vertices.empty()) {
+        CV_LOG_WARNING(NULL, "Have no vertices to save");
+        return;
+    };
 
     auto encoder = pc::findEncoder(filename);
     if (!encoder) {
         String file_ext = cv::pc::getExtension(filename);
-        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        return;
     }
 
     encoder->setDestination(filename);
@@ -104,7 +110,7 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+    CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
 
@@ -114,7 +120,8 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
     pc::PointCloudDecoder decoder = pc::findDecoder(filename);
     String file_ext = cv::pc::getExtension(filename);
     if (!decoder || (file_ext != "obj" && file_ext != "OBJ")) {
-        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        return;
     }
 
     decoder->setSource(filename);
@@ -145,19 +152,23 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+    CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
 
 void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-    CV_Assert(!vertices.empty());
+    if (vertices.empty()) {
+        CV_LOG_WARNING(NULL, "Have no vertices to save");
+        return;
+    }
 
     auto encoder = pc::findEncoder(filename);
     String file_ext = cv::pc::getExtension(filename);
     if (!encoder || (file_ext != "obj" && file_ext != "OBJ")) {
-        CV_Error(Error::StsError, "File extension '" + file_ext + "' is not supported");
+        CV_LOG_WARNING(NULL, "File extension '" + file_ext + "' is not supported");
+        return;
     }
 
     encoder->setDestination(filename);
@@ -182,7 +193,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+    CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 
 }} /* namespace cv::pc */

@@ -2595,8 +2595,8 @@ protected:
 * If the cloud cannot be read, throws an error
 *
 * Currently, the following file formats are supported:
-* -  <a href="https://en.wikipedia.org/wiki/Wavefront_.obj_file">Wavefront obj file *.obj</a>
-* -  <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">Polygon File Format *.ply</a>
+* -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file)
+* -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
 *
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud

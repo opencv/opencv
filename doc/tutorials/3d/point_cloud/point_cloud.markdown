@@ -61,7 +61,7 @@ vertices, normals = cv2.loadPointCloud("teapot.obj")
 
 ![](teapot_grid.jpg)
 
-Other possible way to draw 3d objects can be a mesh. 
+Other possible way to draw 3d objects can be a mesh.
 For that we use special functions to load mesh data and display it.
 Here for now only .OBJ files are supported and they should be triangulated before processing (triangulation - process of breaking faces into triangles).
 
