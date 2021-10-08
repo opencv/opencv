@@ -6,6 +6,7 @@
 
 #include <stdexcept>
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
+#include <opencv2/gapi/own/assert.hpp>
 
 namespace cv {
 namespace gapi {
