@@ -91,7 +91,7 @@ TEST(Objdetect_face_detection, regression)
     //  when testing manually.
     if (extraTestDataPath)
         cvtest::addDataSearchPath(extraTestDataPath);
-    String model = findDataFile("dnn/onnx/models/yunet.onnx", true);
+    String model = findDataFile("dnn/onnx/models/yunet-202109.onnx", true);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
