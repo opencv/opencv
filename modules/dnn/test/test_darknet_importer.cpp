@@ -745,8 +745,14 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
+    double scoreDiff = 8e-5;
+    double iouDiff = 3e-4;
+
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    {
+        scoreDiff = 0.006;
+        iouDiff = 0.042;
+    }
 
     std::string config_file = "yolov4x-mish.cfg";
     std::string weights_file = "yolov4x-mish.weights";
