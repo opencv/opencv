@@ -10,6 +10,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
