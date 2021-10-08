@@ -248,6 +248,9 @@ OCV_OPTION(WITH_VTK "Include VTK library support (and build opencv_viz module ei
 OCV_OPTION(WITH_CUDA "Include NVidia Cuda Runtime support" OFF
   VISIBLE_IF NOT IOS AND NOT WINRT
   VERIFY HAVE_CUDA)
+OCV_OPTION(WITH_NVIDIA_OPTICAL_FLOW_SDK "Include NVIDIA Optical Flow SDK support" ON
+  VISIBLE_IF NOT IOS AND NOT WINRT
+  VERIFY HAVE_CUDA && NOT CUDA_VERSION VERSION_LESS "10.0")
 OCV_OPTION(WITH_CUFFT "Include NVidia Cuda Fast Fourier Transform (FFT) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUFFT)
@@ -1612,6 +1615,12 @@ if(WITH_CUDA OR HAVE_CUDA)
     status("")
     status("  cuDNN:" HAVE_CUDNN THEN "YES (ver ${CUDNN_VERSION})" ELSE NO)
 endif()
+
+if(HAVE_CUDA)
+  status("")
+  status("  NVIDIA OpticalFlow SDK:" HAVE_NVIDIA_OPTICAL_FLOW_SDK THEN "YES (ver ${NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION}.${NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION})" ELSE NO)
+endif()
+
 
 if(WITH_VULKAN OR HAVE_VULKAN)
   status("")

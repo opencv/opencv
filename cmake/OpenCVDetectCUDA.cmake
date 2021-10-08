@@ -86,6 +86,55 @@ if(CUDA_FOUND)
     endif()
   endif()
 
+  if(WITH_NVIDIA_OPTICAL_FLOW_SDK)
+    if(NVIDIA_OPTICAL_FLOW_SDK)
+      file(STRINGS "${NVIDIA_OPTICAL_FLOW_SDK}/NvOFInterface/nvOpticalFlowCommon.h" NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION_STR
+        REGEX "#define[ \t]+NV_OF_API_MAJOR_VERSION[ \t]+([x0-9a-f]+)" )
+      if(NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION_STR MATCHES "#define[ \t]+NV_OF_API_MAJOR_VERSION[ \t]+([x0-9a-f]+)")
+        set(NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION "${CMAKE_MATCH_1}" CACHE STRING "Optical Flow SDK major version")
+      endif()
+
+      file(STRINGS "${NVIDIA_OPTICAL_FLOW_SDK}/NvOFInterface/nvOpticalFlowCommon.h" NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION_STR
+        REGEX "#define[ \t]+NV_OF_API_MINOR_VERSION[ \t]+([x0-9a-f]+)" )
+      if(NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION_STR MATCHES "#define[ \t]+NV_OF_API_MINOR_VERSION[ \t]+([x0-9a-f]+)")
+        set(NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION "${CMAKE_MATCH_1}" CACHE STRING "Optical Flow SDK minor version")
+      endif()
+
+      if(NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION)
+          set(NVIDIA_OPTICAL_FLOW_SDK_INCLUDE "${NVIDIA_OPTICAL_FLOW_SDK}/NvOFInterface")
+          set(HAVE_NVIDIA_OPTICAL_FLOW_SDK 1 CACHE BOOL "Optical Flow SDK found")
+      else()
+          message(STATUS "Cannot recognize NVIDIA Optical Flow SDK")
+      endif()
+    else()
+      set(NVIDIA_OPTICAL_FLOW_2_0_HEADERS_COMMIT "edb50da3cf849840d680249aa6dbef248ebce2ca")
+      set(NVIDIA_OPTICAL_FLOW_2_0_HEADERS_MD5 "a73cd48b18dcc0cc8933b30796074191")
+      set(NVIDIA_OPTICAL_FLOW_2_0_HEADERS_PATH "${OpenCV_BINARY_DIR}/3rdparty/NVIDIAOpticalFlowSDK_2_0_Headers")
+      ocv_download(FILENAME "${NVIDIA_OPTICAL_FLOW_2_0_HEADERS_COMMIT}.zip"
+                      HASH ${NVIDIA_OPTICAL_FLOW_2_0_HEADERS_MD5}
+                      URL "https://github.com/NVIDIA/NVIDIAOpticalFlowSDK/archive/"
+                      DESTINATION_DIR "${NVIDIA_OPTICAL_FLOW_2_0_HEADERS_PATH}"
+                      STATUS NVIDIA_OPTICAL_FLOW_2_0_HEADERS_DOWNLOAD_SUCCESS
+                      ID "NVIDIA_OPTICAL_FLOW"
+                      UNPACK RELATIVE_URL)
+
+      if(NOT NVIDIA_OPTICAL_FLOW_2_0_HEADERS_DOWNLOAD_SUCCESS)
+          message(STATUS "Failed to download NVIDIA_Optical_Flow_2_0 Headers")
+      else()
+          set(NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION 2 CACHE STRING "Optical Flow SDK major version")
+          set(NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION 0 CACHE STRING "Optical Flow SDK minor version")
+          set (NVIDIA_OPTICAL_FLOW_SDK_INCLUDE "${NVIDIA_OPTICAL_FLOW_2_0_HEADERS_PATH}/NVIDIAOpticalFlowSDK-${NVIDIA_OPTICAL_FLOW_2_0_HEADERS_COMMIT}")
+          set(HAVE_NVIDIA_OPTICAL_FLOW_SDK 1 CACHE BOOL "Optical Flow SDK found")
+      endif()
+    endif()
+
+    if(NVIDIA_OPTICAL_FLOW_SDK_FOUND)
+      message(STATUS "Building with NVIDIA Optical Flow API ${NVIDIA_OPTICAL_FLOW_SDK_MAJOR_VERSION}.${NVIDIA_OPTICAL_FLOW_SDK_MINOR_VERSION}")
+    endif()
+
+  endif()
+
+
   message(STATUS "CUDA detected: " ${CUDA_VERSION})
 
   OCV_OPTION(CUDA_ENABLE_DEPRECATED_GENERATION "Enable deprecated generations in the list" OFF)
