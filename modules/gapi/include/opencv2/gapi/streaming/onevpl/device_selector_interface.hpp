@@ -9,10 +9,7 @@
 
 #include <limits>
 #include <map>
-#include <memory>
-#include <stdexcept>
 #include <string>
-#include <utility>
 
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 

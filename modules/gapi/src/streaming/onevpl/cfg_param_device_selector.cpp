@@ -6,6 +6,7 @@
 
 #ifdef HAVE_ONEVPL
 #include <vpl/mfxvideo.h>
+#include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 
 #include "streaming/onevpl/cfg_param_device_selector.hpp"

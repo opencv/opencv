@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#include <stdexcept>
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 
 namespace cv {

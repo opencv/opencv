@@ -69,11 +69,21 @@ GSource::GSource(const std::string&, const CfgParams&) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
-GSource::GSource(std::shared_ptr<IDataProvider>, const CfgParams&) {
+GSource::GSource(const std::string&, const CfgParams&, const std::string&,
+                 void*, void*) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 GSource::GSource(const std::string&, const CfgParams&, std::shared_ptr<IDeviceSelector>) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+
+GSource::GSource(std::shared_ptr<IDataProvider>, const CfgParams&) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+
+GSource::GSource(std::shared_ptr<IDataProvider>, const CfgParams&,
+                 const std::string&, void*, void*) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
