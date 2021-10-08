@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test{ namespace {
+namespace opencv_test { namespace {
 
 // label format:
 //   image_name
@@ -12,17 +12,17 @@ namespace opencv_test{ namespace {
 //   face_1
 //   face_..
 //   face_num
-std::map<String, Mat> blobFromTXT(const String& path, int numCoords)
+std::map<std::string, Mat> blobFromTXT(const std::string& path, int numCoords)
 {
     std::ifstream ifs(path.c_str());
     CV_Assert(ifs.is_open());
 
-    std::map<String, Mat> gt;
+    std::map<std::string, Mat> gt;
 
     Mat faces;
     int faceNum = -1;
     int faceCount = 0;
-    for (String line, key; getline(ifs, line); )
+    for (std::string line, key; getline(ifs, line); )
     {
         std::istringstream iss(line);
         if (line.find(".png") != std::string::npos)
@@ -61,7 +61,6 @@ std::map<String, Mat> blobFromTXT(const String& path, int numCoords)
     return gt;
 }
 
-typedef testing::TestWithParam<String> Objdetect_face_detection;
 TEST(Objdetect_face_detection, regression)
 {
     // Pre-set params
@@ -72,33 +71,21 @@ TEST(Objdetect_face_detection, regression)
     int numCoords = 4 + 2 * numLM;
 
     // Load ground truth labels
-    std::map<String, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt", true), numCoords);
+    std::map<std::string, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt"), numCoords);
     // for (auto item: gt)
     // {
     //     std::cout << item.first << " " << item.second.size() << std::endl;
     // }
 
     // Initialize detector
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    // Since search scope is limited to $opencv_extra/testdata/cv,
-    // we need to add extraTestDataPath ($opencv_extra/testdata) to the search path
-    //  to find the ONNX models for CI, which means we need to add OPENCV_DNN_TEST_DATA_PATH=$opencv_extra/testdata
-    //  when testing manually.
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
-    String model = findDataFile("dnn/onnx/models/yunet-202109.onnx", true);
+    std::string model = findDataFile("dnn/onnx/models/yunet-202109.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
     // Detect and match
     for (auto item: gt)
     {
-        String imagePath = findDataFile("cascadeandhog/images/" + item.first, true);
+        std::string imagePath = findDataFile("cascadeandhog/images/" + item.first);
         Mat image = imread(imagePath);
 
         // Set input size
@@ -160,7 +147,6 @@ TEST(Objdetect_face_detection, regression)
     }
 }
 
-typedef testing::TestWithParam<String> Objdetect_face_recognition;
 TEST(Objdetect_face_recognition, regression)
 {
     // Pre-set params
@@ -170,17 +156,17 @@ TEST(Objdetect_face_recognition, regression)
     double l2norm_similar_thresh = 1.128;
 
     // Load ground truth labels
-    std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt", true).c_str());
+    std::ifstream ifs(findDataFile("dnn_face/recognition/cascades_label.txt").c_str());
     CV_Assert(ifs.is_open());
 
-    std::set<String> fSet;
-    std::map<String, Mat> featureMap;
-    std::map<std::pair<String, String>, int> gtMap;
+    std::set<std::string> fSet;
+    std::map<std::string, Mat> featureMap;
+    std::map<std::pair<std::string, std::string>, int> gtMap;
 
 
-    for (String line, key; getline(ifs, line);)
+    for (std::string line, key; getline(ifs, line);)
     {
-        String fname1, fname2;
+        std::string fname1, fname2;
         int label;
         std::istringstream iss(line);
         iss>>fname1>>fname2>>label;
@@ -192,28 +178,16 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    // Since search scope is limited to $opencv_extra/testdata/cv,
-    // we need to add extraTestDataPath ($opencv_extra/testdata) to the search path
-    //  to find the ONNX models for CI, which means we need to add OPENCV_DNN_TEST_DATA_PATH=$opencv_extra/testdata
-    //  when testing manually.
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
-    String detect_model = findDataFile("dnn/onnx/models/yunet.onnx", true);
+    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202109.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
-    String recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", true);
+    std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
     Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(recog_model, "");
 
     // Detect and match
     for (auto fname: fSet)
     {
-        String imagePath = findDataFile("dnn_face/recognition/" + fname, true);
+        std::string imagePath = findDataFile("dnn_face/recognition/" + fname);
         Mat image = imread(imagePath);
 
         Mat faces;
@@ -242,4 +216,4 @@ TEST(Objdetect_face_recognition, regression)
     }
 }
 
-}} // namespace ; namespace opencv_test
+}} // namespace
