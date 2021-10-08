@@ -18,7 +18,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         std::size_t boxes_per_cell, std::size_t box_size,
         std::size_t rows, std::size_t cols, T scale_x_y,
         std::size_t height_norm, std::size_t width_norm,
-        bool if_true_sigmoid_else_softmax);
+        bool if_true_sigmoid_else_softmax, bool new_coords);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

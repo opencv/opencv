@@ -60,6 +60,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         T class_prob_cutoff;
 
         T nms_iou_threshold;
+        bool new_coords;
     };
 
     template <class T>
@@ -87,6 +88,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             class_prob_cutoff = config.class_prob_cutoff;
 
             nms_iou_threshold = config.nms_iou_threshold;
+            new_coords = config.new_coords;
         }
 
         void forward(
@@ -115,7 +117,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 boxes_per_cell, cell_box_size,
                 rows, cols, scale_x_y,
                 height_norm, width_norm,
-                if_true_sigmoid_else_softmax
+                if_true_sigmoid_else_softmax,
+                new_coords
             );
 
             if (nms_iou_threshold > 0) {
@@ -176,6 +179,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         T object_prob_cutoff, class_prob_cutoff;
 
         T nms_iou_threshold;
+        bool new_coords;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */
