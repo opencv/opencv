@@ -77,7 +77,6 @@ static mfxVariant cfg_param_to_mfx_variant(const CfgParam& accel_param) {
 }
 
 CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
-    IDeviceSelector(),
     suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
 
@@ -159,7 +158,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
             // oneVPL recommendation
             {
-                ID3D11Multithread       *pD11Multithread;
+                ID3D11Multithread *pD11Multithread = nullptr;
                 device_context->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
                 pD11Multithread->SetMultithreadProtected(true);
                 pD11Multithread->Release();
@@ -190,7 +189,6 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
                                                const std::string& device_id,
                                                Context::Ptr ctx_ptr,
                                                const CfgParams& cfg_params) :
-    IDeviceSelector(),
     suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
     suggested_context(IDeviceSelector::create<Context>(nullptr, AccelType::HOST)) {
     auto accel_mode_it =

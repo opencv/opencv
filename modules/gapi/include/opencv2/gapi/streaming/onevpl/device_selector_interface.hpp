@@ -98,4 +98,4 @@ protected:
 } // namespace gapi
 } // namespace cv
 
-#endif // GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
+#endif // GAPI_STREAMING_ONEVPL_DEVICE_SELECTOR_INTERFACE_HPP

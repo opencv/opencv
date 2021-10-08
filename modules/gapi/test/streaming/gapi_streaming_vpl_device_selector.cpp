@@ -43,17 +43,17 @@ namespace
 {
 
 void test_dev_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreTable::value_type &scored_device,
-             cv::gapi::wip::onevpl::IDeviceSelector::Score expected_score,
-             cv::gapi::wip::onevpl::AccelType expected_type,
-             cv::gapi::wip::onevpl::Device::Ptr expected_ptr) {
+                 cv::gapi::wip::onevpl::IDeviceSelector::Score expected_score,
+                 cv::gapi::wip::onevpl::AccelType expected_type,
+                 cv::gapi::wip::onevpl::Device::Ptr expected_ptr) {
     EXPECT_EQ(std::get<0>(scored_device), expected_score);
     EXPECT_EQ(std::get<1>(scored_device).get_type(), expected_type);
     EXPECT_EQ(std::get<1>(scored_device).get_ptr(), expected_ptr);
 }
 
 void test_ctx_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceContexts::value_type &ctx,
-             cv::gapi::wip::onevpl::AccelType expected_type,
-             cv::gapi::wip::onevpl::Context::Ptr expected_ptr) {
+                 cv::gapi::wip::onevpl::AccelType expected_type,
+                 cv::gapi::wip::onevpl::Context::Ptr expected_ptr) {
     EXPECT_EQ(ctx.get_type(), expected_type);
     EXPECT_EQ(ctx.get_ptr(), expected_ptr);
 }
@@ -61,7 +61,7 @@ void test_ctx_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceCo
 void test_host_dev_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceScoreTable::value_type &scored_device,
                       cv::gapi::wip::onevpl::IDeviceSelector::Score expected_score) {
     test_dev_eq(scored_device, expected_score,
-            cv::gapi::wip::onevpl::AccelType::HOST, nullptr);
+                cv::gapi::wip::onevpl::AccelType::HOST, nullptr);
 }
 
 void test_host_ctx_eq(const typename cv::gapi::wip::onevpl::IDeviceSelector::DeviceContexts::value_type &ctx) {

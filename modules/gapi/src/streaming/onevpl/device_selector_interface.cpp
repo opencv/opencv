@@ -47,7 +47,6 @@ AccelType Device::get_type() const {
     return type;
 }
 
-
 Context::Context(Ptr ctx_ptr, AccelType ctx_type) :
     ptr(ctx_ptr),
     type(ctx_type) {
@@ -64,8 +63,6 @@ AccelType Context::get_type() const {
     return type;
 }
 
-
-
 IDeviceSelector::Score::Score(Type val) :
     value(val) {
 }
@@ -79,7 +76,6 @@ IDeviceSelector::Score::operator Type () const {
 IDeviceSelector::Score::Type IDeviceSelector::Score::get() const {
     return value;
 }
-
 
 IDeviceSelector::~IDeviceSelector() {
 }

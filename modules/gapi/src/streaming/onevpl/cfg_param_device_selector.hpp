@@ -38,4 +38,4 @@ private:
 } // namespace gapi
 } // namespace cv
 
-#endif // GAPI_STREAMING_ONEVPL_ONEVPL_FILE_DATA_PROVIDER_HPP
+#endif // GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP

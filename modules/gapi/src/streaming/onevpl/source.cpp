@@ -59,8 +59,8 @@ GSource::GSource(std::shared_ptr<IDataProvider> source,
 
 // common delegating parameters c-tor
 GSource::GSource(std::shared_ptr<IDataProvider> source,
-            const CfgParams& cfg_params,
-            std::shared_ptr<IDeviceSelector> selector) :
+                 const CfgParams& cfg_params,
+                 std::shared_ptr<IDeviceSelector> selector) :
     GSource(std::unique_ptr<Priv>(new GSource::Priv(source, cfg_params, selector))) {
 }
 
