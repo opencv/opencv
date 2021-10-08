@@ -53,6 +53,18 @@
 #include <opencv2/core/utils/tls.hpp>
 #include <opencv2/core/utils/instrumentation.hpp>
 
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+  #if defined(__clang__) && defined(__has_feature)
+  #if __has_feature(thread_sanitizer)
+      #define OPENCV_WITH_THREAD_SANITIZER 1
+      #include <atomic>  // assume C++11
+  #endif
+  #endif
+#endif
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+    #define OPENCV_WITH_THREAD_SANITIZER 0
+#endif
+
 namespace cv {
 
 static void _initSystem()
@@ -1426,74 +1438,75 @@ namespace details {
 #endif
 #endif
 
-template <class T>
-class DisposedSingletonMark
-{
-private:
-    static bool mark;
-protected:
-    DisposedSingletonMark() {}
-    ~DisposedSingletonMark()
-    {
-        mark = true;
-    }
-public:
-    static bool isDisposed() { return mark; }
-};
-
 // TLS platform abstraction layer
-class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
+class TlsAbstraction
 {
 public:
     TlsAbstraction();
-    ~TlsAbstraction();
-    void* getData() const
+    ~TlsAbstraction()
     {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return NULL;
-        return getData_();
-    }
-    void setData(void *pData)
-    {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return;
-        return setData_(pData);
+        // TlsAbstraction singleton should not be released
+        // There is no reliable way to avoid problems caused by static initialization order fiasco
+        // NB: Do NOT use logging here
+        fprintf(stderr, "OpenCV FATAL: TlsAbstraction::~TlsAbstraction() call is not expected\n");
+        fflush(stderr);
     }
 
+    void* getData() const;
+    void setData(void *pData);
+
+    void releaseSystemResources();
+
 private:
-    void* getData_() const;
-    void setData_(void *pData);
 
 #ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
+    bool disposed;
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
+#if OPENCV_WITH_THREAD_SANITIZER
+    std::atomic<bool> disposed;
+#else
+    bool disposed;
+#endif
 #endif
 };
 
-template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
-
-static TlsAbstraction& getTlsAbstraction_()
+class TlsAbstractionReleaseGuard
 {
-    static TlsAbstraction g_tls;  // disposed in atexit() handlers (required for unregistering our callbacks)
-    return g_tls;
-}
+    TlsAbstraction& tls_;
+public:
+    TlsAbstractionReleaseGuard(TlsAbstraction& tls) : tls_(tls)
+    {
+        /* nothing */
+    }
+    ~TlsAbstractionReleaseGuard()
+    {
+        tls_.releaseSystemResources();
+    }
+};
+
+// TODO use reference
 static TlsAbstraction* getTlsAbstraction()
 {
 #ifdef CV_CXX11
-    static TlsAbstraction* instance = &getTlsAbstraction_();
+    static TlsAbstraction *g_tls = new TlsAbstraction();  // memory leak is intended here to avoid disposing of TLS container
+    static TlsAbstractionReleaseGuard g_tlsReleaseGuard(*g_tls);
 #else
-    static TlsAbstraction* volatile instance = NULL;
-    if (instance == NULL)
+    static TlsAbstraction* volatile g_tls = NULL;
+    if (g_tls == NULL)
     {
         cv::AutoLock lock(cv::getInitializationMutex());
-        if (instance == NULL)
-            instance = &getTlsAbstraction_();
+        if (g_tls == NULL)
+        {
+            g_tls = new TlsAbstraction();
+            static TlsAbstractionReleaseGuard g_tlsReleaseGuard(*g_tls);
+        }
     }
 #endif
-    return DisposedSingletonMark<TlsAbstraction>::isDisposed() ? NULL : instance;
+    return g_tls;
 }
 
 
@@ -1501,12 +1514,15 @@ static TlsAbstraction* getTlsAbstraction()
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
-TlsAbstraction::~TlsAbstraction() {}
-void* TlsAbstraction::getData_() const
+void TlsAbstraction::releaseSystemResources()
+{
+    cv::__termination = true;  // DllMain is missing in static builds
+}
+void* TlsAbstraction::getData() const
 {
     return tlsData;
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
     tlsData = pData;
 }
@@ -1515,6 +1531,7 @@ void TlsAbstraction::setData_(void *pData)
 static void NTAPI opencv_fls_destructor(void* pData);
 #endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
 #ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
@@ -1523,8 +1540,10 @@ TlsAbstraction::TlsAbstraction()
 #endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
+    cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
 #ifndef CV_USE_FLS
     TlsFree(tlsKey);
 #else // CV_USE_FLS
@@ -1532,16 +1551,20 @@ TlsAbstraction::~TlsAbstraction()
 #endif // CV_USE_FLS
     tlsKey = TLS_OUT_OF_INDEXES;
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
 #ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
 #else // CV_USE_FLS
     return FlsGetValue(tlsKey);
 #endif // CV_USE_FLS
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
 #ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 #else // CV_USE_FLS
@@ -1552,11 +1575,14 @@ void TlsAbstraction::setData_(void *pData)
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
     CV_Assert(pthread_key_create(&tlsKey, opencv_tls_destructor) == 0);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
+    cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
     if (pthread_key_delete(tlsKey) != 0)
     {
         // Don't use logging here
@@ -1564,12 +1590,16 @@ TlsAbstraction::~TlsAbstraction()
         fflush(stderr);
     }
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
     return pthread_getspecific(tlsKey);
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
     CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
 }
 #endif
@@ -1597,6 +1627,7 @@ public:
     TlsStorage() :
         tlsSlotsSize(0)
     {
+        (void)getTlsAbstraction();  // ensure singeton initialization (for correct order of atexit calls)
         tlsSlots.reserve(32);
         threads.reserve(32);
         g_isTlsStorageInitialized = true;
@@ -1834,11 +1865,11 @@ static void WINAPI opencv_fls_destructor(void* pData)
 #endif // CV_USE_FLS
 #endif // _WIN32
 
-static TlsAbstraction* const g_force_initialization_of_TlsAbstraction
+static TlsStorage* const g_force_initialization_of_TlsStorage
 #if defined __GNUC__
     __attribute__((unused))
 #endif
-    = getTlsAbstraction();
+    = &getTlsStorage();
 
 } // namespace details
 using namespace details;
