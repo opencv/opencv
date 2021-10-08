@@ -222,8 +222,6 @@ class OCL4DNNConvSpatial
         bool createDWConvKernel(int32_t blockWidth,
                                 int32_t blockHeight,
                                 int32_t blockDepth);
-        void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
-                             int32_t offset, int32_t size, bool write_only);
         bool convolve(const UMat &bottom, UMat &top,
                       const UMat &weight, const UMat &bias,
                       int32_t numImages,

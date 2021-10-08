@@ -218,14 +218,7 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
 #endif
         if (!use_cache_path_)
         {
-            static int warn_ = 0;
-            if (!warn_)
-            {
-                std::cerr
-                    << "OpenCV(ocl4dnn): Kernel configuration cache directory doesn't exist: " << cache_path_ << std::endl
-                    << std::endl;
-                warn_ = true;
-            }
+            CV_LOG_ONCE_ERROR(NULL, "OpenCV(ocl4dnn): Kernel configuration cache directory doesn't exist: " << cache_path_);
         }
     }
 
@@ -418,7 +411,6 @@ void OCL4DNNConvSpatial<Dtype>::setupKernelDetails(int32_t kernelType,
         addDef("CHANNELS", channels_ / group_);
         addDef("APPLY_BIAS", bias_term_);
         addDef("OUTPUT_Z", M_);
-        addDef("ZPAR", 1);
         setFusionDefine(fused_activ_, fused_eltwise_);
 
         src_ = cv::ocl::dnn::conv_layer_spatial_oclsrc;
@@ -672,8 +664,7 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
                       int r, int c, int interleavedRows, int nonInterleavedRows,
                       int blockWidth, int rowAlignment )
 {
-    CHECK_EQ(interleavedRows % 2, 0) <<
-             "interleaveMatrix only supports even values for interleavedRows.";
+    CV_Check(interleavedRows, interleavedRows % 2 == 0, "interleaveMatrix only supports even values for interleavedRows.");
 
     size_t memSize = r * c * sizeof(float);
     size_t dstSize = memSize *
@@ -685,9 +676,12 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
     const int yStride = c * 2;
     const Dtype *pSrc = mem;
     Dtype* pDst = mem_dst;
-    for (int y = 0; y < r;) {
-        for (int rows = 0; rows < interleavedRows; rows += 2) {
-            if ( y >= r ) break;
+    for (int y = 0; y < r;)
+    {
+        for (int rows = 0; rows < interleavedRows; rows += 2)
+        {
+            if (y >= r)
+                break;
             if ((c % xStride) == 0) {
                 for (int x = 0; x < c / xStride; x++) {
                     memcpy(pDst + x * xStride * 2,                         // NOLINT
@@ -712,11 +706,14 @@ void interleaveMatrix(Dtype* mem_dst, const Dtype *mem,
             y += 2;
         }
 
-        for (int rows = 0; rows < nonInterleavedRows; rows++) {
-            if (y >= r) break;
+        for (int rows = 0; rows < nonInterleavedRows; rows++)
+        {
+            if (y >= r)
+                break;
             const int stride = rowAlignment;
             int remaining = c;
-            for (int x = 0; x < c; x += stride) {
+            for (int x = 0; x < c; x += stride)
+            {
                 if (remaining >= stride) {
                     memcpy(pDst + x * 2, pSrc + x, stride * sizeof(Dtype));    // NOLINT
                     remaining -=stride;
@@ -853,34 +850,6 @@ bool OCL4DNNConvSpatial<float>::createBasicKernel(int32_t blockWidth,
 }
 
 template<>
-void OCL4DNNConvSpatial<float>::CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
-                                                int32_t offset, int32_t size, bool write_only)
-{
-    cl_mem sub_mem;
-    cl_buffer_region region;
-    cl_int err;
-    size_t element_size = (use_half_) ? sizeof(short) : sizeof(float);
-
-    region.origin = offset * element_size + buffer.offset;
-    region.size = size * element_size;
-    sub_mem = clCreateSubBuffer((cl_mem)buffer.handle(ACCESS_READ),
-                                write_only ? CL_MEM_WRITE_ONLY : CL_MEM_READ_ONLY,
-                                CL_BUFFER_CREATE_TYPE_REGION, &region, &err);
-    if (err)
-    {
-        std::cout << "Failed to create sub buffer." << std::endl;
-        return;
-    }
-
-    int step = element_size, rows = size, cols = 1;
-    ocl::convertFromBuffer(sub_mem, step, rows, cols,
-                           (use_half_) ? CV_16SC1 : CV_32FC1, sub_buffer);
-
-    //decrease ocl mem refcount
-    clReleaseMemObject(sub_mem);
-}
-
-template<>
 bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
                                          const UMat &weight, const UMat &bias,
                                          int32_t numImages, kernelConfig* config)
@@ -938,7 +907,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
             kernel.set(argIdx++, (uint16_t)output_h_);
             if (!kernel.run_(3, config->global_work_size, config->local_work_size, false))
             {
-                std::cout << "IDLF kernel run failed." << std::endl;
+                CV_LOG_ERROR(NULL, "DNN/OpenCL: IDLF kernel run failed");
                 return false;
             }
         }
@@ -1012,7 +981,7 @@ bool OCL4DNNConvSpatial<float>::convolve(const UMat &bottom, UMat &top,
 
             if (!kernel.run_(3, global_size, config->local_work_size, false))
             {
-                std::cout << "GEMM like kernel run failed." << std::endl;
+                CV_LOG_ERROR(NULL, "DNN/OpenCL: GEMM like kernel run failed");
                 return false;
             }
         }
@@ -1115,14 +1084,9 @@ float OCL4DNNConvSpatial<float>::timedConvolve(const UMat &bottom, UMat &top,
     {
         queue = cv::ocl::Queue::getDefault();
     }
-    catch (const cv::Exception&)
+    catch (const std::exception& e)
     {
-        static int warn_ = 0;
-        if (!warn_)
-        {
-            std::cout << "OpenCV(ocl4dnn): Can't get OpenCL default queue for auto-tuning." << std::endl;
-            warn_ = true;
-        }
+        CV_LOG_ONCE_ERROR(NULL, "OpenCV(ocl4dnn): Can't get OpenCL default queue for auto-tuning: " << e.what());
         return 1e6;
     }
 
@@ -1326,9 +1290,9 @@ ocl::Program OCL4DNNConvSpatial<Dtype>::compileKernel()
     phash.insert(std::pair<std::string, ocl::Program>(kernel_name_, program));
     if (!program.ptr())
     {
-        std::cout << "Failed to compile kernel: " << kernel_name_
-                  << ", buildflags: " << options
-                  << ", errmsg: " << errmsg << std::endl;
+        CV_LOG_WARNING(NULL, "DNN/OpenCL: Failed to compile kernel: " << kernel_name_
+            << ", buildflags: '" << options << "', errmsg: '" << errmsg << "'"
+        );
     }
     return program;
 }
@@ -1754,7 +1718,8 @@ void OCL4DNNConvSpatial<float>::setupConvolution(const UMat &bottom,
                     fastestTime = kernelQueue[x]->executionTime;
                 }
             }
-            if (fastestKernel < 0) break;
+            if (fastestKernel < 0)
+                break;
             // Test fastest kernel
             bool verified = verifyResult(bottom, top, weight, bias, numImages, kernelQueue[fastestKernel], verifyTop);
             if (verified == true) {
@@ -1913,17 +1878,18 @@ bool OCL4DNNConvSpatial<Dtype>::setupKernelByConfig(int x, int y, int z, int typ
     {
         if (z == 1)
             z = 16;
-        CHECK_EQ(z == 16 || z == 8, true) << "invalid SIMD size" << std::endl;
+        CV_Check(z, z == 16 || z == 8, "DNN/OpenCL: IDLF - invalid SIMD size");
     }
     kernelQueue.clear();
     createConvolutionKernel(type, x, y, z);
-    if (kernelQueue.size() != 1) {
-        std::cerr << "Failed setup kernel by config:"
+    if (kernelQueue.size() != 1)
+    {
+        CV_LOG_ERROR(NULL, "DNN/OpenCL: Failed setup kernel by config: "
             << " x = " << x
             << " y = " << y
             << " z = " << z
             << " type = " << type
-            << std::endl;
+        );
         return false;
     }
     bestKernelConfig = kernelQueue[0];
@@ -1955,13 +1921,9 @@ bool OCL4DNNConvSpatial<Dtype>::loadTunedConfig()
     {
         if (cache_path_.empty())
         {
-            static int warn_ = 0;
-            if (!warn_)
-            {
-                std::cout << "OpenCV(ocl4dnn): consider to specify kernel configuration cache directory " << std::endl
-                          << "                 via OPENCV_OCL4DNN_CONFIG_PATH parameter." << std::endl;
-                warn_ = true;
-            }
+            CV_LOG_ONCE_WARNING(NULL, "OpenCV(ocl4dnn): consider to specify kernel configuration cache directory "
+                "through OPENCV_OCL4DNN_CONFIG_PATH parameter."
+            );
         }
         return false;
     }
