@@ -860,7 +860,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
             }
             else
             {
-                CV_WARN("Error opening file: " << filename << " (" << err->message << ")");
+                CV_WARN("Error opening file: " << filename << " (" << (err ? err->message : "<unknown reason>") << ")");
                 return false;
             }
         }
@@ -868,9 +868,9 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         {
             GSafePtr<GError> err;
             uridecodebin.attach(gst_parse_launch(filename, err.getRef()));
-            if (err)
+            if (!uridecodebin)
             {
-                CV_WARN("Error opening bin: " << err->message);
+                CV_WARN("Error opening bin: " << (err ? err->message : "<unknown reason>"));
                 return false;
             }
             manualpipeline = true;
@@ -2073,7 +2073,7 @@ void handleMessage(GstElement * pipeline)
                 gst_message_parse_error(msg, err.getRef(), debug.getRef());
                 GSafePtr<gchar> name; name.attach(gst_element_get_name(GST_MESSAGE_SRC (msg)));
                 CV_WARN("Embedded video playback halted; module " << name.get() <<
-                        " reported: " << err->message);
+                        " reported: " << (err ? err->message : "<unknown reason>"));
                 CV_LOG_DEBUG(NULL, "GStreamer debug: " << debug.get());
 
                 gst_element_set_state(GST_ELEMENT(pipeline), GST_STATE_NULL);
