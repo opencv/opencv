@@ -4,6 +4,7 @@ set(OPENCV_DNN_SAMPLES_REQUIRED_DEPS
   opencv_core
   opencv_imgproc
   opencv_dnn
+  opencv_objdetect
   opencv_video
   opencv_imgcodecs
   opencv_videoio
