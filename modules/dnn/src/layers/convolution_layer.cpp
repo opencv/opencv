@@ -46,6 +46,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
 #include "opencv2/core/hal/hal.hpp"
@@ -1494,7 +1495,26 @@ public:
             config.pad = pad;
             config.stride = stride;
             config.dilation = dilation;
+            if (inputs[0].dims != 4 && inputs[0].dims != umat_blobs[0].dims)
+            {
+                static bool bypassCheck = utils::getConfigurationParameterBool("OPENCV_OCL4DNN_CONVOLUTION_IGNORE_INPUT_DIMS_4_CHECK", false);
+                if (!bypassCheck)
+                {
+                    CV_LOG_ERROR(NULL, "DNN/OpenCL: Unsupported configuration: inputs[0].dims=" << inputs[0].dims << "  umat_blobs[0].dims=" << umat_blobs[0].dims
+                        << ". Consider reporting complete reproducer to https://github.com/opencv/opencv/issues/20833."
+                        << " You can skip this check temporary through OPENCV_OCL4DNN_CONVOLUTION_IGNORE_INPUT_DIMS_4_CHECK=1"
+                    );
+                    return false;
+                }
+            }
             config.group = inputs[0].size[1] / umat_blobs[0].size[1];
+            if (config.group < 1)  // config.group == 0 causes div by zero in ocl4dnn code
+            {
+                CV_LOG_WARNING(NULL, "DNN/OpenCL: Unsupported config.group=" << config.group
+                    << ". Consider reporting complete reproducer to https://github.com/opencv/opencv/issues/20833"
+                );
+                return false;
+            }
             config.bias_term = umat_blobs.size() == 2;
             config.use_half = use_half;
 
