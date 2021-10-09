@@ -223,6 +223,9 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
             continue;
         std::vector<std::string> candidates;
         cv::glob(utils::fs::join(path, plugin_expr), candidates);
+        // Prefer candisates with higher versions
+        // TODO: implemented accurate versions-based comparator
+        std::sort(candidates.begin(), candidates.end(), std::greater<std::string>());
         CV_LOG_DEBUG(NULL, "    - " << path << ": " << candidates.size());
         copy(candidates.begin(), candidates.end(), back_inserter(results));
     }
