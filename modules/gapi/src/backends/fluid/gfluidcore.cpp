@@ -2954,7 +2954,7 @@ GAPI_FLUID_KERNEL(GFluidPhase, cv::gapi::core::GPhase, false)
 };
 
 template<typename T, typename Mapper, int chanNum>
-struct linearScratchDesc {
+struct LinearScratchDesc {
     using alpha_t = typename Mapper::alpha_type;
     using index_t = typename Mapper::index_type;
 
@@ -2965,7 +2965,7 @@ struct linearScratchDesc {
     index_t* mapsy;
     T*       tmp;
 
-    linearScratchDesc(int /*inW*/, int /*inH*/, int outW, int outH,  void* data) {
+    LinearScratchDesc(int /*inW*/, int /*inH*/, int outW, int outH,  void* data) {
         alpha = reinterpret_cast<alpha_t*>(data);
         clone = reinterpret_cast<alpha_t*>(alpha + outW);
         mapsx = reinterpret_cast<index_t*>(clone + outW*4);
@@ -2976,7 +2976,7 @@ struct linearScratchDesc {
 
     static int bufSize(int inW, int /*inH*/, int outW, int outH, int lpi) {
         auto size = outW * sizeof(alpha_t)     +
-                    outW * sizeof(alpha_t) * 4 +  // alpha clones // previous alpha is redundant?
+                    outW * sizeof(alpha_t) * 4 +  // alpha clones
                     outW * sizeof(index_t)     +
                     outH * sizeof(alpha_t)     +
                     outH * sizeof(index_t) * 2 +
@@ -3002,7 +3002,7 @@ static inline void initScratchLinear(const cv::GMatDesc& in,
     static const auto unity = Mapper::unity;
 
     auto inSz = in.size;
-    auto sbufsize = linearScratchDesc<T, Mapper, chanNum>::bufSize(inSz.width, inSz.height, outSz.width, outSz.height, lpi);
+    auto sbufsize = LinearScratchDesc<T, Mapper, chanNum>::bufSize(inSz.width, inSz.height, outSz.width, outSz.height, lpi);
 
     Size scratch_size{sbufsize, 1};
 
@@ -3017,7 +3017,7 @@ static inline void initScratchLinear(const cv::GMatDesc& in,
     double hRatio = ratio(in.size.width, outSz.width);
     double vRatio = ratio(in.size.height, outSz.height);
 
-    linearScratchDesc<T, Mapper, chanNum> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+    LinearScratchDesc<T, Mapper, chanNum> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
 
     auto *alpha = scr.alpha;
     auto *clone = scr.clone;
@@ -3125,7 +3125,7 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
     GAPI_DbgAssert(outY + lpi <= outSz.height);
     GAPI_DbgAssert(lpi <= 4);
 
-    linearScratchDesc<T, Mapper, numChan> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
+    LinearScratchDesc<T, Mapper, numChan> scr(inSz.width, inSz.height, outSz.width, outSz.height, scratch.OutLineB());
 
     const auto *alpha = scr.alpha;
     const auto *mapsx = scr.mapsx;
@@ -3151,15 +3151,15 @@ static void calcRowLinearC(const cv::gapi::fluid::View  & in,
 
     if (inSz.width >= 16 && outSz.width >= 16)
     {
-        calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
-                                         reinterpret_cast<const uint8_t**>(src0),
-                                         reinterpret_cast<const uint8_t**>(src1),
-                                         reinterpret_cast<const short*>(alpha),
-                                         reinterpret_cast<const short*>(clone),
-                                         reinterpret_cast<const short*>(mapsx),
-                                         reinterpret_cast<const short*>(beta),
-                                         reinterpret_cast<uint8_t*>(tmp),
-                                         inSz, outSz, lpi);
+        sse42::calcRowLinear_8UC_Impl_<numChan>(reinterpret_cast<uint8_t**>(dst),
+                                                reinterpret_cast<const uint8_t**>(src0),
+                                                reinterpret_cast<const uint8_t**>(src1),
+                                                reinterpret_cast<const short*>(alpha),
+                                                reinterpret_cast<const short*>(clone),
+                                                reinterpret_cast<const short*>(mapsx),
+                                                reinterpret_cast<const short*>(beta),
+                                                reinterpret_cast<uint8_t*>(tmp),
+                                                inSz, outSz, lpi);
 
         return;
     }

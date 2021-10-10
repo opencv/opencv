@@ -2114,92 +2114,7 @@ PERF_TEST_P_(ResizePerfTest, TestPerformance)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P_(BottlenecksPerfTest, TestPerformance)
-{
-    compare_f cmpF = get<0>(GetParam());
-    cv::GCompileArgs compile_args = get<1>(GetParam());
-
-    in_mat1 = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
-
-    cv::Mat cvvga;
-    cv::Mat cvgray;
-    cv::Mat cvblurred;
-
-    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
-    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
-    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
-    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
-
-    cv::GMat in;
-    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
-    cv::GMat gray = cv::gapi::BGR2Gray(vga);
-    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
-    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
-    cv::GComputation ac(in, out);
-
-    auto cc = ac.compile(descr_of(gin(in_mat1)),
-                         std::move(compile_args));
-    cc(gin(in_mat1), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1), gout(out_mat_gapi));
-    }
-
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
 //------------------------------------------------------------------------------
-
-PERF_TEST_P_(StackOverflowPerfTest, TestPerformance)
-{
-    compare_f cmpF = get<0>(GetParam());
-    MatType type = get<1>(GetParam());
-    cv::Size sz_in = get<2>(GetParam());
-    cv::GCompileArgs compile_args = get<3>(GetParam());
-
-    in_mat1 = cv::Mat(sz_in, type);
-    cv::Scalar mean = cv::Scalar::all(127);
-    cv::Scalar stddev = cv::Scalar::all(40.f);
-    cv::randn(in_mat1, mean, stddev);
-
-    cv::Mat cvvga;
-    cv::Mat cvgray;
-    cv::Mat cvblurred;
-
-    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
-    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
-    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
-    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
-
-    cv::GMat in;
-    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
-    cv::GMat gray = cv::gapi::BGR2Gray(vga);
-    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
-    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
-    cv::GComputation ac(in, out);
-
-    auto cc = ac.compile(descr_of(gin(in_mat1)),
-                         std::move(compile_args));
-    cc(gin(in_mat1), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1), gout(out_mat_gapi));
-    }
-
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
 
 PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
 {
@@ -2230,6 +2145,97 @@ PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
     // Warm-up graph engine:
     auto cc = c.compile(descr_of(gin(in_mat1)),
                         std::move(compile_args));
+    cc(gin(in_mat1), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1), gout(out_mat_gapi));
+    }
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+// This test cases were created to control performance result of test scenario mentioned here:
+// https://stackoverflow.com/questions/60629331/opencv-gapi-performance-not-good-as-expected
+
+PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    cv::GCompileArgs compile_args = get<1>(GetParam());
+
+    in_mat1 = cv::imread(findDataFile("cv/edgefilter/kodim23.png"));
+
+    cv::Mat cvvga;
+    cv::Mat cvgray;
+    cv::Mat cvblurred;
+
+    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
+    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
+    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
+    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
+
+    cv::GMat in;
+    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
+    cv::GMat gray = cv::gapi::BGR2Gray(vga);
+    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
+    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
+    cv::GComputation ac(in, out);
+
+    auto cc = ac.compile(descr_of(gin(in_mat1)),
+        std::move(compile_args));
+    cc(gin(in_mat1), gout(out_mat_gapi));
+
+    TEST_CYCLE()
+    {
+        cc(gin(in_mat1), gout(out_mat_gapi));
+    }
+
+    // Comparison ////////////////////////////////////////////////////////////
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//------------------------------------------------------------------------------
+
+PERF_TEST_P_(BottleneckKernelsPerfTest, TestPerformance)
+{
+    compare_f cmpF = get<0>(GetParam());
+    MatType type = get<1>(GetParam());
+    cv::Size sz_in = get<2>(GetParam());
+    cv::GCompileArgs compile_args = get<3>(GetParam());
+
+    in_mat1 = cv::Mat(sz_in, type);
+    cv::Scalar mean = cv::Scalar::all(127);
+    cv::Scalar stddev = cv::Scalar::all(40.f);
+    cv::randn(in_mat1, mean, stddev);
+
+    cv::Mat cvvga;
+    cv::Mat cvgray;
+    cv::Mat cvblurred;
+
+    cv::resize(in_mat1, cvvga, cv::Size(), 0.5, 0.5);
+    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
+    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
+    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
+
+    cv::GMat in;
+    cv::GMat vga = cv::gapi::resize(in, cv::Size(), 0.5, 0.5, 1);
+    cv::GMat gray = cv::gapi::BGR2Gray(vga);
+    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
+    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
+    cv::GComputation ac(in, out);
+
+    auto cc = ac.compile(descr_of(gin(in_mat1)),
+        std::move(compile_args));
     cc(gin(in_mat1), gout(out_mat_gapi));
 
     TEST_CYCLE()

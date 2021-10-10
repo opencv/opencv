@@ -286,11 +286,11 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestFluid, ResizePerfTest,
         Values(cv::compile_args(CORE_FLUID))));
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
-INSTANTIATE_TEST_CASE_P(BottlenecksPerfTestFluid, BottlenecksPerfTest,
+INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsConstInputPerfTest,
     Combine(Values(AbsSimilarPoints(0, 1).to_compare_f()),
         Values(cv::compile_args(CORE_FLUID, IMGPROC_FLUID))));
 
-INSTANTIATE_TEST_CASE_P(StackOverflowPerfTestFluid, StackOverflowPerfTest,
+INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsPerfTest,
     Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
         Values(CV_8UC3),
         Values(szSmall128, szVGA, sz720p, sz1080p),

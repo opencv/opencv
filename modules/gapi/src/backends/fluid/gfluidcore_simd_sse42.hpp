@@ -12,37 +12,6 @@
 
 #include "opencv2/core.hpp"
 
-#ifdef CV_AVX2
-#undef CV_AVX2
-#endif
-#define CV_AVX2 0
-
-#ifdef CV_SSE4_2
-#undef CV_SSE4_2
-#undef CV_SSE4_1
-#undef CV_SSSE3
-#undef CV_SSE3
-#undef CV_SSE2
-#undef CV_SSE
-#endif
-#define CV_SSE4_2 1
-#define CV_SSE4_1 1
-#define CV_SSSE3  1
-#define CV_SSE3   1
-#define CV_SSE2   1
-#define CV_SSE    1
-#define CV_CPU_HAS_SUPPORT_SSE2 1
-
-#ifdef CV_SIMD128
-#undef CV_SIMD128
-#endif
-
-#ifdef CV_SIMD256
-#undef CV_SIMD256
-#endif
-#define CV_SIMD256 0
-
-#define CV_SIMD128 1
 #include <opencv2/core/hal/intrin.hpp>
 
 #include <cstdint>
@@ -59,6 +28,8 @@
 namespace cv {
 namespace gapi {
 namespace fluid {
+namespace sse42 {
+
 CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x16& vec, const uchar src[], const short* index, const int pos)
 {
     const int chanNum = 4;
@@ -74,7 +45,7 @@ CV_ALWAYS_INLINE void v_gather_pixel_map(v_uint8x16& vec, const uchar src[], con
 }
 
 CV_ALWAYS_INLINE void resize_vertical_anyLPI(const uchar* src0, const uchar* src1,
-                                             uchar* tmp, const int inLength,
+                                             uchar* dst, const int inLength,
                                              const short beta) {
     constexpr int nlanes = 16;
     __m128i zero = _mm_setzero_si128();
@@ -94,7 +65,7 @@ CV_ALWAYS_INLINE void resize_vertical_anyLPI(const uchar* src0, const uchar* src
             __m128i r2 = _mm_mulhrs_epi16(_mm_sub_epi16(a2, b2), b);
             __m128i res1 = _mm_add_epi16(r1, b1);
             __m128i res2 = _mm_add_epi16(r2, b2);
-            _mm_storeu_si128(reinterpret_cast<__m128i*>(tmp + w), _mm_packus_epi16(res1, res2));
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst + w), _mm_packus_epi16(res1, res2));
         }
 
         if (w < inLength) {
@@ -245,6 +216,7 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                                               const int      lpi) {
     bool xRatioEq = inSz.width == outSz.width;
     bool yRatioEq = inSz.height == outSz.height;
+    constexpr int nlanes = 16;
     constexpr int half_nlanes = 16 / 2;
     constexpr int chanNum = 3;
 
@@ -254,8 +226,6 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
         if (lpi == 4)
         {
             // vertical pass
-            GAPI_DbgAssert(inSz.width >= half_nlanes);
-
             __m128i b0 = _mm_set1_epi16(beta[0]);
             __m128i b1 = _mm_set1_epi16(beta[1]);
             __m128i b2 = _mm_set1_epi16(beta[2]);
@@ -329,9 +299,9 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
             // horizontal pass
             __m128i horizontal_shuf_mask = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
 
-            for (int x = 0; outSz.width >= half_nlanes; )
+            for (int x = 0; outSz.width >= nlanes; )
             {
-                for (; x <= outSz.width - half_nlanes; x += half_nlanes)
+                for (; x <= outSz.width - nlanes; x += nlanes)
                 {
 #ifdef _WIN64
                     __m128i a00 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * x]), *reinterpret_cast<const int64_t*>(&clone[4 * x]));
@@ -346,6 +316,18 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                     __m128i a66 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 6)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 6)]));
                     __m128i a67 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 6)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 7)]));
                     __m128i a77 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 7)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 7)]));
+                    __m128i a88 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 8)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 8)]));
+                    __m128i a89 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 8)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 9)]));
+                    __m128i a99 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 9)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 9)]));
+                    __m128i a1010 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 10)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 10)]));
+                    __m128i a1011 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 10)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 11)]));
+                    __m128i a1111 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 11)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 11)]));
+                    __m128i a1212 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 12)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 12)]));
+                    __m128i a1213 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 12)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 13)]));
+                    __m128i a1313 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 13)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 13)]));
+                    __m128i a1414 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 14)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 14)]));
+                    __m128i a1415 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 14)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 15)]));
+                    __m128i a1515 = _mm_setr_epi64x(*reinterpret_cast<const int64_t*>(&clone[4 * (x + 15)]), *reinterpret_cast<const int64_t*>(&clone[4 * (x + 15)]));
 #else
                     __m128i a00 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * x]), *reinterpret_cast<const __m64*>(&clone[4 * x]));
                     __m128i a01 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * x]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 1)]));
@@ -359,7 +341,20 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                     __m128i a66 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 6)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 6)]));
                     __m128i a67 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 6)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 7)]));
                     __m128i a77 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 7)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 7)]));
+                    __m128i a88 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 8)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 8)]));
+                    __m128i a89 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 8)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 9)]));
+                    __m128i a99 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 9)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 9)]));
+                    __m128i a1010 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 10)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 10)]));
+                    __m128i a1011 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 10)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 11)]));
+                    __m128i a1111 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 11)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 11)]));
+                    __m128i a1212 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 12)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 12)]));
+                    __m128i a1213 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 12)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 13)]));
+                    __m128i a1313 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 13)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 13)]));
+                    __m128i a1414 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 14)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 14)]));
+                    __m128i a1415 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 14)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 15)]));
+                    __m128i a1515 = _mm_setr_epi64(*reinterpret_cast<const __m64*>(&clone[4 * (x + 15)]), *reinterpret_cast<const __m64*>(&clone[4 * (x + 15)]));
 #endif
+
                     // load 3 channels of first pixel from first pair of 4-couple scope
                     __m128i pix1 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x])]));
                     // insert first channel from next couple of pixels to completely fill the simd vector
@@ -389,8 +384,8 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                     // gather data from the same lines together
                     __m128i res1 = _mm_shuffle_epi8(q0_0, horizontal_shuf_mask);
 
-                    val_0 = _mm_unpacklo_epi8(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 1] + 1)])), zero);
-                    val_1 = _mm_unpacklo_epi8(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1) + 1)])), zero);
+                    val_0 = _mm_unpacklo_epi8(_mm_insert_epi64(val_0, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 1] + 1)]), 0), zero);
+                    val_1 = _mm_unpacklo_epi8(_mm_insert_epi64(val_1, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 1] + 1) + 1)]), 0), zero);
 
                     val_2 = _mm_insert_epi64(val_2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 2])]), 0);
                     val_3 = _mm_insert_epi64(val_3, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 2] + 1))]), 0);
@@ -456,8 +451,8 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                     // gather data from the same lines together
                     __m128i res4 = _mm_shuffle_epi8(q0_3, horizontal_shuf_mask);
 
-                    val_0 = _mm_unpacklo_epi8(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum *  mapsx[x + 5]      + 1)])), zero);
-                    val_1 = _mm_unpacklo_epi8(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 5] + 1) + 1)])), zero);
+                    val_0 = _mm_unpacklo_epi8(_mm_insert_epi64(val_0, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum *  mapsx[x + 5]      + 1)]), 0), zero);
+                    val_1 = _mm_unpacklo_epi8(_mm_insert_epi64(val_1, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 5] + 1) + 1)]), 0), zero);
 
                     val_2 = _mm_insert_epi64(val_2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 6])]), 0);
                     val_3 = _mm_insert_epi64(val_3, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 6] + 1))]), 0);
@@ -510,18 +505,178 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
                     __m128i bl24 = _mm_blend_epi16(bl2, _mm_slli_si128(bl4, 8), 0xF0 /*0b11110000*/);
                     __m128i bl42 = _mm_blend_epi16(_mm_srli_si128(bl2, 8), bl4, 0xF0 /*0b11110000*/);
 
+                    // load 3 channels of first pixel from first pair of 4-couple scope
+                    __m128i pix17 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 8])]));
+                    // insert first channel from next couple of pixels to completely fill the simd vector
+                    pix17 = _mm_insert_epi32(pix17, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 9])]), 3);
+
+                    // load 3 channels of neighbor pixel from first pair of 4-couple scope
+                    __m128i pix18 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 8] + 1))]));
+                    // insert first channel from next couple of pixels to completely fill the simd vector
+                    pix18 = _mm_insert_epi32(pix18, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 9] + 1))]), 3);
+
+                    // expand 8-bit data to 16-bit
+                    val_0 = _mm_unpacklo_epi8(pix17, zero);
+                    val_1 = _mm_unpacklo_epi8(pix18, zero);
+
+                    // expand 8-bit data to 16-bit
+                    val_2 = _mm_unpackhi_epi8(pix17, zero);
+                    val_3 = _mm_unpackhi_epi8(pix18, zero);
+
+                    // the main calculations
+                    __m128i t0_6 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a88);
+                    __m128i t1_6 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a89);
+                    __m128i r0_6 = _mm_add_epi16(val_1, t0_6);
+                    __m128i r1_6 = _mm_add_epi16(val_3, t1_6);
+
+                    // pack 16-bit data to 8-bit
+                    __m128i q0_6 = _mm_packus_epi16(r0_6, r1_6);
+                    // gather data from the same lines together
+                    __m128i res7 = _mm_shuffle_epi8(q0_6, horizontal_shuf_mask);
+
+                    val_0 = _mm_unpacklo_epi8(_mm_insert_epi64(val_0, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 9] + 1)]), 0), zero);
+                    val_1 = _mm_unpacklo_epi8(_mm_insert_epi64(val_1, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 9] + 1) + 1)]), 0), zero);
+
+                    val_2 = _mm_insert_epi64(val_2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 10])]), 0);
+                    val_3 = _mm_insert_epi64(val_3, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 10] + 1))]), 0);
+
+                    val_2 = _mm_unpacklo_epi8(val_2, zero);
+                    val_3 = _mm_unpacklo_epi8(val_3, zero);
+
+                    __m128i t0_7 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a99);
+                    __m128i t1_7 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a1010);
+                    __m128i r0_7 = _mm_add_epi16(val_1, t0_7);
+                    __m128i r1_7 = _mm_add_epi16(val_3, t1_7);
+
+                    __m128i q0_7 = _mm_packus_epi16(r0_7, r1_7);
+                    __m128i res8 = _mm_shuffle_epi8(q0_7, horizontal_shuf_mask);
+
+                    __m128i pix21 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 11] - 1) + 2)]));
+                    pix21 = _mm_insert_epi32(pix21, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 10] + 2)]), 0);
+
+                    __m128i pix22 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 11] + 2)]));
+                    pix22 = _mm_insert_epi32(pix22, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 10] + 1) + 2)]), 0);
+
+                    val_0 = _mm_unpacklo_epi8(pix21, zero);
+                    val_1 = _mm_unpacklo_epi8(pix22, zero);
+
+                    val_2 = _mm_unpackhi_epi8(pix21, zero);
+                    val_3 = _mm_unpackhi_epi8(pix22, zero);
+
+                    // the main calculations
+                    __m128i t0_8 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a1011);
+                    __m128i t1_8 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a1111);
+                    __m128i r0_8 = _mm_add_epi16(val_1, t0_8);
+                    __m128i r1_8 = _mm_add_epi16(val_3, t1_8);
+
+                    // pack 16-bit data to 8-bit
+                    __m128i q0_8 = _mm_packus_epi16(r0_8, r1_8);
+                    __m128i res9 = _mm_shuffle_epi8(q0_8, horizontal_shuf_mask);
+
+                    __m128i pix23 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 12])]));
+                    // insert first channel from next couple of pixels to completely fill the simd vector
+                    pix23 = _mm_insert_epi32(pix23, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 13])]), 3);
+
+                    // load 3 channels of neighbor pixel from first pair of 4-couple scope
+                    __m128i pix24 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 12] + 1))]));
+                    // insert first channel from next couple of pixels to completely fill the simd vector
+                    pix24 = _mm_insert_epi32(pix24, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 13] + 1))]), 3);
+
+                    // expand 8-bit data to 16-bit
+                    val_0 = _mm_unpacklo_epi8(pix23, zero);
+                    val_1 = _mm_unpacklo_epi8(pix24, zero);
+
+                    // expand 8-bit data to 16-bit
+                    val_2 = _mm_unpackhi_epi8(pix23, zero);
+                    val_3 = _mm_unpackhi_epi8(pix24, zero);
+
+                    // the main calculations
+                    __m128i t0_9 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a1212);
+                    __m128i t1_9 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a1213);
+                    __m128i r0_9 = _mm_add_epi16(val_1, t0_9);
+                    __m128i r1_9 = _mm_add_epi16(val_3, t1_9);
+
+                    // pack 16-bit data to 8-bit
+                    __m128i q0_9 = _mm_packus_epi16(r0_9, r1_9);
+                    // gather data from the same lines together
+                    __m128i res10 = _mm_shuffle_epi8(q0_9, horizontal_shuf_mask);
+
+                    val_0 = _mm_unpacklo_epi8(_mm_insert_epi64(val_0, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 13] + 1)]), 0), zero);
+                    val_1 = _mm_unpacklo_epi8(_mm_insert_epi64(val_1, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 13] + 1) + 1)]), 0), zero);
+
+                    val_2 = _mm_insert_epi64(val_2, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * mapsx[x + 14])]), 0);
+                    val_3 = _mm_insert_epi64(val_3, *reinterpret_cast<const int64_t*>(&tmp[4 * (chanNum * (mapsx[x + 14] + 1))]), 0);
+
+                    val_2 = _mm_unpacklo_epi8(val_2, zero);
+                    val_3 = _mm_unpacklo_epi8(val_3, zero);
+
+                    __m128i t0_10 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a1313);
+                    __m128i t1_10 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a1414);
+                    __m128i r0_10 = _mm_add_epi16(val_1, t0_10);
+                    __m128i r1_10 = _mm_add_epi16(val_3, t1_10);
+
+                    __m128i q0_10 = _mm_packus_epi16(r0_10, r1_10);
+                    __m128i res11 = _mm_shuffle_epi8(q0_10, horizontal_shuf_mask);
+
+                    __m128i pix27 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * (mapsx[x + 15] - 1) + 2)]));
+                    pix27 = _mm_insert_epi32(pix27, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * mapsx[x + 14] + 2)]), 0);
+
+                    __m128i pix28 = _mm_lddqu_si128(reinterpret_cast<const __m128i*>(&tmp[4 * (chanNum * mapsx[x + 15] + 2)]));
+                    pix28 = _mm_insert_epi32(pix28, *reinterpret_cast<const int*>(&tmp[4 * (chanNum * (mapsx[x + 14] + 1) + 2)]), 0);
+
+                    val_0 = _mm_unpacklo_epi8(pix27, zero);
+                    val_1 = _mm_unpacklo_epi8(pix28, zero);
+
+                    val_2 = _mm_unpackhi_epi8(pix27, zero);
+                    val_3 = _mm_unpackhi_epi8(pix28, zero);
+
+                    // the main calculations
+                    __m128i t0_11 = _mm_mulhrs_epi16(_mm_sub_epi16(val_0, val_1), a1415);
+                    __m128i t1_11 = _mm_mulhrs_epi16(_mm_sub_epi16(val_2, val_3), a1515);
+                    __m128i r0_11 = _mm_add_epi16(val_1, t0_11);
+                    __m128i r1_11 = _mm_add_epi16(val_3, t1_11);
+
+                    // pack 16-bit data to 8-bit
+                    __m128i q0_11 = _mm_packus_epi16(r0_11, r1_11);
+                    __m128i res12 = _mm_shuffle_epi8(q0_11, horizontal_shuf_mask);
+
+                    __m128i bl7 = _mm_blend_epi16(res7, _mm_slli_si128(res8, 4), 0xCC /*0b11001100*/);
+                    __m128i bl8 = _mm_blend_epi16(_mm_srli_si128(res7, 4), res8, 0xCC /*0b11001100*/);
+
+                    __m128i bl9 = _mm_blend_epi16(res9, _mm_slli_si128(res10, 4), 0xCC /*0b11001100*/);
+                    __m128i bl10 = _mm_blend_epi16(_mm_srli_si128(res9, 4), res10, 0xCC /*0b11001100*/);
+
+                    __m128i bl11 = _mm_blend_epi16(res11, _mm_slli_si128(res12, 4), 0xCC /*0b11001100*/);
+                    __m128i bl12 = _mm_blend_epi16(_mm_srli_si128(res11, 4), res12, 0xCC /*0b11001100*/);
+
+                    __m128i bl57 = _mm_blend_epi16(bl5, _mm_slli_si128(bl7, 8), 0xF0 /*0b11110000*/);
+                    __m128i bl75 = _mm_blend_epi16(_mm_srli_si128(bl5, 8), bl7, 0xF0 /*0b11110000*/);
+
+                    __m128i bl68 = _mm_blend_epi16(bl6, _mm_slli_si128(bl8, 8), 0xF0 /*0b11110000*/);
+                    __m128i bl86 = _mm_blend_epi16(_mm_srli_si128(bl6, 8), bl8, 0xF0 /*0b11110000*/);
+
+                    __m128i bl911 = _mm_blend_epi16(bl9, _mm_slli_si128(bl11, 8), 0xF0 /*0b11110000*/);
+                    __m128i bl119 = _mm_blend_epi16(_mm_srli_si128(bl9, 8), bl11, 0xF0 /*0b11110000*/);
+
+                    __m128i bl1012 = _mm_blend_epi16(bl10, _mm_slli_si128(bl12, 8), 0xF0 /*0b11110000*/);
+                    __m128i bl1210 = _mm_blend_epi16(_mm_srli_si128(bl10, 8), bl12, 0xF0 /*0b11110000*/);
+
                     _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[0][3 * x]), bl13);
                     _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[1][3 * x]), bl24);
                     _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[2][3 * x]), bl31);
                     _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[3][3 * x]), bl42);
-                    _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[0][3 * x + 16]), bl5);
-                    _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[1][3 * x + 16]), bl6);
-                    _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[2][3 * x + 16]), _mm_srli_si128(bl5, 8));
-                    _mm_storel_epi64(reinterpret_cast<__m128i*>(&dst[3][3 * x + 16]), _mm_srli_si128(bl6, 8));
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[0][3 * x + 16]), bl57);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[1][3 * x + 16]), bl68);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[2][3 * x + 16]), bl75);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[3][3 * x + 16]), bl86);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[0][3 * x + 32]), bl911);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[1][3 * x + 32]), bl1012);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[2][3 * x + 32]), bl119);
+                    _mm_storeu_si128(reinterpret_cast<__m128i*>(&dst[3][3 * x + 32]), bl1210);
                 }
 
                 if (x < outSz.width) {
-                    x = outSz.width - half_nlanes;
+                    x = outSz.width - nlanes;
                     continue;
                 }
                 break;
@@ -571,6 +726,7 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],
         }
     }
 }
+} // namespace sse42
 } // namespace fliud
 } // namespace gapi
 } // namespace cv
