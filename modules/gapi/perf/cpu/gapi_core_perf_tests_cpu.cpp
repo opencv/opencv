@@ -329,11 +329,13 @@ INSTANTIATE_TEST_CASE_P(ResizePerfTestCPU, ResizePerfTest,
         Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestCPU, BottleneckKernelsConstInputPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+    Combine(Values(AbsExact().to_compare_f()),
+       Values("cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
+              "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
        Values(cv::compile_args(CORE_CPU))));
 
-INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestCPU, BottleneckKernelsPerfTest,
-    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestCPU, ResizeInSimpleGraphPerfTest,
+    Combine(Values(AbsExact().to_compare_f()),
         Values(CV_8UC3),
         Values(szSmall128, szVGA, sz720p, sz1080p),
         Values(cv::compile_args(CORE_CPU))));

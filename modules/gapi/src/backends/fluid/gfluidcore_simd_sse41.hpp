@@ -8,7 +8,7 @@
 
 #include "opencv2/gapi/own/saturate.hpp"
 
-#include <nmmintrin.h>
+#include <smmintrin.h>
 
 #include "opencv2/core.hpp"
 
@@ -200,7 +200,7 @@ CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_(uint8_t**,
                                               const Size& ,
                                               const int )
 {
-    CV_Assert("Unsupported number of channel");
+    static_assert(chanNum != 3, "Unsupported number of channel");
 }
 template<>
 CV_ALWAYS_INLINE void calcRowLinear_8UC_Impl_<3>(uint8_t* dst[],

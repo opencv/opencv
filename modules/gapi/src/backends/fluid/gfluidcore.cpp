@@ -20,7 +20,7 @@
 #include <opencv2/gapi/fluid/core.hpp>
 
 #if CV_SSE4_1
-#include "gfluidcore_simd_sse42.hpp"
+#include "gfluidcore_simd_sse41.hpp"
 #endif
 
 #include "gfluidbuffer_priv.hpp"
