@@ -161,7 +161,8 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
     *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
     auto frame = cv::util::get<MediaFrame*>(out_arg);
     auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
-    adapter->setParams({packet->getWidth(), packet->getHeight()},
+    adapter->setParams(cv::Size(static_cast<int>(packet->getWidth()),
+                                static_cast<int>(packet->getHeight())),
                         cv::gapi::oak::OAKFrameFormat::BGR,
                         packet->getData().data(),
                         packet->getData().size());

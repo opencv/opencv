@@ -245,11 +245,6 @@ find_package(depthai)
 if(depthai_FOUND)
   ocv_target_compile_definitions(${the_module} PRIVATE -DWITH_OAK_BACKEND)
   ocv_target_link_libraries(${the_module} PRIVATE depthai::core)
-  # FIXME: remove this // or leave to test against pure dai pipeline?
-  if(TARGET opencv_test_gapi)
-    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DWITH_OAK_BACKEND)
-    ocv_target_link_libraries(opencv_test_gapi PRIVATE depthai::core)
-  endif()
 endif()
 
 if(HAVE_PLAIDML)
