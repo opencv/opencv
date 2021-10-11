@@ -1523,3 +1523,38 @@ def save_data_and_paddle_model(model, name, input_data):
 input_shape = [1, 2, 3, 4]
 x = paddle.rand(input_shape, dtype="float32")
 save_data_and_paddle_model(Resize_HumanSeg(), "resize_humanseg", x)
+
+class SubFromConstBroadcast(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SubFromConstBroadcast, self).__init__()
+        self.const = torch.randn(1, 3, dtype=torch.float32)
+
+    def forward(self, x):
+        return self.const - x
+
+model = SubFromConstBroadcast()
+input_ = Variable(torch.randn(2, 3, dtype=torch.float32))
+save_data_and_model("sub_from_const_broadcast", input_, model)
+
+class SubFromConstEltWise(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SubFromConstEltWise, self).__init__()
+        self.const = torch.randn(1, 2, 3, 4, dtype=torch.float32)
+
+    def forward(self, x):
+        return self.const - x
+
+model = SubFromConstEltWise()
+input_ = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
+save_data_and_model("sub_from_const_eltwise", input_, model)
+
+class SubFromConst1(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(SubFromConst1, self).__init__()
+
+    def forward(self, x):
+        return 1 - x
+
+model = SubFromConst1()
+input_ = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
+save_data_and_model("sub_from_const1", input_, model)
