@@ -903,7 +903,19 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     opencv_onnx::NodeProto node_proto = node_proto_;
     const std::string& layer_type = node_proto.op_type();
     bool isSub = layer_type == "Sub";
-    CV_CheckEQ(node_proto.input_size(), 2, "");
+    CV_Assert((node_proto.input_size() == 2) || (layer_type == "Sum" && node_proto.input_size() > 2));
+
+    if (layer_type == "Sum" && node_proto.input_size() > 2)
+    {
+        for (int i = 0; i < node_proto.input_size(); ++i)
+        {
+            if (layer_id.find(node_proto.input(i)) == layer_id.end())
+            {
+                CV_Error(Error::StsNotImplemented, "Sum of constants is not implemented for inputs > 2");
+            }
+        }
+    }
+
     bool is_const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
     bool is_const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
     if (is_const_0 && is_const_1)
