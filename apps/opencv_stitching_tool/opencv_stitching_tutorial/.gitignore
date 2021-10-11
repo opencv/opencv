@@ -1,0 +1,9 @@
+# Ignore everything
+/*
+/*/
+
+# But not these files...
+!.gitignore
+!figures/
+!Stitching Tutorial.ipynb
+!README.md
