@@ -931,6 +931,13 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
     testONNXModels("conv_resize_pool_1d");
 }
 
+TEST_P(Test_ONNX_layers, SubFromConst)
+{
+    testONNXModels("sub_from_const1");
+    testONNXModels("sub_from_const_eltwise");
+    testONNXModels("sub_from_const_broadcast");
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
