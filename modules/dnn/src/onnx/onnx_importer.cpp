@@ -53,7 +53,6 @@ class ONNXImporter
     Mat getBlob(const std::string& input_name);
 
     LayerParams getLayerParams(const opencv_onnx::NodeProto& node_proto);
-    bool isCeilMode(const LayerParams& layerParams);
 
     void addConstant(const std::string& name, const Mat& blob);
     void addLayer(LayerParams& layerParams,
@@ -61,6 +60,7 @@ class ONNXImporter
 
     void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
                    const std::string& input, size_t n);
+    void addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id);
 public:
 
     ONNXImporter(Net& net, const char *onnxFile)
@@ -458,6 +458,32 @@ void ONNXImporter::expandMid(const std::string& prefix, opencv_onnx::NodeProto& 
     {
         node_proto.add_input(input_names[i]);
     }
+}
+
+/** @brief Multiply one of node_proto inputs by -1
+ * @param layerParams parameters of the node
+ * @param node_proto node which input will be replaced
+ * @param input_id id of input to be multiplied by -1
+ */
+void ONNXImporter::addNegation(const LayerParams& layerParams, opencv_onnx::NodeProto& node_proto, int input_id)
+{
+    LayerParams powerParams;
+    powerParams.name = layerParams.name + "/neg";
+    powerParams.type = "Power";
+    powerParams.set("scale", -1.f);
+
+    //Create Power layer
+    int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
+    //Connect to input
+    IterLayerId_t layerId = layer_id.find(node_proto.input(input_id));
+    CV_Assert(layerId != layer_id.end());
+    dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
+    //Add shape
+    layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
+    outShapes[powerParams.name] = outShapes[node_proto.input(input_id)];
+
+    //Replace input to Power
+    node_proto.set_input(input_id, powerParams.name);
 }
 
 void ONNXImporter::addConstant(const std::string& name, const Mat& blob)
@@ -918,29 +944,42 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     else if (is_const_0 || is_const_1)
     {
         int const_blob_id = is_const_0 ? 0 : 1;
+        int input_id = 1 - const_blob_id;
         Mat blob = getBlob(node_proto, const_blob_id);
         int blob_total = blob.total();
+
+        const float inputScale = isSub && is_const_0 ? -1.f : 1.f;
+        const float constScale = isSub && is_const_1 ? -1.f : 1.f;
+
         if (blob_total == 1) {
             layerParams.type = "Power";
-            layerParams.set("shift", (isSub ? -1 : 1) * blob.ptr<float>()[0]);
+            layerParams.set("scale", inputScale);
+            layerParams.set("shift", constScale * blob.ptr<float>()[0]);
         }
         else {
-            MatShape inpShape = outShapes[node_proto.input(1 - const_blob_id)];
+            MatShape inpShape = outShapes[node_proto.input(input_id)];
             if (shape(blob) == inpShape)
             {
                 LayerParams constParams;
                 constParams.name = layerParams.name + "/const";
                 constParams.type = "Const";
-                constParams.blobs.push_back((isSub ? -1 : 1) * blob);
+                constParams.blobs.push_back(blob);
                 int id = dstNet.addLayer(constParams.name, constParams.type, constParams);
                 layer_id.insert(std::make_pair(constParams.name, LayerInfo(id, 0)));
                 outShapes[constParams.name] = shape(blob);
 
                 layerParams.type = "Eltwise";
+                float coeffs[] = {1., isSub ? -1.f : 1.f};
+                layerParams.set("coeff", DictValue::arrayReal<float*>(coeffs, 2));
                 node_proto.set_input(const_blob_id, constParams.name);
             }
             else
             {
+                if (inputScale < 0.f)
+                {
+                    addNegation(layerParams, node_proto, input_id);
+                }
+
                 layerParams.type = "Scale";
                 layerParams.set("bias_term", true);
                 int axis = 1;
@@ -955,7 +994,7 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
                 }
                 layerParams.set("axis", axis);
                 blob = blob.reshape(1, 1);
-                layerParams.blobs.push_back((isSub ? -1 : 1) * blob);
+                layerParams.blobs.push_back(constScale * blob);
             }
         }
     }
@@ -972,23 +1011,7 @@ void ONNXImporter::parseBias(LayerParams& layerParams, const opencv_onnx::NodePr
     {
         if (isSub)
         {
-            LayerParams powerParams;
-            powerParams.name = layerParams.name + "/neg";
-            powerParams.type = "Power";
-            powerParams.set("scale", -1);
-
-            //Create Power layer
-            int id = dstNet.addLayer(powerParams.name, powerParams.type, powerParams);
-            //Connect to input
-            IterLayerId_t layerId = layer_id.find(node_proto.input(1));
-            CV_Assert(layerId != layer_id.end());
-            dstNet.connect(layerId->second.layerId, layerId->second.outputId, id, 0);
-            //Add shape
-            layer_id.insert(std::make_pair(powerParams.name, LayerInfo(id, 0)));
-            outShapes[powerParams.name] = outShapes[node_proto.input(1)];
-
-            //Replace input to Power
-            node_proto.set_input(1, powerParams.name);
+            addNegation(layerParams, node_proto, 1);
         }
         layerParams.type = "Scale";
         layerParams.set("bias_term", true);
