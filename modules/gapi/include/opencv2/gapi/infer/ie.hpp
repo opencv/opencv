@@ -79,6 +79,8 @@ struct ParamDesc {
 
     // NB: An optional config to setup RemoteContext for IE
     cv::util::any context_config;
+
+    size_t batch_size;
 };
 } // namespace detail
 
@@ -120,7 +122,8 @@ public:
               , {}
               , {}
               , 1u
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     /** @overload
@@ -141,7 +144,8 @@ public:
               , {}
               , {}
               , 1u
-              , {}} {
+              , {}
+              , 1u} {
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -316,6 +320,11 @@ public:
         return *this;
     }
 
+    Params<Net>& cfgBatchSize(const size_t size) {
+        desc.batch_size = size;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -350,7 +359,7 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}},
+                {}, 1u},
           m_tag(tag) {
     };
 
@@ -368,7 +377,7 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}},
+                {}, 1u},
           m_tag(tag) {
     };
 
@@ -432,6 +441,11 @@ public:
     /** @overload */
     Params& cfgInputReshape(const std::unordered_set<std::string>&layer_names) {
         desc.layer_names_to_reshape = layer_names;
+        return *this;
+    }
+
+    Params& cfgBatchSize(const size_t size) {
+        desc.batch_size = size;
         return *this;
     }
 
