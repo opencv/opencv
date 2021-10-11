@@ -152,23 +152,21 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         out.post(cv::gimpl::EndOfStream{});
     }
 
+    // FIXME: consider a better solution
     auto packet = m_out_queue->get<dai::ImgFrame>();
 
-    // FIXME: consider a better solution
     // FIXME: cover all outputs
     auto out_arg = out.get(0);
 
-    //auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
     *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
     auto frame = cv::util::get<MediaFrame*>(out_arg);
     auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
+    adapter->setParams({packet->getWidth(), packet->getHeight()},
+                        cv::gapi::oak::OAKFrameFormat::BGR,
+                        packet->getData().data(),
+                        packet->getData().size());
 
-    adapter->setParams({m_enc_config.width, m_enc_config.height}, // assert with frame desc
-                        cv::gapi::oak::OAKFrameFormat::BGR, packet->getData().data());
-    if (packet->getData().data() == nullptr) {
-            std::cout << "nullptr in backend" << std::endl;
-        }
-    // ???
+    // FIXME: do we need to pass meta here?
     out.meta(out_arg, {});
     out.post(std::move(out_arg));
 }

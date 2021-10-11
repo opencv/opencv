@@ -15,7 +15,9 @@ namespace oak {
 class OAKMediaAdapter::Priv final {
 public:
     Priv() = default;
-    void setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr);
+    void setParams(cv::Size sz, OAKFrameFormat fmt,
+                   const unsigned char* data_ptr, size_t data_sz);
+    size_t getDataSize();
 
     MediaFrame::View access(MediaFrame::Access access);
     cv::GFrameDesc meta() const;
@@ -26,26 +28,42 @@ private:
     cv::Size m_sz;
     OAKFrameFormat m_fmt;
     const unsigned char* m_data_ptr;
+    size_t m_data_sz;
 };
 
-void OAKMediaAdapter::Priv::setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr){
+void OAKMediaAdapter::Priv::setParams(cv::Size sz, OAKFrameFormat fmt,
+                                      const unsigned char* data_ptr, size_t data_sz){
     m_sz = sz;
     m_fmt = fmt;
     m_data_ptr = data_ptr;
+    m_data_sz = data_sz;
 }
+
+size_t OAKMediaAdapter::Priv::getDataSize() {
+    return m_data_sz;
+}
+
 MediaFrame::View OAKMediaAdapter::Priv::access(MediaFrame::Access) {
     GAPI_Assert(m_fmt == OAKFrameFormat::BGR && "OAKMediaAdapter only supports BGR format for now");
     return MediaFrame::View{cv::MediaFrame::View::Ptrs{const_cast<unsigned char*>(m_data_ptr)},
                             cv::MediaFrame::View::Strides{}};
 }
+
 cv::GFrameDesc OAKMediaAdapter::Priv::meta() const { return {MediaFormat::BGR, m_sz}; }
 
-void OAKMediaAdapter::setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr) {
-    m_priv->setParams(sz, fmt, data_ptr);
+void OAKMediaAdapter::setParams(cv::Size sz, OAKFrameFormat fmt,
+                                const unsigned char* data_ptr, size_t data_sz) {
+    m_priv->setParams(sz, fmt, data_ptr, data_sz);
 }
+
+size_t OAKMediaAdapter::getDataSize() {
+    return m_priv->getDataSize();
+}
+
 MediaFrame::View OAKMediaAdapter::access(MediaFrame::Access access) {
     return m_priv->access(access);
 }
+
 cv::GFrameDesc OAKMediaAdapter::meta() const { return m_priv->meta(); }
 
 OAKMediaAdapter::OAKMediaAdapter() : m_priv(new OAKMediaAdapter::Priv()) {};
@@ -63,7 +81,8 @@ namespace oak {
 OAKMediaAdapter::OAKMediaAdapter() {
     GAPI_Assert(false && "Built without depthai library support");
 }
-void OAKMediaAdapter::setParams(cv::Size sz, OAKFrameFormat fmt, const unsigned char* data_ptr) {
+void OAKMediaAdapter::setParams(cv::Size sz, OAKFrameFormat fmt,
+                                const unsigned char* data_ptr, size_t data_sz) {
     GAPI_Assert(false && "Built without depthai library support");
 }
 cv::GFrameDesc OAKMediaAdapter::meta() const {
