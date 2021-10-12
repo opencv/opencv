@@ -9,7 +9,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, "{@audio||}");
-    string file = "C:\\Users\\Leverel\\WorkSpace\\Git\\opencv_extra\\testdata\\highgui\\audio\\test_audio.mp4";//parser.get<string>("@audio");//"C:\\Users\\Leverel\\Downloads\\sample_960x400_ocean_with_audio.mp4";//parser.get<string>("@audio");
+    string file = parser.get<string>("@audio");
 
     if (file.empty())
     {
