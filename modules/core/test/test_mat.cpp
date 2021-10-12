@@ -1985,7 +1985,6 @@ class TestInputArrayRangeChecking {
         #define C(x) case cv::_InputArray::x: return #x
         C(MAT);
         C(UMAT);
-        C(EXPR);
         C(MATX);
         C(STD_VECTOR);
         C(NONE);
