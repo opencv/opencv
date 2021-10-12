@@ -33,14 +33,6 @@ protected:
             }
         }
     }
-    virtual void checkAudio()
-    {
-        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
-            for (unsigned int i = 0; i < validAudioData[nCh].size(); i++)
-            {
-                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
-            }
-    }
 protected:
     int expectedNumAudioCh;
     double epsilon;
@@ -104,6 +96,14 @@ private:
             else { break; }
         }
         ASSERT_FALSE(audioData.empty());
+    }
+    void checkAudio()
+    {
+        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
+            for (unsigned int i = 0; i < validAudioData[nCh].size(); i++)
+            {
+                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
+            }
     }
 };
 
@@ -212,7 +212,7 @@ private:
         EXPECT_GE(minPsnrOriginal, psnrThreshold);
         ASSERT_FALSE(audioData.empty());
     }
-    void checkAudio() override
+    void checkAudio()
     {
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
             for (unsigned int i = 0; i < audioData[nCh].size(); i++)
