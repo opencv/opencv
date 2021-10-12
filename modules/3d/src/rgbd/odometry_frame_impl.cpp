@@ -93,13 +93,13 @@ template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
 	this->depth = getTMat<TMat>(_depth);
+	this->findMask(_depth);
 }
 
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::getDepth(OutputArray _depth)
 {
 	_depth.assign(this->depth);
-	this->findMask(_depth);
 }
 
 template<typename TMat>
@@ -171,12 +171,19 @@ void OdometryFrameImplTMat<TMat>::getPyramidAt(OutputArray _img, OdometryFramePy
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::findMask(InputArray _depth)
 {
+    //TODO: fix bug with zero mask
 	Mat depth = _depth.getMat();
 	Mat mask(depth.size(), CV_8UC1, Scalar(255));
 	for (int y = 0; y < depth.rows; y++)
-		for (int x = 0; x < depth.cols; x++)
-			if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
-				mask.at<uchar>(y, x) = 0;
+        for (int x = 0; x < depth.cols; x++)
+        {
+            //if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) > 10 || depth.at<float>(y, x) <= FLT_EPSILON)
+            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) <= FLT_EPSILON)
+                mask.at<uchar>(y, x) = 0;
+            else
+                mask.at<uchar>(y, x) = 1;
+            //std::cout << depth.at<float>(y, x) << " " <<  (int)mask.at<uchar>(y, x) << std::endl;
+        }
 	this->setMask(mask);
 }
 

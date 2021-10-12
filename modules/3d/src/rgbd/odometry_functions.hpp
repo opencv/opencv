@@ -147,6 +147,8 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings);
 bool prepareICPFrameSrc (OdometryFrame& frame, OdometrySettings settings);
 bool prepareICPFrameDst (OdometryFrame& frame, OdometrySettings settings);
 
+bool prepareICPFrameTMP (OdometryFrame& frame, OdometrySettings settings);
+
 
 void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage);
 
@@ -210,6 +212,14 @@ void computeProjectiveMatrix(const Mat& ksi, Mat& Rt);
 bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x);
 
 bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double maxRotation);
+
+Depth _pyrDownBilateral(const Depth depth, float sigma);
+void _makeFrameFromDepth(InputArray _depth,
+    OutputArray pyrPoints, OutputArray pyrNormals,
+    const Intr intr, int levels, float depthFactor,
+    float sigmaDepth, float sigmaSpatial, int kernelSize,
+    float truncateThreshold);
+
 
 /*
 struct Intr

@@ -48,6 +48,9 @@ bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     isCorrect3 = isCorrect3 && prepareICPFrameDst(srcFrame, settings);
     bool isCorrect4 = prepareICPFrameDst(dstFrame, settings);
 
+    prepareICPFrameTMP(srcFrame, settings);
+    prepareICPFrameTMP(dstFrame, settings);
+
     return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
 }
 
@@ -222,14 +225,27 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidImage(depth, dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
-    std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
+    std::vector<TMat> mpyramids;
+    std::vector<TMat> npyramids;
+    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
+        npyramids, mpyramids);
+    setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+
+
+    //std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
+    double min0, max0, min1, max1;
+    //cv::minMaxLoc(dpyramids[0], &min0, &max0);
+    //std::cout << "d: " << min0 << " " << max0 << std::endl;
+    //cv::minMaxLoc(cpyramids[0], &min1, &max1);
+    //std::cout << "c: " << min1 << " " << max1 << std::endl;
 
+    //std::cout << cpyramids[0] << std::endl;
     return true;
 }
 
@@ -312,6 +328,32 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidNormalsMask(npyramids, mpyramids, settings.getMaxPointsPart(), nmpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_NORMMASK, nmpyramids);
 
+    return true;
+}
+
+
+bool prepareICPFrameTMP(OdometryFrame& frame, OdometrySettings settings)
+{
+    typedef Mat TMat;
+
+    std::vector<TMat> cpyramids, npyramids;
+    Matx33f cameraMatrix;
+    settings.getCameraMatrix(cameraMatrix);
+    UMat depth;
+    frame.getDepth(depth);
+
+
+    std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
+    Intr intrinsics(cameraMatrix);
+
+    //computePointsNormals(intrinsics, 5000, depth, cpyramids, npyramids)
+    _makeFrameFromDepth(depth, cpyramids, npyramids, intrinsics,
+        frame.getPyramidLevels(OdometryFramePyramidType::PYR_CLOUD),
+        5000, 0.04f, 4.5f, 7, 0.f);
+
+    //preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
+    setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
+    setPyramids(frame, OdometryFramePyramidType::PYR_NORM, npyramids);
     return true;
 }
 
@@ -750,6 +792,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
 
             //std::cout << corresps_rgbd.rows << " " << corresps_icp.rows << " " << minCorrespsCount << " " << (algtype != OdometryAlgoType::FAST) << std::endl;
+            //std::cout << (corresps_rgbd.rows < minCorrespsCount) << (corresps_icp.rows < minCorrespsCount) << (algtype != OdometryAlgoType::FAST) << std::endl;
             if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount && algtype != OdometryAlgoType::FAST)
                 break;
 
@@ -799,6 +842,9 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
             //std::cout << "se: " << solutionExist << std::endl;
             //std::cout << AtA << std::endl;
+            //std::cout << AtB << std::endl;
+
+            //std::cout << ksi << std::endl;
             if (!solutionExist)
             {
                 break;
@@ -818,7 +864,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
             computeProjectiveMatrix(ksi, currRt);
             resultRt = currRt * resultRt;
-
+            //std::cout << resultRt << std::endl;
             Vec6f x(ksi);
             Affine3f tinc(Vec3f(x.val), Vec3f(x.val + 3));
             transform = tinc * transform;
@@ -829,7 +875,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
     }
 
-
+    //std::cout << resultRt << std::endl;
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
@@ -901,11 +947,14 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
         for (int u1 = 0; u1 < depth1.cols; u1++)
         {
             float d1 = depth1_row[u1];
-            if (mask1_row[u1])
+            //if (mask1_row[u1])
+            if (!cvIsNaN(d1))
             {
                 CV_DbgAssert(!cvIsNaN(d1));
                 float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
                     Kt_ptr[2]);
+                //std::cout <<"lol" << std::endl;
+
                 if (transformed_d1 > 0)
                 {
                     float transformed_d1_inv = 1.f / transformed_d1;
@@ -913,15 +962,18 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
                         Kt_ptr[0]));
                     int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
                         Kt_ptr[1]));
+                    //std::cout << 1 << std::endl;
                     if (r.contains(Point(u0, v0)))
                     {
                         float d0 = depth0.at<float>(v0, u0);
-                        if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        //if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        if (!cvIsNaN(d0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
                             Vec2s& c = corresps.at<Vec2s>(v0, u0);
                             float& d = diffs.at<float>(v0, u0);
                             float diff = 0;
+                            //std::cout << " " << c[0] << std::endl;
                             if (c[0] != -1)
                             {
                                 diff = 0;
@@ -943,6 +995,7 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
                                                               static_cast<int>(image1.at<uchar>(v1, u1)));
                                 correspCount++;
                             }
+                            //std::cout << Vec2s((short)u0, (short)v0) <<" "<< Vec2s((short)u1, (short)v1) << std::endl;
                             c = Vec2s((short)u1, (short)v1);
                             d = diff;
                             sigma += diff * diff;
@@ -1268,6 +1321,7 @@ struct GetAbInvoker : ParallelLoopBody
 
                 //try to optimize
                 Point3f VxN = newP.cross(oldN);
+                //std::cout << newP << oldN << VxN << std::endl;
                 float ab[7] = { VxN.x, VxN.y, VxN.z, oldN.x, oldN.y, oldN.z, oldN.dot(-diff) };
                 // build point-wise upper-triangle matrix [ab^T * ab] w/o last row
                 // which is [A^T*A | A^T*b]
@@ -1325,8 +1379,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         maxDepthDiff * maxDepthDiff, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
-    parallel_for_(range, invoker, nstripes);
-    //invoker(range);
+    //parallel_for_(range, invoker, nstripes);
+    invoker(range);
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)
@@ -1339,6 +1393,217 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
         b(i) = sumAB(i, 6);
     }
+}
+
+
+
+struct _ComputePointsNormalsInvoker : ParallelLoopBody
+{
+    _ComputePointsNormalsInvoker(const Depth& _depth, _Points& _points, _Normals& _normals,
+        const Intr::Reprojector& _reproj, float _dfac) :
+        ParallelLoopBody(),
+        depth(_depth),
+        points(_points),
+        normals(_normals),
+        reproj(_reproj),
+        dfac(_dfac)
+    { }
+
+    virtual void operator ()(const Range& range) const override
+    {
+        for (int y = range.start; y < range.end; y++)
+        {
+            const depthType* depthRow0 = depth[y];
+            const depthType* depthRow1 = (y < depth.rows - 1) ? depth[y + 1] : 0;
+            _ptype* ptsRow = points[y];
+            _ptype* normRow = normals[y];
+
+            for (int x = 0; x < depth.cols; x++)
+            {
+                depthType d00 = depthRow0[x];
+                depthType z00 = d00 * dfac;
+                Point3f v00 = reproj(Point3f((float)x, (float)y, z00));
+
+                Point3f p = nan3, n = nan3;
+
+                if (x < depth.cols - 1 && y < depth.rows - 1)
+                {
+                    depthType d01 = depthRow0[x + 1];
+                    depthType d10 = depthRow1[x];
+
+                    depthType z01 = d01 * dfac;
+                    depthType z10 = d10 * dfac;
+
+                    // before it was
+                    //if(z00*z01*z10 != 0)
+                    if (z00 != 0 && z01 != 0 && z10 != 0)
+                    {
+                        Point3f v01 = reproj(Point3f((float)(x + 1), (float)(y + 0), z01));
+                        Point3f v10 = reproj(Point3f((float)(x + 0), (float)(y + 1), z10));
+
+                        cv::Vec3f vec = (v01 - v00).cross(v10 - v00);
+                        n = -normalize(vec);
+                        p = v00;
+                    }
+                }
+
+                ptsRow[x] = p;
+                normRow[x] = n;
+            }
+        }
+    }
+
+    const Depth& depth;
+    _Points& points;
+    _Normals& normals;
+    const Intr::Reprojector& reproj;
+    float dfac;
+};
+
+void _computePointsNormals(const Intr intr, float depthFactor, const Depth depth,
+    _Points points, _Normals normals)
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(!points.empty() && !normals.empty());
+    CV_Assert(depth.size() == points.size());
+    CV_Assert(depth.size() == normals.size());
+
+    // conversion to meters
+    // before it was:
+    //float dfac = 0.001f/depthFactor;
+    float dfac = 1.f / depthFactor;
+
+    Intr::Reprojector reproj = intr.makeReprojector();
+
+    _ComputePointsNormalsInvoker ci(depth, points, normals, reproj, dfac);
+    Range range(0, depth.rows);
+    const int nstripes = -1;
+    parallel_for_(range, ci, nstripes);
+}
+
+void _makeFrameFromDepth(InputArray _depth,
+    OutputArray pyrPoints, OutputArray pyrNormals,
+    const Intr intr, int levels, float depthFactor,
+    float sigmaDepth, float sigmaSpatial, int kernelSize,
+    float truncateThreshold)
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(_depth.type() == DEPTH_TYPE);
+
+
+    int kp = pyrPoints.kind(), kn = pyrNormals.kind();
+    CV_Assert(kp == _InputArray::STD_ARRAY_MAT || kp == _InputArray::STD_VECTOR_MAT);
+    CV_Assert(kn == _InputArray::STD_ARRAY_MAT || kn == _InputArray::STD_VECTOR_MAT);
+
+    Depth depth = _depth.getMat();
+
+    // looks like OpenCV's bilateral filter works the same as KinFu's
+    Depth smooth;
+    Depth depthNoNans = depth.clone();
+    patchNaNs(depthNoNans);
+    bilateralFilter(depthNoNans, smooth, kernelSize, sigmaDepth * depthFactor, sigmaSpatial);
+
+    // depth truncation can be used in some scenes
+    Depth depthThreshold;
+    if (truncateThreshold > 0.f)
+        threshold(smooth, depthThreshold, truncateThreshold * depthFactor, 0.0, THRESH_TOZERO_INV);
+    else
+        depthThreshold = smooth;
+
+    // we don't need depth pyramid outside this method
+    // if we do, the code is to be refactored
+
+    Depth scaled = depthThreshold;
+    Size sz = smooth.size();
+    pyrPoints.create(levels, 1, _POINT_TYPE);
+    pyrNormals.create(levels, 1, _POINT_TYPE);
+    for (int i = 0; i < levels; i++)
+    {
+        pyrPoints.create(sz, _POINT_TYPE, i);
+        pyrNormals.create(sz, _POINT_TYPE, i);
+
+        _Points  p = pyrPoints.getMatRef(i);
+        _Normals n = pyrNormals.getMatRef(i);
+
+        _computePointsNormals(intr.scale(i), depthFactor, scaled, p, n);
+
+        if (i < levels - 1)
+        {
+            sz.width /= 2; sz.height /= 2;
+            scaled = _pyrDownBilateral(scaled, sigmaDepth * depthFactor);
+        }
+    }
+}
+
+struct _PyrDownBilateralInvoker : ParallelLoopBody
+{
+    _PyrDownBilateralInvoker(const Depth& _depth, Depth& _depthDown, float _sigma) :
+        ParallelLoopBody(),
+        depth(_depth),
+        depthDown(_depthDown),
+        sigma(_sigma)
+    { }
+
+    virtual void operator ()(const Range& range) const override
+    {
+        //std::cout << "\n PyrDownBilateralInvoker" << std::endl;
+        float sigma3 = sigma * 3;
+        const int D = 5;
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            depthType* downRow = depthDown[y];
+            const depthType* srcCenterRow = depth[2 * y];
+
+            for (int x = 0; x < depthDown.cols; x++)
+            {
+                depthType center = srcCenterRow[2 * x];
+
+                int sx = max(0, 2 * x - D / 2), ex = min(2 * x - D / 2 + D, depth.cols - 1);
+                int sy = max(0, 2 * y - D / 2), ey = min(2 * y - D / 2 + D, depth.rows - 1);
+
+                depthType sum = 0;
+                int count = 0;
+
+                for (int iy = sy; iy < ey; iy++)
+                {
+                    const depthType* srcRow = depth[iy];
+                    for (int ix = sx; ix < ex; ix++)
+                    {
+                        depthType val = srcRow[ix];
+                        if (abs(val - center) < sigma3)
+                        {
+                            sum += val; count++;
+                        }
+                    }
+                }
+                //std::cout <<Point2i(y, x)<< " ";
+                downRow[x] = (count == 0) ? 0 : sum / count;
+            }
+        }
+    }
+
+    const Depth& depth;
+    Depth& depthDown;
+    float sigma;
+};
+
+
+Depth _pyrDownBilateral(const Depth depth, float sigma)
+{
+    CV_TRACE_FUNCTION();
+    //std::cout << depth << std::endl;
+    Depth depthDown(depth.rows / 2, depth.cols / 2);
+
+    _PyrDownBilateralInvoker pdi(depth, depthDown, sigma);
+    Range range(0, depthDown.rows);
+    const int nstripes = -1;
+    //parallel_for_(range, pdi, nstripes);
+    pdi(range);
+
+    return depthDown;
 }
 
 }
