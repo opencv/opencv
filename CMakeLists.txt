@@ -290,7 +290,7 @@ OCV_OPTION(WITH_INF_ENGINE "Include Intel Inference Engine support" OFF
 OCV_OPTION(WITH_NGRAPH "Include nGraph support" WITH_INF_ENGINE
   VISIBLE_IF TRUE
   VERIFY TARGET ngraph::ngraph)
-OCV_OPTION(WITH_WEBNN "Include WebNN support" OFF
+OCV_OPTION(WITH_WEBNN "Include WebNN support" WITH_WEBNN
   VISIBLE_IF TRUE
   VERIFY HAVE_WEBNN)
 OCV_OPTION(WITH_JASPER "Include JPEG2K support (Jasper)" ON
