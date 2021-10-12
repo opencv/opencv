@@ -45,4 +45,6 @@ else()
   message(AUTHOR_WARNING "Use WebNN")
 endif()
 
-set(HAVE_WEBNN 1)
+if(VALID_WEBNN)
+  set(HAVE_WEBNN ON)
+endif()
