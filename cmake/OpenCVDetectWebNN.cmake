@@ -42,7 +42,7 @@ endif()
 if(NOT EMSCRIPTEN)
   message(AUTHOR_WARNING "Use WebNN-native")
 else()
-message(AUTHOR_WARNING "Use WebNN")
+  message(AUTHOR_WARNING "Use WebNN")
 endif()
 
 set(HAVE_WEBNN 1)
