@@ -1342,7 +1342,7 @@ bool CvCapture_MSMF::grabVideoFrame()
                 0,             // Flags.
                 &streamIndex,  // Receives the actual stream index.
                 &flags,        // Receives status flags.
-                &impendingVideoSampleTime,   // Receives the time stamp. 
+                &impendingVideoSampleTime,   // Receives the time stamp.
                 &impendingVideoSample   // Receives the sample or NULL.
             )))
                 break;
@@ -1583,7 +1583,7 @@ bool CvCapture_MSMF::grabFrame()
 
         bool returnFlag = true;
 
-        if (videoStream != -1) 
+        if (videoStream != -1)
         {
             if (!vEOS)
                 returnFlag &= grabVideoFrame();
