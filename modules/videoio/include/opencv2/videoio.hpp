@@ -199,6 +199,7 @@ enum VideoCaptureProperties {
        CAP_PROP_AUDIO_TOTAL_CHANNELS = 63, //!< Number of audio channels in the selected audio stream.
        CAP_PROP_AUDIO_TOTAL_STREAMS = 64, //!< Number of audio stream in the used media.
        CAP_PROP_AUDIO_SYNC_LAST_FRAME = 65, //!< Default value is 1 (the last audio frame is synchronized with the video frame by duration), 0 is no audio and video last frames sync(the last audio frame will contain all remaining audio data. The duration of the received audio data may be longer than the duration of the received video data)
+       CAP_PROP_TIME_SHIFT_STREAMS = 66, //!< (read only) Can be requested after first captured data. Contains the time difference between the start of the audio stream and the video stream in nanoseconds.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif

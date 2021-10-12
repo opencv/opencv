@@ -9,7 +9,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, "{@audio||}");
-    string file = parser.get<string>("@audio");
+    string file = "C:\\Users\\Leverel\\WorkSpace\\Git\\opencv_extra\\testdata\\highgui\\audio\\test_audio.mp4";//parser.get<string>("@audio");//"C:\\Users\\Leverel\\Downloads\\sample_960x400_ocean_with_audio.mp4";//parser.get<string>("@audio");
 
     if (file.empty())
     {
@@ -22,8 +22,7 @@ int main(int argc, char** argv)
     VideoCapture cap;
     vector<int> params {    CAP_PROP_AUDIO_STREAM, 0,
                             CAP_PROP_VIDEO_STREAM, 0,
-                            CAP_PROP_AUDIO_DATA_DEPTH, CV_16S,
-                            CAP_PROP_AUDIO_SYNC_LAST_FRAME, 1   };
+                            CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
 
     cap.open(file, CAP_MSMF, params);
     if (!cap.isOpened())
@@ -65,7 +64,6 @@ int main(int argc, char** argv)
     }
 
     cout << "Number of audio samples: " << numberOfSamples << endl
-         << " Number of video frames: " << numberOfFrames << endl;
-
+         << "Number of video frames: " << numberOfFrames << endl;
     return 0;
 }

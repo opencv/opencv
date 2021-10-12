@@ -6,10 +6,10 @@
 
 namespace opencv_test { namespace {
 
-//file format, number of audio channels, epsilon, video type, weight, height, number of frame, fps, psnr Threshold, backend
-typedef std::tuple<std::string, int, double, int, int, int, int, int, double, std::pair<std::string, int> > paramCombination;
-//file format, number of audio channels, epsilon, backend
-typedef std::tuple<std::string, int, double, std::pair<std::string, int> > param;
+//file name, number of audio channels, epsilon, video type, weight, height, number of frame, fps, psnr Threshold, backend
+typedef std::tuple<std::string, int, double, int, int, int, int, int, double, VideoCaptureAPIs> paramCombination;
+//file name, number of audio channels, epsilon, backend
+typedef std::tuple<std::string, int, double, VideoCaptureAPIs> param;
 
 class AudioBaseTest
 {
@@ -19,33 +19,36 @@ protected:
     {
         const double step = 3.14/22050;
         double value = 0;
-        for (int j = 0; j < 3; j++)
+        validAudioData.resize(expectedNumAudioCh);
+        for (int nCh = 0; nCh < expectedNumAudioCh; nCh++)
         {
-            value = 0;
-            for(int i = 0; i < 44100; i++)
+            for (int j = 0; j < 3; j++)
             {
-                validAudioData.push_back(sin(value));
-                value += step;
+                value = 0;
+                for(int i = 0; i < 44100; i++)
+                {
+                    validAudioData[nCh].push_back(sin(value));
+                    value += step;
+                }
             }
         }
     }
-    void checkAudio()
+    virtual void checkAudio()
     {
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
-            for (unsigned int i = 0; i < validAudioData.size(); i++)
+            for (unsigned int i = 0; i < validAudioData[nCh].size(); i++)
             {
-                EXPECT_LE(fabs(validAudioData[i] - audioData[nCh][i]), epsilon) << "sample index " << i;
+                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
             }
     }
 protected:
-    std::string format;
     int expectedNumAudioCh;
     double epsilon;
-    std::pair<std::string, int> backend;
+    VideoCaptureAPIs backend;
     std::string root;
     std::string fileName;
 
-    std::vector<double> validAudioData;
+    std::vector<std::vector<double>> validAudioData;
     std::vector<std::vector<double>> audioData;
     std::vector<int> params;
 
@@ -58,12 +61,11 @@ class AudioTestFixture : public AudioBaseTest, public testing::TestWithParam <pa
 public:
     AudioTestFixture()
     {
-        format = get<0>(GetParam());
+        fileName = get<0>(GetParam());
         expectedNumAudioCh = get<1>(GetParam());
         epsilon = get<2>(GetParam());
         backend = get<3>(GetParam());
         root = "audio/";
-        fileName = "test_audio";
         params = {  CAP_PROP_AUDIO_STREAM, 0,
                     CAP_PROP_VIDEO_STREAM, -1,
                     CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
@@ -78,7 +80,7 @@ public:
 private:
     void readFile()
     {
-        ASSERT_TRUE(cap.open(findDataFile(root + fileName + "." + format), backend.second, params));
+        ASSERT_TRUE(cap.open(findDataFile(root + fileName), backend, params));
         const int audioBaseIndex = static_cast<int>(cap.get(cv::CAP_PROP_AUDIO_BASE_INDEX));
         const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
         ASSERT_EQ(expectedNumAudioCh, numberOfChannels);
@@ -91,8 +93,8 @@ private:
                 for (int nCh = 0; nCh < numberOfChannels; nCh++)
                 {
                     ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex));
-                    ASSERT_EQ(CV_16SC1, audioFrame.type());
-                    for(int i = 0; i < audioFrame.cols; i++)
+                    ASSERT_EQ(CV_16SC1, audioFrame.type()) << audioData[nCh].size();
+                    for (int i = 0; i < audioFrame.cols; i++)
                     {
                         f = ((double) audioFrame.at<signed short>(0,i)) / (double) 32768;
                         audioData[nCh].push_back(f);
@@ -107,17 +109,18 @@ private:
 
 const param audioParams[] =
 {
-    param("wav", 1, 0.0001, {"CAP_MSMF", cv::CAP_MSMF}),
-    param("mp3", 2, 0.1, {"CAP_MSMF", cv::CAP_MSMF}),
-    param("mp4", 1, 0.15, {"CAP_MSMF", cv::CAP_MSMF})
+    param("test_audio.wav", 1, 0.0001, cv::CAP_MSMF),
+    param("test_mono_audio.mp3", 1, 0.1, cv::CAP_MSMF),
+    param("test_stereo_audio.mp3", 2, 0.1, cv::CAP_MSMF),
+    param("test_audio.mp4", 1, 0.15, cv::CAP_MSMF)
 };
 
 class Audio : public AudioTestFixture{};
 
 TEST_P(Audio, audio)
 {
-    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend.second)))
-        throw SkipTestException(backend.first + " backend was not found");
+    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend)))
+        throw SkipTestException(cv::videoio_registry::getBackendName(backend) + " backend was not found");
 
     doTest();
 }
@@ -135,12 +138,11 @@ public:
         fps(get<7>(GetParam())),
         psnrThreshold(get<8>(GetParam()))
         {
-            format = get<0>(GetParam());
+            fileName = get<0>(GetParam());
             expectedNumAudioCh = get<1>(GetParam());
             epsilon = get<2>(GetParam());
             backend = get<9>(GetParam());
             root = "audio/";
-            fileName = "test_audio";
             params = {  CAP_PROP_AUDIO_STREAM, 0,
                         CAP_PROP_VIDEO_STREAM, 0,
                         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
@@ -148,25 +150,14 @@ public:
     void doTest()
     {
         getValidAudioData();
-        getValidVideoData();
         readFile();
         checkAudio();
-        checkVideoFrames();
     }
 
 private:
-    void getValidVideoData()
-    {
-        Mat img(height, width, videoType);
-        for (int i = 0; i < numberOfFrames; ++i)
-        {
-            generateFrame(i, numberOfFrames, img);
-            validVideoData.push_back(img);
-        }
-    }
     void readFile()
     {
-        ASSERT_TRUE(cap.open(findDataFile(root + fileName + "." + format), backend.second, params));
+        ASSERT_TRUE(cap.open(findDataFile(root + fileName), backend, params));
 
         const int audioBaseIndex = static_cast<int>(cap.get(cv::CAP_PROP_AUDIO_BASE_INDEX));
         const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
@@ -178,46 +169,56 @@ private:
         int audioSamplesTolerance = samplesPerFrame / 2;
 
         double f = 0;
-        audioData.resize(numberOfChannels);
-        for (;;)
-        {
-            if (cap.grab())
-            {
-                SCOPED_TRACE(cv::format("frame=%d", (int)(videoData.size()+1)));
-                ASSERT_TRUE(cap.retrieve(videoFrame));
-                for (int nCh = 0; nCh < numberOfChannels; nCh++)
-                {
-                    ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex+nCh));
-                    for (int i = 0; i < audioFrame.cols; i++)
-                    {
-                        f = audioFrame.at<signed short>(0,i) / 32768.0;
-                        audioData[nCh].push_back(f);
-                    }
-                }
-                ASSERT_LT(abs(cap.get(CAP_PROP_AUDIO_POS) -  (cap.get(CAP_PROP_POS_MSEC)/ 1000  + 1./fps) * samplePerSecond), audioSamplesTolerance);
-                ASSERT_LT(abs(audioFrame.cols - samplesPerFrame), audioSamplesTolerance);
-                ASSERT_EQ(CV_16SC1, audioFrame.type());
-                if (!videoFrame.empty())
-                    videoData.push_back(videoFrame);
-            }
-            else { break; }
-        }
-        ASSERT_FALSE(audioData.empty());
-        ASSERT_FALSE(videoData.empty());
-    }
-    void checkVideoFrames()
-    {
-        ASSERT_EQ(validVideoData.size(), videoData.size());
+        Mat img(height, width, videoType);
         double minPsnrOriginal = 1000;
-        for (unsigned int i = 0; i < validVideoData.size(); i++)
+        audioData.resize(numberOfChannels);
+        for (int frame = 0; frame < numberOfFrames; frame++)
         {
-            ASSERT_EQ(validVideoData[i].rows, videoData[i].rows) << "The dimension of the rows does not match. Frame index: " << i;
-            ASSERT_EQ(validVideoData[i].cols, videoData[i].cols) << "The dimension of the cols does not match. Frame index: " << i;
-            double psnr = cvtest::PSNR(validVideoData[i], videoData[i]);
+            ASSERT_TRUE(cap.grab());
+
+            SCOPED_TRACE(cv::format("frame=%d", frame));
+
+            ASSERT_TRUE(cap.retrieve(videoFrame));
+            generateFrame(frame, numberOfFrames, img);
+            ASSERT_EQ(img.rows, videoFrame.rows) << "The dimension of the rows does not match. Frame index: " << frame;
+            ASSERT_EQ(img.cols, videoFrame.cols) << "The dimension of the cols does not match. Frame index: " << frame;
+            double psnr = cvtest::PSNR(img, videoFrame);
             if (psnr < minPsnrOriginal)
                 minPsnrOriginal = psnr;
+
+            int audioFrameCols = 0;
+            for (int nCh = 0; nCh < numberOfChannels; nCh++)
+            {
+                ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex+nCh));
+                ASSERT_EQ(CV_16SC1, audioFrame.type());
+                if (nCh == 0)
+                    audioFrameCols = audioFrame.cols;
+                else
+                    ASSERT_EQ(audioFrameCols, audioFrame.cols);
+                for (int i = 0; i < audioFrame.cols; i++)
+                {
+                    f = audioFrame.at<signed short>(0,i) / 32768.0;
+                    audioData[nCh].push_back(f);
+                }
+            }
+            if (!audioFrame.empty())
+                if (frame != numberOfFrames-1)
+                {
+                    ASSERT_LT(abs(cap.get(CAP_PROP_AUDIO_POS) + (cap.get(CAP_PROP_TIME_SHIFT_STREAMS)/ 1e6) * samplePerSecond -  (cap.get(CAP_PROP_POS_MSEC)/ 1000  + 1./fps) * samplePerSecond), audioSamplesTolerance);
+                    ASSERT_LT(abs(audioFrame.cols - samplesPerFrame), audioSamplesTolerance);
+                }
         }
+        ASSERT_FALSE(cap.grab());
         EXPECT_GE(minPsnrOriginal, psnrThreshold);
+        ASSERT_FALSE(audioData.empty());
+    }
+    void checkAudio() override
+    {
+        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
+            for (unsigned int i = 0; i < audioData[nCh].size(); i++)
+            {
+                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
+            }
     }
 protected:
     const int videoType;
@@ -227,23 +228,20 @@ protected:
     const int fps;
     const double psnrThreshold;
 
-    std::vector<Mat> validVideoData;
-    std::vector<Mat> videoData;
-
     Mat videoFrame;
 };
 
 const paramCombination mediaParams[] =
 {
-    paramCombination("mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 30, 30., {"CAP_MSMF", cv::CAP_MSMF})
+    paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 30, 30., cv::CAP_MSMF)
 };
 
 class Media : public MediaTestFixture{};
 
 TEST_P(Media, audio)
 {
-    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend.second)))
-        throw SkipTestException(backend.first + " backend was not found");
+    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend)))
+        throw SkipTestException(cv::videoio_registry::getBackendName(backend) + " backend was not found");
 
     doTest();
 }
