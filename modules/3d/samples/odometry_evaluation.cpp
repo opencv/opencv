@@ -104,15 +104,27 @@ int main(int argc, char** argv)
         cameraMatrix.at<float>(1,2) = cy;
     }
 
-    Ptr<OdometryFrame> frame_prev = OdometryFrame::create(),
-                       frame_curr = OdometryFrame::create();
-    Ptr<Odometry> odometry = Odometry::createFromName(string(argv[3]) + "Odometry");
-    if(odometry.empty())
-    {
-        cout << "Can not create Odometry algorithm. Check the passed odometry name." << endl;
-        return -1;
-    }
-    odometry->setCameraMatrix(cameraMatrix);
+    //if(odometry)
+    //{
+    //    cout << "Can not create Odometry algorithm. Check the passed odometry name." << endl;
+    //    return -1;
+    //}
+
+    OdometrySettings ods;
+    ods.setCameraMatrix(cameraMatrix);
+    Odometry odometry;
+    String odname = string(argv[3]);
+    if (odname == "Rgbd")
+        odometry = Odometry(OdometryType::RGB, ods, OdometryAlgoType::COMMON);
+    else if (odname == "ICP")
+        odometry = Odometry(OdometryType::ICP, ods, OdometryAlgoType::COMMON);
+    else if (odname == "RgbdICP")
+        odometry = Odometry(OdometryType::RGBD, ods, OdometryAlgoType::COMMON);
+    else if (odname == "FastICP")
+        odometry = Odometry(OdometryType::ICP, ods, OdometryAlgoType::FAST);
+
+    OdometryFrame frame_prev = odometry.createOdometryFrame(),
+                  frame_curr = odometry.createOdometryFrame();
 
     TickMeter gtm;
     int count = 0;
@@ -167,8 +179,8 @@ int main(int argc, char** argv)
         {
             Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            frame_curr->setImage(gray);
-            frame_curr->setDepth(depth);
+            frame_curr.setImage(gray);
+            frame_curr.setDepth(depth);
 
             Mat Rt;
             if(!Rts.empty())
@@ -176,7 +188,7 @@ int main(int argc, char** argv)
                 TickMeter tm;
                 tm.start();
                 gtm.start();
-                bool res = odometry->compute(frame_curr, frame_prev, Rt);
+                bool res = odometry.compute(frame_curr, frame_prev, Rt);
                 gtm.stop();
                 tm.stop();
                 count++;
@@ -197,9 +209,11 @@ int main(int argc, char** argv)
                 Rts.push_back( prevRt * Rt );
             }
 
-            if (!frame_prev.empty())
-                frame_prev.release();
-            std::swap(frame_prev, frame_curr);
+            //if (!frame_prev.empty())
+            //    frame_prev.release();
+            frame_prev = frame_curr;
+            frame_curr = odometry.createOdometryFrame();
+            //std::swap(frame_prev, frame_curr);
         }
     }
 
