@@ -95,6 +95,7 @@ public:
 
     //! TODO: Add support for GPU arrays (UMat)
     OdometryFrame frame;
+    OdometryFrame renderFrame;
 
     std::shared_ptr<Volume> volume;
 };
@@ -115,11 +116,21 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, const cv::Matx33f
     if (!points.needed() && !normals.needed())
     {
         MatType pts, nrm;
+        //frame.setPyramidLevel(1, OdometryFramePyramidType::PYR_CLOUD);
+        //frame.setPyramidLevel(1, OdometryFramePyramidType::PYR_NORM);
+
         frame.getPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
         frame.getPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM, 0);
         volume->raycast(_cameraPose.matrix, intrinsics, frameSize, pts, nrm);
         frame.setPyramidAt(pts, OdometryFramePyramidType::PYR_CLOUD, 0);
         frame.setPyramidAt(nrm, OdometryFramePyramidType::PYR_NORM,  0);
+
+        renderFrame = frame;
+
+        Mat depth;
+        frame.getDepth(depth);
+        frame = OdometryFrame(OdometryFrameStoreType::UMAT);
+        frame.setDepth(depth);
     }
     else
     {
