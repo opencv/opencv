@@ -39,6 +39,8 @@
 //
 //M*/
 
+// previous code retracted and license revoked
+
 #include "precomp.hpp"
 
 #ifndef HAVE_OPENCL
