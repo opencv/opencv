@@ -118,6 +118,8 @@ private:
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElu                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTanh                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseAbs                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCompare              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePRelu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLRN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseInstanceNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1372,6 +1374,38 @@ void ONNXImporter::parseElu(LayerParams& layerParams, const opencv_onnx::NodePro
 void ONNXImporter::parseTanh(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "TanH";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseAbs(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "AbsVal";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter::parseCompare(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(node_proto.input_size() == 2);
+    const std::string& layer_type = node_proto.op_type();
+
+    bool is_const_0 = layer_id.find(node_proto.input(0)) == layer_id.end();
+    bool is_const_1 = layer_id.find(node_proto.input(1)) == layer_id.end();
+
+    if (is_const_0 || is_const_1)
+    {
+        Mat blob = getBlob(node_proto, static_cast<int>(is_const_1));
+        blob = blob.reshape(1, 1);
+        layerParams.blobs.push_back(blob);
+    }
+
+    layerParams.type = "Compare";
+
+    if (layer_type == "Equal")
+        layerParams.set("mode", "equal");
+    else if (layer_type == "Greater")
+        layerParams.set("mode", "greater");
+    else
+        layerParams.set("mode", "less");
     addLayer(layerParams, node_proto);
 }
 
@@ -2904,6 +2938,8 @@ const ONNXImporter::DispatchMap ONNXImporter::buildDispatchMap()
     dispatch["Relu"] = &ONNXImporter::parseRelu;
     dispatch["Elu"] = &ONNXImporter::parseElu;
     dispatch["Tanh"] = &ONNXImporter::parseTanh;
+    dispatch["Abs"] = &ONNXImporter::parseAbs;
+    dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = &ONNXImporter::parseCompare;
     dispatch["PRelu"] = &ONNXImporter::parsePRelu;
     dispatch["LRN"] = &ONNXImporter::parseLRN;
     dispatch["InstanceNormalization"] = &ONNXImporter::parseInstanceNormalization;

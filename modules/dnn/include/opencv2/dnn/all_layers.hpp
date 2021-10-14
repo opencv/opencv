@@ -600,6 +600,42 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ExpLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CeilLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<CeilLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS FloorLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<FloorLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS LogLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<LogLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS RoundLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<RoundLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SqrtLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<SqrtLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS NotLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<NotLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ActivationLayerInt8 : public ActivationLayer
     {
     public:
@@ -665,6 +701,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         bool hasBias;
         int axis;
+        String mode;
 
         static Ptr<ScaleLayer> create(const LayerParams& params);
     };
@@ -684,6 +721,12 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     class CV_EXPORTS ShiftLayerInt8 : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS CompareLayer : public Layer
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
