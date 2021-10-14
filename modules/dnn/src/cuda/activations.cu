@@ -129,6 +129,36 @@ void bnll(const Stream& stream, Span<T> output, View<T> input) {
 }
 
 template <class T>
+void ceil(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, CeilFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void floor(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, FloorFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void log(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, LogFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void rint(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, RintFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void sqrt(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, SqrtFunctor<T>>(stream, output, input);
+}
+
+template <class T>
+void not_k(const Stream& stream, Span<T> output, View<T> input) {
+    generic_op<T, NotFunctor<T>>(stream, output, input);
+}
+
+template <class T>
 void abs(const Stream& stream, Span<T> output, View<T> input) {
     generic_op<T, AbsFunctor<T>>(stream, output, input);
 }
@@ -160,6 +190,12 @@ template void sigmoid<__half>(const Stream&, Span<__half>, View<__half>);
 template void elu<__half>(const Stream&, Span<__half>, View<__half>);
 template void abs<__half>(const Stream& stream, Span<__half> output, View<__half> input);
 template void bnll<__half>(const Stream&, Span<__half>, View<__half>);
+template void ceil<__half>(const Stream&, Span<__half>, View<__half>);
+template void floor<__half>(const Stream&, Span<__half>, View<__half>);
+template void log<__half>(const Stream&, Span<__half>, View<__half>);
+template void rint<__half>(const Stream&, Span<__half>, View<__half>);
+template void sqrt<__half>(const Stream&, Span<__half>, View<__half>);
+template void not_k<__half>(const Stream&, Span<__half>, View<__half>);
 template void power<__half>(const Stream&, Span<__half>, View<__half>, __half, __half, __half);
 template void exp<__half>(const Stream&, Span<__half>, View<__half>, __half, __half);
 #endif
@@ -174,6 +210,12 @@ template void sigmoid<float>(const Stream&, Span<float>, View<float>);
 template void elu<float>(const Stream&, Span<float>, View<float>);
 template void abs<float>(const Stream& stream, Span<float> output, View<float> input);
 template void bnll<float>(const Stream&, Span<float>, View<float>);
+template void ceil<float>(const Stream&, Span<float>, View<float>);
+template void floor<float>(const Stream&, Span<float>, View<float>);
+template void log<float>(const Stream&, Span<float>, View<float>);
+template void rint<float>(const Stream&, Span<float>, View<float>);
+template void sqrt<float>(const Stream&, Span<float>, View<float>);
+template void not_k<float>(const Stream&, Span<float>, View<float>);
 template void power<float>(const Stream&, Span<float>, View<float>, float, float, float);
 template void exp<float>(const Stream&, Span<float>, View<float>, float, float);
 
