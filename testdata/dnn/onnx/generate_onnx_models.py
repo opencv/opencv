@@ -1187,6 +1187,155 @@ x = Variable(torch.randn(2, 2))
 model = Exp()
 save_data_and_model("exp", x, model)
 
+class Ceil(nn.Module):
+    def __init__(self):
+        super(Ceil, self).__init__()
+
+    def forward(self, x):
+        return torch.ceil(x)
+
+model = Ceil()
+input = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
+save_data_and_model("ceil", input, model, version = 11)
+
+class Floor(nn.Module):
+    def __init__(self):
+        super(Floor, self).__init__()
+
+    def forward(self, x):
+        return torch.floor(x)
+
+model = Floor()
+input = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
+save_data_and_model("floor", input, model, version = 11)
+
+class Log(nn.Module):
+    def __init__(self):
+        super(Log, self).__init__()
+
+    def forward(self, x):
+        return torch.log(torch.abs(x + 0.1))
+
+model = Log()
+input = Variable(torch.randn(1, 2, 3, 4, dtype=torch.float32))
+save_data_and_model("log", input, model, version = 11)
+
+class Round(nn.Module):
+    def __init__(self):
+        super(Round, self).__init__()
+
+    def forward(self, x):
+        return torch.round(x)
+
+model = Round()
+input = Variable(torch.tensor([[-1.5, -1., -0.9, -0.5, -0.4, 0., 0.4, 0.5, 0.9, 1, 1.5]]))
+save_data_and_model("round", input, model, version = 11)
+
+class Sqrt(nn.Module):
+
+    def __init__(self):
+        super(Sqrt, self).__init__()
+
+    def forward(self, a):
+        return torch.sqrt(torch.FloatTensor.abs(a))
+
+a = Variable(torch.randn(1, 3, 2, 2))
+model = Sqrt()
+save_data_and_model("sqrt", a, model)
+
+class Equal(nn.Module):
+
+    def __init__(self):
+        super(Equal, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x == 0.5)*x
+
+model = Equal()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("equal", input, model, version = 11, export_params=True)
+
+class EqualSameDims(nn.Module):
+
+    def __init__(self):
+        super(EqualSameDims, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x1, x2):
+        x1 = self.conv(x1)
+        x2 = self.conv(x2)
+        x1 = x1 == x2
+        return x2*x1
+
+model = EqualSameDims()
+input1 = Variable(torch.rand(1, 3, 4, 5))
+input2 = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model_multy_inputs("equal_same_dims", model, input1, input2, export_params=True)
+
+class Less(nn.Module):
+
+    def __init__(self):
+        super(Less, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x < 0.7)*x
+
+model = Less()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("less", input, model, version = 11, export_params=True)
+
+class LessSameDims(nn.Module):
+
+    def __init__(self):
+        super(LessSameDims, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x1, x2):
+        x1 = self.conv(x1)
+        x2 = self.conv(x2)
+        x1 = x1 < x2
+        return x2*x1
+
+model = LessSameDims()
+input1 = Variable(torch.rand(1, 3, 4, 5))
+input2 = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model_multy_inputs("less_same_dims", model, input1, input2, export_params=True)
+
+class Greater(nn.Module):
+
+    def __init__(self):
+        super(Greater, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x > 0.5)*x
+
+model = Greater()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("greater", input, model, version = 11, export_params=True)
+
+class GreaterSameDims(nn.Module):
+
+    def __init__(self):
+        super(GreaterSameDims, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x1, x2):
+        x1 = self.conv(x1)
+        x2 = self.conv(x2)
+        x1 = x1 > x2
+        return x2*x1
+
+model = GreaterSameDims()
+input1 = Variable(torch.rand(1, 3, 4, 5))
+input2 = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model_multy_inputs("greater_same_dims", model, input1, input2, export_params=True)
+
 class ReduceMaxGlobal(nn.Module):
   def forward(self, x):
     out = torch.max(x)
@@ -1584,6 +1733,14 @@ def cumsum_exclusive_1d_reverse(x):
     return tf.cumsum(x, exclusive=True, reverse=True)
 
 save_data_and_tf_function(cumsum_exclusive_1d_reverse, "cumsum_1d_exclusive_1_reverse", x)
+
+x = np.random.rand(1, 2, 3, 4)
+
+@tf.function
+def Not(x):
+    return tf.cast(tf.math.logical_not(tf.math.less(x, 0.5)), tf.float32)
+
+save_data_and_tf_function(Not, "not", x)
 
 #paddle2onnx model
 class Resize_HumanSeg(paddle.nn.Layer):
