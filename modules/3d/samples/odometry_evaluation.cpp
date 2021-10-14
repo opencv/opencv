@@ -66,6 +66,9 @@ void setCameraMatrixFreiburg2(float& fx, float& fy, float& cx, float& cy)
  */
 int main(int argc, char** argv)
 {
+    //std::cout << argc << std::endl;
+    //std::cout << argv[1] << std::endl;
+
     if(argc != 4)
     {
         cout << "Format: file_with_rgb_depth_pairs trajectory_file odometry_name [Rgbd or ICP or RgbdICP or FastICP]" << endl;
@@ -80,8 +83,14 @@ int main(int argc, char** argv)
     if( !file.is_open() )
         return -1;
 
-    char dlmrt = '/';
-    size_t pos = filename.rfind(dlmrt);
+    char dlmrt1 = '/';
+    char dlmrt2 = '\\';
+
+    size_t pos1 = filename.rfind(dlmrt1);
+    size_t pos2 = filename.rfind(dlmrt2);
+    size_t pos = pos1 < pos2 ? pos1 : pos2;
+    char dlmrt = pos1 < pos2 ? dlmrt1 : dlmrt2;
+
     string dirname = pos == string::npos ? "" : filename.substr(0, pos) + dlmrt;
 
     const int timestampLength = 17;
@@ -153,8 +162,6 @@ int main(int argc, char** argv)
             CV_Assert(!depth.empty());
             CV_Assert(depth.type() == CV_16UC1);
 
-            cout << i << " " << rgbFilename << " " << depthFilename << endl;
-
             // scale depth
             Mat depth_flt;
             depth.convertTo(depth_flt, CV_32FC1, 1.f/5000.f);
@@ -188,6 +195,7 @@ int main(int argc, char** argv)
                 TickMeter tm;
                 tm.start();
                 gtm.start();
+                odometry.prepareFrames(frame_curr, frame_prev);
                 bool res = odometry.compute(frame_curr, frame_prev, Rt);
                 gtm.stop();
                 tm.stop();
