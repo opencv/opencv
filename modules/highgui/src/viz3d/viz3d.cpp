@@ -332,7 +332,9 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
 
     if (mode == RENDER_WIREFRAME)
     {
-        const float limit = 2.0f * 3.1415f;
+        static const float PI = 3.14159265359f;
+        static const float LIMIT = 2.0f * PI;
+
         std::vector<float> points_data;
 
         for (int e = 0; e < 3; ++e)
@@ -342,9 +344,9 @@ void showSphere(const String& win_name, const String& obj_name, float radius, co
             ex((e + 0) % 3) = radius;
             ey((e + 1) % 3) = radius;
 
-            for (float t = 0.0f, n; t < limit;)
+            for (float t = 0.0f, n; t < LIMIT;)
             {
-                n = t + limit / (divs * 4);
+                n = t + LIMIT / (divs * 4);
                 points_data.insert(points_data.end(), {
                     ex(0) * cos(t) + ey(0) * sin(t), ex(1) * cos(t) + ey(1) * sin(t), ex(2) * cos(t) + ey(2) * sin(t), color(0), color(1), color(2),
                     ex(0) * cos(n) + ey(0) * sin(n), ex(1) * cos(n) + ey(1) * sin(n), ex(2) * cos(n) + ey(2) * sin(n), color(0), color(1), color(2),
