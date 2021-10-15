@@ -48,8 +48,8 @@ bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     isCorrect3 = isCorrect3 && prepareICPFrameDst(srcFrame, settings);
     bool isCorrect4 = prepareICPFrameDst(dstFrame, settings);
 
-    prepareICPFrameTMP(srcFrame, settings);
-    prepareICPFrameTMP(dstFrame, settings);
+    //prepareICPFrameTMP(srcFrame, settings);
+    //prepareICPFrameTMP(dstFrame, settings);
 
     return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
 }
@@ -225,14 +225,14 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidImage(depth, dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
-    std::vector<TMat> mpyramids;
-    std::vector<TMat> npyramids;
-    preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
-        npyramids, mpyramids);
-    setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+    //std::vector<TMat> mpyramids;
+    //std::vector<TMat> npyramids;
+    //preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
+    //    npyramids, mpyramids);
+    //setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
 
 
-    //std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
+    std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -240,12 +240,7 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
     double min0, max0, min1, max1;
-    //cv::minMaxLoc(dpyramids[0], &min0, &max0);
-    //std::cout << "d: " << min0 << " " << max0 << std::endl;
-    //cv::minMaxLoc(cpyramids[0], &min1, &max1);
-    //std::cout << "c: " << min1 << " " << max1 << std::endl;
 
-    //std::cout << cpyramids[0] << std::endl;
     return true;
 }
 
@@ -947,8 +942,8 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
         for (int u1 = 0; u1 < depth1.cols; u1++)
         {
             float d1 = depth1_row[u1];
-            //if (mask1_row[u1])
-            if (!cvIsNaN(d1))
+            if (mask1_row[u1])
+            //if (!cvIsNaN(d1))
             {
                 CV_DbgAssert(!cvIsNaN(d1));
                 float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
@@ -966,8 +961,8 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
                     if (r.contains(Point(u0, v0)))
                     {
                         float d0 = depth0.at<float>(v0, u0);
-                        //if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
-                        if (!cvIsNaN(d0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
+                        //if (!cvIsNaN(d0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
                             Vec2s& c = corresps.at<Vec2s>(v0, u0);

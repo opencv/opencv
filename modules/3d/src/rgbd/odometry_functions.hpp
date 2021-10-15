@@ -16,24 +16,19 @@ static inline
 void checkImage(InputArray image)
 {
     if (image.empty())
-        //CV_Error(Error::StsBadSize, "Image is empty.");
-        std::cout << "Image is empty." << std::endl;
+        CV_Error(Error::StsBadSize, "Image is empty.");
     if (image.type() != CV_8UC1)
-        //CV_Error(Error::StsBadSize, "Image type has to be CV_8UC1.");
-        std::cout << "Image type has to be CV_8UC1." << image.type() << std::endl;
+        CV_Error(Error::StsBadSize, "Image type has to be CV_8UC1.");
 }
 static inline
 void checkDepth(InputArray depth, const Size& imageSize)
 {
     if (depth.empty())
-        //CV_Error(Error::StsBadSize, "Depth is empty.");
-        std::cout << "Depth is empty." << std::endl;
+        CV_Error(Error::StsBadSize, "Depth is empty.");
     if (depth.size() != imageSize)
-        //CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
-        std::cout << "Depth has to have the size equal to the image size." << std::endl;
+        CV_Error(Error::StsBadSize, "Depth has to have the size equal to the image size.");
     if (depth.type() != CV_32FC1)
-        //CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
-        std::cout << "Depth type has to be CV_32FC1." << std::endl;
+        CV_Error(Error::StsBadSize, "Depth type has to be CV_32FC1.");
 }
 
 static inline
@@ -42,11 +37,9 @@ void checkMask(InputArray mask, const Size& imageSize)
     if (!mask.empty())
     {
         if (mask.size() != imageSize)
-            //CV_Error(Error::StsBadSize, "Mask has to have the size equal to the image size.");
-            std::cout << "Mask has to have the size equal to the image size." << std::endl;
+            CV_Error(Error::StsBadSize, "Mask has to have the size equal to the image size.");
         if (mask.type() != CV_8UC1)
-            //CV_Error(Error::StsBadSize, "Mask type has to be CV_8UC1.");
-            std::cout << "Mask type has to be CV_8UC1." << std::endl;
+            CV_Error(Error::StsBadSize, "Mask type has to be CV_8UC1.");
     }
 }
 
@@ -54,11 +47,9 @@ static inline
 void checkNormals(InputArray normals, const Size& depthSize)
 {
     if (normals.size() != depthSize)
-        //CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
-        std::cout << "Normals has to have the size equal to the depth size." << std::endl;
+        CV_Error(Error::StsBadSize, "Normals has to have the size equal to the depth size.");
     if (normals.type() != CV_32FC3)
-        //CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
-        std::cout << "Normals type has to be CV_32FC3." << std::endl;
+        CV_Error(Error::StsBadSize, "Normals type has to be CV_32FC3.");
 }
 
 
