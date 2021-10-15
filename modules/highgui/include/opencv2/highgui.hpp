@@ -51,6 +51,8 @@
 #include "opencv2/videoio.hpp"
 #endif
 
+#include "highgui/viz3d.hpp"
+
 /**
 @defgroup highgui High-level GUI
 
@@ -889,7 +891,5 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 //! @} highgui
 
 } // cv
-
-#include "highgui/viz3d.hpp"
 
 #endif
