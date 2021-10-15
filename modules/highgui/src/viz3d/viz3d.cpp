@@ -589,7 +589,7 @@ void cv::viz3d::showRGBD(const String& win_name, const String& obj_name, InputAr
     CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
 #else
     CV_Assert(img.dims() == 2 && img.channels() == 4 && img.type() == CV_32FC4);
-    
+
     Mat mat = img.getMat();
     Mat points;
 
@@ -714,7 +714,7 @@ void cv::viz3d::View::setAspect(float aspect)
     {
         this->aspect = aspect;
         this->setPerspective(this->fov, this->z_near, this->z_far);
-    }  
+    }
 }
 
 void cv::viz3d::View::setPerspective(float fov, float z_near, float z_far)
@@ -1169,58 +1169,58 @@ cv::viz3d::Mesh::Mesh(InputArray verts, InputArray indices)
     if (verts.size().width == 3)
     {
         this->va.create({
-            ogl::Attribute(
+            {
                 this->verts,
                 3 * sizeof(float), 0,
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 0
-            )
+            }
         });
     }
     else if (verts.size().width == 6)
     {
         this->va.create({
-		    ogl::Attribute(
+		    {
 			    this->verts,
 			    6 * sizeof(float), 0,
 			    3, ogl::Attribute::FLOAT,
 			    false, false,
 			    0
-		    ),
-		    ogl::Attribute(
+            },
+		    {
 			    this->verts,
 			    6 * sizeof(float), 3 * sizeof(float),
 			    3, ogl::Attribute::FLOAT,
 			    false, false,
 			    1
-		    )
+            }
 	    });
     }
     else if (verts.size().width == 9)
     {
         this->va.create({
-		    ogl::Attribute(
+		    {
 			    this->verts,
 			    9 * sizeof(float), 0,
 			    3, ogl::Attribute::FLOAT,
 			    false, false,
 			    0
-		    ),
-		    ogl::Attribute(
+            },
+		    {
 			    this->verts,
 			    9 * sizeof(float), 3 * sizeof(float),
 			    3, ogl::Attribute::FLOAT,
 			    false, false,
 			    1
-		    ),
-            ogl::Attribute(
+            },
+            {
                 this->verts,
                 9 * sizeof(float), 6 * sizeof(float),
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 2
-            )
+            }
 	    });
     }
 }
@@ -1230,7 +1230,7 @@ cv::viz3d::Mesh::Mesh(InputArray verts)
     // Check parameter validity
     CV_Assert(verts.channels() == 1 && verts.dims() == 2 && (verts.size().width == 3 || verts.size().width == 6 || verts.size().width == 9));
     CV_Assert(verts.depth() == CV_32F);
- 
+
     // Prepare buffers
     if (verts.kind() == _InputArray::OPENGL_BUFFER)
         this->verts = verts.getOGlBuffer();
@@ -1243,58 +1243,58 @@ cv::viz3d::Mesh::Mesh(InputArray verts)
     if (verts.size().width == 3)
     {
         this->va.create({
-            ogl::Attribute(
+            {
                 this->verts,
                 3 * sizeof(float), 0,
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 0
-            )
+            }
             });
     }
     else if (verts.size().width == 6)
     {
         this->va.create({
-            ogl::Attribute(
+            {
                 this->verts,
                 6 * sizeof(float), 0,
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 0
-            ),
-            ogl::Attribute(
+            },
+            {
                 this->verts,
                 6 * sizeof(float), 3 * sizeof(float),
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 1
-            )
+            }
         });
     }
     else if (verts.size().width == 9)
     {
         this->va.create({
-            ogl::Attribute(
+            {
                 this->verts,
                 9 * sizeof(float), 0,
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 0
-            ),
-            ogl::Attribute(
+            },
+            {
                 this->verts,
                 9 * sizeof(float), 3 * sizeof(float),
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 1
-            ),
-            ogl::Attribute(
+            },
+            {
                 this->verts,
                 9 * sizeof(float), 6 * sizeof(float),
                 3, ogl::Attribute::FLOAT,
                 false, false,
                 2
-            )
+            }
         });
     }
 }
@@ -1439,7 +1439,7 @@ ogl::Program cv::viz3d::Mesh::buildShader()
             }
         )", ogl::Shader::FRAGMENT);
     }
-	
+
     return ogl::Program(vs, fs);
 }
 
@@ -1476,20 +1476,20 @@ cv::viz3d::Lines::Lines(InputArray points, int count)
 
 	// Prepare vertex array
 	this->va.create({
-		ogl::Attribute(
+		{
 			this->points,
 			6 * sizeof(float), 0,
 			3, ogl::Attribute::FLOAT,
 			false, false,
 			0
-		),
-		ogl::Attribute(
+        },
+		{
 			this->points,
 			6 * sizeof(float), 3 * sizeof(float),
 			3, ogl::Attribute::FLOAT,
 			false, false,
 			1
-		)
+        }
 	});
 
     if (count == -1)
@@ -1512,7 +1512,7 @@ void cv::viz3d::Lines::draw(const View& view, const Light& light)
         ogl::Program::setUniformMat4x4(this->proj_loc, view.getProj());
 
         ogl::drawArrays(0, this->count, ogl::LINES);
-    }   
+    }
 }
 
 void cv::viz3d::Lines::update(InputArray points)
@@ -1588,20 +1588,20 @@ cv::viz3d::PointCloud::PointCloud(InputArray points)
 
     // Prepare vertex array
     this->va.create({
-        ogl::Attribute(
+        {
             this->points,
             6 * sizeof(float), 0,
             3, ogl::Attribute::FLOAT,
             false, false,
             0
-        ),
-        ogl::Attribute(
+        },
+        {
             this->points,
             6 * sizeof(float), 3 * sizeof(float),
             3, ogl::Attribute::FLOAT,
             false, false,
             1
-        )
+        }
     });
 }
 

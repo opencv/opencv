@@ -490,26 +490,21 @@ struct CV_EXPORTS Attribute
         FLOAT           = 0x1406, //!< 32-bit floating point.
     };
 
-    /** @brief Creates a vertex attribute.
-     * 
-     * @param buffer The buffer this attribute takes data from.
-     * @param stride Number of bytes between each element described by this attribute.
-     * @param offset Position of the first element in the buffer in bytes.
-     * @param size Number of components of the type (float = 1 component, vec3 = 3 components).
-     * @param type Type of the vertex attribute. See cv::ogl::Attribute::Type.
-     * @param integer Is the vertex attribute an integer?
-     * @param normalized If the vertex attribute isn't an integer, should it be normalized?
-     * @param shader_loc Location of the attribute in the program. See cv::ogl::Program::getAttributeLocation.
-     */
-    Attribute(Buffer buffer, size_t stride, size_t offset, int size, Type type, bool integer, bool normalized, unsigned int shader_loc);
-
+    //! The buffer this attribute takes data from.
     Buffer buffer_;
+    //! Number of bytes between each element described by this attribute.
     size_t stride_;
+    //! Position of the first element in the buffer in bytes.
     size_t offset_;
+    //! Number of components of the type (eg.: float = 1 component, vec3 = 3 components).
     int size_;
+    //! Type of the vertex attribute. See cv::ogl::Attribute::Type.
     Type type_;
+    //! Is the vertex attribute an integer?
     bool integer_;
+    //! If the vertex attribute isn't an integer, should it be normalized?
     bool normalized_;
+    //! Location of the attribute in the program. See cv::ogl::Program::getAttributeLocation.
     unsigned int shader_loc_;
 };
 
