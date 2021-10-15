@@ -32,7 +32,8 @@ static inline void _getMatFromInputArray(cv::InputArray input_pts, cv::Mat &mat)
 
     if (kind == _InputArray::STD_VECTOR)
     {
-        mat = cv::Mat(static_cast<int>(mat.total()), 3, CV_32F, mat.data);
+        int new_rows = mat.rows * mat.cols * mat.channels() / 3;
+        mat = cv::Mat(new_rows, 3, CV_32F, mat.data);
     }
     else
     {
@@ -47,7 +48,7 @@ static inline void _getMatFromInputArray(cv::InputArray input_pts, cv::Mat &mat)
     }
 }
 
-void voxelGridSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
+void voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                        const float length, const float width, const float height)
 {
     CV_CheckGT(length, 0.0f, "Invalid length of grid");
@@ -114,9 +115,8 @@ void voxelGridSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
     }
 
     const int pts_new_size = static_cast<int>(grids.size());
-    sampled_pts.create(pts_new_size, 3, CV_32F);
-
-    float *const sampling_pts_ptr = (float *) sampled_pts.getMat().data;
+    sampled_point_flags.resize(ori_pts_size);
+    std::fill(sampled_point_flags.begin(), sampled_point_flags.end(), false);
 
     // Take out the points in the grid and calculate the point closest to the centroid
     std::unordered_map<keyType, std::vector<int>>::iterator grid_iter = grids.begin();
@@ -125,7 +125,7 @@ void voxelGridSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
     {
         std::vector<int> grid_pts = grid_iter->second;
         int grid_pts_cnt = static_cast<int>(grid_iter->second.size());
-        float *sampled_ptr_base = ori_pts_ptr + 3 * grid_pts[0];
+        int sampled_point_idx = grid_pts[0];
         // 1. one point in the grid, select it directly, no need to calculate.
         // 2. two points in the grid, the distance from these two points to their centroid is the same,
         //        can directly select one of them, also do not need to calculate
@@ -157,15 +157,12 @@ void voxelGridSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
                 if (dist_square < min_dist_square)
                 {
                     min_dist_square = dist_square;
-                    sampled_ptr_base = ptr_base;
+                    sampled_point_idx = item;
                 }
             }
         }
 
-        float *const new_pts_ptr_base = sampling_pts_ptr + 3 * label_id;
-        *(new_pts_ptr_base) = *sampled_ptr_base;
-        *(new_pts_ptr_base + 1) = *(sampled_ptr_base + 1);
-        *(new_pts_ptr_base + 2) = *(sampled_ptr_base + 2);
+        sampled_point_flags[sampled_point_idx] = true;
     }
 
 } // voxelGrid()
@@ -216,7 +213,7 @@ void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts, const
  * 2. Find a point in C that is the farthest away from S and put it into S
  * The distance from point to S set is the smallest distance from point to all points in S
  */
-void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
+void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                            const int sampled_pts_size, const float dist_lower_limit, cv::RNG *rng)
 {
     CV_CheckGT(sampled_pts_size, 0, "The point cloud size after sampling must be greater than 0.");
@@ -248,8 +245,10 @@ void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts
     idxs[0] = seed;
     idxs[seed] = 0;
 
-    sampled_pts.create(sampled_pts_size, 3, CV_32F);
-    float *const sampled_pts_ptr = (float *) sampled_pts.getMat().data;
+    sampled_point_flags.resize(ori_pts_size);
+    std::fill(sampled_point_flags.begin(), sampled_point_flags.end(), false);
+    sampled_point_flags[seed] = true;
+
     float *const ori_pts_ptr = (float *) ori_pts.data;
     int sampled_cnt = 1;
     const float dist_lower_limit_square = dist_lower_limit * dist_lower_limit;
@@ -279,6 +278,8 @@ void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts
             }
         }
 
+        sampled_point_flags[idxs[last_pt]] = true;
+
         if (max_dist_square < dist_lower_limit_square) break;
 
         _swap(idxs[sampled_cnt], idxs[last_pt]);
@@ -286,20 +287,9 @@ void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts
         ++sampled_cnt;
     }
 
-    // According to the marked index, put the data of the sampled point into the output matrix
-    for (int i = 0; i < sampled_cnt; ++i)
-    {
-        float *const last_pt_ptr_base = ori_pts_ptr + 3 * idxs[i];
-        float *const sampled_pts_ptr_base = sampled_pts_ptr + 3 * i;
-        float last_pt_x = *last_pt_ptr_base, last_pt_y = *(last_pt_ptr_base + 1), last_pt_z = *(last_pt_ptr_base + 2);
-        *sampled_pts_ptr_base = last_pt_x;
-        *(sampled_pts_ptr_base + 1) = last_pt_y;
-        *(sampled_pts_ptr_base + 2) = last_pt_z;
-    }
-
 } // farthestPointSampling()
 
-void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
+void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                            const float sampled_scale, const float dist_lower_limit, cv::RNG *rng)
 {
     CV_CheckGT(sampled_scale, 0.0f, "The point cloud sampled scale must greater than 0.");
@@ -307,7 +297,7 @@ void farthestPointSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts
     CV_CheckGE(dist_lower_limit, 0.0f, "The distance lower bound must be greater than or equal to 0.");
     cv::Mat ori_pts;
     _getMatFromInputArray(input_pts, ori_pts);
-    farthestPointSampling(sampled_pts, input_pts,
+    farthestPointSampling(sampled_point_flags, input_pts,
                           cvCeil(sampled_scale * ori_pts.rows), dist_lower_limit, rng);
 } // farthestPointSampling()
 
