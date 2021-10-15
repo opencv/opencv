@@ -1,31 +1,6 @@
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
-function(ocv_add_python_files_from_path search_path)
-  file(GLOB_RECURSE extra_py_files
-       RELATIVE "${search_path}"
-       # Plain Python code
-       "${search_path}/*.py"
-       # Type annotations
-       "${search_path}/*.pyi"
-  )
-  message(DEBUG "Extra Py files for ${search_path}: ${extra_py_files}")
-  if(extra_py_files)
-    list(SORT extra_py_files)
-    foreach(filename ${extra_py_files})
-      get_filename_component(module "${filename}" DIRECTORY)
-      if(NOT ${module} IN_LIST extra_modules)
-        list(APPEND extra_modules ${module})
-      endif()
-      configure_file("${search_path}/${filename}" "${__loader_path}/cv2/${filename}" COPYONLY)
-      install(FILES "${search_path}/${filename}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/${module}/" COMPONENT python)
-    endforeach()
-    message(STATUS "Found ${extra_modules} Python modules from ${search_path}")
-  else()
-    message(WARNING "Can't add Python files and modules from ${module_path}. There is no .py or .pyi files")
-  endif()
-endfunction()
-
 ocv_add_module(${MODULE_NAME} BINDINGS PRIVATE_REQUIRED opencv_python_bindings_generator)
 
 include_directories(SYSTEM
@@ -243,21 +218,6 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
   endif()
   configure_file("${PYTHON_SOURCE_DIR}/package/template/config-x.y.py.in" "${__python_loader_install_tmp_path}/cv2/${__target_config}" @ONLY)
   install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/" COMPONENT python)
-
-  # handle Python extra code
-  foreach(m ${OPENCV_MODULES_BUILD})
-    if (";${OPENCV_MODULE_${m}_WRAPPERS};" MATCHES ";python;" AND HAVE_${m}
-        AND EXISTS "${OPENCV_MODULE_${m}_LOCATION}/misc/python/package"
-    )
-      ocv_add_python_files_from_path("${OPENCV_MODULE_${m}_LOCATION}/misc/python/package")
-    endif()
-  endforeach(m)
-
-  if(NOT "${OCV_PYTHON_EXTRA_MODULES_PATH}" STREQUAL "")
-    foreach(extra_ocv_py_modules_path ${OCV_PYTHON_EXTRA_MODULES_PATH})
-      ocv_add_python_files_from_path(${extra_ocv_py_modules_path})
-    endforeach()
-  endif()
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
 unset(PYTHON_SRC_DIR)

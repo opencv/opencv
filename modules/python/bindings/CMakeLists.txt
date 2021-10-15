@@ -8,6 +8,10 @@ set(OPENCV_PYTHON_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "")
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
+if(NOT OPENCV_SKIP_PYTHON_LOADER)
+  include("${PYTHON_SOURCE_DIR}/python_loader.cmake")
+endif()
+
 # get list of modules to wrap
 set(OPENCV_PYTHON_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
