@@ -14,21 +14,21 @@ namespace cv { namespace viz3d {
 static void openGlDrawCallback(void* data)
 {
     Window* win = static_cast<Window*>(data);
-    if (win != nullptr)
+    if (win)
         win->draw();
 }
 
 static void openGlFreeCallback(void* data)
 {
     Window* win = static_cast<Window*>(data);
-    if (win != nullptr)
+    if (win)
         delete win;
 }
 
 static void mouseCallback(int event, int x, int y, int flags, void* data)
 {
     Window* win = static_cast<Window*>(data);
-    if (win != nullptr)
+    if (win)
         win->onMouse(event, x, y, flags);
 }
 
@@ -52,7 +52,7 @@ static Window* getWindow(const String& win_name)
     else
     {
         auto callback = getOpenGlDrawCallback(win_name);
-        if (callback != nullptr && callback != openGlDrawCallback)
+        if (callback && callback != openGlDrawCallback)
             CV_Error(cv::Error::StsBadArg, "OpenCV/UI: viz3d can't be used because the OpenGL callback is already being used on this window");
     }
 
@@ -820,7 +820,7 @@ Window::Window(const String& name)
 Window::~Window()
 {
 	delete this->crosshair;
-    if (this->grid != nullptr)
+    if (this->grid)
         delete this->grid;
 
     for (auto obj : this->objects)
@@ -847,10 +847,10 @@ void Window::set(const String& obj_name, Object* obj)
 		else
 			it->second = obj;
 	}
-	else if (obj != nullptr)
+	else if (obj)
 		this->objects[obj_name] = obj;
 
-    if (obj != nullptr)
+    if (obj)
     {
         String name = obj->getShaderName();
         auto it = this->shaders.find(name);
@@ -1022,7 +1022,7 @@ void Window::setGridVisible(bool visible)
         this->grid = new Lines(Mat(4096, 6, CV_32F), 0);
         this->grid->setShader(this->shaders[this->grid->getShaderName()]);
     }
-    else if (this->grid != nullptr)
+    else if (this->grid)
     {
         delete this->grid;
         this->grid = nullptr;
