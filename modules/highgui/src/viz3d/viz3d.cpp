@@ -7,8 +7,7 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/imgproc.hpp"
 
-using namespace cv;
-using namespace cv::viz3d;
+namespace cv { namespace viz3d {
 
 #ifdef HAVE_OPENGL
 
@@ -62,7 +61,7 @@ static Window* getWindow(const String& win_name)
 
 #endif // HAVE_OPENGL
 
-void cv::viz3d::setPerspective(const String& win_name, float fov, float z_near, float z_far)
+void setPerspective(const String& win_name, float fov, float z_near, float z_far)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -78,7 +77,7 @@ void cv::viz3d::setPerspective(const String& win_name, float fov, float z_near, 
 #endif
 }
 
-void cv::viz3d::setGridVisible(const String& win_name, bool visible)
+void setGridVisible(const String& win_name, bool visible)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -92,7 +91,7 @@ void cv::viz3d::setGridVisible(const String& win_name, bool visible)
 #endif
 }
 
-void cv::viz3d::setSun(const String& win_name, const Vec3f& direction, const Vec3f& ambient, const Vec3f& diffuse)
+void setSun(const String& win_name, const Vec3f& direction, const Vec3f& ambient, const Vec3f& diffuse)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -108,7 +107,7 @@ void cv::viz3d::setSun(const String& win_name, const Vec3f& direction, const Vec
 #endif
 }
 
-void cv::viz3d::setSky(const String& win_name, const Vec3f& color)
+void setSky(const String& win_name, const Vec3f& color)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -122,7 +121,7 @@ void cv::viz3d::setSky(const String& win_name, const Vec3f& color)
 #endif
 }
 
-void cv::viz3d::showBox(const String& win_name, const String& obj_name, const Vec3f& size, const Vec3f& color, RenderMode mode)
+void showBox(const String& win_name, const String& obj_name, const Vec3f& size, const Vec3f& color, RenderMode mode)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -256,7 +255,7 @@ void cv::viz3d::showBox(const String& win_name, const String& obj_name, const Ve
 #endif
 }
 
-void cv::viz3d::showPlane(const String& win_name, const String& obj_name, const Vec2f& size, const Vec3f& color, RenderMode mode)
+void showPlane(const String& win_name, const String& obj_name, const Vec2f& size, const Vec3f& color, RenderMode mode)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -317,7 +316,7 @@ void cv::viz3d::showPlane(const String& win_name, const String& obj_name, const 
 #endif
 }
 
-void cv::viz3d::showSphere(const String& win_name, const String& obj_name, float radius, const Vec3f& color, RenderMode mode, int divs)
+void showSphere(const String& win_name, const String& obj_name, float radius, const Vec3f& color, RenderMode mode, int divs)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -427,7 +426,7 @@ void cv::viz3d::showSphere(const String& win_name, const String& obj_name, float
 #endif
 }
 
-void cv::viz3d::showCameraTrajectory(
+void showCameraTrajectory(
     const String& win_name, const String& obj_name, InputArray trajectory,
     float aspect, float scale, Vec3f frustum_color, Vec3f line_color)
 {
@@ -516,7 +515,7 @@ void cv::viz3d::showCameraTrajectory(
 #endif
 }
 
-void cv::viz3d::showMesh(const String& win_name, const String& obj_name, InputArray verts, InputArray indices)
+void showMesh(const String& win_name, const String& obj_name, InputArray verts, InputArray indices)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -537,7 +536,7 @@ void cv::viz3d::showMesh(const String& win_name, const String& obj_name, InputAr
 #endif
 }
 
-void cv::viz3d::showMesh(const String& win_name, const String& obj_name, InputArray verts)
+void showMesh(const String& win_name, const String& obj_name, InputArray verts)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -557,7 +556,7 @@ void cv::viz3d::showMesh(const String& win_name, const String& obj_name, InputAr
 #endif
 }
 
-void cv::viz3d::showPoints(const String& win_name, const String& obj_name, InputArray points)
+void showPoints(const String& win_name, const String& obj_name, InputArray points)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -577,7 +576,7 @@ void cv::viz3d::showPoints(const String& win_name, const String& obj_name, Input
 #endif
 }
 
-void cv::viz3d::showRGBD(const String& win_name, const String& obj_name, InputArray img, const Matx33f& intrinsics, float scale)
+void showRGBD(const String& win_name, const String& obj_name, InputArray img, const Matx33f& intrinsics, float scale)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -624,7 +623,7 @@ void cv::viz3d::showRGBD(const String& win_name, const String& obj_name, InputAr
 #endif
 }
 
-void cv::viz3d::showLines(const String& win_name, const String& obj_name, InputArray points)
+void showLines(const String& win_name, const String& obj_name, InputArray points)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -644,7 +643,7 @@ void cv::viz3d::showLines(const String& win_name, const String& obj_name, InputA
 #endif
 }
 
-void cv::viz3d::setObjectPosition(const String& win_name, const String& obj_name, const Vec3f& position)
+void setObjectPosition(const String& win_name, const String& obj_name, const Vec3f& position)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -662,7 +661,7 @@ void cv::viz3d::setObjectPosition(const String& win_name, const String& obj_name
 #endif
 }
 
-void cv::viz3d::setObjectRotation(const String& win_name, const String& obj_name, const Vec3f& rotation)
+void setObjectRotation(const String& win_name, const String& obj_name, const Vec3f& rotation)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -680,7 +679,7 @@ void cv::viz3d::setObjectRotation(const String& win_name, const String& obj_name
 #endif
 }
 
-void cv::viz3d::destroyObject(const String& win_name, const String& obj_name)
+void destroyObject(const String& win_name, const String& obj_name)
 {
     CV_TRACE_FUNCTION();
 #ifndef HAVE_OPENGL
@@ -696,7 +695,7 @@ void cv::viz3d::destroyObject(const String& win_name, const String& obj_name)
 
 #ifdef HAVE_OPENGL
 
-cv::viz3d::View::View()
+View::View()
 {
     this->origin = { 0.0f, 0.0f, 0.0f };
     this->distance = 10.0f;
@@ -708,7 +707,7 @@ cv::viz3d::View::View()
     this->lookAt(this->origin, { 0.0f, 1.0f, 0.0f });
 }
 
-void cv::viz3d::View::setAspect(float aspect)
+void View::setAspect(float aspect)
 {
     if (this->aspect != aspect)
     {
@@ -717,7 +716,7 @@ void cv::viz3d::View::setAspect(float aspect)
     }
 }
 
-void cv::viz3d::View::setPerspective(float fov, float z_near, float z_far)
+void View::setPerspective(float fov, float z_near, float z_far)
 {
     this->fov = fov;
     this->z_near = z_near;
@@ -732,7 +731,7 @@ void cv::viz3d::View::setPerspective(float fov, float z_near, float z_far)
     this->proj(3, 2) = -(2.0f * this->z_far * this->z_near) / (this->z_far - this->z_near);
 }
 
-void cv::viz3d::View::rotate(float dx, float dy)
+void View::rotate(float dx, float dy)
 {
     this->position = normalize(this->position - this->origin);
     float theta = atan2(this->position(2), this->position(0));
@@ -749,7 +748,7 @@ void cv::viz3d::View::rotate(float dx, float dy)
     this->lookAt(this->origin, this->up);
 }
 
-void cv::viz3d::View::move(float dx, float dy)
+void View::move(float dx, float dy)
 {
     Vec3f forward = normalize(this->position - this->origin);
     Vec3f right = normalize(this->up.cross(forward));
@@ -761,7 +760,7 @@ void cv::viz3d::View::move(float dx, float dy)
     this->lookAt(this->origin, this->up);
 }
 
-void cv::viz3d::View::scaleDistance(float amount)
+void View::scaleDistance(float amount)
 {
     this->distance *= amount;
     this->distance = max(0.1f, this->distance);
@@ -770,7 +769,7 @@ void cv::viz3d::View::scaleDistance(float amount)
     this->lookAt(this->origin, this->up);
 }
 
-void cv::viz3d::View::lookAt(const Vec3f& point, const Vec3f& up)
+void View::lookAt(const Vec3f& point, const Vec3f& up)
 {
     Vec3f f = normalize(point - this->position);
     Vec3f s = normalize(up.cross(f));
@@ -792,7 +791,7 @@ void cv::viz3d::View::lookAt(const Vec3f& point, const Vec3f& up)
     this->view(3, 3) = 1.0f;
 }
 
-cv::viz3d::Window::Window(const String& name)
+Window::Window(const String& name)
 {
     this->name = name;
     this->sun.direction = normalize(Vec3f(0.3f, 1.0f, 0.5f));
@@ -818,7 +817,7 @@ cv::viz3d::Window::Window(const String& name)
     this->grid = nullptr;
 }
 
-cv::viz3d::Window::~Window()
+Window::~Window()
 {
 	delete this->crosshair;
     if (this->grid != nullptr)
@@ -828,7 +827,7 @@ cv::viz3d::Window::~Window()
 		delete obj.second;
 }
 
-cv::viz3d::Object* cv::viz3d::Window::get(const String& obj_name)
+Object* Window::get(const String& obj_name)
 {
 	auto it = this->objects.find(obj_name);
 	if (it == this->objects.end())
@@ -836,7 +835,7 @@ cv::viz3d::Object* cv::viz3d::Window::get(const String& obj_name)
 	return it->second;
 }
 
-void cv::viz3d::Window::set(const String& obj_name, Object* obj)
+void Window::set(const String& obj_name, Object* obj)
 {
 	auto it = this->objects.find(obj_name);
 	if (it != this->objects.end() && it->second != obj)
@@ -861,14 +860,14 @@ void cv::viz3d::Window::set(const String& obj_name, Object* obj)
     }
 }
 
-void cv::viz3d::Window::setSun(const Vec3f& direction, const Vec3f& ambient, const Vec3f& diffuse)
+void Window::setSun(const Vec3f& direction, const Vec3f& ambient, const Vec3f& diffuse)
 {
     this->sun.direction = normalize(direction);
     this->sun.ambient = ambient;
     this->sun.diffuse = diffuse;
 }
 
-void cv::viz3d::Window::setSky(const Vec3f& color)
+void Window::setSky(const Vec3f& color)
 {
     this->sky_color = color;
 }
@@ -1016,7 +1015,7 @@ static Mat getGridVertices(const View& view)
     return points;
 }
 
-void cv::viz3d::Window::setGridVisible(bool visible)
+void Window::setGridVisible(bool visible)
 {
     if (visible)
     {
@@ -1030,7 +1029,7 @@ void cv::viz3d::Window::setGridVisible(bool visible)
     }
 }
 
-void cv::viz3d::Window::draw()
+void Window::draw()
 {
     Rect rect = getWindowImageRect(this->name);
     float aspect = (float)rect.width / (float)rect.height;
@@ -1055,7 +1054,7 @@ void cv::viz3d::Window::draw()
         obj.second->draw(this->view, this->sun);
 }
 
-void cv::viz3d::Window::onMouse(int event, int x, int y, int flags)
+void Window::onMouse(int event, int x, int y, int flags)
 {
     if (event == EVENT_LBUTTONDOWN || event == EVENT_RBUTTONDOWN)
     {
@@ -1083,26 +1082,26 @@ void cv::viz3d::Window::onMouse(int event, int x, int y, int flags)
     }
 }
 
-cv::viz3d::Object::Object()
+Object::Object()
 {
 	this->position = { 0.0f, 0.0f, 0.0f };
 	this->rotation = { 0.0f, 0.0f, 0.0f };
 	this->model = Matx44f::eye();
 }
 
-void cv::viz3d::Object::setPosition(const Vec3f& position)
+void Object::setPosition(const Vec3f& position)
 {
     this->position = position;
     this->updateModel();
 }
 
-void cv::viz3d::Object::setRotation(const Vec3f& rotation)
+void Object::setRotation(const Vec3f& rotation)
 {
     this->rotation = rotation;
     this->updateModel();
 }
 
-void cv::viz3d::Object::updateModel()
+void Object::updateModel()
 {
     // Calculate rotation matrices
     Matx44f rot_a = Matx44f::eye();
@@ -1133,7 +1132,7 @@ void cv::viz3d::Object::updateModel()
     this->model = rot_c * rot_b * rot_a * trans;
 }
 
-cv::viz3d::Mesh::Mesh(InputArray verts, InputArray indices)
+Mesh::Mesh(InputArray verts, InputArray indices)
 {
     // Check parameter validity
     CV_Assert(verts.channels() == 1 && verts.dims() == 2 && (verts.size().width == 3 || verts.size().width == 6 || verts.size().width == 9));
@@ -1225,7 +1224,7 @@ cv::viz3d::Mesh::Mesh(InputArray verts, InputArray indices)
     }
 }
 
-cv::viz3d::Mesh::Mesh(InputArray verts)
+Mesh::Mesh(InputArray verts)
 {
     // Check parameter validity
     CV_Assert(verts.channels() == 1 && verts.dims() == 2 && (verts.size().width == 3 || verts.size().width == 6 || verts.size().width == 9));
@@ -1299,7 +1298,7 @@ cv::viz3d::Mesh::Mesh(InputArray verts)
     }
 }
 
-void cv::viz3d::Mesh::draw(const View& view, const Light& light)
+void Mesh::draw(const View& view, const Light& light)
 {
     this->program.bind();
     this->va.bind();
@@ -1323,7 +1322,7 @@ void cv::viz3d::Mesh::draw(const View& view, const Light& light)
     }
 }
 
-String cv::viz3d::Mesh::getShaderName()
+String Mesh::getShaderName()
 {
     if (this->verts.size().width == 3)
         return "mesh-xyz";
@@ -1333,7 +1332,7 @@ String cv::viz3d::Mesh::getShaderName()
         return "mesh-xyz-rgb-uvw";
 }
 
-ogl::Program cv::viz3d::Mesh::buildShader()
+ogl::Program Mesh::buildShader()
 {
     ogl::Shader vs, fs;
 
@@ -1443,7 +1442,7 @@ ogl::Program cv::viz3d::Mesh::buildShader()
     return ogl::Program(vs, fs);
 }
 
-void cv::viz3d::Mesh::setShader(ogl::Program program)
+void Mesh::setShader(ogl::Program program)
 {
 	this->program = program;
 	this->model_loc = this->program.getUniformLocation("model");
@@ -1458,7 +1457,7 @@ void cv::viz3d::Mesh::setShader(ogl::Program program)
     }
 }
 
-cv::viz3d::Lines::Lines(InputArray points, int count)
+Lines::Lines(InputArray points, int count)
 {
 	// Check parameter validity
 	CV_Assert(points.channels() == 1 && points.dims() == 2 && points.size().width == 6);
@@ -1498,7 +1497,7 @@ cv::viz3d::Lines::Lines(InputArray points, int count)
         this->count = count;
 }
 
-void cv::viz3d::Lines::draw(const View& view, const Light& light)
+void Lines::draw(const View& view, const Light& light)
 {
     CV_UNUSED(light);
 
@@ -1515,7 +1514,7 @@ void cv::viz3d::Lines::draw(const View& view, const Light& light)
     }
 }
 
-void cv::viz3d::Lines::update(InputArray points)
+void Lines::update(InputArray points)
 {
     // Check parameter validity
     CV_Assert(points.channels() == 1 && points.dims() == 2 && points.size().width == 6);
@@ -1525,12 +1524,12 @@ void cv::viz3d::Lines::update(InputArray points)
     this->count = points.size().height;
 }
 
-String cv::viz3d::Lines::getShaderName()
+String Lines::getShaderName()
 {
 	return "lines";
 }
 
-ogl::Program cv::viz3d::Lines::buildShader()
+ogl::Program Lines::buildShader()
 {
 	// Setup shader pipeline
 	auto vs = ogl::Shader(R"(
@@ -1566,7 +1565,7 @@ ogl::Program cv::viz3d::Lines::buildShader()
 	return ogl::Program(vs, fs);
 }
 
-void cv::viz3d::Lines::setShader(ogl::Program program)
+void Lines::setShader(ogl::Program program)
 {
 	this->program = program;
 	this->model_loc = this->program.getUniformLocation("model");
@@ -1574,7 +1573,7 @@ void cv::viz3d::Lines::setShader(ogl::Program program)
 	this->proj_loc = this->program.getUniformLocation("proj");
 }
 
-cv::viz3d::PointCloud::PointCloud(InputArray points)
+PointCloud::PointCloud(InputArray points)
 {
     // Check parameter validity
     CV_Assert(points.channels() == 1 && points.dims() == 2 && points.size().width == 6);
@@ -1605,7 +1604,7 @@ cv::viz3d::PointCloud::PointCloud(InputArray points)
     });
 }
 
-void cv::viz3d::PointCloud::draw(const View& view, const Light& light)
+void PointCloud::draw(const View& view, const Light& light)
 {
     CV_UNUSED(light);
 
@@ -1619,12 +1618,12 @@ void cv::viz3d::PointCloud::draw(const View& view, const Light& light)
     ogl::drawArrays(0, this->points.size().height, ogl::POINTS);
 }
 
-String cv::viz3d::PointCloud::getShaderName()
+String PointCloud::getShaderName()
 {
 	return "points";
 }
 
-ogl::Program cv::viz3d::PointCloud::buildShader()
+ogl::Program PointCloud::buildShader()
 {
 	// Setup shader pipeline
 	auto vs = ogl::Shader(R"(
@@ -1660,12 +1659,15 @@ ogl::Program cv::viz3d::PointCloud::buildShader()
 	return ogl::Program(vs, fs);
 }
 
-void cv::viz3d::PointCloud::setShader(ogl::Program program)
+void PointCloud::setShader(ogl::Program program)
 {
 	this->program = program;
 	this->model_loc = this->program.getUniformLocation("model");
 	this->view_loc = this->program.getUniformLocation("view");
 	this->proj_loc = this->program.getUniformLocation("proj");
 }
+
+} // namespace viz3d
+} // namespace cv
 
 #endif
