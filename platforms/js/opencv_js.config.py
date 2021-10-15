@@ -13,18 +13,86 @@ core = {
     'Algorithm': [],
 }
 
-imgproc = {'': ['Canny', 'GaussianBlur', 'Laplacian', 'HoughLines', 'HoughLinesP', 'HoughCircles', 'Scharr','Sobel', \
-                'adaptiveThreshold','approxPolyDP','arcLength','bilateralFilter','blur','boundingRect','boxFilter',\
-                'calcBackProject','calcHist','circle','compareHist','connectedComponents','connectedComponentsWithStats', \
-                'contourArea', 'convexHull', 'convexityDefects', 'cornerHarris','cornerMinEigenVal','createCLAHE', \
-                'createLineSegmentDetector','cvtColor','demosaicing','dilate', 'distanceTransform','distanceTransformWithLabels', \
-                'drawContours','ellipse','ellipse2Poly','equalizeHist','erode', 'filter2D', 'findContours','fitEllipse', \
-                'fitLine', 'floodFill','getAffineTransform', 'getPerspectiveTransform', 'getRotationMatrix2D', 'getStructuringElement', \
-                'goodFeaturesToTrack','grabCut','initUndistortRectifyMap', 'integral','integral2', 'isContourConvex', 'line', \
-                'matchShapes', 'matchTemplate','medianBlur', 'minAreaRect', 'minEnclosingCircle', 'moments', 'morphologyEx', \
-                'pointPolygonTest', 'putText','pyrDown','pyrUp','rectangle','remap', 'resize','sepFilter2D','threshold', \
-                'undistort','warpAffine','warpPerspective','warpPolar','watershed', \
-                'fillPoly', 'fillConvexPoly', 'polylines',
+imgproc = {
+    '': [
+        'Canny',
+        'GaussianBlur',
+        'Laplacian',
+        'HoughLines',
+        'HoughLinesP',
+        'HoughCircles',
+        'Scharr',
+        'Sobel',
+        'adaptiveThreshold',
+        'approxPolyDP',
+        'arcLength',
+        'bilateralFilter',
+        'blur',
+        'boundingRect',
+        'boxFilter',
+        'calcBackProject',
+        'calcHist',
+        'circle',
+        'compareHist',
+        'connectedComponents',
+        'connectedComponentsWithStats',
+        'contourArea',
+        'convexHull',
+        'convexityDefects',
+        'cornerHarris',
+        'cornerMinEigenVal',
+        'createCLAHE',
+        'createLineSegmentDetector',
+        'cvtColor',
+        'demosaicing',
+        'dilate',
+        'distanceTransform',
+        'distanceTransformWithLabels',
+        'drawContours',
+        'ellipse',
+        'ellipse2Poly',
+        'equalizeHist',
+        'erode',
+        'filter2D',
+        'findContours',
+        'fitEllipse',
+        'fitLine',
+        'floodFill',
+        'getAffineTransform',
+        'getPerspectiveTransform',
+        'getRotationMatrix2D',
+        'getStructuringElement',
+        'goodFeaturesToTrack',
+        'grabCut',
+        #'initUndistortRectifyMap',  # 4.x: moved to calib3d
+        'integral',
+        'integral2',
+        'isContourConvex',
+        'line',
+        'matchShapes',
+        'matchTemplate',
+        'medianBlur',
+        'minAreaRect',
+        'minEnclosingCircle',
+        'moments',
+        'morphologyEx',
+        'pointPolygonTest',
+        'putText',
+        'pyrDown',
+        'pyrUp',
+        'rectangle',
+        'remap',
+        'resize',
+        'sepFilter2D',
+        'threshold',
+        #'undistort',  # 4.x: moved to calib3d
+        'warpAffine',
+        'warpPerspective',
+        'warpPolar',
+        'watershed',
+        'fillPoly',
+        'fillConvexPoly',
+        'polylines',
     ],
     'CLAHE': ['apply', 'collectGarbage', 'getClipLimit', 'getTilesGridSize', 'setClipLimit', 'setTilesGridSize'],
     'segmentation_IntelligentScissorsMB': [
@@ -99,11 +167,32 @@ aruco = {'': ['detectMarkers', 'drawDetectedMarkers', 'drawAxis', 'estimatePoseS
 
 _3d = {
     '': [
-        'findHomography', 'calibrateCameraExtended', 'drawFrameAxes', 'estimateAffine2D',
-        'getDefaultNewCameraMatrix', 'initUndistortRectifyMap', 'Rodrigues',
-        'solvePnP', 'solvePnPRansac', 'solvePnPRefineLM'
-    ]
+        'findHomography',
+        'calibrateCameraExtended',
+        'drawFrameAxes',
+        'estimateAffine2D',
+        'getDefaultNewCameraMatrix',
+        'initUndistortRectifyMap',
+        'Rodrigues',
+        'solvePnP',
+        'solvePnPRansac',
+        'solvePnPRefineLM',
+        'projectPoints',
+        'undistort',
+    ],
+}
+
+calib = {
+    '': [
+
+        # cv::fisheye namespace
+        'fisheye_initUndistortRectifyMap',
+        'fisheye_projectPoints',
+    ],
 }
 
 
-white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, _3d])
+white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, aruco, _3d, calib])
+
+# namespace_prefix_override['dnn'] = ''  # compatibility stuff (enabled by default)
+# namespace_prefix_override['aruco'] = ''  # compatibility stuff (enabled by default)

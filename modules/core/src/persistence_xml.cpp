@@ -45,7 +45,7 @@ public:
             if( FileNode::isCollection(struct_flags) )
             {
                 if( FileNode::isMap(struct_flags) ^ (key != 0) )
-                    CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                    CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                              "or add element with key to sequence" );
             }
             else
@@ -61,26 +61,26 @@ public:
         if( !key )
             key = "_";
         else if( key[0] == '_' && key[1] == '\0' )
-            CV_Error( CV_StsBadArg, "A single _ is a reserved tag name" );
+            CV_Error( cv::Error::StsBadArg, "A single _ is a reserved tag name" );
 
         len = (int)strlen( key );
         *ptr++ = '<';
         if( tag_type == CV_XML_CLOSING_TAG )
         {
             if( !attrlist.empty() )
-                CV_Error( CV_StsBadArg, "Closing tag should not include any attributes" );
+                CV_Error( cv::Error::StsBadArg, "Closing tag should not include any attributes" );
             *ptr++ = '/';
         }
 
         if( !cv_isalpha(key[0]) && key[0] != '_' )
-            CV_Error( CV_StsBadArg, "Key should start with a letter or _" );
+            CV_Error( cv::Error::StsBadArg, "Key should start with a letter or _" );
 
         ptr = fs->resizeWriteBuffer( ptr, len );
         for( i = 0; i < len; i++ )
         {
             char c = key[i];
             if( !cv_isalnum(c) && c != '_' && c != '-' )
-                CV_Error( CV_StsBadArg, "Key name may only contain alphanumeric characters [a-zA-Z0-9], '-' and '_'" );
+                CV_Error( cv::Error::StsBadArg, "Key name may only contain alphanumeric characters [a-zA-Z0-9], '-' and '_'" );
             ptr[i] = c;
         }
         ptr += len;
@@ -158,11 +158,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != '\"' || str[0] != str[len-1] )
         {
@@ -233,6 +233,16 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
         int len = (int)strlen(data);
         if( key && *key == '\0' )
             key = 0;
@@ -255,7 +265,7 @@ public:
             int new_offset = (int)(ptr - fs->bufferStart()) + len;
 
             if( key )
-                CV_Error( CV_StsBadArg, "elements with keys can not be written to sequence" );
+                CV_Error( cv::Error::StsBadArg, "elements with keys can not be written to sequence" );
 
             current_struct.flags = FileNode::SEQ;
 
@@ -281,10 +291,10 @@ public:
         char* ptr;
 
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         if( strstr(comment, "--") != 0 )
-            CV_Error( CV_StsBadArg, "Double hyphen \'--\' is not allowed in the comments" );
+            CV_Error( cv::Error::StsBadArg, "Double hyphen \'--\' is not allowed in the comments" );
 
         len = (int)strlen(comment);
         eol = strchr(comment, '\n');

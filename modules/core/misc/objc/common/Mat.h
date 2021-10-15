@@ -114,7 +114,17 @@ CV_EXPORTS @interface Mat : NSObject
 - (BOOL)isSubmatrix;
 - (void)locateROI:(Size2i*)wholeSize ofs:(Point2i*)offset NS_SWIFT_NAME(locateROI(wholeSize:offset:));
 - (Mat*)mul:(Mat*)mat scale:(double)scale;
+/**
+ Performs element-wise multiplication
+ @param mat operand with with which to perform element-wise multiplication
+*/
 - (Mat*)mul:(Mat*)mat;
+/**
+ Performs matrix multiplication
+ @param mat operand with with which to perform matrix multiplication
+ @see `Core.gemm(...)`
+*/
+- (Mat*)matMul:(Mat*)mat;
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type NS_SWIFT_NAME(ones(rows:cols:type:));
 + (Mat*)ones:(Size2i*)size type:(int)type NS_SWIFT_NAME(ones(size:type:));
 + (Mat*)onesEx:(NSArray<NSNumber*>*)sizes type:(int)type NS_SWIFT_NAME(ones(sizes:type:));

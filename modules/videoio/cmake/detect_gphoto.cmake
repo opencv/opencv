@@ -9,5 +9,3 @@ endif()
 if(HAVE_GPHOTO2)
   ocv_add_external_target(gphoto2 "${GPHOTO2_INCLUDE_DIRS}" "${GPHOTO2_LIBRARIES}" "HAVE_GPHOTO2")
 endif()
-
-set(HAVE_GPHOTO2 ${HAVE_GPHOTO2} PARENT_SCOPE)

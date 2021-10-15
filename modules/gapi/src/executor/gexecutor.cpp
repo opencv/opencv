@@ -7,8 +7,6 @@
 
 #include "precomp.hpp"
 
-#include <iostream>
-
 #include <ade/util/zip_range.hpp>
 
 #include <opencv2/gapi/opencv_includes.hpp>
@@ -157,10 +155,14 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
         // FIXME:
         // Rework, find a better way to check if there should be
         // a real copy (add a pass to StreamingBackend?)
+        // NB: In case RMat adapter not equal to "RMatAdapter" need to
+        // copy data back to the host as well.
+        // FIXME: Rename "RMatAdapter" to "OpenCVAdapter".
         auto& out_mat = *util::get<cv::Mat*>(g_arg);
         const auto& rmat = mag.template slot<cv::RMat>().at(rc.id);
-        auto mag_data = rmat.get<RMatAdapter>()->data();
-        if (out_mat.data != mag_data) {
+        auto* adapter = rmat.get<RMatAdapter>();
+        if ((adapter != nullptr && out_mat.data != adapter->data()) ||
+            (adapter == nullptr)) {
             auto view = rmat.access(RMat::Access::R);
             asMat(view).copyTo(out_mat);
         }
@@ -407,7 +409,8 @@ bool cv::gimpl::GExecutor::canReshape() const
 {
     // FIXME: Introduce proper reshaping support on GExecutor level
     // for all cases!
-    return (m_ops.size() == 1) && m_ops[0].isl_exec->canReshape();
+    return std::all_of(m_ops.begin(), m_ops.end(),
+                       [](const OpDesc& op) { return op.isl_exec->canReshape(); });
 }
 
 void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
@@ -417,7 +420,17 @@ void cv::gimpl::GExecutor::reshape(const GMetaArgs& inMetas, const GCompileArgs&
     ade::passes::PassContext ctx{g};
     passes::initMeta(ctx, inMetas);
     passes::inferMeta(ctx, true);
-    m_ops[0].isl_exec->reshape(g, args);
+
+    // NB: Before reshape islands need to re-init resources for every slot.
+    for (auto slot : m_slots)
+    {
+        initResource(slot.slot_nh, slot.data_nh);
+    }
+
+    for (auto& op : m_ops)
+    {
+        op.isl_exec->reshape(g, args);
+    }
 }
 
 void cv::gimpl::GExecutor::prepareForNewStream()

@@ -124,8 +124,9 @@ void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 
     CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
 
-    CV_CPU_DISPATCH(cvtTwoPlaneYUVtoBGR, (src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx),
-        CV_CPU_DISPATCH_MODES_ALL);
+    cvtTwoPlaneYUVtoBGR(
+            src_data, src_step, src_data + src_step * dst_height, src_step, dst_data, dst_step,
+            dst_width, dst_height, dcn, swapBlue, uIdx);
 }
 
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
@@ -135,7 +136,20 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
 {
     CV_INSTRUMENT_REGION();
 
-    CV_CPU_DISPATCH(cvtTwoPlaneYUVtoBGR, (y_data, uv_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx),
+    cvtTwoPlaneYUVtoBGR(y_data, src_step, uv_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+}
+
+void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
+                         uchar * dst_data, size_t dst_step,
+                         int dst_width, int dst_height,
+                         int dcn, bool swapBlue, int uIdx)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(cvtTwoPlaneYUVtoBGREx, cv_hal_cvtTwoPlaneYUVtoBGREx,
+             y_data, y_step, uv_data, uv_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+
+    CV_CPU_DISPATCH(cvtTwoPlaneYUVtoBGR, (y_data, y_step, uv_data, uv_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -172,7 +186,8 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 {
     CV_INSTRUMENT_REGION();
 
-    // TODO: add hal replacement method
+    CALL_HAL(cvtBGRtoTwoPlaneYUV, cv_hal_cvtBGRtoTwoPlaneYUV,
+             src_data, src_step, y_data, dst_step, uv_data, dst_step, width, height, scn, swapBlue, uIdx);
 
     CV_CPU_DISPATCH(cvtBGRtoTwoPlaneYUV, (src_data, src_step, y_data, uv_data, dst_step, width, height, scn, swapBlue, uIdx),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -406,14 +421,21 @@ void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArr
 
     Mat ysrc = _ysrc.getMat(), uvsrc = _uvsrc.getMat();
 
-    CV_CheckEQ(ysrc.step, uvsrc.step, "");
-
     _dst.create( ysz, CV_MAKETYPE(depth, dcn));
     Mat dst = _dst.getMat();
 
-    hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step,
-                             dst.data, dst.step, dst.cols, dst.rows,
-                             dcn, swapb, uidx);
+    if(ysrc.step == uvsrc.step)
+    {
+        hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step,
+                                 dst.data, dst.step, dst.cols, dst.rows,
+                                 dcn, swapb, uidx);
+    }
+    else
+    {
+        hal::cvtTwoPlaneYUVtoBGR(ysrc.data, ysrc.step, uvsrc.data, uvsrc.step,
+                                dst.data, dst.step, dst.cols, dst.rows,
+                                dcn, swapb, uidx);
+    }
 }
 
 } // namespace cv

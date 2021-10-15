@@ -171,6 +171,13 @@ double VideoCapture_uEye::getProperty(int property_id) const
     case CAP_PROP_FPS:
         value = fps;
         break;
+    case CAP_PROP_EXPOSURE:
+        ASSERT_UEYE(is_Exposure(cam_id, IS_EXPOSURE_CMD_GET_EXPOSURE, (void*)&value, sizeof(value)));
+        break;
+    case CAP_PROP_GAIN:
+        auto gain = is_SetHWGainFactor(cam_id, IS_GET_MASTER_GAIN_FACTOR, 100);
+        value = static_cast<double>(gain)/100.0;
+        break;
     }
     return value;
 }
@@ -200,6 +207,12 @@ bool VideoCapture_uEye::setProperty(int property_id, double value)
             if(fps == value)
                 break;
             ASSERT_UEYE(is_SetFrameRate(cam_id, value, &fps));
+            break;
+        case CAP_PROP_EXPOSURE:
+            ASSERT_UEYE(is_Exposure(cam_id, IS_EXPOSURE_CMD_SET_EXPOSURE, (void*)&value, sizeof(value)));
+            break;
+        case CAP_PROP_GAIN:
+            is_SetHWGainFactor(cam_id, IS_SET_MASTER_GAIN_FACTOR, static_cast<int>(value));
             break;
         }
         if(set_format)

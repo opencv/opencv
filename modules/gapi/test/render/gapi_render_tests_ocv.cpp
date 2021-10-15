@@ -639,8 +639,8 @@ INSTANTIATE_TEST_CASE_P(RenderBGROCVTestRectsImpl, RenderBGROCVTestRects,
                                 Values(cv::Rect(100, 100, 200, 200)),
                                 Values(cv::Scalar(100, 50, 150)),
                                 Values(2),
-                                Values(LINE_8),
-                                Values(0)));
+                                Values(LINE_8, LINE_4),
+                                Values(0, 1)));
 
 INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestRectsImpl, RenderNV12OCVTestRects,
                         Combine(Values(cv::Size(1280, 720)),
@@ -673,8 +673,8 @@ INSTANTIATE_TEST_CASE_P(RenderNV12OCVTestCirclesImpl, RenderNV12OCVTestCircles,
                                 Values(10),
                                 Values(cv::Scalar(100, 50, 150)),
                                 Values(2),
-                                Values(LINE_8),
-                                Values(0)));
+                                Values(LINE_8, LINE_4),
+                                Values(0, 1)));
 
 INSTANTIATE_TEST_CASE_P(RenderMFrameOCVTestCirclesImpl, RenderMFrameOCVTestCircles,
                         Combine(Values(cv::Size(1280, 720)),

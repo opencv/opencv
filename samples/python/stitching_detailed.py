@@ -450,7 +450,8 @@ def main():
                 cameras[i].focal *= compose_work_aspect
                 cameras[i].ppx *= compose_work_aspect
                 cameras[i].ppy *= compose_work_aspect
-                sz = (full_img_sizes[i][0] * compose_scale, full_img_sizes[i][1] * compose_scale)
+                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                      int(round(full_img_sizes[i][1] * compose_scale)))
                 K = cameras[i].K().astype(np.float32)
                 roi = warper.warpRoi(sz, K, cameras[i].R)
                 corners.append(roi[0:2])

@@ -14,8 +14,8 @@
 namespace cv {
 namespace gapi {
 namespace s11n {
-    struct IOStream;
-    struct IIStream;
+struct IOStream;
+struct IIStream;
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
@@ -42,6 +42,9 @@ namespace cv {
 //         performCalculations(in_view, out_view);
 //         // data from out_view is transferred to the device when out_view is destroyed
 //     }
+/** \addtogroup gapi_data_structures
+ * @{
+ */
 class GAPI_EXPORTS RMat
 {
 public:
@@ -108,10 +111,12 @@ public:
         // is transferred to the device when the view is destroyed
         virtual View access(Access) = 0;
         virtual void serialize(cv::gapi::s11n::IOStream&) {
-            GAPI_Assert(false && "Generic serialize method should never be called for RMat adapter");
+            GAPI_Assert(false && "Generic serialize method of RMat::Adapter does nothing by default. "
+                                 "Please, implement it in derived class to properly serialize the object.");
         }
         virtual void deserialize(cv::gapi::s11n::IIStream&) {
-            GAPI_Assert(false && "Generic deserialize method should never be called for RMat adapter");
+            GAPI_Assert(false && "Generic deserialize method of RMat::Adapter does nothing by default. "
+                                 "Please, implement it in derived class to properly deserialize the object.");
         }
     };
     using AdapterP = std::shared_ptr<Adapter>;
@@ -146,6 +151,7 @@ private:
 
 template<typename T, typename... Ts>
 RMat make_rmat(Ts&&... args) { return { std::make_shared<T>(std::forward<Ts>(args)...) }; }
+/** @} */
 
 } //namespace cv
 

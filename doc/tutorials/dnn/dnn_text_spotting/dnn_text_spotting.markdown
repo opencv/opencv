@@ -3,7 +3,7 @@
 @tableofcontents
 
 @prev_tutorial{tutorial_dnn_OCR}
-@next_tutorial{pytorch_cls_tutorial_dnn_conversion}
+@next_tutorial{tutorial_dnn_face}
 
 |    |    |
 | -: | :- |
@@ -26,6 +26,11 @@ Before recognition, you should `setVocabulary` and `setDecodeType`.
     - `T` is the sequence length
     - `B` is the batch size (only support `B=1` in inference)
     - and `Dim` is the length of vocabulary +1('Blank' of CTC is at the index=0 of Dim).
+- "CTC-prefix-beam-search", the output of the text recognition model should be a probability matrix same with "CTC-greedy".
+    - The algorithm is proposed at Hannun's [paper](https://arxiv.org/abs/1408.2873).
+    - `setDecodeOptsCTCPrefixBeamSearch` could be used to control the beam size in search step.
+    - To futher optimize for big vocabulary, a new option `vocPruneSize` is introduced to avoid iterate the whole vocbulary
+       but only the number of `vocPruneSize` tokens with top probabilty.
 
 @ref cv::dnn::TextRecognitionModel::recognize() is the main function for text recognition.
 - The input image should be a cropped text image or an image with `roiRects`

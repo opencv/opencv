@@ -657,7 +657,11 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 try
                 {
                     InferenceEngine::IExtensionPtr extension =
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+                        std::make_shared<InferenceEngine::Extension>(libName);
+#else
                         InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
+#endif
 
                     ie.AddExtension(extension, "CPU");
                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
@@ -788,20 +792,31 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 }
 
 
-static InferenceEngine::Layout estimateLayout(const Mat& m)
+static InferenceEngine::Layout estimateLayout(int dims)
 {
-    if (m.dims == 4)
+    if (dims == 4)
         return InferenceEngine::Layout::NCHW;
-    else if (m.dims == 3)
+    else if (dims == 3)
         return InferenceEngine::Layout::CHW;
-    else if (m.dims == 2)
+    else if (dims == 2)
         return InferenceEngine::Layout::NC;
-    else if (m.dims == 1)
+    else if (dims == 1)
         return InferenceEngine::Layout::C;
-    else if (m.dims == 5)
+    else if (dims == 5)
         return InferenceEngine::Layout::NCDHW;
     else
         return InferenceEngine::Layout::ANY;
+}
+static inline
+InferenceEngine::Layout estimateLayout(size_t dims)
+{
+    return estimateLayout((int)dims);
+}
+
+static inline
+InferenceEngine::Layout estimateLayout(const Mat& m)
+{
+    return estimateLayout(m.dims);
 }
 
 static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
@@ -838,6 +853,7 @@ InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layou
 
 NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, targetId)
+    , host((Mat*)&m)
 {
     dataPtr = wrapToInfEngineDataNode(m);
     blob = wrapToNgraphBlob(m, estimateLayout(m));
@@ -889,7 +905,11 @@ InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
         copy = InferenceEngine::make_shared_blob<uint8_t>(description);
     }
     else
-        CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    {
+        std::ostringstream msg;
+        msg << precision;
+        CV_Error_(Error::StsNotImplemented, ("Unsupported blob precision: %s", msg.str().c_str()));
+    }
     copy->allocate();
     return copy;
 }
@@ -902,6 +922,66 @@ InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
     return p->dataPtr;
 }
 
+static
+InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
+{
+    auto dims = description.getDims();
+    auto layout = estimateLayout(dims.size());
+    MatShape matShape(dims.begin(), dims.end());
+    if (description.getPrecision() == InferenceEngine::Precision::FP32)
+    {
+        m.create(matShape, CV_32FC1);
+        return InferenceEngine::make_shared_blob<float>(
+                {description.getPrecision(), dims, layout}, (float*)m.data);
+    }
+    else if (description.getPrecision() == InferenceEngine::Precision::I32)
+    {
+        m.create(matShape, CV_32SC1);
+        return InferenceEngine::make_shared_blob<int>(
+                {description.getPrecision(), dims, layout}, (int*)m.data);
+    }
+    else if (description.getPrecision() == InferenceEngine::Precision::U8)
+    {
+        m.create(matShape, CV_8UC1);
+        return InferenceEngine::make_shared_blob<uchar>(
+                {description.getPrecision(), dims, layout}, (uchar*)m.data);
+    }
+    std::ostringstream msg;
+    msg << "Unsupported IE precision: " << description.getPrecision();
+    CV_Error(Error::StsNotImplemented, msg.str());
+}
+
+InferenceEngine::DataPtr ngraphDataOutputNode(
+        const Ptr<BackendWrapper>& ptr,
+        const InferenceEngine::TensorDesc& description,
+        const std::string name)
+{
+    CV_Assert(!ptr.empty());
+    Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
+    CV_Assert(!p.empty());
+    NgraphBackendWrapper& w = *p;
+    const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
+    auto dims = description.getDims();
+    bool reallocate = false;
+    if (blobDesc.getPrecision() != description.getPrecision())
+    {
+        reallocate = true;
+        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
+    }
+    if (dims.size() != blobDesc.getDims().size())
+    {
+        reallocate = true;
+        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
+    }
+    if (reallocate)
+    {
+        auto layout = estimateLayout(dims.size());
+        w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {description.getPrecision(), dims, layout}));
+        w.blob = reallocateBlob(*w.host, description);
+    }
+    return w.dataPtr;
+}
 
 void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
                       Ptr<BackendNode>& node, bool isAsync)
@@ -917,6 +997,13 @@ void InfEngineNgraphNet::reset()
     allBlobs.clear();
     infRequests.clear();
     isInit = false;
+
+    outputsDesc.clear();
+    for (const auto& it : cnn.getOutputsInfo())
+    {
+        const std::string& name = it.first;
+        outputsDesc.insert({name, it.second->getTensorDesc()});
+    }
 }
 
 void InfEngineNgraphNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
@@ -1005,35 +1092,54 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         reqWrapper->req.SetInput(inpBlobs);
         reqWrapper->req.SetOutput(outBlobs);
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+        InferenceEngine::InferRequest infRequest = reqWrapper->req;
+        NgraphReqWrapper* wrapperPtr = reqWrapper.get();
+        CV_Assert(wrapperPtr && "Internal error");
+#else
         InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
-        infRequestPtr->SetUserData(reqWrapper.get(), 0);
+        CV_Assert(infRequestPtr);
+        InferenceEngine::IInferRequest& infRequest = *infRequestPtr.get();
+        infRequest.SetUserData(reqWrapper.get(), 0);
+#endif
 
-        infRequestPtr->SetCompletionCallback(
-            [](InferenceEngine::IInferRequest::Ptr request, InferenceEngine::StatusCode status)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+        // do NOT capture 'reqWrapper' (smart ptr) in the lambda callback
+        infRequest.SetCompletionCallback<std::function<void(InferenceEngine::InferRequest, InferenceEngine::StatusCode)>>(
+            [wrapperPtr](InferenceEngine::InferRequest /*request*/, InferenceEngine::StatusCode status)
+#else
+        infRequest.SetCompletionCallback(
+            [](InferenceEngine::IInferRequest::Ptr requestPtr, InferenceEngine::StatusCode status)
+#endif
             {
                 CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
+#if !INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+                CV_Assert(requestPtr);
+                InferenceEngine::IInferRequest& request = *requestPtr.get();
 
-                NgraphReqWrapper* wrapper;
-                request->GetUserData((void**)&wrapper, 0);
-                CV_Assert(wrapper && "Internal error");
+                NgraphReqWrapper* wrapperPtr;
+                request.GetUserData((void**)&wrapperPtr, 0);
+                CV_Assert(wrapperPtr && "Internal error");
+#endif
+                NgraphReqWrapper& wrapper = *wrapperPtr;
 
                 size_t processedOutputs = 0;
                 try
                 {
-                    for (; processedOutputs < wrapper->outProms.size(); ++processedOutputs)
+                    for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
                     {
-                        const std::string& name = wrapper->outsNames[processedOutputs];
-                        Mat m = ngraphBlobToMat(wrapper->req.GetBlob(name));
+                        const std::string& name = wrapper.outsNames[processedOutputs];
+                        Mat m = ngraphBlobToMat(wrapper.req.GetBlob(name));
 
                         try
                         {
                             CV_Assert(status == InferenceEngine::StatusCode::OK);
-                            wrapper->outProms[processedOutputs].setValue(m.clone());
+                            wrapper.outProms[processedOutputs].setValue(m.clone());
                         }
                         catch (...)
                         {
                             try {
-                                wrapper->outProms[processedOutputs].setException(std::current_exception());
+                                wrapper.outProms[processedOutputs].setException(std::current_exception());
                             } catch(...) {
                                 CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
                             }
@@ -1043,16 +1149,16 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
                 catch (...)
                 {
                     std::exception_ptr e = std::current_exception();
-                    for (; processedOutputs < wrapper->outProms.size(); ++processedOutputs)
+                    for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
                     {
                         try {
-                            wrapper->outProms[processedOutputs].setException(e);
+                            wrapper.outProms[processedOutputs].setException(e);
                         } catch(...) {
                             CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
                         }
                     }
                 }
-                wrapper->isReady = true;
+                wrapper.isReady = true;
             }
         );
     }

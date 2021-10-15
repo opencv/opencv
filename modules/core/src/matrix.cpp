@@ -809,18 +809,17 @@ Mat::Mat(const Mat& m, const Rect& roi)
     data += roi.x*esz;
     CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
               0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
-    if( u )
-        CV_XADD(&u->refcount, 1);
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
     step[0] = m.step[0]; step[1] = esz;
     updateContinuityFlag();
 
+    addref();
     if( rows <= 0 || cols <= 0 )
     {
-        release();
         rows = cols = 0;
+        release();
     }
 }
 
