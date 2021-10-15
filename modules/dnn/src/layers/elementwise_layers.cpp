@@ -500,16 +500,9 @@ struct ReLU6Functor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 2; }
 };
 
-struct TanHFunctor : public BaseFunctor
+template <class T>
+struct BaseDefaultFunctor : public BaseFunctor
 {
-    typedef TanHLayer Layer;
-
-    bool supportBackend(int backendId, int)
-    {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-    }
-
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
     {
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
@@ -517,7 +510,7 @@ struct TanHFunctor : public BaseFunctor
             for( int i = 0; i < len; i++ )
             {
                 float x = srcptr[i];
-                dstptr[i] = tanh(x);
+                dstptr[i] = static_cast<T const*>(this)->calculate(x);
             }
         }
     }
@@ -537,18 +530,54 @@ struct TanHFunctor : public BaseFunctor
             UMat& src = inputs[i];
             UMat& dst = outputs[i];
 
-            ocl::Kernel kernel("TanHForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
+            ocl::Kernel kernel(ocl_kernel_name, ocl::dnn::activations_oclsrc, buildopt);
+            kernel.set(0, static_cast<int>(src.total()));
             kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
             kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+            static_cast<T const*>(this)->setKernelParams(kernel);
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            CV_Assert(kernel.run(1, &gSize, nullptr, false));
         }
 
         return true;
     }
 #endif
+
+    inline void setKernelParams(ocl::Kernel& kernel) const {}
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+private:
+    static const char* const ocl_kernel_name;
+};
+
+struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
+{
+    typedef TanHLayer Layer;
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    inline float calculate(float x) const
+    {
+        return tanh(x);
+    }
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -575,55 +604,23 @@ struct TanHFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
-struct SwishFunctor : public BaseFunctor
+template<>
+const char* const TanHFunctor::BaseDefaultFunctor<TanHFunctor>::ocl_kernel_name = "TanHForward";
+
+struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
     typedef SwishLayer Layer;
 
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;;
+               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for( int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                dstptr[i] = x / (1.0f + exp(-x));
-            }
-        }
+        return x / (1.f + exp(-x));
     }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("SwishForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-
-        return true;
-    }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -632,13 +629,6 @@ struct SwishFunctor : public BaseFunctor
         top(x, y, c, n) = input / (1.0f + exp(-input));
     }
 #endif  // HAVE_HALIDE
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
@@ -651,7 +641,10 @@ struct SwishFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 3; }
 };
 
-struct MishFunctor : public BaseFunctor
+template<>
+const char* const SwishFunctor::BaseDefaultFunctor<SwishFunctor>::ocl_kernel_name = "SwishForward";
+
+struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 {
     typedef MishLayer Layer;
 
@@ -661,53 +654,18 @@ struct MishFunctor : public BaseFunctor
                backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
+        // Use fast approximation introduced in https://github.com/opencv/opencv/pull/17200
+        if (x >= 8.f)
         {
-            for( int i = 0; i < len; i++ )
-            {
-                // Use fast approximation introduced in https://github.com/opencv/opencv/pull/17200
-                float x = srcptr[i];
-                if (x >= 8.f)
-                    dstptr[i] = x;
-                else
-                {
-                    float eX = exp(x);
-                    float n = (eX + 2) * eX;
-                    dstptr[i] = (x * n) / (n + 2);
-                }
-            }
-        }
-    }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("MishForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
+            return x;
         }
 
-        return true;
+        float eX = exp(x);
+        float n = (eX + 2.f) * eX;
+        return (x * n) / (n + 2.f);
     }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -716,13 +674,6 @@ struct MishFunctor : public BaseFunctor
         top(x, y, c, n) = input * tanh(log(1.0f + exp(input)));
     }
 #endif  // HAVE_HALIDE
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
@@ -740,7 +691,10 @@ struct MishFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 3; }
 };
 
-struct SigmoidFunctor : public BaseFunctor
+template<>
+const char* const MishFunctor::BaseDefaultFunctor<MishFunctor>::ocl_kernel_name = "MishForward";
+
+struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 {
     typedef SigmoidLayer Layer;
 
@@ -750,45 +704,10 @@ struct SigmoidFunctor : public BaseFunctor
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||  backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for( int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                dstptr[i] = 1.f/(1.f + exp(-x));
-            }
-        }
+        return 1.f / (1.f + exp(-x));
     }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("SigmoidForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-
-        return true;
-    }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -815,7 +734,10 @@ struct SigmoidFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 3; }
 };
 
-struct ELUFunctor : public BaseFunctor
+template<>
+const char* const SigmoidFunctor::BaseDefaultFunctor<SigmoidFunctor>::ocl_kernel_name = "SigmoidForward";
+
+struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 {
     typedef ELULayer Layer;
 
@@ -825,45 +747,10 @@ struct ELUFunctor : public BaseFunctor
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for(int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                dstptr[i] = x >= 0.f ? x : exp(x) - 1;
-            }
-        }
+        return x >= 0.f ? x : exp(x) - 1.f;
     }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("ELUForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-
-        return true;
-    }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -890,7 +777,10 @@ struct ELUFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 2; }
 };
 
-struct AbsValFunctor : public BaseFunctor
+template<>
+const char* const ELUFunctor::BaseDefaultFunctor<ELUFunctor>::ocl_kernel_name = "ELUForward";
+
+struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 {
     typedef AbsLayer Layer;
 
@@ -903,45 +793,10 @@ struct AbsValFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for( int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                dstptr[i] = abs(x);
-            }
-        }
+        return abs(x);
     }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("AbsValForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-
-        return true;
-    }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -971,7 +826,10 @@ struct AbsValFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return 1; }
 };
 
-struct BNLLFunctor : public BaseFunctor
+template<>
+const char* const AbsValFunctor::BaseDefaultFunctor<AbsValFunctor>::ocl_kernel_name = "AbsValForward";
+
+struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 {
     typedef BNLLLayer Layer;
 
@@ -980,46 +838,11 @@ struct BNLLFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for( int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
-                dstptr[i] = x > 0 ? x + log(1. + exp(-x)) : log(1. + exp(x));
-            }
-        }
+        // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
+        return x > 0 ? x + log(1.f + exp(-x)) : log(1.f + exp(x));
     }
-
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
-    {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("BNLLForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-
-        return true;
-    }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -1030,22 +853,11 @@ struct BNLLFunctor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-#ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_DNN_NGRAPH
-
     int64 getFLOPSPerElement() const { return 5; }
 };
+
+template<>
+const char* const BNLLFunctor::BaseDefaultFunctor<BNLLFunctor>::ocl_kernel_name = "BNLLForward";
 
 struct PowerFunctor : public BaseFunctor
 {
@@ -1206,7 +1018,7 @@ struct PowerFunctor : public BaseFunctor
     int64 getFLOPSPerElement() const { return power == 1 ? 2 : 10; }
 };
 
-struct ExpFunctor : public BaseFunctor
+struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 {
     typedef ExpLayer Layer;
     float base, scale, shift;
@@ -1232,47 +1044,16 @@ struct ExpFunctor : public BaseFunctor
                backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    inline float calculate(float x) const
     {
-        float a = normScale, b = normShift;
-        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
-        {
-            for( int i = 0; i < len; i++ )
-            {
-                float x = srcptr[i];
-                dstptr[i] = exp(a*x + b);
-            }
-        }
+        return exp(normScale * x + normShift);
     }
 
-#ifdef HAVE_OPENCL
-    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    inline void setKernelParams(ocl::Kernel& kernel) const
     {
-        std::vector<UMat> inputs;
-        std::vector<UMat> outputs;
-
-        inps.getUMatVector(inputs);
-        outs.getUMatVector(outputs);
-        String buildopt = oclGetTMacro(inputs[0]);
-
-        for (size_t i = 0; i < inputs.size(); i++)
-        {
-            UMat& src = inputs[i];
-            UMat& dst = outputs[i];
-
-            ocl::Kernel kernel("ExpForward", ocl::dnn::activations_oclsrc, buildopt);
-            kernel.set(0, (int)src.total());
-            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
-            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
-            kernel.set(3, (float)normScale);
-            kernel.set(4, (float)normShift);
-
-            size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, NULL, false));
-        }
-        return true;
+        kernel.set(3, normScale);
+        kernel.set(4, normShift);
     }
-#endif
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -1281,13 +1062,6 @@ struct ExpFunctor : public BaseFunctor
         top(x, y, c, n) = exp(normScale * input + normShift);
     }
 #endif  // HAVE_HALIDE
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    InferenceEngine::Builder::Layer initInfEngineBuilderAPI()
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
@@ -1304,6 +1078,9 @@ struct ExpFunctor : public BaseFunctor
 
     int64 getFLOPSPerElement() const { return 3; }
 };
+
+template<>
+const char* const ExpFunctor::BaseDefaultFunctor<ExpFunctor>::ocl_kernel_name = "ExpForward";
 
 struct ChannelsPReLUFunctor : public BaseFunctor
 {
