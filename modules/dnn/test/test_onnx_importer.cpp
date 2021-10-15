@@ -991,6 +991,14 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
     testONNXModels("conv_resize_pool_1d");
 }
 
+TEST_P(Test_ONNX_layers, SubFromConst)
+{
+    testONNXModels("sub_from_const1");
+    testONNXModels("sub_from_const_eltwise");
+    testONNXModels("sub_from_const_broadcast");
+}
+
+
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
