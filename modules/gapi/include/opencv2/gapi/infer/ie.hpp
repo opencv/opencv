@@ -320,6 +320,14 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the inference batch size.
+
+    The function is used to specify inference batch size.
+    Follow https://docs.openvinotoolkit.org/latest/classInferenceEngine_1_1CNNNetwork.html#a8e9d19270a48aab50cb5b1c43eecb8e9 for additional information
+
+    @param size batch size which will be used.
+    @return reference to this parameter structure.
+    */
     Params<Net>& cfgBatchSize(const size_t size) {
         desc.batch_size = size;
         return *this;
@@ -444,6 +452,7 @@ public:
         return *this;
     }
 
+    /** @see ie::Params::cfgBatchSize */
     Params& cfgBatchSize(const size_t size) {
         desc.batch_size = size;
         return *this;

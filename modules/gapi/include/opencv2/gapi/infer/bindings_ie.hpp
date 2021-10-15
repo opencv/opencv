@@ -44,6 +44,9 @@ public:
     GAPI_WRAP
     PyParams& cfgNumRequests(size_t nireq);
 
+    GAPI_WRAP
+    PyParams& cfgBatchSize(const size_t size);
+
     GBackend      backend() const;
     std::string   tag()     const;
     cv::util::any params()  const;

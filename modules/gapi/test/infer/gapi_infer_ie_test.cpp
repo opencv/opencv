@@ -2234,7 +2234,6 @@ TEST(TestAgeGenderIE, InferWithBatch)
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
-    std::cout << gapi_age.size << std::endl;
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
