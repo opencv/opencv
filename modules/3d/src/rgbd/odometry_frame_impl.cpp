@@ -92,7 +92,18 @@ void OdometryFrameImplTMat<TMat>::getGrayImage(OutputArray _image)
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
-	this->depth = getTMat<TMat>(_depth);
+
+    Mat depth_tmp, depth_flt;
+    depth_tmp = _depth.getMat();
+    double min, max;
+    cv::minMaxLoc(depth_tmp, NULL, &max);
+    if (max > 10)
+    {
+        depth_tmp.convertTo(depth_flt, CV_32FC1, 1.f / 5000.f);
+        depth_flt.setTo(std::numeric_limits<float>::quiet_NaN(), depth_flt < FLT_EPSILON);
+        depth_tmp = depth_flt;
+    }
+    this->depth = getTMat<TMat>(depth_tmp);
 	this->findMask(_depth);
 }
 
