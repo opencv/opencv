@@ -24,8 +24,9 @@ namespace cv {
  * @param length Grid length
  * @param width  Grid width
  * @param height  Grid height
+ * @return The number of points actually sampled
  */
-CV_EXPORTS void voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                                   float length, float width, float height);
 
 /**
@@ -73,8 +74,9 @@ CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input
  *                  the farthest point to S is less than dist_lower_limit, default 0
  * @param rng Optional random number generator used for selecting seed point for FPS;
  *                  if it is nullptr, theRNG () is used instead.
+ * @return The number of points actually sampled
  */
-CV_EXPORTS void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                                       int sampled_pts_size, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
 
 /**
@@ -89,8 +91,9 @@ CV_EXPORTS void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv
  *                  the farthest point to S is less than dist_lower_limit, default 0
  * @param rng Optional random number generator used for selecting seed point for FPS;
  *                  if it is nullptr, theRNG () is used instead.
+ * @return The number of points actually sampled
  */
-CV_EXPORTS void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                                       float sampled_scale, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
 
 //! @} _3d

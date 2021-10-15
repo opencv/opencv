@@ -48,7 +48,7 @@ static inline void _getMatFromInputArray(cv::InputArray input_pts, cv::Mat &mat)
     }
 }
 
-void voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+int voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                        const float length, const float width, const float height)
 {
     CV_CheckGT(length, 0.0f, "Invalid length of grid");
@@ -165,6 +165,7 @@ void voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray in
         sampled_point_flags[sampled_point_idx] = true;
     }
 
+    return pts_new_size;
 } // voxelGrid()
 
 void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts, const int sampled_pts_size, cv::RNG *rng)
@@ -213,7 +214,7 @@ void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts, const
  * 2. Find a point in C that is the farthest away from S and put it into S
  * The distance from point to S set is the smallest distance from point to all points in S
  */
-void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                            const int sampled_pts_size, const float dist_lower_limit, cv::RNG *rng)
 {
     CV_CheckGT(sampled_pts_size, 0, "The point cloud size after sampling must be greater than 0.");
@@ -278,18 +279,19 @@ void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArra
             }
         }
 
-        sampled_point_flags[idxs[last_pt]] = true;
 
         if (max_dist_square < dist_lower_limit_square) break;
 
+        sampled_point_flags[idxs[last_pt]] = true;
         _swap(idxs[sampled_cnt], idxs[last_pt]);
         _swap(dist_square[sampled_cnt], dist_square[last_pt]);
         ++sampled_cnt;
     }
 
+    return sampled_cnt;
 } // farthestPointSampling()
 
-void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
                            const float sampled_scale, const float dist_lower_limit, cv::RNG *rng)
 {
     CV_CheckGT(sampled_scale, 0.0f, "The point cloud sampled scale must greater than 0.");
@@ -297,7 +299,7 @@ void farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArra
     CV_CheckGE(dist_lower_limit, 0.0f, "The distance lower bound must be greater than or equal to 0.");
     cv::Mat ori_pts;
     _getMatFromInputArray(input_pts, ori_pts);
-    farthestPointSampling(sampled_point_flags, input_pts,
+    return farthestPointSampling(sampled_point_flags, input_pts,
                           cvCeil(sampled_scale * ori_pts.rows), dist_lower_limit, rng);
 } // farthestPointSampling()
 
