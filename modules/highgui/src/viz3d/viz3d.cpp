@@ -43,9 +43,9 @@ static Window* getWindow(const String& win_name)
 
     if (!win)
     {
-		setOpenGlContext(win_name);
-		win = new Window(win_name);
-		setOpenGlDrawCallback(win_name, &openGlDrawCallback, win);
+        setOpenGlContext(win_name);
+        win = new Window(win_name);
+        setOpenGlDrawCallback(win_name, &openGlDrawCallback, win);
         setOpenGlFreeCallback(win_name, &openGlFreeCallback);
         setMouseCallback(win_name, &mouseCallback, win);
     }
