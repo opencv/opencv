@@ -801,56 +801,56 @@ Window::Window(const String& name)
     this->sun.diffuse = { 1.0f, 1.0f, 1.0f };
     this->sky_color = { 0.0f, 0.0f, 0.0f };
 
-	float points[] = {
-		0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-		0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f,
-	};
+    float points[] = {
+        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 1.0f,
+    };
 
-	Mat points_mat = Mat(Size(6, 6), CV_32F, points);
+    Mat points_mat = Mat(Size(6, 6), CV_32F, points);
 
-	this->crosshair = new Lines(points_mat);
-	this->shaders[this->crosshair->getShaderName()] = this->crosshair->buildShader();
-	this->crosshair->setShader(this->shaders[this->crosshair->getShaderName()]);
+    this->crosshair = new Lines(points_mat);
+    this->shaders[this->crosshair->getShaderName()] = this->crosshair->buildShader();
+    this->crosshair->setShader(this->shaders[this->crosshair->getShaderName()]);
 
     this->grid = nullptr;
 }
 
 Window::~Window()
 {
-	delete this->crosshair;
+    delete this->crosshair;
     if (this->grid)
         delete this->grid;
 
     for (auto obj : this->objects)
-		delete obj.second;
+        delete obj.second;
 }
 
 Object* Window::get(const String& obj_name)
 {
-	auto it = this->objects.find(obj_name);
-	if (it == this->objects.end())
-		return nullptr;
-	return it->second;
+    auto it = this->objects.find(obj_name);
+    if (it == this->objects.end())
+        return nullptr;
+    return it->second;
 }
 
 void Window::set(const String& obj_name, Object* obj)
 {
-	auto it = this->objects.find(obj_name);
-	if (it != this->objects.end() && it->second != obj)
-	{
-		delete it->second;
+    auto it = this->objects.find(obj_name);
+    if (it != this->objects.end() && it->second != obj)
+    {
+        delete it->second;
 
-		if (obj == nullptr)
-			this->objects.erase(it);
-		else
-			it->second = obj;
-	}
-	else if (obj)
-		this->objects[obj_name] = obj;
+        if (obj == nullptr)
+            this->objects.erase(it);
+        else
+            it->second = obj;
+    }
+    else if (obj)
+        this->objects[obj_name] = obj;
 
     if (obj)
     {
@@ -1086,9 +1086,9 @@ void Window::onMouse(int event, int x, int y, int flags)
 
 Object::Object()
 {
-	this->position = { 0.0f, 0.0f, 0.0f };
-	this->rotation = { 0.0f, 0.0f, 0.0f };
-	this->model = Matx44f::eye();
+    this->position = { 0.0f, 0.0f, 0.0f };
+    this->rotation = { 0.0f, 0.0f, 0.0f };
+    this->model = Matx44f::eye();
 }
 
 void Object::setPosition(const Vec3f& position)
@@ -1182,38 +1182,38 @@ Mesh::Mesh(InputArray verts, InputArray indices)
     else if (verts.size().width == 6)
     {
         this->va.create({
-		    {
-			    this->verts,
-			    6 * sizeof(float), 0,
-			    3, ogl::Attribute::FLOAT,
-			    false, false,
-			    0
+            {
+                this->verts,
+                6 * sizeof(float), 0,
+                3, ogl::Attribute::FLOAT,
+                false, false,
+                0
             },
-		    {
-			    this->verts,
-			    6 * sizeof(float), 3 * sizeof(float),
-			    3, ogl::Attribute::FLOAT,
-			    false, false,
-			    1
+            {
+                this->verts,
+                6 * sizeof(float), 3 * sizeof(float),
+                3, ogl::Attribute::FLOAT,
+                false, false,
+                1
             }
-	    });
+        });
     }
     else if (verts.size().width == 9)
     {
         this->va.create({
-		    {
-			    this->verts,
-			    9 * sizeof(float), 0,
-			    3, ogl::Attribute::FLOAT,
-			    false, false,
-			    0
+            {
+                this->verts,
+                9 * sizeof(float), 0,
+                3, ogl::Attribute::FLOAT,
+                false, false,
+                0
             },
-		    {
-			    this->verts,
-			    9 * sizeof(float), 3 * sizeof(float),
-			    3, ogl::Attribute::FLOAT,
-			    false, false,
-			    1
+            {
+                this->verts,
+                9 * sizeof(float), 3 * sizeof(float),
+                3, ogl::Attribute::FLOAT,
+                false, false,
+                1
             },
             {
                 this->verts,
@@ -1222,7 +1222,7 @@ Mesh::Mesh(InputArray verts, InputArray indices)
                 false, false,
                 2
             }
-	    });
+        });
     }
 }
 
@@ -1338,7 +1338,7 @@ ogl::Program Mesh::buildShader()
 {
     ogl::Shader vs, fs;
 
-	// Setup shader pipeline
+    // Setup shader pipeline
     if (this->verts.size().width == 3)
     {
         vs = ogl::Shader(R"(
@@ -1385,7 +1385,7 @@ ogl::Program Mesh::buildShader()
             }
         )", ogl::Shader::VERTEX);
 
-	    fs = ogl::Shader(R"(
+        fs = ogl::Shader(R"(
             #version 330 core
 
             in vec3 frag_color;
@@ -1446,10 +1446,10 @@ ogl::Program Mesh::buildShader()
 
 void Mesh::setShader(ogl::Program program)
 {
-	this->program = program;
-	this->model_loc = this->program.getUniformLocation("model");
-	this->view_loc = this->program.getUniformLocation("view");
-	this->proj_loc = this->program.getUniformLocation("proj");
+    this->program = program;
+    this->model_loc = this->program.getUniformLocation("model");
+    this->view_loc = this->program.getUniformLocation("view");
+    this->proj_loc = this->program.getUniformLocation("proj");
     this->sun_direction_loc = -1;
     if (this->verts.size().width == 9)
     {
@@ -1461,13 +1461,13 @@ void Mesh::setShader(ogl::Program program)
 
 Lines::Lines(InputArray points, int count)
 {
-	// Check parameter validity
-	CV_Assert(points.channels() == 1 && points.dims() == 2 && points.size().width == 6);
-	CV_Assert(points.depth() == CV_32F);
+    // Check parameter validity
+    CV_Assert(points.channels() == 1 && points.dims() == 2 && points.size().width == 6);
+    CV_Assert(points.depth() == CV_32F);
 
-	// Prepare buffers
-	if (points.kind() == _InputArray::OPENGL_BUFFER)
-		this->points = points.getOGlBuffer();
+    // Prepare buffers
+    if (points.kind() == _InputArray::OPENGL_BUFFER)
+        this->points = points.getOGlBuffer();
     else
     {
         this->points.create(points.size(), points.type(), ogl::Buffer::ARRAY_BUFFER);
@@ -1475,23 +1475,23 @@ Lines::Lines(InputArray points, int count)
             this->points.copyFrom(points, ogl::Buffer::ARRAY_BUFFER);
     }
 
-	// Prepare vertex array
-	this->va.create({
-		{
-			this->points,
-			6 * sizeof(float), 0,
-			3, ogl::Attribute::FLOAT,
-			false, false,
-			0
+    // Prepare vertex array
+    this->va.create({
+        {
+            this->points,
+            6 * sizeof(float), 0,
+            3, ogl::Attribute::FLOAT,
+            false, false,
+            0
         },
-		{
-			this->points,
-			6 * sizeof(float), 3 * sizeof(float),
-			3, ogl::Attribute::FLOAT,
-			false, false,
-			1
+        {
+            this->points,
+            6 * sizeof(float), 3 * sizeof(float),
+            3, ogl::Attribute::FLOAT,
+            false, false,
+            1
         }
-	});
+    });
 
     if (count == -1)
         this->count = this->points.size().height;
@@ -1528,13 +1528,13 @@ void Lines::update(InputArray points)
 
 String Lines::getShaderName()
 {
-	return "lines";
+    return "lines";
 }
 
 ogl::Program Lines::buildShader()
 {
-	// Setup shader pipeline
-	auto vs = ogl::Shader(R"(
+    // Setup shader pipeline
+    auto vs = ogl::Shader(R"(
         #version 330 core
 
         layout (location = 0) in vec3 vert_pos;
@@ -1552,7 +1552,7 @@ ogl::Program Lines::buildShader()
         }
     )", ogl::Shader::VERTEX);
 
-	auto fs = ogl::Shader(R"(
+    auto fs = ogl::Shader(R"(
         #version 330 core
 
         in vec3 frag_color;
@@ -1564,15 +1564,15 @@ ogl::Program Lines::buildShader()
         }
     )", ogl::Shader::FRAGMENT);
 
-	return ogl::Program(vs, fs);
+    return ogl::Program(vs, fs);
 }
 
 void Lines::setShader(ogl::Program program)
 {
-	this->program = program;
-	this->model_loc = this->program.getUniformLocation("model");
-	this->view_loc = this->program.getUniformLocation("view");
-	this->proj_loc = this->program.getUniformLocation("proj");
+    this->program = program;
+    this->model_loc = this->program.getUniformLocation("model");
+    this->view_loc = this->program.getUniformLocation("view");
+    this->proj_loc = this->program.getUniformLocation("proj");
 }
 
 PointCloud::PointCloud(InputArray points)
@@ -1622,13 +1622,13 @@ void PointCloud::draw(const View& view, const Light& light)
 
 String PointCloud::getShaderName()
 {
-	return "points";
+    return "points";
 }
 
 ogl::Program PointCloud::buildShader()
 {
-	// Setup shader pipeline
-	auto vs = ogl::Shader(R"(
+    // Setup shader pipeline
+    auto vs = ogl::Shader(R"(
         #version 330 core
 
         layout (location = 0) in vec3 vert_pos;
@@ -1646,7 +1646,7 @@ ogl::Program PointCloud::buildShader()
         }
     )", ogl::Shader::VERTEX);
 
-	auto fs = ogl::Shader(R"(
+    auto fs = ogl::Shader(R"(
         #version 330 core
 
         in vec3 frag_color;
@@ -1658,15 +1658,15 @@ ogl::Program PointCloud::buildShader()
         }
     )", ogl::Shader::FRAGMENT);
 
-	return ogl::Program(vs, fs);
+    return ogl::Program(vs, fs);
 }
 
 void PointCloud::setShader(ogl::Program program)
 {
-	this->program = program;
-	this->model_loc = this->program.getUniformLocation("model");
-	this->view_loc = this->program.getUniformLocation("view");
-	this->proj_loc = this->program.getUniformLocation("proj");
+    this->program = program;
+    this->model_loc = this->program.getUniformLocation("model");
+    this->view_loc = this->program.getUniformLocation("view");
+    this->proj_loc = this->program.getUniformLocation("proj");
 }
 
 } // namespace viz3d
