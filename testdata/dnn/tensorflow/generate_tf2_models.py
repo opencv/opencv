@@ -15,16 +15,16 @@ def gen_data(placeholder):
     return np.random.standard_normal(shape).astype(placeholder.dtype.as_numpy_dtype())
 
 
-def writeBlob(data, name):
+def writeBlob(data, name, nchw = False):
     try:
         data = data.numpy()
     except:
         pass
 
-    if data.ndim == 4:
+    if not nchw and data.ndim == 4:
         # NHWC->NCHW
         data = data.transpose(0, 3, 1, 2)
-    elif data.ndim == 5:
+    elif not nchw and data.ndim == 5:
         # NDHWC->NCDHW
         data = data.transpose(0, 4, 1, 2, 3)
 
@@ -32,7 +32,7 @@ def writeBlob(data, name):
     np.save(name + '.npy', data)
 
 
-def save(model, name, **kwargs):
+def save(model, name, nchw = False, **kwargs):
     model.save(name)
 
     assert(len(kwargs) == 1)
@@ -40,8 +40,8 @@ def save(model, name, **kwargs):
     inputData = gen_data(next(iter(kwargs.values())))
     outputData = model(inputData)
 
-    writeBlob(inputData, name + '_in')
-    writeBlob(outputData, name + '_out')
+    writeBlob(inputData, name + '_in', nchw)
+    writeBlob(outputData, name + '_out', nchw)
 
     # Freeze model
     loaded = tf.saved_model.load(name)
@@ -58,6 +58,15 @@ def save(model, name, **kwargs):
 
     shutil.rmtree(name)
 
+def getGraph(model):
+    func = tf.function(lambda x: model(x))
+    func = func.get_concrete_function([tf.TensorSpec(model_input.shape, model_input.dtype) for model_input in model.inputs])
+
+    frozen_func = convert_variables_to_constants_v2(func)
+    return frozen_func.graph.as_graph_def()
+
+def saveBroken(graph, name):
+    tf.io.write_graph(graph_or_graph_def=graph, logdir='.', name=name + '_net.pb', as_text=False)
 
 # Test cases ###################################################################
 model = tf.keras.models.Sequential([
@@ -78,6 +87,67 @@ model = tf.keras.models.Sequential([
 ])
 save(model, 'tf2_permute_nhwc_ncwh', average_pooling2d_input=tf.TensorSpec(shape=[None, 4, 6, 3], dtype=tf.float32))
 ################################################################################
+# TF 2.5.0 + python 3.6.13
+x_0 = tf.keras.layers.Input(batch_shape = (2, 3, 4))
+mid_0 = tf.expand_dims(x_0, axis=0)
+x_1 = tf.keras.layers.Input(batch_shape = (2, 3, 4))
+mid_1 = tf.reshape(x_1, [1, 2, 3, 4])
+out = tf.math.multiply(mid_0, mid_1)
+graph = getGraph(tf.keras.Model([x_0, x_1], out))
+graph.node[3].op = 'UnknownLayer' # replace ExpandDims op with womething that will never be implemented
+saveBroken(graph, 'not_implemented_layer')
+################################################################################
+# TF 2.5.0 + python 3.6.13
+x_0 = tf.keras.layers.Input(batch_shape = (1, 3, 4))
+x_1 = tf.keras.layers.Input(batch_shape = (1, 3, 4))
+mid = tf.math.multiply(x_0, x_1)
+out = tf.math.multiply(mid, x_1)
+graph = getGraph(tf.keras.Model([x_0, x_1], out))
+graph.node[2].input.pop() # break the connection in the graph
+saveBroken(graph, 'broken_layer')
+# TF 2.5.0 + python 3.6.13
+tf.keras.backend.set_image_data_format('channels_first')
+x = tf.keras.layers.Input(batch_shape = (1, 2, 3, 4), name='x')
+kernel = np.random.standard_normal((3, 3, 2, 3)).astype(np.float32)
+y = tf.nn.conv2d(x, tf.constant(kernel, dtype=tf.float32), data_format = 'NCHW', padding = [[0, 0], [0, 0], [2, 1], [2, 1]], strides = [1, 1, 3, 2])
+model = tf.keras.Model(x, y)
+save(model, 'conv2d_asymmetric_pads_nchw', True, x=tf.TensorSpec(shape=[1, 2, 3, 4], dtype=tf.float32))
+################################################################################
+# TF 2.5.0 + python 3.6.13
+tf.keras.backend.set_image_data_format('channels_last')
+x = tf.keras.layers.Input(batch_shape = (1, 3, 4, 2), name='x')
+kernel = np.random.standard_normal((3, 3, 2, 3)).astype(np.float32)
+y = tf.nn.conv2d(x, tf.constant(kernel, dtype=tf.float32), data_format = 'NHWC', padding = [[0, 0], [2, 1], [2, 1], [0, 0]], strides = [1, 3, 2, 1])
+model = tf.keras.Model(x, y)
+save(model, 'conv2d_asymmetric_pads_nhwc', False, x=tf.TensorSpec(shape=[1, 3, 4, 2], dtype=tf.float32))
+################################################################################
+# TF 2.5.0 + python 3.6.13
+tf.keras.backend.set_image_data_format('channels_first')
+x = tf.keras.layers.Input(batch_shape = (1, 1, 2, 3), name='x')
+y = tf.nn.max_pool(x, ksize=2, data_format = "NCHW", padding = [[0, 0], [0, 0], [1, 0], [1, 1]], strides = [1, 1, 3, 2])
+model = tf.keras.Model(x, y)
+save(model, 'max_pool2d_asymmetric_pads_nchw', True, x=tf.TensorSpec(shape=(1, 1, 2, 3), dtype=tf.float32))
+################################################################################
+# TF 2.5.0 + python 3.6.13
+tf.keras.backend.set_image_data_format('channels_last')
+x = tf.keras.layers.Input(batch_shape = (1, 2, 3, 1), name='x')
+y = tf.nn.max_pool(x, ksize=2, data_format = "NHWC", padding = [[0, 0], [1, 0], [1, 1], [0, 0]], strides = [1, 3, 2, 1])
+model = tf.keras.Model(x, y)
+save(model, 'max_pool2d_asymmetric_pads_nhwc', False, x=tf.TensorSpec(shape=(1, 2, 3, 1), dtype=tf.float32))
+################dd################################################################
+tf.keras.backend.set_image_data_format('channels_first')
+x = tf.keras.layers.Input(batch_shape = (1, 3, 2, 3), name='x')
+kernel = np.random.standard_normal((3, 3, 2, 3)).astype(np.float32)
+y = tf.compat.v1.nn.conv2d_backprop_input(input_sizes=tf.constant([1, 2, 3, 4]), filter=kernel, out_backprop=x, data_format = "NCHW", padding = [[0, 0], [0, 0], [2, 1], [2, 1]], strides = [1, 1, 3, 2])
+model = tf.keras.Model(x, y)
+save(model, 'conv2d_backprop_input_asymmetric_pads_nchw', True, x=tf.TensorSpec(shape=(1, 3, 2, 3), dtype=tf.float32))
+################################################################################
+tf.keras.backend.set_image_data_format('channels_last')
+x = tf.keras.layers.Input(batch_shape = (1, 2, 3, 3), name='x')
+kernel = np.random.standard_normal((3, 3, 2, 3)).astype(np.float32)
+y = tf.compat.v1.nn.conv2d_backprop_input(input_sizes=tf.constant([1, 3, 4, 2]), filter=kernel, out_backprop=x, data_format = "NHWC", padding = [[0, 0], [2, 1], [2, 1], [0, 0]], strides = [1, 3, 2, 1])
+model = tf.keras.Model(x, y)
+save(model, 'conv2d_backprop_input_asymmetric_pads_nhwc', False, x=tf.TensorSpec(shape=(1, 2, 3, 3), dtype=tf.float32))
 
 # Uncomment to print the final graph.
 # with tf.io.gfile.GFile('tf2_prelu_net.pb', 'rb') as f:

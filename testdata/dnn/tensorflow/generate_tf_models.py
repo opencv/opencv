@@ -572,6 +572,22 @@ reduced = tf.reduce_mean(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_mean')
 ################################################################################
 inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
+reduced = tf.reduce_max(inp, axis=[1, 2], keepdims=True)
+save(inp, reduced, 'reduce_max')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 4], 'ReduceMax')
+out = tf.reduce_max([inp, inp * 2], axis=0)
+save(inp, out, 'max_pool_by_axis')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_max(inp, axis=-1)
+save(inp, out, 'reduce_max_channel')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 2, 3], 'input')
+out = tf.math.reduce_max(inp, axis=-1, keep_dims=True)
+save(inp, out, ('reduce_max_channel', 'keep_dims'), is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [2, 3, 4, 5], 'input')
 reduced = tf.reduce_sum(inp, axis=[1, 2], keepdims=True)
 save(inp, reduced, 'reduce_sum')
 ################################################################################
@@ -1002,6 +1018,29 @@ hi = shape_input[1] / 3
 wi = shape_input[2] / 2
 input_down = tf.image.resize(conv, size=[hi, wi], method=0, name='resize_down')
 save(inp, input_down, 'resize_bilinear_down')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, None, None, 3], 'input')
+biased = tf.nn.bias_add(inp, [1, 2, 3], data_format='NHWC')
+resized1 = tf.image.resize(biased, [5, 6])
+concat = tf.concat([resized1, biased], 3)
+# blob = np.random.standard_normal([1, 5, 6, 3]).astype(tf.float32.as_numpy_dtype())
+# writeBlob(blob, 'resize_concat_optimization_in')
+save(inp, concat, 'resize_concat_optimization', optimize=False, is_gen_data=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+sub = inp - 3.0
+sub = 4.0 + sub
+save(inp, sub, prefix + 'bias_add_1', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+expand_dim = inp + 1
+expand_dim = tf.expand_dims(expand_dim, -2)
+save(inp, expand_dim, prefix + 'expand_dims_1', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4, 5], 'input')
+expand_dim = inp + 1
+expand_dim = tf.expand_dims(expand_dim, 2)
+save(inp, expand_dim, prefix + 'expand_dims_2', optimize=False)
 ################################################################################
 
 # Uncomment to print the final graph.
