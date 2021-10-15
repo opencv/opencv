@@ -258,7 +258,6 @@ void OdometryTest::run()
     if(diff > idError)
     {
         FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
-        //std::cout << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
     }
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
@@ -323,8 +322,8 @@ void OdometryTest::run()
             better_5times_count++;
 
         CV_LOG_INFO(NULL, "Iter " << iter);
-        CV_LOG_INFO(NULL, "rdiffnorm " << rdiffnorm << "; possibleError " << possibleError);
-        CV_LOG_INFO(NULL, "tdiffnorm " << tdiffnorm << "; possibleError " << possibleError);
+        CV_LOG_INFO(NULL, "rdiff: " << Vec3f(diff.rvec()) << "; rdiffnorm: " << rdiffnorm);
+        CV_LOG_INFO(NULL, "tdiff: " << Vec3f(diff.translation()) << "; tdiffnorm: " << tdiffnorm);
 
         CV_LOG_INFO(NULL, "better_1time_count " << better_1time_count << "; better_5time_count " << better_5times_count);
     }
