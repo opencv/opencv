@@ -62,16 +62,30 @@ TEST_F(SamplingTest, VoxelGridFilterSampling) {
     // Set 1.1 as the side length, and there should be only one point after sampling.
     voxelGridSampling(mask, ptCloud, 1.1f, 1.1f, 1.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
+    // Sampled point cloud should have only 1 point.
     EXPECT_EQ(sampledPts.rows, 1);
-    ASSERT_TRUE(checkExistPoint(ptCloud, sampledPts.row(0)));
+    // The point should be in a box with a side length of 1.1.
+    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 0) && sampledPts.at<float>(0, 0) < 1.1f);
+    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 1) && sampledPts.at<float>(0, 1) < 1.1f);
+    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 2) && sampledPts.at<float>(0, 2) < 1.1f);
 
     // Set (0.55, 0.55, 1.1) as the side length, and there should be 4 points after sampling.
     sampledPts.release();
     voxelGridSampling(mask, ptCloud, 0.55f, 0.55f, 1.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
+    // Sampled point cloud should have 4 points.
     EXPECT_EQ(sampledPts.rows, 4);
+    // All points should be in 4 different boxes.
+    float x[4] = {0.0f, 0.0f, 0.55f, 0.55f}, y[4] = {0.0f, 0.55f, 0.0f, 0.55f};
     for(int i = 0; i < 4; i++){
-        ASSERT_TRUE(checkExistPoint(ptCloud, sampledPts.row(i)));
+        bool flag;
+        for(int j = 0; j < 4; j++){
+            flag =  x[i] <= sampledPts.at<float>(j, 0) && sampledPts.at<float>(j, 0) < x[i] + 0.55f &&
+                    y[i] <= sampledPts.at<float>(j, 1) && sampledPts.at<float>(j, 1) < y[i] + 0.55f &&
+                    0.0f <= sampledPts.at<float>(j, 2) && sampledPts.at<float>(j, 2) < 1.1f ;
+            if(flag) break;
+        }
+        ASSERT_TRUE(flag);
     }
 }
 
@@ -93,6 +107,8 @@ TEST_F(SamplingTest, FarthestPointSampling) {
     ASSERT_EQ(check.at<float>(0, 0), 1);
     ASSERT_EQ(check.at<float>(0, 1), 1);
     ASSERT_EQ(check.at<float>(0, 2), 1);
+
+
 }
 
 } // namespace
