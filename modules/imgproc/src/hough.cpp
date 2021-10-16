@@ -435,12 +435,14 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
         }
     }
 
+    int pos = (int)(lst.size() - 1);
+    if( pos >= 0 && lst[pos].rho < 0 )
+        lst.pop_back();
+
     lines.create((int)lst.size(), 1, type);
     Mat _lines = lines.getMat();
     for( size_t idx = 0; idx < lst.size(); idx++ )
     {
-        if( lst[idx].rho < 0 )
-            continue;
         if (type == CV_32FC2)
         {
             _lines.at<Vec2f>((int)idx) = Vec2f(lst[idx].rho, lst[idx].theta);
@@ -2301,14 +2303,16 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
                 std::vector<Vec4f> cw(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cw[i] = GetCircle4f(circles[i]);
-                Mat(cw).copyTo(_circles);
+                if (ncircles > 0)
+                    Mat(1, (int)ncircles, cv::traits::Type<Vec4f>::value, &cw[0]).copyTo(_circles);
             }
             else if( type == CV_32FC3 )
             {
                 std::vector<Vec3f> cwow(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cwow[i] = GetCircle(circles[i]);
-                Mat(cwow).copyTo(_circles);
+                if (ncircles > 0)
+                    Mat(1, (int)ncircles, cv::traits::Type<Vec3f>::value, &cwow[0]).copyTo(_circles);
             }
             else
                 CV_Error(Error::StsError, "Internal error");

@@ -6,6 +6,7 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 
 ##### Linux
 -   @subpage tutorial_linux_install
+-   @subpage tutorial_linux_gdb_pretty_printer
 -   @subpage tutorial_linux_gcc_cmake
 -   @subpage tutorial_linux_eclipse
 

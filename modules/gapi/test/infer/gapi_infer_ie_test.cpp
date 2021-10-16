@@ -9,6 +9,8 @@
 #ifdef HAVE_INF_ENGINE
 
 #include <stdexcept>
+#include <mutex>
+#include <condition_variable>
 
 #include <inference_engine.hpp>
 
@@ -2050,6 +2052,139 @@ TEST(IEFrameAdapter, blobParams)
     auto actual = cv::util::any_cast<decltype(expected)>(frame.blobParams());
 
     EXPECT_EQ(expected, actual);
+}
+
+namespace
+{
+
+struct Sync {
+    std::mutex              m;
+    std::condition_variable cv;
+    int                     counter = 0;
+};
+
+class GMockMediaAdapter final: public cv::MediaFrame::IAdapter {
+public:
+    explicit GMockMediaAdapter(cv::Mat m, Sync& sync)
+        : m_mat(m), m_sync(sync) {
+    }
+
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, m_mat.size()};
+    }
+
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+
+    ~GMockMediaAdapter() {
+        {
+            std::lock_guard<std::mutex> lk{m_sync.m};
+            m_sync.counter--;
+        }
+        m_sync.cv.notify_one();
+    }
+
+private:
+    cv::Mat m_mat;
+    Sync&   m_sync;
+};
+
+// NB: This source is needed to simulate real
+// cases where the memory resources are limited.
+// GMockSource(int limit) - accept the number of MediaFrames that
+// the source can produce until resources are over.
+class GMockSource : public cv::gapi::wip::IStreamSource {
+public:
+    explicit GMockSource(int limit)
+        : m_limit(limit), m_mat(cv::Size(1920, 1080), CV_8UC3) {
+        cv::randu(m_mat, cv::Scalar::all(0), cv::Scalar::all(255));
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        std::unique_lock<std::mutex> lk(m_sync.m);
+        m_sync.counter++;
+        // NB: Can't produce new frames until old ones are released.
+        m_sync.cv.wait(lk, [this]{return m_sync.counter <= m_limit;});
+
+        data = cv::MediaFrame::Create<GMockMediaAdapter>(m_mat, m_sync);
+        return true;
+    }
+
+    GMetaArg descr_of() const override {
+        return GMetaArg{cv::GFrameDesc{cv::MediaFormat::BGR, m_mat.size()}};
+    }
+
+private:
+    int     m_limit;
+    cv::Mat m_mat;
+    Sync    m_sync;
+};
+
+struct LimitedSourceInfer: public ::testing::Test {
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    LimitedSourceInfer()
+        : comp([](){
+            cv::GFrame in;
+            cv::GMat age, gender;
+            std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+            return cv::GComputation(cv::GIn(in), cv::GOut(age, gender));
+        }) {
+        initDLDTDataPath();
+    }
+
+    GStreamingCompiled compileStreaming(int nireq) {
+        cv::gapi::ie::detail::ParamDesc params;
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.device_id = "CPU";
+
+        auto pp = cv::gapi::ie::Params<AgeGender> {
+            params.model_path, params.weights_path, params.device_id }
+        .cfgOutputLayers({ "age_conv3", "prob" })
+        .cfgNumRequests(nireq);
+
+        return comp.compileStreaming(cv::compile_args(cv::gapi::networks(pp)));
+    }
+
+    void run(const int max_frames, const int limit, const int nireq) {
+        auto pipeline = compileStreaming(nireq);
+        pipeline.setSource<GMockSource>(limit);
+        pipeline.start();
+
+        int num_frames = 0;
+        while (num_frames != max_frames &&
+               pipeline.pull(cv::gout(out_age, out_gender))) {
+            ++num_frames;
+        }
+    }
+
+    cv::GComputation comp;
+    cv::Mat          out_age, out_gender;
+};
+
+} // anonymous namespace
+
+TEST_F(LimitedSourceInfer, ReleaseFrame)
+{
+    constexpr int max_frames      = 50;
+    constexpr int resources_limit = 1;
+    constexpr int nireq           = 1;
+
+    run(max_frames, resources_limit, nireq);
+}
+
+TEST_F(LimitedSourceInfer, ReleaseFrameAsync)
+{
+    constexpr int max_frames      = 50;
+    constexpr int resources_limit = 4;
+    constexpr int nireq           = 8;
+
+    run(max_frames, resources_limit, nireq);
 }
 
 } // namespace opencv_test

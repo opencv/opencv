@@ -37,6 +37,7 @@
 #include <iterator>
 #include <limits>
 #include <algorithm>
+#include <set>
 
 
 #ifndef OPENCV_32BIT_CONFIGURATION

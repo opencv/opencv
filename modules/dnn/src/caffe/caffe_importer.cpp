@@ -306,16 +306,13 @@ public:
 
         caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
         const int numBlobs = binLayer->blobs_size();
+        std::vector<caffe::BlobProto*> blobs(numBlobs);
+        binLayer->mutable_blobs()->ExtractSubrange(0, numBlobs, blobs.data());
         layerParams.blobs.resize(numBlobs);
         for (int bi = 0; bi < numBlobs; bi++)
         {
-            blobFromProto(binLayer->blobs(bi), layerParams.blobs[bi]);
-        }
-        binLayer->clear_blobs();
-        CV_Assert(numBlobs == binLayer->blobs().ClearedCount());
-        for (int bi = 0; bi < numBlobs; bi++)
-        {
-            delete binLayer->mutable_blobs()->ReleaseCleared();
+            blobFromProto(*blobs[bi], layerParams.blobs[bi]);
+            delete blobs[bi];
         }
     }
 

@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GSTREAMING_COMPILED_HPP
@@ -65,11 +65,22 @@ using OptionalOpaqueRef = OptRef<cv::detail::OpaqueRef>;
 using GOptRunArgP = util::variant<
     optional<cv::Mat>*,
     optional<cv::RMat>*,
+    optional<cv::MediaFrame>*,
     optional<cv::Scalar>*,
     cv::detail::OptionalVectorRef,
     cv::detail::OptionalOpaqueRef
 >;
 using GOptRunArgsP = std::vector<GOptRunArgP>;
+
+using GOptRunArg = util::variant<
+    optional<cv::Mat>,
+    optional<cv::RMat>,
+    optional<cv::MediaFrame>,
+    optional<cv::Scalar>,
+    optional<cv::detail::VectorRef>,
+    optional<cv::detail::OpaqueRef>
+>;
+using GOptRunArgs = std::vector<GOptRunArg>;
 
 namespace detail {
 
@@ -84,6 +95,14 @@ template<typename T> inline GOptRunArgP wrap_opt_arg(optional<std::vector<T> >& 
 
 template<> inline GOptRunArgP wrap_opt_arg(optional<cv::Mat> &m) {
     return GOptRunArgP{&m};
+}
+
+template<> inline GOptRunArgP wrap_opt_arg(optional<cv::RMat> &m) {
+    return GOptRunArgP{&m};
+}
+
+template<> inline GOptRunArgP wrap_opt_arg(optional<cv::MediaFrame> &f) {
+    return GOptRunArgP{&f};
 }
 
 template<> inline GOptRunArgP wrap_opt_arg(optional<cv::Scalar> &s) {
@@ -196,7 +215,7 @@ public:
      * @param s a shared pointer to IStreamSource representing the
      * input video stream.
      */
-    GAPI_WRAP void setSource(const gapi::wip::IStreamSource::Ptr& s);
+    void setSource(const gapi::wip::IStreamSource::Ptr& s);
 
     /**
      * @brief Constructs and specifies an input video stream for a
@@ -255,7 +274,7 @@ public:
 
     // NB: Used from python
     /// @private -- Exclude this function from OpenCV documentation
-    GAPI_WRAP std::tuple<bool, cv::GRunArgs> pull();
+    GAPI_WRAP std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
 
     /**
      * @brief Get some next available data from the pipeline.
@@ -372,6 +391,14 @@ protected:
 /** @} */
 
 namespace gapi {
+
+/**
+ * @brief This namespace contains G-API functions, structures, and
+ * symbols related to the Streaming execution mode.
+ *
+ * Some of the operations defined in this namespace (e.g. size(),
+ * BGR(), etc.) can be used in the traditional execution mode too.
+ */
 namespace streaming {
 /**
  * @brief Specify queue capacity for streaming execution.
@@ -379,9 +406,11 @@ namespace streaming {
  * In the streaming mode the pipeline steps are connected with queues
  * and this compile argument controls every queue's size.
  */
-struct GAPI_EXPORTS queue_capacity
+struct GAPI_EXPORTS_W_SIMPLE queue_capacity
 {
+    GAPI_WRAP
     explicit queue_capacity(size_t cap = 1) : capacity(cap) { };
+    GAPI_PROP_RW
     size_t capacity;
 };
 /** @} */

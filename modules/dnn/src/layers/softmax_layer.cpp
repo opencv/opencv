@@ -374,6 +374,22 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        float inpScale = scales[0][0];
+        Mat lookUpTable(1, 256, CV_32F);
+        float* table = lookUpTable.ptr<float>();
+        for (int i = -128; i < 128; i++)
+        {
+            float x = inpScale*(i - 127); // ensures exp(x) is always between (0, 1)
+            table[i+128] = std::exp(x);
+        }
+        params.blobs.clear();
+        params.blobs.push_back(lookUpTable);
+        return true;
+    }
+
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {

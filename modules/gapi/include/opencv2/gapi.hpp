@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_HPP
@@ -19,6 +19,7 @@
     @}
     @defgroup gapi_std_backends G-API Standard Backends
     @defgroup gapi_compile_args G-API Graph Compilation Arguments
+    @defgroup gapi_serialization G-API Serialization functionality
 @}
  */
 

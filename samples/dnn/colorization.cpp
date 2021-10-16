@@ -50,7 +50,7 @@ int main(int argc, char **argv)
         "  https://github.com/richzhang/colorization\n"
         "Download caffemodel and prototxt files:\n"
         "  http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel\n"
-        "  https://raw.githubusercontent.com/richzhang/colorization/master/colorization/models/colorization_deploy_v2.prototxt\n";
+        "  https://raw.githubusercontent.com/richzhang/colorization/caffe/models/colorization_deploy_v2.prototxt\n";
     const string keys =
         "{ h help |                                    | print this help message }"
         "{ proto  | colorization_deploy_v2.prototxt    | model configuration }"

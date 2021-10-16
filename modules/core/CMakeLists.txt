@@ -153,6 +153,14 @@ if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
 endif()
 
+if(OPENCV_DISABLE_THREAD_SUPPORT)
+  ocv_target_compile_definitions(${the_module} PUBLIC "OPENCV_DISABLE_THREAD_SUPPORT=1")
+endif()
+
+if(OPENCV_SEMIHOSTING)
+  ocv_target_compile_definitions(${the_module} PRIVATE "-DOPENCV_SEMIHOSTING")
+endif(OPENCV_SEMIHOSTING)
+
 if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()

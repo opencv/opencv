@@ -1,19 +1,12 @@
-include(FindPkgConfig)
-
-# FIXIT: stop using PARENT_SCOPE in dependencies
-if(PROJECT_NAME STREQUAL "OpenCV")
-  macro(add_backend backend_id cond_var)
-    if(${cond_var})
-      include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
-    endif()
-  endmacro()
-else()
-  function(add_backend backend_id cond_var)
-    if(${cond_var})
-      include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
-    endif()
-  endfunction()
+if(NOT PROJECT_NAME STREQUAL "OpenCV")
+  include(FindPkgConfig)
 endif()
+
+macro(add_backend backend_id cond_var)
+  if(${cond_var})
+    include("${CMAKE_CURRENT_LIST_DIR}/detect_${backend_id}.cmake")
+  endif()
+endmacro()
 
 add_backend("ffmpeg" WITH_FFMPEG)
 add_backend("gstreamer" WITH_GSTREAMER)

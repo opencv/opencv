@@ -708,9 +708,10 @@ bool CvCapture_MSMF::initStream(DWORD streamID, const MediaType& mt)
 _ComPtr<IMFAttributes> CvCapture_MSMF::getDefaultSourceConfig(UINT32 num)
 {
     CV_Assert(num > 0);
+    const bool OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS", true);
     _ComPtr<IMFAttributes> res;
     if (FAILED(MFCreateAttributes(&res, num)) ||
-        FAILED(res->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, true)) ||
+        FAILED(res->SetUINT32(MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_DISABLE_DXVA, false)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, false)) ||
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))

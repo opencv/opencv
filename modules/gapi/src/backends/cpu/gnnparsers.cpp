@@ -170,12 +170,14 @@ private:
 } // namespace nn
 } // namespace gapi
 
-void parseSSDBL(const cv::Mat&  in_ssd_result,
-                const cv::Size& in_size,
-                const float     confidence_threshold,
-                const int       filter_label,
-                std::vector<cv::Rect>& out_boxes,
-                std::vector<int>&      out_labels)
+void ParseSSD(const cv::Mat&  in_ssd_result,
+              const cv::Size& in_size,
+              const float     confidence_threshold,
+              const int       filter_label,
+              const bool      alignment_to_square,
+              const bool      filter_out_of_bounds,
+              std::vector<cv::Rect>& out_boxes,
+              std::vector<int>&      out_labels)
 {
     cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
     out_boxes.clear();
@@ -192,48 +194,18 @@ void parseSSDBL(const cv::Mat&  in_ssd_result,
         {
             break;    // marks end-of-detections
         }
-
-        if (confidence < confidence_threshold ||
-            (filter_label != -1 && label != filter_label))
-        {
-            continue; // filter out object classes if filter is specified
-        }             // and skip objects with low confidence
-        out_boxes.emplace_back(rc & parser.getSurface());
-        out_labels.emplace_back(label);
-    }
-}
-
-void parseSSD(const cv::Mat&  in_ssd_result,
-              const cv::Size& in_size,
-              const float     confidence_threshold,
-              const bool      alignment_to_square,
-              const bool      filter_out_of_bounds,
-              std::vector<cv::Rect>& out_boxes)
-{
-    cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
-    out_boxes.clear();
-    cv::Rect rc;
-    float image_id, confidence;
-    int label;
-    const size_t range = parser.getMaxProposals();
-    for (size_t i = 0; i < range; ++i)
-    {
-        std::tie(rc, image_id, confidence, label) = parser.extract(i);
-
-        if (image_id < 0.f)
-        {
-            break;    // marks end-of-detections
-        }
         if (confidence < confidence_threshold)
         {
             continue; // skip objects with low confidence
         }
-
+        if((filter_label != -1) && (label != filter_label))
+        {
+            continue; // filter out object classes if filter is specified
+        }
         if (alignment_to_square)
         {
             parser.adjustBoundingBox(rc);
         }
-
         const auto clipped_rc = rc & parser.getSurface();
         if (filter_out_of_bounds)
         {
@@ -243,6 +215,7 @@ void parseSSD(const cv::Mat&  in_ssd_result,
             }
         }
         out_boxes.emplace_back(clipped_rc);
+        out_labels.emplace_back(label);
     }
 }
 

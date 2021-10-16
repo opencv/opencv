@@ -183,8 +183,8 @@ extern "C" {
 #endif
 
 #if USE_AV_INTERRUPT_CALLBACK
-#define LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS 30000
-#define LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS 30000
+#define LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS 30000
 
 #ifdef _WIN32
 // http://stackoverflow.com/questions/5404277/porting-clock-gettime-to-windows
@@ -523,6 +523,8 @@ struct CvCapture_FFMPEG
 
     AVDictionary *dict;
 #if USE_AV_INTERRUPT_CALLBACK
+    int open_timeout;
+    int read_timeout;
     AVInterruptCallbackMetadata interrupt_metadata;
 #endif
 
@@ -568,6 +570,11 @@ void CvCapture_FFMPEG::init()
     rotation_auto = false;
 #endif
     dict = NULL;
+
+#if USE_AV_INTERRUPT_CALLBACK
+    open_timeout = LIBAVFORMAT_INTERRUPT_OPEN_DEFAULT_TIMEOUT_MS;
+    read_timeout = LIBAVFORMAT_INTERRUPT_READ_DEFAULT_TIMEOUT_MS;
+#endif
 
     rawMode = false;
     rawModeInitialized = false;
@@ -928,6 +935,16 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
         if (params.has(CAP_PROP_HW_ACCELERATION_USE_OPENCL)) {
             use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
         }
+#if USE_AV_INTERRUPT_CALLBACK
+        if (params.has(CAP_PROP_OPEN_TIMEOUT_MSEC))
+        {
+            open_timeout = params.get<int>(CAP_PROP_OPEN_TIMEOUT_MSEC);
+        }
+        if (params.has(CAP_PROP_READ_TIMEOUT_MSEC))
+        {
+            read_timeout = params.get<int>(CAP_PROP_READ_TIMEOUT_MSEC);
+        }
+#endif
         if (params.warnUnusedParameters())
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
@@ -937,7 +954,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_OPEN_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = open_timeout;
     get_monotonic_time(&interrupt_metadata.value);
 
     ic = avformat_alloc_context();
@@ -1282,7 +1299,7 @@ bool CvCapture_FFMPEG::grabFrame()
 #if USE_AV_INTERRUPT_CALLBACK
     // activate interrupt callback
     get_monotonic_time(&interrupt_metadata.value);
-    interrupt_metadata.timeout_after_ms = LIBAVFORMAT_INTERRUPT_READ_TIMEOUT_MS;
+    interrupt_metadata.timeout_after_ms = read_timeout;
 #endif
 
 #if USE_AV_SEND_FRAME_API
@@ -1574,6 +1591,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_HW_ACCELERATION_USE_OPENCL:
         return static_cast<double>(use_opencl);
 #endif  // USE_AV_HW_CODECS
+    case CAP_PROP_STREAM_OPEN_TIME_USEC:
+        //ic->start_time_realtime is in microseconds
+        return ((double)ic->start_time_realtime);
     default:
         break;
     }

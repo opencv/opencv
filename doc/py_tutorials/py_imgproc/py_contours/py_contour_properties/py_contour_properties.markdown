@@ -1,6 +1,9 @@
 Contour Properties {#tutorial_py_contour_properties}
 ==================
 
+@prev_tutorial{tutorial_py_contour_features}
+@next_tutorial{tutorial_py_contours_more_functions}
+
 Here we will learn to extract some frequently used properties of objects like Solidity, Equivalent
 Diameter, Mask image, Mean Intensity etc. More features can be found at [Matlab regionprops
 documentation](http://www.mathworks.in/help/images/ref/regionprops.html).

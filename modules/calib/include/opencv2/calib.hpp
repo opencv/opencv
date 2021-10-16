@@ -525,6 +525,8 @@ Sample usage of detecting and drawing chessboard corners: :
 the board to make the detection more robust in various environments. Otherwise, if there is no
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
+
+Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
@@ -581,6 +583,8 @@ transformation it is beneficial to use round corners for the field corners
 which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
+
+Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
 ![Checkerboard](pics/checkerboard_radon.png)
  */
 CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
