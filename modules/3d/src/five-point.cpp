@@ -420,7 +420,7 @@ static Mat findEssentialMat_( InputArray _points1, InputArray _points2,
     transform(_points1, _pointsTransformed1, affine);
     transform(_points2, _pointsTransformed2, affine);
 
-    return findEssentialMat(_pointsTransformed1, _pointsTransformed2, cm0, method, prob, threshold, _mask);
+    return findEssentialMat(_pointsTransformed1, _pointsTransformed2, cm0, method, prob, threshold, 1000/*maxIters*/, _mask);
 }
 
 
@@ -477,13 +477,6 @@ Mat findEssentialMat( InputArray _points1, InputArray _points2, InputArray _came
     return E;
 }
 
-Mat findEssentialMat( InputArray _points1, InputArray _points2, InputArray _cameraMatrix,
-                              int method, double prob, double threshold,
-                              OutputArray _mask)
-{
-    return findEssentialMat(_points1, _points2, _cameraMatrix, method, prob, threshold, 1000, _mask);
-}
-
 Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Point2d pp,
                               int method, double prob, double threshold, int maxIters, OutputArray _mask)
 {
@@ -491,15 +484,6 @@ Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Po
 
     Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
     return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, maxIters, _mask);
-}
-
-Mat findEssentialMat( InputArray _points1, InputArray _points2, double focal, Point2d pp,
-                              int method, double prob, double threshold, OutputArray _mask)
-{
-    CV_INSTRUMENT_REGION();
-
-    Mat cameraMatrix = (Mat_<double>(3,3) << focal, 0, pp.x, 0, focal, pp.y, 0, 0, 1);
-    return findEssentialMat(_points1, _points2, cameraMatrix, method, prob, threshold, 1000, _mask);
 }
 
 Mat findEssentialMat( InputArray _points1, InputArray _points2,

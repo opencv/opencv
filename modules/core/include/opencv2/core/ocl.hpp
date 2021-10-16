@@ -274,11 +274,7 @@ public:
 
 
     /** Get thread-local OpenCL context (initialize if necessary) */
-#if 0  // OpenCV 5.0
     static Context& getDefault();
-#else
-    static Context& getDefault(bool initialize = true);
-#endif
 
     /** @returns cl_context value */
     void* ptr() const;
@@ -320,8 +316,7 @@ public:
     struct Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
-// TODO OpenCV 5.0
-//protected:
+protected:
     Impl* p;
 };
 

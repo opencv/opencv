@@ -1476,15 +1476,6 @@ Mat findEssentialMat(
     int maxIters = 1000, OutputArray mask = noArray()
 );
 
-/** @overload */
-CV_EXPORTS
-Mat findEssentialMat(
-    InputArray points1, InputArray points2,
-    InputArray cameraMatrix, int method,
-    double prob, double threshold,
-    OutputArray mask
-);  // TODO remove from OpenCV 5.0
-
 /** @overload
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
@@ -1523,15 +1514,6 @@ Mat findEssentialMat(
     double threshold = 1.0, int maxIters = 1000,
     OutputArray mask = noArray()
 );
-
-/** @overload */
-CV_EXPORTS
-Mat findEssentialMat(
-    InputArray points1, InputArray points2,
-    double focal, Point2d pp,
-    int method, double prob,
-    double threshold, OutputArray mask
-);  // TODO remove from OpenCV 5.0
 
 /** @brief Calculates an essential matrix from the corresponding points in two images from potentially two different cameras.
 

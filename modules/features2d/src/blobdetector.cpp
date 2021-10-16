@@ -324,12 +324,7 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     {
         // https://github.com/opencv/opencv/issues/6667
         CV_LOG_ONCE_INFO(NULL, "SimpleBlobDetector: params.minDistBetweenBlobs is ignored for case with single threshold");
-#if 0  // OpenCV 5.0
         CV_CheckEQ(params.minRepeatability, 1u, "Incompatible parameters for case with single threshold");
-#else
-        if (params.minRepeatability != 1)
-            CV_LOG_WARNING(NULL, "SimpleBlobDetector: params.minRepeatability=" << params.minRepeatability << " is incompatible for case with single threshold. Empty result is expected.");
-#endif
     }
 
     std::vector < std::vector<Center> > centers;

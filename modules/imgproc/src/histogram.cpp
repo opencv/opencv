@@ -1883,7 +1883,9 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
             return false;
 
         size_t lsize = 256;
-        UMat lut(1, (int)lsize, CV_32SC1), hist = _hist.getUMat(), uranges(ranges, true);
+        UMat lut(1, (int)lsize, CV_32SC1);
+        UMat hist = _hist.getUMat();
+        UMat uranges; Mat(ranges, false).copyTo(uranges);
 
         lutk.args(ocl::KernelArg::ReadOnlyNoSize(hist), hist.rows,
                   ocl::KernelArg::PtrWriteOnly(lut), scale, ocl::KernelArg::PtrReadOnly(uranges));
@@ -1919,7 +1921,9 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
             return false;
 
         size_t lsize = 256;
-        UMat lut(1, (int)lsize<<1, CV_32SC1), uranges(ranges, true), hist = _hist.getUMat();
+        UMat lut(1, (int)lsize<<1, CV_32SC1);
+        UMat hist = _hist.getUMat();
+        UMat uranges; Mat(ranges, false).copyTo(uranges);
 
         lutk1.args(hist.rows, ocl::KernelArg::PtrWriteOnly(lut), (int)0, ocl::KernelArg::PtrReadOnly(uranges), (int)0);
         if (!lutk1.run(1, &lsize, NULL, false))
