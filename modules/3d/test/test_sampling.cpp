@@ -130,6 +130,11 @@ TEST_F(SamplingTest, FarthestPointSampling) {
             }
         }
     }
+
+    // Test the dist_lower_limit arguments of FPS function.
+    farthestPointSampling(mask, ptCloud, 4, 3);
+    maskToPointCloud(ptCloud, mask, sampledPts);
+    EXPECT_EQ(sampledPts.rows, 2);
 }
 
 } // namespace
