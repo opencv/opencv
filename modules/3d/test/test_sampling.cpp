@@ -28,61 +28,53 @@ bool checkExistPoint(const Mat &ptCloud, const Mat &pt) {
 
 // Change mask to sampled point cloud
 void maskToPointCloud(const Mat &ptCloud, const vector<bool> &mask, Mat &sampledPts){
+    sampledPts.release();
     for(int i = 0 ; i < mask.size(); i++){
         if(mask.at(i))
-            sampledPts.push_back(ptCloud.row(i));
+            sampledPts.push_back(ptCloud.row(i).clone());
     }
 }
 
 class SamplingTest : public ::testing::Test
 {
 protected:
-    void SetUp() override {
-        // Initialize a cube point cloud with 8 points as vertices.
-        ptCloud = Mat(sizeof(ptCloudInfo)/sizeof(ptCloudInfo[0])/3, 3, CV_32F, ptCloudInfo);
-    }
-
     void TearDown() override{
         ptCloud.release();
         sampledPts.release();
     }
 
 public:
-    float ptCloudInfo[24] = {
-            0, 0, 0,  0, 0, 1,  0, 1, 0,  0, 1, 1,
-            1, 0, 0,  1, 0, 1,  1, 1, 0,  1, 1, 1
-    };
-    Mat ptCloud;
+    Mat ptCloud = (Mat_<float>(8, 3) <<
+            0, 0, 0,  1, 0, 0,  1, 2, 0,  0, 2, 0,
+            0, 0, 3,  1, 0, 3,  1, 2, 3,  0, 2, 3
+            );
     Mat sampledPts;
     vector<bool> mask;
 };
 
 
 TEST_F(SamplingTest, VoxelGridFilterSampling) {
-    // Set 1.1 as the side length, and there should be only one point after sampling.
-    voxelGridSampling(mask, ptCloud, 1.1f, 1.1f, 1.1f);
+    // Set (1.1, 2.1, 3.1) as the side length, and there should be only one point after sampling.
+    voxelGridSampling(mask, ptCloud, 1.1f, 2.1f, 3.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    // Sampled point cloud should have only 1 point.
     EXPECT_EQ(sampledPts.rows, 1);
-    // The point should be in a box with a side length of 1.1.
-    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 0) && sampledPts.at<float>(0, 0) < 1.1f);
-    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 1) && sampledPts.at<float>(0, 1) < 1.1f);
-    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 2) && sampledPts.at<float>(0, 2) < 1.1f);
+    // The point should be in a box with a side length of (1.1, 2.1, 3.1).
+    ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 0) && sampledPts.at<float>(0, 0) < 1.1f &&
+            0.0f <= sampledPts.at<float>(0, 1) && sampledPts.at<float>(0, 1) < 2.1f &&
+            0.0f <= sampledPts.at<float>(0, 2) && sampledPts.at<float>(0, 2) < 3.1f);
 
-    // Set (0.55, 0.55, 1.1) as the side length, and there should be 4 points after sampling.
-    sampledPts.release();
-    voxelGridSampling(mask, ptCloud, 0.55f, 0.55f, 1.1f);
+    // Set (0.55, 1.05, 3.1) as the side length, and there should be 4 points after sampling.
+    voxelGridSampling(mask, ptCloud, 0.55f, 1.05f, 3.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    // Sampled point cloud should have 4 points.
     EXPECT_EQ(sampledPts.rows, 4);
     // All points should be in 4 different boxes.
-    float x[4] = {0.0f, 0.0f, 0.55f, 0.55f}, y[4] = {0.0f, 0.55f, 0.0f, 0.55f};
+    float x[4] = {0.0f, 0.0f, 0.55f, 0.55f}, y[4] = {0.0f, 1.05f, 0.0f, 1.05f};
     for(int i = 0; i < 4; i++){
         bool flag;
         for(int j = 0; j < 4; j++){
             flag =  x[i] <= sampledPts.at<float>(j, 0) && sampledPts.at<float>(j, 0) < x[i] + 0.55f &&
-                    y[i] <= sampledPts.at<float>(j, 1) && sampledPts.at<float>(j, 1) < y[i] + 0.55f &&
-                    0.0f <= sampledPts.at<float>(j, 2) && sampledPts.at<float>(j, 2) < 1.1f ;
+                    y[i] <= sampledPts.at<float>(j, 1) && sampledPts.at<float>(j, 1) < y[i] + 1.05f &&
+                    0.0f <= sampledPts.at<float>(j, 2) && sampledPts.at<float>(j, 2) < 3.1f ;
             if(flag) break;
         }
         ASSERT_TRUE(flag);
@@ -90,7 +82,7 @@ TEST_F(SamplingTest, VoxelGridFilterSampling) {
 }
 
 TEST_F(SamplingTest, RandomSampling) {
-    // Set 1 as the size, and there should be only one point after sampling.
+    // Set 4 as the size, and there should have 4 points after sampling.
     randomSampling(sampledPts, ptCloud, 4);
     EXPECT_EQ(sampledPts.rows, 4);
     for(int i = 0; i < 4; i++){
@@ -99,16 +91,45 @@ TEST_F(SamplingTest, RandomSampling) {
 }
 
 TEST_F(SamplingTest, FarthestPointSampling) {
+    Mat ans2 = (Mat_<float>(1, 3) << 1, 2, 3),
+        check,
+        dPtCloud = ptCloud.clone();
+    dPtCloud.push_back(ptCloud.clone());
+
     // Set 2 as the size, and there should be 2 diagonal points after sampling.
     farthestPointSampling(mask, ptCloud, 2);
     maskToPointCloud(ptCloud, mask, sampledPts);
     EXPECT_EQ(sampledPts.rows, 2);
-    Mat check = sampledPts.row(0) + sampledPts.row(1);
-    ASSERT_EQ(check.at<float>(0, 0), 1);
-    ASSERT_EQ(check.at<float>(0, 1), 1);
-    ASSERT_EQ(check.at<float>(0, 2), 1);
+    check = sampledPts.row(0) + sampledPts.row(1);
+    ASSERT_TRUE(comparePoints(check, 0, ans2, 0));
 
+    // Set 4 as the size, and there should be 4 specific points after sampling.
+    farthestPointSampling(mask, ptCloud, 4);
+    maskToPointCloud(ptCloud, mask, sampledPts);
+    EXPECT_EQ(sampledPts.rows, 4);
+    // These 4 points should form a plane perpendicular to the X and Y axes.
+    for(int i = 0; i < 4; i++){
+        check = sampledPts.row(i).clone();
+        check.at<float>(0, 2) += 3;
+        check.at<float>(0, 2) -= floor(check.at<float>(0, 2) / 6) * 6;
+        ASSERT_TRUE(checkExistPoint(sampledPts, check));
+    }
 
+    // After doubling the point cloud, 8 points are sampled and each vertex is displayed only once.
+    farthestPointSampling(mask, dPtCloud, 8);
+    maskToPointCloud(ptCloud, mask, sampledPts);
+    EXPECT_EQ(sampledPts.rows, 8);
+    bool isAppear[8];
+    for(bool &item : isAppear) item = false;
+    for(int i = 0; i < 8; i++){
+        for(int j = 0; j < 8; j++){
+            if(comparePoints(sampledPts, i, ptCloud, j)){
+                ASSERT_FALSE(isAppear[j]);
+                isAppear[j] = true;
+                break;
+            }
+        }
+    }
 }
 
 } // namespace
