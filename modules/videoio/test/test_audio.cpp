@@ -211,7 +211,7 @@ public:
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
         {
             ASSERT_EQ(numberOfSamples, audioData[nCh].size());
-            for (int i = 0; i < numberOfSamples; i++)
+            for (unsigned int i = 0; i < numberOfSamples; i++)
             {
                 EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
             }
@@ -222,7 +222,7 @@ protected:
     const int height;
     const int width;
     const int numberOfFrames;
-    const int numberOfSamples;
+    const unsigned int numberOfSamples;
     const int fps;
     const double psnrThreshold;
 };
