@@ -2224,20 +2224,29 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         int axis = toNCHW(indices.at<int>(0));
         if (axis == 2 || axis == 3)
         {
-            layerParams.set("pool", pool_type);
-            layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
-            layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
-            int id = dstNet.addLayer(name, "Pooling", layerParams);
-            layer_id[name] = id;
-            connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
-
-            if (!keepDims)
+            if (keepDims) {
+                layerParams.set("pool", pool_type);
+                layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
+                layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
+                int id = dstNet.addLayer(name, "Pooling", layerParams);
+                layer_id[name] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+            }
+            else
             {
                 // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
+                layerParams.set("pool", pool_type);
+                layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
+                layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
+                std::string poolingName = name+"/origin";
+                int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
+                layer_id[poolingName] = id;
+                connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
+
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
                 std::string permName = name + "/nchw";
-                Pin inpId = Pin(name);
+                Pin inpId = Pin(poolingName);
                 addPermuteLayer(order, permName, inpId);
 
                 LayerParams squeezeLp;
@@ -2248,6 +2257,11 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                 layer_id[squeezeName] = squeezeId;
                 connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
+
+            
+                int recoverOrder[] = {0, 2, 1};  // From NCH,NCW to NHC, NWC.
+                Pin squeezePin = Pin(squeezeName);
+                addPermuteLayer(recoverOrder, name, squeezePin, 3);
             }
         }
         else if (axis == 1)
