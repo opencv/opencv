@@ -38,6 +38,8 @@
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 #include "streaming/onevpl/engine/engine_session.hpp"
 
+#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
+
 namespace opencv_test
 {
 namespace
@@ -440,6 +442,12 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
 
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);
+}
+
+TEST(OneVPL_Source_MFP, enumerate)
+{
+    cv::gapi::wip::onevpl::MFPDemuxDataProvider provider("C:\\Users\\sivanov\\github\\opencv_extra\\testdata\\highgui\\video\\big_buck_bunny.mp4");
+    (void) provider;
 }
 }
 } // namespace opencv_test
