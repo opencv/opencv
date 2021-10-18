@@ -43,13 +43,14 @@ class Stitcher:
          "timelapse": Timelapser.DEFAULT_TIMELAPSE}
 
     def __init__(self, **kwargs):
+        self.initialize_stitcher(**kwargs)
+
+    def initialize_stitcher(self, **kwargs):
         self.settings = Stitcher.DEFAULT_SETTINGS.copy()
         self.validate_kwargs(kwargs)
         self.settings.update(kwargs)
-        self.initialize_stitcher(**self.settings)
 
-    def initialize_stitcher(self, **kwargs):
-        args = SimpleNamespace(**kwargs)
+        args = SimpleNamespace(**self.settings)
         self.img_handler = ImageHandler(args.medium_megapix,
                                         args.low_megapix,
                                         args.final_megapix)
