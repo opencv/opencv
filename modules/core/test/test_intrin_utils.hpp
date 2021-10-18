@@ -373,6 +373,23 @@ template<typename R> struct TheTest
             EXPECT_EQ((LaneType)12, vx_setall_res2_[i]);
         }
 
+#if CV_SIMD_WIDTH == 16
+        {
+            uint64 a = CV_BIG_INT(0x7fffffffffffffff);
+            uint64 b = (uint64)CV_BIG_INT(0xcfffffffffffffff);
+            v_uint64x2 uint64_vec(a, b);
+            EXPECT_EQ(a, uint64_vec.get0());
+            EXPECT_EQ(b, v_extract_n<1>(uint64_vec));
+        }
+        {
+            int64 a = CV_BIG_INT(0x7fffffffffffffff);
+            int64 b = CV_BIG_INT(-1);
+            v_int64x2 int64_vec(a, b);
+            EXPECT_EQ(a, int64_vec.get0());
+            EXPECT_EQ(b, v_extract_n<1>(int64_vec));
+        }
+#endif
+
         return *this;
     }
 
