@@ -537,7 +537,7 @@ struct BaseDefaultFunctor : public BaseFunctor
             static_cast<T const*>(this)->setKernelParams(kernel);
 
             size_t gSize = src.total();
-            CV_Assert(kernel.run(1, &gSize, nullptr, false));
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
         }
 
         return true;
