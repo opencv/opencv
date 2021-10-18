@@ -52,9 +52,9 @@ public:
 
         if (inputs_.depth() == CV_16S)
         {
-            UMat inputFp32(shape(inputs[0]), CV_32F);
+            UMat inputFp32;
             convertFp16(inputs[0], inputFp32);
-            inputFp32.copyTo(inputs[0]);
+            inputs[0] = inputFp32;  // replace
         }
 
         inputs[0].convertTo(outputs[0], CV_8S, 1.f/scale, zeropoint);
@@ -118,7 +118,7 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        UMat outputFp32(shape(outputs[0]), CV_32F);
+        UMat outputFp32;
         inputs[0].convertTo(outputFp32, CV_32F, scale, -(scale*zeropoint));
 
         if (outputs_.depth() == CV_16S)
