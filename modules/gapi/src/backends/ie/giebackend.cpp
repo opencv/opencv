@@ -237,6 +237,7 @@ struct IEUnit {
 
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
+            net.setBatchSize(params.batch_size);
             inputs  = net.getInputsInfo();
             outputs = net.getOutputsInfo();
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
@@ -1412,11 +1413,11 @@ std::vector<int> cv::gapi::ie::util::to_ocv(const IE::SizeVector &dims) {
     return toCV(dims);
 }
 
-IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &blob) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &blob) {
     return wrapIE(blob, cv::gapi::ie::TraitAs::IMAGE);
 }
 
-IE::Blob::Ptr cv::gapi::ie::util::to_ie(cv::Mat &y_plane, cv::Mat &uv_plane) {
+IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &y_plane, const cv::Mat &uv_plane) {
     auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
     auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
 #if INF_ENGINE_RELEASE >= 2021010000
