@@ -168,6 +168,8 @@ set(gapi_srcs
     src/streaming/onevpl/source_priv.cpp
     src/streaming/onevpl/file_data_provider.cpp
     src/streaming/onevpl/cfg_params.cpp
+    src/streaming/onevpl/cfg_params_parser.cpp
+    src/streaming/onevpl/utils.cpp
     src/streaming/onevpl/data_provider_interface_exception.cpp
     src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/surface.cpp

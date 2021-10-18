@@ -11,6 +11,8 @@
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
+#ifdef HAVE_ONEVPL
+
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -93,4 +95,5 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
 } // namespace gapi
 } // namespace cv
 
+#endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_ENGINE_PROCESSING_ENGINE_BASE_HPP
