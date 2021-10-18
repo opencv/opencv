@@ -2379,7 +2379,7 @@ inline void v_load_deinterleave( const unsigned* ptr, v_uint32x8& a, v_uint32x8&
     __m256i ab0 = _mm256_loadu_si256((const __m256i*)ptr);
     __m256i ab1 = _mm256_loadu_si256((const __m256i*)(ptr + 8));
 
-    const int sh = 0+2*4+1*16+3*64;
+    enum { sh = 0+2*4+1*16+3*64 };
     __m256i p0 = _mm256_shuffle_epi32(ab0, sh);
     __m256i p1 = _mm256_shuffle_epi32(ab1, sh);
     __m256i pl = _mm256_permute2x128_si256(p0, p1, 0 + 2*16);
