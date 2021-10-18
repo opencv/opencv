@@ -148,8 +148,6 @@ public:
 
     void doTest()
     {
-        getValidAudioData();
-
         ASSERT_TRUE(cap.open(findDataFile(root + fileName), backend, params));
 
         const int audioBaseIndex = static_cast<int>(cap.get(cv::CAP_PROP_AUDIO_BASE_INDEX));
@@ -161,7 +159,8 @@ public:
         int samplesPerFrame = (int)(1./fps*samplePerSecond);
         int audioSamplesTolerance = samplesPerFrame / 2;
 
-        double f = 0;
+        double audio0_timestamp = 0;
+
         Mat videoFrame;
         Mat img(height, width, videoType);
         audioData.resize(numberOfChannels);
@@ -171,49 +170,78 @@ public:
 
             ASSERT_TRUE(cap.grab());
 
+            if (frame == 0)
+            {
+                double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
+                double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
+                audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
+                std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
+            }
+
             ASSERT_TRUE(cap.retrieve(videoFrame));
-            generateFrame(frame, numberOfFrames, img);
-            ASSERT_EQ(img.size, videoFrame.size);
-            double psnr = cvtest::PSNR(img, videoFrame);
-            EXPECT_GE(psnr, psnrThreshold);
+            if (numberOfSamples > 0)
+            {
+                generateFrame(frame, numberOfFrames, img);
+                ASSERT_EQ(img.size, videoFrame.size);
+                double psnr = cvtest::PSNR(img, videoFrame);
+                EXPECT_GE(psnr, psnrThreshold);
+            }
 
             int audioFrameCols = 0;
             for (int nCh = 0; nCh < numberOfChannels; nCh++)
             {
                 ASSERT_TRUE(cap.retrieve(audioFrame, audioBaseIndex+nCh));
-                if (!audioFrame.empty())
-                    ASSERT_EQ(CV_16SC1, audioFrame.type());
+                if (audioFrame.empty())
+                    continue;
+                ASSERT_EQ(CV_16SC1, audioFrame.type());
                 if (nCh == 0)
                     audioFrameCols = audioFrame.cols;
                 else
                     ASSERT_EQ(audioFrameCols, audioFrame.cols) << "channel "<< nCh;
                 for (int i = 0; i < audioFrame.cols; i++)
                 {
-                    f = audioFrame.at<signed short>(0,i) / 32768.0;
+                    double f = audioFrame.at<signed short>(0,i) / 32768.0;
                     audioData[nCh].push_back(f);
                 }
             }
-            if (!audioFrame.empty())
-                if (frame != 0 && frame != numberOfFrames-1)
-                {
 
-                    EXPECT_NEAR(cap.get(CAP_PROP_AUDIO_POS), ((cap.get(CAP_PROP_POS_MSEC) - cap.get(CAP_PROP_AUDIO_SHIFT_NSEC) / 1e9) / 1000) * samplePerSecond, audioSamplesTolerance) << "CAP_PROP_POS_MSEC = " << cap.get(CAP_PROP_POS_MSEC);
-                    EXPECT_LT(abs(audioFrame.cols - samplesPerFrame), audioSamplesTolerance);
-                }
+            if (frame < 5 || frame >= numberOfFrames-5)
+                std::cout << "frame=" << frame << ":  audioFrameSize=" << audioFrameCols << "  videoTimestamp=" << cap.get(CAP_PROP_POS_MSEC) << " ms" << std::endl;
+            else if (frame == 6)
+                std::cout << "frame..." << std::endl;
+
+            if (audioFrameCols == 0)
+                continue;
+            if (frame != 0 && frame != numberOfFrames-1)
+            {
+                // validate audio position
+                EXPECT_NEAR(
+                        cap.get(CAP_PROP_AUDIO_POS) / samplePerSecond + audio0_timestamp,
+                        cap.get(CAP_PROP_POS_MSEC) * 1e-3,
+                        (1.0 / fps) * 0.3)
+                    << "CAP_PROP_AUDIO_POS=" << cap.get(CAP_PROP_AUDIO_POS) << " CAP_PROP_POS_MSEC=" << cap.get(CAP_PROP_POS_MSEC);
+
+                // validate audio frame size
+                EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
+            }
         }
         ASSERT_FALSE(cap.grab());
         ASSERT_FALSE(audioData.empty());
 
-        checkAudio();
+        if (numberOfSamples > 0)
+            checkAudio();
     }
     void checkAudio()
     {
+        getValidAudioData();
+
+        ASSERT_EQ(expectedNumAudioCh, audioData.size());
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
         {
-            ASSERT_EQ(numberOfSamples, audioData[nCh].size());
+            ASSERT_EQ(numberOfSamples, audioData[nCh].size()) << "nCh=" << nCh;
             for (unsigned int i = 0; i < numberOfSamples; i++)
             {
-                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
+                EXPECT_NEAR(validAudioData[nCh][i], audioData[nCh][i], epsilon) << "sample index=" << i << " nCh=" << nCh;
             }
         }
     }
@@ -230,6 +258,10 @@ protected:
 const paramCombination mediaParams[] =
 {
     paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
+#if 0
+    // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
+    , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, 0.15, CV_8UC3, 400, 960, 1116, 0, 30, 30., cv::CAP_MSMF)
+#endif
 };
 
 class Media : public MediaTestFixture{};

@@ -1394,10 +1394,11 @@ bool CvCapture_MSMF::grabVideoFrame()
                     returnFlag = false;
                 else if (usedVideoSample)
                     returnFlag = true;
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of video stream detected");
             }
             else
             {
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): got video frame with timestamp=" << impendingVideoSampleTime);
                 if (audioStream != -1)
                 {
                     if (!usedVideoSample)
@@ -1508,12 +1509,13 @@ bool CvCapture_MSMF::grabAudioFrame()
                     audioSamples.pop_back();
                 if (videoStream != -1 && !vEOS)
                     returnFlag = true;
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of stream detected");
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): End of audio stream detected");
                 break;
             }
             else
             {
                 audioSamples[numberOfSamples]->GetSampleDuration(&audioSampleDuration);
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): got audio frame with timestamp=" << audioSampleTime << "  duration=" << audioSampleDuration);
                 bufferedAudioDuration += (LONGLONG)(audioSampleDuration + residualTime*1e7);
                 if (nFrame == 1 && audioStartOffset == -1)
                 {
