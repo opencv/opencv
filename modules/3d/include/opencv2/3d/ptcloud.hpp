@@ -18,15 +18,15 @@ namespace cv {
  * point cloud data, in each voxel (i.e., 3D box), all the points present will be
  * approximated (i.e., downsampled) with the point closest to their centroid.
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point,
- *                     sampled_point_flags[i] is TRUE mean i-th point selected.
+ * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN
  * @param length Grid length
  * @param width  Grid width
  * @param height  Grid height
  * @return The number of points actually sampled
  */
-CV_EXPORTS int voxelGridSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
                                   float length, float width, float height);
 
 /**
@@ -66,8 +66,8 @@ CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input
  * 2. Find a point in C that is the farthest away from S and put it into S
  * The distance from point to S set is the smallest distance from point to all points in S
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point,
- *                     sampled_point_flags[i] is TRUE mean i-th point selected.
+ * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN
  * @param sampled_pts_size The desired point cloud size after sampling
  * @param dist_lower_limit Sampling is terminated early if the distance from
@@ -76,14 +76,14 @@ CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input
  *                  if it is nullptr, theRNG () is used instead.
  * @return The number of points actually sampled
  */
-CV_EXPORTS int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
                                       int sampled_pts_size, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
 
 /**
  * @brief Details in farthestPointSampling(cv::InputArray, int, cv::OutputArray, float)
  *
- * @param sampled_point_flags  (Output) Flags of the sampled point,
- *                     sampled_point_flags[i] is TRUE mean i-th point selected.
+ * @param sampled_point_flags  (Output) Flags of the sampled point, (pass in std::vector<int> or std::vector<char> etc.)
+ *                     sampled_point_flags[i] is 1 means i-th point selected, 0 means it is not selected.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN
  * @param sampled_scale The percentage of the sampled point cloud to the original size,
  *                      that is, sampled size = original size * sampled_scale, range (0, 1)
@@ -93,7 +93,7 @@ CV_EXPORTS int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv:
  *                  if it is nullptr, theRNG () is used instead.
  * @return The number of points actually sampled
  */
-CV_EXPORTS int farthestPointSampling(std::vector<bool> &sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
                                       float sampled_scale, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
 
 //! @} _3d

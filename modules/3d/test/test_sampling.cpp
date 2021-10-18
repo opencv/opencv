@@ -27,7 +27,7 @@ bool checkExistPoint(const Mat &ptCloud, const Mat &pt) {
 }
 
 // Change mask to sampled point cloud
-void maskToPointCloud(const Mat &ptCloud, const vector<bool> &mask, Mat &sampledPts){
+void maskToPointCloud(const Mat &ptCloud, const vector<char> &mask, Mat &sampledPts){
     sampledPts.release();
     for(int i = 0 ; i < mask.size(); i++){
         if(mask.at(i))
@@ -49,7 +49,7 @@ public:
             0, 0, 3,  1, 0, 3,  1, 2, 3,  0, 2, 3
             );
     Mat sampledPts;
-    vector<bool> mask;
+    vector<char> mask;
 };
 
 
