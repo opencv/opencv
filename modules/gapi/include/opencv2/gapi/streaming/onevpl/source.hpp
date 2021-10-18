@@ -51,6 +51,8 @@ private:
 };
 } // namespace onevpl
 
+using GVPLSource = onevpl::GSource;
+
 template<class... Args>
 GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_onevpl_src(Args&&... args)
 {

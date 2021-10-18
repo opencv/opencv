@@ -117,7 +117,7 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
         return MFX_ERR_NOT_ENOUGH_BUFFER;
     }
 
-    std::copy_n(p0, bs.DataLength, p1);
+    std::copy_n(p1, bs.DataLength, p0);
 
     bs.DataOffset = 0;
     bs.DataLength += static_cast<mfxU32>(data_provider->fetch_data(bs.MaxLength - bs.DataLength,
