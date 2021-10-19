@@ -129,7 +129,7 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__
 #  include <unistd.h>
 #  include <fcntl.h>
-#if defined __QNXNTO__
+#if defined __QNX__
 #  include <sys/elf.h>
 #else
 #  include <elf.h>
@@ -545,7 +545,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNXNTO__
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
