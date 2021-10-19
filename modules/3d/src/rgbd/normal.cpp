@@ -16,6 +16,11 @@ T inline norm_vec(const Vec<T, 3>& vec)
 {
     return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
 }
+template<typename T>
+T inline norm_vec(const Vec<T, 4>& vec)
+{
+    return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+}
 
 /** Given 3d points, compute their distance to the origin
  * @param points
@@ -24,7 +29,7 @@ T inline norm_vec(const Vec<T, 3>& vec)
 template<typename T>
 Mat_<T> computeRadius(const Mat& points)
 {
-    typedef Vec<T, 3> PointT;
+    typedef Vec<T, 4> PointT;
 
     // Compute the
     Size size(points.cols, points.rows);
@@ -54,7 +59,8 @@ void computeThetaPhi(int rows, int cols, const Matx<T, 3, 3>& K, Mat& cos_theta,
     Mat points3d;
     depthTo3d(depth_image, Mat(K), points3d);
 
-    typedef Vec<T, 3> Vec3T;
+    //typedef Vec<T, 3> Vec3T;
+    typedef Vec<T, 4> Vec4T;
 
     cos_theta = Mat_<T>(rows, cols);
     sin_theta = Mat_<T>(rows, cols);
@@ -65,8 +71,8 @@ void computeThetaPhi(int rows, int cols, const Matx<T, 3, 3>& K, Mat& cos_theta,
     {
         T* row_cos_theta = cos_theta.ptr <T>(y), * row_sin_theta = sin_theta.ptr <T>(y);
         T* row_cos_phi = cos_phi.ptr <T>(y), * row_sin_phi = sin_phi.ptr <T>(y);
-        const Vec3T* row_points = points3d.ptr <Vec3T>(y),
-               * row_points_end = points3d.ptr <Vec3T>(y) + points3d.cols;
+        const Vec4T* row_points = points3d.ptr <Vec4T>(y),
+               * row_points_end = points3d.ptr <Vec4T>(y) + points3d.cols;
         const T* row_r = r.ptr < T >(y);
         for (; row_points < row_points_end;
             ++row_cos_theta, ++row_sin_theta, ++row_cos_phi, ++row_sin_phi, ++row_points, ++row_r)
@@ -366,7 +372,8 @@ public:
 
     virtual void assertOnBadArg(const Mat& points3d_ori) const CV_OVERRIDE
     {
-        CV_Assert(points3d_ori.channels() == 3);
+        //CV_Assert(points3d_ori.channels() == 3);
+        CV_Assert(points3d_ori.channels() == 4);
         CV_Assert(points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F);
     }
 
@@ -421,7 +428,8 @@ public:
     {
         // Only focus on the depth image for LINEMOD
         Mat depth_in;
-        if (points3d.channels() == 3)
+        //if (points3d.channels() == 3)
+        if (points3d.channels() == 4)
         {
             std::vector<Mat> channels;
             split(points3d, channels);

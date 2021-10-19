@@ -239,8 +239,8 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
-    double min0, max0, min1, max1;
-
+    //std::cout << cpyramids[0] << std::endl;
+    
     return true;
 }
 
@@ -470,7 +470,7 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraM
         for (size_t i = 0; i < depthSize; i++)
         {
             CV_Assert(pyramidCloud.size((int)i) == pyramidDepth.size((int)i));
-            CV_Assert(pyramidCloud.type((int)i) == CV_32FC3);
+            CV_Assert(pyramidCloud.type((int)i) == CV_32FC4);
         }
     }
     else
@@ -478,7 +478,7 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraM
         std::vector<Matx33f> pyramidCameraMatrix;
         buildPyramidCameraMatrix(cameraMatrix, (int)depthSize, pyramidCameraMatrix);
 
-        pyramidCloud.create((int)depthSize, 1, CV_32FC3, -1);
+        pyramidCloud.create((int)depthSize, 1, CV_32FC4, -1);
         for (size_t i = 0; i < depthSize; i++)
         {
             TMat cloud;
@@ -775,15 +775,15 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
             if(method != OdometryType::RGB)
             {
-                //if (algtype == OdometryAlgoType::COMMON)
-                //{
+                if (algtype == OdometryAlgoType::COMMON)
+                {
                     const Mat pyramidNormalsMask;
                     dstFrame.getPyramidAt(pyramidNormalsMask, OdometryFramePyramidType::PYR_NORMMASK, level);
                     computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                         srcLevelDepth, srcLevelDepth, pyramidMask,
                         dstLevelDepth, dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
                         corresps_icp, diffs_icp, sigma_icp, OdometryType::ICP);
-                //}
+                }
             }
 
             //std::cout << corresps_rgbd.rows << " " << corresps_icp.rows << " " << minCorrespsCount << " " << (algtype != OdometryAlgoType::FAST) << std::endl;
@@ -825,6 +825,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     cv::Matx66f A;
                     cv::Vec6f b;
+                    //std::cout << dstPyrCloud << std::endl;
                     calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
                     AtA_icp = Mat(A);
                     AtB_icp = Mat(b);
@@ -1221,7 +1222,7 @@ typedef Matx<float, 6, 7> ABtype;
 struct GetAbInvoker : ParallelLoopBody
 {
     GetAbInvoker(ABtype& _globalAb, Mutex& _mtx,
-        const _Points& _oldPts, const _Normals& _oldNrm, const _Points& _newPts, const _Normals& _newNrm,
+        const Points& _oldPts, const _Normals& _oldNrm, const Points& _newPts, const _Normals& _newNrm,
         Affine3f _pose, Intr::Projector _proj, float _sqDistanceThresh, float _minCos) :
         ParallelLoopBody(),
         globalSumAb(_globalAb), mtx(_mtx),
@@ -1238,12 +1239,12 @@ struct GetAbInvoker : ParallelLoopBody
 
         for (int y = range.start; y < range.end; y++)
         {
-            const _ptype* newPtsRow = newPts[y];
+            const ptype* newPtsRow = newPts[y];
             const _ptype* newNrmRow = newNrm[y];
 
             for (int x = 0; x < newPts.cols; x++)
             {
-                Point3f newP = newPtsRow[x];
+                Point3f newP = fromPtype(newPtsRow[x]);
                 Point3f newN = newNrmRow[x];
 
                 Point3f oldP(nan3), oldN(nan3);
@@ -1264,13 +1265,13 @@ struct GetAbInvoker : ParallelLoopBody
                 int xi = cvFloor(oldCoords.x), yi = cvFloor(oldCoords.y);
                 float tx = oldCoords.x - xi, ty = oldCoords.y - yi;
 
-                const _ptype* prow0 = oldPts[yi + 0];
-                const _ptype* prow1 = oldPts[yi + 1];
+                const ptype* prow0 = oldPts[yi + 0];
+                const ptype* prow1 = oldPts[yi + 1];
 
-                Point3f p00 = prow0[xi + 0];
-                Point3f p01 = prow0[xi + 1];
-                Point3f p10 = prow1[xi + 0];
-                Point3f p11 = prow1[xi + 1];
+                Point3f p00 = fromPtype(prow0[xi + 0]);
+                Point3f p01 = fromPtype(prow0[xi + 1]);
+                Point3f p10 = fromPtype(prow1[xi + 0]);
+                Point3f p11 = fromPtype(prow1[xi + 1]);
 
                 //do not fix missing data
                 if (!(fastCheck(p00) && fastCheck(p01) &&
@@ -1348,9 +1349,9 @@ struct GetAbInvoker : ParallelLoopBody
 
     ABtype& globalSumAb;
     Mutex& mtx;
-    const _Points& oldPts;
+    const Points& oldPts;
     const _Normals& oldNrm;
-    const _Points& newPts;
+    const Points& newPts;
     const _Normals& newNrm;
     Affine3f pose;
     const Intr::Projector proj;
@@ -1366,8 +1367,11 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
-    const _Points  op(oldPts), on(oldNrm);
-    const _Normals np(newPts), nn(newNrm);
+    const Points  op(oldPts), np(newPts);
+    const _Normals on(oldNrm),  nn(newNrm);
+
+    //std::cout << op << std::endl;
+
     Intr intrinsics(cameraMatrix);
     GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
         intrinsics.scale(level).makeProjector(),
@@ -1390,7 +1394,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     }
 }
 
-
+//#################################################################
 
 struct _ComputePointsNormalsInvoker : ParallelLoopBody
 {
