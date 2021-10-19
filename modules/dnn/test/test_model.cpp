@@ -604,7 +604,7 @@ TEST_P(Test_Model, SegmentationMultipleInputSizes)
 
     SegmentationModel model(weights_file, config_file);
     
-    Mat frame = imread(inImgPath);
+    Mat frame = imread(inp);
     Mat mask;
     
     Size size1{128, 128};    
