@@ -8,8 +8,8 @@ namespace opencv_test { namespace {
 
 //file name, number of audio channels, epsilon, video type, weight, height, number of frame, number of audio samples, fps, psnr Threshold, backend
 typedef std::tuple<std::string, int, double, int, int, int, int, int, int, double, VideoCaptureAPIs> paramCombination;
-//file name, number of audio channels, epsilon, backend
-typedef std::tuple<std::string, int, double, VideoCaptureAPIs> param;
+//file name, number of audio channels, number of audio samples, epsilon, backend
+typedef std::tuple<std::string, int, int, double, VideoCaptureAPIs> param;
 
 class AudioBaseTest
 {
@@ -22,19 +22,33 @@ protected:
         validAudioData.resize(expectedNumAudioCh);
         for (int nCh = 0; nCh < expectedNumAudioCh; nCh++)
         {
-            for (int j = 0; j < 3; j++)
+            value = 0;
+            for(int i = 0; i < numberOfSamples; i++)
             {
-                value = 0;
-                for(int i = 0; i < 44100; i++)
-                {
-                    validAudioData[nCh].push_back(sin(value));
-                    value += step;
-                }
+                if (i != 0 && i % 44100 == 0)
+                    value = 0;
+                validAudioData[nCh].push_back(sin(value));
+                value += step;
+            }
+        }
+    }
+    void checkAudio()
+    {
+        getValidAudioData();
+
+        ASSERT_EQ(expectedNumAudioCh, audioData.size());
+        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
+        {
+            ASSERT_EQ(numberOfSamples, audioData[nCh].size()) << "nCh=" << nCh;
+            for (int i = 0; i < numberOfSamples; i++)
+            {
+                EXPECT_NEAR(validAudioData[nCh][i], audioData[nCh][i], epsilon) << "sample index=" << i << " nCh=" << nCh;
             }
         }
     }
 protected:
     int expectedNumAudioCh;
+    int numberOfSamples;
     double epsilon;
     VideoCaptureAPIs backend;
     std::string root;
@@ -55,8 +69,9 @@ public:
     {
         fileName = get<0>(GetParam());
         expectedNumAudioCh = get<1>(GetParam());
-        epsilon = get<2>(GetParam());
-        backend = get<3>(GetParam());
+        numberOfSamples = get<2>(GetParam());
+        epsilon = get<3>(GetParam());
+        backend = get<4>(GetParam());
         root = "audio/";
         params = {  CAP_PROP_AUDIO_STREAM, 0,
                     CAP_PROP_VIDEO_STREAM, -1,
@@ -65,8 +80,6 @@ public:
 
     void doTest()
     {
-        getValidAudioData();
-
         ASSERT_TRUE(cap.open(findDataFile(root + fileName), backend, params));
         const int audioBaseIndex = static_cast<int>(cap.get(cv::CAP_PROP_AUDIO_BASE_INDEX));
         const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
@@ -94,22 +107,14 @@ public:
 
         checkAudio();
     }
-    void checkAudio()
-    {
-        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
-            for (unsigned int i = 0; i < validAudioData[nCh].size(); i++)
-            {
-                EXPECT_LE(fabs(validAudioData[nCh][i] - audioData[nCh][i]), epsilon) << "sample index " << i;
-            }
-    }
 };
 
 const param audioParams[] =
 {
-    param("test_audio.wav", 1, 0.0001, cv::CAP_MSMF),
-    param("test_mono_audio.mp3", 1, 0.1, cv::CAP_MSMF),
-    param("test_stereo_audio.mp3", 2, 0.1, cv::CAP_MSMF),
-    param("test_audio.mp4", 1, 0.15, cv::CAP_MSMF)
+    param("test_audio.wav", 1, 132300, 0.0001, cv::CAP_MSMF),
+    param("test_mono_audio.mp3", 1, 133104, 0.12, cv::CAP_MSMF),
+    param("test_stereo_audio.mp3", 2, 133104, 0.12, cv::CAP_MSMF),
+    param("test_audio.mp4", 1, 133104, 0.15, cv::CAP_MSMF)
 };
 
 class Audio : public AudioTestFixture{};
@@ -132,12 +137,12 @@ public:
         height(get<4>(GetParam())),
         width(get<5>(GetParam())),
         numberOfFrames(get<6>(GetParam())),
-        numberOfSamples(get<7>(GetParam())),
         fps(get<8>(GetParam())),
         psnrThreshold(get<9>(GetParam()))
         {
             fileName = get<0>(GetParam());
             expectedNumAudioCh = get<1>(GetParam());
+            numberOfSamples = get<7>(GetParam());
             epsilon = get<2>(GetParam());
             backend = get<10>(GetParam());
             root = "audio/";
@@ -231,26 +236,11 @@ public:
         if (numberOfSamples > 0)
             checkAudio();
     }
-    void checkAudio()
-    {
-        getValidAudioData();
-
-        ASSERT_EQ(expectedNumAudioCh, audioData.size());
-        for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
-        {
-            ASSERT_EQ(numberOfSamples, audioData[nCh].size()) << "nCh=" << nCh;
-            for (unsigned int i = 0; i < numberOfSamples; i++)
-            {
-                EXPECT_NEAR(validAudioData[nCh][i], audioData[nCh][i], epsilon) << "sample index=" << i << " nCh=" << nCh;
-            }
-        }
-    }
 protected:
     const int videoType;
     const int height;
     const int width;
     const int numberOfFrames;
-    const unsigned int numberOfSamples;
     const int fps;
     const double psnrThreshold;
 };
