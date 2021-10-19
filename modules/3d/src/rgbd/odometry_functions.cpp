@@ -1078,11 +1078,16 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
         double w_sobelScale = w * sobelScaleIn;
 
-        const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
+        //const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
+        //Point3f tp0;
+        //tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
+        //tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
+        //tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
         Point3f tp0;
-        tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
+        tp0.y = (float)(p0[0] * Rt_ptr[4] + p0[1] * Rt_ptr[5] + p0[2] * Rt_ptr[6] + Rt_ptr[7]);
+        tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
 
         func(A_ptr,
             w_sobelScale * dI_dx1.at<short int>(v1, u1),
@@ -1134,14 +1139,21 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
-        const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
+        //const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
+        //Point3f tp0;
+        //tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
+        //tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
+        //tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
         Point3f tp0;
-        tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
+        tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
+        tp0.y = (float)(p0[0] * Rt_ptr[4] + p0[1] * Rt_ptr[5] + p0[2] * Rt_ptr[6] + Rt_ptr[7]);
+        tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
 
         Vec3f n1 = normals1.at<Vec3f>(v1, u1);
-        Point3f v = cloud1.at<Point3f>(v1, u1) - tp0;
+        //Point3f v = cloud1.at<Point3f>(v1, u1) - tp0;
+        Vec4f _v = cloud1.at<Vec4f>(v1, u1);
+        Point3f v = Point3f(_v[0], _v[1], _v[2]) - tp0;
 
         tps0_ptr[correspIndex] = tp0;
         diffs_ptr[correspIndex] = n1[0] * v.x + n1[1] * v.y + n1[2] * v.z;
