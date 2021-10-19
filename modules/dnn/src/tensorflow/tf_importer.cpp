@@ -2258,7 +2258,6 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 layer_id[squeezeName] = squeezeId;
                 connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
 
-            
                 int recoverOrder[] = {0, 2, 1};  // From NCH,NCW to NHC, NWC.
                 Pin squeezePin = Pin(squeezeName);
                 addPermuteLayer(recoverOrder, name, squeezePin, 3);
