@@ -24,7 +24,8 @@ static inline void _swap(Tp &n, Tp &m)
  * Get cv::Mat with type N×3 CV_32FC1 from cv::InputArray
  * Use different interpretations for the same memory data.
  */
-static inline void _getMatFromInputArray(InputArray input_pts, Mat &mat) {
+static inline void _getMatFromInputArray(InputArray input_pts, Mat &mat)
+{
     CV_Check(input_pts.dims(), input_pts.dims() < 3,
              "Only support data with dimension less than 3.");
 
@@ -34,25 +35,30 @@ static inline void _getMatFromInputArray(InputArray input_pts, Mat &mat) {
     CV_Check(total, total % 3 == 0,
              "total = input_pts.rows() * input_pts.cols() * input_pts.channels() must be an integer multiple of 3");
 
-    if (channels == 1 && rows == 3 && cols != 3) {
+    if (channels == 1 && rows == 3 && cols != 3)
+    {
         // Layout of point cloud data in memory space:
         // x1, ..., xn, y1, ..., yn, z1, ..., zn
         // For example, the input is cv::Mat with type 3×N CV_32FC1
         transpose(input_pts, mat);
-    } else {
+    }
+    else
+    {
         // Layout of point cloud data in memory space:
         // x1, y1, z1, ..., xn, yn, zn
         // For example, the input is std::vector<Point3d>, or std::vector<int>, or cv::Mat with type N×1 CV_32FC3
         mat = input_pts.getMat().reshape(1, (int) (total / 3));
     }
 
-    if (mat.type() != CV_32F) { // Use float to store data
+    if (mat.type() != CV_32F)
+    {
         Mat tmp;
-        mat.convertTo(tmp, CV_32F);
+        mat.convertTo(tmp, CV_32F); // Use float to store data
         swap(mat, tmp);
     }
 
-    if (!mat.isContinuous()) {
+    if (!mat.isContinuous())
+    {
         mat = mat.clone();
     }
 
@@ -181,6 +187,7 @@ int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
 void randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sampled_pts_size, RNG *rng)
 {
     CV_CheckGT(sampled_pts_size, 0, "The point cloud size after sampling must be greater than 0.");
+    CV_CheckDepth(input_pts.depth(), input_pts.depth() == CV_32F, "The output data type only supports float.");
 
     // Get input point cloud data
     Mat ori_pts;
@@ -194,10 +201,22 @@ void randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sam
     for (int i = 0; i < ori_pts_size; ++i) pts_idxs[i] = i;
     randShuffle(pts_idxs, 1, rng);
 
-    sampled_pts.create(sampled_pts_size, 3, CV_32F);
+    int depth = input_pts.depth(), channels = input_pts.channels();
+    if (channels == 3 && sampled_pts.isVector())
+    {
+        // std::vector<cv::Point3f>
+        sampled_pts.create(1, sampled_pts_size, CV_32FC3);
+    }
+    else
+    {
+        // std::vector<float> or cv::Mat
+        sampled_pts.create(sampled_pts_size, 3, CV_32F);
+    }
+
+    Mat out = sampled_pts.getMat();
 
     float *const ori_pts_ptr = (float *) ori_pts.data;
-    float *const sampled_pts_ptr = (float *) sampled_pts.getMat().data;
+    float *const sampled_pts_ptr = (float *) out.data;
     for (int i = 0; i < sampled_pts_size; ++i)
     {
         float *const ori_pts_ptr_base = ori_pts_ptr + pts_idxs[i] * 3;

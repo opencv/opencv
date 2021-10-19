@@ -34,7 +34,8 @@ CV_EXPORTS int voxelGridSampling(OutputArray sampled_point_flags, InputArray inp
  *
  * Use cv::randShuffle to shuffle the point index, then take the first sampled_pts_size
  *
- * @param sampled_pts  Point cloud after sampling
+ * @param sampled_pts  Point cloud after sampling.
+ *                     Support cv::Mat(sampled_pts_size, 3, CV_32F), std::vector<cv::Point3f>.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN
  * @param sampled_pts_size The desired point cloud size after sampling
  * @param rng  Optional random number generator used for cv::randShuffle;
@@ -48,7 +49,8 @@ CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
  *
  * Use cv::randShuffle to shuffle the point index, then take the first input_pts.size*sampled_scale
  *
- * @param sampled_pts  Point cloud after sampling
+ * @param sampled_pts  Point cloud after sampling.
+ *                     Support cv::Mat(size * sampled_scale, 3, CV_32F), std::vector<cv::Point3f>.
  * @param input_pts  Original point cloud, vector of Point3 or Mat of size Nx3/3xN
  * @param sampled_scale The percentage of the sampled point cloud to the original size,
  *                      that is, sampled size = original size * sampled_scale, range (0, 1)
