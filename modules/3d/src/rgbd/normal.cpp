@@ -106,6 +106,20 @@ inline void signNormal(const Vec<T, 3>& normal_in, Vec<T, 3>& normal_out)
     normal_out[1] = res[1];
     normal_out[2] = res[2];
 }
+template<typename T>
+inline void signNormal(const Vec<T, 3>& normal_in, Vec<T, 4>& normal_out)
+{
+    Vec<T, 3> res;
+    if (normal_in[2] > 0)
+        res = -normal_in / norm_vec(normal_in);
+    else
+        res = normal_in / norm_vec(normal_in);
+
+    normal_out[0] = res[0];
+    normal_out[1] = res[1];
+    normal_out[2] = res[2];
+    normal_out[3] = 0;
+}
 
 /** Modify normals to make sure they point towards the camera
  * @param normals
@@ -125,6 +139,25 @@ inline void signNormal(T a, T b, T c, Vec<T, 3>& normal)
         normal[0] = a * norm;
         normal[1] = b * norm;
         normal[2] = c * norm;
+    }
+}
+template<typename T>
+inline void signNormal(T a, T b, T c, Vec<T, 4>& normal)
+{
+    T norm = 1 / std::sqrt(a * a + b * b + c * c);
+    if (c > 0)
+    {
+        normal[0] = -a * norm;
+        normal[1] = -b * norm;
+        normal[2] = -c * norm;
+        normal[3] = 0;
+    }
+    else
+    {
+        normal[0] = a * norm;
+        normal[1] = b * norm;
+        normal[2] = c * norm;
+        normal[3] = 0;
     }
 }
 
@@ -233,7 +266,7 @@ public:
         calcRadiusAnd3d(points3d_ori, points3d, radius);
 
         // Get the normals
-        normals_out.create(points3d_ori.size(), CV_MAKETYPE(dtype, 3));
+        normals_out.create(points3d_ori.size(), CV_MAKETYPE(dtype, 4));
         if (points3d_in.empty())
             return;
 
@@ -268,6 +301,7 @@ class FALS : public RgbdNormalsImpl<T>
 public:
     typedef Matx<T, 3, 3> Mat33T;
     typedef Vec<T, 9> Vec9T;
+    typedef Vec<T, 4> Vec4T;
     typedef Vec<T, 3> Vec3T;
 
     FALS(int _rows, int _cols, int _windowSize, const Mat& _K) :
@@ -351,13 +385,15 @@ public:
         row_r = r.ptr < T >(0);
         const Vec3T* B_vec = B[0];
         const Mat33T* M_inv = reinterpret_cast<const Mat33T*>(M_inv_.ptr(0));
-        Vec3T* normal = normals.ptr<Vec3T>(0);
+        //Vec3T* normal = normals.ptr<Vec3T>(0);
+        Vec4T* normal = normals.ptr<Vec4T>(0);
         for (; row_r != row_r_end; ++row_r, ++B_vec, ++normal, ++M_inv)
             if (cvIsNaN(*row_r))
             {
                 (*normal)[0] = *row_r;
                 (*normal)[1] = *row_r;
                 (*normal)[2] = *row_r;
+                (*normal)[3] = 0;
             }
             else
             {

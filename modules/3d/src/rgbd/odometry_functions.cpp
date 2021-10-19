@@ -309,6 +309,9 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
         }
         
     }
+
+    //std::cout << normals << std::endl;
+
     std::vector<TMat> npyramids;
     std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
     preparePyramidNormals(normals, dpyramids, npyramids);
@@ -437,14 +440,15 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
 
             if (!pyramidNormal.empty())
             {
-                CV_Assert(pyramidNormal.type(i) == CV_32FC3);
+                CV_Assert(pyramidNormal.type(i) == CV_32FC4);
                 CV_Assert(pyramidNormal.size(i) == pyramidDepth.size(i));
                 TMat levelNormal = getTMat<TMat>(pyramidNormal, i).clone();
 
                 TMat validNormalMask;
                 // NaN check
                 cv::compare(levelNormal, levelNormal, validNormalMask, CMP_EQ);
-                CV_Assert(validNormalMask.type() == CV_8UC3);
+                //CV_Assert(validNormalMask.type() == CV_8UC3);
+                CV_Assert(validNormalMask.type() == CV_8UC4);
 
                 std::vector<TMat> channelMasks;
                 split(validNormalMask, channelMasks);
@@ -1150,7 +1154,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         tp0.y = (float)(p0[0] * Rt_ptr[4] + p0[1] * Rt_ptr[5] + p0[2] * Rt_ptr[6] + Rt_ptr[7]);
         tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
 
-        Vec3f n1 = normals1.at<Vec3f>(v1, u1);
+        Vec4f n1 = normals1.at<Vec4f>(v1, u1);
         //Point3f v = cloud1.at<Point3f>(v1, u1) - tp0;
         Vec4f _v = cloud1.at<Vec4f>(v1, u1);
         Point3f v = Point3f(_v[0], _v[1], _v[2]) - tp0;
@@ -1172,7 +1176,8 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         double w = sigma + std::abs(diffs_ptr[correspIndex]);
         w = w > DBL_EPSILON ? 1. / w : 1.;
 
-        func(A_ptr, tps0_ptr[correspIndex], normals1.at<Vec3f>(v1, u1) * w);
+        Vec4f n4 = normals1.at<Vec4f>(v1, u1);
+        func(A_ptr, tps0_ptr[correspIndex], Vec3f(n4[0], n4[1], n4[2]) * w);
 
         for (int y = 0; y < transformDim; y++)
         {
@@ -1234,7 +1239,7 @@ typedef Matx<float, 6, 7> ABtype;
 struct GetAbInvoker : ParallelLoopBody
 {
     GetAbInvoker(ABtype& _globalAb, Mutex& _mtx,
-        const Points& _oldPts, const _Normals& _oldNrm, const Points& _newPts, const _Normals& _newNrm,
+        const Points& _oldPts, const Normals& _oldNrm, const Points& _newPts, const Normals& _newNrm,
         Affine3f _pose, Intr::Projector _proj, float _sqDistanceThresh, float _minCos) :
         ParallelLoopBody(),
         globalSumAb(_globalAb), mtx(_mtx),
@@ -1252,12 +1257,12 @@ struct GetAbInvoker : ParallelLoopBody
         for (int y = range.start; y < range.end; y++)
         {
             const ptype* newPtsRow = newPts[y];
-            const _ptype* newNrmRow = newNrm[y];
+            const ptype* newNrmRow = newNrm[y];
 
             for (int x = 0; x < newPts.cols; x++)
             {
                 Point3f newP = fromPtype(newPtsRow[x]);
-                Point3f newN = newNrmRow[x];
+                Point3f newN = fromPtype(newNrmRow[x]);
 
                 Point3f oldP(nan3), oldN(nan3);
 
@@ -1290,13 +1295,13 @@ struct GetAbInvoker : ParallelLoopBody
                     fastCheck(p10) && fastCheck(p11)))
                     continue;
 
-                const _ptype* nrow0 = oldNrm[yi + 0];
-                const _ptype* nrow1 = oldNrm[yi + 1];
+                const ptype* nrow0 = oldNrm[yi + 0];
+                const ptype* nrow1 = oldNrm[yi + 1];
 
-                Point3f n00 = nrow0[xi + 0];
-                Point3f n01 = nrow0[xi + 1];
-                Point3f n10 = nrow1[xi + 0];
-                Point3f n11 = nrow1[xi + 1];
+                Point3f n00 = fromPtype(nrow0[xi + 0]);
+                Point3f n01 = fromPtype(nrow0[xi + 1]);
+                Point3f n10 = fromPtype(nrow1[xi + 0]);
+                Point3f n11 = fromPtype(nrow1[xi + 1]);
 
                 if (!(fastCheck(n00) && fastCheck(n01) &&
                     fastCheck(n10) && fastCheck(n11)))
@@ -1362,9 +1367,9 @@ struct GetAbInvoker : ParallelLoopBody
     ABtype& globalSumAb;
     Mutex& mtx;
     const Points& oldPts;
-    const _Normals& oldNrm;
+    const Normals& oldNrm;
     const Points& newPts;
-    const _Normals& newNrm;
+    const Normals& newNrm;
     Affine3f pose;
     const Intr::Projector proj;
     float sqDistanceThresh;
@@ -1380,7 +1385,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
     const Points  op(oldPts), np(newPts);
-    const _Normals on(oldNrm),  nn(newNrm);
+    const Normals on(oldNrm),  nn(newNrm);
 
     //std::cout << op << std::endl;
 
