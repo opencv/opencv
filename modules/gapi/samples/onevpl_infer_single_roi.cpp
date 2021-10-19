@@ -27,7 +27,6 @@
 #include <cldnn/cldnn_config.hpp>
 #include <atlbase.h>
 #include <d3d11.h>
-#include <d3d11_4.h>
 #pragma comment(lib, "dxgi")
 #undef NOMINMAX
 #undef D3D11_NO_HELPERS
