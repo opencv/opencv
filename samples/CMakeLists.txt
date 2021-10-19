@@ -120,6 +120,7 @@ else()
   find_package(Threads)
 endif()
 if((TARGET Threads::Threads OR HAVE_THREADS) AND NOT OPENCV_EXAMPLES_DISABLE_THREADS)
+  set(HAVE_THREADS 1)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 
