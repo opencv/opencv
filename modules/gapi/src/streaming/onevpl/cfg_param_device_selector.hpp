@@ -7,6 +7,8 @@
 #ifndef GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 #define GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 
+#ifdef HAVE_ONEVPL
+
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
@@ -38,4 +40,5 @@ private:
 } // namespace gapi
 } // namespace cv
 
+#endif //HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
