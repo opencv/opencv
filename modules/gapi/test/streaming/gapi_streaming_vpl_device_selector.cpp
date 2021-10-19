@@ -22,7 +22,6 @@
 #define D3D11_NO_HELPERS
 #define NOMINMAX
 #include <d3d11.h>
-#include <d3d11_4.h>
 #include <codecvt>
 #include "opencv2/core/directx.hpp"
 #ifdef HAVE_OPENCL
