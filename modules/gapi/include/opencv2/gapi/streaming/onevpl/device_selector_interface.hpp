@@ -19,14 +19,14 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-enum class AccelType : uint8_t {
+enum class GAPI_EXPORTS AccelType : uint8_t {
     HOST,
     DX11,
 
     LAST_VALUE = std::numeric_limits<uint8_t>::max()
 };
 
-const char* to_cstring(AccelType type);
+GAPI_EXPORTS const char* to_cstring(AccelType type);
 
 struct IDeviceSelector;
 struct GAPI_EXPORTS Device {
