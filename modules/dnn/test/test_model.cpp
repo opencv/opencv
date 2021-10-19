@@ -599,10 +599,7 @@ TEST_P(Test_Model, Segmentation)
 TEST_P(Test_Model, SegmentationMultipleInputSizes)
 {
     std::string inp = _tf("dog416.png");
-    std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
-    std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
-
-    SegmentationModel model(weights_file, config_file);
+    Net model = readNet(_tf("fcn8s-heavy-pascal.caffemodel"", false), _tf("fcn8s-heavy-pascal.prototxt"));
 
     Mat frame = imread(inp);
     model.setInput(blobFromImage(frame));
