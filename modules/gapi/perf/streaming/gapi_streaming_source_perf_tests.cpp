@@ -47,7 +47,13 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
         CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type),
     };
 
-    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
+    cv::gapi::wip::IStreamSource::Ptr source_ptr;
+    try {
+        source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
+    } catch(...)
+        throw SkipTestException("G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    }
+
     cv::gapi::wip::Data out;
     TEST_CYCLE()
     {
