@@ -545,7 +545,7 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNXNTO__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
