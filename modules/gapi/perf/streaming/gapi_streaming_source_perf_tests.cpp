@@ -50,7 +50,7 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
     cv::gapi::wip::IStreamSource::Ptr source_ptr;
     try {
         source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
-    } catch(...)
+    } catch(...) {
         throw SkipTestException("G-API compiled without `WITH_GAPI_ONEVPL=ON`");
     }
 
