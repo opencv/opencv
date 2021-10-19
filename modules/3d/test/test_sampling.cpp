@@ -6,7 +6,6 @@
 
 namespace opencv_test { namespace {
 
-
 // Compare 2 points in different point clouds.
 bool comparePoints(const Mat &m, int rm, const Mat &n, int rn) {
     Mat diff = m.row(rm) != n.row(rn);
@@ -43,10 +42,9 @@ protected:
     }
 
 public:
-    Mat ptCloud = (Mat_<float>(8, 3) <<
-            0, 0, 0,  1, 0, 0,  1, 2, 0,  0, 2, 0,
-            0, 0, 3,  1, 0, 3,  1, 2, 3,  0, 2, 3
-            );
+    Mat ptCloud = Mat({8, 3}, {
+            0.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,  1.0f, 2.0f, 0.0f,  0.0f, 2.0f, 0.0f,
+            0.0f, 0.0f, 3.0f,  1.0f, 0.0f, 3.0f,  1.0f, 2.0f, 3.0f,  0.0f, 2.0f, 3.0f});
     Mat sampledPts;
     vector<char> mask;
 };
@@ -90,7 +88,7 @@ TEST_F(SamplingTest, RandomSampling) {
 }
 
 TEST_F(SamplingTest, FarthestPointSampling) {
-    Mat ans2 = (Mat_<float>(1, 3) << 1, 2, 3),
+    Mat ans2 = Mat({1, 3}, {1.0f, 2.0f, 3.0f}),
         check,
         dPtCloud = ptCloud.clone();
     dPtCloud.push_back(ptCloud.clone());
