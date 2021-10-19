@@ -25,7 +25,6 @@
 #define D3D11_NO_HELPERS
 #define NOMINMAX
 #include <cldnn/cldnn_config.hpp>
-#include <gpu/gpu_context_api_dx.hpp>
 #include <atlbase.h>
 #include <d3d11.h>
 #include <d3d11_4.h>
@@ -62,6 +61,7 @@ std::string get_weights_path(const std::string &model_path) {
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
 
+#ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
 
@@ -90,7 +90,7 @@ AccelParamsType create_device_with_ctx(CComPtr<IDXGIAdapter> adapter) {
 }
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
-
+#endif // HAVE_INF_ENGINE
 } // anonymous namespace
 
 namespace custom {
