@@ -26,7 +26,7 @@ namespace cv {
  * @param height  Grid height
  * @return The number of points actually sampled
  */
-CV_EXPORTS int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
+CV_EXPORTS int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
                                   float length, float width, float height);
 
 /**
@@ -40,8 +40,8 @@ CV_EXPORTS int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputA
  * @param rng  Optional random number generator used for cv::randShuffle;
  *                      if it is nullptr, theRNG () is used instead.
  */
-CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
-                               int sampled_pts_size, cv::RNG *rng = nullptr);
+CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
+                               int sampled_pts_size, RNG *rng = nullptr);
 
 /**
  * @brief Point cloud sampling by randomly select points
@@ -55,8 +55,8 @@ CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input
  * @param rng  Optional random number generator used for cv::randShuffle;
  *                      if it is nullptr, theRNG () is used instead.
  */
-CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts,
-                               float sampled_scale, cv::RNG *rng = nullptr);
+CV_EXPORTS void randomSampling(OutputArray sampled_pts, InputArray input_pts,
+                               float sampled_scale, RNG *rng = nullptr);
 
 /**
  * @brief Farthest Point Sampling(FPS):
@@ -76,8 +76,8 @@ CV_EXPORTS void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input
  *                  if it is nullptr, theRNG () is used instead.
  * @return The number of points actually sampled
  */
-CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
-                                      int sampled_pts_size, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
+CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
+                                      int sampled_pts_size, float dist_lower_limit = 0, RNG *rng = nullptr);
 
 /**
  * @brief Details in farthestPointSampling(cv::InputArray, int, cv::OutputArray, float)
@@ -93,8 +93,8 @@ CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::In
  *                  if it is nullptr, theRNG () is used instead.
  * @return The number of points actually sampled
  */
-CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_pts,
-                                      float sampled_scale, float dist_lower_limit = 0, cv::RNG *rng = nullptr);
+CV_EXPORTS int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
+                                      float sampled_scale, float dist_lower_limit = 0, RNG *rng = nullptr);
 
 //! @} _3d
 } //end namespace cv
