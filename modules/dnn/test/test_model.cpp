@@ -603,23 +603,18 @@ TEST_P(Test_Model, SegmentationMultipleInputSizes)
     std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
 
     SegmentationModel model(weights_file, config_file);
-    
+
     Mat frame = imread(inp);
-    Mat mask;
-    
-    Size size1{128, 128};    
-    model.setInputSize(size1);
-    model.segment(frame, mask);
-    
-    Size size2{256, 256};
-    resize(frame, frame, size2);
-    model.setInputSize(size2);
-    model.segment(frame, mask);
-    
-    Size size3{64, 64};
-    resize(frame, frame, size3);
-    model.setInputSize(size3);
-    model.segment(frame, mask);
+    model.setInput(blobFromImage(frame));
+    model.forward();
+
+    resize(frame, frame, (256, 256));
+    model.setInput(blobFromImage(frame));
+    model.forward();
+
+    resize(frame, frame, (64, 64));
+    model.setInput(blobFromImage(frame));
+    model.forward();
 }
 
 TEST_P(Test_Model, TextRecognition)
