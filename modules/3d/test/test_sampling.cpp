@@ -6,7 +6,6 @@
 
 namespace opencv_test { namespace {
 
-using namespace cv;
 
 // Compare 2 points in different point clouds.
 bool comparePoints(const Mat &m, int rm, const Mat &n, int rn) {
@@ -57,7 +56,7 @@ TEST_F(SamplingTest, VoxelGridFilterSampling) {
     // Set (1.1, 2.1, 3.1) as the side length, and there should be only one point after sampling.
     voxelGridSampling(mask, ptCloud, 1.1f, 2.1f, 3.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 1);
+    EXPECT_EQ(1, sampledPts.rows);
     // The point should be in a box with a side length of (1.1, 2.1, 3.1).
     ASSERT_TRUE(0.0f <= sampledPts.at<float>(0, 0) && sampledPts.at<float>(0, 0) < 1.1f &&
             0.0f <= sampledPts.at<float>(0, 1) && sampledPts.at<float>(0, 1) < 2.1f &&
@@ -66,7 +65,7 @@ TEST_F(SamplingTest, VoxelGridFilterSampling) {
     // Set (0.55, 1.05, 3.1) as the side length, and there should be 4 points after sampling.
     voxelGridSampling(mask, ptCloud, 0.55f, 1.05f, 3.1f);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 4);
+    EXPECT_EQ(4, sampledPts.rows);
     // All points should be in 4 different boxes.
     float x[4] = {0.0f, 0.0f, 0.55f, 0.55f}, y[4] = {0.0f, 1.05f, 0.0f, 1.05f};
     for(int i = 0; i < 4; i++){
@@ -84,7 +83,7 @@ TEST_F(SamplingTest, VoxelGridFilterSampling) {
 TEST_F(SamplingTest, RandomSampling) {
     // Set 4 as the size, and there should have 4 points after sampling.
     randomSampling(sampledPts, ptCloud, 4);
-    EXPECT_EQ(sampledPts.rows, 4);
+    EXPECT_EQ(4, sampledPts.rows);
     for(int i = 0; i < 4; i++){
         ASSERT_TRUE(checkExistPoint(ptCloud, sampledPts.row(i)));
     }
@@ -99,14 +98,14 @@ TEST_F(SamplingTest, FarthestPointSampling) {
     // Set 2 as the size, and there should be 2 diagonal points after sampling.
     farthestPointSampling(mask, ptCloud, 2);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 2);
+    EXPECT_EQ(2, sampledPts.rows);
     check = sampledPts.row(0) + sampledPts.row(1);
     ASSERT_TRUE(comparePoints(check, 0, ans2, 0));
 
     // Set 4 as the size, and there should be 4 specific points after sampling.
     farthestPointSampling(mask, ptCloud, 4);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 4);
+    EXPECT_EQ(4, sampledPts.rows);
     // These 4 points should form a plane perpendicular to the X and Y axes.
     for(int i = 0; i < 4; i++){
         check = sampledPts.row(i).clone();
@@ -118,7 +117,7 @@ TEST_F(SamplingTest, FarthestPointSampling) {
     // After doubling the point cloud, 8 points are sampled and each vertex is displayed only once.
     farthestPointSampling(mask, dPtCloud, 8);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 8);
+    EXPECT_EQ(8, sampledPts.rows);
     bool isAppear[8];
     for(bool &item : isAppear) item = false;
     for(int i = 0; i < 8; i++){
@@ -134,7 +133,7 @@ TEST_F(SamplingTest, FarthestPointSampling) {
     // Test the dist_lower_limit arguments of FPS function.
     farthestPointSampling(mask, ptCloud, 4, 3);
     maskToPointCloud(ptCloud, mask, sampledPts);
-    EXPECT_EQ(sampledPts.rows, 2);
+    EXPECT_EQ(2, sampledPts.rows);
 }
 
 } // namespace

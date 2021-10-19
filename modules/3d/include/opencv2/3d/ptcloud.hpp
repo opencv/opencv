@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 
-#ifndef OPENCV_PTCLOUD_HPP
-#define OPENCV_PTCLOUD_HPP
+#ifndef OPENCV_3D_PTCLOUD_HPP
+#define OPENCV_3D_PTCLOUD_HPP
 
 namespace cv {
 
@@ -98,4 +98,4 @@ CV_EXPORTS int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::In
 
 //! @} _3d
 } //end namespace cv
-#endif //OPENCV_PTCLOUD_HPP
+#endif //OPENCV_3D_PTCLOUD_HPP

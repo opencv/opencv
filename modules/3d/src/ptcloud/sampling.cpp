@@ -21,20 +21,16 @@ static inline void _swap(Tp &n, Tp &m)
 }
 
 /**
+ * Get cv::Mat with type N×3 CV_32FC1 from cv::InputArray
  * Use different interpretations for the same memory data.
- *
- * Do not use the output as input to this function again.
- * In other words, the following operations are prohibited:
- *    std::vector<cv::Point3d> input;
- *    cv::Mat output, output2;
- *    _getMatFromInputArray(input, output);
- *    _getMatFromInputArray(output, output2); // Prohibited!
- *
  */
 static inline void _getMatFromInputArray(cv::InputArray input_pts, cv::Mat &mat) {
+    CV_Check(input_pts.dims(), input_pts.dims() < 3,
+             "Only support data with dimension less than 3.");
+
     // Guaranteed data can construct N×3 point clouds
     int rows = input_pts.rows(), cols = input_pts.cols(), channels = input_pts.channels();
-    int total = rows * cols * channels;
+    size_t total = rows * cols * channels;
     CV_Check(total, total % 3 == 0,
              "total = input_pts.rows() * input_pts.cols() * input_pts.channels() must be an integer multiple of 3");
 
@@ -42,16 +38,23 @@ static inline void _getMatFromInputArray(cv::InputArray input_pts, cv::Mat &mat)
         // Layout of point cloud data in memory space:
         // x1, ..., xn, y1, ..., yn, z1, ..., zn
         // For example, the input is cv::Mat with type 3×N CV_32FC1
-        cv::transpose(input_pts.getMat(), mat);
+        cv::transpose(input_pts, mat);
     } else {
         // Layout of point cloud data in memory space:
         // x1, y1, z1, ..., xn, yn, zn
         // For example, the input is std::vector<Point3d>, or std::vector<int>, or cv::Mat with type N×1 CV_32FC3
-        mat = cv::Mat(total / 3, 3, input_pts.depth(), input_pts.getMat().data);
+        mat = input_pts.getMat().reshape(1, (int) (total / 3));
     }
 
-    if (mat.type() != CV_32F)
-        mat.convertTo(mat, CV_32F); // Use float to store data
+    if (mat.type() != CV_32F) { // Use float to store data
+        cv::Mat tmp;
+        mat.convertTo(tmp, CV_32F);
+        cv::swap(mat, tmp);
+    }
+
+    if (!mat.isContinuous()) {
+        mat = mat.clone();
+    }
 
 }
 
@@ -79,16 +82,16 @@ int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_
     for (int i = 1; i < ori_pts_size; ++i)
     {
         float *const ptr_base = ori_pts_ptr + 3 * i;
-        float x = *(ptr_base), y = *(ptr_base + 1), z = *(ptr_base + 2);
+        float x = ptr_base[0], y = ptr_base[1], z = ptr_base[2];
 
-        if (x_min > x) x_min = x;
-        if (x_max < x) x_max = x;
+        x_min = std::min(x_min, x);
+        x_max = std::max(x_max, x);
 
-        if (y_min > y) y_min = y;
-        if (y_max < y) y_max = y;
+        y_min = std::min(y_min, y);
+        y_max = std::max(y_max, y);
 
-        if (z_min > z) z_min = z;
-        if (z_max < z) z_max = z;
+        z_min = std::min(z_min, z);
+        z_max = std::max(z_max, z);
     }
 
     // Up to 2^64 grids for key type int64_t
@@ -142,9 +145,9 @@ int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_
             for (const int &item: grid_pts)
             {
                 float *const ptr_base = ori_pts_ptr + 3 * item;
-                sum_x += *(ptr_base);
-                sum_y += *(ptr_base + 1);
-                sum_z += *(ptr_base + 2);
+                sum_x += ptr_base[0];
+                sum_y += ptr_base[1];
+                sum_z += ptr_base[2];
             }
 
             float centroid_x = sum_x / grid_pts_cnt, centroid_y = sum_y / grid_pts_cnt, centroid_z =
@@ -155,7 +158,7 @@ int voxelGridSampling(cv::OutputArray sampled_point_flags, cv::InputArray input_
             for (const int &item: grid_pts)
             {
                 float *const ptr_base = ori_pts_ptr + item * 3;
-                float x = *(ptr_base), y = *(ptr_base + 1), z = *(ptr_base + 2);
+                float x = ptr_base[0], y = ptr_base[1], z = ptr_base[2];
 
                 float dist_square = (x - centroid_x) * (x - centroid_x) +
                                     (y - centroid_y) * (y - centroid_y) +
@@ -199,9 +202,9 @@ void randomSampling(cv::OutputArray sampled_pts, cv::InputArray input_pts, const
     {
         float *const ori_pts_ptr_base = ori_pts_ptr + pts_idxs[i] * 3;
         float *const sampled_pts_ptr_base = sampled_pts_ptr + i * 3;
-        *(sampled_pts_ptr_base) = *(ori_pts_ptr_base);
-        *(sampled_pts_ptr_base + 1) = *(ori_pts_ptr_base + 1);
-        *(sampled_pts_ptr_base + 2) = *(ori_pts_ptr_base + 2);
+        sampled_pts_ptr_base[0] = ori_pts_ptr_base[0];
+        sampled_pts_ptr_base[1] = ori_pts_ptr_base[1];
+        sampled_pts_ptr_base[2] = ori_pts_ptr_base[2];
     }
 
 } // randomSampling()
@@ -263,16 +266,16 @@ int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray in
     {
         int last_pt = sampled_cnt - 1;
         float *const last_pt_ptr_base = ori_pts_ptr + 3 * idxs[last_pt];
-        float last_pt_x = *last_pt_ptr_base, last_pt_y = *(last_pt_ptr_base + 1), last_pt_z = *(last_pt_ptr_base + 2);
+        float last_pt_x = last_pt_ptr_base[0], last_pt_y = last_pt_ptr_base[1], last_pt_z = last_pt_ptr_base[2];
 
         // Calculate the distance from point in C to set S
         float max_dist_square = 0;
         for (int i = sampled_cnt; i < ori_pts_size; ++i)
         {
             float *const ori_pts_ptr_base = ori_pts_ptr + 3 * idxs[i];
-            float x_diff = (last_pt_x - *ori_pts_ptr_base);
-            float y_diff = (last_pt_y - *(ori_pts_ptr_base + 1));
-            float z_diff = (last_pt_z - *(ori_pts_ptr_base + 2));
+            float x_diff = (last_pt_x - ori_pts_ptr_base[0]);
+            float y_diff = (last_pt_y - ori_pts_ptr_base[1]);
+            float z_diff = (last_pt_z - ori_pts_ptr_base[2]);
             float next_dist_square = x_diff * x_diff + y_diff * y_diff + z_diff * z_diff;
             if (next_dist_square < dist_square[i])
             {
@@ -286,7 +289,8 @@ int farthestPointSampling(cv::OutputArray sampled_point_flags, cv::InputArray in
         }
 
 
-        if (max_dist_square < dist_lower_limit_square) break;
+        if (max_dist_square < dist_lower_limit_square)
+            break;
 
         _sampled_point_flags[idxs[last_pt]] = 1;
         _swap(idxs[sampled_cnt], idxs[last_pt]);
