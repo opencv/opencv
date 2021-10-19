@@ -33,40 +33,47 @@ class VideoCapSourcePerfTest : public TestPerfParams<source_t> {};
 
 PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
 {
-  using namespace cv::gapi::wip::onevpl;
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+    using namespace cv::gapi::wip::onevpl;
 
-  const auto params = GetParam();
-  source_t src = findDataFile(get<0>(params));
-  codec_t type = get<1>(params);
+    const auto params = GetParam();
+    source_t src = findDataFile(get<0>(params));
+    codec_t type = get<1>(params);
 
-  std::vector<CfgParam> cfg_params {
-      CfgParam::create<std::string>("mfxImplDescription.Impl", "MFX_IMPL_TYPE_HARDWARE"),
-      CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type),
-  };
+    std::vector<CfgParam> cfg_params {
+        CfgParam::create<std::string>("mfxImplDescription.Impl", "MFX_IMPL_TYPE_HARDWARE"),
+        CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type),
+    };
 
-  auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
-  cv::gapi::wip::Data out;
-  TEST_CYCLE()
-  {
-      source_ptr->pull(out);
-  }
+    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
+    cv::gapi::wip::Data out;
+    TEST_CYCLE()
+    {
+        source_ptr->pull(out);
+    }
 
-  SANITY_CHECK_NOTHING();
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
 {
-  using namespace cv::gapi::wip;
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
 
-  source_t src = findDataFile(GetParam());
-  auto source_ptr = make_src<GCaptureSource>(src);
-  Data out;
-  TEST_CYCLE()
-  {
-      source_ptr->pull(out);
-  }
+    using namespace cv::gapi::wip;
 
-  SANITY_CHECK_NOTHING();
+    source_t src = findDataFile(GetParam());
+    auto source_ptr = make_src<GCaptureSource>(src);
+    Data out;
+    TEST_CYCLE()
+    {
+        source_ptr->pull(out);
+    }
+
+    SANITY_CHECK_NOTHING();
 }
 
 INSTANTIATE_TEST_CASE_P(Streaming, OneVPLSourcePerfTest,
