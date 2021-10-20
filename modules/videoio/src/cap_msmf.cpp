@@ -1560,7 +1560,7 @@ bool CvCapture_MSMF::grabAudioFrame()
             }
             if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
                 break;
-            LONGLONG lastSize = bufferAudioData.size();
+            size_t lastSize = bufferAudioData.size();
             bufferAudioData.resize(lastSize+cursize);
             for (unsigned int i = 0; i < cursize; i++)
             {
@@ -1587,8 +1587,8 @@ bool CvCapture_MSMF::grabAudioFrame()
             chunkLengthOfBytes = bufferAudioData.size();
         }
         CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
-        copy(bufferAudioData.begin(), bufferAudioData.begin()+chunkLengthOfBytes, std::back_inserter(audioDataInUse));
-        bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin()+chunkLengthOfBytes);
+        copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
+        bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
         if (audioFrame.empty())
         {
             switch (outputAudioFormat)
