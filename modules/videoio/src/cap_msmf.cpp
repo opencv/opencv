@@ -1316,18 +1316,10 @@ bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params
             outputAudioFormat = value;
         }
     }
-    if (params.has(CAP_PROP_AUDIO_SYNC_LAST_FRAME))
+    if (params.has(CAP_PROP_AUDIO_SYNCHRONIZE))
     {
-        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SYNC_LAST_FRAME));
-        if (value != 0 && value != 1)
-        {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_SYNC_LAST_FRAME parameter value is invalid/unsupported: " << value);
-            return false;
-        }
-        else
-        {
-            syncLastFrame = (value == 1) ? true : false;
-        }
+        int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SYNCHRONIZE));
+        syncLastFrame = (value != 0) ? true : false;
     }
     return true;
 }
