@@ -43,6 +43,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     void bnll(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
 
     template <class T>
+    void ceil(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void floor(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void log(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void rint(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void sqrt(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
+    void not_k(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input);
+
+    template <class T>
     void power(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, T exp, T scale, T shift);
 
     template <class T>
