@@ -135,8 +135,12 @@ bool prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {
     //std::cout << "prepareRGBFrameSrc()" << std::endl;
     typedef Mat TMat;
-    std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
-    std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
+
+    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
+    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
+    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -151,8 +155,12 @@ bool prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
     //std::cout << "prepareRGBFrameDst()" << std::endl;
     typedef Mat TMat;
-    std::vector<TMat> ipyramids = getPyramids(frame, OdometryFramePyramidType::PYR_IMAGE);
-    std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
+
+    std::vector<TMat> ipyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_IMAGE));
+    getPyramids(frame, OdometryFramePyramidType::PYR_IMAGE, ipyramids);
+    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
+    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+
     std::vector<TMat> dxpyramids, dypyramids, tmpyramids;
 
     Mat _minGradientMagnitudes;
@@ -222,7 +230,9 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidImage(depth, dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
-    std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
+    std::vector<TMat> mpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_MASK));
+    getPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
+
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
@@ -242,7 +252,9 @@ bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     TMat mask;
     frame.getMask(mask);
 
-    std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
+    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
+    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
+
     std::vector<TMat> mpyramids;
     std::vector<TMat> npyramids;
     preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
@@ -299,7 +311,8 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     }
 
     std::vector<TMat> npyramids;
-    std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
+    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
+    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
     preparePyramidNormals(normals, dpyramids, npyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_NORM, npyramids);
 
@@ -327,7 +340,8 @@ bool prepareICPFrameTMP(OdometryFrame& frame, OdometrySettings settings)
     frame.getDepth(depth);
 
 
-    std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
+    std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
+    getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
     Intr intrinsics(cameraMatrix);
 
     //computePointsNormals(intrinsics, 5000, depth, cpyramids, npyramids)
@@ -354,17 +368,24 @@ void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArray
     }
 }
 
-std::vector<Mat> getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype)
+void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArrayOfArrays _pyramid)
 {
+    typedef Mat TMat;
+
     size_t nLevels = odf.getPyramidLevels(oftype);
-    std::vector<Mat> pyramids;
+    //std::vector<TMat> pyramids;
+    //_pyramid.getMatVector(pyramids);
     for (size_t l = 0; l < nLevels; l++)
     {
-        Mat img;
+        TMat img;
         odf.getPyramidAt(img, oftype, l);
-        pyramids.push_back(img);
+        TMat& p = _pyramid.getMatRef(l);
+        img.copyTo(p);
+        //TMat& src = pyramids[l];
+        //src = img;
+        //img.copyTo(pyramids[l]);
+        //pyramids.push_back(img);
     }
-    return pyramids;
 }
 
 void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount)
@@ -658,14 +679,13 @@ void preparePyramidNormalsMask(InputArray pyramidNormals, InputArray pyramidMask
             const Mat normals = pyramidNormals.getMat((int)i);
             for (int y = 0; y < normalsMask.rows; y++)
             {
-                const Vec3f* normals_row = normals.ptr<Vec3f>(y);
+                const Vec4f* normals_row = normals.ptr<Vec4f>(y);
                 uchar* normalsMask_row = normalsMask.ptr<uchar>(y);
                 for (int x = 0; x < normalsMask.cols; x++)
                 {
-                    Vec3f n = normals_row[x];
+                    Vec4f n = normals_row[x];
                     if (cvIsNaN(n[0]))
                     {
-                        CV_DbgAssert(cvIsNaN(n[1]) && cvIsNaN(n[2]));
                         normalsMask_row[x] = 0;
                     }
                 }

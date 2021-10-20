@@ -142,9 +142,7 @@ bool prepareICPFrameTMP (OdometryFrame& frame, OdometrySettings settings);
 
 
 void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage);
-
-std::vector<Mat> getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype);
-
+void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArrayOfArrays _pyramid);
 
 void preparePyramidImage(InputArray image, InputOutputArrayOfArrays pyramidImage, size_t levelCount);
 
