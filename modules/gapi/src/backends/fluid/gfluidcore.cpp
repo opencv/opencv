@@ -708,34 +708,8 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
         case ARITHM_DIVIDE:
-        {
-#if 0
-            if (std::is_same<SRC1, uchar>::value && std::is_same<DST, uchar>::value)
-            {
-                div_hal(reinterpret_cast<const uchar*>(in1), reinterpret_cast<const uchar*>(in2), reinterpret_cast<uchar*>(out), length, _scale);
-            }
-            else if (std::is_same<SRC1, short>::value && std::is_same<DST, short>::value)
-            {
-                div_hal(reinterpret_cast<const short*>(in1), reinterpret_cast<const short*>(in2), reinterpret_cast<short*>(out), length, _scale);
-            }
-            else if (std::is_same<SRC1, ushort>::value && std::is_same<DST, ushort>::value)
-            {
-                div_hal(reinterpret_cast<const ushort*>(in1), reinterpret_cast<const ushort*>(in2), reinterpret_cast<ushort*>(out), length, _scale);
-            }
-            else if (std::is_same<SRC1, float>::value && std::is_same<DST, float>::value)
-            {
-                div_hal(reinterpret_cast<const float*>(in1), reinterpret_cast<const float*>(in2), reinterpret_cast<float*>(out), length, _scale);
-            }
-            else
-            {
-                for (; x < length; ++x)
-                    out[x] = div<DST>(in1[x], in2[x], _scale);
-            }
-#else
             div_hal(in1, in2, out, length, _scale);
-#endif
             break;
-        }
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
