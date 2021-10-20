@@ -36,7 +36,7 @@ except (AttributeError, cv.error) as e:
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
 try:
-    FEATURES_FIND_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
+    FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
 except AttributeError:
     print("SIFT not available")
 try:
