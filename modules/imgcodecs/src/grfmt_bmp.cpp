@@ -58,7 +58,7 @@ BmpDecoder::BmpDecoder()
     m_origin = ORIGIN_TL;
     m_bpp = 0;
     m_rle_code = BMP_RGB;
-    memset(m_RGBA_index, -1, sizeof(m_RGBA_index));
+    initMask();
 }
 
 
@@ -98,7 +98,7 @@ bool  BmpDecoder::readHeader()
         int  size = m_strm.getDWord();
         CV_Assert(size > 0); // overflow, 2Gb limit
 
-        memset(m_RGBA_index, -1, sizeof(m_RGBA_index));
+        initMask();
         if( size >= 36 )
         {
             m_width  = m_strm.getDWord();
@@ -117,14 +117,16 @@ bool  BmpDecoder::readHeader()
                 for( int index_RGBA = 0; index_RGBA < 4; ++index_RGBA )
                 {
                     uint mask = m_strm.getDWord();
-                    for( int i = -1; i < 4; ++i )
+                    m_rgba_mask[index_RGBA] = mask;
+                    if(mask != 0)
                     {
-                        if ( mask == 0 )
+                        int bit_count = 0;
+                        while(!(mask & 1))
                         {
-                            m_RGBA_index[index_RGBA] = i;
-                            break;
+                            mask >>= 1;
+                            ++bit_count;
                         }
-                        mask >>= 8;
+                        m_rgba_bit_offset[index_RGBA] = bit_count;
                     }
                 }
                 m_strm.skip( size - 56 );
@@ -511,8 +513,8 @@ decode_rle8_bad: ;
                     icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
                 else if ( img.channels() == 4 )
                 {
-                    int range = m_RGBA_index[0] | m_RGBA_index[1] | m_RGBA_index[2] | m_RGBA_index[3];
-                    if ( range == 3 )
+                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0) && (m_rgba_bit_offset[3] >= 0);
+                    if ( has_bit_mask )
                         maskBGRA(data, src, m_width);
                     else
                         memcpy(data, src, m_width * 4);
@@ -532,14 +534,21 @@ decode_rle8_bad: ;
     return result;
 }
 
+void  BmpDecoder::initMask()
+{
+    memset(m_rgba_mask, 0, sizeof(m_rgba_mask));
+    memset(m_rgba_bit_offset, -1, sizeof(m_rgba_bit_offset));
+}
+
 void  BmpDecoder::maskBGRA(uchar* des, uchar* src, int num)
 {
     for( int i = 0; i < num; i++, des += 4, src += 4 )
     {
-        des[0] = src[m_RGBA_index[2]];
-        des[1] = src[m_RGBA_index[1]];
-        des[2] = src[m_RGBA_index[0]];
-        des[3] = src[m_RGBA_index[3]];
+        uint data = *((uint*)src);
+        des[0] = (uchar)((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]);
+        des[1] = (uchar)((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]);
+        des[2] = (uchar)((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]);
+        des[3] = (uchar)((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]);
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////

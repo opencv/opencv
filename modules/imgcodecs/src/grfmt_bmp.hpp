@@ -73,6 +73,7 @@ public:
 
 protected:
 
+    void  initMask();
     void  maskBGRA(uchar* des, uchar* src, int num);
 
     enum Origin
@@ -87,7 +88,8 @@ protected:
     int             m_bpp;
     int             m_offset;
     BmpCompression  m_rle_code;
-    int             m_RGBA_index[4];
+    uint            m_rgba_mask[4];
+    int             m_rgba_bit_offset[4];
 };
 
 
