@@ -110,8 +110,6 @@ if(MSVC)
   endif()
 endif()
 
-add_definitions(-DDISABLE_OPENCV_24_COMPATIBILITY=1)  # Avoid C-like legacy API
-
 if(OPENCV_EXAMPLES_DISABLE_THREADS)
   # nothing
 elseif(MSVC OR APPLE)
