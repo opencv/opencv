@@ -37,7 +37,6 @@ void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& t
     // temporary solution
     Mat cloud3;
     cloud3.create(cloud.size(), CV_32FC3);
-
     for (int y = 0; y < cloud3.rows; y++)
     {
         for (int x = 0; x < cloud3.cols; x++)
@@ -59,7 +58,6 @@ void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& t
         tvec.copyTo(dst);
     }
     Mat warpedCloud, warpedImagePoints;
-    //perspectiveTransform(cloud, warpedCloud, Rt);
     perspectiveTransform(cloud3, warpedCloud, Rt);
     projectPoints(warpedCloud.reshape(3, 1), Mat(3,1,CV_32FC1, Scalar(0)), Mat(3,1,CV_32FC1, Scalar(0)), K, Mat(1,5,CV_32FC1, Scalar(0)), warpedImagePoints);
     warpedImagePoints = warpedImagePoints.reshape(2, cloud.rows);
@@ -264,8 +262,6 @@ void OdometryTest::run()
 
     odometry.prepareFrames(odf, odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
-    //std::cout << isComputed << std::endl;
-    //std::cout << calcRt << std::endl;
 
     if(!isComputed)
     {
@@ -296,10 +292,6 @@ void OdometryTest::run()
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
 
-        //Affine3f _Rt = Affine3f(Vec3f(rvec), Vec3f(tvec));
-        //cv::warpAffine(image, warpedImage, _Rt.matrix, image.size());
-        //cv::warpAffine(depth, warpedDepth, _Rt.matrix, image.size());
-
         OdometryFrame odfSrc = odometry.createOdometryFrame();
         OdometryFrame odfDst = odometry.createOdometryFrame();
         odfSrc.setImage(image);
@@ -310,8 +302,6 @@ void OdometryTest::run()
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
 
-        //std::cout << isComputed << std::endl;
-        //std::cout << calcRt << std::endl;
         if (!isComputed)
             continue;
         Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
@@ -344,7 +334,6 @@ void OdometryTest::run()
         if (5. * rdiffnorm < possibleError && 5 * tdiffnorm < possibleError)
             better_5times_count++;
 
-        //std::cout << "Iter " << iter << std::endl;
         CV_LOG_INFO(NULL, "Iter " << iter);
         CV_LOG_INFO(NULL, "rdiff: " << Vec3f(diff.rvec()) << "; rdiffnorm: " << rdiffnorm);
         CV_LOG_INFO(NULL, "tdiff: " << Vec3f(diff.translation()) << "; tdiffnorm: " << tdiffnorm);
@@ -379,19 +368,19 @@ TEST(RGBD_Odometry_Rgbd, algorithmic)
 
 TEST(RGBD_Odometry_ICP, algorithmic)
 {
-    OdometryTest test(OdometryType::ICP, OdometryAlgoType::COMMON, 0.99, 0.99);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
 TEST(RGBD_Odometry_RgbdICP, algorithmic)
 {
-    OdometryTest test(OdometryType::RGBD, OdometryAlgoType::COMMON, 0.99, 0.99);
+    OdometryTest test(OdometryType::RGB_DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.run();
 }
 
 TEST(RGBD_Odometry_FastICP, algorithmic)
 {
-    OdometryTest test(OdometryType::ICP, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.run();
 }
 
@@ -404,19 +393,19 @@ TEST(RGBD_Odometry_Rgbd, UMats)
 
 TEST(RGBD_Odometry_ICP, UMats)
 {
-    OdometryTest test(OdometryType::ICP, OdometryAlgoType::COMMON, 0.99, 0.99);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.checkUMats();
 }
 
 TEST(RGBD_Odometry_RgbdICP, UMats)
 {
-    OdometryTest test(OdometryType::RGBD, OdometryAlgoType::COMMON, 0.99, 0.99);
+    OdometryTest test(OdometryType::RGB_DEPTH, OdometryAlgoType::COMMON, 0.99, 0.99);
     test.checkUMats();
 }
 
 TEST(RGBD_Odometry_FastICP, UMats)
 {
-    OdometryTest test(OdometryType::ICP, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
+    OdometryTest test(OdometryType::DEPTH, OdometryAlgoType::FAST, 0.99, 0.99, FLT_EPSILON);
     test.checkUMats();
 }
 

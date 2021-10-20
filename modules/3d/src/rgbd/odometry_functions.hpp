@@ -204,6 +204,7 @@ bool solveSystem(const Mat& AtA, const Mat& AtB, double detThreshold, Mat& x);
 
 bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double maxRotation);
 
+
 Depth _pyrDownBilateral(const Depth depth, float sigma);
 void _makeFrameFromDepth(InputArray _depth,
     OutputArray pyrPoints, OutputArray pyrNormals,

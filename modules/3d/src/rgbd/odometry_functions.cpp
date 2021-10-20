@@ -48,9 +48,6 @@ bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
     isCorrect3 = isCorrect3 && prepareICPFrameDst(srcFrame, settings);
     bool isCorrect4 = prepareICPFrameDst(dstFrame, settings);
 
-    //prepareICPFrameTMP(srcFrame, settings);
-    //prepareICPFrameTMP(dstFrame, settings);
-
     return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
 }
 
@@ -225,13 +222,6 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidImage(depth, dpyramids, iterCounts.size());
     setPyramids(frame, OdometryFramePyramidType::PYR_DEPTH, dpyramids);
 
-    //std::vector<TMat> mpyramids;
-    //std::vector<TMat> npyramids;
-    //preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
-    //    npyramids, mpyramids);
-    //setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-
-
     std::vector<TMat> mpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_MASK);
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
@@ -239,7 +229,6 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
-    //std::cout << cpyramids[0] << std::endl;
     
     return true;
 }
@@ -255,11 +244,10 @@ bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 
     std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
     std::vector<TMat> mpyramids;
-    std::vector<TMat> npyramids;// = getPyramids(frame, OdometryFramePyramidType::PYR_NORM);
+    std::vector<TMat> npyramids;
     preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
         npyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-    //setPyramids(frame, OdometryFramePyramidType::PYR_NORMMASK, npyramids);
 
     return true;
 }
@@ -309,8 +297,6 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
         }
         
     }
-
-    //std::cout << normals << std::endl;
 
     std::vector<TMat> npyramids;
     std::vector<TMat> dpyramids = getPyramids(frame, OdometryFramePyramidType::PYR_DEPTH);
@@ -447,7 +433,6 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
                 TMat validNormalMask;
                 // NaN check
                 cv::compare(levelNormal, levelNormal, validNormalMask, CMP_EQ);
-                //CV_Assert(validNormalMask.type() == CV_8UC3);
                 CV_Assert(validNormalMask.type() == CV_8UC4);
 
                 std::vector<TMat> channelMasks;
@@ -486,7 +471,6 @@ void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraM
         for (size_t i = 0; i < depthSize; i++)
         {
             TMat cloud;
-            //depthTo3d(getTMat<TMat>(pyramidDepth, (int)i), pyramidCameraMatrix[i], cloud, getTMat<TMat>(pyramidMask, (int)i));
             depthTo3d(getTMat<TMat>(pyramidDepth, (int)i), pyramidCameraMatrix[i], cloud, Mat());
             getTMatRef<TMat>(pyramidCloud, (int)i) = cloud;
 
@@ -745,7 +729,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         srcFrame.getPyramidAt(srcLevelDepth, OdometryFramePyramidType::PYR_DEPTH, level);
         dstFrame.getPyramidAt(dstLevelDepth, OdometryFramePyramidType::PYR_DEPTH, level);
 
-        if (method != OdometryType::ICP)
+        if (method != OdometryType::DEPTH)
         {
             srcFrame.getPyramidAt(srcLevelImage, OdometryFramePyramidType::PYR_IMAGE, level);
             dstFrame.getPyramidAt(dstLevelImage, OdometryFramePyramidType::PYR_IMAGE, level);
@@ -767,7 +751,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             const Mat pyramidMask;
             srcFrame.getPyramidAt(pyramidMask, OdometryFramePyramidType::PYR_MASK, level);
 
-            if(method != OdometryType::ICP)
+            if(method != OdometryType::DEPTH)// RGB
             {
                 const Mat pyramidTexturedMask;
                 dstFrame.getPyramidAt(pyramidTexturedMask, OdometryFramePyramidType::PYR_TEXMASK, level);
@@ -777,7 +761,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                                 corresps_rgbd, diffs_rgbd, sigma_rgbd, OdometryType::RGB);
             }
 
-            if(method != OdometryType::RGB)
+            if(method != OdometryType::RGB)//ICP
             {
                 if (algtype == OdometryAlgoType::COMMON)
                 {
@@ -786,12 +770,10 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
                         srcLevelDepth, srcLevelDepth, pyramidMask,
                         dstLevelDepth, dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
-                        corresps_icp, diffs_icp, sigma_icp, OdometryType::ICP);
+                        corresps_icp, diffs_icp, sigma_icp, OdometryType::DEPTH);
                 }
             }
 
-            //std::cout << corresps_rgbd.rows << " " << corresps_icp.rows << " " << minCorrespsCount << " " << (algtype != OdometryAlgoType::FAST) << std::endl;
-            //std::cout << (corresps_rgbd.rows < minCorrespsCount) << (corresps_icp.rows < minCorrespsCount) << (algtype != OdometryAlgoType::FAST) << std::endl;
             if(corresps_rgbd.rows < minCorrespsCount && corresps_icp.rows < minCorrespsCount && algtype != OdometryAlgoType::FAST)
                 break;
 
@@ -829,7 +811,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     cv::Matx66f A;
                     cv::Vec6f b;
-                    //std::cout << dstPyrCloud << std::endl;
                     calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
                     AtA_icp = Mat(A);
                     AtB_icp = Mat(b);
@@ -840,11 +821,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
             }
 
             bool solutionExist = solveSystem(AtA, AtB, determinantThreshold, ksi);
-            //std::cout << "se: " << solutionExist << std::endl;
-            //std::cout << AtA << std::endl;
-            //std::cout << AtB << std::endl;
 
-            //std::cout << ksi << std::endl;
             if (!solutionExist)
             {
                 break;
@@ -864,7 +841,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
             computeProjectiveMatrix(ksi, currRt);
             resultRt = currRt * resultRt;
-            //std::cout << resultRt << std::endl;
             Vec6f x(ksi);
             Affine3f tinc(Vec3f(x.val), Vec3f(x.val + 3));
             transform = tinc * transform;
@@ -875,7 +851,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
     }
 
-    //std::cout << resultRt << std::endl;
     _Rt.create(resultRt.size(), resultRt.type());
     Mat Rt = _Rt.getMat();
     resultRt.copyTo(Rt);
@@ -948,12 +923,10 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
         {
             float d1 = depth1_row[u1];
             if (mask1_row[u1])
-            //if (!cvIsNaN(d1))
             {
                 CV_DbgAssert(!cvIsNaN(d1));
                 float transformed_d1 = static_cast<float>(d1 * (KRK_inv6_u1[u1] + KRK_inv7_v1_plus_KRK_inv8[v1]) +
                     Kt_ptr[2]);
-                //std::cout <<"lol" << std::endl;
 
                 if (transformed_d1 > 0)
                 {
@@ -962,18 +935,15 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
                         Kt_ptr[0]));
                     int v0 = cvRound(transformed_d1_inv * (d1 * (KRK_inv3_u1[u1] + KRK_inv4_v1_plus_KRK_inv5[v1]) +
                         Kt_ptr[1]));
-                    //std::cout << 1 << std::endl;
                     if (r.contains(Point(u0, v0)))
                     {
                         float d0 = depth0.at<float>(v0, u0);
                         if (validMask0.at<uchar>(v0, u0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
-                        //if (!cvIsNaN(d0) && std::abs(transformed_d1 - d0) <= maxDepthDiff)
                         {
                             CV_DbgAssert(!cvIsNaN(d0));
                             Vec2s& c = corresps.at<Vec2s>(v0, u0);
                             float& d = diffs.at<float>(v0, u0);
                             float diff = 0;
-                            //std::cout << " " << c[0] << std::endl;
                             if (c[0] != -1)
                             {
                                 diff = 0;
@@ -995,7 +965,6 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
                                                               static_cast<int>(image1.at<uchar>(v1, u1)));
                                 correspCount++;
                             }
-                            //std::cout << Vec2s((short)u0, (short)v0) <<" "<< Vec2s((short)u1, (short)v1) << std::endl;
                             c = Vec2s((short)u1, (short)v1);
                             d = diff;
                             sigma += diff * diff;
@@ -1334,7 +1303,6 @@ struct GetAbInvoker : ParallelLoopBody
 
                 //try to optimize
                 Point3f VxN = newP.cross(oldN);
-                //std::cout << newP << oldN << VxN << std::endl;
                 float ab[7] = { VxN.x, VxN.y, VxN.z, oldN.x, oldN.y, oldN.z, oldN.dot(-diff) };
                 // build point-wise upper-triangle matrix [ab^T * ab] w/o last row
                 // which is [A^T*A | A^T*b]
@@ -1387,7 +1355,6 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     const Points  op(oldPts), np(newPts);
     const Normals on(oldNrm),  nn(newNrm);
 
-    //std::cout << op << std::endl;
 
     Intr intrinsics(cameraMatrix);
     GetAbInvoker invoker(sumAB, mutex, op, on, np, nn, pose,
@@ -1395,8 +1362,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         maxDepthDiff * maxDepthDiff, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
-    //parallel_for_(range, invoker, nstripes);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
+    //invoker(range);
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)

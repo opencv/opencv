@@ -33,7 +33,7 @@ bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Output
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
-		OdometryType::ICP, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
+		OdometryType::DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
     return isCorrect;
 }
 

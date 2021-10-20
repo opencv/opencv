@@ -113,12 +113,6 @@ int main(int argc, char** argv)
         cameraMatrix.at<float>(1,2) = cy;
     }
 
-    //if(odometry)
-    //{
-    //    cout << "Can not create Odometry algorithm. Check the passed odometry name." << endl;
-    //    return -1;
-    //}
-
     OdometrySettings ods;
     ods.setCameraMatrix(cameraMatrix);
     Odometry odometry;
@@ -126,11 +120,16 @@ int main(int argc, char** argv)
     if (odname == "Rgbd")
         odometry = Odometry(OdometryType::RGB, ods, OdometryAlgoType::COMMON);
     else if (odname == "ICP")
-        odometry = Odometry(OdometryType::ICP, ods, OdometryAlgoType::COMMON);
+        odometry = Odometry(OdometryType::DEPTH, ods, OdometryAlgoType::COMMON);
     else if (odname == "RgbdICP")
-        odometry = Odometry(OdometryType::RGBD, ods, OdometryAlgoType::COMMON);
+        odometry = Odometry(OdometryType::RGB_DEPTH, ods, OdometryAlgoType::COMMON);
     else if (odname == "FastICP")
-        odometry = Odometry(OdometryType::ICP, ods, OdometryAlgoType::FAST);
+        odometry = Odometry(OdometryType::DEPTH, ods, OdometryAlgoType::FAST);
+    else
+    {
+        std::cout << "Can not create Odometry algorithm. Check the passed odometry name." << std::endl;
+        return -1;
+    }
 
     OdometryFrame frame_prev = odometry.createOdometryFrame(),
                   frame_curr = odometry.createOdometryFrame();

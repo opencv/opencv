@@ -35,7 +35,7 @@ bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, Outpu
 		this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
 		iterCounts, this->settings.getMaxTranslation(),
 		this->settings.getMaxRotation(), settings.getSobelScale(),
-		OdometryType::RGBD, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
+		OdometryType::RGB_DEPTH, OdometryTransformType::RIGID_TRANSFORMATION, this->algtype);
 	return isCorrect;
 }
 

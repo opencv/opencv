@@ -11,15 +11,15 @@ namespace cv
 {
 enum class OdometryType
 {
-    ICP = 0,
-    RGB = 1,
-    RGBD = 2
+    DEPTH     = 0,
+    RGB       = 1,
+    RGB_DEPTH = 2
 };
 
 enum class OdometryAlgoType
 {
     COMMON = 0,
-    FAST = 1
+    FAST   = 1
 };
 
 class OdometryImpl

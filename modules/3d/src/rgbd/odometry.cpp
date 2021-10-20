@@ -19,13 +19,13 @@ Odometry::Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoTy
 {
 	switch (otype)
 	{
-	case OdometryType::ICP:
+	case OdometryType::DEPTH:
 		this->odometry = makePtr<OdometryICP>(settings, algtype);
 		break;
 	case OdometryType::RGB:
 		this->odometry = makePtr<OdometryRGB>(settings, algtype);
 		break;
-	case OdometryType::RGBD:
+	case OdometryType::RGB_DEPTH:
 		this->odometry = makePtr<OdometryRGBD>(settings, algtype);
 		break;
 	default:
