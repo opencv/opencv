@@ -36,7 +36,7 @@ protected:
     {
         getValidAudioData();
 
-        ASSERT_EQ(expectedNumAudioCh, audioData.size());
+        ASSERT_EQ(expectedNumAudioCh, (int)audioData.size());
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
         {
             ASSERT_EQ(numberOfSamples, audioData[nCh].size()) << "nCh=" << nCh;

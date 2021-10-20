@@ -780,7 +780,7 @@ protected:
     LONGLONG audioTime;
     LONGLONG chunkLengthOfBytes;
     LONGLONG givenAudioTime;
-    LONGLONG extensionСhunkLengthOfBytes; // the number of additional bytes required to align the audio chunk
+    LONGLONG numberOfAdditionalAudioBytes; // the number of additional bytes required to align the audio chunk
     double bufferedAudioDuration;
     LONGLONG audioSamplePos;
     DWORD numberOfAudioStreams;
@@ -832,7 +832,7 @@ CvCapture_MSMF::CvCapture_MSMF():
     audioTime(0),
     chunkLengthOfBytes(0),
     givenAudioTime(0),
-    extensionСhunkLengthOfBytes(0),
+    numberOfAdditionalAudioBytes(0),
     bufferedAudioDuration(0),
     audioSamplePos(0),
     numberOfAudioStreams(0),
@@ -1585,10 +1585,10 @@ bool CvCapture_MSMF::grabAudioFrame()
         if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
         {
             if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
-                chunkLengthOfBytes -= extensionСhunkLengthOfBytes;
-            extensionСhunkLengthOfBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) 
+                chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
+            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
                                         - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
-            chunkLengthOfBytes += extensionСhunkLengthOfBytes;
+            chunkLengthOfBytes += numberOfAdditionalAudioBytes;
         }
         if (lastFrame && !syncLastFrame|| aEOS && !vEOS)
         {
