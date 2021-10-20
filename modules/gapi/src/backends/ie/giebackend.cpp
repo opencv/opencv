@@ -218,8 +218,6 @@ struct IEUnit {
 
     cv::gapi::ie::detail::ParamDesc params;
     IE::CNNNetwork net;
-    IE::InputsDataMap inputs;
-    IE::OutputsDataMap outputs;
 
     IE::ExecutableNetwork this_network;
     cv::gimpl::ie::wrap::Plugin this_plugin;
@@ -238,8 +236,6 @@ struct IEUnit {
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             net = cv::gimpl::ie::wrap::readNetwork(params);
             net.setBatchSize(params.batch_size);
-            inputs  = net.getInputsInfo();
-            outputs = net.getOutputsInfo();
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
             this_plugin.SetConfig(params.config);
@@ -268,14 +264,14 @@ struct IEUnit {
         }
         if (params.num_in == 1u && params.input_names.empty()) {
             if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                params.input_names = { inputs.begin()->first };
+                params.input_names = { net.getInputsInfo().begin()->first };
             } else {
                 params.input_names = { this_network.GetInputsInfo().begin()->first };
             }
         }
         if (params.num_out == 1u && params.output_names.empty()) {
             if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-                params.output_names = { outputs.begin()->first };
+                params.output_names = { net.getOutputsInfo().begin()->first };
             } else {
                 params.output_names = { this_network.GetOutputsInfo().begin()->first };
             }
@@ -291,8 +287,6 @@ struct IEUnit {
     cv::gimpl::ie::IECompiled compile() const {
         IEUnit* non_const_this = const_cast<IEUnit*>(this);
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
-            // FIXME: In case importNetwork for fill inputs/outputs need to obtain ExecutableNetwork, but
-            // for loadNetwork they can be obtained by using readNetwork
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
             non_const_this->this_plugin.SetConfig(params.config);
             non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
@@ -922,10 +916,11 @@ struct Infer: public cv::detail::KernelTag {
         // NB: Configuring input precision and network reshape must be done
         // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+            auto inputs = uu.net.getInputsInfo();
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
                     const auto &input_name = std::get<0>(it);
-                    auto       &&ii = uu.inputs.at(input_name);
+                    auto       &&ii = inputs.at(input_name);
                     const auto & mm = std::get<1>(it);
 
                     configureInputInfo(ii, mm);
@@ -950,11 +945,13 @@ struct Infer: public cv::detail::KernelTag {
         for (const auto &out_name : uu.params.output_names) {
             // NOTE: our output_names vector follows the API order
             // of this operation's outputs
-            const IE::DataPtr& ie_out = uu.outputs.at(out_name);
-            const IE::SizeVector dims = ie_out->getTensorDesc().getDims();
+            const auto& desc =
+                uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
+                    ? uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
+                    : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
-            cv::GMatDesc outm(toCV(ie_out->getPrecision()),
-                              toCV(ie_out->getTensorDesc().getDims()));
+            cv::GMatDesc outm(toCV(desc.getPrecision()),
+                              toCV(desc.getDims()));
             result.emplace_back(outm);
         }
         return result;
@@ -1013,7 +1010,7 @@ struct InferROI: public cv::detail::KernelTag {
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
             const auto &input_name = uu.params.input_names.at(0);
-            auto &&ii = uu.inputs.at(input_name);
+            auto &&ii = uu.net.getInputsInfo().at(input_name);
             auto &&mm = in_metas.at(1u);
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
@@ -1036,11 +1033,13 @@ struct InferROI: public cv::detail::KernelTag {
         for (const auto &out_name : uu.params.output_names) {
             // NOTE: our output_names vector follows the API order
             // of this operation's outputs
-            const IE::DataPtr& ie_out = uu.outputs.at(out_name);
-            const IE::SizeVector dims = ie_out->getTensorDesc().getDims();
+            const auto& desc =
+                uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
+                    ? uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
+                    : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
-            cv::GMatDesc outm(toCV(ie_out->getPrecision()),
-                              toCV(ie_out->getTensorDesc().getDims()));
+            cv::GMatDesc outm(toCV(desc.getPrecision()),
+                              toCV(desc.getDims()));
             result.emplace_back(outm);
         }
         return result;
@@ -1099,8 +1098,9 @@ struct InferList: public cv::detail::KernelTag {
         // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             std::size_t idx = 1u;
+            auto inputs = uu.net.getInputsInfo();
             for (auto &&input_name : uu.params.input_names) {
-                auto       &&ii = uu.inputs.at(input_name);
+                auto       &&ii = inputs.at(input_name);
                 const auto & mm = in_metas[idx++];
                 configureInputInfo(ii, mm);
                 if (uu.params.layer_names_to_reshape.find(input_name) !=
@@ -1144,8 +1144,12 @@ struct InferList: public cv::detail::KernelTag {
 
         std::vector<std::vector<int>> cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+            const auto& out_name = ctx->uu.params.output_names[i];
+            const auto& desc =
+                ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
+                    ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
+                    : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
+            cached_dims[i] = toCV(desc.getDims());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
@@ -1232,7 +1236,6 @@ struct InferList2: public cv::detail::KernelTag {
 
         std::size_t idx = 1u;
         for (auto &&input_name : uu.params.input_names) {
-                  auto &ii = uu.inputs.at(input_name);
             const auto &mm = in_metas[idx];
             GAPI_Assert(util::holds_alternative<cv::GArrayDesc>(mm)
                         && "Non-array inputs are not supported");
@@ -1242,6 +1245,7 @@ struct InferList2: public cv::detail::KernelTag {
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
                     // This is a cv::Rect -- configure the IE preprocessing
+                    auto ii = uu.net.getInputsInfo().at(input_name);
                     configureInputInfo(ii, mm_0);
                     if (uu.params.layer_names_to_reshape.find(input_name) !=
                         uu.params.layer_names_to_reshape.end()) {
@@ -1290,8 +1294,12 @@ struct InferList2: public cv::detail::KernelTag {
         // FIXME: This could be done ONCE at graph compile stage!
         std::vector< std::vector<int> > cached_dims(ctx->uu.params.num_out);
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            const IE::DataPtr& ie_out = ctx->uu.outputs.at(ctx->uu.params.output_names[i]);
-            cached_dims[i] = toCV(ie_out->getTensorDesc().getDims());
+            const auto& out_name = ctx->uu.params.output_names[i];
+            const auto& desc =
+                ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
+                    ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
+                    : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
+            cached_dims[i] = toCV(desc.getDims());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
