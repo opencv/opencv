@@ -114,10 +114,10 @@ bool  BmpDecoder::readHeader()
             {
                 m_strm.skip(4); //important colors
                 //0 is Red channel bit mask, 1 is Green channel bit mask, 2 is Blue channel bit mask, 3 is Alpha channel bit mask
-                for( int index_RGBA = 0; index_RGBA < 4; ++index_RGBA )
+                for( int index_rgba = 0; index_rgba < 4; ++index_rgba )
                 {
                     uint mask = m_strm.getDWord();
-                    m_rgba_mask[index_RGBA] = mask;
+                    m_rgba_mask[index_rgba] = mask;
                     if(mask != 0)
                     {
                         int bit_count = 0;
@@ -126,7 +126,7 @@ bool  BmpDecoder::readHeader()
                             mask >>= 1;
                             ++bit_count;
                         }
-                        m_rgba_bit_offset[index_RGBA] = bit_count;
+                        m_rgba_bit_offset[index_rgba] = bit_count;
                     }
                 }
                 m_strm.skip( size - 56 );
