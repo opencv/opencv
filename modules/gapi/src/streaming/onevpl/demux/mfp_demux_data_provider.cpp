@@ -19,6 +19,7 @@
 #include <fstream>
 
 #include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
+#include "logger.hpp"
 
 #pragma comment(lib,"Mf.lib")
 #pragma comment(lib,"Mfuuid.lib")
@@ -35,62 +36,64 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-inline HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource)
-    {
-        CStringW sURL(url.c_str());
+HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
+    CStringW sURL(url.c_str());
 
-        HRESULT hr = S_OK;
+    HRESULT hr = S_OK;
 
-        IMFSourceResolver   *pSourceResolver = nullptr;
-        IUnknown            *pSourceUnk = nullptr;
+    IMFSourceResolver *pSourceResolver = nullptr;
+    IUnknown *pSourceUnk = nullptr;
 
-        // Create the source resolver.
-        if (SUCCEEDED(hr))
-        {
-            hr = MFCreateSourceResolver(&pSourceResolver);
-        } else {
-            throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                                   "cannot create MFCreateSourceResolver");
-        }
-
-        // Use the source resolver to create the media source.
-        if (SUCCEEDED(hr))
-        {
-            MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
-
-            hr = pSourceResolver->CreateObjectFromURL(
-                sURL,                       // URL of the source.
-                MF_RESOLUTION_MEDIASOURCE,  // Create a source object.
-                nullptr,                       // Optional property store.
-                &ObjectType,                // Receives the created object type.
-                &pSourceUnk                 // Receives a pointer to the media source.
-                );
-        } else {
-            throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                                   "cannot create CreateObjectFromURL");
-        }
-
-        // Get the IMFMediaSource interface from the media source.
-        if (SUCCEEDED(hr))
-        {
-            hr = pSourceUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)ppSource);
-        } else {
-            throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                                   "cannot query IMFMediaSource");
-        }
-
-        // Clean up
-        if (pSourceResolver) {
-            pSourceResolver->Release();
-            pSourceResolver = nullptr;
-        }
-        if (pSourceUnk) {
-            pSourceUnk->Release();
-            pSourceUnk = nullptr;
-        }
-
-        return hr;
+    hr = MFCreateSourceResolver(&pSourceResolver);
+    if (FAILED(hr)) {
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                               "cannot create MFCreateSourceResolver from URI: " +
+                                               url);
     }
+
+    MF_OBJECT_TYPE ObjectType = MF_OBJECT_INVALID;
+    DWORD resolver_flags = MF_RESOLUTION_MEDIASOURCE | MF_RESOLUTION_READ |
+                           MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
+    do {
+        hr = pSourceResolver->CreateObjectFromURL(sURL,
+                                                  resolver_flags,
+                                                  nullptr, &ObjectType,
+                                                  &pSourceUnk);
+        if (FAILED(hr)) {
+            resolver_flags ^= MF_RESOLUTION_KEEP_BYTE_STREAM_ALIVE_ON_FAIL;
+            resolver_flags ^= MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE ;
+            GAPI_LOG_DEBUG(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE using file extension, "
+                                    "try special mode");
+            continue;
+        }
+    } while (FAILED(hr) &&
+             (resolver_flags & MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE));
+
+    if (FAILED(hr)) {
+        GAPI_LOG_WARNING(nullptr, "Cannot create MF_RESOLUTION_MEDIASOURCE from URI: " <<
+                                  url);
+        pSourceResolver->Release();
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                                   "cannot create CreateObjectFromURL");
+    }
+
+    hr = pSourceUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)ppSource);
+    if (FAILED(hr)) {
+        pSourceResolver->Release();
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                               "cannot query IMFMediaSource");
+    }
+    if (pSourceResolver) {
+        pSourceResolver->Release();
+        pSourceResolver = nullptr;
+    }
+    if (pSourceUnk) {
+        pSourceUnk->Release();
+        pSourceUnk = nullptr;
+    }
+
+    return hr;
+}
 
 MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
     source_handle(fopen(file_path.c_str(), "rb"), &fclose) {
@@ -111,23 +114,18 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create IMFMediaSource");
     }
 
-///////////////////
-    IMFAttributes   *pAttributes = nullptr;
-    IMFMediaType    *pType = nullptr;
-    reader = nullptr;
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - start creating source attributes");
+    IMFAttributes *pAttributes = nullptr;
+    IMFMediaType *pType = nullptr;
 
-    //
-    // Create the source reader.
-    //
+    hr = MFCreateAttributes(&pAttributes, 2);
 
-    // Create an attribute store to hold initialization settings.
-
-    if (SUCCEEDED(hr)) {
-        hr = MFCreateAttributes(&pAttributes, 2);
+    if (FAILED(hr)) {
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot MFCreateAttributes");
     }
-    if (SUCCEEDED(hr)) {
-        hr = pAttributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
-    }
+
+    hr = pAttributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
 
     // Set the callback pointer.
     /*if (SUCCEEDED(hr))
@@ -138,16 +136,15 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
             );
     }*/
 
-    if (SUCCEEDED(hr)) {
-        hr = MFCreateSourceReaderFromMediaSource(
-            source_ptr,
-            pAttributes,
-            &reader
-            );
-    } else {
+    reader = nullptr;
+    hr = MFCreateSourceReaderFromMediaSource(source_ptr, pAttributes,
+                                             &reader);
+    if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create MFCreateSourceReaderFromMediaSource");
     }
 
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - created IMFSourceReader: " << reader);
     // Try to find a suitable output type.
     if (SUCCEEDED(hr)) {
         for (DWORD i = 0; ; i++) {
