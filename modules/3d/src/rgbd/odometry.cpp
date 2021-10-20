@@ -50,6 +50,11 @@ OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType)
     return OdometryFrame(matType);
 }
 
+bool Odometry::prepareFrame(OdometryFrame frame)
+{
+	return this->odometry->prepareFrame(frame);
+}
+
 bool Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	return this->odometry->prepareFrames(srcFrame, dstFrame);

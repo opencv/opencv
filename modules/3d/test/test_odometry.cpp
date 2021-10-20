@@ -232,7 +232,7 @@ void OdometryTest::checkUMats()
     uimage.release();
     udepth.release();
 
-    odometry.prepareFrames(odf, odf);
+    odometry.prepareFrame(odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
     ASSERT_TRUE(isComputed);
     double diff = cv::norm(calcRt, Mat::eye(4, 4, CV_64FC1));
@@ -260,7 +260,7 @@ void OdometryTest::run()
     // 1. Try to find Rt between the same frame (try masks also).
     Mat mask(image.size(), CV_8UC1, Scalar(255));
 
-    odometry.prepareFrames(odf, odf);
+    odometry.prepareFrame(odf);
     bool isComputed = odometry.compute(odf, odf, calcRt);
 
     if(!isComputed)

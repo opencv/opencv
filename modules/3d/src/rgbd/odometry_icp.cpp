@@ -14,6 +14,11 @@ OdometryICP::~OdometryICP()
 {
 }
 
+bool OdometryICP::prepareFrame(OdometryFrame frame)
+{
+	return prepareICPFrame(frame, frame, this->settings);
+}
+
 bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
 	return prepareICPFrame(srcFrame, dstFrame, this->settings);

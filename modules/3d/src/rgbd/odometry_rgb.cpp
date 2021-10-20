@@ -14,11 +14,14 @@ OdometryRGB::~OdometryRGB()
 {
 }
 
+bool OdometryRGB::prepareFrame(OdometryFrame frame)
+{
+	return prepareRGBFrame(frame, frame, this->settings);
+}
+
 bool OdometryRGB::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	//std::cout << "OdometryRGB::prepareFrames()" << std::endl;
-	prepareRGBFrame(srcFrame, dstFrame, this->settings);
-	return true;
+	return prepareRGBFrame(srcFrame, dstFrame, this->settings);
 }
 
 bool OdometryRGB::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const

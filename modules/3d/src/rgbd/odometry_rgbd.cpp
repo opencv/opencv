@@ -14,11 +14,14 @@ OdometryRGBD::~OdometryRGBD()
 {
 }
 
+bool OdometryRGBD::prepareFrame(OdometryFrame frame)
+{
+	return prepareRGBDFrame(frame, frame, this->settings);
+}
+
 bool OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	//std::cout << "OdometryRGBD::prepareFrames()" << std::endl;
-	prepareRGBDFrame(srcFrame, dstFrame, this->settings);
-	return true;
+	return prepareRGBDFrame(srcFrame, dstFrame, this->settings);
 }
 
 bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const

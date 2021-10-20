@@ -15,6 +15,7 @@ public:
 	OdometryRGB(OdometrySettings settings, OdometryAlgoType algtype);
 	~OdometryRGB();
 
+    virtual bool prepareFrame(OdometryFrame frame);
 	virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
 	virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
