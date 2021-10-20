@@ -12,6 +12,7 @@
 #include <opencv2/gapi/streaming/source.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 
 namespace cv {
 namespace gapi {
@@ -38,8 +39,31 @@ public:
 
     GSource(const std::string& filePath,
             const CfgParams& cfg_params = CfgParams{});
+
+    GSource(const std::string& filePath,
+            const CfgParams& cfg_params,
+            const std::string& device_id,
+            void* accel_device_ptr,
+            void* accel_ctx_ptr);
+
+    GSource(const std::string& filePath,
+            const CfgParams& cfg_params,
+            std::shared_ptr<IDeviceSelector> selector);
+
+
     GSource(std::shared_ptr<IDataProvider> source,
             const CfgParams& cfg_params = CfgParams{});
+
+    GSource(std::shared_ptr<IDataProvider> source,
+            const CfgParams& cfg_params,
+            const std::string& device_id,
+            void* accel_device_ptr,
+            void* accel_ctx_ptr);
+
+    GSource(std::shared_ptr<IDataProvider> source,
+            const CfgParams& cfg_params,
+            std::shared_ptr<IDeviceSelector> selector);
+
     ~GSource() override;
 
     bool pull(cv::gapi::wip::Data& data) override;
