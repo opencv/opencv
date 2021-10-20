@@ -23,7 +23,7 @@ protected:
         for (int nCh = 0; nCh < expectedNumAudioCh; nCh++)
         {
             value = 0;
-            for(int i = 0; i < numberOfSamples; i++)
+            for(unsigned int i = 0; i < numberOfSamples; i++)
             {
                 if (i != 0 && i % 44100 == 0)
                     value = 0;
@@ -40,7 +40,7 @@ protected:
         for (unsigned int nCh = 0; nCh < audioData.size(); nCh++)
         {
             ASSERT_EQ(numberOfSamples, audioData[nCh].size()) << "nCh=" << nCh;
-            for (int i = 0; i < numberOfSamples; i++)
+            for (unsigned int i = 0; i < numberOfSamples; i++)
             {
                 EXPECT_NEAR(validAudioData[nCh][i], audioData[nCh][i], epsilon) << "sample index=" << i << " nCh=" << nCh;
             }
@@ -48,7 +48,7 @@ protected:
     }
 protected:
     int expectedNumAudioCh;
-    int numberOfSamples;
+    unsigned int numberOfSamples;
     double epsilon;
     VideoCaptureAPIs backend;
     std::string root;
