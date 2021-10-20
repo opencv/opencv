@@ -624,6 +624,46 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 }
 #endif
 
+template<typename SRC, typename DST>
+static void div_hal(const SRC*, const SRC*, DST*, int, float)
+{
+    // Do nothing because this case doesn't exist.
+    return;
+}
+
+static void div_hal(const uchar in1[], const uchar in2[], uchar out[],
+                    int length, float scale)
+{
+    hal::div8u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
+               out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+    return;
+}
+
+static void div_hal(const short in1[], const short in2[], short out[],
+                    int length, float scale)
+{
+    hal::div16s(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
+                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+    return;
+}
+
+static void div_hal(const ushort in1[], const ushort in2[], ushort out[],
+                    int length, float scale)
+{
+    hal::div16u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
+                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+    return;
+}
+
+static void div_hal(const float in1[], const float in2[], float out[],
+                    int length, float scale)
+{
+    hal::div32f(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
+                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+    return;
+}
+
+
 template<typename DST, typename SRC1, typename SRC2>
 static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
                        double scale=1)
@@ -668,9 +708,34 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
         case ARITHM_DIVIDE:
-            for (; x < length; ++x)
-                out[x] = div<DST>(in1[x], in2[x], _scale);
+        {
+#if 0
+            if (std::is_same<SRC1, uchar>::value && std::is_same<DST, uchar>::value)
+            {
+                div_hal(reinterpret_cast<const uchar*>(in1), reinterpret_cast<const uchar*>(in2), reinterpret_cast<uchar*>(out), length, _scale);
+            }
+            else if (std::is_same<SRC1, short>::value && std::is_same<DST, short>::value)
+            {
+                div_hal(reinterpret_cast<const short*>(in1), reinterpret_cast<const short*>(in2), reinterpret_cast<short*>(out), length, _scale);
+            }
+            else if (std::is_same<SRC1, ushort>::value && std::is_same<DST, ushort>::value)
+            {
+                div_hal(reinterpret_cast<const ushort*>(in1), reinterpret_cast<const ushort*>(in2), reinterpret_cast<ushort*>(out), length, _scale);
+            }
+            else if (std::is_same<SRC1, float>::value && std::is_same<DST, float>::value)
+            {
+                div_hal(reinterpret_cast<const float*>(in1), reinterpret_cast<const float*>(in2), reinterpret_cast<float*>(out), length, _scale);
+            }
+            else
+            {
+                for (; x < length; ++x)
+                    out[x] = div<DST>(in1[x], in2[x], _scale);
+            }
+#else
+            div_hal(in1, in2, out, length, _scale);
+#endif
             break;
+        }
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
 }
@@ -743,6 +808,7 @@ GAPI_FLUID_KERNEL(GFluidDiv, cv::gapi::core::GDiv, false)
         BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
