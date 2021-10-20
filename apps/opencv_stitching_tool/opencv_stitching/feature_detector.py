@@ -14,7 +14,7 @@ class FeatureDetector:
     DETECTOR_CHOICES['orb'] = cv.ORB.create
 
     try:
-        DETECTOR_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
+        DETECTOR_CHOICES['sift'] = cv.SIFT_create
     except AttributeError:
         print("SIFT not available")
 
