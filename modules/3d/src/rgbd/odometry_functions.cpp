@@ -10,7 +10,7 @@
 namespace cv
 {
 
-#define USE_INTRINSICS 0
+#define USE_INTRINSICS 1
 
 static const int normalWinSize = 5;
 static const RgbdNormals::RgbdNormalsMethod normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
@@ -1190,11 +1190,40 @@ bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double m
     return translation <= maxTranslation && rotation <= maxRotation;
 }
 
-static inline bool fastCheck(const Point3f& p)
+#if USE_INTRINSICS
+static inline bool fastCheck(const v_float32x4& p0, const v_float32x4& p1)
 {
-    return !cvIsNaN(p.x) &&!cvIsNaN(p.y) &&!cvIsNaN(p.z);
+    float check = (p0.get0() + p1.get0());
+    return !cvIsNaN(check);
 }
 
+static inline void getCrossPerm(const v_float32x4& a, v_float32x4& yzx, v_float32x4& zxy)
+{
+    v_uint32x4 aa = v_reinterpret_as_u32(a);
+    v_uint32x4 yz00 = v_extract<1>(aa, v_setzero_u32());
+    v_uint32x4 x0y0, tmp;
+    v_zip(aa, v_setzero_u32(), x0y0, tmp);
+    v_uint32x4 yzx0 = v_combine_low(yz00, x0y0);
+    v_uint32x4 y000 = v_extract<2>(x0y0, v_setzero_u32());
+    v_uint32x4 zx00 = v_extract<1>(yzx0, v_setzero_u32());
+    zxy = v_reinterpret_as_f32(v_combine_low(zx00, y000));
+    yzx = v_reinterpret_as_f32(yzx0);
+}
+
+static inline v_float32x4 crossProduct(const v_float32x4& a, const v_float32x4& b)
+{
+    v_float32x4 ayzx, azxy, byzx, bzxy;
+    getCrossPerm(a, ayzx, azxy);
+    getCrossPerm(b, byzx, bzxy);
+    return ayzx * bzxy - azxy * byzx;
+}
+#else
+static inline bool fastCheck(const Point3f& p)
+{
+    return !cvIsNaN(p.x);
+}
+
+#endif
 
 typedef Matx<float, 6, 7> ABtype;
 
@@ -1211,7 +1240,180 @@ struct GetAbInvoker : ParallelLoopBody
 
     virtual void operator ()(const Range& range) const override
     {
+#if USE_INTRINSICS
+        CV_Assert(ptype::channels == 4);
 
+        const size_t utBufferSize = 9;
+        float CV_DECL_ALIGNED(16) upperTriangle[utBufferSize * 4];
+        for (size_t i = 0; i < utBufferSize * 4; i++)
+            upperTriangle[i] = 0;
+        // how values are kept in upperTriangle
+        const int NA = 0;
+        const size_t utPos[] =
+        {
+           0,  1,  2,  4,  5,  6,  3,
+          NA,  9, 10, 12, 13, 14, 11,
+          NA, NA, 18, 20, 21, 22, 19,
+          NA, NA, NA, 24, 28, 30, 32,
+          NA, NA, NA, NA, 25, 29, 33,
+          NA, NA, NA, NA, NA, 26, 34
+        };
+
+        const float(&pm)[16] = pose.matrix.val;
+        v_float32x4 poseRot0(pm[0], pm[4], pm[8], 0);
+        v_float32x4 poseRot1(pm[1], pm[5], pm[9], 0);
+        v_float32x4 poseRot2(pm[2], pm[6], pm[10], 0);
+        v_float32x4 poseTrans(pm[3], pm[7], pm[11], 0);
+
+        v_float32x4 vfxy(proj.fx, proj.fy, 0, 0), vcxy(proj.cx, proj.cy, 0, 0);
+        v_float32x4 vframe((float)(oldPts.cols - 1), (float)(oldPts.rows - 1), 1.f, 1.f);
+
+        float sqThresh = sqDistanceThresh;
+        float cosThresh = minCos;
+
+        for (int y = range.start; y < range.end; y++)
+        {
+            const CV_DECL_ALIGNED(16) float* newPtsRow = (const float*)newPts[y];
+            const CV_DECL_ALIGNED(16) float* newNrmRow = (const float*)newNrm[y];
+
+            for (int x = 0; x < newPts.cols; x++)
+            {
+                v_float32x4 newP = v_load_aligned(newPtsRow + x * 4);
+                v_float32x4 newN = v_load_aligned(newNrmRow + x * 4);
+
+                if (!fastCheck(newP, newN))
+                    continue;
+
+                //transform to old coord system
+                newP = v_matmuladd(newP, poseRot0, poseRot1, poseRot2, poseTrans);
+                newN = v_matmuladd(newN, poseRot0, poseRot1, poseRot2, v_setzero_f32());
+
+                //find correspondence by projecting the point
+                v_float32x4 oldCoords;
+                float pz = (v_reinterpret_as_f32(v_rotate_right<2>(v_reinterpret_as_u32(newP))).get0());
+                // x, y, 0, 0
+                oldCoords = v_muladd(newP / v_setall_f32(pz), vfxy, vcxy);
+
+                if (!v_check_all((oldCoords >= v_setzero_f32()) & (oldCoords < vframe)))
+                    continue;
+
+                // bilinearly interpolate oldPts and oldNrm under oldCoords point
+                v_float32x4 oldP;
+                v_float32x4 oldN;
+                {
+                    v_int32x4 ixy = v_floor(oldCoords);
+                    v_float32x4 txy = oldCoords - v_cvt_f32(ixy);
+                    int xi = ixy.get0();
+                    int yi = v_rotate_right<1>(ixy).get0();
+                    v_float32x4 tx = v_setall_f32(txy.get0());
+                    txy = v_reinterpret_as_f32(v_rotate_right<1>(v_reinterpret_as_u32(txy)));
+                    v_float32x4 ty = v_setall_f32(txy.get0());
+
+                    const float* prow0 = (const float*)oldPts[yi + 0];
+                    const float* prow1 = (const float*)oldPts[yi + 1];
+
+                    v_float32x4 p00 = v_load(prow0 + (xi + 0) * 4);
+                    v_float32x4 p01 = v_load(prow0 + (xi + 1) * 4);
+                    v_float32x4 p10 = v_load(prow1 + (xi + 0) * 4);
+                    v_float32x4 p11 = v_load(prow1 + (xi + 1) * 4);
+
+                    // do not fix missing data
+                    // NaN check is done later
+
+                    const float* nrow0 = (const float*)oldNrm[yi + 0];
+                    const float* nrow1 = (const float*)oldNrm[yi + 1];
+
+                    v_float32x4 n00 = v_load(nrow0 + (xi + 0) * 4);
+                    v_float32x4 n01 = v_load(nrow0 + (xi + 1) * 4);
+                    v_float32x4 n10 = v_load(nrow1 + (xi + 0) * 4);
+                    v_float32x4 n11 = v_load(nrow1 + (xi + 1) * 4);
+
+                    // NaN check is done later
+
+                    v_float32x4 p0 = p00 + tx * (p01 - p00);
+                    v_float32x4 p1 = p10 + tx * (p11 - p10);
+                    oldP = p0 + ty * (p1 - p0);
+
+                    v_float32x4 n0 = n00 + tx * (n01 - n00);
+                    v_float32x4 n1 = n10 + tx * (n11 - n10);
+                    oldN = n0 + ty * (n1 - n0);
+                }
+
+                bool oldPNcheck = fastCheck(oldP, oldN);
+
+                //filter by distance
+                v_float32x4 diff = newP - oldP;
+                bool distCheck = !(v_reduce_sum(diff * diff) > sqThresh);
+
+                //filter by angle
+                bool angleCheck = !(abs(v_reduce_sum(newN * oldN)) < cosThresh);
+
+                if (!(oldPNcheck && distCheck && angleCheck))
+                    continue;
+
+                // build point-wise vector ab = [ A | b ]
+                v_float32x4 VxNv = crossProduct(newP, oldN);
+                Point3f VxN;
+                VxN.x = VxNv.get0();
+                VxN.y = v_reinterpret_as_f32(v_extract<1>(v_reinterpret_as_u32(VxNv), v_setzero_u32())).get0();
+                VxN.z = v_reinterpret_as_f32(v_extract<2>(v_reinterpret_as_u32(VxNv), v_setzero_u32())).get0();
+
+                float dotp = -v_reduce_sum(oldN * diff);
+
+                // build point-wise upper-triangle matrix [ab^T * ab] w/o last row
+                // which is [A^T*A | A^T*b]
+                // and gather sum
+
+                v_float32x4 vd = VxNv | v_float32x4(0, 0, 0, dotp);
+                v_float32x4 n = oldN;
+                v_float32x4 nyzx;
+                {
+                    v_uint32x4 aa = v_reinterpret_as_u32(n);
+                    v_uint32x4 yz00 = v_extract<1>(aa, v_setzero_u32());
+                    v_uint32x4 x0y0, tmp;
+                    v_zip(aa, v_setzero_u32(), x0y0, tmp);
+                    nyzx = v_reinterpret_as_f32(v_combine_low(yz00, x0y0));
+                }
+
+                v_float32x4 vutg[utBufferSize];
+                for (size_t i = 0; i < utBufferSize; i++)
+                    vutg[i] = v_load_aligned(upperTriangle + i * 4);
+
+                int p = 0;
+                v_float32x4 v;
+                // vx * vd, vx * n
+                v = v_setall_f32(VxN.x);
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, vd, vutg[p])); p++;
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, n, vutg[p])); p++;
+                // vy * vd, vy * n
+                v = v_setall_f32(VxN.y);
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, vd, vutg[p])); p++;
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, n, vutg[p])); p++;
+                // vz * vd, vz * n
+                v = v_setall_f32(VxN.z);
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, vd, vutg[p])); p++;
+                v_store_aligned(upperTriangle + p * 4, v_muladd(v, n, vutg[p])); p++;
+                // nx^2, ny^2, nz^2
+                v_store_aligned(upperTriangle + p * 4, v_muladd(n, n, vutg[p])); p++;
+                // nx*ny, ny*nz, nx*nz
+                v_store_aligned(upperTriangle + p * 4, v_muladd(n, nyzx, vutg[p])); p++;
+                // nx*d, ny*d, nz*d
+                v = v_setall_f32(dotp);
+                v_store_aligned(upperTriangle + p * 4, v_muladd(n, v, vutg[p])); p++;
+            }
+        }
+
+        ABtype sumAB = ABtype::zeros();
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = i; j < 7; j++)
+            {
+                size_t p = utPos[i * 7 + j];
+                sumAB(i, j) = upperTriangle[p];
+            }
+        }
+
+#else
         float upperTriangle[UTSIZE];
         for (int i = 0; i < UTSIZE; i++)
             upperTriangle[i] = 0;
@@ -1320,7 +1522,7 @@ struct GetAbInvoker : ParallelLoopBody
                 sumAB(i, j) = upperTriangle[pos++];
             }
         }
-
+#endif
         AutoLock al(mtx);
         globalSumAb += sumAB;
     }
@@ -1355,8 +1557,8 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         maxDepthDiff * maxDepthDiff, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
-    parallel_for_(range, invoker, nstripes);
-    //invoker(range);
+    //parallel_for_(range, invoker, nstripes);
+    invoker(range);
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)

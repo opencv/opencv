@@ -282,11 +282,13 @@ void OdometryTest::run()
     int iterCount = 100;
     int better_1time_count = 0;
     int better_5times_count = 0;
-    for(int iter = 0; iter < iterCount; iter++)
+    for (int iter = 0; iter < iterCount; iter++)
     {
         calcRt.zeros(calcRt.size(), calcRt.type());
-        Mat rvec, tvec;
-        generateRandomTransformation(rvec, tvec);
+        //Mat rvec, tvec;
+        //generateRandomTransformation(rvec, tvec);
+        Mat rvec({ -0.03171219635731576, 0.02730514922383876, -0.02836160787504433 });
+        Mat tvec({ 0.009236226856976532, -0.01528302045278561, 0.005445293169215653});
 
         Mat warpedImage, warpedDepth;
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
@@ -301,7 +303,10 @@ void OdometryTest::run()
 
         odometry.prepareFrames(odfSrc, odfDst);
         isComputed = odometry.compute(odfSrc, odfDst, calcRt);
-
+        std::cout << rvec << std::endl;
+        std::cout << tvec << std::endl;
+        std::cout << isComputed << std::endl;
+        std::cout << calcRt << std::endl;
         if (!isComputed)
             continue;
         Mat calcR = calcRt(Rect(0,0,3,3)), calcRvec;
