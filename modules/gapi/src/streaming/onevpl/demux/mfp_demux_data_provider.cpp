@@ -266,6 +266,7 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
     IMFSample *pSample = NULL;
 
     HRESULT     hr = S_OK;
+    do {
     hr = reader->ReadSample(
             (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
             0,
@@ -292,34 +293,37 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
         throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - TODO");
     }
 
-    if (pSample == NULL)
+    /*if (pSample == NULL)
     {
         throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - sample is NULL");
+    }*/
     }
-
+    while(!pSample && !empty());
     // We got a sample. Hold onto it.
-    pSample->AddRef();
+    if( pSample) {
+        pSample->AddRef();
 
-    hr = pSample->ConvertToContiguousBuffer(&pBuffer);
+        hr = pSample->ConvertToContiguousBuffer(&pBuffer);
 
-    if (FAILED(hr))
-    {
-        throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - ConvertToContiguousBuffer failed");
+        if (FAILED(hr))
+        {
+            throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - ConvertToContiguousBuffer failed");
+        }
+
+        hr = pBuffer->Lock(&pBitmapData, NULL, &cbBitmapData);
+        if (FAILED(hr))
+        {
+            throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - canno Lock buffer");
+        }
+
+        if (pBitmapData)
+        {
+            memcpy(out_data, pBitmapData, std::min<size_t>(cbBitmapData, out_data_bytes_size));
+            pBuffer->Unlock();
+        }
+        pBuffer->Release();
+        pSample->Release();
     }
-
-    hr = pBuffer->Lock(&pBitmapData, NULL, &cbBitmapData);
-    if (FAILED(hr))
-    {
-        throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - canno Lock buffer");
-    }
-
-    if (pBitmapData)
-    {
-        memcpy(out_data, pBitmapData, std::min<size_t>(cbBitmapData, out_data_bytes_size));
-        pBuffer->Unlock();
-    }
-    pBuffer->Release();
-    pSample->Release();
     return cbBitmapData;
 }
 

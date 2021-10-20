@@ -8,6 +8,7 @@
 
 #include "streaming/onevpl/source_priv.hpp"
 #include "streaming/onevpl/file_data_provider.hpp"
+#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 
 namespace cv {
@@ -36,7 +37,8 @@ GSource::GSource(const std::string& filePath,
 GSource::GSource(const std::string& filePath,
                  const CfgParams& cfg_params,
                  std::shared_ptr<IDeviceSelector> selector) :
-    GSource(std::make_shared<FileDataProvider>(filePath), cfg_params, selector) {
+    GSource(std::make_shared<MFPDemuxDataProvider>(filePath), cfg_params, selector) {
+    //GSource(std::make_shared<FileDataProvider>(filePath), cfg_params, selector) {
     if (filePath.empty()) {
         util::throw_error(std::logic_error("Cannot create 'GSource' on empty source file name"));
     }

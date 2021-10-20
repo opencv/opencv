@@ -444,7 +444,7 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     engine.get_frame(frame);
 }
 
-TEST(OneVPL_Source_MFP, enumerate)
+TEST(OneVPL_Source_MFP, decode_header)
 {
     using namespace cv::gapi::wip::onevpl;
     MFPDemuxDataProvider provider("C:\\Users\\sivanov\\github\\opencv_extra\\testdata\\highgui\\video\\sample_322x242_15frames.yuv420p.libx264.mp4");
