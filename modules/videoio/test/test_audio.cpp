@@ -184,7 +184,7 @@ public:
             }
 
             ASSERT_TRUE(cap.retrieve(videoFrame));
-            if (numberOfSamples > 0)
+            if (epsilon >= 0)
             {
                 generateFrame(frame, numberOfFrames, img);
                 ASSERT_EQ(img.size, videoFrame.size);
@@ -225,7 +225,9 @@ public:
                         cap.get(CAP_PROP_POS_MSEC) * 1e-3,
                         (1.0 / fps) * 0.3)
                     << "CAP_PROP_AUDIO_POS=" << cap.get(CAP_PROP_AUDIO_POS) << " CAP_PROP_POS_MSEC=" << cap.get(CAP_PROP_POS_MSEC);
-
+            }
+            if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)
+            {
                 // validate audio frame size
                 EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
             }
@@ -233,7 +235,9 @@ public:
         ASSERT_FALSE(cap.grab());
         ASSERT_FALSE(audioData.empty());
 
-        if (numberOfSamples > 0)
+        std::cout << "Total audio samples=" << audioData[0].size() << std::endl;
+
+        if (epsilon >= 0)
             checkAudio();
     }
 protected:
@@ -250,7 +254,7 @@ const paramCombination mediaParams[] =
     paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
 #if 0
     // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
-    , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, 0.15, CV_8UC3, 400, 960, 1116, 0, 30, 30., cv::CAP_MSMF)
+    , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
 #endif
 };
 
