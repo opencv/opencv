@@ -180,7 +180,7 @@ bool  BmpDecoder::readHeader()
         throw;
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
-    m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
+    m_type = iscolor ? ((m_bpp == 32 && m_rle_code != BMP_RGB) ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
     m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
     m_height = std::abs(m_height);
 
