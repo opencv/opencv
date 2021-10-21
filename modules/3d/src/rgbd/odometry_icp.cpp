@@ -34,7 +34,6 @@ bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 
 bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
 {
-	//std::cout << "OdometryICP::compute()" << std::endl;
 	Matx33f cameraMatrix;
 	settings.getCameraMatrix(cameraMatrix);
 	std::vector<int> iterCounts;

@@ -31,7 +31,6 @@ bool OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 
 bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
 {
-	//std::cout << "OdometryRGBD::compute()" << std::endl;
 	Matx33f cameraMatrix;
 	settings.getCameraMatrix(cameraMatrix);
 	std::vector<int> iterCounts;

@@ -4,7 +4,6 @@
 #include "opencl_kernels_3d.hpp"
 
 #include "opencv2/imgproc.hpp"
-//#include <opencv2/core/hal/intrin_cpp.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 #include <opencv2/core/dualquaternion.hpp>
 
@@ -54,7 +53,6 @@ bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
 
 bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
-    //std::cout << "prepareRGBFrameBase()" << std::endl;
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
  
@@ -134,7 +132,6 @@ bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
 bool prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {
-    //std::cout << "prepareRGBFrameSrc()" << std::endl;
     typedef Mat TMat;
 
     std::vector<TMat> dpyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_DEPTH));
@@ -154,7 +151,6 @@ bool prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 
 bool prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
-    //std::cout << "prepareRGBFrameDst()" << std::endl;
     typedef Mat TMat;
 
     std::vector<TMat> ipyramids(frame.getPyramidLevels(OdometryFramePyramidType::PYR_IMAGE));
@@ -184,8 +180,6 @@ bool prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 
 bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
-    //std::cout << "prepareICPFrameBase()" << std::endl;
-
     typedef Mat TMat;
 
     TMat depth;
@@ -245,9 +239,7 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 }
 
 bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
-{
-    //std::cout << "prepareICPFrameSrc()" << std::endl;
-    
+{    
     typedef Mat TMat;
 
     TMat mask;
@@ -267,8 +259,6 @@ bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 
 bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
-    //std::cout << "prepareICPFrameDst()" << std::endl;
-
     typedef Mat TMat;
 
     Ptr<RgbdNormals> normalsComputer;
@@ -335,7 +325,6 @@ void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArray
     std::vector<Mat> pyramids;
     pyramidImage.getMatVector(pyramids);
     odf.setPyramidLevel(nLevels, oftype);
-    //odf.setPyramidLevels(nLevels);
     for (size_t l = 0; l < nLevels; l++)
     {
         odf.setPyramidAt(pyramids[l], oftype, l);
@@ -347,18 +336,12 @@ void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArra
     typedef Mat TMat;
 
     size_t nLevels = odf.getPyramidLevels(oftype);
-    //std::vector<TMat> pyramids;
-    //_pyramid.getMatVector(pyramids);
     for (size_t l = 0; l < nLevels; l++)
     {
         TMat img;
         odf.getPyramidAt(img, oftype, l);
         TMat& p = _pyramid.getMatRef(l);
         img.copyTo(p);
-        //TMat& src = pyramids[l];
-        //src = img;
-        //img.copyTo(pyramids[l]);
-        //pyramids.push_back(img);
     }
 }
 
@@ -755,7 +738,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                                 corresps_rgbd, diffs_rgbd, sigma_rgbd, OdometryType::RGB);
             }
 
-            if(method != OdometryType::RGB)//ICP
+            if(method != OdometryType::RGB)// ICP
             {
                 if (algtype == OdometryAlgoType::COMMON)
                 {
@@ -864,7 +847,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
     return isOk;
 }
 
-
+// In RGB case compute sigma and diffs too
 void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
     const Mat& image0, const Mat& depth0, const Mat& validMask0,
     const Mat& image1, const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
@@ -1046,11 +1029,6 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
 
         double w_sobelScale = w * sobelScaleIn;
 
-        //const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
-        //Point3f tp0;
-        //tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        //tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        //tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
         const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
         Point3f tp0;
         tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
@@ -1107,11 +1085,6 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         int u0 = c[0], v0 = c[1];
         int u1 = c[2], v1 = c[3];
 
-        //const Point3f& p0 = cloud0.at<Point3f>(v0, u0);
-        //Point3f tp0;
-        //tp0.x = (float)(p0.x * Rt_ptr[0] + p0.y * Rt_ptr[1] + p0.z * Rt_ptr[2] + Rt_ptr[3]);
-        //tp0.y = (float)(p0.x * Rt_ptr[4] + p0.y * Rt_ptr[5] + p0.z * Rt_ptr[6] + Rt_ptr[7]);
-        //tp0.z = (float)(p0.x * Rt_ptr[8] + p0.y * Rt_ptr[9] + p0.z * Rt_ptr[10] + Rt_ptr[11]);
         const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
         Point3f tp0;
         tp0.x = (float)(p0[0] * Rt_ptr[0] + p0[1] * Rt_ptr[1] + p0[2] * Rt_ptr[2] + Rt_ptr[3]);
@@ -1119,7 +1092,6 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         tp0.z = (float)(p0[0] * Rt_ptr[8] + p0[1] * Rt_ptr[9] + p0[2] * Rt_ptr[10] + Rt_ptr[11]);
 
         Vec4f n1 = normals1.at<Vec4f>(v1, u1);
-        //Point3f v = cloud1.at<Point3f>(v1, u1) - tp0;
         Vec4f _v = cloud1.at<Vec4f>(v1, u1);
         Point3f v = Point3f(_v[0], _v[1], _v[2]) - tp0;
 
@@ -1569,8 +1541,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         maxDepthDiff * maxDepthDiff, std::cos(angleThreshold));
     Range range(0, newPts.rows);
     const int nstripes = -1;
-    //parallel_for_(range, invoker, nstripes);
-    invoker(range);
+    parallel_for_(range, invoker, nstripes);
 
     // splitting AB matrix to A and b
     for (int i = 0; i < 6; i++)

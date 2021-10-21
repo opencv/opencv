@@ -31,7 +31,6 @@ bool OdometryRGB::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 
 bool OdometryRGB::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const
 {
-	//std::cout << "OdometryRGB::compute()" << std::endl;
 	Matx33f cameraMatrix;
 	settings.getCameraMatrix(cameraMatrix);
 	std::vector<int> iterCounts;

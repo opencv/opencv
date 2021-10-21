@@ -87,7 +87,6 @@ static void depthTo3dMask(const cv::Mat& depth, const cv::Mat& K, const cv::Mat&
     z_mat.resize(n_points);
 
     depthTo3d_from_uvz(K, u_mat, v_mat, z_mat, points3d);
-    //points3d = points3d.reshape(3, 1);
     points3d = points3d.reshape(4, 1);
 }
 
@@ -173,7 +172,6 @@ void depthTo3dSparse(InputArray depth_in, InputArray K_in, InputArray points_in,
     std::vector<cv::Mat> channels(2);
     cv::split(points_float, channels);
 
-    //points3d_out.create(channels[0].rows, channels[0].cols, CV_32FC3);
     points3d_out.create(channels[0].rows, channels[0].cols, CV_32FC4);
     cv::Mat points3d = points3d_out.getMat();
     depthTo3d_from_uvz(K_in.getMat(), channels[0], channels[1], z_mat, points3d);
