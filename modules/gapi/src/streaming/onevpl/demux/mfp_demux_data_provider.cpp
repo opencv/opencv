@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 //
 // Copyright (C) 2021 Intel Corporation
+#ifdef HAVE_ONEVPL
+#ifdef _WIN32
 #include <errno.h>
 #include <atlstr.h>
 
@@ -16,26 +18,22 @@
 #include <wmcontainer.h>
 #include <wmcodecdsp.h>
 
-#include <fstream>
-
-#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
-#include "logger.hpp"
-
 #pragma comment(lib,"Mf.lib")
 #pragma comment(lib,"Mfuuid.lib")
 #pragma comment(lib,"Mfplat.lib")
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "mfreadwrite.lib")
-
-
 #pragma comment(lib, "mfuuid") //???
+#endif // _WIN32
 
+#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
+#include "logger.hpp"
 
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-
+#ifdef _WIN32
 HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
     CStringW sURL(url.c_str());
 
@@ -74,7 +72,7 @@ HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
                                   url);
         pSourceResolver->Release();
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
-                                                   "cannot create CreateObjectFromURL");
+                                               "cannot create CreateObjectFromURL");
     }
 
     hr = pSourceUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)ppSource);
@@ -95,13 +93,7 @@ HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
     return hr;
 }
 
-MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
-    source_handle(fopen(file_path.c_str(), "rb"), &fclose) {
-    if (!source_handle) {
-        throw DataProviderSystemErrorException(errno,
-                                               "MFPDemuxDataProvider: cannot open source file: " + file_path);
-    }
-
+MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) {
     HRESULT hr = S_OK;
     hr = MFStartup(MF_VERSION);
     if (FAILED(hr)) {
@@ -109,12 +101,15 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
     }
 
     source_ptr = nullptr;
+    GAPI_LOG_INFO(nullptr, "IDataProvider: " << this <<
+                            " - initializing, URI " << file_path);
     hr = CreateMediaSource(file_path, &source_ptr);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create IMFMediaSource");
     }
 
     GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            ", URI: " << file_path <<
                             " - start creating source attributes");
     IMFAttributes *pAttributes = nullptr;
     IMFMediaType *pType = nullptr;
@@ -191,54 +186,13 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
     } else {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot ReadSample");
     }
-
-
-    MFT_REGISTER_TYPE_INFO tinfo;
-    tinfo.guidMajorType = MFMediaType_Video;
-    tinfo.guidSubtype = MFVideoFormat_MPEG2;
-
-    CLSID *pDecoderCLSIDs = NULL;   // Pointer to an array of CLISDs.
-    UINT32 cDecoderCLSIDs = 0;   // Size of the array.
-
-
-    uint32_t flags = MFT_ENUM_FLAG_ALL;
-    IMFActivate** activate = nullptr;
-	UINT32 count = 0;
-
-    hr = MFTEnumEx(MFT_CATEGORY_DEMULTIPLEXER, flags, &tinfo, NULL, &activate, &count);
-    /*hr = MFTEnum(
-            MFT_CATEGORY_DEMULTIPLEXER,
-            flags,                  // Reserved
-            NULL,             // Input type to match. (Encoded type.)
-            NULL,               // Output type to match. (Don't care.)
-            &pDecoderCLSIDs,    // Receives a pointer to an array of CLSIDs.
-            &cDecoderCLSIDs     // Receives the size of the array.
-            ));*/
-
-    std::wfstream out(L"MFT.txt", std::ios_base::out | std::ios_base::trunc);
-
-    if (SUCCEEDED(hr) )
-    {
-        out << "Success, count: " << count << std::endl;
-			for (int i = 0; i < count; ++i)
-			{
-				UINT32 l = 0;
-				UINT32 l1 = 0;
-				activate[i]->GetStringLength(MFT_FRIENDLY_NAME_Attribute, &l);
-				std::unique_ptr<wchar_t[]> name(new wchar_t[l + 1]);
-				memset(name.get(), 0, l + 1);
-				hr = activate[i]->GetString(MFT_FRIENDLY_NAME_Attribute, name.get(), l + 1, &l1);
-				out << name.get() << std::endl;
-				activate[i]->Release();
-			}
-			//CoTaskMemFree(activate);
-    } else {
-        out <<HRESULT_CODE(hr);
-    }
-
+    GAPI_LOG_INFO(nullptr, "IDataProvider: " << this <<
+                            " - initialized");
 }
 
 MFPDemuxDataProvider::~MFPDemuxDataProvider() {
+    GAPI_LOG_INFO(nullptr, "IDataProvider: " << this <<
+                            " - deinitializing");
     if (reader) {
         reader->Release();
         reader = nullptr;
@@ -250,84 +204,104 @@ MFPDemuxDataProvider::~MFPDemuxDataProvider() {
     }
 
     (void)MFShutdown();
+    GAPI_LOG_INFO(nullptr, "IDataProvider: " << this <<
+                            " - deinitialized");
 }
 
 size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_data) {
     if (empty()) {
         return 0;
     }
-    DWORD       dwFlags = 0;
-    BYTE        *pBitmapData = NULL;    // Bitmap data
-    DWORD       cbBitmapData = 0;       // Size of data, in bytes
-    IMFMediaBuffer *pBuffer = 0;
-    IMFSample *pSample = NULL;
 
-    HRESULT     hr = S_OK;
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - dst bytes count: " << out_data_bytes_size <<
+                            ", dst: " << out_data);
+
+    BYTE *mapped_buffer_data = nullptr;
+    DWORD mapped_buffer_size = 0;
+    IMFMediaBuffer *contiguous_buffer = 0;
+    IMFSample *retrieved_sample = nullptr;
+    DWORD retrieved_stream_flag = 0;
+
+    HRESULT hr = S_OK;
     do {
-    hr = reader->ReadSample(
-            (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
-            0,
-            NULL,
-            &dwFlags,
-            NULL,
-            &pSample
-            );
+        GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - retrieve sample from source");
+        hr = reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+                                0,
+                                nullptr,
+                                &retrieved_stream_flag,
+                                nullptr,
+                                &retrieved_sample);
 
-    if (FAILED(hr)) {
-        throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - cannot ReadSample");
-    }
-
-    if (dwFlags & MF_SOURCE_READERF_ENDOFSTREAM)
-    {
-        reader->Release();
-        reader = nullptr;
-    }
-
-    if (dwFlags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED)
-    {
-        // Type change. Get the new format.
-        //hr = GetVideoFormat(&m_format);
-        throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - TODO");
-    }
-
-    /*if (pSample == NULL)
-    {
-        throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - sample is NULL");
-    }*/
-    }
-    while(!pSample && !empty());
-    // We got a sample. Hold onto it.
-    if( pSample) {
-        pSample->AddRef();
-
-        hr = pSample->ConvertToContiguousBuffer(&pBuffer);
-
-        if (FAILED(hr))
-        {
-            throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - ConvertToContiguousBuffer failed");
+        if (FAILED(hr)) {
+            throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - cannot ReadSample");
         }
 
-        hr = pBuffer->Lock(&pBitmapData, NULL, &cbBitmapData);
-        if (FAILED(hr))
-        {
-            throw DataProviderSystemErrorException (HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - canno Lock buffer");
+        if (retrieved_stream_flag & MF_SOURCE_READERF_ENDOFSTREAM) {
+            GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - EOF");
+            reader->Release();
+            reader = nullptr;
         }
 
-        if (pBitmapData)
-        {
-            memcpy(out_data, pBitmapData, std::min<size_t>(cbBitmapData, out_data_bytes_size));
-            pBuffer->Unlock();
+        if (retrieved_stream_flag & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED){
+            // Type change. Get the new format.
+            //hr = GetVideoFormat(&m_format);
+            GAPI_LOG_WARNING(nullptr, "IDataProvider: " << this <<
+                            " - Media type changing is UNSUPPORTED");
+            throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - TODO");
         }
-        pBuffer->Release();
-        pSample->Release();
     }
-    return cbBitmapData;
+    while (!retrieved_sample && !empty());
+
+    if (retrieved_sample) {
+        GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                                " - sample retrieved");
+
+        retrieved_sample->AddRef();
+        hr = retrieved_sample->ConvertToContiguousBuffer(&contiguous_buffer);
+        if (FAILED(hr)) {
+            throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - ConvertToContiguousBuffer failed");
+        }
+
+        //TODO
+        hr = contiguous_buffer->Lock(&mapped_buffer_data, nullptr, &mapped_buffer_size);
+        if (FAILED(hr)) {
+            throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - canno Lock buffer");
+        }
+
+        if (mapped_buffer_data)
+        {
+            GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - fetch buffer from mapped data with size: " << mapped_buffer_size);
+            memcpy(out_data, mapped_buffer_data, std::min<size_t>(mapped_buffer_size, out_data_bytes_size));
+            contiguous_buffer->Unlock();
+        }
+        contiguous_buffer->Release();
+        retrieved_sample->Release();
+    }
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - bytes fetched: " << mapped_buffer_size);
+    return mapped_buffer_size;
 }
 
 bool MFPDemuxDataProvider::empty() const {
     return !reader;
 }
+#else
+
+MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string&) {
+    GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
+}
+size_t MFPDemuxDataProvider::fetch_data(size_t, void*) {
+}
+bool MFPDemuxDataProvider::empty() const override {
+}
+#endif // _WIN32
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+
+#endif // HAVE_ONEVPL

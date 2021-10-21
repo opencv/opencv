@@ -107,7 +107,8 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
     if (!data_provider) {
         return MFX_ERR_MORE_DATA;
     }
-
+    GAPI_LOG_DEBUG(nullptr, "bitstream before fetch, DataOffset: " << bs.DataOffset <<
+                            ", DataLength: " << bs.DataLength);
     mfxU8 *p0 = bs.Data;
     mfxU8 *p1 = bs.Data + bs.DataOffset;
     if (bs.DataOffset > bs.MaxLength - 1) {
@@ -122,6 +123,8 @@ mfxStatus ReadEncodedStream(mfxBitstream &bs, std::shared_ptr<IDataProvider>& da
     bs.DataOffset = 0;
     bs.DataLength += static_cast<mfxU32>(data_provider->fetch_data(bs.MaxLength - bs.DataLength,
                                                                    bs.Data + bs.DataLength));
+    GAPI_LOG_DEBUG(nullptr, "bitstream after fetch, DataOffset: " << bs.DataOffset <<
+                            ", DataLength: " << bs.DataLength);
     if (bs.DataLength == 0)
         return MFX_ERR_MORE_DATA;
 

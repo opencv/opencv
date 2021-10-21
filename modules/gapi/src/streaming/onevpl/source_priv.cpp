@@ -147,7 +147,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
         // An available VPL implementation with max matching count
         std::vector<CfgParam> impl_params = get_params_from_string<CfgParam>(ss.str());
         std::sort(impl_params.begin(), impl_params.end());
-        GAPI_LOG_DEBUG(nullptr, "Find implementation cfg params count" << impl_params.size());
+        GAPI_LOG_DEBUG(nullptr, "Find implementation cfg params count: " << impl_params.size());
 
         std::vector<CfgParam> matched_params;
         std::set_intersection(impl_params.begin(), impl_params.end(),
@@ -254,21 +254,24 @@ DecoderParams GSource::Priv::create_decoder_from_file(const CfgParam& decoder_cf
     // So CodecId has U32 data type
     bitstream.CodecId = decoder.Data.U32;
 
-    mfxStatus sts = ReadEncodedStream(bitstream, provider);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error reading bitstream, error: " +
-                                 mfxstatus_to_string(sts));
-    }
-
-    // Retrieve the frame information from input stream
+ // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder.Data.U32;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
-    if(MFX_ERR_NONE != sts) {
-        throw std::runtime_error("Error decoding header, error: " +
-                                 mfxstatus_to_string(sts));
-    }
+    mfxStatus sts = MFX_ERR_NONE;
+    do {
+        sts = ReadEncodedStream(bitstream, provider);
+        if(MFX_ERR_NONE != sts) {
+            throw std::runtime_error("Error reading bitstream, error: " +
+                                     mfxstatus_to_string(sts));
+        }
+
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
+        if(MFX_ERR_NONE != sts && MFX_ERR_MORE_DATA != sts) {
+            throw std::runtime_error("Error decoding header, error: " +
+                                     mfxstatus_to_string(sts));
+        }
+    } while (sts == MFX_ERR_MORE_DATA && !provider->empty());
 
     // Input parameters finished, now initialize decode
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
