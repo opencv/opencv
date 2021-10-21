@@ -513,7 +513,7 @@ decode_rle8_bad: ;
                     icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
                 else if ( img.channels() == 4 )
                 {
-                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0) && (m_rgba_bit_offset[3] >= 0);
+                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
                     if ( has_bit_mask )
                         maskBGRA(data, src, m_width);
                     else
@@ -548,7 +548,10 @@ void  BmpDecoder::maskBGRA(uchar* des, uchar* src, int num)
         des[0] = (uchar)((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]);
         des[1] = (uchar)((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]);
         des[2] = (uchar)((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]);
-        des[3] = (uchar)((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]);
+        if (m_rgba_bit_offset[3] >= 0)
+            des[3] = (uchar)((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]);
+        else
+            des[3] = 255;
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
