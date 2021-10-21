@@ -1,6 +1,7 @@
 #include "odometry_functions.hpp"
 #include "../precomp.hpp"
 #include "utils.hpp"
+#include "opencl_kernels_3d.hpp"
 
 #include "opencv2/imgproc.hpp"
 //#include <opencv2/core/hal/intrin_cpp.hpp>
@@ -804,7 +805,8 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     srcFrame.getPyramidAt(srcPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
                     cv::Matx66f A;
                     cv::Vec6f b;
-                    calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, level, maxDepthDiff, angleThreshold, A, b);
+                    int lvls = (int)iterCounts.size();
+                    calcICPLsmMatricesFast(cameraMatrix, dstPyrCloud, dstPyrNormals, srcPyrCloud, srcPyrNormals, transform, lvls,  level, maxDepthDiff, angleThreshold, A, b);
                     AtA_icp = Mat(A);
                     AtB_icp = Mat(b);
                 }
@@ -1540,10 +1542,20 @@ struct GetAbInvoker : ParallelLoopBody
 };
 
 void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& oldNrm, const Mat& newPts, const Mat& newNrm,
-    cv::Affine3f pose, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+    cv::Affine3f pose, int lvls, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
 {
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
+
+#ifdef HAVE_OPENCL
+    AccessFlag af = AccessFlag::ACCESS_READ;
+    calcICPLsmMatricesFast_ocl(cameraMatrix,
+        oldPts.getUMat(af), oldNrm.getUMat(af),
+        newPts.getUMat(af), newNrm.getUMat(af),
+        pose, lvls, level, maxDepthDiff, angleThreshold,
+        A, b);
+    return;
+#endif
 
     ABtype sumAB = ABtype::zeros();
     Mutex mutex;
@@ -1572,5 +1584,124 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
         b(i) = sumAB(i, 6);
     }
 }
+
+#ifdef HAVE_OPENCL
+
+void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const UMat& oldNrm, const UMat& newPts, const UMat& newNrm,
+    cv::Affine3f pose, int lvls, int level, float maxDepthDiff, float angleThreshold, cv::Matx66f& A, cv::Vec6f& b)
+{
+    CV_TRACE_FUNCTION();
+
+    Size oldSize = oldPts.size(), newSize = newPts.size();
+    CV_Assert(oldSize == oldNrm.size());
+    CV_Assert(newSize == newNrm.size());
+
+    // calculate 1x7 vector ab to produce b and upper triangle of A:
+    // [A|b] = ab*(ab^t)
+    // and then reduce it across work groups
+
+    std::vector<UMat> groupedSumBuffers(lvls);
+    cv::String errorStr;
+    ocl::ProgramSource source = ocl::_3d::icp_oclsrc;
+    cv::String options = "-cl-mad-enable";
+    ocl::Kernel k;
+    k.create("getAb", source, options, &errorStr);
+
+    if (k.empty())
+        throw std::runtime_error("Failed to create kernel: " + errorStr);
+
+    size_t globalSize[2];
+    globalSize[0] = (size_t)newPts.cols;
+    globalSize[1] = (size_t)newPts.rows;
+
+    const ocl::Device& device = ocl::Device::getDefault();
+    size_t wgsLimit = device.maxWorkGroupSize();
+    size_t memSize = device.localMemSize();
+    // local memory should keep upperTriangles for all threads in group for reduce
+    const size_t ltsz = UTSIZE * sizeof(float);
+    const size_t lcols = 32;
+    size_t lrows = min(memSize / ltsz, wgsLimit) / lcols;
+    // round lrows down to 2^n
+    lrows = roundDownPow2(lrows);
+    size_t localSize[2] = { lcols, lrows };
+    Size ngroups((int)divUp(globalSize[0], (unsigned int)localSize[0]),
+        (int)divUp(globalSize[1], (unsigned int)localSize[1]));
+
+    // size of local buffer for group-wide reduce
+    size_t lsz = localSize[0] * localSize[1] * ltsz;
+
+    Intr intrinsics(cameraMatrix);
+    Intr::Projector proj = intrinsics.scale(level).makeProjector();
+    Vec2f fxy(proj.fx, proj.fy), cxy(proj.cx, proj.cy);
+
+    UMat& groupedSumGpu = groupedSumBuffers[level];
+    groupedSumGpu.create(Size(ngroups.width * UTSIZE, ngroups.height),
+        CV_32F);
+    groupedSumGpu.setTo(0);
+
+    // TODO: optimization possible:
+    // samplers instead of oldPts/oldNrm (mask needed)
+    k.args(ocl::KernelArg::ReadOnlyNoSize(oldPts),
+        ocl::KernelArg::ReadOnlyNoSize(oldNrm),
+        oldSize,
+        ocl::KernelArg::ReadOnlyNoSize(newPts),
+        ocl::KernelArg::ReadOnlyNoSize(newNrm),
+        newSize,
+        ocl::KernelArg::Constant(pose.matrix.val,
+            sizeof(pose.matrix.val)),
+        fxy.val, cxy.val,
+        maxDepthDiff * maxDepthDiff,
+        std::cos(angleThreshold),
+        ocl::KernelArg::Local(lsz),
+        ocl::KernelArg::WriteOnlyNoSize(groupedSumGpu)
+    );
+
+    if (!k.run(2, globalSize, localSize, true))
+        throw std::runtime_error("Failed to run kernel");
+
+    float upperTriangle[UTSIZE];
+    for (int i = 0; i < UTSIZE; i++)
+        upperTriangle[i] = 0;
+
+    Mat groupedSumCpu = groupedSumGpu.getMat(ACCESS_READ);
+
+    for (int y = 0; y < ngroups.height; y++)
+    {
+        const float* rowr = groupedSumCpu.ptr<float>(y);
+        for (int x = 0; x < ngroups.width; x++)
+        {
+            const float* p = rowr + x * UTSIZE;
+            for (int j = 0; j < UTSIZE; j++)
+            {
+                upperTriangle[j] += p[j];
+            }
+        }
+    }
+    groupedSumCpu.release();
+
+    ABtype sumAB = ABtype::zeros();
+    int pos = 0;
+    for (int i = 0; i < 6; i++)
+    {
+        for (int j = i; j < 7; j++)
+        {
+            sumAB(i, j) = upperTriangle[pos++];
+        }
+    }
+
+    // splitting AB matrix to A and b
+    for (int i = 0; i < 6; i++)
+    {
+        // augment lower triangle of A by symmetry
+        for (int j = i; j < 6; j++)
+        {
+            A(i, j) = A(j, i) = sumAB(i, j);
+        }
+
+        b(i) = sumAB(i, 6);
+    }
+}
+
+#endif
 
 }
