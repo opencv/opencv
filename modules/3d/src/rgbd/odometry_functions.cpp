@@ -1193,7 +1193,7 @@ bool testDeltaTransformation(const Mat& deltaRt, double maxTranslation, double m
 #if USE_INTRINSICS
 static inline bool fastCheck(const v_float32x4& p0, const v_float32x4& p1)
 {
-    float check = (p0.get0() + p1.get0());
+    float check = v_reduce_sum(p0) + v_reduce_sum(p1);
     return !cvIsNaN(check);
 }
 
