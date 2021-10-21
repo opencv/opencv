@@ -347,8 +347,9 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     }
 
     // Comparison ////////////////////////////////////////////////////////////
-    // FIXIT unrealiable check: EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    EXPECT_EQ(out_mat_gapi.size(), sz);
+    {
+        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
+    }
 
     SANITY_CHECK_NOTHING();
 }

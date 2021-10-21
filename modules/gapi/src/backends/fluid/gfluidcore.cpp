@@ -625,41 +625,42 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
 #endif
 
 template<typename SRC, typename DST>
-static void div_hal(const SRC*, const SRC*, DST*, int, float)
+static void div_hal(const SRC*, const SRC*, DST*, int, void*)
 {
     // Do nothing because this case doesn't exist.
+    CV_Assert("unsupported types");
     return;
 }
 
 static void div_hal(const uchar in1[], const uchar in2[], uchar out[],
-                    int length, float scale)
+                    int length, void* scale)
 {
     hal::div8u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-               out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+               out, static_cast<size_t>(length), length, 1, scale);
     return;
 }
 
 static void div_hal(const short in1[], const short in2[], short out[],
-                    int length, float scale)
+                    int length, void* scale)
 {
     hal::div16s(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+                out, static_cast<size_t>(length), length, 1, scale);
     return;
 }
 
 static void div_hal(const ushort in1[], const ushort in2[], ushort out[],
-                    int length, float scale)
+                    int length, void* scale)
 {
     hal::div16u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+                out, static_cast<size_t>(length), length, 1, scale);
     return;
 }
 
 static void div_hal(const float in1[], const float in2[], float out[],
-                    int length, float scale)
+                    int length, void* scale)
 {
     hal::div32f(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, reinterpret_cast<void*>(&scale));
+                out, static_cast<size_t>(length), length, 1, scale);
     return;
 }
 
@@ -708,7 +709,7 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
         case ARITHM_DIVIDE:
-            div_hal(in1, in2, out, length, _scale);
+            div_hal(in1, in2, out, length, static_cast<void*>(&scale));
             break;
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
