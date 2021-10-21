@@ -305,6 +305,16 @@ TEST(Imgcodecs_Bmp, rgba_bit_mask)
     ASSERT_EQ(CV_8UC4, img.type());
 }
 
+TEST(Imgcodecs_Bmp, read_32bit_xrgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_xrgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+}
+
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
 {
