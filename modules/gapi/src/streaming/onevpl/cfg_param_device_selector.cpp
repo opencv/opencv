@@ -10,6 +10,7 @@
 #include <opencv2/gapi/util/variant.hpp>
 
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
+#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 #ifdef HAVE_DIRECTX
@@ -19,7 +20,6 @@
 // get rid of generate macro max/min/etc from DX side
 #define D3D11_NO_HELPERS
 #define NOMINMAX
-#include <atlbase.h>
 #include <d3d11.h>
 #include <d3d11_4.h>
 #pragma comment(lib, "dxgi")
@@ -113,8 +113,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
                                                 };
             D3D_FEATURE_LEVEL featureLevel;
 
-            CComPtr<IDXGIFactory> adapter_factory;
-            CComPtr<IDXGIAdapter> intel_adapters;
+            auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
             {
                 IDXGIFactory* out_factory = nullptr;
                 HRESULT err = CreateDXGIFactory(__uuidof(IDXGIFactory),
@@ -122,10 +121,10 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
                 if (FAILED(err)) {
                     throw std::runtime_error("Cannot create CreateDXGIFactory, error: " + std::to_string(HRESULT_CODE(err)));
                 }
-                adapter_factory.Attach(out_factory);
+                adapter_factory = createCOMPtrGuard(out_factory);
             }
 
-            CComPtr<IDXGIAdapter> intel_adapter;
+            auto intel_adapter = createCOMPtrGuard<IDXGIAdapter>();
             UINT adapter_index = 0;
             const unsigned int refIntelVendorID = 0x8086;
             IDXGIAdapter* out_adapter = nullptr;
@@ -134,7 +133,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
                 DXGI_ADAPTER_DESC desc{};
                 out_adapter->GetDesc(&desc);
                 if (desc.VendorId == refIntelVendorID) {
-                    intel_adapter.Attach(out_adapter);
+                    intel_adapter = createCOMPtrGuard(out_adapter);
                     break;
                 }
                 ++adapter_index;
@@ -145,7 +144,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             }
 
             // Create the Direct3D 11 API device object and a corresponding context.
-            HRESULT err = D3D11CreateDevice(intel_adapter,
+            HRESULT err = D3D11CreateDevice(intel_adapter.get(),
                                             D3D_DRIVER_TYPE_UNKNOWN,
                                             nullptr, creationFlags,
                                             featureLevels, ARRAYSIZE(featureLevels),
