@@ -12,12 +12,18 @@
 #include <fstream>
 #include <sstream>
 
+CV_SUPPRESS_DEPRECATED_START
+#  if defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable:4201)  // nonstandard extension used: nameless struct/union
+#  endif
 #ifdef HAVE_ONEVPL
 #  include <vpl/mfxcommon.h>
 #  include <vpl/mfxstructures.h>
 #  include <vpl/mfxvideo++.h>
 #  include <vpl/mfxvp8.h>
 #  include <vpl/mfxjpeg.h>
+#  include <vpl/mfxdispatcher.h>
 #else
 #  include <mfxcommon.h>
 #  include <mfxstructures.h>
@@ -28,6 +34,10 @@
 #    include <mfxplugin++.h>
 #  endif
 #endif
+#  if defined(_MSC_VER)
+#    pragma warning(pop)
+#  endif
+CV_SUPPRESS_DEPRECATED_END
 
 //                 //
 //  Debug helpers  //
@@ -176,10 +186,29 @@ inline void cleanup(T * &ptr)
 
 //==================================================================================================
 
+#ifdef HAVE_ONEVPL
+mfxLoader getVPLLoaderInstance();
+#endif
+
+//==================================================================================================
+
+class MFXVideoSession_WRAP : public MFXVideoSession
+{
+#ifdef HAVE_ONEVPL
+public:
+    mfxStatus CreateSession()
+    {
+        return MFXCreateSession(getVPLLoaderInstance(), 0, &m_session);
+    }
+#endif
+};
+
+//==================================================================================================
+
 class Plugin
 {
 public:
-    static Plugin * loadEncoderPlugin(MFXVideoSession &session, mfxU32 codecId)
+    static Plugin * loadEncoderPlugin(MFXVideoSession_WRAP &session, mfxU32 codecId)
     {
 #ifdef HAVE_MFX_PLUGIN
         static const mfxPluginUID hevc_enc_uid = { 0x6f, 0xad, 0xc7, 0x91, 0xa0, 0xc2, 0xeb, 0x47, 0x9a, 0xb6, 0xdc, 0xd5, 0xea, 0x9d, 0xa3, 0x47 };
@@ -190,7 +219,7 @@ public:
 #endif
         return 0;
     }
-    static Plugin * loadDecoderPlugin(MFXVideoSession &session, mfxU32 codecId)
+    static Plugin * loadDecoderPlugin(MFXVideoSession_WRAP &session, mfxU32 codecId)
     {
 #ifdef HAVE_MFX_PLUGIN
         static const mfxPluginUID hevc_dec_uid = { 0x33, 0xa6, 0x1c, 0x0b, 0x4c, 0x27, 0x45, 0x4c, 0xa8, 0xd8, 0x5d, 0xde, 0x75, 0x7c, 0x6f, 0x8e };
@@ -213,9 +242,9 @@ private:
     mfxStatus res;
 private:
 #ifdef HAVE_MFX_PLUGIN
-    MFXVideoSession &session;
+    MFXVideoSession_WRAP &session;
     mfxPluginUID uid;
-    Plugin(MFXVideoSession &_session, mfxPluginUID _uid) : session(_session), uid(_uid)
+    Plugin(MFXVideoSession_WRAP &_session, mfxPluginUID _uid) : session(_session), uid(_uid)
     {
         res = MFXVideoUSER_Load(session, &uid, 1);
     }
@@ -298,9 +327,9 @@ public:
 class DeviceHandler {
 public:
     virtual ~DeviceHandler() {}
-    bool init(MFXVideoSession &session);
+    bool init(MFXVideoSession_WRAP &session);
 protected:
-    virtual bool initDeviceSession(MFXVideoSession &session) = 0;
+    virtual bool initDeviceSession(MFXVideoSession_WRAP &session) = 0;
 };
 
 
@@ -340,7 +369,7 @@ public:
 private:
     VAHandle(const VAHandle &);
     VAHandle &operator=(const VAHandle &);
-    bool initDeviceSession(MFXVideoSession &session) CV_OVERRIDE;
+    bool initDeviceSession(MFXVideoSession_WRAP &session) CV_OVERRIDE;
 private:
     VADisplay display;
     int file;
@@ -360,7 +389,7 @@ public:
 private:
     DXHandle(const DXHandle &);
     DXHandle &operator=(const DXHandle &);
-    bool initDeviceSession(MFXVideoSession &) CV_OVERRIDE { return true; }
+    bool initDeviceSession(MFXVideoSession_WRAP &) CV_OVERRIDE { return true; }
 };
 
 #endif // _WIN32
