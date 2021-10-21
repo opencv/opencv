@@ -77,6 +77,7 @@ HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
 
     hr = pSourceUnk->QueryInterface(__uuidof(IMFMediaSource), (void**)ppSource);
     if (FAILED(hr)) {
+        pSourceUnk->Release();
         pSourceResolver->Release();
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
                                                "cannot query IMFMediaSource");
@@ -109,7 +110,6 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) {
     }
 
     GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
-                            ", URI: " << file_path <<
                             " - start creating source attributes");
     IMFAttributes *pAttributes = nullptr;
     IMFMediaType *pType = nullptr;
@@ -131,6 +131,33 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) {
             );
     }*/
 
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - is getting presentation description");
+    IMFPresentationDescriptor* descriptor = nullptr;
+    hr = source_ptr->CreatePresentationDescriptor(&descriptor);
+    if (FAILED(hr)) {
+        source_ptr->Release();
+        throw DataProviderSystemErrorException(HRESULT_CODE(hr),
+                                               "cannot CreatePresentationDescriptor");
+    }
+
+    DWORD stream_count = 0;
+    BOOL is_stream_selected = false;
+    descriptor->GetStreamDescriptorCount(&stream_count);
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - received stream count: " << stream_count);
+    for( DWORD stream_index = 0; stream_index < stream_count; stream_index++) {
+        IMFStreamDescriptor *stream_descriptor = nullptr;
+        descriptor->GetStreamDescriptorByIndex(stream_index, &is_stream_selected,
+                                               &stream_descriptor);
+    }
+    if (descriptor) {
+        descriptor->Release();
+        descriptor = nullptr;
+    }
+
+    GAPI_LOG_DEBUG(nullptr, "IDataProvider: " << this <<
+                            " - is creating media source");
     reader = nullptr;
     hr = MFCreateSourceReaderFromMediaSource(source_ptr, pAttributes,
                                              &reader);
