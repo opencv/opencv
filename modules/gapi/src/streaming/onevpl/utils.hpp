@@ -16,6 +16,7 @@
 #include <vpl/mfxvideo.h>
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
@@ -25,6 +26,26 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+
+// Since ATL headers might not be available on specific MSVS Build Tools
+// we use simple `CComPtr` implementation like as `ComPtrGuard`
+// which is not supposed to be the full functional replacement of `CComPtr`
+// and it uses as RAII to make sure utilization is correct
+template <typename COMNonManageableType>
+void release(COMNonManageableType *ptr) {
+    if (ptr) {
+        ptr->Release();
+    }
+}
+
+template <typename COMNonManageableType>
+using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
+
+template <typename COMNonManageableType>
+ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
+    return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
 
 const char* mfx_impl_to_cstr(const mfxIMPL impl);
 
