@@ -34,7 +34,6 @@ void CachedPool::push_back(surface_ptr_t &&surf) {
 }
 
 size_t CachedPool::available_size() const {
-
     size_t free_surf_count =
         std::count_if(surfaces.begin(), surfaces.end(),
                      [](const surface_ptr_t& val) {
