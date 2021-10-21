@@ -40,6 +40,7 @@ public:
     OdometryImpl() {};
     ~OdometryImpl() {};
 
+    virtual OdometryFrame createOdometryFrame() = 0;
     virtual bool prepareFrame(OdometryFrame frame) = 0;
     virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const = 0;

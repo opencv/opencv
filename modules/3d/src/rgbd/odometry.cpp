@@ -42,7 +42,7 @@ Odometry::~Odometry()
 
 OdometryFrame Odometry::createOdometryFrame()
 {
-    return OdometryFrame(OdometryFrameStoreType::MAT);
+    return this->odometry->createOdometryFrame();
 }
 
 OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType)

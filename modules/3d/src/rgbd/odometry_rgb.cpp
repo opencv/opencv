@@ -14,6 +14,11 @@ OdometryRGB::~OdometryRGB()
 {
 }
 
+OdometryFrame OdometryRGB::createOdometryFrame()
+{
+    return OdometryFrame(OdometryFrameStoreType::MAT);
+}
+
 bool OdometryRGB::prepareFrame(OdometryFrame frame)
 {
 	return prepareRGBFrame(frame, frame, this->settings);

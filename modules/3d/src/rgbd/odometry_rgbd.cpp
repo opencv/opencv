@@ -14,6 +14,11 @@ OdometryRGBD::~OdometryRGBD()
 {
 }
 
+OdometryFrame OdometryRGBD::createOdometryFrame()
+{
+    return OdometryFrame(OdometryFrameStoreType::MAT);
+}
+
 bool OdometryRGBD::prepareFrame(OdometryFrame frame)
 {
 	return prepareRGBDFrame(frame, frame, this->settings);

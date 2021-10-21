@@ -14,6 +14,14 @@ OdometryICP::~OdometryICP()
 {
 }
 
+OdometryFrame OdometryICP::createOdometryFrame()
+{
+#ifdef HAVE_OPENCL
+    return OdometryFrame(OdometryFrameStoreType::UMAT);
+#endif
+    return OdometryFrame(OdometryFrameStoreType::MAT);
+}
+
 bool OdometryICP::prepareFrame(OdometryFrame frame)
 {
 	return prepareICPFrame(frame, frame, this->settings);
