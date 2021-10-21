@@ -38,19 +38,19 @@ face1_align = recognizer.alignCrop(img1, face1[1][0])
 face2_align = recognizer.alignCrop(img2, face2[1][0])
 
 # Extract features
-face1_feature = recognizer.faceFeature(face1_align)
-face2_feature = recognizer.faceFeature(face2_align)
+face1_feature = recognizer.feature(face1_align)
+face2_feature = recognizer.feature(face2_align)
 
 # Calculate distance (0: cosine, 1: L2)
 cosine_similarity_threshold = 0.363
-cosine_score = recognizer.faceMatch(face1_feature, face2_feature, 0)
+cosine_score = recognizer.match(face1_feature, face2_feature, 0)
 msg = 'different identities'
 if cosine_score >= cosine_similarity_threshold:
     msg = 'the same identity'
 print('They have {}. Cosine Similarity: {}, threshold: {} (higher value means higher similarity, max 1.0).'.format(msg, cosine_score, cosine_similarity_threshold))
 
 l2_similarity_threshold = 1.128
-l2_score = recognizer.faceMatch(face1_feature, face2_feature, 1)
+l2_score = recognizer.match(face1_feature, face2_feature, 1)
 msg = 'different identities'
 if l2_score <= l2_similarity_threshold:
     msg = 'the same identity'
