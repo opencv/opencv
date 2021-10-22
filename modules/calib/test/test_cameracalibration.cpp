@@ -2182,7 +2182,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
             }
 
             // Check pose when camera matrices are the same.
-            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, 1000/*maxIters*/, mask);
             E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
                 "Two big difference between the same essential matrices computed using different functions with same cameras, testcase " << testcase;
@@ -2221,7 +2221,7 @@ TEST(CV_RecoverPoseTest, regression_15341)
             }
 
             // Check pose when camera matrices are the same.
-            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, mask);
+            E = findEssentialMat(points1, points2, cameraMatrix, RANSAC, 0.999, 1.0, 1000/*maxIters*/, mask);
             E2 = findEssentialMat(points1, points2, cameraMatrix, zeroDistCoeffs, cameraMatrix, zeroDistCoeffs, RANSAC, 0.999, 1.0, mask);
             EXPECT_LT(cv::norm(E, E2, NORM_INF), 1e-4) <<
                 "Two big difference between the same essential matrices computed using different functions with same cameras, testcase " << testcase;

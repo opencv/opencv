@@ -178,7 +178,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
     }
 # endif // HAVE_VA_INTEL
     {
-        Context& ctx = Context::getDefault(true);
+        Context& ctx = Context::getDefault();
         return ctx;
     }
 #endif  // !HAVE_VA
