@@ -44,6 +44,26 @@ enum {
     VPL_NEW_API_MINOR_VERSION = 2
 };
 
+int codec_id_to_mfx(IDataProvider::CodecID codec) {
+    switch(codec) {
+        case IDataProvider::CodecID::AVC:
+            return MFX_CODEC_AVC;
+        case IDataProvider::CodecID::HEVC:
+            return MFX_CODEC_HEVC;
+        case IDataProvider::CodecID::MPEG2:
+            return MFX_CODEC_MPEG2;
+        case IDataProvider::CodecID::VC1:
+            return MFX_CODEC_VC1;
+        case IDataProvider::CodecID::VP9:
+            return MFX_CODEC_VP9;
+        case IDataProvider::CodecID::AV1:
+            return MFX_CODEC_AV1;
+        case IDataProvider::CodecID::JPEG:
+            return MFX_CODEC_JPEG;
+        default:
+            GAPI_Assert(false, "Unsupported CodecId");
+    }
+}
 
 GSource::Priv::Priv() :
     mfx_handle(MFXLoad()),
@@ -195,10 +215,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // initialize decoder
     // Find codec ID from config
-    auto dec_it = std::find_if(cfg_params.begin(), cfg_params.end(), [] (const CfgParam& value) {
-        return value.get_name() == "mfxImplDescription.mfxDecoderDescription.decoder.CodecID";
-    });
-    GAPI_Assert (dec_it != cfg_params.end() && "Cannot determine DecoderID from oneVPL config. Abort");
+    uint32_t decoder_id = codec_id_to_mfx(provider->get_codec());
 
     // create session driving engine if required
     if (!engine) {
@@ -215,7 +232,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
     }
 
     //create decoder for session accoring to header recovered from source file
-    DecoderParams decoder_param = create_decoder_from_file(*dec_it, provider);
+    DecoderParams decoder_param = create_decoder_from_file(decoder_id, provider);
 
     // create engine session for processing mfx session pipeline
     engine->initialize_session(mfx_session, std::move(decoder_param),
@@ -233,7 +250,7 @@ GSource::Priv::~Priv()
     MFXUnload(mfx_handle);
 }
 
-DecoderParams GSource::Priv::create_decoder_from_file(const CfgParam& decoder_cfg,
+DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
                                                       std::shared_ptr<IDataProvider> provider)
 {
     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
@@ -247,16 +264,11 @@ DecoderParams GSource::Priv::create_decoder_from_file(const CfgParam& decoder_cf
                                  std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
     }
 
-    mfxVariant decoder = cfg_param_to_mfx_variant(decoder_cfg);
-    // according to oneVPL documentation references
-    // https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_struct.html
-    // mfxVariant is an `union` type and considered different meaning for different param ids
-    // So CodecId has U32 data type
-    bitstream.CodecId = decoder.Data.U32;
+    bitstream.CodecId = decoder_id;
 
  // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = decoder.Data.U32;
+    mfxDecParams.mfx.CodecId = decoder_id;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     mfxStatus sts = MFX_ERR_NONE;
     do {
