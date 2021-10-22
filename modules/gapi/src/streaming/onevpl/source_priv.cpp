@@ -273,6 +273,15 @@ DecoderParams GSource::Priv::create_decoder_from_file(const CfgParam& decoder_cf
         }
     } while (sts == MFX_ERR_MORE_DATA && !provider->empty());
 
+    if (MFX_ERR_NONE != sts) {
+        GAPI_LOG_WARNING(nullptr, "cannot decode header from provider: " << provider.get()
+                                  << ". Make sure data source is valid and/or "
+                                  "\"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
+                                  " has correct value in case of demultiplexed raw input");
+         throw std::runtime_error("Error decode header, error: " +
+                                  mfxstatus_to_string(sts));
+    }
+
     // Input parameters finished, now initialize decode
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {

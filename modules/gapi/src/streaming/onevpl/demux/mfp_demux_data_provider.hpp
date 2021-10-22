@@ -26,11 +26,14 @@ struct GAPI_EXPORTS MFPDemuxDataProvider : public IDataProvider {
     MFPDemuxDataProvider(const std::string& file_path);
     ~MFPDemuxDataProvider();
 
+    CodecID get_codec() const override;
     size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
     bool empty() const override;
 private:
     IMFMediaSource *source_ptr;
     IMFSourceReader *reader;
+
+    CodecID codec;
 };
 } // namespace onevpl
 } // namespace wip

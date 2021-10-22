@@ -290,6 +290,10 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
         EXPECT_TRUE(in);
     }
 
+    CodecID get_codec() const override {
+        return CodecID::HEVC;
+    }
+
     size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
         data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
         return (size_t)data_stream.gcount();
@@ -2266,7 +2270,7 @@ TEST(OneVPL_Source, Init)
     std::stringstream stream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
     EXPECT_TRUE(stream.write(reinterpret_cast<char*>(const_cast<unsigned char *>(hevc_header)),
                              sizeof(hevc_header)));
-    std::shared_ptr<cv::gapi::wip::onevpl::IDataProvider> stream_data_provider = std::make_shared<StreamDataProvider>(stream);
+    auto stream_data_provider = std::make_shared<StreamDataProvider>(stream);
 
     cv::Ptr<cv::gapi::wip::IStreamSource> cap;
     bool cap_created = false;

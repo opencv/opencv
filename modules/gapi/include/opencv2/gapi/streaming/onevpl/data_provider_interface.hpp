@@ -7,6 +7,7 @@
 #ifndef GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #define GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #include <exception>
+#include <limits>
 #include <string>
 
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
@@ -29,6 +30,15 @@ private:
     std::string reason;
 };
 
+struct GAPI_EXPORTS DataProviderUnsupportedException : public DataProviderException {
+    DataProviderUnsupportedException(const std::string& desription);
+    virtual ~DataProviderUnsupportedException();
+    virtual const char* what() const noexcept override;
+
+private:
+    std::string reason;
+};
+
 /**
  * @brief Public interface allows to customize extraction of video stream data
  * used by onevpl::GSource instead of reading stream from file (by default).
@@ -42,7 +52,27 @@ private:
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
 
-    virtual ~IDataProvider() {}
+    enum class CodecID : uint16_t {
+        AVC,
+        HEVC,
+        MPEG2,
+        VC1,
+        VP9,
+        AV1,
+        JPEG,
+
+        UNCOMPRESSED = std::numeric_limits<uint16_t>::max()
+    };
+
+    static const char *to_cstr(CodecID codec);
+
+    virtual ~IDataProvider() = default;
+
+    /**
+     * The function is used by onevpl::GSource to extract codec id from data
+     *
+     */
+    virtual CodecID get_codec() const = 0;
 
     /**
      * The function is used by onevpl::GSource to extract binary data stream from @ref IDataProvider

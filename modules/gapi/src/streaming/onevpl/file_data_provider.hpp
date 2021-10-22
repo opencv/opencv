@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 
 namespace cv {
 namespace gapi {
@@ -17,13 +18,16 @@ namespace onevpl {
 struct FileDataProvider : public IDataProvider {
 
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
-    FileDataProvider(const std::string& file_path);
+    FileDataProvider(const std::string& file_path,
+                     const std::vector<CfgParam> codec_params = {});
     ~FileDataProvider();
 
+    CodecID get_codec() const override;
     size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
     bool empty() const override;
 private:
     file_ptr source_handle;
+    CodecID codec;
 };
 } // namespace onevpl
 } // namespace wip
