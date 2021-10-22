@@ -127,13 +127,17 @@ main = async function() {
     let net = cv.readNet(configPath, modelPath);
     net.setPreferableBackend(6);
     net.setInput(input);
+    let result = net.forward();
     const start = performance.now();
-    const result = net.forward();
+    for (i=0;i<1000;i++)
+    {
+        result = net.forward();
+    }
     const time  = performance.now()-start;
     const probs = softmax(result);
     const classes = getTopClasses(probs, labels);
 
-    updateResult(classes, time);
+    updateResult(classes, time/1000);
     input.delete();
     net.delete();
     result.delete();

@@ -147,8 +147,9 @@ int main(int argc, char** argv)
         double t;
         int classId;
         double confidence;
-        for(int i = 0; i < 100; i++) {
-            Mat prob = net.forward();
+        Mat prob = net.forward();
+        for(int i = 0; i < 1000; i++) {
+            prob = net.forward();
 
             //! [Make forward pass]
 
@@ -165,7 +166,7 @@ int main(int argc, char** argv)
             t_sum += t;
         }
         std::string label = format("Inference time: %.2f ms", t);
-        std::string label2 = format("Average time of 100 rounds: %.2f ms", t_sum/100);
+        std::string label2 = format("Average time of 100 rounds: %.2f ms", t_sum/1000);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
         putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
