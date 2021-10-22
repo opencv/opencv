@@ -1728,7 +1728,6 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     }
 
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
-    CV_Assert(_circles.isMat() || _circles.isVector());
 
     if( dp <= 0 || minDist <= 0 || param1 <= 0 || param2 <= 0)
         CV_Error( Error::StsOutOfRange, "dp, min_dist, canny_threshold and acc_threshold must be all positive numbers" );
