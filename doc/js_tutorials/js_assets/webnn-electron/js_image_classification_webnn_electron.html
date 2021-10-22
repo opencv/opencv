@@ -128,7 +128,7 @@ main = async function() {
     net.setInput(input);
     let result = net.forward();
     const start = performance.now();
-    for (i=0;i<1000;i++)
+    for (i=0;i<200;i++)
     {
         result = net.forward();
     }
@@ -136,7 +136,7 @@ main = async function() {
     const probs = softmax(result);
     const classes = getTopClasses(probs, labels);
 
-    updateResult(classes, time/1000);
+    updateResult(classes, time/200);
     input.delete();
     net.delete();
     result.delete();
