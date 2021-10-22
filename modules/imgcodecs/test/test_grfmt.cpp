@@ -302,7 +302,7 @@ TEST(Imgcodecs_Bmp, rgba_bit_mask)
 
     const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
-    uchar* data = img.ptr();
+    const uchar* data = img.ptr();
     ASSERT_EQ(data[3], 255);
 }
 
@@ -313,7 +313,7 @@ TEST(Imgcodecs_Bmp, read_32bit_xrgb)
 
     const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
-    uchar* data = img.ptr();
+    const uchar* data = img.ptr();
     ASSERT_EQ(data[3], 255);
 }
 
