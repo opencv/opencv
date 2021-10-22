@@ -4,6 +4,7 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include "sys/time.h"
 
 #include "common.hpp"
 
@@ -142,28 +143,37 @@ int main(int argc, char** argv)
         net.setInput(blob);
         //! [Set input blob]
         //! [Make forward pass]
-        Mat prob = net.forward();
-        //! [Make forward pass]
-
-        //! [Get a class with a highest score]
-        Point classIdPoint;
+        double t_sum = 0.0;
+        double t;
+        int classId;
         double confidence;
-        minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
-        int classId = classIdPoint.x;
-        //! [Get a class with a highest score]
+        for(int i = 0; i < 100; i++) {
+            Mat prob = net.forward();
 
-        // Put efficiency information.
-        std::vector<double> layersTimes;
-        double freq = getTickFrequency() / 1000;
-        double t = net.getPerfProfile(layersTimes) / freq;
+            //! [Make forward pass]
+
+            //! [Get a class with a highest score]
+            Point classIdPoint;
+            minMaxLoc(prob.reshape(1, 1), 0, &confidence, 0, &classIdPoint);
+            classId = classIdPoint.x;
+            //! [Get a class with a highest score]
+
+            // Put efficiency information.
+            std::vector<double> layersTimes;
+            double freq = getTickFrequency() / 1000;
+            t = net.getPerfProfile(layersTimes) / freq;
+            t_sum += t;
+        }
         std::string label = format("Inference time: %.2f ms", t);
+        std::string label2 = format("Average time of 100 rounds: %.2f ms", t_sum/100);
         putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label2, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         // Print predicted class.
         label = format("%s: %.4f", (classes.empty() ? format("Class #%d", classId).c_str() :
                                                       classes[classId].c_str()),
                                    confidence);
-        putText(frame, label, Point(0, 40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        putText(frame, label, Point(0, 55), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
         imshow(kWinName, frame);
     }
