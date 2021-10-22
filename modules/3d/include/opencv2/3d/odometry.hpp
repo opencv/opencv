@@ -5,8 +5,7 @@
 #ifndef ODOMETRY_HPP
 #define ODOMETRY_HPP
 
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/core/affine.hpp>
+#include <opencv2/core.hpp>
 
 #include "odometry_frame.hpp"
 #include "odometry_settings.hpp"

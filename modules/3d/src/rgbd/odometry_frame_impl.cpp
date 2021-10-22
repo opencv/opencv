@@ -99,6 +99,8 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 
     Mat depth_tmp, depth_flt;
     depth_tmp = _depth.getMat();
+    // Odometry works with depth values in range [0, 10)
+    // if the max depth value more than 10, it needs to devide by 5000
     double max;
     cv::minMaxLoc(depth_tmp, NULL, &max);
     if (max > 10)

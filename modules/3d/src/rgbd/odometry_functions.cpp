@@ -665,7 +665,6 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          double maxTranslation, double maxRotation, double sobelScale,
                          OdometryType method, OdometryTransformType transfromType, OdometryAlgoType algtype)
 {
-    //std::cout << "RGBDICPOdometryImpl()" << std::endl;
     int transformDim = -1;
     CalcRgbdEquationCoeffsPtr rgbdEquationFuncPtr = 0;
     CalcICPEquationCoeffsPtr icpEquationFuncPtr = 0;

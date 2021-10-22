@@ -6,9 +6,6 @@
 #define ODOMETRY_SETTINGS_HPP
 
 #include <opencv2/core.hpp>
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core/cvstd.hpp>
 
 namespace cv
 {

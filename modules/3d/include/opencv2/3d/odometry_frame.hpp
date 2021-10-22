@@ -5,10 +5,7 @@
 #ifndef ODOMETRY_FRAME_HPP
 #define ODOMETRY_FRAME_HPP
 
-#include <iostream>
 #include <opencv2/core.hpp>
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/core/mat.hpp>
 
 namespace cv
 {
