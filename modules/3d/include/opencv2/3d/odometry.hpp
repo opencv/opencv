@@ -44,8 +44,8 @@ public:
     ~OdometryImpl() {};
 
     virtual OdometryFrame createOdometryFrame() = 0;
-    virtual bool prepareFrame(OdometryFrame frame) = 0;
-    virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
+    virtual void prepareFrame(OdometryFrame frame) = 0;
+    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const = 0;
 };
 
@@ -69,13 +69,13 @@ public:
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
      */
-    bool prepareFrame(OdometryFrame frame);
+    void prepareFrame(OdometryFrame frame);
 
     /** Prepare frame for odometry calculation
      * @param srcFrame frame will be prepared as src frame ("original" image)
      * @param srcFrame frame will be prepared as dsr frame ("rotated" image)
      */
-    bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
+    void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
 
     /** Prepare frame for odometry calculation
      * @param srcFrame src frame ("original" image)

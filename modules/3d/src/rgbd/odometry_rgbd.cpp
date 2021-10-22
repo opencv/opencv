@@ -23,14 +23,14 @@ OdometryFrame OdometryRGBD::createOdometryFrame()
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
 
-bool OdometryRGBD::prepareFrame(OdometryFrame frame)
+void OdometryRGBD::prepareFrame(OdometryFrame frame)
 {
-	return prepareRGBDFrame(frame, frame, this->settings);
+	prepareRGBDFrame(frame, frame, this->settings, this->algtype);
 }
 
-bool OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void OdometryRGBD::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	return prepareRGBDFrame(srcFrame, dstFrame, this->settings);
+	prepareRGBDFrame(srcFrame, dstFrame, this->settings, this->algtype);
 }
 
 bool OdometryRGBD::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const

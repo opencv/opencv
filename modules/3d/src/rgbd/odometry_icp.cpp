@@ -26,14 +26,14 @@ OdometryFrame OdometryICP::createOdometryFrame()
     return OdometryFrame(OdometryFrameStoreType::MAT);
 }
 
-bool OdometryICP::prepareFrame(OdometryFrame frame)
+void OdometryICP::prepareFrame(OdometryFrame frame)
 {
-	return prepareICPFrame(frame, frame, this->settings);
+	prepareICPFrame(frame, frame, this->settings, this->algtype);
 }
 
-bool OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void OdometryICP::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	return prepareICPFrame(srcFrame, dstFrame, this->settings);
+	prepareICPFrame(srcFrame, dstFrame, this->settings, this->algtype);
 }
 
 bool OdometryICP::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const

@@ -130,17 +130,17 @@ void calcICPEquationCoeffsTranslation(double* C, const Point3f& /*p0*/, const Ve
 typedef
 void (*CalcICPEquationCoeffsPtr)(double*, const Point3f&, const Vec3f&);
 
-bool prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
-bool prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
-bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
+void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype);
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings);
+void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype);
 
-bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings);
-bool prepareRGBFrameSrc (OdometryFrame& frame, OdometrySettings settings);
-bool prepareRGBFrameDst (OdometryFrame& frame, OdometrySettings settings);
+void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings);
+void prepareRGBFrameSrc (OdometryFrame& frame, OdometrySettings settings);
+void prepareRGBFrameDst (OdometryFrame& frame, OdometrySettings settings);
 
-bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings);
-bool prepareICPFrameSrc (OdometryFrame& frame, OdometrySettings settings);
-bool prepareICPFrameDst (OdometryFrame& frame, OdometrySettings settings);
+void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings);
+void prepareICPFrameSrc (OdometryFrame& frame, OdometrySettings settings);
+void prepareICPFrameDst (OdometryFrame& frame, OdometrySettings settings);
 
 
 void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage);

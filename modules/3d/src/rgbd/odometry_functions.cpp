@@ -24,38 +24,33 @@ enum
     UTSIZE = 27
 };
 
-bool prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
+void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
-    bool isCorrect1 = prepareRGBFrame(srcFrame, dstFrame, settings);
-    bool isCorrect2 = prepareICPFrame(srcFrame, dstFrame, settings);
-
-    return isCorrect1 && isCorrect2;
+    prepareRGBFrame(srcFrame, dstFrame, settings);
+    prepareICPFrame(srcFrame, dstFrame, settings, algtype);
 }
 
-bool prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
+void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
 {
-    bool isCorrect1 = prepareRGBFrameBase(srcFrame, settings);
-    bool isCorrect2 = prepareRGBFrameBase(dstFrame, settings);
+    prepareRGBFrameBase(srcFrame, settings);
+    prepareRGBFrameBase(dstFrame, settings);
     
-    bool isCorrect3 = prepareRGBFrameSrc(srcFrame, settings);
-    bool isCorrect4 = prepareRGBFrameDst(dstFrame, settings);
-
-	return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
+    prepareRGBFrameSrc(srcFrame, settings);
+    prepareRGBFrameDst(dstFrame, settings);
 }
 
-bool prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings)
+void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometrySettings settings, OdometryAlgoType algtype)
 {
-    bool isCorrect1 = prepareICPFrameBase(srcFrame, settings);
-    bool isCorrect2 = prepareICPFrameBase(dstFrame, settings);
+    prepareICPFrameBase(srcFrame, settings);
+    prepareICPFrameBase(dstFrame, settings);
 
-    bool isCorrect3 = prepareICPFrameSrc(srcFrame, settings);
-    isCorrect3 = isCorrect3 && prepareICPFrameDst(srcFrame, settings);
-    bool isCorrect4 = prepareICPFrameDst(dstFrame, settings);
-
-    return isCorrect1 && isCorrect2 && isCorrect3 && isCorrect4;
+    prepareICPFrameSrc(srcFrame, settings);
+    if (algtype == OdometryAlgoType::FAST)
+        prepareICPFrameDst(srcFrame, settings);
+    prepareICPFrameDst(dstFrame, settings);
 }
 
-bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
+void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
@@ -130,11 +125,9 @@ bool prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
         npyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-
-	return true;
 }
 
-bool prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
+void prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {
     typedef Mat TMat;
 
@@ -149,11 +142,9 @@ bool prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
-	
-    return true;
 }
 
-bool prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
+void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
     typedef Mat TMat;
 
@@ -178,11 +169,9 @@ bool prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
     setPyramids(frame, OdometryFramePyramidType::PYR_DIX, dxpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_DIY, dypyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_TEXMASK, tmpyramids);
-    
-    return true;
 }
 
-bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
+void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
     typedef Mat TMat;
 
@@ -238,11 +227,9 @@ bool prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
-    
-    return true;
 }
 
-bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
+void prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
 {    
     typedef Mat TMat;
 
@@ -257,11 +244,9 @@ bool prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
         npyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-
-    return true;
 }
 
-bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
+void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
 {
     typedef Mat TMat;
 
@@ -319,8 +304,6 @@ bool prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     std::vector<TMat> nmpyramids;
     preparePyramidNormalsMask(npyramids, mpyramids, settings.getMaxPointsPart(), nmpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_NORMMASK, nmpyramids);
-
-    return true;
 }
 
 void setPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, InputArrayOfArrays pyramidImage)
@@ -748,8 +731,8 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                     const Mat pyramidNormalsMask;
                     dstFrame.getPyramidAt(pyramidNormalsMask, OdometryFramePyramidType::PYR_NORMMASK, level);
                     computeCorresps(levelCameraMatrix, levelCameraMatrix_inv, resultRt_inv,
-                        srcLevelDepth, srcLevelDepth, pyramidMask,
-                        dstLevelDepth, dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
+                        Mat(), srcLevelDepth, pyramidMask,
+                        Mat(), dstLevelDepth, pyramidNormalsMask, maxDepthDiff,
                         corresps_icp, diffs_icp, sigma_icp, OdometryType::DEPTH);
                 }
             }

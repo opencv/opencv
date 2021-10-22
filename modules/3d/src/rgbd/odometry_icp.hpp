@@ -20,8 +20,8 @@ public:
 	~OdometryICP();
 
     virtual OdometryFrame createOdometryFrame();
-    virtual bool prepareFrame(OdometryFrame frame);
-	virtual bool prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
+    virtual void prepareFrame(OdometryFrame frame);
+	virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
 	virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
 }

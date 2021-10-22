@@ -54,18 +54,19 @@ OdometryFrame Odometry::createOdometryFrame(OdometryFrameStoreType matType)
     return OdometryFrame(matType);
 }
 
-bool Odometry::prepareFrame(OdometryFrame frame)
+void Odometry::prepareFrame(OdometryFrame frame)
 {
-	return this->odometry->prepareFrame(frame);
+	this->odometry->prepareFrame(frame);
 }
 
-bool Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
+void Odometry::prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame)
 {
-	return this->odometry->prepareFrames(srcFrame, dstFrame);
+	this->odometry->prepareFrames(srcFrame, dstFrame);
 }
 
 bool Odometry::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt)
 {
+    this->prepareFrames(srcFrame, dstFrame);
 	return this->odometry->compute(srcFrame, dstFrame, Rt);
 }
 
