@@ -1941,7 +1941,7 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
         CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
 
     if(!CV_IS_MAT(calibMatr))
-        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
+        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be matrices!");
 
     double dummy = .0;
     Point2d pp;
@@ -3289,7 +3289,7 @@ cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
         CV_Error(CV_StsNullPtr, "Some of parameters is a NULL pointer!");
 
     if(!CV_IS_MAT(projMatr) || !CV_IS_MAT(calibMatr) || !CV_IS_MAT(rotMatr) || !CV_IS_MAT(posVect))
-        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be a matrices!");
+        CV_Error(CV_StsUnsupportedFormat, "Input parameters must be matrices!");
 
     if(projMatr->cols != 4 || projMatr->rows != 3)
         CV_Error(CV_StsUnmatchedSizes, "Size of projection matrix must be 3x4!");
