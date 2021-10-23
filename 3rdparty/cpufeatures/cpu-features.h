@@ -190,7 +190,7 @@ extern uint64_t android_getCpuFeatures(void);
  *     This flag implies -mfpu=neon-vfpv4.
  *
  *   -mcpu=iwmmxt
- *     Allows the use of iWMMXt instrinsics with GCC.
+ *     Allows the use of iWMMXt intrinsics with GCC.
  *
  * IMPORTANT NOTE: These flags should only be tested when
  * android_getCpuFamily() returns ANDROID_CPU_FAMILY_ARM, i.e. this is a
@@ -227,7 +227,7 @@ enum {
  *     CPU has Floating-point unit.
  *
  *   ASIMD:
- *     CPU has Advanced SIMD unit.
+ *     CPU has an Advanced SIMD unit.
  *
  *   AES:
  *     CPU supports AES instructions.
