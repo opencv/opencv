@@ -317,8 +317,9 @@ namespace minEnclosingTriangle {
 */
 static void findMinEnclosingTriangle(cv::InputArray points,
                                      CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
-    std::vector<cv::Point2f> resultingTriangle, polygon;
     CV_Assert(!points.empty());
+    std::vector<cv::Point2f> resultingTriangle;
+    cv::Mat polygon;
     convexHull(points, polygon, true, true);
     findMinEnclosingTriangle(polygon, resultingTriangle, area);
     cv::Mat(resultingTriangle).copyTo(triangle);

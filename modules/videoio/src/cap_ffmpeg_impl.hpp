@@ -830,6 +830,7 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
     static bool skip_header = false;
     static int prev_level = -1;
     CV_UNUSED(ptr);
+    if (level>av_log_get_level()) return;
     if (!skip_header || level != prev_level) printf("[OPENCV:FFMPEG:%02d] ", level);
     vprintf(fmt, vargs);
     size_t fmt_len = strlen(fmt);
@@ -850,9 +851,15 @@ public:
     {
 #ifndef NO_GETENV
         char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-        if (debug_option != NULL)
+        char* level_option = getenv("OPENCV_FFMPEG_LOGLEVEL");
+        int level = AV_LOG_VERBOSE;
+        if (level_option != NULL)
         {
-            av_log_set_level(AV_LOG_VERBOSE);
+            level = atoi(level_option);
+        }
+        if ( (debug_option != NULL) || (level_option != NULL) )
+        {
+            av_log_set_level(level);
             av_log_set_callback(ffmpeg_log_callback);
         }
         else

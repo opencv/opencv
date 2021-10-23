@@ -2457,5 +2457,38 @@ TEST(Imgproc_minAreaRect, reproducer_19769)
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
 }
 
+TEST(Imgproc_minEnclosingTriangle, regression_17585)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points(N, 2, CV_32FC1, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_20890)
+{
+    vector<Point> points;
+    points.push_back(Point(0, 0));
+    points.push_back(Point(0, 1));
+    points.push_back(Point(1, 1));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points, triangle));
+}
+
+TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
+{
+    const int N = 3;
+    float pts_[N][2] = { {0, 0}, {0, 1}, {1, 1} };
+    cv::Mat points1xN(1, N, CV_32FC2, static_cast<void*>(pts_));
+    cv::Mat pointsNx1(N, 1, CV_32FC2, static_cast<void*>(pts_));
+    vector<Point2f> triangle;
+
+    EXPECT_NO_THROW(minEnclosingTriangle(points1xN, triangle));
+    EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
+}
+
 }} // namespace
 /* End of file. */
