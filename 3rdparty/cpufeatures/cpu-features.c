@@ -200,7 +200,7 @@ read_file(const char*  pathname, char*  buffer, size_t  buffsize)
 }
 
 #ifdef __arm__
-/* Extract the content of a the first occurence of a given field in
+/* Extract the content of the first occurrence of a given field in
  * the content of /proc/cpuinfo and return it as a heap-allocated
  * string that must be freed by the caller.
  *
@@ -1278,7 +1278,7 @@ android_setCpuArm(int cpu_count, uint64_t cpu_features, uint32_t cpu_id)
  *   |
  * ARCH_NEON_FP16 (+EXT_FP16)
  *
- * -fpu=<name> values and their correspondance with FPU architectures above:
+ * -fpu=<name> values and their correspondence with FPU architectures above:
  *
  *   {"vfp",               FPU_ARCH_VFP_V2},
  *   {"vfp9",              FPU_ARCH_VFP_V2},
