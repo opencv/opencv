@@ -670,7 +670,7 @@ unsigned int JITAPI iJIT_GetNewMethodID(void);
 iJIT_IsProfilingActiveFlags JITAPI iJIT_IsProfilingActive(void);
 
 /**
- * @brief Reports infomation about JIT-compiled code to the agent.
+ * @brief Reports information about JIT-compiled code to the agent.
  *
  * The reported information is used to attribute samples obtained from any
  * Intel(R) VTune(TM) Amplifier collector. This API needs to be called
