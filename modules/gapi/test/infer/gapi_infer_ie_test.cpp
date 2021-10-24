@@ -139,6 +139,20 @@ void setNetParameters(IE::CNNNetwork& net, bool is_nv12 = false) {
     }
 }
 
+void compileBlob(const cv::gapi::ie::detail::ParamDesc& params,
+                 const std::string&                     output,
+                 const IE::Precision&                   ip) {
+    auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+    auto net    = cv::gimpl::ie::wrap::readNetwork(params);
+    for (auto&& ii : net.getInputsInfo()) {
+        ii.second->setPrecision(ip);
+    }
+    auto this_network = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+    std::ofstream out_file{output, std::ios::out | std::ios::binary};
+    GAPI_Assert(out_file.is_open());
+    this_network.Export(out_file);
+}
+
 } // anonymous namespace
 
 // TODO: Probably DNN/IE part can be further parametrized with a template
@@ -2230,6 +2244,62 @@ TEST(TestAgeGenderIE, InferWithBatch)
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" })
      .cfgBatchSize(batch_size);
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+}
+
+TEST(TestAgeGender, ImportNetwork)
+{
+    initDLDTDataPath();
+
+    const std::string model_name = "age-gender-recognition-retail-0013";
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path   = findDataFile(SUBDIR + model_name + ".xml");
+    params.weights_path = findDataFile(SUBDIR + model_name + ".bin");
+    params.device_id    = "MYRIAD";
+
+    const std::string blob_path = model_name + ".blob";
+
+    compileBlob(params, blob_path, IE::Precision::U8);
+
+    cv::Mat in_mat(320, 240, CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+    cv::Mat gapi_age, gapi_gender;
+
+    // Load & run IE network
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
+        cv::gapi::ie::detail::ParamDesc p;
+        p.model_path = blob_path;
+        p.device_id = "MYRIAD";
+        auto this_network  = cv::gimpl::ie::wrap::importNetwork(plugin, p);
+        auto infer_request = this_network.CreateInferRequest();
+        IE::PreProcessInfo info;
+        info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        infer_request.SetBlob("data", cv::gapi::ie::util::to_ie(in_mat), info);
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        blob_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
