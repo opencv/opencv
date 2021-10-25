@@ -54,6 +54,10 @@ class SeamFinder:
     @staticmethod
     def exctract_seam_lines(blended_seam_masks, linesize=1):
         seam_lines = cv.Canny(np.uint8(blended_seam_masks), 100, 200)
+        seam_indices = (seam_lines == 255).nonzero()
+        seam_lines = remove_invalid_line_pixels(
+            seam_indices, seam_lines, blended_seam_masks
+            )
         kernelsize = linesize + linesize - 1
         kernel = np.ones((kernelsize, kernelsize), np.uint8)
         return cv.dilate(seam_lines, kernel)
@@ -96,3 +100,28 @@ def add_weighted_image(img1, img2, alpha):
     return cv.addWeighted(
         img1, alpha, img2, (1.0 - alpha), 0.0
         )
+
+
+def remove_invalid_line_pixels(indices, lines, mask):
+    for x, y in zip(*indices):
+        if check_if_pixel_or_neighbor_is_black(mask, x, y):
+            lines[x, y] = 0
+    return lines
+
+
+def check_if_pixel_or_neighbor_is_black(img, x, y):
+    check = [is_pixel_black(img, x, y),
+             is_pixel_black(img, x+1, y), is_pixel_black(img, x-1, y),
+             is_pixel_black(img, x, y+1), is_pixel_black(img, x, y-1)]
+    return any(check)
+
+
+def is_pixel_black(img, x, y):
+    return np.all(get_pixel_value(img, x, y) == 0)
+
+
+def get_pixel_value(img, x, y):
+    try:
+        return img[x, y]
+    except IndexError:
+        pass
