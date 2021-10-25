@@ -98,6 +98,10 @@ static inline DST divr(SRC1 x, SRC2 y, float scale=1)
 //
 //---------------------------
 #if CV_SIMD
+CV_ALWAYS_INLINE v_float32 v_load_f32(const float* in)
+{
+    return vx_load(in);
+}
 CV_ALWAYS_INLINE v_float32 v_load_f32(const ushort* in)
 {
     return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(in)));
@@ -112,18 +116,20 @@ CV_ALWAYS_INLINE v_float32 v_load_f32(const uchar* in)
 {
     return v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(in)));
 }
-#endif
 
-#if CV_SSE2
-CV_ALWAYS_INLINE void addw_short_store(short* out, const v_int32& c1, const v_int32& c2)
+CV_ALWAYS_INLINE void v_store_i16(short* out, const v_int32& c1, const v_int32& c2)
 {
-    vx_store(out, v_pack(c1, c2));
+    v_int16 t = v_pack(c1, c2);
+    vx_store(out, t);
 }
 
-CV_ALWAYS_INLINE void addw_short_store(ushort* out, const v_int32& c1, const v_int32& c2)
+CV_ALWAYS_INLINE void v_store_i16(ushort* out, const v_int32& c1, const v_int32& c2)
 {
     vx_store(out, v_pack_u(c1, c2));
 }
+#endif
+
+#if CV_SSE2
 
 template<typename SRC, typename DST>
 CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
@@ -154,8 +160,8 @@ CV_ALWAYS_INLINE int addw_simd(const SRC in1[], const SRC in2[], DST out[],
             v_float32 b1 = v_load_f32(&in2[x]);
             v_float32 b2 = v_load_f32(&in2[x + nlanes / 2]);
 
-            addw_short_store(&out[x], v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
-                                      v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))));
+            v_store_i16(&out[x], v_round(v_fma(a1, alpha, v_fma(b1, beta, gamma))),
+                                 v_round(v_fma(a2, alpha, v_fma(b2, beta, gamma))));
         }
 
         if (x < length)
@@ -623,47 +629,235 @@ CV_ALWAYS_INLINE int sub_simd(const SRC in1[], const SRC in2[], DST out[], int l
     return 0;
 }
 #endif
-
+#if 0
 template<typename SRC, typename DST>
-static void div_hal(const SRC*, const SRC*, DST*, int, void*)
-{
+static void div_hal(const SRC*, const SRC*, DST*, int, double)
+{    
     // Do nothing because this case doesn't exist.
     CV_Assert("unsupported types");
     return;
 }
+#endif
+#if CV_SIMD
 
+template<typename scalar_t>
+struct vector_type_of;
+
+template<typename scalar_t>
+using vector_type_of_t = typename vector_type_of<scalar_t>::type;
+
+template<> struct vector_type_of<uchar> { using type = v_uint8; };
+template<> struct vector_type_of<ushort> { using type = v_uint16; };
+template<> struct vector_type_of<short> { using type = v_int16; };
+CV_ALWAYS_INLINE v_int16 v_load_div_f32(const short* src, const v_int16& zero, v_float32& div1, v_float32& div2)
+{
+    v_int16 div = vx_load(src);
+    v_int32 d1, d2;
+    v_expand(div, d1, d2);
+    div1 = v_cvt_f32(d1);
+    div2 = v_cvt_f32(d2);
+    return (div == zero);
+}
+
+CV_ALWAYS_INLINE v_uint16 v_load_div_f32(const ushort* src, const v_uint16& zero, v_float32& div1, v_float32& div2)
+{
+    v_uint16 div = vx_load(src);
+    v_uint32 d1, d2;
+    v_expand(div, d1, d2);
+    div1 = v_cvt_f32(v_reinterpret_as_s32(d1));
+    div2 = v_cvt_f32(v_reinterpret_as_s32(d2));
+    return (div == zero);
+}
+
+CV_ALWAYS_INLINE v_uint16 v_load_div_f32(const uchar* src, const v_uint16& zero, v_float32& div1, v_float32& div2)
+{
+    v_uint16 div = vx_load_expand(src);
+    v_uint32 d1, d2;
+    v_expand(div, d1, d2);
+    div1 = v_cvt_f32(v_reinterpret_as_s32(d1));
+    div2 = v_cvt_f32(v_reinterpret_as_s32(d2));
+    return (div == zero);
+}
+
+
+CV_ALWAYS_INLINE v_uint16 v_load_div_f32(const float* src, const v_uint16& zero, v_float32& div1, v_float32& div2)
+{
+    constexpr int nlanes = v_uint16::nlanes;
+    div1 = vx_load(src);
+    div2 = vx_load(&src[nlanes / 2]);
+    return zero;
+}
+
+CV_ALWAYS_INLINE v_int16 v_load_div_f32(const float* src, const v_int16& zero, v_float32& div1, v_float32& div2)
+{
+    constexpr int nlanes = v_int16::nlanes;
+    div1 = vx_load(src);
+    div2 = vx_load(&src[nlanes / 2]);
+    return zero;
+}
+
+CV_ALWAYS_INLINE void v_store_div_i16(short* dst, const v_int16& mask, const v_int16& zero, v_int32& res1, v_int32& res2)
+{
+    vx_store(dst, v_select(mask, zero, v_pack(res1, res2)));
+}
+
+CV_ALWAYS_INLINE void v_store_div_i16(ushort* dst, const v_uint16& mask, const v_uint16& zero, v_int32& res1, v_int32& res2)
+{
+    vx_store(dst, v_select(mask, zero, v_pack_u(res1, res2)));
+}
+
+
+
+template<typename SRC, typename DST>
+CV_ALWAYS_INLINE int div_hal(const SRC in1[], const SRC in2[], DST out[],
+                             int length, double _scale)
+{
+    static_assert(/*((std::is_same<SRC, ushort>::value) || (std::is_same<SRC, short>::value)) &&*/
+                  ((std::is_same<DST, ushort>::value) || (std::is_same<DST, short>::value)),
+                  "This templated overload is only for short and ushort type combinations.");
+
+    constexpr int nlanes = vector_type_of_t<DST>::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    const vector_type_of_t<DST> v_zero = vx_setall<vector_type_of_t<DST>::lane_type>(0);
+    
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+    v_float32 div1, div2;
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 2]);
+            const vector_type_of_t<DST> mask = v_load_div_f32(&in2[x], v_zero, div1, div2);
+            //v_float32 b1 = v_load_f32(&in2[x]);
+            //v_float32 b2 = v_load_f32(&in2[x + nlanes / 2]);
+            //v_select(denom == v_zero, v_zero, res);
+            v_store_i16(&out[x], v_round(a1 * (scale / div1)),
+                                 v_round(a2 * (scale / div2)));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE int div_hal(const SRC in1[], const SRC in2[], uchar out[],
+                             int length, double _scale)
+{
+    constexpr int nlanes = v_uint8::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 a2 = v_load_f32(&in1[x + nlanes / 4]);
+            v_float32 a3 = v_load_f32(&in1[x + nlanes / 2]);
+            v_float32 a4 = v_load_f32(&in1[x + 3 * nlanes / 4]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+            v_float32 b2 = v_load_f32(&in2[x + nlanes / 4]);
+            v_float32 b3 = v_load_f32(&in2[x + nlanes / 2]);
+            v_float32 b4 = v_load_f32(&in2[x + 3 * nlanes / 4]);
+
+            v_int32 sum1 = v_round(a1 * scale / b1),
+                    sum2 = v_round(a2 * scale / b2),
+                    sum3 = v_round(a3 * scale / b3),
+                    sum4 = v_round(a4 * scale / b4);
+
+            vx_store(&out[x], v_pack_u(v_pack(sum1, sum2), v_pack(sum3, sum4)));
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+
+template<typename SRC>
+CV_ALWAYS_INLINE int div_hal(const SRC in1[], const SRC in2[], float out[],
+                             int length, double _scale)
+{
+    constexpr int nlanes = v_float32::nlanes;
+
+    if (length < nlanes)
+        return 0;
+
+    v_float32 scale = vx_setall_f32(static_cast<float>(_scale));
+
+    int x = 0;
+    for (;;)
+    {
+        for (; x <= length - nlanes; x += nlanes)
+        {
+            v_float32 a1 = v_load_f32(&in1[x]);
+            v_float32 b1 = v_load_f32(&in2[x]);
+
+            vx_store(&out[x], a1 * scale / b1);
+        }
+
+        if (x < length)
+        {
+            x = length - nlanes;
+            continue;  // process one more time (unaligned tail)
+        }
+        break;
+    }
+    return x;
+}
+#endif // CV_SIMD
+#if 0
 static void div_hal(const uchar in1[], const uchar in2[], uchar out[],
-                    int length, void* scale)
+                    int length, double scale)
 {
     hal::div8u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-               out, static_cast<size_t>(length), length, 1, scale);
+               out, static_cast<size_t>(length), length, 1, &scale);
     return;
 }
 
 static void div_hal(const short in1[], const short in2[], short out[],
-                    int length, void* scale)
+                    int length, double scale)
 {
     hal::div16s(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, scale);
+                out, static_cast<size_t>(length), length, 1, &scale);
     return;
 }
 
 static void div_hal(const ushort in1[], const ushort in2[], ushort out[],
-                    int length, void* scale)
+                    int length, double scale)
 {
     hal::div16u(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, scale);
+                out, static_cast<size_t>(length), length, 1, &scale);
     return;
 }
 
 static void div_hal(const float in1[], const float in2[], float out[],
-                    int length, void* scale)
+                    int length, double scale)
 {
     hal::div32f(in1, static_cast<size_t>(length), in2, static_cast<size_t>(length),
-                out, static_cast<size_t>(length), length, 1, scale);
+                out, static_cast<size_t>(length), length, 1, &scale);
     return;
 }
-
+#endif
 
 template<typename DST, typename SRC1, typename SRC2>
 static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm arithm,
@@ -709,7 +903,7 @@ static void run_arithm(Buffer &dst, const View &src1, const View &src2, Arithm a
                 out[x] = mul<DST>(in1[x], in2[x], _scale);
             break;
         case ARITHM_DIVIDE:
-            div_hal(in1, in2, out, length, static_cast<void*>(&scale));
+            div_hal(in1, in2, out, length, scale);
             break;
         default: CV_Error(cv::Error::StsBadArg, "unsupported arithmetic operation");
     }
@@ -780,11 +974,16 @@ GAPI_FLUID_KERNEL(GFluidDiv, cv::gapi::core::GDiv, false)
     {
         //      DST     SRC1    SRC2    OP          __VA_ARGS__
         BINARY_(uchar , uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(uchar,  ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(uchar ,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( short,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_(ushort, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_(ushort,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float, uchar , uchar , run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
+        BINARY_( float, ushort, ushort, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  short,  short, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
         BINARY_( float,  float,  float, run_arithm, dst, src1, src2, ARITHM_DIVIDE, scale);
 
