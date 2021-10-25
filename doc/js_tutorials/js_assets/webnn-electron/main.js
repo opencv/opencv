@@ -13,6 +13,7 @@ function createWindow() {
     height: 840,
     webPreferences: {
       nodeIntegration: true,
+      contextIsolation: false,
       preload: app.getAppPath()+"/node_setup.js"
     }
   })
