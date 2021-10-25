@@ -25,7 +25,6 @@
 #define D3D11_NO_HELPERS
 #define NOMINMAX
 #include <cldnn/cldnn_config.hpp>
-#include <atlbase.h>
 #include <d3d11.h>
 #pragma comment(lib, "dxgi")
 #undef NOMINMAX
@@ -64,9 +63,29 @@ std::string get_weights_path(const std::string &model_path) {
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
 
-using AccelParamsType = std::tuple<CComPtr<ID3D11Device>, CComPtr<ID3D11DeviceContext>>;
+// Since ATL headers might not be available on specific MSVS Build Tools
+// we use simple `CComPtr` implementation like as `ComPtrGuard`
+// which is not supposed to be the full functional replacement of `CComPtr`
+// and it uses as RAII to make sure utilization is correct
+template <typename COMNonManageableType>
+void release(COMNonManageableType *ptr) {
+    if (ptr) {
+        ptr->Release();
+    }
+}
 
-AccelParamsType create_device_with_ctx(CComPtr<IDXGIAdapter> adapter) {
+template <typename COMNonManageableType>
+using ComPtrGuard = std::unique_ptr<COMNonManageableType, decltype(&release<COMNonManageableType>)>;
+
+template <typename COMNonManageableType>
+ComPtrGuard<COMNonManageableType> createCOMPtrGuard(COMNonManageableType *ptr = nullptr) {
+    return ComPtrGuard<COMNonManageableType> {ptr, &release<COMNonManageableType>};
+}
+
+
+using AccelParamsType = std::tuple<ComPtrGuard<ID3D11Device>, ComPtrGuard<ID3D11DeviceContext>>;
+
+AccelParamsType create_device_with_ctx(IDXGIAdapter* adapter) {
     UINT flags = 0;
     D3D_FEATURE_LEVEL feature_levels[] = { D3D_FEATURE_LEVEL_11_1,
                                            D3D_FEATURE_LEVEL_11_0,
@@ -85,7 +104,8 @@ AccelParamsType create_device_with_ctx(CComPtr<IDXGIAdapter> adapter) {
                                  std::to_string(HRESULT_CODE(err)));
     }
 
-    return std::make_tuple(ret_device_ptr, ret_ctx_ptr);
+    return std::make_tuple(createCOMPtrGuard(ret_device_ptr),
+                           createCOMPtrGuard(ret_ctx_ptr));
 }
 #endif // HAVE_D3D11
 #endif // HAVE_DIRECTX
@@ -270,12 +290,11 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_INF_ENGINE
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-    CComPtr<ID3D11Device> dx11_dev;
-    CComPtr<ID3D11DeviceContext> dx11_ctx;
+    auto dx11_dev = createCOMPtrGuard<ID3D11Device>();
+    auto dx11_ctx = createCOMPtrGuard<ID3D11DeviceContext>();
 
     if (device_id.find("GPU") != std::string::npos) {
-        CComPtr<IDXGIFactory> adapter_factory;
-        CComPtr<IDXGIAdapter> intel_adapters;
+        auto adapter_factory = createCOMPtrGuard<IDXGIFactory>();
         {
             IDXGIFactory* out_factory = nullptr;
             HRESULT err = CreateDXGIFactory(__uuidof(IDXGIFactory),
@@ -284,10 +303,10 @@ int main(int argc, char *argv[]) {
                 std::cerr << "Cannot create CreateDXGIFactory, error: " << HRESULT_CODE(err) << std::endl;
                 return -1;
             }
-            adapter_factory.Attach(out_factory);
+            adapter_factory = createCOMPtrGuard(out_factory);
         }
 
-        CComPtr<IDXGIAdapter> intel_adapter;
+        auto intel_adapter = createCOMPtrGuard<IDXGIAdapter>();
         UINT adapter_index = 0;
         const unsigned int refIntelVendorID = 0x8086;
         IDXGIAdapter* out_adapter = nullptr;
@@ -296,7 +315,7 @@ int main(int argc, char *argv[]) {
             DXGI_ADAPTER_DESC desc{};
             out_adapter->GetDesc(&desc);
             if (desc.VendorId == refIntelVendorID) {
-                intel_adapter.Attach(out_adapter);
+                intel_adapter = createCOMPtrGuard(out_adapter);
                 break;
             }
             ++adapter_index;
@@ -307,9 +326,9 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter);
-        accel_device_ptr = reinterpret_cast<void*>(dx11_dev.p);
-        accel_ctx_ptr = reinterpret_cast<void*>(dx11_ctx.p);
+        std::tie(dx11_dev, dx11_ctx) = create_device_with_ctx(intel_adapter.get());
+        accel_device_ptr = reinterpret_cast<void*>(dx11_dev.get());
+        accel_ctx_ptr = reinterpret_cast<void*>(dx11_ctx.get());
 
         // put accel type description for VPL source
         source_cfgs.push_back(cfg::create_from_string(
