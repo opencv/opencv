@@ -174,7 +174,7 @@ size_t OdometryFrameImplTMat<TMat>::getPyramidLevels(OdometryFramePyramidType of
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::setPyramidAt(InputArray  _img, OdometryFramePyramidType pyrType, size_t level)
 {
-    CV_Assert(_img.channels() == 4);
+    //CV_Assert(_img.channels() != 4);
 	TMat img = getTMat<TMat>(_img);
 	pyramids[pyrType][level] = img;
 }

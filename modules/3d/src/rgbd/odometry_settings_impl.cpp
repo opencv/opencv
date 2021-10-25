@@ -28,8 +28,46 @@ const float defaultMaxRotation = 15.f;
 const float defaultMinGradientMagnitude = 10.f;
 std::vector<float> defaultMinGradientMagnitudes = std::vector<float>(defaultIterCounts.size(), defaultMinGradientMagnitude);
 
+class OdometrySettings::Impl
+{
+public:
+    Impl() {};
+    ~Impl() {};
+    virtual void setCameraMatrix(InputArray val) = 0;
+    virtual void getCameraMatrix(OutputArray val) const = 0;
+    virtual void setIterCounts(InputArray val) = 0;
+    virtual void getIterCounts(OutputArray val) const = 0;
 
-class OdometrySettingsImplCommon : public OdometrySettingsImpl
+    virtual void  setMinDepth(float val) = 0;
+    virtual float getMinDepth() const = 0;
+    virtual void  setMaxDepth(float val) = 0;
+    virtual float getMaxDepth() const = 0;
+    virtual void  setMaxDepthDiff(float val) = 0;
+    virtual float getMaxDepthDiff() const = 0;
+    virtual void  setMaxPointsPart(float val) = 0;
+    virtual float getMaxPointsPart() const = 0;
+
+    virtual void setSobelSize(int val) = 0;
+    virtual int  getSobelSize() const = 0;
+    virtual void   setSobelScale(double val) = 0;
+    virtual double getSobelScale() const = 0;
+    virtual void setNormalWinSize(int val) = 0;
+    virtual int  getNormalWinSize() const = 0;
+
+    virtual void  setAngleThreshold(float val) = 0;
+    virtual float getAngleThreshold() const = 0;
+    virtual void  setMaxTranslation(float val) = 0;
+    virtual float getMaxTranslation() const = 0;
+    virtual void  setMaxRotation(float val) = 0;
+    virtual float getMaxRotation() const = 0;
+
+    virtual void  setMinGradientMagnitude(float val) = 0;
+    virtual float getMinGradientMagnitude() const = 0;
+    virtual void setMinGradientMagnitudes(InputArray val) = 0;
+    virtual void getMinGradientMagnitudes(OutputArray val) const = 0;
+};
+
+class OdometrySettingsImplCommon : public OdometrySettings::Impl
 {
 public:
     OdometrySettingsImplCommon();
@@ -91,8 +129,42 @@ private:
 
 OdometrySettings::OdometrySettings()
 {
-	this->odometrySettings = makePtr<OdometrySettingsImplCommon>();
+	this->impl = makePtr<OdometrySettingsImplCommon>();
 }
+
+void OdometrySettings::setCameraMatrix(InputArray val) { this->impl->setCameraMatrix(val); }
+void OdometrySettings::getCameraMatrix(OutputArray val) const { this->impl->getCameraMatrix(val); }
+void OdometrySettings::setIterCounts(InputArray val) { this->impl->setIterCounts(val); }
+void OdometrySettings::getIterCounts(OutputArray val) const { this->impl->getIterCounts(val); }
+
+void  OdometrySettings::setMinDepth(float val) { this->impl->setMinDepth(val); }
+float OdometrySettings::getMinDepth() const { return this->impl->getMinDepth(); }
+void  OdometrySettings::setMaxDepth(float val) { this->impl->setMaxDepth(val); }
+float OdometrySettings::getMaxDepth() const { return this->impl->getMaxDepth(); }
+void  OdometrySettings::setMaxDepthDiff(float val) { this->impl->setMaxDepthDiff(val); }
+float OdometrySettings::getMaxDepthDiff() const { return this->impl->getMaxDepthDiff(); }
+void  OdometrySettings::setMaxPointsPart(float val) { this->impl->setMaxPointsPart(val); }
+float OdometrySettings::getMaxPointsPart() const { return this->impl->getMaxPointsPart(); }
+
+void OdometrySettings::setSobelSize(int val) { this->impl->setSobelSize(val); }
+int  OdometrySettings::getSobelSize() const { return this->impl->getSobelSize(); }
+void   OdometrySettings::setSobelScale(double val) { this->impl->setSobelScale(val); }
+double OdometrySettings::getSobelScale() const { return this->impl->getSobelScale(); }
+void OdometrySettings::setNormalWinSize(int val) { this->impl->setNormalWinSize(val); }
+int  OdometrySettings::getNormalWinSize() const { return this->impl->getNormalWinSize(); }
+
+void  OdometrySettings::setAngleThreshold(float val) { this->impl->setAngleThreshold(val); }
+float OdometrySettings::getAngleThreshold() const { return this->impl->getAngleThreshold(); }
+void  OdometrySettings::setMaxTranslation(float val) { this->impl->setMaxTranslation(val); }
+float OdometrySettings::getMaxTranslation() const { return this->impl->getMaxTranslation(); }
+void  OdometrySettings::setMaxRotation(float val) { this->impl->setMaxRotation(val); }
+float OdometrySettings::getMaxRotation() const { return this->impl->getMaxRotation(); }
+
+void  OdometrySettings::setMinGradientMagnitude(float val) { this->impl->setMinGradientMagnitude(val); }
+float OdometrySettings::getMinGradientMagnitude() const { return this->impl->getMinGradientMagnitude(); }
+void OdometrySettings::setMinGradientMagnitudes(InputArray val) { this->impl->setMinGradientMagnitudes(val); }
+void OdometrySettings::getMinGradientMagnitudes(OutputArray val) const { this->impl->getMinGradientMagnitudes(val); }
+
 
 OdometrySettingsImplCommon::OdometrySettingsImplCommon()
 {
