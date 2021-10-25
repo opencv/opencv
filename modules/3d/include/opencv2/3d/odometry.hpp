@@ -35,24 +35,8 @@ enum class OdometryAlgoType
     FAST   = 1
 };
 
-class OdometryImpl
-{
-private:
-
-public:
-    OdometryImpl() {};
-    ~OdometryImpl() {};
-
-    virtual OdometryFrame createOdometryFrame() = 0;
-    virtual void prepareFrame(OdometryFrame frame) = 0;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;
-    virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const = 0;
-};
-
 class CV_EXPORTS_W Odometry
 {
-private:
-    Ptr<OdometryImpl>odometry;
 public:
     CV_WRAP Odometry();
     CV_WRAP Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
@@ -87,6 +71,10 @@ public:
      *   0    0    0    1  }
      */
     bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt);
+
+    class Impl;
+private:
+    Ptr<Impl> impl;
 };
 
 }

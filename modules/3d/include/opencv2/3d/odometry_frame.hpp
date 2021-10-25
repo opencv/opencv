@@ -33,60 +33,30 @@ enum class OdometryFrameStoreType
     UMAT = 1
 };
 
-class OdometryFrameImpl
-{
-public:
-    OdometryFrameImpl() {};
-    ~OdometryFrameImpl() {};
-    virtual void setImage(InputArray  image) = 0;
-    virtual void getImage(OutputArray image) = 0;
-    virtual void getGrayImage(OutputArray image) = 0;
-    virtual void setDepth(InputArray  depth) = 0;
-    virtual void getDepth(OutputArray depth) = 0;
-    virtual void setMask(InputArray  mask) = 0;
-    virtual void getMask(OutputArray mask) = 0;
-    virtual void setNormals(InputArray  normals) = 0;
-    virtual void getNormals(OutputArray normals) = 0;
-    virtual void   setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype) = 0;
-    virtual void   setPyramidLevels(size_t _nLevels) = 0;
-    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) = 0;
-    virtual void setPyramidAt(InputArray  img,
-        OdometryFramePyramidType pyrType, size_t level) = 0;
-    virtual void getPyramidAt(OutputArray img,
-        OdometryFramePyramidType pyrType, size_t level) = 0;
-};
-
 class CV_EXPORTS_W OdometryFrame
 {
-private:
-    Ptr<OdometryFrameImpl> odometryFrame;
 public:
     OdometryFrame();
     OdometryFrame(OdometryFrameStoreType matType);
     ~OdometryFrame() {};
-    void setImage(InputArray  image) { this->odometryFrame->setImage(image); }
-    void getImage(OutputArray image) const { this->odometryFrame->getImage(image); }
-    void getGrayImage(OutputArray image) const { this->odometryFrame->getGrayImage(image); }
-    void setDepth(InputArray  depth) { this->odometryFrame->setDepth(depth); }
-    void getDepth(OutputArray depth) const { this->odometryFrame->getDepth(depth); }
-    void setMask(InputArray  mask) { this->odometryFrame->setMask(mask); }
-    void getMask(OutputArray mask) const { this->odometryFrame->getMask(mask); }
-    void setNormals(InputArray  normals) { this->odometryFrame->setNormals(normals); }
-    void getNormals(OutputArray normals) const { this->odometryFrame->getNormals(normals); }
-    void setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype)
-    {
-        this->odometryFrame->setPyramidLevel(_nLevels, oftype);
-    }
-    void setPyramidLevels(size_t _nLevels) { this->odometryFrame->setPyramidLevels(_nLevels); }
-    size_t getPyramidLevels(OdometryFramePyramidType oftype) const { return this->odometryFrame->getPyramidLevels(oftype); }
-    void setPyramidAt(InputArray  img, OdometryFramePyramidType pyrType, size_t level)
-    {
-        this->odometryFrame->setPyramidAt(img, pyrType, level);
-    }
-    void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const
-    {
-        this->odometryFrame->getPyramidAt(img, pyrType, level);
-    }
+    void setImage(InputArray  image);
+    void getImage(OutputArray image) const;
+    void getGrayImage(OutputArray image) const;
+    void setDepth(InputArray  depth);
+    void getDepth(OutputArray depth) const;
+    void setMask(InputArray  mask);
+    void getMask(OutputArray mask) const;
+    void setNormals(InputArray  normals);
+    void getNormals(OutputArray normals) const;
+    void setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype);
+    void setPyramidLevels(size_t _nLevels);
+    size_t getPyramidLevels(OdometryFramePyramidType oftype) const;
+    void setPyramidAt(InputArray  img, OdometryFramePyramidType pyrType, size_t level);
+    void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const;
+
+    class Impl;
+private:
+    Ptr<Impl> impl;
 };
 }
 #endif // !ODOMETRY_FRAME_HPP

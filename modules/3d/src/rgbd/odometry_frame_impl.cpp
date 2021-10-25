@@ -14,8 +14,31 @@
 namespace cv
 {
 
+class OdometryFrame::Impl
+{
+public:
+    Impl() {};
+    ~Impl() {};
+    virtual void setImage(InputArray  image) = 0;
+    virtual void getImage(OutputArray image) = 0;
+    virtual void getGrayImage(OutputArray image) = 0;
+    virtual void setDepth(InputArray  depth) = 0;
+    virtual void getDepth(OutputArray depth) = 0;
+    virtual void setMask(InputArray  mask) = 0;
+    virtual void getMask(OutputArray mask) = 0;
+    virtual void setNormals(InputArray  normals) = 0;
+    virtual void getNormals(OutputArray normals) = 0;
+    virtual void   setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype) = 0;
+    virtual void   setPyramidLevels(size_t _nLevels) = 0;
+    virtual size_t getPyramidLevels(OdometryFramePyramidType oftype) = 0;
+    virtual void setPyramidAt(InputArray  img,
+        OdometryFramePyramidType pyrType, size_t level) = 0;
+    virtual void getPyramidAt(OutputArray img,
+        OdometryFramePyramidType pyrType, size_t level) = 0;
+};
+
 template<typename TMat>
-class OdometryFrameImplTMat : public OdometryFrameImpl
+class OdometryFrameImplTMat : public OdometryFrame::Impl
 {
 public:
 	OdometryFrameImplTMat();
@@ -51,16 +74,40 @@ private:
 
 OdometryFrame::OdometryFrame()
 {
-    this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>();
+    this->impl = makePtr<OdometryFrameImplTMat<Mat>>();
 };
 
 OdometryFrame::OdometryFrame(OdometryFrameStoreType matType)
 {
 	if (matType == OdometryFrameStoreType::UMAT)
-		this->odometryFrame = makePtr<OdometryFrameImplTMat<UMat>>();
+		this->impl = makePtr<OdometryFrameImplTMat<UMat>>();
 	else
-		this->odometryFrame = makePtr<OdometryFrameImplTMat<Mat>>();
+		this->impl = makePtr<OdometryFrameImplTMat<Mat>>();
 };
+
+void OdometryFrame::setImage(InputArray  image) { this->impl->setImage(image); }
+void OdometryFrame::getImage(OutputArray image) const { this->impl->getImage(image); }
+void OdometryFrame::getGrayImage(OutputArray image) const { this->impl->getGrayImage(image); }
+void OdometryFrame::setDepth(InputArray  depth) { this->impl->setDepth(depth); }
+void OdometryFrame::getDepth(OutputArray depth) const { this->impl->getDepth(depth); }
+void OdometryFrame::setMask(InputArray  mask) { this->impl->setMask(mask); }
+void OdometryFrame::getMask(OutputArray mask) const { this->impl->getMask(mask); }
+void OdometryFrame::setNormals(InputArray  normals) { this->impl->setNormals(normals); }
+void OdometryFrame::getNormals(OutputArray normals) const { this->impl->getNormals(normals); }
+void OdometryFrame::setPyramidLevel(size_t _nLevels, OdometryFramePyramidType oftype)
+{
+    this->impl->setPyramidLevel(_nLevels, oftype);
+}
+void OdometryFrame::setPyramidLevels(size_t _nLevels) { this->impl->setPyramidLevels(_nLevels); }
+size_t OdometryFrame::getPyramidLevels(OdometryFramePyramidType oftype) const { return this->impl->getPyramidLevels(oftype); }
+void OdometryFrame::setPyramidAt(InputArray  img, OdometryFramePyramidType pyrType, size_t level)
+{
+    this->impl->setPyramidAt(img, pyrType, level);
+}
+void OdometryFrame::getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const
+{
+    this->impl->getPyramidAt(img, pyrType, level);
+}
 
 template<typename TMat>
 OdometryFrameImplTMat<TMat>::OdometryFrameImplTMat()
