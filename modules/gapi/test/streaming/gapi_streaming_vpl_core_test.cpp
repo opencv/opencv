@@ -443,59 +443,6 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);
 }
-
-TEST(OneVPL_Source_MFP, decode_header)
-{
-    using namespace cv::gapi::wip::onevpl;
-    MFPDemuxDataProvider provider("C:\\Users\\sivanov\\github\\opencv_extra\\testdata\\highgui\\video\\sample_322x242_15frames.yuv420p.libx264.mp4");
-
-    mfxLoader mfx_handle = MFXLoad();
-
-    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
-    EXPECT_TRUE(cfg_inst_0);
-    mfxVariant mfx_param_0;
-    mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
-    mfx_param_0.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.Impl",
-                                                    mfx_param_0), MFX_ERR_NONE);
-
-    mfxConfig cfg_inst_1 = MFXCreateConfig(mfx_handle);
-    EXPECT_TRUE(cfg_inst_1);
-    mfxVariant mfx_param_1;
-    mfx_param_1.Type = MFX_VARIANT_TYPE_U32;
-    mfx_param_1.Data.U32 = MFX_CODEC_AVC;
-    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_1,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
-                                                    mfx_param_1), MFX_ERR_NONE);
-
-    // create session
-    mfxSession mfx_session{};
-    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
-    EXPECT_EQ(MFX_ERR_NONE, sts);
-
-    // create proper bitstream
-    mfxBitstream bitstream{};
-    const int BITSTREAM_BUFFER_SIZE = 2000000;
-    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
-    EXPECT_TRUE(bitstream.Data);
-
-    // simulate read stream
-    bitstream.DataOffset = 0;
-    bitstream.DataLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.DataLength = provider.fetch_data(bitstream.DataLength, bitstream.Data);
-    bitstream.CodecId = MFX_CODEC_AVC;
-
-    // prepare dec params
-    mfxVideoParam mfxDecParams {};
-    mfxDecParams.mfx.CodecId = bitstream.CodecId;
-    mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
-    sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
-    EXPECT_EQ(MFX_ERR_NONE, sts);
-    MFXVideoDECODE_Close(mfx_session);
-
-    MFXClose(mfx_session);
-    MFXUnload(mfx_handle);
-}
 }
 } // namespace opencv_test
 #endif // HAVE_ONEVPL

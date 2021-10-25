@@ -61,7 +61,7 @@ int codec_id_to_mfx(IDataProvider::CodecID codec) {
         case IDataProvider::CodecID::JPEG:
             return MFX_CODEC_JPEG;
         default:
-            GAPI_Assert(false, "Unsupported CodecId");
+            GAPI_Assert(false && "Unsupported CodecId");
     }
 }
 

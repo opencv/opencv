@@ -391,7 +391,8 @@ MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
         ComPtrGuard<IMFMediaType> media_type = createCOMPtrGuard(media_type_tmp);
         GUID subtype;
         if (SUCCEEDED(media_type->GetGUID(MF_MT_SUBTYPE, &subtype))) {
-            GAPI_LOG_DEBUG(nullptr, " video type:" << GetGUIDNameConst(subtype));
+            GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                    "video type: " << GetGUIDNameConst(subtype));
 
             std::string is_codec_supported("unsupported, skip...");
             try {

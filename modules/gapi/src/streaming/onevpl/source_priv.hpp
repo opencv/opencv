@@ -35,6 +35,8 @@ namespace onevpl {
 struct VPLAccelerationPolicy;
 class ProcessingEngineBase;
 
+int GAPI_EXPORTS codec_id_to_mfx(IDataProvider::CodecID codec);
+
 struct GSource::Priv
 {
     explicit Priv(std::shared_ptr<IDataProvider> provider,
