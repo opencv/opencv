@@ -263,6 +263,7 @@ namespace cv { namespace cuda { namespace device
         };
 
         __device__ __forceinline__ int calcDist(const uchar&  a, const uchar&  b) { return (a-b)*(a-b); }
+        __device__ __forceinline__ int calcDist(const ushort& a, const ushort& b) { return ::abs(a - b);}
         __device__ __forceinline__ int calcDist(const uchar2& a, const uchar2& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y); }
         __device__ __forceinline__ int calcDist(const uchar3& a, const uchar3& b) { return (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z); }
 
@@ -512,7 +513,7 @@ namespace cv { namespace cuda { namespace device
 
         template void nlm_fast_gpu<uchar>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float,  cudaStream_t);
         template void nlm_fast_gpu<uchar2>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
-        template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);        
+        template void nlm_fast_gpu<uchar3>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
         template void nlm_fast_gpu<ushort>(const PtrStepSzb&, PtrStepSzb, PtrStepi, int, int, float, cudaStream_t);
 
         __global__ void fnlm_split_kernel(const PtrStepSz<uchar3> lab, PtrStepb l, PtrStep<uchar2> ab)

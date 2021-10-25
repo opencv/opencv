@@ -52,7 +52,7 @@ namespace cv { namespace cuda {
 
 /** @brief Performs pure non local means denoising without any simplification, and thus it is not fast.
 
-@param src Source image. Supports only CV_8UC1, CV_8UC2 and CV_8UC3.
+@param src Source image. Supports only CV_8UC1, CV_8UC2, CV_8UC3, and CV_16UC1
 @param dst Destination image.
 @param h Filter sigma regulating filter strength for color.
 @param search_window Size of search window.
