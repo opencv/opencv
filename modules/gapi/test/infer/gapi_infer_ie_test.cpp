@@ -2368,6 +2368,39 @@ TEST(TestAgeGender, ImportNetworkNV12)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
+TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
+{
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    // NB: Precision for inputs is U8.
+    params.model_path= compileAgeGenderBlob();
+    params.device_id = "MYRIAD";
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in, age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    cv::Mat in_mat(320, 240, CV_32FC3);
+    cv::randu(in_mat, 0, 1);
+    cv::Mat gapi_age, gapi_gender;
+
+    // NB: Blob precision is U8, but user pass FP32 data, so exception will be thrown.
+    // Now exception comes directly from IE, but since G-API has information
+    // about data precision at the compile stage, consider the possibility of
+    // throwing exception from there.
+    EXPECT_ANY_THROW(comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
