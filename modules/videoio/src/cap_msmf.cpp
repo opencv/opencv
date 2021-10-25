@@ -709,6 +709,7 @@ public:
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
+    bool configureAudioFrame();
     bool grabAudioFrame();
     bool grabVideoFrame();
     virtual bool grabFrame() CV_OVERRIDE;
@@ -1038,6 +1039,7 @@ bool CvCapture_MSMF::configureAudioOutput(MediaType newType)
     if (bestMatch.second.isEmpty(true))
     {
         CV_LOG_DEBUG(NULL, "Can not find audio stream with requested parameters");
+        isOpen = false;
         return false;
     }
     dwAudioStreamIndex = bestMatch.first.stream;
@@ -1439,6 +1441,91 @@ bool CvCapture_MSMF::grabVideoFrame()
     return returnFlag;
 }
 
+bool CvCapture_MSMF::configureAudioFrame()
+{
+    if (!audioSamples.empty() || !bufferAudioData.empty() && aEOS)
+    {
+        _ComPtr<IMFMediaBuffer> buf = NULL;
+        std::vector<BYTE> audioDataInUse;
+        BYTE* ptr = NULL;
+        DWORD maxsize = 0, cursize = 0;
+        CV_TRACE_REGION("get_contiguous_buffer");
+        for (auto item : audioSamples)
+        {
+            if (!SUCCEEDED(item->ConvertToContiguousBuffer(&buf)))
+            {
+                CV_TRACE_REGION("get_buffer");
+                DWORD bcnt = 0;
+                if (!SUCCEEDED(item->GetBufferCount(&bcnt)))
+                    break;
+                if (bcnt == 0)
+                    break;
+                if (!SUCCEEDED(item->GetBufferByIndex(0, &buf)))
+                    break;
+            }
+            if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
+                break;
+            size_t lastSize = bufferAudioData.size();
+            bufferAudioData.resize(lastSize+cursize);
+            for (unsigned int i = 0; i < cursize; i++)
+            {
+                bufferAudioData[lastSize+i]=*(ptr+i);
+            }
+            CV_TRACE_REGION_NEXT("unlock");
+            buf->Unlock();
+            buf = NULL;
+        }
+        audioSamples.clear();
+
+        audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
+        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*captureAudioFormat.nChannels*(captureAudioFormat.bit_per_sample)/8)/1e7) : cursize;
+        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
+        {
+            if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
+                chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
+            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
+                                        - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
+            chunkLengthOfBytes += numberOfAdditionalAudioBytes;
+        }
+        if (lastFrame && !syncLastFrame || aEOS && !vEOS)
+        {
+            chunkLengthOfBytes = bufferAudioData.size();
+            audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
+        }
+        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
+        copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
+        bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
+        if (audioFrame.empty())
+        {
+            switch (outputAudioFormat)
+            {
+            case CV_8S:
+                cv::Mat((int)chunkLengthOfBytes/(captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
+                break;
+            case CV_16S:
+                cv::Mat((int)chunkLengthOfBytes/(2*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
+                break;
+            case CV_32S:
+                cv::Mat((int)chunkLengthOfBytes/(4*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
+                break;
+            case CV_32F:
+                cv::Mat((int)chunkLengthOfBytes/(4*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
+                break;
+            default:
+                break;
+            }
+        }
+        audioDataInUse.clear();
+        audioDataInUse.shrink_to_fit();
+        
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool CvCapture_MSMF::grabAudioFrame()
 {
     DWORD streamIndex,  flags;
@@ -1500,6 +1587,8 @@ bool CvCapture_MSMF::grabAudioFrame()
                 aEOS = true;
                 if (videoStream != -1 && !vEOS)
                     returnFlag = true;
+                if (videoStream == -1)
+                    audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
                 CV_LOG_DEBUG(NULL, "videoio(MSMF): End of audio stream detected");
                 break;
             }
@@ -1538,81 +1627,7 @@ bool CvCapture_MSMF::grabAudioFrame()
         }
     }
 
-    if (!audioSamples.empty() || !bufferAudioData.empty() && aEOS)
-    {
-        _ComPtr<IMFMediaBuffer> buf = NULL;
-        std::vector<BYTE> audioDataInUse;
-        BYTE* ptr = NULL;
-        DWORD maxsize = 0, cursize = 0;
-        CV_TRACE_REGION("get_contiguous_buffer");
-        for (auto item : audioSamples)
-        {
-            if (!SUCCEEDED(item->ConvertToContiguousBuffer(&buf)))
-            {
-                CV_TRACE_REGION("get_buffer");
-                DWORD bcnt = 0;
-                if (!SUCCEEDED(item->GetBufferCount(&bcnt)))
-                    break;
-                if (bcnt == 0)
-                    break;
-                if (!SUCCEEDED(item->GetBufferByIndex(0, &buf)))
-                    break;
-            }
-            if (!SUCCEEDED(buf->Lock(&ptr, &maxsize, &cursize)))
-                break;
-            size_t lastSize = bufferAudioData.size();
-            bufferAudioData.resize(lastSize+cursize);
-            for (unsigned int i = 0; i < cursize; i++)
-            {
-                bufferAudioData[lastSize+i]=*(ptr+i);
-            }
-            CV_TRACE_REGION_NEXT("unlock");
-            buf->Unlock();
-            buf = NULL;
-        }
-        audioSamples.clear();
-
-        audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
-        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*captureAudioFormat.nChannels*(captureAudioFormat.bit_per_sample)/8)/1e7) : cursize;
-        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
-        {
-            if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
-                chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
-            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
-                                        - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
-            chunkLengthOfBytes += numberOfAdditionalAudioBytes;
-        }
-        if (lastFrame && !syncLastFrame|| aEOS && !vEOS)
-        {
-            chunkLengthOfBytes = bufferAudioData.size();
-        }
-        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
-        copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
-        bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
-        if (audioFrame.empty())
-        {
-            switch (outputAudioFormat)
-            {
-            case CV_8S:
-                cv::Mat((int)chunkLengthOfBytes/(captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
-                break;
-            case CV_16S:
-                cv::Mat((int)chunkLengthOfBytes/(2*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
-                break;
-            case CV_32S:
-                cv::Mat((int)chunkLengthOfBytes/(4*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
-                break;
-            case CV_32F:
-                cv::Mat((int)chunkLengthOfBytes/(4*captureAudioFormat.nChannels), captureAudioFormat.nChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
-                break;
-            default:
-                break;
-            }
-        }
-        audioDataInUse.clear();
-        audioDataInUse.shrink_to_fit();
-    }
-
+    returnFlag &= configureAudioFrame();
     return returnFlag;
 }
 
@@ -1662,6 +1677,9 @@ bool CvCapture_MSMF::grabFrame()
         }
         if (videoStream != -1)
             usedVideoSampleTime = reader->m_lastSampleTimestamp;
+        if (audioStream != -1)
+            return configureAudioFrame();
+
         return true;
     }
     else if (isOpen)
