@@ -1,3 +1,4 @@
+import os
 import cv2 as cv
 import numpy as np
 
@@ -45,11 +46,5 @@ class Timelapser:
 
     @staticmethod
     def get_fixed_filename(img_name):
-        pos_s = img_name.rfind("/")
-        if pos_s == -1:
-            fixed_file_name = "fixed_" + img_name
-        else:
-            fixed_file_name = (img_name[:pos_s + 1] +
-                               "fixed_" +
-                               img_name[pos_s + 1:])
-        return fixed_file_name
+        dirname, filename = os.path.split(img_name)
+        return os.path.join(dirname, "fixed_" + filename)
