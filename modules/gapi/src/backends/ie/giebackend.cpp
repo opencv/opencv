@@ -223,6 +223,8 @@ struct IEUnit {
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
     InferenceEngine::RemoteContext::Ptr rctx = nullptr;
+    using PreProcMap = std::unordered_map<std::string, IE::PreProcessInfo>;
+    mutable cv::util::optional<PreProcMap> preproc_map;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -546,6 +548,7 @@ static void setBlob(InferenceEngine::InferRequest&        req,
         GAPI_Assert(kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
         IE::PreProcessInfo info;
         info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        info.setColorFormat(IE::ColorFormat::NV12);
         req.SetBlob(layer_name, blob, info);
     }
 }
@@ -816,6 +819,24 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
     }
 }
 
+static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
+                                               const cv::GMetaArg&        mm) {
+
+    IE::PreProcessInfo info;
+    if (cv::util::holds_alternative<cv::GFrameDesc>(mm)) {
+        auto desc = cv::util::get<cv::GFrameDesc>(mm);
+        if (desc.fmt == cv::MediaFormat::NV12) {
+            info.setColorFormat(IE::ColorFormat::NV12);
+        }
+    }
+    const auto layout = ii->getTensorDesc().getLayout();
+    if (layout == IE::Layout::NCHW ||
+        layout == IE::Layout::NHWC) {
+        info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
+    }
+    return info;
+}
+
 // NB: This is a callback used by async infer
 // to post outputs blobs (cv::GMat's).
 static void PostOutputs(InferenceEngine::InferRequest   &request,
@@ -915,7 +936,8 @@ struct Infer: public cv::detail::KernelTag {
 
         // NB: Configuring input precision and network reshape must be done
         // only in the loadNetwork case.
-        if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+        using namespace cv::gapi::ie::detail;
+        if (uu.params.kind == ParamDesc::Kind::Load) {
             auto inputs = uu.net.getInputsInfo();
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -937,6 +959,18 @@ struct Infer: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+        } else {
+            GAPI_Assert(uu.params.kind == ParamDesc::Kind::Import);
+            IEUnit::PreProcMap preproc_map;
+            auto inputs = uu.this_network.GetInputsInfo();
+            for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
+                                            ade::util::toRange(in_metas))) {
+                    const auto &input_name = std::get<0>(it);
+                    auto       &&ii = inputs.at(input_name);
+                    const auto & mm = std::get<1>(it);
+                    preproc_map.emplace(input_name, configurePreProcInfo(ii, mm));
+            }
+            uu.preproc_map = cv::optional<IEUnit::PreProcMap>(std::move(preproc_map));
         }
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -970,10 +1004,18 @@ struct Infer: public cv::detail::KernelTag {
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            setBlob(req,
-                                    ctx->uu.params.kind,
-                                    ctx->uu.params.input_names[i],
-                                    this_blob);
+
+                            using namespace cv::gapi::ie::detail;
+                            const auto layer_name = ctx->uu.params.input_names[i];
+                            if (ctx->uu.params.kind == ParamDesc::Kind::Load) {
+                                req.SetBlob(layer_name, this_blob);
+                            } else {
+                                GAPI_Assert(ctx->uu.params.kind == ParamDesc::Kind::Import);
+                                const auto& preproc_map = ctx->uu.preproc_map.value();
+                                req.SetBlob(layer_name,
+                                            this_blob,
+                                            preproc_map.at(layer_name));
+                            }
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
