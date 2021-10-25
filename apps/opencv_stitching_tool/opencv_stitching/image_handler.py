@@ -14,7 +14,7 @@ class ImageHandler:
                  low_megapix=DEFAULT_LOW_MEGAPIX,
                  final_megapix=DEFAULT_FINAL_MEGAPIX):
 
-        if medium_megapix <= low_megapix:
+        if medium_megapix < low_megapix:
             raise StitchingError("Medium resolution megapix need to be "
                                  "greater or equal than low resolution "
                                  "megapix")
