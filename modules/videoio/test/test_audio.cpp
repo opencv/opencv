@@ -281,9 +281,9 @@ const paramIsOpen isOpenParams[] =
 class IsOpenTestFixture : public testing::TestWithParam <paramIsOpen>
 {
 public:
-    IsOpenTestFixture() : 
+    IsOpenTestFixture() :
         fileName(get<0>(GetParam())),
-        backend(get<3>(GetParam())) 
+        backend(get<3>(GetParam()))
     {
         params = {  CAP_PROP_AUDIO_STREAM, get<1>(GetParam()),
                     CAP_PROP_VIDEO_STREAM, get<2>(GetParam()),

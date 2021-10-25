@@ -1517,7 +1517,7 @@ bool CvCapture_MSMF::configureAudioFrame()
         }
         audioDataInUse.clear();
         audioDataInUse.shrink_to_fit();
-        
+
         return true;
     }
     else
