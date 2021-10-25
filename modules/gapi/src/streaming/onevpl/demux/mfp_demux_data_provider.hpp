@@ -14,6 +14,7 @@
 #include <atlbase.h>
 #undef NOMINMAX
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
+#include "streaming/onevpl/utils.hpp"
 
 struct IMFMediaSource;
 struct IMFSourceReader;
@@ -30,8 +31,8 @@ struct GAPI_EXPORTS MFPDemuxDataProvider : public IDataProvider {
     size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
     bool empty() const override;
 private:
-    IMFMediaSource *source_ptr;
-    IMFSourceReader *reader;
+    ComPtrGuard<IMFMediaSource> source;
+    ComPtrGuard<IMFSourceReader> source_reader;
 
     CodecID codec;
 };

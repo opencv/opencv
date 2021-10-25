@@ -36,7 +36,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 #ifdef _WIN32
-HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
+HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
     CStringW sURL(url.c_str());
 
     HRESULT hr = S_OK;
@@ -84,20 +84,22 @@ HRESULT CreateMediaSource(const std::string& url, IMFMediaSource **ppSource) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
                                                "cannot query IMFMediaSource");
     }
-    if (pSourceResolver) {
-        pSourceResolver->Release();
-        pSourceResolver = nullptr;
-    }
+
     if (pSourceUnk) {
         pSourceUnk->Release();
         pSourceUnk = nullptr;
     }
 
+    if (pSourceResolver) {
+        pSourceResolver->Release();
+        pSourceResolver = nullptr;
+    }
     return hr;
 }
 
 /*
- * The next part of converting GUID into string was copied and modified from
+ * The next part of converting GUID into string function GetGUIDNameConst
+ * was copied and modified from
  * https://docs.microsoft.com/en-us/windows/win32/medfound/media-type-debugging-code
  */
 #ifndef IF_EQUAL_RETURN
@@ -282,36 +284,39 @@ IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
 }
 
 MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
-codec(CodecID::UNCOMPRESSED) {
+  source(createCOMPtrGuard<IMFMediaSource>()),
+  source_reader(createCOMPtrGuard<IMFSourceReader>()),
+  codec(CodecID::UNCOMPRESSED) {
     HRESULT hr = S_OK;
     hr = MFStartup(MF_VERSION);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot initialize MFStartup");
     }
 
-    source_ptr = nullptr;
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
                            " initializing, URI " << file_path);
-    hr = CreateMediaSource(file_path, &source_ptr);
+    IMFMediaSource *source_tmp = nullptr;
+    hr = create_media_source(file_path, &source_tmp);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create IMFMediaSource");
     }
+    source.reset(source_tmp);
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             " start creating source attributes");
-    IMFAttributes *pAttributes = nullptr;
-    hr = MFCreateAttributes(&pAttributes, 2);
-
+    IMFAttributes *attrs_tmp = nullptr;
+    hr = MFCreateAttributes(&attrs_tmp, 2);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot MFCreateAttributes");
     }
 
-    hr = pAttributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
+    ComPtrGuard<IMFAttributes> attributes = createCOMPtrGuard(attrs_tmp);
+    hr = attributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
 
-    // Set the callback pointer.
+    // TODO Set the callback pointer.
     /*if (SUCCEEDED(hr))
     {
-        hr = pAttributes->SetUnknown(
+        hr = attributes->SetUnknown(
             MF_SOURCE_READER_ASYNC_CALLBACK,
             this
             );
@@ -319,14 +324,13 @@ codec(CodecID::UNCOMPRESSED) {
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "is getting presentation description");
-    IMFPresentationDescriptor* descriptor = nullptr;
-    hr = source_ptr->CreatePresentationDescriptor(&descriptor);
+    IMFPresentationDescriptor* descriptor_tmp = nullptr;
+    hr = source->CreatePresentationDescriptor(&descriptor_tmp);
     if (FAILED(hr)) {
-        source_ptr->Release();
         throw DataProviderSystemErrorException(HRESULT_CODE(hr),
                                                "cannot CreatePresentationDescriptor");
     }
-
+    ComPtrGuard<IMFPresentationDescriptor> descriptor = createCOMPtrGuard(descriptor_tmp);
     DWORD stream_count = 0;
     BOOL is_stream_selected = false;
     descriptor->GetStreamDescriptorCount(&stream_count);
@@ -334,54 +338,79 @@ codec(CodecID::UNCOMPRESSED) {
                             "received stream count: " << stream_count);
     for (DWORD stream_index = 0;
         stream_index < stream_count && !is_stream_selected; stream_index++) {
-        IMFStreamDescriptor *stream_descriptor = nullptr;
+
+        GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                "check stream info by index: " << stream_index);
+        IMFStreamDescriptor *stream_descriptor_tmp = nullptr;
         descriptor->GetStreamDescriptorByIndex(stream_index, &is_stream_selected,
-                                               &stream_descriptor);
-
-        is_stream_selected = false; // deselect until find supported stream
-        IMFMediaTypeHandler *handler = nullptr;
-        stream_descriptor->GetMediaTypeHandler(&handler);
-        if (handler) {
-            GUID guidMajorType;
-            if (SUCCEEDED(handler->GetMajorType(&guidMajorType))) {
-
-                if (MFMediaType_Video == guidMajorType) {
-                    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                                            "video stream detected by index: " << stream_index);
-                    IMFMediaType *pMediaType = nullptr;
-                    handler->GetCurrentMediaType(&pMediaType);
-                    if (pMediaType) {
-                        GUID subtype;
-                        if (SUCCEEDED(pMediaType->GetGUID(MF_MT_SUBTYPE, &subtype))) {
-                            GAPI_LOG_DEBUG(nullptr, " video type:" << GetGUIDNameConst(subtype));
-
-                            std::string is_codec_supported("unsupported, skip...");
-                            try {
-                                codec = convert_to_CodecId(subtype);
-                                is_stream_selected = true;
-                                is_codec_supported = "selected!";
-                            } catch (...) {
-                            }
-
-                            GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
-                                          " by URI: " << file_path <<
-                                          ", video stream index: " << stream_index <<
-                                          ", codec: " << GetGUIDNameConst(subtype) <<
-                                          " - " << is_codec_supported)
-                        }
-                        pMediaType->Release();
-                        pMediaType = nullptr;
-                    }
-                }
-            }
-            handler->Release();
-            handler = nullptr;
+                                               &stream_descriptor_tmp);
+        if (!stream_descriptor_tmp) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "Cannot get stream descriptor by index: " <<
+                                      stream_index);
+            continue;
         }
-        stream_descriptor->Release();
-    }
-    if (descriptor) {
-        descriptor->Release();
-        descriptor = nullptr;
+
+        ComPtrGuard<IMFStreamDescriptor> stream_descriptor =
+                                    createCOMPtrGuard(stream_descriptor_tmp);
+        is_stream_selected = false; // deselect until find supported stream found
+        IMFMediaTypeHandler *handler_tmp = nullptr;
+        stream_descriptor->GetMediaTypeHandler(&handler_tmp);
+        if (!handler_tmp) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "Cannot get media type handler for stream by index: " <<
+                                      stream_index);
+            continue;
+        }
+
+        ComPtrGuard<IMFMediaTypeHandler> handler = createCOMPtrGuard(handler_tmp);
+        GUID guidMajorType;
+        if (FAILED(handler->GetMajorType(&guidMajorType))) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "Cannot get major GUID type for stream by index: " <<
+                                      stream_index);
+            continue;
+        }
+
+        if (guidMajorType != MFMediaType_Video) {
+            GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                    "Skipping non-video stream");
+            continue;
+        }
+        GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                "video stream detected");
+        IMFMediaType *media_type_tmp = nullptr;
+        handler->GetCurrentMediaType(&media_type_tmp);
+        if (!media_type_tmp) {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "Cannot determine media type for stream by index: " <<
+                                      stream_index);
+            continue;
+        }
+
+        ComPtrGuard<IMFMediaType> media_type = createCOMPtrGuard(media_type_tmp);
+        GUID subtype;
+        if (SUCCEEDED(media_type->GetGUID(MF_MT_SUBTYPE, &subtype))) {
+            GAPI_LOG_DEBUG(nullptr, " video type:" << GetGUIDNameConst(subtype));
+
+            std::string is_codec_supported("unsupported, skip...");
+            try {
+                codec = convert_to_CodecId(subtype);
+                is_stream_selected = true;
+                is_codec_supported = "selected!";
+            } catch (...) {}
+
+            GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
+                          " by URI: " << file_path <<
+                          ", video stream index: " << stream_index <<
+                          ", codec: " << GetGUIDNameConst(subtype) <<
+                          " - " << is_codec_supported)
+        } else {
+            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                      "Cannot media GUID subtype for stream by index: " <<
+                                      stream_index);
+            continue;
+        }
     }
 
     if (!is_stream_selected) {
@@ -391,19 +420,20 @@ codec(CodecID::UNCOMPRESSED) {
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "is creating media source");
-    reader = nullptr;
-    hr = MFCreateSourceReaderFromMediaSource(source_ptr, pAttributes,
-                                             &reader);
+    IMFSourceReader *source_reader_tmp = nullptr;
+    hr = MFCreateSourceReaderFromMediaSource(source.get(), attributes.get(),
+                                             &source_reader_tmp);
     if (FAILED(hr)) {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot create MFCreateSourceReaderFromMediaSource");
     }
+    source_reader = createCOMPtrGuard(source_reader_tmp);
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                            "created IMFSourceReader: " << reader);
+                            "created IMFSourceReader: " << source_reader);
 
     if (SUCCEEDED(hr)) {
         // Ask for the first sample.
-        hr = reader->ReadSample(
+        hr = source_reader->ReadSample(
             (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
             0,
             NULL,
@@ -421,17 +451,11 @@ codec(CodecID::UNCOMPRESSED) {
 MFPDemuxDataProvider::~MFPDemuxDataProvider() {
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
                             "deinitializing");
-    if (reader) {
-        reader->Release();
-        reader = nullptr;
-    }
+    // release COM object before overall MFP shutdown
+    source_reader.reset();
+    source.reset();
 
-    if (source_ptr) {
-        source_ptr->Shutdown();
-        source_ptr = nullptr;
-    }
-
-    (void)MFShutdown();
+    MFShutdown();
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
                            "deinitialized");
 }
@@ -459,7 +483,7 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
     do {
         GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                                 "retrieve sample from source");
-        hr = reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+        hr = source_reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
                                 0,
                                 nullptr,
                                 &retrieved_stream_flag,
@@ -472,13 +496,14 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
 
         if (retrieved_stream_flag & MF_SOURCE_READERF_ENDOFSTREAM) {
             GAPI_LOG_DEBUG(nullptr, "[" << this << "] EOF");
-            reader->Release();
-            reader = nullptr;
+
+            // close reader
+            source_reader.reset();
         }
 
         if (retrieved_stream_flag & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED){
-            // Type change. Get the new format.
-            //hr = GetVideoFormat(&m_format);
+            // TODO Type change. Get the new format.
+            // hr = GetVideoFormat(&m_format);
             GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
                                       "media type changing is UNSUPPORTED");
             throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - TODO");
@@ -496,7 +521,7 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
             throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - ConvertToContiguousBuffer failed");
         }
 
-        //TODO
+        //TODO think how to avoid buffer copy
         hr = contiguous_buffer->Lock(&mapped_buffer_data, nullptr, &mapped_buffer_size);
         if (FAILED(hr)) {
             throw DataProviderSystemErrorException(HRESULT_CODE(hr), "MFPDemuxDataProvider::fetch_data - canno Lock buffer");
@@ -519,7 +544,7 @@ size_t MFPDemuxDataProvider::fetch_data(size_t out_data_bytes_size, void* out_da
 }
 
 bool MFPDemuxDataProvider::empty() const {
-    return !reader;
+    return !source_reader;
 }
 #else
 
