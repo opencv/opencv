@@ -136,7 +136,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             // prepare sync object for new surface
             LegacyDecodeSession::op_handle_t sync_pair{};
 
-            // enqueue qecode operation with current session surface
+            // enqueue decode operation with current session surface
             my_sess.last_status =
                     MFXVideoDECODE_DecodeFrameAsync(my_sess.session,
                                                     my_sess.last_status == MFX_ERR_NONE
@@ -180,7 +180,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
 
             if (my_sess.last_status == MFX_ERR_NONE) {
                 my_sess.sync_queue.emplace(sync_pair);
-            } else if (MFX_ERR_MORE_DATA != my_sess.last_status) /* suppress MFX_ERR_MORE_DATA warning */ {
+            } else if (my_sess.last_status != MFX_ERR_MORE_DATA) /* suppress MFX_ERR_MORE_DATA warning */ {
                 GAPI_LOG_WARNING(nullptr, "pending ops count: " << my_sess.sync_queue.size() <<
                                           ", sync id: " << sync_pair.first <<
                                           ", status: " << mfxstatus_to_string(my_sess.last_status));
@@ -280,7 +280,7 @@ void VPLLegacyDecodeEngine::on_frame_ready(LegacyDecodeSession& sess,
                                                                    ready_surface);
     ready_frames.emplace(cv::MediaFrame(std::move(frame_adapter)), sess.generate_frame_meta());
 
-    // pop away ready sync onject
+    // pop away synced out object
     sess.sync_queue.pop();
 }
 

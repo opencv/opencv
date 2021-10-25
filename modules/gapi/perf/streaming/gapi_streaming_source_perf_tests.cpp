@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef HAVE_ONEVPL
 
 #include "../perf_precomp.hpp"
 #include "../../test/common/gapi_tests_common.hpp"
@@ -39,7 +40,7 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
     using namespace cv::gapi::wip::onevpl;
 
     const auto params = GetParam();
-    source_t src = findDataFile(get<0>(params));
+    source_t src = findDataFile(get<0>(params), false);
     codec_t type = get<1>(params);
 
     std::vector<CfgParam> cfg_params {
@@ -71,7 +72,7 @@ PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
 
     using namespace cv::gapi::wip;
 
-    source_t src = findDataFile(GetParam());
+    source_t src = findDataFile(GetParam(), false);
     auto source_ptr = make_src<GCaptureSource>(src);
     Data out;
     TEST_CYCLE()
@@ -90,3 +91,5 @@ INSTANTIATE_TEST_CASE_P(Streaming, VideoCapSourcePerfTest,
                         Values(files[0],
                                files[1]));
 } // namespace opencv_test
+
+#endif // HAVE_ONEVPL
