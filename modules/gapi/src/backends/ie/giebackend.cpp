@@ -223,8 +223,12 @@ struct IEUnit {
     cv::gimpl::ie::wrap::Plugin this_plugin;
 
     InferenceEngine::RemoteContext::Ptr rctx = nullptr;
+
+    // FIXME: This map contains preprocessing information
+    // for input layers in case ImportNetwork. Since this map is collected in
+    // outMeta which is const, need to mark map as mutable.
     using PreProcMap = std::unordered_map<std::string, IE::PreProcessInfo>;
-    mutable cv::util::optional<PreProcMap> preproc_map;
+    mutable PreProcMap preproc_map;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -536,20 +540,17 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
 }
 
 
-static void setBlob(InferenceEngine::InferRequest&        req,
-                    cv::gapi::ie::detail::ParamDesc::Kind kind,
-                    const std::string&                    layer_name,
-                    IE::Blob::Ptr                         blob) {
-    // NB: In case importNetwork preprocessing must be
-    // passed as SetBlob argument.
-    if (kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+static void setBlob(InferenceEngine::InferRequest& req,
+                    IE::Blob::Ptr                  blob,
+                    const IECallContext&           ctx,
+                    const std::size_t              layer_idx) {
+    using namespace cv::gapi::ie::detail;
+    const auto layer_name = ctx.uu.params.input_names.at(layer_idx);
+    if (ctx.uu.params.kind == ParamDesc::Kind::Load) {
         req.SetBlob(layer_name, blob);
     } else {
-        GAPI_Assert(kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
-        IE::PreProcessInfo info;
-        info.setResizeAlgorithm(IE::RESIZE_BILINEAR);
-        info.setColorFormat(IE::ColorFormat::NV12);
-        req.SetBlob(layer_name, blob, info);
+        GAPI_Assert(ctx.uu.params.kind == ParamDesc::Kind::Import);
+        req.SetBlob(layer_name, blob, ctx.uu.preproc_map.at(layer_name));
     }
 }
 
@@ -961,16 +962,14 @@ struct Infer: public cv::detail::KernelTag {
             }
         } else {
             GAPI_Assert(uu.params.kind == ParamDesc::Kind::Import);
-            IEUnit::PreProcMap preproc_map;
             auto inputs = uu.this_network.GetInputsInfo();
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
-                    const auto &input_name = std::get<0>(it);
-                    auto       &&ii = inputs.at(input_name);
-                    const auto & mm = std::get<1>(it);
-                    preproc_map.emplace(input_name, configurePreProcInfo(ii, mm));
+                const auto &input_name = std::get<0>(it);
+                auto       &&ii = inputs.at(input_name);
+                const auto & mm = std::get<1>(it);
+                uu.preproc_map.emplace(input_name, configurePreProcInfo(ii, mm));
             }
-            uu.preproc_map = cv::optional<IEUnit::PreProcMap>(std::move(preproc_map));
         }
 
         // FIXME: It would be nice here to have an exact number of network's
@@ -1004,18 +1003,7 @@ struct Infer: public cv::detail::KernelTag {
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-
-                            using namespace cv::gapi::ie::detail;
-                            const auto layer_name = ctx->uu.params.input_names[i];
-                            if (ctx->uu.params.kind == ParamDesc::Kind::Load) {
-                                req.SetBlob(layer_name, this_blob);
-                            } else {
-                                GAPI_Assert(ctx->uu.params.kind == ParamDesc::Kind::Import);
-                                const auto& preproc_map = ctx->uu.preproc_map.value();
-                                req.SetBlob(layer_name,
-                                            this_blob,
-                                            preproc_map.at(layer_name));
-                            }
+                            setBlob(req, this_blob, *ctx, i);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
@@ -1098,10 +1086,9 @@ struct InferROI: public cv::detail::KernelTag {
 
                         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
                         setBlob(req,
-                                ctx->uu.params.kind,
-                                *(ctx->uu.params.input_names.begin()),
-                                IE::make_shared_blob(this_blob,
-                                                     toIE(this_roi)));
+                                IE::make_shared_blob(this_blob, toIE(this_roi)),
+                                *ctx,
+                                1u);
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         req.StartAsync();
@@ -1207,10 +1194,7 @@ struct InferList: public cv::detail::KernelTag {
                 cv::gimpl::ie::RequestPool::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
                         IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        setBlob(req,
-                                ctx->uu.params.kind,
-                                ctx->uu.params.input_names[0u],
-                                roi_blob);
+                        setBlob(req, roi_blob, *ctx, 0u);
                         req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, pos)
@@ -1369,10 +1353,7 @@ struct InferList2: public cv::detail::KernelTag {
                                 GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
-                            setBlob(req,
-                                    ctx->uu.params.kind,
-                                    ctx->uu.params.input_names[in_idx],
-                                    this_blob);
+                            setBlob(req, this_blob, *ctx, in_idx);
                         }
                         req.StartAsync();
                     },
