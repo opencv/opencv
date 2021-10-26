@@ -72,38 +72,38 @@ class OdometrySettingsImplCommon : public OdometrySettings::Impl
 public:
     OdometrySettingsImplCommon();
     ~OdometrySettingsImplCommon() {};
-	virtual void setCameraMatrix(InputArray val);
-	virtual void getCameraMatrix(OutputArray val) const;
-	virtual void setIterCounts(InputArray val);
-	virtual void getIterCounts(OutputArray val) const;
+	virtual void setCameraMatrix(InputArray val) override;
+	virtual void getCameraMatrix(OutputArray val) const override;
+	virtual void setIterCounts(InputArray val) override;
+	virtual void getIterCounts(OutputArray val) const override;
 
-	virtual void  setMinDepth(float val);
-	virtual float getMinDepth() const;
-	virtual void  setMaxDepth(float val);
-	virtual float getMaxDepth() const;
-	virtual void  setMaxDepthDiff(float val);
-	virtual float getMaxDepthDiff() const;
-	virtual void  setMaxPointsPart(float val);
-	virtual float getMaxPointsPart() const;
+	virtual void  setMinDepth(float val) override;
+	virtual float getMinDepth() const override;
+	virtual void  setMaxDepth(float val) override;
+	virtual float getMaxDepth() const override;
+	virtual void  setMaxDepthDiff(float val) override;
+	virtual float getMaxDepthDiff() const override;
+	virtual void  setMaxPointsPart(float val) override;
+	virtual float getMaxPointsPart() const override;
 
-	virtual void setSobelSize(int val);
-	virtual int  getSobelSize() const;
-	virtual void   setSobelScale(double val);
-	virtual double getSobelScale() const;
-	virtual void setNormalWinSize(int val);
-	virtual int  getNormalWinSize() const;
+	virtual void setSobelSize(int val) override;
+	virtual int  getSobelSize() const override;
+	virtual void   setSobelScale(double val) override;
+	virtual double getSobelScale() const override;
+	virtual void setNormalWinSize(int val) override;
+	virtual int  getNormalWinSize() const override;
 
-	virtual void  setAngleThreshold(float val);
-	virtual float getAngleThreshold() const;
-	virtual void  setMaxTranslation(float val);
-	virtual float getMaxTranslation() const;
-	virtual void  setMaxRotation(float val);
-	virtual float getMaxRotation() const;
+	virtual void  setAngleThreshold(float val) override;
+	virtual float getAngleThreshold() const override;
+	virtual void  setMaxTranslation(float val) override;
+	virtual float getMaxTranslation() const override;
+	virtual void  setMaxRotation(float val) override;
+	virtual float getMaxRotation() const override;
 
-	virtual void  setMinGradientMagnitude(float val);
-	virtual float getMinGradientMagnitude() const;
-	virtual void setMinGradientMagnitudes(InputArray val);
-	virtual void getMinGradientMagnitudes(OutputArray val) const;
+	virtual void  setMinGradientMagnitude(float val) override;
+	virtual float getMinGradientMagnitude() const override;
+	virtual void setMinGradientMagnitudes(InputArray val) override;
+	virtual void getMinGradientMagnitudes(OutputArray val) const override;
 
 private:
     Matx33f cameraMatrix;
@@ -215,7 +215,7 @@ void OdometrySettingsImplCommon::setIterCounts(InputArray val)
 		std::vector<Mat> pyramids;
 		val.getMatVector(pyramids);
 		this->iterCounts.clear();
-		for (int i = 0; i < nLevels; i++)
+		for (size_t i = 0; i < nLevels; i++)
 			this->iterCounts.push_back(pyramids[i].at<int>(0));
 	}
 	else
@@ -328,7 +328,7 @@ void OdometrySettingsImplCommon::setMinGradientMagnitudes(InputArray val)
 		std::vector<Mat> pyramids;
 		val.getMatVector(pyramids);
 		this->minGradientMagnitudes.clear();
-		for (int i = 0; i < nLevels; i++)
+		for (size_t i = 0; i < nLevels; i++)
 			this->minGradientMagnitudes.push_back(pyramids[i].at<int>(0));
 	}
 	else
