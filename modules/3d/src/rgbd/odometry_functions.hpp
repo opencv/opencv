@@ -152,7 +152,7 @@ template<typename TMat>
 void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float minDepth, float maxDepth, InputArrayOfArrays pyramidNormal, InputOutputArrayOfArrays pyramidMask);
 
 template<typename TMat>
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud, InputArrayOfArrays pyramidMask);
+void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud);
 
 void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, std::vector<Matx33f>& pyramidCameraMatrix);
 
@@ -184,8 +184,8 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
     const Mat& image1, const Mat& depth1, const Mat& selectMask1, float maxDepthDiff,
     Mat& _corresps, Mat& _diffs, double& _sigma, OdometryType method);
 
-void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
-    const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
+void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
+    const Mat& dI_dx1, const Mat& dI_dy1,
     const Mat& corresps, const Mat& diffs, const double sigma,
     double fx, double fy, double sobelScaleIn,
     Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim);

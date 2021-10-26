@@ -14,8 +14,6 @@
 namespace cv
 {
 
-#define USE_INTRINSICS 1
-
 static const int normalWinSize = 5;
 static const RgbdNormals::RgbdNormalsMethod normalMethod = RgbdNormals::RGBD_NORMALS_METHOD_FALS;
 
@@ -140,7 +138,7 @@ void prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
     
-    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
+    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
 }
 
@@ -225,7 +223,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
 
-    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids, mpyramids);
+    preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
 }
 
@@ -412,7 +410,7 @@ void preparePyramidMask(InputArray mask, InputArrayOfArrays pyramidDepth, float 
 }
 
 template<typename TMat>
-void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud, InputArrayOfArrays pyramidMask)
+void preparePyramidCloud(InputArrayOfArrays pyramidDepth, const Matx33f& cameraMatrix, InputOutputArrayOfArrays pyramidCloud)
 {
     size_t depthSize = pyramidDepth.size(-1).width;
     size_t cloudSize = pyramidCloud.size(-1).width;
@@ -752,7 +750,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 dstFrame.getPyramidAt(dstPyrImage, OdometryFramePyramidType::PYR_IMAGE, level);
                 dstFrame.getPyramidAt(dstPyrIdx, OdometryFramePyramidType::PYR_DIX, level);
                 dstFrame.getPyramidAt(dstPyrIdy, OdometryFramePyramidType::PYR_DIY, level);
-                calcRgbdLsmMatrices(srcPyrImage, srcPyrCloud, resultRt, dstPyrImage, dstPyrIdx, dstPyrIdy,
+                calcRgbdLsmMatrices(srcPyrCloud, resultRt, dstPyrIdx, dstPyrIdy,
                                     corresps_rgbd, diffs_rgbd, sigma_rgbd, fx, fy, sobelScale,
                                     AtA_rgbd, AtB_rgbd, rgbdEquationFuncPtr, transformDim);
                 AtA += AtA_rgbd;
@@ -964,8 +962,8 @@ void computeCorresps(const Matx33f& _K, const Matx33f& _K_inv, const Mat& Rt,
     }
 }
 
-void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
-    const Mat& image1, const Mat& dI_dx1, const Mat& dI_dy1,
+void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
+    const Mat& dI_dx1, const Mat& dI_dy1,
     const Mat& corresps, const Mat& _diffs, const double _sigma,
     double fx, double fy, double sobelScaleIn,
     Mat& AtA, Mat& AtB, CalcRgbdEquationCoeffsPtr func, int transformDim)
@@ -974,7 +972,6 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     AtB = Mat(transformDim, 1, CV_64FC1, Scalar(0));
     double* AtB_ptr = AtB.ptr<double>();
 
-    const int correspsCount = corresps.rows;
 
     CV_Assert(Rt.type() == CV_64FC1);
     const double* Rt_ptr = Rt.ptr<const double>();
@@ -982,25 +979,7 @@ void calcRgbdLsmMatrices(const Mat& image0, const Mat& cloud0, const Mat& Rt,
     const float* diffs_ptr = _diffs.ptr<float>();
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
     double sigma = _sigma;
-    /*
-    AutoBuffer<float> diffs(correspsCount);
-    float* diffs_ptr = diffs.data();
 
-    const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
-
-    double sigma = 0;
-    for (int correspIndex = 0; correspIndex < corresps.rows; correspIndex++)
-    {
-        const Vec4i& c = corresps_ptr[correspIndex];
-        int u0 = c[0], v0 = c[1];
-        int u1 = c[2], v1 = c[3];
-
-        diffs_ptr[correspIndex] = static_cast<float>(static_cast<int>(image0.at<uchar>(v0, u0)) -
-            static_cast<int>(image1.at<uchar>(v1, u1)));
-        sigma += diffs_ptr[correspIndex] * diffs_ptr[correspIndex];
-    }
-    sigma = std::sqrt(sigma / correspsCount);
-    */
     std::vector<double> A_buf(transformDim);
     double* A_ptr = &A_buf[0];
 
@@ -1504,6 +1483,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
 {
     CV_Assert(oldPts.size() == oldNrm.size());
     CV_Assert(newPts.size() == newNrm.size());
+    CV_Assert(lvls > 0);
 
 #ifdef HAVE_OPENCL
     AccessFlag af = AccessFlag::ACCESS_READ;

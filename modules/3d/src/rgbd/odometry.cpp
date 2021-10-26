@@ -99,7 +99,7 @@ public:
 
     virtual OdometryFrame createOdometryFrame() override;
     virtual void prepareFrame(OdometryFrame frame) override;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
+    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
 
@@ -158,7 +158,7 @@ public:
 
     virtual OdometryFrame createOdometryFrame() override;
     virtual void prepareFrame(OdometryFrame frame) override;
-    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
+    virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
 

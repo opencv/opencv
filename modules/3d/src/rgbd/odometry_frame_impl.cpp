@@ -236,15 +236,15 @@ void OdometryFrameImplTMat<TMat>::getPyramidAt(OutputArray _img, OdometryFramePy
 template<typename TMat>
 void OdometryFrameImplTMat<TMat>::findMask(InputArray _depth)
 {
-	Mat depth = _depth.getMat();
-	Mat mask(depth.size(), CV_8UC1, Scalar(255));
-	for (int y = 0; y < depth.rows; y++)
-        for (int x = 0; x < depth.cols; x++)
+	Mat d = _depth.getMat();
+	Mat m(d.size(), CV_8UC1, Scalar(255));
+	for (int y = 0; y < d.rows; y++)
+        for (int x = 0; x < d.cols; x++)
         {
-            if (cvIsNaN(depth.at<float>(y, x)) || depth.at<float>(y, x) <= FLT_EPSILON)
-                mask.at<uchar>(y, x) = 0;
+            if (cvIsNaN(d.at<float>(y, x)) || d.at<float>(y, x) <= FLT_EPSILON)
+                m.at<uchar>(y, x) = 0;
         }
-	this->setMask(mask);
+	this->setMask(m);
 }
 
 }
