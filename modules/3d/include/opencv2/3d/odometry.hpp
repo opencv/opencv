@@ -38,8 +38,8 @@ enum class OdometryAlgoType
 class CV_EXPORTS_W Odometry
 {
 public:
-    CV_WRAP Odometry();
-    CV_WRAP Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
+    Odometry();
+    Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype);
     ~Odometry();
 
     /** Create new odometry frame
