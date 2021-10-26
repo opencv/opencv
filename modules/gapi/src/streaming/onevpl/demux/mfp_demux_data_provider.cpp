@@ -258,7 +258,7 @@ const char* GetGUIDNameConst(const GUID& guid)
     IF_EQUAL_RETURN(guid, MFAudioFormat_AAC); //              WAVE_FORMAT_MPEG_HEAAC
     IF_EQUAL_RETURN(guid, MFAudioFormat_ADTS); //             WAVE_FORMAT_MPEG_ADTS_AAC
 
-    return NULL;
+    return "<unknown>";
 }
 
 IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
