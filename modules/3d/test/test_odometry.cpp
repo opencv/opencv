@@ -267,10 +267,10 @@ void OdometryTest::run()
     {
         FAIL() << "Can not find Rt between the same frame" << std::endl;
     }
-    double diff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
-    if(diff > idError)
+    double ndiff = cv::norm(calcRt, Mat::eye(4,4,CV_64FC1));
+    if(ndiff > idError)
     {
-        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
+        FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << ndiff << std::endl;
     }
 
     // 2. Generate random rigid body motion in some ranges several times (iterCount).
@@ -284,7 +284,6 @@ void OdometryTest::run()
     int better_5times_count = 0;
     for (int iter = 0; iter < iterCount; iter++)
     {
-        calcRt.zeros(calcRt.size(), calcRt.type());
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
         
