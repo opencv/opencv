@@ -7,8 +7,6 @@
 #include <errno.h>
 #ifdef _WIN32
 #define NOMINMAX
-#include <atlstr.h> //TODO If you see it then put comment to remove it, please
-
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mfreadwrite.h>
@@ -20,12 +18,11 @@
 #include <wmcodecdsp.h>
 #undef NOMINMAX
 
-#pragma comment(lib,"Mf.lib")
-#pragma comment(lib,"Mfuuid.lib")
-#pragma comment(lib,"Mfplat.lib")
+#pragma comment(lib, "Mf.lib")
+#pragma comment(lib, "Mfuuid.lib")
+#pragma comment(lib, "Mfplat.lib")
 #pragma comment(lib, "shlwapi.lib")
 #pragma comment(lib, "mfreadwrite.lib")
-#pragma comment(lib, "mfuuid") //???
 #endif // _WIN32
 
 #include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
@@ -37,7 +34,10 @@ namespace wip {
 namespace onevpl {
 #ifdef _WIN32
 HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
-    CStringW sURL(url.c_str());
+    wchar_t sURL[MAX_PATH];
+    GAPI_Assert(url.size() < MAX_PATH && "Windows MAX_PATH limit was exceeded");
+    size_t ret_url_lenght = 0;
+    mbstowcs_s(&ret_url_lenght, sURL, url.data(), url.size());
 
     HRESULT hr = S_OK;
 
