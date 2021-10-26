@@ -270,4 +270,15 @@ TEST_P(Media, audio)
 
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
 
+TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
+{
+    std::string fileName = "audio/test_audio.mp4";
+    std::vector<int> params {   CAP_PROP_AUDIO_STREAM, 1,
+                                CAP_PROP_VIDEO_STREAM, 0,
+                                CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
+    VideoCapture cap;
+    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
+    ASSERT_FALSE(cap.isOpened());
+}
+
 }} //namespace
