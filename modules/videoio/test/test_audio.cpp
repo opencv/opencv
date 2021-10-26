@@ -10,8 +10,6 @@ namespace opencv_test { namespace {
 typedef std::tuple<std::string, int, double, int, int, int, int, int, int, double, VideoCaptureAPIs> paramCombination;
 //file name, number of audio channels, number of audio samples, epsilon, backend
 typedef std::tuple<std::string, int, int, double, VideoCaptureAPIs> param;
-//file name, number of audio stream, number of video stream, backend
-typedef std::tuple<std::string, int, int, VideoCaptureAPIs> paramIsOpen;
 
 class AudioBaseTest
 {
@@ -272,45 +270,15 @@ TEST_P(Media, audio)
 
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
 
-const paramIsOpen isOpenParams[] =
+TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {
-    paramIsOpen("test_audio.mp4", 1, 0, cv::CAP_MSMF),
-    paramIsOpen("test_audio.mp4", 1, -1, cv::CAP_MSMF)
-};
-
-class IsOpenTestFixture : public testing::TestWithParam <paramIsOpen>
-{
-public:
-    IsOpenTestFixture() :
-        fileName(get<0>(GetParam())),
-        backend(get<3>(GetParam()))
-    {
-        params = {  CAP_PROP_AUDIO_STREAM, get<1>(GetParam()),
-                    CAP_PROP_VIDEO_STREAM, get<2>(GetParam()),
-                    CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-    };
-    void doTest()
-    {
-        VideoCapture cap;
-        cap.open(fileName, backend, params);
-        ASSERT_FALSE(cap.isOpened());
-    }
-protected:
-    std::string fileName;
-    std::vector<int> params;
-    VideoCaptureAPIs backend;
-};
-
-class CheckIsOpen : public IsOpenTestFixture{};
-
-TEST_P(CheckIsOpen, audio)
-{
-    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend)))
-        throw SkipTestException(cv::videoio_registry::getBackendName(backend) + " backend was not found");
-
-    doTest();
+    std::string fileName = "audio/test_audio.mp4";
+    std::vector<int> params {   CAP_PROP_AUDIO_STREAM, 1,
+                                CAP_PROP_VIDEO_STREAM, 0,
+                                CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
+    VideoCapture cap;
+    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
+    ASSERT_FALSE(cap.isOpened());
 }
-
-INSTANTIATE_TEST_CASE_P(/**/, CheckIsOpen, testing::ValuesIn(isOpenParams));
 
 }} //namespace
