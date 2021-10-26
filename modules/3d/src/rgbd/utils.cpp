@@ -8,6 +8,12 @@
 namespace cv
 {
 
+template<typename TMat>
+inline TMat getTMat(InputArray, int)
+{
+    return TMat();
+}
+
 template<>
 Mat getTMat<Mat>(InputArray a, int i)
 {
@@ -19,6 +25,13 @@ UMat getTMat<UMat>(InputArray a, int i)
 {
     return a.getUMat(i);
 }
+
+template<typename TMat>
+inline TMat& getTMatRef(InputOutputArray, int)
+{
+    return TMat();
+}
+
 template<>
 Mat& getTMatRef<Mat>(InputOutputArray a, int i)
 {
