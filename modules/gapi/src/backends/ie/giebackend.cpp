@@ -228,7 +228,7 @@ struct IEUnit {
     // for input layers in case ImportNetwork. Since this map is collected in
     // outMeta which is const, need to mark map as mutable.
     using PreProcMap = std::unordered_map<std::string, IE::PreProcessInfo>;
-    mutable PreProcMap preproc_map;
+    PreProcMap preproc_map;
 
     explicit IEUnit(const cv::gapi::ie::detail::ParamDesc &pp)
         : params(pp) {
@@ -961,12 +961,14 @@ struct Infer: public cv::detail::KernelTag {
         } else {
             GAPI_Assert(uu.params.kind == ParamDesc::Kind::Import);
             auto inputs = uu.this_network.GetInputsInfo();
+            // FIXME: This isn't the best place to collect PreProcMap.
+            auto* non_const_prepm = const_cast<IEUnit::PreProcMap*>(&uu.preproc_map);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
                 const auto &input_name = std::get<0>(it);
                 auto       &&ii = inputs.at(input_name);
                 const auto & mm = std::get<1>(it);
-                uu.preproc_map.emplace(input_name, configurePreProcInfo(ii, mm));
+                non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm));
             }
         }
 
