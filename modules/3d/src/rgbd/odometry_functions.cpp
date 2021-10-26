@@ -678,7 +678,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
 
     Mat resultRt = initRt.empty() ? Mat::eye(4,4,CV_64FC1) : initRt.clone();
     Mat currRt, ksi;
-    Affine3f& transform = Affine3f::Identity();
+    Affine3f transform = Affine3f::Identity();
 
     bool isOk = false;
     for(int level = (int)iterCounts.size() - 1; level >= 0; level--)
