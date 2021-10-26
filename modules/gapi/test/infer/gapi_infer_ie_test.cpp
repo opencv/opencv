@@ -2375,7 +2375,7 @@ TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
 
     cv::gapi::ie::detail::ParamDesc params;
     // NB: Precision for inputs is U8.
-    params.model_path= compileAgeGenderBlob();
+    params.model_path = compileAgeGenderBlob();
     params.device_id = "MYRIAD";
 
     // Configure & run G-API
