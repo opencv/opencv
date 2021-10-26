@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "../src/remap_type.hpp"
 
 namespace opencv_test { namespace {
 
@@ -1529,6 +1530,133 @@ TEST(Imgproc_Remap, DISABLED_memleak)
         }
         remap(src, dst, map_x, map_y, CV_INTER_LINEAR);
     }
+}
+
+
+
+TEST(Imgproc_check_remap_type, test_remap_type_mapxy)
+{
+    Mat src;
+    const int N = 36;
+    src.create(N, N, CV_8U);
+    randu(src, 0, 256);
+    Mat map_x(src.size(), CV_32FC1), map_y(src.size(), CV_32FC1);
+
+    ASSERT_EQ(RemapType::fp32_mapx_mapy, check_and_get_remap_type(map_x, map_y));
+
+    Mat map_xy, emptyMat;
+    Mat channels[2] = {map_x, map_y};
+    merge(channels, 2, map_xy);
+
+    ASSERT_EQ(RemapType::fp32_mapxy, check_and_get_remap_type(map_xy, emptyMat));
+
+    map_xy.convertTo(map_xy, CV_16SC2);
+    ASSERT_EQ(RemapType::int16, check_and_get_remap_type(map_xy, emptyMat));
+}
+
+TEST(Imgproc_check_remap_type, test_remap_type_fixed_point)
+{
+    Mat src;
+    const int N = 36;
+    src.create(N, N, CV_8U);
+    randu(src, 0, 256);
+    Mat map_xy(src.size(), CV_16SC2), map_xy_fixed_point(src.size(), CV_16SC1);
+
+    ASSERT_EQ(RemapType::fixedPointInt16, check_and_get_remap_type(map_xy, map_xy_fixed_point));
+
+    map_xy_fixed_point.convertTo(map_xy_fixed_point, CV_16UC1);
+    ASSERT_EQ(RemapType::fixedPointInt16, check_and_get_remap_type(map_xy, map_xy_fixed_point));
+}
+
+PARAM_TEST_CASE(ParamConvertMapsTest, std::tuple<int, int>, int, bool)
+{
+    int map1Type;
+    int map2Type;
+    int dst1type;
+    bool nninterpolate;
+    const int N = 21;
+    Mat map_x, map_y;
+    Mat src, dst1, dst2;
+
+    virtual void SetUp() override
+    {
+        auto types = GET_PARAM(0);
+        map1Type = get<0>(types);
+        map2Type = get<1>(types);
+        dst1type = GET_PARAM(1);
+        nninterpolate = GET_PARAM(2);;
+
+        if (map1Type > 0)
+        {
+            map_x.create(N, N, map1Type);
+            randu(map_x, 0., N+0.);
+        }
+        if (map2Type > 0)
+        {
+            map_y.create(N, N, map2Type);
+            if (map_y.depth() == CV_32F)
+                randu(map_y, 0., N+0.);
+            else
+                randu(map_y, 0, 1 << INTER_BITS2); // set fixed point map
+        }
+        src.create(N, N, CV_8U);
+        randu(src, 0, 256);
+    }
+
+    virtual void TearDown() override
+    {
+        Mat map_xy, dst_map_xy, emptyMat, res1, res2;
+        convertMaps(map_x, map_y, map_xy, emptyMat, CV_32FC2);
+        convertMaps(dst1, dst2, dst_map_xy, emptyMat, CV_32FC2);
+        EXPECT_LE(cv::norm(map_xy, dst_map_xy, NORM_INF), 1.f);
+    }
+};
+
+#define test_float_types std::make_tuple(CV_32FC2, -1), std::make_tuple(CV_32FC1, CV_32FC1)
+#define test_int_types std::make_tuple(CV_16SC2, -1), std::make_tuple(-1, CV_16SC2)
+#define test_fixed_point_types std::make_tuple(CV_16SC2, CV_16SC1), std::make_tuple(CV_16SC2, CV_16UC1)
+
+struct Param_fp32 : public ParamConvertMapsTest {};
+struct Param_fixedPoint : public ParamConvertMapsTest {};
+struct Param_int16 : public ParamConvertMapsTest {};
+
+INSTANTIATE_TEST_CASE_P(/**/, Param_fp32, testing::Combine(Values(
+        test_float_types, test_int_types, test_fixed_point_types
+        ),
+        Values(CV_32FC2, CV_32FC1),
+        Values(false, true)));
+
+INSTANTIATE_TEST_CASE_P(/**/, Param_fixedPoint, testing::Combine(Values(
+        test_float_types, test_fixed_point_types
+        ),
+        Values(CV_16SC2),
+        Values(false)));
+
+INSTANTIATE_TEST_CASE_P(/**/, Param_int16, testing::Combine(Values(
+        test_float_types, test_int_types, test_fixed_point_types
+        ),
+        Values(CV_16SC2),
+        Values(true)));
+
+TEST_P(Param_fp32, test_convert_maps_to_fp32)
+{
+    convertMaps(map_x, map_y, dst1, dst2, dst1type, nninterpolate);
+    if (dst1type == CV_32FC2)
+        ASSERT_EQ(RemapType::fp32_mapxy, check_and_get_remap_type(dst1, dst2));
+    else
+        ASSERT_EQ(RemapType::fp32_mapx_mapy, check_and_get_remap_type(dst1, dst2));
+}
+
+TEST_P(Param_fixedPoint, test_convert_maps_to_fixedPointInt16)
+{
+    convertMaps(map_x, map_y, dst1, dst2, dst1type, nninterpolate);
+    ASSERT_EQ(RemapType::fixedPointInt16, check_and_get_remap_type(dst1, dst2));
+}
+
+TEST_P(Param_int16, test_convert_maps_to_Int16)
+{
+    convertMaps(map_x, map_y, dst1, dst2, dst1type, nninterpolate);
+    ASSERT_EQ(RemapType::int16, check_and_get_remap_type(dst1, dst2));
 }
 
 //** @deprecated */
