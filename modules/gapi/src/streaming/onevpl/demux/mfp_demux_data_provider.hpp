@@ -10,9 +10,6 @@
 
 #ifdef HAVE_ONEVPL
 #ifdef _WIN32
-#define NOMINMAX
-#include <atlbase.h>
-#undef NOMINMAX
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include "streaming/onevpl/utils.hpp"
 
