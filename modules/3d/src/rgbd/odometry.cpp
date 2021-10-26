@@ -16,8 +16,7 @@ private:
 
 public:
     Impl() {};
-    ~Impl() {};
-
+    virtual ~Impl() {};
     virtual OdometryFrame createOdometryFrame() = 0;
     virtual void prepareFrame(OdometryFrame frame) = 0;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) = 0;

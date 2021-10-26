@@ -18,7 +18,7 @@ class OdometryFrame::Impl
 {
 public:
     Impl() {};
-    ~Impl() {};
+    virtual ~Impl() {};
     virtual void setImage(InputArray  image) = 0;
     virtual void getImage(OutputArray image) = 0;
     virtual void getGrayImage(OutputArray image) = 0;

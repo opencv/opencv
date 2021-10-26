@@ -32,7 +32,7 @@ class OdometrySettings::Impl
 {
 public:
     Impl() {};
-    ~Impl() {};
+    virtual ~Impl() {};
     virtual void setCameraMatrix(InputArray val) = 0;
     virtual void getCameraMatrix(OutputArray val) const = 0;
     virtual void setIterCounts(InputArray val) = 0;
