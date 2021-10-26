@@ -20,7 +20,7 @@ if(NOT OPENCV_EXAMPLES_SKIP_PARALLEL_BACKEND_TBB
     AND NOT OPENCV_EXAMPLES_SKIP_TBB
     AND NOT OPENCV_EXAMPLE_SKIP_TBB  # deprecated (to be removed in OpenCV 5.0)
 )
-  find_package(TBB)
+  find_package(TBB QUIET)
   if(NOT TBB_FOUND)
     find_path(TBB_INCLUDE_DIR NAMES "tbb/tbb.h")
     find_library(TBB_LIBRARY NAMES "tbb")
