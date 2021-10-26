@@ -2433,9 +2433,18 @@ contains the rounded coordinates and the second array (created only when nninter
 contains indices in the interpolation tables.
 
 - \f$\texttt{(CV_32FC2)} \rightarrow \texttt{(CV_16SC2, CV_16UC1)}\f$. The same as above but
-the original maps are stored in one 2-channel matrix.
+the original maps are stored in one 2-channel matrix (only when nninterpolation=false ).
 
-- Reverse conversion. Obviously, the reconstructed floating-point maps will not be exactly the same
+- \f$\texttt{(CV_32FC1, CV_32FC1)} \rightarrow \texttt{(CV_16SC2)}\f$. Original floating-point maps
+(see remap ) are converted to a int16 representation (only when nninterpolation=true ).
+
+- \f$\texttt{(CV_32FC2)} \rightarrow \texttt{(CV_16SC2)}\f$. The same as above but
+the original maps are stored in one 2-channel matrix  (only when nninterpolation=true ).
+
+- \f$\texttt{(CV_16SC2, CV_16UC1)} \rightarrow \texttt{(CV_16SC2)}\f$. Original fixed-point maps
+(see remap ) are converted to a int16 representation (only when nninterpolation=true ).
+
+- Reverse conversion. Obviously, the reconstructed floating-point or fixed-point maps will not be exactly the same
 as the originals.
 
 @param map1 The first input map of type CV_16SC2, CV_32FC1, or CV_32FC2 .
