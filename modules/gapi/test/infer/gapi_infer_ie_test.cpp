@@ -2273,7 +2273,7 @@ TEST(ImportNetwork, Infer)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path= compileAgeGenderBlob();
+    params.model_path = compileAgeGenderBlob();
     params.device_id = "MYRIAD";
 
     cv::Mat in_mat(320, 240, CV_8UC3);
