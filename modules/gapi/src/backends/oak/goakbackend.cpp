@@ -31,18 +31,17 @@ class GOAKExecutable final: public GIslandExecutable {
     GModel::ConstGraph m_gm;
     cv::GCompileArgs m_args;
 
-    dai::Pipeline m_pipeline;
-    dai::Device m_device;
-
-    std::string m_out_queue_name;
+    std::unique_ptr<dai::Device> m_device;
+    std::unique_ptr<dai::Pipeline> m_pipeline;
     std::shared_ptr<dai::DataOutputQueue> m_out_queue;
 
+    std::string m_out_queue_name;
     cv::gapi::oak::EncoderConfig m_enc_config;
 
 public:
     GOAKExecutable(const ade::Graph& g,
-                   const cv::GCompileArgs &args,
-                   const std::vector<ade::NodeHandle> &nodes,
+                   const cv::GCompileArgs& args,
+                   const std::vector<ade::NodeHandle>& nodes,
                    const std::vector<cv::gimpl::Data>& ins_data,
                    const std::vector<cv::gimpl::Data>& outs_data);
     ~GOAKExecutable() = default;
@@ -60,7 +59,6 @@ public:
 };
 
 struct GOAKKernel{
-    // FIXME: extend
     GOAKKernel() = default;
 };
 
@@ -73,9 +71,9 @@ struct OAKComponent
 }} // namespace gimpl // namespace cv
 
 using OAKGraph = ade::TypedGraph
-    < cv::gimpl::NetworkParams       // opaque structure, assigned by G-API
+    < cv::gimpl::NetworkParams
     , cv::gimpl::Op
-    , cv::gimpl::CustomMetaFunction  // custom meta function expected by G-API
+    , cv::gimpl::CustomMetaFunction
     , cv::gimpl::OAKComponent
     // FIXME: extend
     >;
@@ -94,32 +92,40 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                                           const std::vector<cv::gimpl::Data>& /*ins_data*/,
                                           const std::vector<cv::gimpl::Data>& /*outs_data*/)
     : m_g(g), m_gm(m_g), m_args(args),
-    // FIXME: consider a better solution
-    // We need to get dai::Device first to set dai::DataOutputQueue
-    m_device([this, nodes]() {
+      m_device(nullptr), m_pipeline(new dai::Pipeline), m_out_queue(nullptr)
+    {
+        // FIXME: remove this check
+        // Check that graph structure is linear
+        for (const auto& nh : nodes) {
+            if (nh.get()->inEdges().size() > 1 || nh.get()->outEdges().size() > 1) {
+                util::throw_error(std::logic_error("GOAKExecutable doesn't support non-linear structure yet"));
+            }
+        }
+
         // FIXME: change the hard-coded behavior (XLinkIn path)
-        auto camRgb = m_pipeline.create<dai::node::ColorCamera>();
+        auto camRgb = m_pipeline->create<dai::node::ColorCamera>();
         // FIXME: extract camera compile arguments here and properly convert them for dai
         camRgb->setBoardSocket(dai::CameraBoardSocket::RGB);
         camRgb->setResolution(dai::ColorCameraProperties::SensorResolution::THE_1080_P);
 
         // FIXME: change the hard-coded behavior
-        auto xout = m_pipeline.create<dai::node::XLinkOut>();
-        //m_out_queue_name = "xout";
-        xout->setStreamName("xout");
+        auto xout = m_pipeline->create<dai::node::XLinkOut>();
+        // FIXME: handle multiple outputs
+        m_out_queue_name = "xout";
+        xout->setStreamName(m_out_queue_name);
 
         for (const auto& nh : nodes) {
             // FIXME: consider a better solution
             if (m_gm.metadata(nh).get<NodeType>().t == NodeType::OP) {
                 auto op = m_gm.metadata(nh).get<Op>();
                 if (op.k.name == "org.opencv.oak.enc") {
-                    auto videoEnc = m_pipeline.create<dai::node::VideoEncoder>();
+                    auto videoEnc = m_pipeline->create<dai::node::VideoEncoder>();
                     // FIXME: encoder params is the 2nd arg - consider a better approach here
                     m_enc_config = op.args[1].get<cv::gapi::oak::EncoderConfig>();
                     // FIXME: convert all the parameters to dai
                     videoEnc->setDefaultProfilePreset(m_enc_config.width, m_enc_config.height,
                                                       m_enc_config.frameRate,
-                                                      dai::VideoEncoderProperties::Profile::H265_MAIN);
+                                                      dai::VideoEncoderProperties::Profile::H264_MAIN);
                     // FIXME: think about proper linking:
                     // probably, firts need to link in nodes to camera, then
                     // for each non-input node check their in edges, get dai elements and link it there
@@ -128,15 +134,16 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                     // FIXME: think about proper linking:
                     videoEnc->bitstream.link(xout->input);
                 } else {
-                    GAPI_Assert("Unsupported operation in OAK backend");
+                    util::throw_error(std::logic_error("Unsupported operation in OAK backend"));
                 }
             }
         }
 
-        return m_pipeline;
-    }()),
-    // FIXME: add queue parameters
-    m_out_queue(m_device.getOutputQueue("xout", 30, true)) {}
+        m_device = std::unique_ptr<dai::Device>(new dai::Device(*m_pipeline));
+
+        // FIXME: add queue parameters
+        m_out_queue = m_device->getOutputQueue(m_out_queue_name, 30, true);
+    }
 
 void cv::gimpl::GOAKExecutable::handleNewStream() {
     // FIXME: implement
@@ -158,18 +165,25 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
     // FIXME: cover all outputs
     auto out_arg = out.get(0);
 
-    *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
-    auto frame = cv::util::get<MediaFrame*>(out_arg);
-    auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
-    adapter->setParams(cv::Size(static_cast<int>(packet->getWidth()),
-                                static_cast<int>(packet->getHeight())),
-                        cv::gapi::oak::OAKFrameFormat::BGR,
-                        packet->getData().data(),
-                        packet->getData().size());
+    // Encoder case
+    if (util::holds_alternative<cv::detail::VectorRef>(out_arg)) {
+        /*
+        *cv::util::get<cv::MediaFrame*>(out_arg) = cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>();
+        auto frame = cv::util::get<MediaFrame*>(out_arg);
+        auto adapter = frame->get<cv::gapi::oak::OAKMediaAdapter>();
+        adapter->setParams(cv::Size(static_cast<int>(packet->getWidth()),
+                                    static_cast<int>(packet->getHeight())),
+                            cv::gapi::oak::OAKFrameFormat::BGR,
+                            packet->getData().data(),
+                            packet->getData().size());
 
-    // FIXME: do we need to pass meta here?
-    out.meta(out_arg, {});
-    out.post(std::move(out_arg));
+        // FIXME: do we need to pass meta here?
+        out.meta(out_arg, {});
+        out.post(std::move(out_arg));
+        */
+    } else {
+        util::throw_error(std::logic_error("Expected GArray at the end of the OAK pipeline"));
+    }
 }
 
 // Built-in kernels for OAK /////////////////////////////////////////////////////

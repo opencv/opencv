@@ -91,9 +91,8 @@ cv::GFrameDesc OAKMediaAdapter::meta() const {
 cv::MediaFrame::View OAKMediaAdapter::access(cv::MediaFrame::Access) {
     GAPI_Assert(false && "Built without depthai library support");
 }
-OAKMediaAdapter::~OAKMediaAdapter() {
-    GAPI_Assert(false && "Built without depthai library support");
-}
+OAKMediaAdapter::~OAKMediaAdapter() {}
+class OAKMediaAdapter::Priv {};
 } // namespace oak
 } // namespace gapi
 } // namespace cv
