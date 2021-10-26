@@ -35,8 +35,8 @@ public:
     OdometryICP(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryICP();
 
-    virtual OdometryFrame createOdometryFrame();
-    virtual void prepareFrame(OdometryFrame frame);
+    virtual OdometryFrame createOdometryFrame() override;
+    virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame) override;
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
@@ -97,8 +97,8 @@ public:
     OdometryRGB(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryRGB();
 
-    virtual OdometryFrame createOdometryFrame();
-    virtual void prepareFrame(OdometryFrame frame);
+    virtual OdometryFrame createOdometryFrame() override;
+    virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
@@ -156,8 +156,8 @@ public:
     OdometryRGBD(OdometrySettings settings, OdometryAlgoType algtype);
     ~OdometryRGBD();
 
-    virtual OdometryFrame createOdometryFrame();
-    virtual void prepareFrame(OdometryFrame frame);
+    virtual OdometryFrame createOdometryFrame() override;
+    virtual void prepareFrame(OdometryFrame frame) override;
     virtual void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
     virtual bool compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArray Rt) const override;
 };
