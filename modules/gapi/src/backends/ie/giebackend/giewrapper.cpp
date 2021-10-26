@@ -99,7 +99,7 @@ IE::Core giewrap::getCore() {
 }
 
 IE::Core giewrap::getPlugin(const GIEParam& params) {
-    giewrap::Plugin plugin;
+    auto plugin = giewrap::getCore();
     if (params.device_id == "CPU" || params.device_id == "FPGA")
     {
         for (auto &&extlib : giewrap::getExtensions(params))

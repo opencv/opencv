@@ -244,7 +244,6 @@ struct IEUnit {
             net.setBatchSize(params.batch_size);
         } else if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import) {
             this_plugin = cv::gimpl::ie::wrap::getPlugin(params);
-            this_plugin.SetConfig(params.config);
             this_network = cv::gimpl::ie::wrap::importNetwork(this_plugin, params, rctx);
             if (!params.reshape_table.empty() || !params.layer_names_to_reshape.empty()) {
                 GAPI_LOG_WARNING(NULL, "Reshape isn't supported for imported network");
@@ -294,7 +293,6 @@ struct IEUnit {
         IEUnit* non_const_this = const_cast<IEUnit*>(this);
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
-            non_const_this->this_plugin.SetConfig(params.config);
             non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
                                                                             net, params, rctx);
         }

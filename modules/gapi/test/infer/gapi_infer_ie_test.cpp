@@ -2267,7 +2267,8 @@ TEST(TestAgeGenderIE, InferWithBatch)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGender, ImportNetwork)
+
+TEST(ImportNetwork, Infer)
 {
     initDLDTDataPath();
 
@@ -2315,7 +2316,7 @@ TEST(TestAgeGender, ImportNetwork)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGender, ImportNetworkNV12)
+TEST(ImportNetwork, InferNV12)
 {
     initDLDTDataPath();
 
