@@ -303,7 +303,12 @@ bool TiffDecoder::readHeader()
                     result = true;
                     break;
                 case 8:
-                    m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
+                    //Palette color, the value of the component is used as an index into the red,
+                    //green and blue curves in the ColorMap field to retrieve an RGB triplet that defines the color.
+                    if(photometric == PHOTOMETRIC_PALETTE)
+                        m_type = CV_MAKETYPE(CV_8U, 3);
+                    else
+                        m_type = CV_MAKETYPE(CV_8U, !isGrayScale ? wanted_channels : 1);
                     result = true;
                     break;
                 case 16:
