@@ -17,7 +17,7 @@ namespace wip {
 namespace onevpl {
 
 struct GAPI_EXPORTS DataProviderException : public std::exception {
-    virtual ~DataProviderException() {};
+    virtual ~DataProviderException() {}
 };
 
 struct GAPI_EXPORTS DataProviderSystemErrorException : public DataProviderException {
@@ -42,7 +42,7 @@ private:
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
 
-    virtual ~IDataProvider() {};
+    virtual ~IDataProvider() {}
 
     /**
      * The function is used by onevpl::GSource to extract binary data stream from @ref IDataProvider
