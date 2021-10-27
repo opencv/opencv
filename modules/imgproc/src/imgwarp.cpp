@@ -1860,7 +1860,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
 
     if (inputRemapType == RemapType::fixedPointInt16 && outputRemapType == RemapType::int16)
     {
-        m1->copyTo(dstmap1);
+        m1->copyTo(dstmap1);  // TODO: improved accuracy for inputRemapType fixedPointInt16
+        return;
+    }
+
+    if (inputRemapType == RemapType::fp32_mapxy && outputRemapType == RemapType::int16)
+    {
+        m1->convertTo(dstmap1, dstmap1.type());
         return;
     }
 
@@ -1980,23 +1986,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         }
         else if( m1type == CV_32FC2 && dstm1type == CV_16SC2 )
         {
-            if( nninterpolate )
-            {
-                #if CV_SIMD128
-                int span = v_float32x4::nlanes;
-                {
-                    for( ; x <= (size.width << 1) - span * 2; x += span * 2 )
-                        v_store(dst1 + x, v_pack(v_round(v_load(src1f + x)),
-                                                 v_round(v_load(src1f + x + span))));
-                }
-                #endif
-                for( ; x < size.width; x++ )
-                {
-                    dst1[x*2] = saturate_cast<short>(src1f[x*2]);
-                    dst1[x*2+1] = saturate_cast<short>(src1f[x*2+1]);
-                }
-            }
-            else
+            if(!nninterpolate) // inputRemapType == RemapType::fp32_mapxy && outputRemapType == RemapType::fixedPointInt16
             {
                 #if CV_TRY_SSE4_1
                 if( useSSE4_1 )
@@ -2041,6 +2031,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     }
                 }
             }
+            else // this branch is never called: inputRemapType == RemapType::fp32_mapxy && outputRemapType == RemapType::int16
+                CV_Error( CV_StsNotImplemented, "Unsupported combination of input/output matrices" );
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
