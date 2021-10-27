@@ -219,6 +219,16 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+TEST(Imgcodecs_Tiff, read_palette_color_image)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
 
 //==================================================================================================
 
