@@ -542,11 +542,10 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
 
 
 static void setBlob(InferenceEngine::InferRequest& req,
+                    const std::string&             layer_name,
                     const IE::Blob::Ptr&           blob,
-                    const IECallContext&           ctx,
-                    const std::size_t              layer_idx) {
+                    const IECallContext&           ctx) {
     using namespace cv::gapi::ie::detail;
-    const auto layer_name = ctx.uu.params.input_names.at(layer_idx);
     if (ctx.uu.params.kind == ParamDesc::Kind::Load) {
         req.SetBlob(layer_name, blob);
     } else {
@@ -1005,7 +1004,7 @@ struct Infer: public cv::detail::KernelTag {
                             // and redirect our data producers to this memory
                             // (A memory dialog comes to the picture again)
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i);
-                            setBlob(req, this_blob, *ctx, i);
+                            setBlob(req, ctx->uu.params.input_names[i], this_blob, *ctx);
                         }
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
@@ -1088,9 +1087,9 @@ struct InferROI: public cv::detail::KernelTag {
 
                         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1);
                         setBlob(req,
+                                *(ctx->uu.params.input_names.begin()),
                                 IE::make_shared_blob(this_blob, toIE(this_roi)),
-                                *ctx,
-                                1u);
+                                *ctx);
                         // FIXME: Should it be done by kernel ?
                         // What about to do that in RequestPool ?
                         req.StartAsync();
@@ -1196,7 +1195,7 @@ struct InferList: public cv::detail::KernelTag {
                 cv::gimpl::ie::RequestPool::Task {
                     [ctx, rc, this_blob](InferenceEngine::InferRequest &req) {
                         IE::Blob::Ptr roi_blob = IE::make_shared_blob(this_blob, toIE(rc));
-                        setBlob(req, roi_blob, *ctx, 0u);
+                        setBlob(req, ctx->uu.params.input_names[0u], roi_blob, *ctx);
                         req.StartAsync();
                     },
                     std::bind(callback, std::placeholders::_1, pos)
@@ -1355,7 +1354,7 @@ struct InferList2: public cv::detail::KernelTag {
                                 GAPI_Assert(false &&
                                         "Only Rect and Mat types are supported for infer list 2!");
                             }
-                            setBlob(req, this_blob, *ctx, in_idx);
+                            setBlob(req, ctx->uu.params.input_names[in_idx], this_blob, *ctx);
                         }
                         req.StartAsync();
                     },
