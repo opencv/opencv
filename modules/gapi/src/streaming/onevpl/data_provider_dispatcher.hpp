@@ -7,6 +7,7 @@
 #ifndef GAPI_STREAMING_ONEVPL_DATA_PROVIDER_DISPATCHER_HPP
 #define GAPI_STREAMING_ONEVPL_DATA_PROVIDER_DISPATCHER_HPP
 
+#ifdef HAVE_ONEVPL
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 
@@ -24,4 +25,5 @@ struct GAPI_EXPORTS DataProviderDispatcher {
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_DATA_PROVIDER_DISPATCHER_HPP

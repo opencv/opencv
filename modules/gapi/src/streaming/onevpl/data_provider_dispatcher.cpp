@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2021 Intel Corporation
 
+#ifdef HAVE_ONEVPL
+
 #include "streaming/onevpl/data_provider_dispatcher.hpp"
 #include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
@@ -63,3 +65,4 @@ IDataProvider::Ptr DataProviderDispatcher::create(const std::string& file_path,
 } // namespace wip
 } // namespace gapi
 } // namespace cv
+#endif // HAVE_ONEVPL
