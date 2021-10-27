@@ -57,13 +57,13 @@ public:
 
     /** Prepare frame for odometry calculation
      * @param srcFrame frame will be prepared as src frame ("original" image)
-     * @param srcFrame frame will be prepared as dsr frame ("rotated" image)
+     * @param dstFrame frame will be prepared as dsr frame ("rotated" image)
      */
     void prepareFrames(OdometryFrame srcFrame, OdometryFrame dstFrame);
 
     /** Prepare frame for odometry calculation
      * @param srcFrame src frame ("original" image)
-     * @param srcFrame dsr frame ("rotated" image)
+     * @param dstFrame dsr frame ("rotated" image)
      * @param Rt Rigid transformation, which will be calculated, in form:
      * { R_11 R_12 R_13 t_1
      *   R_21 R_22 R_23 t_2
