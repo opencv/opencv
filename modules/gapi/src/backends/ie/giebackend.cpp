@@ -224,9 +224,9 @@ struct IEUnit {
 
     InferenceEngine::RemoteContext::Ptr rctx = nullptr;
 
-    // FIXME: This map contains preprocessing information
-    // for input layers in case ImportNetwork. Since this map is collected in
-    // outMeta which is const, need to mark map as mutable.
+    // FIXME: Unlike loadNetwork case, importNetwork requires that preprocessing
+    // should be passed as ExecutableNetwork::SetBlob method, so need to collect
+    // and store this information at the graph compilation stage (outMeta) and use in runtime.
     using PreProcMap = std::unordered_map<std::string, IE::PreProcessInfo>;
     PreProcMap preproc_map;
 
@@ -291,6 +291,9 @@ struct IEUnit {
     // This method is [supposed to be] called at Island compilation stage
     cv::gimpl::ie::IECompiled compile() const {
         IEUnit* non_const_this = const_cast<IEUnit*>(this);
+        // FIXME: LoadNetwork must be called only after all necessary model
+        // inputs information is set, since it's done in outMeta and compile called after that,
+        // this place seems to be suitable, but consider another place not to break const agreements.
         if (params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             non_const_this->this_plugin  = cv::gimpl::ie::wrap::getPlugin(params);
             non_const_this->this_network = cv::gimpl::ie::wrap::loadNetwork(non_const_this->this_plugin,
@@ -820,7 +823,6 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
 
 static IE::PreProcessInfo configurePreProcInfo(const IE::InputInfo::CPtr& ii,
                                                const cv::GMetaArg&        mm) {
-
     IE::PreProcessInfo info;
     if (cv::util::holds_alternative<cv::GFrameDesc>(mm)) {
         auto desc = cv::util::get<cv::GFrameDesc>(mm);
