@@ -72,64 +72,64 @@ class OdometrySettingsImplCommon : public OdometrySettings::Impl
 public:
     OdometrySettingsImplCommon();
     ~OdometrySettingsImplCommon() {};
-	virtual void setCameraMatrix(InputArray val) override;
-	virtual void getCameraMatrix(OutputArray val) const override;
-	virtual void setIterCounts(InputArray val) override;
-	virtual void getIterCounts(OutputArray val) const override;
+    virtual void setCameraMatrix(InputArray val) override;
+    virtual void getCameraMatrix(OutputArray val) const override;
+    virtual void setIterCounts(InputArray val) override;
+    virtual void getIterCounts(OutputArray val) const override;
 
-	virtual void  setMinDepth(float val) override;
-	virtual float getMinDepth() const override;
-	virtual void  setMaxDepth(float val) override;
-	virtual float getMaxDepth() const override;
-	virtual void  setMaxDepthDiff(float val) override;
-	virtual float getMaxDepthDiff() const override;
-	virtual void  setMaxPointsPart(float val) override;
-	virtual float getMaxPointsPart() const override;
+    virtual void  setMinDepth(float val) override;
+    virtual float getMinDepth() const override;
+    virtual void  setMaxDepth(float val) override;
+    virtual float getMaxDepth() const override;
+    virtual void  setMaxDepthDiff(float val) override;
+    virtual float getMaxDepthDiff() const override;
+    virtual void  setMaxPointsPart(float val) override;
+    virtual float getMaxPointsPart() const override;
 
-	virtual void setSobelSize(int val) override;
-	virtual int  getSobelSize() const override;
-	virtual void   setSobelScale(double val) override;
-	virtual double getSobelScale() const override;
-	virtual void setNormalWinSize(int val) override;
-	virtual int  getNormalWinSize() const override;
+    virtual void setSobelSize(int val) override;
+    virtual int  getSobelSize() const override;
+    virtual void   setSobelScale(double val) override;
+    virtual double getSobelScale() const override;
+    virtual void setNormalWinSize(int val) override;
+    virtual int  getNormalWinSize() const override;
 
-	virtual void  setAngleThreshold(float val) override;
-	virtual float getAngleThreshold() const override;
-	virtual void  setMaxTranslation(float val) override;
-	virtual float getMaxTranslation() const override;
-	virtual void  setMaxRotation(float val) override;
-	virtual float getMaxRotation() const override;
+    virtual void  setAngleThreshold(float val) override;
+    virtual float getAngleThreshold() const override;
+    virtual void  setMaxTranslation(float val) override;
+    virtual float getMaxTranslation() const override;
+    virtual void  setMaxRotation(float val) override;
+    virtual float getMaxRotation() const override;
 
-	virtual void  setMinGradientMagnitude(float val) override;
-	virtual float getMinGradientMagnitude() const override;
-	virtual void setMinGradientMagnitudes(InputArray val) override;
-	virtual void getMinGradientMagnitudes(OutputArray val) const override;
+    virtual void  setMinGradientMagnitude(float val) override;
+    virtual float getMinGradientMagnitude() const override;
+    virtual void setMinGradientMagnitudes(InputArray val) override;
+    virtual void getMinGradientMagnitudes(OutputArray val) const override;
 
 private:
     Matx33f cameraMatrix;
-	std::vector<int> iterCounts;
+    std::vector<int> iterCounts;
 
-	float minDepth;
-	float maxDepth;
-	float maxDepthDiff;
-	float maxPointsPart;
+    float minDepth;
+    float maxDepth;
+    float maxDepthDiff;
+    float maxPointsPart;
 
-	int sobelSize;
-	double sobelScale;
-	int normalWinSize;
+    int sobelSize;
+    double sobelScale;
+    int normalWinSize;
 
-	float angleThreshold;
-	float maxTranslation;
-	float maxRotation;
+    float angleThreshold;
+    float maxTranslation;
+    float maxRotation;
 
-	float minGradientMagnitude;
-	std::vector<float> minGradientMagnitudes;
+    float minGradientMagnitude;
+    std::vector<float> minGradientMagnitudes;
 };
 
 
 OdometrySettings::OdometrySettings()
 {
-	this->impl = makePtr<OdometrySettingsImplCommon>();
+    this->impl = makePtr<OdometrySettingsImplCommon>();
 }
 
 void OdometrySettings::setCameraMatrix(InputArray val) { this->impl->setCameraMatrix(val); }
@@ -169,23 +169,23 @@ void OdometrySettings::getMinGradientMagnitudes(OutputArray val) const { this->i
 OdometrySettingsImplCommon::OdometrySettingsImplCommon()
 {
     this->cameraMatrix = defaultCameraMatrix;
-	this->iterCounts = defaultIterCounts;
+    this->iterCounts = defaultIterCounts;
 
-	this->minDepth = defaultMinDepth;
-	this->maxDepth = defaultMaxDepth;
-	this->maxDepthDiff = defaultMaxDepthDiff;
-	this->maxPointsPart = defaultMaxPointsPart;
+    this->minDepth = defaultMinDepth;
+    this->maxDepth = defaultMaxDepth;
+    this->maxDepthDiff = defaultMaxDepthDiff;
+    this->maxPointsPart = defaultMaxPointsPart;
 
-	this->sobelSize = defaultSobelSize;
-	this->sobelScale = defaultSobelScale;
-	this->normalWinSize = defaultNormalWinSize;
+    this->sobelSize = defaultSobelSize;
+    this->sobelScale = defaultSobelScale;
+    this->normalWinSize = defaultNormalWinSize;
 
     this->angleThreshold = defaultAngleThreshold;
-	this->maxTranslation = defaultMaxTranslation;
-	this->maxRotation = defaultMaxRotation;
+    this->maxTranslation = defaultMaxTranslation;
+    this->maxRotation = defaultMaxRotation;
 
-	this->minGradientMagnitude = defaultMinGradientMagnitude;
-	this->minGradientMagnitudes = defaultMinGradientMagnitudes;
+    this->minGradientMagnitude = defaultMinGradientMagnitude;
+    this->minGradientMagnitudes = defaultMinGradientMagnitudes;
 }
 
 void OdometrySettingsImplCommon::setCameraMatrix(InputArray val)
@@ -196,10 +196,10 @@ void OdometrySettingsImplCommon::setCameraMatrix(InputArray val)
         CV_Assert(val.type() == CV_32F);
         val.copyTo(cameraMatrix);
     }
-	else
-	{
-		this->cameraMatrix = defaultCameraMatrix;
-	}
+    else
+    {
+        this->cameraMatrix = defaultCameraMatrix;
+    }
 }
 
 void OdometrySettingsImplCommon::getCameraMatrix(OutputArray val) const
@@ -209,136 +209,136 @@ void OdometrySettingsImplCommon::getCameraMatrix(OutputArray val) const
 
 void OdometrySettingsImplCommon::setIterCounts(InputArray val)
 {
-	if (!val.empty())
-	{
-		size_t nLevels = val.size(-1).width;
-		std::vector<Mat> pyramids;
-		val.getMatVector(pyramids);
-		this->iterCounts.clear();
-		for (size_t i = 0; i < nLevels; i++)
-			this->iterCounts.push_back(pyramids[i].at<int>(0));
-	}
-	else
-	{
-		this->iterCounts = defaultIterCounts;
-	}
+    if (!val.empty())
+    {
+        size_t nLevels = val.size(-1).width;
+        std::vector<Mat> pyramids;
+        val.getMatVector(pyramids);
+        this->iterCounts.clear();
+        for (size_t i = 0; i < nLevels; i++)
+            this->iterCounts.push_back(pyramids[i].at<int>(0));
+    }
+    else
+    {
+        this->iterCounts = defaultIterCounts;
+    }
 }
 
 void OdometrySettingsImplCommon::getIterCounts(OutputArray val) const
 {
-	Mat(defaultIterCounts).copyTo(val);
+    Mat(defaultIterCounts).copyTo(val);
 }
 
 void  OdometrySettingsImplCommon::setMinDepth(float val)
 {
-	this->minDepth = val;
+    this->minDepth = val;
 }
 float OdometrySettingsImplCommon::getMinDepth() const
 {
-	return this->minDepth;
+    return this->minDepth;
 }
 void  OdometrySettingsImplCommon::setMaxDepth(float val)
 {
-	this->maxDepth = val;
+    this->maxDepth = val;
 }
 float OdometrySettingsImplCommon::getMaxDepth() const
 {
-	return this->maxDepth;
+    return this->maxDepth;
 }
 void  OdometrySettingsImplCommon::setMaxDepthDiff(float val)
 {
-	this->maxDepthDiff = val;
+    this->maxDepthDiff = val;
 }
 float OdometrySettingsImplCommon::getMaxDepthDiff() const
 {
-	return this->maxDepthDiff;
+    return this->maxDepthDiff;
 }
 void  OdometrySettingsImplCommon::setMaxPointsPart(float val)
 {
-	this->maxPointsPart = val;
+    this->maxPointsPart = val;
 }
 float OdometrySettingsImplCommon::getMaxPointsPart() const
 {
-	return this->maxPointsPart;
+    return this->maxPointsPart;
 }
 
 void OdometrySettingsImplCommon::setSobelSize(int val)
 {
-	this->sobelSize = val;
+    this->sobelSize = val;
 }
 int  OdometrySettingsImplCommon::getSobelSize() const
 {
-	return this->sobelScale;
+    return this->sobelScale;
 }
 void   OdometrySettingsImplCommon::setSobelScale(double val)
 {
-	this->sobelScale = val;
+    this->sobelScale = val;
 }
 double OdometrySettingsImplCommon::getSobelScale() const
 {
-	return this->sobelScale;
+    return this->sobelScale;
 }
 void OdometrySettingsImplCommon::setNormalWinSize(int val)
 {
-	this->normalWinSize = val;
+    this->normalWinSize = val;
 }
 int  OdometrySettingsImplCommon::getNormalWinSize() const
 {
-	return this->normalWinSize;
+    return this->normalWinSize;
 }
 
 void  OdometrySettingsImplCommon::setAngleThreshold(float val)
 {
-	this->angleThreshold = val;
+    this->angleThreshold = val;
 }
 float OdometrySettingsImplCommon::getAngleThreshold() const
 {
-	return this->angleThreshold;
+    return this->angleThreshold;
 }
 void  OdometrySettingsImplCommon::setMaxTranslation(float val)
 {
-	this->maxTranslation = val;
+    this->maxTranslation = val;
 }
 float OdometrySettingsImplCommon::getMaxTranslation() const
 {
-	return this->maxTranslation;
+    return this->maxTranslation;
 }
 void  OdometrySettingsImplCommon::setMaxRotation(float val)
 {
-	this->maxRotation = val;
+    this->maxRotation = val;
 }
 float OdometrySettingsImplCommon::getMaxRotation() const
 {
-	return this->maxRotation;
+    return this->maxRotation;
 }
 
 void  OdometrySettingsImplCommon::setMinGradientMagnitude(float val)
 {
-	this->minGradientMagnitude = val;
+    this->minGradientMagnitude = val;
 }
 float OdometrySettingsImplCommon::getMinGradientMagnitude() const
 {
-	return this->minGradientMagnitude;
+    return this->minGradientMagnitude;
 }
 void OdometrySettingsImplCommon::setMinGradientMagnitudes(InputArray val)
 {
-	if (!val.empty())
-	{
-		size_t nLevels = val.size(-1).width;
-		std::vector<Mat> pyramids;
-		val.getMatVector(pyramids);
-		this->minGradientMagnitudes.clear();
-		for (size_t i = 0; i < nLevels; i++)
-			this->minGradientMagnitudes.push_back(pyramids[i].at<int>(0));
-	}
-	else
-	{
-		this->minGradientMagnitudes = defaultMinGradientMagnitudes;
-	}
+    if (!val.empty())
+    {
+        size_t nLevels = val.size(-1).width;
+        std::vector<Mat> pyramids;
+        val.getMatVector(pyramids);
+        this->minGradientMagnitudes.clear();
+        for (size_t i = 0; i < nLevels; i++)
+            this->minGradientMagnitudes.push_back(pyramids[i].at<int>(0));
+    }
+    else
+    {
+        this->minGradientMagnitudes = defaultMinGradientMagnitudes;
+    }
 }
 void OdometrySettingsImplCommon::getMinGradientMagnitudes(OutputArray val) const
 {
-	Mat(this->minGradientMagnitudes).copyTo(val);
+    Mat(this->minGradientMagnitudes).copyTo(val);
 }
 
 }

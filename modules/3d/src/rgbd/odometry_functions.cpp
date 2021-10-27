@@ -32,7 +32,7 @@ void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
 {
     prepareRGBFrameBase(srcFrame, settings);
     prepareRGBFrameBase(dstFrame, settings);
-    
+
     prepareRGBFrameSrc(srcFrame, settings);
     prepareRGBFrameDst(dstFrame, settings);
 }
@@ -52,7 +52,7 @@ void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
 {
     // Can be transformed into template argument in the future
     // when this algorithm supports OCL UMats too
- 
+
     typedef Mat TMat;
 
     TMat image;
@@ -137,7 +137,7 @@ void prepareRGBFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     std::vector<TMat> cpyramids;
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
-    
+
     preparePyramidCloud<TMat>(dpyramids, cameraMatrix, cpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_CLOUD, cpyramids);
 }
@@ -163,7 +163,7 @@ void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidSobel<TMat>(ipyramids, 0, 1, dypyramids, settings.getSobelSize());
     preparePyramidTexturedMask(dxpyramids, dypyramids, minGradientMagnitudes,
         mpyramids, settings.getMaxPointsPart(), tmpyramids, settings.getSobelScale());
-    
+
     setPyramids(frame, OdometryFramePyramidType::PYR_DIX, dxpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_DIY, dypyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_TEXMASK, tmpyramids);
@@ -228,7 +228,7 @@ void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
 }
 
 void prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
-{    
+{
     typedef Mat TMat;
 
     TMat mask;
@@ -285,7 +285,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
             normalsComputer->apply(c0, normals);
             frame.setNormals(normals);
         }
-        
+
     }
 
     std::vector<TMat> npyramids;
@@ -298,7 +298,7 @@ void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings)
     preparePyramidMask<TMat>(mask, dpyramids, settings.getMinDepth(), settings.getMaxDepth(),
         npyramids, mpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_MASK, mpyramids);
-    
+
     std::vector<TMat> nmpyramids;
     preparePyramidNormalsMask(npyramids, mpyramids, settings.getMaxPointsPart(), nmpyramids);
     setPyramids(frame, OdometryFramePyramidType::PYR_NORMMASK, nmpyramids);
@@ -525,7 +525,7 @@ void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfAr
                 }
             }
             Mat texMask = texturedMask & pyramidMask.getMat((int)i);
-            
+
             randomSubsetOfMask(texMask, (float)maxPointsPart);
             pyramidTexturedMask.getMatRef((int)i) = texMask;
         }
@@ -701,14 +701,14 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         const double determinantThreshold = 1e-6;
 
         Mat AtA_rgbd, AtB_rgbd, AtA_icp, AtB_icp;
-        
+
         // Run transformation search on current level iteratively.
         for(int iter = 0; iter < iterCounts[level]; iter ++)
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
             Mat corresps_rgbd, corresps_icp, diffs_rgbd, diffs_icp;
             double sigma_rgbd, sigma_icp;
-            
+
             const Mat pyramidMask;
             srcFrame.getPyramidAt(pyramidMask, OdometryFramePyramidType::PYR_MASK, level);
 
@@ -761,7 +761,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                 const Mat dstPyrCloud, dstPyrNormals, srcPyrNormals;
                 dstFrame.getPyramidAt(dstPyrCloud, OdometryFramePyramidType::PYR_CLOUD, level);
                 dstFrame.getPyramidAt(dstPyrNormals, OdometryFramePyramidType::PYR_NORM, level);
-                
+
                 if (algtype == OdometryAlgoType::COMMON)
                 {
                     calcICPLsmMatrices(srcPyrCloud, resultRt, dstPyrCloud, dstPyrNormals,
@@ -975,7 +975,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
 
     CV_Assert(Rt.type() == CV_64FC1);
     const double* Rt_ptr = Rt.ptr<const double>();
-    
+
     const float* diffs_ptr = _diffs.ptr<float>();
     const Vec4i* corresps_ptr = corresps.ptr<Vec4i>();
     double sigma = _sigma;

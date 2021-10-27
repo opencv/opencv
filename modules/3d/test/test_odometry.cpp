@@ -240,7 +240,7 @@ void OdometryTest::checkUMats()
     {
         FAIL() << "Incorrect transformation between the same frame (not the identity matrix), diff = " << diff << std::endl;
     }
-    
+
 }
 
 void OdometryTest::run()
@@ -286,7 +286,7 @@ void OdometryTest::run()
     {
         Mat rvec, tvec;
         generateRandomTransformation(rvec, tvec);
-        
+
         Mat warpedImage, warpedDepth;
         warpFrame(image, depth, rvec, tvec, K, warpedImage, warpedDepth);
         dilateFrame(warpedImage, warpedDepth); // due to inaccuracy after warping
