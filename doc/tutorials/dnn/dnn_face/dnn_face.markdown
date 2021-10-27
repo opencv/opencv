@@ -12,7 +12,7 @@
 
 ## Introduction
 
-In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#Models). The usage of `FaceDetectorYN` and `FaceRecognizer` are presented in [Usage](#Usage).
+In this section, we introduce the DNN-based module for face detection and face recognition. Models can be obtained in [Models](#Models). The usage of `FaceDetectorYN` and `FaceRecognizerSF` are presented in [Usage](#Usage).
 
 ## Models
 
@@ -58,8 +58,8 @@ x1, y1, w, h, x_re, y_re, x_le, y_le, x_nt, y_nt, x_rcm, y_rcm, x_lcm, y_lcm
 Following Face Detection, run codes below to extract face feature from facial image.
 
 ```cpp
-// Initialize FaceRecognizer with model path (cv::String)
-Ptr<FaceRecognizer> faceRecognizer = FaceRecognizer::create(model_path, "");
+// Initialize FaceRecognizerSF with model path (cv::String)
+Ptr<FaceRecognizerSF> faceRecognizer = FaceRecognizerSF::create(model_path, "");
 
 // Aligning and cropping facial image through the first face of faces detected by dnn_face::DNNFaceDetector
 Mat aligned_face;
