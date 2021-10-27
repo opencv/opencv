@@ -31,7 +31,7 @@ struct GAPI_EXPORTS GTransform
     F pattern;
     F substitute;
 
-    GTransform(const std::string& d, const F &p, const F &s) : description(d), pattern(p), substitute(s){};
+    GTransform(const std::string& d, const F &p, const F &s) : description(d), pattern(p), substitute(s) {}
 };
 
 namespace detail

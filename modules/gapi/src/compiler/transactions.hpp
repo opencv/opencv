@@ -69,8 +69,8 @@ struct ChangeT
 {
     struct Base
     {
-        virtual void commit  (ade::Graph & ) {};
-        virtual void rollback(ade::Graph & ) {};
+        virtual void commit  (ade::Graph & ) {}
+        virtual void rollback(ade::Graph & ) {}
         virtual ~Base() = default;
     };
 
