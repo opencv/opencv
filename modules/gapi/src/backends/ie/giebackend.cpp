@@ -539,7 +539,7 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx, std::size_t i) {
 
 
 static void setBlob(InferenceEngine::InferRequest& req,
-                    IE::Blob::Ptr                  blob,
+                    const IE::Blob::Ptr&           blob,
                     const IECallContext&           ctx,
                     const std::size_t              layer_idx) {
     using namespace cv::gapi::ie::detail;
