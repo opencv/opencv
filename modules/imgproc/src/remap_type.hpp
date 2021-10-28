@@ -4,7 +4,9 @@ enum class RemapType {
     fp32_mapxy,
     fp32_mapx_mapy,
     fixedPointInt16,
+    fixedPointInt32,
     int16,
+    int32,
     errorType
 };
 
@@ -26,15 +28,19 @@ inline RemapType get_remap_type(const Mat &map1, const Mat &map2)
     }
     else if (map1.channels() == 2) // int or fixedPointInt
     {
-        if (map2.empty()) // int16
+        if (map2.empty()) // int16 or int32
         {
             if (map1.type() == CV_16SC2) // int16
                 return RemapType::int16;
+            else if (map1.type() == CV_32SC2) // int32
+                return RemapType::int32;
         }
-        else if (map2.channels() == 1) // fixedPointInt16
+        else if (map2.channels() == 1 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) // fixedPointInt16 or fixedPointInt32
         {
-            if (map1.type() == CV_16SC2 && (map2.type() == CV_16UC1 || map2.type() == CV_16SC1)) // fixedPointInt16
+            if (map1.type() == CV_16SC2) // fixedPointInt16
                 return RemapType::fixedPointInt16;
+            else if (map1.type() == CV_32SC2) // fixedPointInt32
+                return RemapType::fixedPointInt32;
         }
     }
     return RemapType::errorType;
