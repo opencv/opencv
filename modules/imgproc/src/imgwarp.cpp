@@ -1884,7 +1884,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         return;
     }
 
-    if (inputRemapType == RemapType::int16 && outputRemapType == RemapType::fixedPointInt16)
+    if ((inputRemapType == RemapType::int16 || inputRemapType == RemapType::int32) && outputRemapType == RemapType::fixedPointInt16)
     {
         m1->convertTo(dstmap1, dstmap1.type());
         dstmap2 = Mat::zeros( size, CV_16UC1);
