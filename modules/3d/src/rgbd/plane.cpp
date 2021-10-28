@@ -178,7 +178,7 @@ private:
 class PlaneGrid
 {
 public:
-    PlaneGrid(const Mat_<Vec3f>& points3d, int block_size) :
+    PlaneGrid(const Mat_<Vec4f>& points3d, int block_size) :
         block_size_(block_size)
     {
         // Figure out some dimensions
@@ -204,10 +204,10 @@ public:
                 int K = 0;
                 for (int j = y * block_size; j < std::min((y + 1) * block_size, points3d.rows); ++j)
                 {
-                    const Vec3f* vec = points3d.ptr < Vec3f >(j, x * block_size), * vec_end;
+                    const Vec4f* vec = points3d.ptr < Vec4f >(j, x * block_size), * vec_end;
                     float* pointpointt = reinterpret_cast<float*>(Q_.ptr < Vec<float, 9> >(j, x * block_size));
                     if (x == mini_cols - 1)
-                        vec_end = points3d.ptr < Vec3f >(j, points3d.cols - 1) + 1;
+                        vec_end = points3d.ptr < Vec4f >(j, points3d.cols - 1) + 1;
                     else
                         vec_end = vec + block_size;
                     for (; vec != vec_end; ++vec, pointpointt += 9)
@@ -226,7 +226,7 @@ public:
                         *(pointpointt + 8) = vec->val[2] * vec->val[2];
 
                         Q += *reinterpret_cast<Matx33f*>(pointpointt);
-                        m += (*vec);
+                        m += Vec3f((*vec)[0], (*vec)[1], (*vec)[2]);
                         ++K;
                     }
                 }
@@ -327,7 +327,7 @@ private:
 class InlierFinder
 {
 public:
-    InlierFinder(float err, const Mat_<Vec3f>& points3d, const Mat_<Vec3f>& normals,
+    InlierFinder(float err, const Mat_<Vec4f>& points3d, const Mat_<Vec4f>& normals,
                  unsigned char plane_index, int block_size) :
         err_(err),
         points3d_(points3d),
@@ -362,14 +362,14 @@ public:
         for (int yy = range_y.start; yy != range_y.end; ++yy)
         {
             uchar* data = overall_mask.ptr(yy, range_x.start), * data_end = data + range_x.size();
-            const Vec3f* point = points3d_.ptr < Vec3f >(yy, range_x.start);
+            const Vec4f* point = points3d_.ptr < Vec4f >(yy, range_x.start);
             const Matx33f* Q_local = reinterpret_cast<const Matx33f*>(plane_grid.Q_.ptr < Vec<float, 9>
             >(yy, range_x.start));
 
             // Depending on whether you have a normal, check it
             if (!normals_.empty())
             {
-                const Vec3f* normal = normals_.ptr < Vec3f >(yy, range_x.start);
+                const Vec4f* normal = normals_.ptr < Vec4f >(yy, range_x.start);
                 for (; data != data_end; ++data, ++point, ++normal, ++Q_local)
                 {
                     // Don't do anything if the point already belongs to another plane
@@ -377,13 +377,15 @@ public:
                         continue;
 
                     // If the point is close enough to the plane
-                    if (plane->distance(*point) < err_)
+                    Vec3f _p = Vec3f((*point)[0], (*point)[1], (*point)[2]);
+                    if (plane->distance(_p) < err_)
                     {
                         // make sure the normals are similar to the plane
-                        if (std::abs(plane->n().dot(*normal)) > 0.3)
+                        Vec3f _n = Vec3f((*normal)[0], (*normal)[1], (*normal)[2]);
+                        if (std::abs(plane->n().dot(_n)) > 0.3)
                         {
                             // The point now belongs to the plane
-                            plane->UpdateStatistics(*point, *Q_local);
+                            plane->UpdateStatistics(_p, *Q_local);
                             *data = plane_index_;
                             ++n_valid_points;
                         }
@@ -399,10 +401,11 @@ public:
                         continue;
 
                     // If the point is close enough to the plane
-                    if (plane->distance(*point) < err_)
+                    Vec3f _p = Vec3f((*point)[0], (*point)[1], (*point)[2]);
+                    if (plane->distance(_p) < err_)
                     {
                         // The point now belongs to the plane
-                        plane->UpdateStatistics(*point, *Q_local);
+                        plane->UpdateStatistics(_p, *Q_local);
                         *data = plane_index_;
                         ++n_valid_points;
                     }
@@ -461,8 +464,8 @@ public:
 
 private:
     float err_;
-    const Mat_<Vec3f>& points3d_;
-    const Mat_<Vec3f>& normals_;
+    const Mat_<Vec4f>& points3d_;
+    const Mat_<Vec4f>& normals_;
     unsigned char plane_index_;
     /** THe block size as defined in the main algorithm */
     int block_size_;
@@ -478,7 +481,7 @@ void findPlanes(InputArray points3d_in, InputArray normals_in, OutputArray mask_
 {
     CV_Assert(method == RGBD_PLANE_METHOD_DEFAULT);
 
-    Mat_<Vec3f> points3d, normals;
+    Mat_<Vec4f> points3d, normals;
     if (points3d_in.depth() == CV_32F)
         points3d = points3d_in.getMat();
     else
