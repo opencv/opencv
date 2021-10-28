@@ -297,7 +297,10 @@ It is possible to alternate error processing by using redirectError().
  */
 CV_EXPORTS void error(int _code, const String& _err, const char* _func, const char* _file, int _line);
 
-#ifdef __GNUC__
+#if defined(__clang__) && defined(_MSC_VER)  // MSVC-Clang
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Winvalid-noreturn"
+#elif defined(__GNUC__)
 # if defined __clang__ || defined __APPLE__
 #   pragma GCC diagnostic push
 #   pragma GCC diagnostic ignored "-Winvalid-noreturn"
@@ -316,7 +319,10 @@ CV_INLINE CV_NORETURN void errorNoReturn(int _code, const String& _err, const ch
 # endif
 #endif
 }
-#ifdef __GNUC__
+
+#if defined(__clang__) && defined(_MSC_VER)  // MSVC-Clang
+# pragma clang diagnostic pop
+#elif defined(__GNUC__)
 # if defined __clang__ || defined __APPLE__
 #   pragma GCC diagnostic pop
 # endif
