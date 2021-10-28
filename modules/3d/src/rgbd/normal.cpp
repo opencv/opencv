@@ -444,6 +444,7 @@ template<typename T>
 class LINEMOD : public RgbdNormalsImpl<T>
 {
 public:
+    typedef Vec<T, 4> Vec4T;
     typedef Vec<T, 3> Vec3T;
     typedef Matx<T, 3, 3> Mat33T;
 
@@ -540,7 +541,7 @@ public:
         for (int y = r; y < this->rows - r - 1; ++y)
         {
             const DepthDepth* p_line = reinterpret_cast<const DepthDepth*>(depthIn.ptr(y, r));
-            Vec3T* normal = normals.ptr<Vec3T>(y, r);
+            Vec4T* normal = normals.ptr<Vec4T>(y, r);
 
             for (int x = r; x < this->cols - r - 1; ++x)
             {
@@ -592,7 +593,7 @@ public:
 
     virtual void assertOnBadArg(const Mat& points3d_ori) const CV_OVERRIDE
     {
-        CV_Assert(((points3d_ori.channels() == 3) && (points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)) ||
+        CV_Assert(((points3d_ori.channels() == 4) && (points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)) ||
                   ((points3d_ori.channels() == 1) && (points3d_ori.depth() == CV_16U || points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)));
     }
 
@@ -613,6 +614,7 @@ class SRI : public RgbdNormalsImpl<T>
 public:
     typedef Matx<T, 3, 3> Mat33T;
     typedef Vec<T, 9> Vec9T;
+    typedef Vec<T, 4> Vec4T;
     typedef Vec<T, 3> Vec3T;
 
     SRI(int _rows, int _cols, int _windowSize, const Mat& _K) :
@@ -723,13 +725,13 @@ public:
         sepFilter2D(r, r_phi, r.depth(), kx_dy_, ky_dy_);
 
         // Fill the result matrix
-        Mat_<Vec3T> normals(this->rows, this->cols);
+        Mat_<Vec4T> normals(this->rows, this->cols);
 
         const T* r_theta_ptr = r_theta[0], * r_theta_ptr_end = r_theta_ptr + this->rows * this->cols;
         const T* r_phi_ptr = r_phi[0];
         const Mat33T* R = reinterpret_cast<const Mat33T*>(R_hat_[0]);
         const T* r_ptr = r[0];
-        Vec3T* normal = normals[0];
+        Vec4T* normal = normals[0];
         for (; r_theta_ptr != r_theta_ptr_end; ++r_theta_ptr, ++r_phi_ptr, ++R, ++r_ptr, ++normal)
         {
             if (cvIsNaN(*r_ptr))
@@ -737,6 +739,7 @@ public:
                 (*normal)[0] = *r_ptr;
                 (*normal)[1] = *r_ptr;
                 (*normal)[2] = *r_ptr;
+                (*normal)[3] = 0;
             }
             else
             {
@@ -750,15 +753,15 @@ public:
         }
 
         remap(normals, normals_out, invxy_, invfxy_, INTER_LINEAR);
-        normal = normals_out.ptr<Vec3T>(0);
-        Vec3T* normal_end = normal + this->rows * this->cols;
+        normal = normals_out.ptr<Vec4T>(0);
+        Vec4T* normal_end = normal + this->rows * this->cols;
         for (; normal != normal_end; ++normal)
             signNormal((*normal)[0], (*normal)[1], (*normal)[2], *normal);
     }
 
     virtual void assertOnBadArg(const Mat& points3d_ori) const CV_OVERRIDE
     {
-        CV_Assert(((points3d_ori.channels() == 3) && (points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)));
+        CV_Assert(((points3d_ori.channels() == 4) && (points3d_ori.depth() == CV_32F || points3d_ori.depth() == CV_64F)));
     }
 
     // Cached data

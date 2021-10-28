@@ -48,9 +48,9 @@ float cy = H / 2.f + 0.5f;
 Mat K = (Mat_<double>(3, 3) << focal_length, 0, cx, 0, focal_length, cy, 0, 0, 1);
 Mat Kinv = K.inv();
 
-void points3dToDepth16U(const Mat_<Vec3f>& points3d, Mat& depthMap);
+void points3dToDepth16U(const Mat_<Vec4f>& points3d, Mat& depthMap);
 
-void points3dToDepth16U(const Mat_<Vec3f>& points3d, Mat& depthMap)
+void points3dToDepth16U(const Mat_<Vec4f>& points3d, Mat& depthMap)
 {
     std::vector<Point3f> points3dvec;
     for (int i = 0; i < H; i++)
