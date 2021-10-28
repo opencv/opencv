@@ -263,7 +263,7 @@ TEST_F(SamplingTest, FarthestPointSamplingDoublePtCloud)
         int offset = ori_pts_size / 2;
         bool flag = true;
         for (int i = 0; i < offset; i++)
-            flag &= (bool) (mask_ptr[i] ^ mask_ptr[i + offset]);
+            flag &= (mask_ptr[i] == 0 && mask_ptr[i + offset] != 0) || (mask_ptr[i] != 0 && mask_ptr[i + offset] == 0);
         ASSERT_TRUE(flag)
         << header << info << "The sampled points size is " << sampled_pts_size
         << "\nThe mask should be one of the answer list" << endl;
