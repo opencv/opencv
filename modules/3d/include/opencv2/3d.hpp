@@ -10,6 +10,7 @@
 
 #include "opencv2/3d/depth.hpp"
 #include "opencv2/3d/volume.hpp"
+#include "opencv2/3d/ptcloud.hpp"
 
 /**
   @defgroup _3d 3D vision functionality
