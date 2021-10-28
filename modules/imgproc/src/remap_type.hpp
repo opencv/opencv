@@ -1,6 +1,6 @@
 namespace cv
 {
-enum RemapType {
+enum class RemapType {
     fp32_mapxy,
     fp32_mapx_mapy,
     fixedPointInt16,
@@ -8,7 +8,7 @@ enum RemapType {
     errorType
 };
 
-static const std::string errorRemapMessage =
+const std::string errorRemapMessage =
         "fp32_mapxy: map1 having the type CV_32FC2; map2 is empty\n"
         "fp32_mapx_mapy: map1 having the type CV_32FC1; map2 having the type CV_32FC1\n"
         "fixedPointInt16: map1 having the type CV_16SC2; map2 having the type CV_16UC1 or CV_16SC1\n"
@@ -50,7 +50,7 @@ inline RemapType check_and_get_remap_type(Mat &map1, Mat &map2)
 
     RemapType type = get_remap_type(map1, map2);
     if (type == RemapType::errorType)
-        CV_Error(cv::Error::StsBadSize, errorRemapMessage.data());
+        CV_Error(cv::Error::StsBadSize, errorRemapMessage);
     return type;
 }
 }
