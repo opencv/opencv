@@ -187,7 +187,8 @@ int voxelGridSampling(OutputArray sampled_point_flags, InputArray input_pts,
 void randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sampled_pts_size, RNG *rng)
 {
     CV_CheckGT(sampled_pts_size, 0, "The point cloud size after sampling must be greater than 0.");
-    CV_CheckDepth(input_pts.depth(), input_pts.depth() == CV_32F, "The output data type only supports float.");
+    CV_CheckDepth(sampled_pts.depth(), sampled_pts.isMat() || sampled_pts.depth() == CV_32F,
+                  "The output data type only supports Mat, vector<Point3f>.");
 
     // Get input point cloud data
     Mat ori_pts;
@@ -201,7 +202,7 @@ void randomSampling(OutputArray sampled_pts, InputArray input_pts, const int sam
     for (int i = 0; i < ori_pts_size; ++i) pts_idxs[i] = i;
     randShuffle(pts_idxs, 1, rng);
 
-    int depth = input_pts.depth(), channels = input_pts.channels();
+    int channels = input_pts.channels();
     if (channels == 3 && sampled_pts.isVector())
     {
         // std::vector<cv::Point3f>
@@ -238,10 +239,16 @@ void randomSampling(OutputArray sampled_pts, InputArray input_pts, const float s
 } // randomSampling()
 
 /**
- * Input point cloud C, sampled point cloud S, S initially has a size of 0
- * 1. Randomly take a seed point from C and put it into S
- * 2. Find a point in C that is the farthest away from S and put it into S
- * The distance from point to S set is the smallest distance from point to all points in S
+ * FPS Algorithm:
+ *   Input: Point cloud *C*, *sampled_pts_size*, *dist_lower_limit*
+ *   Initialize: Set sampled point cloud S to the empty set
+ *   Step:
+ *     1. Randomly take a seed point from C and take it from C to S;
+ *     2. Find a point in C that is the farthest away from S and take it from C to S;
+ *       (The distance from point to set S is the smallest distance from point to all points in S)
+ *     3. Repeat *step 2* until the farthest distance of the point in C from S
+ *       is less than *dist_lower_limit*, or the size of S is equal to *sampled_pts_size*.
+ *   Output: Sampled point cloud S
  */
 int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
                            const int sampled_pts_size, const float dist_lower_limit, RNG *rng)
