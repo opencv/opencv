@@ -329,9 +329,14 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
+    //This condition need to workaround bug in OpenCV.
+    //It reinitializes divider matrix without zero values.
+    if (dtype == CV_16S && dtype != type)
+        cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
+
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(in_mat1, in_mat2, out_mat_ocv, scale, dtype);
-    //out_mat_ocv.size().
+
     // G-API code ////////////////////////////////////////////////////////////
     cv::GMat in1, in2, out;
     out = cv::gapi::div(in1, in2, scale, dtype);
@@ -347,30 +352,6 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
         cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
     }
 
-       int error = 0;
-    if (true) {
-#if 1
-        for (int i = 0; i < out_mat_gapi.size().height; i++) {
-            for (int j = 0; j < out_mat_gapi.size().width; j++) {
-                if ((out_mat_gapi.at<int16_t>(i, j) != out_mat_ocv.at<int16_t>(i, j)) &&
-                    (cv::abs(out_mat_gapi.at<int16_t>(i, j) - out_mat_ocv.at<int16_t>(i, j)) > 1))
-                {
-                    error++;
-                    std::cout << " col = " << j << " row = " << i << " G-API: " << (int)out_mat_gapi.at<int16_t>(i, j) << " OCV: " << (int)out_mat_ocv.at<int16_t>(i, j) << " diff = " << (int)cv::abs(out_mat_gapi.at<int16_t>(i, j) - out_mat_ocv.at<int16_t>(i, j)) << std::endl << std::endl;
-                    std::cout << "error number = " << error << std::endl;
-                }
-            }
-        }
-#endif
-       // std::cout << "=========================================== G-API ======================================" << std::endl<< std::endl;
-
-        //std::cout << (int)out_mat_gapi.at<uint8_t>(0, 1) << std::endl << std::endl;
-
-        //std::cout << out_mat_gapi /*cv::format(out_mat_gapi, cv::Formatter::FMT_C)*/ << std::endl << std::endl;
-        //std::cout << "=========================================== OCV =======================================" << std::endl << std::endl;
-        //std::cout << out_mat_ocv /*cv::format(out_mat_ocv, cv::Formatter::FMT_PYTHON)*/ << std::endl << std::endl;
-    }
-    //counter++;
     // Comparison ////////////////////////////////////////////////////////////
     {
         EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
