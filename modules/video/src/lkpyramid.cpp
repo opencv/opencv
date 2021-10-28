@@ -104,8 +104,7 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_store(trow1 + x, t1);
             }
         }
-#endif
-
+#else
         for( ; x < colsn; x++ )
         {
             int t0 = (srow0[x] + srow2[x])*3 + srow1[x]*10;
@@ -113,6 +112,7 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
             trow0[x] = (deriv_type)t0;
             trow1[x] = (deriv_type)t1;
         }
+#endif
 
         // make border
         int x0 = (cols > 1 ? 1 : 0)*cn, x1 = (cols > 1 ? cols-2 : 0)*cn;
@@ -140,13 +140,14 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_store_interleave((drow + x*2), t0, t1);
             }
         }
-#endif
+#else
         for( ; x < colsn; x++ )
         {
             deriv_type t0 = (deriv_type)(trow0[x+cn] - trow0[x-cn]);
             deriv_type t1 = (deriv_type)((trow1[x+cn] + trow1[x-cn])*3 + trow1[x]*10);
             drow[x*2] = t0; drow[x*2+1] = t1;
         }
+#endif
     }
 }
 
