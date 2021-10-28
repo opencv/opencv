@@ -47,12 +47,15 @@
 
 #include "opencv2/core/hal/interface.h"
 
-#if defined __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wunused-parameter"
-#elif defined _MSC_VER
-#  pragma warning( push )
-#  pragma warning( disable: 4100 )
+#if defined(__clang__)  // clang or MSVC clang
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 //! @addtogroup core_hal_interface
@@ -731,10 +734,12 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 //! @}
 
 
-#if defined __GNUC__
-#  pragma GCC diagnostic pop
-#elif defined _MSC_VER
-#  pragma warning( pop )
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #include "hal_internal.hpp"
