@@ -32,11 +32,8 @@ if(MSVC)
   if(MSVC_VERSION LESS 1910)
     # Disable obsolete warning C4503 popping up on MSVC << 15 2017
     # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4503?view=vs-2019
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503)
-  endif()
-  if (OPENCV_GAPI_INF_ENGINE AND NOT INF_ENGINE_RELEASE VERSION_GREATER "2021000000")
-    # Disable IE deprecated code warning C4996 for releases < 2021.1
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4996)
+    # and IE deprecated code warning C4996
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
 endif()
 
