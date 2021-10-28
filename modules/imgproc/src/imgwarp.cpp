@@ -1856,6 +1856,14 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     {
         outputRemapType = RemapType::fixedPointInt16;
     }
+    else if (dstm1type == CV_32SC2 && nninterpolate)
+    {
+        outputRemapType = RemapType::int32;
+    }
+    else if (dstm1type == CV_32SC2 && !nninterpolate)
+    {
+        outputRemapType = RemapType::fixedPointInt32;
+    }
     if (outputRemapType == RemapType::errorType)
         CV_Error(cv::Error::StsBadSize, errorRemapMessage);
 
@@ -1884,10 +1892,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         return;
     }
 
-    if ((inputRemapType == RemapType::int16 || inputRemapType == RemapType::int32) && outputRemapType == RemapType::fixedPointInt16)
+    if ((inputRemapType == RemapType::int16 || inputRemapType == RemapType::int32) &&
+        (outputRemapType == RemapType::fixedPointInt16 || outputRemapType == RemapType::int16 ||
+         outputRemapType == RemapType::fp32_mapxy))
     {
         m1->convertTo(dstmap1, dstmap1.type());
-        dstmap2 = Mat::zeros( size, CV_16UC1);
+        if (outputRemapType == RemapType::fixedPointInt16)
+            dstmap2 = Mat::zeros( size, CV_16UC1);
         return;
     }
 

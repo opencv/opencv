@@ -1613,7 +1613,7 @@ PARAM_TEST_CASE(ParamConvertMapsTest, std::tuple<int, int>, int, bool)
 };
 
 #define test_float_types std::make_tuple(CV_32FC2, -1), std::make_tuple(CV_32FC1, CV_32FC1)
-#define test_int_types std::make_tuple(CV_16SC2, -1), std::make_tuple(-1, CV_16SC2)
+#define test_int_types std::make_tuple(CV_16SC2, -1), std::make_tuple(-1, CV_16SC2)//, std::make_tuple(CV_32SC2, -1)
 #define test_fixed_point_types std::make_tuple(CV_16SC2, CV_16SC1), std::make_tuple(CV_16SC2, CV_16UC1)
 
 struct Param_fp32 : public ParamConvertMapsTest {};
@@ -1633,7 +1633,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Param_fixedPoint, testing::Combine(Values(
         Values(false)));
 
 INSTANTIATE_TEST_CASE_P(/**/, Param_int16, testing::Combine(Values(
-        test_float_types, test_int_types, test_fixed_point_types
+        test_float_types, test_int_types, test_fixed_point_types, std::make_tuple(CV_32SC2, -1)
         ),
         Values(CV_16SC2),
         Values(true)));
