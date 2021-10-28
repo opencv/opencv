@@ -17,12 +17,12 @@ rayPlaneIntersection(Point2f uv, const Mat& centroid, const Mat& normal, const M
 }
 #endif
 
-Vec3f rayPlaneIntersection(const Vec3d& uv1, double centroid_dot_normal, const Vec3d& normal, const Matx33d& Kinv)
+Vec4f rayPlaneIntersection(const Vec3d& uv1, double centroid_dot_normal, const Vec4d& normal, const Matx33d& Kinv)
 {
     Matx31d L = Kinv * uv1; //a ray passing through camera optical center
     //and uv.
     L = L * (1.0 / cv::norm(L));
-    double LdotNormal = L.dot(normal);
+    double LdotNormal = L.dot(Vec3d(normal[0], normal[1], normal[2]));
     double d;
     if (std::fabs(LdotNormal) > 1e-9)
     {
@@ -34,7 +34,7 @@ Vec3f rayPlaneIntersection(const Vec3d& uv1, double centroid_dot_normal, const V
         std::cout << "warning, LdotNormal nearly 0! " << LdotNormal << std::endl;
         std::cout << "contents of L, Normal: " << Mat(L) << ", " << Mat(normal) << std::endl;
     }
-    Vec3f xyz((float)(d * L(0)), (float)(d * L(1)), (float)(d * L(2)));
+    Vec4f xyz((float)(d * L(0)), (float)(d * L(1)), (float)(d * L(2)), 0);
     return xyz;
 }
 
@@ -80,13 +80,14 @@ void points3dToDepth16U(const Mat_<Vec3f>& points3d, Mat& depthMap)
 static RNG rng;
 struct Plane
 {
-    Vec3d n, p;
+    Vec4d n, p;
     double p_dot_n;
     Plane()
     {
         n[0] = rng.uniform(-0.5, 0.5);
         n[1] = rng.uniform(-0.5, 0.5);
         n[2] = -0.3; //rng.uniform(-1.f, 0.5f);
+        n[3] = 0.;
         n = n / cv::norm(n);
         set_d((float)rng.uniform(-2.0, 0.6));
     }
@@ -94,11 +95,11 @@ struct Plane
     void
         set_d(float d)
     {
-        p = Vec3d(0, 0, d / n[2]);
+        p = Vec4d(0, 0, d / n[2], 0);
         p_dot_n = p.dot(n);
     }
 
-    Vec3f
+    Vec4f
         intersection(float u, float v, const Matx33f& Kinv_in) const
     {
         return rayPlaneIntersection(Vec3d(u, v, 1), p_dot_n, n, Kinv_in);
@@ -118,8 +119,8 @@ void gen_points_3d(std::vector<Plane>& planes_out, Mat_<unsigned char> &plane_ma
             planes.push_back(px);
         }
     }
-    Mat_ < Vec3f > outp(H, W);
-    Mat_ < Vec3f > outn(H, W);
+    Mat_ < Vec4f > outp(H, W);
+    Mat_ < Vec4f > outn(H, W);
     plane_mask.create(H, W);
 
     // n  ( r - r_0) = 0
@@ -156,6 +157,7 @@ public:
         Mat_<unsigned char> plane_mask;
         for (unsigned char i = 0; i < 3; ++i)
         {
+            std::cout << "method: " << int(i) << std::endl;
             RgbdNormals::RgbdNormalsMethod method = RgbdNormals::RGBD_NORMALS_METHOD_FALS;;
             // inner vector: whether it's 1 plane or 3 planes
             // outer vector: float or double
@@ -282,15 +284,15 @@ public:
             normals_computer->apply(points3d, in_normals);
         tm.stop();
 
-        Mat_<Vec3f> normals, ground_normals;
-        in_normals.convertTo(normals, CV_32FC3);
-        in_ground_normals.convertTo(ground_normals, CV_32FC3);
+        Mat_<Vec4f> normals, ground_normals;
+        in_normals.convertTo(normals, CV_32FC4);
+        in_ground_normals.convertTo(ground_normals, CV_32FC4);
 
         float err = 0;
         for (int y = 0; y < normals.rows; ++y)
             for (int x = 0; x < normals.cols; ++x)
             {
-                Vec3f vec1 = normals(y, x), vec2 = ground_normals(y, x);
+                Vec4f vec1 = normals(y, x), vec2 = ground_normals(y, x);
                 vec1 = vec1 / cv::norm(vec1);
                 vec2 = vec2 / cv::norm(vec2);
 
@@ -381,7 +383,8 @@ public:
                 ASSERT_LE(float(n_max - n_gt) / n_gt, 0.001);
                 // Compare the normals
                 Vec3d normal(plane_coefficients[i_max][0], plane_coefficients[i_max][1], plane_coefficients[i_max][2]);
-                ASSERT_GE(std::abs(gt_planes[j].n.dot(normal)), 0.95);
+                Vec4d n = gt_planes[j].n;
+                ASSERT_GE(std::abs(Vec3d(n[0], n[1], n[2]).dot(normal)), 0.95);
             }
 
             CV_LOG_INFO(NULL, "Speed: ");
