@@ -139,6 +139,20 @@ void setNetParameters(IE::CNNNetwork& net, bool is_nv12 = false) {
     }
 }
 
+bool checkDeviceIsAvailable(const std::string& device) {
+    const static auto available_devices = [&](){
+        auto devices = cv::gimpl::ie::wrap::getCore().GetAvailableDevices();
+        return std::unordered_set<std::string>{devices.begin(), devices.end()};
+    }();
+    return available_devices.find(device) != available_devices.end();
+}
+
+void skipIfDeviceNotAvailable(const std::string& device) {
+    if (!checkDeviceIsAvailable(device)) {
+        throw SkipTestException("Device: " + device + " isn't available!");
+    }
+}
+
 void compileBlob(const cv::gapi::ie::detail::ParamDesc& params,
                  const std::string&                     output,
                  const IE::Precision&                   ip) {
@@ -153,14 +167,14 @@ void compileBlob(const cv::gapi::ie::detail::ParamDesc& params,
     this_network.Export(out_file);
 }
 
-std::string compileAgeGenderBlob() {
+std::string compileAgeGenderBlob(const std::string& device) {
     const static std::string blob_path = [&](){
         cv::gapi::ie::detail::ParamDesc params;
         const std::string model_name = "age-gender-recognition-retail-0013";
         const std::string output  = model_name + ".blob";
         params.model_path   = findDataFile(SUBDIR + model_name + ".xml");
         params.weights_path = findDataFile(SUBDIR + model_name + ".bin");
-        params.device_id    = "MYRIAD";
+        params.device_id    = device;
         compileBlob(params, output, IE::Precision::U8);
         return output;
     }();
@@ -2270,11 +2284,14 @@ TEST(TestAgeGenderIE, InferWithBatch)
 
 TEST(ImportNetwork, Infer)
 {
+    const std::string device = "MYRIAD";
+    skipIfDeviceNotAvailable(device);
+
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = compileAgeGenderBlob();
-    params.device_id = "MYRIAD";
+    params.model_path = compileAgeGenderBlob(device);
+    params.device_id = device;
 
     cv::Mat in_mat(320, 240, CV_8UC3);
     cv::randu(in_mat, 0, 255);
@@ -2318,11 +2335,14 @@ TEST(ImportNetwork, Infer)
 
 TEST(ImportNetwork, InferNV12)
 {
+    const std::string device = "MYRIAD";
+    skipIfDeviceNotAvailable(device);
+
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path= compileAgeGenderBlob();
-    params.device_id = "MYRIAD";
+    params.model_path= compileAgeGenderBlob(device);
+    params.device_id = device;
 
     cv::Size sz{320, 240};
     cv::Mat in_y_mat(sz, CV_8UC1);
@@ -2369,14 +2389,17 @@ TEST(ImportNetwork, InferNV12)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGender, DISABLED_ThrowBlobAndInputPrecisionMismatch)
+TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
 {
+    const std::string device = "MYRIAD";
+    skipIfDeviceNotAvailable(device);
+
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
     // NB: Precision for inputs is U8.
-    params.model_path = compileAgeGenderBlob();
-    params.device_id = "MYRIAD";
+    params.model_path = compileAgeGenderBlob(device);
+    params.device_id = device;
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
