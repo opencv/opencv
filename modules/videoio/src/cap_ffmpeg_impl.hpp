@@ -532,6 +532,10 @@ struct CvCapture_FFMPEG
     bool processRawPacket();
     bool rawMode;
     bool rawModeInitialized;
+    bool includeExtraData;
+    uint8_t* extraData;
+    int extraDataLen;
+    int paddExtraData;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
@@ -578,6 +582,10 @@ void CvCapture_FFMPEG::init()
 
     rawMode = false;
     rawModeInitialized = false;
+    includeExtraData = false;
+    extraData = 0;
+    extraDataLen = 0;
+    paddExtraData = 0;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
@@ -652,6 +660,11 @@ void CvCapture_FFMPEG::close()
 #else
         av_bitstream_filter_close(bsfc);
 #endif
+    }
+
+    if (extraData) {
+        delete[] extraData;
+        extraData = 0;
     }
 
     init();
@@ -1201,6 +1214,17 @@ bool CvCapture_FFMPEG::processRawPacket()
 #else
         CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #endif
+        if (ic->streams[video_stream]->codec->extradata_size && (strcmp(ic->iformat->name, "rtsp") == 0 || eVideoCodec == AV_CODEC_ID_MPEG4)) {
+            includeExtraData = true;
+            if (eVideoCodec != AV_CODEC_ID_MPEG4) {
+                // defend against ip camera's whose side info has a shorter start code prefix length than the first packet
+                uint8_t* extraData = ic->streams[video_stream]->codec->extradata;
+                if ((packet.size >= 5 && packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 0 && packet.data[3] == 1) &&
+                    (ic->streams[video_stream]->codec->extradata_size >= 4 && extraData[0] == 0 && extraData[1] == 0 && extraData[2] == 1)) {
+                    paddExtraData = 1;
+                }
+            }
+        }
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
@@ -1410,12 +1434,25 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
     if (rawMode)
     {
         AVPacket& p = bsfc ? packet_filtered : packet;
-        *data = p.data;
-        *step = p.size;
-        *width = p.size;
+        if (includeExtraData) {
+            includeExtraData = false;
+            extraDataLen = ic->streams[video_stream]->codec->extradata_size + paddExtraData;
+            *step = extraDataLen + p.size;
+            extraData = new uint8_t[*step];
+            memset(extraData, 0, paddExtraData);
+            memcpy(extraData + paddExtraData, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
+            memcpy(&extraData[ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
+            *data = extraData;
+        }
+        else{
+            extraDataLen = 0;
+            *data = p.data;
+            *step = p.size;
+        }
+        *width = *step;
         *height = 1;
         *cn = 1;
-        return p.data != NULL;
+        return *data != NULL;
     }
 
     AVFrame* sw_picture = picture;
@@ -1580,6 +1617,10 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (rawMode)
             return -1;
         break;
+    case CAP_PROP_LF_KEY_FRAME:
+        return packet.flags == 1;
+    case CAP_PROP_LF_PARAM_SET_LEN:
+        return extraDataLen;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:

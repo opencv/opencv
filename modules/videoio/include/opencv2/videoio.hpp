@@ -200,6 +200,8 @@ enum VideoCaptureProperties {
        CAP_PROP_AUDIO_TOTAL_CHANNELS = 64, //!< (read-only) Number of audio channels in the selected audio stream (mono, stereo, etc)
        CAP_PROP_AUDIO_TOTAL_STREAMS = 65, //!< (read-only) Number of audio streams.
        CAP_PROP_AUDIO_SYNCHRONIZE = 66, //!< (open, read) Enables audio synchronization.
+       CAP_PROP_LF_KEY_FRAME=67, //!< Indicates whether the last frame was a key frame or not.
+       CAP_PROP_LF_PARAM_SET_LEN=68, //!< Indicates the length in bytes of the parameter set[s] at the begining of the last raw frame if CAP_PROP_FORMAT==-1.
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
