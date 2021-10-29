@@ -102,6 +102,7 @@ public:
 
     enum class Access { R, W };
     class IAdapter
+    // Adapter class is going to be deleted and renamed as IAdapter
     {
     public:
         virtual ~IAdapter() = default;
@@ -119,7 +120,7 @@ public:
                                  "Please, implement it in derived class to properly deserialize the object.");
         }
     };
-    using Adapter = IAdapter;
+    using Adapter = IAdapter; // Keep backward compatibility
     using AdapterP = std::shared_ptr<IAdapter>;
 
     RMat() = default;
