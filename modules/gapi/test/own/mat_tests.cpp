@@ -157,8 +157,8 @@ struct OwnMatMoveSemantics : NonEmptyMat, ::testing::Test {
 
     void ensure_state_moved_to(Mat const& moved_to)
     {
-        EXPECT_EQ(state_of(moved_to),     initial_state);
-        EXPECT_EQ(state_of(moved_from),   state_of(Mat{}));
+        EXPECT_EQ(state_of(moved_to), initial_state);
+        EXPECT_EQ(state_of(moved_from), state_of(Mat{}));
     }
 };
 
