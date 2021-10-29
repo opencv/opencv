@@ -199,6 +199,7 @@ static int JBIGEncode(TIFF* tif, uint8* buffer, tmsize_t size, uint16 s)
 
 int TIFFInitJBIG(TIFF* tif, int scheme)
 {
+        (void)scheme;
 	assert(scheme == COMPRESSION_JBIG);
 
 	/*

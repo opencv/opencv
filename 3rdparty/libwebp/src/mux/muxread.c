@@ -100,7 +100,7 @@ static int MuxImageParse(const WebPChunk* const chunk, int copy_data,
                          WebPMuxImage* const wpi) {
   const uint8_t* bytes = chunk->data_.bytes;
   size_t size = chunk->data_.size;
-  const uint8_t* const last = bytes + size;
+  const uint8_t* const last = (bytes == NULL) ? NULL : bytes + size;
   WebPChunk subchunk;
   size_t subchunk_size;
   WebPChunk** unknown_chunk_list = &wpi->unknown_;
@@ -155,7 +155,6 @@ static int MuxImageParse(const WebPChunk* const chunk, int copy_data,
         break;
       default:
         goto Fail;
-        break;
     }
     subchunk_size = ChunkDiskSize(&subchunk);
     bytes += subchunk_size;
@@ -264,7 +263,6 @@ WebPMux* WebPMuxCreateInternal(const WebPData* bitstream, int copy_data,
         if (!MuxImageParse(&chunk, copy_data, wpi)) goto Err;
         ChunkRelease(&chunk);
         goto PushImage;
-        break;
       default:  // A non-image chunk.
         if (wpi->is_partial_) goto Err;  // Encountered a non-image chunk before
                                          // getting all chunks of an image.

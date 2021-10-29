@@ -47,6 +47,23 @@ static std::string bytesToStringRepr(size_t value)
         s = s.substr(0, s.size() - 1);
     return s;
 }
+
+static String getDeviceTypeString(const cv::ocl::Device& device)
+{
+    if (device.type() == cv::ocl::Device::TYPE_CPU) {
+        return "CPU";
+    }
+
+    if (device.type() == cv::ocl::Device::TYPE_GPU) {
+        if (device.hostUnifiedMemory()) {
+            return "iGPU";
+        } else {
+            return "dGPU";
+        }
+    }
+
+    return "unknown";
+}
 } // namespace
 
 static void dumpOpenCLInformation()
@@ -64,46 +81,36 @@ static void dumpOpenCLInformation()
 
         std::vector<PlatformInfo> platforms;
         cv::ocl::getPlatfomsInfo(platforms);
-        if (platforms.size() > 0)
-        {
-            DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
-            for (size_t i = 0; i < platforms.size(); i++)
-            {
-                const PlatformInfo* platform = &platforms[i];
-                DUMP_MESSAGE_STDOUT("    " << platform->name().c_str());
-                Device current_device;
-                for (int j = 0; j < platform->deviceNumber(); j++)
-                {
-                    platform->getDevice(current_device, j);
-                    const char* deviceTypeStr = current_device.type() == Device::TYPE_CPU
-                        ? ("CPU") : (current_device.type() == Device::TYPE_GPU ? current_device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
-                    DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name().c_str() << " (" << current_device.version().c_str() << ")");
-                    DUMP_CONFIG_PROPERTY( cv::format("cv_ocl_platform_%d_device_%d", (int)i, (int)j ),
-                        cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
-                        platform->name().c_str(), deviceTypeStr, current_device.name().c_str(), current_device.version().c_str()) );
-                }
-            }
-        }
-        else
+        if (platforms.empty())
         {
             DUMP_MESSAGE_STDOUT("OpenCL is not available");
             DUMP_CONFIG_PROPERTY("cv_ocl", "not available");
             return;
         }
 
+        DUMP_MESSAGE_STDOUT("OpenCL Platforms: ");
+        for (size_t i = 0; i < platforms.size(); i++)
+        {
+            const PlatformInfo* platform = &platforms[i];
+            DUMP_MESSAGE_STDOUT("    " << platform->name());
+            Device current_device;
+            for (int j = 0; j < platform->deviceNumber(); j++)
+            {
+                platform->getDevice(current_device, j);
+                String deviceTypeStr = getDeviceTypeString(current_device);
+                DUMP_MESSAGE_STDOUT( "        " << deviceTypeStr << ": " << current_device.name() << " (" << current_device.version() << ")");
+                DUMP_CONFIG_PROPERTY( cv::format("cv_ocl_platform_%d_device_%d", (int)i, j ),
+                    cv::format("(Platform=%s)(Type=%s)(Name=%s)(Version=%s)",
+                    platform->name().c_str(), deviceTypeStr.c_str(), current_device.name().c_str(), current_device.version().c_str()) );
+            }
+        }
         const Device& device = Device::getDefault();
         if (!device.available())
             CV_Error(Error::OpenCLInitError, "OpenCL device is not available");
 
         DUMP_MESSAGE_STDOUT("Current OpenCL device: ");
 
-#if 0
-        DUMP_MESSAGE_STDOUT("    Platform = " << device.getPlatform().name());
-        DUMP_CONFIG_PROPERTY("cv_ocl_current_platformName", device.getPlatform().name());
-#endif
-
-        const char* deviceTypeStr = device.type() == Device::TYPE_CPU
-            ? ("CPU") : (device.type() == Device::TYPE_GPU ? device.hostUnifiedMemory() ? "iGPU" : "dGPU" : "unknown");
+        String deviceTypeStr = getDeviceTypeString(device);
         DUMP_MESSAGE_STDOUT("    Type = " << deviceTypeStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_deviceType", deviceTypeStr);
 
@@ -137,6 +144,10 @@ static void dumpOpenCLInformation()
         DUMP_MESSAGE_STDOUT("    Double support = " << doubleSupportStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_haveDoubleSupport", device.doubleFPConfig() > 0);
 
+        const char* halfSupportStr = device.halfFPConfig() > 0 ? "Yes" : "No";
+        DUMP_MESSAGE_STDOUT("    Half support = " << halfSupportStr);
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveHalfSupport", device.halfFPConfig() > 0);
+
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = " << isUnifiedMemoryStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_hostUnifiedMemory", device.hostUnifiedMemory());
@@ -156,7 +167,7 @@ static void dumpOpenCLInformation()
             }
             pos = pos2 + 1;
         }
-        DUMP_CONFIG_PROPERTY("cv_ocl_current_extensions", extensionsStr.c_str());
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_extensions", extensionsStr);
 
         const char* haveAmdBlasStr = haveAmdBlas() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Has AMD Blas = " << haveAmdBlasStr);
@@ -184,6 +195,9 @@ static void dumpOpenCLInformation()
 
         DUMP_MESSAGE_STDOUT("    Preferred vector width double = " << device.preferredVectorWidthDouble());
         DUMP_CONFIG_PROPERTY("cv_ocl_current_preferredVectorWidthDouble", device.preferredVectorWidthDouble());
+
+        DUMP_MESSAGE_STDOUT("    Preferred vector width half = " << device.preferredVectorWidthHalf());
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_preferredVectorWidthHalf", device.preferredVectorWidthHalf());
     }
     catch (...)
     {

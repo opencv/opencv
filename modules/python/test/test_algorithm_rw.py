@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Algorithm serializaion test."""
+"""Algorithm serialization test."""
 import tempfile
 import os
 import cv2 as cv

@@ -23,9 +23,12 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     switch (v) {
     case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
     case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
-    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
     case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
     case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    case DNN_BACKEND_CUDA: *os << "CUDA"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -37,8 +40,11 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_HDDL: *os << "HDDL"; return;
     case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_CUDA: *os << "CUDA"; return;
+    case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -62,10 +68,10 @@ void normAssert(
         double l1 /*= 0.00001*/, double lInf /*= 0.0001*/)
 {
     double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
-    EXPECT_LE(normL1, l1) << comment;
+    EXPECT_LE(normL1, l1) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 
     double normInf = cvtest::norm(ref, test, cv::NORM_INF);
-    EXPECT_LE(normInf, lInf) << comment;
+    EXPECT_LE(normInf, lInf) << comment << "  |ref| = " << cvtest::norm(ref, cv::NORM_INF);
 }
 
 std::vector<cv::Rect2d> matToBoxes(const cv::Mat& m)
@@ -95,9 +101,12 @@ void normAssertDetections(
         const char *comment /*= ""*/, double confThreshold /*= 0.0*/,
         double scores_diff /*= 1e-5*/, double boxes_iou_diff /*= 1e-4*/)
 {
+    ASSERT_FALSE(testClassIds.empty()) << "No detections";
     std::vector<bool> matchedRefBoxes(refBoxes.size(), false);
+    std::vector<double> refBoxesIoUDiff(refBoxes.size(), 1.0);
     for (int i = 0; i < testBoxes.size(); ++i)
     {
+        //cout << "Test[i=" << i << "]: score=" << testScores[i] << " id=" << testClassIds[i] << " box " << testBoxes[i] << endl;
         double testScore = testScores[i];
         if (testScore < confThreshold)
             continue;
@@ -105,6 +114,7 @@ void normAssertDetections(
         int testClassId = testClassIds[i];
         const cv::Rect2d& testBox = testBoxes[i];
         bool matched = false;
+        double topIoU = 0;
         for (int j = 0; j < refBoxes.size() && !matched; ++j)
         {
             if (!matchedRefBoxes[j] && testClassId == refClassIds[j] &&
@@ -112,7 +122,9 @@ void normAssertDetections(
             {
                 double interArea = (testBox & refBoxes[j]).area();
                 double iou = interArea / (testBox.area() + refBoxes[j].area() - interArea);
-                if (std::abs(iou - 1.0) < boxes_iou_diff)
+                topIoU = std::max(topIoU, iou);
+                refBoxesIoUDiff[j] = std::min(refBoxesIoUDiff[j], 1.0f - iou);
+                if (1.0 - iou < boxes_iou_diff)
                 {
                     matched = true;
                     matchedRefBoxes[j] = true;
@@ -120,8 +132,11 @@ void normAssertDetections(
             }
         }
         if (!matched)
+        {
             std::cout << cv::format("Unmatched prediction: class %d score %f box ",
                                     testClassId, testScore) << testBox << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
         EXPECT_TRUE(matched) << comment;
     }
 
@@ -131,7 +146,9 @@ void normAssertDetections(
         if (!matchedRefBoxes[i] && refScores[i] > confThreshold)
         {
             std::cout << cv::format("Unmatched reference: class %d score %f box ",
-                                    refClassIds[i], refScores[i]) << refBoxes[i] << std::endl;
+                                    refClassIds[i], refScores[i]) << refBoxes[i]
+                << " IoU diff: " << refBoxesIoUDiff[i]
+                << std::endl;
             EXPECT_LE(refScores[i], confThreshold) << comment;
         }
     }
@@ -160,6 +177,52 @@ void normAssertDetections(
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
+// For text detection networks
+// Curved text polygon is not supported in the current version.
+// (concave polygon is invalid input to intersectConvexConvex)
+void normAssertTextDetections(
+        const std::vector<std::vector<Point>>& gtPolys,
+        const std::vector<std::vector<Point>>& testPolys,
+        const char *comment /*= ""*/, double boxes_iou_diff /*= 1e-4*/)
+{
+    std::vector<bool> matchedRefBoxes(gtPolys.size(), false);
+    for (uint i = 0; i < testPolys.size(); ++i)
+    {
+        const std::vector<Point>& testPoly = testPolys[i];
+        bool matched = false;
+        double topIoU = 0;
+        for (uint j = 0; j < gtPolys.size() && !matched; ++j)
+        {
+            if (!matchedRefBoxes[j])
+            {
+                std::vector<Point> intersectionPolygon;
+                float intersectArea = intersectConvexConvex(testPoly, gtPolys[j], intersectionPolygon, true);
+                double iou = intersectArea / (contourArea(testPoly) + contourArea(gtPolys[j]) - intersectArea);
+                topIoU = std::max(topIoU, iou);
+                if (1.0 - iou < boxes_iou_diff)
+                {
+                    matched = true;
+                    matchedRefBoxes[j] = true;
+                }
+            }
+        }
+        if (!matched) {
+            std::cout << cv::format("Unmatched-det:") << testPoly << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
+        EXPECT_TRUE(matched) << comment;
+    }
+
+    // Check unmatched groundtruth.
+    for (uint i = 0; i < gtPolys.size(); ++i)
+    {
+        if (!matchedRefBoxes[i]) {
+            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << std::endl;
+        }
+        EXPECT_TRUE(matchedRefBoxes[i]);
+    }
+}
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
     const std::ios::openmode mode = std::ios::in | std::ios::binary;
@@ -182,7 +245,9 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
-        bool withVkCom /*= true*/
+        bool withVkCom /*= true*/,
+        bool withCUDA /*= true*/,
+        bool withNgraph /*= true*/
 )
 {
 #ifdef HAVE_INF_ENGINE
@@ -200,13 +265,24 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
-        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE);
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
-            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE, *i));
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
+    }
+    if (withNgraph)
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+        }
+
     }
 #else
     CV_UNUSED(withInferenceEngine);
@@ -217,6 +293,15 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
     }
+
+#ifdef HAVE_CUDA
+    if(withCUDA)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+            targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+    }
+#endif
+
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -231,6 +316,40 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
     return testing::ValuesIn(targets);
 }
 
+testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE()
+{
+#ifdef HAVE_INF_ENGINE
+    bool withVPU = validateVPUType();
+
+    std::vector< tuple<Backend, Target> > targets;
+    std::vector< Target > available;
+
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
+        }
+    }
+
+    {
+        available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+        {
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
+                continue;
+            targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
+        }
+
+    }
+
+    return testing::ValuesIn(targets);
+#else
+    return testing::ValuesIn(std::vector< tuple<Backend, Target> >());
+#endif
+}
 
 #ifdef HAVE_INF_ENGINE
 static std::string getTestInferenceEngineVPUType()
@@ -251,7 +370,7 @@ static bool validateVPUType_()
     bool have_vpu_target = false;
     for (std::vector<Target>::const_iterator i = available.begin(); i != available.end(); ++i)
     {
-        if (*i == DNN_TARGET_MYRIAD)
+        if (*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL)
         {
             have_vpu_target = true;
             break;
@@ -315,6 +434,7 @@ void initDNNTests()
     );
 #if defined(INF_ENGINE_RELEASE)
     registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_IE,
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
         CV_TEST_TAG_DNN_SKIP_IE_2018R5,
 #elif INF_ENGINE_VER_MAJOR_EQ(2019010000)
@@ -324,17 +444,31 @@ void initDNNTests()
 # endif
 #elif INF_ENGINE_VER_MAJOR_EQ(2019020000)
         CV_TEST_TAG_DNN_SKIP_IE_2019R2,
+#elif INF_ENGINE_VER_MAJOR_EQ(2019030000)
+        CV_TEST_TAG_DNN_SKIP_IE_2019R3,
 #endif
-        CV_TEST_TAG_DNN_SKIP_IE
+#ifdef HAVE_DNN_NGRAPH
+        CV_TEST_TAG_DNN_SKIP_IE_NGRAPH,
+#endif
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+        CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
+#endif
+        CV_TEST_TAG_DNN_SKIP_IE_CPU
     );
-#endif
     registerGlobalSkipTag(
         // see validateVPUType(): CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
+#endif
 #ifdef HAVE_VULKAN
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+
+#ifdef HAVE_CUDA
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP32, CV_TEST_TAG_DNN_SKIP_CUDA_FP16
     );
 #endif
 }

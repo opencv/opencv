@@ -55,6 +55,11 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
 }
 
+
+ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
+{
+    return m_exif.getTag(tag);
+}
 bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;

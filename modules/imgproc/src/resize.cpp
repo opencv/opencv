@@ -51,6 +51,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "hal_replacement.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "resize.hpp"
@@ -920,20 +921,23 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     static const double cs[][2]=
     {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
 
-    if( x < FLT_EPSILON )
-    {
-        for( int i = 0; i < 8; i++ )
-            coeffs[i] = 0;
-        coeffs[3] = 1;
-        return;
-    }
-
     float sum = 0;
     double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0= std::cos(y0);
     for(int i = 0; i < 8; i++ )
     {
-        double y = -(x+3-i)*CV_PI*0.25;
-        coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        float y0_ = (x+3-i);
+        if (fabs(y0_) >= 1e-6f)
+        {
+            double y = -y0_*CV_PI*0.25;
+            coeffs[i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+        }
+        else
+        {
+            // special handling for 'x' values:
+            // - ~0.0: 0 0 0 1 0 0 0 0
+            // - ~1.0: 0 0 0 0 1 0 0 0
+            coeffs[i] = 1e30f;
+        }
         sum += coeffs[i];
     }
 
@@ -967,8 +971,8 @@ class resizeNNInvoker :
     public ParallelLoopBody
 {
 public:
-    resizeNNInvoker(const Mat& _src, Mat &_dst, int *_x_ofs, int _pix_size4, double _ify) :
-        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs), pix_size4(_pix_size4),
+    resizeNNInvoker(const Mat& _src, Mat &_dst, int *_x_ofs, double _ify) :
+        ParallelLoopBody(), src(_src), dst(_dst), x_ofs(_x_ofs),
         ify(_ify)
     {
     }
@@ -1040,19 +1044,18 @@ public:
             default:
                 for( x = 0; x < dsize.width; x++, D += pix_size )
                 {
-                    const int* _tS = (const int*)(S + x_ofs[x]);
-                    int* _tD = (int*)D;
-                    for( int k = 0; k < pix_size4; k++ )
-                        _tD[k] = _tS[k];
+                    const uchar* _tS = S + x_ofs[x];
+                    for (int k = 0; k < pix_size; k++)
+                        D[k] = _tS[k];
                 }
             }
         }
     }
 
 private:
-    const Mat src;
-    Mat dst;
-    int* x_ofs, pix_size4;
+    const Mat& src;
+    Mat& dst;
+    int* x_ofs;
     double ify;
 
     resizeNNInvoker(const resizeNNInvoker&);
@@ -1066,7 +1069,6 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     AutoBuffer<int> _x_ofs(dsize.width);
     int* x_ofs = _x_ofs.data();
     int pix_size = (int)src.elemSize();
-    int pix_size4 = (int)(pix_size / sizeof(int));
     double ifx = 1./fx, ify = 1./fy;
     int x;
 
@@ -1081,9 +1083,9 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     if(CV_CPU_HAS_SUPPORT_AVX2 && ((pix_size == 2) || (pix_size == 4)))
     {
         if(pix_size == 2)
-            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+            opt_AVX2::resizeNN2_AVX2(range, src, dst, x_ofs, ify);
         else
-            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, pix_size4, ify);
+            opt_AVX2::resizeNN4_AVX2(range, src, dst, x_ofs, ify);
     }
     else
 #endif
@@ -1091,38 +1093,159 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
     if(CV_CPU_HAS_SUPPORT_SSE4_1 && ((pix_size == 2) || (pix_size == 4)))
     {
         if(pix_size == 2)
-            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+            opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, ify);
         else
-            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, pix_size4, ify);
+            opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, ify);
     }
     else
 #endif
     {
-        resizeNNInvoker invoker(src, dst, x_ofs, pix_size4, ify);
+        resizeNNInvoker invoker(src, dst, x_ofs, ify);
         parallel_for_(range, invoker, dst.total()/(double)(1<<16));
     }
 }
 
+class resizeNN_bitexactInvoker : public ParallelLoopBody
+{
+public:
+    resizeNN_bitexactInvoker(const Mat& _src, Mat& _dst, int* _x_ofse, int _ify, int _ify0)
+        : src(_src), dst(_dst), x_ofse(_x_ofse), ify(_ify), ify0(_ify0) {}
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        Size ssize = src.size(), dsize = dst.size();
+        int pix_size = (int)src.elemSize();
+        for( int y = range.start; y < range.end; y++ )
+        {
+            uchar* D = dst.ptr(y);
+            int _sy = (ify * y + ify0) >> 16;
+            int sy = std::min(_sy, ssize.height-1);
+            const uchar* S = src.ptr(sy);
+
+            int x = 0;
+            switch( pix_size )
+            {
+            case 1:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint8::nlanes; x += v_uint8::nlanes )
+                    v_store(D + x, vx_lut(S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    D[x] = S[x_ofse[x]];
+                break;
+            case 2:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint16::nlanes; x += v_uint16::nlanes )
+                    v_store((ushort*)D + x, vx_lut((ushort*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((ushort*)D + x) = *((ushort*)S + x_ofse[x]);
+                break;
+            case 3:
+                for( ; x < dsize.width; x++, D += 3 )
+                {
+                    const uchar* _tS = S + x_ofse[x] * 3;
+                    D[0] = _tS[0]; D[1] = _tS[1]; D[2] = _tS[2];
+                }
+                break;
+            case 4:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint32::nlanes; x += v_uint32::nlanes )
+                    v_store((uint32_t*)D + x, vx_lut((uint32_t*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((uint32_t*)D + x) = *((uint32_t*)S + x_ofse[x]);
+                break;
+            case 6:
+                for( ; x < dsize.width; x++, D += 6 )
+                {
+                    const ushort* _tS = (const ushort*)(S + x_ofse[x]*6);
+                    ushort* _tD = (ushort*)D;
+                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+                }
+                break;
+            case 8:
+#if CV_SIMD
+                for( ; x <= dsize.width - v_uint64::nlanes; x += v_uint64::nlanes )
+                    v_store((uint64_t*)D + x, vx_lut((uint64_t*)S, x_ofse + x));
+#endif
+                for( ; x < dsize.width; x++ )
+                    *((uint64_t*)D + x) = *((uint64_t*)S + x_ofse[x]);
+                break;
+            case 12:
+                for( ; x < dsize.width; x++, D += 12 )
+                {
+                    const int* _tS = (const int*)(S + x_ofse[x]*12);
+                    int* _tD = (int*)D;
+                    _tD[0] = _tS[0]; _tD[1] = _tS[1]; _tD[2] = _tS[2];
+                }
+                break;
+            default:
+                for( x = 0; x < dsize.width; x++, D += pix_size )
+                {
+                    const uchar* _tS = S + x_ofse[x] * pix_size;
+                    for (int k = 0; k < pix_size; k++)
+                        D[k] = _tS[k];
+                }
+            }
+        }
+    }
+private:
+    const Mat& src;
+    Mat& dst;
+    int* x_ofse;
+    const int ify;
+    const int ify0;
+};
+
+static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /*fy*/ )
+{
+    Size ssize = src.size(), dsize = dst.size();
+    int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
+    int ifx0 = ifx / 2 - 1;                                     // This method uses center pixel coordinate as Pillow and scikit-images do.
+    int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
+    int ify0 = ify / 2 - 1;
+
+    cv::utils::BufferArea area;
+    int* x_ofse = 0;
+    area.allocate(x_ofse, dsize.width, CV_SIMD_WIDTH);
+    area.commit();
+
+    for( int x = 0; x < dsize.width; x++ )
+    {
+        int sx = (ifx * x + ifx0) >> 16;
+        x_ofse[x] = std::min(sx, ssize.width-1);    // offset in element (not byte)
+    }
+    Range range(0, dsize.height);
+    resizeNN_bitexactInvoker invoker(src, dst, x_ofse, ify, ify0);
+    parallel_for_(range, invoker, dst.total()/(double)(1<<16));
+}
 
 struct VResizeNoVec
 {
-    int operator()(const uchar**, uchar*, const uchar*, int ) const { return 0; }
+    template<typename WT, typename T, typename BT>
+    int operator()(const WT**, T*, const BT*, int ) const
+    {
+        return 0;
+    }
 };
 
 struct HResizeNoVec
 {
-    int operator()(const uchar**, uchar**, int, const int*,
-        const uchar*, int, int, int, int, int) const { return 0; }
+    template<typename T, typename WT, typename AT> inline
+    int operator()(const T**, WT**, int, const int*,
+        const AT*, int, int, int, int, int) const
+    {
+        return 0;
+    }
 };
 
 #if CV_SIMD
 
 struct VResizeLinearVec_32s8u
 {
-    int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
+    int operator()(const int** src, uchar* dst, const short* beta, int width) const
     {
-        const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
         const int *S0 = src[0], *S1 = src[1];
         int x = 0;
         v_int16 b0 = vx_setall_s16(beta[0]), b1 = vx_setall_s16(beta[1]);
@@ -1150,12 +1273,9 @@ struct VResizeLinearVec_32s8u
 
 struct VResizeLinearVec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        ushort* dst = (ushort*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1180,12 +1300,9 @@ struct VResizeLinearVec_32f16u
 
 struct VResizeLinearVec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        short* dst = (short*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1210,12 +1327,9 @@ struct VResizeLinearVec_32f16s
 
 struct VResizeLinearVec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1];
-        float* dst = (float*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
@@ -1234,10 +1348,8 @@ struct VResizeLinearVec_32f
 
 struct VResizeCubicVec_32s8u
 {
-    int operator()(const uchar** _src, uchar* dst, const uchar* _beta, int width ) const
+    int operator()(const int** src, uchar* dst, const short* beta, int width) const
     {
-        const int** src = (const int**)_src;
-        const short* beta = (const short*)_beta;
         const int *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
         int x = 0;
         float scale = 1.f/(INTER_RESIZE_COEF_SCALE*INTER_RESIZE_COEF_SCALE);
@@ -1271,12 +1383,9 @@ struct VResizeCubicVec_32s8u
 
 struct VResizeCubicVec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        ushort* dst = (ushort*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1297,12 +1406,9 @@ struct VResizeCubicVec_32f16u
 
 struct VResizeCubicVec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        short* dst = (short*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1323,12 +1429,9 @@ struct VResizeCubicVec_32f16s
 
 struct VResizeCubicVec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3];
-        float* dst = (float*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]);
@@ -1348,10 +1451,12 @@ struct VResizeCubicVec_32f
 
 struct VResizeLanczos4Vec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width) const
     {
-        if (CV_CPU_HAS_SUPPORT_SSE4_1) return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(_src, _dst, _beta, width);
-        else return 0;
+        if (CV_CPU_HAS_SUPPORT_SSE4_1)
+            return opt_SSE4_1::VResizeLanczos4Vec_32f16u_SSE41(src, dst, beta, width);
+        else
+            return 0;
     }
 };
 
@@ -1359,13 +1464,10 @@ struct VResizeLanczos4Vec_32f16u
 
 struct VResizeLanczos4Vec_32f16u
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, ushort* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        ushort * dst = (ushort*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
@@ -1398,13 +1500,10 @@ struct VResizeLanczos4Vec_32f16u
 
 struct VResizeLanczos4Vec_32f16s
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, short* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        short * dst = (short*)_dst;
         int x = 0;
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
                   b2 = vx_setall_f32(beta[2]), b3 = vx_setall_f32(beta[3]),
@@ -1435,13 +1534,10 @@ struct VResizeLanczos4Vec_32f16s
 
 struct VResizeLanczos4Vec_32f
 {
-    int operator()(const uchar** _src, uchar* _dst, const uchar* _beta, int width ) const
+    int operator()(const float** src, float* dst, const float* beta, int width ) const
     {
-        const float** src = (const float**)_src;
-        const float* beta = (const float*)_beta;
         const float *S0 = src[0], *S1 = src[1], *S2 = src[2], *S3 = src[3],
                     *S4 = src[4], *S5 = src[5], *S6 = src[6], *S7 = src[7];
-        float* dst = (float*)_dst;
         int x = 0;
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]),
@@ -1481,10 +1577,239 @@ typedef VResizeNoVec VResizeLanczos4Vec_32f;
 
 #endif
 
+#if CV_SIMD128
+
+template<typename ST, typename DT, typename AT, typename DVT>
+struct HResizeLinearVec_X4
+{
+    int operator()(const ST** src, DT** dst, int count, const int* xofs,
+        const AT* alpha, int, int, int cn, int, int xmax) const
+    {
+        const int nlanes = 4;
+        const int len0 = xmax & -nlanes;
+        int dx = 0, k = 0;
+
+        for( ; k <= (count - 2); k+=2 )
+        {
+            const ST *S0 = src[k];
+            DT *D0 = dst[k];
+            const ST *S1 = src[k+1];
+            DT *D1 = dst[k+1];
+
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_deinterleave(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S0[sx0], S0[sx1], S0[sx2], S0[sx3]);
+                DVT s1(S0[sx0+cn], S0[sx1+cn], S0[sx2+cn], S0[sx3+cn]);
+                DVT s0_u(S1[sx0], S1[sx1], S1[sx2], S1[sx3]);
+                DVT s1_u(S1[sx0+cn], S1[sx1+cn], S1[sx2+cn], S1[sx3+cn]);
+                v_store(&D1[dx], s0_u * a_even + s1_u * a_odd);
+                v_store(&D0[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        for( ; k < count; k++ )
+        {
+            const ST *S = src[k];
+            DT *D = dst[k];
+            for( dx = 0; dx < len0; dx += nlanes )
+            {
+                int sx0 = xofs[dx+0];
+                int sx1 = xofs[dx+1];
+                int sx2 = xofs[dx+2];
+                int sx3 = xofs[dx+3];
+                DVT a_even;
+                DVT a_odd;
+
+                v_load_deinterleave(&alpha[dx*2], a_even, a_odd);
+                DVT s0(S[sx0], S[sx1], S[sx2], S[sx3]);
+                DVT s1(S[sx0+cn], S[sx1+cn], S[sx2+cn], S[sx3+cn]);
+                v_store(&D[dx], s0 * a_even + s1 * a_odd);
+            }
+        }
+        return dx;
+    }
+};
+
+struct HResizeLinearVecU8_X4
+{
+    int operator()(const uchar** src, int** dst, int count, const int* xofs,
+        const short* alpha/*[xmax]*/, int /*smax*/, int dmax, int cn, int /*xmin*/, int xmax) const
+    {
+        int dx = 0, k = 0;
+
+        if(cn == 1)
+        {
+            const int step = 8;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_lut_pairs(S0, xofs+dx), sl, sh);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                    v_expand(v_lut_pairs(S1, xofs+dx), sl, sh);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_lut_pairs(S, xofs+dx), sl, sh);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+        }
+        else if(cn == 2)
+        {
+            const int step = 8;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_interleave_pairs(v_lut_quads(S0, ofs)), sl, sh);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D0[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                    v_expand(v_interleave_pairs(v_lut_quads(S1, ofs)), sl, sh);
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D1[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    int ofs[4] = { xofs[dx], xofs[dx + 2], xofs[dx + 4], xofs[dx + 6] };
+                    v_int16x8 al = v_load(alpha+dx*2);
+                    v_int16x8 ah = v_load(alpha+dx*2+8);
+                    v_uint16x8 sl, sh;
+                    v_expand(v_interleave_pairs(v_lut_quads(S, ofs)), sl, sh);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(sl), al));
+                    v_store(&D[dx+4], v_dotprod(v_reinterpret_as_s16(sh), ah));
+                }
+            }
+        }
+        else if(cn == 3)
+        {
+            /* Peek at the last x offset to find the maximal s offset.  We know the loop
+               will terminate prior to value which may be 1 or more elements prior to the
+               final valid offset. xofs[] is constucted to be an array of increasingly
+               large offsets (i.e xofs[x] <= xofs[x+1] for x < xmax). */
+            int smax = xofs[dmax-cn];
+
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S0+xofs[dx]) | (v_load_expand_q(S0+xofs[dx]+cn)<<16)), a));
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S1+xofs[dx]) | (v_load_expand_q(S1+xofs[dx]+cn)<<16)), a));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; (xofs[dx] + cn) < smax; dx += cn )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_load_expand_q(S+xofs[dx]) | (v_load_expand_q(S+xofs[dx]+cn)<<16)), a));
+                }
+            }
+            /* Debug check to ensure truthiness that we never vector the final value. */
+            CV_DbgAssert(dx < dmax);
+        }
+        else if(cn == 4)
+        {
+            const int step = 4;
+            const int len0 = xmax & -step;
+            for( ; k <= (count - 2); k+=2 )
+            {
+                const uchar *S0 = src[k];
+                int *D0 = dst[k];
+                const uchar *S1 = src[k+1];
+                int *D1 = dst[k+1];
+
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D0[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S0+xofs[dx]))), a));
+                    v_store(&D1[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S1+xofs[dx]))), a));
+                }
+            }
+            for( ; k < count; k++ )
+            {
+                const uchar *S = src[k];
+                int *D = dst[k];
+                for( dx = 0; dx < len0; dx += step )
+                {
+                    v_int16x8 a = v_load(alpha+dx*2);
+                    v_store(&D[dx], v_dotprod(v_reinterpret_as_s16(v_interleave_quads(v_load_expand(S+xofs[dx]))), a));
+                }
+            }
+        }
+        else
+        {
+            return 0;  // images with channels >4 are out of optimization scope
+        }
+        return dx;
+    }
+};
+
+typedef HResizeLinearVec_X4<float,float,float,v_float32x4> HResizeLinearVec_32f;
+typedef HResizeLinearVec_X4<ushort,float,float,v_float32x4> HResizeLinearVec_16u32f;
+typedef HResizeLinearVec_X4<short,float,float,v_float32x4> HResizeLinearVec_16s32f;
+typedef HResizeLinearVecU8_X4 HResizeLinearVec_8u32s;
+
+#else
+
 typedef HResizeNoVec HResizeLinearVec_8u32s;
 typedef HResizeNoVec HResizeLinearVec_16u32f;
 typedef HResizeNoVec HResizeLinearVec_16s32f;
 typedef HResizeNoVec HResizeLinearVec_32f;
+
+#endif
+
 typedef HResizeNoVec HResizeLinearVec_64f;
 
 
@@ -1502,10 +1827,10 @@ struct HResizeLinear
         int dx, k;
         VecOp vecOp;
 
-        int dx0 = vecOp((const uchar**)src, (uchar**)dst, count,
-            xofs, (const uchar*)alpha, swidth, dwidth, cn, xmin, xmax );
+        int dx0 = vecOp(src, dst, count,
+            xofs, alpha, swidth, dwidth, cn, xmin, xmax );
 
-        for( k = 0; k <= count - 2; k++ )
+        for( k = 0; k <= count - 2; k+=2 )
         {
             const T *S0 = src[k], *S1 = src[k+1];
             WT *D0 = dst[k], *D1 = dst[k+1];
@@ -1529,7 +1854,7 @@ struct HResizeLinear
         {
             const T *S = src[k];
             WT *D = dst[k];
-            for( dx = 0; dx < xmax; dx++ )
+            for( dx = dx0; dx < xmax; dx++ )
             {
                 int sx = xofs[dx];
                 D[dx] = S[sx]*alpha[dx*2] + S[sx+cn]*alpha[dx*2+1];
@@ -1556,7 +1881,7 @@ struct VResizeLinear
         CastOp castOp;
         VecOp vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1587,7 +1912,7 @@ struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COE
         const buf_type *S0 = src[0], *S1 = src[1];
         VResizeLinearVec_32s8u vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -1669,7 +1994,7 @@ struct VResizeCubic
         CastOp castOp;
         VecOp vecOp;
 
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         for( ; x < width; x++ )
             dst[x] = castOp(S0[x]*b0 + S1[x]*b1 + S2[x]*b2 + S3[x]*b3);
     }
@@ -1741,7 +2066,7 @@ struct VResizeLanczos4
     {
         CastOp castOp;
         VecOp vecOp;
-        int x = vecOp((const uchar**)src, (uchar*)dst, (const uchar*)beta, width);
+        int x = vecOp(src, dst, beta, width);
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
@@ -3514,6 +3839,12 @@ void resize(int src_type,
         return;
     }
 
+    if( interpolation == INTER_NEAREST_EXACT )
+    {
+        resizeNN_bitexact( src, dst, inv_scale_x, inv_scale_y );
+        return;
+    }
+
     int k, sx, sy, dx, dy;
 
 
@@ -3737,6 +4068,11 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() && _src.cols() > 10 && _src.rows() > 10,
                ocl_resize(_src, _dst, dsize, inv_scale_x, inv_scale_y, interpolation))
+
+    // Fake reference to source. Resolves issue 13577 in case of src == dst.
+    UMat srcUMat;
+    if (_src.isUMat())
+        srcUMat = _src.getUMat();
 
     Mat src = _src.getMat();
     _dst.create(dsize, src.type());

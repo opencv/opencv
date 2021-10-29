@@ -23,7 +23,7 @@ public:
 
         struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
         if( !FileNode::isCollection(struct_flags))
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
 
         if( type_name && *type_name == '\0' )
@@ -53,29 +53,26 @@ public:
     void endWriteStruct(const FStructData& current_struct)
     {
         int struct_flags = current_struct.flags;
-        CV_Assert( FileNode::isCollection(struct_flags) );
 
-        if( !FileNode::isFlow(struct_flags) )
-        {
-#if 0
-            if ( fs->bufferPtr() <= fs->bufferStart() + fs->space )
-            {
-                /* some bad code for base64_writer... */
-                ptr = fs->bufferPtr();
-                *ptr++ = '\n';
-                *ptr++ = '\0';
-                fs->puts( fs->bufferStart() );
-                fs->setBufferPtr(fs->bufferStart());
+        if (FileNode::isCollection(struct_flags)) {
+            if (!FileNode::isFlow(struct_flags)) {
+                if (fs->bufferPtr() <= fs->bufferStart() + fs->get_space()) {
+                    /* some bad code for base64_writer... */
+                    char *ptr = fs->bufferPtr();
+                    *ptr++ = '\n';
+                    *ptr++ = '\0';
+                    fs->puts(fs->bufferStart());
+                    fs->setBufferPtr(fs->bufferStart());
+                }
+                fs->flush();
             }
-#endif
-            fs->flush();
-        }
 
-        char* ptr = fs->bufferPtr();
-        if( ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags) )
-            *ptr++ = ' ';
-        *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
-        fs->setBufferPtr(ptr);
+            char *ptr = fs->bufferPtr();
+            if (ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags))
+                *ptr++ = ' ';
+            *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
+            fs->setBufferPtr(ptr);
+        }
     }
 
     void write(const char* key, int value)
@@ -97,11 +94,11 @@ public:
         int i, len;
 
         if( !str )
-            CV_Error( CV_StsNullPtr, "Null string pointer" );
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
 
         len = (int)strlen(str);
         if( len > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The written string is too long" );
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
 
         if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
         {
@@ -136,6 +133,20 @@ public:
 
     void writeScalar(const char* key, const char* data)
     {
+        /* check write_struct */
+
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
+        {
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
+        /* check parameters */
+
         size_t key_len = 0u;
         if( key && *key == '\0' )
             key = 0;
@@ -143,9 +154,9 @@ public:
         {
             key_len = strlen(key);
             if ( key_len == 0u )
-                CV_Error( CV_StsBadArg, "The key is an empty" );
+                CV_Error( cv::Error::StsBadArg, "The key is an empty" );
             else if ( static_cast<int>(key_len) > CV_FS_MAX_LEN )
-                CV_Error( CV_StsBadArg, "The key is too long" );
+                CV_Error( cv::Error::StsBadArg, "The key is too long" );
         }
 
         size_t data_len = 0u;
@@ -157,7 +168,7 @@ public:
         if( FileNode::isCollection(struct_flags) )
         {
             if ( (FileNode::isMap(struct_flags) ^ (key != 0)) )
-                CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
+                CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
                          "or add element with key to sequence" );
         } else {
             fs->setNonEmpty();
@@ -199,7 +210,7 @@ public:
         if( key )
         {
             if( !cv_isalpha(key[0]) && key[0] != '_' )
-                CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
+                CV_Error( cv::Error::StsBadArg, "Key must start with a letter or _" );
 
             ptr = fs->resizeWriteBuffer( ptr, static_cast<int>(key_len) );
             *ptr++ = '\"';
@@ -210,7 +221,7 @@ public:
 
                 ptr[i] = c;
                 if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
-                    CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+                    CV_Error( cv::Error::StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
             }
 
             ptr += key_len;
@@ -233,7 +244,7 @@ public:
     void writeComment(const char* comment, bool eol_comment)
     {
         if( !comment )
-            CV_Error( CV_StsNullPtr, "Null comment" );
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
 
         int len = static_cast<int>(strlen(comment));
         char* ptr = fs->bufferPtr();
@@ -411,7 +422,10 @@ public:
         if( *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
 
-        const char * end = ptr;
+        if( ptr == beg )
+            CV_PARSE_ERROR_CPP( "Key is empty" );
+        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(ptr - beg)), FileNode::NONE);
+
         ptr++;
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
@@ -420,18 +434,23 @@ public:
         if( *ptr != ':' )
             CV_PARSE_ERROR_CPP( "Missing \':\' between key and value" );
 
-        /* [beg, end) */
-        if( end <= beg )
-            CV_PARSE_ERROR_CPP( "Key is empty" );
-
-        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(end - beg)), FileNode::NONE);
         return ++ptr;
     }
 
-    bool getBase64Row(char*, int /*indent*/, char*&, char*&)
+    bool getBase64Row(char* ptr, int /*indent*/, char* &beg, char* &end)
     {
-        CV_PARSE_ERROR_CPP("Currently, JSON parser does not support base64 data");
-        return false;
+        beg = end = ptr;
+        if( !ptr || !*ptr )
+            return false;
+
+        // find end of the row
+        while( cv_isprint(*ptr) && (*ptr != ',') && (*ptr != '"'))
+            ++ptr;
+        if ( *ptr == '\0' )
+            CV_PARSE_ERROR_CPP( "Unexpected end of line" );
+
+        end = ptr;
+        return true;
     }
 
     char* parseValue( char* ptr, FileNode& node )
@@ -451,117 +470,15 @@ public:
             for ( ; (cv_isalnum(*ptr) || *ptr == '$' ) && len <= 9u; ptr++ )
                 len++;
 
-            if ( len >= 8u && memcmp( beg, "$base64$", 8u ) == 0 )
+            if ((len >= 8u) && (memcmp( beg, "$base64$", 8u ) == 0) )
             {   /**************** Base64 string ****************/
-                CV_PARSE_ERROR_CPP("base64 data is not supported");
-#if 0
-                ptr = beg += 8;
-
-                std::string base64_buffer;
-                base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
-
-                bool is_matching = false;
-                while ( !is_matching )
-                {
-                    switch ( *ptr )
-                    {
-                        case '\0':
-                        {
-                            base64_buffer.append( beg, ptr );
-
-                            ptr = fs->gets();
-                            if( !ptr || !*ptr )
-                                CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
-                            beg = ptr;
-                            break;
-                        }
-                        case '\"':
-                        {
-                            base64_buffer.append( beg, ptr );
-                            beg = ptr;
-                            is_matching = true;
-                            break;
-                        }
-                        case '\n':
-                        case '\r':
-                        {
-                            CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
-                            break;
-                        }
-                        default:
-                        {
-                            ptr++;
-                            break;
-                        }
-                    }
-                }
+                ptr = beg + 8;
+                ptr = fs->parseBase64(ptr, 0, node);
 
                 if ( *ptr != '\"' )
                     CV_PARSE_ERROR_CPP( "'\"' - right-quote of string is missing" );
                 else
                     ptr++;
-
-                if ( base64_buffer.size() >= base64::ENCODED_HEADER_SIZE )
-                {
-                    const char * base64_beg = base64_buffer.data();
-                    const char * base64_end = base64_beg + base64_buffer.size();
-
-                    /* get dt from header */
-                    std::string dt;
-                    {
-                        std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
-                        base64::base64_decode(base64_beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
-                        if ( !base64::read_base64_header(header, dt) || dt.empty() )
-                            CV_PARSE_ERROR_CPP("Invalid `dt` in Base64 header");
-                    }
-
-
-                    if ( base64_buffer.size() > base64::ENCODED_HEADER_SIZE )
-                    {
-                        /* set base64_beg to beginning of base64 data */
-                        base64_beg = &base64_buffer.at( base64::ENCODED_HEADER_SIZE );
-                        if ( !base64::base64_valid( base64_beg, 0U, base64_end - base64_beg ) )
-                            CV_PARSE_ERROR_CPP( "Invalid Base64 data." );
-
-                        /* buffer for decoded data(exclude header) */
-                        std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_end - base64_beg) );
-                        int total_byte_size = static_cast<int>(
-                                                               base64::base64_decode_buffer_size( base64_end - base64_beg, base64_beg, false )
-                                                               );
-                        {
-                            base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
-                            const uchar * binary_beg = reinterpret_cast<const uchar *>( base64_beg );
-                            const uchar * binary_end = binary_beg + (base64_end - base64_beg);
-                            parser.read( binary_beg, binary_end );
-                            parser.flush();
-                        }
-
-                        /* save as CvSeq */
-                        int elem_size = ::icvCalcStructSize(dt.c_str(), 0);
-                        if (total_byte_size % elem_size != 0)
-                            CV_PARSE_ERROR_CPP("Byte size not match elememt size");
-                        int elem_cnt = total_byte_size / elem_size;
-
-                        /* after icvFSCreateCollection, node->tag == struct_flags */
-                        icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                        base64::make_seq(binary_buffer.data(), elem_cnt, dt.c_str(), *node->data.seq);
-                    }
-                    else
-                    {
-                        /* empty */
-                        icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                    }
-                }
-                else if ( base64_buffer.empty() )
-                {
-                    /* empty */
-                    icvFSCreateCollection(fs, FileNode::FLOW | FileNode::SEQ, node);
-                }
-                else
-                {
-                    CV_PARSE_ERROR("Unrecognized Base64 header");
-                }
-#endif
             }
             else
             {   /**************** normal string ****************/
@@ -578,10 +495,14 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
                             ptr++;
+                            if (i + 1 >= CV_FS_MAX_LEN)
+                                CV_PARSE_ERROR_CPP("string is too long");
                             switch ( *ptr )
                             {
                             case '\\':
@@ -605,6 +526,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
@@ -620,6 +543,8 @@ public:
                             sz = (int)(ptr - beg);
                             if( sz > 0 )
                             {
+                                if (i + sz >= CV_FS_MAX_LEN)
+                                    CV_PARSE_ERROR_CPP("string is too long");
                                 memcpy(buf + i, beg, sz);
                                 i += sz;
                             }
@@ -809,7 +734,9 @@ public:
             else if ( *ptr == '}' )
                 break;
             else
+            {
                 CV_PARSE_ERROR_CPP( "Unexpected character" );
+            }
         }
 
         if (!ptr)
@@ -850,8 +777,6 @@ public:
             CV_PARSE_ERROR_CPP( "left-brace of top level is missing" );
         }
 
-        if( !ptr || !*ptr )
-            CV_PARSE_ERROR_CPP( "Unexpected End-Of-File" );
         return true;
     }
 

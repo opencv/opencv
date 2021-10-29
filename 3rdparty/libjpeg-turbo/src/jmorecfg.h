@@ -5,7 +5,7 @@
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 1997-2009 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2009, 2011, 2014-2015, 2018, D. R. Commander.
+ * Copyright (C) 2009, 2011, 2014-2015, 2018, 2020, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -43,24 +43,10 @@
 
 #if BITS_IN_JSAMPLE == 8
 /* JSAMPLE should be the smallest type that will hold the values 0..255.
- * You can use a signed char by having GETJSAMPLE mask it with 0xFF.
  */
-
-#ifdef HAVE_UNSIGNED_CHAR
 
 typedef unsigned char JSAMPLE;
 #define GETJSAMPLE(value)  ((int)(value))
-
-#else /* not HAVE_UNSIGNED_CHAR */
-
-typedef char JSAMPLE;
-#ifdef __CHAR_UNSIGNED__
-#define GETJSAMPLE(value)  ((int)(value))
-#else
-#define GETJSAMPLE(value)  ((int)(value) & 0xFF)
-#endif /* __CHAR_UNSIGNED__ */
-
-#endif /* HAVE_UNSIGNED_CHAR */
 
 #define MAXJSAMPLE      255
 #define CENTERJSAMPLE   128
@@ -97,21 +83,8 @@ typedef short JCOEF;
  * managers, this is also the data type passed to fread/fwrite.
  */
 
-#ifdef HAVE_UNSIGNED_CHAR
-
 typedef unsigned char JOCTET;
 #define GETJOCTET(value)  (value)
-
-#else /* not HAVE_UNSIGNED_CHAR */
-
-typedef char JOCTET;
-#ifdef __CHAR_UNSIGNED__
-#define GETJOCTET(value)  (value)
-#else
-#define GETJOCTET(value)  ((value) & 0xFF)
-#endif /* __CHAR_UNSIGNED__ */
-
-#endif /* HAVE_UNSIGNED_CHAR */
 
 
 /* These typedefs are used for various table entries and so forth.
@@ -123,15 +96,7 @@ typedef char JOCTET;
 
 /* UINT8 must hold at least the values 0..255. */
 
-#ifdef HAVE_UNSIGNED_CHAR
 typedef unsigned char UINT8;
-#else /* not HAVE_UNSIGNED_CHAR */
-#ifdef __CHAR_UNSIGNED__
-typedef char UINT8;
-#else /* not __CHAR_UNSIGNED__ */
-typedef short UINT8;
-#endif /* __CHAR_UNSIGNED__ */
-#endif /* HAVE_UNSIGNED_CHAR */
 
 /* UINT16 must hold at least the values 0..65535. */
 
@@ -273,9 +238,9 @@ typedef int boolean;
 
 /* Capability options common to encoder and decoder: */
 
-#define DCT_ISLOW_SUPPORTED     /* slow but accurate integer algorithm */
-#define DCT_IFAST_SUPPORTED     /* faster, less accurate integer method */
-#define DCT_FLOAT_SUPPORTED     /* floating-point: accurate, fast on fast HW */
+#define DCT_ISLOW_SUPPORTED     /* accurate integer method */
+#define DCT_IFAST_SUPPORTED     /* less accurate int method [legacy feature] */
+#define DCT_FLOAT_SUPPORTED     /* floating-point method [legacy feature] */
 
 /* Encoder capability options: */
 

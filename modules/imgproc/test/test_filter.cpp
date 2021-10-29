@@ -59,6 +59,13 @@ protected:
     bool fp_kernel;
     bool inplace;
     int border;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        ArrayTest::dump_test_case(test_case_idx, out);
+        *out << "border=" << border << std::endl;
+    }
+
 };
 
 
@@ -685,6 +692,12 @@ protected:
     void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
     double get_success_error_level( int test_case_idx, int i, int j );
     const char* smooth_type;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_FilterBaseTest::dump_test_case(test_case_idx, out);
+        *out << "smooth_type=" << smooth_type << std::endl;
+    }
 };
 
 
@@ -795,6 +808,12 @@ protected:
     double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ );
     double sigma;
     int param1, param2;
+
+    void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
+    {
+        CV_SmoothBaseTest::dump_test_case(test_case_idx, out);
+        *out << "kernel=(" << param1 << ", " << param2 << ") sigma=" << sigma << std::endl;
+    }
 };
 
 
@@ -838,7 +857,7 @@ void CV_GaussianBlurTest::run_func()
 
 // !!! Copied from cvSmooth, if the code is changed in cvSmooth,
 // make sure to update this one too.
-#define SMALL_GAUSSIAN_SIZE 7
+#define SMALL_GAUSSIAN_SIZE 9
 static void
 calcGaussianKernel( int n, double sigma, vector<float>& kernel )
 {
@@ -847,14 +866,15 @@ calcGaussianKernel( int n, double sigma, vector<float>& kernel )
         {1.f},
         {0.25f, 0.5f, 0.25f},
         {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f},
-        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125}
+        {0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125},
+        {4.0 / 256, 13.0 / 256, 30.0 / 256, 51.0 / 256, 60.0 / 256, 51.0 / 256, 30.0 / 256, 13.0 / 256, 4.0 / 256}
     };
 
     kernel.resize(n);
     if( n <= SMALL_GAUSSIAN_SIZE && sigma <= 0 )
     {
-        assert( n%2 == 1 );
-        memcpy( &kernel[0], small_gaussian_tab[n>>1], n*sizeof(kernel[0]));
+        CV_Assert(n%2 == 1);
+        memcpy(&kernel[0], small_gaussian_tab[n / 2], n*sizeof(kernel[0]));
     }
     else
     {
@@ -2302,5 +2322,38 @@ TEST(Imgproc_Pyrdown, issue_12961)
     cv::pyrDown(src, dst);
     ASSERT_EQ(0.0, cv::norm(dst));
 }
+
+
+// https://github.com/opencv/opencv/issues/16857
+TEST(Imgproc, filter_empty_src_16857)
+{
+#define CV_TEST_EXPECT_EMPTY_THROW(statement) CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, ".empty()")
+
+    Mat src, dst, dst2;
+
+    CV_TEST_EXPECT_EMPTY_THROW(bilateralFilter(src, dst, 5, 50, 20));
+    CV_TEST_EXPECT_EMPTY_THROW(blur(src, dst, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(boxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(sqrBoxFilter(src, dst, CV_8U, Size(3, 3)));
+    CV_TEST_EXPECT_EMPTY_THROW(medianBlur(src, dst, 3));
+    CV_TEST_EXPECT_EMPTY_THROW(GaussianBlur(src, dst, Size(3, 3), 0));
+    CV_TEST_EXPECT_EMPTY_THROW(cv::filter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(sepFilter2D(src, dst, CV_8U, Mat_<float>::zeros(Size(3, 1)), Mat_<float>::zeros(Size(1, 3))));
+    CV_TEST_EXPECT_EMPTY_THROW(Sobel(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(spatialGradient(src, dst, dst2));
+    CV_TEST_EXPECT_EMPTY_THROW(Scharr(src, dst, CV_8U, 1, 1));
+    CV_TEST_EXPECT_EMPTY_THROW(Laplacian(src, dst, CV_8U));
+
+    CV_TEST_EXPECT_EMPTY_THROW(cv::dilate(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(cv::erode(src, dst, Mat()));  // cvtest:: by default
+    CV_TEST_EXPECT_EMPTY_THROW(morphologyEx(src, dst, MORPH_OPEN, Mat()));
+
+    //debug: CV_TEST_EXPECT_EMPTY_THROW(blur(Mat_<uchar>(Size(3,3)), dst, Size(3, 3)));
+
+    EXPECT_TRUE(src.empty());
+    EXPECT_TRUE(dst.empty());
+    EXPECT_TRUE(dst2.empty());
+}
+
 
 }} // namespace

@@ -93,6 +93,25 @@ OCL_TEST_P(HOG, GetDescriptors)
     EXPECT_MAT_SIMILAR(cpu_desc, gpu_desc, 1e-1);
 }
 
+OCL_TEST_P(HOG, SVMDetector)
+{
+    HOGDescriptor hog_first, hog_second;
+
+    // empty -> empty
+    hog_first.copyTo(hog_second);
+
+    // first -> both
+    hog_first.setSVMDetector(hog_first.getDefaultPeopleDetector());
+    hog_first.copyTo(hog_second);
+
+    // both -> both
+    hog_first.copyTo(hog_second);
+
+    // second -> empty
+    hog_first.setSVMDetector(cv::noArray());
+    hog_first.copyTo(hog_second);
+}
+
 OCL_TEST_P(HOG, Detect)
 {
     HOGDescriptor hog;

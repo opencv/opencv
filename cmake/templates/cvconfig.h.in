@@ -13,9 +13,6 @@
 /* Compile for 'real' NVIDIA GPU architectures */
 #define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
 
-/* Create PTX or BIN for 1.0 compute capability */
-#cmakedefine CUDA_ARCH_BIN_OR_PTX_10
-
 /* NVIDIA GPU features are used */
 #define CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES}"
 
@@ -30,9 +27,6 @@
 
 /* Clp support */
 #cmakedefine HAVE_CLP
-
-/* Cocoa API */
-#cmakedefine HAVE_COCOA
 
 /* NVIDIA CUDA Runtime API*/
 #cmakedefine HAVE_CUDA
@@ -59,12 +53,6 @@
 /* Geospatial Data Abstraction Library */
 #cmakedefine HAVE_GDAL
 
-/* GTK+ 2.0 Thread support */
-#cmakedefine HAVE_GTHREAD
-
-/* GTK+ 2.x toolkit */
-#cmakedefine HAVE_GTK
-
 /* Halide support */
 #cmakedefine HAVE_HALIDE
 
@@ -81,6 +69,7 @@
 #cmakedefine HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
+#cmakedefine HAVE_OPENJPEG
 #cmakedefine HAVE_JASPER
 
 /* IJG JPEG codec */
@@ -94,6 +83,8 @@
 
 /* NVIDIA Video Decoding API*/
 #cmakedefine HAVE_NVCUVID
+#cmakedefine HAVE_NVCUVID_HEADER
+#cmakedefine HAVE_DYNLINK_NVCUVID_HEADER
 
 /* NVIDIA Video Encoding API*/
 #cmakedefine HAVE_NVCUVENC
@@ -121,12 +112,6 @@
 /* parallel_for with pthreads */
 #cmakedefine HAVE_PTHREADS_PF
 
-/* Qt support */
-#cmakedefine HAVE_QT
-
-/* Qt OpenGL support */
-#cmakedefine HAVE_QT_OPENGL
-
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 
@@ -135,9 +120,6 @@
 
 /* TIFF codec */
 #cmakedefine HAVE_TIFF
-
-/* Win32 UI */
-#cmakedefine HAVE_WIN32UI
 
 /* Define if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */

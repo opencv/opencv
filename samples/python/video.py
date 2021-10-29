@@ -39,9 +39,6 @@ import re
 
 from numpy import pi, sin, cos
 
-# built-in modules
-from time import clock
-
 # local modules
 from tst_scene_render import TestSceneRender
 import common

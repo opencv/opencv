@@ -19,6 +19,7 @@ class stitching_test(NewOpenCVTests):
         self.assertAlmostEqual(pano.shape[0], 685, delta=100, msg="rows: %r" % list(pano.shape))
         self.assertAlmostEqual(pano.shape[1], 1025, delta=100, msg="cols: %r" % list(pano.shape))
 
+
 class stitching_detail_test(NewOpenCVTests):
 
     def test_simple(self):
@@ -81,6 +82,38 @@ class stitching_detail_test(NewOpenCVTests):
         self.assertIsNotNone(timelapser)
         timelapser = cv.detail.Timelapser_createDefault(cv.detail.Timelapser_CROP);
         self.assertIsNotNone(timelapser)
+
+
+class stitching_compose_panorama_test_no_args(NewOpenCVTests):
+
+    def test_simple(self):
+
+        img1 = self.get_sample('stitching/a1.png')
+        img2 = self.get_sample('stitching/a2.png')
+
+        stitcher = cv.Stitcher.create(cv.Stitcher_PANORAMA)
+
+        stitcher.estimateTransform((img1, img2))
+
+        result, _ = stitcher.composePanorama()
+
+        assert result == 0
+
+
+class stitching_compose_panorama_args(NewOpenCVTests):
+
+    def test_simple(self):
+
+        img1 = self.get_sample('stitching/a1.png')
+        img2 = self.get_sample('stitching/a2.png')
+
+        stitcher = cv.Stitcher.create(cv.Stitcher_PANORAMA)
+
+        stitcher.estimateTransform((img1, img2))
+        result, _ = stitcher.composePanorama((img1, img2))
+
+        assert result == 0
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

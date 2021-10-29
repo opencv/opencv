@@ -15,7 +15,7 @@
 
 namespace cv { namespace gimpl {
 
-// NB: This is what a "Kernel Package" from the origianl Wiki doc should be.
+// NB: This is what a "Kernel Package" from the original Wiki doc should be.
 void loadOCLImgProc(std::map<std::string, cv::GOCLKernel> &kmap);
 
 }}

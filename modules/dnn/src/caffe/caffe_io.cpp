@@ -92,6 +92,7 @@
 #ifdef HAVE_PROTOBUF
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/stubs/common.h>
 #include <google/protobuf/text_format.h>
 
 #include <opencv2/core.hpp>
@@ -1111,7 +1112,11 @@ static const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 by
 
 bool ReadProtoFromBinary(ZeroCopyInputStream* input, Message *proto) {
     CodedInputStream coded_input(input);
+#if GOOGLE_PROTOBUF_VERSION >= 3006000
+    coded_input.SetTotalBytesLimit(kProtoReadBytesLimit);
+#else
     coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+#endif
 
     return proto->ParseFromCodedStream(&coded_input);
 }
@@ -1120,11 +1125,12 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     std::ifstream fs(filename, std::ifstream::in);
     CHECK(fs.is_open()) << "Can't open \"" << filename << "\"";
     IstreamInputStream input(&fs);
+    google::protobuf::TextFormat::Parser parser;
 #ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
-    return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
-#else
-    return google::protobuf::TextFormat::Parser().Parse(&input, proto);
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
 #endif
+    return parser.Parse(&input, proto);
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
@@ -1137,12 +1143,12 @@ bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
 
 bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
     ArrayInputStream input(data, len);
+    google::protobuf::TextFormat::Parser parser;
 #ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
-    return google::protobuf::TextFormat::Parser(true).Parse(&input, proto);
-#else
-    return google::protobuf::TextFormat::Parser().Parse(&input, proto);
+    parser.AllowUnknownField(true);
+    parser.SetRecursionLimit(1000);
 #endif
-
+    return parser.Parse(&input, proto);
 }
 
 

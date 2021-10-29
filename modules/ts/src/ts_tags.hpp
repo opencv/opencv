@@ -21,6 +21,8 @@ namespace cvtest {
 
 void activateTestTags(const cv::CommandLineParser& parser);
 
+void testTagIncreaseSkipCount(const std::string& tag, bool isMain = true, bool appendSkipTests = false);
+
 } // namespace
 
 #endif // OPENCV_TS_SRC_TAGS_HPP

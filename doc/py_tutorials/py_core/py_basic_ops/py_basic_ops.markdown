@@ -8,13 +8,13 @@ Learn to:
 
 -   Access pixel values and modify them
 -   Access image properties
--   Setting Region of Interest (ROI)
--   Splitting and Merging images
+-   Set a Region of Interest (ROI)
+-   Split and merge images
 
-Almost all the operations in this section is mainly related to Numpy rather than OpenCV. A good
+Almost all the operations in this section are mainly related to Numpy rather than OpenCV. A good
 knowledge of Numpy is required to write better optimized code with OpenCV.
 
-*( Examples will be shown in Python terminal since most of them are just single line codes )*
+*( Examples will be shown in a Python terminal, since most of them are just single lines of code )*
 
 Accessing and Modifying pixel values
 ------------------------------------
@@ -45,15 +45,15 @@ You can modify the pixel values the same way.
 [255 255 255]
 @endcode
 
-**warning**
+**Warning**
 
-Numpy is a optimized library for fast array calculations. So simply accessing each and every pixel
-values and modifying it will be very slow and it is discouraged.
+Numpy is an optimized library for fast array calculations. So simply accessing each and every pixel
+value and modifying it will be very slow and it is discouraged.
 
 @note The above method is normally used for selecting a region of an array, say the first 5 rows
 and last 3 columns. For individual pixel access, the Numpy array methods, array.item() and
-array.itemset() are considered better, however they always return a scalar. If you want to access
-all B,G,R values, you need to call array.item() separately for all.
+array.itemset() are considered better. They always return a scalar, however, so if you want to access
+all the B,G,R values, you will need to call array.item() separately for each value.
 
 Better pixel accessing and editing method :
 @code{.py}
@@ -70,11 +70,10 @@ Better pixel accessing and editing method :
 Accessing Image Properties
 --------------------------
 
-Image properties include number of rows, columns and channels, type of image data, number of pixels
-etc.
+Image properties include number of rows, columns, and channels; type of image data; number of pixels; etc.
 
-The shape of an image is accessed by img.shape. It returns a tuple of number of rows, columns, and channels
-(if image is color):
+The shape of an image is accessed by img.shape. It returns a tuple of the number of rows, columns, and channels
+(if the image is color):
 @code{.py}
 >>> print( img.shape )
 (342, 548, 3)
@@ -95,13 +94,13 @@ uint8
 @endcode
 
 @note img.dtype is very important while debugging because a large number of errors in OpenCV-Python
-code is caused by invalid datatype.
+code are caused by invalid datatype.
 
 Image ROI
 ---------
 
-Sometimes, you will have to play with certain region of images. For eye detection in images, first
-face detection is done all over the image. When a face is obtained, we select the face region alone
+Sometimes, you will have to play with certain regions of images. For eye detection in images, first
+face detection is done over the entire image. When a face is obtained, we select the face region alone
 and search for eyes inside it instead of searching the whole image. It improves accuracy (because eyes
 are always on faces :D ) and performance (because we search in a small area).
 
@@ -118,9 +117,9 @@ Check the results below:
 Splitting and Merging Image Channels
 ------------------------------------
 
-Sometimes you will need to work separately on B,G,R channels of image. In this case, you need
-to split the BGR images to single channels. In other cases, you may need to join these individual
-channels to a BGR image. You can do it simply by:
+Sometimes you will need to work separately on the B,G,R channels of an image. In this case, you need
+to split the BGR image into single channels. In other cases, you may need to join these individual
+channels to create a BGR image. You can do this simply by:
 @code{.py}
 >>> b,g,r = cv.split(img)
 >>> img = cv.merge((b,g,r))
@@ -129,7 +128,7 @@ Or
 @code
 >>> b = img[:,:,0]
 @endcode
-Suppose you want to set all the red pixels to zero, you do not need to split the channels first.
+Suppose you want to set all the red pixels to zero - you do not need to split the channels first.
 Numpy indexing is faster:
 @code{.py}
 >>> img[:,:,2] = 0
@@ -137,13 +136,13 @@ Numpy indexing is faster:
 
 **Warning**
 
-cv.split() is a costly operation (in terms of time). So do it only if you need it. Otherwise go
+cv.split() is a costly operation (in terms of time). So use it only if necessary. Otherwise go
 for Numpy indexing.
 
 Making Borders for Images (Padding)
 -----------------------------------
 
-If you want to create a border around the image, something like a photo frame, you can use
+If you want to create a border around an image, something like a photo frame, you can use
 **cv.copyMakeBorder()**. But it has more applications for convolution operation, zero
 padding etc. This function takes following arguments:
 

@@ -6,18 +6,27 @@ body, table, div, p, dl {
 }
 
 code {
-    font: 12px Consolas, "Liberation Mono", Courier, monospace;
     font-size: 85%;
+    font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
     white-space: pre-wrap;
     padding: 1px 5px;
-    padding: 0;
-    background-color: #ddd;
+    background-color: rgb(223, 229, 241);
     vertical-align: baseline;
 }
 
 body {
     background-image: url(bodybg.png);
     margin: 0 auto;
+}
+
+div.fragment {
+    padding: 3px;
+    padding-bottom: 0px;
+}
+
+div.line {
+    padding-bottom: 3px;
+    font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
 }
 
 div.contents {
@@ -34,4 +43,12 @@ span.arrow {
 
 div.image img{
     max-width: 900px;
+}
+
+#projectlogo
+{
+    text-align: center;
+    vertical-align: middle;
+    border-collapse: separate;
+    padding-left: 0.5em;
 }

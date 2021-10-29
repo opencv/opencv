@@ -51,7 +51,7 @@ OCL_TEST_P(Feature2DFixture, KeypointsSame)
     for (size_t i = 0; i < keypoints.size(); ++i)
     {
         EXPECT_GE(KeyPoint::overlap(keypoints[i], ukeypoints[i]), 0.95);
-        EXPECT_NEAR(keypoints[i].angle, ukeypoints[i].angle, 0.001);
+        EXPECT_NEAR(keypoints[i].angle, ukeypoints[i].angle, 0.05);
     }
 }
 

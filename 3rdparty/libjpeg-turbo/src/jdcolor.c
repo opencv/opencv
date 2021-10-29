@@ -341,9 +341,9 @@ rgb_gray_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     input_row++;
     outptr = *output_buf++;
     for (col = 0; col < num_cols; col++) {
-      r = GETJSAMPLE(inptr0[col]);
-      g = GETJSAMPLE(inptr1[col]);
-      b = GETJSAMPLE(inptr2[col]);
+      r = inptr0[col];
+      g = inptr1[col];
+      b = inptr2[col];
       /* Y */
       outptr[col] = (JSAMPLE)((ctab[r + R_Y_OFF] + ctab[g + G_Y_OFF] +
                                ctab[b + B_Y_OFF]) >> SCALEBITS);
@@ -550,9 +550,9 @@ ycck_cmyk_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     input_row++;
     outptr = *output_buf++;
     for (col = 0; col < num_cols; col++) {
-      y  = GETJSAMPLE(inptr0[col]);
-      cb = GETJSAMPLE(inptr1[col]);
-      cr = GETJSAMPLE(inptr2[col]);
+      y  = inptr0[col];
+      cb = inptr1[col];
+      cr = inptr2[col];
       /* Range-limiting is essential due to noise introduced by DCT losses. */
       outptr[0] = range_limit[MAXJSAMPLE - (y + Crrtab[cr])];   /* red */
       outptr[1] = range_limit[MAXJSAMPLE - (y +                 /* green */
@@ -560,7 +560,7 @@ ycck_cmyk_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                                                  SCALEBITS)))];
       outptr[2] = range_limit[MAXJSAMPLE - (y + Cbbtab[cb])];   /* blue */
       /* K passes through unchanged */
-      outptr[3] = inptr3[col];  /* don't need GETJSAMPLE here */
+      outptr[3] = inptr3[col];
       outptr += 4;
     }
   }
@@ -571,11 +571,10 @@ ycck_cmyk_convert(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
  * RGB565 conversion
  */
 
-#define PACK_SHORT_565_LE(r, g, b)  ((((r) << 8) & 0xF800) | \
-                                     (((g) << 3) & 0x7E0) | ((b) >> 3))
-#define PACK_SHORT_565_BE(r, g, b)  (((r) & 0xF8) | ((g) >> 5) | \
-                                     (((g) << 11) & 0xE000) | \
-                                     (((b) << 5) & 0x1F00))
+#define PACK_SHORT_565_LE(r, g, b) \
+  ((((r) << 8) & 0xF800) | (((g) << 3) & 0x7E0) | ((b) >> 3))
+#define PACK_SHORT_565_BE(r, g, b) \
+  (((r) & 0xF8) | ((g) >> 5) | (((g) << 11) & 0xE000) | (((b) << 5) & 0x1F00))
 
 #define PACK_TWO_PIXELS_LE(l, r)    ((r << 16) | l)
 #define PACK_TWO_PIXELS_BE(l, r)    ((l << 16) | r)

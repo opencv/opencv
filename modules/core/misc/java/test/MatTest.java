@@ -455,6 +455,27 @@ public class MatTest extends OpenCVTestCase {
         bytesNum = sm.get(1, 1, buff11);
         assertEquals(4, bytesNum);
         assertTrue(Arrays.equals(new short[] {340, 341, 0, 0}, buff11));
+
+        Mat m2 = new Mat(new int[]{ 5, 6, 8 }, CvType.CV_16S);
+        short[] data = new short[(int)m2.total()];
+        for (int i = 0; i < data.length; i++ ) {
+            data[i] = (short)i;
+        }
+        m2.put(new int[] {0, 0, 0}, data);
+        Mat matNonContinuous = m2.submat(new Range[]{new Range(1,4), new Range(2,5), new Range(3,6)});
+        Mat matContinuous = matNonContinuous.clone();
+        short[] outNonContinuous = new short[(int)matNonContinuous.total()];
+        matNonContinuous.get(new int[] { 0, 0, 0 }, outNonContinuous);
+        short[] outContinuous = new short[(int)matNonContinuous.total()];
+        matContinuous.get(new int[] { 0, 0, 0 }, outContinuous);
+        assertArrayEquals(outNonContinuous, outContinuous);
+        Mat subMat2 = m2.submat(new Range[]{new Range(1,4), new Range(1,5), new Range(0,8)});
+        Mat subMatClone2 = subMat2.clone();
+        short[] outNonContinuous2 = new short[(int)subMat2.total()];
+        subMat2.get(new int[] { 0, 1, 1 }, outNonContinuous2);
+        short[] outContinuous2 = new short[(int)subMat2.total()];
+        subMatClone2.get(new int[] { 0, 1, 1 }, outContinuous2);
+        assertArrayEquals(outNonContinuous2, outContinuous2);
     }
 
     public void testGetNativeObjAddr() {
@@ -662,6 +683,16 @@ public class MatTest extends OpenCVTestCase {
         dst = m1.mul(m2, 3.0);
 
         truth = new Mat(2, 2, CvType.CV_32F, new Scalar(18));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testMatMulMat() {
+        Mat m1 = new Mat(2, 2, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(2, 2, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.matMul(m2);
+
+        truth = new Mat(2, 2, CvType.CV_32F, new Scalar(12));
         assertMatEqual(truth, dst, EPS);
     }
 
@@ -1246,4 +1277,49 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(1, bbuf.get(4095));
     }
 
+    public void testMatFromByteBufferWithStep() {
+        ByteBuffer bbuf = ByteBuffer.allocateDirect(80*64);
+        bbuf.putInt(0x01010101);
+        bbuf.putInt(64, 0x02020202);
+        bbuf.putInt(80, 0x03030303);
+        Mat m = new Mat(64, 64, CvType.CV_8UC1, bbuf, 80);
+        assertEquals(8, Core.countNonZero(m));
+        Core.add(m, new Scalar(5), m);
+        assertEquals(4096, Core.countNonZero(m));
+        m.release();
+        assertEquals(6, bbuf.get(0));
+        assertEquals(5, bbuf.get(63));
+        assertEquals(2, bbuf.get(64));
+        assertEquals(0, bbuf.get(79));
+        assertEquals(8, bbuf.get(80));
+        assertEquals(5, bbuf.get(63*80 + 63));
+    }
+
+    public void testMatAt() {
+        Mat uc1 = new Mat(2, 3, CvType.CV_8S) {
+            {
+                put(0, 0, 1, 2, 3);
+                put(1, 0, 4, 5, 6);
+            }
+        };
+        assertEquals((byte)1, uc1.at(Byte.class, 0, 0).getV().byteValue());
+        assertEquals((byte)2, uc1.at(Byte.class, 0, 1).getV().byteValue());
+        assertEquals((byte)3, uc1.at(Byte.class, 0, 2).getV().byteValue());
+        assertEquals((byte)4, uc1.at(Byte.class, 1, 0).getV().byteValue());
+        assertEquals((byte)5, uc1.at(Byte.class, 1, 1).getV().byteValue());
+        assertEquals((byte)6, uc1.at(Byte.class, 1, 2).getV().byteValue());
+        uc1.at(Byte.class, 0, 0).setV((byte)7);
+        uc1.at(Byte.class, 0, 1).setV((byte)8);
+        uc1.at(Byte.class, 0, 2).setV((byte)9);
+        uc1.at(Byte.class, 1, 0).setV((byte)10);
+        uc1.at(Byte.class, 1, 1).setV((byte)11);
+        uc1.at(Byte.class, 1, 2).setV((byte)12);
+        byte[] data = new byte[6];
+        uc1.get(0, 0, data);
+        assertArrayEquals(data, new byte[] {7, 8, 9, 10, 11, 12});
+        Mat.Tuple3<Byte> bgr = rgbLena.at(Byte.class, 0, 0).getV3c();
+        assertEquals(bgr.get_0().byteValue(), (byte)128);
+        assertEquals(bgr.get_1().byteValue(), (byte)138);
+        assertEquals(bgr.get_2().byteValue(), (byte)225);
+    }
 }

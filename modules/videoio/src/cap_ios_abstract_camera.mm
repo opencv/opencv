@@ -299,11 +299,13 @@
     }
     else
     {
+#if (!defined(TARGET_OS_MACCATALYST) || !TARGET_OS_MACCATALYST)
         // Deprecated in 6.0; here for backward compatibility
         if ([self.captureVideoPreviewLayer isOrientationSupported])
         {
             [self.captureVideoPreviewLayer setOrientation:self.defaultAVCaptureVideoOrientation];
         }
+#endif
     }
 
     if (parentView != nil) {

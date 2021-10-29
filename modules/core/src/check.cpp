@@ -171,6 +171,10 @@ void check_failed_auto(const Size_<int> v, const CheckContext& ctx)
 {
     check_failed_auto_< Size_<int> >(v, ctx);
 }
+void check_failed_auto(const std::string& v, const CheckContext& ctx)
+{
+    check_failed_auto_< std::string >(v, ctx);
+}
 
 
 }} // namespace

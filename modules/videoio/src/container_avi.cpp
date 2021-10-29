@@ -124,6 +124,7 @@ struct RiffList
     uint32_t m_size;
     uint32_t m_list_type_cc;
 };
+#pragma pack(pop)
 
 class VideoInputStream
 {
@@ -149,7 +150,6 @@ private:
     String  m_fname;
 };
 
-#pragma pack(pop)
 
 inline VideoInputStream& operator >> (VideoInputStream& is, AviMainHeader& avih)
 {
@@ -668,7 +668,7 @@ void BitStream::writeBlock()
 }
 
 size_t BitStream::getPos() const {
-    return safe_int_cast<size_t>(m_current - m_start, "Failed to determine AVI bufer position: value is out of range") + m_pos;
+    return safe_int_cast<size_t>(m_current - m_start, "Failed to determine AVI buffer position: value is out of range") + m_pos;
 }
 
 void BitStream::putByte(int val)

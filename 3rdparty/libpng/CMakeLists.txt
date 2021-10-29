@@ -46,8 +46,19 @@ if(";${CPU_BASELINE_FINAL};" MATCHES "SSE2"
   add_definitions(-DPNG_INTEL_SSE)
 endif()
 
+# set definitions and sources for MIPS
+if(";${CPU_BASELINE_FINAL};" MATCHES "MSA")
+    list(APPEND lib_srcs mips/mips_init.c mips/filter_msa_intrinsics.c)
+    add_definitions(-DPNG_MIPS_MSA_OPT=2)
+    ocv_warnings_disable(CMAKE_C_FLAGS -Wshadow)
+else()
+    add_definitions(-DPNG_MIPS_MSA_OPT=0)
+endif()
+
 if(PPC64LE OR PPC64)
-  if(ENABLE_VSX AND NOT PPC64)
+  # VSX3 features are backwards compatible
+  if(";${CPU_BASELINE_FINAL};" MATCHES "VSX.*"
+      AND NOT PPC64)
     list(APPEND lib_srcs powerpc/powerpc_init.c powerpc/filter_vsx_intrinsics.c)
     add_definitions(-DPNG_POWERPC_VSX_OPT=2)
   else()
@@ -63,7 +74,7 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 endif(MSVC)
 
-add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
+add_library(${PNG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wundef -Wcast-align -Wimplicit-fallthrough -Wunused-parameter -Wsign-compare)
@@ -81,7 +92,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${PNG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${PNG_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(libpng LICENSE README)

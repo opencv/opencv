@@ -1,0 +1,16 @@
+//
+// This file is auto-generated. Please don't modify it!
+//
+
+#import "$objcName.h"
+#import "CVObjcUtil.h"
+
+$imports
+
+@implementation $objcName
+
+$nativePointerHandling
+
+$methodImplementations
+
+@end

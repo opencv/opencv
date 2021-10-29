@@ -227,7 +227,11 @@ TEST(Photo_CalibrateDebevec, regression)
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-    ASSERT_FALSE(max > 0.1);
+#if defined(__arm__) || defined(__aarch64__)
+    ASSERT_LT(max, 0.131);
+#else
+    ASSERT_LT(max, 0.1);
+#endif
 }
 
 TEST(Photo_CalibrateRobertson, regression)
@@ -243,6 +247,23 @@ TEST(Photo_CalibrateRobertson, regression)
     Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
     calibrate->process(images, response, times);
     checkEqual(expected, response, 1e-1f, "CalibrateRobertson");
+}
+
+TEST(Photo_CalibrateRobertson, bug_18180)
+{
+    vector<Mat> images;
+    vector<cv::String> fn;
+    string test_path = cvtest::TS::ptr()->get_data_path() + "hdr/exposures/bug_18180/";
+    for(int i = 1; i <= 4; ++i)
+        images.push_back(imread(test_path + std::to_string(i) + ".jpg"));
+    vector<float> times {15.0f, 2.5f, 0.25f, 0.33f};
+    Mat response, expected;
+    Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson(2, 0.01f);
+    calibrate->process(images, response, times);
+    Mat response_no_nans = response.clone();
+    patchNaNs(response_no_nans);
+    // since there should be no NaNs, original response vs. response with NaNs patched should be identical
+    EXPECT_EQ(0.0, cv::norm(response, response_no_nans, NORM_L2));
 }
 
 }} // namespace

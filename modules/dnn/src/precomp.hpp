@@ -73,11 +73,4 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 
-
-namespace cv { namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
-#define IS_DNN_OPENCL_TARGET(id) (id == DNN_TARGET_OPENCL || id == DNN_TARGET_OPENCL_FP16)
-Mutex& getInitializationMutex();
-void initializeLayerFactory();
-CV__DNN_INLINE_NS_END
-}} // namespace
+#include "dnn_common.hpp"

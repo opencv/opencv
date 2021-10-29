@@ -60,6 +60,7 @@
 #include "ImathNamespace.h"
 
 #include <iostream>
+#include <algorithm>
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 

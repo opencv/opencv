@@ -38,14 +38,14 @@ TEST_P(PartialComputation, Test)
     cv::Mat out_mat_ocv = cv::Mat::zeros(sz, CV_8UC1);
 
     // Run G-API
-    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(cv::gin(in_mat), cv::gout(out_mat_gapi));
 
     // Check with OpenCV
     if (roi == cv::Rect{}) roi = cv::Rect{0,0,sz.width,sz.height};
     cv::blur(in_mat(roi), out_mat_ocv(roi), {kernelSize, kernelSize}, anchor, borderType);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, PartialComputation,
@@ -72,14 +72,14 @@ TEST_P(PartialComputationAddC, Test)
     cv::Mat out_mat_ocv = cv::Mat::zeros(sz, CV_8UC1);
 
     // Run G-API
-    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(cv::descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(cv::gin(in_mat), cv::gout(out_mat_gapi));
 
     // Check with OpenCV
     if (roi == cv::Rect{}) roi = cv::Rect{0,0,sz.width,sz.height};
     out_mat_ocv(roi) = in_mat(roi) + 1;
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat_gapi != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat_gapi, out_mat_ocv, NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, PartialComputationAddC,
@@ -110,7 +110,7 @@ TEST_P(SequenceOfBlursRoiTest, Test)
     Mat out_mat_gapi = Mat::zeros(sz_in, CV_8UC1);
 
     GComputation c(GIn(in), GOut(out));
-    auto cc = c.compile(descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{to_own(roi)}}));
+    auto cc = c.compile(descr_of(in_mat), cv::compile_args(fluidTestPackage, GFluidOutputRois{{roi}}));
     cc(gin(in_mat), gout(out_mat_gapi));
 
     cv::Mat mid_mat_ocv = Mat::zeros(sz_in, CV_8UC1);
@@ -125,7 +125,7 @@ TEST_P(SequenceOfBlursRoiTest, Test)
 
     cv::blur(mid_mat_ocv(roi), out_mat_ocv(roi), {5,5}, anchor, borderType);
 
-    EXPECT_EQ(0, countNonZero(out_mat_ocv != out_mat_gapi));
+    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, SequenceOfBlursRoiTest,
@@ -180,8 +180,8 @@ TEST_P(TwoBlursRoiTest, Test)
     cv::blur(in_mat(outRoi), out_mat_ocv1(outRoi), {kernelSize1, kernelSize1}, anchor, borderType1);
     cv::blur(in_mat(outRoi), out_mat_ocv2(outRoi), {kernelSize2, kernelSize2}, anchor, borderType2);
 
-    EXPECT_EQ(0, countNonZero(out_mat_ocv1 != out_mat_gapi1));
-    EXPECT_EQ(0, countNonZero(out_mat_ocv2 != out_mat_gapi2));
+    EXPECT_EQ(0, cvtest::norm(out_mat_ocv1, out_mat_gapi1, NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(out_mat_ocv2, out_mat_gapi2, NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(FluidRoi, TwoBlursRoiTest,

@@ -13,7 +13,7 @@ Install Visual Studio 2013 Community Edition
     http://go.microsoft.com/?linkid=9863608
 
 Install Visual Studio Express 2012 for Windows Desktop
-    http://www.microsoft.com/en-us/download/details.aspx?id=34673
+    https://devblogs.microsoft.com/visualstudio/visual-studio-express-2012-for-windows-desktop-is-here/
 
 
 

@@ -11,12 +11,20 @@ Implementation of Batch Normalization layer.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/batch_norm.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -27,6 +35,7 @@ namespace dnn
 class BatchNormLayerImpl CV_FINAL : public BatchNormLayer
 {
 public:
+    Mat origin_weights, origin_bias;
     Mat weights_, bias_;
     UMat umat_weight, umat_bias;
     mutable int dims;
@@ -80,11 +89,11 @@ public:
         const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
         const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
 
-        weights_.create(1, (int)n, CV_32F);
-        bias_.create(1, (int)n, CV_32F);
+        origin_weights.create(1, (int)n, CV_32F);
+        origin_bias.create(1, (int)n, CV_32F);
 
-        float* dstWeightsData = weights_.ptr<float>();
-        float* dstBiasData = bias_.ptr<float>();
+        float* dstWeightsData = origin_weights.ptr<float>();
+        float* dstBiasData = origin_bias.ptr<float>();
 
         for (size_t i = 0; i < n; ++i)
         {
@@ -92,6 +101,12 @@ public:
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
         }
+    }
+
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        origin_weights.reshape(1, 1).copyTo(weights_);
+        origin_bias.reshape(1, 1).copyTo(bias_);
     }
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
@@ -155,8 +170,9 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return (backendId == DNN_BACKEND_OPENCV) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
     }
 
 #ifdef HAVE_OPENCL
@@ -222,7 +238,7 @@ public:
                 kernel.set(4, ocl::KernelArg::PtrReadOnly(umat_weight));
                 kernel.set(5, ocl::KernelArg::PtrReadOnly(umat_bias));
                 kernel.set(6, ocl::KernelArg::PtrWriteOnly(dst));
-                bool ret = kernel.run(2, global, NULL, false);
+                bool ret = kernel.run_(2, global, NULL, false);
                 if (!ret)
                     return false;
             }
@@ -306,6 +322,18 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::BatchNormOp>(preferableTarget, std::move(context->stream), weights_, bias_);
+    }
+#endif
+
     virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
     {
         switch (node->backendId)
@@ -352,7 +380,7 @@ public:
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
     {
         InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
@@ -361,7 +389,37 @@ public:
         addConstantData("biases", wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        shape[1] = weights_.total();
+        auto weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), weights_.data);
+        auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), bias_.data);
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#else
+        auto scale_node = std::make_shared<ngraph::op::v0::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#endif
+        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        params.set("input_scale", scales[0][0]);
+        params.set("input_zeropoint", zeropoints[0][0]);
+
+        params.blobs.clear();
+        params.blobs.push_back(origin_weights);
+        params.blobs.push_back(origin_bias);
+        return true;
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

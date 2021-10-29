@@ -74,9 +74,7 @@ void mouseHandler(int event, int x, int y, int, void*)
         final = Mat::zeros(src.size(), CV_8UC3);
         mask = Mat::zeros(src.size(), CV_8UC1);
 
-        vector<vector<Point> > vpts;
-        vpts.push_back(pts);
-        fillPoly(mask, vpts, Scalar(255, 255, 255), 8, 0);
+        fillPoly(mask, pts, Scalar(255, 255, 255), 8, 0);
         bitwise_and(src, src, final, mask);
         imshow("Mask", mask);
         imshow("Result", final);

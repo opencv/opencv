@@ -74,7 +74,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer
 JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2
   (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data)
 {
-    static const char method_name[] = "Mat::n_1Mat__IIILByteBuffer()";
+    static const char method_name[] = "Mat::n_1Mat__IIILjava_nio_ByteBuffer_2()";
     try {
         LOGD("%s", method_name);
         return (jlong) new Mat( rows, cols, type, (void*)env->GetDirectBufferAddress(data) );
@@ -87,6 +87,32 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer
     return 0;
 }
 
+
+/*
+ * Class:     org_opencv_core_Mat
+ * Method:    n_Mat
+ * Signature: (IIILjava/nio/ByteBuffer;J)J
+ *
+ * Mat::Mat(int rows, int cols, int type, void* data, size_t step)
+ */
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2J
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data, jlong step);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIILjava_nio_ByteBuffer_2J
+  (JNIEnv* env, jclass, jint rows, jint cols, jint type, jobject data, jlong step)
+{
+    static const char method_name[] = "Mat::n_1Mat__IIILjava_nio_ByteBuffer_2J()";
+    try {
+        LOGD("%s", method_name);
+        return (jlong) new Mat(rows, cols, type, (void*)env->GetDirectBufferAddress(data), (size_t)step);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
 
 
 //
@@ -1346,6 +1372,32 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1mul__JJ
 }
 
 
+//
+// Mat Mat Mat::matMul(Mat m)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1matMul__JJ
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1matMul__JJ
+  (JNIEnv* env, jclass, jlong self, jlong m_nativeObj)
+{
+    static const char method_name[] = "Mat::n_1matMul__JJ()";
+    try {
+        LOGD("%s", method_name);
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        Mat& m = *((Mat*)m_nativeObj);
+        Mat _retval_ = (*me) * m;
+        return (jlong) new Mat(_retval_);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+
+    return 0;
+}
+
 
 //
 // static Mat Mat::ones(int rows, int cols, int type)
@@ -2103,78 +2155,81 @@ namespace {
 #undef JOCvT
 }
 
-template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, int offset, char* buff)
-{
-    if(! m) return 0;
-    if(! buff) return 0;
-
-    count *= sizeof(T);
-    int rest = ((m->rows - row) * m->cols - col) * (int)m->elemSize();
-    if(count>rest) count = rest;
-    int res = count;
-
-    if( m->isContinuous() )
-    {
-        memcpy(m->ptr(row, col), buff + offset, count);
-    } else {
-        // row by row
-        int num = (m->cols - col) * (int)m->elemSize(); // 1st partial row
-        if(count<num) num = count;
-        uchar* data = m->ptr(row++, col);
-        while(count>0){
-            memcpy(data, buff + offset, num);
-            count -= num;
-            buff += num;
-            num = m->cols * (int)m->elemSize();
-            if(count<num) num = count;
-            data = m->ptr(row++, 0);
-        }
+static size_t idx2Offset(cv::Mat* mat, std::vector<int>& indices) {
+    size_t offset = indices[0];
+    for (int dim=1; dim < mat->dims; dim++) {
+        offset = offset*mat->size[dim] + indices[dim];
     }
-    return res;
+    return offset;
+}
+
+static void offset2Idx(cv::Mat* mat, size_t offset, std::vector<int>& indices) {
+    for (int dim=mat->dims-1; dim>=0; dim--) {
+        indices[dim] = offset % mat->size[dim];
+        offset = (offset - indices[dim]) / mat->size[dim];
+    }
 }
 
 // returns true if final index was reached
-static bool updateIdx(cv::Mat* m, std::vector<int>& idx, int inc) {
-    for (int i=m->dims-1; i>=0; i--) {
-        if (inc == 0) return false;
-        idx[i] = (idx[i] + 1) % m->size[i];
-        inc--;
-    }
-    return true;
+static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
+    size_t currentOffset = idx2Offset(mat, indices);
+    size_t newOffset = currentOffset + inc;
+    bool reachedEnd = newOffset>=(size_t)mat->total();
+    offset2Idx(mat, reachedEnd?0:newOffset, indices);
+    return reachedEnd;
 }
 
-template<typename T> static int mat_put_idx(cv::Mat* m, std::vector<int>& idx, int count, int offset, char* buff)
-{
+template<typename T> static int mat_copy_data(cv::Mat* m, std::vector<int>& idx, int count, char* buff, bool isPut) {
     if(! m) return 0;
     if(! buff) return 0;
 
-    count *= sizeof(T);
-    int rest = (int)m->elemSize();
-    for (int i = 0; i < m->dims; i++) {
-        rest *= (m->size[i] - idx[i]);
-    }
-    if(count>rest) count = rest;
-    int res = count;
+    size_t countBytes = count * sizeof(T);
+    size_t remainingBytes = (size_t)(m->total() - idx2Offset(m, idx))*m->elemSize();
+    countBytes = (countBytes>remainingBytes)?remainingBytes:countBytes;
+    int res = (int)countBytes;
 
     if( m->isContinuous() )
     {
-        memcpy(m->ptr(idx.data()), buff + offset, count);
+        if (isPut) {
+            memcpy(m->ptr(idx.data()), buff, countBytes);
+        } else {
+            memcpy(buff, m->ptr(idx.data()), countBytes);
+        }
     } else {
-        // dim by dim
-        int num = (m->size[m->dims-1] - idx[m->dims-1]) * (int)m->elemSize(); // 1st partial row
-        if(count<num) num = count;
+        size_t blockSize = m->size[m->dims-1] * m->elemSize();
+        size_t firstPartialBlockSize = (m->size[m->dims-1] - idx[m->dims-1]) * m->step[m->dims-1];;
+        for (int dim=m->dims-2; dim>=0 && blockSize == m->step[dim]; dim--) {
+            blockSize *= m->size[dim];
+            firstPartialBlockSize += (m->size[dim] - (idx[dim]+1)) * m->step[dim];
+        }
+        size_t copyCount = (countBytes<firstPartialBlockSize)?countBytes:firstPartialBlockSize;
         uchar* data = m->ptr(idx.data());
-        while(count>0){
-            memcpy(data, buff + offset, num);
-            updateIdx(m, idx, num / (int)m->elemSize());
-            count -= num;
-            buff += num;
-            num = m->size[m->dims-1] * (int)m->elemSize();
-            if(count<num) num = count;
+        while(countBytes>0){
+            if (isPut) {
+                memcpy(data, buff, copyCount);
+            } else {
+                memcpy(buff, data, copyCount);
+            }
+            updateIdx(m, idx, copyCount / m->elemSize());
+            countBytes -= copyCount;
+            buff += copyCount;
+            copyCount = countBytes<blockSize?countBytes:blockSize;
             data = m->ptr(idx.data());
         }
     }
     return res;
+}
+
+template<typename T> static int mat_put_idx(cv::Mat* m, std::vector<int>& idx, int count, int offset, char* buff)
+{
+    return mat_copy_data<T>(m, idx, count, buff + offset, true);
+}
+
+template<typename T> static int mat_put(cv::Mat* m, int row, int col, int count, int offset, char* buff)
+{
+    int indicesArray[] = { row, col };
+    std::vector<int> indices(indicesArray, indicesArray+2);
+    return mat_put_idx<T>(m, indices, count, offset, buff);
 }
 
 template<class ARRAY> static jint java_mat_put(JNIEnv* env, jlong self, jint row, jint col, jint count, jint offset, ARRAY vals)
@@ -2429,68 +2484,16 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_nPutDIdx
 
 } // extern "C"
 
-template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count, char* buff)
-{
-    if(! m) return 0;
-    if(! buff) return 0;
-
-    int bytesToCopy = count * sizeof(T);
-    int bytesRestInMat = ((m->rows - row) * m->cols - col) * (int)m->elemSize();
-    if(bytesToCopy > bytesRestInMat) bytesToCopy = bytesRestInMat;
-    int res = bytesToCopy;
-
-    if( m->isContinuous() )
-    {
-        memcpy(buff, m->ptr(row, col), bytesToCopy);
-    } else {
-        // row by row
-        int bytesInRow = (m->cols - col) * (int)m->elemSize(); // 1st partial row
-        while(bytesToCopy > 0)
-        {
-            int len = std::min(bytesToCopy, bytesInRow);
-            memcpy(buff, m->ptr(row, col), len);
-            bytesToCopy -= len;
-            buff += len;
-            row++;
-            col = 0;
-            bytesInRow = m->cols * (int)m->elemSize();
-        }
-    }
-    return res;
-}
-
 template<typename T> static int mat_get_idx(cv::Mat* m, std::vector<int>& idx, int count, char* buff)
 {
-    if(! m) return 0;
-    if(! buff) return 0;
+    return mat_copy_data<T>(m, idx, count, buff, false);
+}
 
-    count *= sizeof(T);
-    int rest = (int)m->elemSize();
-    for (int i = 0; i < m->dims; i++) {
-        rest *= (m->size[i] - idx[i]);
-    }
-    if(count>rest) count = rest;
-    int res = count;
-
-    if( m->isContinuous() )
-    {
-        memcpy(buff, m->ptr(idx.data()), count);
-    } else {
-        // dim by dim
-        int num = (m->size[m->dims-1] - idx[m->dims-1]) * (int)m->elemSize(); // 1st partial row
-        if(count<num) num = count;
-        uchar* data = m->ptr(idx.data());
-        while(count>0){
-            memcpy(buff, data, num);
-            updateIdx(m, idx, num / (int)m->elemSize());
-            count -= num;
-            buff += num;
-            num = m->size[m->dims-1] * (int)m->elemSize();
-            if(count<num) num = count;
-            data = m->ptr(idx.data());
-        }
-    }
-    return res;
+template<typename T> static int mat_get(cv::Mat* m, int row, int col, int count, char* buff)
+{
+    int indicesArray[] = { row, col };
+    std::vector<int> indices(indicesArray, indicesArray+2);
+    return mat_get_idx<T>(m, indices, count, buff);
 }
 
 template<class ARRAY> static jint java_mat_get(JNIEnv* env, jlong self, jint row, jint col, jint count, ARRAY vals) {

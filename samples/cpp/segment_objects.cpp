@@ -8,14 +8,14 @@
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
     printf("\n"
             "This program demonstrated a simple method of connected components clean up of background subtraction\n"
             "When the program starts, it begins learning the background.\n"
             "You can toggle background learning on and off by hitting the space bar.\n"
             "Call\n"
-            "./segment_objects [video file, else it reads camera 0]\n\n");
+            "%s [video file, else it reads camera 0]\n\n", argv[0]);
 }
 
 static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     CommandLineParser parser(argc, argv, "{help h||}{@input||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     string input = parser.get<std::string>("@input");

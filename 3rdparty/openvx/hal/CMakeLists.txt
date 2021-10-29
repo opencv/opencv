@@ -5,7 +5,7 @@ target_include_directories(openvx_hal PUBLIC
   ${CMAKE_SOURCE_DIR}/modules/core/include
   ${CMAKE_SOURCE_DIR}/modules/imgproc/include
   ${OPENVX_INCLUDE_DIR})
-target_link_libraries(openvx_hal LINK_PUBLIC ${OPENVX_LIBRARIES})
+target_link_libraries(openvx_hal PUBLIC ${OPENVX_LIBRARIES})
 set_target_properties(openvx_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(openvx_hal EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)

@@ -31,7 +31,11 @@ namespace gapi {
     struct GNetPackage;
 }  // namespace gapi
 
-namespace gimpl { namespace passes {
+namespace gimpl {
+
+bool is_intrinsic(const std::string &op_name);
+
+namespace passes {
 
 void dumpDot(const ade::Graph &g, std::ostream& os);
 void dumpDot(ade::passes::PassContext &ctx, std::ostream& os);
@@ -58,6 +62,16 @@ void resolveKernels(ade::passes::PassContext   &ctx,
 
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);
+void topoSortIslands(ade::passes::PassContext &ctx);
+
+void applyTransformations(ade::passes::PassContext &ctx,
+                          const gapi::GKernelPackage &pkg,
+                          const std::vector<std::unique_ptr<ade::Graph>> &preGeneratedPatterns);
+
+void addStreaming(ade::passes::PassContext &ctx);
+
+void intrinDesync(ade::passes::PassContext &ctx);
+void intrinFinalize(ade::passes::PassContext &ctx);
 
 }} // namespace gimpl::passes
 

@@ -101,12 +101,13 @@ class CvCaptureCAM : public CvCapture {
 public:
     CvCaptureCAM(int cameraNum = -1) ;
     ~CvCaptureCAM();
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id) const;
-    virtual bool setProperty(int property_id, double value);
-    virtual int didStart();
+    bool grabFrame() CV_OVERRIDE;
+    IplImage* retrieveFrame(int) CV_OVERRIDE;
+    double getProperty(int property_id) const CV_OVERRIDE;
+    bool setProperty(int property_id, double value) CV_OVERRIDE;
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
 
+    virtual int didStart();
 
 private:
     AVCaptureSession            *mCaptureSession;
@@ -143,12 +144,13 @@ class CvCaptureFile : public CvCapture {
 public:
     CvCaptureFile(const char* filename) ;
     ~CvCaptureFile();
-    virtual bool grabFrame();
-    virtual IplImage* retrieveFrame(int);
-    virtual double getProperty(int property_id) const;
-    virtual bool setProperty(int property_id, double value);
-    virtual int didStart();
+    bool grabFrame() CV_OVERRIDE;
+    IplImage* retrieveFrame(int) CV_OVERRIDE;
+    double getProperty(int property_id) const CV_OVERRIDE;
+    bool setProperty(int property_id, double value) CV_OVERRIDE;
+    int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_AVFOUNDATION; }
 
+    virtual int didStart();
 
 private:
     AVAsset                  *mAsset;
@@ -231,9 +233,12 @@ cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
     return 0;
 }
 
-cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc, double fps, const cv::Size &frameSize, bool isColor)
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size& frameSize,
+                                                         const cv::VideoWriterParameters& params)
 {
     CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
     CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, sz, isColor);
     if (wrt->isOpened())
     {
@@ -339,10 +344,28 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         }
         else if (status != AVAuthorizationStatusAuthorized)
         {
-            fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
-            // TODO: doesn't work via ssh
-            [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
-            // we do not wait for completion
+            if (!cv::utils::getConfigurationParameterBool("OPENCV_AVFOUNDATION_SKIP_AUTH", false))
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), requesting...\n", status);
+                [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL) { /* we don't care */}];
+                if ([NSThread isMainThread])
+                {
+                    // we run the main loop for 0.1 sec to show the message
+                    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+                }
+                else
+                {
+                    fprintf(stderr, "OpenCV: can not spin main run loop from other thread, set "
+                                    "OPENCV_AVFOUNDATION_SKIP_AUTH=1 to disable authorization request "
+                                    "and perform it in your application.\n");
+                }
+            }
+            else
+            {
+                fprintf(stderr, "OpenCV: not authorized to capture video (status %ld), set "
+                                "OPENCV_AVFOUNDATION_SKIP_AUTH=0 to enable authorization request or "
+                                "perform it in your application.\n", status);
+            }
             [localpool drain];
             return 0;
         }
@@ -796,7 +819,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
         // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
-        // kCVPixelFormatType_24RGB is significanly slower than kCVPixelFormatType_32BGRA.
+        // kCVPixelFormatType_24RGB is significantly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
         mFormat = CV_8UC3;
     } else if (mMode == CV_CAP_MODE_GRAY) {
@@ -1178,13 +1201,23 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         is_good = false;
     }
 
-    // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
+    // Three codec supported AVVideoCodecH264 AVVideoCodecJPEG AVVideoCodecTypeHEVC
     // On iPhone 3G H264 is not supported.
     if (fourcc == CV_FOURCC('J','P','E','G') || fourcc == CV_FOURCC('j','p','e','g') ||
-            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g') ){
+            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g')){
         codec = [AVVideoCodecJPEG copy]; // Use JPEG codec if specified, otherwise H264
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
+    // Available since macOS 10.13
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+    }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
+            fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
+        if (@available(macOS 10.13, *)) {
+            codec = [AVVideoCodecTypeHEVC copy];
+        } else {
+            is_good = false;
+        }
+#endif
     }else{
         is_good = false;
     }
@@ -1196,7 +1229,7 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         NSError *error = nil;
 
 
-        // Make sure the file does not already exist. Necessary to overwirte??
+        // Make sure the file does not already exist. Necessary to overwrite??
         /*
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if ([fileManager fileExistsAtPath:path]){
@@ -1314,7 +1347,7 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
             colorSpace, kCGImageAlphaLast|kCGBitmapByteOrderDefault,
             provider, NULL, false, kCGRenderingIntentDefault);
 
-    //CGImage -> CVPixelBufferRef coversion
+    //CGImage -> CVPixelBufferRef conversion
     CVPixelBufferRef pixelBuffer = NULL;
     CFDataRef cfData = CGDataProviderCopyData(CGImageGetDataProvider(cgImage));
     int status = CVPixelBufferCreateWithBytes(NULL,

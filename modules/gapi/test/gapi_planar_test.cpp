@@ -131,7 +131,7 @@ TEST_P(PlanarTest, Resize3c3p)
     cv::resize(in_mat, resized_mat, out_sz, 0, 0, interp);
     toPlanar(resized_mat, out_mat_ocv);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat, out_mat_ocv, NORM_INF));
 }
 
 TEST_P(PlanarTest, Resize3p3p)
@@ -161,7 +161,7 @@ TEST_P(PlanarTest, Resize3p3p)
         cv::resize(in_mat_roi, out_mat_roi, out_sz, 0, 0, interp);
     }
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat, out_mat_ocv, NORM_INF));
 }
 
 TEST_P(PlanarTest, Pipeline)
@@ -193,7 +193,7 @@ TEST_P(PlanarTest, Pipeline)
     cv::resize(rgb, resized_mat, out_sz, 0, 0, interp);
     toPlanar(resized_mat, out_mat_ocv);
 
-    EXPECT_EQ(0, cv::countNonZero(out_mat != out_mat_ocv));
+    EXPECT_EQ(0, cvtest::norm(out_mat, out_mat_ocv, NORM_INF));
 }
 
 INSTANTIATE_TEST_CASE_P(Sanity, PlanarTest,

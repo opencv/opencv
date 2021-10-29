@@ -47,7 +47,7 @@ template<> double atoT<double>(const std::string& s) { return std::atof(s.c_str(
 template<typename T>
 T read_number(cv::RLByteStream& strm)
 {
-  // should be enogh to take string representation of any number
+  // should be enough to take string representation of any number
   const size_t buffer_size = 2048;
 
   std::vector<char> buffer(buffer_size, 0);

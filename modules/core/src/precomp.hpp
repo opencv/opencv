@@ -43,6 +43,10 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#ifdef BUILD_PLUGIN
+#include "opencv2/core/utility.hpp"
+#else  // BUILD_PLUGIN
+
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"
 
@@ -322,7 +326,7 @@ struct CoreTLSData
 {
     CoreTLSData() :
 //#ifdef HAVE_OPENCL
-        device(0), useOpenCL(-1),
+        oclExecutionContextInitialized(false), useOpenCL(-1),
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
@@ -333,8 +337,8 @@ struct CoreTLSData
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    int device; // device index of an array of devices in a context, see also Device::getDefault
-    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
+    ocl::OpenCLExecutionContext oclExecutionContext;
+    bool oclExecutionContextInitialized;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
@@ -344,7 +348,7 @@ struct CoreTLSData
 #endif
 };
 
-TLSData<CoreTLSData>& getCoreTlsData();
+CoreTLSData& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
 #if defined _WIN32 || defined WINCE
@@ -364,22 +368,18 @@ bool __termination;  // skip some cleanups, because process is terminating
 
 cv::Mutex& getInitializationMutex();
 
-// TODO Memory barriers?
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
-    static TYPE* volatile instance = NULL; \
-    if (instance == NULL) \
-    { \
-        cv::AutoLock lock(cv::getInitializationMutex()); \
-        if (instance == NULL) \
-            instance = INITIALIZER; \
-    } \
+    static TYPE* const instance = INITIALIZER; \
     return RET_VALUE;
 
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+CV_EXPORTS void releaseTlsStorageThread();
+
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
-#endif /*_CXCORE_INTERNAL_H_*/
+#endif  // BUILD_PLUGIN
+#endif  // __OPENCV_PRECOMP_H__

@@ -38,11 +38,12 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 // 2011 Jason Newton <nevion@gmail.com>
-// 2016 Costantino Grama <costantino.grana@unimore.it>
-// 2016 Federico Bolelli <federico.bolelli@hotmail.com>
+// 2016, 2021 Costantino Grana <costantino.grana@unimore.it>
+// 2016, 2021 Federico Bolelli <federico.bolelli@unimore.it>
 // 2016 Lorenzo Baraldi <lorenzo.baraldi@unimore.it>
 // 2016 Roberto Vezzani <roberto.vezzani@unimore.it>
 // 2016 Michele Cancilla <cancilla.michele@gmail.com>
+// 2021 Stefano Allegretti <stefano.allegretti@unimore.it>
 //M*/
 //
 #include "precomp.hpp"
@@ -145,14 +146,21 @@ namespace cv{
         void finish(){
             for (int l = 0; l < statsv.rows; ++l){
                 int *row =& statsv.at<int>(l, 0);
-                row[CC_STAT_WIDTH] = row[CC_STAT_WIDTH] - row[CC_STAT_LEFT] + 1;
-                row[CC_STAT_HEIGHT] = row[CC_STAT_HEIGHT] - row[CC_STAT_TOP] + 1;
-
-                Point2ui64& integral = integrals[l];
-                double *centroid = &centroidsv.at<double>(l, 0);
                 double area = ((unsigned*)row)[CC_STAT_AREA];
-                centroid[0] = double(integral.x) / area;
-                centroid[1] = double(integral.y) / area;
+                double *centroid = &centroidsv.at<double>(l, 0);
+                if (area > 0){
+                    row[CC_STAT_WIDTH] = row[CC_STAT_WIDTH] - row[CC_STAT_LEFT] + 1;
+                    row[CC_STAT_HEIGHT] = row[CC_STAT_HEIGHT] - row[CC_STAT_TOP] + 1;
+                    Point2ui64& integral = integrals[l];
+                    centroid[0] = double(integral.x) / area;
+                    centroid[1] = double(integral.y) / area;
+                } else {
+                    row[CC_STAT_WIDTH] = 0;
+                    row[CC_STAT_HEIGHT] = 0;
+                    row[CC_STAT_LEFT] = -1;
+                    centroid[0] = std::numeric_limits<double>::quiet_NaN();
+                    centroid[1] = std::numeric_limits<double>::quiet_NaN();
+                }
             }
         }
 
@@ -265,9 +273,380 @@ namespace cv{
         }
     }
 
-    //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan array union find) variant
-        //using decision trees
-        //Kesheng Wu, et al
+    template <typename LT> static inline
+    LT stripeFirstLabel4Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return (LT(y) * LT(w) /*+ 1*/) / 2 + 1;
+    }
+
+    template <typename LT> static inline
+    LT stripeFirstLabel8Connectivity(int y, int w)
+    {
+        CV_DbgAssert((y & 1) == 0);
+        return LT((y /*+ 1*/) / 2) * LT((w + 1) / 2) + 1;
+    }
+
+    //Implementation of Spaghetti algorithm, as described in "Spaghetti Labeling: Directed Acyclic Graphs for Block-Based
+    //Connected Components Labeling" (only for 8-connectivity)
+    //Federico Bolelli et. al.
+    template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
+    struct LabelingBolelli
+    {
+        LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop)
+        {
+            CV_Assert(img.rows == imgLabels.rows);
+            CV_Assert(img.cols == imgLabels.cols);
+            CV_Assert(connectivity == 8);
+
+            const int h = img.rows;
+            const int w = img.cols;
+
+            const int e_rows = h & -2;
+            const bool o_rows = h % 2 == 1;
+            const int e_cols = w & -2;
+            const bool o_cols = w % 2 == 1;
+
+            // A quick and dirty upper bound for the maximum number of labels.
+            // Following formula comes from the fact that a 2x2 block in 8-connectivity case
+            // can never have more than 1 new label and 1 label for background.
+            // Worst case image example pattern:
+            // 1 0 1 0 1...
+            // 0 0 0 0 0...
+            // 1 0 1 0 1...
+            // ............
+            const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
+
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
+            //P[0] = 0;
+            LabelT lunique = 1;
+
+            // First scan
+
+            // We work with 2x2 blocks
+            // +-+-+-+
+            // |P|Q|R|
+            // +-+-+-+
+            // |S|X|
+            // +-+-+
+
+            // The pixels are named as follows
+            // +---+---+---+
+            // |a b|c d|e f|
+            // |g h|i j|k l|
+            // +---+---+---+
+            // |m n|o p|
+            // |q r|s t|
+            // +---+---+
+
+            // Pixels a, f, l, q are not needed, since we need to understand the
+            // the connectivity between these blocks and those pixels only matter
+            // when considering the outer connectivities
+
+            // A bunch of defines is used to check if the pixels are foreground
+            // and to define actions to be performed on blocks
+            {
+                #define CONDITION_B img_row_prev_prev[c-1]>0
+                #define CONDITION_C img_row_prev_prev[c]>0
+                #define CONDITION_D img_row_prev_prev[c+1]>0
+                #define CONDITION_E img_row_prev_prev[c+2]>0
+
+                #define CONDITION_G img_row_prev[c-2]>0
+                #define CONDITION_H img_row_prev[c-1]>0
+                #define CONDITION_I img_row_prev[c]>0
+                #define CONDITION_J img_row_prev[c+1]>0
+                #define CONDITION_K img_row_prev[c+2]>0
+
+                #define CONDITION_M img_row[c-2]>0
+                #define CONDITION_N img_row[c-1]>0
+                #define CONDITION_O img_row[c]>0
+                #define CONDITION_P img_row[c+1]>0
+
+                #define CONDITION_R img_row_fol[c-1]>0
+                #define CONDITION_S img_row_fol[c]>0
+                #define CONDITION_T img_row_fol[c+1]>0
+
+                // Action 1: No action
+                #define ACTION_1 img_labels_row[c] = 0;
+                // Action 2: New label (the block has foreground pixels and is not connected to anything else)
+                #define ACTION_2 img_labels_row[c] = lunique; \
+                                 P[lunique] = lunique;        \
+                                 lunique = lunique + 1;
+                //Action 3: Assign label of block P
+                #define ACTION_3 img_labels_row[c] = img_labels_row_prev_prev[c - 2];
+                // Action 4: Assign label of block Q
+                #define ACTION_4 img_labels_row[c] = img_labels_row_prev_prev[c];
+                // Action 5: Assign label of block R
+                #define ACTION_5 img_labels_row[c] = img_labels_row_prev_prev[c + 2];
+                // Action 6: Assign label of block S
+                #define ACTION_6 img_labels_row[c] = img_labels_row[c - 2];
+                // Action 7: Merge labels of block P and Q
+                #define ACTION_7 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]);
+                //Action 8: Merge labels of block P and R
+                #define ACTION_8 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c + 2]);
+                // Action 9 Merge labels of block P and S
+                #define ACTION_9 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row[c - 2]);
+                // Action 10 Merge labels of block Q and R
+                #define ACTION_10 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c], img_labels_row_prev_prev[c + 2]);
+                // Action 11: Merge labels of block Q and S
+                #define ACTION_11 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c], img_labels_row[c - 2]);
+                // Action 12: Merge labels of block R and S
+                #define ACTION_12 img_labels_row[c] = set_union(P, img_labels_row_prev_prev[c + 2], img_labels_row[c - 2]);
+                // Action 13: Merge labels of block P, Q and R
+                #define ACTION_13 img_labels_row[c] = set_union(P, set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]), img_labels_row_prev_prev[c + 2]);
+                // Action 14: Merge labels of block P, Q and S
+                #define ACTION_14 img_labels_row[c] = set_union(P, set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c]), img_labels_row[c - 2]);
+                //Action 15: Merge labels of block P, R and S
+                #define ACTION_15 img_labels_row[c] = set_union(P, set_union(P, img_labels_row_prev_prev[c - 2], img_labels_row_prev_prev[c + 2]), img_labels_row[c - 2]);
+                //Action 16: labels of block Q, R and S
+                #define ACTION_16 img_labels_row[c] = set_union(P, set_union(P, img_labels_row_prev_prev[c], img_labels_row_prev_prev[c + 2]), img_labels_row[c - 2]);
+            }
+            // The following Directed Rooted Acyclic Graphs (DAGs) allow to choose which action to
+            // perform, checking as few conditions as possible. Special DAGs are used for the first/last
+            // line of the image and for single line images. Actions: the blocks label are provisionally
+            // stored in the top left pixel of the block in the labels image.
+            if (h == 1) {
+                // Single line
+                const PixelT * const img_row = img.ptr<PixelT>(0);
+                LabelT * const img_labels_row = imgLabels.ptr<LabelT>(0);
+                int c = -2;
+                #include "ccl_bolelli_forest_singleline.inc.hpp"
+            }
+            else {
+                // More than one line
+
+                // First couple of lines
+                {
+                    const PixelT * const img_row = img.ptr<PixelT>(0);
+                    const PixelT * const img_row_fol = (PixelT *)(((char*)img_row) + img.step.p[0]);
+                    LabelT * const img_labels_row = imgLabels.ptr<LabelT>(0);
+                    int c = -2;
+                    #include "ccl_bolelli_forest_firstline.inc.hpp"
+                }
+
+                // Every other line but the last one if image has an odd number of rows
+                for (int r = 2; r < e_rows; r += 2) {
+                    // Get rows pointer
+                    const PixelT * const img_row = img.ptr<PixelT>(r);
+                    const PixelT * const img_row_prev = (PixelT *)(((char*)img_row) - img.step.p[0]);
+                    const PixelT * const img_row_prev_prev = (PixelT *)(((char*)img_row_prev) - img.step.p[0]);
+                    const PixelT * const img_row_fol = (PixelT *)(((char*)img_row) + img.step.p[0]);
+                    LabelT * const img_labels_row = imgLabels.ptr<LabelT>(r);
+                    LabelT * const img_labels_row_prev_prev = (LabelT *)(((char*)img_labels_row) - imgLabels.step.p[0] - imgLabels.step.p[0]);
+
+                    int c = -2;
+                    goto tree_0;
+
+                    #include "ccl_bolelli_forest.inc.hpp"
+                }
+
+                // Last line (in case the rows are odd)
+                if (o_rows) {
+                    int r = h - 1;
+                    const PixelT * const img_row = img.ptr<PixelT>(r);
+                    const PixelT * const img_row_prev = (PixelT *)(((char*)img_row) - img.step.p[0]);
+                    const PixelT * const img_row_prev_prev = (PixelT *)(((char*)img_row_prev) - img.step.p[0]);
+                    LabelT * const img_labels_row = imgLabels.ptr<LabelT>(r);
+                    LabelT * const img_labels_row_prev_prev = (LabelT *)(((char*)img_labels_row) - imgLabels.step.p[0] - imgLabels.step.p[0]);
+                    int c = -2;
+                    #include "ccl_bolelli_forest_lastline.inc.hpp"
+                }
+            }
+
+            // undef conditions and actions
+            {
+                #undef ACTION_1
+                #undef ACTION_2
+                #undef ACTION_3
+                #undef ACTION_4
+                #undef ACTION_5
+                #undef ACTION_6
+                #undef ACTION_7
+                #undef ACTION_8
+                #undef ACTION_9
+                #undef ACTION_10
+                #undef ACTION_11
+                #undef ACTION_12
+                #undef ACTION_13
+                #undef ACTION_14
+                #undef ACTION_15
+                #undef ACTION_16
+
+                #undef CONDITION_B
+                #undef CONDITION_C
+                #undef CONDITION_D
+                #undef CONDITION_E
+
+                #undef CONDITION_G
+                #undef CONDITION_H
+                #undef CONDITION_I
+                #undef CONDITION_J
+                #undef CONDITION_K
+
+                #undef CONDITION_M
+                #undef CONDITION_N
+                #undef CONDITION_O
+                #undef CONDITION_P
+
+                #undef CONDITION_R
+                #undef CONDITION_S
+                #undef CONDITION_T
+            }
+
+            // Second scan + analysis
+            LabelT nLabels = flattenL(P, lunique);
+            sop.init(nLabels);
+
+            int r = 0;
+            for (; r < e_rows; r += 2) {
+                // Get rows pointer
+                const PixelT * const img_row = img.ptr<PixelT>(r);
+                const PixelT * const img_row_fol = (PixelT *)(((char*)img_row) + img.step.p[0]);
+                LabelT * const img_labels_row = imgLabels.ptr<LabelT>(r);
+                LabelT * const img_labels_row_fol = (LabelT *)(((char*)img_labels_row) + imgLabels.step.p[0]);
+                int c = 0;
+                for (; c < e_cols; c += 2) {
+                    LabelT iLabel = img_labels_row[c];
+                    if (iLabel > 0) {
+                        iLabel = P[iLabel];
+                        if (img_row[c] > 0) {
+                            img_labels_row[c] = iLabel;
+                            sop(r, c, iLabel);
+                        }
+                        else {
+                            img_labels_row[c] = 0;
+                            sop(r, c, 0);
+                        }
+                        if (img_row[c + 1] > 0) {
+                            img_labels_row[c + 1] = iLabel;
+                            sop(r, c + 1, iLabel);
+                        }
+                        else {
+                            img_labels_row[c + 1] = 0;
+                            sop(r, c + 1, 0);
+                        }
+                        if (img_row_fol[c] > 0) {
+                            img_labels_row_fol[c] = iLabel;
+                            sop(r + 1, c, iLabel);
+                        }
+                        else {
+                            img_labels_row_fol[c] = 0;
+                            sop(r + 1, c, 0);
+                        }
+                        if (img_row_fol[c + 1] > 0) {
+                            img_labels_row_fol[c + 1] = iLabel;
+                            sop(r + 1, c + 1, iLabel);
+                        }
+                        else {
+                            img_labels_row_fol[c + 1] = 0;
+                            sop(r + 1, c + 1, 0);
+                        }
+                    }
+                    else {
+                        img_labels_row[c] = 0;
+                        sop(r, c, 0);
+                        img_labels_row[c + 1] = 0;
+                        sop(r, c + 1, 0);
+                        img_labels_row_fol[c] = 0;
+                        sop(r + 1, c, 0);
+                        img_labels_row_fol[c + 1] = 0;
+                        sop(r + 1, c + 1, 0);
+                    }
+                }
+                // Last column if the number of columns is odd
+                if (o_cols) {
+                    LabelT iLabel = img_labels_row[c];
+                    if (iLabel > 0) {
+                        iLabel = P[iLabel];
+                        if (img_row[c] > 0) {
+                            img_labels_row[c] = iLabel;
+                            sop(r, c, iLabel);
+                        }
+                        else {
+                            img_labels_row[c] = 0;
+                            sop(r, c, 0);
+                        }
+                        if (img_row_fol[c] > 0) {
+                            img_labels_row_fol[c] = iLabel;
+                            sop(r + 1, c, iLabel);
+                        }
+                        else {
+                            img_labels_row_fol[c] = 0;
+                            sop(r + 1, c, 0);
+                        }
+                    }
+                    else {
+                        img_labels_row[c] = 0;
+                        sop(r, c, 0);
+                        img_labels_row_fol[c] = 0;
+                        sop(r + 1, c, 0);
+                    }
+                }
+            }
+            // Last row if the number of rows is odd
+            if (o_rows) {
+                // Get rows pointer
+                const PixelT * const img_row = img.ptr<PixelT>(r);
+                LabelT * const img_labels_row = imgLabels.ptr<LabelT>(r);
+                int c = 0;
+                for (; c < e_cols; c += 2) {
+                    LabelT iLabel = img_labels_row[c];
+                    if (iLabel > 0) {
+                        iLabel = P[iLabel];
+                        if (img_row[c] > 0) {
+                            img_labels_row[c] = iLabel;
+                            sop(r, c, iLabel);
+                        }
+                        else {
+                            img_labels_row[c] = 0;
+                            sop(r, c, 0);
+                        }
+                        if (img_row[c + 1] > 0) {
+                            img_labels_row[c + 1] = iLabel;
+                            sop(r, c + 1, iLabel);
+                        }
+                        else {
+                            img_labels_row[c + 1] = 0;
+                            sop(r, c + 1, 0);
+                        }
+                    }
+                    else {
+                        img_labels_row[c] = 0;
+                        sop(r, c, 0);
+                        img_labels_row[c + 1] = 0;
+                        sop(r, c + 1, 0);
+                    }
+                }
+                // Last column if the number of columns is odd
+                if (o_cols) {
+                    LabelT iLabel = img_labels_row[c];
+                    if (iLabel > 0) {
+                        iLabel = P[iLabel];
+                        if (img_row[c] > 0) {
+                            img_labels_row[c] = iLabel;
+                            sop(r, c, iLabel);
+                        }
+                        else {
+                            img_labels_row[c] = 0;
+                            sop(r, c, 0);
+                        }
+                    }
+                    else {
+                        img_labels_row[c] = 0;
+                        sop(r, c, iLabel);
+                    }
+                }
+            }
+
+            sop.finish();
+            return nLabels;
+        }//End function LabelingBolelli operator()
+    };//End struct LabelingBolelli
+
+    //Parallel implementation of Scan Array-based Union Find (SAUF) algorithm, as described in "Two More Strategies to Speed
+    //Up Connected Components Labeling Algorithms"
+    //Federico Bolelli et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWuParallel{
 
@@ -283,12 +662,14 @@ namespace cv{
 
             FirstScan8Connectivity&  operator=(const FirstScan8Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -308,11 +689,11 @@ namespace cv{
                     LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
-#define condition_p c > 0 && r > limitLine && img_row_prev[c - 1] > 0
-#define condition_q r > limitLine && img_row_prev[c] > 0
-#define condition_r c < w - 1 && r > limitLine && img_row_prev[c + 1] > 0
-#define condition_s c > 0 && img_row[c - 1] > 0
-#define condition_x img_row[c] > 0
+                        #define condition_p c > 0 && r > limitLine && img_row_prev[c - 1] > 0
+                        #define condition_q r > limitLine && img_row_prev[c] > 0
+                        #define condition_r c < w - 1 && r > limitLine && img_row_prev[c + 1] > 0
+                        #define condition_s c > 0 && img_row[c - 1] > 0
+                        #define condition_x img_row[c] > 0
 
                         if (condition_x){
                             if (condition_q){
@@ -366,11 +747,11 @@ namespace cv{
                 //write in the follower memory location
                 chunksSizeAndLabels_[startR + 1] = label - firstLabel;
             }
-#undef condition_p
-#undef condition_q
-#undef condition_r
-#undef condition_s
-#undef condition_x
+            #undef condition_p
+            #undef condition_q
+            #undef condition_r
+            #undef condition_s
+            #undef condition_x
         };
 
         class FirstScan4Connectivity : public cv::ParallelLoopBody{
@@ -385,12 +766,14 @@ namespace cv{
 
             FirstScan4Connectivity&  operator=(const FirstScan4Connectivity& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
+
                 chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r * imgLabels_.cols + 1) / 2 + 1);
+                LabelT label = stripeFirstLabel4Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int w = img_.cols;
@@ -409,9 +792,9 @@ namespace cv{
                     LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels_.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
-#define condition_q r > limitLine && img_row_prev[c] > 0
-#define condition_s c > 0 && img_row[c - 1] > 0
-#define condition_x img_row[c] > 0
+                        #define condition_q r > limitLine && img_row_prev[c] > 0
+                        #define condition_s c > 0 && img_row[c - 1] > 0
+                        #define condition_x img_row[c] > 0
 
                         if (condition_x){
                             if (condition_q){
@@ -445,9 +828,9 @@ namespace cv{
                 //write in the following memory location
                 chunksSizeAndLabels_[startR + 1] = label - firstLabel;
             }
-#undef condition_q
-#undef condition_s
-#undef condition_x
+            #undef condition_q
+            #undef condition_s
+            #undef condition_x
         };
 
         class SecondScan : public cv::ParallelLoopBody{
@@ -462,8 +845,9 @@ namespace cv{
 
             SecondScan&  operator=(const SecondScan& ) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, imgLabels_.rows));
                 int r = range.start;
                 const int rowBegin = r;
                 const int rowEnd = range.end;
@@ -514,10 +898,10 @@ namespace cv{
 
                 for (int c = 0; c < w; ++c){
 
-#define condition_p c > 0 && imgLabels_row_prev[c - 1] > 0
-#define condition_q imgLabels_row_prev[c] > 0
-#define condition_r c < w - 1 && imgLabels_row_prev[c + 1] > 0
-#define condition_x imgLabels_row[c] > 0
+                    #define condition_p c > 0 && imgLabels_row_prev[c - 1] > 0
+                    #define condition_q imgLabels_row_prev[c] > 0
+                    #define condition_r c < w - 1 && imgLabels_row_prev[c + 1] > 0
+                    #define condition_x imgLabels_row[c] > 0
 
                     if (condition_x){
                         if (condition_p){
@@ -535,10 +919,10 @@ namespace cv{
                     }
                 }
             }
-#undef condition_p
-#undef condition_q
-#undef condition_r
-#undef condition_x
+            #undef condition_p
+            #undef condition_q
+            #undef condition_r
+            #undef condition_x
         }
 
         inline static
@@ -559,8 +943,8 @@ namespace cv{
 
                 for (int c = 0; c < w; ++c){
 
-#define condition_q imgLabels_row_prev[c] > 0
-#define condition_x imgLabels_row[c] > 0
+                    #define condition_q imgLabels_row_prev[c] > 0
+                    #define condition_x imgLabels_row[c] > 0
 
                     if (condition_x){
                         if (condition_q){
@@ -570,8 +954,8 @@ namespace cv{
                     }
                 }
             }
-#undef condition_q
-#undef condition_x
+            #undef condition_q
+            #undef condition_x
         }
 
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
@@ -595,61 +979,58 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(h * sizeof(int));
+            std::vector<int> chunksSizeAndLabels(roundUp(h, 2));
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
             //First label is for background
-            P[0] = 0;
+            //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
             LabelT nLabels = 1;
 
             if (connectivity == 8){
                 //First scan
-                cv::parallel_for_(range, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan8Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
-                mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels);
+                mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int((i + 1) / 2) * int((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel8Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
             else{
                 //First scan
-                cv::parallel_for_(range, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+                cv::parallel_for_(range2, FirstScan4Connectivity(img, imgLabels, P, chunksSizeAndLabels.data()), nParallelStripes);
 
                 //merge labels of different chunks
-                mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels);
+                mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, int(i * w + 1) / 2 + 1, chunksSizeAndLabels[i + 1], nLabels);
+                    flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
 
             //Array for statistics dataof threads
-            StatsOp *sopArray = new StatsOp[h];
+            std::vector<StatsOp> sopArray(h);
 
             sop.init(nLabels);
             //Second scan
-            cv::parallel_for_(range, SecondScan(imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
-            StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
+            cv::parallel_for_(range2, SecondScan(imgLabels, P, sop, sopArray.data(), nLabels), nParallelStripes);
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
 
-            delete[] sopArray;
-            cv::fastFree(chunksSizeAndLabels);
-            cv::fastFree(P);
             return nLabels;
         }
     };//End struct LabelingWuParallel
 
-
-    //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan array union find) variant
+    //Based on "Two Strategies to Speed up Connected Components Algorithms", the SAUF (Scan Array-based Union Find) variant
     //using decision trees
-    //Kesheng Wu, et al
+    //Kesheng Wu et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingWu{
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
@@ -671,9 +1052,10 @@ namespace cv{
             //Obviously, 4-way connectivity upper bound is also good for 8-way connectivity labeling
             const size_t Plength = (size_t(h) * size_t(w) + 1) / 2 + 1;
             //array P for equivalences resolution
-            LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
             //first label is for background pixels
-            P[0] = 0;
+            //P[0] = 0;
             LabelT lunique = 1;
 
             if (connectivity == 8){
@@ -686,11 +1068,11 @@ namespace cv{
 
                     for (int c = 0; c < w; ++c){
 
-#define condition_p c>0 && r>0 && img_row_prev[c - 1]>0
-#define condition_q r>0 && img_row_prev[c]>0
-#define condition_r c < w - 1 && r > 0 && img_row_prev[c + 1] > 0
-#define condition_s c > 0 && img_row[c - 1] > 0
-#define condition_x img_row[c] > 0
+                        #define condition_p c>0 && r>0 && img_row_prev[c - 1]>0
+                        #define condition_q r>0 && img_row_prev[c]>0
+                        #define condition_r c < w - 1 && r > 0 && img_row_prev[c + 1] > 0
+                        #define condition_s c > 0 && img_row[c - 1] > 0
+                        #define condition_x img_row[c] > 0
 
                         if (condition_x){
                             if (condition_q){
@@ -744,11 +1126,11 @@ namespace cv{
                         }
                     }
                 }
-#undef condition_p
-#undef condition_q
-#undef condition_r
-#undef condition_s
-#undef condition_x
+                #undef condition_p
+                #undef condition_q
+                #undef condition_r
+                #undef condition_s
+                #undef condition_x
             }
             else{
                 for (int r = 0; r < h; ++r){
@@ -758,9 +1140,9 @@ namespace cv{
                     LabelT * const imgLabels_row_prev = (LabelT *)(((char *)imgLabels_row) - imgLabels.step.p[0]);
                     for (int c = 0; c < w; ++c) {
 
-#define condition_q r > 0 && img_row_prev[c] > 0
-#define condition_s c > 0 && img_row[c - 1] > 0
-#define condition_x img_row[c] > 0
+                        #define condition_q r > 0 && img_row_prev[c] > 0
+                        #define condition_s c > 0 && img_row[c - 1] > 0
+                        #define condition_x img_row[c] > 0
 
                         if (condition_x){
                             if (condition_q){
@@ -792,9 +1174,9 @@ namespace cv{
                         }
                     }
                 }
-#undef condition_q
-#undef condition_s
-#undef condition_x
+                #undef condition_q
+                #undef condition_s
+                #undef condition_x
             }
 
             //analysis
@@ -811,15 +1193,14 @@ namespace cv{
             }
 
             sop.finish();
-            fastFree(P);
 
             return nLabels;
         }//End function LabelingWu operator()
     };//End struct LabelingWu
 
-
-    // Based on "Optimized  Block-based Connected Components Labeling with Decision Trees", Costantino Grana et al
-    // Only for 8-connectivity
+    //Parallel implementation of BBDT (Block-Based with Decision Tree) algorithm, as described in "Two More Strategies to Speed
+    //Up Connected Components Labeling Algorithms"
+    //Federico Bolelli et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGranaParallel{
 
@@ -836,14 +1217,14 @@ namespace cv{
 
             FirstScan&  operator=(const FirstScan&) { return *this; }
 
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
 
-                chunksSizeAndLabels_[r] = range.end + (range.end % 2);
+                chunksSizeAndLabels_[r] = range.end;
 
-                LabelT label = LabelT((r + 1) / 2)  * LabelT((imgLabels_.cols + 1) / 2) + 1;
+                LabelT label = stripeFirstLabel8Connectivity<LabelT>(r, imgLabels_.cols);
 
                 const LabelT firstLabel = label;
                 const int h = img_.rows, w = img_.cols;
@@ -876,31 +1257,31 @@ namespace cv{
                         // +---+---+
 
                         // Pixels a, f, l, q are not needed, since we need to understand the
-                        // the connectivity between these blocks and those pixels only metter
+                        // the connectivity between these blocks and those pixels only matter
                         // when considering the outer connectivities
 
                         // A bunch of defines used to check if the pixels are foreground,
                         // without going outside the image limits.
 
-#define condition_b c-1>=0 && r > limitLine && img_row_prev_prev[c-1]>0
-#define condition_c r > limitLine && img_row_prev_prev[c]>0
-#define condition_d c+1<w && r > limitLine && img_row_prev_prev[c+1]>0
-#define condition_e c+2<w && r > limitLine && img_row_prev_prev[c+2]>0
+                        #define condition_b c-1>=0 && r > limitLine && img_row_prev_prev[c-1]>0
+                        #define condition_c r > limitLine && img_row_prev_prev[c]>0
+                        #define condition_d c+1<w && r > limitLine && img_row_prev_prev[c+1]>0
+                        #define condition_e c+2<w && r > limitLine && img_row_prev_prev[c+2]>0
 
-#define condition_g c-2>=0 && r > limitLine - 1 && img_row_prev[c-2]>0
-#define condition_h c-1>=0 && r > limitLine - 1 && img_row_prev[c-1]>0
-#define condition_i r > limitLine - 1 && img_row_prev[c]>0
-#define condition_j c+1<w && r > limitLine - 1 && img_row_prev[c+1]>0
-#define condition_k c+2<w && r > limitLine - 1 && img_row_prev[c+2]>0
+                        #define condition_g c-2>=0 && r > limitLine - 1 && img_row_prev[c-2]>0
+                        #define condition_h c-1>=0 && r > limitLine - 1 && img_row_prev[c-1]>0
+                        #define condition_i r > limitLine - 1 && img_row_prev[c]>0
+                        #define condition_j c+1<w && r > limitLine - 1 && img_row_prev[c+1]>0
+                        #define condition_k c+2<w && r > limitLine - 1 && img_row_prev[c+2]>0
 
-#define condition_m c-2>=0 && img_row[c-2]>0
-#define condition_n c-1>=0 && img_row[c-1]>0
-#define condition_o img_row[c]>0
-#define condition_p c+1<w && img_row[c+1]>0
+                        #define condition_m c-2>=0 && img_row[c-2]>0
+                        #define condition_n c-1>=0 && img_row[c-1]>0
+                        #define condition_o img_row[c]>0
+                        #define condition_p c+1<w && img_row[c+1]>0
 
-#define condition_r c-1>=0 && r+1<h && img_row_fol[c-1]>0
-#define condition_s r+1<h && img_row_fol[c]>0
-#define condition_t c+1<w && r+1<h && img_row_fol[c+1]>0
+                        #define condition_r c-1>=0 && r+1<h && img_row_fol[c-1]>0
+                        #define condition_s r+1<h && img_row_fol[c]>0
+                        #define condition_t c+1<w && r+1<h && img_row_fol[c+1]>0
 
                         // This is a decision tree which allows to choose which action to
                         // perform, checking as few conditions as possible.
@@ -1878,15 +2259,15 @@ namespace cv{
                 //write in the follower memory location
                 chunksSizeAndLabels_[startR + 1] = label - firstLabel;
             }
-#undef condition_k
-#undef condition_j
-#undef condition_i
-#undef condition_h
-#undef condition_g
-#undef condition_e
-#undef condition_d
-#undef condition_c
-#undef condition_b
+            #undef condition_k
+            #undef condition_j
+            #undef condition_i
+            #undef condition_h
+            #undef condition_g
+            #undef condition_e
+            #undef condition_d
+            #undef condition_c
+            #undef condition_b
         };
 
         class SecondScan : public cv::ParallelLoopBody{
@@ -1902,14 +2283,13 @@ namespace cv{
             SecondScan(const cv::Mat& img, cv::Mat& imgLabels, LabelT *P, StatsOp& sop, StatsOp *sopArray, LabelT& nLabels)
                 : img_(img), imgLabels_(imgLabels), P_(P), sop_(sop), sopArray_(sopArray), nLabels_(nLabels){}
 
-            SecondScan&  operator=(const SecondScan& ) { return *this; }
-
-            void operator()(const cv::Range& range) const CV_OVERRIDE
+            void operator()(const cv::Range& range2) const CV_OVERRIDE
             {
+                const Range range(range2.start * 2, std::min(range2.end * 2, img_.rows));
                 int r = range.start;
-                r += (r % 2);
+
                 const int rowBegin = r;
-                const int rowEnd = range.end + range.end % 2;
+                const int rowEnd = range.end;
 
                 if (rowBegin > 0){
                     sopArray_[rowBegin].initElement(nLabels_);
@@ -2487,12 +2867,12 @@ namespace cv{
 
                     for (int c = 0; c < w; c += 2){
 
-#define condition_x imgLabels_row[c] > 0
-#define condition_pppr c > 1 && imgLabels_row_prev_prev[c - 2] > 0
-#define condition_qppr imgLabels_row_prev_prev[c] > 0
-#define condition_qppr1 c < w - 1
-#define condition_qppr2 c < w
-#define condition_rppr c < w - 2 && imgLabels_row_prev_prev[c + 2] > 0
+                        #define condition_x imgLabels_row[c] > 0
+                        #define condition_pppr c > 1 && imgLabels_row_prev_prev[c - 2] > 0
+                        #define condition_qppr imgLabels_row_prev_prev[c] > 0
+                        #define condition_qppr1 c < w - 1
+                        #define condition_qppr2 c < w
+                        #define condition_rppr c < w - 2 && imgLabels_row_prev_prev[c + 2] > 0
 
                         if (condition_x){
                             if (condition_pppr){
@@ -2542,49 +2922,46 @@ namespace cv{
 
             //Array used to store info and labeled pixel by each thread.
             //Different threads affect different memory location of chunksSizeAndLabels
-            const int chunksSizeAndLabelsSize = h + 1;
-            int *chunksSizeAndLabels = (int *)cv::fastMalloc(chunksSizeAndLabelsSize * sizeof(int));
+            const int chunksSizeAndLabelsSize = roundUp(h, 2);
+            std::vector<int> chunksSizeAndLabels(chunksSizeAndLabelsSize);
 
             //Tree of labels
-            LabelT *P = (LabelT *)cv::fastMalloc(Plength * sizeof(LabelT));
+            std::vector<LabelT> P(Plength, 0);
             //First label is for background
-            P[0] = 0;
+            //P[0] = 0;
 
-            cv::Range range(0, h);
+            cv::Range range2(0, divUp(h, 2));
             const double nParallelStripes = std::max(1, std::min(h / 2, getNumThreads()*4));
 
-            //First scan, each thread works with chunk of img.rows/nThreads rows
-            //e.g. 300 rows, 4 threads -> each chunks is composed of 75 rows
-            cv::parallel_for_(range, FirstScan(img, imgLabels, P, chunksSizeAndLabels), nParallelStripes);
+            //First scan
+            cv::parallel_for_(range2, FirstScan(img, imgLabels, P.data(), chunksSizeAndLabels.data()), nParallelStripes);
 
             //merge labels of different chunks
-            mergeLabels(img, imgLabels, P, chunksSizeAndLabels);
+            mergeLabels(img, imgLabels, P.data(), chunksSizeAndLabels.data());
 
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                CV_Assert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P, LabelT((i + 1) / 2) * LabelT((w + 1) / 2) + 1, chunksSizeAndLabels[i + 1], nLabels);
+                CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
+                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
-            StatsOp *sopArray = new StatsOp[h];
+            std::vector<StatsOp> sopArray(h);
             sop.init(nLabels);
 
             //Second scan
-            cv::parallel_for_(range, SecondScan(img, imgLabels, P, sop, sopArray, nLabels), nParallelStripes);
+            cv::parallel_for_(range2, SecondScan(img, imgLabels, P.data(), sop, sopArray.data(), nLabels), nParallelStripes);
 
-            StatsOp::mergeStats(imgLabels, sopArray, sop, nLabels);
+            StatsOp::mergeStats(imgLabels, sopArray.data(), sop, nLabels);
             sop.finish();
 
-            delete[] sopArray;
-            cv::fastFree(chunksSizeAndLabels);
-            cv::fastFree(P);
             return nLabels;
         }
     };//End struct LabelingGranaParallel
 
-    // Based on "Optimized  Block-based Connected Components Labeling with Decision Trees", Costantino Grana et al
-    // Only for 8-connectivity
+    //Implementation of BBDT (Block-Based with Decision Tree) algorithm, as described in "Optimized Block-based Connected
+    //Components Labeling with Decision Trees" (only for 8-connectivity)
+    //Costantino Grana et. al.
     template<typename LabelT, typename PixelT, typename StatsOp = NoOp >
     struct LabelingGrana{
         LabelT operator()(const cv::Mat& img, cv::Mat& imgLabels, int connectivity, StatsOp& sop){
@@ -2605,8 +2982,9 @@ namespace cv{
             //............
             const size_t Plength = size_t(((h + 1) / 2) * size_t((w + 1) / 2)) + 1;
 
-            LabelT *P = (LabelT *)fastMalloc(sizeof(LabelT) *Plength);
-            P[0] = 0;
+            std::vector<LabelT> P_(Plength, 0);
+            LabelT *P = P_.data();
+            //P[0] = 0;
             LabelT lunique = 1;
 
             // First scan
@@ -2637,30 +3015,30 @@ namespace cv{
                     // +---+---+
 
                     // Pixels a, f, l, q are not needed, since we need to understand the
-                    // the connectivity between these blocks and those pixels only metter
+                    // the connectivity between these blocks and those pixels only matter
                     // when considering the outer connectivities
 
                     // A bunch of defines used to check if the pixels are foreground,
                     // without going outside the image limits.
-#define condition_b c-1>=0 && r-2>=0 && img_row_prev_prev[c-1]>0
-#define condition_c r-2>=0 && img_row_prev_prev[c]>0
-#define condition_d c+1<w&& r-2>=0 && img_row_prev_prev[c+1]>0
-#define condition_e c+2<w  && r-1>=0 && img_row_prev[c-1]>0
+                    #define condition_b c-1>=0 && r-2>=0 && img_row_prev_prev[c-1]>0
+                    #define condition_c r-2>=0 && img_row_prev_prev[c]>0
+                    #define condition_d c+1<w&& r-2>=0 && img_row_prev_prev[c+1]>0
+                    #define condition_e c+2<w  && r-1>=0 && img_row_prev[c-1]>0
 
-#define condition_g c-2>=0 && r-1>=0 && img_row_prev[c-2]>0
-#define condition_h c-1>=0 && r-1>=0 && img_row_prev[c-1]>0
-#define condition_i r-1>=0 && img_row_prev[c]>0
-#define condition_j c+1<w && r-1>=0 && img_row_prev[c+1]>0
-#define condition_k c+2<w && r-1>=0 && img_row_prev[c+2]>0
+                    #define condition_g c-2>=0 && r-1>=0 && img_row_prev[c-2]>0
+                    #define condition_h c-1>=0 && r-1>=0 && img_row_prev[c-1]>0
+                    #define condition_i r-1>=0 && img_row_prev[c]>0
+                    #define condition_j c+1<w && r-1>=0 && img_row_prev[c+1]>0
+                    #define condition_k c+2<w && r-1>=0 && img_row_prev[c+2]>0
 
-#define condition_m c-2>=0 && img_row[c-2]>0
-#define condition_n c-1>=0 && img_row[c-1]>0
-#define condition_o img_row[c]>0
-#define condition_p c+1<w && img_row[c+1]>0
+                    #define condition_m c-2>=0 && img_row[c-2]>0
+                    #define condition_n c-1>=0 && img_row[c-1]>0
+                    #define condition_o img_row[c]>0
+                    #define condition_p c+1<w && img_row[c+1]>0
 
-#define condition_r c-1>=0 && r+1<h && img_row_fol[c-1]>0
-#define condition_s r+1<h && img_row_fol[c]>0
-#define condition_t c+1<w && r+1<h && img_row_fol[c+1]>0
+                    #define condition_r c-1>=0 && r+1<h && img_row_fol[c-1]>0
+                    #define condition_s r+1<h && img_row_fol[c]>0
+                    #define condition_t c+1<w && r+1<h && img_row_fol[c+1]>0
 
                     // This is a decision tree which allows to choose which action to
                     // perform, checking as few conditions as possible.
@@ -3914,7 +4292,6 @@ namespace cv{
             }
 
             sop.finish();
-            fastFree(P);
 
             return nLabels;
 
@@ -3928,7 +4305,7 @@ namespace cv{
     int connectedComponents_sub1(const cv::Mat& I, cv::Mat& L, int connectivity, int ccltype, StatsOp& sop){
         CV_Assert(L.channels() == 1 && I.channels() == 1);
         CV_Assert(connectivity == 8 || connectivity == 4);
-        CV_Assert(ccltype == CCL_GRANA || ccltype == CCL_WU || ccltype == CCL_DEFAULT);
+        CV_Assert(ccltype == CCL_SPAGHETTI || ccltype == CCL_BBDT || ccltype == CCL_SAUF || ccltype == CCL_BOLELLI || ccltype == CCL_GRANA || ccltype == CCL_WU || ccltype == CCL_DEFAULT);
 
         int lDepth = L.depth();
         int iDepth = I.depth();
@@ -3940,8 +4317,8 @@ namespace cv{
         //Run parallel labeling only if the rows of the image are at least twice the number of available threads
         const bool is_parallel = currentParallelFramework != NULL && nThreads > 1 && L.rows / nThreads >= 2;
 
-        if (ccltype == CCL_WU || connectivity == 4){
-            // Wu algorithm is used
+        if (ccltype == CCL_SAUF || ccltype == CCL_WU || connectivity == 4){
+            // SAUF algorithm is used
             using connectedcomponents::LabelingWu;
             using connectedcomponents::LabelingWuParallel;
             //warn if L's depth is not sufficient?
@@ -3960,8 +4337,8 @@ namespace cv{
                     return (int)LabelingWuParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
             }
         }
-        else if ((ccltype == CCL_GRANA || ccltype == CCL_DEFAULT) && connectivity == 8){
-            // Grana algorithm is used
+        else if ((ccltype == CCL_BBDT || ccltype == CCL_GRANA || ccltype == CCL_DEFAULT) && connectivity == 8){
+            // BBDT algorithm is used
             using connectedcomponents::LabelingGrana;
             using connectedcomponents::LabelingGranaParallel;
             //warn if L's depth is not sufficient?
@@ -3978,6 +4355,23 @@ namespace cv{
                     return (int)LabelingGrana<int, uchar, StatsOp>()(I, L, connectivity, sop);
                 else
                     return (int)LabelingGranaParallel<int, uchar, StatsOp>()(I, L, connectivity, sop);
+            }
+        }
+        else if ((ccltype == CCL_SPAGHETTI || ccltype == CCL_BOLELLI) && connectivity == 8) {
+            // Spaghetti algorithm is used
+            using connectedcomponents::LabelingBolelli;
+            //using connectedcomponents::LabelingBolelliParallel; // Not implemented
+            //warn if L's depth is not sufficient?
+            if (lDepth == CV_8U) {
+                //Not supported yet
+            }
+            else if (lDepth == CV_16U) {
+                return (int)LabelingBolelli<ushort, uchar, StatsOp>()(I, L, connectivity, sop);
+            }
+            else if (lDepth == CV_32S) {
+                //note that signed types don't really make sense here and not being able to use unsigned matters for scientific projects
+                //OpenCV: how should we proceed?  .at<T> typechecks in debug mode
+                return (int)LabelingBolelli<int, uchar, StatsOp>()(I, L, connectivity, sop);
             }
         }
 

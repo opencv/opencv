@@ -41,7 +41,6 @@ namespace gimpl {
             return    !inputDataNodes.empty() && !startOpNodes.empty()
                    && !finishOpNodes.empty() && !outputDataNodes.empty()
                    && !inputTestDataNodes.empty() && !outputTestDataNodes.empty();
-
         }
 
        S nodes() const {
@@ -92,6 +91,11 @@ namespace gimpl {
 
     GAPI_EXPORTS SubgraphMatch findMatches(const cv::gimpl::GModel::Graph& patternGraph,
                                            const cv::gimpl::GModel::Graph& compGraph);
+
+    GAPI_EXPORTS void performSubstitution(cv::gimpl::GModel::Graph& graph,
+                                          const cv::gimpl::Protocol& patternP,
+                                          const cv::gimpl::Protocol& substituteP,
+                                          const cv::gimpl::SubgraphMatch& patternToGraphMatch);
 
 } //namespace gimpl
 } //namespace cv

@@ -42,7 +42,14 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/normalize_bbox.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv { namespace dnn {
 
@@ -63,14 +70,19 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
             if (pnorm != 2)
                 return false;
 
-            return preferableTarget == DNN_TARGET_MYRIAD ? !acrossSpatial : startAxis == 1;
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && isMyriad)
+                return !acrossSpatial;
+
+            return startAxis == 1;
         }
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_CUDA && (pnorm == 1 || pnorm == 2));
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -114,8 +126,8 @@ public:
 
         const UMat& inp0 = inputs[0];
         UMat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         size_t num = total(shape(inp0.size), 0, startAxis);
         size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
@@ -199,8 +211,8 @@ public:
 
         const Mat& inp0 = inputs[0];
         Mat& buffer = internals[0];
-        startAxis = clamp(startAxis, inp0.dims);
-        endAxis = clamp(endAxis, inp0.dims);
+        startAxis = normalize_axis(startAxis, inp0.dims);
+        endAxis = normalize_axis(endAxis, inp0.dims);
 
         const float* inpData = inp0.ptr<float>();
         float* outData = outputs[0].ptr<float>();
@@ -257,11 +269,13 @@ public:
         }
     }
 
-#ifdef HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        if (input->dims.size() == 4)
+        std::vector<size_t> dims = input->getDims();
+        if (dims.size() == 4)
         {
             InferenceEngine::Builder::NormalizeLayer ieLayer(name);
 
@@ -270,13 +284,14 @@ public:
             ieLayer.setEpsilon(epsilon);
 
             InferenceEngine::Builder::Layer l = ieLayer;
-            const int numChannels = input->dims[2];  // NOTE: input->dims are reversed (whcn)
+            const int numChannels = dims[1];
             InferenceEngine::Blob::Ptr weights;
             if (blobs.empty())
             {
-                weights = InferenceEngine::make_shared_blob<float>(InferenceEngine::Precision::FP32,
-                                                                   InferenceEngine::Layout::C,
-                                                                   {(size_t)numChannels});
+                weights = InferenceEngine::make_shared_blob<float>({
+                              InferenceEngine::Precision::FP32,
+                              {(size_t)numChannels}, InferenceEngine::Layout::C
+                          });
                 weights->allocate();
 
                 Mat weightsMat = infEngineBlobToMat(weights).reshape(1, numChannels);
@@ -304,7 +319,74 @@ public:
             return Ptr<BackendNode>(new InfEngineBackendNode(l));
         }
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        const size_t batch = ieInpNode->get_shape()[0];
+        const size_t numChannels = ieInpNode->get_shape()[1];
+
+        std::vector<int64_t> axes_data;
+        if (!acrossSpatial) {
+            axes_data.push_back(1);
+        } else {
+            axes_data.resize(ieInpNode->get_shape().size() - 1);
+            std::iota(axes_data.begin(), axes_data.end(), 1);
+        }
+        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_data.size()}, axes_data);
+        auto norm = std::make_shared<ngraph::op::v0::NormalizeL2>(ieInpNode, axes, epsilon, ngraph::op::EpsMode::ADD);
+
+        CV_Assert(blobs.empty() || numChannels == blobs[0].total());
+        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        shape[0] = blobs.empty() ? 1 : batch;
+        shape[1] = numChannels;
+        if (!blobs.empty())
+        {
+            auto weight = std::make_shared<ngraph::op::Constant>(
+                                      ngraph::element::f32, ngraph::Shape(shape), blobs[0].data);
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
+            auto mul = std::make_shared<ngraph::op::v1::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#else
+            auto mul = std::make_shared<ngraph::op::v0::Multiply>(norm, weight, ngraph::op::AutoBroadcastType::NUMPY);
+#endif
+            return Ptr<BackendNode>(new InfEngineNgraphNode(mul));
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(norm));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        if(pnorm != 1 && pnorm != 2)
+            CV_Error(Error::StsNotImplemented, "Unsupported normalization mode");
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        NormalizeConfiguration<float> config;
+        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
+        config.axis_start = normalize_axis(startAxis, input_shape.size());
+        config.axis_end = normalize_axis(endAxis, input_shape.size()) + 1; /* +1 because NormalizeOp follows [start, end) convention */
+        config.norm = pnorm;
+        config.eps = epsilon;
+
+        const auto& weightsMat = blobs.empty() ? Mat() : blobs[0];
+        return make_cuda_node<cuda4dnn::NormalizeOp>(preferableTarget, std::move(context->stream), weightsMat, config);
+    }
+#endif
+
 
 private:
     int startAxis, endAxis;

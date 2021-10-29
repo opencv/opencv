@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include <ctype.h>
 
+#include <opencv2/core/utils/logger.hpp>
+
 namespace cv {
 namespace ml {
 
@@ -98,6 +100,7 @@ DTrees::Split::Split()
 
 DTreesImpl::WorkData::WorkData(const Ptr<TrainData>& _data)
 {
+    CV_Assert(!_data.empty());
     data = _data;
     vector<int> subsampleIdx;
     Mat sidx0 = _data->getTrainSampleIdx();
@@ -136,6 +139,7 @@ void DTreesImpl::clear()
 
 void DTreesImpl::startTraining( const Ptr<TrainData>& data, int )
 {
+    CV_Assert(!data.empty());
     clear();
     w = makePtr<WorkData>(data);
 
@@ -223,6 +227,7 @@ void DTreesImpl::endTraining()
 
 bool DTreesImpl::train( const Ptr<TrainData>& trainData, int flags )
 {
+    CV_Assert(!trainData.empty());
     startTraining(trainData, flags);
     bool ok = addTree( w->sidx ) >= 0;
     w.release();
@@ -1691,10 +1696,13 @@ void DTreesImpl::write( FileStorage& fs ) const
 void DTreesImpl::readParams( const FileNode& fn )
 {
     _isClassifier = (int)fn["is_classifier"] != 0;
-    /*int var_all = (int)fn["var_all"];
-    int var_count = (int)fn["var_count"];
-    int cat_var_count = (int)fn["cat_var_count"];
+    int varAll = (int)fn["var_all"];
+    int varCount = (int)fn["var_count"];
+    /*int cat_var_count = (int)fn["cat_var_count"];
     int ord_var_count = (int)fn["ord_var_count"];*/
+
+    if (varAll <= 0)
+        CV_Error(Error::StsParseError, "The field \"var_all\" of DTree classifier is missing or non-positive");
 
     FileNode tparams_node = fn["training_params"];
 
@@ -1720,11 +1728,38 @@ void DTreesImpl::readParams( const FileNode& fn )
     readVectorOrMat(fn["var_idx"], varIdx);
     fn["var_type"] >> varType;
 
-    int format = 0;
-    fn["format"] >> format;
-    bool isLegacy = format < 3;
+    bool isLegacy = false;
+    if (fn["format"].empty())  // Export bug until OpenCV 3.2: https://github.com/opencv/opencv/pull/6314
+    {
+        if (!fn["cat_ofs"].empty())
+            isLegacy = false;  // 2.4 doesn't store "cat_ofs"
+        else if (!fn["missing_subst"].empty())
+            isLegacy = false;  // 2.4 doesn't store "missing_subst"
+        else if (!fn["class_labels"].empty())
+            isLegacy = false;  // 2.4 doesn't store "class_labels"
+        else if ((int)varType.size() != varAll)
+            isLegacy = true;  // 3.0+: https://github.com/opencv/opencv/blame/3.0.0/modules/ml/src/tree.cpp#L1576
+        else if (/*(int)varType.size() == varAll &&*/ varCount == varAll)
+            isLegacy = true;
+        else
+        {
+            // 3.0+:
+            // - https://github.com/opencv/opencv/blame/3.0.0/modules/ml/src/tree.cpp#L1552-L1553
+            // - https://github.com/opencv/opencv/blame/3.0.0/modules/ml/src/precomp.hpp#L296
+            isLegacy = !(varCount + 1 == varAll);
+        }
+        CV_LOG_INFO(NULL, "ML/DTrees: possible missing 'format' field due to bug of OpenCV export implementation. "
+                "Details: https://github.com/opencv/opencv/issues/5412. Consider re-exporting of saved ML model. "
+                "isLegacy = " << isLegacy);
+    }
+    else
+    {
+        int format = 0;
+        fn["format"] >> format;
+        CV_CheckGT(format, 0, "");
+        isLegacy = format < 3;
+    }
 
-    int varAll = (int)fn["var_all"];
     if (isLegacy && (int)varType.size() <= varAll)
     {
         std::vector<uchar> extendedTypes(varAll + 1, 0);

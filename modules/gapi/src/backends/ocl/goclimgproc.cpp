@@ -147,6 +147,24 @@ GAPI_OCL_KERNEL(GOCLSobel, cv::gapi::imgproc::GSobel)
     }
 };
 
+GAPI_OCL_KERNEL(GOCLLaplacian, cv::gapi::imgproc::GLaplacian)
+{
+    static void run(const cv::UMat& in, int ddepth, int ksize, double scale,
+                    double delta, int borderType, cv::UMat &out)
+    {
+        cv::Laplacian(in, out, ddepth, ksize, scale, delta, borderType);
+    }
+};
+
+GAPI_OCL_KERNEL(GOCLBilateralFilter, cv::gapi::imgproc::GBilateralFilter)
+{
+    static void run(const cv::UMat& in, int ddepth, double sigmaColor,
+                    double sigmaSpace, int borderType, cv::UMat &out)
+    {
+        cv::bilateralFilter(in, out, ddepth, sigmaColor, sigmaSpace, borderType);
+    }
+};
+
 GAPI_OCL_KERNEL(GOCLEqualizeHist, cv::gapi::imgproc::GEqHist)
 {
     static void run(const cv::UMat& in, cv::UMat &out)
@@ -260,6 +278,8 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::ocl::kernels()
         , GOCLErode
         , GOCLDilate
         , GOCLSobel
+        , GOCLLaplacian
+        , GOCLBilateralFilter
         , GOCLCanny
         , GOCLEqualizeHist
         , GOCLRGB2YUV

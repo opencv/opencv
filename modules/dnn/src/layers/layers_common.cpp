@@ -144,26 +144,37 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
 }
 }
 
-void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, bool &globalPooling,
+void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<bool>& globalPooling,
                             std::vector<size_t>& pads_begin, std::vector<size_t>& pads_end,
                             std::vector<size_t>& strides, cv::String &padMode)
 {
-    globalPooling = params.has("global_pooling") &&
-                    params.get<bool>("global_pooling");
+    bool is_global = params.get<bool>("global_pooling", false);
+    globalPooling.resize(3);
+    globalPooling[0] = params.get<bool>("global_pooling_d", is_global);
+    globalPooling[1] = params.get<bool>("global_pooling_h", is_global);
+    globalPooling[2] = params.get<bool>("global_pooling_w", is_global);
 
-    if (globalPooling)
+    if (globalPooling[0] || globalPooling[1] || globalPooling[2])
     {
         util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode);
-        if(params.has("kernel_h") || params.has("kernel_w") || params.has("kernel_size"))
-        {
+        if ((globalPooling[0] && params.has("kernel_d")) ||
+            (globalPooling[1] && params.has("kernel_h")) ||
+            (globalPooling[2] && params.has("kernel_w")) ||
+            params.has("kernel_size")) {
             CV_Error(cv::Error::StsBadArg, "In global_pooling mode, kernel_size (or kernel_h and kernel_w) cannot be specified");
         }
-        for (int i = 0; i < pads_begin.size(); i++) {
-            if (pads_begin[i] != 0 || pads_end[i] != 0)
+
+        kernel.resize(3);
+        kernel[0] = params.get<int>("kernel_d", 1);
+        kernel[1] = params.get<int>("kernel_h", 1);
+        kernel[2] = params.get<int>("kernel_w", 1);
+
+        for (int i = 0, j = globalPooling.size() - pads_begin.size(); i < pads_begin.size(); i++, j++) {
+            if ((pads_begin[i] != 0 || pads_end[i] != 0) && globalPooling[j])
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, pads must be = 0");
         }
-        for (int i = 0; i < strides.size(); i++) {
-            if (strides[i] != 1)
+        for (int i = 0, j = globalPooling.size() - strides.size(); i < strides.size(); i++, j++) {
+            if (strides[i] != 1 && globalPooling[j])
                 CV_Error(cv::Error::StsBadArg, "In global_pooling mode, strides must be = 1");
         }
     }

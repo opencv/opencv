@@ -42,9 +42,12 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
+
 #include <algorithm>
 #include <stdlib.h>
 using std::max;
@@ -52,6 +55,11 @@ using std::max;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/softmax.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -81,7 +89,7 @@ public:
     {
         bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         MatShape shape = inputs[0];
-        int cAxis = clamp(axisRaw, shape.size());
+        int cAxis = normalize_axis(axisRaw, shape.size());
         shape[cAxis] = 1;
         internals.assign(1, shape);
         return inplace;
@@ -90,8 +98,10 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine() && !logSoftMax) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() && !logSoftMax) ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan());
     }
 
@@ -114,7 +124,7 @@ public:
 
         UMat& src = inputs[0];
         UMat& dstMat = outputs[0];
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
 
         if (softmaxOp.empty())
         {
@@ -206,7 +216,7 @@ public:
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
-        int axis = clamp(axisRaw, src.dims);
+        int axis = normalize_axis(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis), channels = src.size[axis],
                 innerSize = src.total(axis + 1);
 
@@ -286,11 +296,26 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto channel_axis = normalize_axis(axisRaw, input_wrapper->getRank());
+        return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
+    }
+#endif
+
     virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
         vkcom::Tensor in = VkComTensor(inputs[0]);
-        int cAxis = clamp(axisRaw, in.dimNum());
+        int cAxis = normalize_axis(axisRaw, in.dimNum());
         std::shared_ptr<vkcom::OpBase> op(new vkcom::OpSoftmax(cAxis, logSoftMax));
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
 #endif  // HAVE_VULKAN
@@ -323,16 +348,47 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_INF_ENGINE
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
 
         InferenceEngine::Builder::SoftMaxLayer ieLayer(name);
-        ieLayer.setAxis(clamp(axisRaw, input->dims.size()));
+        ieLayer.setAxis(normalize_axis(axisRaw, input->getDims().size()));
+
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        int axis = normalize_axis(axisRaw, ieInpNode->get_shape().size());
+        auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
+        if (logSoftMax)
+            return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        float inpScale = scales[0][0];
+        Mat lookUpTable(1, 256, CV_32F);
+        float* table = lookUpTable.ptr<float>();
+        for (int i = -128; i < 128; i++)
+        {
+            float x = inpScale*(i - 127); // ensures exp(x) is always between (0, 1)
+            table[i+128] = std::exp(x);
+        }
+        params.blobs.clear();
+        params.blobs.push_back(lookUpTable);
+        return true;
+    }
 
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE

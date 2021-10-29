@@ -2021,6 +2021,14 @@ TEST(Compare, regression_8999)
     EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
 }
 
+TEST(Compare, regression_16F_do_not_crash)
+{
+    cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
+    cv::Mat mat2(2, 2, CV_16F, cv::Scalar(2));
+    cv::Mat dst;
+    EXPECT_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ), cv::Exception);
+}
+
 
 TEST(Core_minMaxIdx, regression_9207_1)
 {
@@ -2158,6 +2166,15 @@ TEST(Core_Norm, IPP_regression_NORM_L1_16UC3_small)
     EXPECT_EQ((double)20*cn, cv::norm(a, b, NORM_L1, mask));
 }
 
+TEST(Core_Norm, NORM_L2_8UC4)
+{
+    // Tests there is no integer overflow in norm computation for multiple channels.
+    const int kSide = 100;
+    cv::Mat4b a(kSide, kSide, cv::Scalar(255, 255, 255, 255));
+    cv::Mat4b b = cv::Mat4b::zeros(kSide, kSide);
+    const double kNorm = 2.*kSide*255.;
+    EXPECT_EQ(kNorm, cv::norm(a, b, NORM_L2));
+}
 
 TEST(Core_ConvertTo, regression_12121)
 {
@@ -2444,6 +2461,18 @@ TEST(Core_MinMaxIdx, rows_overflow)
         EXPECT_FALSE(fabs(minVal0 - minVal) > 1e-6 || fabs(maxVal0 - maxVal) > 1e-6) << "NxM=" << N << "x" << M <<
             "    min=" << minVal0 << " vs " <<  minVal <<
             "    max=" << maxVal0 << " vs " << maxVal;
+    }
+}
+
+
+TEST(Core_Magnitude, regression_19506)
+{
+    for (int N = 1; N <= 64; ++N)
+    {
+        Mat a(1, N, CV_32FC1, Scalar::all(1e-20));
+        Mat res;
+        magnitude(a, a, res);
+        EXPECT_LE(cvtest::norm(res, NORM_L1), 1e-15) << N;
     }
 }
 

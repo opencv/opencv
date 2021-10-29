@@ -494,7 +494,6 @@ DISOpticalFlowImpl::PatchInverseSearch_ParBody::PatchInverseSearch_ParBody(DISOp
     v_float32x4 w10v = v_setall_f32(w10);                                                                              \
     v_float32x4 w11v = v_setall_f32(w11);                                                                              \
                                                                                                                        \
-    v_uint8x16 I0_row_16, I1_row_16, I1_row_shifted_16, I1_row_next_16, I1_row_next_shifted_16;                        \
     v_uint16x8 I0_row_8, I1_row_8, I1_row_shifted_8, I1_row_next_8, I1_row_next_shifted_8, tmp;                        \
     v_uint32x4 I0_row_4_left, I1_row_4_left, I1_row_shifted_4_left, I1_row_next_4_left, I1_row_next_shifted_4_left;    \
     v_uint32x4 I0_row_4_right, I1_row_4_right, I1_row_shifted_4_right, I1_row_next_4_right,                            \
@@ -502,29 +501,22 @@ DISOpticalFlowImpl::PatchInverseSearch_ParBody::PatchInverseSearch_ParBody(DISOp
     v_float32x4 I_diff_left, I_diff_right;                                                                             \
                                                                                                                        \
     /* Preload and expand the first row of I1: */                                                                      \
-    I1_row_16 = v_load(I1_ptr);                                                                                        \
-    I1_row_shifted_16 = v_extract<1>(I1_row_16, I1_row_16);                                                            \
-    v_expand(I1_row_16, I1_row_8, tmp);                                                                                \
-    v_expand(I1_row_shifted_16, I1_row_shifted_8, tmp);                                                                \
+    I1_row_8 = v_load_expand(I1_ptr);                                                                                  \
+    I1_row_shifted_8 = v_load_expand(I1_ptr + 1);                                                                      \
     v_expand(I1_row_8, I1_row_4_left, I1_row_4_right);                                                                 \
     v_expand(I1_row_shifted_8, I1_row_shifted_4_left, I1_row_shifted_4_right);                                         \
     I1_ptr += I1_stride;
 
 #define HAL_PROCESS_BILINEAR_8x8_PATCH_EXTRACTION                                                                      \
     /* Load the next row of I1: */                                                                                     \
-    I1_row_next_16 = v_load(I1_ptr);                                                                                   \
-    /* Circular shift left by 1 element: */                                                                            \
-    I1_row_next_shifted_16 = v_extract<1>(I1_row_next_16, I1_row_next_16);                                             \
-    /* Expand to 8 ushorts (we only need the first 8 values): */                                                       \
-    v_expand(I1_row_next_16, I1_row_next_8, tmp);                                                                      \
-    v_expand(I1_row_next_shifted_16, I1_row_next_shifted_8, tmp);                                                      \
+    I1_row_next_8 = v_load_expand(I1_ptr);                                                                             \
+    I1_row_next_shifted_8 = v_load_expand(I1_ptr + 1);                                                                 \
     /* Separate the left and right halves: */                                                                          \
     v_expand(I1_row_next_8, I1_row_next_4_left, I1_row_next_4_right);                                                  \
     v_expand(I1_row_next_shifted_8, I1_row_next_shifted_4_left, I1_row_next_shifted_4_right);                          \
                                                                                                                        \
     /* Load current row of I0: */                                                                                      \
-    I0_row_16 = v_load(I0_ptr);                                                                                        \
-    v_expand(I0_row_16, I0_row_8, tmp);                                                                                \
+    I0_row_8 = v_load_expand(I0_ptr);                                                                                  \
     v_expand(I0_row_8, I0_row_4_left, I0_row_4_right);                                                                 \
                                                                                                                        \
     /* Compute diffs between I0 and bilinearly interpolated I1: */                                                     \

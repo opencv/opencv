@@ -83,7 +83,7 @@ Let us define a kernel function \f$K(p,q)\f$ which does a dot product between tw
 \begin{aligned}
 K(p,q)  = \phi(p).\phi(q) &= \phi(p)^T \phi(q) \\
                           &= (p_{1}^2,p_{2}^2,\sqrt{2} p_1 p_2).(q_{1}^2,q_{2}^2,\sqrt{2} q_1 q_2) \\
-                          &= p_1 q_1 + p_2 q_2 + 2 p_1 q_1 p_2 q_2 \\
+                          &= p_{1}^2 q_{1}^2 + p_{2}^2 q_{2}^2 + 2 p_1 q_1 p_2 q_2 \\
                           &= (p_1 q_1 + p_2 q_2)^2 \\
           \phi(p).\phi(q) &= (p.q)^2
 \end{aligned}

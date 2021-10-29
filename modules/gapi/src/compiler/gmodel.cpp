@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -23,12 +23,16 @@
 
 namespace cv { namespace gimpl {
 
-ade::NodeHandle GModel::mkOpNode(GModel::Graph &g, const GKernel &k, const std::vector<GArg> &args, const std::string &island)
+ade::NodeHandle GModel::mkOpNode(GModel::Graph &g,
+                                 const GKernel &k,
+                                 const std::vector<GArg> &args,
+                                 const cv::util::any &params,
+                                 const std::string &island)
 {
     ade::NodeHandle op_h = g.createNode();
     g.metadata(op_h).set(NodeType{NodeType::OP});
     //These extra empty {} are to please GCC (-Wmissing-field-initializers)
-    g.metadata(op_h).set(Op{k, args, {}, {}});
+    g.metadata(op_h).set(Op{k, args, {}, {}, params});
     if (!island.empty())
         g.metadata(op_h).set(Island{island});
     return op_h;
@@ -50,7 +54,11 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GOrigin& origin)
         storage    = Data::Storage::CONST_VAL;
         g.metadata(data_h).set(ConstValue{value});
     }
-    g.metadata(data_h).set(Data{origin.shape, id, meta, origin.ctor, storage});
+    // FIXME: Sometimes a GArray-related node may be created w/o the
+    // associated host-type constructor (e.g. when the array is
+    // somewhere in the middle of the graph).
+    auto ctor_copy = origin.ctor;
+    g.metadata(data_h).set(Data{origin.shape, id, meta, ctor_copy, origin.kind, storage});
     return data_h;
 }
 
@@ -63,12 +71,13 @@ ade::NodeHandle GModel::mkDataNode(GModel::Graph &g, const GShape shape)
     GMetaArg meta;
     HostCtor ctor;
     Data::Storage storage = Data::Storage::INTERNAL; // By default, all objects are marked INTERNAL
+    cv::detail::OpaqueKind kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
-    g.metadata(data_h).set(Data{shape, id, meta, ctor, storage});
+    g.metadata(data_h).set(Data{shape, id, meta, ctor, kind, storage});
     return data_h;
 }
 
-void GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t in_port)
+ade::EdgeHandle GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t in_port)
 {
     // Check if input is already connected
     for (const auto& in_e : opH->inEdges())
@@ -87,9 +96,11 @@ void GModel::linkIn(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::si
 
     // Replace an API object with a REF (G* -> GOBJREF)
     op.args[in_port] = cv::GArg(RcDesc{gm.rc, gm.shape, {}});
+
+    return eh;
 }
 
-void GModel::linkOut(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t out_port)
+ade::EdgeHandle GModel::linkOut(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::size_t out_port)
 {
     // FIXME: check validity using kernel prototype
 
@@ -112,9 +123,11 @@ void GModel::linkOut(Graph &g, ade::NodeHandle opH, ade::NodeHandle objH, std::s
     const auto min_out_size = std::max(op.outs.size(), storage_with_port);
     op.outs.resize(min_out_size, RcDesc{-1,GShape::GMAT,{}}); // FIXME: Invalid shape instead?
     op.outs[out_port] = RcDesc{gm.rc, gm.shape, {}};
+
+    return eh;
 }
 
-std::vector<ade::NodeHandle> GModel::orderedInputs(ConstGraph &g, ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedInputs(const ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_in_nhs(nh->inEdges().size());
     for (const auto& in_eh : nh->inEdges())
@@ -126,7 +139,7 @@ std::vector<ade::NodeHandle> GModel::orderedInputs(ConstGraph &g, ade::NodeHandl
     return sorted_in_nhs;
 }
 
-std::vector<ade::NodeHandle> GModel::orderedOutputs(ConstGraph &g, ade::NodeHandle nh)
+std::vector<ade::NodeHandle> GModel::orderedOutputs(const ConstGraph &g, ade::NodeHandle nh)
 {
     std::vector<ade::NodeHandle> sorted_out_nhs(nh->outEdges().size());
     for (const auto& out_eh : nh->outEdges())
@@ -185,35 +198,48 @@ void GModel::log(Graph &g, ade::EdgeHandle eh, std::string &&msg, ade::NodeHandl
     }
 }
 
+void GModel::log_clear(Graph &g, ade::NodeHandle node)
+{
+    if (g.metadata(node).contains<Journal>())
+    {
+        // according to documentation, clear() doesn't deallocate (__capacity__ of vector preserved)
+        g.metadata(node).get<Journal>().messages.clear();
+    }
+}
+
+
 ade::NodeHandle GModel::detail::dataNodeOf(const ConstLayoutGraph &g, const GOrigin &origin)
 {
     // FIXME: Does it still work with graph transformations, e.g. redirectWriter()??
     return g.metadata().get<Layout>().object_nodes.at(origin);
 }
 
-void GModel::redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to)
+std::vector<ade::EdgeHandle> GModel::redirectReaders(Graph &g, ade::NodeHandle from, ade::NodeHandle to)
 {
     std::vector<ade::EdgeHandle> ehh(from->outEdges().begin(), from->outEdges().end());
+    std::vector<ade::EdgeHandle> ohh;
+    ohh.reserve(ehh.size());
     for (auto e : ehh)
     {
         auto dst = e->dstNode();
         auto input = g.metadata(e).get<Input>();
         g.erase(e);
-        linkIn(g, dst, to, input.port);
+        ohh.push_back(linkIn(g, dst, to, input.port));
     }
+    return ohh;
 }
 
-void GModel::redirectWriter(Graph &g, ade::NodeHandle from, ade::NodeHandle to)
+ade::EdgeHandle GModel::redirectWriter(Graph &g, ade::NodeHandle from, ade::NodeHandle to)
 {
     GAPI_Assert(from->inEdges().size() == 1);
     auto e = from->inEdges().front();
     auto op = e->srcNode();
     auto output = g.metadata(e).get<Output>();
     g.erase(e);
-    linkOut(g, op, to, output.port);
+    return linkOut(g, op, to, output.port);
 }
 
-GMetaArgs GModel::collectInputMeta(GModel::ConstGraph cg, ade::NodeHandle node)
+GMetaArgs GModel::collectInputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node)
 {
     GAPI_Assert(cg.metadata(node).get<NodeType>().t == NodeType::OP);
     GMetaArgs in_meta_args(cg.metadata(node).get<Op>().args.size());
@@ -240,7 +266,7 @@ ade::EdgeHandle GModel::getInEdgeByPort(const GModel::ConstGraph& cg,
     return *edge;
 }
 
-GMetaArgs GModel::collectOutputMeta(GModel::ConstGraph cg, ade::NodeHandle node)
+GMetaArgs GModel::collectOutputMeta(const GModel::ConstGraph &cg, ade::NodeHandle node)
 {
     GAPI_Assert(cg.metadata(node).get<NodeType>().t == NodeType::OP);
     GMetaArgs out_meta_args(cg.metadata(node).get<Op>().outs.size());

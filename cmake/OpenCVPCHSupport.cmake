@@ -125,11 +125,11 @@ MACRO(_PCH_GET_COMPILE_COMMAND out_command _input _output)
             STRING(REGEX REPLACE "^ +" "" pchsupport_compiler_cxx_arg1 ${CMAKE_CXX_COMPILER_ARG1})
 
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ELSE(CMAKE_CXX_COMPILER_ARG1)
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ENDIF(CMAKE_CXX_COMPILER_ARG1)
     ELSE()
@@ -305,10 +305,13 @@ fi
 ${_command} '-D$<JOIN:$<TARGET_PROPERTY:${_targetName},COMPILE_DEFINITIONS>,' '-D>'
 ")
     GET_FILENAME_COMPONENT(_outdir ${_output} PATH)
+    if(NOT CMAKE_HOST_WIN32)  # chmod may be not available on Win32/MinGW (and it is not required)
+      set(_pch_prepare_command COMMAND chmod +x "${_pch_generate_file_cmd}")
+    endif()
     ADD_CUSTOM_COMMAND(
       OUTPUT "${_output}"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${_outdir}"
-      COMMAND chmod +x "${_pch_generate_file_cmd}"
+      ${_pch_prepare_command}
       COMMAND "${_pch_generate_file_cmd}"
       DEPENDS "${_input}" "${_pch_generate_file_cmd}"
       DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${_name}"

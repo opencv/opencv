@@ -1,6 +1,8 @@
 Contours Hierarchy {#tutorial_js_contours_hierarchy}
 ==================
 
+@prev_tutorial{tutorial_js_contours_more_functions}
+
 Goal
 ----
 
@@ -145,7 +147,7 @@ no child, parent is contour-3. So array is [-1,-1,-1,3].
 And this is the final guy, Mr.Perfect. It retrieves all the contours and creates a full family
 hierarchy list. **It even tells, who is the grandpa, father, son, grandson and even beyond... :)**.
 
-For examle, I took above image, rewrite the code for cv.RETR_TREE, reorder the contours as per the
+For example, I took above image, rewrite the code for cv.RETR_TREE, reorder the contours as per the
 result given by OpenCV and analyze it. Again, red letters give the contour number and green letters
 give the hierarchy order.
 

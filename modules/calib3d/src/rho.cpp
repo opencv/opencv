@@ -55,7 +55,7 @@
 #include <math.h>
 #include <vector>
 #include "rho.h"
-
+#include "opencv2/core/utils/buffer_area.private.hpp"
 
 
 
@@ -65,7 +65,6 @@ namespace cv{/* For C support, replace with extern "C" { */
 
 
 /* Constants */
-const int    MEM_ALIGN              = 32;
 const size_t HSIZE                  = (3*3*sizeof(float));
 const double MIN_DELTA_CHNG         = 0.1;
 // const double CHI_STAT               = 2.706;
@@ -312,16 +311,14 @@ struct RHO_HEST_REFC : RHO_HEST{
 
     /* Levenberg-Marquardt Refinement */
     struct{
-        float  (* JtJ)[8];         /* JtJ matrix */
-        float  (* tmp1)[8];        /* Temporary 1 */
+        float*    JtJ;             /* JtJ matrix */
+        float*    tmp1;            /* Temporary 1 */
         float*    Jte;             /* Jte vector */
     } lm;
 
     /* Memory Management */
-    struct{
-        cv::Mat perObj;
-        cv::Mat perRun;
-    } mem;
+    utils::BufferArea runArea;
+    utils::BufferArea objArea;
 
     /* Initialized? */
     int initialized;
@@ -659,16 +656,9 @@ inline int    RHO_HEST_REFC::initialize(void){
 
     fastSeed((uint64_t)~0);
 
+    initialized = 1;
 
-    int areAllAllocsSuccessful = !mem.perObj.empty();
-
-    if(!areAllAllocsSuccessful){
-        finalize();
-    }else{
-        initialized = 1;
-    }
-
-    return areAllAllocsSuccessful;
+    return true;
 }
 
 /**
@@ -835,45 +825,14 @@ unsigned RHO_HEST_REFC::rhoHest(const float*   src,     /* Source points */
  */
 
 inline void   RHO_HEST_REFC::allocatePerObj(void){
-    /* We have known sizes */
-    size_t ctrl_smpl_sz   = SMPL_SIZE*sizeof(*ctrl.smpl);
-    size_t curr_pkdPts_sz = SMPL_SIZE*2*2*sizeof(*curr.pkdPts);
-    size_t curr_H_sz      = HSIZE;
-    size_t best_H_sz      = HSIZE;
-    size_t lm_JtJ_sz      = 8*8*sizeof(float);
-    size_t lm_tmp1_sz     = 8*8*sizeof(float);
-    size_t lm_Jte_sz      = 1*8*sizeof(float);
-
-    /* We compute offsets */
-    size_t total = 0;
-#define MK_OFFSET(v)                                     \
-    size_t v ## _of = total;                             \
-    total = alignSize(v ## _of  +  v ## _sz, MEM_ALIGN)
-
-    MK_OFFSET(ctrl_smpl);
-    MK_OFFSET(curr_pkdPts);
-    MK_OFFSET(curr_H);
-    MK_OFFSET(best_H);
-    MK_OFFSET(lm_JtJ);
-    MK_OFFSET(lm_tmp1);
-    MK_OFFSET(lm_Jte);
-
-#undef MK_OFFSET
-
-    /* Allocate dynamic memory managed by cv::Mat */
-    mem.perObj.create(1, (int)(total + MEM_ALIGN), CV_8UC1);
-
-    /* Extract aligned pointer */
-    unsigned char* ptr = alignPtr(mem.perObj.data, MEM_ALIGN);
-
-    /* Assign pointers */
-    ctrl.smpl   = (unsigned*)  (ptr + ctrl_smpl_of);
-    curr.pkdPts = (float*)     (ptr + curr_pkdPts_of);
-    curr.H      = (float*)     (ptr + curr_H_of);
-    best.H      = (float*)     (ptr + best_H_of);
-    lm.JtJ      = (float(*)[8])(ptr + lm_JtJ_of);
-    lm.tmp1     = (float(*)[8])(ptr + lm_tmp1_of);
-    lm.Jte      = (float*)     (ptr + lm_Jte_of);
+    objArea.allocate(ctrl.smpl, SMPL_SIZE);
+    objArea.allocate(curr.pkdPts, SMPL_SIZE*2*2);
+    objArea.allocate(curr.H, HSIZE);
+    objArea.allocate(best.H, HSIZE);
+    objArea.allocate(lm.JtJ, 8*8);
+    objArea.allocate(lm.tmp1, 8*8);
+    objArea.allocate(lm.Jte, 1*8);
+    objArea.commit();
 }
 
 
@@ -885,30 +844,9 @@ inline void   RHO_HEST_REFC::allocatePerObj(void){
  */
 
 inline void   RHO_HEST_REFC::allocatePerRun(void){
-    /* We have known sizes */
-    size_t best_inl_sz = arg.N;
-    size_t curr_inl_sz = arg.N;
-
-    /* We compute offsets */
-    size_t total = 0;
-#define MK_OFFSET(v)                                     \
-    size_t v ## _of = total;                             \
-    total = alignSize(v ## _of  +  v ## _sz, MEM_ALIGN)
-
-    MK_OFFSET(best_inl);
-    MK_OFFSET(curr_inl);
-
-#undef MK_OFFSET
-
-    /* Allocate dynamic memory managed by cv::Mat */
-    mem.perRun.create(1, (int)(total + MEM_ALIGN), CV_8UC1);
-
-    /* Extract aligned pointer */
-    unsigned char* ptr = alignPtr(mem.perRun.data, MEM_ALIGN);
-
-    /* Assign pointers */
-    best.inl  = (char*)(ptr + best_inl_of);
-    curr.inl  = (char*)(ptr + curr_inl_of);
+    runArea.allocate(best.inl, arg.N);
+    runArea.allocate(curr.inl, arg.N);
+    runArea.commit();
 }
 
 
@@ -919,10 +857,7 @@ inline void   RHO_HEST_REFC::allocatePerRun(void){
  */
 
 inline void   RHO_HEST_REFC::deallocatePerRun(void){
-    best.inl  = NULL;
-    curr.inl  = NULL;
-
-    mem.perRun.release();
+    runArea.release();
 }
 
 
@@ -933,15 +868,7 @@ inline void   RHO_HEST_REFC::deallocatePerRun(void){
  */
 
 inline void   RHO_HEST_REFC::deallocatePerObj(void){
-    ctrl.smpl   = NULL;
-    curr.pkdPts = NULL;
-    curr.H      = NULL;
-    best.H      = NULL;
-    lm.JtJ      = NULL;
-    lm.tmp1     = NULL;
-    lm.Jte      = NULL;
-
-    mem.perObj.release();
+    objArea.release();
 }
 
 
@@ -2144,7 +2071,7 @@ inline void   RHO_HEST_REFC::refine(void){
      */
     /* Find initial conditions */
     sacCalcJacobianErrors(best.H, arg.src, arg.dst, best.inl, arg.N,
-                          lm.JtJ, lm.Jte,  &S);
+                          (float(*)[8])lm.JtJ, lm.Jte,  &S);
 
     /*Levenberg-Marquardt Loop.*/
     for(i=0;i<MAXLEVMARQITERS;i++){
@@ -2169,11 +2096,11 @@ inline void   RHO_HEST_REFC::refine(void){
          * transpose) then multiply Jte in order to find dH.
          */
 
-        while(!sacChol8x8Damped(lm.JtJ, L, lm.tmp1)){
+        while(!sacChol8x8Damped((float(*)[8])lm.JtJ, L, (float(*)[8])lm.tmp1)){
             L *= 2.0f;
         }
-        sacTRInv8x8   (lm.tmp1, lm.tmp1);
-        sacTRISolve8x8(lm.tmp1, lm.Jte,  dH);
+        sacTRInv8x8   ((float(*)[8])lm.tmp1, (float(*)[8])lm.tmp1);
+        sacTRISolve8x8((float(*)[8])lm.tmp1, lm.Jte,  dH);
         sacSub8x1     (newH,       best.H,  dH);
         sacCalcJacobianErrors(newH, arg.src, arg.dst, best.inl, arg.N,
                               NULL, NULL, &newS);
@@ -2204,7 +2131,7 @@ inline void   RHO_HEST_REFC::refine(void){
             S = newS;
             memcpy(best.H, newH, sizeof(newH));
             sacCalcJacobianErrors(best.H, arg.src, arg.dst, best.inl, arg.N,
-                                  lm.JtJ, lm.Jte,  &S);
+                                  (float(*)[8])lm.JtJ, lm.Jte,  &S);
         }
     }
 }

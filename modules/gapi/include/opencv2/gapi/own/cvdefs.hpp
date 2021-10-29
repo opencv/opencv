@@ -9,7 +9,6 @@
 #define OPENCV_GAPI_CV_DEFS_HPP
 
 #if defined(GAPI_STANDALONE)
-
 // Simulate OpenCV definitions taken from various
 // OpenCV interface headers if G-API is built in a
 // standalone mode.

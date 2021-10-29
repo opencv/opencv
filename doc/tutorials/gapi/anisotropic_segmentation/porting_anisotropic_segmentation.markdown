@@ -1,5 +1,8 @@
 # Porting anisotropic image segmentation on G-API {#tutorial_gapi_anisotropic_segmentation}
 
+@prev_tutorial{tutorial_gapi_interactive_face_detection}
+@next_tutorial{tutorial_gapi_face_beautification}
+
 [TOC]
 
 # Introduction {#gapi_anisotropic_intro}
@@ -39,7 +42,7 @@ With G-API, we can define it as follows:
 It is important to understand that the new G-API based version of
 calcGST() will just produce a compute graph, in contrast to its
 original version, which actually calculates the values. This is a
-principial difference -- G-API based functions like this are used to
+principal difference -- G-API based functions like this are used to
 construct graphs, not to process the actual data.
 
 Let's start implementing calcGST() with calculation of \f$J\f$
@@ -153,11 +156,11 @@ file name before running the application, e.g.:
 
     $ GRAPH_DUMP_PATH=segm.dot ./bin/example_tutorial_porting_anisotropic_image_segmentation_gapi
 
-Now this file can be visalized with a `dot` command like this:
+Now this file can be visualized with a `dot` command like this:
 
     $ dot segm.dot -Tpng -o segm.png
 
-or viewed instantly with `xdot` command (please refer to your
+or viewed interactively with `xdot` (please refer to your
 distribution/operating system documentation on how to install these
 packages).
 
@@ -186,7 +189,7 @@ is also OpenCV-based since it fallbacks to OpenCV functions inside.
 
 On GNU/Linux, application memory footprint can be profiled with
 [Valgrind](http://valgrind.org/). On Debian/Ubuntu systems it can be
-installed like this (assuming you have administrator priveleges):
+installed like this (assuming you have administrator privileges):
 
     $ sudo apt-get install valgrind massif-visualizer
 
@@ -239,10 +242,10 @@ consumption is because the default naive OpenCV-based backend is used to
 execute this graph. This backend serves mostly for quick prototyping
 and debugging algorithms before offload/further optimization.
 
-This backend doesn't utilize any complex memory mamagement strategies yet
+This backend doesn't utilize any complex memory management strategies yet
 since it is not its point at the moment. In the following chapter,
 we'll learn about Fluid backend and see how the same G-API code can
-run in a completely different model (and the footprint shrinked to a
+run in a completely different model (and the footprint shrunk to a
 number of kilobytes).
 
 # Backends and kernels {#gapi_anisotropic_backends}
@@ -298,7 +301,7 @@ as a _graph compilation option_:
 
 @snippet cpp/tutorial_code/gapi/porting_anisotropic_image_segmentation/porting_anisotropic_image_segmentation_gapi_fluid.cpp kernel_pkg_use
 
-Traditional OpenCV is logically divided into modules, whith every
+Traditional OpenCV is logically divided into modules, with every
 module providing a set of functions. In G-API, there are also
 "modules" which are represented as kernel packages provided by a
 particular backend. In this example, we pass Fluid kernel packages to
@@ -368,14 +371,14 @@ visualization like this:
 
 ![Anisotropic image segmentation graph with OpenCV & Fluid kernels](pics/segm_fluid.gif)
 
-This graph doesn't differ structually from its previous version (in
+This graph doesn't differ structurally from its previous version (in
 terms of operations and data objects), though a changed layout (on the
 left side of the dump) is easily noticeable.
 
 The visualization reflects how G-API deals with mixed graphs, also
 called _heterogeneous_ graphs. The majority of operations in this
 graph are implemented with Fluid backend, but Box filters are executed
-by the OpenCV backend. One can easily see that the graph is partioned
+by the OpenCV backend. One can easily see that the graph is partitioned
 (with rectangles). G-API groups connected operations based on their
 affinity, forming _subgraphs_ (or _islands_ in G-API terminology), and
 our top-level graph becomes a composition of multiple smaller

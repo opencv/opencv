@@ -39,11 +39,11 @@ static void onTrackbar(int, void*)
     imshow(window_name2, cedge);
 }
 
-static void help()
+static void help(const char** argv)
 {
     printf("\nThis sample demonstrates Canny edge detection\n"
            "Call:\n"
-           "    /.edge [image_name -- Default is fruits.jpg]\n\n");
+           "    %s [image_name -- Default is fruits.jpg]\n\n", argv[0]);
 }
 
 const char* keys =
@@ -53,7 +53,7 @@ const char* keys =
 
 int main( int argc, const char** argv )
 {
-    help();
+    help(argv);
     CommandLineParser parser(argc, argv, keys);
     string filename = parser.get<string>(0);
 
@@ -61,7 +61,7 @@ int main( int argc, const char** argv )
     if(image.empty())
     {
         printf("Cannot read image file: %s\n", filename.c_str());
-        help();
+        help(argv);
         return -1;
     }
     cedge.create(image.size(), image.type());

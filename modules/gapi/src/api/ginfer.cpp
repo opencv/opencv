@@ -7,17 +7,16 @@
 
 #include "precomp.hpp"
 
-#include <functional> // hash
-#include <numeric> // accumulate
-#include <unordered_set>
-#include <iterator>
-
-#include <ade/util/algorithm.hpp>
-
 #include <opencv2/gapi/infer.hpp>
 
-cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> &&ii)
-    : networks(std::move(ii)) {
+#include <unordered_set>
+
+cv::gapi::GNetPackage::GNetPackage(std::initializer_list<GNetParam> ii)
+    : networks(ii) {
+}
+
+cv::gapi::GNetPackage::GNetPackage(std::vector<GNetParam> nets)
+    : networks(nets) {
 }
 
 std::vector<cv::gapi::GBackend> cv::gapi::GNetPackage::backends() const {

@@ -10,8 +10,8 @@ namespace
 {
 void basicPanoramaStitching(const string &img1Path, const string &img2Path)
 {
-    Mat img1 = imread(img1Path);
-    Mat img2 = imread(img2Path);
+    Mat img1 = imread( samples::findFile( img1Path ) );
+    Mat img2 = imread( samples::findFile( img2Path ) );
 
     //! [camera-pose-from-Blender-at-location-1]
     Mat c1Mo = (Mat_<double>(4,4) << 0.9659258723258972, 0.2588190734386444, 0.0, 1.5529145002365112,
@@ -67,9 +67,9 @@ void basicPanoramaStitching(const string &img1Path, const string &img2Path)
 }
 
 const char* params
-    = "{ help h         |                              | print usage }"
-      "{ image1         | ../data/Blender_Suzanne1.jpg | path to the first Blender image }"
-      "{ image2         | ../data/Blender_Suzanne2.jpg | path to the second Blender image }";
+    = "{ help h   |                      | print usage }"
+      "{ image1   | Blender_Suzanne1.jpg | path to the first Blender image }"
+      "{ image2   | Blender_Suzanne2.jpg | path to the second Blender image }";
 }
 
 int main(int argc, char *argv[])

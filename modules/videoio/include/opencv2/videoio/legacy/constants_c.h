@@ -225,8 +225,8 @@ enum
     CV_CAP_PROP_XI_COOLING                                      = 466, // Start camera cooling.
     CV_CAP_PROP_XI_TARGET_TEMP                                  = 467, // Set sensor target temperature for cooling.
     CV_CAP_PROP_XI_CHIP_TEMP                                    = 468, // Camera sensor temperature
-    CV_CAP_PROP_XI_HOUS_TEMP                                    = 469, // Camera housing tepmerature
-    CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP                          = 590, // Camera housing back side tepmerature
+    CV_CAP_PROP_XI_HOUS_TEMP                                    = 469, // Camera housing temperature
+    CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP                          = 590, // Camera housing back side temperature
     CV_CAP_PROP_XI_SENSOR_BOARD_TEMP                            = 596, // Camera sensor board temperature
     CV_CAP_PROP_XI_CMS                                          = 470, // Mode of color management system.
     CV_CAP_PROP_XI_APPLY_CMS                                    = 471, // Enable applying of CMS profiles to xiGetImage (see XI_PRM_INPUT_CMS_PROFILE, XI_PRM_OUTPUT_CMS_PROFILE).
@@ -419,7 +419,7 @@ Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
 
 List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
 FFMPEG backend with MP4 container natively uses other values as fourcc code:
-see [ObjectType](http://www.mp4ra.org/codecs.html).
+see [ObjectType](http://mp4ra.org/#/codecs).
 */
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {

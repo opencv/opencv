@@ -8,11 +8,11 @@
 using namespace std;
 using namespace cv;
 
-static void help()
+static void help(char* argv[])
 {
     cout << "\n This program demonstrates how to detect compute and match ORB BRISK and AKAZE descriptors \n"
-        "Usage: \n"
-        "  ./matchmethod_orb_akaze_brisk --image1=<image1(basketball1.png as default)> --image2=<image2(basketball2.png as default)>\n"
+            "Usage: \n  "
+         << argv[0] << " --image1=<image1(basketball1.png as default)> --image2=<image2(basketball2.png as default)>\n"
         "Press a key when image window is active to change algorithm or descriptor";
 }
 
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         "{help h ||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     fileName.push_back(samples::findFile(parser.get<string>(0)));

@@ -39,9 +39,14 @@
 //
 //M*/
 
+#ifdef HALF_SUPPORT
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16:enable
+#endif
+#endif
+
 #define CONCAT(A,B) A##_##B
 #define TEMPLATE(name,type) CONCAT(name,type)
-#define Dtype float
 
 __kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
     (__global Dtype* weightIn,
@@ -57,8 +62,8 @@ __kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
   //Original location
 
   //Output location
-  int outputSublayer = channels / swizzleFactor;
-  int outputSublayerIndex = channels % swizzleFactor;
+  //int outputSublayer = channels / swizzleFactor;
+  //int outputSublayerIndex = channels % swizzleFactor;
 
   int filter = sX / (kernel_w*kernel_h*channels);
   int kernel_X = sX % kernel_w;
@@ -68,6 +73,10 @@ __kernel void TEMPLATE(copyWeightsSwizzled, Dtype)
   int FP = filter / swizzleFactor;
   int F1 = filter % swizzleFactor;
 
-  weightOut[FP*(kernel_w*kernel_h*channels*swizzleFactor) + kernel_C*(kernel_w*kernel_h*swizzleFactor) + kernel_Y*(kernel_w*swizzleFactor) + kernel_X*swizzleFactor + F1]
-  = weightIn[filter*(kernel_w*kernel_h*channels) + kernel_C*(kernel_w*kernel_h) + kernel_Y*kernel_w + kernel_X];
+  int idxOut = FP*(kernel_w*kernel_h*channels*swizzleFactor) + kernel_C*(kernel_w*kernel_h*swizzleFactor) + kernel_Y*(kernel_w*swizzleFactor) + kernel_X*swizzleFactor + F1;
+  int idxIn = filter*(kernel_w*kernel_h*channels) + kernel_C*(kernel_w*kernel_h) + kernel_Y*kernel_w + kernel_X;
+
+  // idxIn is not valid if (filter >= outputs) - no data for these elements. Output alignment gaps are filled by zeros
+  Dtype v = (filter < outputs) ? weightIn[idxIn] : (Dtype)0;
+  weightOut[idxOut] = v;
 }

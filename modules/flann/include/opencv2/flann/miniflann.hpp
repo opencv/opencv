@@ -43,6 +43,8 @@
 #ifndef OPENCV_MINIFLANN_HPP
 #define OPENCV_MINIFLANN_HPP
 
+//! @cond IGNORED
+
 #include "opencv2/core.hpp"
 #include "opencv2/flann/defines.h"
 
@@ -141,6 +143,7 @@ struct CV_EXPORTS SavedIndexParams : public IndexParams
 
 struct CV_EXPORTS SearchParams : public IndexParams
 {
+    SearchParams( int checks, float eps, bool sorted, bool explore_all_trees );
     SearchParams( int checks = 32, float eps = 0, bool sorted = true );
 };
 
@@ -166,12 +169,17 @@ public:
     CV_WRAP cvflann::flann_algorithm_t getAlgorithm() const;
 
 protected:
+    bool load_(const String& filename);
+
     cvflann::flann_distance_t distType;
     cvflann::flann_algorithm_t algo;
     int featureType;
     void* index;
+    Mat features_clone;  // index may store features pointer internally for searching, so avoid dangling pointers: https://github.com/opencv/opencv/issues/17553
 };
 
 } } // namespace cv::flann
+
+//! @endcond
 
 #endif

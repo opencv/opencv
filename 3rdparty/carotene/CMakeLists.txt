@@ -20,11 +20,14 @@ if(CMAKE_COMPILER_IS_GNUCC)
     # - matchTemplate about 5-10%
     # - goodFeaturesToTrack 10-20%
     # - cornerHarris 30% for some cases
-
-    set_source_files_properties(${carotene_sources} COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0.0")
+        set_source_files_properties(${carotene_sources} COMPILE_FLAGS "--param ipcp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    else()
+        set_source_files_properties(${carotene_sources} COMPILE_FLAGS "--param ipa-cp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
+    endif()
 endif()
 
-add_library(carotene_objs OBJECT
+add_library(carotene_objs OBJECT EXCLUDE_FROM_ALL
   ${carotene_headers}
   ${carotene_sources}
 )
@@ -37,4 +40,5 @@ if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
 endif()
 
-add_library(carotene STATIC EXCLUDE_FROM_ALL "$<TARGET_OBJECTS:carotene_objs>")
+# we add dummy file to fix XCode build
+add_library(carotene STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} "$<TARGET_OBJECTS:carotene_objs>" "${CAROTENE_SOURCE_DIR}/dummy.cpp")

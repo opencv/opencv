@@ -50,7 +50,7 @@ def main():
         print("Can't stitch images, error code = %d" % status)
         sys.exit(-1)
 
-    cv.imwrite(args.output, pano);
+    cv.imwrite(args.output, pano)
     print("stitching completed successfully. %s saved!" % args.output)
 
     print('Done')

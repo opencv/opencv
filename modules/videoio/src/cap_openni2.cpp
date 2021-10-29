@@ -103,7 +103,7 @@ private:
 class CvCapture_OpenNI2 : public CvCapture
 {
 public:
-    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MAX=1 };
+    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_ORBBEC_ASTRA=2, DEVICE_MAX=2 };
 
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
@@ -120,6 +120,7 @@ public:
     virtual bool setProperty(int probIdx, double propVal) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
     virtual IplImage* retrieveFrame(int outputType) CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_OPENNI2; }
 
     bool isOpened() const;
 
@@ -261,7 +262,8 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
             index %= 10;
         }
         // Asus XTION and Occipital Structure Sensor do not have an image generator
-        needColor = (deviceType != DEVICE_ASUS_XTION);
+        // Orbbec Astra cameras don't provide OpenNI interface for color stream reading
+        needColor = (deviceType != DEVICE_ASUS_XTION) && (deviceType != DEVICE_ORBBEC_ASTRA);
 
         // find appropriate device URI
         openni::Array<openni::DeviceInfo> ldevs;
@@ -300,6 +302,11 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
     setProperty(CV_CAP_PROP_OPENNI2_MIRROR, 0.0);
 
     isContextOpened = true;
+
+    CV_LOG_INFO(NULL, cv::format("Opened OpenNI camera: %s %s (%04x:%04x)",
+                      device.getDeviceInfo().getVendor(), device.getDeviceInfo().getName(),
+                      device.getDeviceInfo().getUsbVendorId(), device.getDeviceInfo().getUsbProductId())
+    );
 }
 
 CvCapture_OpenNI2::~CvCapture_OpenNI2()

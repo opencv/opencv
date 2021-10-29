@@ -77,6 +77,8 @@ Useful links:
 http://www.inf.ufrgs.br/~eslgastal/DomainTransform
 
 https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
+
+    @defgroup photo_c C API
 @}
   */
 

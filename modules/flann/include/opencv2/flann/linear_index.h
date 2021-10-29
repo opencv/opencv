@@ -31,7 +31,8 @@
 #ifndef OPENCV_FLANN_LINEAR_INDEX_H_
 #define OPENCV_FLANN_LINEAR_INDEX_H_
 
-#include "general.h"
+//! @cond IGNORED
+
 #include "nn_index.h"
 
 namespace cvflann
@@ -128,5 +129,7 @@ private:
 };
 
 }
+
+//! @endcond
 
 #endif // OPENCV_FLANN_LINEAR_INDEX_H_

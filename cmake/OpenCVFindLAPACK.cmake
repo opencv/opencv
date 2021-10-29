@@ -58,16 +58,52 @@ macro(ocv_lapack_check)
     string(REPLACE ";" "\n" _lapack_content "${_lapack_content}")
     ocv_update_file("${CBLAS_H_PROXY_PATH}" "${_lapack_content}")
 
+    if(CMAKE_GENERATOR MATCHES "Visual Studio"  # MSBuild
+        AND LAPACK_IMPL STREQUAL "MKL"
+        AND ";${LAPACK_LIBRARIES};" MATCHES ";tbb;" AND TARGET tbb
+        AND DEFINED TBB_INTERFACE_VERSION AND NOT (TBB_INTERFACE_VERSION LESS 12000)  # oneTBB/oneAPI workaround
+    )
+      # workaround DEFAULTLIB:tbb12.lib issue
+      get_target_property(_tbb_lib tbb IMPORTED_LOCATION)
+      if(NOT _tbb_lib)
+        get_target_property(_tbb_lib tbb IMPORTED_LOCATION_RELEASE)
+      endif()
+      if(_tbb_lib AND NOT OPENCV_SKIP_WORKAROUND_MKL_LINK_DIRECTORIES_TBB)
+        # MSBuild drops content of 'LIB' environment variable,
+        # so pass TBB library directory through `link_directories()`
+        get_filename_component(_tbb_lib_dir "${_tbb_lib}" DIRECTORY)
+        message(STATUS "MKL: adding '${_tbb_lib_dir}' to link directories (workaround DEFAULTLIB issue)")
+        link_directories("${_tbb_lib_dir}")
+      elseif(NOT OPENCV_SKIP_WORKAROUND_MKL_DEFAULTLIB)
+        # We may have tbb.lib for 'tbb' target, but not 'tbb12.lib'
+        ocv_update(OPENCV_MKL_IGNORE_DEFAULTLIB_TBB "tbb12.lib")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:${OPENCV_MKL_IGNORE_DEFAULTLIB_TBB}")
+      endif()
+    endif()
+
+    # TODO add cache for try_compile() inputs/results
+
+    get_property(__link_directories DIRECTORY PROPERTY LINK_DIRECTORIES)
+    if(LAPACK_LINK_LIBRARIES)
+      list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
+    endif()
+
     try_compile(__VALID_LAPACK
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
         CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
-                    "-DLINK_DIRECTORIES:STRING=${LAPACK_LINK_LIBRARIES}"
-                    "-DLINK_LIBRARIES:STRING=${LAPACK_LIBRARIES}"
+                    "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+        LINK_LIBRARIES ${LAPACK_LIBRARIES}
         OUTPUT_VARIABLE TRY_OUT
     )
     if(NOT __VALID_LAPACK)
-      #message(FATAL_ERROR "LAPACK: check build log:\n${TRY_OUT}")
+      file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+          "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
+          "    LAPACK_INCLUDE_DIR: '${LAPACK_INCLUDE_DIR}'\n"
+          "    LAPACK_LIBRARIES: '${LAPACK_LIBRARIES}'\n"
+          "    LAPACK_LINK_LIBRARIES: '${__link_directories}'\n"
+          "    Output:\n${TRY_OUT}\n\n")
       message(STATUS "LAPACK(${LAPACK_IMPL}): Can't build LAPACK check code. This LAPACK version is not supported.")
       unset(LAPACK_LIBRARIES)
     else()

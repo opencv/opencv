@@ -131,12 +131,17 @@ static void
 HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
                 std::vector<KeyPoint>& pts, int blockSize, float harris_k)
 {
-    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+    CV_CheckTypeEQ(img.type(), CV_8UC1, "");
+    CV_CheckGT(blockSize, 0, "");
+    CV_CheckLE(blockSize*blockSize, 2048, "");
 
     size_t ptidx, ptsize = pts.size();
 
     const uchar* ptr00 = img.ptr<uchar>();
-    int step = (int)(img.step/img.elemSize1());
+    size_t size_t_step = img.step;
+    CV_CheckLE(size_t_step * blockSize + blockSize + 1, (size_t)INT_MAX, "");  // ofs computation, step+1
+    int step = static_cast<int>(size_t_step);
+
     int r = blockSize/2;
 
     float scale = 1.f/((1 << 2) * blockSize * 255.f);
@@ -154,7 +159,7 @@ HarrisResponses(const Mat& img, const std::vector<Rect>& layerinfo,
         int y0 = cvRound(pts[ptidx].pt.y);
         int z = pts[ptidx].octave;
 
-        const uchar* ptr0 = ptr00 + (y0 - r + layerinfo[z].y)*step + x0 - r + layerinfo[z].x;
+        const uchar* ptr0 = ptr00 + (y0 - r + layerinfo[z].y)*size_t_step + (x0 - r + layerinfo[z].x);
         int a = 0, b = 0, c = 0;
 
         for( int k = 0; k < blockSize*blockSize; k++ )
@@ -983,7 +988,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     int descPatchSize = cvCeil(halfPatchSize*sqrt(2.0));
     int border = std::max(edgeThreshold, std::max(descPatchSize, HARRIS_BLOCK_SIZE/2))+1;
 
+#ifdef HAVE_OPENCL
     bool useOCL = ocl::isOpenCLActivated() && OCL_FORCE_CHECK(_image.isUMat() || _descriptors.isUMat());
+#else
+    bool useOCL = false;
+#endif
 
     Mat image = _image.getMat(), mask = _mask.getMat();
     if( image.type() != CV_8UC1 )
@@ -1021,15 +1030,20 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     Mat imagePyramid, maskPyramid;
     UMat uimagePyramid, ulayerInfo;
 
-    int level_dy = image.rows + border*2;
-    Point level_ofs(0,0);
-    Size bufSize((cvRound(image.cols/getScale(0, firstLevel, scaleFactor)) + border*2 + 15) & -16, 0);
+    float level0_inv_scale = 1.0f / getScale(0, firstLevel, scaleFactor);
+    size_t level0_width = (size_t)cvRound(image.cols * level0_inv_scale);
+    size_t level0_height = (size_t)cvRound(image.rows * level0_inv_scale);
+    Size bufSize((int)alignSize(level0_width + border*2, 16), 0);  // TODO change alignment to 64
+
+    int level_dy = (int)level0_height + border*2;
+    Point level_ofs(0, 0);
 
     for( level = 0; level < nLevels; level++ )
     {
         float scale = getScale(level, firstLevel, scaleFactor);
         layerScale[level] = scale;
-        Size sz(cvRound(image.cols/scale), cvRound(image.rows/scale));
+        float inv_scale = 1.0f / scale;
+        Size sz(cvRound(image.cols * inv_scale), cvRound(image.rows * inv_scale));
         Size wholeSize(sz.width + border*2, sz.height + border*2);
         if( level_ofs.x + wholeSize.width > bufSize.width )
         {

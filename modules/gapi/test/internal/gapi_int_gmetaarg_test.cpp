@@ -141,7 +141,7 @@ TEST(GMetaArg, Can_Describe_RunArg)
     constexpr int w = 3, h = 3, c = 3;
     uchar data[w*h*c];
     cv::gapi::own::Mat om(h, w, CV_8UC3, data);
-    cv::gapi::own::Scalar os;
+    cv::Scalar os;
     std::vector<int> v;
 
     GMetaArgs metas = {GMetaArg(descr_of(m)),
@@ -181,7 +181,7 @@ TEST(GMetaArg, Can_Describe_RunArgP)
     constexpr int w = 3, h = 3, c = 3;
     uchar data[w*h*c];
     cv::gapi::own::Mat om(h, w, CV_8UC3, data);
-    cv::gapi::own::Scalar os;
+    cv::Scalar os;
     std::vector<int> v;
 
     GMetaArgs metas = {GMetaArg(descr_of(m)),

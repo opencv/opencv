@@ -16,7 +16,7 @@ int main(int argc, char **argv)
         "  https://www.bogotobogo.com/python/OpenCV_Python/images/mean_shift_tracking/slow_traffic_small.mp4";
     const string keys =
         "{ h help |      | print this help message }"
-        "{ @image |<none>| path to image file }";
+        "{ @image | vtest.avi | path to image file }";
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
     if (parser.has("help"))
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
         parser.printMessage();
         return 0;
     }
-    string filename = parser.get<string>("@image");
+    string filename = samples::findFile(parser.get<string>("@image"));
     if (!parser.check())
     {
         parser.printErrors();

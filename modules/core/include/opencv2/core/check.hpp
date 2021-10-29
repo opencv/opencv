@@ -63,7 +63,7 @@ struct CheckContext {
 #define CV__CHECK_LOCATION_VARNAME(id) CVAUX_CONCAT(CVAUX_CONCAT(__cv_check_, id), __LINE__)
 #define CV__DEFINE_CHECK_CONTEXT(id, message, testOp, p1_str, p2_str) \
     static const cv::detail::CheckContext CV__CHECK_LOCATION_VARNAME(id) = \
-            { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, message, p1_str, p2_str }
+            { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, "" message, "" p1_str, "" p2_str }
 
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
@@ -79,6 +79,7 @@ CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const std::string& v1, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckContext& ctx);

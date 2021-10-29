@@ -1,6 +1,8 @@
 Contours : Getting Started {#tutorial_js_contours_begin}
 ==========================
 
+@next_tutorial{tutorial_js_contour_features}
+
 Goal
 ----
 

@@ -81,7 +81,7 @@ protected:
     void  UpSample( uchar *data, int xstep, int ystep, int xsample, int ysample );
     void  UpSampleX( float *data, int xstep, int xsample );
     void  UpSampleY( uchar *data, int xstep, int ystep, int ysample );
-    void  ChromaToBGR( float *data, int numlines, int step );
+    void  ChromaToBGR( float *data, int numlines, int xstep, int ystep );
     void  RGBToGray( float *in, float *out );
 
     InputFile      *m_file;
@@ -91,11 +91,13 @@ protected:
     const Channel  *m_red;
     const Channel  *m_green;
     const Channel  *m_blue;
+    const Channel  *m_alpha;
     Chromaticities  m_chroma;
     int             m_bit_depth;
     bool            m_native_depth;
     bool            m_iscolor;
     bool            m_isfloat;
+    bool            m_hasalpha;
 
 private:
     ExrDecoder(const ExrDecoder &); // copy disabled

@@ -11,6 +11,43 @@
 using namespace std;
 using namespace cv;
 
+static float estimateBitrate(int codecId, size_t pixelNum, float fps)
+{
+    float bitrate = 0.f;
+    const float mp = pixelNum / 1000000.f;
+    if (codecId == MFX_CODEC_MPEG2)
+    {
+        bitrate = (mp * 43) * fps + 360;
+    }
+    else if (codecId == MFX_CODEC_AVC)
+    {
+        bitrate = (mp * 140 + 19) * pow(fps, 0.60f);
+    }
+    else if (codecId == MFX_CODEC_HEVC)
+    {
+        bitrate = (mp * 63 + 45) * pow(fps, 0.60f);
+    }
+    else
+    {
+        MSG(cerr << "MFX encoder Bitrate estimation FAILED" << endl);
+    }
+    DBG(cout << "MFX encoder Bitrate estimation (" << mp << " MP x " << fps << " fps): " << bitrate << endl);
+    return bitrate;
+
+}
+
+static size_t getBitrateDivisor()
+{
+    static const size_t res = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_MFX_BITRATE_DIVISOR", 300);
+    return res;
+}
+
+static mfxU32 getWriterTimeoutMS()
+{
+    static const size_t res = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_MFX_WRITER_TIMEOUT", 1);
+    return saturate_cast<mfxU32>(res * 1000); // convert from seconds
+}
+
 inline mfxU32 codecIdByFourCC(int fourcc)
 {
     const int CC_MPG2 = FourCC('M', 'P', 'G', '2').vali32;
@@ -49,7 +86,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
 
     // Init device and session
     deviceHandler = createDeviceHandler();
-    session = new MFXVideoSession();
+    session = new MFXVideoSession_WRAP();
     if (!deviceHandler->init(*session))
     {
         MSG(cerr << "MFX: Can't initialize session" << endl);
@@ -78,7 +115,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = (mfxU16)cvRound(frameSize.area() * fps / 500); // TODO: set in options
+    params.mfx.TargetKbps = saturate_cast<mfxU16>(estimateBitrate(codecId, frameSize.area(), (float)fps) * 300 / getBitrateDivisor()); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;
@@ -110,7 +147,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
 
     // Init encoder
     res = encoder->Init(&params);
-    DBG(cout << "MFX Init: " << res << endl << params.mfx.FrameInfo);
+    DBG(cout << "MFX encoder Init: " << res << endl << params.mfx.FrameInfo);
     if (res < MFX_ERR_NONE)
     {
         MSG(cerr << "MFX: Failed to init encoder: " << res << endl);
@@ -211,7 +248,7 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
         res = encoder->EncodeFrameAsync(NULL, workSurface, &bs->stream, &sync);
         if (res == MFX_ERR_NONE)
         {
-            res = session->SyncOperation(sync, 1000); // 1 sec, TODO: provide interface to modify timeout
+            res = session->SyncOperation(sync, getWriterTimeoutMS()); // TODO: provide interface to modify timeout
             if (res == MFX_ERR_NONE)
             {
                 // ready to write
@@ -240,7 +277,7 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
         else if (res == MFX_WRN_DEVICE_BUSY)
         {
             DBG(cout << "Waiting for device" << endl);
-            sleep(1);
+            sleep_ms(1000);
             continue;
         }
         else
@@ -251,10 +288,12 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
     }
 }
 
-Ptr<IVideoWriter> cv::create_MFX_writer(const std::string &filename, int _fourcc, double fps, const Size &frameSize, bool isColor)
+Ptr<IVideoWriter> cv::create_MFX_writer(const std::string& filename, int _fourcc, double fps,
+                                        const Size& frameSize, const VideoWriterParameters& params)
 {
     if (codecIdByFourCC(_fourcc) > 0)
     {
+        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
         Ptr<VideoWriter_IntelMFX> a = makePtr<VideoWriter_IntelMFX>(filename, _fourcc, fps, frameSize, isColor);
         if (a->isOpened())
             return a;

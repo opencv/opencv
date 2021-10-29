@@ -1,7 +1,13 @@
 How to use the OpenCV parallel_for_ to parallelize your code {#tutorial_how_to_use_OpenCV_parallel_for_}
 ==================================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_file_input_output_with_xml_yml}
+
+|    |    |
+| -: | :- |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -32,7 +38,7 @@ automatically available with the platform (e.g. APPLE GCD) but chances are that 
 have access to a parallel framework either directly or by enabling the option in CMake and rebuild the library.
 
 The second (weak) precondition is more related to the task you want to achieve as not all computations
-are suitable / can be adatapted to be run in a parallel way. To remain simple, tasks that can be split
+are suitable / can be adapted to be run in a parallel way. To remain simple, tasks that can be split
 into multiple elementary operations with no memory dependency (no possible race condition) are easily
 parallelizable. Computer vision processing are often easily parallelizable as most of the time the processing of
 one pixel does not depend to the state of other pixels.

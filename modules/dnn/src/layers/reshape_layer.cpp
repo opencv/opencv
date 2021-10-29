@@ -42,8 +42,16 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reshape.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -58,14 +66,7 @@ static void computeShapeByReshapeMask(const MatShape &srcShape,
     int srcShapeSize = (int)srcShape.size();
     int maskShapeSize = (int)maskShape.size();
 
-    if (srcRange == Range::all())
-        srcRange = Range(0, srcShapeSize);
-    else
-    {
-        int sz = srcRange.size();
-        srcRange.start = clamp(srcRange.start, srcShapeSize);
-        srcRange.end = srcRange.end == INT_MAX ? srcShapeSize : srcRange.start + sz;
-    }
+    srcRange = normalize_axis_range(srcRange, srcShapeSize);
 
     bool explicitMask = !maskShape.empty();  // All mask values are positive.
     for (int i = 0, n = maskShape.size(); i < n && explicitMask; ++i)
@@ -162,6 +163,9 @@ public:
         setParamsFrom(params);
         int axis = params.get<int>("axis", 0);
         int numAxes = params.get<int>("num_axes", -1);
+        hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
+        shapesInitialized = !hasDynamicShapes;
+
         CV_Assert(numAxes >= -1);
         newShapeRange = (numAxes == -1) ? Range(axis, INT_MAX) : Range(axis, axis + numAxes);
 
@@ -174,12 +178,32 @@ public:
             for (i = 0; i < dims; i++)
                 newShapeDesc[i] = paramShape.get<int>(i);
         }
+        if (hasDynamicShapes)
+        {
+            dynamicShapes.clear();
+            inputIndices.clear();
+            if (params.has("dynamic_axes")) {
+                CV_Assert(params.has("input_indices"));
+                const DictValue &dynamicAxes = params.get("dynamic_axes");
+                const DictValue &dynamicInputShapes = params.get("input_indices");
+                int i, dims = dynamicAxes.size();
+                CV_Assert(dims == dynamicInputShapes.size());
+                CV_Assert(dims > 0);
+                dynamicShapes.resize(dims);
+                inputIndices.resize(dims);
+                for (i = 0; i < dims; i++) {
+                    dynamicShapes[i] = dynamicAxes.get<int>(i);
+                    inputIndices[i] = dynamicInputShapes.get<int>(i);
+                }
+            }
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               backendId == DNN_BACKEND_CUDA ||
+               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine());
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -187,13 +211,21 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+
         if (inputs.size() == 1 || inputs.size() == requiredOutputs)
         {
             outputs.clear();
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                outputs.push_back(MatShape());
-                computeShapeByReshapeMask(inputs[i], newShapeDesc, newShapeRange, outputs.back());
+                if (hasDynamicShapes && !shapesInitialized)
+                {
+                    outputs.push_back(newShapeDesc);
+                }
+                else
+                {
+                    outputs.push_back(MatShape());
+                    computeShapeByReshapeMask(inputs[i], newShapeDesc, newShapeRange, outputs.back());
+                }
             }
         }
         else
@@ -201,6 +233,19 @@ public:
             CV_Assert_N(inputs.size() == 2, total(inputs[0]) == total(inputs[1]));
             outputs.assign(1, inputs[1]);
         }
+        return true;
+    }
+
+    bool updateMemoryShapes(const std::vector<MatShape> &inputs) CV_OVERRIDE
+    {
+        if (hasDynamicShapes)
+        {
+            for (int i = 0; i < dynamicShapes.size(); ++i)
+            {
+                newShapeDesc[dynamicShapes[i]] = inputs[0][inputIndices[i]];
+            }
+        }
+        shapesInitialized = true;
         return true;
     }
 
@@ -258,7 +303,8 @@ public:
         }
     }
 
-#ifdef HAVE_INF_ENGINE
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
     virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
     {
         InferenceEngine::Builder::ReshapeLayer ieLayer(name);
@@ -266,10 +312,49 @@ public:
         ieLayer.setDims(outShapes[0]);
         return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
     }
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_DNN_IE_NN_BUILDER_2019
+
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(outShapes.size() == 1);
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        std::vector<int64_t> out(outShapes[0].begin(), outShapes[0].end());
+        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                       ngraph::Shape{out.size()}, out.data());
+        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        return true;
+    }
 
 private:
     std::vector<MatShape> outShapes;
+    std::vector<int> dynamicShapes; // Which axes shapes are dynamic and require reinitialization with new input
+    std::vector<int> inputIndices; // Which axes from input are needed to compute correct output shape
+    bool hasDynamicShapes;
+    bool shapesInitialized;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

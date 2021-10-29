@@ -71,13 +71,16 @@ TEST_P(Imgcodecs_FileMode, regression)
 
 const string all_images[] =
 {
-#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
+#if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
+    || defined(HAVE_OPENJPEG)
     "readwrite/Rome.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Grey.jp2",
     "readwrite/Grey.jp2",
+    "readwrite/balloon.j2c",
 #endif
+
 #ifdef HAVE_GDCM
     "readwrite/int16-mono1.dcm",
     "readwrite/uint8-mono2.dcm",
@@ -108,11 +111,11 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_FileMode,
                             testing::ValuesIn(all_images),
                             testing::ValuesIn(basic_modes)));
 
-// GDAL does not support "hdr", "dcm" and have problems with "jp2"
+// GDAL does not support "hdr", "dcm" and has problems with JPEG2000 files (jp2, j2c)
 struct notForGDAL {
     bool operator()(const string &name) const {
         const string &ext = name.substr(name.size() - 3, 3);
-        return ext == "hdr" || ext == "dcm" || ext == "jp2" ||
+        return ext == "hdr" || ext == "dcm" || ext == "jp2" || ext == "j2c" ||
                 name.find("rle8.bmp") != std::string::npos;
     }
 };
@@ -291,6 +294,43 @@ TEST(Imgcodecs_Bmp, read_rle8)
     EXPECT_LE(cvtest::norm(rle, ord, NORM_L2), 1.e-10);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), rle, ord);
 }
+
+TEST(Imgcodecs_Bmp, read_32bit_rgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_rgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
+TEST(Imgcodecs_Bmp, rgba_bit_mask)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_mask.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
+TEST(Imgcodecs_Bmp, read_32bit_xrgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_xrgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
 
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)

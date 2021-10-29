@@ -7,12 +7,12 @@
 
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
 
 printf("\nShow off image morphology: erosion, dialation, open and close\n"
-    "Call:\n   morphology2 [image]\n"
-    "This program also shows use of rect, ellipse and cross kernels\n\n");
+    "Call:\n   %s [image]\n"
+    "This program also shows use of rect, ellipse and cross kernels\n\n", argv[0]);
 printf( "Hot keys: \n"
     "\tESC - quit the program\n"
     "\tr - use rectangle structuring element\n"
@@ -62,13 +62,13 @@ int main( int argc, char** argv )
     cv::CommandLineParser parser(argc, argv, "{help h||}{ @image | baboon.jpg | }");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     std::string filename = samples::findFile(parser.get<std::string>("@image"));
     if( (src = imread(filename,IMREAD_COLOR)).empty() )
     {
-        help();
+        help(argv);
         return -1;
     }
 

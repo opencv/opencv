@@ -276,4 +276,23 @@ INSTANTIATE_TEST_CASE_P(Core, CountNonZeroND,
     )
 );
 
+
+typedef testing::TestWithParam<tuple<int, cv::Size> > CountNonZeroBig;
+
+TEST_P(CountNonZeroBig, /**/)
+{
+    const int type = get<0>(GetParam());
+    const Size sz = get<1>(GetParam());
+
+    EXPECT_EQ(0, cv::countNonZero(cv::Mat::zeros(sz, type)));
+    EXPECT_EQ(sz.area(), cv::countNonZero(cv::Mat::ones(sz, type)));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, CountNonZeroBig,
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_32FC1),
+        testing::Values(Size(1, 524190), Size(524190, 1), Size(3840, 2160))
+    )
+);
+
 }} // namespace

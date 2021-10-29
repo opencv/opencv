@@ -219,6 +219,16 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+TEST(Imgcodecs_Tiff, read_palette_color_image)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+}
+
 
 //==================================================================================================
 
@@ -308,7 +318,7 @@ TEST(Imgcodecs_Tiff, imdecode_no_exception_temporary_file_removed)
 }
 
 
-TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989)
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_grayscale)
 {
     const string filename = cvtest::findDataFile("readwrite/bitsperpixel1.tiff");
     cv::Mat img;
@@ -332,6 +342,119 @@ TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr12989_default)
     EXPECT_EQ(64, img.rows);
     EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
 }
+
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr17275_grayscale)
+{
+    const string filename = cvtest::findDataFile("readwrite/bitsperpixel1_min.tiff");
+    cv::Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filename, IMREAD_GRAYSCALE));
+    ASSERT_FALSE(img.empty());
+    EXPECT_EQ(64, img.cols);
+    EXPECT_EQ(64, img.rows);
+    EXPECT_EQ(CV_8UC1, img.type()) << cv::typeToString(img.type());
+    // Check for 0/255 values only: 267 + 3829 = 64*64
+    EXPECT_EQ(267, countNonZero(img == 0));
+    EXPECT_EQ(3829, countNonZero(img == 255));
+}
+
+TEST(Imgcodecs_Tiff, decode_black_and_write_image_pr17275_default)
+{
+    const string filename = cvtest::findDataFile("readwrite/bitsperpixel1_min.tiff");
+    cv::Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filename));  // by default image type is CV_8UC3
+    ASSERT_FALSE(img.empty());
+    EXPECT_EQ(64, img.cols);
+    EXPECT_EQ(64, img.rows);
+    EXPECT_EQ(CV_8UC3, img.type()) << cv::typeToString(img.type());
+}
+
+TEST(Imgcodecs_Tiff, count_multipage)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    {
+        const string filename = root + "readwrite/multipage.tif";
+        ASSERT_EQ((size_t)6, imcount(filename));
+    }
+    {
+        const string filename = root + "readwrite/test32FC3_raw.tiff";
+        ASSERT_EQ((size_t)1, imcount(filename));
+    }
+}
+
+TEST(Imgcodecs_Tiff, read_multipage_indexed)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const int page_count = sizeof(page_files) / sizeof(page_files[0]);
+    vector<Mat> single_pages;
+    for (int i = 0; i < page_count; i++)
+    {
+        // imread and imreadmulti have different default values for the flag
+        const Mat page = imread(root + page_files[i], IMREAD_ANYCOLOR);
+        single_pages.push_back(page);
+    }
+    ASSERT_EQ((size_t)page_count, single_pages.size());
+
+    {
+        SCOPED_TRACE("Edge Cases");
+        vector<Mat> multi_pages;
+        bool res = imreadmulti(filename, multi_pages, 0, 0);
+        // If we asked for 0 images and we successfully read 0 images should this be false ?
+        ASSERT_TRUE(res == false);
+        ASSERT_EQ((size_t)0, multi_pages.size());
+        res = imreadmulti(filename, multi_pages, 0, 123123);
+        ASSERT_TRUE(res == true);
+        ASSERT_EQ((size_t)6, multi_pages.size());
+    }
+
+    {
+        SCOPED_TRACE("Read all with indices");
+        vector<Mat> multi_pages;
+        bool res = imreadmulti(filename, multi_pages, 0, 6);
+        ASSERT_TRUE(res == true);
+        ASSERT_EQ((size_t)page_count, multi_pages.size());
+        for (int i = 0; i < page_count; i++)
+        {
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[i], single_pages[i]);
+        }
+    }
+
+    {
+        SCOPED_TRACE("Read one by one");
+        vector<Mat> multi_pages;
+        for (int i = 0; i < page_count; i++)
+        {
+            bool res = imreadmulti(filename, multi_pages, i, 1);
+            ASSERT_TRUE(res == true);
+            ASSERT_EQ((size_t)1, multi_pages.size());
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i]);
+            multi_pages.clear();
+        }
+    }
+
+    {
+        SCOPED_TRACE("Read multiple at a time");
+        vector<Mat> multi_pages;
+        for (int i = 0; i < page_count/2; i++)
+        {
+            bool res = imreadmulti(filename, multi_pages, i*2, 2);
+            ASSERT_TRUE(res == true);
+            ASSERT_EQ((size_t)2, multi_pages.size());
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[0], single_pages[i * 2]) << i;
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), multi_pages[1], single_pages[i * 2 + 1]);
+            multi_pages.clear();
+        }
+    }
+}
+
 
 #endif
 

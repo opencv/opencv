@@ -26,7 +26,6 @@ import cv2 as cv
 
 import video
 from common import anorm2, draw_str
-from time import clock
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
@@ -66,7 +65,7 @@ class App:
                     if len(tr) > self.track_len:
                         del tr[0]
                     new_tracks.append(tr)
-                    cv.circle(vis, (x, y), 2, (0, 255, 0), -1)
+                    cv.circle(vis, (int(x), int(y)), 2, (0, 255, 0), -1)
                 self.tracks = new_tracks
                 cv.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
                 draw_str(vis, (20, 20), 'track count: %d' % len(self.tracks))

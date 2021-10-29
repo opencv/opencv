@@ -82,7 +82,7 @@ TEST(CUDA_BruteForceNonLocalMeans, Regression)
     cv::resize(gray_gold, gray_gold, cv::Size(256, 256));
 
     EXPECT_MAT_NEAR(bgr_gold, dbgr, 1);
-    EXPECT_MAT_NEAR(gray_gold, dgray, 1e-4);
+    EXPECT_MAT_NEAR(gray_gold, dgray, 1);
 }
 
 ////////////////////////////////////////////////////////

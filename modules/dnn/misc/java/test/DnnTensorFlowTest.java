@@ -141,4 +141,9 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         net = Dnn.readNetFromTensorflow(new MatOfByte(modelBuffer));
         checkInceptionNet(net);
     }
+
+    public void testGetAvailableTargets() {
+        List<Integer> targets = Dnn.getAvailableTargets(Dnn.DNN_BACKEND_OPENCV);
+        assertTrue(targets.contains(Dnn.DNN_TARGET_CPU));
+    }
 }

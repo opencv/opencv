@@ -31,10 +31,11 @@
 #ifndef OPENCV_FLANN_NNINDEX_H
 #define OPENCV_FLANN_NNINDEX_H
 
-#include "general.h"
 #include "matrix.h"
 #include "result_set.h"
 #include "params.h"
+
+//! @cond IGNORED
 
 namespace cvflann
 {
@@ -67,11 +68,11 @@ public:
      */
     virtual void knnSearch(const Matrix<ElementType>& queries, Matrix<int>& indices, Matrix<DistanceType>& dists, int knn, const SearchParams& params)
     {
-        assert(queries.cols == veclen());
-        assert(indices.rows >= queries.rows);
-        assert(dists.rows >= queries.rows);
-        assert(int(indices.cols) >= knn);
-        assert(int(dists.cols) >= knn);
+        CV_Assert(queries.cols == veclen());
+        CV_Assert(indices.rows >= queries.rows);
+        CV_Assert(dists.rows >= queries.rows);
+        CV_Assert(int(indices.cols) >= knn);
+        CV_Assert(int(dists.cols) >= knn);
 
 #if 0
         KNNResultSet<DistanceType> resultSet(knn);
@@ -173,5 +174,7 @@ public:
 };
 
 }
+
+//! @endcond
 
 #endif //OPENCV_FLANN_NNINDEX_H

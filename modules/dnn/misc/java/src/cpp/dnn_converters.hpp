@@ -28,5 +28,6 @@ jobject vector_Ptr_Layer_to_List(JNIEnv* env, std::vector<cv::Ptr<cv::dnn::Layer
 
 std::vector<cv::Ptr<cv::dnn::Layer> > List_to_vector_Ptr_Layer(JNIEnv* env, jobject list);
 
+jobject vector_Target_to_List(JNIEnv* env, std::vector<cv::dnn::Target>& vs);
 
 #endif	/* DNN_CONVERTERS_HPP */

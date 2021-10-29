@@ -40,15 +40,16 @@ while(1):
     p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, frame_gray, p0, None, **lk_params)
 
     # Select good points
-    good_new = p1[st==1]
-    good_old = p0[st==1]
+    if p1 is not None:
+        good_new = p1[st==1]
+        good_old = p0[st==1]
 
     # draw the tracks
     for i,(new,old) in enumerate(zip(good_new, good_old)):
         a,b = new.ravel()
         c,d = old.ravel()
-        mask = cv.line(mask, (a,b),(c,d), color[i].tolist(), 2)
-        frame = cv.circle(frame,(a,b),5,color[i].tolist(),-1)
+        mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
+        frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
     img = cv.add(frame,mask)
 
     cv.imshow('frame',img)

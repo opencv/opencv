@@ -14,6 +14,11 @@
 #include <windows.h>
 #endif
 
+// defined in core/private.hpp
+namespace cv {
+CV_EXPORTS const char* currentParallelFramework();
+}
+
 static void dumpHWFeatures(bool showAll = false)
 {
     std::cout << "OpenCV's HW features list:" << std::endl;
@@ -34,6 +39,16 @@ static void dumpHWFeatures(bool showAll = false)
     std::cout << "Total available: " << count << std::endl;
 }
 
+static void dumpParallelFramework()
+{
+    const char* parallelFramework = cv::currentParallelFramework();
+    if (parallelFramework)
+    {
+        int threads = cv::getNumThreads();
+        std::cout << "Parallel framework: " << parallelFramework << " (nthreads=" << threads << ")" << std::endl;
+    }
+}
+
 int main(int argc, const char** argv)
 {
     CV_TRACE_FUNCTION();
@@ -47,6 +62,7 @@ int main(int argc, const char** argv)
         "{ verbose v      |      | show build configuration log }"
         "{ opencl         |      | show information about OpenCL (available platforms/devices, default selected device) }"
         "{ hw             |      | show detected HW features (see cv::checkHardwareSupport() function). Use --hw=0 to show available features only }"
+        "{ threads        |      | show configured parallel framework and number of active threads }"
     );
 
     if (parser.has("help"))
@@ -73,10 +89,17 @@ int main(int argc, const char** argv)
     {
         dumpHWFeatures(parser.get<bool>("hw"));
     }
+
+    if (parser.has("threads"))
+    {
+        dumpParallelFramework();
+    }
+
 #else
     std::cout << cv::getBuildInformation().c_str() << std::endl;
     cv::dumpOpenCLInformation();
     dumpHWFeatures();
+    dumpParallelFramework();
     MessageBoxA(NULL, "Check console window output", "OpenCV(" CV_VERSION ")", MB_ICONINFORMATION | MB_OK);
 #endif
 

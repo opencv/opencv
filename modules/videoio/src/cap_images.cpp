@@ -429,7 +429,8 @@ bool CvVideoWriter_Images::setProperty( int id, double value )
     return false; // not supported
 }
 
-Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int, double, const Size &, bool)
+Ptr<IVideoWriter> create_Images_writer(const std::string &filename, int, double, const Size &,
+    const cv::VideoWriterParameters&)
 {
     CvVideoWriter_Images *writer = new CvVideoWriter_Images;
 

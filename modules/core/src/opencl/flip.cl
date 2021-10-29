@@ -42,10 +42,25 @@
 #if kercn != 3
 #define loadpix(addr) *(__global const T *)(addr)
 #define storepix(val, addr)  *(__global T *)(addr) = val
+#define storepix_2(val0, val1, addr0, addr1) \
+    *(__global T *)(addr0) = val0; *(__global T *)(addr1) = val1
 #define TSIZE (int)sizeof(T)
 #else
 #define loadpix(addr) vload3(0, (__global const T1 *)(addr))
 #define storepix(val, addr) vstore3(val, 0, (__global T1 *)(addr))
+#if DEPTH == 2 || DEPTH == 3
+#define storepix_2(val0, val1, addr0, addr1) \
+    ((__global T1 *)(addr0))[0] = val0.x; \
+    ((__global T1 *)(addr1))[0] = val1.x; \
+    ((__global T1 *)(addr0))[1] = val0.y; \
+    ((__global T1 *)(addr1))[1] = val1.y; \
+    ((__global T1 *)(addr0))[2] = val0.z; \
+    ((__global T1 *)(addr1))[2] = val1.z
+#else
+#define storepix_2(val0, val1, addr0, addr1) \
+    storepix(val0, addr0); \
+    storepix(val1, addr1)
+#endif
 #define TSIZE ((int)sizeof(T1)*3)
 #endif
 
@@ -69,8 +84,7 @@ __kernel void arithm_flip_rows(__global const uchar * srcptr, int src_step, int 
             T src0 = loadpix(srcptr + src_index0);
             T src1 = loadpix(srcptr + src_index1);
 
-            storepix(src1, dstptr + dst_index0);
-            storepix(src0, dstptr + dst_index1);
+            storepix_2(src1, src0, dstptr + dst_index0, dstptr + dst_index1);
 
             src_index0 += src_step;
             src_index1 -= src_step;
@@ -115,8 +129,7 @@ __kernel void arithm_flip_rows_cols(__global const uchar * srcptr, int src_step,
 #endif
 #endif
 
-            storepix(src1, dstptr + dst_index0);
-            storepix(src0, dstptr + dst_index1);
+            storepix_2(src1, src0, dstptr + dst_index0, dstptr + dst_index1);
 
             src_index0 += src_step;
             src_index1 -= src_step;
@@ -161,8 +174,7 @@ __kernel void arithm_flip_cols(__global const uchar * srcptr, int src_step, int 
 #endif
 #endif
 
-            storepix(src1, dstptr + dst_index0);
-            storepix(src0, dstptr + dst_index1);
+            storepix_2(src1, src0, dstptr + dst_index0, dstptr + dst_index1);
 
             src_index0 += src_step;
             src_index1 += src_step;

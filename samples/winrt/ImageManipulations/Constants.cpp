@@ -17,6 +17,6 @@ using namespace SDKSample;
 Platform::Array<Scenario>^ MainPage::scenariosInner = ref new Platform::Array<Scenario>
 {
     // The format here is the following:
-    //     { "Description for the sample", "Fully quaified name for the class that implements the scenario" }
+    //     { "Description for the sample", "Fully qualified name for the class that implements the scenario" }
     { "Enumerate cameras and add a video effect", "SDKSample.MediaCapture.AdvancedCapture" },
 };

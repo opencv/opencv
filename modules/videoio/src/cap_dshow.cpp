@@ -109,6 +109,7 @@ Thanks to:
 #include <vector>
 
 //Include Directshow stuff here so we don't worry about needing all the h files.
+#define NO_DSHOW_STRSAFE
 #include "dshow.h"
 #include "strmif.h"
 #include "aviriff.h"
@@ -481,7 +482,7 @@ class videoInput{
         bool setupDeviceFourcc(int deviceID, int w, int h,int fourcc);
 
         //These two are only for capture cards
-        //USB and Firewire cameras souldn't specify connection
+        //USB and Firewire cameras shouldn't specify connection
         bool setupDevice(int deviceID, int connection);
         bool setupDevice(int deviceID, int w, int h, int connection);
 
@@ -2502,7 +2503,10 @@ static void findClosestSizeAndSubtype(videoDevice * VD, int widthIn, int heightI
                    int tempH = 999999;
 
                    //Don't want to get stuck in a loop
-                   if(stepX < 1 || stepY < 1) continue;
+                   if(stepX < 1 || stepY < 1){
+                       MyDeleteMediaType(pmtConfig);
+                       continue;
+                    }
 
                    //DebugPrintOut("min is %i %i max is %i %i - res is %i %i\n", scc.MinOutputSize.cx, scc.MinOutputSize.cy,  scc.MaxOutputSize.cx,  scc.MaxOutputSize.cy, stepX, stepY);
                    //DebugPrintOut("min frame duration is %i  max duration is %i\n", scc.MinFrameInterval, scc.MaxFrameInterval);
@@ -2618,7 +2622,8 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
         return true;
     }else{
         VD->streamConf->SetFormat(tmpType);
-        if( tmpType != NULL )MyDeleteMediaType(tmpType);
+        if( VD->pAmMediaType != NULL)MyDeleteMediaType(VD->pAmMediaType);
+        VD->pAmMediaType = tmpType;
     }
 
     return false;
@@ -2740,6 +2745,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     }
 
     VIDEOINFOHEADER *pVih =  reinterpret_cast<VIDEOINFOHEADER*>(VD->pAmMediaType->pbFormat);
+    CV_Assert(pVih);
     int currentWidth    =  HEADER(pVih)->biWidth;
     int currentHeight    =  HEADER(pVih)->biHeight;
 
@@ -2945,6 +2951,22 @@ int videoInput::start(int deviceID, videoDevice *VD){
 
     DebugPrintOut("SETUP: Device is setup and ready to capture.\n\n");
     VD->readyToCapture = true;
+
+    // check for optional saving the direct show graph to a file
+    const char* graph_filename = getenv("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
+    if (graph_filename) {
+        size_t filename_len = strlen(graph_filename);
+        std::vector<WCHAR> wfilename(filename_len + 1);
+        size_t len = mbstowcs(&wfilename[0], graph_filename, filename_len  + 1);
+        CV_Assert(len == filename_len);
+
+        HRESULT res = SaveGraphFile(VD->pGraph, &wfilename[0]);
+        if (SUCCEEDED(res)) {
+            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename);
+        } else {
+            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename);
+        }
+    }
 
     //Release filters - seen someone else do this
     //looks like it solved the freezes
@@ -3324,6 +3346,7 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_fourcc(-1)
     , m_widthSet(-1)
     , m_heightSet(-1)
+    , m_convertRGBSet(true)
 {
     CoInitialize(0);
     open(index);
@@ -3433,6 +3456,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
             break;
         g_VI.stopDevice(m_index);
         g_VI.setupDevice(m_index,  cvFloor(propVal));
+        g_VI.setConvertRGB(m_index, m_convertRGBSet);
         break;
 
     case CV_CAP_PROP_FPS:
@@ -3446,6 +3470,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.setupDevice(m_index, m_widthSet, m_heightSet);
             else
                 g_VI.setupDevice(m_index);
+            g_VI.setConvertRGB(m_index, m_convertRGBSet);
         }
         return g_VI.isDeviceSetup(m_index);
     }
@@ -3464,7 +3489,11 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
 
     case CV_CAP_PROP_CONVERT_RGB:
     {
-        return g_VI.setConvertRGB(m_index, cvRound(propVal) == 1);
+        const bool convertRgb = cvRound(propVal) == 1;
+        const bool success = g_VI.setConvertRGB(m_index, convertRgb);
+        if(success)
+            m_convertRGBSet = convertRgb;
+        return success;
     }
 
     }
@@ -3480,6 +3509,7 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
                 g_VI.stopDevice(m_index);
                 g_VI.setIdealFramerate(m_index, fps);
                 g_VI.setupDeviceFourcc(m_index, m_width, m_height, m_fourcc);
+                g_VI.setConvertRGB(m_index, m_convertRGBSet);
             }
 
             bool success = g_VI.isDeviceSetup(m_index);
@@ -3585,6 +3615,7 @@ void VideoCapture_DShow::close()
         m_index = -1;
     }
     m_widthSet = m_heightSet = m_width = m_height = -1;
+    m_convertRGBSet = true;
 }
 
 Ptr<IVideoCapture> create_DShow_capture(int index)

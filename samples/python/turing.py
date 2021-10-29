@@ -32,7 +32,7 @@ def main():
 
     w, h = 512, 512
 
-    args, args_list = getopt.getopt(sys.argv[1:], 'o:', [])
+    args, _args_list = getopt.getopt(sys.argv[1:], 'o:', [])
     args = dict(args)
     out = None
     if '-o' in args:

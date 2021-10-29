@@ -280,6 +280,8 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src0.empty());
+
     CV_Assert( (ksize % 2 == 1) && (_src0.dims() <= 2 ));
 
     if( ksize <= 1 || _src0.empty() )
@@ -302,11 +304,6 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
                openvx_medianFilter(_src0, _dst, ksize))
 
     //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
-        return;
-#endif
 
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);

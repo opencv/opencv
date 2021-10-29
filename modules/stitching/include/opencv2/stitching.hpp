@@ -259,6 +259,20 @@ public:
      */
     CV_WRAP Status estimateTransform(InputArrayOfArrays images, InputArrayOfArrays masks = noArray());
 
+    /** @brief These function restors camera rotation and camera intrinsics of each camera
+     *  that can be got with @ref Stitcher::cameras call
+
+    @param images Input images.
+    @param cameras Estimated rotation of cameras for each of the input images.
+    @param component Indices (0-based) of images constituting the final panorama (optional).
+    @return Status code.
+     */
+    Status setTransform(InputArrayOfArrays images,
+                        const std::vector<detail::CameraParams> &cameras,
+                        const std::vector<int> &component);
+    /** @overload */
+    Status setTransform(InputArrayOfArrays images, const std::vector<detail::CameraParams> &cameras);
+
     /** @overload */
     CV_WRAP Status composePanorama(OutputArray pano);
     /** @brief These functions try to compose the given images (or images stored internally from the other function
@@ -272,7 +286,7 @@ public:
     @param pano Final pano.
     @return Status code.
      */
-    Status composePanorama(InputArrayOfArrays images, OutputArray pano);
+    CV_WRAP Status composePanorama(InputArrayOfArrays images, OutputArray pano);
 
     /** @overload */
     CV_WRAP Status stitch(InputArrayOfArrays images, OutputArray pano);

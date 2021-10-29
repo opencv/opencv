@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -33,13 +33,13 @@
 //
 // If not, we need to introduce that!
 using GOCLModel = ade::TypedGraph
-    < cv::gimpl::Unit
+    < cv::gimpl::OCLUnit
     , cv::gimpl::Protocol
     >;
 
 // FIXME: Same issue with Typed and ConstTyped
 using GConstGOCLModel = ade::ConstTypedGraph
-    < cv::gimpl::Unit
+    < cv::gimpl::OCLUnit
     , cv::gimpl::Protocol
     >;
 
@@ -53,7 +53,7 @@ namespace
         {
             GOCLModel gm(graph);
             auto ocl_impl = cv::util::any_cast<cv::GOCLKernel>(impl.opaque);
-            gm.metadata(op_node).set(cv::gimpl::Unit{ocl_impl});
+            gm.metadata(op_node).set(cv::gimpl::OCLUnit{ocl_impl});
         }
 
         virtual EPtr compile(const ade::Graph &graph,
@@ -96,7 +96,7 @@ cv::gimpl::GOCLExecutable::GOCLExecutable(const ade::Graph &g,
             if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
             {
                 const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::gapi::own::Mat>()[desc.rc];
+                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
                 createMat(mat_desc, mat);
             }
             break;
@@ -113,7 +113,8 @@ cv::GArg cv::gimpl::GOCLExecutable::packArg(const GArg &arg)
     // FIXME: this check has to be done somewhere in compilation stage.
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
               && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY);
+              && arg.kind != cv::detail::ArgKind::GARRAY
+              && arg.kind != cv::detail::ArgKind::GOPAQUE);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {
@@ -128,10 +129,13 @@ cv::GArg cv::gimpl::GOCLExecutable::packArg(const GArg &arg)
     switch (ref.shape)
     {
     case GShape::GMAT:    return GArg(m_res.slot<cv::UMat>()[ref.id]);
-    case GShape::GSCALAR: return GArg(m_res.slot<cv::gapi::own::Scalar>()[ref.id]);
-        // Note: .at() is intentional for GArray as object MUST be already there
+    case GShape::GSCALAR: return GArg(m_res.slot<cv::Scalar>()[ref.id]);
+    // Note: .at() is intentional for GArray as object MUST be already there
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
+    // Note: .at() is intentional for GOpaque as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case GShape::GOPAQUE:  return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -161,12 +165,31 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
         // NB: avoid clearing the whole magazine, there's also pre-allocated internal data
         for (auto& it : input_objs)  umats.erase(it.first.id);
         for (auto& it : output_objs) umats.erase(it.first.id);
+
+        // In/Out args clean-up is mandatory now with RMat
+        for (auto &it : input_objs)  magazine::unbind(*p, it.first);
+        for (auto &it : output_objs) magazine::unbind(*p, it.first);
     };
     // RAII wrapper to clean-up m_res
     std::unique_ptr<cv::gimpl::Mag, decltype(clean_up)> cleaner(&m_res, clean_up);
 
-    for (auto& it : input_objs)   magazine::bindInArg (m_res, it.first, it.second, true);
-    for (auto& it : output_objs)  magazine::bindOutArg(m_res, it.first, it.second, true);
+    const auto bindUMat = [this](const RcDesc& rc) {
+            auto& mag_umat = m_res.template slot<cv::UMat>()[rc.id];
+            mag_umat = m_res.template slot<cv::Mat>()[rc.id].getUMat(ACCESS_READ);
+    };
+
+    for (auto& it : input_objs) {
+        const auto& rc = it.first;
+        magazine::bindInArg (m_res, rc, it.second);
+        // There is already cv::Mat in the magazine after bindInArg call,
+        // extract UMat from it, put into the magazine
+        if (rc.shape == GShape::GMAT) bindUMat(rc);
+    }
+    for (auto& it : output_objs) {
+        const auto& rc = it.first;
+        magazine::bindOutArg(m_res, rc, it.second);
+        if (rc.shape == GShape::GMAT) bindUMat(rc);
+    }
 
     // Initialize (reset) internal data nodes with user structures
     // before processing a frame (no need to do it for external data structures)
@@ -194,7 +217,7 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
 
         // Obtain our real execution unit
         // TODO: Should kernels be copyable?
-        GOCLKernel k = gcm.metadata(op_info.nh).get<Unit>().k;
+        GOCLKernel k = gcm.metadata(op_info.nh).get<OCLUnit>().k;
 
         // Initialize kernel's execution context:
         // - Input parameters
@@ -208,21 +231,21 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta
-        for (const auto &out_it : ade::util::indexed(op.outs))
+        for (const auto out_it : ade::util::indexed(op.outs))
         {
             // FIXME: Can the same GArg type resolution mechanism be reused here?
-            const auto out_port  = ade::util::index(out_it);
-            const auto out_desc  = ade::util::value(out_it);
+            const auto  out_port  = ade::util::index(out_it);
+            const auto& out_desc  = ade::util::value(out_it);
             context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc, true);
         }
 
         // Now trigger the executable unit
         k.apply(context);
 
-        for (const auto &out_it : ade::util::indexed(op_info.expected_out_metas))
+        for (const auto out_it : ade::util::indexed(op_info.expected_out_metas))
         {
-            const auto out_index      = ade::util::index(out_it);
-            const auto expected_meta  = ade::util::value(out_it);
+            const auto  out_index      = ade::util::index(out_it);
+            const auto& expected_meta  = ade::util::value(out_it);
 
             if (!can_describe(expected_meta, context.m_results[out_index]))
             {
@@ -237,5 +260,20 @@ void cv::gimpl::GOCLExecutable::run(std::vector<InObj>  &&input_objs,
         }
     } // for(m_script)
 
-    for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second, true);
+    for (auto &it : output_objs)
+    {
+        const auto& rc    = it.first;
+              auto& g_arg = it.second;
+        magazine::writeBack(m_res, rc, g_arg);
+        if (rc.shape == GShape::GMAT)
+        {
+            uchar* out_arg_data = m_res.template slot<cv::Mat>()[rc.id].data;
+            auto& mag_mat = m_res.template slot<cv::UMat>().at(rc.id);
+            GAPI_Assert((out_arg_data == (mag_mat.getMat(ACCESS_RW).data)) && " data for output parameters was reallocated ?");
+        }
+    }
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }

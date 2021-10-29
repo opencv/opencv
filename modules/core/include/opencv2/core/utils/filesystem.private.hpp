@@ -16,8 +16,8 @@
 #      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1
 #  elif defined(__APPLE__)
 #    include <TargetConditionals.h>
-#    if (defined(TARGET_OS_OSX) && TARGET_OS_OSX) || (!defined(TARGET_OS_OSX) && !TARGET_OS_IPHONE)
-#      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1 // OSX only
+#    if (defined(TARGET_OS_OSX) && TARGET_OS_OSX) || (defined(TARGET_OS_IOS) && TARGET_OS_IOS)
+#      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1 // OSX, iOS only
 #    endif
 #  else
      /* unknown */
@@ -49,8 +49,8 @@ public:
     void lock(); //< acquire exclusive (writer) lock
     void unlock(); //< release exclusive (writer) lock
 
-    void lock_shared(); //< acquire sharable (reader) lock
-    void unlock_shared(); //< release sharable (reader) lock
+    void lock_shared(); //< acquire shareable (reader) lock
+    void unlock_shared(); //< release shareable (reader) lock
 
     struct Impl;
 protected:

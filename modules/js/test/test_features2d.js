@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 if (typeof module !== 'undefined' && module.exports) {
-    // The envrionment is Node.js
+    // The environment is Node.js
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
@@ -59,7 +59,7 @@ QUnit.test('Detectors', function(assert) {
 
   let akaze = new cv.AKAZE();
   akaze.detect(image, kp);
-  assert.equal(kp.size(), 52, 'AKAZE');
+  assert.equal(kp.size(), 53, 'AKAZE');
 });
 
 QUnit.test('BFMatcher', function(assert) {

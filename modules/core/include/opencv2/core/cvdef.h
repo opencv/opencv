@@ -45,8 +45,14 @@
 #ifndef OPENCV_CORE_CVDEF_H
 #define OPENCV_CORE_CVDEF_H
 
+#include "opencv2/core/version.hpp"
+
 //! @addtogroup core_utils
 //! @{
+
+#ifdef OPENCV_INCLUDE_PORT_FILE  // User-provided header file with custom platform configuration
+#include OPENCV_INCLUDE_PORT_FILE
+#endif
 
 #if !defined CV_DOXYGEN && !defined CV_IGNORE_DEBUG_BUILD_GUARD
 #if (defined(_MSC_VER) && (defined(DEBUG) || defined(_DEBUG))) || \
@@ -82,12 +88,24 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
 #define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
-#if defined __GNUC__
+#ifdef CV_Func
+// keep current value (through OpenCV port file)
+#elif defined __GNUC__ || (defined (__cpluscplus) && (__cpluscplus >= 201103))
+#define CV_Func __func__
+#elif defined __clang__ && (__clang_minor__ * 100 + __clang_major__ >= 305)
+#define CV_Func __func__
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION >= 199901)
 #define CV_Func __func__
 #elif defined _MSC_VER
 #define CV_Func __FUNCTION__
+#elif defined(__INTEL_COMPILER) && (_INTEL_COMPILER >= 600)
+#define CV_Func __FUNCTION__
+#elif defined __IBMCPP__ && __IBMCPP__ >=500
+#define CV_Func __FUNCTION__
+#elif defined __BORLAND__ && (__BORLANDC__ >= 0x550)
+#define CV_Func __FUNC__
 #else
-#define CV_Func ""
+#define CV_Func "<unknown>"
 #endif
 
 //! @cond IGNORED
@@ -118,9 +136,11 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #  if !defined(__clang__) && defined(__GNUC__) && (__GNUC__*100 + __GNUC_MINOR__ > 302)
 #    define CV_StaticAssert(condition, reason) ({ extern int __attribute__((error("CV_StaticAssert: " reason " " #condition))) CV_StaticAssert(); ((condition) ? 0 : CV_StaticAssert()); })
 #  else
+namespace cv {
      template <bool x> struct CV_StaticAssert_failed;
      template <> struct CV_StaticAssert_failed<true> { enum { val = 1 }; };
      template<int x> struct CV_StaticAssert_test {};
+}
 #    define CV_StaticAssert(condition, reason)\
        typedef cv::CV_StaticAssert_test< sizeof(cv::CV_StaticAssert_failed< static_cast<bool>(condition) >) > CVAUX_CONCAT(CV_StaticAssert_failed_at_, __LINE__)
 #  endif
@@ -161,7 +181,12 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #undef abs
 #undef Complex
 
+#if defined __cplusplus
+#include <limits>
+#else
 #include <limits.h>
+#endif
+
 #include "opencv2/core/hal/interface.h"
 
 #if defined __ICL
@@ -244,8 +269,14 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 
 #define CV_CPU_NEON             100
 
+#define CV_CPU_MSA              150
+
+#define CV_CPU_RISCVV           170
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
+
+#define CV_CPU_RVV              210
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
@@ -253,7 +284,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #define CV_CPU_AVX512_KNL       258
 #define CV_CPU_AVX512_KNM       259
 #define CV_CPU_AVX512_CNL       260
-#define CV_CPU_AVX512_CEL       261
+#define CV_CPU_AVX512_CLX       261
 #define CV_CPU_AVX512_ICL       262
 
 // when adding to this list remember to update the following enum
@@ -294,15 +325,21 @@ enum CpuFeatures {
 
     CPU_NEON            = 100,
 
+    CPU_MSA             = 150,
+
+    CPU_RISCVV          = 170,
+
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
+
+    CPU_RVV             = 210,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
     CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
     CPU_AVX512_KNL      = 258, //!< Knights Landing with AVX-512F/CD/ER/PF
     CPU_AVX512_KNM      = 259, //!< Knights Mill with AVX-512F/CD/ER/PF/4FMAPS/4VNNIW/VPOPCNTDQ
     CPU_AVX512_CNL      = 260, //!< Cannon Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI
-    CPU_AVX512_CEL      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI
+    CPU_AVX512_CLX      = 261, //!< Cascade Lake with AVX-512F/CD/BW/DQ/VL/VNNI
     CPU_AVX512_ICL      = 262, //!< Ice Lake with AVX-512F/CD/BW/DQ/VL/IFMA/VBMI/VNNI/VBMI2/BITALG/VPOPCNTDQ
 
     CPU_MAX_FEATURE     = 512  // see CV_HARDWARE_MAX_FEATURE
@@ -311,6 +348,13 @@ enum CpuFeatures {
 
 #include "cv_cpu_dispatch.h"
 
+#if !defined(CV_STRONG_ALIGNMENT) && defined(__arm__) && !(defined(__aarch64__) || defined(_M_ARM64))
+// int*, int64* should be propertly aligned pointers on ARMv7
+#define CV_STRONG_ALIGNMENT 1
+#endif
+#if !defined(CV_STRONG_ALIGNMENT)
+#define CV_STRONG_ALIGNMENT 0
+#endif
 
 /* fundamental constants */
 #define CV_PI   3.1415926535897932384626433832795
@@ -350,7 +394,9 @@ typedef union Cv64suf
 }
 Cv64suf;
 
+#ifndef OPENCV_ABI_COMPATIBILITY
 #define OPENCV_ABI_COMPATIBILITY 400
+#endif
 
 #ifdef __OPENCV_BUILD
 #  define DISABLE_OPENCV_3_COMPATIBILITY
@@ -637,7 +683,11 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  include <intrin.h>
 #  define CV_XADD(addr, delta) (int)_InterlockedExchangeAdd((long volatile*)addr, delta)
 #else
-   CV_INLINE CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #ifdef OPENCV_FORCE_UNSAFE_XADD
+    CV_INLINE int CV_XADD(int* addr, int delta) { int tmp = *addr; *addr += delta; return tmp; }
+  #else
+    #error "OpenCV: can't define safe CV_XADD macro for current platform (unsupported). Define CV_XADD macro through custom port header (see OPENCV_INCLUDE_PORT_FILE)"
+  #endif
 #endif
 
 
@@ -655,14 +705,47 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  endif
 #endif
 
+/****************************************************************************************\
+*                       CV_NODISCARD_STD attribute (C++17)                               *
+* encourages the compiler to issue a warning if the return value is discarded            *
+\****************************************************************************************/
+#ifndef CV_NODISCARD_STD
+#  ifndef __has_cpp_attribute
+//   workaround preprocessor non-compliance https://reviews.llvm.org/D57851
+#    define __has_cpp_attribute(__x) 0
+#  endif
+#  if __has_cpp_attribute(nodiscard)
+#    define CV_NODISCARD_STD [[nodiscard]]
+#  elif __cplusplus >= 201703L
+//   available when compiler is C++17 compliant
+#    define CV_NODISCARD_STD [[nodiscard]]
+#  elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
+//   available with VS2017 v15.3+ with /std:c++17 or higher; works on functions and classes
+#    define CV_NODISCARD_STD [[nodiscard]]
+#  elif defined(__GNUC__) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 700) && (__cplusplus >= 201103L)
+//   available with GCC 7.0+; works on functions, works or silently fails on classes
+#    define CV_NODISCARD_STD [[nodiscard]]
+#  elif defined(__GNUC__) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 408) && (__cplusplus >= 201103L)
+//   available with GCC 4.8+ but it usually does nothing and can fail noisily -- therefore not used
+//   define CV_NODISCARD_STD [[gnu::warn_unused_result]]
+#  endif
+#endif
+#ifndef CV_NODISCARD_STD
+#  define CV_NODISCARD_STD /* nothing by default */
+#endif
+
 
 /****************************************************************************************\
-*                                  CV_NODISCARD attribute                                *
-* encourages the compiler to issue a warning if the return value is discarded (C++17)    *
+*                      CV_NODISCARD attribute (deprecated, GCC only)                     *
+* DONT USE: use instead the standard CV_NODISCARD_STD macro above                        *
+*           this legacy method silently fails to issue warning until some version        *
+*           after gcc 6.3.0. Yet with gcc 7+ you can use the above standard method       *
+*           which makes this method useless. Don't use it.                               *
+* @deprecated use instead CV_NODISCARD_STD                                               *
 \****************************************************************************************/
 #ifndef CV_NODISCARD
 #  if defined(__GNUC__)
-#    define CV_NODISCARD __attribute__((__warn_unused_result__)) // at least available with GCC 3.4
+#    define CV_NODISCARD __attribute__((__warn_unused_result__))
 #  elif defined(__clang__) && defined(__has_attribute)
 #    if __has_attribute(__warn_unused_result__)
 #      define CV_NODISCARD __attribute__((__warn_unused_result__))
@@ -691,6 +774,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #endif
 
 #define CV_CXX_MOVE_SEMANTICS 1
+#define CV_CXX_MOVE(x) std::move(x)
 #define CV_CXX_STD_ARRAY 1
 #include <array>
 #ifndef CV_OVERRIDE
@@ -801,7 +885,7 @@ protected:
     float16_t() : w(0) {}
     explicit float16_t(float x)
     {
-    #if CV_AVX2
+    #if CV_FP16
         __m128 v = _mm_load_ss(&x);
         w = (ushort)_mm_cvtsi128_si32(_mm_cvtps_ph(v, 0));
     #else
@@ -832,7 +916,7 @@ protected:
 
     operator float() const
     {
-    #if CV_AVX2
+    #if CV_FP16
         float f;
         _mm_store_ss(&f, _mm_cvtph_ps(_mm_cvtsi32_si128(w)));
         return f;

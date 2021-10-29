@@ -16,18 +16,14 @@ namespace cv
 
 namespace gimpl
 {
-    // Union type for various user-defined type constructors (GArray<T>, etc)
-    // FIXME: Replace construct-only API with a more generic one
-    //    (probably with bits of introspection)
-    // Not required for non-user-defined types (GMat, GScalar, etc)
-    using HostCtor = util::variant
-    < util::monostate
-    , detail::ConstructVec
-    >;
+    // HostCtor was there, but then moved to public
+    // Redeclare here to avoid changing tons of code
+    using HostCtor = cv::detail::HostCtor;
 
     using ConstVal = util::variant
     < util::monostate
-    , cv::gapi::own::Scalar
+    , cv::Scalar
+    , cv::detail::VectorRef
     >;
 
     struct RcDesc

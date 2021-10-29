@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels_core.hpp"
 #include <map>
@@ -121,6 +121,33 @@ static const double DFTTab[][2] =
 { 1.00000000000000000, 0.00000000585167232 },
 { 1.00000000000000000, 0.00000000292583616 }
 };
+
+namespace {
+template <typename T>
+struct Constants {
+    static const T sin_120;
+    static const T fft5_2;
+    static const T fft5_3;
+    static const T fft5_4;
+    static const T fft5_5;
+};
+
+template <typename T>
+const T Constants<T>::sin_120 = (T)0.86602540378443864676372317075294;
+
+template <typename T>
+const T Constants<T>::fft5_2 = (T)0.559016994374947424102293417182819;
+
+template <typename T>
+const T Constants<T>::fft5_3 = (T)-0.951056516295153572116439333379382;
+
+template <typename T>
+const T Constants<T>::fft5_4 = (T)-1.538841768587626701285145288018455;
+
+template <typename T>
+const T Constants<T>::fft5_5 = (T)0.363271264002680442947733378740309;
+
+}  //namespace
 
 #define BitRev(i,shift) \
    ((int)((((unsigned)bitrevTab[(i)&255] << 24)+ \
@@ -372,12 +399,247 @@ DFTInit( int n0, int nf, const int* factors, int* itab, int elem_size, void* _wa
     }
 }
 
+// Reference radix-2 implementation.
+template<typename T> struct DFT_R2
+{
+    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
+        const int nx = n/2;
+        for(int i = 0 ; i < c_n; i += n)
+        {
+            Complex<T>* v = dst + i;
+            T r0 = v[0].re + v[nx].re;
+            T i0 = v[0].im + v[nx].im;
+            T r1 = v[0].re - v[nx].re;
+            T i1 = v[0].im - v[nx].im;
+            v[0].re = r0; v[0].im = i0;
+            v[nx].re = r1; v[nx].im = i1;
+
+            for( int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
+            {
+                v = dst + i + j;
+                r1 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
+                i1 = v[nx].im*wave[dw].re + v[nx].re*wave[dw].im;
+                r0 = v[0].re; i0 = v[0].im;
+
+                v[0].re = r0 + r1; v[0].im = i0 + i1;
+                v[nx].re = r0 - r1; v[nx].im = i0 - i1;
+            }
+        }
+    }
+};
+
+// Reference radix-3 implementation.
+template<typename T> struct DFT_R3
+{
+    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
+        const int nx = n / 3;
+        for(int i = 0; i < c_n; i += n )
+        {
+            {
+                Complex<T>* v = dst + i;
+                T r1 = v[nx].re + v[nx*2].re;
+                T i1 = v[nx].im + v[nx*2].im;
+                T r0 = v[0].re;
+                T i0 = v[0].im;
+                T r2 = Constants<T>::sin_120*(v[nx].im - v[nx*2].im);
+                T i2 = Constants<T>::sin_120*(v[nx*2].re - v[nx].re);
+                v[0].re = r0 + r1; v[0].im = i0 + i1;
+                r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
+                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
+                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
+            }
+
+            for(int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
+            {
+                Complex<T>* v = dst + i + j;
+                T r0 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
+                T i0 = v[nx].re*wave[dw].im + v[nx].im*wave[dw].re;
+                T i2 = v[nx*2].re*wave[dw*2].re - v[nx*2].im*wave[dw*2].im;
+                T r2 = v[nx*2].re*wave[dw*2].im + v[nx*2].im*wave[dw*2].re;
+                T r1 = r0 + i2; T i1 = i0 + r2;
+
+                r2 = Constants<T>::sin_120*(i0 - r2); i2 = Constants<T>::sin_120*(i2 - r0);
+                r0 = v[0].re; i0 = v[0].im;
+                v[0].re = r0 + r1; v[0].im = i0 + i1;
+                r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
+                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
+                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
+            }
+        }
+    }
+};
+
+// Reference radix-5 implementation.
+template<typename T> struct DFT_R5
+{
+    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
+        const int nx = n / 5;
+        for(int i = 0; i < c_n; i += n )
+        {
+            for(int j = 0, dw = 0; j < nx; j++, dw += dw0 )
+            {
+                Complex<T>* v0 = dst + i + j;
+                Complex<T>* v1 = v0 + nx*2;
+                Complex<T>* v2 = v1 + nx*2;
+
+                T r0, i0, r1, i1, r2, i2, r3, i3, r4, i4, r5, i5;
+
+                r3 = v0[nx].re*wave[dw].re - v0[nx].im*wave[dw].im;
+                i3 = v0[nx].re*wave[dw].im + v0[nx].im*wave[dw].re;
+                r2 = v2[0].re*wave[dw*4].re - v2[0].im*wave[dw*4].im;
+                i2 = v2[0].re*wave[dw*4].im + v2[0].im*wave[dw*4].re;
+
+                r1 = r3 + r2; i1 = i3 + i2;
+                r3 -= r2; i3 -= i2;
+
+                r4 = v1[nx].re*wave[dw*3].re - v1[nx].im*wave[dw*3].im;
+                i4 = v1[nx].re*wave[dw*3].im + v1[nx].im*wave[dw*3].re;
+                r0 = v1[0].re*wave[dw*2].re - v1[0].im*wave[dw*2].im;
+                i0 = v1[0].re*wave[dw*2].im + v1[0].im*wave[dw*2].re;
+
+                r2 = r4 + r0; i2 = i4 + i0;
+                r4 -= r0; i4 -= i0;
+
+                r0 = v0[0].re; i0 = v0[0].im;
+                r5 = r1 + r2; i5 = i1 + i2;
+
+                v0[0].re = r0 + r5; v0[0].im = i0 + i5;
+
+                r0 -= (T)0.25*r5; i0 -= (T)0.25*i5;
+                r1 = Constants<T>::fft5_2*(r1 - r2); i1 = Constants<T>::fft5_2*(i1 - i2);
+                r2 = -Constants<T>::fft5_3*(i3 + i4); i2 = Constants<T>::fft5_3*(r3 + r4);
+
+                i3 *= -Constants<T>::fft5_5; r3 *= Constants<T>::fft5_5;
+                i4 *= -Constants<T>::fft5_4; r4 *= Constants<T>::fft5_4;
+
+                r5 = r2 + i3; i5 = i2 + r3;
+                r2 -= i4; i2 -= r4;
+
+                r3 = r0 + r1; i3 = i0 + i1;
+                r0 -= r1; i0 -= i1;
+
+                v0[nx].re = r3 + r2; v0[nx].im = i3 + i2;
+                v2[0].re = r3 - r2; v2[0].im = i3 - i2;
+
+                v1[0].re = r0 + r5; v1[0].im = i0 + i5;
+                v1[nx].re = r0 - r5; v1[nx].im = i0 - i5;
+            }
+        }
+    }
+};
+
+template<typename T> struct DFT_VecR2
+{
+    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
+        DFT_R2<T>()(dst, c_n, n, dw0, wave);
+    }
+};
+
+template<typename T> struct DFT_VecR3
+{
+    void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
+        DFT_R3<T>()(dst, c_n, n, dw0, wave);
+    }
+};
+
 template<typename T> struct DFT_VecR4
 {
     int operator()(Complex<T>*, int, int, int&, const Complex<T>*) const { return 1; }
 };
 
 #if CV_SSE3
+
+// multiplies *a and *b:
+//  r_re + i*r_im = (a_re + i*a_im)*(b_re + i*b_im)
+// r_re and r_im are placed respectively in bits 31:0 and 63:32 of the resulting
+// vector register.
+inline __m128 complexMul(const Complex<float>* const a, const Complex<float>* const b) {
+    const __m128 z = _mm_setzero_ps();
+    const __m128 neg_elem0 = _mm_set_ps(0.0f,0.0f,0.0f,-0.0f);
+    // v_a[31:0] is a->re and v_a[63:32] is a->im.
+    const __m128 v_a = _mm_loadl_pi(z, (const __m64*)a);
+    const __m128 v_b = _mm_loadl_pi(z, (const __m64*)b);
+    // x_1 = v[nx] * wave[dw].
+    const __m128 v_a_riri = _mm_shuffle_ps(v_a, v_a, _MM_SHUFFLE(0, 1, 0, 1));
+    const __m128 v_b_irri = _mm_shuffle_ps(v_b, v_b, _MM_SHUFFLE(1, 0, 0, 1));
+    const __m128 mul = _mm_mul_ps(v_a_riri, v_b_irri);
+    const __m128 xored = _mm_xor_ps(mul, neg_elem0);
+    return _mm_hadd_ps(xored, z);
+}
+
+// optimized radix-2 transform
+template<> struct DFT_VecR2<float> {
+    void operator()(Complex<float>* dst, const int c_n, const int n, const int dw0, const Complex<float>* wave) const {
+        const __m128 z = _mm_setzero_ps();
+        const int nx = n/2;
+        for(int i = 0 ; i < c_n; i += n)
+        {
+            {
+                Complex<float>* v = dst + i;
+                float r0 = v[0].re + v[nx].re;
+                float i0 = v[0].im + v[nx].im;
+                float r1 = v[0].re - v[nx].re;
+                float i1 = v[0].im - v[nx].im;
+                v[0].re = r0; v[0].im = i0;
+                v[nx].re = r1; v[nx].im = i1;
+            }
+
+            for( int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
+            {
+                Complex<float>* v = dst + i + j;
+                const __m128 x_1 = complexMul(&v[nx], &wave[dw]);
+                const __m128 v_0 = _mm_loadl_pi(z, (const __m64*)&v[0]);
+                _mm_storel_pi((__m64*)&v[0], _mm_add_ps(v_0, x_1));
+                _mm_storel_pi((__m64*)&v[nx], _mm_sub_ps(v_0, x_1));
+            }
+        }
+    }
+};
+
+// Optimized radix-3 implementation.
+template<> struct DFT_VecR3<float> {
+    void operator()(Complex<float>* dst, const int c_n, const int n, const int dw0, const Complex<float>* wave) const {
+        const int nx = n / 3;
+        const __m128 z = _mm_setzero_ps();
+        const __m128 neg_elem1 = _mm_set_ps(0.0f,0.0f,-0.0f,0.0f);
+        const __m128 sin_120 = _mm_set1_ps(Constants<float>::sin_120);
+        const __m128 one_half = _mm_set1_ps(0.5f);
+        for(int i = 0; i < c_n; i += n )
+        {
+            {
+                Complex<float>* v = dst + i;
+
+                float r1 = v[nx].re + v[nx*2].re;
+                float i1 = v[nx].im + v[nx*2].im;
+                float r0 = v[0].re;
+                float i0 = v[0].im;
+                float r2 = Constants<float>::sin_120*(v[nx].im - v[nx*2].im);
+                float i2 = Constants<float>::sin_120*(v[nx*2].re - v[nx].re);
+                v[0].re = r0 + r1; v[0].im = i0 + i1;
+                r0 -= (float)0.5*r1; i0 -= (float)0.5*i1;
+                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
+                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
+            }
+
+            for(int j = 1, dw = dw0; j < nx; j++, dw += dw0 )
+            {
+                Complex<float>* v = dst + i + j;
+                const __m128 x_0 = complexMul(&v[nx], &wave[dw]);
+                const __m128 x_2 = complexMul(&v[nx*2], &wave[dw*2]);
+                const __m128 x_1 = _mm_add_ps(x_0, x_2);
+
+                const __m128 v_0 = _mm_loadl_pi(z, (const __m64*)&v[0]);
+                _mm_storel_pi((__m64*)&v[0], _mm_add_ps(v_0, x_1));
+
+                const __m128 x_3 = _mm_mul_ps(sin_120, _mm_xor_ps(_mm_sub_ps(x_2, x_0), neg_elem1));
+                const __m128 x_3s = _mm_shuffle_ps(x_3, x_3, _MM_SHUFFLE(0, 1, 0, 1));
+                const __m128 x_4 = _mm_sub_ps(v_0, _mm_mul_ps(one_half, x_1));
+                _mm_storel_pi((__m64*)&v[nx], _mm_add_ps(x_4, x_3s));
+                _mm_storel_pi((__m64*)&v[nx*2], _mm_sub_ps(x_4, x_3s));
+            }
+        }
+    }
+};
 
 // optimized radix-4 transform
 template<> struct DFT_VecR4<float>
@@ -573,12 +835,6 @@ struct OcvDftOptions {
 template<typename T> static void
 DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 {
-    static const T sin_120 = (T)0.86602540378443864676372317075294;
-    static const T fft5_2 = (T)0.559016994374947424102293417182819;
-    static const T fft5_3 = (T)-0.951056516295153572116439333379382;
-    static const T fft5_4 = (T)-1.538841768587626701285145288018455;
-    static const T fft5_5 = (T)0.363271264002680442947733378740309;
-
     const Complex<T>* wave = (Complex<T>*)c.wave;
     const int * itab = c.itab;
 
@@ -775,30 +1031,18 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
         for( ; n < c.factors[0]; )
         {
             // do the remaining radix-2 transform
-            nx = n;
             n *= 2;
             dw0 /= 2;
 
-            for( i = 0; i < c.n; i += n )
+            if(c.haveSSE3)
             {
-                Complex<T>* v = dst + i;
-                T r0 = v[0].re + v[nx].re;
-                T i0 = v[0].im + v[nx].im;
-                T r1 = v[0].re - v[nx].re;
-                T i1 = v[0].im - v[nx].im;
-                v[0].re = r0; v[0].im = i0;
-                v[nx].re = r1; v[nx].im = i1;
-
-                for( j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-                {
-                    v = dst + i + j;
-                    r1 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
-                    i1 = v[nx].im*wave[dw].re + v[nx].re*wave[dw].im;
-                    r0 = v[0].re; i0 = v[0].im;
-
-                    v[0].re = r0 + r1; v[0].im = i0 + i1;
-                    v[nx].re = r0 - r1; v[nx].im = i0 - i1;
-                }
+                DFT_VecR2<T> vr2;
+                vr2(dst, c.n, n, dw0, wave);
+            }
+            else
+            {
+                DFT_R2<T> vr2;
+                vr2(dst, c.n, n, dw0, wave);
             }
         }
     }
@@ -813,94 +1057,21 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 
         if( factor == 3 )
         {
-            // radix-3
-            for( i = 0; i < c.n; i += n )
+            if(c.haveSSE3)
             {
-                Complex<T>* v = dst + i;
-
-                T r1 = v[nx].re + v[nx*2].re;
-                T i1 = v[nx].im + v[nx*2].im;
-                T r0 = v[0].re;
-                T i0 = v[0].im;
-                T r2 = sin_120*(v[nx].im - v[nx*2].im);
-                T i2 = sin_120*(v[nx*2].re - v[nx].re);
-                v[0].re = r0 + r1; v[0].im = i0 + i1;
-                r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
-                v[nx].re = r0 + r2; v[nx].im = i0 + i2;
-                v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
-
-                for( j = 1, dw = dw0; j < nx; j++, dw += dw0 )
-                {
-                    v = dst + i + j;
-                    r0 = v[nx].re*wave[dw].re - v[nx].im*wave[dw].im;
-                    i0 = v[nx].re*wave[dw].im + v[nx].im*wave[dw].re;
-                    i2 = v[nx*2].re*wave[dw*2].re - v[nx*2].im*wave[dw*2].im;
-                    r2 = v[nx*2].re*wave[dw*2].im + v[nx*2].im*wave[dw*2].re;
-                    r1 = r0 + i2; i1 = i0 + r2;
-
-                    r2 = sin_120*(i0 - r2); i2 = sin_120*(i2 - r0);
-                    r0 = v[0].re; i0 = v[0].im;
-                    v[0].re = r0 + r1; v[0].im = i0 + i1;
-                    r0 -= (T)0.5*r1; i0 -= (T)0.5*i1;
-                    v[nx].re = r0 + r2; v[nx].im = i0 + i2;
-                    v[nx*2].re = r0 - r2; v[nx*2].im = i0 - i2;
-                }
+                DFT_VecR3<T> vr3;
+                vr3(dst, c.n, n, dw0, wave);
+            }
+            else
+            {
+                DFT_R3<T> vr3;
+                vr3(dst, c.n, n, dw0, wave);
             }
         }
         else if( factor == 5 )
         {
-            // radix-5
-            for( i = 0; i < c.n; i += n )
-            {
-                for( j = 0, dw = 0; j < nx; j++, dw += dw0 )
-                {
-                    Complex<T>* v0 = dst + i + j;
-                    Complex<T>* v1 = v0 + nx*2;
-                    Complex<T>* v2 = v1 + nx*2;
-
-                    T r0, i0, r1, i1, r2, i2, r3, i3, r4, i4, r5, i5;
-
-                    r3 = v0[nx].re*wave[dw].re - v0[nx].im*wave[dw].im;
-                    i3 = v0[nx].re*wave[dw].im + v0[nx].im*wave[dw].re;
-                    r2 = v2[0].re*wave[dw*4].re - v2[0].im*wave[dw*4].im;
-                    i2 = v2[0].re*wave[dw*4].im + v2[0].im*wave[dw*4].re;
-
-                    r1 = r3 + r2; i1 = i3 + i2;
-                    r3 -= r2; i3 -= i2;
-
-                    r4 = v1[nx].re*wave[dw*3].re - v1[nx].im*wave[dw*3].im;
-                    i4 = v1[nx].re*wave[dw*3].im + v1[nx].im*wave[dw*3].re;
-                    r0 = v1[0].re*wave[dw*2].re - v1[0].im*wave[dw*2].im;
-                    i0 = v1[0].re*wave[dw*2].im + v1[0].im*wave[dw*2].re;
-
-                    r2 = r4 + r0; i2 = i4 + i0;
-                    r4 -= r0; i4 -= i0;
-
-                    r0 = v0[0].re; i0 = v0[0].im;
-                    r5 = r1 + r2; i5 = i1 + i2;
-
-                    v0[0].re = r0 + r5; v0[0].im = i0 + i5;
-
-                    r0 -= (T)0.25*r5; i0 -= (T)0.25*i5;
-                    r1 = fft5_2*(r1 - r2); i1 = fft5_2*(i1 - i2);
-                    r2 = -fft5_3*(i3 + i4); i2 = fft5_3*(r3 + r4);
-
-                    i3 *= -fft5_5; r3 *= fft5_5;
-                    i4 *= -fft5_4; r4 *= fft5_4;
-
-                    r5 = r2 + i3; i5 = i2 + r3;
-                    r2 -= i4; i2 -= r4;
-
-                    r3 = r0 + r1; i3 = i0 + i1;
-                    r0 -= r1; i0 -= i1;
-
-                    v0[nx].re = r3 + r2; v0[nx].im = i3 + i2;
-                    v2[0].re = r3 - r2; v2[0].im = i3 - i2;
-
-                    v1[0].re = r0 + r5; v1[0].im = i0 + i5;
-                    v1[nx].re = r0 - r5; v1[nx].im = i0 - i5;
-                }
-            }
+            DFT_R5<T> vr5;
+            vr5(dst, c.n, n, dw0, wave);
         }
         else
         {
@@ -2249,7 +2420,7 @@ namespace cv {
 
 #define CLAMDDFT_Assert(func) \
     { \
-        clAmdFftStatus s = (func); \
+        clfftStatus s = (func); \
         CV_Assert(s == CLFFT_SUCCESS); \
     }
 
@@ -2266,8 +2437,8 @@ class PlanCache
             bool dft_scale = (flags & DFT_SCALE) != 0;
             bool dft_rows = (flags & DFT_ROWS) != 0;
 
-            clAmdFftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
-            clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
+            clfftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
+            clfftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
 
             size_t batchSize = dft_rows ? dft_size.height : 1;
             size_t clLengthsIn[3] = { (size_t)dft_size.width, dft_rows ? 1 : (size_t)dft_size.height, 1 };
@@ -2304,28 +2475,30 @@ class PlanCache
             clStridesIn[2] = dft_rows ? clStridesIn[1] : dft_size.width * clStridesIn[1];
             clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
+            CLAMDDFT_Assert(clfftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
 
             // setting plan properties
-            CLAMDDFT_Assert(clAmdFftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
-            CLAMDDFT_Assert(clAmdFftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
-            CLAMDDFT_Assert(clAmdFftSetLayout(plHandle, inLayout, outLayout))
-            CLAMDDFT_Assert(clAmdFftSetPlanBatchSize(plHandle, batchSize))
-            CLAMDDFT_Assert(clAmdFftSetPlanInStride(plHandle, dim, clStridesIn))
-            CLAMDDFT_Assert(clAmdFftSetPlanOutStride(plHandle, dim, clStridesOut))
-            CLAMDDFT_Assert(clAmdFftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
+            CLAMDDFT_Assert(clfftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
+            CLAMDDFT_Assert(clfftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
+            CLAMDDFT_Assert(clfftSetLayout(plHandle, inLayout, outLayout))
+            CLAMDDFT_Assert(clfftSetPlanBatchSize(plHandle, batchSize))
+            CLAMDDFT_Assert(clfftSetPlanInStride(plHandle, dim, clStridesIn))
+            CLAMDDFT_Assert(clfftSetPlanOutStride(plHandle, dim, clStridesOut))
+            CLAMDDFT_Assert(clfftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
 
             float scale = dft_scale ? 1.0f / (dft_rows ? dft_size.width : dft_size.area()) : 1.0f;
-            CLAMDDFT_Assert(clAmdFftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
+            CLAMDDFT_Assert(clfftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
 
             // ready to bake
             cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
-            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, NULL, NULL))
+            CLAMDDFT_Assert(clfftBakePlan(plHandle, 1, &queue, NULL, NULL))
         }
 
         ~FftPlan()
         {
-//            clAmdFftDestroyPlan(&plHandle);
+            // Do not tear down clFFT.
+            // The user application may still use clFFT even after OpenCV is unloaded.
+            /*clfftDestroyPlan(&plHandle);*/
         }
 
         friend class PlanCache;
@@ -2339,7 +2512,7 @@ class PlanCache
         FftType fftType;
 
         cl_context context;
-        clAmdFftPlanHandle plHandle;
+        clfftPlanHandle plHandle;
     };
 
 public:
@@ -2348,8 +2521,8 @@ public:
         CV_SINGLETON_LAZY_INIT_REF(PlanCache, new PlanCache())
     }
 
-    clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
-                                     bool inplace, int flags, FftType fftType)
+    clfftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
+                                  bool inplace, int flags, FftType fftType)
     {
         cl_context currentContext = (cl_context)ocl::Context::getDefault().ptr();
 
@@ -2449,13 +2622,13 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     UMat src = _src.getUMat(), dst = _dst.getUMat();
     bool inplace = src.u == dst.u;
 
-    clAmdFftPlanHandle plHandle = PlanCache::getInstance().
+    clfftPlanHandle plHandle = PlanCache::getInstance().
             getPlanHandle(ssize, (int)src.step, (int)dst.step,
                           depth == CV_64F, inplace, flags, fftType);
 
     // get the bufferSize
     size_t bufferSize = 0;
-    CLAMDDFT_Assert(clAmdFftGetTmpBufSize(plHandle, &bufferSize))
+    CLAMDDFT_Assert(clfftGetTmpBufSize(plHandle, &bufferSize))
     UMat tmpBuffer(1, (int)bufferSize, CV_8UC1);
 
     cl_mem srcarg = (cl_mem)src.handle(ACCESS_READ);
@@ -2464,9 +2637,9 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
     cl_event e = 0;
 
-    CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
-                                       1, &queue, 0, NULL, &e,
-                                       &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
+    CLAMDDFT_Assert(clfftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                                          1, &queue, 0, NULL, &e,
+                                          &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
 
     tmpBuffer.addref();
     clSetEventCallback(e, CL_COMPLETE, oclCleanupCallback, tmpBuffer.u);
@@ -4469,6 +4642,9 @@ int cv::getOptimalDFTSize( int size0 )
     return optimalDFTSizeTab[b];
 }
 
+
+#ifndef OPENCV_EXCLUDE_C_API
+
 CV_IMPL void
 cvDFT( const CvArr* srcarr, CvArr* dstarr, int flags, int nonzero_rows )
 {
@@ -4524,4 +4700,5 @@ cvGetOptimalDFTSize( int size0 )
     return cv::getOptimalDFTSize(size0);
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */

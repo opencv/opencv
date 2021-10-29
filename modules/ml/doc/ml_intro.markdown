@@ -433,7 +433,7 @@ Logistic Regression {#ml_intro_lr}
 ML implements logistic regression, which is a probabilistic classification technique. Logistic
 Regression is a binary classification algorithm which is closely related to Support Vector Machines
 (SVM). Like SVM, Logistic Regression can be extended to work on multi-class classification problems
-like digit recognition (i.e. recognizing digitis like 0,1 2, 3,... from the given images). This
+like digit recognition (i.e. recognizing digits like 0,1 2, 3,... from the given images). This
 version of Logistic Regression supports both binary and multi-class classifications (for multi-class
 it creates a multiple 2-class classifiers). In order to train the logistic regression classifier,
 Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see

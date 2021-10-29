@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Intelligent Scissors Example</title>
+<link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h2>Intelligent Scissors Example</h2>
+<p>
+    Click <b>Start</b> button to launch the code below.<br>
+    Then click on image to pick source point. After that you can hover mouse pointer over canvas to specify target point candidate.<br>
+    You can change the code in the &lt;textarea&gt; to investigate more. You can choose another image (need to "Stop" first).
+</p>
+<div>
+<div class="control"><button id="tryIt" disabled>Start</button> <button id="stopIt" disabled>Stop</button></div>
+<textarea class="code" rows="20" cols="100" id="codeEditor" spellcheck="false">
+</textarea>
+<p class="err" id="errorMessage"></p>
+</div>
+<div id="inputParams">
+  <div class="caption">canvasInput <input type="file" id="fileInput" name="file" accept="image/*" /></div>
+  <canvas id="canvasInput"></canvas>
+</div>
+<div id="result" style="display:none">
+  <canvas id="canvasOutput"></canvas>
+</div>
+
+<script src="utils.js" type="text/javascript"></script>
+
+<script id="codeSnippet" type="text/code-snippet">
+let src = cv.imread('canvasInput');
+//cv.resize(src, src, new cv.Size(1024, 1024));
+cv.imshow('canvasOutput', src);
+
+let tool = new cv.segmentation_IntelligentScissorsMB();
+tool.setEdgeFeatureCannyParameters(32, 100);
+tool.setGradientMagnitudeMaxLimit(200);
+tool.applyImage(src);
+
+let hasMap = false;
+
+let canvas = document.getElementById('canvasOutput');
+canvas.addEventListener('click', e => {
+    let startX = e.offsetX, startY = e.offsetY; console.log(startX, startY);
+    if (startX < src.cols && startY < src.rows)
+    {
+        console.time('buildMap');
+        tool.buildMap(new cv.Point(startX, startY));
+        console.timeEnd('buildMap');
+        hasMap = true;
+    }
+});
+canvas.addEventListener('mousemove', e => {
+    let x = e.offsetX, y = e.offsetY; //console.log(x, y);
+    let dst = src.clone();
+    if (hasMap && x >= 0 && x < src.cols && y >= 0 && y < src.rows)
+    {
+        let contour = new cv.Mat();
+        tool.getContour(new cv.Point(x, y), contour);
+        let contours = new cv.MatVector();
+        contours.push_back(contour);
+        let color = new cv.Scalar(0, 255, 0, 255);  // RGBA
+        cv.polylines(dst, contours, false, color, 1, cv.LINE_8);
+        contours.delete(); contour.delete();
+    }
+    cv.imshow('canvasOutput', dst);
+    dst.delete();
+});
+canvas.addEventListener('dispose', e => {
+    src.delete();
+    tool.delete();
+});
+</script>
+
+<script type="text/javascript">
+let utils = new Utils('errorMessage');
+
+utils.loadCode('codeSnippet', 'codeEditor');
+utils.loadImageToCanvas('lena.jpg', 'canvasInput');
+utils.addFileInputHandler('fileInput', 'canvasInput');
+
+let disposeEvent = new Event('dispose');
+
+let tryIt = document.getElementById('tryIt');
+let stopIt = document.getElementById('stopIt');
+
+tryIt.addEventListener('click', () => {
+    let e_input = document.getElementById('inputParams');
+    e_input.style.display = 'none';
+
+    let e_result = document.getElementById("result")
+    e_result.style.display = '';
+
+    var e = document.getElementById("canvasOutput");
+    var e_new = e.cloneNode(true);
+    e.parentNode.replaceChild(e_new, e);  // reset event handlers
+
+    stopIt.removeAttribute('disabled');
+    tryIt.setAttribute('disabled', '');
+
+    utils.executeCode('codeEditor');
+});
+
+stopIt.addEventListener('click', () => {
+    let e_input = document.getElementById('inputParams');
+    e_input.style.display = '';
+
+    let e_result = document.getElementById("result")
+    e_result.style.display = 'none';
+
+    var e = document.getElementById("canvasOutput");
+    e.dispatchEvent(disposeEvent);
+
+    var e_new = e.cloneNode(true);
+    e.parentNode.replaceChild(e_new, e);  // reset event handlers
+
+    tryIt.removeAttribute('disabled');
+    stopIt.setAttribute('disabled', '');
+});
+
+utils.loadOpenCv(() => {
+    tryIt.removeAttribute('disabled');
+});
+</script>
+</body>
+</html>

@@ -40,6 +40,11 @@
 //M*/
 
 #include "precomp.hpp"
+
+#ifndef HAVE_OPENCL
+#include "ocl_disabled.impl.hpp"
+#else // HAVE_OPENCL
+
 #include <list>
 #include <map>
 #include <deque>
@@ -71,8 +76,11 @@
 #undef CV__ALLOCATOR_STATS_LOG
 
 #define CV_OPENCL_ALWAYS_SHOW_BUILD_LOG          0
+#define CV_OPENCL_SHOW_BUILD_OPTIONS             0
+#define CV_OPENCL_SHOW_BUILD_KERNELS             0
 
 #define CV_OPENCL_SHOW_RUN_KERNELS               0
+#define CV_OPENCL_SYNC_RUN_KERNELS               0
 #define CV_OPENCL_TRACE_CHECK                    0
 
 #define CV_OPENCL_VALIDATE_BINARY_PROGRAMS       1
@@ -103,26 +111,10 @@
 #define CV_OPENCL_SVM_TRACE_ERROR_P(...)
 #endif
 
-#include "opencv2/core/opencl/runtime/opencl_clamdblas.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clblas.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
 
-#ifdef HAVE_OPENCL
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
-#else
-#if defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable : 4100)
-    #pragma warning(disable : 4702)
-#elif defined(__clang__)
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wunused-parameter"
-#elif defined(__GNUC__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-// TODO FIXIT: This file can't be build without OPENCL
-#include "ocl_deprecated.hpp"
-#endif // HAVE_OPENCL
 
 #ifdef HAVE_OPENCL_SVM
 #include "opencv2/core/opencl/runtime/opencl_svm_20.hpp"
@@ -146,31 +138,6 @@ cv::utils::AllocatorStatisticsInterface& getOpenCLAllocatorStatistics()
 {
     return opencl_allocator_stats;
 }
-
-#ifndef HAVE_OPENCL
-#define CV_OPENCL_NO_SUPPORT() CV_Error(cv::Error::OpenCLApiCallError, "OpenCV build without OpenCL support")
-namespace {
-struct DummyImpl
-{
-    DummyImpl() { CV_OPENCL_NO_SUPPORT(); }
-    ~DummyImpl() { /* do not throw in desctructors */ }
-    IMPLEMENT_REFCOUNTABLE();
-};
-} // namespace
-
-// TODO Replace to empty body (without HAVE_OPENCL)
-#define CV_OCL_TRACE_CHECK_RESULT(status, message) /* nothing */
-#define CV_OCL_API_ERROR_MSG(check_result, msg) cv::String()
-#define CV_OCL_CHECK_RESULT(check_result, msg) (void)check_result
-#define CV_OCL_CHECK_(expr, check_result) expr; (void)check_result
-#define CV_OCL_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
-#define CV_OCL_DBG_CHECK_RESULT(check_result, msg) (void)check_result
-#define CV_OCL_DBG_CHECK_(expr, check_result) expr; (void)check_result
-#define CV_OCL_DBG_CHECK(expr) do { cl_int __cl_result = (expr); CV_OCL_CHECK_RESULT(__cl_result, #expr); } while (0)
-
-static const bool CV_OPENCL_DISABLE_BUFFER_RECT_OPERATIONS = false;
-
-#else // HAVE_OPENCL
 
 #ifndef _DEBUG
 static bool isRaiseError()
@@ -205,7 +172,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -225,7 +192,7 @@ void traceOpenCLCheck(cl_int status, const char* message)
         CV_OCL_TRACE_CHECK_RESULT(check_result, msg); \
         if (check_result != CL_SUCCESS && isRaiseError()) \
         { \
-            if (0) { const char* msg_ = (msg); CV_UNUSED(msg_); /* ensure const char* type (cv::String without c_str()) */ } \
+            static_assert(std::is_convertible<decltype(msg), const char*>::value, "msg of CV_OCL_DBG_CHECK_RESULT must be const char*"); \
             cv::String error_msg = CV_OCL_API_ERROR_MSG(check_result, msg); \
             CV_Error(Error::OpenCLApiCallError, error_msg); \
         } \
@@ -267,7 +234,9 @@ static const String getBuildExtraOptions()
     return param_buildExtraOptions;
 }
 
-#endif // HAVE_OPENCL
+static const bool CV_OPENCL_ENABLE_MEM_USE_HOST_PTR = utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
+static const size_t CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR", 4);
+
 
 struct UMat2D
 {
@@ -328,7 +297,7 @@ static uint64 crc64( const uchar* data, size_t size, uint64 crc0=0 )
     return ~crc;
 }
 
-#if defined HAVE_OPENCL && OPENCV_HAVE_FILESYSTEM_SUPPORT
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 struct OpenCLBinaryCacheConfigurator
 {
     cv::String cache_path_;
@@ -863,15 +832,330 @@ public:
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 
+
+struct OpenCLExecutionContext::Impl
+{
+    ocl::Context context_;
+    int device_;  // device index in context
+    ocl::Queue queue_;
+    int useOpenCL_;
+
+protected:
+    Impl() = delete;
+
+    void _init_device(cl_device_id deviceID)
+    {
+        CV_Assert(deviceID);
+        int ndevices = (int)context_.ndevices();
+        CV_Assert(ndevices > 0);
+        bool found = false;
+        for (int i = 0; i < ndevices; i++)
+        {
+            ocl::Device d = context_.device(i);
+            cl_device_id dhandle = (cl_device_id)d.ptr();
+            if (dhandle == deviceID)
+            {
+                device_ = i;
+                found = true;
+                break;
+            }
+        }
+        CV_Assert(found && "OpenCL device can't work with passed OpenCL context");
+    }
+
+    void _init_device(const ocl::Device& device)
+    {
+        CV_Assert(device.ptr());
+        int ndevices = (int)context_.ndevices();
+        CV_Assert(ndevices > 0);
+        bool found = false;
+        for (int i = 0; i < ndevices; i++)
+        {
+            ocl::Device d = context_.device(i);
+            if (d.getImpl() == device.getImpl())
+            {
+                device_ = i;
+                found = true;
+                break;
+            }
+        }
+        CV_Assert(found && "OpenCL device can't work with passed OpenCL context");
+    }
+
+public:
+    Impl(cl_platform_id platformID, cl_context context, cl_device_id deviceID)
+        : device_(0), useOpenCL_(-1)
+    {
+        CV_UNUSED(platformID);
+        CV_Assert(context);
+        CV_Assert(deviceID);
+
+        context_ = Context::fromHandle(context);
+        _init_device(deviceID);
+        queue_ = Queue(context_, context_.device(device_));
+    }
+
+    Impl(const ocl::Context& context, const ocl::Device& device, const ocl::Queue& queue)
+        : device_(0), useOpenCL_(-1)
+    {
+        CV_Assert(context.ptr());
+        CV_Assert(device.ptr());
+
+        context_ = context;
+        _init_device(device);
+        queue_ = queue;
+    }
+
+    Impl(const ocl::Context& context, const ocl::Device& device)
+        : device_(0), useOpenCL_(-1)
+    {
+        CV_Assert(context.ptr());
+        CV_Assert(device.ptr());
+
+        context_ = context;
+        _init_device(device);
+        queue_ = Queue(context_, context_.device(device_));
+    }
+
+    Impl(const ocl::Context& context, const int device, const ocl::Queue& queue)
+        : context_(context)
+        , device_(device)
+        , queue_(queue)
+        , useOpenCL_(-1)
+    {
+        // nothing
+    }
+    Impl(const Impl& other)
+        : context_(other.context_)
+        , device_(other.device_)
+        , queue_(other.queue_)
+        , useOpenCL_(-1)
+    {
+        // nothing
+    }
+
+    inline bool useOpenCL() const { return const_cast<Impl*>(this)->useOpenCL(); }
+    bool useOpenCL()
+    {
+        if (useOpenCL_ < 0)
+        {
+            try
+            {
+                useOpenCL_ = 0;
+                if (!context_.empty() && context_.ndevices() > 0)
+                {
+                    const Device& d = context_.device(device_);
+                    useOpenCL_ = d.available();
+                }
+            }
+            catch (const cv::Exception&)
+            {
+                // nothing
+            }
+            if (!useOpenCL_)
+                CV_LOG_INFO(NULL, "OpenCL: can't use OpenCL execution context");
+        }
+        return useOpenCL_ > 0;
+    }
+
+    void setUseOpenCL(bool flag)
+    {
+        if (!flag)
+            useOpenCL_ = 0;
+        else
+            useOpenCL_ = -1;
+    }
+
+    static const std::shared_ptr<Impl>& getInitializedExecutionContext()
+    {
+        CV_TRACE_FUNCTION();
+
+        CV_LOG_INFO(NULL, "OpenCL: initializing thread execution context");
+
+        static bool initialized = false;
+        static std::shared_ptr<Impl> g_primaryExecutionContext;
+
+        if (!initialized)
+        {
+            cv::AutoLock lock(getInitializationMutex());
+            if (!initialized)
+            {
+                CV_LOG_INFO(NULL, "OpenCL: creating new execution context...");
+                try
+                {
+                    Context c = ocl::Context::create(std::string());
+                    if (c.ndevices())
+                    {
+                        int deviceId = 0;
+                        auto& d = c.device(deviceId);
+                        if (d.available())
+                        {
+                            auto q = ocl::Queue(c, d);
+                            if (!q.ptr())
+                            {
+                                CV_LOG_ERROR(NULL, "OpenCL: Can't create default OpenCL queue");
+                            }
+                            else
+                            {
+                                g_primaryExecutionContext = std::make_shared<Impl>(c, deviceId, q);
+                                CV_LOG_INFO(NULL, "OpenCL: device=" << d.name());
+                            }
+                        }
+                        else
+                        {
+                            CV_LOG_ERROR(NULL, "OpenCL: OpenCL device is not available (CL_DEVICE_AVAILABLE returns false)");
+                        }
+                    }
+                    else
+                    {
+                        CV_LOG_INFO(NULL, "OpenCL: context is not available/disabled");
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    CV_LOG_INFO(NULL, "OpenCL: Can't initialize OpenCL context/device/queue: " << e.what());
+                }
+                catch (...)
+                {
+                    CV_LOG_WARNING(NULL, "OpenCL: Can't initialize OpenCL context/device/queue: unknown C++ exception");
+                }
+                initialized = true;
+            }
+        }
+        return g_primaryExecutionContext;
+    }
+};
+
+Context& OpenCLExecutionContext::getContext() const
+{
+    CV_Assert(p);
+    return p->context_;
+}
+Device& OpenCLExecutionContext::getDevice() const
+{
+    CV_Assert(p);
+    return p->context_.device(p->device_);
+}
+Queue& OpenCLExecutionContext::getQueue() const
+{
+    CV_Assert(p);
+    return p->queue_;
+}
+
+bool OpenCLExecutionContext::useOpenCL() const
+{
+    if (p)
+        return p->useOpenCL();
+    return false;
+}
+void OpenCLExecutionContext::setUseOpenCL(bool flag)
+{
+    CV_Assert(p);
+    p->setUseOpenCL(flag);
+}
+
+/* static */
+OpenCLExecutionContext& OpenCLExecutionContext::getCurrent()
+{
+    CV_TRACE_FUNCTION();
+    CoreTLSData& data = getCoreTlsData();
+    OpenCLExecutionContext& c = data.oclExecutionContext;
+    if (!data.oclExecutionContextInitialized)
+    {
+        data.oclExecutionContextInitialized = true;
+        if (c.empty() && haveOpenCL())
+            c.p = Impl::getInitializedExecutionContext();
+    }
+    return c;
+}
+
+/* static */
+OpenCLExecutionContext& OpenCLExecutionContext::getCurrentRef()
+{
+    CV_TRACE_FUNCTION();
+    CoreTLSData& data = getCoreTlsData();
+    OpenCLExecutionContext& c = data.oclExecutionContext;
+    return c;
+}
+
+void OpenCLExecutionContext::bind() const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(p);
+    CoreTLSData& data = getCoreTlsData();
+    data.oclExecutionContext = *this;
+    data.oclExecutionContextInitialized = true;
+    data.useOpenCL = p->useOpenCL_;  // propagate "-1", avoid call useOpenCL()
+}
+
+
+OpenCLExecutionContext OpenCLExecutionContext::cloneWithNewQueue() const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(p);
+    const Queue q(getContext(), getDevice());
+    return cloneWithNewQueue(q);
+}
+
+OpenCLExecutionContext OpenCLExecutionContext::cloneWithNewQueue(const ocl::Queue& q) const
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(p);
+    CV_Assert(q.ptr() != NULL);
+    OpenCLExecutionContext c;
+    c.p = std::make_shared<Impl>(p->context_, p->device_, q);
+    return c;
+}
+
+/* static */
+OpenCLExecutionContext OpenCLExecutionContext::create(const Context& context, const Device& device, const ocl::Queue& queue)
+{
+    CV_TRACE_FUNCTION();
+    if (!haveOpenCL())
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL runtime is not available!");
+
+    CV_Assert(!context.empty());
+    CV_Assert(context.ptr());
+    CV_Assert(!device.empty());
+    CV_Assert(device.ptr());
+    OpenCLExecutionContext ctx;
+    ctx.p = std::make_shared<OpenCLExecutionContext::Impl>(context, device, queue);
+    return ctx;
+
+}
+
+/* static */
+OpenCLExecutionContext OpenCLExecutionContext::create(const Context& context, const Device& device)
+{
+    CV_TRACE_FUNCTION();
+    if (!haveOpenCL())
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL runtime is not available!");
+
+    CV_Assert(!context.empty());
+    CV_Assert(context.ptr());
+    CV_Assert(!device.empty());
+    CV_Assert(device.ptr());
+    OpenCLExecutionContext ctx;
+    ctx.p = std::make_shared<OpenCLExecutionContext::Impl>(context, device);
+    return ctx;
+
+}
+
+void OpenCLExecutionContext::release()
+{
+    CV_TRACE_FUNCTION();
+    p.reset();
+}
+
+
+
 // true if we have initialized OpenCL subsystem with available platforms
-static bool g_isOpenCVActivated = false;
+static bool g_isOpenCLInitialized = false;
+static bool g_isOpenCLAvailable = false;
 
 bool haveOpenCL()
 {
     CV_TRACE_FUNCTION();
-#ifdef HAVE_OPENCL
-    static bool g_isOpenCLInitialized = false;
-    static bool g_isOpenCLAvailable = false;
 
     if (!g_isOpenCLInitialized)
     {
@@ -883,14 +1167,18 @@ bool haveOpenCL()
             {
                 g_isOpenCLAvailable = false;
                 g_isOpenCLInitialized = true;
+                return false;
             }
         }
+
+        cv::AutoLock lock(getInitializationMutex());
         CV_LOG_INFO(NULL, "Initialize OpenCL runtime...");
         try
         {
             cl_uint n = 0;
             g_isOpenCLAvailable = ::clGetPlatformIDs(0, NULL, &n) == CL_SUCCESS;
-            g_isOpenCVActivated = n > 0;
+            g_isOpenCLAvailable &= n > 0;
+            CV_LOG_INFO(NULL, "OpenCL: found " << n << " platforms");
         }
         catch (...)
         {
@@ -899,51 +1187,58 @@ bool haveOpenCL()
         g_isOpenCLInitialized = true;
     }
     return g_isOpenCLAvailable;
-#else
-    return false;
-#endif
 }
 
 bool useOpenCL()
 {
-    CoreTLSData* data = getCoreTlsData().get();
-    if( data->useOpenCL < 0 )
+    CoreTLSData& data = getCoreTlsData();
+    if (data.useOpenCL < 0)
     {
         try
         {
-            data->useOpenCL = (int)(haveOpenCL() && Device::getDefault().ptr() && Device::getDefault().available()) ? 1 : 0;
+            data.useOpenCL = 0;
+            if (haveOpenCL())
+            {
+                auto c = OpenCLExecutionContext::getCurrent();
+                data.useOpenCL = c.useOpenCL();
+            }
         }
         catch (...)
         {
-            data->useOpenCL = 0;
+            CV_LOG_INFO(NULL, "OpenCL: can't initialize thread OpenCL execution context");
         }
     }
-    return data->useOpenCL > 0;
+    return data.useOpenCL > 0;
 }
 
-#ifdef HAVE_OPENCL
 bool isOpenCLActivated()
 {
-    if (!g_isOpenCVActivated)
+    if (!g_isOpenCLAvailable)
         return false; // prevent unnecessary OpenCL activation via useOpenCL()->haveOpenCL() calls
     return useOpenCL();
 }
-#endif
 
 void setUseOpenCL(bool flag)
 {
     CV_TRACE_FUNCTION();
 
-    CoreTLSData* data = getCoreTlsData().get();
-    if (!flag)
+    CoreTLSData& data = getCoreTlsData();
+    auto& c = OpenCLExecutionContext::getCurrentRef();
+    if (!c.empty())
     {
-        data->useOpenCL = 0;
+        c.setUseOpenCL(flag);
+        data.useOpenCL = c.useOpenCL();
     }
-    else if( haveOpenCL() )
+    else
     {
-        data->useOpenCL = (Device::getDefault().ptr() != NULL) ? 1 : 0;
+        if (!flag)
+            data.useOpenCL = 0;
+        else
+            data.useOpenCL = -1; // enabled by default (if context is not initialized)
     }
 }
+
+
 
 #ifdef HAVE_CLAMDBLAS
 
@@ -962,11 +1257,13 @@ public:
 
     ~AmdBlasHelper()
     {
-        try
+        // Do not tear down clBLAS.
+        // The user application may still use clBLAS even after OpenCV is unloaded.
+        /*try
         {
-            clAmdBlasTeardown();
+            clblasTeardown();
         }
-        catch (...) { }
+        catch (...) { }*/
     }
 
 protected:
@@ -982,7 +1279,7 @@ protected:
                 {
                     try
                     {
-                        g_isAmdBlasAvailable = clAmdBlasSetup() == clAmdBlasSuccess;
+                        g_isAmdBlasAvailable = clblasSetup() == clblasSuccess;
                     }
                     catch (...)
                     {
@@ -1036,11 +1333,13 @@ public:
 
     ~AmdFftHelper()
     {
-        try
+        // Do not tear down clFFT.
+        // The user application may still use clFFT even after OpenCV is unloaded.
+        /*try
         {
-//            clAmdFftTeardown();
+            clfftTeardown();
         }
-        catch (...) { }
+        catch (...) { }*/
     }
 
 protected:
@@ -1057,10 +1356,10 @@ protected:
                     try
                     {
                         cl_uint major, minor, patch;
-                        CV_Assert(clAmdFftInitSetupData(&setupData) == CLFFT_SUCCESS);
+                        CV_Assert(clfftInitSetupData(&setupData) == CLFFT_SUCCESS);
 
                         // it throws exception in case AmdFft binaries are not found
-                        CV_Assert(clAmdFftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
+                        CV_Assert(clfftGetVersion(&major, &minor, &patch) == CLFFT_SUCCESS);
                         g_isAmdFftAvailable = true;
                     }
                     catch (const Exception &)
@@ -1077,12 +1376,12 @@ protected:
     }
 
 private:
-    static clAmdFftSetupData setupData;
+    static clfftSetupData setupData;
     static bool g_isAmdFftInitialized;
     static bool g_isAmdFftAvailable;
 };
 
-clAmdFftSetupData AmdFftHelper::setupData;
+clfftSetupData AmdFftHelper::setupData;
 bool AmdFftHelper::g_isAmdFftAvailable = false;
 bool AmdFftHelper::g_isAmdFftInitialized = false;
 
@@ -1155,7 +1454,7 @@ struct Platform::Impl
     bool initialized;
 };
 
-Platform::Platform()
+Platform::Platform() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1184,6 +1483,23 @@ Platform& Platform::operator = (const Platform& pl)
     return *this;
 }
 
+Platform::Platform(Platform&& pl) CV_NOEXCEPT
+{
+    p = pl.p;
+    pl.p = nullptr;
+}
+
+Platform& Platform::operator = (Platform&& pl) CV_NOEXCEPT
+{
+    if (this != &pl) {
+        if(p)
+            p->release();
+        p = pl.p;
+        pl.p = nullptr;
+    }
+    return *this;
+}
+
 void* Platform::ptr() const
 {
     return p ? p->handle : 0;
@@ -1191,6 +1507,7 @@ void* Platform::ptr() const
 
 Platform& Platform::getDefault()
 {
+    CV_LOG_ONCE_WARNING(NULL, "OpenCL: Platform::getDefault() is deprecated and will be removed. Use cv::ocl::getPlatfomsInfo() for enumeration of available platforms");
     static Platform p;
     if( !p.p )
     {
@@ -1202,39 +1519,57 @@ Platform& Platform::getDefault()
 
 /////////////////////////////////////// Device ////////////////////////////////////////////
 
-// deviceVersion has format
+// Version has format:
 //   OpenCL<space><major_version.minor_version><space><vendor-specific information>
 // by specification
 //   http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clGetDeviceInfo.html
 //   http://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/clGetDeviceInfo.html
-static void parseDeviceVersion(const String &deviceVersion, int &major, int &minor)
+//   https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/clGetPlatformInfo.html
+//   https://www.khronos.org/registry/OpenCL/sdk/1.2/docs/man/xhtml/clGetPlatformInfo.html
+static void parseOpenCLVersion(const String &version, int &major, int &minor)
 {
     major = minor = 0;
-    if (10 >= deviceVersion.length())
+    if (10 >= version.length())
         return;
-    const char *pstr = deviceVersion.c_str();
+    const char *pstr = version.c_str();
     if (0 != strncmp(pstr, "OpenCL ", 7))
         return;
-    size_t ppos = deviceVersion.find('.', 7);
+    size_t ppos = version.find('.', 7);
     if (String::npos == ppos)
         return;
-    String temp = deviceVersion.substr(7, ppos - 7);
+    String temp = version.substr(7, ppos - 7);
     major = atoi(temp.c_str());
-    temp = deviceVersion.substr(ppos + 1);
+    temp = version.substr(ppos + 1);
     minor = atoi(temp.c_str());
 }
 
 struct Device::Impl
 {
     Impl(void* d)
+        : refcount(1)
+        , handle(0)
+    {
+        try
+        {
+            cl_device_id device = (cl_device_id)d;
+            _init(device);
+            CV_OCL_CHECK(clRetainDevice(device));  // increment reference counter on success only
+        }
+        catch (...)
+        {
+            throw;
+        }
+    }
+
+    void _init(cl_device_id d)
     {
         handle = (cl_device_id)d;
-        refcount = 1;
 
         name_ = getStrProp(CL_DEVICE_NAME);
         version_ = getStrProp(CL_DEVICE_VERSION);
         extensions_ = getStrProp(CL_DEVICE_EXTENSIONS);
         doubleFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_DOUBLE_FP_CONFIG);
+        halfFPConfig_ = getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG);
         hostUnifiedMemory_ = getBoolProp(CL_DEVICE_HOST_UNIFIED_MEMORY);
         maxComputeUnits_ = getProp<cl_uint, int>(CL_DEVICE_MAX_COMPUTE_UNITS);
         maxWorkGroupSize_ = getProp<size_t, size_t>(CL_DEVICE_MAX_WORK_GROUP_SIZE);
@@ -1243,7 +1578,7 @@ struct Device::Impl
         addressBits_ = getProp<cl_uint, int>(CL_DEVICE_ADDRESS_BITS);
 
         String deviceVersion_ = getStrProp(CL_DEVICE_VERSION);
-        parseDeviceVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
+        parseOpenCLVersion(deviceVersion_, deviceVersionMajor_, deviceVersionMinor_);
 
         size_t pos = 0;
         while (pos < extensions_.size())
@@ -1292,6 +1627,20 @@ struct Device::Impl
 #endif
     }
 
+    ~Impl()
+    {
+#ifdef _WIN32
+        if (!cv::__termination)
+#endif
+        {
+            if (handle)
+            {
+                CV_OCL_CHECK(clReleaseDevice(handle));
+                handle = 0;
+            }
+        }
+    }
+
     template<typename _TpCL, typename _TpOut>
     _TpOut getProp(cl_device_info prop) const
     {
@@ -1333,6 +1682,7 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    int halfFPConfig_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1349,7 +1699,7 @@ struct Device::Impl
 };
 
 
-Device::Device()
+Device::Device() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -1378,6 +1728,23 @@ Device& Device::operator = (const Device& d)
     return *this;
 }
 
+Device::Device(Device&& d) CV_NOEXCEPT
+{
+    p = d.p;
+    d.p = nullptr;
+}
+
+Device& Device::operator = (Device&& d) CV_NOEXCEPT
+{
+    if (this != &d) {
+        if(p)
+            p->release();
+        p = d.p;
+        d.p = nullptr;
+    }
+    return *this;
+}
+
 Device::~Device()
 {
     if(p)
@@ -1389,6 +1756,16 @@ void Device::set(void* d)
     if(p)
         p->release();
     p = new Impl(d);
+    if (p->handle)
+    {
+        CV_OCL_CHECK(clReleaseDevice((cl_device_id)d));
+    }
+}
+
+Device Device::fromHandle(void* d)
+{
+    Device device(d);
+    return device;
 }
 
 void* Device::ptr() const
@@ -1455,11 +1832,7 @@ int Device::singleFPConfig() const
 { return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_SINGLE_FP_CONFIG) : 0; }
 
 int Device::halfFPConfig() const
-#ifdef CL_VERSION_1_2
-{ return p ? p->getProp<cl_device_fp_config, int>(CL_DEVICE_HALF_FP_CONFIG) : 0; }
-#else
-{ CV_REQUIRE_OPENCL_1_2_ERROR; }
-#endif
+{ return p ? p->halfFPConfig_ : 0; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
@@ -1651,10 +2024,14 @@ size_t Device::profilingTimerResolution() const
 
 const Device& Device::getDefault()
 {
-    const Context& ctx = Context::getDefault();
-    int idx = getCoreTlsData().get()->device;
-    const Device& device = ctx.device(idx);
-    return device;
+    auto& c = OpenCLExecutionContext::getCurrent();
+    if (!c.empty())
+    {
+        return c.getDevice();
+    }
+
+    static Device dummy;
+    return dummy;
 }
 
 ////////////////////////////////////// Context ///////////////////////////////////////////////////
@@ -1706,7 +2083,7 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     split(configurationStr, ':', parts);
     if (parts.size() > 3)
     {
-        std::cerr << "ERROR: Invalid configuration string for OpenCL device" << std::endl;
+        CV_LOG_ERROR(NULL, "OpenCL: Invalid configuration string for OpenCL device: " << configurationStr);
         return false;
     }
     if (parts.size() > 2)
@@ -1723,17 +2100,20 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
 }
 
 #if defined WINRT || defined _WIN32_WCE
-static cl_device_id selectOpenCLDevice()
+static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
 {
+    CV_UNUSED(configuration)
     return NULL;
 }
 #else
-static cl_device_id selectOpenCLDevice()
+static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
 {
     std::string platform, deviceName;
     std::vector<std::string> deviceTypes;
 
-    const char* configuration = getenv("OPENCV_OPENCL_DEVICE");
+    if (!configuration)
+        configuration = getenv("OPENCV_OPENCL_DEVICE");
+
     if (configuration &&
             (strcmp(configuration, "disabled") == 0 ||
              !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName)
@@ -1778,22 +2158,24 @@ static cl_device_id selectOpenCLDevice()
         platforms.resize(numPlatforms);
     }
 
-    int selectedPlatform = -1;
     if (platform.length() > 0)
     {
-        for (size_t i = 0; i < platforms.size(); i++)
+        for (std::vector<cl_platform_id>::iterator currentPlatform = platforms.begin(); currentPlatform != platforms.end();)
         {
             std::string name;
-            CV_OCL_DBG_CHECK(getStringInfo(clGetPlatformInfo, platforms[i], CL_PLATFORM_NAME, name));
+            CV_OCL_DBG_CHECK(getStringInfo(clGetPlatformInfo, *currentPlatform, CL_PLATFORM_NAME, name));
             if (name.find(platform) != std::string::npos)
             {
-                selectedPlatform = (int)i;
-                break;
+                ++currentPlatform;
+            }
+            else
+            {
+                currentPlatform = platforms.erase(currentPlatform);
             }
         }
-        if (selectedPlatform == -1)
+        if (platforms.size() == 0)
         {
-            std::cerr << "ERROR: Can't find OpenCL platform by name: " << platform << std::endl;
+            CV_LOG_ERROR(NULL, "OpenCL: Can't find OpenCL platform by name: " << platform);
             goto not_found;
         }
     }
@@ -1824,17 +2206,15 @@ static cl_device_id selectOpenCLDevice()
             deviceType = Device::TYPE_ALL;
         else
         {
-            std::cerr << "ERROR: Unsupported device type for OpenCL device (GPU, CPU, ACCELERATOR): " << deviceTypes[t] << std::endl;
+            CV_LOG_ERROR(NULL, "OpenCL: Unsupported device type for OpenCL device (GPU, CPU, ACCELERATOR): " << deviceTypes[t]);
             goto not_found;
         }
 
-        std::vector<cl_device_id> devices; // TODO Use clReleaseDevice to cleanup
-        for (int i = selectedPlatform >= 0 ? selectedPlatform : 0;
-                (selectedPlatform >= 0 ? i == selectedPlatform : true) && (i < (int)platforms.size());
-                i++)
+        std::vector<cl_device_id> devices;
+        for (std::vector<cl_platform_id>::iterator currentPlatform = platforms.begin(); currentPlatform != platforms.end(); ++currentPlatform)
         {
             cl_uint count = 0;
-            cl_int status = clGetDeviceIDs(platforms[i], deviceType, 0, NULL, &count);
+            cl_int status = clGetDeviceIDs(*currentPlatform, deviceType, 0, NULL, &count);
             if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
             {
                 CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get count");
@@ -1843,7 +2223,7 @@ static cl_device_id selectOpenCLDevice()
                 continue;
             size_t base = devices.size();
             devices.resize(base + count);
-            status = clGetDeviceIDs(platforms[i], deviceType, count, &devices[base], &count);
+            status = clGetDeviceIDs(*currentPlatform, deviceType, count, &devices[base], &count);
             if (!(status == CL_SUCCESS || status == CL_DEVICE_NOT_FOUND))
             {
                 CV_OCL_DBG_CHECK_RESULT(status, "clGetDeviceIDs get IDs");
@@ -1875,13 +2255,16 @@ not_found:
     if (!configuration)
         return NULL; // suppress messages on stderr
 
-    std::cerr << "ERROR: Requested OpenCL device not found, check configuration: " << configuration << std::endl
-            << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
-            << "    Device types: ";
+    std::ostringstream msg;
+    msg << "ERROR: Requested OpenCL device not found, check configuration: '" << configuration << "'" << std::endl
+        << "    Platform: " << (platform.length() == 0 ? "any" : platform) << std::endl
+        << "    Device types:";
     for (size_t t = 0; t < deviceTypes.size(); t++)
-        std::cerr << deviceTypes[t] << " ";
+        msg << ' ' << deviceTypes[t];
 
-    std::cerr << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName) << std::endl;
+    msg << std::endl << "    Device name: " << (deviceName.length() == 0 ? "any" : deviceName);
+
+    CV_LOG_ERROR(NULL, msg.str());
     return NULL;
 }
 #endif
@@ -1950,7 +2333,6 @@ static unsigned int getSVMCapabilitiesMask()
 } // namespace
 #endif
 
-#ifdef HAVE_OPENCL
 static size_t getProgramCountLimit()
 {
     static bool initialized = false;
@@ -1962,34 +2344,232 @@ static size_t getProgramCountLimit()
     }
     return count;
 }
-#endif
+
+static int g_contextId = 0;
+
+class OpenCLBufferPoolImpl;
+class OpenCLSVMBufferPoolImpl;
 
 struct Context::Impl
 {
     static Context::Impl* get(Context& context) { return context.p; }
 
-    void __init()
+    typedef std::deque<Context::Impl*> container_t;
+    static container_t& getGlobalContainer()
     {
-        refcount = 1;
-        handle = 0;
-#ifdef HAVE_OPENCL_SVM
-        svmInitialized = false;
-#endif
+        // never delete this container (Impl lifetime is greater due to TLS storage)
+        static container_t* g_contexts = new container_t();
+        return *g_contexts;
     }
 
-    Impl()
+protected:
+    Impl(const std::string& configuration_)
+        : refcount(1)
+        , contextId(CV_XADD(&g_contextId, 1))
+        , configuration(configuration_)
+        , handle(0)
+#ifdef HAVE_OPENCL_SVM
+        , svmInitialized(false)
+#endif
     {
-        __init();
+        if (!haveOpenCL())
+            CV_Error(cv::Error::OpenCLApiCallError, "OpenCL runtime is not available!");
+
+        cv::AutoLock lock(cv::getInitializationMutex());
+        auto& container = getGlobalContainer();
+        container.resize(std::max(container.size(), (size_t)contextId + 1));
+        container[contextId] = this;
+    }
+
+    ~Impl()
+    {
+#ifdef _WIN32
+        if (!cv::__termination)
+#endif
+        {
+            if (handle)
+            {
+                CV_OCL_DBG_CHECK(clReleaseContext(handle));
+                handle = NULL;
+            }
+            devices.clear();
+        }
+
+        userContextStorage.clear();
+
+        {
+            cv::AutoLock lock(cv::getInitializationMutex());
+            auto& container = getGlobalContainer();
+            CV_CheckLT((size_t)contextId, container.size(), "");
+            container[contextId] = NULL;
+        }
+    }
+
+    void init_device_list()
+    {
+        CV_Assert(handle);
+
+        cl_uint ndevices = 0;
+        CV_OCL_CHECK(clGetContextInfo(handle, CL_CONTEXT_NUM_DEVICES, sizeof(ndevices), &ndevices, NULL));
+        CV_Assert(ndevices > 0);
+
+        cv::AutoBuffer<cl_device_id> cl_devices(ndevices);
+        size_t devices_ret_size = 0;
+        CV_OCL_CHECK(clGetContextInfo(handle, CL_CONTEXT_DEVICES, cl_devices.size() * sizeof(cl_device_id), &cl_devices[0], &devices_ret_size));
+        CV_CheckEQ(devices_ret_size, cl_devices.size() * sizeof(cl_device_id), "");
+
+        devices.clear();
+        for (unsigned i = 0; i < ndevices; i++)
+        {
+            devices.emplace_back(Device::fromHandle(cl_devices[i]));
+        }
+    }
+
+    void __init_buffer_pools();  // w/o synchronization
+    void _init_buffer_pools() const
+    {
+        if (!bufferPool_)
+        {
+            cv::AutoLock lock(cv::getInitializationMutex());
+            if (!bufferPool_)
+            {
+                const_cast<Impl*>(this)->__init_buffer_pools();
+            }
+        }
+    }
+public:
+    static Impl* findContext(const std::string& configuration)
+    {
+        CV_TRACE_FUNCTION();
+        cv::AutoLock lock(cv::getInitializationMutex());
+        auto& container = getGlobalContainer();
+        if (configuration.empty() && !container.empty())
+            return container[0];
+        for (auto it = container.begin(); it != container.end(); ++it)
+        {
+            Impl* i = *it;
+            if (i && i->configuration == configuration)
+            {
+                return i;
+            }
+        }
+        return NULL;
+    }
+
+    static Impl* findOrCreateContext(const std::string& configuration_)
+    {
+        CV_TRACE_FUNCTION();
+        std::string configuration = configuration_;
+        if (configuration_.empty())
+        {
+            const char* c = getenv("OPENCV_OPENCL_DEVICE");
+            if (c)
+                configuration = c;
+        }
+        Impl* impl = findContext(configuration);
+        if (impl)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: reuse context@" << impl->contextId << " for configuration: " << configuration)
+            impl->addref();
+            return impl;
+        }
+
+        cl_device_id d = selectOpenCLDevice(configuration.empty() ? NULL : configuration.c_str());
+        if (d == NULL)
+            return NULL;
+
+        impl = new Impl(configuration);
+        try
+        {
+            impl->createFromDevice(d);
+            if (impl->handle)
+                return impl;
+            delete impl;
+            return NULL;
+        }
+        catch (...)
+        {
+            delete impl;
+            throw;
+        }
+    }
+
+    static Impl* findOrCreateContext(cl_context h)
+    {
+        CV_TRACE_FUNCTION();
+
+        CV_Assert(h);
+
+        std::string configuration = cv::format("@ctx-%p", (void*)h);
+        Impl* impl = findContext(configuration);
+        if (impl)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: reuse context@" << impl->contextId << " for configuration: " << configuration)
+            impl->addref();
+            return impl;
+        }
+
+        impl = new Impl(configuration);
+        try
+        {
+            CV_OCL_CHECK(clRetainContext(h));
+            impl->handle = h;
+            impl->init_device_list();
+            return impl;
+        }
+        catch (...)
+        {
+            delete impl;
+            throw;
+        }
+    }
+
+    static Impl* findOrCreateContext(const ocl::Device& device)
+    {
+        CV_TRACE_FUNCTION();
+
+        CV_Assert(!device.empty());
+        cl_device_id d = (cl_device_id)device.ptr();
+        CV_Assert(d);
+
+        std::string configuration = cv::format("@dev-%p", (void*)d);
+        Impl* impl = findContext(configuration);
+        if (impl)
+        {
+            CV_LOG_INFO(NULL, "OpenCL: reuse context@" << impl->contextId << " for configuration: " << configuration)
+            impl->addref();
+            return impl;
+        }
+
+        impl = new Impl(configuration);
+        try
+        {
+            impl->createFromDevice(d);
+            CV_Assert(impl->handle);
+            return impl;
+        }
+        catch (...)
+        {
+            delete impl;
+            throw;
+        }
     }
 
     void setDefault()
     {
-        CV_Assert(handle == NULL);
-
+        CV_TRACE_FUNCTION();
         cl_device_id d = selectOpenCLDevice();
 
         if (d == NULL)
             return;
+
+        createFromDevice(d);
+    }
+
+    void createFromDevice(cl_device_id d)
+    {
+        CV_TRACE_FUNCTION();
+        CV_Assert(handle == NULL);
 
         cl_platform_id pl = NULL;
         CV_OCL_DBG_CHECK(clGetDeviceInfo(d, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &pl, NULL));
@@ -2015,71 +2595,6 @@ struct Context::Impl
         }
         else
             handle = NULL;
-    }
-
-    Impl(int dtype0)
-    {
-        __init();
-
-        cl_int retval = 0;
-        cl_platform_id pl = (cl_platform_id)Platform::getDefault().ptr();
-        cl_context_properties prop[] =
-        {
-            CL_CONTEXT_PLATFORM, (cl_context_properties)pl,
-            0
-        };
-
-        cl_uint i, nd0 = 0, nd = 0;
-        int dtype = dtype0 & 15;
-        CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, 0, 0, &nd0));
-
-        AutoBuffer<void*> dlistbuf(nd0*2+1);
-        cl_device_id* dlist = (cl_device_id*)dlistbuf.data();
-        cl_device_id* dlist_new = dlist + nd0;
-        CV_OCL_DBG_CHECK(clGetDeviceIDs(pl, dtype, nd0, dlist, &nd0));
-        String name0;
-
-        for(i = 0; i < nd0; i++)
-        {
-            Device d(dlist[i]);
-            if( !d.available() || !d.compilerAvailable() )
-                continue;
-            if( dtype0 == Device::TYPE_DGPU && d.hostUnifiedMemory() )
-                continue;
-            if( dtype0 == Device::TYPE_IGPU && !d.hostUnifiedMemory() )
-                continue;
-            String name = d.name();
-            if( nd != 0 && name != name0 )
-                continue;
-            name0 = name;
-            dlist_new[nd++] = dlist[i];
-        }
-
-        if(nd == 0)
-            return;
-
-        // !!! in the current implementation force the number of devices to 1 !!!
-        nd = 1;
-
-        handle = clCreateContext(prop, nd, dlist_new, 0, 0, &retval);
-        CV_OCL_DBG_CHECK_RESULT(retval, "clCreateContext");
-        bool ok = handle != 0 && retval == CL_SUCCESS;
-        if( ok )
-        {
-            devices.resize(nd);
-            for( i = 0; i < nd; i++ )
-                devices[i].set(dlist_new[i]);
-        }
-    }
-
-    ~Impl()
-    {
-        if(handle)
-        {
-            CV_OCL_DBG_CHECK(clReleaseContext(handle));
-            handle = NULL;
-        }
-        devices.clear();
     }
 
     Program getProg(const ProgramSource& src, const String& buildflags, String& errmsg);
@@ -2157,6 +2672,9 @@ struct Context::Impl
 
     IMPLEMENT_REFCOUNTABLE();
 
+    const int contextId;  // global unique ID
+    const std::string configuration;
+
     cl_context handle;
     std::vector<Device> devices;
 
@@ -2168,6 +2686,36 @@ struct Context::Impl
     phash_t phash;
     typedef std::list<cv::String> CacheList;
     CacheList cacheList;
+
+    std::shared_ptr<OpenCLBufferPoolImpl> bufferPool_;
+    std::shared_ptr<OpenCLBufferPoolImpl> bufferPoolHostPtr_;
+    OpenCLBufferPoolImpl& getBufferPool() const
+    {
+        _init_buffer_pools();
+        CV_DbgAssert(bufferPool_);
+        return *bufferPool_.get();
+    }
+    OpenCLBufferPoolImpl& getBufferPoolHostPtr() const
+    {
+        _init_buffer_pools();
+        CV_DbgAssert(bufferPoolHostPtr_);
+        return *bufferPoolHostPtr_.get();
+    }
+
+    std::map<std::type_index, std::shared_ptr<UserContext>> userContextStorage;
+    cv::Mutex userContextMutex;
+    void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext) {
+        cv::AutoLock lock(userContextMutex);
+        userContextStorage[typeId] = userContext;
+    }
+    std::shared_ptr<UserContext> getUserContext(std::type_index typeId) {
+        cv::AutoLock lock(userContextMutex);
+        auto it = userContextStorage.find(typeId);
+        if (it != userContextStorage.end())
+            return it->second;
+        else
+            return nullptr;
+    }
 
 #ifdef HAVE_OPENCL_SVM
     bool svmInitialized;
@@ -2304,60 +2852,86 @@ struct Context::Impl
         svmFunctions.fn_clSVMAlloc = NULL;
         return;
     }
+
+    std::shared_ptr<OpenCLSVMBufferPoolImpl> bufferPoolSVM_;
+
+    OpenCLSVMBufferPoolImpl& getBufferPoolSVM() const
+    {
+        _init_buffer_pools();
+        CV_DbgAssert(bufferPoolSVM_);
+        return *bufferPoolSVM_.get();
+    }
 #endif
 
     friend class Program;
 };
 
 
-Context::Context()
+Context::Context() CV_NOEXCEPT
 {
     p = 0;
 }
 
+Context::~Context()
+{
+    release();
+}
+
+// deprecated
 Context::Context(int dtype)
 {
     p = 0;
     create(dtype);
 }
 
-bool Context::create()
-{
-    if( !haveOpenCL() )
-        return false;
-    if(p)
-        p->release();
-    p = new Impl();
-    if(!p->handle)
-    {
-        delete p;
-        p = 0;
-    }
-    return p != 0;
-}
-
-bool Context::create(int dtype0)
-{
-    if( !haveOpenCL() )
-        return false;
-    if(p)
-        p->release();
-    p = new Impl(dtype0);
-    if(!p->handle)
-    {
-        delete p;
-        p = 0;
-    }
-    return p != 0;
-}
-
-Context::~Context()
+void Context::release()
 {
     if (p)
     {
         p->release();
         p = NULL;
     }
+}
+
+bool Context::create()
+{
+    release();
+    if (!haveOpenCL())
+        return false;
+    p = Impl::findOrCreateContext(std::string());
+    if (p && p->handle)
+        return true;
+    release();
+    return false;
+}
+
+// deprecated
+bool Context::create(int dtype)
+{
+    if( !haveOpenCL() )
+        return false;
+    release();
+    if (dtype == CL_DEVICE_TYPE_DEFAULT || (unsigned)dtype == (unsigned)CL_DEVICE_TYPE_ALL)
+    {
+        p = Impl::findOrCreateContext("");
+    }
+    else if (dtype == CL_DEVICE_TYPE_GPU)
+    {
+        p = Impl::findOrCreateContext(":GPU:");
+    }
+    else if (dtype == CL_DEVICE_TYPE_CPU)
+    {
+        p = Impl::findOrCreateContext(":CPU:");
+    }
+    else
+    {
+        CV_LOG_ERROR(NULL, "OpenCL: Can't recognize OpenCV device type=" << dtype);
+    }
+    if (p && !p->handle)
+    {
+        release();
+    }
+    return p != 0;
 }
 
 Context::Context(const Context& c)
@@ -2378,6 +2952,23 @@ Context& Context::operator = (const Context& c)
     return *this;
 }
 
+Context::Context(Context&& c) CV_NOEXCEPT
+{
+    p = c.p;
+    c.p = nullptr;
+}
+
+Context& Context::operator = (Context&& c) CV_NOEXCEPT
+{
+    if (this != &c) {
+        if(p)
+            p->release();
+        p = c.p;
+        c.p = nullptr;
+    }
+    return *this;
+}
+
 void* Context::ptr() const
 {
     return p == NULL ? NULL : p->handle;
@@ -2388,7 +2979,7 @@ size_t Context::ndevices() const
     return p ? p->devices.size() : 0;
 }
 
-const Device& Context::device(size_t idx) const
+Device& Context::device(size_t idx) const
 {
     static Device dummy;
     return !p || idx >= p->devices.size() ? dummy : p->devices[idx];
@@ -2396,23 +2987,16 @@ const Device& Context::device(size_t idx) const
 
 Context& Context::getDefault(bool initialize)
 {
-    static Context* ctx = new Context();
-    if(!ctx->p && haveOpenCL())
+    auto& c = OpenCLExecutionContext::getCurrent();
+    if (!c.empty())
     {
-        if (!ctx->p)
-            ctx->p = new Impl();
-        if (initialize)
-        {
-            // do not create new Context right away.
-            // First, try to retrieve existing context of the same type.
-            // In its turn, Platform::getContext() may call Context::create()
-            // if there is no such context.
-            if (ctx->p->handle == NULL)
-                ctx->p->setDefault();
-        }
+        auto& ctx = c.getContext();
+        return ctx;
     }
 
-    return *ctx;
+    CV_UNUSED(initialize);
+    static Context dummy;
+    return dummy;
 }
 
 Program Context::getProg(const ProgramSource& prog,
@@ -2425,6 +3009,49 @@ void Context::unloadProg(Program& prog)
 {
     if (p)
         p->unloadProg(prog);
+}
+
+/* static */
+Context Context::fromHandle(void* context)
+{
+    Context ctx;
+    ctx.p = Impl::findOrCreateContext((cl_context)context);
+    return ctx;
+}
+
+/* static */
+Context Context::fromDevice(const ocl::Device& device)
+{
+    Context ctx;
+    ctx.p = Impl::findOrCreateContext(device);
+    return ctx;
+}
+
+/* static */
+Context Context::create(const std::string& configuration)
+{
+    Context ctx;
+    ctx.p = Impl::findOrCreateContext(configuration);
+    return ctx;
+}
+
+void* Context::getOpenCLContextProperty(int propertyId) const
+{
+    if (p == NULL)
+        return nullptr;
+    ::size_t size = 0;
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, 0, NULL, &size));
+    std::vector<cl_context_properties> prop(size / sizeof(cl_context_properties), (cl_context_properties)0);
+    CV_OCL_CHECK(clGetContextInfo(p->handle, CL_CONTEXT_PROPERTIES, size, prop.data(), NULL));
+    for (size_t i = 0; i < prop.size(); i += 2)
+    {
+        if (prop[i] == (cl_context_properties)propertyId)
+        {
+            CV_LOG_DEBUG(NULL, "OpenCL: found context property=" << propertyId << ") => " << (void*)prop[i + 1]);
+            return (void*)prop[i + 1];
+        }
+    }
+    return nullptr;
 }
 
 #ifdef HAVE_OPENCL_SVM
@@ -2488,6 +3115,21 @@ CV_EXPORTS bool useSVM(UMatUsageFlags usageFlags)
 } // namespace cv::ocl::svm
 #endif // HAVE_OPENCL_SVM
 
+Context::UserContext::~UserContext()
+{
+}
+
+void Context::setUserContext(std::type_index typeId, const std::shared_ptr<Context::UserContext>& userContext)
+{
+    CV_Assert(p);
+    p->setUserContext(typeId, userContext);
+}
+
+std::shared_ptr<Context::UserContext> Context::getUserContext(std::type_index typeId)
+{
+    CV_Assert(p);
+    return p->getUserContext(typeId);
+}
 
 static void get_platform_name(cl_platform_id id, String& name)
 {
@@ -2510,12 +3152,23 @@ static void get_platform_name(cl_platform_id id, String& name)
 */
 void attachContext(const String& platformName, void* platformID, void* context, void* deviceID)
 {
-    cl_uint cnt = 0;
+    auto ctx = OpenCLExecutionContext::create(platformName, platformID, context, deviceID);
+    ctx.bind();
+}
 
+/* static */
+OpenCLExecutionContext OpenCLExecutionContext::create(
+        const std::string& platformName, void* platformID, void* context, void* deviceID
+)
+{
+    if (!haveOpenCL())
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL runtime is not available!");
+
+    cl_uint cnt = 0;
     CV_OCL_CHECK(clGetPlatformIDs(0, 0, &cnt));
 
     if (cnt == 0)
-        CV_Error(cv::Error::OpenCLApiCallError, "no OpenCL platform available!");
+        CV_Error(cv::Error::OpenCLApiCallError, "No OpenCL platform available!");
 
     std::vector<cl_platform_id> platforms(cnt);
 
@@ -2545,43 +3198,25 @@ void attachContext(const String& platformName, void* platformID, void* context, 
     if (platformName != actualPlatformName)
         CV_Error(cv::Error::OpenCLApiCallError, "No matched platforms available!");
 
-    // do not initialize OpenCL context
-    Context ctx = Context::getDefault(false);
+    OpenCLExecutionContext ctx;
+    ctx.p = std::make_shared<OpenCLExecutionContext::Impl>((cl_platform_id)platformID, (cl_context)context, (cl_device_id)deviceID);
+    CV_OCL_CHECK(clReleaseContext((cl_context)context));
+    CV_OCL_CHECK(clReleaseDevice((cl_device_id)deviceID));
+    return ctx;
+}
 
-    // attach supplied context to OpenCV
-    initializeContextFromHandle(ctx, platformID, context, deviceID);
-
-    CV_OCL_CHECK(clRetainContext((cl_context)context));
-
-    // clear command queue, if any
-    getCoreTlsData().get()->oclQueue.finish();
-    Queue q;
-    getCoreTlsData().get()->oclQueue = q;
-
-    return;
-} // attachContext()
-
-
-void initializeContextFromHandle(Context& ctx, void* platform, void* _context, void* _device)
+void initializeContextFromHandle(Context& ctx, void* _platform, void* _context, void* _device)
 {
+    // internal call, less checks
+    cl_platform_id platformID = (cl_platform_id)_platform;
     cl_context context = (cl_context)_context;
-    cl_device_id device = (cl_device_id)_device;
+    cl_device_id deviceID = (cl_device_id)_device;
 
-    // cleanup old context
-    Context::Impl * impl = ctx.p;
-    if (impl->handle)
-    {
-        CV_OCL_DBG_CHECK(clReleaseContext(impl->handle));
-    }
-    impl->devices.clear();
+    std::string platformName = PlatformInfo(&platformID).name();
 
-    impl->handle = context;
-    impl->devices.resize(1);
-    impl->devices[0].set(device);
-
-    Platform& p = Platform::getDefault();
-    Platform::Impl* pImpl = p.p;
-    pImpl->handle = (cl_platform_id)platform;
+    auto clExecCtx = OpenCLExecutionContext::create(platformName, platformID, context, deviceID);
+    CV_Assert(!clExecCtx.empty());
+    ctx = clExecCtx.getContext();
 }
 
 /////////////////////////////////////////// Queue /////////////////////////////////////////////
@@ -2680,7 +3315,7 @@ struct Queue::Impl
     cv::ocl::Queue profiling_queue_;
 };
 
-Queue::Queue()
+Queue::Queue() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2706,6 +3341,23 @@ Queue& Queue::operator = (const Queue& q)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Queue::Queue(Queue&& q) CV_NOEXCEPT
+{
+    p = q.p;
+    q.p = nullptr;
+}
+
+Queue& Queue::operator = (Queue&& q) CV_NOEXCEPT
+{
+    if (this != &q) {
+        if(p)
+            p->release();
+        p = q.p;
+        q.p = nullptr;
+    }
     return *this;
 }
 
@@ -2744,10 +3396,14 @@ void* Queue::ptr() const
 
 Queue& Queue::getDefault()
 {
-    Queue& q = getCoreTlsData().get()->oclQueue;
-    if( !q.p && haveOpenCL() )
-        q.create(Context::getDefault());
-    return q;
+    auto& c = OpenCLExecutionContext::getCurrent();
+    if (!c.empty())
+    {
+        auto& q = c.getQueue();
+        return q;
+    }
+    static Queue dummy;
+    return dummy;
 }
 
 static cl_command_queue getQueue(const Queue& q)
@@ -2760,7 +3416,7 @@ static cl_command_queue getQueue(const Queue& q)
 
 /////////////////////////////////////////// KernelArg /////////////////////////////////////////////
 
-KernelArg::KernelArg()
+KernelArg::KernelArg() CV_NOEXCEPT
     : flags(0), m(0), obj(0), sz(0), wscale(1), iwscale(1)
 {
 }
@@ -2782,7 +3438,7 @@ KernelArg KernelArg::Constant(const Mat& m)
 struct Kernel::Impl
 {
     Impl(const char* kname, const Program& prog) :
-        refcount(1), handle(NULL), isInProgress(false), nu(0)
+        refcount(1), handle(NULL), isInProgress(false), isAsyncRun(false), nu(0)
     {
         cl_program ph = (cl_program)prog.ptr();
         cl_int retval = 0;
@@ -2800,19 +3456,33 @@ struct Kernel::Impl
 
     void cleanupUMats()
     {
+        bool exceptionOccurred = false;
         for( int i = 0; i < MAX_ARRS; i++ )
+        {
             if( u[i] )
             {
                 if( CV_XADD(&u[i]->urefcount, -1) == 1 )
                 {
                     u[i]->flags |= UMatData::ASYNC_CLEANUP;
-                    u[i]->currAllocator->deallocate(u[i]);
+                    try
+                    {
+                        u[i]->currAllocator->deallocate(u[i]);
+                    }
+                    catch(const std::exception& exc)
+                    {
+                        // limited by legacy before C++11, therefore log and
+                        // remember some exception occurred to throw below
+                        CV_LOG_ERROR(NULL, "OCL: Unexpected C++ exception in OpenCL Kernel::Impl::cleanupUMats(): " << exc.what());
+                        exceptionOccurred = true;
+                    }
                 }
                 u[i] = 0;
             }
+        }
         nu = 0;
         haveTempDstUMats = false;
         haveTempSrcUMats = false;
+        CV_Assert(!exceptionOccurred);
     }
 
     void addUMat(const UMat& m, bool dst)
@@ -2827,17 +3497,32 @@ struct Kernel::Impl
             haveTempSrcUMats = true;  // UMat is created on RAW memory (without proper lifetime management, even from Mat)
     }
 
-    void addImage(const Image2D& image)
+    /// Preserve image lifetime (while it is specified as Kernel argument)
+    void registerImageArgument(int arg, const Image2D& image)
     {
-        images.push_back(image);
+        CV_CheckGE(arg, 0, "");
+        if (arg < (int)shadow_images.size() && shadow_images[arg].ptr() != image.ptr())  // TODO future: replace ptr => impl (more strong check)
+        {
+            CV_Check(arg, !isInProgress, "ocl::Kernel: clearing of pending Image2D arguments is not allowed");
+        }
+        shadow_images.reserve(MAX_ARRS);
+        shadow_images.resize(std::max(shadow_images.size(), (size_t)arg + 1));
+        shadow_images[arg] = image;
     }
 
     void finit(cl_event e)
     {
         CV_UNUSED(e);
-        cleanupUMats();
-        images.clear();
         isInProgress = false;
+        try
+        {
+            cleanupUMats();
+        }
+        catch(...)
+        {
+            release();
+            throw;
+        }
         release();
     }
 
@@ -2859,8 +3544,9 @@ struct Kernel::Impl
     enum { MAX_ARRS = 16 };
     UMatData* u[MAX_ARRS];
     bool isInProgress;
+    bool isAsyncRun;  // true if kernel was scheduled in async mode
     int nu;
-    std::list<Image2D> images;
+    std::vector<Image2D> shadow_images;
     bool haveTempDstUMats;
     bool haveTempSrcUMats;
 };
@@ -2893,7 +3579,7 @@ static void CL_CALLBACK oclCleanupCallback(cl_event e, cl_int, void *p)
 
 namespace cv { namespace ocl {
 
-Kernel::Kernel()
+Kernel::Kernel() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -2926,6 +3612,23 @@ Kernel& Kernel::operator = (const Kernel& k)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+Kernel::Kernel(Kernel&& k) CV_NOEXCEPT
+{
+    p = k.p;
+    k.p = nullptr;
+}
+
+Kernel& Kernel::operator = (Kernel&& k) CV_NOEXCEPT
+{
+    if (this != &k) {
+        if(p)
+            p->release();
+        p = k.p;
+        k.p = nullptr;
+    }
     return *this;
 }
 
@@ -2975,6 +3678,19 @@ bool Kernel::empty() const
     return ptr() == 0;
 }
 
+static cv::String dumpValue(size_t sz, const void* p)
+{
+    if (!p)
+        return "NULL";
+    if (sz == 2)
+        return cv::format("%d / %uu / 0x%04x", *(short*)p, *(unsigned short*)p, *(short*)p);
+    if (sz == 4)
+        return cv::format("%d / %uu / 0x%08x / %g", *(int*)p, *(int*)p, *(int*)p, *(float*)p);
+    if (sz == 8)
+        return cv::format("%lld / %lluu / 0x%16llx / %g", *(long long*)p, *(long long*)p, *(long long*)p, *(double*)p);
+    return cv::format("%p", p);
+}
+
 int Kernel::set(int i, const void* value, size_t sz)
 {
     if (!p || !p->handle)
@@ -2985,7 +3701,7 @@ int Kernel::set(int i, const void* value, size_t sz)
         p->cleanupUMats();
 
     cl_int retval = clSetKernelArg(p->handle, (cl_uint)i, sz, value);
-    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, value=%p)", p->name.c_str(), (int)i, (int)sz, (void*)value).c_str());
+    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clSetKernelArg('%s', arg_index=%d, size=%d, value=%s)", p->name.c_str(), (int)i, (int)sz, dumpValue(sz, value).c_str()).c_str());
     if (retval != CL_SUCCESS)
         return -1;
     return i+1;
@@ -2993,9 +3709,11 @@ int Kernel::set(int i, const void* value, size_t sz)
 
 int Kernel::set(int i, const Image2D& image2D)
 {
-    p->addImage(image2D);
     cl_mem h = (cl_mem)image2D.ptr();
-    return set(i, &h, sizeof(h));
+    int res = set(i, &h, sizeof(h));
+    if (res >= 0)
+        p->registerImageArgument(i, image2D);
+    return res;
 }
 
 int Kernel::set(int i, const UMat& m)
@@ -3138,13 +3856,57 @@ bool Kernel::run(int dims, size_t _globalsize[], size_t _localsize[],
 }
 
 
+bool Kernel::run_(int dims, size_t _globalsize[], size_t _localsize[],
+                  bool sync, const Queue& q)
+{
+    CV_Assert(p);
+    return p->run(dims, _globalsize, _localsize, sync, NULL, q);
+}
+
+
+static bool isRaiseErrorOnReuseAsyncKernel()
+{
+    static bool initialized = false;
+    static bool value = false;
+    if (!initialized)
+    {
+        value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_RAISE_ERROR_REUSE_ASYNC_KERNEL", false);
+        initialized = true;
+    }
+    return value;
+}
+
 bool Kernel::Impl::run(int dims, size_t globalsize[], size_t localsize[],
         bool sync, int64* timeNS, const Queue& q)
 {
     CV_INSTRUMENT_REGION_OPENCL_RUN(name.c_str());
 
-    if (!handle || isInProgress)
+    if (!handle)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel has zero handle: " << name);
         return false;
+    }
+
+    if (isAsyncRun)
+    {
+        CV_LOG_ERROR(NULL, "OpenCL kernel can't be reused in async mode: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
+    isAsyncRun = !sync;
+
+    if (isInProgress)
+    {
+        CV_LOG_ERROR(NULL, "Previous OpenCL kernel launch is not finished: " << name);
+        if (isRaiseErrorOnReuseAsyncKernel())
+            CV_Assert(0);
+        return false;  // OpenCV 5.0: raise error
+    }
+
+#if CV_OPENCL_SYNC_RUN_KERNELS
+    sync = true;
+#endif
 
     cl_command_queue qq = getQueue(q);
     if (haveTempDstUMats)
@@ -3440,7 +4202,7 @@ struct ProgramSource::Impl
 };
 
 
-ProgramSource::ProgramSource()
+ProgramSource::ProgramSource() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -3481,6 +4243,23 @@ ProgramSource& ProgramSource::operator = (const ProgramSource& prog)
     if(p)
         p->release();
     p = newp;
+    return *this;
+}
+
+ProgramSource::ProgramSource(ProgramSource&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+ProgramSource& ProgramSource::operator = (ProgramSource&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
     return *this;
 }
 
@@ -3535,8 +4314,6 @@ internal::ProgramEntry::operator ProgramSource&() const
 
 /////////////////////////////////////////// Program /////////////////////////////////////////////
 
-#ifdef HAVE_OPENCL
-
 static
 cv::String joinBuildOptions(const cv::String& a, const cv::String& b)
 {
@@ -3578,7 +4355,28 @@ struct Program::Impl
             if (!param_buildExtraOptions.empty())
                 buildflags = joinBuildOptions(buildflags, param_buildExtraOptions);
         }
+#if CV_OPENCL_SHOW_BUILD_OPTIONS
+        CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' options:" << buildflags);
+#endif
         compile(ctx, src_, errmsg);
+#if CV_OPENCL_SHOW_BUILD_KERNELS
+        if (handle)
+        {
+            size_t retsz = 0;
+            char kernels_buffer[4096] = {0};
+            cl_int result = clGetProgramInfo(handle, CL_PROGRAM_KERNEL_NAMES, sizeof(kernels_buffer), &kernels_buffer[0], &retsz);
+            CV_OCL_DBG_CHECK_RESULT(result, cv::format("clGetProgramInfo(CL_PROGRAM_KERNEL_NAMES: %s/%s)", sourceModule_.c_str(), sourceName_.c_str()).c_str());
+            if (result == CL_SUCCESS && retsz < sizeof(kernels_buffer))
+            {
+                kernels_buffer[retsz] = 0;
+                CV_LOG_INFO(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' kernels: '" << kernels_buffer << "'");
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, "OpenCL program '" << sourceModule_ << "/" << sourceName_ << "' can't retrieve kernel names!");
+            }
+        }
+#endif
     }
 
     bool compile(const Context& ctx, const ProgramSource::Impl* src_, String& errmsg)
@@ -3810,7 +4608,6 @@ struct Program::Impl
                 CV_LOG_INFO(NULL, result << ": Kernels='" << kernels_buffer << "'");
             }
 #endif
-
         }
         return handle != NULL;
     }
@@ -3950,12 +4747,11 @@ struct Program::Impl
     String sourceName_;
 };
 
-#else // HAVE_OPENCL
-struct Program::Impl : public DummyImpl {};
-#endif // HAVE_OPENCL
 
-
-Program::Program() { p = 0; }
+Program::Program() CV_NOEXCEPT
+{
+    p = 0;
+}
 
 Program::Program(const ProgramSource& src,
         const String& buildflags, String& errmsg)
@@ -3982,6 +4778,23 @@ Program& Program::operator = (const Program& prog)
     return *this;
 }
 
+Program::Program(Program&& prog) CV_NOEXCEPT
+{
+    p = prog.p;
+    prog.p = nullptr;
+}
+
+Program& Program::operator = (Program&& prog) CV_NOEXCEPT
+{
+    if (this != &prog) {
+        if(p)
+            p->release();
+        p = prog.p;
+        prog.p = nullptr;
+    }
+    return *this;
+}
+
 Program::~Program()
 {
     if(p)
@@ -3996,7 +4809,6 @@ bool Program::create(const ProgramSource& src,
         p->release();
         p = NULL;
     }
-#ifdef HAVE_OPENCL
     p = new Impl(src, buildflags, errmsg);
     if(!p->handle)
     {
@@ -4004,18 +4816,11 @@ bool Program::create(const ProgramSource& src,
         p = 0;
     }
     return p != 0;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 void* Program::ptr() const
 {
-#ifdef HAVE_OPENCL
     return p ? p->handle : 0;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 #ifndef OPENCV_REMOVE_DEPRECATED_API
@@ -4038,44 +4843,30 @@ bool Program::write(String& bin) const
 
 String Program::getPrefix() const
 {
-#ifdef HAVE_OPENCL
     if(!p)
         return String();
     Context::Impl* ctx_ = Context::getDefault().getImpl();
     CV_Assert(ctx_);
     return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), p->buildflags.c_str());
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 String Program::getPrefix(const String& buildflags)
 {
-#ifdef HAVE_OPENCL
         Context::Impl* ctx_ = Context::getDefault().getImpl();
         CV_Assert(ctx_);
         return cv::format("opencl=%s\nbuildflags=%s", ctx_->getPrefixString().c_str(), buildflags.c_str());
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
-#endif
+#endif // OPENCV_REMOVE_DEPRECATED_API
 
 void Program::getBinary(std::vector<char>& binary) const
 {
-#ifdef HAVE_OPENCL
     CV_Assert(p && "Empty program");
     p->getProgramBinary(binary);
-#else
-    binary.clear();
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 Program Context::Impl::getProg(const ProgramSource& src,
                                const String& buildflags, String& errmsg)
 {
-#ifdef HAVE_OPENCL
     size_t limit = getProgramCountLimit();
     const ProgramSource::Impl* src_ = src.getImpl();
     CV_Assert(src_);
@@ -4127,9 +4918,6 @@ Program Context::Impl::getProg(const ProgramSource& src,
         cacheList.push_front(key);
     }
     return prog;
-#else
-    CV_OPENCL_NO_SUPPORT();
-#endif
 }
 
 
@@ -4541,14 +5329,32 @@ private:
 #define CV_OPENCL_DATA_PTR_ALIGNMENT 16
 #endif
 
-class OpenCLAllocator CV_FINAL : public MatAllocator
+
+void Context::Impl::__init_buffer_pools()
 {
-    mutable OpenCLBufferPoolImpl bufferPool;
-    mutable OpenCLBufferPoolImpl bufferPoolHostPtr;
-#ifdef  HAVE_OPENCL_SVM
-    mutable OpenCLSVMBufferPoolImpl bufferPoolSVM;
+    bufferPool_ = std::make_shared<OpenCLBufferPoolImpl>(0);
+    OpenCLBufferPoolImpl& bufferPool = *bufferPool_.get();
+    bufferPoolHostPtr_ = std::make_shared<OpenCLBufferPoolImpl>(CL_MEM_ALLOC_HOST_PTR);
+    OpenCLBufferPoolImpl& bufferPoolHostPtr = *bufferPoolHostPtr_.get();
+
+    size_t defaultPoolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
+    size_t poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_BUFFERPOOL_LIMIT", defaultPoolSize);
+    bufferPool.setMaxReservedSize(poolSize);
+    size_t poolSizeHostPtr = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_HOST_PTR_BUFFERPOOL_LIMIT", defaultPoolSize);
+    bufferPoolHostPtr.setMaxReservedSize(poolSizeHostPtr);
+
+#ifdef HAVE_OPENCL_SVM
+    bufferPoolSVM_ = std::make_shared<OpenCLSVMBufferPoolImpl>();
+    OpenCLSVMBufferPoolImpl& bufferPoolSVM = *bufferPoolSVM_.get();
+    size_t poolSizeSVM = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT", defaultPoolSize);
+    bufferPoolSVM.setMaxReservedSize(poolSizeSVM);
 #endif
 
+    CV_LOG_INFO(NULL, "OpenCL: Initializing buffer pool for context@" << contextId << " with max capacity: poolSize=" << poolSize << " poolSizeHostPtr=" << poolSizeHostPtr);
+}
+
+class OpenCLAllocator CV_FINAL : public MatAllocator
+{
 public:
     enum AllocatorFlags
     {
@@ -4561,20 +5367,7 @@ public:
     };
 
     OpenCLAllocator()
-        : bufferPool(0),
-          bufferPoolHostPtr(CL_MEM_ALLOC_HOST_PTR)
     {
-        size_t defaultPoolSize, poolSize;
-        defaultPoolSize = ocl::Device::getDefault().isIntel() ? 1 << 27 : 0;
-        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_BUFFERPOOL_LIMIT", defaultPoolSize);
-        bufferPool.setMaxReservedSize(poolSize);
-        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_HOST_PTR_BUFFERPOOL_LIMIT", defaultPoolSize);
-        bufferPoolHostPtr.setMaxReservedSize(poolSize);
-#ifdef HAVE_OPENCL_SVM
-        poolSize = utils::getConfigurationParameterSizeT("OPENCV_OPENCL_SVM_BUFFERPOOL_LIMIT", defaultPoolSize);
-        bufferPoolSVM.setMaxReservedSize(poolSize);
-#endif
-
         matStdAllocator = Mat::getDefaultAllocator();
     }
     ~OpenCLAllocator()
@@ -4589,6 +5382,17 @@ public:
         return u;
     }
 
+    static bool isOpenCLMapForced()  // force clEnqueueMapBuffer / clEnqueueUnmapMemObject OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_MAPPING", false);
+        return value;
+    }
+    static bool isOpenCLCopyingForced()  // force clEnqueueReadBuffer[Rect] / clEnqueueWriteBuffer[Rect] OpenCL API
+    {
+        static bool value = cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_BUFFER_FORCE_COPYING", false);
+        return value;
+    }
+
     void getBestFlags(const Context& ctx, AccessFlag /*flags*/, UMatUsageFlags usageFlags, int& createFlags, UMatData::MemoryFlag& flags0) const
     {
         const Device& dev = ctx.device(0);
@@ -4596,7 +5400,15 @@ public:
         if ((usageFlags & USAGE_ALLOCATE_HOST_MEMORY) != 0)
             createFlags |= CL_MEM_ALLOC_HOST_PTR;
 
-        if( dev.hostUnifiedMemory() )
+        if (!isOpenCLCopyingForced() &&
+            (isOpenCLMapForced() ||
+                (dev.hostUnifiedMemory()
+#ifndef __APPLE__
+                || dev.isIntel()
+#endif
+                )
+            )
+        )
             flags0 = static_cast<UMatData::MemoryFlag>(0);
         else
             flags0 = UMatData::COPY_ON_MAP;
@@ -4607,6 +5419,9 @@ public:
     {
         if(!useOpenCL())
             return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+
+        flushCleanupQueue();
+
         CV_Assert(data == 0);
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -4617,7 +5432,9 @@ public:
         }
 
         Context& ctx = Context::getDefault();
-        flushCleanupQueue();
+        if (!ctx.getImpl())
+            return defaultAllocate(dims, sizes, type, data, step, flags, usageFlags);
+        Context::Impl& ctxImpl = *ctx.getImpl();
 
         int createFlags = 0;
         UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
@@ -4631,7 +5448,7 @@ public:
         if (ctx.useSVM() && svm::useSVM(usageFlags) && !svmCaps.isNoSVMSupport())
         {
             allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED;
-            handle = bufferPoolSVM.allocate(total);
+            handle = ctxImpl.getBufferPoolSVM().allocate(total);
 
             // this property is constant, so single buffer pool can be used here
             bool isFineGrainBuffer = svmCaps.isSupportFineGrainBuffer();
@@ -4642,12 +5459,12 @@ public:
         if (createFlags == 0)
         {
             allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_USED;
-            handle = bufferPool.allocate(total);
+            handle = ctxImpl.getBufferPool().allocate(total);
         }
         else if (createFlags == CL_MEM_ALLOC_HOST_PTR)
         {
             allocatorFlags = ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED;
-            handle = bufferPoolHostPtr.allocate(total);
+            handle = ctxImpl.getBufferPoolHostPtr().allocate(total);
         }
         else
         {
@@ -4663,6 +5480,7 @@ public:
         u->handle = handle;
         u->flags = flags0;
         u->allocatorFlags_ = allocatorFlags;
+        u->allocatorContext = std::static_pointer_cast<void>(std::make_shared<ocl::Context>(ctx));
         CV_DbgAssert(!u->tempUMat()); // for bufferPool.release() consistency in deallocate()
         u->markHostCopyObsolete(true);
         opencl_allocator_stats.onAllocate(u->size);
@@ -4685,6 +5503,8 @@ public:
             int createFlags = 0;
             UMatData::MemoryFlag flags0 = static_cast<UMatData::MemoryFlag>(0);
             getBestFlags(ctx, accessFlags, usageFlags, createFlags, flags0);
+
+            bool copyOnMap = (flags0 & UMatData::COPY_ON_MAP) != 0;
 
             cl_context ctx_handle = (cl_context)ctx.ptr();
             int allocatorFlags = 0;
@@ -4745,18 +5565,35 @@ public:
             else
 #endif
             {
+                if( copyOnMap )
+                    accessFlags &= ~ACCESS_FAST;
+
                 tempUMatFlags = UMatData::TEMP_UMAT;
-                if (u->origdata == cv::alignPtr(u->origdata, 4)  // There are OpenCL runtime issues for less aligned data
-                    && !(u->originalUMatData && u->originalUMatData->handle)  // Avoid sharing of host memory between OpenCL buffers
+                if (
+                #ifdef __APPLE__
+                    !copyOnMap &&
+                #endif
+                    CV_OPENCL_ENABLE_MEM_USE_HOST_PTR
+                    // There are OpenCL runtime issues for less aligned data
+                    && (CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR != 0
+                        && u->origdata == cv::alignPtr(u->origdata, (int)CV_OPENCL_ALIGNMENT_MEM_USE_HOST_PTR))
+                    // Avoid sharing of host memory between OpenCL buffers
+                    && !(u->originalUMatData && u->originalUMatData->handle)
                 )
                 {
-                    handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|createFlags,
+                    // Change the host-side origdata[size] to "pinned memory" that enables fast
+                    // DMA-transfers over PCIe to the device. Often used with clEnqueueMapBuffer/clEnqueueUnmapMemObject
+                    handle = clCreateBuffer(ctx_handle, CL_MEM_USE_HOST_PTR|(createFlags & ~CL_MEM_ALLOC_HOST_PTR),
                                             u->size, u->origdata, &retval);
-                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_USE_HOST_PTR|createFlags, sz=%lld, origdata=%p) => %p",
+                    CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_USE_HOST_PTR|(createFlags & ~CL_MEM_ALLOC_HOST_PTR), sz=%lld, origdata=%p) => %p",
                             (long long int)u->size, u->origdata, (void*)handle).c_str());
                 }
                 if((!handle || retval < 0) && !(accessFlags & ACCESS_FAST))
                 {
+                    // Allocate device-side memory and immediately copy data from the host-side pointer origdata[size].
+                    // If createFlags=CL_MEM_ALLOC_HOST_PTR (aka cv::USAGE_ALLOCATE_HOST_MEMORY), then
+                    // additionally allocate a host-side "pinned" duplicate of the origdata that is
+                    // managed by OpenCL. This is potentially faster in unaligned/unmanaged scenarios.
                     handle = clCreateBuffer(ctx_handle, CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags,
                                                u->size, u->origdata, &retval);
                     CV_OCL_DBG_CHECK_RESULT(retval, cv::format("clCreateBuffer(CL_MEM_COPY_HOST_PTR|CL_MEM_READ_WRITE|createFlags, sz=%lld, origdata=%p) => %p",
@@ -4770,7 +5607,7 @@ public:
             u->handle = handle;
             u->prevAllocator = u->currAllocator;
             u->currAllocator = this;
-            u->flags |= tempUMatFlags;
+            u->flags |= tempUMatFlags | flags0;
             u->allocatorFlags_ = allocatorFlags;
         }
         if (!!(accessFlags & ACCESS_WRITE))
@@ -4905,7 +5742,7 @@ public:
                                 (CL_MAP_READ | CL_MAP_WRITE),
                                 0, u->size, 0, 0, 0, &retval);
                             CV_OCL_CHECK_RESULT(retval, cv::format("clEnqueueMapBuffer(handle=%p, sz=%lld) => %p", (void*)u->handle, (long long int)u->size, data).c_str());
-                            CV_Assert(u->origdata == data);
+                            CV_Assert(u->origdata == data && "Details: https://github.com/opencv/opencv/issues/6293");
                             if (u->originalUMatData)
                             {
                                 CV_Assert(u->originalUMatData->data == data);
@@ -4962,15 +5799,26 @@ public:
             }
             if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_USED)
             {
-                bufferPool.release((cl_mem)u->handle);
+                std::shared_ptr<ocl::Context> pCtx = std::static_pointer_cast<ocl::Context>(u->allocatorContext);
+                CV_Assert(pCtx);
+                ocl::Context& ctx = *pCtx.get();
+                CV_Assert(ctx.getImpl());
+                ctx.getImpl()->getBufferPool().release((cl_mem)u->handle);
             }
             else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_HOST_PTR_USED)
             {
-                bufferPoolHostPtr.release((cl_mem)u->handle);
+                std::shared_ptr<ocl::Context> pCtx = std::static_pointer_cast<ocl::Context>(u->allocatorContext);
+                CV_Assert(pCtx);
+                ocl::Context& ctx = *pCtx.get();
+                CV_Assert(ctx.getImpl());
+                ctx.getImpl()->getBufferPoolHostPtr().release((cl_mem)u->handle);
             }
 #ifdef HAVE_OPENCL_SVM
             else if (u->allocatorFlags_ & ALLOCATOR_FLAGS_BUFFER_POOL_SVM_USED)
             {
+                std::shared_ptr<ocl::Context> pCtx = std::static_pointer_cast<ocl::Context>(u->allocatorContext);
+                CV_Assert(pCtx);
+                ocl::Context& ctx = *pCtx.get();
                 if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_SYSTEM)
                 {
                     //nothing
@@ -4978,7 +5826,6 @@ public:
                 else if ((u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_FINE_GRAIN_BUFFER ||
                         (u->allocatorFlags_ & svm::OPENCL_SVM_BUFFER_MASK) == svm::OPENCL_SVM_COARSE_GRAIN_BUFFER)
                 {
-                    Context& ctx = Context::getDefault();
                     const svm::SVMFunctions* svmFns = svm::getSVMFunctions(ctx);
                     CV_DbgAssert(svmFns->isValid());
                     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -4990,7 +5837,8 @@ public:
                         CV_OCL_CHECK_RESULT(status, "clEnqueueSVMUnmap()");
                     }
                 }
-                bufferPoolSVM.release((void*)u->handle);
+                CV_Assert(ctx.getImpl());
+                ctx.getImpl()->getBufferPoolSVM().release((void*)u->handle);
             }
 #endif
             else
@@ -5706,22 +6554,26 @@ public:
         }
     }
 
-    BufferPoolController* getBufferPoolController(const char* id) const CV_OVERRIDE {
+    BufferPoolController* getBufferPoolController(const char* id) const CV_OVERRIDE
+    {
+        ocl::Context ctx = Context::getDefault();
+        if (ctx.empty())
+            return NULL;
 #ifdef HAVE_OPENCL_SVM
         if ((svm::checkForceSVMUmatUsage() && (id == NULL || strcmp(id, "OCL") == 0)) || (id != NULL && strcmp(id, "SVM") == 0))
         {
-            return &bufferPoolSVM;
+            return &ctx.getImpl()->getBufferPoolSVM();
         }
 #endif
         if (id != NULL && strcmp(id, "HOST_ALLOC") == 0)
         {
-            return &bufferPoolHostPtr;
+            return &ctx.getImpl()->getBufferPoolHostPtr();
         }
         if (id != NULL && strcmp(id, "OCL") != 0)
         {
             CV_Error(cv::Error::StsBadArg, "getBufferPoolController(): unknown BufferPool ID\n");
         }
-        return &bufferPool;
+        return &ctx.getImpl()->getBufferPool();
     }
 
     MatAllocator* matStdAllocator;
@@ -5756,8 +6608,7 @@ public:
 
 static OpenCLAllocator* getOpenCLAllocator_() // call once guarantee
 {
-    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destrutor call (using of this object is too wide)
-    g_isOpenCVActivated = true;
+    static OpenCLAllocator* g_allocator = new OpenCLAllocator(); // avoid destructor call (using of this object is too wide)
     return g_allocator;
 }
 MatAllocator* getOpenCLAllocator()
@@ -5876,6 +6727,10 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
         depth = CV_32F;
         break;
 
+    case CL_HALF_FLOAT:
+        depth = CV_16F;
+        break;
+
     default:
         CV_Error(cv::Error::OpenCLApiCallError, "Not supported image_channel_data_type");
     }
@@ -5884,8 +6739,22 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
     switch (fmt.image_channel_order)
     {
     case CL_R:
+    case CL_A:
+    case CL_INTENSITY:
+    case CL_LUMINANCE:
         type = CV_MAKE_TYPE(depth, 1);
         break;
+
+    case CL_RG:
+    case CL_RA:
+        type = CV_MAKE_TYPE(depth, 2);
+        break;
+
+    // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+    // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+    /*case CL_RGB:
+        type = CV_MAKE_TYPE(depth, 3);
+        break;*/
 
     case CL_RGBA:
     case CL_BGRA:
@@ -5929,7 +6798,12 @@ void convertFromImage(void* cl_mem_image, UMat& dst)
 static void getDevices(std::vector<cl_device_id>& devices, cl_platform_id platform)
 {
     cl_uint numDevices = 0;
-    CV_OCL_DBG_CHECK(clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices));
+    cl_int status = clGetDeviceIDs(platform, (cl_device_type)Device::TYPE_ALL, 0, NULL, &numDevices);
+    if (status != CL_DEVICE_NOT_FOUND) // Not an error if platform has no devices
+    {
+        CV_OCL_DBG_CHECK_RESULT(status,
+            cv::format("clGetDeviceIDs(platform, Device::TYPE_ALL, num_entries=0, devices=NULL, numDevices=%p)", &numDevices).c_str());
+    }
 
     if (numDevices == 0)
     {
@@ -5948,6 +6822,9 @@ struct PlatformInfo::Impl
         refcount = 1;
         handle = *(cl_platform_id*)id;
         getDevices(devices, handle);
+
+        version_ = getStrProp(CL_PLATFORM_VERSION);
+        parseOpenCLVersion(version_, versionMajor_, versionMinor_);
     }
 
     String getStrProp(cl_platform_info prop) const
@@ -5961,9 +6838,13 @@ struct PlatformInfo::Impl
     IMPLEMENT_REFCOUNTABLE();
     std::vector<cl_device_id> devices;
     cl_platform_id handle;
+
+    String version_;
+    int versionMajor_;
+    int versionMinor_;
 };
 
-PlatformInfo::PlatformInfo()
+PlatformInfo::PlatformInfo() CV_NOEXCEPT
 {
     p = 0;
 }
@@ -5999,6 +6880,23 @@ PlatformInfo& PlatformInfo::operator =(const PlatformInfo& i)
     return *this;
 }
 
+PlatformInfo::PlatformInfo(PlatformInfo&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+PlatformInfo& PlatformInfo::operator = (PlatformInfo&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if(p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
+    }
+    return *this;
+}
+
 int PlatformInfo::deviceNumber() const
 {
     return p ? (int)p->devices.size() : 0;
@@ -6023,7 +6921,19 @@ String PlatformInfo::vendor() const
 
 String PlatformInfo::version() const
 {
-    return p ? p->getStrProp(CL_PLATFORM_VERSION) : String();
+    return p ? p->version_ : String();
+}
+
+int PlatformInfo::versionMajor() const
+{
+    CV_Assert(p);
+    return p->versionMajor_;
+}
+
+int PlatformInfo::versionMinor() const
+{
+    CV_Assert(p);
+    return p->versionMinor_;
 }
 
 static void getPlatforms(std::vector<cl_platform_id>& platforms)
@@ -6235,6 +7145,13 @@ static std::string kerToStr(const Mat & k)
             stream << "DIG(" << data[i] << "f)";
         stream << "DIG(" << data[width] << "f)";
     }
+    else if (depth == CV_16F)
+    {
+        stream.setf(std::ios_base::showpoint);
+        for (int i = 0; i < width; ++i)
+            stream << "DIG(" << (float)data[i] << "h)";
+        stream << "DIG(" << (float)data[width] << "h)";
+    }
     else
     {
         for (int i = 0; i < width; ++i)
@@ -6258,7 +7175,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, 0 };
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<float16_t> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 
@@ -6297,14 +7214,14 @@ int predictOptimalVectorWidth(InputArray src1, InputArray src2, InputArray src3,
     int vectorWidths[] = { d.preferredVectorWidthChar(), d.preferredVectorWidthChar(),
         d.preferredVectorWidthShort(), d.preferredVectorWidthShort(),
         d.preferredVectorWidthInt(), d.preferredVectorWidthFloat(),
-        d.preferredVectorWidthDouble(), -1 };
+        d.preferredVectorWidthDouble(), d.preferredVectorWidthHalf() };
 
     // if the device says don't use vectors
     if (vectorWidths[0] == 1)
     {
         // it's heuristic
         vectorWidths[CV_8U] = vectorWidths[CV_8S] = 4;
-        vectorWidths[CV_16U] = vectorWidths[CV_16S] = 2;
+        vectorWidths[CV_16U] = vectorWidths[CV_16S] = vectorWidths[CV_16F] = 2;
         vectorWidths[CV_32S] = vectorWidths[CV_32F] = vectorWidths[CV_64F] = 1;
     }
 
@@ -6392,10 +7309,12 @@ struct Image2D::Impl
     {
         cl_image_format format;
         static const int channelTypes[] = { CL_UNSIGNED_INT8, CL_SIGNED_INT8, CL_UNSIGNED_INT16,
-                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, -1 };
+                                       CL_SIGNED_INT16, CL_SIGNED_INT32, CL_FLOAT, -1, CL_HALF_FLOAT };
         static const int channelTypesNorm[] = { CL_UNORM_INT8, CL_SNORM_INT8, CL_UNORM_INT16,
                                                 CL_SNORM_INT16, -1, -1, -1, -1 };
-        static const int channelOrders[] = { -1, CL_R, CL_RG, -1, CL_RGBA };
+        // CL_RGB has no mappings to OpenCV types because CL_RGB can only be used with
+        // CL_UNORM_SHORT_565, CL_UNORM_SHORT_555, or CL_UNORM_INT_101010.
+        static const int channelOrders[] = { -1, CL_R, CL_RG, /*CL_RGB*/ -1, CL_RGBA };
 
         int channelType = norm ? channelTypesNorm[depth] : channelTypes[depth];
         int channelOrder = channelOrders[cn];
@@ -6410,22 +7329,28 @@ struct Image2D::Impl
             CV_Error(Error::OpenCLApiCallError, "OpenCL runtime not found!");
 
         cl_context context = (cl_context)Context::getDefault().ptr();
+        if (!context)
+            return false;
+
         // Figure out how many formats are supported by this context.
         cl_uint numFormats = 0;
         cl_int err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
                                                 CL_MEM_OBJECT_IMAGE2D, numFormats,
                                                 NULL, &numFormats);
         CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, NULL)");
-        AutoBuffer<cl_image_format> formats(numFormats);
-        err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
-                                         CL_MEM_OBJECT_IMAGE2D, numFormats,
-                                         formats.data(), NULL);
-        CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
-        for (cl_uint i = 0; i < numFormats; ++i)
+        if (numFormats > 0)
         {
-            if (!memcmp(&formats[i], &format, sizeof(format)))
+            AutoBuffer<cl_image_format> formats(numFormats);
+            err = clGetSupportedImageFormats(context, CL_MEM_READ_WRITE,
+                                             CL_MEM_OBJECT_IMAGE2D, numFormats,
+                                             formats.data(), NULL);
+            CV_OCL_DBG_CHECK_RESULT(err, "clGetSupportedImageFormats(CL_MEM_OBJECT_IMAGE2D, formats)");
+            for (cl_uint i = 0; i < numFormats; ++i)
             {
-                return true;
+                if (!memcmp(&formats[i], &format, sizeof(format)))
+                {
+                    return true;
+                }
             }
         }
         return false;
@@ -6521,7 +7446,7 @@ struct Image2D::Impl
     cl_mem handle;
 };
 
-Image2D::Image2D()
+Image2D::Image2D() CV_NOEXCEPT
 {
     p = NULL;
 }
@@ -6575,6 +7500,23 @@ Image2D & Image2D::operator = (const Image2D & i)
         if (p)
             p->release();
         p = i.p;
+    }
+    return *this;
+}
+
+Image2D::Image2D(Image2D&& i) CV_NOEXCEPT
+{
+    p = i.p;
+    i.p = nullptr;
+}
+
+Image2D& Image2D::operator = (Image2D&& i) CV_NOEXCEPT
+{
+    if (this != &i) {
+        if (p)
+            p->release();
+        p = i.p;
+        i.p = nullptr;
     }
     return *this;
 }
@@ -6645,27 +7587,19 @@ struct Timer::Impl
 
     void start()
     {
-#ifdef HAVE_OPENCL
         CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
         timer.start();
-#endif
     }
 
     void stop()
     {
-#ifdef HAVE_OPENCL
         CV_OCL_DBG_CHECK(clFinish((cl_command_queue)queue.ptr()));
         timer.stop();
-#endif
     }
 
     uint64 durationNS() const
     {
-#ifdef HAVE_OPENCL
         return (uint64)(timer.getTimeSec() * 1e9);
-#else
-        return 0;
-#endif
     }
 
     TickMeter timer;
@@ -6692,13 +7626,6 @@ uint64 Timer::durationNS() const
     return p->durationNS();
 }
 
-#ifndef HAVE_OPENCL
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#elif defined(__clang__)
-    #pragma clang diagnostic pop
-#elif defined(__GNUC__)
-    #pragma GCC diagnostic pop
-#endif
-#endif
 }} // namespace
+
+#endif // HAVE_OPENCL

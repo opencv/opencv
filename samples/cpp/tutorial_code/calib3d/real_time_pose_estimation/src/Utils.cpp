@@ -323,15 +323,8 @@ void createFeatures(const std::string &featureName, int numKeypoints, cv::Ptr<cv
     }
     else if (featureName == "SIFT")
     {
-#if defined (OPENCV_ENABLE_NONFREE) && defined (HAVE_OPENCV_XFEATURES2D)
-        detector = cv::xfeatures2d::SIFT::create();
-        descriptor = cv::xfeatures2d::SIFT::create();
-#else
-        std::cout << "xfeatures2d module is not available or nonfree is not enabled." << std::endl;
-        std::cout << "Default to ORB." << std::endl;
-        detector = cv::ORB::create(numKeypoints);
-        descriptor = cv::ORB::create(numKeypoints);
-#endif
+        detector = cv::SIFT::create();
+        descriptor = cv::SIFT::create();
     }
     else if (featureName == "SURF")
     {

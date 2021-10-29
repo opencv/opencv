@@ -1,6 +1,16 @@
 OpenCV iOS - Image Processing {#tutorial_image_manipulation}
 =============================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_hello}
+@next_tutorial{tutorial_video_processing}
+
+|    |    |
+| -: | :- |
+| Original author | Charu Hans |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

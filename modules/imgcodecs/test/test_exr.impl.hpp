@@ -6,8 +6,19 @@
 
 namespace opencv_test { namespace {
 
-TEST(Imgcodecs_EXR, readWrite_32FC1)
+size_t getFileSize(const string& filename)
 {
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    if (ifs.is_open())
+    {
+        ifs.seekg(0, std::ios::end);
+        return (size_t)ifs.tellg();
+    }
+    return 0;
+}
+
+TEST(Imgcodecs_EXR, readWrite_32FC1)
+{ // Y channels
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC1.exr";
     const string filenameOutput = cv::tempfile(".exr");
@@ -23,6 +34,8 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
     ASSERT_EQ(CV_32FC1,img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(396u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
@@ -31,7 +44,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
 }
 
 TEST(Imgcodecs_EXR, readWrite_32FC3)
-{
+{ // RGB channels
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3.exr";
     const string filenameOutput = cv::tempfile(".exr");
@@ -113,5 +126,183 @@ TEST(Imgcodecs_EXR, readWrite_32FC3_half)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC1.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_EXR_COMPRESSION);
+    params.push_back(IMWRITE_EXR_COMPRESSION_PIZ);
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(849u, getFileSize(filenameOutput));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+// Note: YC to GRAYSCALE (IMREAD_GRAYSCALE | IMREAD_ANYDEPTH)
+// outputs a black image,
+// as does Y to RGB (IMREAD_COLOR | IMREAD_ANYDEPTH).
+// This behavoir predates adding EXR alpha support issue
+// 16115.
+
+TEST(Imgcodecs_EXR, read_YA_ignore_alpha)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YA.exr";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_GRAYSCALE | IMREAD_ANYDEPTH);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
+
+    // Writing Y covered by test 32FC1
+}
+
+TEST(Imgcodecs_EXR, read_YA_unchanged)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YA.exr";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC2, img.type());
+
+    // Cannot test writing, 2 channel writing not suppported by loadsave
+}
+
+TEST(Imgcodecs_EXR, read_YC_changeDepth)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YRYBY.exr";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_COLOR);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    // Cannot test writing, EXR encoder doesn't support 8U depth
+}
+
+TEST(Imgcodecs_EXR, readwrite_YCA_ignore_alpha)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YRYBYA.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+    const Mat img = cv::imread(filenameInput, IMREAD_COLOR | IMREAD_ANYDEPTH);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC3, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_EXR, read_YC_unchanged)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YRYBY.exr";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC3, img.type());
+
+    // Writing YC covered by test readwrite_YCA_ignore_alpha
+}
+
+TEST(Imgcodecs_EXR, readwrite_YCA_unchanged)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_YRYBYA.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC4, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_EXR, readwrite_RGBA_togreyscale)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_GeneratedRGBA.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+    const Mat img = cv::imread(filenameInput, IMREAD_GRAYSCALE | IMREAD_ANYDEPTH);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
+TEST(Imgcodecs_EXR, read_RGBA_ignore_alpha)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_GeneratedRGBA.exr";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_COLOR | IMREAD_ANYDEPTH);
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC3, img.type());
+
+    // Writing RGB covered by test 32FC3
+}
+
+TEST(Imgcodecs_EXR, read_RGBA_unchanged)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_GeneratedRGBA.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+#ifndef GENERATE_DATA
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+#else
+    const Size sz(64, 32);
+    Mat img(sz, CV_32FC4, Scalar(0.5, 0.1, 1, 1));
+    img(Rect(10, 5, sz.width - 30, sz.height - 20)).setTo(Scalar(1, 0, 0, 1));
+    img(Rect(10, 20, sz.width - 30, sz.height - 20)).setTo(Scalar(1, 1, 0, 0));
+    ASSERT_TRUE(cv::imwrite(filenameInput, img));
+#endif
+
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC4, img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
 
 }} // namespace

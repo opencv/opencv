@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GEXECUTOR_HPP
@@ -54,6 +54,7 @@ namespace gimpl {
 class GExecutor
 {
 protected:
+    Mag m_res;
     std::unique_ptr<ade::Graph> m_orig_graph;
     std::shared_ptr<ade::Graph> m_island_graph;
 
@@ -77,9 +78,10 @@ protected:
     };
     std::vector<DataDesc> m_slots;
 
-    Mag m_res;
+    class Input;
+    class Output;
 
-    void initResource(const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
+    void initResource(const ade::NodeHandle &nh, const ade::NodeHandle &orig_nh); // FIXME: shouldn't it be RcDesc?
 
 public:
     explicit GExecutor(std::unique_ptr<ade::Graph> &&g_model);
@@ -87,6 +89,8 @@ public:
 
     bool canReshape() const;
     void reshape(const GMetaArgs& inMetas, const GCompileArgs& args);
+
+    void prepareForNewStream();
 
     const GModel::Graph& model() const; // FIXME: make it ConstGraph?
 };

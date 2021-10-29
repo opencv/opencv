@@ -19,7 +19,7 @@ using namespace std;
 using namespace cv;
 
 // Functions for facial feature detection
-static void help();
+static void help(char** argv);
 static void detectFaces(Mat&, vector<Rect_<int> >&, string);
 static void detectEyes(Mat&, vector<Rect_<int> >&, string);
 static void detectNose(Mat&, vector<Rect_<int> >&, string);
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
             "{eyes||}{nose||}{mouth||}{help h||}{@image||}{@facexml||}");
     if (parser.has("help"))
     {
-        help();
+        help(argv);
         return 0;
     }
     input_image_path = parser.get<string>("@image");
@@ -63,14 +63,14 @@ int main(int argc, char** argv)
     return 0;
 }
 
-static void help()
+static void help(char** argv)
 {
     cout << "\nThis file demonstrates facial feature points detection using Haarcascade classifiers.\n"
         "The program detects a face and eyes, nose and mouth inside the face."
         "The code has been tested on the Japanese Female Facial Expression (JAFFE) database and found"
         "to give reasonably accurate results. \n";
 
-    cout << "\nUSAGE: ./cpp-example-facial_features [IMAGE] [FACE_CASCADE] [OPTIONS]\n"
+    cout << "\nUSAGE: " << argv[0] << " [IMAGE] [FACE_CASCADE] [OPTIONS]\n"
         "IMAGE\n\tPath to the image of a face taken as input.\n"
         "FACE_CASCSDE\n\t Path to a haarcascade classifier for face detection.\n"
         "OPTIONS: \nThere are 3 options available which are described in detail. There must be a "
@@ -81,11 +81,11 @@ static void help()
 
 
     cout << "EXAMPLE:\n"
-        "(1) ./cpp-example-facial_features image.jpg face.xml -eyes=eyes.xml -mouth=mouth.xml\n"
+        "(1) " << argv[0] << " image.jpg face.xml -eyes=eyes.xml -mouth=mouth.xml\n"
         "\tThis will detect the face, eyes and mouth in image.jpg.\n"
-        "(2) ./cpp-example-facial_features image.jpg face.xml -nose=nose.xml\n"
+        "(2) " << argv[0] << " image.jpg face.xml -nose=nose.xml\n"
         "\tThis will detect the face and nose in image.jpg.\n"
-        "(3) ./cpp-example-facial_features image.jpg face.xml\n"
+        "(3) " << argv[0] << " image.jpg face.xml\n"
         "\tThis will detect only the face in image.jpg.\n";
 
     cout << " \n\nThe classifiers for face and eyes can be downloaded from : "

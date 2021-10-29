@@ -31,7 +31,7 @@ ocv_include_directories(${OpenCL_INCLUDE_DIR})
 file(GLOB all_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 foreach(sample_filename ${all_samples})
   ocv_define_sample(tgt ${sample_filename} opencl)
-  ocv_target_link_libraries(${tgt} LINK_PRIVATE
+  ocv_target_link_libraries(${tgt} PRIVATE
     ${OPENCV_LINKER_LIBS}
     ${OPENCV_OPENCL_SAMPLES_REQUIRED_DEPS}
     ${OpenCL_LIBRARY})

@@ -443,6 +443,8 @@ void boxFilter(InputArray _src, OutputArray _dst, int ddepth,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(!_src.empty());
+
     CV_OCL_RUN(_dst.isUMat() &&
                (borderType == BORDER_REPLICATE || borderType == BORDER_CONSTANT ||
                 borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101),
@@ -513,6 +515,8 @@ void sqrBoxFilter(InputArray _src, OutputArray _dst, int ddepth,
                   bool normalize, int borderType)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int srcType = _src.type(), sdepth = CV_MAT_DEPTH(srcType), cn = CV_MAT_CN(srcType);
     Size size = _src.size();

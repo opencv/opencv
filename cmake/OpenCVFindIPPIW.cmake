@@ -29,6 +29,16 @@ macro(ippiw_debugmsg MESSAGE)
     message(STATUS "${MESSAGE}")
   endif()
 endmacro()
+
+macro(ippiw_done)
+  foreach(__file ${IPP_IW_LICENSE_FILES})
+    if(EXISTS "${__file}")
+      ocv_install_3rdparty_licenses(ippiw "${__file}")
+    endif()
+  endforeach()
+  return()
+endmacro()
+
 file(TO_CMAKE_PATH "${IPPROOT}" IPPROOT)
 
 # This function detects Intel IPP Integration Wrappers version by analyzing .h file
@@ -81,7 +91,7 @@ macro(ippiw_setup PATH BUILD)
           if(EXISTS "${FILE}")
             set(HAVE_IPP_IW_LL 1)
           endif()
-          return()
+          ippiw_done()
         else()
           ippiw_debugmsg("sources\tno")
         endif()
@@ -98,12 +108,13 @@ macro(ippiw_setup PATH BUILD)
           message(STATUS "found Intel IPP Integration Wrappers binaries: ${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE}")
           message(STATUS "at: ${IPP_IW_PATH}")
 
-          add_library(ippiw STATIC IMPORTED)
-          set_target_properties(ippiw PROPERTIES
+          add_library(ipp_iw STATIC IMPORTED)
+          set_target_properties(ipp_iw PROPERTIES
             IMPORTED_LINK_INTERFACE_LIBRARIES ""
             IMPORTED_LOCATION "${FILE}"
           )
-          if (NOT BUILD_SHARED_LIBS)
+
+          if (NOT BUILD_SHARED_LIBS AND ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;")
             # CMake doesn't support "install(TARGETS ${name} ...)" command with imported targets
             install(FILES "${FILE}"
                     DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
@@ -112,7 +123,7 @@ macro(ippiw_setup PATH BUILD)
           endif()
 
           set(IPP_IW_INCLUDES "${IPP_IW_PATH}/include")
-          set(IPP_IW_LIBRARIES ippiw)
+          set(IPP_IW_LIBRARIES ipp_iw)
 
           set(HAVE_IPP_IW 1)
           set(BUILD_IPP_IW 0)
@@ -120,7 +131,7 @@ macro(ippiw_setup PATH BUILD)
           if(EXISTS "${FILE}")
             set(HAVE_IPP_IW_LL 1)
           endif()
-          return()
+          ippiw_done()
         else()
           ippiw_debugmsg("binaries\tno")
         endif()
@@ -147,14 +158,12 @@ if(BUILD_IPP_IW)
   ippiw_setup("${OpenCV_SOURCE_DIR}/3rdparty/ippiw" 1)
 
   set(IPPIW_ROOT "${IPPROOT}/../iw")
-  ocv_install_3rdparty_licenses(ippiw
-    "${IPPIW_ROOT}/../support.txt"
-    "${IPPIW_ROOT}/../third-party-programs.txt")
-  if(WIN32)
-    ocv_install_3rdparty_licenses(ippiw "${IPPIW_ROOT}/../EULA.rtf")
-  else()
-    ocv_install_3rdparty_licenses(ippiw "${IPPIW_ROOT}/../EULA.txt")
-  endif()
+  set(IPP_IW_LICENSE_FILES ${IPP_IW_LICENSE_FILES_EXTRA}
+      "${IPPIW_ROOT}/../support.txt"
+      "${IPPIW_ROOT}/../third-party-programs.txt"
+      "${IPPIW_ROOT}/../EULA.rtf"
+      "${IPPIW_ROOT}/../EULA.txt"
+  )
 
   # Package sources
   get_filename_component(__PATH "${IPPROOT}/../iw/" ABSOLUTE)
@@ -167,10 +176,11 @@ if(BUILD_IPP_IW)
     include("${OpenCV_SOURCE_DIR}/3rdparty/ippicv/ippicv.cmake")
     download_ippicv(TEMP_ROOT)
     set(IPPIW_ROOT "${TEMP_ROOT}/iw/")
-    ocv_install_3rdparty_licenses(ippiw
-      "${IPPIW_ROOT}/../EULA.txt"
-      "${IPPIW_ROOT}/../support.txt"
-      "${IPPIW_ROOT}/../third-party-programs.txt")
+    set(IPP_IW_LICENSE_FILES ${IPP_IW_LICENSE_FILES_EXTRA}
+        "${IPPIW_ROOT}/../EULA.txt"
+        "${IPPIW_ROOT}/../support.txt"
+        "${IPPIW_ROOT}/../third-party-programs.txt"
+    )
 
     ippiw_setup("${IPPIW_ROOT}" 1)
   endif()

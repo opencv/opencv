@@ -40,6 +40,8 @@
 //M*/
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
+
 /* default alignment for dynamic data strucutures, resided in storages. */
 #define  CV_STRUCT_ALIGN    ((int)sizeof(double))
 
@@ -1766,7 +1768,7 @@ cvSeqInsertSlice( CvSeq* seq, int index, const CvArr* from_arr )
             CV_Error( CV_StsBadArg, "Source is not a sequence nor matrix" );
 
         if( !CV_IS_MAT_CONT(mat->type) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg, "The source array must be 1d coninuous vector" );
+            CV_Error( CV_StsBadArg, "The source array must be 1d continuous vector" );
 
         from = cvMakeSeqHeaderForArray( CV_SEQ_KIND_GENERIC, sizeof(from_header),
                                                  CV_ELEM_SIZE(mat->type),
@@ -3585,4 +3587,5 @@ void  seqInsertSlice( CvSeq* seq, int before_index, const CvArr* from_arr )
 
 }
 
+#endif  // OPENCV_EXCLUDE_C_API
 /* End of file. */

@@ -46,7 +46,7 @@ struct Conv3DParamID
         CONV_100 = 16,
         CONV_LAST = sizeof(testConvolution3DConfigs) / sizeof(testConvolution3DConfigs[0])
     };
-    int val_;                                                                  \
+    int val_;
     Conv3DParamID(int val = 0) : val_(val) {}
     operator int() const { return val_; }
     static ::testing::internal::ParamGenerator<Conv3DParamID> all()
@@ -59,7 +59,7 @@ struct Conv3DParamID
         Conv3DParamID v_[NUM]; for (int i = 0; i < NUM; ++i) { v_[i] = Conv3DParamID(i); } // reduce generated code size
         return ::testing::ValuesIn(v_, v_ + NUM);
     }
-};                                                                                  \
+};
 static inline void PrintTo(const Conv3DParamID& v, std::ostream* os)
 {
     CV_Assert((int)v >= 0); CV_Assert((int)v < Conv3DParamID::CONV_LAST);
@@ -111,8 +111,8 @@ PERF_TEST_P_(Conv3D, conv3d)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
 
-    if (targetId != DNN_TARGET_CPU)
-        throw SkipTestException("Only CPU is supported");
+    if (targetId != DNN_TARGET_CPU && backendId != DNN_BACKEND_CUDA)
+        throw SkipTestException("Only CPU and CUDA is supported");
 
     int inChannels = inputShape[1];
 

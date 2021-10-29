@@ -8,7 +8,20 @@ include(CMakeParseArguments)
 function(ocv_cmake_dump_vars)
   set(OPENCV_SUPPRESS_DEPRECATIONS 1)  # suppress deprecation warnings from variable_watch() guards
   get_cmake_property(__variableNames VARIABLES)
-  cmake_parse_arguments(DUMP "" "TOFILE" "" ${ARGN})
+  cmake_parse_arguments(DUMP "FORCE" "TOFILE" "" ${ARGN})
+
+  # avoid generation of excessive logs with "--trace" or "--trace-expand" parameters
+  # Note: `-DCMAKE_TRACE_MODE=1` should be passed to CMake through command line. It is not a CMake buildin variable for now (2020-12)
+  #       Use `cmake . -UCMAKE_TRACE_MODE` to remove this variable from cache
+  if(CMAKE_TRACE_MODE AND NOT DUMP_FORCE)
+    if(DUMP_TOFILE)
+      file(WRITE ${CMAKE_BINARY_DIR}/${DUMP_TOFILE} "Skipped due to enabled CMAKE_TRACE_MODE")
+    else()
+      message(AUTHOR_WARNING "ocv_cmake_dump_vars() is skipped due to enabled CMAKE_TRACE_MODE")
+    endif()
+    return()
+  endif()
+
   set(regex "${DUMP_UNPARSED_ARGUMENTS}")
   string(TOLOWER "${regex}" regex_lower)
   set(__VARS "")
@@ -16,7 +29,8 @@ function(ocv_cmake_dump_vars)
     string(TOLOWER "${__variableName}" __variableName_lower)
     if((__variableName MATCHES "${regex}" OR __variableName_lower MATCHES "${regex_lower}")
         AND NOT __variableName_lower MATCHES "^__")
-      set(__VARS "${__VARS}${__variableName}=${${__variableName}}\n")
+      get_property(__value VARIABLE PROPERTY "${__variableName}")
+      set(__VARS "${__VARS}${__variableName}=${__value}\n")
     endif()
   endforeach()
   if(DUMP_TOFILE)
@@ -97,6 +111,30 @@ macro(ocv_update VAR)
   else()
     #ocv_debug_message("Preserve old value for ${VAR}: ${${VAR}}")
   endif()
+endmacro()
+
+function(_ocv_access_removed_variable VAR ACCESS)
+  if(ACCESS STREQUAL "MODIFIED_ACCESS")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)
+    return()
+  endif()
+  if(ACCESS MATCHES "UNKNOWN_.*"
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE
+      AND NOT OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR}
+  )
+    message(WARNING "OpenCV: Variable has been removed from CMake scripts: ${VAR}")
+    set(OPENCV_SUPPRESS_MESSAGE_REMOVED_VARIABLE_${VAR} 1 PARENT_SCOPE)  # suppress similar messages
+  endif()
+endfunction()
+macro(ocv_declare_removed_variable VAR)
+  if(NOT DEFINED ${VAR})  # don't hit external variables
+    variable_watch(${VAR} _ocv_access_removed_variable)
+  endif()
+endmacro()
+macro(ocv_declare_removed_variables)
+  foreach(_var ${ARGN})
+    ocv_declare_removed_variable(${_var})
+  endforeach()
 endmacro()
 
 # Search packages for the host system instead of packages for the target system
@@ -287,9 +325,22 @@ function(ocv_append_target_property target prop)
   endif()
 endfunction()
 
+if(DEFINED OPENCV_DEPENDANT_TARGETS_LIST)
+  foreach(v ${OPENCV_DEPENDANT_TARGETS_LIST})
+    unset(${v} CACHE)
+  endforeach()
+  unset(OPENCV_DEPENDANT_TARGETS_LIST CACHE)
+endif()
+
 function(ocv_append_dependant_targets target)
   #ocv_debug_message("ocv_append_dependant_targets(${target} ${ARGN})")
   _ocv_fix_target(target)
+  list(FIND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}" __id)
+  if(__id EQUAL -1)
+    list(APPEND OPENCV_DEPENDANT_TARGETS_LIST "OPENCV_DEPENDANT_TARGETS_${target}")
+    list(SORT OPENCV_DEPENDANT_TARGETS_LIST)
+    set(OPENCV_DEPENDANT_TARGETS_LIST "${OPENCV_DEPENDANT_TARGETS_LIST}" CACHE INTERNAL "")
+  endif()
   set(OPENCV_DEPENDANT_TARGETS_${target} "${OPENCV_DEPENDANT_TARGETS_${target}};${ARGN}" CACHE INTERNAL "" FORCE)
 endfunction()
 
@@ -362,9 +413,28 @@ macro(ocv_clear_vars)
   endforeach()
 endmacro()
 
+
+# Clears passed variables with INTERNAL type from CMake cache
+macro(ocv_clear_internal_cache_vars)
+  foreach(_var ${ARGN})
+    get_property(_propertySet CACHE ${_var} PROPERTY TYPE SET)
+    if(_propertySet)
+      get_property(_type CACHE ${_var} PROPERTY TYPE)
+      if(_type STREQUAL "INTERNAL")
+        message("Cleaning INTERNAL cached variable: ${_var}")
+        unset(${_var} CACHE)
+      endif()
+    endif()
+  endforeach()
+  unset(_propertySet)
+  unset(_type)
+endmacro()
+
+
 set(OCV_COMPILER_FAIL_REGEX
-    "command line option .* is valid for .* but not for C\\+\\+" # GNU
-    "command line option .* is valid for .* but not for C" # GNU
+    "argument .* is not valid"                  # GCC 9+ (including support of unicode quotes)
+    "command[- ]line option .* is valid for .* but not for C\\+\\+" # GNU
+    "command[- ]line option .* is valid for .* but not for C" # GNU
     "unrecognized .*option"                     # GNU
     "unknown .*option"                          # Clang
     "ignoring unknown option"                   # MSVC
@@ -414,12 +484,34 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
       else()
         set(__msg "")
       endif()
+      if(CMAKE_REQUIRED_LIBRARIES)
+        set(__link_libs LINK_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+      else()
+        set(__link_libs)
+      endif()
+      set(__cmake_flags "")
+      if(CMAKE_EXE_LINKER_FLAGS)  # CMP0056 do this on new CMake
+        list(APPEND __cmake_flags "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}")
+      endif()
+
+      # CMP0067 do this on new CMake
+      if(DEFINED CMAKE_CXX_STANDARD)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}")
+      endif()
+      if(DEFINED CMAKE_CXX_STANDARD_REQUIRED)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_STANDARD_REQUIRED=${CMAKE_CXX_STANDARD_REQUIRED}")
+      endif()
+      if(DEFINED CMAKE_CXX_EXTENSIONS)
+        list(APPEND __cmake_flags "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
+      endif()
+
       MESSAGE(STATUS "Performing Test ${RESULT}${__msg}")
       TRY_COMPILE(${RESULT}
         "${CMAKE_BINARY_DIR}"
         "${_fname}"
-        CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${CMAKE_EXE_LINKER_FLAGS}"   # CMP0056 do this on new CMake
+        CMAKE_FLAGS ${__cmake_flags}
         COMPILE_DEFINITIONS "${FLAG}"
+        ${__link_libs}
         OUTPUT_VARIABLE OUTPUT)
 
       if(${RESULT})
@@ -472,16 +564,22 @@ macro(ocv_check_flag_support lang flag varname base_options)
   elseif("_${lang}_" MATCHES "_C_")
     set(_lang C)
   elseif("_${lang}_" MATCHES "_OBJCXX_")
-    set(_lang OBJCXX)
+    if(DEFINED CMAKE_OBJCXX_COMPILER)  # CMake 3.16+ and enable_language(OBJCXX) call are required
+      set(_lang OBJCXX)
+    else()
+      set(_lang CXX)
+    endif()
   else()
     set(_lang ${lang})
   endif()
 
   string(TOUPPER "${flag}" ${varname})
   string(REGEX REPLACE "^(/|-)" "HAVE_${_lang}_" ${varname} "${${varname}}")
-  string(REGEX REPLACE " -|-|=| |\\." "_" ${varname} "${${varname}}")
+  string(REGEX REPLACE " -|-|=| |\\.|," "_" ${varname} "${${varname}}")
 
-  ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
+  if(DEFINED CMAKE_${_lang}_COMPILER)
+    ocv_check_compiler_flag("${_lang}" "${base_options} ${flag}" ${${varname}} ${ARGN})
+  endif()
 endmacro()
 
 macro(ocv_check_runtime_flag flag result)
@@ -768,7 +866,9 @@ macro(ocv_check_modules define)
       foreach(flag ${${define}_LDFLAGS})
         if(flag MATCHES "^-L(.*)")
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
-        elseif(IS_ABSOLUTE "${flag}")
+        elseif(IS_ABSOLUTE "${flag}"
+            OR flag STREQUAL "-lstdc++"
+        )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
           set(_lib "${CMAKE_MATCH_1}")
@@ -781,7 +881,7 @@ macro(ocv_check_modules define)
           if(pkgcfg_lib_${define}_${_lib})
             list(APPEND _libs "${pkgcfg_lib_${define}_${_lib}}")
           else()
-            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manualy")
+            message(WARNING "ocv_check_modules(${define}): can't find library '${_lib}'. Specify 'pkgcfg_lib_${define}_${_lib}' manually")
             list(APPEND _libs "${_lib}")
           endif()
         else()
@@ -1370,17 +1470,19 @@ endmacro()
 function(ocv_target_link_libraries target)
   set(LINK_DEPS ${ARGN})
   _ocv_fix_target(target)
-  set(LINK_MODE "LINK_PRIVATE")
+  set(LINK_MODE "PRIVATE")
   set(LINK_PENDING "")
   foreach(dep ${LINK_DEPS})
     if(" ${dep}" STREQUAL " ${target}")
       # prevent "link to itself" warning (world problem)
-    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL "LINK_PUBLIC")
+    elseif(" ${dep}" STREQUAL " LINK_PRIVATE" OR " ${dep}" STREQUAL " LINK_PUBLIC"  # deprecated
+        OR " ${dep}" STREQUAL " PRIVATE" OR " ${dep}" STREQUAL " PUBLIC" OR " ${dep}" STREQUAL " INTERFACE"
+    )
       if(NOT LINK_PENDING STREQUAL "")
         __ocv_push_target_link_libraries(${LINK_MODE} ${LINK_PENDING})
         set(LINK_PENDING "")
-        set(LINK_MODE "${dep}")
       endif()
+      set(LINK_MODE "${dep}")
     else()
       if(BUILD_opencv_world)
         if(OPENCV_MODULE_${dep}_IS_PART_OF_WORLD)
@@ -1449,10 +1551,16 @@ function(ocv_add_library target)
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
+    if(IOS AND NOT MAC_CATALYST)
+      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
+    else()
+      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/osx/Info.plist")
+    endif()
+
     set_target_properties(${target} PROPERTIES
       FRAMEWORK TRUE
       MACOSX_FRAMEWORK_IDENTIFIER org.opencv
-      MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_BINARY_DIR}/ios/Info.plist
+      MACOSX_FRAMEWORK_INFO_PLIST ${OPENCV_APPLE_INFO_PLIST}
       # "current version" in semantic format in Mach-O binary file
       VERSION ${OPENCV_LIBVERSION}
       # "compatibility version" in semantic format in Mach-O binary file
@@ -1468,6 +1576,59 @@ function(ocv_add_library target)
   endif()
 
   _ocv_append_target_includes(${target})
+endfunction()
+
+
+function(ocv_add_external_target name inc link def)
+  if(BUILD_SHARED_LIBS AND link)
+    set(imp IMPORTED)
+  endif()
+  add_library(ocv.3rdparty.${name} INTERFACE ${imp})
+  if(def)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.11.0"))  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/1264 : eliminates "Cannot specify compile definitions for imported target" error message
+      target_compile_definitions(ocv.3rdparty.${name} INTERFACE "${def}")
+    else()
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES INTERFACE_COMPILE_DEFINITIONS "${def}")
+    endif()
+  endif()
+  if(inc)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.11.0"))  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/1264 : eliminates "Cannot specify compile definitions for imported target" error message
+      target_include_directories(ocv.3rdparty.${name} SYSTEM INTERFACE "$<BUILD_INTERFACE:${inc}>")
+    else()
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${inc}>"
+          INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "$<BUILD_INTERFACE:${inc}>"
+      )
+    endif()
+  endif()
+  if(link)
+    # When cmake version is greater than or equal to 3.11, INTERFACE_LINK_LIBRARIES no longer applies to interface library
+    # See https://github.com/opencv/opencv/pull/18658
+    if(CMAKE_VERSION VERSION_LESS 3.11)
+      set_target_properties(ocv.3rdparty.${name} PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${link}")
+    else()
+      target_link_libraries(ocv.3rdparty.${name} INTERFACE ${link})
+    endif()
+  endif()
+  # to install used target only upgrade CMake
+  if(NOT BUILD_SHARED_LIBS
+      AND CMAKE_VERSION VERSION_LESS "3.13.0"  # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+  )
+    install(TARGETS ocv.3rdparty.${name} EXPORT OpenCVModules)
+  endif()
+endfunction()
+
+# Returns the first non-interface target
+function(ocv_get_imported_target imported interface)
+  set(__result "${interface}")
+  get_target_property(__type "${__result}" TYPE)
+  if(__type STREQUAL "INTERFACE_LIBRARY")
+    get_target_property(__libs "${__result}" INTERFACE_LINK_LIBRARIES)
+    list(GET __libs 0 __interface)
+    ocv_get_imported_target(__result "${__interface}")
+  endif()
+  set(${imported} "${__result}" PARENT_SCOPE)
 endfunction()
 
 
@@ -1514,7 +1675,10 @@ macro(ocv_get_all_libs _modules _extra _3rdparty)
         endif()
         if (TARGET ${dep})
           get_target_property(_type ${dep} TYPE)
-          if(_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS OR _type STREQUAL "INTERFACE_LIBRARY")
+          if((_type STREQUAL "STATIC_LIBRARY" AND BUILD_SHARED_LIBS)
+              OR _type STREQUAL "INTERFACE_LIBRARY"
+              OR DEFINED OPENCV_MODULE_${dep}_LOCATION  # OpenCV modules
+          )
             # nothing
           else()
             get_target_property(_output ${dep} IMPORTED_LOCATION)
@@ -1815,3 +1979,15 @@ function(ocv_update_file filepath content)
     file(WRITE "${filepath}" "${content}")
   endif()
 endfunction()
+
+if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "")  # avoid CMake warnings: https://gitlab.kitware.com/cmake/cmake/-/issues/18938
+else()
+  ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
+endif()
+
+
+#
+# Include configuration override settings
+#
+include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")
