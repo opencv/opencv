@@ -942,7 +942,7 @@ struct Infer: public cv::detail::KernelTag {
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
                     const auto &input_name = std::get<0>(it);
-                    auto       &&ii = inputs.at(input_name);
+                    auto ii = inputs.at(input_name);
                     const auto & mm = std::get<1>(it);
 
                     configureInputInfo(ii, mm);
@@ -967,7 +967,7 @@ struct Infer: public cv::detail::KernelTag {
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
                 const auto &input_name = std::get<0>(it);
-                auto       &&ii = inputs.at(input_name);
+                auto ii = inputs.at(input_name);
                 const auto & mm = std::get<1>(it);
                 non_const_prepm->emplace(input_name, configurePreProcInfo(ii, mm));
             }
@@ -1041,7 +1041,7 @@ struct InferROI: public cv::detail::KernelTag {
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
             const auto &input_name = uu.params.input_names.at(0);
-            auto &&ii = uu.net.getInputsInfo().at(input_name);
+            auto ii = uu.net.getInputsInfo().at(input_name);
             auto &&mm = in_metas.at(1u);
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
@@ -1130,7 +1130,7 @@ struct InferList: public cv::detail::KernelTag {
             std::size_t idx = 1u;
             auto inputs = uu.net.getInputsInfo();
             for (auto &&input_name : uu.params.input_names) {
-                auto       &&ii = inputs.at(input_name);
+                auto ii = inputs.at(input_name);
                 const auto & mm = in_metas[idx++];
                 configureInputInfo(ii, mm);
                 if (uu.params.layer_names_to_reshape.find(input_name) !=
