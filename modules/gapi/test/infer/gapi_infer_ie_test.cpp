@@ -2369,7 +2369,7 @@ TEST(ImportNetwork, InferNV12)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
-TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
+TEST(TestAgeGender, DISABLED_ThrowBlobAndInputPrecisionMismatch)
 {
     initDLDTDataPath();
 
