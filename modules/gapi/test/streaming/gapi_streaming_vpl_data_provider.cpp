@@ -12,6 +12,7 @@
 #include "streaming/onevpl/data_provider_dispatcher.hpp"
 #include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
+#include "streaming/onevpl/demux/async_mfp_demux_data_provider.hpp"
 #include "streaming/onevpl/source_priv.hpp"
 
 namespace opencv_test
@@ -76,9 +77,9 @@ mfxStatus read_encoded_stream(mfxBitstream &bs,
 }
 
 
-class OneVPLSourceMFPDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
+class OneVPL_Source_MFPDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
 
-TEST_P(OneVPLSourceMFPDispatcherTest, open_and_decode_file)
+TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
 {
     if (!initTestDataPathSilent()) {
         throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
@@ -147,7 +148,7 @@ TEST_P(OneVPLSourceMFPDispatcherTest, open_and_decode_file)
 }
 
 
-TEST_P(OneVPLSourceMFPDispatcherTest, choose_dmux_provider)
+TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
 {
     if (!initTestDataPathSilent()) {
         throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
@@ -178,7 +179,74 @@ TEST_P(OneVPLSourceMFPDispatcherTest, choose_dmux_provider)
     EXPECT_TRUE(std::dynamic_pointer_cast<MFPDemuxDataProvider>(provider_ptr));
 }
 
-INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPLSourceMFPDispatcherTest,
+INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPL_Source_MFPDispatcherTest,
+                        testing::ValuesIn(files));
+
+/////////////
+class OneVPL_Source_MFPAsyncDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
+TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
+{
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+    using namespace cv::gapi::wip::onevpl;
+
+    source_t path = findDataFile(std::get<0>(GetParam()), false);
+    dd_valid_t dd_result = std::get<1>(GetParam());
+    dec_valid_t dec_result = std::get<3>(GetParam());
+
+    // open demux source & check format support
+    std::unique_ptr<MFPAsyncDemuxDataProvider> provider_ptr;
+    try {
+        provider_ptr.reset(new MFPAsyncDemuxDataProvider(path));
+    } catch (...) {
+        EXPECT_FALSE(dd_result);
+        GTEST_SUCCEED();
+        return;
+    }
+    EXPECT_TRUE(dd_result);
+
+    // initialize MFX
+    mfxLoader mfx_handle = MFXLoad();
+
+    mfxConfig cfg_inst_0 = MFXCreateConfig(mfx_handle);
+    EXPECT_TRUE(cfg_inst_0);
+    mfxVariant mfx_param_0;
+    mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
+    mfx_param_0.Data.U32 = codec_id_to_mfx(provider_ptr->get_codec());
+    EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
+                                                    mfx_param_0), MFX_ERR_NONE);
+
+    // create MFX session
+    mfxSession mfx_session{};
+    mfxStatus sts = MFXCreateSession(mfx_handle, 0, &mfx_session);
+    EXPECT_EQ(MFX_ERR_NONE, sts);
+
+    // create proper bitstream
+    std::shared_ptr<mfxBitstream> bitstream{};
+    // prepare dec params
+    mfxVideoParam mfxDecParams {};
+    mfxDecParams.mfx.CodecId = mfx_param_0.Data.U32;
+    mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    do {
+        sts = provider_ptr->fetch_bitstream_data(bitstream);
+        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
+        EXPECT_TRUE(MFX_ERR_NONE == sts || MFX_ERR_MORE_DATA == sts);
+    } while (sts == MFX_ERR_MORE_DATA && !provider_ptr->empty());
+
+    if (dec_result) {
+        EXPECT_EQ(MFX_ERR_NONE, sts);
+    } else {
+        EXPECT_FALSE(MFX_ERR_NONE == sts);
+    }
+
+    MFXVideoDECODE_Close(mfx_session);
+    MFXClose(mfx_session);
+    MFXUnload(mfx_handle);
+}
+
+INSTANTIATE_TEST_CASE_P(MFP_ASYNC_VPL_DecodeHeaderTests, OneVPL_Source_MFPAsyncDispatcherTest,
                         testing::ValuesIn(files));
 }
 } // namespace opencv_test
