@@ -2107,7 +2107,7 @@ struct Sync {
 
 class GMockMediaAdapter final: public cv::MediaFrame::IAdapter {
 public:
-    explicit GMockMediaAdapter(cv::Mat m, Sync& sync)
+    explicit GMockMediaAdapter(cv::Mat m, std::shared_ptr<Sync> sync)
         : m_mat(m), m_sync(sync) {
     }
 
@@ -2123,15 +2123,15 @@ public:
 
     ~GMockMediaAdapter() {
         {
-            std::lock_guard<std::mutex> lk{m_sync.m};
-            m_sync.counter--;
+            std::lock_guard<std::mutex> lk{m_sync->m};
+            m_sync->counter--;
         }
-        m_sync.cv.notify_one();
+        m_sync->cv.notify_one();
     }
 
 private:
-    cv::Mat m_mat;
-    Sync&   m_sync;
+    cv::Mat               m_mat;
+    std::shared_ptr<Sync> m_sync;
 };
 
 // NB: This source is needed to simulate real
@@ -2141,15 +2141,16 @@ private:
 class GMockSource : public cv::gapi::wip::IStreamSource {
 public:
     explicit GMockSource(int limit)
-        : m_limit(limit), m_mat(cv::Size(1920, 1080), CV_8UC3) {
+        : m_limit(limit), m_mat(cv::Size(1920, 1080), CV_8UC3),
+          m_sync(new Sync{}) {
         cv::randu(m_mat, cv::Scalar::all(0), cv::Scalar::all(255));
     }
 
     bool pull(cv::gapi::wip::Data& data) {
-        std::unique_lock<std::mutex> lk(m_sync.m);
-        m_sync.counter++;
+        std::unique_lock<std::mutex> lk(m_sync->m);
+        m_sync->counter++;
         // NB: Can't produce new frames until old ones are released.
-        m_sync.cv.wait(lk, [this]{return m_sync.counter <= m_limit;});
+        m_sync->cv.wait(lk, [this]{return m_sync->counter <= m_limit;});
 
         data = cv::MediaFrame::Create<GMockMediaAdapter>(m_mat, m_sync);
         return true;
@@ -2160,9 +2161,9 @@ public:
     }
 
 private:
-    int     m_limit;
-    cv::Mat m_mat;
-    Sync    m_sync;
+    int                   m_limit;
+    cv::Mat               m_mat;
+    std::shared_ptr<Sync> m_sync;
 };
 
 struct LimitedSourceInfer: public ::testing::Test {
