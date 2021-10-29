@@ -33,7 +33,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 #ifdef _WIN32
-HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
+static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
     wchar_t sURL[MAX_PATH];
     GAPI_Assert(url.size() < MAX_PATH && "Windows MAX_PATH limit was exceeded");
     size_t ret_url_lenght = 0;
@@ -106,7 +106,7 @@ HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
 #define IF_EQUAL_RETURN(param, val) if(val == param) return #val
 #endif
 
-const char* GetGUIDNameConst(const GUID& guid)
+static const char* GetGUIDNameConst(const GUID& guid)
 {
     IF_EQUAL_RETURN(guid, MF_MT_MAJOR_TYPE);
     IF_EQUAL_RETURN(guid, MF_MT_MAJOR_TYPE);
@@ -261,7 +261,7 @@ const char* GetGUIDNameConst(const GUID& guid)
     return "<unknown>";
 }
 
-IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
+static IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
     if (guid== MFVideoFormat_H264) {
         return IDataProvider::CodecID::AVC;
     } else if (guid == MFVideoFormat_H265 ||
