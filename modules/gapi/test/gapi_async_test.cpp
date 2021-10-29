@@ -382,7 +382,7 @@ TYPED_TEST_P(cancel, basic)
             ++canceled;
         }
     }
-    ASSERT_GT(0u, canceled);
+    ASSERT_GT(canceled, 0u);
 #endif
 }
 
