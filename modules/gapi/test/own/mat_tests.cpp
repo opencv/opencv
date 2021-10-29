@@ -24,12 +24,12 @@ inline std::size_t multiply_dims(Dims const& dims){
 TEST(OwnMat, DefaultConstruction)
 {
     Mat m;
-    ASSERT_EQ(m.data, nullptr);
-    ASSERT_EQ(m.cols, 0);
-    ASSERT_EQ(m.rows, 0);
-    ASSERT_EQ(m.cols, 0);
-    ASSERT_EQ(m.type(), 0);
-    ASSERT_EQ(m.depth(), 0);
+    ASSERT_EQ(nullptr, m.data);
+    ASSERT_EQ(0, m.cols);
+    ASSERT_EQ(0, m.rows);
+    ASSERT_EQ(0, m.cols);
+    ASSERT_EQ(0, m.type());
+    ASSERT_EQ(0, m.depth());
     ASSERT_TRUE(m.dims.empty());
     ASSERT_TRUE(m.empty());
 }
@@ -40,15 +40,15 @@ TEST(OwnMat, Create)
     Mat m;
     m.create(size, CV_8UC1);
 
-    ASSERT_NE(m.data, nullptr);
-    ASSERT_EQ((cv::gapi::own::Size{m.cols, m.rows}), size);
+    ASSERT_NE(nullptr, m.data);
+    ASSERT_EQ(size, (cv::gapi::own::Size{m.cols, m.rows}));
 
-    ASSERT_EQ(m.total(), static_cast<size_t>(size.height) * size.width);
-    ASSERT_EQ(m.type(), CV_8UC1);
-    ASSERT_EQ(m.depth(), CV_8U);
-    ASSERT_EQ(m.channels(), 1);
-    ASSERT_EQ(m.elemSize(), sizeof(uint8_t));
-    ASSERT_EQ(m.step,   sizeof(uint8_t) * m.cols);
+    ASSERT_EQ(static_cast<size_t>(size.height) * size.width, m.total());
+    ASSERT_EQ(CV_8UC1, m.type());
+    ASSERT_EQ(CV_8U, m.depth());
+    ASSERT_EQ(1, m.channels());
+    ASSERT_EQ(sizeof(uint8_t), m.elemSize());
+    ASSERT_EQ(sizeof(uint8_t) * m.cols, m.step);
     ASSERT_TRUE(m.dims.empty());
     ASSERT_FALSE(m.empty());
 }
@@ -59,16 +59,16 @@ TEST(OwnMat, CreateND)
     Mat m;
     m.create(dims, CV_32F);
 
-    ASSERT_NE(nullptr        , m.data      );
+    ASSERT_NE(nullptr , m.data);
     ASSERT_EQ((cv::gapi::own::Size{0,0}), (cv::gapi::own::Size{m.cols, m.rows}));
 
     ASSERT_EQ(multiply_dims(dims), m.total());
-    ASSERT_EQ(CV_32F         , m.type()    );
-    ASSERT_EQ(CV_32F         , m.depth()   );
-    ASSERT_EQ(-1             , m.channels());
-    ASSERT_EQ(sizeof(float)  , m.elemSize());
-    ASSERT_EQ(0u             , m.step      );
-    ASSERT_EQ(dims           , m.dims      );
+    ASSERT_EQ(CV_32F, m.type());
+    ASSERT_EQ(CV_32F, m.depth());
+    ASSERT_EQ(-1, m.channels());
+    ASSERT_EQ(sizeof(float), m.elemSize());
+    ASSERT_EQ(0u, m.step);
+    ASSERT_EQ(dims, m.dims);
     ASSERT_FALSE(m.empty());
 }
 
@@ -78,15 +78,15 @@ TEST(OwnMat, CreateOverload)
     Mat m;
     m.create(size.height,size.width, CV_8UC1);
 
-    ASSERT_NE(m.data, nullptr);
-    ASSERT_EQ((cv::Size{m.cols, m.rows}), size);
+    ASSERT_NE(nullptr, m.data);
+    ASSERT_EQ(size, (cv::Size{m.cols, m.rows}));
 
-    ASSERT_EQ(m.total(), static_cast<size_t>(size.height) * size.width);
-    ASSERT_EQ(m.type(), CV_8UC1);
-    ASSERT_EQ(m.depth(), CV_8U);
-    ASSERT_EQ(m.channels(), 1);
-    ASSERT_EQ(m.elemSize(), sizeof(uint8_t));
-    ASSERT_EQ(m.step,   sizeof(uint8_t) * m.cols);
+    ASSERT_EQ(static_cast<size_t>(size.height) * size.width, m.total());
+    ASSERT_EQ(CV_8UC1, m.type());
+    ASSERT_EQ(CV_8U, m.depth());
+    ASSERT_EQ(1, m.channels());
+    ASSERT_EQ(sizeof(uint8_t), m.elemSize());
+    ASSERT_EQ(sizeof(uint8_t) * m.cols, m.step);
     ASSERT_TRUE(m.dims.empty());
     ASSERT_FALSE(m.empty());
 }
@@ -97,14 +97,14 @@ TEST(OwnMat, Create3chan)
     Mat m;
     m.create(size, CV_8UC3);
 
-    ASSERT_NE(m.data, nullptr);
-    ASSERT_EQ((cv::Size{m.cols, m.rows}), size);
+    ASSERT_NE(nullptr, m.data);
+    ASSERT_EQ(size, (cv::Size{m.cols, m.rows}));
 
-    ASSERT_EQ(m.type(), CV_8UC3);
-    ASSERT_EQ(m.depth(), CV_8U);
-    ASSERT_EQ(m.channels(), 3);
-    ASSERT_EQ(m.elemSize(), 3 * sizeof(uint8_t));
-    ASSERT_EQ(m.step,       3*  sizeof(uint8_t) * m.cols);
+    ASSERT_EQ(CV_8UC3, m.type());
+    ASSERT_EQ(CV_8U, m.depth());
+    ASSERT_EQ(3, m.channels());
+    ASSERT_EQ(3 * sizeof(uint8_t), m.elemSize());
+    ASSERT_EQ(3 * sizeof(uint8_t) * m.cols, m.step);
     ASSERT_TRUE(m.dims.empty());
     ASSERT_FALSE(m.empty());
 }
@@ -134,7 +134,7 @@ namespace {
     };
 
     void ensure_mats_are_same(Mat const& copy, Mat const& m){
-        EXPECT_NE(copy.data, nullptr);
+        EXPECT_NE(nullptr, copy.data);
         EXPECT_EQ(state_of(copy), state_of(m));
     }
 }
@@ -157,8 +157,8 @@ struct OwnMatMoveSemantics : NonEmptyMat, ::testing::Test {
 
     void ensure_state_moved_to(Mat const& moved_to)
     {
-        EXPECT_EQ(state_of(moved_to),     initial_state);
-        EXPECT_EQ(state_of(moved_from),   state_of(Mat{}));
+        EXPECT_EQ(state_of(moved_to), initial_state);
+        EXPECT_EQ(state_of(moved_from), state_of(Mat{}));
     }
 };
 

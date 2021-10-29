@@ -102,7 +102,7 @@ TEST(GMetaArg, Can_Get_Metas_From_Input_Run_Args)
     GMatDesc m_desc;
     GMetaArgs meta_args = descr_of(cv::gin(m, s, v));
 
-    EXPECT_EQ(meta_args.size(), 3u);
+    EXPECT_EQ(3u, meta_args.size());
     EXPECT_NO_THROW(m_desc = util::get<cv::GMatDesc>(meta_args[0]));
     EXPECT_NO_THROW(util::get<cv::GScalarDesc>(meta_args[1]));
     EXPECT_NO_THROW(util::get<cv::GArrayDesc>(meta_args[2]));
