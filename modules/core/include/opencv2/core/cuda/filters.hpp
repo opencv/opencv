@@ -47,6 +47,7 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 #include "type_traits.hpp"
+#include "nppdefs.h"
 
 /** @file
  * @deprecated Use @ref cudev instead.
@@ -95,6 +96,12 @@ namespace cv { namespace cuda { namespace device
 
             const int x1 = __float2int_rd(x);
             const int y1 = __float2int_rd(y);
+            if (x1 <= NPP_MIN_32S || x1 >= NPP_MAX_32S || y1 <= NPP_MIN_32S || y1 >= NPP_MAX_32S)
+            {
+                elem_type src_reg = src(y1, x1);
+                out = out + src_reg * 1.0f;
+                return saturate_cast<elem_type>(out);
+            }
             const int x2 = x1 + 1;
             const int y2 = y1 + 1;
 
