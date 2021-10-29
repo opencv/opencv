@@ -124,11 +124,11 @@ TEST(OneVPL_Source_Surface, InitSurface)
     // check self consistency
     EXPECT_EQ(reinterpret_cast<void*>(surf->get_handle()),
               reinterpret_cast<void*>(mfx_core_handle));
-    EXPECT_EQ(surf->get_locks_count(), 0);
-    EXPECT_EQ(surf->obtain_lock(), 0);
-    EXPECT_EQ(surf->get_locks_count(), 1);
-    EXPECT_EQ(surf->release_lock(), 1);
-    EXPECT_EQ(surf->get_locks_count(), 0);
+    EXPECT_EQ(0, surf->get_locks_count());
+    EXPECT_EQ(0, surf->obtain_lock());
+    EXPECT_EQ(1, surf->get_locks_count());
+    EXPECT_EQ(1, surf->release_lock());
+    EXPECT_EQ(0, surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_Surface, ConcurrentLock)
@@ -143,7 +143,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check self consistency
-    EXPECT_EQ(surf->get_locks_count(), 0);
+    EXPECT_EQ(0, surf->get_locks_count());
 
     // MFX internal limitation: do not exceede U16 range
     // so I16 is using here
@@ -168,7 +168,7 @@ TEST(OneVPL_Source_Surface, ConcurrentLock)
     }
 
     worker_thread.join();
-    EXPECT_EQ(surf->get_locks_count(), lock_counter * 2);
+    EXPECT_EQ(lock_counter * 2, surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_Surface, MemoryLifeTime)
@@ -180,7 +180,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     std::shared_ptr<void> associated_memory (preallocated_memory_ptr.get(),
                                              [&preallocated_memory_ptr] (void* ptr) {
                                                     EXPECT_TRUE(preallocated_memory_ptr);
-                                                    EXPECT_EQ(preallocated_memory_ptr.get(), ptr);
+                                                    EXPECT_EQ(ptr, preallocated_memory_ptr.get());
                                                     preallocated_memory_ptr.reset();
                                             });
 
@@ -201,7 +201,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     }
 
     // workspace memory must be alive
-    EXPECT_EQ(surfaces.size(), 0);
+    EXPECT_EQ(0, surfaces.size());
     EXPECT_TRUE(associated_memory != nullptr);
     EXPECT_TRUE(preallocated_memory_ptr.get() != nullptr);
 
@@ -223,7 +223,7 @@ TEST(OneVPL_Source_Surface, MemoryLifeTime)
     associated_memory.reset();
 
     // workspace memory must be still alive
-    EXPECT_EQ(surfaces.size(), 0);
+    EXPECT_EQ(0, surfaces.size());
     EXPECT_TRUE(associated_memory == nullptr);
     EXPECT_TRUE(preallocated_memory_ptr.get() != nullptr);
 
@@ -246,13 +246,13 @@ TEST(OneVPL_Source_CPU_FrameAdapter, InitFrameAdapter)
     auto surf = Surface::create_surface(std::move(handle), associated_memory);
 
     // check consistency
-    EXPECT_EQ(surf->get_locks_count(), 0);
+    EXPECT_EQ(0, surf->get_locks_count());
 
     {
         VPLMediaFrameCPUAdapter adapter(surf);
-        EXPECT_EQ(surf->get_locks_count(), 1);
+        EXPECT_EQ(1, surf->get_locks_count());
     }
-    EXPECT_EQ(surf->get_locks_count(), 0);
+    EXPECT_EQ(0, surf->get_locks_count());
 }
 
 TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
@@ -276,8 +276,8 @@ TEST(OneVPL_Source_CPU_Accelerator, InitDestroy)
                                                          surface_size_bytes,
                                                          create_test_surface);
         // check consistency
-        EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-        EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+        EXPECT_EQ(surface_count, acceleration_policy->get_surface_count(key));
+        EXPECT_EQ(surface_count, acceleration_policy->get_free_surface_count(key));
 
         pool_export_keys.push_back(key);
     }
@@ -301,8 +301,8 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
                                                          surface_size_bytes,
                                                          create_test_surface);
     // check consistency
-    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+    EXPECT_EQ(surface_count, acceleration_policy->get_surface_count(key));
+    EXPECT_EQ(surface_count, acceleration_policy->get_free_surface_count(key));
 
     // consume available surfaces
     std::vector<std::shared_ptr<Surface>> surfaces;
@@ -310,13 +310,13 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(surf->obtain_lock(), 0);
+        EXPECT_EQ(0, surf->obtain_lock());
         surfaces.push_back(std::move(surf));
     }
 
     // check consistency (no free surfaces)
     EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), 0);
+    EXPECT_EQ(0, acceleration_policy->get_free_surface_count(key));
 
     // fail consume non-free surfaces
     for (size_t i = 0; i < surface_count; i++) {
@@ -325,19 +325,19 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConsume)
 
     // release surfaces
     for (auto& surf : surfaces) {
-        EXPECT_EQ(surf->release_lock(), 1);
+        EXPECT_EQ(1, surf->release_lock());
     }
     surfaces.clear();
 
     // check consistency
-    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+    EXPECT_EQ(surface_count, acceleration_policy->get_surface_count(key));
+    EXPECT_EQ(surface_count, acceleration_policy->get_free_surface_count(key));
 
     //check availability after release
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(surf->obtain_lock(), 0);
+        EXPECT_EQ(0, surf->obtain_lock());
     }
 }
 
@@ -358,8 +358,8 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
                                                          create_test_surface);
 
     // check consistency
-    EXPECT_EQ(acceleration_policy->get_surface_count(key), surface_count);
-    EXPECT_EQ(acceleration_policy->get_free_surface_count(key), surface_count);
+    EXPECT_EQ(surface_count, acceleration_policy->get_surface_count(key));
+    EXPECT_EQ(surface_count, acceleration_policy->get_free_surface_count(key));
 
     // consume available surfaces
     std::vector<std::shared_ptr<Surface>> surfaces;
@@ -367,7 +367,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
     for (size_t i = 0; i < surface_count; i++) {
         std::shared_ptr<Surface> surf = acceleration_policy->get_free_surface(key).lock();
         EXPECT_TRUE(surf.get() != nullptr);
-        EXPECT_EQ(surf->obtain_lock(), 0);
+        EXPECT_EQ(0, surf->obtain_lock());
         surfaces.push_back(std::move(surf));
     }
 
@@ -381,7 +381,7 @@ TEST(OneVPL_Source_CPU_Accelerator, PoolProduceConcurrentConsume)
         // concurrent release surfaces
         size_t surfaces_count = surfaces.size();
         for (auto& surf : surfaces) {
-            EXPECT_EQ(surf->release_lock(), 1);
+            EXPECT_EQ(1, surf->release_lock());
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         surfaces.clear();
@@ -415,28 +415,28 @@ TEST(OneVPL_Source_ProcessingEngine, Init)
     mfxSession mfx_session{};
     engine.initialize_session(mfx_session, DecoderParams{}, std::shared_ptr<IDataProvider>{});
 
-    EXPECT_EQ(engine.get_ready_frames_count(), 0);
+    EXPECT_EQ(0, engine.get_ready_frames_count());
     ProcessingEngineBase::ExecutionStatus ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
-    EXPECT_EQ(engine.pipeline_stage_num, 0);
+    EXPECT_EQ(0, engine.pipeline_stage_num);
 
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
-    EXPECT_EQ(engine.pipeline_stage_num, 1);
+    EXPECT_EQ(1, engine.pipeline_stage_num);
 
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Continue);
-    EXPECT_EQ(engine.pipeline_stage_num, 2);
+    EXPECT_EQ(2, engine.pipeline_stage_num);
 
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::Processed);
-    EXPECT_EQ(engine.pipeline_stage_num, 3);
-    EXPECT_EQ(engine.get_ready_frames_count(), 1);
+    EXPECT_EQ(3, engine.pipeline_stage_num);
+    EXPECT_EQ(1, engine.get_ready_frames_count());
 
     ret = engine.process(mfx_session);
     EXPECT_EQ(ret, ProcessingEngineBase::ExecutionStatus::SessionNotFound);
-    EXPECT_EQ(engine.pipeline_stage_num, 3);
-    EXPECT_EQ(engine.get_ready_frames_count(), 1);
+    EXPECT_EQ(3, engine.pipeline_stage_num);
+    EXPECT_EQ(1, engine.get_ready_frames_count());
 
     cv::gapi::wip::Data frame;
     engine.get_frame(frame);

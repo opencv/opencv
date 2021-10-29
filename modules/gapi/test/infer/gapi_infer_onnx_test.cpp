@@ -231,7 +231,7 @@ void remapToIESSDOut(const std::vector<cv::Mat> &detections,
     }
 
     // SSD-MobilenetV1 structure check
-    ASSERT_EQ(detections[0].total(), 1u);
+    ASSERT_EQ(1u, detections[0].total());
     ASSERT_EQ(detections[2].total(), detections[0].total() * 100);
     ASSERT_EQ(detections[2].total(), detections[3].total());
     ASSERT_EQ((detections[2].total() * 4), detections[1].total());

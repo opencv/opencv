@@ -17,7 +17,7 @@ TEST(Scalar, CreateEmpty)
 
     for (int i = 0; i < 4; ++i)
     {
-        EXPECT_EQ(s[i], 0.0);
+        EXPECT_EQ(0.0, s[i]);
     }
 }
 
@@ -25,20 +25,20 @@ TEST(Scalar, CreateFromVal)
 {
     cv::gapi::own::Scalar s(5.0);
 
-    EXPECT_EQ(s[0], 5.0);
-    EXPECT_EQ(s[1], 0.0);
-    EXPECT_EQ(s[2], 0.0);
-    EXPECT_EQ(s[3], 0.0);
+    EXPECT_EQ(5.0, s[0]);
+    EXPECT_EQ(0.0, s[1]);
+    EXPECT_EQ(0.0, s[2]);
+    EXPECT_EQ(0.0, s[3]);
 }
 
 TEST(Scalar, CreateFromVals)
 {
     cv::gapi::own::Scalar s(5.3, 3.3, 4.1, -2.0);
 
-    EXPECT_EQ(s[0], 5.3);
-    EXPECT_EQ(s[1], 3.3);
-    EXPECT_EQ(s[2], 4.1);
-    EXPECT_EQ(s[3], -2.0);
+    EXPECT_EQ(5.3, s[0]);
+    EXPECT_EQ(3.3, s[1]);
+    EXPECT_EQ(4.1, s[2]);
+    EXPECT_EQ(-2.0, s[3]);
 }
 
 } // namespace opencv_test

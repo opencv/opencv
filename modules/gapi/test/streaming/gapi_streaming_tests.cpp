@@ -1130,7 +1130,7 @@ TEST_F(GAPI_Streaming_TemplateTypes, UnusedVectorIsOK)
         }
         GAPI_Assert(out_mat || out_int);
         if (out_int) {
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }
@@ -1748,7 +1748,7 @@ TEST(GAPI_Streaming_Desync, MultipleDesyncOutputs_1) {
         if (out_vec || out_int) {
             EXPECT_EQ(320, out_vec.value()[0]);
             EXPECT_EQ(240, out_vec.value()[1]);
-            EXPECT_EQ(  3, out_int.value());
+            EXPECT_EQ(3, out_int.value());
         }
     }
 }

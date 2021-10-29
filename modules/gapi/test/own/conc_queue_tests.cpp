@@ -27,7 +27,7 @@ TEST(ConcQueue, PushPop)
     {
         int x;
         q.pop(x);
-        EXPECT_EQ(x, i);
+        EXPECT_EQ(i, x);
     }
 }
 
