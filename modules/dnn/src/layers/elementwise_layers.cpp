@@ -620,8 +620,8 @@ struct ReLU6Functor : public BaseFunctor
     ml::Operand initWebnnAPI(const ml::GraphBuilder& builder, const ml::Operand& input)
     {
         ml::ClampOptions clampOptions;
-        clampOptions.minValue = webnn::BuildConstant(builder, {}, &minValue, 1 * sizeof(float), ml::OperandType::Float32);
-        clampOptions.maxValue = webnn::BuildConstant(builder, {}, &maxValue, 1 * sizeof(float), ml::OperandType::Float32);
+        clampOptions.minValue = minValue;
+        clampOptions.maxValue = maxValue;
         return builder.Clamp(input, &clampOptions);
     }
 #endif
