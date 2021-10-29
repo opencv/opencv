@@ -1182,7 +1182,7 @@ public:
                 Mat bufa(_bufa, Rect(0, 0, bcols, brows));
                 for( y1 = 0; y1 < brows; y1++ )
                 {
-                    IdxType* XY = bufxy.ptr<IdxType>(y1);
+                    short* XY = bufxy.ptr<short>(y1);
                     ushort* A = bufa.ptr<ushort>(y1);
 
                     if (remapType == RemapType::fixedPointInt16 || remapType == RemapType::fixedPointInt32)
@@ -1205,7 +1205,6 @@ public:
                     }
                     else if (remapType == RemapType::fp32_mapx_mapy)
                     {
-                        short* XY = bufxy.ptr<short>(y1); // if remapType == RemapType::fp32_mapx_mapy: IdxType == short
                         const float* sX = m1->ptr<float>(y+y1) + x;
                         const float* sY = m2->ptr<float>(y+y1) + x;
 
@@ -1244,7 +1243,6 @@ public:
                     }
                     else if (remapType == RemapType::fp32_mapxy)
                     {
-                        short* XY = bufxy.ptr<short>(y1); // if remapType == RemapType::fp32_mapxy: IdxType == short
                         const float* sXY = m1->ptr<float>(y+y1) + x*2;
                         x1 = 0;
 
@@ -1725,7 +1723,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
     bool isLargeImage = ((remapType == RemapType::int32 || remapType == RemapType::fixedPointInt32) ? true : false);
-    CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX || isLargeImage);
+    CV_Assert( (dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX) || isLargeImage);
     CV_Assert( remapType != RemapType::int16 || interpolation == INTER_NEAREST );
     CV_Assert( !isLargeImage || interpolation == INTER_NEAREST );
 

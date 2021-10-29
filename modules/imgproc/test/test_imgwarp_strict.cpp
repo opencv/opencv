@@ -95,7 +95,7 @@ CV_ImageWarpBaseTest::CV_ImageWarpBaseTest() :
     BaseTest(), interpolation(-1),
     src(), dst(), reference_dst()
 {
-    test_case_count = 40;
+    test_case_count = 50;
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
@@ -742,7 +742,7 @@ void CV_Remap_Test::generate_test_data()
     borderValue = Scalar::all(rng.uniform(0, 255));
 
     // generating the mapx, mapy matrices
-    static const int mapx_types[] = { CV_16SC2, CV_32FC1, CV_32FC2 };
+    static const int mapx_types[] = { CV_16SC2, CV_32SC2, CV_32FC1, CV_32FC2 };
     mapx.create(dst.size(), mapx_types[rng.uniform(0, sizeof(mapx_types) / sizeof(int))]);
     mapy.release();
 
@@ -783,6 +783,18 @@ void CV_Remap_Test::generate_test_data()
                     }
                     break;
                 }
+            }
+        }
+        break;
+
+        case CV_32SC2:
+        {
+            interpolation = INTER_NEAREST;
+            MatIterator_<Vec2i> begin_x = mapx.begin<Vec2i>(), end_x = mapx.end<Vec2i>();
+            for ( ; begin_x != end_x; ++begin_x)
+            {
+                (*begin_x)[0] = static_cast<int>(rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0)));
+                (*begin_x)[1] = static_cast<int>(rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0)));
             }
         }
         break;
