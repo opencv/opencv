@@ -315,7 +315,7 @@ TEST(usac_Essential, accuracy) {
         for (auto flag : flags) {
             cv::Mat mask, E;
             try {
-                E = cv::findEssentialMat(pts1, pts2, K1, flag, conf, thr, mask);
+                E = cv::findEssentialMat(pts1, pts2, K1, flag, conf, thr, 1000/*maxIters*/, mask);
             } catch (cv::Exception &e) {
                 if (e.code != cv::Error::StsNotImplemented)
                     FAIL() << "Essential matrix estimation failed!\n";
