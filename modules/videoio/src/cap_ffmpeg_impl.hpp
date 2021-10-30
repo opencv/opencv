@@ -1218,9 +1218,9 @@ bool CvCapture_FFMPEG::processRawPacket()
             includeExtraData = true;
             if (eVideoCodec != AV_CODEC_ID_MPEG4) {
                 // defend against ip camera's whose side info has a shorter start code prefix length than the first packet
-                uint8_t* extraData = ic->streams[video_stream]->codec->extradata;
                 if ((packet.size >= 5 && packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 0 && packet.data[3] == 1) &&
-                    (ic->streams[video_stream]->codec->extradata_size >= 4 && extraData[0] == 0 && extraData[1] == 0 && extraData[2] == 1)) {
+                    (ic->streams[video_stream]->codec->extradata_size >= 4 && ic->streams[video_stream]->codec->extradata[0] == 0 &&
+                        ic->streams[video_stream]->codec->extradata[1] == 0 && ic->streams[video_stream]->codec->extradata[2] == 1)) {
                     paddExtraData = 1;
                 }
             }
