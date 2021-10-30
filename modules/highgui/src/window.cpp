@@ -399,10 +399,10 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
 #endif
 }
 
-cv::Rect cvGetWindowImageRect(const char* name)
+cv::Rect cv::getWindowImageRect(const String& name)
 {
     CV_TRACE_FUNCTION();
-    CV_Assert(name);
+    CV_Assert(!name.empty());
 
     {
         auto window = findWindow_(name);
@@ -427,24 +427,18 @@ cv::Rect cvGetWindowImageRect(const char* name)
 #else
 
     #if defined (HAVE_QT)
-        return cvGetWindowRect_QT(name);
+        return cvGetWindowRect_QT(name.c_str());
     #elif defined(HAVE_WIN32UI)
-        return cvGetWindowRect_W32(name);
+        return cvGetWindowRect_W32(name.c_str());
     #elif defined (HAVE_GTK)
-        return cvGetWindowRect_GTK(name);
+        return cvGetWindowRect_GTK(name.c_str());
     #elif defined (HAVE_COCOA)
-        return cvGetWindowRect_COCOA(name);
+        return cvGetWindowRect_COCOA(name.c_str());
     #else
         return Rect(-1, -1, -1, -1);
     #endif
 
 #endif
-}
-
-cv::Rect cv::getWindowImageRect(const String& winname)
-{
-    CV_TRACE_FUNCTION();
-    return cvGetWindowImageRect(winname.c_str());
 }
 
 void cv::namedWindow( const String& winname, int flags )
