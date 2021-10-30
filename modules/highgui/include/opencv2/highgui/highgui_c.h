@@ -129,11 +129,6 @@ CVAPI(int) cvNamedWindow( const char* name, int flags CV_DEFAULT(CV_WINDOW_AUTOS
 CVAPI(void) cvSetWindowProperty(const char* name, int prop_id, double prop_value);
 CVAPI(double) cvGetWindowProperty(const char* name, int prop_id);
 
-#ifdef __cplusplus  // FIXIT remove in OpenCV 4.0
-/* Get window image rectangle coordinates, width and height */
-CVAPI(cv::Rect)cvGetWindowImageRect(const char* name);
-#endif
-
 /* display image within window (highgui windows remember their content) */
 CVAPI(void) cvShowImage( const char* name, const CvArr* image );
 
