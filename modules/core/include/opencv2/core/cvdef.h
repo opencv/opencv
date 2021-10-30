@@ -719,6 +719,8 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  elif __cplusplus >= 201703L
 //   available when compiler is C++17 compliant
 #    define CV_NODISCARD_STD [[nodiscard]]
+#  elif defined(__INTEL_COMPILER)
+     // see above, available when C++17 is enabled
 #  elif defined(_MSC_VER) && _MSC_VER >= 1911 && _MSVC_LANG >= 201703L
 //   available with VS2017 v15.3+ with /std:c++17 or higher; works on functions and classes
 #    define CV_NODISCARD_STD [[nodiscard]]
