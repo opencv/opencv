@@ -191,6 +191,7 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
     }
 }
 
+static
 cv::Rect cvGetWindowImageRect(const char* name)
 {
     if (!name)
