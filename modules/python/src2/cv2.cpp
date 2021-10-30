@@ -788,6 +788,8 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
         if (ndims >= 1 && _strides[ndims - 1] != (npy_intp)elemsize*_sizes[ndims])
             needcopy = true;
+
+        elemsize = CV_ELEM_SIZE(type);
     }
 
     if (needcopy)
