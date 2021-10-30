@@ -244,7 +244,7 @@ struct v_uint64x2
     explicit v_uint64x2(__m128i v) : val(v) {}
     v_uint64x2(uint64 v0, uint64 v1)
     {
-#if defined(_MSC_VER) && _MSC_VER >= 1920/*MSVS 2019*/ && defined(_M_X64)
+#if defined(_MSC_VER) && _MSC_VER >= 1920/*MSVS 2019*/ && defined(_M_X64) && !defined(__clang__)
         val = _mm_setr_epi64x((int64_t)v0, (int64_t)v1);
 #elif defined(__GNUC__)
         val = _mm_setr_epi64((__m64)v0, (__m64)v1);
@@ -278,7 +278,7 @@ struct v_int64x2
     explicit v_int64x2(__m128i v) : val(v) {}
     v_int64x2(int64 v0, int64 v1)
     {
-#if defined(_MSC_VER) && _MSC_VER >= 1920/*MSVS 2019*/ && defined(_M_X64)
+#if defined(_MSC_VER) && _MSC_VER >= 1920/*MSVS 2019*/ && defined(_M_X64) && !defined(__clang__)
         val = _mm_setr_epi64x((int64_t)v0, (int64_t)v1);
 #elif defined(__GNUC__)
         val = _mm_setr_epi64((__m64)v0, (__m64)v1);
