@@ -793,9 +793,16 @@ void CV_Remap_Test::generate_test_data()
             MatIterator_<Vec2i> begin_x = mapx.begin<Vec2i>(), end_x = mapx.end<Vec2i>();
             for ( ; begin_x != end_x; ++begin_x)
             {
-                (*begin_x)[0] = static_cast<int>(rng.uniform(static_cast<int>(_n), std::max(src.cols + n - 1, 0)));
-                (*begin_x)[1] = static_cast<int>(rng.uniform(static_cast<int>(_n), std::max(src.rows + n - 1, 0)));
+                (*begin_x)[0] = rng.uniform(0, src.cols);
+                (*begin_x)[1] = rng.uniform(0, src.rows);
             }
+            //if (rng.uniform(0, 2))
+            //{
+            //    mapy.create(dst.size(), CV_16UC1);
+            //    MatIterator_<ushort> begin_y = mapy.begin<ushort>(), end_y = mapy.end<ushort>();
+            //    for ( ; begin_y != end_y; ++begin_y)
+            //        *begin_y = static_cast<ushort>(rng.uniform(0, 1024));
+            //}
         }
         break;
 

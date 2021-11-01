@@ -1122,7 +1122,7 @@ public:
                 {
                     if (remapType == RemapType::int16 || remapType == RemapType::int32) // the data is already in the right format
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
-                    else if(remapType == RemapType::fixedPointInt16)
+                    else if(remapType == RemapType::fixedPointInt16 || remapType == RemapType::fixedPointInt32)
                     {
                         for( y1 = 0; y1 < brows; y1++ )
                         {
@@ -1185,7 +1185,7 @@ public:
                     short* XY = bufxy.ptr<short>(y1);
                     ushort* A = bufa.ptr<ushort>(y1);
 
-                    if (remapType == RemapType::fixedPointInt16 || remapType == RemapType::fixedPointInt32)
+                    if (remapType == RemapType::fixedPointInt16)
                     {
                         bufxy = (*m1)(Rect(x, y, bcols, brows));
 
@@ -1310,8 +1310,8 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
             rowsPerWI = dev.isIntel() ? 4 : 1;
 
-    if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
-            || _map2.type() == CV_16SC1 || remapType == RemapType::int32 || remapType == RemapType::int32)
+    if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST) ||
+        _map2.type() == CV_16SC1 || remapType == RemapType::int32 || remapType == RemapType::fixedPointInt32)
         return false;
 
     UMat src = _src.getUMat(), map1 = _map1.getUMat(), map2 = _map2.getUMat();
@@ -1722,7 +1722,9 @@ void cv::remap( InputArray _src, OutputArray _dst,
         ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
         openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
-    bool isLargeImage = ((remapType == RemapType::int32 || remapType == RemapType::fixedPointInt32) ? true : false);
+    bool isLargeImage = remapType == RemapType::int32 || //remapType == RemapType::fixedPointInt32 ||
+                                     dst.cols >= SHRT_MAX || dst.rows >= SHRT_MAX ||
+                                     src.cols >= SHRT_MAX || src.rows >= SHRT_MAX;
     CV_Assert( (dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX) || isLargeImage);
     CV_Assert( remapType != RemapType::int16 || interpolation == INTER_NEAREST );
     CV_Assert( !isLargeImage || interpolation == INTER_NEAREST );
@@ -1868,9 +1870,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     _dstmap1.create( size, dstm1type );
     dstmap1 = _dstmap1.getMat();
 
-    if (outputRemapType == RemapType::fp32_mapx_mapy || outputRemapType == RemapType::fixedPointInt16)
+    if (outputRemapType == RemapType::fp32_mapx_mapy || outputRemapType == RemapType::fixedPointInt16 ||
+        outputRemapType == RemapType::fixedPointInt32)
     {
-        _dstmap2.create( size, dstm1type == CV_16SC2 ? CV_16UC1 : CV_32FC1 );
+        _dstmap2.create( size, outputRemapType == RemapType::fp32_mapx_mapy ? CV_32FC1 : CV_16UC1);
         dstmap2 = _dstmap2.getMat();
     }
     else
@@ -1887,6 +1890,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     if (inputRemapType == RemapType::fixedPointInt16 && outputRemapType == RemapType::int16)
     {
         m1->copyTo(dstmap1);  // TODO: improved accuracy for inputRemapType fixedPointInt16
+        return;
+    }
+
+    if (inputRemapType == RemapType::fixedPointInt32 && (outputRemapType == RemapType::int16 ||
+                                                         outputRemapType == RemapType::fp32_mapxy))
+    {
+        m1->convertTo(dstmap1, dstmap1.type());  // TODO: improved accuracy
         return;
     }
 

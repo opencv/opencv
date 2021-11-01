@@ -1,5 +1,6 @@
-namespace cv
-{
+namespace cv {
+namespace {
+
 enum class RemapType {
     fp32_mapxy,
     fp32_mapx_mapy,
@@ -59,4 +60,7 @@ inline RemapType check_and_get_remap_type(Mat &map1, Mat &map2)
         CV_Error(cv::Error::StsBadSize, errorRemapMessage);
     return type;
 }
+
+}
+
 }
