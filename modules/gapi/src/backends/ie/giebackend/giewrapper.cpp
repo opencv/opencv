@@ -18,6 +18,8 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/configuration.private.hpp>
+
 namespace IE = InferenceEngine;
 namespace giewrap = cv::gimpl::ie::wrap;
 using GIEParam = cv::gapi::ie::detail::ParamDesc;
@@ -93,8 +95,31 @@ IE::InferencePlugin giewrap::getPlugin(const GIEParam& params) {
     return plugin;
 }
 #else // >= 2019.R2
-IE::Core giewrap::getCore() {
+
+static IE::Core create_IE_Core_pointer() {
+    static IE::Core* core = new IE::Core();  // 'delete' is never called
+    return *core;
+}
+
+static IE::Core create_IE_Core_instance() {
     static IE::Core core;
+    return core;
+}
+
+IE::Core giewrap::getCore() {
+    static bool param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
+        utils::getConfigurationParameterBool(
+                "OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
+#ifdef _WIN32
+                true
+#else
+                false
+#endif
+                );
+
+    IE::Core core = param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+        ? create_IE_Core_pointer()
+        : create_IE_Core_instance();
     return core;
 }
 
