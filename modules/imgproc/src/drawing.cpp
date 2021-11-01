@@ -1444,6 +1444,8 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
         {
             prelast = &tmp;
             last = tmp.next;
+            sort_flag = 0;
+            PolyEdge *last_exchange = 0;
 
             while( last != keep_prelast && last->next != 0 )
             {
@@ -1457,6 +1459,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
                     te->next = last;
                     prelast = te;
                     sort_flag = 1;
+                    last_exchange = prelast;
                 }
                 else
                 {
@@ -1464,9 +1467,8 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
                     last = te;
                 }
             }
-            keep_prelast = prelast;
-        }
-        while( sort_flag && keep_prelast != tmp.next && keep_prelast != &tmp );
+            keep_prelast = last_exchange;
+        } while( sort_flag && keep_prelast != tmp.next && keep_prelast != &tmp );
     }
 }
 
