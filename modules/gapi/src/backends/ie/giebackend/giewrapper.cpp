@@ -97,7 +97,8 @@ IE::InferencePlugin giewrap::getPlugin(const GIEParam& params) {
 #else // >= 2019.R2
 
 static IE::Core create_IE_Core_pointer() {
-    static IE::Core* core = new IE::Core();  // 'delete' is never called
+    // NB: 'delete' is never called
+    static IE::Core* core = new IE::Core();
     return *core;
 }
 
@@ -107,30 +108,19 @@ static IE::Core create_IE_Core_instance() {
 }
 
 IE::Core giewrap::getCore() {
-    // to make happy memory leak tools use:
-    // - OPENCV_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS=0
+    // NB: to make happy memory leak tools use:
     // - OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
     static bool param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
         utils::getConfigurationParameterBool(
                 "OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
                 true
 #else
                 false
 #endif
                 );
-
-    IE::Core core = param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
-        ? create_IE_Core_pointer()
-        : create_IE_Core_instance();
-
-    static bool param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS =
-        utils::getConfigurationParameterBool(
-                "OPENCV_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS", true);
-    if (param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS) {
-        core.GetAvailableDevices();
-    }
-    return core;
+    return param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+        ? create_IE_Core_pointer() : create_IE_Core_instance();
 }
 
 IE::Core giewrap::getPlugin(const GIEParam& params) {
