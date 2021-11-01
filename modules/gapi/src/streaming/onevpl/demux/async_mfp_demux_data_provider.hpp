@@ -46,7 +46,7 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider,
     mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream);
     bool empty() const override;
 
-private:
+protected: /* For Unit tests only */
     enum class State {
         InProgress,
         Exhausted
@@ -58,13 +58,16 @@ private:
     STDMETHODIMP_(ULONG) Release() override;
 
     // IMFSourceReaderCallback methods
-    virtual STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
-                                      DWORD stream_flag, LONGLONG timestamp,
-                                      IMFSample *sample_ptr) override;
+    STDMETHODIMP OnReadSample(HRESULT status, DWORD stream_index,
+                              DWORD stream_flag, LONGLONG timestamp,
+                              IMFSample *sample_ptr) override;
     virtual STDMETHODIMP OnEvent(DWORD, IMFMediaEvent *) override;
     virtual STDMETHODIMP OnFlush(DWORD) override;
 
     // implementation methods
+    virtual HRESULT on_read_sample_impl(HRESULT status, DWORD stream_index,
+                                       DWORD stream_flag, LONGLONG timestamp,
+                                       IMFSample *sample_ptr);
     void flush();
     virtual HRESULT request_next(HRESULT hr, DWORD stream_flag,
                                  size_t worker_buffer_count);
@@ -74,6 +77,7 @@ private:
                                        std::shared_ptr<mfxBitstream> &&staging_stream);
     size_t get_locked_buffer_size() const;
 
+private:
     // members
     size_t keep_preprocessed_buf_count;
 

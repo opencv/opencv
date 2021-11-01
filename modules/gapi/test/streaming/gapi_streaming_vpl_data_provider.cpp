@@ -6,6 +6,8 @@
 
 #ifdef HAVE_ONEVPL
 
+#include <future>
+
 #include "../test_precomp.hpp"
 
 #include "../common/gapi_tests_common.hpp"
@@ -182,7 +184,149 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
 INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPL_Source_MFPDispatcherTest,
                         testing::ValuesIn(files));
 
-/////////////
+namespace test {
+    struct IntrusiveAsyncDemuxDataProvider :
+            public cv::gapi::wip::onevpl::MFPAsyncDemuxDataProvider {
+
+    using base_t = cv::gapi::wip::onevpl::MFPAsyncDemuxDataProvider;
+    using base_t::base_t;
+
+    ~IntrusiveAsyncDemuxDataProvider() {
+        destroyed = true;
+    }
+
+    HRESULT on_read_sample_impl(HRESULT status, DWORD stream_index,
+                                DWORD stream_flag, LONGLONG timestamp,
+                                IMFSample *sample_ptr) override {
+        if (IntrusiveAsyncDemuxDataProvider::need_request_next) {
+            return base_t::on_read_sample_impl(status, stream_index, stream_flag,
+                                        timestamp, sample_ptr);
+        }
+        return status;
+    }
+
+
+    // implementation methods
+    HRESULT request_next(HRESULT hr, DWORD stream_flag,
+                         size_t worker_buffer_count) override {
+        return base_t::request_next(hr, stream_flag, worker_buffer_count);
+    }
+
+    size_t produce_worker_data(void *key,
+                               cv::gapi::wip::onevpl::ComPtrGuard<IMFMediaBuffer> &&buffer,
+                               std::shared_ptr<mfxBitstream> &&staging_stream) {
+        return base_t::produce_worker_data(key, std::move(buffer),
+                                           std::move(staging_stream));
+    }
+
+    static bool need_request_next;
+    static bool destroyed;
+};
+
+bool IntrusiveAsyncDemuxDataProvider::need_request_next{};
+bool IntrusiveAsyncDemuxDataProvider::destroyed{};
+} // namespace test
+
+TEST(OneVPL_Source_MFPAsyncDemux, sync_flush) {
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+
+    using namespace cv::gapi::wip::onevpl;
+
+    source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
+    test::IntrusiveAsyncDemuxDataProvider::need_request_next = false;
+    const size_t preprocessed_samples_count = 3;
+    {
+        test::IntrusiveAsyncDemuxDataProvider provider(path, preprocessed_samples_count);
+        size_t produce_buffer_count = 199 * preprocessed_samples_count;
+        std::thread producer([&provider, produce_buffer_count]() {
+            size_t total_produced_count = 0;
+            for (size_t i = 0; i < produce_buffer_count; i ++) {
+                total_produced_count += provider.produce_worker_data(
+                                                    reinterpret_cast<void*>(i),
+                                                    createCOMPtrGuard<IMFMediaBuffer>(nullptr),
+                                                    {});
+            }
+        });
+        producer.join();
+    }
+
+    EXPECT_EQ(test::IntrusiveAsyncDemuxDataProvider::destroyed, true);
+}
+
+TEST(OneVPL_Source_MFPAsyncDemux, async_flush) {
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+
+    using namespace cv::gapi::wip::onevpl;
+
+    source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
+    test::IntrusiveAsyncDemuxDataProvider::need_request_next = true;
+    const size_t preprocessed_samples_count = 999;
+    {
+        std::shared_ptr<mfxBitstream> stream;
+        test::IntrusiveAsyncDemuxDataProvider provider(path, preprocessed_samples_count);
+        EXPECT_EQ(provider.fetch_bitstream_data(stream), MFX_ERR_NONE);
+        EXPECT_TRUE(stream);
+    }
+
+    EXPECT_EQ(test::IntrusiveAsyncDemuxDataProvider::destroyed, true);
+}
+
+TEST(OneVPL_Source_MFPAsyncDemux, preprocessed_limit) {
+}
+
+TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+
+    using namespace cv::gapi::wip::onevpl;
+
+    source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
+    test::IntrusiveAsyncDemuxDataProvider::need_request_next = false;
+    const size_t preprocessed_samples_count = 3;
+    test::IntrusiveAsyncDemuxDataProvider provider(path, preprocessed_samples_count);
+
+    std::promise<void> start_consume_data;
+    std::future<void> wait_consume_data = start_consume_data.get_future();
+    size_t produce_buffer_count = 199 * preprocessed_samples_count;
+    std::thread producer([&provider, &wait_consume_data, produce_buffer_count]() {
+        wait_consume_data.wait();
+        size_t total_produced_count = 0;
+        for (size_t i = 0; i < produce_buffer_count; i ++) {
+            std::shared_ptr<mfxBitstream> dummy_stream = std::make_shared<mfxBitstream>();
+            dummy_stream->DataLength = static_cast<mfxU32>(i); // control block
+            dummy_stream->Data = reinterpret_cast<mfxU8*>(i);
+            total_produced_count = provider.produce_worker_data(
+                                                    dummy_stream->Data,
+                                                    createCOMPtrGuard<IMFMediaBuffer>(nullptr),
+                                                    std::move(dummy_stream));
+            EXPECT_TRUE(total_produced_count <= produce_buffer_count);
+        }
+    });
+
+    std::thread consumer([&provider, &start_consume_data, produce_buffer_count]() {
+
+        start_consume_data.set_value();
+        size_t total_consumed_count = 0;
+        std::shared_ptr<mfxBitstream> dummy_stream;
+        size_t stream_idx = 0;
+        do {
+            EXPECT_EQ(provider.fetch_bitstream_data(dummy_stream), MFX_ERR_NONE);
+            EXPECT_TRUE(dummy_stream);
+            EXPECT_EQ(dummy_stream->DataLength, stream_idx);
+            stream_idx ++;
+            total_consumed_count++;
+        } while (total_consumed_count != produce_buffer_count);
+    });
+
+    producer.join();
+    consumer.join();
+}
+
 class OneVPL_Source_MFPAsyncDispatcherTest : public ::testing::TestWithParam<array_element_t> {};
 TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
 {

@@ -454,16 +454,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
 
     if (SUCCEEDED(hr)) {
         // Ask for the first sample.
-        submit_read_request.test_and_set();
-
-        hr = source_reader->ReadSample(
-            (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
-            0,
-            NULL,
-            NULL,
-            NULL,
-            NULL
-            );
+        request_next(hr, 0, 0);
     } else {
         throw DataProviderSystemErrorException(HRESULT_CODE(hr), "Cannot ReadSample");
     }
@@ -480,9 +471,11 @@ MFPAsyncDemuxDataProvider::~MFPAsyncDemuxDataProvider() {
     {
         std::unique_lock<std::mutex> l(buffer_storage_mutex);
         GAPI_LOG_INFO(nullptr, "Clean up async storage, count: " <<
-                                worker_key_to_buffer_mapping_storage.size());
+                               worker_key_to_buffer_mapping_storage.size());
         for (auto& buffer : worker_key_to_buffer_mapping_storage) {
-            buffer.second->Unlock();
+            if (buffer.second) {
+                buffer.second->Unlock();
+            }
         }
         worker_key_to_buffer_mapping_storage.clear();
     }
@@ -490,7 +483,9 @@ MFPAsyncDemuxDataProvider::~MFPAsyncDemuxDataProvider() {
     GAPI_LOG_INFO(nullptr, "Clean didn't used up storage, count: " <<
                            processing_key_to_buffer_mapping_storage.size());
     for (auto& buffer : processing_key_to_buffer_mapping_storage) {
-        buffer.second->Unlock();
+        if (buffer.second) {
+            buffer.second->Unlock();
+        }
     }
     processing_key_to_buffer_mapping_storage.clear();
 
@@ -530,9 +525,16 @@ HRESULT MFPAsyncDemuxDataProvider::QueryInterface(REFIID riid, void** ppv)
 
 
 STDMETHODIMP
-MFPAsyncDemuxDataProvider::OnReadSample(HRESULT status, DWORD,
-                                        DWORD stream_flag, LONGLONG,
+MFPAsyncDemuxDataProvider::OnReadSample(HRESULT status, DWORD stream_index,
+                                        DWORD stream_flag, LONGLONG timestamp,
                                         IMFSample *sample_ptr) {
+    return on_read_sample_impl(status, stream_index, stream_flag,
+                               timestamp, sample_ptr);
+}
+
+HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
+                                                       DWORD stream_flag, LONGLONG,
+                                                       IMFSample *sample_ptr) {
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] status: " << std::to_string(HRESULT_CODE(status)) <<
                             ", stream flags: " << stream_flag <<
                             ", sample: " << sample_ptr);
@@ -580,7 +582,7 @@ MFPAsyncDemuxDataProvider::OnReadSample(HRESULT status, DWORD,
             staging_stream->CodecId = codec_id_to_mfx(get_codec());
 
             GAPI_LOG_DEBUG(nullptr, "[" << this << "] bitstream created, data: " <<
-                                    staging_stream->Data <<
+                                    static_cast<void*>(staging_stream->Data) <<
                                     ", MaxLength: " << staging_stream->MaxLength <<
                                     ", DataLength: "  << staging_stream->DataLength);
 
@@ -655,8 +657,10 @@ HRESULT MFPAsyncDemuxDataProvider::request_next(HRESULT hr,
     if (worker_buffer_count < keep_preprocessed_buf_count) {
         // only one consumer might make submit
         if (!submit_read_request.test_and_set()) {
-            (void)source_reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
+            hr = source_reader->ReadSample((DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
                                             0, NULL, NULL, NULL, NULL);
+            GAPI_LOG_DEBUG(nullptr, "[" << this << "] submit read sample, status: " <<
+                                    std::to_string(HRESULT_CODE(hr)));
         }
     }
     return hr;
@@ -725,6 +729,24 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             ", dst: " << out_bitsream.get());
     do {
+        if (out_bitsream) {
+            // make dmux buffer unlock for not empty bitstream
+            GAPI_LOG_DEBUG(nullptr, "bitstream before fetch, DataOffset: " << out_bitsream->DataOffset <<
+                            ", DataLength: " << out_bitsream->DataLength);
+
+            // cleanup
+            auto it = processing_key_to_buffer_mapping_storage.find(out_bitsream->Data);
+            if (it == processing_key_to_buffer_mapping_storage.end()) {
+                GAPI_LOG_WARNING(nullptr, "Cannot find appropriate dmux buffer by key: " <<
+                                 static_cast<void*>(out_bitsream->Data));
+                GAPI_Assert(false && "invalid bitstream key");
+            }
+            if (it->second) {
+                it->second->Unlock();
+            }
+            processing_key_to_buffer_mapping_storage.erase(it);
+        }
+
         // consume bitstream portion
         if (processing_locked_buffer_storage.empty() &&
             provider_state.load() == State::InProgress) {
@@ -736,22 +758,6 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
         if (processing_locked_buffer_storage.empty()) {
             GAPI_DbgAssert(provider_state == State::Exhausted && "Source reader must be drained");
              return MFX_ERR_MORE_DATA;
-        }
-
-        // make dmux buffer unloc for not empty itstream
-        if (out_bitsream) {
-            GAPI_LOG_DEBUG(nullptr, "bitstream before fetch, DataOffset: " << out_bitsream->DataOffset <<
-                            ", DataLength: " << out_bitsream->DataLength);
-
-            // cleanup
-            auto it = processing_key_to_buffer_mapping_storage.find(out_bitsream->Data);
-            if (it == processing_key_to_buffer_mapping_storage.end()) {
-                GAPI_LOG_WARNING(nullptr, "Cannot find appropriate dmux buffer by key: " <<
-                                out_bitsream->Data)
-                GAPI_Assert(false && "invalid bitstream key");
-            }
-            it->second->Unlock();
-            processing_key_to_buffer_mapping_storage.erase(it);
         }
 
         out_bitsream = processing_locked_buffer_storage.front();
