@@ -106,25 +106,10 @@ static IE::Core create_IE_Core_instance() {
     return core;
 }
 
-static bool init_IE_plugins()
-{
-    // load and hold IE plugins
-    static InferenceEngine::Core* core = new InferenceEngine::Core();  // 'delete' is never called
-    (void)core->GetAvailableDevices();
-    return true;
-}
-
 IE::Core giewrap::getCore() {
     // to make happy memory leak tools use:
     // - OPENCV_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS=0
     // - OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
-    static bool param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS =
-        utils::getConfigurationParameterBool(
-                "OPENCV_DNN_INFERENCE_ENGINE_HOLD_PLUGINS", true);
-    static bool init_IE_plugins_ =
-        param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS && init_IE_plugins();
-    CV_UNUSED(init_IE_plugins_);
-
     static bool param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
         utils::getConfigurationParameterBool(
                 "OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
@@ -138,6 +123,13 @@ IE::Core giewrap::getCore() {
     IE::Core core = param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
         ? create_IE_Core_pointer()
         : create_IE_Core_instance();
+
+    static bool param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS =
+        utils::getConfigurationParameterBool(
+                "OPENCV_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS", true);
+    if (param_GAPI_INFERENCE_ENGINE_HOLD_PLUGINS) {
+        core.GetAvailableDevices();
+    }
     return core;
 }
 
