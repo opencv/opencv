@@ -262,4 +262,71 @@ bool Odometry::compute(OdometryFrame srcFrame, OdometryFrame dstFrame, OutputArr
 }
 
 
+template<class ImageElemType>
+static void
+warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
+    const Mat& Rt, const Mat& cameraMatrix, const Mat& distCoeff,
+    OutputArray _warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+{
+    CV_Assert(_image.size() == depth.size());
+
+    Mat cloud;
+    depthTo3d(depth, cameraMatrix, cloud);
+
+    std::vector<Point2f> points2d;
+    Mat transformedCloud;
+    perspectiveTransform(cloud, transformedCloud, Rt);
+    projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
+        distCoeff, points2d);
+
+    Mat image = _image.getMat();
+    Size sz = _image.size();
+    Mat mask = _mask.getMat();
+    _warpedImage.create(sz, image.type());
+    Mat warpedImage = _warpedImage.getMat();
+
+    Mat zBuffer(sz, CV_32FC1, std::numeric_limits<float>::max());
+    const Rect rect = Rect(Point(), sz);
+
+    for (int y = 0; y < sz.height; y++)
+    {
+        //const Point3f* cloud_row = cloud.ptr<Point3f>(y);
+        const Point3f* transformedCloud_row = transformedCloud.ptr<Point3f>(y);
+        const Point2f* points2d_row = &points2d[y * sz.width];
+        const ImageElemType* image_row = image.ptr<ImageElemType>(y);
+        const uchar* mask_row = mask.empty() ? 0 : mask.ptr<uchar>(y);
+        for (int x = 0; x < sz.width; x++)
+        {
+            const float transformed_z = transformedCloud_row[x].z;
+            const Point2i p2d = points2d_row[x];
+            if ((!mask_row || mask_row[x]) && transformed_z > 0 && rect.contains(p2d) && /*!cvIsNaN(cloud_row[x].z) && */zBuffer.at<float>(p2d) > transformed_z)
+            {
+                warpedImage.at<ImageElemType>(p2d) = image_row[x];
+                zBuffer.at<float>(p2d) = transformed_z;
+            }
+        }
+    }
+
+    if (warpedMask.needed())
+        Mat(zBuffer != std::numeric_limits<float>::max()).copyTo(warpedMask);
+
+    if (warpedDepth.needed())
+    {
+        zBuffer.setTo(std::numeric_limits<float>::quiet_NaN(), zBuffer == std::numeric_limits<float>::max());
+        zBuffer.copyTo(warpedDepth);
+    }
+}
+
+void warpFrame(InputArray image, InputArray depth, InputArray mask,
+    InputArray Rt, InputArray cameraMatrix, InputArray distCoeff,
+    OutputArray warpedImage, OutputArray warpedDepth, OutputArray warpedMask)
+{
+    if (image.type() == CV_8UC1)
+        warpFrameImpl<uchar>(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
+    else if (image.type() == CV_8UC3)
+        warpFrameImpl<Point3_<uchar> >(image, depth, mask, Rt.getMat(), cameraMatrix.getMat(), distCoeff.getMat(), warpedImage, warpedDepth, warpedMask);
+    else
+        CV_Error(Error::StsBadArg, "Image has to be type of CV_8UC1 or CV_8UC3");
+}
+
 }
