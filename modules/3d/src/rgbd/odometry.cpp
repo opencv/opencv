@@ -273,9 +273,20 @@ warpFrameImpl(InputArray _image, InputArray depth, InputArray _mask,
     Mat cloud;
     depthTo3d(depth, cameraMatrix, cloud);
 
+    Mat cloud3;
+    cloud3.create(cloud.size(), CV_32FC3);
+    for (int y = 0; y < cloud3.rows; y++)
+    {
+        for (int x = 0; x < cloud3.cols; x++)
+        {
+            Vec4f p = cloud.at<Vec4f>(y, x);
+            cloud3.at<Vec3f>(y, x) = Vec3f(p[0], p[1], p[2]);
+        }
+    }
+
     std::vector<Point2f> points2d;
     Mat transformedCloud;
-    perspectiveTransform(cloud, transformedCloud, Rt);
+    perspectiveTransform(cloud3, transformedCloud, Rt);
     projectPoints(transformedCloud.reshape(3, 1), Mat::eye(3, 3, CV_64FC1), Mat::zeros(3, 1, CV_64FC1), cameraMatrix,
         distCoeff, points2d);
 
