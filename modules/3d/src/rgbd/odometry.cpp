@@ -54,8 +54,9 @@ OdometryFrame OdometryICP::createOdometryFrame()
 {
 #ifdef HAVE_OPENCL
     return OdometryFrame(OdometryFrameStoreType::UMAT);
-#endif
+#else
     return OdometryFrame(OdometryFrameStoreType::MAT);
+#endif
 }
 
 void OdometryICP::prepareFrame(OdometryFrame frame)

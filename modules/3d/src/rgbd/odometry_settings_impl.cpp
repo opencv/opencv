@@ -268,7 +268,7 @@ void OdometrySettingsImplCommon::setSobelSize(int val)
 }
 int  OdometrySettingsImplCommon::getSobelSize() const
 {
-    return this->sobelScale;
+    return this->sobelSize;
 }
 void   OdometrySettingsImplCommon::setSobelScale(double val)
 {
@@ -329,7 +329,7 @@ void OdometrySettingsImplCommon::setMinGradientMagnitudes(InputArray val)
         val.getMatVector(pyramids);
         this->minGradientMagnitudes.clear();
         for (size_t i = 0; i < nLevels; i++)
-            this->minGradientMagnitudes.push_back(pyramids[i].at<int>(0));
+            this->minGradientMagnitudes.push_back(pyramids[i].at<float>(0));
     }
     else
     {

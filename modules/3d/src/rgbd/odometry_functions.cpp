@@ -325,7 +325,7 @@ void getPyramids(OdometryFrame& odf, OdometryFramePyramidType oftype, OutputArra
     {
         TMat img;
         odf.getPyramidAt(img, oftype, l);
-        TMat& p = _pyramid.getMatRef(l);
+        TMat& p = _pyramid.getMatRef(int(l));
         img.copyTo(p);
     }
 }
@@ -502,7 +502,7 @@ void preparePyramidTexturedMask(InputArrayOfArrays pyramid_dI_dx, InputArrayOfAr
         CV_Assert(minGradMagnitudes.type() == CV_32F);
         Mat_<float> mgMags = minGradMagnitudes.getMat();
 
-        const float sobelScale2_inv = 1. / (float)(sobelScale * sobelScale);
+        const float sobelScale2_inv = (float) (1. / (sobelScale * sobelScale));
         pyramidTexturedMask.create((int)didxLevels, 1, CV_8UC1, -1);
         for (size_t i = 0; i < didxLevels; i++)
         {
@@ -707,7 +707,7 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
         {
             Mat resultRt_inv = resultRt.inv(DECOMP_SVD);
             Mat corresps_rgbd, corresps_icp, diffs_rgbd, diffs_icp;
-            double sigma_rgbd, sigma_icp;
+            double sigma_rgbd = 0, sigma_icp = 0;
 
             const Mat pyramidMask;
             srcFrame.getPyramidAt(pyramidMask, OdometryFramePyramidType::PYR_MASK, level);
