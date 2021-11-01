@@ -94,7 +94,7 @@ TYPED_TEST(RMatTypedTest, CorrectAdapterCast) {
     EXPECT_NE(nullptr, this->rmat().template get<T>());
 }
 
-class DummyAdapter : public RMat::Adapter {
+class DummyAdapter : public RMat::IAdapter {
     virtual RMat::View access(RMat::Access) override { return {}; }
     virtual cv::GMatDesc desc() const override { return {}; }
 };
@@ -103,7 +103,7 @@ TYPED_TEST(RMatTypedTest, IncorrectAdapterCast) {
     EXPECT_EQ(nullptr, this->rmat().template get<DummyAdapter>());
 }
 
-class RMatAdapterForBackend : public RMat::Adapter {
+class RMatAdapterForBackend : public RMat::IAdapter {
     int m_i;
 public:
     RMatAdapterForBackend(int i) : m_i(i) {}
