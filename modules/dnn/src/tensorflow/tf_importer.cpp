@@ -2238,7 +2238,8 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 layerParams.set("pool", pool_type);
                 layerParams.set(axis == 2 ? "kernel_w" : "kernel_h", 1);
                 layerParams.set(axis == 2 ? "global_pooling_h" : "global_pooling_w", true);
-                std::string poolingName = name+"/origin";
+                std::string poolingName = name+"/Pooling";
+                CV_Assert(layer_id.find(poolingName) == layer_id.end());
                 int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
                 layer_id[poolingName] = id;
                 connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
