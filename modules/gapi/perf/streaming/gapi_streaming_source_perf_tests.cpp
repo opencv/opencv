@@ -40,7 +40,7 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
     using namespace cv::gapi::wip::onevpl;
 
     const auto params = GetParam();
-    source_t src = findDataFile(get<0>(params), false);
+    source_t src = findDataFile(get<0>(params));
     codec_t type = get<1>(params);
 
     std::vector<CfgParam> cfg_params {
@@ -48,12 +48,7 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
         CfgParam::create("mfxImplDescription.mfxDecoderDescription.decoder.CodecID", type),
     };
 
-    cv::gapi::wip::IStreamSource::Ptr source_ptr;
-    try {
-        source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
-    } catch(...) {
-        throw SkipTestException("G-API compiled without `WITH_GAPI_ONEVPL=ON`");
-    }
+    auto source_ptr = cv::gapi::wip::make_onevpl_src(src, cfg_params);
 
     cv::gapi::wip::Data out;
     TEST_CYCLE()
@@ -72,7 +67,7 @@ PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
 
     using namespace cv::gapi::wip;
 
-    source_t src = findDataFile(GetParam(), false);
+    source_t src = findDataFile(GetParam());
     auto source_ptr = make_src<GCaptureSource>(src);
     Data out;
     TEST_CYCLE()

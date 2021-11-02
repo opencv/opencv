@@ -297,3 +297,15 @@ if (TARGET example_gapi_onevpl_infer_single_roi)
     ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
 endif()
+
+# perf test dependencies postprocessing
+if(HAVE_GAPI_ONEVPL)
+  # NB: TARGET opencv_perf_gapi doesn't exist before `ocv_add_perf_tests`
+  if(TARGET opencv_perf_gapi)
+    ocv_target_compile_definitions(opencv_perf_gapi PRIVATE -DHAVE_ONEVPL)
+    ocv_target_link_libraries(opencv_perf_gapi PRIVATE ${VPL_IMPORTED_TARGETS})
+    if(HAVE_D3D11 AND HAVE_OPENCL)
+        ocv_target_include_directories(opencv_perf_gapi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    endif()
+  endif()
+endif()

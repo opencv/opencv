@@ -38,7 +38,7 @@ size_t CachedPool::available_size() const {
         std::count_if(surfaces.begin(), surfaces.end(),
                      [](const surface_ptr_t& val) {
             GAPI_DbgAssert(val && "Pool contains empty surface");
-            return !val->get_locks_count();
+            return (val->get_locks_count() == 0);
         });
     return free_surf_count;
 }
@@ -48,7 +48,7 @@ CachedPool::surface_ptr_t CachedPool::find_free() {
         std::find_if(next_free_it, surfaces.end(),
                      [](const surface_ptr_t& val) {
             GAPI_DbgAssert(val && "Pool contains empty surface");
-            return !val->get_locks_count();
+            return (val->get_locks_count() == 0);
         });
 
     // Limitation realloc pool might be a future extension
@@ -56,7 +56,7 @@ CachedPool::surface_ptr_t CachedPool::find_free() {
         it = std::find_if(surfaces.begin(), next_free_it,
                           [](const surface_ptr_t& val) {
                 GAPI_DbgAssert(val && "Pool contains empty surface");
-                return !val->get_locks_count();
+                return (val->get_locks_count() == 0);
             });
         if (it == next_free_it) {
             std::stringstream ss;

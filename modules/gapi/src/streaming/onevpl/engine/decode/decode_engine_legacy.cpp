@@ -162,7 +162,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
                                                     &sync_pair.second,
                                                     &sync_pair.first);
 
-                } catch (const std::exception& ex) {
+                } catch (const std::runtime_error& ex) {
                     GAPI_LOG_WARNING(nullptr, "[" << my_sess.session <<
                                                "] has no surface, reason: " <<
                                                ex.what());
@@ -295,7 +295,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             try {
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
-            } catch (const std::exception& ex) {
+            } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
                                           "Abort");
                 // TODO it is supposed to be `break;` here in future PR
@@ -317,7 +317,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             try {
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
-            } catch (const std::exception& ex) {
+            } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what());
                 // TODO it is supposed to be `break;` here in future PR
             }
@@ -361,7 +361,7 @@ ProcessingEngineBase::ExecutionStatus VPLLegacyDecodeEngine::process_error(mfxSt
             try {
                 sess.swap_surface(*this);
                 return ExecutionStatus::Continue;
-            } catch (const std::exception& ex) {
+            } catch (const std::runtime_error& ex) {
                 GAPI_LOG_WARNING(nullptr, "[" << sess.session << "] error: " << ex.what() <<
                                           "Abort");
                 // TODO it is supposed to be `break;` here in future PR

@@ -47,7 +47,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
                                               surface_ptr_ctr_t creator) {
     GAPI_LOG_DEBUG(nullptr, "pool size: " << pool_size << ", surface size bytes: " << surface_size_bytes);
 
-    // create empty pool with reservation
+    // NB: create empty pool with reservation
     pool_t pool(pool_size);
 
     // allocate workplace memory area
@@ -120,9 +120,9 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
 VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_surface(pool_key_t key) {
     auto pool_it = pool_table.find(key);
     if (pool_it == pool_table.end()) {
-        throw std::runtime_error("VPLCPUAccelerationPolicy::get_free_surface - "
-                                 "key is not found, table size: " +
-                                 std::to_string(pool_table.size()));
+        GAPI_LOG_WARNING(nullptr, "key is not found, table size: " <<
+                                  pool_table.size());
+        GAPI_Assert(false && "Invalid surface key requested in VPLCPUAccelerationPolicy");
     }
 
     pool_t& requested_pool = pool_it->second;

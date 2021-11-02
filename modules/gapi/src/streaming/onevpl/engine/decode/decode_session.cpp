@@ -51,7 +51,7 @@ void LegacyDecodeSession::swap_surface(VPLLegacyDecodeEngine& engine) {
                                 ", new: "<< cand->get_handle());
 
         procesing_surface_ptr = cand;
-    } catch (const std::exception& ex) {
+    } catch (const std::runtime_error& ex) {
         GAPI_LOG_WARNING(nullptr, "[" << session << "] error: " << ex.what() <<
                                    "Abort");
     }
