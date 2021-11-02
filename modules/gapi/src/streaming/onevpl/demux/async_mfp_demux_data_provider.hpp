@@ -42,8 +42,7 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider,
     ~MFPAsyncDemuxDataProvider();
 
     CodecID get_codec() const override;
-    size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
-    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream);
+    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
     bool empty() const override;
 
 protected: /* For Unit tests only */

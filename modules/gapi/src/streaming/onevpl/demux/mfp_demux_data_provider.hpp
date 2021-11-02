@@ -25,9 +25,10 @@ struct GAPI_EXPORTS MFPDemuxDataProvider : public IDataProvider {
     ~MFPDemuxDataProvider();
 
     CodecID get_codec() const override;
-    size_t fetch_data(size_t out_data_bytes_size, void* out_data) override;
+    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
     bool empty() const override;
 private:
+    size_t fetch_data(size_t out_data_bytes_size, void* out_data);
     ComPtrGuard<IMFMediaSource> source;
     ComPtrGuard<IMFSourceReader> source_reader;
 

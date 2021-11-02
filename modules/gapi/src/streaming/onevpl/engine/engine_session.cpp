@@ -14,7 +14,7 @@ namespace gapi {
 namespace wip {
 namespace onevpl {
 
-EngineSession::EngineSession(mfxSession sess, mfxBitstream&& str) :
+EngineSession::EngineSession(mfxSession sess, std::shared_ptr<mfxBitstream>&& str) :
         session(sess), stream(std::move(str)) {}
 EngineSession::~EngineSession()
 {

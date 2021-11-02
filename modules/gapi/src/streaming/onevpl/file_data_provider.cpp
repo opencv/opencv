@@ -17,8 +17,10 @@ namespace onevpl {
 
 #ifdef HAVE_ONEVPL
 FileDataProvider::FileDataProvider(const std::string& file_path,
-                                   const std::vector<CfgParam> codec_params) :
-    source_handle(nullptr, &fclose) {
+                                   const std::vector<CfgParam> codec_params,
+                                   size_t bitstream_data_size_value) :
+    source_handle(nullptr, &fclose),
+    bitstream_data_size(bitstream_data_size_value) {
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "check codec Id from CfgParam, total param count: " <<
@@ -86,20 +88,60 @@ FileDataProvider::CodecID FileDataProvider::get_codec() const {
     return codec;
 }
 
-size_t FileDataProvider::fetch_data(size_t out_data_bytes_size, void* out_data) {
+mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitstream) {
+
+    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                            ", dst: " << out_bitstream.get());
     if (empty()) {
-        return 0;
+        return MFX_ERR_NONE;
     }
 
-    size_t ret = fread(out_data, 1, out_data_bytes_size, source_handle.get());
-    if (ret == 0) {
+    if (!out_bitstream) {
+        out_bitstream = std::make_shared<mfxBitstream>();
+        out_bitstream->MaxLength = bitstream_data_size;
+        out_bitstream->Data = (mfxU8 *)calloc(out_bitstream->MaxLength, sizeof(mfxU8));
+        if(!out_bitstream->Data) {
+            throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
+                                     std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
+        }
+        out_bitstream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+    }
+    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                            "bitstream before fetch, DataOffset: " <<
+                            out_bitstream->DataOffset <<
+                            ", DataLength: " <<
+                            out_bitstream->DataLength);
+    mfxU8 *p0 = out_bitstream->Data;
+    mfxU8 *p1 = out_bitstream->Data + out_bitstream->DataOffset;
+    if (out_bitstream->DataOffset > out_bitstream->MaxLength - 1) {
+        return MFX_ERR_NOT_ENOUGH_BUFFER;
+    }
+    if (out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength) {
+        return MFX_ERR_NOT_ENOUGH_BUFFER;
+    }
+
+    std::copy_n(p1, out_bitstream->DataLength, p0);
+
+    out_bitstream->DataOffset = 0;
+    size_t bytes_count = fread(out_bitstream->Data + out_bitstream->DataLength,
+                               1, out_bitstream->MaxLength - out_bitstream->DataLength,
+                               source_handle.get());
+    if (bytes_count == 0) {
         if (feof(source_handle.get())) {
             source_handle.reset();
         } else {
-            throw DataProviderSystemErrorException (errno, "FileDataProvider::fetch_data error read");
+            throw DataProviderSystemErrorException (errno, "FileDataProvider::fetch_bitstream_data error read");
         }
     }
-    return ret;
+    out_bitstream->DataLength += bytes_count;
+    GAPI_LOG_DEBUG(nullptr, "bitstream after fetch, DataOffset: " << out_bitstream->DataOffset <<
+                            ", DataLength: " << out_bitstream->DataLength);
+    if (out_bitstream->DataLength == 0)
+        return MFX_ERR_MORE_DATA;
+
+    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                            "buff fetched: " << out_bitstream.get());
+    return MFX_ERR_NONE;
 }
 
 bool FileDataProvider::empty() const {
@@ -118,10 +160,6 @@ FileDataProvider::~FileDataProvider() = default;
 
 FileDataProvider::CodecID FileDataProvider::get_codec() const {
     return codec;
-}
-
-size_t FileDataProvider::fetch_data(size_t, void*) {
-    return 0;
 }
 
 bool FileDataProvider::empty() const {

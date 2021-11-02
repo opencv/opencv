@@ -10,6 +10,10 @@
 #include <limits>
 #include <string>
 
+#ifdef HAVE_ONEVPL
+#include <vpl/mfxvideo.h>
+#endif // HAVE_ONEVPL
+
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
 
 namespace cv {
@@ -65,6 +69,7 @@ struct GAPI_EXPORTS IDataProvider {
     };
 
     static const char *to_cstr(CodecID codec);
+    static int codec_id_to_mfx(IDataProvider::CodecID codec);
 
     virtual ~IDataProvider() = default;
 
@@ -85,8 +90,9 @@ struct GAPI_EXPORTS IDataProvider {
      * @param out_data the output consumer buffer with capacity out_data_bytes_size.
      * @return fetched bytes count.
      */
-    virtual size_t fetch_data(size_t out_data_bytes_size, void* out_data) = 0;
-
+#ifdef HAVE_ONEVPL
+    virtual mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) = 0;
+#endif // HAVE_ONEVPL
     /**
      * The function is used by onevpl::GSource to check more binary data availability.
      *

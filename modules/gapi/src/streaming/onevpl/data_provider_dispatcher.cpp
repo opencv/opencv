@@ -47,7 +47,7 @@ IDataProvider::Ptr DataProviderDispatcher::create(const std::string& file_path,
     if (!provider) {
         GAPI_LOG_DEBUG(nullptr, "Try on MFP data provider");
         try {
-            provider = std::make_shared<MFPDemuxDataProvider>(file_path);
+            provider = std::make_shared<MFPAsyncDemuxDataProvider>(file_path);
             GAPI_LOG_INFO(nullptr, "MFP data provider created");
         } catch (const DataProviderUnsupportedException& ex) {
             GAPI_LOG_INFO(nullptr, "raw data provider creation is failed, reason: " <<

@@ -272,26 +272,6 @@ static IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
                              GetGUIDNameConst(guid));
 }
 
-static int codec_id_to_mfx(IDataProvider::CodecID codec) {
-    switch(codec) {
-        case IDataProvider::CodecID::AVC:
-            return MFX_CODEC_AVC;
-        case IDataProvider::CodecID::HEVC:
-            return MFX_CODEC_HEVC;
-        case IDataProvider::CodecID::MPEG2:
-            return MFX_CODEC_MPEG2;
-        case IDataProvider::CodecID::VC1:
-            return MFX_CODEC_VC1;
-        case IDataProvider::CodecID::VP9:
-            return MFX_CODEC_VP9;
-        case IDataProvider::CodecID::AV1:
-            return MFX_CODEC_AV1;
-        case IDataProvider::CodecID::JPEG:
-            return MFX_CODEC_JPEG;
-        default:
-            GAPI_Assert(false && "Unsupported CodecId");
-    }
-}
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_path,
                                                      size_t keep_preprocessed_buf_count_value) :
   keep_preprocessed_buf_count(keep_preprocessed_buf_count_value),
@@ -493,7 +473,7 @@ MFPAsyncDemuxDataProvider::~MFPAsyncDemuxDataProvider() {
     source_reader.reset();
     source.reset();
 
-    GAPI_DbgAssert(com_interface_reference_count.load() == 1 &&
+    GAPI_DbgAssert(com_interface_reference_count.load() > 0 &&
                    "Incorrect reference counting for MFPAsyncDemuxDataProvider");
     MFShutdown();
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
@@ -579,7 +559,7 @@ HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
 
             staging_stream->MaxLength = max_buffer_size;
             staging_stream->DataLength = curr_size;
-            staging_stream->CodecId = codec_id_to_mfx(get_codec());
+            staging_stream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
 
             GAPI_LOG_DEBUG(nullptr, "[" << this << "] bitstream created, data: " <<
                                     static_cast<void*>(staging_stream->Data) <<
@@ -636,14 +616,14 @@ void MFPAsyncDemuxDataProvider::flush() {
 HRESULT MFPAsyncDemuxDataProvider::request_next(HRESULT hr,
                                                 DWORD stream_flag,
                                                 size_t worker_buffer_count) {
-    GAPI_LOG_DEBUG(nullptr, "[" << this << "] request next sample, status: " <<
+    GAPI_LOG_DEBUG(nullptr, "[" << this << "] status: " <<
                             std::to_string(HRESULT_CODE(hr)) <<
                             ", stream flags: " << stream_flag <<
                             ", worker buffer count: (" << worker_buffer_count <<
                             "/" << keep_preprocessed_buf_count << ")");
     // check gap in stream
     if (stream_flag & MF_SOURCE_READERF_STREAMTICK ) {
-        GAPI_LOG_INFO(nullptr, "[" << this << "] Stream gap detected");
+        GAPI_LOG_INFO(nullptr, "[" << this << "] stream gap detected");
         return hr;
     }
 
@@ -717,28 +697,31 @@ MFPAsyncDemuxDataProvider::CodecID MFPAsyncDemuxDataProvider::get_codec() const 
     return codec;
 }
 
-size_t MFPAsyncDemuxDataProvider::fetch_data(size_t, void*) {
-    return 0;
-}
-
 mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) {
     if (empty()) {
+        GAPI_LOG_DEBUG(nullptr, "[" << this << "] empty");
         return MFX_ERR_MORE_DATA;
     }
-
-    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                            ", dst: " << out_bitsream.get());
     do {
         if (out_bitsream) {
             // make dmux buffer unlock for not empty bitstream
-            GAPI_LOG_DEBUG(nullptr, "bitstream before fetch, DataOffset: " << out_bitsream->DataOffset <<
-                            ", DataLength: " << out_bitsream->DataLength);
+            GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
+                                    "bitstream before fetch: " <<
+                                    out_bitsream.get() <<
+                                    ", DataOffset: " <<
+                                    out_bitsream->DataOffset <<
+                                    ", DataLength: " <<
+                                    out_bitsream->DataLength);
+            if (out_bitsream->DataOffset < out_bitsream->DataLength) {
+                return MFX_ERR_NONE;
+            }
 
             // cleanup
             auto it = processing_key_to_buffer_mapping_storage.find(out_bitsream->Data);
             if (it == processing_key_to_buffer_mapping_storage.end()) {
-                GAPI_LOG_WARNING(nullptr, "Cannot find appropriate dmux buffer by key: " <<
-                                 static_cast<void*>(out_bitsream->Data));
+                GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
+                                          "cannot find appropriate dmux buffer by key: " <<
+                                          static_cast<void*>(out_bitsream->Data));
                 GAPI_Assert(false && "invalid bitstream key");
             }
             if (it->second) {
@@ -763,13 +746,15 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
         out_bitsream = processing_locked_buffer_storage.front();
         processing_locked_buffer_storage.pop();
 
-        GAPI_LOG_DEBUG(nullptr, "bitstream after fetch, DataOffset: " << out_bitsream->DataOffset <<
-                            ", DataLength: " << out_bitsream->DataLength);
+        GAPI_LOG_DEBUG(nullptr, "[" << this << "] "
+                                "bitstream after fetch: " <<
+                                out_bitsream.get() <<
+                                ", DataOffset: " <<
+                                out_bitsream->DataOffset <<
+                                ", DataLength: " <<
+                                out_bitsream->DataLength);
     }
     while (false);
-
-    GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
-                            "buff fetched: " << out_bitsream.get());
     return MFX_ERR_NONE;
 }
 
@@ -782,8 +767,6 @@ bool MFPAsyncDemuxDataProvider::empty() const {
 
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string&) {
     GAPI_Assert(false && "Unsupported: Microsoft Media Foundation is not available");
-}
-size_t MFPAsyncDemuxDataProvider::fetch_data(size_t, void*) {
 }
 bool MFPAsyncDemuxDataProvider::empty() const override {
 }

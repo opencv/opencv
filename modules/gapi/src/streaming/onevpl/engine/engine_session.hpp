@@ -26,17 +26,17 @@ namespace onevpl {
 
 // GAPI_EXPORTS for tests
 struct GAPI_EXPORTS DecoderParams {
-    mfxBitstream stream;
+    std::shared_ptr<mfxBitstream> stream;
     mfxVideoParam param;
 };
 
 struct GAPI_EXPORTS EngineSession {
     mfxSession session;
-    mfxBitstream stream;
+    std::shared_ptr<mfxBitstream> stream;
     mfxSyncPoint sync;
     mfxStatus last_status;
 
-    EngineSession(mfxSession sess, mfxBitstream&& str);
+    EngineSession(mfxSession sess, std::shared_ptr<mfxBitstream>&& str);
     std::string error_code_to_str() const;
     virtual ~EngineSession();
 };

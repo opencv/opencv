@@ -1,3 +1,14 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2021 Intel Corporation
+
+#ifdef HAVE_ONEVPL
+#include <vpl/mfxvideo.h>
+#include <vpl/mfxjpeg.h>
+#endif // HAVE_ONEVPL
+
 #include <errno.h>
 #include <string.h>
 
@@ -48,6 +59,30 @@ const char *IDataProvider::to_cstr(IDataProvider::CodecID codec) {
         default:
             return "<unsupported>";
     }
+}
+int IDataProvider::codec_id_to_mfx(IDataProvider::CodecID codec) {
+#ifdef HAVE_ONEVPL
+    switch(codec) {
+        case IDataProvider::CodecID::AVC:
+            return MFX_CODEC_AVC;
+        case IDataProvider::CodecID::HEVC:
+            return MFX_CODEC_HEVC;
+        case IDataProvider::CodecID::MPEG2:
+            return MFX_CODEC_MPEG2;
+        case IDataProvider::CodecID::VC1:
+            return MFX_CODEC_VC1;
+        case IDataProvider::CodecID::VP9:
+            return MFX_CODEC_VP9;
+        case IDataProvider::CodecID::AV1:
+            return MFX_CODEC_AV1;
+        case IDataProvider::CodecID::JPEG:
+            return MFX_CODEC_JPEG;
+        default:
+            GAPI_Assert(false && "Unsupported CodecId");
+    }
+#else
+    GAPI_Assert(false && "Unsupported CodecId");
+#endif // HAVE_ONEVPL
 }
 } // namespace onevpl
 } // namespace wip

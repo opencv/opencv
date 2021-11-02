@@ -44,27 +44,6 @@ enum {
     VPL_NEW_API_MINOR_VERSION = 2
 };
 
-int codec_id_to_mfx(IDataProvider::CodecID codec) {
-    switch(codec) {
-        case IDataProvider::CodecID::AVC:
-            return MFX_CODEC_AVC;
-        case IDataProvider::CodecID::HEVC:
-            return MFX_CODEC_HEVC;
-        case IDataProvider::CodecID::MPEG2:
-            return MFX_CODEC_MPEG2;
-        case IDataProvider::CodecID::VC1:
-            return MFX_CODEC_VC1;
-        case IDataProvider::CodecID::VP9:
-            return MFX_CODEC_VP9;
-        case IDataProvider::CodecID::AV1:
-            return MFX_CODEC_AV1;
-        case IDataProvider::CodecID::JPEG:
-            return MFX_CODEC_JPEG;
-        default:
-            GAPI_Assert(false && "Unsupported CodecId");
-    }
-}
-
 GSource::Priv::Priv() :
     mfx_handle(MFXLoad()),
     mfx_impl_description(),
@@ -215,7 +194,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // initialize decoder
     // Find codec ID from config
-    uint32_t decoder_id = codec_id_to_mfx(provider->get_codec());
+    uint32_t decoder_id = IDataProvider::codec_id_to_mfx(provider->get_codec());
 
     // create session driving engine if required
     if (!engine) {
@@ -255,16 +234,7 @@ DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
 {
     GAPI_DbgAssert(provider && "Cannot create decoder, data provider is nullptr");
 
-    mfxBitstream bitstream{};
-    const int BITSTREAM_BUFFER_SIZE = 2000000;
-    bitstream.MaxLength = BITSTREAM_BUFFER_SIZE;
-    bitstream.Data = (mfxU8 *)calloc(bitstream.MaxLength, sizeof(mfxU8));
-    if(!bitstream.Data) {
-        throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
-                                 std::to_string(bitstream.MaxLength * sizeof(mfxU8)));
-    }
-
-    bitstream.CodecId = decoder_id;
+    std::shared_ptr<mfxBitstream> bitstream{};
 
  // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
@@ -272,13 +242,13 @@ DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     mfxStatus sts = MFX_ERR_NONE;
     do {
-        sts = ReadEncodedStream(bitstream, provider);
+        sts = provider->fetch_bitstream_data(bitstream);
         if(MFX_ERR_NONE != sts) {
             throw std::runtime_error("Error reading bitstream, error: " +
                                      mfxstatus_to_string(sts));
         }
 
-        sts = MFXVideoDECODE_DecodeHeader(mfx_session, &bitstream, &mfxDecParams);
+        sts = MFXVideoDECODE_DecodeHeader(mfx_session, bitstream.get(), &mfxDecParams);
         if(MFX_ERR_NONE != sts && MFX_ERR_MORE_DATA != sts) {
             throw std::runtime_error("Error decoding header, error: " +
                                      mfxstatus_to_string(sts));

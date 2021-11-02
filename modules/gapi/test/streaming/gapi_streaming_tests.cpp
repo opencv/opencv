@@ -294,7 +294,42 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
         return CodecID::HEVC;
     }
 
-    size_t fetch_data(size_t out_data_size, void* out_data_buf) override {
+    mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitstream) override {
+        if (empty()) {
+            return MFX_ERR_NONE;
+        }
+
+        if (!out_bitstream) {
+            out_bitstream = std::make_shared<mfxBitstream>();
+            out_bitstream->MaxLength = 2000000;
+            out_bitstream->Data = (mfxU8 *)calloc(out_bitstream->MaxLength, sizeof(mfxU8));
+            if(!out_bitstream->Data) {
+                throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
+                                         std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
+            }
+            out_bitstream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+        }
+
+        mfxU8 *p0 = out_bitstream->Data;
+        mfxU8 *p1 = out_bitstream->Data + out_bitstream->DataOffset;
+        if (out_bitstream->DataOffset > out_bitstream->MaxLength - 1) {
+            return MFX_ERR_NOT_ENOUGH_BUFFER;
+        }
+        if (out_bitstream->DataLength + out_bitstream->DataOffset > out_bitstream->MaxLength) {
+            return MFX_ERR_NOT_ENOUGH_BUFFER;
+        }
+
+        std::copy_n(p1, out_bitstream->DataLength, p0);
+
+        out_bitstream->DataOffset = 0;
+        out_bitstream->DataLength += static_cast<mfxU32>(fetch_data(out_bitstream->MaxLength - out_bitstream->DataLength,
+                                                         out_bitstream->Data + out_bitstream->DataLength));
+        if (out_bitstream->DataLength == 0)
+            return MFX_ERR_MORE_DATA;
+        return MFX_ERR_NONE;
+    }
+
+    size_t fetch_data(size_t out_data_size, void* out_data_buf) {
         data_stream.read(reinterpret_cast<char*>(out_data_buf), out_data_size);
         return (size_t)data_stream.gcount();
     }
