@@ -1485,7 +1485,7 @@ void calcICPLsmMatricesFast(Matx33f cameraMatrix, const Mat& oldPts, const Mat& 
     CV_Assert(newPts.size() == newNrm.size());
     CV_Assert(lvls > 0);
 
-#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCL_
     AccessFlag af = AccessFlag::ACCESS_READ;
     calcICPLsmMatricesFast_ocl(cameraMatrix,
         oldPts.getUMat(af), oldNrm.getUMat(af),
