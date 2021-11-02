@@ -1539,10 +1539,11 @@ void calcICPLsmMatricesFast_ocl(Matx33f cameraMatrix, const UMat& oldPts, const 
 
     std::vector<UMat> groupedSumBuffers(lvls);
     cv::String errorStr;
+    String name = "getAb";
     ocl::ProgramSource source = ocl::_3d::icp_oclsrc;
     cv::String options = "-cl-mad-enable";
     ocl::Kernel k;
-    k.create("getAb", source, options, &errorStr);
+    k.create(name.c_str(), source, options, &errorStr);
 
     if (k.empty())
         throw std::runtime_error("Failed to create kernel: " + errorStr);
