@@ -413,6 +413,11 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
     runTensorFlowNet("reduce_sum");  // a SUM pooling over all spatial dimensions.
 }
 
+TEST_P(Test_TensorFlow_layers, pooling_reduce_sum2)
+{
+    runTensorFlowNet("reduce_sum2"); // a SUM pooling over all spatial dimensions.
+}
+
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)

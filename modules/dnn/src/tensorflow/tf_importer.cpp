@@ -2245,22 +2245,18 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
 
                 LayerParams permLP;
                 int order[] = {0, 2, 3, 1};  // From OpenCV's NCHW to NHWC.
-                std::string permName = name + "/nchw";
+                std::string permName = name + "/nhwc";
                 Pin inpId = Pin(poolingName);
                 addPermuteLayer(order, permName, inpId);
 
                 LayerParams squeezeLp;
-                std::string squeezeName = name + "/squeeze";
+                std::string squeezeName = name;
                 CV_Assert(layer_id.find(squeezeName) == layer_id.end());
                 squeezeLp.set("axis", indices.at<int>(0));
                 squeezeLp.set("end_axis", indices.at<int>(0) + 1);
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
                 layer_id[squeezeName] = squeezeId;
                 connect(layer_id, dstNet, Pin(permName), squeezeId, 0);
-
-                int recoverOrder[] = {0, 2, 1};  // From NCH,NCW to NHC, NWC.
-                Pin squeezePin = Pin(squeezeName);
-                addPermuteLayer(recoverOrder, name, squeezePin, 3);
             }
         }
         else if (axis == 1)
