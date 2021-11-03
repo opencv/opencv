@@ -31,21 +31,22 @@
 #ifndef GOOGLE_PROTOBUF_UTIL_CONVERTER_JSON_STREAM_PARSER_H__
 #define GOOGLE_PROTOBUF_UTIL_CONVERTER_JSON_STREAM_PARSER_H__
 
+#include <cstdint>
 #include <stack>
 #include <string>
 
 #include <google/protobuf/stubs/common.h>
-#include <google/protobuf/stubs/stringpiece.h>
+#include <google/protobuf/stubs/status.h>
+#include <google/protobuf/stubs/strutil.h>
 #include <google/protobuf/stubs/status.h>
 
-namespace google {
-namespace util {
-class Status;
-}  // namespace util
+#include <google/protobuf/port_def.inc>
 
+namespace google {
 namespace protobuf {
 namespace util {
 namespace converter {
+
 
 class ObjectWriter;
 
@@ -69,21 +70,62 @@ class ObjectWriter;
 //
 // This parser is thread-compatible as long as only one thread is calling a
 // Parse() method at a time.
-class LIBPROTOBUF_EXPORT JsonStreamParser {
+class PROTOBUF_EXPORT JsonStreamParser {
  public:
   // Creates a JsonStreamParser that will write to the given ObjectWriter.
   explicit JsonStreamParser(ObjectWriter* ow);
   virtual ~JsonStreamParser();
 
-  // Parses a UTF-8 encoded JSON string from a StringPiece.
+  // Parses a UTF-8 encoded JSON string from a StringPiece. If the returned
+  // status is non-ok, the status might contain a payload ParseErrorType with
+  // type_url kParseErrorTypeUrl and a payload containing string snippet of the
+  // error with type_url kParseErrorSnippetUrl.
   util::Status Parse(StringPiece json);
 
 
-  // Finish parsing the JSON string.
+  // Finish parsing the JSON string. If the returned status is non-ok, the
+  // status might contain a payload ParseErrorType with type_url
+  // kParseErrorTypeUrl and a payload containing string snippet of the error
+  // with type_url kParseErrorSnippetUrl.
   util::Status FinishParse();
 
 
+  // Sets the max recursion depth of JSON message to be deserialized. JSON
+  // messages over this depth will fail to be deserialized.
+  // Default value is 100.
+  void set_max_recursion_depth(int max_depth) {
+    max_recursion_depth_ = max_depth;
+  }
+
+  // Denotes the cause of error.
+  enum ParseErrorType {
+    UNKNOWN_PARSE_ERROR,
+    OCTAL_OR_HEX_ARE_NOT_VALID_JSON_VALUES,
+    EXPECTED_COLON,
+    EXPECTED_COMMA_OR_BRACKET,
+    EXPECTED_VALUE,
+    EXPECTED_COMMA_OR_BRACES,
+    EXPECTED_OBJECT_KEY_OR_BRACES,
+    EXPECTED_VALUE_OR_BRACKET,
+    INVALID_KEY_OR_VARIABLE_NAME,
+    NON_UTF_8,
+    PARSING_TERMINATED_BEFORE_END_OF_INPUT,
+    UNEXPECTED_TOKEN,
+    EXPECTED_CLOSING_QUOTE,
+    ILLEGAL_HEX_STRING,
+    INVALID_ESCAPE_SEQUENCE,
+    MISSING_LOW_SURROGATE,
+    INVALID_LOW_SURROGATE,
+    INVALID_UNICODE,
+    UNABLE_TO_PARSE_NUMBER,
+    NUMBER_EXCEEDS_RANGE_DOUBLE
+  };
+
  private:
+  friend class JsonStreamParserTest;
+  // Return the current recursion depth.
+  int recursion_depth() { return recursion_depth_; }
+
   enum TokenType {
     BEGIN_STRING,     // " or '
     BEGIN_NUMBER,     // - or digit
@@ -115,13 +157,13 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
     Type type;
     union {
       double double_val;
-      int64 int_val;
-      uint64 uint_val;
+      int64_t int_val;
+      uint64_t uint_val;
     };
   };
 
   // Parses a single chunk of JSON, returning an error if the JSON was invalid.
-  util::Status ParseChunk(StringPiece json);
+  util::Status ParseChunk(StringPiece chunk);
 
   // Runs the parser based on stack_ and p_, until the stack is empty or p_ runs
   // out of data. If we unexpectedly run out of p_ we push the latest back onto
@@ -155,7 +197,8 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
   util::Status ParseNumberHelper(NumberResult* result);
 
   // Parse a number as double into a NumberResult.
-  util::Status ParseDoubleHelper(const string& number, NumberResult* result);
+  util::Status ParseDoubleHelper(const std::string& number,
+                                 NumberResult* result);
 
   // Handles a { during parsing of a value.
   util::Status HandleBeginObject();
@@ -187,13 +230,23 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
   // Whether an empty-null is allowed in the current state.
   bool IsEmptyNullAllowed(TokenType type);
 
+  // Whether the whole input is all whitespaces.
+  bool IsInputAllWhiteSpaces(TokenType type);
+
   // Report a failure as a util::Status.
-  util::Status ReportFailure(StringPiece message);
+  util::Status ReportFailure(StringPiece message,
+                             ParseErrorType parse_code);
 
   // Report a failure due to an UNKNOWN token type. We check if we hit the
   // end of the stream and if we're finishing or not to detect what type of
   // status to return in this case.
-  util::Status ReportUnknown(StringPiece message);
+  util::Status ReportUnknown(StringPiece message,
+                             ParseErrorType parse_code);
+
+  // Helper function to check recursion depth and increment it. It will return
+  // OkStatus() if the current depth is allowed. Otherwise an error is returned.
+  // key is used for error reporting.
+  util::Status IncrementRecursionDepth(StringPiece key) const;
 
   // Advance p_ past all whitespace or until the end of the string.
   void SkipWhitespace();
@@ -216,7 +269,7 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
 
   // Contains any leftover text from a previous chunk that we weren't able to
   // fully parse, for example the start of a key or number.
-  string leftover_;
+  std::string leftover_;
 
   // The current chunk of JSON being parsed. Primarily used for providing
   // context during error reporting.
@@ -230,36 +283,58 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
 
   // Storage for key_ if we need to keep ownership, for example between chunks
   // or if the key was unescaped from a JSON string.
-  string key_storage_;
+  std::string key_storage_;
 
   // True during the FinishParse() call, so we know that any errors are fatal.
   // For example an unterminated string will normally result in cancelling and
   // trying during the next chunk, but during FinishParse() it is an error.
   bool finishing_;
 
+  // Whether non whitespace tokens have been seen during parsing.
+  // It is used to handle the case of a pure whitespace stream input.
+  bool seen_non_whitespace_;
+
+  // The JsonStreamParser requires a root element by default and it will raise
+  // error if the root element is missing. If `allow_no_root_element_` is true,
+  // the JsonStreamParser can also handle this case.
+  bool allow_no_root_element_;
+
   // String we parsed during a call to ParseStringHelper().
   StringPiece parsed_;
 
   // Storage for the string we parsed. This may be empty if the string was able
   // to be parsed directly from the input.
-  string parsed_storage_;
+  std::string parsed_storage_;
 
   // The character that opened the string, either ' or ".
   // A value of 0 indicates that string parsing is not in process.
   char string_open_;
 
   // Storage for the chunk that are being parsed in ParseChunk().
-  string chunk_storage_;
+  std::string chunk_storage_;
 
   // Whether to allow non UTF-8 encoded input and replace invalid code points.
   bool coerce_to_utf8_;
+
+  // Replacement character for invalid UTF-8 code points.
+  std::string utf8_replacement_character_;
 
   // Whether allows empty string represented null array value or object entry
   // value.
   bool allow_empty_null_;
 
+  // Whether unquoted object keys can contain embedded non-alphanumeric
+  // characters when this is unambiguous for parsing.
+  bool allow_permissive_key_naming_;
+
   // Whether allows out-of-range floating point numbers or reject them.
   bool loose_float_number_conversion_;
+
+  // Tracks current recursion depth.
+  mutable int recursion_depth_;
+
+  // Maximum allowed recursion depth.
+  int max_recursion_depth_;
 
   GOOGLE_DISALLOW_IMPLICIT_CONSTRUCTORS(JsonStreamParser);
 };
@@ -267,6 +342,8 @@ class LIBPROTOBUF_EXPORT JsonStreamParser {
 }  // namespace converter
 }  // namespace util
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_UTIL_CONVERTER_JSON_STREAM_PARSER_H__

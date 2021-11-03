@@ -31,6 +31,8 @@
 #ifndef GOOGLE_PROTOBUF_UTIL_CONVERTER_CONSTANTS_H__
 #define GOOGLE_PROTOBUF_UTIL_CONVERTER_CONSTANTS_H__
 
+#include <cstdint>
+
 #include <google/protobuf/stubs/common.h>
 
 // This file contains constants used by //net/proto2/util/converter.
@@ -49,20 +51,20 @@ const char kRfc3339TimeFormat[] = "%E4Y-%m-%dT%H:%M:%S";
 // timestamps like "1-01-0001T23:59:59Z" instead of "0001-01-0001T23:59:59Z".
 const char kRfc3339TimeFormatNoPadding[] = "%Y-%m-%dT%H:%M:%S";
 
-// Minimun seconds allowed in a google.protobuf.Timestamp value.
-const int64 kTimestampMinSeconds = -62135596800LL;
+// Minimum seconds allowed in a google.protobuf.Timestamp value.
+const int64_t kTimestampMinSeconds = -62135596800LL;
 
 // Maximum seconds allowed in a google.protobuf.Timestamp value.
-const int64 kTimestampMaxSeconds = 253402300799LL;
+const int64_t kTimestampMaxSeconds = 253402300799LL;
 
 // Minimum seconds allowed in a google.protobuf.Duration value.
-const int64 kDurationMinSeconds = -315576000000LL;
+const int64_t kDurationMinSeconds = -315576000000LL;
 
 // Maximum seconds allowed in a google.protobuf.Duration value.
-const int64 kDurationMaxSeconds = 315576000000LL;
+const int64_t kDurationMaxSeconds = 315576000000LL;
 
 // Nano seconds in a second.
-const int32 kNanosPerSecond = 1000000000;
+const int32_t kNanosPerSecond = 1000000000;
 
 // Type url representing NULL values in google.protobuf.Struct type.
 const char kStructNullValueTypeUrl[] =
@@ -86,15 +88,11 @@ const char kDurationType[] = "google.protobuf.Duration";
 // Type URL for struct value type google.protobuf.Value
 const char kStructValueTypeUrl[] = "type.googleapis.com/google.protobuf.Value";
 
-// Type URL for struct value type google.protobuf.Value
-const char kStructTypeUrl[] = "type.googleapis.com/google.protobuf.Struct";
-
 // Type string for google.protobuf.Any
 const char kAnyType[] = "google.protobuf.Any";
 
-// The type URL of google.protobuf.FieldMask;
-const char kFieldMaskTypeUrl[] =
-    "type.googleapis.com/google.protobuf.FieldMask";
+// The protobuf option name of jspb.message_id;
+const char kOptionJspbMessageId[] = "jspb.message_id";
 
 }  // namespace converter
 }  // namespace util

@@ -47,10 +47,10 @@ class ObjectLocationTracker : public LocationTrackerInterface {
   // Creates an empty location tracker.
   ObjectLocationTracker() {}
 
-  virtual ~ObjectLocationTracker() {}
+  ~ObjectLocationTracker() override {}
 
   // Returns empty because nothing is tracked.
-  virtual string ToString() const { return ""; }
+  std::string ToString() const override { return ""; }
 
  private:
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(ObjectLocationTracker);
@@ -59,6 +59,6 @@ class ObjectLocationTracker : public LocationTrackerInterface {
 }  // namespace converter
 }  // namespace util
 }  // namespace protobuf
-
 }  // namespace google
+
 #endif  // GOOGLE_PROTOBUF_UTIL_CONVERTER_OBJECT_LOCATION_TRACKER_H__

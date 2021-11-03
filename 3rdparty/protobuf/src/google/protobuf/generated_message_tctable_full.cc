@@ -1,5 +1,5 @@
 // Protocol Buffers - Google's data interchange format
-// Copyright 2014 Google Inc.  All rights reserved.
+// Copyright 2008 Google Inc.  All rights reserved.
 // https://developers.google.com/protocol-buffers/
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,42 +27,27 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#ifndef GOOGLE_PROTOBUF_STUBS_SINGLETON_H__
-#define GOOGLE_PROTOBUF_STUBS_SINGLETON_H__
 
-#include <google/protobuf/stubs/atomicops.h>
-#include <google/protobuf/stubs/common.h>
-#include <google/protobuf/stubs/once.h>
+#include <cstdint>
+
+#include <google/protobuf/parse_context.h>
+#include <google/protobuf/extension_set.h>
+#include <google/protobuf/generated_message_tctable_impl.h>
+#include <google/protobuf/message.h>
+#include <google/protobuf/unknown_field_set.h>
+
+// clang-format off
+#include <google/protobuf/port_def.inc>
+// clang-format on
 
 namespace google {
 namespace protobuf {
 namespace internal {
-template<typename T>
-class Singleton {
- public:
-  static T* get() {
-    GoogleOnceInit(&once_, &Singleton<T>::Init);
-    return instance_;
-  }
-  static void ShutDown() {
-    delete instance_;
-    instance_ = NULL;
-  }
- private:
-  static void Init() {
-    instance_ = new T();
-  }
-  static ProtobufOnceType once_;
-  static T* instance_;
-};
 
-template<typename T>
-ProtobufOnceType Singleton<T>::once_;
+const char* TcParser::GenericFallback(PROTOBUF_TC_PARAM_DECL) {
+  return GenericFallbackImpl<Message, UnknownFieldSet>(PROTOBUF_TC_PARAM_PASS);
+}
 
-template<typename T>
-T* Singleton<T>::instance_ = NULL;
 }  // namespace internal
 }  // namespace protobuf
 }  // namespace google
-
-#endif  // GOOGLE_PROTOBUF_STUBS_SINGLETON_H__

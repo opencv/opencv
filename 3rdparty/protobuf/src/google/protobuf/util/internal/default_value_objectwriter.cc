@@ -30,7 +30,8 @@
 
 #include <google/protobuf/util/internal/default_value_objectwriter.h>
 
-#include <google/protobuf/stubs/hash.h>
+#include <cstdint>
+#include <unordered_map>
 
 #include <google/protobuf/util/internal/constants.h>
 #include <google/protobuf/util/internal/utility.h>
@@ -39,8 +40,6 @@
 namespace google {
 namespace protobuf {
 namespace util {
-using util::Status;
-using util::StatusOr;
 namespace converter {
 
 namespace {
@@ -48,11 +47,12 @@ namespace {
 // passed converter function on the DataPiece created from "value" argument.
 // If value is empty or if conversion fails, the default_value is returned.
 template <typename T>
-T ConvertTo(StringPiece value, StatusOr<T> (DataPiece::*converter_fn)() const,
+T ConvertTo(StringPiece value,
+            util::StatusOr<T> (DataPiece::*converter_fn)() const,
             T default_value) {
   if (value.empty()) return default_value;
-  StatusOr<T> result = (DataPiece(value, true).*converter_fn)();
-  return result.ok() ? result.ValueOrDie() : default_value;
+  util::StatusOr<T> result = (DataPiece(value, true).*converter_fn)();
+  return result.ok() ? result.value() : default_value;
 }
 }  // namespace
 
@@ -62,25 +62,22 @@ DefaultValueObjectWriter::DefaultValueObjectWriter(
     : typeinfo_(TypeInfo::NewTypeInfo(type_resolver)),
       own_typeinfo_(true),
       type_(type),
-      current_(NULL),
-      root_(NULL),
+      current_(nullptr),
+      root_(nullptr),
       suppress_empty_list_(false),
       preserve_proto_field_names_(false),
-      field_scrub_callback_(NULL),
+      use_ints_for_enums_(false),
       ow_(ow) {}
 
 DefaultValueObjectWriter::~DefaultValueObjectWriter() {
-  for (int i = 0; i < string_values_.size(); ++i) {
-    delete string_values_[i];
-  }
   if (own_typeinfo_) {
     delete typeinfo_;
   }
 }
 
-DefaultValueObjectWriter* DefaultValueObjectWriter::RenderBool(StringPiece name,
-                                                               bool value) {
-  if (current_ == NULL) {
+DefaultValueObjectWriter* DefaultValueObjectWriter::RenderBool(
+    StringPiece name, bool value) {
+  if (current_ == nullptr) {
     ow_->RenderBool(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -89,8 +86,8 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderBool(StringPiece name,
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderInt32(
-    StringPiece name, int32 value) {
-  if (current_ == NULL) {
+    StringPiece name, int32_t value) {
+  if (current_ == nullptr) {
     ow_->RenderInt32(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -99,8 +96,8 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderInt32(
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderUint32(
-    StringPiece name, uint32 value) {
-  if (current_ == NULL) {
+    StringPiece name, uint32_t value) {
+  if (current_ == nullptr) {
     ow_->RenderUint32(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -109,8 +106,8 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderUint32(
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderInt64(
-    StringPiece name, int64 value) {
-  if (current_ == NULL) {
+    StringPiece name, int64_t value) {
+  if (current_ == nullptr) {
     ow_->RenderInt64(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -119,8 +116,8 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderInt64(
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderUint64(
-    StringPiece name, uint64 value) {
-  if (current_ == NULL) {
+    StringPiece name, uint64_t value) {
+  if (current_ == nullptr) {
     ow_->RenderUint64(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -130,7 +127,7 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderUint64(
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderDouble(
     StringPiece name, double value) {
-  if (current_ == NULL) {
+  if (current_ == nullptr) {
     ow_->RenderDouble(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -140,7 +137,7 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderDouble(
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderFloat(
     StringPiece name, float value) {
-  if (current_ == NULL) {
+  if (current_ == nullptr) {
     ow_->RenderBool(name, value);
   } else {
     RenderDataPiece(name, DataPiece(value));
@@ -150,12 +147,12 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderFloat(
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderString(
     StringPiece name, StringPiece value) {
-  if (current_ == NULL) {
+  if (current_ == nullptr) {
     ow_->RenderString(name, value);
   } else {
     // Since StringPiece is essentially a pointer, takes a copy of "value" to
     // avoid ownership issues.
-    string_values_.push_back(new string(value.ToString()));
+    string_values_.emplace_back(new std::string(value));
     RenderDataPiece(name, DataPiece(*string_values_.back(), true));
   }
   return this;
@@ -163,12 +160,12 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderString(
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderBytes(
     StringPiece name, StringPiece value) {
-  if (current_ == NULL) {
+  if (current_ == nullptr) {
     ow_->RenderBytes(name, value);
   } else {
     // Since StringPiece is essentially a pointer, takes a copy of "value" to
     // avoid ownership issues.
-    string_values_.push_back(new string(value.ToString()));
+    string_values_.emplace_back(new std::string(value));
     RenderDataPiece(name, DataPiece(*string_values_.back(), false, true));
   }
   return this;
@@ -176,7 +173,7 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderBytes(
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::RenderNull(
     StringPiece name) {
-  if (current_ == NULL) {
+  if (current_ == nullptr) {
     ow_->RenderNull(name);
   } else {
     RenderDataPiece(name, DataPiece::NullData());
@@ -185,48 +182,27 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::RenderNull(
 }
 
 void DefaultValueObjectWriter::RegisterFieldScrubCallBack(
-    FieldScrubCallBackPtr field_scrub_callback) {
-  field_scrub_callback_.reset(field_scrub_callback.release());
+    FieldScrubCallBack field_scrub_callback) {
+  field_scrub_callback_ = std::move(field_scrub_callback);
 }
 
 DefaultValueObjectWriter::Node* DefaultValueObjectWriter::CreateNewNode(
-    const string& name, const google::protobuf::Type* type, NodeKind kind,
-    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
-    bool suppress_empty_list, FieldScrubCallBack* field_scrub_callback) {
-  return new Node(name, type, kind, data, is_placeholder, path,
-                  suppress_empty_list, field_scrub_callback);
-}
-
-DefaultValueObjectWriter::Node* DefaultValueObjectWriter::CreateNewNode(
-    const string& name, const google::protobuf::Type* type, NodeKind kind,
-    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
-    bool suppress_empty_list, bool preserve_proto_field_names,
-    FieldScrubCallBack* field_scrub_callback) {
+    const std::string& name, const google::protobuf::Type* type, NodeKind kind,
+    const DataPiece& data, bool is_placeholder,
+    const std::vector<std::string>& path, bool suppress_empty_list,
+    bool preserve_proto_field_names, bool use_ints_for_enums,
+    FieldScrubCallBack field_scrub_callback) {
   return new Node(name, type, kind, data, is_placeholder, path,
                   suppress_empty_list, preserve_proto_field_names,
-                  field_scrub_callback);
+                  use_ints_for_enums, std::move(field_scrub_callback));
 }
 
 DefaultValueObjectWriter::Node::Node(
-    const string& name, const google::protobuf::Type* type, NodeKind kind,
-    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
-    bool suppress_empty_list, FieldScrubCallBack* field_scrub_callback)
-    : name_(name),
-      type_(type),
-      kind_(kind),
-      is_any_(false),
-      data_(data),
-      is_placeholder_(is_placeholder),
-      path_(path),
-      suppress_empty_list_(suppress_empty_list),
-      preserve_proto_field_names_(false),
-      field_scrub_callback_(field_scrub_callback) {}
-
-DefaultValueObjectWriter::Node::Node(
-    const string& name, const google::protobuf::Type* type, NodeKind kind,
-    const DataPiece& data, bool is_placeholder, const std::vector<string>& path,
-    bool suppress_empty_list, bool preserve_proto_field_names,
-    FieldScrubCallBack* field_scrub_callback)
+    const std::string& name, const google::protobuf::Type* type, NodeKind kind,
+    const DataPiece& data, bool is_placeholder,
+    const std::vector<std::string>& path, bool suppress_empty_list,
+    bool preserve_proto_field_names, bool use_ints_for_enums,
+    FieldScrubCallBack field_scrub_callback)
     : name_(name),
       type_(type),
       kind_(kind),
@@ -236,20 +212,20 @@ DefaultValueObjectWriter::Node::Node(
       path_(path),
       suppress_empty_list_(suppress_empty_list),
       preserve_proto_field_names_(preserve_proto_field_names),
-      field_scrub_callback_(field_scrub_callback) {}
+      use_ints_for_enums_(use_ints_for_enums),
+      field_scrub_callback_(std::move(field_scrub_callback)) {}
 
 DefaultValueObjectWriter::Node* DefaultValueObjectWriter::Node::FindChild(
     StringPiece name) {
   if (name.empty() || kind_ != OBJECT) {
-    return NULL;
+    return nullptr;
   }
-  for (int i = 0; i < children_.size(); ++i) {
-    Node* child = children_[i];
+  for (Node* child : children_) {
     if (child->name() == name) {
       return child;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 void DefaultValueObjectWriter::Node::WriteTo(ObjectWriter* ow) {
@@ -288,8 +264,7 @@ void DefaultValueObjectWriter::Node::WriteTo(ObjectWriter* ow) {
 }
 
 void DefaultValueObjectWriter::Node::WriteChildren(ObjectWriter* ow) {
-  for (int i = 0; i < children_.size(); ++i) {
-    Node* child = children_[i];
+  for (Node* child : children_) {
     child->WriteTo(ow);
   }
 }
@@ -303,7 +278,7 @@ const google::protobuf::Type* DefaultValueObjectWriter::Node::GetMapValueType(
     if (sub_field.number() != 2) {
       continue;
     }
-    if (sub_field.kind() != google::protobuf::Field_Kind_TYPE_MESSAGE) {
+    if (sub_field.kind() != google::protobuf::Field::TYPE_MESSAGE) {
       // This map's value type is not a message type. We don't need to
       // get the field_type in this case.
       break;
@@ -313,11 +288,11 @@ const google::protobuf::Type* DefaultValueObjectWriter::Node::GetMapValueType(
     if (!sub_type.ok()) {
       GOOGLE_LOG(WARNING) << "Cannot resolve type '" << sub_field.type_url() << "'.";
     } else {
-      return sub_type.ValueOrDie();
+      return sub_type.value();
     }
     break;
   }
-  return NULL;
+  return nullptr;
 }
 
 void DefaultValueObjectWriter::Node::PopulateChildren(
@@ -328,13 +303,13 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
   // TODO(tsun): remove "kStructValueType" from the list. It's being checked
   //     now because of a bug in the tool-chain that causes the "oneof_index"
   //     of kStructValueType to not be set correctly.
-  if (type_ == NULL || type_->name() == kAnyType ||
+  if (type_ == nullptr || type_->name() == kAnyType ||
       type_->name() == kStructType || type_->name() == kTimestampType ||
       type_->name() == kDurationType || type_->name() == kStructValueType) {
     return;
   }
   std::vector<Node*> new_children;
-  hash_map<string, int> orig_children_map;
+  std::unordered_map<std::string, int> orig_children_map;
 
   // Creates a map of child nodes to speed up lookup.
   for (int i = 0; i < children_.size(); ++i) {
@@ -346,31 +321,30 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
 
     // This code is checking if the field to be added to the tree should be
     // scrubbed or not by calling the field_scrub_callback_ callback function.
-    std::vector<string> path;
+    std::vector<std::string> path;
     if (!path_.empty()) {
       path.insert(path.begin(), path_.begin(), path_.end());
     }
     path.push_back(field.name());
-    if (field_scrub_callback_ != NULL &&
-        field_scrub_callback_->Run(path, &field)) {
+    if (field_scrub_callback_ && field_scrub_callback_(path, &field)) {
       continue;
     }
 
-    hash_map<string, int>::iterator found =
+    std::unordered_map<std::string, int>::iterator found =
         orig_children_map.find(field.name());
     // If the child field has already been set, we just add it to the new list
     // of children.
     if (found != orig_children_map.end()) {
       new_children.push_back(children_[found->second]);
-      children_[found->second] = NULL;
+      children_[found->second] = nullptr;
       continue;
     }
 
-    const google::protobuf::Type* field_type = NULL;
+    const google::protobuf::Type* field_type = nullptr;
     bool is_map = false;
     NodeKind kind = PRIMITIVE;
 
-    if (field.kind() == google::protobuf::Field_Kind_TYPE_MESSAGE) {
+    if (field.kind() == google::protobuf::Field::TYPE_MESSAGE) {
       kind = OBJECT;
       util::StatusOr<const google::protobuf::Type*> found_result =
           typeinfo->ResolveTypeUrl(field.type_url());
@@ -378,7 +352,7 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
         // "field" is of an unknown type.
         GOOGLE_LOG(WARNING) << "Cannot resolve type '" << field.type_url() << "'.";
       } else {
-        const google::protobuf::Type* found_type = found_result.ValueOrDie();
+        const google::protobuf::Type* found_type = found_result.value();
         is_map = IsMap(field, *found_type);
 
         if (!is_map) {
@@ -393,8 +367,7 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
     }
 
     if (!is_map &&
-        field.cardinality() ==
-            google::protobuf::Field_Cardinality_CARDINALITY_REPEATED) {
+        field.cardinality() == google::protobuf::Field::CARDINALITY_REPEATED) {
       kind = LIST;
     }
 
@@ -405,22 +378,23 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
 
     // If the child field is of primitive type, sets its data to the default
     // value of its type.
-    google::protobuf::scoped_ptr<Node> child(new Node(
-        preserve_proto_field_names_ ? field.name() : field.json_name(),
-        field_type, kind,
-        kind == PRIMITIVE ? CreateDefaultDataPieceForField(field, typeinfo)
-                          : DataPiece::NullData(),
-        true, path, suppress_empty_list_, preserve_proto_field_names_,
-        field_scrub_callback_));
+    std::unique_ptr<Node> child(
+        new Node(preserve_proto_field_names_ ? field.name() : field.json_name(),
+                 field_type, kind,
+                 kind == PRIMITIVE ? CreateDefaultDataPieceForField(
+                                         field, typeinfo, use_ints_for_enums_)
+                                   : DataPiece::NullData(),
+                 true, path, suppress_empty_list_, preserve_proto_field_names_,
+                 use_ints_for_enums_, field_scrub_callback_));
     new_children.push_back(child.release());
   }
   // Adds all leftover nodes in children_ to the beginning of new_child.
   for (int i = 0; i < children_.size(); ++i) {
-    if (children_[i] == NULL) {
+    if (children_[i] == nullptr) {
       continue;
     }
     new_children.insert(new_children.begin(), children_[i]);
-    children_[i] = NULL;
+    children_[i] = nullptr;
   }
   children_.swap(new_children);
 }
@@ -428,17 +402,15 @@ void DefaultValueObjectWriter::Node::PopulateChildren(
 void DefaultValueObjectWriter::MaybePopulateChildrenOfAny(Node* node) {
   // If this is an "Any" node with "@type" already given and no other children
   // have been added, populates its children.
-  if (node != NULL && node->is_any() && node->type() != NULL &&
+  if (node != nullptr && node->is_any() && node->type() != nullptr &&
       node->type()->name() != kAnyType && node->number_of_children() == 1) {
     node->PopulateChildren(typeinfo_);
   }
 }
 
 DataPiece DefaultValueObjectWriter::FindEnumDefault(
-    const google::protobuf::Field& field, const TypeInfo* typeinfo) {
-  if (!field.default_value().empty())
-    return DataPiece(field.default_value(), true);
-
+    const google::protobuf::Field& field, const TypeInfo* typeinfo,
+    bool use_ints_for_enums) {
   const google::protobuf::Enum* enum_type =
       typeinfo->GetEnumByTypeUrl(field.type_url());
   if (!enum_type) {
@@ -446,88 +418,111 @@ DataPiece DefaultValueObjectWriter::FindEnumDefault(
                  << "'";
     return DataPiece::NullData();
   }
+  if (!field.default_value().empty()) {
+    if (!use_ints_for_enums) {
+      return DataPiece(field.default_value(), true);
+    } else {
+      const std::string& enum_default_value_name = field.default_value();
+      for (int enum_index = 0; enum_index < enum_type->enumvalue_size();
+           ++enum_index) {
+        auto& enum_value = enum_type->enumvalue(enum_index);
+        if (enum_value.name() == enum_default_value_name)
+          return DataPiece(enum_value.number());
+      }
+      GOOGLE_LOG(WARNING) << "Could not find enum value '" << enum_default_value_name
+                   << "' with type '" << field.type_url() << "'";
+      return DataPiece::NullData();
+    }
+  }
   // We treat the first value as the default if none is specified.
   return enum_type->enumvalue_size() > 0
-             ? DataPiece(enum_type->enumvalue(0).name(), true)
+             ? (use_ints_for_enums
+                    ? DataPiece(enum_type->enumvalue(0).number())
+                    : DataPiece(enum_type->enumvalue(0).name(), true))
              : DataPiece::NullData();
 }
 
 DataPiece DefaultValueObjectWriter::CreateDefaultDataPieceForField(
-    const google::protobuf::Field& field, const TypeInfo* typeinfo) {
+    const google::protobuf::Field& field, const TypeInfo* typeinfo,
+    bool use_ints_for_enums) {
   switch (field.kind()) {
-    case google::protobuf::Field_Kind_TYPE_DOUBLE: {
+    case google::protobuf::Field::TYPE_DOUBLE: {
       return DataPiece(ConvertTo<double>(
           field.default_value(), &DataPiece::ToDouble, static_cast<double>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_FLOAT: {
+    case google::protobuf::Field::TYPE_FLOAT: {
       return DataPiece(ConvertTo<float>(
           field.default_value(), &DataPiece::ToFloat, static_cast<float>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_INT64:
-    case google::protobuf::Field_Kind_TYPE_SINT64:
-    case google::protobuf::Field_Kind_TYPE_SFIXED64: {
-      return DataPiece(ConvertTo<int64>(
-          field.default_value(), &DataPiece::ToInt64, static_cast<int64>(0)));
+    case google::protobuf::Field::TYPE_INT64:
+    case google::protobuf::Field::TYPE_SINT64:
+    case google::protobuf::Field::TYPE_SFIXED64: {
+      return DataPiece(ConvertTo<int64_t>(
+          field.default_value(), &DataPiece::ToInt64, static_cast<int64_t>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_UINT64:
-    case google::protobuf::Field_Kind_TYPE_FIXED64: {
-      return DataPiece(ConvertTo<uint64>(
-          field.default_value(), &DataPiece::ToUint64, static_cast<uint64>(0)));
+    case google::protobuf::Field::TYPE_UINT64:
+    case google::protobuf::Field::TYPE_FIXED64: {
+      return DataPiece(ConvertTo<uint64_t>(field.default_value(),
+                                           &DataPiece::ToUint64,
+                                           static_cast<uint64_t>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_INT32:
-    case google::protobuf::Field_Kind_TYPE_SINT32:
-    case google::protobuf::Field_Kind_TYPE_SFIXED32: {
-      return DataPiece(ConvertTo<int32>(
-          field.default_value(), &DataPiece::ToInt32, static_cast<int32>(0)));
+    case google::protobuf::Field::TYPE_INT32:
+    case google::protobuf::Field::TYPE_SINT32:
+    case google::protobuf::Field::TYPE_SFIXED32: {
+      return DataPiece(ConvertTo<int32_t>(
+          field.default_value(), &DataPiece::ToInt32, static_cast<int32_t>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_BOOL: {
+    case google::protobuf::Field::TYPE_BOOL: {
       return DataPiece(
           ConvertTo<bool>(field.default_value(), &DataPiece::ToBool, false));
     }
-    case google::protobuf::Field_Kind_TYPE_STRING: {
+    case google::protobuf::Field::TYPE_STRING: {
       return DataPiece(field.default_value(), true);
     }
-    case google::protobuf::Field_Kind_TYPE_BYTES: {
+    case google::protobuf::Field::TYPE_BYTES: {
       return DataPiece(field.default_value(), false, true);
     }
-    case google::protobuf::Field_Kind_TYPE_UINT32:
-    case google::protobuf::Field_Kind_TYPE_FIXED32: {
-      return DataPiece(ConvertTo<uint32>(
-          field.default_value(), &DataPiece::ToUint32, static_cast<uint32>(0)));
+    case google::protobuf::Field::TYPE_UINT32:
+    case google::protobuf::Field::TYPE_FIXED32: {
+      return DataPiece(ConvertTo<uint32_t>(field.default_value(),
+                                           &DataPiece::ToUint32,
+                                           static_cast<uint32_t>(0)));
     }
-    case google::protobuf::Field_Kind_TYPE_ENUM: {
-      return FindEnumDefault(field, typeinfo);
+    case google::protobuf::Field::TYPE_ENUM: {
+      return FindEnumDefault(field, typeinfo, use_ints_for_enums);
     }
-    default: { return DataPiece::NullData(); }
+    default: {
+      return DataPiece::NullData();
+    }
   }
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::StartObject(
     StringPiece name) {
-  if (current_ == NULL) {
-    std::vector<string> path;
-    root_.reset(CreateNewNode(string(name), &type_, OBJECT,
+  if (current_ == nullptr) {
+    std::vector<std::string> path;
+    root_.reset(CreateNewNode(std::string(name), &type_, OBJECT,
                               DataPiece::NullData(), false, path,
                               suppress_empty_list_, preserve_proto_field_names_,
-                              field_scrub_callback_.get()));
+                              use_ints_for_enums_, field_scrub_callback_));
     root_->PopulateChildren(typeinfo_);
     current_ = root_.get();
     return this;
   }
   MaybePopulateChildrenOfAny(current_);
   Node* child = current_->FindChild(name);
-  if (current_->kind() == LIST || current_->kind() == MAP || child == NULL) {
+  if (current_->kind() == LIST || current_->kind() == MAP || child == nullptr) {
     // If current_ is a list or a map node, we should create a new child and use
     // the type of current_ as the type of the new child.
-    google::protobuf::scoped_ptr<Node> node(
-        CreateNewNode(string(name),
+    std::unique_ptr<Node> node(
+        CreateNewNode(std::string(name),
                       ((current_->kind() == LIST || current_->kind() == MAP)
                            ? current_->type()
-                           : NULL),
+                           : nullptr),
                       OBJECT, DataPiece::NullData(), false,
-                      child == NULL ? current_->path() : child->path(),
+                      child == nullptr ? current_->path() : child->path(),
                       suppress_empty_list_, preserve_proto_field_names_,
-                      field_scrub_callback_.get()));
+                      use_ints_for_enums_, field_scrub_callback_));
     child = node.get();
     current_->AddChild(node.release());
   }
@@ -555,23 +550,23 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::EndObject() {
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::StartList(
     StringPiece name) {
-  if (current_ == NULL) {
-    std::vector<string> path;
-    root_.reset(CreateNewNode(string(name), &type_, LIST, DataPiece::NullData(),
-                              false, path, suppress_empty_list_,
-                              preserve_proto_field_names_,
-                              field_scrub_callback_.get()));
+  if (current_ == nullptr) {
+    std::vector<std::string> path;
+    root_.reset(CreateNewNode(std::string(name), &type_, LIST,
+                              DataPiece::NullData(), false, path,
+                              suppress_empty_list_, preserve_proto_field_names_,
+                              use_ints_for_enums_, field_scrub_callback_));
     current_ = root_.get();
     return this;
   }
   MaybePopulateChildrenOfAny(current_);
   Node* child = current_->FindChild(name);
-  if (child == NULL || child->kind() != LIST) {
-    google::protobuf::scoped_ptr<Node> node(
-        CreateNewNode(string(name), NULL, LIST, DataPiece::NullData(), false,
-                      child == NULL ? current_->path() : child->path(),
-                      suppress_empty_list_, preserve_proto_field_names_,
-                      field_scrub_callback_.get()));
+  if (child == nullptr || child->kind() != LIST) {
+    std::unique_ptr<Node> node(CreateNewNode(
+        std::string(name), nullptr, LIST, DataPiece::NullData(), false,
+        child == nullptr ? current_->path() : child->path(),
+        suppress_empty_list_, preserve_proto_field_names_, use_ints_for_enums_,
+        field_scrub_callback_));
     child = node.get();
     current_->AddChild(node.release());
   }
@@ -584,8 +579,8 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::StartList(
 
 void DefaultValueObjectWriter::WriteRoot() {
   root_->WriteTo(ow_);
-  root_.reset(NULL);
-  current_ = NULL;
+  root_.reset(nullptr);
+  current_ = nullptr;
 }
 
 DefaultValueObjectWriter* DefaultValueObjectWriter::EndList() {
@@ -601,11 +596,11 @@ DefaultValueObjectWriter* DefaultValueObjectWriter::EndList() {
 void DefaultValueObjectWriter::RenderDataPiece(StringPiece name,
                                                const DataPiece& data) {
   MaybePopulateChildrenOfAny(current_);
-  if (current_->type() != NULL && current_->type()->name() == kAnyType &&
+  if (current_->type() != nullptr && current_->type()->name() == kAnyType &&
       name == "@type") {
-    util::StatusOr<string> data_string = data.ToString();
+    util::StatusOr<std::string> data_string = data.ToString();
     if (data_string.ok()) {
-      const string& string_value = data_string.ValueOrDie();
+      const std::string& string_value = data_string.value();
       // If the type of current_ is "Any" and its "@type" field is being set
       // here, sets the type of current_ to be the type specified by the
       // "@type".
@@ -614,26 +609,26 @@ void DefaultValueObjectWriter::RenderDataPiece(StringPiece name,
       if (!found_type.ok()) {
         GOOGLE_LOG(WARNING) << "Failed to resolve type '" << string_value << "'.";
       } else {
-        current_->set_type(found_type.ValueOrDie());
+        current_->set_type(found_type.value());
       }
       current_->set_is_any(true);
       // If the "@type" field is placed after other fields, we should populate
       // other children of primitive type now. Otherwise, we should wait until
       // the first value field is rendered before we populate the children,
       // because the "value" field of a Any message could be omitted.
-      if (current_->number_of_children() > 1 && current_->type() != NULL) {
+      if (current_->number_of_children() > 1 && current_->type() != nullptr) {
         current_->PopulateChildren(typeinfo_);
       }
     }
   }
   Node* child = current_->FindChild(name);
-  if (child == NULL || child->kind() != PRIMITIVE) {
+  if (child == nullptr || child->kind() != PRIMITIVE) {
     // No children are found, creates a new child.
-    google::protobuf::scoped_ptr<Node> node(
-        CreateNewNode(string(name), NULL, PRIMITIVE, data, false,
-                      child == NULL ? current_->path() : child->path(),
+    std::unique_ptr<Node> node(
+        CreateNewNode(std::string(name), nullptr, PRIMITIVE, data, false,
+                      child == nullptr ? current_->path() : child->path(),
                       suppress_empty_list_, preserve_proto_field_names_,
-                      field_scrub_callback_.get()));
+                      use_ints_for_enums_, field_scrub_callback_));
     current_->AddChild(node.release());
   } else {
     child->set_data(data);

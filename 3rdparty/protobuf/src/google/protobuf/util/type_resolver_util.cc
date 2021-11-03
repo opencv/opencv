@@ -38,56 +38,70 @@
 #include <google/protobuf/util/type_resolver.h>
 #include <google/protobuf/stubs/strutil.h>
 #include <google/protobuf/stubs/status.h>
+#include <google/protobuf/stubs/status.h>
+
+// clang-format off
+#include <google/protobuf/port_def.inc>
+// clang-format on
 
 namespace google {
 namespace protobuf {
 namespace util {
 namespace {
+using google::protobuf::Any;
 using google::protobuf::BoolValue;
+using google::protobuf::BytesValue;
+using google::protobuf::DoubleValue;
 using google::protobuf::Enum;
 using google::protobuf::EnumValue;
 using google::protobuf::Field;
+using google::protobuf::FloatValue;
+using google::protobuf::Int32Value;
+using google::protobuf::Int64Value;
 using google::protobuf::Option;
+using google::protobuf::StringValue;
 using google::protobuf::Type;
-
-using util::Status;
-using util::error::INVALID_ARGUMENT;
-using util::error::NOT_FOUND;
+using google::protobuf::UInt32Value;
+using google::protobuf::UInt64Value;
 
 class DescriptorPoolTypeResolver : public TypeResolver {
  public:
-  DescriptorPoolTypeResolver(const string& url_prefix,
+  DescriptorPoolTypeResolver(const std::string& url_prefix,
                              const DescriptorPool* pool)
       : url_prefix_(url_prefix), pool_(pool) {}
 
-  Status ResolveMessageType(const string& type_url, Type* type) {
-    string type_name;
-    Status status = ParseTypeUrl(type_url, &type_name);
+  util::Status ResolveMessageType(const std::string& type_url,
+                                  Type* type) override {
+    std::string type_name;
+    util::Status status = ParseTypeUrl(type_url, &type_name);
     if (!status.ok()) {
       return status;
     }
 
     const Descriptor* descriptor = pool_->FindMessageTypeByName(type_name);
     if (descriptor == NULL) {
-      return Status(NOT_FOUND, "Invalid type URL, unknown type: " + type_name);
+      return util::NotFoundError("Invalid type URL, unknown type: " +
+                                 type_name);
     }
     ConvertDescriptor(descriptor, type);
-    return Status();
+    return util::Status();
   }
 
-  Status ResolveEnumType(const string& type_url, Enum* enum_type) {
-    string type_name;
-    Status status = ParseTypeUrl(type_url, &type_name);
+  util::Status ResolveEnumType(const std::string& type_url,
+                               Enum* enum_type) override {
+    std::string type_name;
+    util::Status status = ParseTypeUrl(type_url, &type_name);
     if (!status.ok()) {
       return status;
     }
 
     const EnumDescriptor* descriptor = pool_->FindEnumTypeByName(type_name);
     if (descriptor == NULL) {
-      return Status(NOT_FOUND, "Invalid type URL, unknown type: " + type_name);
+      return util::InvalidArgumentError("Invalid type URL, unknown type: " +
+                                        type_name);
     }
     ConvertEnumDescriptor(descriptor, enum_type);
-    return Status();
+    return util::Status();
   }
 
  private:
@@ -95,11 +109,6 @@ class DescriptorPoolTypeResolver : public TypeResolver {
     type->Clear();
     type->set_name(descriptor->full_name());
     for (int i = 0; i < descriptor->field_count(); ++i) {
-      const FieldDescriptor* field = descriptor->field(i);
-      if (field->type() == FieldDescriptor::TYPE_GROUP) {
-        // Group fields cannot be represented with Type. We discard them.
-        continue;
-      }
       ConvertFieldDescriptor(descriptor->field(i), type->add_fields());
     }
     for (int i = 0; i < descriptor->oneof_decl_count(); ++i) {
@@ -111,15 +120,125 @@ class DescriptorPoolTypeResolver : public TypeResolver {
 
   void ConvertMessageOptions(const MessageOptions& options,
                              RepeatedPtrField<Option>* output) {
-    if (options.map_entry()) {
-      Option* option = output->Add();
-      option->set_name("map_entry");
-      BoolValue value;
-      value.set_value(true);
-      option->mutable_value()->PackFrom(value);
-    }
+    return ConvertOptionsInternal(options, output);
+  }
 
-    // TODO(xiaofeng): Set other "options"?
+  void ConvertFieldOptions(const FieldOptions& options,
+                           RepeatedPtrField<Option>* output) {
+    return ConvertOptionsInternal(options, output);
+  }
+
+  void ConvertEnumOptions(const EnumOptions& options,
+                          RepeatedPtrField<Option>* output) {
+    return ConvertOptionsInternal(options, output);
+  }
+
+  void ConvertEnumValueOptions(const EnumValueOptions& options,
+                               RepeatedPtrField<Option>* output) {
+    return ConvertOptionsInternal(options, output);
+  }
+
+  // Implementation details for Convert*Options.
+  void ConvertOptionsInternal(const Message& options,
+                              RepeatedPtrField<Option>* output) {
+    const Reflection* reflection = options.GetReflection();
+    std::vector<const FieldDescriptor*> fields;
+    reflection->ListFields(options, &fields);
+    for (const FieldDescriptor* field : fields) {
+      if (field->is_repeated()) {
+        const int size = reflection->FieldSize(options, field);
+        for (int i = 0; i < size; i++) {
+          ConvertOptionField(reflection, options, field, i, output->Add());
+        }
+      } else {
+        ConvertOptionField(reflection, options, field, -1, output->Add());
+      }
+    }
+  }
+
+  static void ConvertOptionField(const Reflection* reflection,
+                                 const Message& options,
+                                 const FieldDescriptor* field, int index,
+                                 Option* out) {
+    out->set_name(field->is_extension() ? field->full_name() : field->name());
+    Any* value = out->mutable_value();
+    switch (field->cpp_type()) {
+      case FieldDescriptor::CPPTYPE_MESSAGE:
+        value->PackFrom(
+            field->is_repeated()
+                ? reflection->GetRepeatedMessage(options, field, index)
+                : reflection->GetMessage(options, field));
+        return;
+      case FieldDescriptor::CPPTYPE_DOUBLE:
+        value->PackFrom(WrapValue<DoubleValue>(
+            field->is_repeated()
+                ? reflection->GetRepeatedDouble(options, field, index)
+                : reflection->GetDouble(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_FLOAT:
+        value->PackFrom(WrapValue<FloatValue>(
+            field->is_repeated()
+                ? reflection->GetRepeatedFloat(options, field, index)
+                : reflection->GetFloat(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_INT64:
+        value->PackFrom(WrapValue<Int64Value>(
+            field->is_repeated()
+                ? reflection->GetRepeatedInt64(options, field, index)
+                : reflection->GetInt64(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_UINT64:
+        value->PackFrom(WrapValue<UInt64Value>(
+            field->is_repeated()
+                ? reflection->GetRepeatedUInt64(options, field, index)
+                : reflection->GetUInt64(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_INT32:
+        value->PackFrom(WrapValue<Int32Value>(
+            field->is_repeated()
+                ? reflection->GetRepeatedInt32(options, field, index)
+                : reflection->GetInt32(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_UINT32:
+        value->PackFrom(WrapValue<UInt32Value>(
+            field->is_repeated()
+                ? reflection->GetRepeatedUInt32(options, field, index)
+                : reflection->GetUInt32(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_BOOL:
+        value->PackFrom(WrapValue<BoolValue>(
+            field->is_repeated()
+                ? reflection->GetRepeatedBool(options, field, index)
+                : reflection->GetBool(options, field)));
+        return;
+      case FieldDescriptor::CPPTYPE_STRING: {
+        const std::string& val =
+            field->is_repeated()
+                ? reflection->GetRepeatedString(options, field, index)
+                : reflection->GetString(options, field);
+        if (field->type() == FieldDescriptor::TYPE_STRING) {
+          value->PackFrom(WrapValue<StringValue>(val));
+        } else {
+          value->PackFrom(WrapValue<BytesValue>(val));
+        }
+        return;
+      }
+      case FieldDescriptor::CPPTYPE_ENUM: {
+        const EnumValueDescriptor* val =
+            field->is_repeated()
+                ? reflection->GetRepeatedEnum(options, field, index)
+                : reflection->GetEnum(options, field);
+        value->PackFrom(WrapValue<Int32Value>(val->number()));
+        return;
+      }
+    }
+  }
+
+  template <typename WrapperT, typename T>
+  static WrapperT WrapValue(T value) {
+    WrapperT wrapper;
+    wrapper.set_value(value);
+    return wrapper;
   }
 
   void ConvertFieldDescriptor(const FieldDescriptor* descriptor, Field* field) {
@@ -141,7 +260,8 @@ class DescriptorPoolTypeResolver : public TypeResolver {
     if (descriptor->has_default_value()) {
       field->set_default_value(DefaultValueAsString(descriptor));
     }
-    if (descriptor->type() == FieldDescriptor::TYPE_MESSAGE) {
+    if (descriptor->type() == FieldDescriptor::TYPE_MESSAGE ||
+        descriptor->type() == FieldDescriptor::TYPE_GROUP) {
       field->set_type_url(GetTypeUrl(descriptor->message_type()));
     } else if (descriptor->type() == FieldDescriptor::TYPE_ENUM) {
       field->set_type_url(GetTypeUrl(descriptor->enum_type()));
@@ -153,7 +273,7 @@ class DescriptorPoolTypeResolver : public TypeResolver {
       field->set_packed(true);
     }
 
-    // TODO(xiaofeng): Set other field "options"?
+    ConvertFieldOptions(descriptor->options(), field->mutable_options());
   }
 
   void ConvertEnumDescriptor(const EnumDescriptor* descriptor,
@@ -168,42 +288,45 @@ class DescriptorPoolTypeResolver : public TypeResolver {
       value->set_name(value_descriptor->name());
       value->set_number(value_descriptor->number());
 
-      // TODO(xiaofeng): Set EnumValue options.
+      ConvertEnumValueOptions(value_descriptor->options(),
+                              value->mutable_options());
     }
-    // TODO(xiaofeng): Set Enum "options".
+
+    ConvertEnumOptions(descriptor->options(), enum_type->mutable_options());
   }
 
-  string GetTypeUrl(const Descriptor* descriptor) {
+  std::string GetTypeUrl(const Descriptor* descriptor) {
     return url_prefix_ + "/" + descriptor->full_name();
   }
 
-  string GetTypeUrl(const EnumDescriptor* descriptor) {
+  std::string GetTypeUrl(const EnumDescriptor* descriptor) {
     return url_prefix_ + "/" + descriptor->full_name();
   }
 
-  Status ParseTypeUrl(const string& type_url, string* type_name) {
+  util::Status ParseTypeUrl(const std::string& type_url,
+                            std::string* type_name) {
     if (type_url.substr(0, url_prefix_.size() + 1) != url_prefix_ + "/") {
-      return Status(INVALID_ARGUMENT,
-                    StrCat("Invalid type URL, type URLs must be of the form '",
-                           url_prefix_, "/<typename>', got: ", type_url));
+      return util::InvalidArgumentError(
+          StrCat("Invalid type URL, type URLs must be of the form '",
+                       url_prefix_, "/<typename>', got: ", type_url));
     }
     *type_name = type_url.substr(url_prefix_.size() + 1);
-    return Status();
+    return util::Status();
   }
 
-  string DefaultValueAsString(const FieldDescriptor* descriptor) {
+  std::string DefaultValueAsString(const FieldDescriptor* descriptor) {
     switch (descriptor->cpp_type()) {
       case FieldDescriptor::CPPTYPE_INT32:
-        return SimpleItoa(descriptor->default_value_int32());
+        return StrCat(descriptor->default_value_int32());
         break;
       case FieldDescriptor::CPPTYPE_INT64:
-        return SimpleItoa(descriptor->default_value_int64());
+        return StrCat(descriptor->default_value_int64());
         break;
       case FieldDescriptor::CPPTYPE_UINT32:
-        return SimpleItoa(descriptor->default_value_uint32());
+        return StrCat(descriptor->default_value_uint32());
         break;
       case FieldDescriptor::CPPTYPE_UINT64:
-        return SimpleItoa(descriptor->default_value_uint64());
+        return StrCat(descriptor->default_value_uint64());
         break;
       case FieldDescriptor::CPPTYPE_FLOAT:
         return SimpleFtoa(descriptor->default_value_float());
@@ -231,13 +354,13 @@ class DescriptorPoolTypeResolver : public TypeResolver {
     return "";
   }
 
-  string url_prefix_;
+  std::string url_prefix_;
   const DescriptorPool* pool_;
 };
 
 }  // namespace
 
-TypeResolver* NewTypeResolverForDescriptorPool(const string& url_prefix,
+TypeResolver* NewTypeResolverForDescriptorPool(const std::string& url_prefix,
                                                const DescriptorPool* pool) {
   return new DescriptorPoolTypeResolver(url_prefix, pool);
 }

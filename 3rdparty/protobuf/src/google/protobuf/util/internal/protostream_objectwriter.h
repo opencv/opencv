@@ -32,10 +32,12 @@
 #define GOOGLE_PROTOBUF_UTIL_CONVERTER_PROTOSTREAM_OBJECTWRITER_H__
 
 #include <deque>
-#include <google/protobuf/stubs/hash.h>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <google/protobuf/stubs/common.h>
+#include <google/protobuf/type.pb.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/descriptor.h>
@@ -46,21 +48,12 @@
 #include <google/protobuf/util/internal/structured_objectwriter.h>
 #include <google/protobuf/util/type_resolver.h>
 #include <google/protobuf/stubs/bytestream.h>
+#include <google/protobuf/stubs/status.h>
+#include <google/protobuf/stubs/hash.h>
+
+#include <google/protobuf/port_def.inc>
 
 namespace google {
-namespace protobuf {
-namespace io {
-class CodedOutputStream;
-}  // namespace io
-}  // namespace protobuf
-
-
-namespace protobuf {
-class Type;
-class Field;
-}  // namespace protobuf
-
-
 namespace protobuf {
 namespace util {
 namespace converter {
@@ -72,7 +65,7 @@ class ObjectLocationTracker;
 // the ProtoWriter class to write raw proto bytes.
 //
 // It also supports streaming.
-class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
+class PROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
  public:
   // Options that control ProtoStreamObjectWriter class's behavior.
   struct Options {
@@ -87,17 +80,62 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
     bool struct_integers_as_strings;
 
     // Not treat unknown fields as an error. If there is an unknown fields,
-    // just ignore it and continue to process the rest.
+    // just ignore it and continue to process the rest. Note that this doesn't
+    // apply to unknown enum values.
     bool ignore_unknown_fields;
+
+    // Ignore unknown enum values.
+    bool ignore_unknown_enum_values;
 
     // If true, check if enum name in camel case or without underscore matches
     // the field name.
     bool use_lower_camel_for_enums;
 
+    // If true, check if enum name in UPPER_CASE matches the field name.
+    bool case_insensitive_enum_parsing;
+
+    // If true, skips rendering the map entry if map value is null unless the
+    // value type is google.protobuf.NullType.
+    bool ignore_null_value_map_entry;
+
+    // If true, accepts repeated key/value pair for a map proto field.
+    bool use_legacy_json_map_format;
+
+    // If true, disable implicitly creating message list.
+    bool disable_implicit_message_list;
+
+    // If true, suppress the error of implicitly creating message list when it
+    // is disabled.
+    bool suppress_implicit_message_list_error;
+
+    // If true, disable implicitly creating scalar list.
+    bool disable_implicit_scalar_list;
+
+    // If true, suppress the error of implicitly creating scalar list when it
+    // is disabled.
+    bool suppress_implicit_scalar_list_error;
+
+    // If true, suppress the error of rendering scalar field if the source is an
+    // object.
+    bool suppress_object_to_scalar_error;
+
+    // If true, use the json name in missing fields errors.
+    bool use_json_name_in_missing_fields;
+
     Options()
         : struct_integers_as_strings(false),
           ignore_unknown_fields(false),
-          use_lower_camel_for_enums(false) {}
+          ignore_unknown_enum_values(false),
+          use_lower_camel_for_enums(false),
+          case_insensitive_enum_parsing(false),
+          ignore_null_value_map_entry(false),
+          use_legacy_json_map_format(false),
+          disable_implicit_message_list(false),
+          suppress_implicit_message_list_error(false),
+          disable_implicit_scalar_list(false),
+          suppress_implicit_scalar_list_error(false),
+          suppress_object_to_scalar_error(false),
+          use_json_name_in_missing_fields(false) {}
 
     // Default instance of Options with all options set to defaults.
     static const Options& Defaults() {
@@ -106,32 +144,32 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
     }
   };
 
-// Constructor. Does not take ownership of any parameter passed in.
+  // Constructor. Does not take ownership of any parameter passed in.
   ProtoStreamObjectWriter(TypeResolver* type_resolver,
                           const google::protobuf::Type& type,
                           strings::ByteSink* output, ErrorListener* listener,
                           const ProtoStreamObjectWriter::Options& options =
                               ProtoStreamObjectWriter::Options::Defaults());
-  virtual ~ProtoStreamObjectWriter();
+  ~ProtoStreamObjectWriter() override;
 
   // ObjectWriter methods.
-  virtual ProtoStreamObjectWriter* StartObject(StringPiece name);
-  virtual ProtoStreamObjectWriter* EndObject();
-  virtual ProtoStreamObjectWriter* StartList(StringPiece name);
-  virtual ProtoStreamObjectWriter* EndList();
+  ProtoStreamObjectWriter* StartObject(StringPiece name) override;
+  ProtoStreamObjectWriter* EndObject() override;
+  ProtoStreamObjectWriter* StartList(StringPiece name) override;
+  ProtoStreamObjectWriter* EndList() override;
 
   // Renders a DataPiece 'value' into a field whose wire type is determined
   // from the given field 'name'.
-  virtual ProtoStreamObjectWriter* RenderDataPiece(StringPiece name,
-                                                   const DataPiece& value);
+  ProtoStreamObjectWriter* RenderDataPiece(StringPiece name,
+                                           const DataPiece& data) override;
 
  protected:
   // Function that renders a well known type with modified behavior.
   typedef util::Status (*TypeRenderer)(ProtoStreamObjectWriter*,
-                                         const DataPiece&);
+                                       const DataPiece&);
 
   // Handles writing Anys out using nested object writers and the like.
-  class LIBPROTOBUF_EXPORT AnyWriter {
+  class PROTOBUF_EXPORT AnyWriter {
    public:
     explicit AnyWriter(ProtoStreamObjectWriter* parent);
     ~AnyWriter();
@@ -156,7 +194,7 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
    private:
     // Before the "@type" field is encountered, we store all incoming data
     // into this Event struct and replay them after we get the "@type" field.
-    class LIBPROTOBUF_EXPORT Event {
+    class PROTOBUF_EXPORT Event {
      public:
       enum Type {
         START_OBJECT = 0,
@@ -171,13 +209,11 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
 
       // Constructor for START_OBJECT and START_LIST events.
       explicit Event(Type type, StringPiece name)
-          : type_(type),
-            name_(name.ToString()),
-            value_(DataPiece::NullData()) {}
+          : type_(type), name_(name), value_(DataPiece::NullData()) {}
 
       // Constructor for RENDER_DATA_PIECE events.
       explicit Event(StringPiece name, const DataPiece& value)
-          : type_(RENDER_DATA_PIECE), name_(name.ToString()), value_(value) {
+          : type_(RENDER_DATA_PIECE), name_(name), value_(value) {
         DeepCopy();
       }
 
@@ -200,9 +236,9 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
       void DeepCopy();
 
       Type type_;
-      string name_;
+      std::string name_;
       DataPiece value_;
-      string value_storage_;
+      std::string value_storage_;
     };
 
     // Handles starting up the any once we have a type.
@@ -216,24 +252,24 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
     ProtoStreamObjectWriter* parent_;
 
     // The nested object writer, used to write events.
-    google::protobuf::scoped_ptr<ProtoStreamObjectWriter> ow_;
+    std::unique_ptr<ProtoStreamObjectWriter> ow_;
 
     // The type_url_ that this Any represents.
-    string type_url_;
+    std::string type_url_;
 
     // Whether this any is invalid. This allows us to only report an invalid
     // Any message a single time rather than every time we get a nested field.
     bool invalid_;
 
     // The output data and wrapping ByteSink.
-    string data_;
+    std::string data_;
     strings::StringByteSink output_;
 
     // The depth within the Any, so we can track when we're done.
     int depth_;
 
     // True if the type is a well-known type. Well-known types in Any
-    // has a special formating:
+    // has a special formatting:
     // {
     //   "@type": "type.googleapis.com/google.protobuf.XXX",
     //   "value": <JSON representation of the type>,
@@ -247,7 +283,7 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
 
   // Represents an item in a stack of items used to keep state between
   // ObjectWrier events.
-  class LIBPROTOBUF_EXPORT Item : public BaseElement {
+  class PROTOBUF_EXPORT Item : public BaseElement {
    public:
     // Indicates the type of item.
     enum ItemType {
@@ -263,7 +299,7 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
     // Constructor for a field of a message.
     Item(Item* parent, ItemType item_type, bool is_placeholder, bool is_list);
 
-    virtual ~Item() {}
+    ~Item() override {}
 
     // These functions return true if the element type is corresponding to the
     // type in function name.
@@ -272,7 +308,7 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
 
     AnyWriter* any() const { return any_.get(); }
 
-    virtual Item* parent() const {
+    Item* parent() const override {
       return static_cast<Item*>(BaseElement::parent());
     }
 
@@ -292,14 +328,14 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
     ProtoStreamObjectWriter* ow_;
 
     // A writer for Any objects, handles all Any-related nonsense.
-    google::protobuf::scoped_ptr<AnyWriter> any_;
+    std::unique_ptr<AnyWriter> any_;
 
     // The type of this element, see enum for permissible types.
     ItemType item_type_;
 
     // Set of map keys already seen for the type_. Used to validate incoming
     // messages so no map key appears more than once.
-    google::protobuf::scoped_ptr<hash_set<string> > map_keys_;
+    std::unique_ptr<std::unordered_set<std::string> > map_keys_;
 
     // Conveys whether this Item is a placeholder or not. Placeholder items are
     // pushed to stack to account for special types.
@@ -315,6 +351,11 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
   ProtoStreamObjectWriter(const TypeInfo* typeinfo,
                           const google::protobuf::Type& type,
                           strings::ByteSink* output, ErrorListener* listener);
+
+  ProtoStreamObjectWriter(const TypeInfo* typeinfo,
+                          const google::protobuf::Type& type,
+                          strings::ByteSink* output, ErrorListener* listener,
+                          const ProtoStreamObjectWriter::Options& options);
 
   // Returns true if the field is a map.
   inline bool IsMap(const google::protobuf::Field& field);
@@ -334,28 +375,28 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
   // Renders google.protobuf.Value in struct.proto. It picks the right oneof
   // type based on value's type.
   static util::Status RenderStructValue(ProtoStreamObjectWriter* ow,
-                                          const DataPiece& value);
+                                        const DataPiece& data);
 
   // Renders google.protobuf.Timestamp value.
   static util::Status RenderTimestamp(ProtoStreamObjectWriter* ow,
-                                        const DataPiece& value);
+                                      const DataPiece& data);
 
   // Renders google.protobuf.FieldMask value.
   static util::Status RenderFieldMask(ProtoStreamObjectWriter* ow,
-                                        const DataPiece& value);
+                                      const DataPiece& data);
 
   // Renders google.protobuf.Duration value.
   static util::Status RenderDuration(ProtoStreamObjectWriter* ow,
-                                       const DataPiece& value);
+                                     const DataPiece& data);
 
   // Renders wrapper message types for primitive types in
   // google/protobuf/wrappers.proto.
   static util::Status RenderWrapperType(ProtoStreamObjectWriter* ow,
-                                          const DataPiece& value);
+                                        const DataPiece& data);
 
   static void InitRendererMap();
   static void DeleteRendererMap();
-  static TypeRenderer* FindTypeRenderer(const string& type_url);
+  static TypeRenderer* FindTypeRenderer(const std::string& type_url);
 
   // Returns true if the map key for type_ is not duplicated key.
   // If map key is duplicated key, this function returns false.
@@ -369,10 +410,11 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
   // on the underlying ObjectWriter depending on whether is_list is false or
   // not.
   // is_placeholder conveys whether the item is a placeholder item or not.
-  // Placeholder items are pushed when adding auxillary types' StartObject or
+  // Placeholder items are pushed when adding auxiliary types' StartObject or
   // StartList calls.
-  void Push(StringPiece name, Item::ItemType item_type, bool is_placeholder,
-            bool is_list);
+  void Push(StringPiece name, Item::ItemType item_type,
+            bool is_placeholder, bool is_list);
+
 
   // Pops items from the stack. All placeholder items are popped until a
   // non-placeholder item is found.
@@ -385,14 +427,14 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
  private:
   // Helper functions to create the map and find functions responsible for
   // rendering well known types, keyed by type URL.
-  static hash_map<string, TypeRenderer>* renderers_;
+  static std::unordered_map<std::string, TypeRenderer>* renderers_;
 
   // Variables for describing the structure of the input tree:
   // master_type_: descriptor for the whole protobuf message.
   const google::protobuf::Type& master_type_;
 
   // The current element, variable for internal state processing.
-  google::protobuf::scoped_ptr<Item> current_;
+  std::unique_ptr<Item> current_;
 
   // Reference to the options that control this class's behavior.
   const ProtoStreamObjectWriter::Options options_;
@@ -403,6 +445,8 @@ class LIBPROTOBUF_EXPORT ProtoStreamObjectWriter : public ProtoWriter {
 }  // namespace converter
 }  // namespace util
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_UTIL_CONVERTER_PROTOSTREAM_OBJECTWRITER_H__

@@ -36,6 +36,10 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/util/type_resolver.h>
 #include <google/protobuf/stubs/bytestream.h>
+#include <google/protobuf/stubs/status.h>
+#include <google/protobuf/stubs/strutil.h>
+
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
@@ -49,17 +53,26 @@ struct JsonParseOptions {
   // Whether to ignore unknown JSON fields during parsing
   bool ignore_unknown_fields;
 
-  JsonParseOptions() : ignore_unknown_fields(false) {}
+  // If true, when a lowercase enum value fails to parse, try convert it to
+  // UPPER_CASE and see if it matches a valid enum.
+  // WARNING: This option exists only to preserve legacy behavior. Avoid using
+  // this option. If your enum needs to support different casing, consider using
+  // allow_alias instead.
+  bool case_insensitive_enum_parsing;
+
+  JsonParseOptions()
+      : ignore_unknown_fields(false),
+        case_insensitive_enum_parsing(false) {}
 };
 
 struct JsonPrintOptions {
   // Whether to add spaces, line breaks and indentation to make the JSON output
   // easy to read.
   bool add_whitespace;
-  // Whether to always print primitive fields. By default primitive fields with
-  // default values will be omitted in JSON joutput. For example, an int32 field
-  // set to 0 will be omitted. Set this flag to true will override the default
-  // behavior and print primitive fields regardless of their values.
+  // Whether to always print primitive fields. By default proto3 primitive
+  // fields with default values will be omitted in JSON output. For example, an
+  // int32 field set to 0 will be omitted. Set this flag to true will override
+  // the default behavior and print primitive fields regardless of their values.
   bool always_print_primitive_fields;
   // Whether to always print enums as ints. By default they are rendered as
   // strings.
@@ -77,27 +90,26 @@ struct JsonPrintOptions {
 // DEPRECATED. Use JsonPrintOptions instead.
 typedef JsonPrintOptions JsonOptions;
 
-// Converts from protobuf message to JSON. This is a simple wrapper of
-// BinaryToJsonString(). It will use the DescriptorPool of the passed-in
-// message to resolve Any types.
-LIBPROTOBUF_EXPORT util::Status MessageToJsonString(const Message& message,
-                                   string* output,
-                                   const JsonOptions& options);
+// Converts from protobuf message to JSON and appends it to |output|. This is a
+// simple wrapper of BinaryToJsonString(). It will use the DescriptorPool of the
+// passed-in message to resolve Any types.
+PROTOBUF_EXPORT util::Status MessageToJsonString(const Message& message,
+                                                 std::string* output,
+                                                 const JsonOptions& options);
 
 inline util::Status MessageToJsonString(const Message& message,
-                                          string* output) {
+                                        std::string* output) {
   return MessageToJsonString(message, output, JsonOptions());
 }
 
 // Converts from JSON to protobuf message. This is a simple wrapper of
 // JsonStringToBinary(). It will use the DescriptorPool of the passed-in
 // message to resolve Any types.
-LIBPROTOBUF_EXPORT util::Status JsonStringToMessage(const string& input,
-                                   Message* message,
-                                   const JsonParseOptions& options);
+PROTOBUF_EXPORT util::Status JsonStringToMessage(
+    StringPiece input, Message* message, const JsonParseOptions& options);
 
-inline util::Status JsonStringToMessage(const string& input,
-                                          Message* message) {
+inline util::Status JsonStringToMessage(StringPiece input,
+                                        Message* message) {
   return JsonStringToMessage(input, message, JsonParseOptions());
 }
 
@@ -107,32 +119,28 @@ inline util::Status JsonStringToMessage(const string& input,
 //   2. input is not valid protobuf wire format, or conflicts with the type
 //      information returned by TypeResolver.
 // Note that unknown fields will be discarded silently.
-LIBPROTOBUF_EXPORT util::Status BinaryToJsonStream(
-    TypeResolver* resolver,
-    const string& type_url,
+PROTOBUF_EXPORT util::Status BinaryToJsonStream(
+    TypeResolver* resolver, const std::string& type_url,
     io::ZeroCopyInputStream* binary_input,
-    io::ZeroCopyOutputStream* json_output,
-    const JsonPrintOptions& options);
+    io::ZeroCopyOutputStream* json_output, const JsonPrintOptions& options);
 
-inline util::Status BinaryToJsonStream(
-    TypeResolver* resolver, const string& type_url,
-    io::ZeroCopyInputStream* binary_input,
-    io::ZeroCopyOutputStream* json_output) {
+inline util::Status BinaryToJsonStream(TypeResolver* resolver,
+                                       const std::string& type_url,
+                                       io::ZeroCopyInputStream* binary_input,
+                                       io::ZeroCopyOutputStream* json_output) {
   return BinaryToJsonStream(resolver, type_url, binary_input, json_output,
                             JsonPrintOptions());
 }
 
-LIBPROTOBUF_EXPORT util::Status BinaryToJsonString(
-    TypeResolver* resolver,
-    const string& type_url,
-    const string& binary_input,
-    string* json_output,
+PROTOBUF_EXPORT util::Status BinaryToJsonString(
+    TypeResolver* resolver, const std::string& type_url,
+    const std::string& binary_input, std::string* json_output,
     const JsonPrintOptions& options);
 
 inline util::Status BinaryToJsonString(TypeResolver* resolver,
-                                         const string& type_url,
-                                         const string& binary_input,
-                                         string* json_output) {
+                                       const std::string& type_url,
+                                       const std::string& binary_input,
+                                       std::string* json_output) {
   return BinaryToJsonString(resolver, type_url, binary_input, json_output,
                             JsonPrintOptions());
 }
@@ -142,47 +150,41 @@ inline util::Status BinaryToJsonString(TypeResolver* resolver,
 //   1. TypeResolver fails to resolve a type.
 //   2. input is not valid JSON format, or conflicts with the type
 //      information returned by TypeResolver.
-LIBPROTOBUF_EXPORT util::Status JsonToBinaryStream(
-    TypeResolver* resolver,
-    const string& type_url,
+PROTOBUF_EXPORT util::Status JsonToBinaryStream(
+    TypeResolver* resolver, const std::string& type_url,
     io::ZeroCopyInputStream* json_input,
-    io::ZeroCopyOutputStream* binary_output,
-    const JsonParseOptions& options);
+    io::ZeroCopyOutputStream* binary_output, const JsonParseOptions& options);
 
 inline util::Status JsonToBinaryStream(
-    TypeResolver* resolver,
-    const string& type_url,
+    TypeResolver* resolver, const std::string& type_url,
     io::ZeroCopyInputStream* json_input,
     io::ZeroCopyOutputStream* binary_output) {
   return JsonToBinaryStream(resolver, type_url, json_input, binary_output,
                             JsonParseOptions());
 }
 
-LIBPROTOBUF_EXPORT util::Status JsonToBinaryString(
-    TypeResolver* resolver,
-    const string& type_url,
-    const string& json_input,
-    string* binary_output,
+PROTOBUF_EXPORT util::Status JsonToBinaryString(
+    TypeResolver* resolver, const std::string& type_url,
+    StringPiece json_input, std::string* binary_output,
     const JsonParseOptions& options);
 
-inline util::Status JsonToBinaryString(
-    TypeResolver* resolver,
-    const string& type_url,
-    const string& json_input,
-    string* binary_output) {
+inline util::Status JsonToBinaryString(TypeResolver* resolver,
+                                       const std::string& type_url,
+                                       StringPiece json_input,
+                                       std::string* binary_output) {
   return JsonToBinaryString(resolver, type_url, json_input, binary_output,
                             JsonParseOptions());
 }
 
 namespace internal {
 // Internal helper class. Put in the header so we can write unit-tests for it.
-class LIBPROTOBUF_EXPORT ZeroCopyStreamByteSink : public strings::ByteSink {
+class PROTOBUF_EXPORT ZeroCopyStreamByteSink : public strings::ByteSink {
  public:
   explicit ZeroCopyStreamByteSink(io::ZeroCopyOutputStream* stream)
       : stream_(stream), buffer_(NULL), buffer_size_(0) {}
   ~ZeroCopyStreamByteSink();
 
-  virtual void Append(const char* bytes, size_t len);
+  void Append(const char* bytes, size_t len) override;
 
  private:
   io::ZeroCopyOutputStream* stream_;
@@ -195,6 +197,8 @@ class LIBPROTOBUF_EXPORT ZeroCopyStreamByteSink : public strings::ByteSink {
 
 }  // namespace util
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_UTIL_JSON_UTIL_H__

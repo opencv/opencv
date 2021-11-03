@@ -29,7 +29,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Author: laszlocsomor@google.com (Laszlo Csomor)
-//
+//  Based on original Protocol Buffers design by
+//  Sanjay Ghemawat, Jeff Dean, and others.
+
 // Implementation for long-path-aware open/mkdir/access/etc. on Windows, as well
 // as for the supporting utility functions.
 //
@@ -40,12 +42,14 @@
 //
 // This file is only used on Windows, it's empty on other platforms.
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(_XBOX_ONE)
 
 // Comment this out to fall back to using the ANSI versions (open, mkdir, ...)
 // instead of the Unicode ones (_wopen, _wmkdir, ...). Doing so can be useful to
 // debug failing tests if that's caused by the long path support.
 #define SUPPORT_LONGPATHS
+
+#include <google/protobuf/io/io_win32.h>
 
 #include <ctype.h>
 #include <direct.h>
@@ -55,10 +59,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <wctype.h>
-#include <windows.h>
 
-#include <google/protobuf/stubs/io_win32.h>
-#include <google/protobuf/stubs/scoped_ptr.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+
+#include <windows.h>
 
 #include <memory>
 #include <sstream>
@@ -67,7 +73,7 @@
 
 namespace google {
 namespace protobuf {
-namespace internal {
+namespace io {
 namespace win32 {
 namespace {
 
@@ -91,7 +97,7 @@ struct CharTraits<wchar_t> {
 
 template <typename char_type>
 bool null_or_empty(const char_type* s) {
-  return s == NULL || *s == 0;
+  return s == nullptr || *s == 0;
 }
 
 // Returns true if the path starts with a drive letter, e.g. "c:".
@@ -151,12 +157,13 @@ wstring normalize(wstring path) {
 
   static const wstring dot(L".");
   static const wstring dotdot(L"..");
+  const WCHAR* p = path.c_str();
 
   std::vector<wstring> segments;
   int segment_start = -1;
   // Find the path segments in `path` (separated by "/").
   for (int i = 0;; ++i) {
-    if (!is_separator(path[i]) && path[i] != L'\0') {
+    if (!is_separator(p[i]) && p[i] != L'\0') {
       // The current character does not end a segment, so start one unless it's
       // already started.
       if (segment_start < 0) {
@@ -165,7 +172,7 @@ wstring normalize(wstring path) {
     } else if (segment_start >= 0 && i > segment_start) {
       // The current character is "/" or "\0", so this ends a segment.
       // Add that to `segments` if there's anything to add; handle "." and "..".
-      wstring segment(path, segment_start, i - segment_start);
+      wstring segment(p, segment_start, i - segment_start);
       segment_start = -1;
       if (segment == dotdot) {
         if (!segments.empty() &&
@@ -176,7 +183,7 @@ wstring normalize(wstring path) {
         segments.push_back(segment);
       }
     }
-    if (path[i] == L'\0') {
+    if (p[i] == L'\0') {
       break;
     }
   }
@@ -199,7 +206,7 @@ wstring normalize(wstring path) {
     result << segments[i];
   }
   // Preserve trailing separator if the input contained it.
-  if (!path.empty() && is_separator(path[path.size() - 1])) {
+  if (!path.empty() && is_separator(p[path.size() - 1])) {
     result << L'\\';
   }
   return result.str();
@@ -224,11 +231,11 @@ bool as_windows_path(const char* path, wstring* result) {
 
 
   if (!is_path_absolute(wpath.c_str())) {
-    int size = ::GetCurrentDirectoryW(0, NULL);
+    int size = ::GetCurrentDirectoryW(0, nullptr);
     if (size == 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
       return false;
     }
-    scoped_array<WCHAR> wcwd(new WCHAR[size]);
+    std::unique_ptr<WCHAR[]> wcwd(new WCHAR[size]);
     ::GetCurrentDirectoryW(size, wcwd.get());
     wpath = join_paths(wcwd.get(), wpath);
   }
@@ -259,7 +266,7 @@ int open(const char* path, int flags, int mode) {
 #endif
 }
 
-int mkdir(const char* path, int _mode) {
+int mkdir(const char* path, int /*_mode*/) {
 #ifdef SUPPORT_LONGPATHS
   wstring wpath;
   if (!as_windows_path(path, &wpath)) {
@@ -315,17 +322,17 @@ FILE* fopen(const char* path, const char* mode) {
 #ifdef SUPPORT_LONGPATHS
   if (null_or_empty(path)) {
     errno = EINVAL;
-    return NULL;
+    return nullptr;
   }
   wstring wpath;
   if (!as_windows_path(path, &wpath)) {
     errno = ENOENT;
-    return NULL;
+    return nullptr;
   }
   wstring wmode;
   if (!strings::utf8_to_wcs(mode, &wmode)) {
     errno = EINVAL;
-    return NULL;
+    return nullptr;
   }
   return ::_wfopen(wpath.c_str(), wmode.c_str());
 #else
@@ -333,7 +340,7 @@ FILE* fopen(const char* path, const char* mode) {
 #endif
 }
 
-int close(int fd) { return ::close(fd); }
+int close(int fd) { return ::_close(fd); }
 
 int dup(int fd) { return ::_dup(fd); }
 
@@ -354,6 +361,56 @@ wstring testonly_utf8_to_winpath(const char* path) {
   return as_windows_path(path, &wpath) ? wpath : wstring();
 }
 
+ExpandWildcardsResult ExpandWildcards(
+    const string& path, std::function<void(const string&)> consume) {
+  if (path.find_first_of("*?") == string::npos) {
+    // There are no wildcards in the path, we don't need to expand it.
+    consume(path);
+    return ExpandWildcardsResult::kSuccess;
+  }
+
+  wstring wpath;
+  if (!as_windows_path(path.c_str(), &wpath)) {
+    return ExpandWildcardsResult::kErrorInputPathConversion;
+  }
+
+  static const wstring kDot = L".";
+  static const wstring kDotDot = L"..";
+  WIN32_FIND_DATAW metadata;
+  HANDLE handle = ::FindFirstFileW(wpath.c_str(), &metadata);
+  if (handle == INVALID_HANDLE_VALUE) {
+    // The pattern does not match any files (or directories).
+    return ExpandWildcardsResult::kErrorNoMatchingFile;
+  }
+
+  string::size_type pos = path.find_last_of("\\/");
+  string dirname;
+  if (pos != string::npos) {
+    dirname = path.substr(0, pos + 1);
+  }
+
+  ExpandWildcardsResult matched = ExpandWildcardsResult::kErrorNoMatchingFile;
+  do {
+    // Ignore ".", "..", and directories.
+    if ((metadata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+        kDot != metadata.cFileName && kDotDot != metadata.cFileName) {
+      matched = ExpandWildcardsResult::kSuccess;
+      string filename;
+      if (!strings::wcs_to_utf8(metadata.cFileName, &filename)) {
+        return ExpandWildcardsResult::kErrorOutputPathConversion;
+      }
+
+      if (dirname.empty()) {
+        consume(filename);
+      } else {
+        consume(dirname + filename);
+      }
+    }
+  } while (::FindNextFileW(handle, &metadata));
+  FindClose(handle);
+  return matched;
+}
+
 namespace strings {
 
 bool wcs_to_mbs(const WCHAR* s, string* out, bool outUtf8) {
@@ -364,15 +421,15 @@ bool wcs_to_mbs(const WCHAR* s, string* out, bool outUtf8) {
   BOOL usedDefaultChar = FALSE;
   SetLastError(0);
   int size = WideCharToMultiByte(
-      outUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, NULL, 0, NULL,
-      outUtf8 ? NULL : &usedDefaultChar);
+      outUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, nullptr, 0, nullptr,
+      outUtf8 ? nullptr : &usedDefaultChar);
   if ((size == 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
       || usedDefaultChar) {
     return false;
   }
-  scoped_array<CHAR> astr(new CHAR[size]);
+  std::unique_ptr<CHAR[]> astr(new CHAR[size]);
   WideCharToMultiByte(
-      outUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, astr.get(), size, NULL, NULL);
+      outUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, astr.get(), size, nullptr, nullptr);
   out->assign(astr.get());
   return true;
 }
@@ -385,11 +442,11 @@ bool mbs_to_wcs(const char* s, wstring* out, bool inUtf8) {
 
   SetLastError(0);
   int size =
-      MultiByteToWideChar(inUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, NULL, 0);
+      MultiByteToWideChar(inUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, nullptr, 0);
   if (size == 0 && GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
     return false;
   }
-  scoped_array<WCHAR> wstr(new WCHAR[size]);
+  std::unique_ptr<WCHAR[]> wstr(new WCHAR[size]);
   MultiByteToWideChar(
       inUtf8 ? CP_UTF8 : CP_ACP, 0, s, -1, wstr.get(), size + 1);
   out->assign(wstr.get());
@@ -406,7 +463,7 @@ bool wcs_to_utf8(const wchar_t* input, string* out) {
 
 }  // namespace strings
 }  // namespace win32
-}  // namespace internal
+}  // namespace io
 }  // namespace protobuf
 }  // namespace google
 

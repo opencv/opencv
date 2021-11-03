@@ -29,68 +29,90 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Author: laszlocsomor@google.com (Laszlo Csomor)
-//
+//  Based on original Protocol Buffers design by
+//  Sanjay Ghemawat, Jeff Dean, and others.
+
 // This file contains the declarations for Windows implementations of
 // commonly used POSIX functions such as open(2) and access(2), as well
 // as macro definitions for flags of these functions.
 //
 // By including this file you'll redefine open/access/etc. to
-// ::google::protobuf::internal::win32::{open/access/etc.}.
+// ::google::protobuf::io::win32::{open/access/etc.}.
 // Make sure you don't include a header that attempts to redeclare or
 // redefine these functions, that'll lead to confusing compilation
 // errors. It's best to #include this file as the last one to ensure that.
 //
 // This file is only used on Windows, it's empty on other platforms.
 
-#ifndef GOOGLE_PROTOBUF_STUBS_IO_WIN32_H__
-#define GOOGLE_PROTOBUF_STUBS_IO_WIN32_H__
+#ifndef GOOGLE_PROTOBUF_IO_IO_WIN32_H__
+#define GOOGLE_PROTOBUF_IO_IO_WIN32_H__
 
 #if defined(_WIN32)
 
+#include <functional>
 #include <string>
-#include <google/protobuf/stubs/port.h>
+
+#include <google/protobuf/port.h>
+#include <google/protobuf/port_def.inc>
 
 // Compilers on Windows other than MSVC (e.g. Cygwin, MinGW32) define the
 // following functions already, except for mkdir.
 namespace google {
 namespace protobuf {
-namespace internal {
+namespace io {
 namespace win32 {
 
-LIBPROTOBUF_EXPORT FILE* fopen(const char* path, const char* mode);
-LIBPROTOBUF_EXPORT int access(const char* path, int mode);
-LIBPROTOBUF_EXPORT int chdir(const char* path);
-LIBPROTOBUF_EXPORT int close(int fd);
-LIBPROTOBUF_EXPORT int dup(int fd);
-LIBPROTOBUF_EXPORT int dup2(int fd1, int fd2);
-LIBPROTOBUF_EXPORT int mkdir(const char* path, int _mode);
-LIBPROTOBUF_EXPORT int open(const char* path, int flags, int mode = 0);
-LIBPROTOBUF_EXPORT int read(int fd, void* buffer, size_t size);
-LIBPROTOBUF_EXPORT int setmode(int fd, int mode);
-LIBPROTOBUF_EXPORT int stat(const char* path, struct _stat* buffer);
-LIBPROTOBUF_EXPORT int write(int fd, const void* buffer, size_t size);
-LIBPROTOBUF_EXPORT std::wstring testonly_utf8_to_winpath(const char* path);
+PROTOBUF_EXPORT FILE* fopen(const char* path, const char* mode);
+PROTOBUF_EXPORT int access(const char* path, int mode);
+PROTOBUF_EXPORT int chdir(const char* path);
+PROTOBUF_EXPORT int close(int fd);
+PROTOBUF_EXPORT int dup(int fd);
+PROTOBUF_EXPORT int dup2(int fd1, int fd2);
+PROTOBUF_EXPORT int mkdir(const char* path, int _mode);
+PROTOBUF_EXPORT int open(const char* path, int flags, int mode = 0);
+PROTOBUF_EXPORT int read(int fd, void* buffer, size_t size);
+PROTOBUF_EXPORT int setmode(int fd, int mode);
+PROTOBUF_EXPORT int stat(const char* path, struct _stat* buffer);
+PROTOBUF_EXPORT int write(int fd, const void* buffer, size_t size);
+PROTOBUF_EXPORT std::wstring testonly_utf8_to_winpath(const char* path);
+
+enum class ExpandWildcardsResult {
+  kSuccess = 0,
+  kErrorNoMatchingFile = 1,
+  kErrorInputPathConversion = 2,
+  kErrorOutputPathConversion = 3,
+};
+
+// Expand wildcards in a path pattern, feed the result to a consumer function.
+//
+// `path` must be a valid, Windows-style path. It may be absolute, or relative
+// to the current working directory, and it may contain wildcards ("*" and "?")
+// in the last path segment. This function passes all matching file names to
+// `consume`. The resulting paths may not be absolute nor normalized.
+//
+// The function returns a value from `ExpandWildcardsResult`.
+PROTOBUF_EXPORT ExpandWildcardsResult ExpandWildcards(
+    const std::string& path, std::function<void(const std::string&)> consume);
 
 namespace strings {
 
 // Convert from UTF-16 to Active-Code-Page-encoded or to UTF-8-encoded text.
-LIBPROTOBUF_EXPORT bool wcs_to_mbs(
-    const wchar_t* s, std::string* out, bool outUtf8);
+PROTOBUF_EXPORT bool wcs_to_mbs(const wchar_t* s, std::string* out,
+                                bool outUtf8);
 
 // Convert from Active-Code-Page-encoded or UTF-8-encoded text to UTF-16.
-LIBPROTOBUF_EXPORT bool mbs_to_wcs(
-    const char* s, std::wstring* out, bool inUtf8);
+PROTOBUF_EXPORT bool mbs_to_wcs(const char* s, std::wstring* out, bool inUtf8);
 
 // Convert from UTF-8-encoded text to UTF-16.
-LIBPROTOBUF_EXPORT bool utf8_to_wcs(const char* input, std::wstring* out);
+PROTOBUF_EXPORT bool utf8_to_wcs(const char* input, std::wstring* out);
 
 // Convert from UTF-16-encoded text to UTF-8.
-LIBPROTOBUF_EXPORT bool wcs_to_utf8(const wchar_t* input, std::string* out);
+PROTOBUF_EXPORT bool wcs_to_utf8(const wchar_t* input, std::string* out);
 
 }  // namespace strings
 
 }  // namespace win32
-}  // namespace internal
+}  // namespace io
 }  // namespace protobuf
 }  // namespace google
 
@@ -110,6 +132,8 @@ LIBPROTOBUF_EXPORT bool wcs_to_utf8(const wchar_t* input, std::string* out);
 #define STDOUT_FILENO 1
 #endif
 
+#include <google/protobuf/port_undef.inc>
+
 #endif  // defined(_WIN32)
 
-#endif  // GOOGLE_PROTOBUF_STUBS_IO_WIN32_H__
+#endif  // GOOGLE_PROTOBUF_IO_IO_WIN32_H__

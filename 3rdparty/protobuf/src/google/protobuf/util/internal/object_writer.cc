@@ -38,43 +38,43 @@ namespace util {
 namespace converter {
 
 // static
-void ObjectWriter::RenderDataPieceTo(const DataPiece& data, StringPiece name,
-                                     ObjectWriter* ow) {
+void ObjectWriter::RenderDataPieceTo(const DataPiece& data,
+                                     StringPiece name, ObjectWriter* ow) {
   switch (data.type()) {
     case DataPiece::TYPE_INT32: {
-      ow->RenderInt32(name, data.ToInt32().ValueOrDie());
+      ow->RenderInt32(name, data.ToInt32().value());
       break;
     }
     case DataPiece::TYPE_INT64: {
-      ow->RenderInt64(name, data.ToInt64().ValueOrDie());
+      ow->RenderInt64(name, data.ToInt64().value());
       break;
     }
     case DataPiece::TYPE_UINT32: {
-      ow->RenderUint32(name, data.ToUint32().ValueOrDie());
+      ow->RenderUint32(name, data.ToUint32().value());
       break;
     }
     case DataPiece::TYPE_UINT64: {
-      ow->RenderUint64(name, data.ToUint64().ValueOrDie());
+      ow->RenderUint64(name, data.ToUint64().value());
       break;
     }
     case DataPiece::TYPE_DOUBLE: {
-      ow->RenderDouble(name, data.ToDouble().ValueOrDie());
+      ow->RenderDouble(name, data.ToDouble().value());
       break;
     }
     case DataPiece::TYPE_FLOAT: {
-      ow->RenderFloat(name, data.ToFloat().ValueOrDie());
+      ow->RenderFloat(name, data.ToFloat().value());
       break;
     }
     case DataPiece::TYPE_BOOL: {
-      ow->RenderBool(name, data.ToBool().ValueOrDie());
+      ow->RenderBool(name, data.ToBool().value());
       break;
     }
     case DataPiece::TYPE_STRING: {
-      ow->RenderString(name, data.ToString().ValueOrDie());
+      ow->RenderString(name, data.ToString().value());
       break;
     }
     case DataPiece::TYPE_BYTES: {
-      ow->RenderBytes(name, data.ToBytes().ValueOrDie());
+      ow->RenderBytes(name, data.ToBytes().value());
       break;
     }
     case DataPiece::TYPE_NULL: {
@@ -85,6 +85,7 @@ void ObjectWriter::RenderDataPieceTo(const DataPiece& data, StringPiece name,
       break;
   }
 }
+
 
 }  // namespace converter
 }  // namespace util

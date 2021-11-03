@@ -37,25 +37,35 @@
 #ifndef GOOGLE_PROTOBUF_IO_PRINTER_H__
 #define GOOGLE_PROTOBUF_IO_PRINTER_H__
 
-#include <string>
+
 #include <map>
+#include <string>
 #include <vector>
+
 #include <google/protobuf/stubs/common.h>
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
 namespace io {
 
-class ZeroCopyOutputStream;     // zero_copy_stream.h
+class ZeroCopyOutputStream;  // zero_copy_stream.h
 
 // Records annotations about a Printer's output.
-class LIBPROTOBUF_EXPORT AnnotationCollector {
+class PROTOBUF_EXPORT AnnotationCollector {
  public:
+  // Annotation is a offset range and a payload pair.
+  typedef std::pair<std::pair<size_t, size_t>, std::string> Annotation;
+
   // Records that the bytes in file_path beginning with begin_offset and ending
   // before end_offset are associated with the SourceCodeInfo-style path.
   virtual void AddAnnotation(size_t begin_offset, size_t end_offset,
-                             const string& file_path,
+                             const std::string& file_path,
                              const std::vector<int>& path) = 0;
+
+  // TODO(gerbens) I don't see why we need virtuals here. Just a vector of
+  // range, payload pairs stored in a context should suffice.
+  virtual void AddAnnotationNew(Annotation& /* a */) {}
 
   virtual ~AnnotationCollector() {}
 };
@@ -72,9 +82,9 @@ class AnnotationProtoCollector : public AnnotationCollector {
       : annotation_proto_(annotation_proto) {}
 
   // Override for AnnotationCollector::AddAnnotation.
-  virtual void AddAnnotation(size_t begin_offset, size_t end_offset,
-                             const string& file_path,
-                             const std::vector<int>& path) {
+  void AddAnnotation(size_t begin_offset, size_t end_offset,
+                     const std::string& file_path,
+                     const std::vector<int>& path) override {
     typename AnnotationProto::Annotation* annotation =
         annotation_proto_->add_annotation();
     for (int i = 0; i < path.size(); ++i) {
@@ -83,6 +93,13 @@ class AnnotationProtoCollector : public AnnotationCollector {
     annotation->set_source_file(file_path);
     annotation->set_begin(begin_offset);
     annotation->set_end(end_offset);
+  }
+  // Override for AnnotationCollector::AddAnnotation.
+  void AddAnnotationNew(Annotation& a) override {
+    auto* annotation = annotation_proto_->add_annotation();
+    annotation->ParseFromString(a.second);
+    annotation->set_begin(a.first.first);
+    annotation->set_end(a.first.second);
   }
 
  private:
@@ -162,7 +179,7 @@ class AnnotationProtoCollector : public AnnotationCollector {
 // This code associates the span covering "call(bar,bar)" in the output with the
 // call_ descriptor.
 
-class LIBPROTOBUF_EXPORT Printer {
+class PROTOBUF_EXPORT Printer {
  public:
   // Create a printer that writes text to the given output stream.  Use the
   // given character as the delimiter for variables.
@@ -177,8 +194,8 @@ class LIBPROTOBUF_EXPORT Printer {
 
   ~Printer();
 
-  // Link a subsitution variable emitted by the last call to Print to the object
-  // described by descriptor.
+  // Link a substitution variable emitted by the last call to Print to the
+  // object described by descriptor.
   template <typename SomeDescriptor>
   void Annotate(const char* varname, const SomeDescriptor* descriptor) {
     Annotate(varname, varname, descriptor);
@@ -201,9 +218,9 @@ class LIBPROTOBUF_EXPORT Printer {
     Annotate(begin_varname, end_varname, descriptor->file()->name(), path);
   }
 
-  // Link a subsitution variable emitted by the last call to Print to the file
+  // Link a substitution variable emitted by the last call to Print to the file
   // with path file_name.
-  void Annotate(const char* varname, const string& file_name) {
+  void Annotate(const char* varname, const std::string& file_name) {
     Annotate(varname, varname, file_name);
   }
 
@@ -212,7 +229,7 @@ class LIBPROTOBUF_EXPORT Printer {
   // at begin_varname's value and ends after the last character of the value
   // substituted for end_varname.
   void Annotate(const char* begin_varname, const char* end_varname,
-                const string& file_name) {
+                const std::string& file_name) {
     if (annotation_collector_ == NULL) {
       // Annotations aren't turned on for this Printer.
       return;
@@ -226,54 +243,15 @@ class LIBPROTOBUF_EXPORT Printer {
   // substituted are identified by their names surrounded by delimiter
   // characters (as given to the constructor).  The variable bindings are
   // defined by the given map.
-  void Print(const std::map<string, string>& variables, const char* text);
+  void Print(const std::map<std::string, std::string>& variables,
+             const char* text);
 
   // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable, const string& value);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3,
-                               const char* variable4, const string& value4);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3,
-                               const char* variable4, const string& value4,
-                               const char* variable5, const string& value5);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3,
-                               const char* variable4, const string& value4,
-                               const char* variable5, const string& value5,
-                               const char* variable6, const string& value6);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3,
-                               const char* variable4, const string& value4,
-                               const char* variable5, const string& value5,
-                               const char* variable6, const string& value6,
-                               const char* variable7, const string& value7);
-  // Like the first Print(), except the substitutions are given as parameters.
-  void Print(const char* text, const char* variable1, const string& value1,
-                               const char* variable2, const string& value2,
-                               const char* variable3, const string& value3,
-                               const char* variable4, const string& value4,
-                               const char* variable5, const string& value5,
-                               const char* variable6, const string& value6,
-                               const char* variable7, const string& value7,
-                               const char* variable8, const string& value8);
+  template <typename... Args>
+  void Print(const char* text, const Args&... args) {
+    std::map<std::string, std::string> vars;
+    PrintInternal(&vars, text, args...);
+  }
 
   // Indent text by two spaces.  After calling Indent(), two spaces will be
   // inserted at the beginning of each line of text.  Indent() may be called
@@ -286,7 +264,7 @@ class LIBPROTOBUF_EXPORT Printer {
 
   // Write a string to the output buffer.
   // This method does not look for newlines to add indentation.
-  void PrintRaw(const string& data);
+  void PrintRaw(const std::string& data);
 
   // Write a zero-delimited string to output buffer.
   // This method does not look for newlines to add indentation.
@@ -295,6 +273,15 @@ class LIBPROTOBUF_EXPORT Printer {
   // Write some bytes to the output buffer.
   // This method does not look for newlines to add indentation.
   void WriteRaw(const char* data, int size);
+
+  // FormatInternal is a helper function not meant to use directly, use
+  // compiler::cpp::Formatter instead. This function is meant to support
+  // formatting text using named variables (eq. "$foo$) from a lookup map (vars)
+  // and variables directly supplied by arguments (eq "$1$" meaning first
+  // argument which is the zero index element of args).
+  void FormatInternal(const std::vector<std::string>& args,
+                      const std::map<std::string, std::string>& vars,
+                      const char* format);
 
   // True if any write to the underlying stream failed.  (We don't just
   // crash in this case because this is an I/O failure, not a programming
@@ -309,10 +296,43 @@ class LIBPROTOBUF_EXPORT Printer {
   // substituted for end_varname. Note that begin_varname and end_varname
   // may refer to the same variable.
   void Annotate(const char* begin_varname, const char* end_varname,
-                const string& file_path, const std::vector<int>& path);
+                const std::string& file_path, const std::vector<int>& path);
+
+  // Base case
+  void PrintInternal(std::map<std::string, std::string>* vars,
+                     const char* text) {
+    Print(*vars, text);
+  }
+
+  template <typename... Args>
+  void PrintInternal(std::map<std::string, std::string>* vars, const char* text,
+                     const char* key, const std::string& value,
+                     const Args&... args) {
+    (*vars)[key] = value;
+    PrintInternal(vars, text, args...);
+  }
 
   // Copy size worth of bytes from data to buffer_.
   void CopyToBuffer(const char* data, int size);
+
+  void push_back(char c) {
+    if (failed_) return;
+    if (buffer_size_ == 0) {
+      if (!Next()) return;
+    }
+    *buffer_++ = c;
+    buffer_size_--;
+    offset_++;
+  }
+
+  bool Next();
+
+  inline void IndentIfAtStart();
+  const char* WriteVariable(
+      const std::vector<std::string>& args,
+      const std::map<std::string, std::string>& vars, const char* format,
+      int* arg_index,
+      std::vector<AnnotationCollector::Annotation>* annotations);
 
   const char variable_delimiter_;
 
@@ -324,7 +344,7 @@ class LIBPROTOBUF_EXPORT Printer {
   // used to calculate annotation ranges in the substitutions_ map below.
   size_t offset_;
 
-  string indent_;
+  std::string indent_;
   bool at_start_of_line_;
   bool failed_;
 
@@ -335,12 +355,12 @@ class LIBPROTOBUF_EXPORT Printer {
   // start offset is the beginning of the substitution; the end offset is the
   // last byte of the substitution plus one (such that (end - start) is the
   // length of the substituted string).
-  std::map<string, std::pair<size_t, size_t> > substitutions_;
+  std::map<std::string, std::pair<size_t, size_t> > substitutions_;
 
   // Keeps track of the keys in substitutions_ that need to be updated when
   // indents are inserted. These are keys that refer to the beginning of the
   // current line.
-  std::vector<string> line_start_variables_;
+  std::vector<std::string> line_start_variables_;
 
   // Returns true and sets range to the substitution range in the output for
   // varname if varname was used once in the last call to Print. If varname
@@ -358,6 +378,8 @@ class LIBPROTOBUF_EXPORT Printer {
 
 }  // namespace io
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_IO_PRINTER_H__

@@ -33,9 +33,6 @@
 
 #include <algorithm>
 #include <memory>
-#ifndef _SHARED_PTR_H
-#include <google/protobuf/stubs/shared_ptr.h>
-#endif
 #include <string>
 #include <vector>
 
@@ -43,7 +40,10 @@
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/stubs/logging.h>
 #include <google/protobuf/util/internal/location_tracker.h>
-#include <google/protobuf/stubs/stringpiece.h>
+#include <google/protobuf/stubs/strutil.h>
+
+// Must be included last.
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
@@ -51,17 +51,19 @@ namespace util {
 namespace converter {
 
 // Interface for error listener.
-class LIBPROTOBUF_EXPORT ErrorListener {
+class PROTOBUF_EXPORT ErrorListener {
  public:
   virtual ~ErrorListener() {}
 
   // Reports an invalid name at the given location.
   virtual void InvalidName(const LocationTrackerInterface& loc,
-                           StringPiece invalid_name, StringPiece message) = 0;
+                           StringPiece invalid_name,
+                           StringPiece message) = 0;
 
   // Reports an invalid value for a field.
   virtual void InvalidValue(const LocationTrackerInterface& loc,
-                            StringPiece type_name, StringPiece value) = 0;
+                            StringPiece type_name,
+                            StringPiece value) = 0;
 
   // Reports a missing required field.
   virtual void MissingField(const LocationTrackerInterface& loc,
@@ -76,19 +78,21 @@ class LIBPROTOBUF_EXPORT ErrorListener {
 };
 
 // An error listener that ignores all errors.
-class LIBPROTOBUF_EXPORT NoopErrorListener : public ErrorListener {
+class PROTOBUF_EXPORT NoopErrorListener : public ErrorListener {
  public:
   NoopErrorListener() {}
-  virtual ~NoopErrorListener() {}
+  ~NoopErrorListener() override {}
 
-  virtual void InvalidName(const LocationTrackerInterface& loc,
-                           StringPiece invalid_name, StringPiece message) {}
+  void InvalidName(const LocationTrackerInterface& /*loc*/,
+                   StringPiece /* invalid_name */,
+                   StringPiece /* message */) override {}
 
-  virtual void InvalidValue(const LocationTrackerInterface& loc,
-                            StringPiece type_name, StringPiece value) {}
+  void InvalidValue(const LocationTrackerInterface& /*loc*/,
+                    StringPiece /* type_name */,
+                    StringPiece /* value */) override {}
 
-  virtual void MissingField(const LocationTrackerInterface& loc,
-                            StringPiece missing_name) {}
+  void MissingField(const LocationTrackerInterface& /* loc */,
+                    StringPiece /* missing_name */) override {}
 
  private:
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(NoopErrorListener);
@@ -98,6 +102,8 @@ class LIBPROTOBUF_EXPORT NoopErrorListener : public ErrorListener {
 }  // namespace converter
 }  // namespace util
 }  // namespace protobuf
-
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>
+
 #endif  // GOOGLE_PROTOBUF_UTIL_CONVERTER_ERROR_LISTENER_H__

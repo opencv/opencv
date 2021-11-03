@@ -30,8 +30,14 @@
 
 #include <google/protobuf/util/field_mask_util.h>
 
+#include <cstdint>
+
+#include <google/protobuf/message.h>
 #include <google/protobuf/stubs/strutil.h>
 #include <google/protobuf/stubs/map_util.h>
+
+// Must be included last.
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
@@ -39,39 +45,40 @@ namespace util {
 
 using google::protobuf::FieldMask;
 
-string FieldMaskUtil::ToString(const FieldMask& mask) {
+std::string FieldMaskUtil::ToString(const FieldMask& mask) {
   return Join(mask.paths(), ",");
 }
 
 void FieldMaskUtil::FromString(StringPiece str, FieldMask* out) {
   out->Clear();
-  std::vector<string> paths = Split(str, ",");
-  for (int i = 0; i < paths.size(); ++i) {
-    if (paths[i].empty()) continue;
-    out->add_paths(paths[i]);
+  std::vector<std::string> paths = Split(str, ",");
+  for (const std::string& path : paths) {
+    if (path.empty()) continue;
+    out->add_paths(path);
   }
 }
 
-bool FieldMaskUtil::SnakeCaseToCamelCase(StringPiece input, string* output) {
+bool FieldMaskUtil::SnakeCaseToCamelCase(StringPiece input,
+                                         std::string* output) {
   output->clear();
   bool after_underscore = false;
-  for (int i = 0; i < input.size(); ++i) {
-    if (input[i] >= 'A' && input[i] <= 'Z') {
+  for (char input_char : input) {
+    if (input_char >= 'A' && input_char <= 'Z') {
       // The field name must not contain uppercase letters.
       return false;
     }
     if (after_underscore) {
-      if (input[i] >= 'a' && input[i] <= 'z') {
-        output->push_back(input[i] + 'A' - 'a');
+      if (input_char >= 'a' && input_char <= 'z') {
+        output->push_back(input_char + 'A' - 'a');
         after_underscore = false;
       } else {
         // The character after a "_" must be a lowercase letter.
         return false;
       }
-    } else if (input[i] == '_') {
+    } else if (input_char == '_') {
       after_underscore = true;
     } else {
-      output->push_back(input[i]);
+      output->push_back(input_char);
     }
   }
   if (after_underscore) {
@@ -81,28 +88,29 @@ bool FieldMaskUtil::SnakeCaseToCamelCase(StringPiece input, string* output) {
   return true;
 }
 
-bool FieldMaskUtil::CamelCaseToSnakeCase(StringPiece input, string* output) {
+bool FieldMaskUtil::CamelCaseToSnakeCase(StringPiece input,
+                                         std::string* output) {
   output->clear();
-  for (int i = 0; i < input.size(); ++i) {
-    if (input[i] == '_') {
+  for (const char c : input) {
+    if (c == '_') {
       // The field name must not contain "_"s.
       return false;
     }
-    if (input[i] >= 'A' && input[i] <= 'Z') {
+    if (c >= 'A' && c <= 'Z') {
       output->push_back('_');
-      output->push_back(input[i] + 'a' - 'A');
+      output->push_back(c + 'a' - 'A');
     } else {
-      output->push_back(input[i]);
+      output->push_back(c);
     }
   }
   return true;
 }
 
-bool FieldMaskUtil::ToJsonString(const FieldMask& mask, string* out) {
+bool FieldMaskUtil::ToJsonString(const FieldMask& mask, std::string* out) {
   out->clear();
   for (int i = 0; i < mask.paths_size(); ++i) {
-    const string& path = mask.paths(i);
-    string camelcase_path;
+    const std::string& path = mask.paths(i);
+    std::string camelcase_path;
     if (!SnakeCaseToCamelCase(path, &camelcase_path)) {
       return false;
     }
@@ -116,11 +124,11 @@ bool FieldMaskUtil::ToJsonString(const FieldMask& mask, string* out) {
 
 bool FieldMaskUtil::FromJsonString(StringPiece str, FieldMask* out) {
   out->Clear();
-  std::vector<string> paths = Split(str, ",");
-  for (int i = 0; i < paths.size(); ++i) {
-    if (paths[i].empty()) continue;
-    string snakecase_path;
-    if (!CamelCaseToSnakeCase(paths[i], &snakecase_path)) {
+  std::vector<std::string> paths = Split(str, ",");
+  for (const std::string& path : paths) {
+    if (path.empty()) continue;
+    std::string snakecase_path;
+    if (!CamelCaseToSnakeCase(path, &snakecase_path)) {
       return false;
     }
     out->add_paths(snakecase_path);
@@ -131,34 +139,33 @@ bool FieldMaskUtil::FromJsonString(StringPiece str, FieldMask* out) {
 bool FieldMaskUtil::GetFieldDescriptors(
     const Descriptor* descriptor, StringPiece path,
     std::vector<const FieldDescriptor*>* field_descriptors) {
-  if (field_descriptors != NULL) {
+  if (field_descriptors != nullptr) {
     field_descriptors->clear();
   }
-  std::vector<string> parts = Split(path, ".");
-  for (int i = 0; i < parts.size(); ++i) {
-    const string& field_name = parts[i];
-    if (descriptor == NULL) {
+  std::vector<std::string> parts = Split(path, ".");
+  for (const std::string& field_name : parts) {
+    if (descriptor == nullptr) {
       return false;
     }
     const FieldDescriptor* field = descriptor->FindFieldByName(field_name);
-    if (field == NULL) {
+    if (field == nullptr) {
       return false;
     }
-    if (field_descriptors != NULL) {
+    if (field_descriptors != nullptr) {
       field_descriptors->push_back(field);
     }
     if (!field->is_repeated() &&
         field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE) {
       descriptor = field->message_type();
     } else {
-      descriptor = NULL;
+      descriptor = nullptr;
     }
   }
   return true;
 }
 
-void FieldMaskUtil::InternalGetFieldMaskForAllFields(
-    const Descriptor* descriptor, FieldMask* out) {
+void FieldMaskUtil::GetFieldMaskForAllFields(const Descriptor* descriptor,
+                                             FieldMask* out) {
   for (int i = 0; i < descriptor->field_count(); ++i) {
     out->add_paths(descriptor->field(i)->name());
   }
@@ -190,18 +197,18 @@ class FieldMaskTree {
   // be added to the tree. If the path matches an existing non-leaf node in the
   // tree, that non-leaf node will be turned into a leaf node with all its
   // children removed because the path matches all the node's children.
-  void AddPath(const string& path);
+  void AddPath(const std::string& path);
 
   // Remove a path from the tree.
   // If the path is a sub-path of an existing field path in the tree, it means
-  // we need remove the existing fied path and add all sub-paths except
+  // we need remove the existing field path and add all sub-paths except
   // specified path. If the path matches an existing node in the tree, this node
   // will be moved.
-  void RemovePath(const string& path, const Descriptor* descriptor);
+  void RemovePath(const std::string& path, const Descriptor* descriptor);
 
   // Calculate the intersection part of a field path with this tree and add
   // the intersection field path into out.
-  void IntersectPath(const string& path, FieldMaskTree* out);
+  void IntersectPath(const std::string& path, FieldMaskTree* out);
 
   // Merge all fields specified by this tree from one message to another.
   void MergeMessage(const Message& source,
@@ -227,12 +234,13 @@ class FieldMaskTree {
   }
 
   // Trims all fields not specified by this tree from the given message.
-  void TrimMessage(Message* message) {
+  // Returns true if the message is modified.
+  bool TrimMessage(Message* message) {
     // Do nothing if the tree is empty.
     if (root_.children.empty()) {
-      return;
+      return false;
     }
-    TrimMessage(&root_, message);
+    return TrimMessage(&root_, message);
   }
 
  private:
@@ -242,14 +250,14 @@ class FieldMaskTree {
     ~Node() { ClearChildren(); }
 
     void ClearChildren() {
-      for (std::map<string, Node*>::iterator it = children.begin();
+      for (std::map<std::string, Node*>::iterator it = children.begin();
            it != children.end(); ++it) {
         delete it->second;
       }
       children.clear();
     }
 
-    std::map<string, Node*> children;
+    std::map<std::string, Node*> children;
 
    private:
     GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(Node);
@@ -257,10 +265,11 @@ class FieldMaskTree {
 
   // Merge a sub-tree to mask. This method adds the field paths represented
   // by all leaf nodes descended from "node" to mask.
-  void MergeToFieldMask(const string& prefix, const Node* node, FieldMask* out);
+  void MergeToFieldMask(const std::string& prefix, const Node* node,
+                        FieldMask* out);
 
   // Merge all leaf nodes of a sub-tree to another tree.
-  void MergeLeafNodesToTree(const string& prefix, const Node* node,
+  void MergeLeafNodesToTree(const std::string& prefix, const Node* node,
                             FieldMaskTree* out);
 
   // Merge all fields specified by a sub-tree from one message to another.
@@ -275,7 +284,8 @@ class FieldMaskTree {
   void AddRequiredFieldPath(Node* node, const Descriptor* descriptor);
 
   // Trims all fields not specified by this sub-tree from the given message.
-  void TrimMessage(const Node* node, Message* message);
+  // Returns true if the message is actually modified
+  bool TrimMessage(const Node* node, Message* message);
 
   Node root_;
 
@@ -296,8 +306,8 @@ void FieldMaskTree::MergeToFieldMask(FieldMask* mask) {
   MergeToFieldMask("", &root_, mask);
 }
 
-void FieldMaskTree::MergeToFieldMask(const string& prefix, const Node* node,
-                                     FieldMask* out) {
+void FieldMaskTree::MergeToFieldMask(const std::string& prefix,
+                                     const Node* node, FieldMask* out) {
   if (node->children.empty()) {
     if (prefix.empty()) {
       // This is the root node.
@@ -306,28 +316,28 @@ void FieldMaskTree::MergeToFieldMask(const string& prefix, const Node* node,
     out->add_paths(prefix);
     return;
   }
-  for (std::map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<std::string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
-    string current_path = prefix.empty() ? it->first : prefix + "." + it->first;
+    std::string current_path =
+        prefix.empty() ? it->first : prefix + "." + it->first;
     MergeToFieldMask(current_path, it->second, out);
   }
 }
 
-void FieldMaskTree::AddPath(const string& path) {
-  std::vector<string> parts = Split(path, ".");
+void FieldMaskTree::AddPath(const std::string& path) {
+  std::vector<std::string> parts = Split(path, ".");
   if (parts.empty()) {
     return;
   }
   bool new_branch = false;
   Node* node = &root_;
-  for (int i = 0; i < parts.size(); ++i) {
+  for (const std::string& node_name : parts) {
     if (!new_branch && node != &root_ && node->children.empty()) {
       // Path matches an existing leaf node. This means the path is already
-      // coverred by this tree (for example, adding "foo.bar.baz" to a tree
+      // covered by this tree (for example, adding "foo.bar.baz" to a tree
       // which already contains "foo.bar").
       return;
     }
-    const string& node_name = parts[i];
     Node*& child = node->children[node_name];
     if (child == NULL) {
       new_branch = true;
@@ -340,25 +350,31 @@ void FieldMaskTree::AddPath(const string& path) {
   }
 }
 
-void FieldMaskTree::RemovePath(const string& path,
+void FieldMaskTree::RemovePath(const std::string& path,
                                const Descriptor* descriptor) {
-  std::vector<string> parts = Split(path, ".");
+  if (root_.children.empty()) {
+    // Nothing to be removed from an empty tree. We shortcut it here so an empty
+    // tree won't be interpreted as a field mask containing all fields by the
+    // code below.
+    return;
+  }
+  std::vector<std::string> parts = Split(path, ".");
   if (parts.empty()) {
     return;
   }
   std::vector<Node*> nodes(parts.size());
   Node* node = &root_;
   const Descriptor* current_descriptor = descriptor;
-  Node* new_branch_node = NULL;
+  Node* new_branch_node = nullptr;
   for (int i = 0; i < parts.size(); ++i) {
     nodes[i] = node;
     const FieldDescriptor* field_descriptor =
         current_descriptor->FindFieldByName(parts[i]);
-    if (field_descriptor == NULL ||
+    if (field_descriptor == nullptr ||
         (field_descriptor->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE &&
          i != parts.size() - 1)) {
       // Invalid path.
-      if (new_branch_node != NULL) {
+      if (new_branch_node != nullptr) {
         // If add any new nodes, cleanup.
         new_branch_node->ClearChildren();
       }
@@ -366,11 +382,11 @@ void FieldMaskTree::RemovePath(const string& path,
     }
 
     if (node->children.empty()) {
-      if (new_branch_node == NULL) {
+      if (new_branch_node == nullptr) {
         new_branch_node = node;
       }
-      for (int i = 0; i < current_descriptor->field_count(); ++i) {
-        node->children[current_descriptor->field(i)->name()] = new Node();
+      for (int j = 0; j < current_descriptor->field_count(); ++j) {
+        node->children[current_descriptor->field(j)->name()] = new Node();
       }
     }
     if (ContainsKey(node->children, parts[i])) {
@@ -393,20 +409,19 @@ void FieldMaskTree::RemovePath(const string& path,
   }
 }
 
-void FieldMaskTree::IntersectPath(const string& path, FieldMaskTree* out) {
-  std::vector<string> parts = Split(path, ".");
+void FieldMaskTree::IntersectPath(const std::string& path, FieldMaskTree* out) {
+  std::vector<std::string> parts = Split(path, ".");
   if (parts.empty()) {
     return;
   }
   const Node* node = &root_;
-  for (int i = 0; i < parts.size(); ++i) {
+  for (const std::string& node_name : parts) {
     if (node->children.empty()) {
       if (node != &root_) {
         out->AddPath(path);
       }
       return;
     }
-    const string& node_name = parts[i];
     const Node* result = FindPtrOrNull(node->children, node_name);
     if (result == NULL) {
       // No intersection found.
@@ -419,14 +434,15 @@ void FieldMaskTree::IntersectPath(const string& path, FieldMaskTree* out) {
   MergeLeafNodesToTree(path, node, out);
 }
 
-void FieldMaskTree::MergeLeafNodesToTree(const string& prefix, const Node* node,
-                                         FieldMaskTree* out) {
+void FieldMaskTree::MergeLeafNodesToTree(const std::string& prefix,
+                                         const Node* node, FieldMaskTree* out) {
   if (node->children.empty()) {
     out->AddPath(prefix);
   }
-  for (std::map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<std::string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
-    string current_path = prefix.empty() ? it->first : prefix + "." + it->first;
+    std::string current_path =
+        prefix.empty() ? it->first : prefix + "." + it->first;
     MergeLeafNodesToTree(current_path, it->second, out);
   }
 }
@@ -438,9 +454,9 @@ void FieldMaskTree::MergeMessage(const Node* node, const Message& source,
   const Reflection* source_reflection = source.GetReflection();
   const Reflection* destination_reflection = destination->GetReflection();
   const Descriptor* descriptor = source.GetDescriptor();
-  for (std::map<string, Node*>::const_iterator it = node->children.begin();
+  for (std::map<std::string, Node*>::const_iterator it = node->children.begin();
        it != node->children.end(); ++it) {
-    const string& field_name = it->first;
+    const std::string& field_name = it->first;
     const Node* child = it->second;
     const FieldDescriptor* field = descriptor->FindFieldByName(field_name);
     if (field == NULL) {
@@ -534,18 +550,18 @@ void FieldMaskTree::MergeMessage(const Node* node, const Message& source,
   }
 }
 
-void FieldMaskTree::AddRequiredFieldPath(
-    Node* node, const Descriptor* descriptor) {
-  const int32 field_count = descriptor->field_count();
+void FieldMaskTree::AddRequiredFieldPath(Node* node,
+                                         const Descriptor* descriptor) {
+  const int32_t field_count = descriptor->field_count();
   for (int index = 0; index < field_count; ++index) {
     const FieldDescriptor* field = descriptor->field(index);
     if (field->is_required()) {
-      const string& node_name = field->name();
+      const std::string& node_name = field->name();
       Node*& child = node->children[node_name];
-      if (child == NULL) {
+      if (child == nullptr) {
         // Add required field path to the tree
         child = new Node();
-      } else if (child->children.empty()){
+      } else if (child->children.empty()) {
         // If the required field is in the tree and does not have any children,
         // do nothing.
         continue;
@@ -555,7 +571,7 @@ void FieldMaskTree::AddRequiredFieldPath(
         AddRequiredFieldPath(child, field->message_type());
       }
     } else if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE) {
-      std::map<string, Node*>::const_iterator it =
+      std::map<std::string, Node*>::const_iterator it =
           node->children.find(field->name());
       if (it != node->children.end()) {
         // Add required fields in the children to the
@@ -569,26 +585,39 @@ void FieldMaskTree::AddRequiredFieldPath(
   }
 }
 
-void FieldMaskTree::TrimMessage(const Node* node, Message* message) {
+bool FieldMaskTree::TrimMessage(const Node* node, Message* message) {
   GOOGLE_DCHECK(!node->children.empty());
   const Reflection* reflection = message->GetReflection();
   const Descriptor* descriptor = message->GetDescriptor();
-  const int32 field_count = descriptor->field_count();
+  const int32_t field_count = descriptor->field_count();
+  bool modified = false;
   for (int index = 0; index < field_count; ++index) {
     const FieldDescriptor* field = descriptor->field(index);
-    std::map<string, Node*>::const_iterator it =
+    std::map<std::string, Node*>::const_iterator it =
         node->children.find(field->name());
     if (it == node->children.end()) {
+      if (field->is_repeated()) {
+        if (reflection->FieldSize(*message, field) != 0) {
+          modified = true;
+        }
+      } else {
+        if (reflection->HasField(*message, field)) {
+          modified = true;
+        }
+      }
       reflection->ClearField(message, field);
     } else {
       if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE) {
         Node* child = it->second;
         if (!child->children.empty() && reflection->HasField(*message, field)) {
-          TrimMessage(child, reflection->MutableMessage(message, field));
+          bool nestedMessageChanged =
+              TrimMessage(child, reflection->MutableMessage(message, field));
+          modified = nestedMessageChanged || modified;
         }
       }
     }
   }
+  return modified;
 }
 
 }  // namespace
@@ -620,9 +649,9 @@ void FieldMaskUtil::Intersect(const FieldMask& mask1, const FieldMask& mask2,
   intersection.MergeToFieldMask(out);
 }
 
-void FieldMaskUtil::InternalSubtract(const Descriptor* descriptor,
-                                     const FieldMask& mask1,
-                                     const FieldMask& mask2, FieldMask* out) {
+void FieldMaskUtil::Subtract(const Descriptor* descriptor,
+                             const FieldMask& mask1, const FieldMask& mask2,
+                             FieldMask* out) {
   if (mask1.paths().empty()) {
     out->Clear();
     return;
@@ -636,9 +665,10 @@ void FieldMaskUtil::InternalSubtract(const Descriptor* descriptor,
   tree.MergeToFieldMask(out);
 }
 
-bool FieldMaskUtil::IsPathInFieldMask(StringPiece path, const FieldMask& mask) {
+bool FieldMaskUtil::IsPathInFieldMask(StringPiece path,
+                                      const FieldMask& mask) {
   for (int i = 0; i < mask.paths_size(); ++i) {
-    const string& mask_path = mask.paths(i);
+    const std::string& mask_path = mask.paths(i);
     if (path == mask_path) {
       return true;
     } else if (mask_path.length() < path.length()) {
@@ -663,26 +693,26 @@ void FieldMaskUtil::MergeMessageTo(const Message& source, const FieldMask& mask,
   tree.MergeMessage(source, options, destination);
 }
 
-void FieldMaskUtil::TrimMessage(const FieldMask& mask, Message* destination) {
+bool FieldMaskUtil::TrimMessage(const FieldMask& mask, Message* message) {
   // Build a FieldMaskTree and walk through the tree to merge all specified
   // fields.
   FieldMaskTree tree;
   tree.MergeFromFieldMask(mask);
-  tree.TrimMessage(GOOGLE_CHECK_NOTNULL(destination));
+  return tree.TrimMessage(GOOGLE_CHECK_NOTNULL(message));
 }
 
-void FieldMaskUtil::TrimMessage(const FieldMask& mask, Message* destination,
+bool FieldMaskUtil::TrimMessage(const FieldMask& mask, Message* message,
                                 const TrimOptions& options) {
   // Build a FieldMaskTree and walk through the tree to merge all specified
   // fields.
   FieldMaskTree tree;
   tree.MergeFromFieldMask(mask);
-  // If keep_required_fields is true, implicitely add required fields of
+  // If keep_required_fields is true, implicitly add required fields of
   // a message present in the tree to prevent from trimming.
   if (options.keep_required_fields()) {
-    tree.AddRequiredFieldPath(GOOGLE_CHECK_NOTNULL(destination->GetDescriptor()));
+    tree.AddRequiredFieldPath(GOOGLE_CHECK_NOTNULL(message->GetDescriptor()));
   }
-  tree.TrimMessage(GOOGLE_CHECK_NOTNULL(destination));
+  return tree.TrimMessage(GOOGLE_CHECK_NOTNULL(message));
 }
 
 }  // namespace util

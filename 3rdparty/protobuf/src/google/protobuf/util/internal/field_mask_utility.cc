@@ -30,8 +30,13 @@
 
 #include <google/protobuf/util/internal/field_mask_utility.h>
 
+#include <google/protobuf/util/internal/utility.h>
+#include <google/protobuf/stubs/status.h>
 #include <google/protobuf/stubs/strutil.h>
 #include <google/protobuf/stubs/status_macros.h>
+
+// Must be included last.
+#include <google/protobuf/port_def.inc>
 
 namespace google {
 namespace protobuf {
@@ -39,21 +44,18 @@ namespace util {
 namespace converter {
 
 namespace {
-inline util::Status CallPathSink(PathSinkCallback path_sink,
-                                   StringPiece arg) {
-  return path_sink->Run(arg);
-}
 
 // Appends a FieldMask path segment to a prefix.
-string AppendPathSegmentToPrefix(StringPiece prefix, StringPiece segment) {
+std::string AppendPathSegmentToPrefix(StringPiece prefix,
+                                      StringPiece segment) {
   if (prefix.empty()) {
-    return segment.ToString();
+    return std::string(segment);
   }
   if (segment.empty()) {
-    return prefix.ToString();
+    return std::string(prefix);
   }
   // If the segment is a map key, appends it to the prefix without the ".".
-  if (segment.starts_with("[\"")) {
+  if (HasPrefixString(segment, "[\"")) {
     return StrCat(prefix, segment);
   }
   return StrCat(prefix, ".", segment);
@@ -61,9 +63,9 @@ string AppendPathSegmentToPrefix(StringPiece prefix, StringPiece segment) {
 
 }  // namespace
 
-string ConvertFieldMaskPath(const StringPiece path,
-                            ConverterCallback converter) {
-  string result;
+std::string ConvertFieldMaskPath(const StringPiece path,
+                                 ConverterCallback converter) {
+  std::string result;
   result.reserve(path.size() << 1);
 
   bool is_quoted = false;
@@ -106,8 +108,8 @@ string ConvertFieldMaskPath(const StringPiece path,
 }
 
 util::Status DecodeCompactFieldMaskPaths(StringPiece paths,
-                                           PathSinkCallback path_sink) {
-  std::stack<string> prefix;
+                                         PathSinkCallback path_sink) {
+  std::stack<std::string> prefix;
   int length = paths.length();
   int previous_position = 0;
   bool in_map_key = false;
@@ -132,10 +134,9 @@ util::Status DecodeCompactFieldMaskPaths(StringPiece paths,
         }
         // Un-escaped '"' must be followed with a ']'.
         if (i >= length - 1 || paths[i + 1] != ']') {
-          return util::Status(
-              util::error::INVALID_ARGUMENT,
-              StrCat("Invalid FieldMask '", paths,
-                     "'. Map keys should be represented as [\"some_key\"]."));
+          return util::InvalidArgumentError(StrCat(
+              "Invalid FieldMask '", paths,
+              "'. Map keys should be represented as [\"some_key\"]."));
         }
         // The end of the map key ("\"]") has been found.
         in_map_key = false;
@@ -144,10 +145,9 @@ util::Status DecodeCompactFieldMaskPaths(StringPiece paths,
         // Checks whether the key ends at the end of a path segment.
         if (i < length - 1 && paths[i + 1] != '.' && paths[i + 1] != ',' &&
             paths[i + 1] != ')' && paths[i + 1] != '(') {
-          return util::Status(
-              util::error::INVALID_ARGUMENT,
-              StrCat("Invalid FieldMask '", paths,
-                     "'. Map keys should be at the end of a path segment."));
+          return util::InvalidArgumentError(StrCat(
+              "Invalid FieldMask '", paths,
+              "'. Map keys should be at the end of a path segment."));
         }
         is_escaping = false;
         continue;
@@ -156,10 +156,9 @@ util::Status DecodeCompactFieldMaskPaths(StringPiece paths,
       // We are not in a map key, look for the start of one.
       if (paths[i] == '[') {
         if (i >= length - 1 || paths[i + 1] != '\"') {
-          return util::Status(
-              util::error::INVALID_ARGUMENT,
-              StrCat("Invalid FieldMask '", paths,
-                     "'. Map keys should be represented as [\"some_key\"]."));
+          return util::InvalidArgumentError(StrCat(
+              "Invalid FieldMask '", paths,
+              "'. Map keys should be represented as [\"some_key\"]."));
         }
         // "[\"" starts a map key.
         in_map_key = true;
@@ -176,40 +175,39 @@ util::Status DecodeCompactFieldMaskPaths(StringPiece paths,
     // '(', ')', ',', or the beginning of the input) and the current position.
     StringPiece segment =
         paths.substr(previous_position, i - previous_position);
-    string current_prefix = prefix.empty() ? "" : prefix.top();
+    std::string current_prefix = prefix.empty() ? "" : prefix.top();
 
     if (i < length && paths[i] == '(') {
       // Builds a prefix and save it into the stack.
       prefix.push(AppendPathSegmentToPrefix(current_prefix, segment));
     } else if (!segment.empty()) {
-      // When the current charactor is ')', ',' or the current position has
+      // When the current character is ')', ',' or the current position has
       // passed the end of the input, builds and outputs a new paths by
       // concatenating the last prefix with the current segment.
-      RETURN_IF_ERROR(CallPathSink(
-          path_sink, AppendPathSegmentToPrefix(current_prefix, segment)));
+      RETURN_IF_ERROR(
+          path_sink(AppendPathSegmentToPrefix(current_prefix, segment)));
     }
 
     // Removes the last prefix after seeing a ')'.
     if (i < length && paths[i] == ')') {
       if (prefix.empty()) {
-        return util::Status(
-            util::error::INVALID_ARGUMENT,
+        return util::InvalidArgumentError(
             StrCat("Invalid FieldMask '", paths,
-                   "'. Cannot find matching '(' for all ')'."));
+                         "'. Cannot find matching '(' for all ')'."));
       }
       prefix.pop();
     }
     previous_position = i + 1;
   }
   if (in_map_key) {
-    return util::Status(util::error::INVALID_ARGUMENT,
-                          StrCat("Invalid FieldMask '", paths,
-                                 "'. Cannot find matching ']' for all '['."));
+    return util::InvalidArgumentError(
+        StrCat("Invalid FieldMask '", paths,
+                     "'. Cannot find matching ']' for all '['."));
   }
   if (!prefix.empty()) {
-    return util::Status(util::error::INVALID_ARGUMENT,
-                          StrCat("Invalid FieldMask '", paths,
-                                 "'. Cannot find matching ')' for all '('."));
+    return util::InvalidArgumentError(
+        StrCat("Invalid FieldMask '", paths,
+                     "'. Cannot find matching ')' for all '('."));
   }
   return util::Status();
 }

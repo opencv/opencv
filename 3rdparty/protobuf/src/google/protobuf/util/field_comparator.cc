@@ -32,12 +32,13 @@
 
 #include <google/protobuf/util/field_comparator.h>
 
+#include <limits>
 #include <string>
 
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+#include <google/protobuf/util/message_differencer.h>
 #include <google/protobuf/stubs/map_util.h>
-#include <google/protobuf/stubs/mathlimits.h>
 #include <google/protobuf/stubs/mathutil.h>
 
 namespace google {
@@ -47,37 +48,32 @@ namespace util {
 FieldComparator::FieldComparator() {}
 FieldComparator::~FieldComparator() {}
 
-DefaultFieldComparator::DefaultFieldComparator()
+SimpleFieldComparator::SimpleFieldComparator()
     : float_comparison_(EXACT),
       treat_nan_as_equal_(false),
-      has_default_tolerance_(false) {
-}
+      has_default_tolerance_(false) {}
 
-DefaultFieldComparator::~DefaultFieldComparator() {}
+SimpleFieldComparator::~SimpleFieldComparator() {}
 
-FieldComparator::ComparisonResult DefaultFieldComparator::Compare(
-      const google::protobuf::Message& message_1,
-      const google::protobuf::Message& message_2,
-      const google::protobuf::FieldDescriptor* field,
-      int index_1, int index_2,
-      const google::protobuf::util::FieldContext* field_context) {
+FieldComparator::ComparisonResult SimpleFieldComparator::SimpleCompare(
+    const Message& message_1, const Message& message_2,
+    const FieldDescriptor* field, int index_1, int index_2,
+    const util::FieldContext* /*field_context*/) {
   const Reflection* reflection_1 = message_1.GetReflection();
   const Reflection* reflection_2 = message_2.GetReflection();
 
   switch (field->cpp_type()) {
-#define COMPARE_FIELD(METHOD)                                              \
-    if (field->is_repeated()) {                                            \
-      return ResultFromBoolean(Compare##METHOD(                            \
-          *field,                                                          \
-          reflection_1->GetRepeated##METHOD(message_1, field, index_1),    \
-          reflection_2->GetRepeated##METHOD(message_2, field, index_2)));  \
-    } else {                                                               \
-      return ResultFromBoolean(Compare##METHOD(                            \
-          *field,                                                          \
-          reflection_1->Get##METHOD(message_1, field),                     \
-          reflection_2->Get##METHOD(message_2, field)));                   \
-    }                                                                      \
-    break;  // Make sure no fall-through is introduced.
+#define COMPARE_FIELD(METHOD)                                                 \
+  if (field->is_repeated()) {                                                 \
+    return ResultFromBoolean(Compare##METHOD(                                 \
+        *field, reflection_1->GetRepeated##METHOD(message_1, field, index_1), \
+        reflection_2->GetRepeated##METHOD(message_2, field, index_2)));       \
+  } else {                                                                    \
+    return ResultFromBoolean(                                                 \
+        Compare##METHOD(*field, reflection_1->Get##METHOD(message_1, field),  \
+                        reflection_2->Get##METHOD(message_2, field)));        \
+  }                                                                           \
+  break;  // Make sure no fall-through is introduced.
 
     case FieldDescriptor::CPPTYPE_BOOL:
       COMPARE_FIELD(Bool);
@@ -95,18 +91,19 @@ FieldComparator::ComparisonResult DefaultFieldComparator::Compare(
       if (field->is_repeated()) {
         // Allocate scratch strings to store the result if a conversion is
         // needed.
-        string scratch1;
-        string scratch2;
+        std::string scratch1;
+        std::string scratch2;
         return ResultFromBoolean(
-            CompareString(*field, reflection_1->GetRepeatedStringReference(
-                                      message_1, field, index_1, &scratch1),
+            CompareString(*field,
+                          reflection_1->GetRepeatedStringReference(
+                              message_1, field, index_1, &scratch1),
                           reflection_2->GetRepeatedStringReference(
                               message_2, field, index_2, &scratch2)));
       } else {
         // Allocate scratch strings to store the result if a conversion is
         // needed.
-        string scratch1;
-        string scratch2;
+        std::string scratch1;
+        std::string scratch2;
         return ResultFromBoolean(CompareString(
             *field,
             reflection_1->GetStringReference(message_1, field, &scratch1),
@@ -130,15 +127,22 @@ FieldComparator::ComparisonResult DefaultFieldComparator::Compare(
   }
 }
 
-void DefaultFieldComparator::SetDefaultFractionAndMargin(double fraction,
-                                                         double margin) {
+bool SimpleFieldComparator::CompareWithDifferencer(
+    MessageDifferencer* differencer, const Message& message1,
+    const Message& message2, const util::FieldContext* field_context) {
+  return differencer->Compare(message1, message2,
+                              field_context->parent_fields());
+}
+
+void SimpleFieldComparator::SetDefaultFractionAndMargin(double fraction,
+                                                        double margin) {
   default_tolerance_ = Tolerance(fraction, margin);
   has_default_tolerance_ = true;
 }
 
-void DefaultFieldComparator::SetFractionAndMargin(const FieldDescriptor* field,
-                                                  double fraction,
-                                                  double margin) {
+void SimpleFieldComparator::SetFractionAndMargin(const FieldDescriptor* field,
+                                                 double fraction,
+                                                 double margin) {
   GOOGLE_CHECK(FieldDescriptor::CPPTYPE_FLOAT == field->cpp_type() ||
         FieldDescriptor::CPPTYPE_DOUBLE == field->cpp_type())
       << "Field has to be float or double type. Field name is: "
@@ -146,38 +150,36 @@ void DefaultFieldComparator::SetFractionAndMargin(const FieldDescriptor* field,
   map_tolerance_[field] = Tolerance(fraction, margin);
 }
 
-bool DefaultFieldComparator::CompareDouble(const FieldDescriptor& field,
-                                           double value_1, double value_2) {
+bool SimpleFieldComparator::CompareDouble(const FieldDescriptor& field,
+                                          double value_1, double value_2) {
   return CompareDoubleOrFloat(field, value_1, value_2);
 }
 
-bool DefaultFieldComparator::CompareEnum(const FieldDescriptor& field,
-                                         const EnumValueDescriptor* value_1,
-                                         const EnumValueDescriptor* value_2) {
+bool SimpleFieldComparator::CompareEnum(const FieldDescriptor& /*field*/,
+                                        const EnumValueDescriptor* value_1,
+                                        const EnumValueDescriptor* value_2) {
   return value_1->number() == value_2->number();
 }
 
-bool DefaultFieldComparator::CompareFloat(const FieldDescriptor& field,
-                                          float value_1, float value_2) {
+bool SimpleFieldComparator::CompareFloat(const FieldDescriptor& field,
+                                         float value_1, float value_2) {
   return CompareDoubleOrFloat(field, value_1, value_2);
 }
 
-template<typename T>
-bool DefaultFieldComparator::CompareDoubleOrFloat(const FieldDescriptor& field,
-                                                  T value_1, T value_2) {
+template <typename T>
+bool SimpleFieldComparator::CompareDoubleOrFloat(const FieldDescriptor& field,
+                                                 T value_1, T value_2) {
   if (value_1 == value_2) {
     // Covers +inf and -inf (which are not within margin or fraction of
     // themselves), and is a shortcut for finite values.
     return true;
   } else if (float_comparison_ == EXACT) {
-    if (treat_nan_as_equal_ &&
-        MathLimits<T>::IsNaN(value_1) && MathLimits<T>::IsNaN(value_2)) {
+    if (treat_nan_as_equal_ && std::isnan(value_1) && std::isnan(value_2)) {
       return true;
     }
     return false;
   } else {
-    if (treat_nan_as_equal_ &&
-        MathLimits<T>::IsNaN(value_1) && MathLimits<T>::IsNaN(value_2)) {
+    if (treat_nan_as_equal_ && std::isnan(value_1) && std::isnan(value_2)) {
       return true;
     }
     // float_comparison_ == APPROXIMATE covers two use cases.
@@ -198,7 +200,7 @@ bool DefaultFieldComparator::CompareDoubleOrFloat(const FieldDescriptor& field,
   }
 }
 
-FieldComparator::ComparisonResult DefaultFieldComparator::ResultFromBoolean(
+FieldComparator::ComparisonResult SimpleFieldComparator::ResultFromBoolean(
     bool boolean_result) const {
   return boolean_result ? FieldComparator::SAME : FieldComparator::DIFFERENT;
 }

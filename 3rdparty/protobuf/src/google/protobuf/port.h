@@ -1,5 +1,5 @@
 // Protocol Buffers - Google's data interchange format
-// Copyright 2014 Google Inc.  All rights reserved.
+// Copyright 2008 Google Inc.  All rights reserved.
 // https://developers.google.com/protocol-buffers/
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,28 +27,14 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#ifndef GOOGLE_PROTOBUF_ATOMIC_SEQUENCE_NUM_H_
-#define GOOGLE_PROTOBUF_ATOMIC_SEQUENCE_NUM_H_
 
-#include <google/protobuf/stubs/atomicops.h>
+// A common header that is included across all protobuf headers.  We do our best
+// to avoid #defining any macros here; instead we generally put macros in
+// port_def.inc and port_undef.inc so they are not visible from outside of
+// protobuf.
 
-namespace google {
-namespace protobuf {
-namespace internal {
+#ifndef GOOGLE_PROTOBUF_PORT_H__
+#define GOOGLE_PROTOBUF_PORT_H__
 
-class SequenceNumber {
- public:
-  SequenceNumber() : word_(0) {}
 
-  AtomicWord GetNext() {
-    return NoBarrier_AtomicIncrement(&word_, 1) - 1;
-  }
- private:
-  AtomicWord word_;
-};
-
-}  // namespace internal
-}  // namespace protobuf
-}  // namespace google
-
-#endif  // GOOGLE_PROTOBUF_ATOMIC_SEQUENCE_NUM_H_
+#endif  // GOOGLE_PROTOBUF_PORT_H__

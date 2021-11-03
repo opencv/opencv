@@ -49,31 +49,33 @@ endfunction()
 
 set(PROTOBUF_ROOT "${CMAKE_CURRENT_LIST_DIR}")
 
-if(MSVC)
-  set(ATOMICOPS_INTERNALS ${PROTOBUF_ROOT}/src/google/protobuf/stubs/atomicops_internals_x86_msvc.cc)
-else()
-  set(ATOMICOPS_INTERNALS ${PROTOBUF_ROOT}/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc)
-endif()
-
 
 append_if_exist(Protobuf_SRCS
 # libprotobuf-lite
+  ${PROTOBUF_ROOT}/src/google/protobuf/any_lite.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/arena.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/arenastring.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/extension_set.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_enum_util.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_table_driven_lite.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_tctable_lite.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_util.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/implicit_weak_message.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/inlined_string_field.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/coded_stream.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/io/io_win32.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/io/strtod.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/zero_copy_stream.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/io/zero_copy_stream_impl.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/zero_copy_stream_impl_lite.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/map.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/message_lite.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/parse_context.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/repeated_field.cc
-  ${ATOMICOPS_INTERNALS}
+  ${PROTOBUF_ROOT}/src/google/protobuf/repeated_ptr_field.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/bytestream.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/common.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/int128.cc
-  ${PROTOBUF_ROOT}/src/google/protobuf/stubs/io_win32.cc
-  ${PROTOBUF_ROOT}/src/google/protobuf/stubs/once.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/status.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/statusor.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/stringpiece.cc
@@ -82,6 +84,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/strutil.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/time.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/wire_format_lite.cc
+
 # libprotobuf
   ${PROTOBUF_ROOT}/src/google/protobuf/any.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/any.pb.cc
@@ -96,20 +99,19 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/empty.pb.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/extension_set_heavy.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/field_mask.pb.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_bases.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_reflection.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_table_driven.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_tctable_full.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/gzip_stream.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/printer.cc
-  ${PROTOBUF_ROOT}/src/google/protobuf/io/strtod.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/io/tokenizer.cc
-  ${PROTOBUF_ROOT}/src/google/protobuf/io/zero_copy_stream_impl.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/map_field.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/message.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/reflection_ops.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/service.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/source_context.pb.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/struct.pb.cc
-  ${PROTOBUF_ROOT}/src/google/protobuf/stubs/mathlimits.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/stubs/substitute.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/text_format.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/timestamp.pb.cc
@@ -130,7 +132,6 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/protostream_objectsource.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/protostream_objectwriter.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/type_info.cc
-#  ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/type_info_test_helper.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/internal/utility.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/json_util.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/util/message_differencer.cc
@@ -140,7 +141,9 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/wrappers.pb.cc
 )
 
-include_directories(BEFORE "${PROTOBUF_ROOT}/src")  # ensure using if own headers: https://github.com/opencv/opencv/issues/13328
+
+include_directories(BEFORE "${PROTOBUF_ROOT}/src")  # ensure using of own headers: https://github.com/opencv/opencv/issues/13328
+
 add_library(libprotobuf STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${Protobuf_SRCS})
 target_include_directories(libprotobuf SYSTEM PUBLIC $<BUILD_INTERFACE:${PROTOBUF_ROOT}/src>)
 set_target_properties(libprotobuf
