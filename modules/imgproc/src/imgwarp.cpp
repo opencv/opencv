@@ -1864,6 +1864,13 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         return;
     }
 
+    if (inputRemapType == RemapType::int16 && outputRemapType == RemapType::fixedPointInt16)
+    {
+        m1->convertTo(dstmap1, dstmap1.type());
+        dstmap2 = Mat::zeros( size, CV_16UC1);
+        return;
+    }
+
     if (inputRemapType == RemapType::fp32_mapxy && outputRemapType == RemapType::int16)
     {
         m1->convertTo(dstmap1, dstmap1.type());
@@ -1890,6 +1897,10 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
         size.width *= size.height;
         size.height = 1;
     }
+    CV_Assert((m1type == CV_32FC1 && dstm1type == CV_16SC2) || // fp32_mapx_mapy to int16 or fixedPointInt16
+              (m1type == CV_32FC2 && dstm1type == CV_16SC2 && !nninterpolate) || // fp32_mapxy to int16
+              (m1type == CV_16SC2 && dstm1type == CV_32FC1) || // int16 or fixedPointInt16 to fp32_mapx_mapy
+              (m1type == CV_16SC2 && dstm1type == CV_32FC2));  // int16 or fixedPointInt16 to fp32_mapxy
 
 #if CV_TRY_SSE4_1
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
@@ -2031,8 +2042,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     }
                 }
             }
-            else // this branch is never called: inputRemapType == RemapType::fp32_mapxy && outputRemapType == RemapType::int16
-                CV_Error( CV_StsNotImplemented, "Unsupported combination of input/output matrices" );
         }
         else if( m1type == CV_16SC2 && dstm1type == CV_32FC1 )
         {
@@ -2130,8 +2139,6 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 dst1f[x*2+1] = src1[x*2+1] + (fxy >> INTER_BITS)*scale;
             }
         }
-        else
-            CV_Error( CV_StsNotImplemented, "Unsupported combination of input/output matrices" );
     }
 }
 

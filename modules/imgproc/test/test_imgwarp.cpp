@@ -1627,7 +1627,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Param_fp32, testing::Combine(Values(
         Values(false, true)));
 
 INSTANTIATE_TEST_CASE_P(/**/, Param_fixedPoint, testing::Combine(Values(
-        test_float_types, test_fixed_point_types
+        test_float_types, test_int_types, test_fixed_point_types
         ),
         Values(CV_16SC2),
         Values(false)));
