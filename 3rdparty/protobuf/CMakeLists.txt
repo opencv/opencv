@@ -13,6 +13,9 @@ if(MSVC)
                                        /wd4701 /wd4703     # potentially uninitialized local/pointer variable 'value' used
                                        /wd4505             # unreferenced local function has been removed
   )
+  if(MSVC_VERSION LESS 1910)  # MSVS 2015
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4309)          # 'static_cast': truncation of constant value
+  endif()
 else()
   #NOTE: -Wno-invalid-offsetof was used as solution for invalid offset warning on protobuf #3450
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-deprecated -Wmissing-prototypes -Wmissing-declarations -Wshadow
