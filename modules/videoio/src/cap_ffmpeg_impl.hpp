@@ -535,7 +535,6 @@ struct CvCapture_FFMPEG
     bool includeExtraData;
     uint8_t* extraData;
     int extraDataLen;
-    int paddExtraData;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
@@ -585,7 +584,6 @@ void CvCapture_FFMPEG::init()
     includeExtraData = false;
     extraData = 0;
     extraDataLen = 0;
-    paddExtraData = 0;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
@@ -1214,17 +1212,10 @@ bool CvCapture_FFMPEG::processRawPacket()
 #else
         CV_CODEC_ID eVideoCodec = video_st->codec->codec_id;
 #endif
-        if (ic->streams[video_stream]->codec->extradata_size && (strcmp(ic->iformat->name, "rtsp") == 0 || eVideoCodec == AV_CODEC_ID_MPEG4)) {
+        const bool bMp4MPEG4 = eVideoCodec == AV_CODEC_ID_MPEG4 && ( !strcmp(ic->iformat->long_name, "QuickTime / MOV")
+            || !strcmp(ic->iformat->long_name, "FLV (Flash Video)") || !strcmp(ic->iformat->long_name, "Matroska / WebM"));
+        if (ic->streams[video_stream]->codec->extradata_size && (strcmp(ic->iformat->name, "rtsp") == 0 || bMp4MPEG4))
             includeExtraData = true;
-            if (eVideoCodec != AV_CODEC_ID_MPEG4) {
-                // defend against ip camera's whose side info has a shorter start code prefix length than the first packet
-                if ((packet.size >= 5 && packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 0 && packet.data[3] == 1) &&
-                    (ic->streams[video_stream]->codec->extradata_size >= 4 && ic->streams[video_stream]->codec->extradata[0] == 0 &&
-                        ic->streams[video_stream]->codec->extradata[1] == 0 && ic->streams[video_stream]->codec->extradata[2] == 1)) {
-                    paddExtraData = 1;
-                }
-            }
-        }
         const char* filterName = NULL;
         if (eVideoCodec == CV_CODEC(CODEC_ID_H264)
 #if LIBAVCODEC_VERSION_MICRO >= 100 \
@@ -1436,12 +1427,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int, unsigned char** data, int* step, int* 
         AVPacket& p = bsfc ? packet_filtered : packet;
         if (includeExtraData) {
             includeExtraData = false;
-            extraDataLen = ic->streams[video_stream]->codec->extradata_size + paddExtraData;
+            extraDataLen = ic->streams[video_stream]->codec->extradata_size;
             *step = extraDataLen + p.size;
             extraData = new uint8_t[*step];
-            memset(extraData, 0, paddExtraData);
-            memcpy(extraData + paddExtraData, ic->streams[video_stream]->codec->extradata, ic->streams[video_stream]->codec->extradata_size);
-            memcpy(&extraData[ic->streams[video_stream]->codec->extradata_size], p.data, p.size);
+            memcpy(extraData, ic->streams[video_stream]->codec->extradata, extraDataLen);
+            memcpy(&extraData[extraDataLen], p.data, p.size);
             *data = extraData;
         }
         else{
@@ -1617,9 +1607,12 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (rawMode)
             return -1;
         break;
-    case CAP_PROP_LF_KEY_FRAME:
-        return packet.flags == 1;
-    case CAP_PROP_LF_PARAM_SET_LEN:
+    case CAP_PROP_LRF_HAS_KEY_FRAME:
+    {
+        const AVPacket& p = bsfc ? packet_filtered : packet;
+        return ((p.flags & AV_PKT_FLAG_KEY) != 0) ? 1 : 0;
+    }
+    case CAP_PROP_LRF_EXTRA_DATA_LEN:
         return extraDataLen;
     case CAP_PROP_BITRATE:
         return static_cast<double>(get_bitrate());
