@@ -1704,6 +1704,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
     CV_Assert( !_map1.empty() );
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     const RemapType remapType = check_and_get_remap_type(map1, map2);
+    CV_Assert(remapType != RemapType::fixedPointInt32);
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_remap(_src, _dst, _map1, _map2, interpolation, borderType, borderValue, remapType))

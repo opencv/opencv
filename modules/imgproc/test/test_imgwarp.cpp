@@ -1572,8 +1572,8 @@ template<typename T>
 void setRandMap(RNG& rng, Mat& mat)
 {
     T* XY = mat.ptr<T>(0);
-    const float scols = mat.cols;
-    const float frows = mat.rows;
+    const float scols = static_cast<float>(mat.cols);
+    const float frows = static_cast<float>(mat.rows);
     for (size_t i = 0; i < mat.total(); ++i)
     {
         XY[0] = static_cast<T>(rng.uniform(0.f, scols));
@@ -1601,7 +1601,8 @@ PARAM_TEST_CASE(ParamConvertMapsTest, std::tuple<int, int>, int, bool, cv::Size)
         nninterpolate = GET_PARAM(2);
         size = GET_PARAM(3);
         RNG rng(0);
-        float scols = size.width, srows = size.height;
+        float scols = static_cast<float>(size.width);
+        float srows = static_cast<float>(size.height);
         if (map1Type > 0)
         {
             map_x.create(size, map1Type);
