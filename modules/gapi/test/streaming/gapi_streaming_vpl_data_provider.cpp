@@ -69,9 +69,9 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
     dec_valid_t dec_result = std::get<3>(GetParam());
 
     // open demux source & check format support
-    std::unique_ptr<MFPDemuxDataProvider> provider_ptr;
+    std::unique_ptr<MFPAsyncDemuxDataProvider> provider_ptr;
     try {
-        provider_ptr.reset(new MFPDemuxDataProvider(path));
+        provider_ptr.reset(new MFPAsyncDemuxDataProvider(path));
     } catch (...) {
         EXPECT_FALSE(dd_result);
         GTEST_SUCCEED();
@@ -149,7 +149,7 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, choose_dmux_provider)
     }
 
     EXPECT_TRUE(dd_result);
-    EXPECT_TRUE(std::dynamic_pointer_cast<MFPDemuxDataProvider>(provider_ptr));
+    EXPECT_TRUE(std::dynamic_pointer_cast<MFPAsyncDemuxDataProvider>(provider_ptr));
 }
 
 INSTANTIATE_TEST_CASE_P(MFP_VPL_DecodeHeaderTests, OneVPL_Source_MFPDispatcherTest,
@@ -270,6 +270,7 @@ TEST(OneVPL_Source_MFPAsyncDemux, produce_consume) {
         for (size_t i = 0; i < produce_buffer_count; i ++) {
             std::shared_ptr<mfxBitstream> dummy_stream = std::make_shared<mfxBitstream>();
             dummy_stream->DataLength = static_cast<mfxU32>(i); // control block
+            dummy_stream->DataOffset = static_cast<mfxU32>(i); // control block
             dummy_stream->Data = reinterpret_cast<mfxU8*>(i);
             total_produced_count = provider.produce_worker_data(
                                                     dummy_stream->Data,
