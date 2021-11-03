@@ -534,8 +534,9 @@ class TextFormat::Parser::ParserImpl {
                       "\" has no field named \"" + field_name + "\".");
           return false;
         } else {
-          ReportWarning("Message type \"" + descriptor->full_name() +
-                        "\" has no field named \"" + field_name + "\".");
+          // No warnings to let user define custom layers (see https://github.com/opencv/opencv/pull/11129)
+          // ReportWarning("Message type \"" + descriptor->full_name() +
+          //               "\" has no field named \"" + field_name + "\".");
         }
       }
     }
@@ -550,13 +551,16 @@ class TextFormat::Parser::ParserImpl {
       // start with "{" or "<" which indicates the beginning of a message body.
       // If there is no ":" or there is a "{" or "<" after ":", this field has
       // to be a message or the input is ill-formed.
+      UnknownFieldSet* unknown_fields = reflection->MutableUnknownFields(message);
       if (TryConsumeBeforeWhitespace(":")) {
         TryConsumeWhitespace(message->GetTypeName(), "Unknown/Reserved");
         if (!LookingAt("{") && !LookingAt("<")) {
-          return SkipFieldValue();
+          UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
+          unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
+          return SkipFieldValue(unknown_field);
         }
       }
-      return SkipFieldMessage();
+      return SkipFieldMessage(unknown_fields);
     }
 
     if (singular_overwrite_policy_ == FORBID_SINGULAR_OVERWRITES) {
@@ -652,13 +656,13 @@ class TextFormat::Parser::ParserImpl {
   }
 
   // Skips the next field including the field's name and value.
-  bool SkipField() {
+  bool SkipField(UnknownFieldSet* unknown_fields) {
+    std::string field_name;
     if (TryConsume("[")) {
       // Extension name or type URL.
-      DO(ConsumeTypeUrlOrFullTypeName());
+      DO(ConsumeTypeUrlOrFullTypeName(&field_name));
       DO(ConsumeBeforeWhitespace("]"));
     } else {
-      std::string field_name;
       DO(ConsumeIdentifierBeforeWhitespace(&field_name));
     }
     TryConsumeWhitespace("Unknown/Reserved", "n/a");
@@ -672,12 +676,14 @@ class TextFormat::Parser::ParserImpl {
     if (TryConsumeBeforeWhitespace(":")) {
       TryConsumeWhitespace("Unknown/Reserved", "n/a");
       if (!LookingAt("{") && !LookingAt("<")) {
-        DO(SkipFieldValue());
+        UnknownFieldSet* unknown_field = unknown_fields->AddGroup(unknown_fields->field_count());
+        unknown_field->AddLengthDelimited(0, field_name);  // Add a field's name.
+        DO(SkipFieldValue(unknown_field));
       } else {
-        DO(SkipFieldMessage());
+        DO(SkipFieldMessage(unknown_fields));
       }
     } else {
-      DO(SkipFieldMessage());
+      DO(SkipFieldMessage(unknown_fields));
     }
     // For historical reasons, fields may optionally be separated by commas or
     // semicolons.
@@ -722,7 +728,7 @@ class TextFormat::Parser::ParserImpl {
 
   // Skips the whole body of a message including the beginning delimiter and
   // the ending delimiter.
-  bool SkipFieldMessage() {
+  bool SkipFieldMessage(UnknownFieldSet* unknown_fields) {
     if (--recursion_limit_ < 0) {
       ReportError(
           StrCat("Message is too deep, the parser exceeded the "
@@ -734,7 +740,7 @@ class TextFormat::Parser::ParserImpl {
     std::string delimiter;
     DO(ConsumeMessageDelimiter(&delimiter));
     while (!LookingAt(">") && !LookingAt("}")) {
-      DO(SkipField());
+      DO(SkipField(unknown_fields));
     }
     DO(Consume(delimiter));
 
@@ -882,7 +888,7 @@ class TextFormat::Parser::ParserImpl {
     return true;
   }
 
-  bool SkipFieldValue() {
+  bool SkipFieldValue(UnknownFieldSet* unknown_field) {
     if (--recursion_limit_ < 0) {
       ReportError(
           StrCat("Message is too deep, the parser exceeded the "
@@ -901,9 +907,9 @@ class TextFormat::Parser::ParserImpl {
     if (TryConsume("[")) {
       while (true) {
         if (!LookingAt("{") && !LookingAt("<")) {
-          DO(SkipFieldValue());
+          DO(SkipFieldValue(unknown_field));
         } else {
-          DO(SkipFieldMessage());
+          DO(SkipFieldMessage(unknown_field));
         }
         if (TryConsume("]")) {
           break;
@@ -959,6 +965,8 @@ class TextFormat::Parser::ParserImpl {
         return false;
       }
     }
+    // Use a tag 1 because tag 0 is used for field's name.
+    unknown_field->AddLengthDelimited(1, tokenizer_.current().text);
     tokenizer_.Next();
     ++recursion_limit_;
     return true;
@@ -1023,6 +1031,24 @@ class TextFormat::Parser::ParserImpl {
     DO(ConsumeIdentifier(&discarded));
     while (TryConsume(".") || TryConsume("/")) {
       DO(ConsumeIdentifier(&discarded));
+    }
+    return true;
+  }
+
+  bool ConsumeTypeUrlOrFullTypeName(std::string* name) {
+    DO(ConsumeIdentifier(name));
+    while (true) {
+      char delim = 0;
+      if (TryConsume("."))
+          delim = '.';
+      else if(TryConsume("/"))
+          delim = '/';
+      else
+          break;
+      std::string part;
+      DO(ConsumeIdentifier(&part));
+      *name += delim;
+      *name += part;
     }
     return true;
   }
