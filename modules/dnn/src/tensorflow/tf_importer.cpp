@@ -2739,14 +2739,21 @@ DataLayout TFImporter::predictOutputDataLayout(const tensorflow::NodeDef& layer)
 
 void TFImporter::populateNet()
 {
-    CV_Assert(netBin.ByteSize() || netTxt.ByteSize());
+#if GOOGLE_PROTOBUF_VERSION < 3005000
+    size_t netBinSize = saturate_cast<size_t>(netBin.ByteSize());
+    size_t netTxtSize = saturate_cast<size_t>(netTxt.ByteSize());
+#else
+    size_t netBinSize = netBin.ByteSizeLong();
+    size_t netTxtSize = netTxt.ByteSizeLong();
+#endif
+    CV_Assert(netBinSize || netTxtSize);
 
     CV_LOG_INFO(NULL, "DNN/TF: parsing model"
         << (netBin.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netBin.versions().producer(), (int)netBin.versions().min_consumer()) : cv::String(" (N/A version info)"))
         << ". Number of nodes = " << netBin.node_size()
     );
 
-    if (netTxt.ByteSize())
+    if (netTxtSize)
     {
         CV_LOG_INFO(NULL, "DNN/TF: parsing config"
             << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
@@ -2775,7 +2782,7 @@ void TFImporter::populateNet()
         CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
     }
 
-    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+    tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
 
     int layersSize = net.node_size();
 
@@ -2873,7 +2880,12 @@ void TFImporter::addPermuteLayer(const int* order, const std::string& permName, 
 
 void TFImporter::parseNode(const tensorflow::NodeDef& layer)
 {
-    tensorflow::GraphDef& net = netTxt.ByteSize() != 0 ? netTxt : netBin;
+#if GOOGLE_PROTOBUF_VERSION < 3005000
+    size_t netTxtSize = saturate_cast<size_t>(netTxt.ByteSize());
+#else
+    size_t netTxtSize = netTxt.ByteSizeLong();
+#endif
+    tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
 
     const std::string& name = layer.name();
     const std::string& type = layer.op();
