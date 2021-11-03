@@ -22,6 +22,10 @@ if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
 endif()
 
+if(WITH_WEBNN AND HAVE_WEBNN)
+  add_definitions(-DHAVE_WEBNN=1)
+endif()
+
 ocv_option(OPENCV_DNN_CUDA "Build with CUDA support"
     HAVE_CUDA
     AND HAVE_CUBLAS
