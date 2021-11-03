@@ -66,9 +66,6 @@ void setCameraMatrixFreiburg2(float& fx, float& fy, float& cx, float& cy)
  */
 int main(int argc, char** argv)
 {
-    //std::cout << argc << std::endl;
-    //std::cout << argv[1] << std::endl;
-
     if(argc != 4)
     {
         cout << "Format: file_with_rgb_depth_pairs trajectory_file odometry_name [Rgbd or ICP or RgbdICP or FastICP]" << endl;

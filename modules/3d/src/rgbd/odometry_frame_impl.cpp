@@ -145,7 +145,7 @@ void OdometryFrameImplTMat<TMat>::setDepth(InputArray _depth)
 {
 
     Mat depth_tmp, depth_flt;
-    depth_tmp = _depth.getMat();
+    depth_tmp = getTMat<Mat>(_depth);
     // Odometry works with depth values in range [0, 10)
     // if the max depth value more than 10, it needs to devide by 5000
     double max;
@@ -196,7 +196,7 @@ void OdometryFrameImplTMat<TMat>::setPyramidLevel(size_t _nLevels, OdometryFrame
     if (oftype < OdometryFramePyramidType::N_PYRAMIDS)
         pyramids[oftype].resize(_nLevels, TMat());
     else
-        std::cout << "Incorrect type." << std::endl;
+        CV_Error(Error::StsBadArg, "Incorrect type.");
 
 }
 

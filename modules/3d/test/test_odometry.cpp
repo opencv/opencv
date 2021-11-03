@@ -34,17 +34,10 @@ void warpFrame(const Mat& image, const Mat& depth, const Mat& rvec, const Mat& t
     Mat cloud;
     depthTo3d(depth, K, cloud);
 
-    // temporary solution
-    Mat cloud3;
-    cloud3.create(cloud.size(), CV_32FC3);
-    for (int y = 0; y < cloud3.rows; y++)
-    {
-        for (int x = 0; x < cloud3.cols; x++)
-        {
-            Vec4f p = cloud.at<Vec4f>(y, x);
-            cloud3.at<Vec3f>(y, x) = Vec3f(p[0], p[1], p[2]);
-        }
-    }
+    Mat cloud3, channels[4];
+    cv::split(cloud, channels);
+    std::vector<Mat> merged = { channels[0], channels[1], channels[2] };
+    cv::merge(merged, cloud3);
 
     Mat Rt = Mat::eye(4, 4, CV_64FC1);
     {

@@ -9,6 +9,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/3d.hpp"
+#include <opencv2/core.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
 #ifdef HAVE_OPENCL

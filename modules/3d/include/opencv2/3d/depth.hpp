@@ -98,7 +98,7 @@ CV_EXPORTS_W void registerDepth(InputArray unregisteredCameraMatrix, InputArray 
  * @param depth the depth image
  * @param in_K
  * @param in_points the list of xy coordinates
- * @param points3d the resulting 3d points
+ * @param points3d the resulting 3d points (point is represented by 4 chanels value [x, y, z, 0])
  */
 CV_EXPORTS_W void depthTo3dSparse(InputArray depth, InputArray in_K, InputArray in_points, OutputArray points3d);
 
@@ -107,7 +107,7 @@ CV_EXPORTS_W void depthTo3dSparse(InputArray depth, InputArray in_K, InputArray 
  * @param depth the depth image (if given as short int CV_U, it is assumed to be the depth in millimeters
  *              (as done with the Microsoft Kinect), otherwise, if given as CV_32F or CV_64F, it is assumed in meters)
  * @param K The calibration matrix
- * @param points3d the resulting 3d points. They are of depth the same as `depth` if it is CV_32F or CV_64F, and the
+ * @param points3d the resulting 3d points (point is represented by 4 chanels value [x, y, z, 0]). They are of depth the same as `depth` if it is CV_32F or CV_64F, and the
  *        depth of `K` if `depth` is of depth CV_U
  * @param mask the mask of the points to consider (can be empty)
  */
