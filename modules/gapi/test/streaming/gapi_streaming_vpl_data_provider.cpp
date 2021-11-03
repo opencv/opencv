@@ -86,7 +86,7 @@ TEST_P(OneVPL_Source_MFPDispatcherTest, open_and_decode_file)
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
-    mfx_param_0.Data.U32 = IDataProvider::codec_id_to_mfx(provider_ptr->get_codec());
+    mfx_param_0.Data.U32 = provider_ptr->get_mfx_codec_id();
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
                                                     mfx_param_0), MFX_ERR_NONE);
 
@@ -246,6 +246,35 @@ TEST(OneVPL_Source_MFPAsyncDemux, async_flush) {
     EXPECT_EQ(test::IntrusiveAsyncDemuxDataProvider::destroyed, true);
 }
 
+TEST(OneVPL_Source_MFPAsyncDemux, eof_async_detection) {
+    if (!initTestDataPathSilent()) {
+        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
+    }
+
+    using namespace cv::gapi::wip::onevpl;
+
+    source_t path = findDataFile("highgui/video/sample_322x242_15frames.yuv420p.libx265.mp4");
+    test::IntrusiveAsyncDemuxDataProvider::need_request_next = false;
+    const size_t preprocessed_samples_count = 0; // do not ask sample at start
+    test::IntrusiveAsyncDemuxDataProvider provider(path, preprocessed_samples_count);
+    std::promise<void> start_consume_data;
+    std::future<void> wait_consume_data = start_consume_data.get_future();
+
+    std::thread fetcher([&provider, &start_consume_data]() {
+        std::shared_ptr<mfxBitstream> stream;
+        start_consume_data.set_value();
+        EXPECT_EQ(provider.fetch_bitstream_data(stream), MFX_ERR_MORE_DATA);
+        EXPECT_FALSE(stream);
+    });
+
+    wait_consume_data.wait();
+    std::this_thread::sleep_for(std::chrono::seconds(2));   // hope fetched has slept on condition
+
+    test::IntrusiveAsyncDemuxDataProvider::need_request_next = true;
+    provider.on_read_sample_impl(S_OK, 0, MF_SOURCE_READERF_ENDOFSTREAM, 0, nullptr);
+    fetcher.join();
+}
+
 TEST(OneVPL_Source_MFPAsyncDemux, preprocessed_limit) {
 }
 
@@ -329,7 +358,7 @@ TEST_P(OneVPL_Source_MFPAsyncDispatcherTest, open_and_decode_file)
     EXPECT_TRUE(cfg_inst_0);
     mfxVariant mfx_param_0;
     mfx_param_0.Type = MFX_VARIANT_TYPE_U32;
-    mfx_param_0.Data.U32 = IDataProvider::codec_id_to_mfx(provider_ptr->get_codec());
+    mfx_param_0.Data.U32 = provider_ptr->get_mfx_codec_id();
     EXPECT_EQ(MFXSetConfigFilterProperty(cfg_inst_0,(mfxU8 *)"mfxImplDescription.mfxDecoderDescription.decoder.CodecID",
                                                     mfx_param_0), MFX_ERR_NONE);
 

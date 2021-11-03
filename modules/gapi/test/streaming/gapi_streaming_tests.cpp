@@ -290,8 +290,8 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
         EXPECT_TRUE(in);
     }
 
-    CodecID get_codec() const override {
-        return CodecID::HEVC;
+    mfx_codec_id_type get_mfx_codec_id() const override {
+        return MFX_CODEC_HEVC;
     }
 
     mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitstream) override {
@@ -307,7 +307,7 @@ struct StreamDataProvider : public cv::gapi::wip::onevpl::IDataProvider {
                 throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
                                          std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
             }
-            out_bitstream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+            out_bitstream->CodecId = get_mfx_codec_id();
         }
 
         mfxU8 *p0 = out_bitstream->Data;

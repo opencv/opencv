@@ -1,3 +1,4 @@
+#if 0
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
@@ -24,7 +25,7 @@ struct GAPI_EXPORTS MFPDemuxDataProvider : public IDataProvider {
     MFPDemuxDataProvider(const std::string& file_path);
     ~MFPDemuxDataProvider();
 
-    CodecID get_codec() const override;
+    mfx_codec_id_type get_mfx_codec_id() const override;
     mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
     bool empty() const override;
 private:
@@ -32,7 +33,7 @@ private:
     ComPtrGuard<IMFMediaSource> source;
     ComPtrGuard<IMFSourceReader> source_reader;
 
-    CodecID codec;
+    mfx_codec_id_type codec;
 };
 } // namespace onevpl
 } // namespace wip
@@ -57,3 +58,4 @@ struct GAPI_EXPORTS MFPDemuxDataProvider : public IDataProvider {
 #endif // _WIN32
 #endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_DEMUX_MFP_DATA_PROVIDER_HPP
+#endif // 0

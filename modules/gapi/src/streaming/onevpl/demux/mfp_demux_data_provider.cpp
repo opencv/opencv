@@ -1,3 +1,4 @@
+#if 0
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
@@ -286,7 +287,7 @@ static IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
 MFPDemuxDataProvider::MFPDemuxDataProvider(const std::string& file_path) :
   source(createCOMPtrGuard<IMFMediaSource>()),
   source_reader(createCOMPtrGuard<IMFSourceReader>()),
-  codec(CodecID::UNCOMPRESSED) {
+  codec(std::numeric_limits<uint32_t>::max()) {
     HRESULT hr = S_OK;
     hr = MFStartup(MF_VERSION);
     if (FAILED(hr)) {
@@ -461,7 +462,7 @@ MFPDemuxDataProvider::~MFPDemuxDataProvider() {
                            "deinitialized");
 }
 
-MFPDemuxDataProvider::CodecID MFPDemuxDataProvider::get_codec() const {
+IDataProvider::mfx_codec_id_type MFPDemuxDataProvider::get_mfx_codec_id() const {
     return codec;
 }
 
@@ -558,7 +559,7 @@ mfxStatus MFPDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstrea
             throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
                                      std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
         }
-        out_bitstream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+        out_bitstream->CodecId = get_mfx_codec_id();
     }
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
@@ -605,3 +606,4 @@ bool MFPDemuxDataProvider::empty() const override {
 } // namespace cv
 
 #endif // HAVE_ONEVPL
+#endif // 0

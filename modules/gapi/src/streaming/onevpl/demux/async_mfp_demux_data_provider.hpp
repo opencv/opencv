@@ -41,7 +41,7 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider,
                               size_t keep_preprocessed_buf_count_value = 3);
     ~MFPAsyncDemuxDataProvider();
 
-    CodecID get_codec() const override;
+    mfx_codec_id_type get_mfx_codec_id() const override;
     mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
     bool empty() const override;
 
@@ -85,7 +85,7 @@ private:
     ComPtrGuard<IMFSourceReader> source_reader;
     std::atomic<ULONG> com_interface_reference_count;
 
-    CodecID codec;
+    mfx_codec_id_type codec;
 
     // worker & processing buffers
     std::map<void*, ComPtrGuard<IMFMediaBuffer>> worker_key_to_buffer_mapping_storage;

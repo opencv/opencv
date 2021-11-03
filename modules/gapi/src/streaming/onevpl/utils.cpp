@@ -152,6 +152,27 @@ mfxU32 cstr_to_mfx_codec_id(const char* cstr) {
     throw std::logic_error(std::string("Cannot parse \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\" value: ") + cstr);
 }
 
+const char* mfx_codec_id_to_cstr(mfxU32 mfx_id) {
+    switch(mfx_id) {
+        case MFX_CODEC_AVC:
+            return "MFX_CODEC_AVC";
+        case MFX_CODEC_HEVC:
+            return "MFX_CODEC_HEVC";
+        case MFX_CODEC_MPEG2:
+            return "MFX_CODEC_MPEG2";
+        case MFX_CODEC_VC1:
+            return "MFX_CODEC_VC1";
+        case MFX_CODEC_VP9:
+            return "MFX_CODEC_VP9";
+        case MFX_CODEC_AV1:
+            return "MFX_CODEC_AV1";
+        case MFX_CODEC_JPEG:
+            return "MFX_CODEC_JPEG";
+        default:
+            return "<unsupported>";
+    }
+}
+
 const char* mfx_codec_type_to_cstr(const mfxU32 fourcc, const mfxU32 type) {
     switch (fourcc) {
         case MFX_CODEC_JPEG: {

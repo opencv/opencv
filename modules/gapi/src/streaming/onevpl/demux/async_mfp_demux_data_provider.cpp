@@ -250,26 +250,27 @@ static const char* GetGUIDNameConst(const GUID& guid)
     return "<unknown>";
 }
 
-static IDataProvider::CodecID convert_to_CodecId(const GUID& guid) {
-    if (guid== MFVideoFormat_H264) {
-        return IDataProvider::CodecID::AVC;
+static IDataProvider::mfx_codec_id_type convert_to_mfx_codec_id(const GUID& guid) {
+    if (guid == MFVideoFormat_H264) {
+        return MFX_CODEC_AVC;
     } else if (guid == MFVideoFormat_H265 ||
                guid == MFVideoFormat_HEVC ||
                guid == MFVideoFormat_HEVC_ES) {
-        return IDataProvider::CodecID::HEVC;
+        return MFX_CODEC_HEVC;
     } else if (guid == MFAudioFormat_MPEG) {
-        return IDataProvider::CodecID::MPEG2;
+        return MFX_CODEC_MPEG2;
     } else if (guid == MFVideoFormat_WVC1) {
-        return IDataProvider::CodecID::VC1;
+        return MFX_CODEC_VC1;
     } else if (guid == MFVideoFormat_VP90) {
-        return IDataProvider::CodecID::VP9;
+        return MFX_CODEC_VP9;
     } else if (guid == MFVideoFormat_AV1) {
-        return IDataProvider::CodecID::AV1;
+        return MFX_CODEC_AV1;
     } else if (guid == MFVideoFormat_MJPG) {
-        return IDataProvider::CodecID::JPEG;
+        return MFX_CODEC_JPEG;
     }
-    throw std::runtime_error(std::string("unsupported codec type: ") +
-                             GetGUIDNameConst(guid));
+
+    throw DataProviderUnsupportedException(std::string("unsupported codec type: ") +
+                                           GetGUIDNameConst(guid));
 }
 
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_path,
@@ -277,7 +278,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
   keep_preprocessed_buf_count(keep_preprocessed_buf_count_value),
   source(createCOMPtrGuard<IMFMediaSource>()),
   source_reader(createCOMPtrGuard<IMFSourceReader>()),
-  codec(CodecID::UNCOMPRESSED),
+  codec(std::numeric_limits<uint32_t>::max()),
   provider_state(State::InProgress) {
 
     submit_read_request.clear();
@@ -395,7 +396,7 @@ MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string& file_pat
 
             std::string is_codec_supported("unsupported, skip...");
             try {
-                codec = convert_to_CodecId(subtype);
+                codec = convert_to_mfx_codec_id(subtype);
                 is_stream_selected = true;
                 is_codec_supported = "selected!";
             } catch (...) {}
@@ -529,6 +530,7 @@ HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
 
         // close reader
         provider_state.store(State::Exhausted);
+        buffer_storage_non_empty_cond.notify_all();
         return hr;
     }
 
@@ -559,7 +561,7 @@ HRESULT MFPAsyncDemuxDataProvider::on_read_sample_impl(HRESULT status, DWORD,
 
             staging_stream->MaxLength = max_buffer_size;
             staging_stream->DataLength = curr_size;
-            staging_stream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+            staging_stream->CodecId = get_mfx_codec_id();
 
             GAPI_LOG_DEBUG(nullptr, "[" << this << "] bitstream created, data: " <<
                                     static_cast<void*>(staging_stream->Data) <<
@@ -592,6 +594,7 @@ STDMETHODIMP MFPAsyncDemuxDataProvider::OnEvent(DWORD, IMFMediaEvent *) {
 
 STDMETHODIMP MFPAsyncDemuxDataProvider::OnFlush(DWORD) {
     provider_state.store(State::Exhausted);
+    buffer_storage_non_empty_cond.notify_all();
     return S_OK;
 }
 
@@ -693,7 +696,7 @@ size_t MFPAsyncDemuxDataProvider::produce_worker_data(void *key,
 }
 
 /////////////// IDataProvider methods ///////////////
-MFPAsyncDemuxDataProvider::CodecID MFPAsyncDemuxDataProvider::get_codec() const {
+IDataProvider::mfx_codec_id_type MFPAsyncDemuxDataProvider::get_mfx_codec_id() const {
     return codec;
 }
 
@@ -740,7 +743,8 @@ mfxStatus MFPAsyncDemuxDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBit
         // EOF check: nothing to process at this point
         if (processing_locked_buffer_storage.empty()) {
             GAPI_DbgAssert(provider_state == State::Exhausted && "Source reader must be drained");
-             return MFX_ERR_MORE_DATA;
+            out_bitsream.reset();
+            return MFX_ERR_MORE_DATA;
         }
 
         out_bitsream = processing_locked_buffer_storage.front();

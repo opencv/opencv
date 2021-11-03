@@ -25,10 +25,10 @@ struct FileDataProvider : public IDataProvider {
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
     FileDataProvider(const std::string& file_path,
                      const std::vector<CfgParam> codec_params = {},
-                     size_t bitstream_data_size_value = 2000000);
+                     uint32_t bitstream_data_size_value = 2000000);
     ~FileDataProvider();
 
-    CodecID get_codec() const override;
+    mfx_codec_id_type get_mfx_codec_id() const override;
 
 #ifdef HAVE_ONEVPL
     mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) override;
@@ -37,8 +37,8 @@ struct FileDataProvider : public IDataProvider {
     bool empty() const override;
 private:
     file_ptr source_handle;
-    CodecID codec;
-    const size_t bitstream_data_size;
+    mfx_codec_id_type codec;
+    const uint32_t bitstream_data_size;
 };
 } // namespace onevpl
 } // namespace wip

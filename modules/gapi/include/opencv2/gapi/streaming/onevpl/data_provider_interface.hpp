@@ -8,6 +8,7 @@
 #define GAPI_STREAMING_ONEVPL_ONEVPL_DATA_PROVIDER_INTERFACE_HPP
 #include <exception>
 #include <limits>
+#include <memory>
 #include <string>
 
 #ifdef HAVE_ONEVPL
@@ -55,21 +56,7 @@ private:
  */
 struct GAPI_EXPORTS IDataProvider {
     using Ptr = std::shared_ptr<IDataProvider>;
-
-    enum class CodecID : uint16_t {
-        AVC,
-        HEVC,
-        MPEG2,
-        VC1,
-        VP9,
-        AV1,
-        JPEG,
-
-        UNCOMPRESSED = std::numeric_limits<uint16_t>::max()
-    };
-
-    static const char *to_cstr(CodecID codec);
-    static int codec_id_to_mfx(IDataProvider::CodecID codec);
+    using mfx_codec_id_type = uint32_t;
 
     virtual ~IDataProvider() = default;
 
@@ -77,21 +64,23 @@ struct GAPI_EXPORTS IDataProvider {
      * The function is used by onevpl::GSource to extract codec id from data
      *
      */
-    virtual CodecID get_codec() const = 0;
+    virtual mfx_codec_id_type get_mfx_codec_id() const = 0;
 
     /**
      * The function is used by onevpl::GSource to extract binary data stream from @ref IDataProvider
      * implementation.
      *
      * It MUST throw `DataProviderException` kind exceptions in fail cases.
-     * It MUST return 0 in EOF which considered as not-fail case.
+     * It MUST return MFX_ERR_MORE_DATA in EOF which considered as not-fail case.
      *
      * @param out_data_bytes_size the available capacity of out_data buffer.
-     * @param out_data the output consumer buffer with capacity out_data_bytes_size.
+     * @param in_out_bitsream the input-output reference on MFX bitstream buffer which MUST be empty at the first request
+     * to allow implementation to allocate it by itself and to return back. Subsequent invocation of `fetch_bitstream_data`
+     * MUST use the previously used in_out_bitsream to avoid skipping rest of hasn't been consumed frames
      * @return fetched bytes count.
      */
 #ifdef HAVE_ONEVPL
-    virtual mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &out_bitsream) = 0;
+    virtual mfxStatus fetch_bitstream_data(std::shared_ptr<mfxBitstream> &in_out_bitsream) = 0;
 #endif // HAVE_ONEVPL
     /**
      * The function is used by onevpl::GSource to check more binary data availability.

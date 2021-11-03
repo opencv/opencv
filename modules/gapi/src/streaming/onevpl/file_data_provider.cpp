@@ -8,6 +8,7 @@
 
 #include "streaming/onevpl/file_data_provider.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
+#include "streaming/onevpl/utils.hpp"
 #include "logger.hpp"
 
 namespace cv {
@@ -18,7 +19,7 @@ namespace onevpl {
 #ifdef HAVE_ONEVPL
 FileDataProvider::FileDataProvider(const std::string& file_path,
                                    const std::vector<CfgParam> codec_params,
-                                   size_t bitstream_data_size_value) :
+                                   uint32_t bitstream_data_size_value) :
     source_handle(nullptr, &fclose),
     bitstream_data_size(bitstream_data_size_value) {
 
@@ -37,38 +38,7 @@ FileDataProvider::FileDataProvider(const std::string& file_path,
         return;
     }
 
-    mfxVariant requested_codec = cfg_param_to_mfx_variant(*codec_it);
-    switch(requested_codec.Data.U32) {
-        case MFX_CODEC_AVC:
-            codec = IDataProvider::CodecID::AVC;
-            break;
-        case MFX_CODEC_HEVC:
-            codec = IDataProvider::CodecID::HEVC;
-            break;
-        case MFX_CODEC_MPEG2:
-            codec = IDataProvider::CodecID::MPEG2;
-            break;
-        case MFX_CODEC_VC1:
-            codec = IDataProvider::CodecID::AVC;
-            break;
-        case MFX_CODEC_VP9:
-            codec = IDataProvider::CodecID::VP9;
-            break;
-        case MFX_CODEC_AV1:
-            codec = IDataProvider::CodecID::AV1;
-            break;
-        case MFX_CODEC_JPEG:
-            codec = IDataProvider::CodecID::JPEG;
-            break;
-        default:
-            GAPI_LOG_WARNING(nullptr, "[" << this << "] " <<
-                                      "unsupported CodecId requested: " << requested_codec.Data.U32 <<
-                                      " check CfgParam \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\"");
-            throw DataProviderUnsupportedException{
-                "unsupported \"mfxImplDescription.mfxDecoderDescription.decoder.CodecID\""
-                " requested for demultiplexed raw data"
-            };
-    }
+    codec = cfg_param_to_mfx_variant(*codec_it).Data.U32;
 
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "opening file: " << file_path);
@@ -79,12 +49,12 @@ FileDataProvider::FileDataProvider(const std::string& file_path,
     }
 
     GAPI_LOG_INFO(nullptr, "[" << this << "] " <<
-                            "file: " << file_path << " opened, codec requested: " << to_cstr(codec));
+                            "file: " << file_path << " opened, codec requested: " << mfx_codec_id_to_cstr(codec));
 }
 
 FileDataProvider::~FileDataProvider() = default;
 
-FileDataProvider::CodecID FileDataProvider::get_codec() const {
+IDataProvider::mfx_codec_id_type FileDataProvider::get_mfx_codec_id() const {
     return codec;
 }
 
@@ -104,7 +74,7 @@ mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &
             throw std::runtime_error("Cannot allocate bitstream.Data bytes: " +
                                      std::to_string(out_bitstream->MaxLength * sizeof(mfxU8)));
         }
-        out_bitstream->CodecId = IDataProvider::codec_id_to_mfx(get_codec());
+        out_bitstream->CodecId = get_mfx_codec_id();
     }
     GAPI_LOG_DEBUG(nullptr, "[" << this << "] " <<
                             "bitstream before fetch, DataOffset: " <<
@@ -133,7 +103,7 @@ mfxStatus FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfxBitstream> &
             throw DataProviderSystemErrorException (errno, "FileDataProvider::fetch_bitstream_data error read");
         }
     }
-    out_bitstream->DataLength += bytes_count;
+    out_bitstream->DataLength += static_cast<mfxU32>(bytes_count);
     GAPI_LOG_DEBUG(nullptr, "bitstream after fetch, DataOffset: " << out_bitstream->DataOffset <<
                             ", DataLength: " << out_bitstream->DataLength);
     if (out_bitstream->DataLength == 0)
@@ -158,7 +128,7 @@ FileDataProvider::FileDataProvider(const std::string&,
 
 FileDataProvider::~FileDataProvider() = default;
 
-FileDataProvider::CodecID FileDataProvider::get_codec() const {
+IDataProvider::mfx_codec_id_type FileDataProvider::get_mfx_codec_id() const {
     return codec;
 }
 

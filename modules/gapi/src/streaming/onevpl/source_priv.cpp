@@ -194,7 +194,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
     // initialize decoder
     // Find codec ID from config
-    uint32_t decoder_id = IDataProvider::codec_id_to_mfx(provider->get_codec());
+    IDataProvider::mfx_codec_id_type decoder_id = provider->get_mfx_codec_id();
 
     // create session driving engine if required
     if (!engine) {
