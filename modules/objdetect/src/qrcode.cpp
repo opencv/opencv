@@ -200,7 +200,7 @@ vector<Vec3d> QRDetect::searchHorizontalLines()
             }
         }
         pixels_position.push_back(width_bin_barcode - 1);
-        for (size_t i = 2; i < pixels_position.size() - 4; i+=2)
+        for (size_t i = 2; i < pixels_position.size() - 3; i+=2)
         {
             test_lines[0] = static_cast<double>(pixels_position[i - 1] - pixels_position[i - 2]);
             test_lines[1] = static_cast<double>(pixels_position[i    ] - pixels_position[i - 1]);
