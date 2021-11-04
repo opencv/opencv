@@ -587,63 +587,84 @@ OPENCV_HAL_IMPL_RVV_SELF_REINTERPRET(int64x2, s64)
 OPENCV_HAL_IMPL_RVV_SELF_REINTERPRET(float64x2, f64)
 #endif
 
-#define OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(_Tpvec1, _Tpvec2, _nTpvec1, _nTpvec2, suffix1, suffix2, nsuffix1, nsuffix2, width1, width2, vl1, vl2) \
+#define OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(_Tpvec1, _Tp1, _Tpvec2, _Tp2, _nTpvec1, _nTpvec2, suffix1, suffix2, nsuffix1, nsuffix2, width1, width2, vl1, vl2) \
 inline v_##_Tpvec1 v_reinterpret_as_##suffix1(const v_##_Tpvec2& v) \
 { \
-    return v_##_Tpvec1((_nTpvec1)vle##width2##_v_##nsuffix2##m1(v.val, vl2)); \
+    return v_##_Tpvec1(vreinterpret_v_##nsuffix2##m1_##nsuffix1##m1(v));\
 } \
 inline v_##_Tpvec2 v_reinterpret_as_##suffix2(const v_##_Tpvec1& v) \
 { \
-    return v_##_Tpvec2((_nTpvec2)vle##width1##_v_##nsuffix1##m1(v.val, vl1)); \
+    return v_##_Tpvec2(vreinterpret_v_##nsuffix1##m1_##nsuffix2##m1(v));\
 }
 
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, int8x16, vuint8m1_t, vint8m1_t, u8, s8, u8, i8, 8, 8, 16, 16)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, int16x8, vuint16m1_t, vint16m1_t, u16, s16, u16, i16, 16, 16, 8, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, int32x4, vuint32m1_t, vint32m1_t, u32, s32, u32, i32, 32, 32, 4, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, float32x4, vuint32m1_t, vfloat32m1_t, u32, f32, u32, f32, 32, 32, 4, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int32x4, float32x4, vint32m1_t, vfloat32m1_t, s32, f32, i32, f32, 32, 32, 4, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, int64x2, vuint64m1_t, vint64m1_t, u64, s64, u64, i64, 64, 64, 2, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, uint16x8, vuint8m1_t, vuint16m1_t, u8, u16, u8, u16, 8, 16, 16, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, uint32x4, vuint8m1_t, vuint32m1_t, u8, u32, u8, u32, 8, 32, 16, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, uint64x2, vuint8m1_t, vuint64m1_t, u8, u64, u8, u64, 8, 64, 16, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, uint32x4, vuint16m1_t, vuint32m1_t, u16, u32, u16, u32, 16, 32, 8, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, uint64x2, vuint16m1_t, vuint64m1_t, u16, u64, u16, u64, 16, 64, 8, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, uint64x2, vuint32m1_t, vuint64m1_t, u32, u64, u32, u64, 32, 64, 4, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int8x16, int16x8, vint8m1_t, vint16m1_t, s8, s16, i8, i16, 8, 16, 16, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int8x16, int32x4, vint8m1_t, vint32m1_t, s8, s32, i8, i32, 8, 32, 16, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int8x16, int64x2, vint8m1_t, vint64m1_t, s8, s64, i8, i64, 8, 64, 16, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int16x8, int32x4, vint16m1_t, vint32m1_t, s16, s32, i16, i32, 16, 32, 8, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int16x8, int64x2, vint16m1_t, vint64m1_t, s16, s64, i16, i64, 16, 64, 8, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int32x4, int64x2, vint32m1_t, vint64m1_t, s32, s64, i32, i64, 32, 64, 4, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, int16x8, vuint8m1_t, vint16m1_t, u8, s16, u8, i16, 8, 16, 16, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, int32x4, vuint8m1_t, vint32m1_t, u8, s32, u8, i32, 8, 32, 16, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, int64x2, vuint8m1_t, vint64m1_t, u8, s64, u8, i64, 8, 64, 16, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, int8x16, vuint16m1_t, vint8m1_t, u16, s8, u16, i8, 16, 8, 8, 16)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, int32x4, vuint16m1_t, vint32m1_t, u16, s32, u16, i32, 16, 32, 8, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, int64x2, vuint16m1_t, vint64m1_t, u16, s64, u16, i64, 16, 64, 8, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, int8x16, vuint32m1_t, vint8m1_t, u32, s8, u32, i8, 32, 8, 4, 16)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, int16x8, vuint32m1_t, vint16m1_t, u32, s16, u32, i16, 32, 16, 4, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, int64x2, vuint32m1_t, vint64m1_t, u32, s64, u32, i64, 32, 64, 4, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, int8x16, vuint64m1_t, vint8m1_t, u64, s8, u64, i8, 64, 8, 2, 16)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, int16x8, vuint64m1_t, vint16m1_t, u64, s16, u64, i16, 64, 16, 2, 8)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, int32x4, vuint64m1_t, vint32m1_t, u64, s32, u64, i32, 64, 32, 2, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, float32x4, vuint8m1_t, vfloat32m1_t, u8, f32, u8, f32, 8, 32, 16, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, float32x4, vuint16m1_t, vfloat32m1_t, u16, f32, u16, f32, 16, 32, 8, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, float32x4, vuint64m1_t, vfloat32m1_t, u64, f32, u64, f32, 64, 32, 2, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int8x16, float32x4, vint8m1_t, vfloat32m1_t, s8, f32, i8, f32, 8, 32, 16, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int16x8, float32x4, vint16m1_t, vfloat32m1_t, s16, f32, i16, f32, 16, 32, 8, 4)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int64x2, float32x4, vint64m1_t, vfloat32m1_t, s64, f32, i64, f32, 64, 32, 2, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint8x16, uchar, int8x16, schar, vuint8m1_t, vint8m1_t, u8, s8, u8, i8, 8, 8, 16, 16)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint16x8, ushort, int16x8, short, vuint16m1_t, vint16m1_t, u16, s16, u16, i16, 16, 16, 8, 8)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint32x4, uint, int32x4, int, vuint32m1_t, vint32m1_t, u32, s32, u32, i32, 32, 32, 4, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint32x4, uint, float32x4, float, vuint32m1_t, vfloat32m1_t, u32, f32, u32, f32, 32, 32, 4, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int32x4, int, float32x4, float, vint32m1_t, vfloat32m1_t, s32, f32, i32, f32, 32, 32, 4, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint64x2, uint64, int64x2, int64, vuint64m1_t, vint64m1_t, u64, s64, u64, i64, 64, 64, 2, 2)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint64x2, float64x2, vuint64m1_t, vfloat64m1_t, u64, f64, u64, f64, 64, 64, 2, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int64x2, float64x2, vint64m1_t, vfloat64m1_t, s64, f64, i64, f64, 64, 64, 2, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint8x16, float64x2, vuint8m1_t, vfloat64m1_t, u8, f64, u8, f64, 8, 64, 16, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint16x8, float64x2, vuint16m1_t, vfloat64m1_t, u16, f64, u16, f64, 16, 64, 6, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(uint32x4, float64x2, vuint32m1_t, vfloat64m1_t, u32, f64, u32, f64, 32, 64, 4, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int8x16, float64x2, vint8m1_t, vfloat64m1_t, s8, f64, i8, f64, 8, 64, 16, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int16x8, float64x2, vint16m1_t, vfloat64m1_t, s16, f64, i16, f64, 16, 64, 8, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(int32x4, float64x2, vint32m1_t, vfloat64m1_t, s32, f64, i32, f64, 32, 64, 4, 2)
-OPENCV_HAL_IMPL_RVV_ONE_TIME_REINTERPRET(float32x4, float64x2, vfloat32m1_t, vfloat64m1_t, f32, f64, f32, f64, 32, 64, 4, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint64x2, uint64, float64x2, double, vuint64m1_t, vfloat64m1_t, u64, f64, u64, f64, 64, 64, 2, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int64x2, int64, float64x2, double, vint64m1_t, vfloat64m1_t, s64, f64, i64, f64, 64, 64, 2, 2)
 #endif
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint8x16, uchar, uint16x8, ushort, vuint8m1_t, vuint16m1_t, u8, u16, u8, u16, 8, 16, 16, 8)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint8x16, uchar, uint32x4, uint, vuint8m1_t, vuint32m1_t, u8, u32, u8, u32, 8, 32, 16, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint8x16, uchar, uint64x2, uint64, vuint8m1_t, vuint64m1_t, u8, u64, u8, u64, 8, 64, 16, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint16x8, ushort, uint32x4, uint, vuint16m1_t, vuint32m1_t, u16, u32, u16, u32, 16, 32, 8, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint16x8, ushort, uint64x2, uint64, vuint16m1_t, vuint64m1_t, u16, u64, u16, u64, 16, 64, 8, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(uint32x4, uint, uint64x2, uint64, vuint32m1_t, vuint64m1_t, u32, u64, u32, u64, 32, 64, 4, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int8x16, schar, int16x8, short, vint8m1_t, vint16m1_t, s8, s16, i8, i16, 8, 16, 16, 8)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int8x16, schar, int32x4, int, vint8m1_t, vint32m1_t, s8, s32, i8, i32, 8, 32, 16, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int8x16, schar, int64x2, int64, vint8m1_t, vint64m1_t, s8, s64, i8, i64, 8, 64, 16, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int16x8, short, int32x4, int, vint16m1_t, vint32m1_t, s16, s32, i16, i32, 16, 32, 8, 4)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int16x8, short, int64x2, int64, vint16m1_t, vint64m1_t, s16, s64, i16, i64, 16, 64, 8, 2)
+OPENCV_HAL_IMPL_RVV_NATIVE_REINTERPRET(int32x4, int, int64x2, int64, vint32m1_t, vint64m1_t, s32, s64, i32, i64, 32, 64, 4, 2)
+
+
+#define OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(_Tpvec1, _Tp1, _Tpvec2, _Tp2, _nTpvec1, _nTpvec2, suffix1, suffix2, nsuffix1, nsuffix2, width1, width2, vl1, vl2) \
+inline v_##_Tpvec1 v_reinterpret_as_##suffix1(const v_##_Tpvec2& v) \
+{ \
+    return v_##_Tpvec1(vreinterpret_v_##nsuffix1##width2##m1_##nsuffix1##width1##m1(vreinterpret_v_##nsuffix2##width2##m1_##nsuffix1##width2##m1(v)));\
+} \
+inline v_##_Tpvec2 v_reinterpret_as_##suffix2(const v_##_Tpvec1& v) \
+{ \
+    return v_##_Tpvec2(vreinterpret_v_##nsuffix1##width2##m1_##nsuffix2##width2##m1(vreinterpret_v_##nsuffix1##width1##m1_##nsuffix1##width2##m1(v)));\
+}
+
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, uchar, int16x8, short, vuint8m1_t, vint16m1_t, u8, s16, u, i, 8, 16, 16, 8)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, uchar, int32x4, int, vuint8m1_t, vint32m1_t, u8, s32, u, i, 8, 32, 16, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, uchar, int64x2, int64, vuint8m1_t, vint64m1_t, u8, s64, u, i, 8, 64, 16, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, ushort, int8x16, schar, vuint16m1_t, vint8m1_t, u16, s8, u, i, 16, 8, 8, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, ushort, int32x4, int, vuint16m1_t, vint32m1_t, u16, s32, u, i, 16, 32, 8, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, ushort, int64x2, int64, vuint16m1_t, vint64m1_t, u16, s64, u, i, 16, 64, 8, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32x4, uint, int8x16, schar, vuint32m1_t, vint8m1_t, u32, s8, u, i, 32, 8, 4, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32x4, uint, int16x8, short, vuint32m1_t, vint16m1_t, u32, s16, u, i, 32, 16, 4, 8)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32x4, uint, int64x2, int64, vuint32m1_t, vint64m1_t, u32, s64, u, i, 32, 64, 4, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64x2, uint64, int8x16, schar, vuint64m1_t, vint8m1_t, u64, s8, u, i, 64, 8, 2, 16)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64x2, uint64, int16x8, short, vuint64m1_t, vint16m1_t, u64, s16, u, i, 64, 16, 2, 8)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64x2, uint64, int32x4, int, vuint64m1_t, vint32m1_t, u64, s32, u, i, 64, 32, 2, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, uchar, float32x4, float, vuint8m1_t, vfloat32m1_t, u8, f32, u, f, 8, 32, 16, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, ushort, float32x4, float, vuint16m1_t, vfloat32m1_t, u16, f32, u, f, 16, 32, 8, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64x2, uint64, float32x4, float, vuint64m1_t, vfloat32m1_t, u64, f32, u, f, 64, 32, 2, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8x16, schar, float32x4, float, vint8m1_t, vfloat32m1_t, s8, f32, i, f, 8, 32, 16, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int16x8, short, float32x4, float, vint16m1_t, vfloat32m1_t, s16, f32, i, f, 16, 32, 8, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int64x2, int64, float32x4, float, vint64m1_t, vfloat32m1_t, s64, f32, i, f, 64, 32, 2, 4)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, uchar, float64x2, double, vuint8m1_t, vfloat64m1_t, u8, f64, u, f, 8, 64, 16, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, ushort, float64x2, double, vuint16m1_t, vfloat64m1_t, u16, f64, u, f, 16, 64, 6, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32x4, uint, float64x2, double, vuint32m1_t, vfloat64m1_t, u32, f64, u, f, 32, 64, 4, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8x16, schar, float64x2, double, vint8m1_t, vfloat64m1_t, s8, f64, i, f, 8, 64, 16, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int16x8, short, float64x2, double, vint16m1_t, vfloat64m1_t, s16, f64, i, f, 16, 64, 8, 2)
+OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int32x4, int, float64x2, double, vint32m1_t, vfloat64m1_t, s32, f64, i, f, 32, 64, 4, 2)
+
+// Three times reinterpret
+inline v_float32x4 v_reinterpret_as_f32(const v_float64x2& v) \
+{ \
+    return v_float32x4(vreinterpret_v_u32m1_f32m1(vreinterpret_v_u64m1_u32m1(vreinterpret_v_f64m1_u64m1(v))));\
+} \
+inline v_float64x2 v_reinterpret_as_f64(const v_float32x4& v) \
+{ \
+    return v_float64x2(vreinterpret_v_u64m1_f64m1(vreinterpret_v_u32m1_u64m1(vreinterpret_v_f32m1_u32m1(v))));\
+}
 
 ////////////// Extract //////////////
 
