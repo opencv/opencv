@@ -13,14 +13,15 @@ ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX)
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java js)
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
-if(HAVE_TENGINE)
-  add_definitions(-DHAVE_TENGINE=1)
-endif()
 
 if(OPENCV_DNN_OPENCL AND HAVE_OPENCL)
   add_definitions(-DCV_OCL4DNN=1)
 else()
   ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
+endif()
+
+if(HAVE_TENGINE)
+  add_definitions(-DHAVE_TENGINE=1)
 endif()
 
 if(MSVC)
