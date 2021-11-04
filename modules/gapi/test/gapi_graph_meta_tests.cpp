@@ -15,18 +15,6 @@ namespace opencv_test {
 
 namespace {
 void initTestDataPath() {
-#ifndef WINRT
-    static bool initialized = false;
-    if (!initialized)
-    {
-        // Since G-API has no own test data (yet), it is taken from the common space
-        const char* testDataPath = getenv("OPENCV_TEST_DATA_PATH");
-        if (testDataPath != nullptr) {
-            cvtest::addDataSearchPath(testDataPath);
-            initialized = true;
-        }
-    }
-#endif // WINRT
 }
 } // anonymous namespace
 
