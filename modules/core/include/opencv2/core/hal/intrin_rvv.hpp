@@ -1435,9 +1435,10 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
     return (scalartype)(_wTpvec(res).get0()); \
 }
 
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32x4, v_float32x4, vfloat32m1_t, float, f32, f32, 4, fredsum)
+// vfredsum for float has renamed to fredosum, also updated in GNU.
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32x4, v_float32x4, vfloat32m1_t, float, f32, f32, 4, fredosum)
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64x2, v_float64x2, vfloat64m1_t, double, f64, f64, 2, fredsum)
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64x2, v_float64x2, vfloat64m1_t, double, f64, f64, 2, fredosum)
 #endif
 
 
