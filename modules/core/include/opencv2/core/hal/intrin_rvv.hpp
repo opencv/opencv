@@ -1563,6 +1563,8 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 
 ////////////// Check all/any //////////////
 
+// use overloaded vpopc in clang, no casting like (vuint64m1_t) is needed.
+#ifndef __clang__
 #define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, suffix, shift, vl) \
 inline bool v_check_all(const _Tpvec& a) \
 { \
@@ -1612,7 +1614,55 @@ inline bool v_check_all(const v_float64x2& a)
 inline bool v_check_any(const v_float64x2& a)
 { return v_check_any(v_reinterpret_as_u64(a)); }
 #endif
+#else
+#define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, vl) \
+inline bool v_check_all(const _Tpvec& a) \
+{ \
+    return vpopc(vmslt(a, 0, vl), vl) == vl; \
+} \
+inline bool v_check_any(const _Tpvec& a) \
+{ \
+    return vpopc(vmslt(a, 0, vl), vl) != 0; \
+}
 
+OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int8x16, 16)
+OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int16x8, 8)
+OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int32x4, 4)
+OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int64x2, 2)
+
+
+inline bool v_check_all(const v_uint8x16& a)
+{ return v_check_all(v_reinterpret_as_s8(a)); }
+inline bool v_check_any(const v_uint8x16& a)
+{ return v_check_any(v_reinterpret_as_s8(a)); }
+
+inline bool v_check_all(const v_uint16x8& a)
+{ return v_check_all(v_reinterpret_as_s16(a)); }
+inline bool v_check_any(const v_uint16x8& a)
+{ return v_check_any(v_reinterpret_as_s16(a)); }
+
+inline bool v_check_all(const v_uint32x4& a)
+{ return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_uint32x4& a)
+{ return v_check_any(v_reinterpret_as_s32(a)); }
+
+inline bool v_check_all(const v_float32x4& a)
+{ return v_check_all(v_reinterpret_as_s32(a)); }
+inline bool v_check_any(const v_float32x4& a)
+{ return v_check_any(v_reinterpret_as_s32(a)); }
+
+inline bool v_check_all(const v_uint64x2& a)
+{ return v_check_all(v_reinterpret_as_s64(a)); }
+inline bool v_check_any(const v_uint64x2& a)
+{ return v_check_any(v_reinterpret_as_s64(a)); }
+
+#if CV_SIMD128_64F
+inline bool v_check_all(const v_float64x2& a)
+{ return v_check_all(v_reinterpret_as_s64(a)); }
+inline bool v_check_any(const v_float64x2& a)
+{ return v_check_any(v_reinterpret_as_s64(a)); }
+#endif
+#endif
 ////////////// abs //////////////
 
 #define OPENCV_HAL_IMPL_RVV_ABSDIFF(_Tpvec, abs) \
