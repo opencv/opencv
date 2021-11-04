@@ -19,6 +19,8 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD128_64F 1
 
 //////////// Unsupported native intrinsics in C++ ////////////
+// The following types have been defined in clang, but not in GCC yet.
+#ifndef __clang__
 
 struct vuint8mf2_t
 {
@@ -224,6 +226,7 @@ inline vint16mf2_t vwcvt_x_x_v_i16mf2 (vint8mf4_t src, size_t vl)
     }
     return vle16_v_i16mf2(tmp, vl);
 }
+#endif
 
 //////////// Types ////////////
 
