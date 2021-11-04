@@ -282,7 +282,10 @@ TEST_P(Test_Model, Classify)
 
 TEST_P(Test_Model, DetectRegion)
 {
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_MEMORY_2GB
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
@@ -332,7 +335,10 @@ TEST_P(Test_Model, DetectRegion)
 
 TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 {
-    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_MEMORY_1GB);
+    applyTestTag(
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_MEMORY_2GB
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
@@ -582,6 +588,10 @@ TEST_P(Test_Model, Detection_normalized)
 
 TEST_P(Test_Model, Segmentation)
 {
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB
+    );
+
     std::string inp = _tf("dog416.png");
     std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
     std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
