@@ -710,7 +710,7 @@ OPENCV_HAL_IMPL_RVV_EXTRACT_FP(v_float64x2, double, f64, vfmv_f_s_f64m1_f64, 2)
 #define OPENCV_HAL_IMPL_RVV_LOADSTORE_OP(_Tpvec, _nTpvec, _Tp, hvl, vl, width, suffix, vmv) \
 inline _Tpvec v_load(const _Tp* ptr) \
 { \
-    return _Tpvec((_nTpvec)vle8_v_u8m1((uchar*)ptr, 16)); \
+    return _Tpvec(vle##width##_v_##suffix##m1(ptr, vl)); \
 } \
 inline _Tpvec v_load_aligned(const _Tp* ptr) \
 { \
@@ -723,7 +723,7 @@ inline _Tpvec v_load_low(const _Tp* ptr) \
 } \
 inline void v_store(_Tp* ptr, const _Tpvec& a) \
 { \
-    vse8_v_u8m1((uchar*)ptr, vle8_v_u8m1((uchar*)a.val, 16), 16); \
+    vse##width##_v_##suffix##m1(ptr, a, vl); \
 } \
 inline void v_store_aligned(_Tp* ptr, const _Tpvec& a) \
 { \
