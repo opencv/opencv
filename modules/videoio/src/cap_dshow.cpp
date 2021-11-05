@@ -93,8 +93,9 @@ Thanks to:
 #pragma warning(disable: 4995)
 #endif
 
-#ifdef __MINGW32__
-// MinGW does not understand COM interfaces
+#if defined(__clang__)  // clang or MSVC clang
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#elif defined(__GNUC__) // MinGW
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #define STRSAFE_NO_DEPRECATE
 #endif
