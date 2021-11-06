@@ -2984,7 +2984,7 @@ public:
         CvTrackbar& trackbar = *trackbar_ptr;
         CV_CheckLE(range.start, range.end, "Invalid trackbar range");
         trackbar.minval = range.start;
-        trackbar.maxval = range.start;
+        trackbar.maxval = range.end;
         SendMessage(trackbar.hwnd, TBM_SETRANGEMIN, (WPARAM)TRUE, (LPARAM)trackbar.minval);
         SendMessage(trackbar.hwnd, TBM_SETRANGEMAX, (WPARAM)TRUE, (LPARAM)trackbar.maxval);
     }
