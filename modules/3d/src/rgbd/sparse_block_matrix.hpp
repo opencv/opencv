@@ -141,7 +141,8 @@ struct BlockSparseMat
     bool sparseSolve(InputArray B, OutputArray X, bool checkSymmetry = true, OutputArray predB = cv::noArray()) const
     {
         Eigen::SparseMatrix<_Tp> bigA = toEigen();
-        Mat mb = B.getMat().t();
+        Mat mb = B.getMat();
+        mb = mb.cols == 1 ? mb : mb.t();
         Eigen::Matrix<_Tp, -1, 1> bigB;
         cv2eigen(mb, bigB);
 
