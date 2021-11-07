@@ -105,6 +105,7 @@ namespace detail
 
 class PoseGraphImpl : public detail::PoseGraph
 {
+public:
     struct Pose3d
     {
         Vec3d t;
@@ -144,6 +145,25 @@ class PoseGraphImpl : public detail::PoseGraph
         inline void normalizeRotation()
         {
             q = q.normalize();
+        }
+
+        // jacobian of exponential (exp(x)* q) : R_6->SE(3) near x == 0
+        inline Matx<double, 7, 6> expJacobian()
+        {
+            Matx43d qj = expQuatJacobian(q);
+            // x node layout is (rot_x, rot_y, rot_z, trans_x, trans_y, trans_z)
+            // pose layout is (q_w, q_x, q_y, q_z, trans_x, trans_y, trans_z)
+            return concatVert(concatHor(qj, Matx43d()),
+                              concatHor(Matx33d(), Matx33d::eye()));
+        }
+
+        inline Pose3d oplus(const Vec6d dx)
+        {
+            Vec3d deltaRot(dx[0], dx[1], dx[2]), deltaTrans(dx[3], dx[4], dx[5]);
+            Pose3d p;
+            p.q = Quatd(0, deltaRot[0], deltaRot[1], deltaRot[2]).exp() * this->q;
+            p.t = this->t + deltaTrans;
+            return p;
         }
     };
 
@@ -200,8 +220,6 @@ class PoseGraphImpl : public detail::PoseGraph
         Matx66f sqrtInfo;
     };
 
-
-public:
     PoseGraphImpl() : nodes(), edges()
     { }
     virtual ~PoseGraphImpl() CV_OVERRIDE
@@ -301,12 +319,11 @@ public:
     // calculate cost function based on provided nodes parameters
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
-    // Termination criteria are max number of iterations and min relative energy change to current energy
     // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
-    virtual int optimize(const cv::TermCriteria& tc = cv::TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-6)) CV_OVERRIDE;
+    virtual int optimize() CV_OVERRIDE;
 
     std::map<size_t, Node> nodes;
-    std::vector<Edge>   edges;
+    std::vector<Edge> edges;
 };
 
 
@@ -527,36 +544,10 @@ double PoseGraphImpl::calcEnergyNodes(const std::map<size_t, Node>& newNodes) co
 
 #if defined(HAVE_EIGEN)
 
-// from Ceres, equation energy change:
-// eq. energy = 1/2 * (residuals + J * step)^2 =
-// 1/2 * ( residuals^2 + 2 * residuals^T * J * step + (J*step)^T * J * step)
-// eq. energy change = 1/2 * residuals^2 - eq. energy =
-// residuals^T * J * step + 1/2 * (J*step)^T * J * step =
-// (residuals^T * J + 1/2 * step^T * J^T * J) * step =
-// step^T * ((residuals^T * J)^T + 1/2 * (step^T * J^T * J)^T) =
-// 1/2 * step^T * (2 * J^T * residuals + J^T * J * step) =
-// 1/2 * step^T * (2 * J^T * residuals + (J^T * J + LMDiag - LMDiag) * step) =
-// 1/2 * step^T * (2 * J^T * residuals + (J^T * J + LMDiag) * step - LMDiag * step) =
-// 1/2 * step^T * (J^T * residuals - LMDiag * step) =
-// 1/2 * x^T * (jtb - lmDiag^T * x)
-static inline double calcJacCostChange(const std::vector<double>& jtb,
-                                       const std::vector<double>& x,
-                                       const std::vector<double>& lmDiag)
-{
-    double jdiag = 0.0;
-    for (size_t i = 0; i < x.size(); i++)
-    {
-        jdiag += x[i] * (jtb[i] - lmDiag[i] * x[i]);
-    }
-    double costChange = jdiag * 0.5;
-    return costChange;
-}
-
-
 // J := J * d_inv, d_inv = make_diag(di)
-// J^T*J := (J * d_inv)^T * J * d_inv = diag(di)* (J^T * J)* diag(di) = eltwise_mul(J^T*J, di*di^T)
+// J^T*J := (J * d_inv)^T * J * d_inv = diag(di) * (J^T * J) * diag(di) = eltwise_mul(J^T*J, di*di^T)
 // J^T*b := (J * d_inv)^T * b = d_inv^T * J^T*b = eltwise_mul(J^T*b, di)
-static inline void doJacobiScaling(BlockSparseMat<double, 6, 6>& jtj, std::vector<double>& jtb, const std::vector<double>& di)
+static void doJacobiScalingSparse(BlockSparseMat<double, 6, 6>& jtj, Mat_<double>& jtb, const Mat_<double>& di)
 {
     // scaling J^T*J
     for (auto& ijv : jtj.ijValue)
@@ -568,335 +559,239 @@ static inline void doJacobiScaling(BlockSparseMat<double, 6, 6>& jtj, std::vecto
             for (int j = 0; j < 6; j++)
             {
                 Point2i pt(bpt.x * 6 + i, bpt.y * 6 + j);
-                m(i, j) *= di[pt.x] * di[pt.y];
+                m(i, j) *= di(pt.x) * di(pt.y);
             }
         }
     }
 
     // scaling J^T*b
-    for (size_t i = 0; i < di.size(); i++)
-    {
-        jtb[i] *= di[i];
-    }
+    jtb = jtb.mul(di);
 }
 
-
-int PoseGraphImpl::optimize(const cv::TermCriteria& tc)
+//TODO: robustness
+struct PoseGraphLevMarq : public BaseLevMarq
 {
-    if (!isValid())
+    PoseGraphLevMarq(PoseGraphImpl* pg_) :
+        BaseLevMarq(),
+        pg(pg_),
+        jtj(0),
+        jtb(),
+        tempNodes(),
+        numNodes(),
+        numEdges(),
+        placesIds(),
+        idToPlace(),
+        nVarNodes()
     {
-        CV_LOG_INFO(NULL, "Invalid PoseGraph that is either not connected or has invalid nodes");
-        return -1;
-    }
-
-    size_t numNodes = getNumNodes();
-    size_t numEdges = getNumEdges();
-
-    // Allocate indices for nodes
-    std::vector<size_t> placesIds;
-    std::map<size_t, size_t> idToPlace;
-    for (const auto& ni : nodes)
-    {
-        if (!ni.second.isFixed)
+        if (!pg->isValid())
         {
-            idToPlace[ni.first] = placesIds.size();
-            placesIds.push_back(ni.first);
+            CV_Error(cv::Error::Code::StsBadArg, "Invalid PoseGraph that is either not connected or has invalid nodes");
         }
+
+        this->numNodes = pg->getNumNodes();
+        this->numEdges = pg->getNumEdges();
+
+        // Allocate indices for nodes
+        for (const auto& ni : pg->nodes)
+        {
+            if (!ni.second.isFixed)
+            {
+                this->idToPlace[ni.first] = this->placesIds.size();
+                this->placesIds.push_back(ni.first);
+            }
+        }
+
+        this->nVarNodes = this->placesIds.size();
+        if (!this->nVarNodes)
+        {
+            CV_Error(cv::Error::Code::StsBadArg, "PoseGraph contains no non-constant nodes, skipping optimization");
+        }
+
+        if (!this->numEdges)
+        {
+            CV_Error(cv::Error::Code::StsBadArg, "PoseGraph has no edges, no optimization to be done");
+        }
+
+        CV_LOG_INFO(NULL, "Optimizing PoseGraph with " << this->numNodes << " nodes and " << this->numEdges << " edges");
+
+        this->nVars = this->nVarNodes * 6;
     }
 
-    size_t nVarNodes = placesIds.size();
-    if (!nVarNodes)
+
+    virtual bool calcFunc(double& energy, bool useProbeVars = false, bool calcEnergy = true, bool calcJacobian = false) CV_OVERRIDE
     {
-        CV_LOG_INFO(NULL, "PoseGraph contains no non-constant nodes, skipping optimization");
-        return -1;
-    }
+        std::map<size_t, PoseGraphImpl::Node>& nodes = useProbeVars ? tempNodes : pg->nodes;
 
-    if (numEdges == 0)
-    {
-        CV_LOG_INFO(NULL, "PoseGraph has no edges, no optimization to be done");
-        return -1;
-    }
-
-    CV_LOG_INFO(NULL, "Optimizing PoseGraph with " << numNodes << " nodes and " << numEdges << " edges");
-
-    size_t nVars = nVarNodes * 6;
-    BlockSparseMat<double, 6, 6> jtj(nVarNodes);
-    std::vector<double> jtb(nVars);
-
-    double energy = calcEnergyNodes(nodes);
-    double oldEnergy = energy;
-
-    CV_LOG_INFO(NULL, "#s" << " energy: " << energy);
-
-    // options
-    // stop conditions
-    bool checkIterations = (tc.type & TermCriteria::COUNT);
-    bool checkEps = (tc.type & TermCriteria::EPS);
-    const unsigned int maxIterations = tc.maxCount;
-    const double minGradientTolerance = 1e-6;
-    const double stepNorm2Tolerance = 1e-6;
-    const double relEnergyDeltaTolerance = tc.epsilon;
-    // normalize jacobian columns for better conditioning
-    // slows down sparse solver, but maybe this'd be useful for some other solver
-    const bool jacobiScaling = false;
-    const double minDiag = 1e-6;
-    const double maxDiag = 1e32;
-
-    const double initialLambdaLevMarq = 0.0001;
-    const double initialLmUpFactor = 2.0;
-    const double initialLmDownFactor = 3.0;
-
-    // finish reasons
-    bool tooLong          = false; // => not found
-    bool smallGradient    = false; // => found
-    bool smallStep        = false; // => found
-    bool smallEnergyDelta = false; // => found
-
-    // column scale inverted, for jacobian scaling
-    std::vector<double> di(nVars);
-
-    double lmUpFactor = initialLmUpFactor;
-    double lambdaLevMarq = initialLambdaLevMarq;
-
-    unsigned int iter = 0;
-    bool done = false;
-    while (!done)
-    {
-        jtj.clear();
-        std::fill(jtb.begin(), jtb.end(), 0.0);
-
-        // caching nodes jacobians
         std::vector<cv::Matx<double, 7, 6>> cachedJac;
-        for (auto id : placesIds)
+        if (calcJacobian)
         {
-            Pose3d p = nodes.at(id).pose;
-            Matx43d qj = expQuatJacobian(p.q);
-            // x node layout is (rot_x, rot_y, rot_z, trans_x, trans_y, trans_z)
-            // pose layout is (q_w, q_x, q_y, q_z, trans_x, trans_y, trans_z)
-            Matx<double, 7, 6> j = concatVert(concatHor(qj, Matx43d()),
-                                              concatHor(Matx33d(), Matx33d::eye()));
-            cachedJac.push_back(j);
+            jtj.clear();
+            std::fill(jtb.begin(), jtb.end(), 0.0);
+
+            // caching nodes jacobians
+            for (auto id : placesIds)
+            {
+                cachedJac.push_back(nodes.at(id).pose.expJacobian());
+            }
         }
 
-        // fill jtj and jtb
-        for (const auto& e : edges)
+        double totalErr = 0.0;
+        for (const auto& e : pg->edges)
         {
             size_t srcId = e.sourceNodeId, dstId = e.targetNodeId;
-            const Node& srcNode = nodes.at(srcId);
-            const Node& dstNode = nodes.at(dstId);
+            const PoseGraphImpl::Node& srcNode = nodes.at(srcId);
+            const PoseGraphImpl::Node& dstNode = nodes.at(dstId);
 
-            Pose3d srcP = srcNode.pose;
-            Pose3d tgtP = dstNode.pose;
+            const PoseGraphImpl::Pose3d& srcP = srcNode.pose;
+            const PoseGraphImpl::Pose3d& tgtP = dstNode.pose;
             bool srcFixed = srcNode.isFixed;
             bool dstFixed = dstNode.isFixed;
 
             Vec6d res;
             Matx<double, 6, 3> stj, ttj;
             Matx<double, 6, 4> sqj, tqj;
-            poseError(srcP.q, srcP.t, tgtP.q, tgtP.t, e.pose.q, e.pose.t, e.sqrtInfo,
-                      /* needJacobians = */ true, sqj, stj, tqj, ttj, res);
 
-            size_t srcPlace = (size_t)(-1), dstPlace = (size_t)(-1);
-            Matx66d sj, tj;
-            if (!srcFixed)
+            double err = poseError(srcP.q, srcP.t, tgtP.q, tgtP.t, e.pose.q, e.pose.t, e.sqrtInfo,
+             /* needJacobians = */ calcJacobian, sqj, stj, tqj, ttj, res);
+            totalErr += err;
+
+            if (calcJacobian)
             {
-                srcPlace = idToPlace.at(srcId);
-                sj = concatHor(sqj, stj) * cachedJac[srcPlace];
-
-                jtj.refBlock(srcPlace, srcPlace) += sj.t() * sj;
-
-                Vec6f jtbSrc = sj.t() * res;
-                for (int i = 0; i < 6; i++)
+                size_t srcPlace = (size_t)(-1), dstPlace = (size_t)(-1);
+                Matx66d sj, tj;
+                if (!srcFixed)
                 {
-                    jtb[6 * srcPlace + i] += -jtbSrc[i];
-                }
-            }
+                    srcPlace = idToPlace.at(srcId);
+                    sj = concatHor(sqj, stj) * cachedJac[srcPlace];
 
-            if (!dstFixed)
-            {
-                dstPlace = idToPlace.at(dstId);
-                tj = concatHor(tqj, ttj) * cachedJac[dstPlace];
+                    jtj.refBlock(srcPlace, srcPlace) += sj.t() * sj;
 
-                jtj.refBlock(dstPlace, dstPlace) += tj.t() * tj;
-
-                Vec6f jtbDst = tj.t() * res;
-                for (int i = 0; i < 6; i++)
-                {
-                    jtb[6 * dstPlace + i] += -jtbDst[i];
-                }
-            }
-
-            if (!(srcFixed || dstFixed))
-            {
-                Matx66d sjttj = sj.t() * tj;
-                jtj.refBlock(srcPlace, dstPlace) += sjttj;
-                jtj.refBlock(dstPlace, srcPlace) += sjttj.t();
-            }
-        }
-
-        CV_LOG_INFO(NULL, "#LM#s" << " energy: " << energy);
-
-        // do the jacobian conditioning improvement used in Ceres
-        if (jacobiScaling)
-        {
-            // L2-normalize each jacobian column
-            // vec d = {d_j = sum(J_ij^2) for each column j of J} = get_diag{ J^T * J }
-            // di = { 1/(1+sqrt(d_j)) }, extra +1 to avoid div by zero
-            if (iter == 0)
-            {
-                for (size_t i = 0; i < nVars; i++)
-                {
-                    double ds = sqrt(jtj.valElem(i, i)) + 1.0;
-                    di[i] = 1.0 / ds;
-                }
-            }
-
-            doJacobiScaling(jtj, jtb, di);
-        }
-
-        double gradientMax = 0.0;
-        // gradient max
-        for (size_t i = 0; i < nVars; i++)
-        {
-            gradientMax = std::max(gradientMax, abs(jtb[i]));
-        }
-
-        // Save original diagonal of jtj matrix for LevMarq
-        std::vector<double> diag(nVars);
-        for (size_t i = 0; i < nVars; i++)
-        {
-            diag[i] = jtj.valElem(i, i);
-        }
-
-        // Solve using LevMarq and get delta transform
-        bool enoughLm = false;
-
-        decltype(nodes) tempNodes = nodes;
-
-        while (!enoughLm && !done)
-        {
-            // form LevMarq matrix
-            std::vector<double> lmDiag(nVars);
-            for (size_t i = 0; i < nVars; i++)
-            {
-                double v = diag[i];
-                double ld = std::min(max(v * lambdaLevMarq, minDiag), maxDiag);
-                lmDiag[i] = ld;
-                jtj.refElem(i, i) = v + ld;
-            }
-
-            CV_LOG_INFO(NULL, "sparse solve...");
-
-            // use double or convert everything to float
-            std::vector<double> x;
-            bool solved = jtj.sparseSolve(jtb, x, false);
-
-            CV_LOG_INFO(NULL, (solved ? "OK" : "FAIL"));
-
-            double costChange = 0.0;
-            double jacCostChange = 0.0;
-            double stepQuality = 0.0;
-            double xNorm2 = 0.0;
-            if (solved)
-            {
-                jacCostChange = calcJacCostChange(jtb, x, lmDiag);
-
-                // x squared norm
-                for (size_t i = 0; i < nVars; i++)
-                {
-                    xNorm2 += x[i] * x[i];
-                }
-
-                // undo jacobi scaling
-                if (jacobiScaling)
-                {
-                    for (size_t i = 0; i < nVars; i++)
+                    Vec6f jtbSrc = sj.t() * res;
+                    for (int i = 0; i < 6; i++)
                     {
-                        x[i] *= di[i];
+                        jtb(6 * srcPlace + i) += jtbSrc[i];
                     }
                 }
 
-                tempNodes = nodes;
-
-                // Update temp nodes using x
-                for (size_t i = 0; i < nVarNodes; i++)
+                if (!dstFixed)
                 {
-                    Vec6d dx(&x[i * 6]);
-                    Vec3d deltaRot(dx[0], dx[1], dx[2]), deltaTrans(dx[3], dx[4], dx[5]);
-                    Pose3d& p = tempNodes.at(placesIds[i]).pose;
+                    dstPlace = idToPlace.at(dstId);
+                    tj = concatHor(tqj, ttj) * cachedJac[dstPlace];
 
-                    p.q = Quatd(0, deltaRot[0], deltaRot[1], deltaRot[2]).exp() * p.q;
-                    p.t += deltaTrans;
+                    jtj.refBlock(dstPlace, dstPlace) += tj.t() * tj;
+
+                    Vec6f jtbDst = tj.t() * res;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        jtb(6 * dstPlace + i) += jtbDst[i];
+                    }
                 }
 
-                // calc energy with temp nodes
-                energy = calcEnergyNodes(tempNodes);
-
-                costChange = oldEnergy - energy;
-
-                stepQuality = costChange / jacCostChange;
-
-                CV_LOG_INFO(NULL, "#LM#" << iter
-                               << " energy: " << energy
-                               << " deltaEnergy: " << costChange
-                               << " deltaEqEnergy: " << jacCostChange
-                               << " max(J^T*b): " << gradientMax
-                               << " norm2(x): " << xNorm2
-                               << " deltaEnergy/energy: " << costChange / energy);
+                if (!(srcFixed || dstFixed))
+                {
+                    Matx66d sjttj = sj.t() * tj;
+                    jtj.refBlock(srcPlace, dstPlace) += sjttj;
+                    jtj.refBlock(dstPlace, srcPlace) += sjttj.t();
+                }
             }
+        }
 
-            if (!solved || costChange < 0)
-            {
-                // failed to optimize, increase lambda and repeat
+        if (calcEnergy)
+        {
+            energy = totalErr * 0.5;
+        }
 
-                lambdaLevMarq *= lmUpFactor;
-                lmUpFactor *= 2.0;
+        return true;
+    }
 
-                CV_LOG_INFO(NULL, "LM goes up, lambda: " << lambdaLevMarq << ", old energy: " << oldEnergy);
-            }
-            else
-            {
-                // optimized successfully, decrease lambda and set variables for next iteration
-                enoughLm = true;
+    // adds d to current variables and writes result to probe vars
+    virtual void currentOplusXToProbe(const Mat_<double>& d) CV_OVERRIDE
+    {
+        tempNodes = pg->nodes;
 
-                lambdaLevMarq *= std::max(1.0 / initialLmDownFactor, 1.0 - pow(2.0 * stepQuality - 1.0, 3));
-                lmUpFactor = initialLmUpFactor;
+        for (size_t i = 0; i < nVarNodes; i++)
+        {
+            Vec6d dx(d[0] + (i * 6));
+            PoseGraphImpl::Pose3d& p = tempNodes.at(placesIds[i]).pose;
 
-                smallGradient = (gradientMax < minGradientTolerance);
-                smallStep = (xNorm2 < stepNorm2Tolerance);
-                smallEnergyDelta = (costChange / energy < relEnergyDeltaTolerance);
-
-                nodes = tempNodes;
-
-                CV_LOG_INFO(NULL, "#" << iter << " energy: " << energy);
-
-                oldEnergy = energy;
-
-                CV_LOG_INFO(NULL, "LM goes down, lambda: " << lambdaLevMarq << " step quality: " << stepQuality);
-            }
-
-            iter++;
-
-            tooLong = (iter >= maxIterations);
-
-            done = ( (checkIterations && tooLong) || smallGradient || smallStep || (checkEps && smallEnergyDelta) );
+            p = p.oplus(dx);
         }
     }
 
-    // if maxIterations is given as a stop criteria, let's consider tooLong as a successful finish
-    bool found = (smallGradient || smallStep || smallEnergyDelta || (checkIterations && tooLong));
+    virtual void prepareVars() CV_OVERRIDE
+    {
+        jtj = BlockSparseMat<double, 6, 6>(nVarNodes);
+        jtb = Mat_<double>(nVars, 1);
+        tempNodes = pg->nodes;
+    }
 
-    CV_LOG_INFO(NULL, "Finished: " << (found ? "" : "not") << "found");
-    if (smallGradient)
-        CV_LOG_INFO(NULL, "Finish reason: gradient max val dropped below threshold");
-    if (smallStep)
-        CV_LOG_INFO(NULL, "Finish reason: step size dropped below threshold");
-    if (smallEnergyDelta)
-        CV_LOG_INFO(NULL, "Finish reason: relative energy change between iterations dropped below threshold");
-    if (tooLong)
-        CV_LOG_INFO(NULL, "Finish reason: max number of iterations reached");
+    virtual const Mat_<double> getDiag() CV_OVERRIDE
+    {
+        return jtj.diagonal();
+    }
 
-    return (found ? iter : -1);
+    virtual const Mat_<double> getJtb() CV_OVERRIDE
+    {
+        return jtb;
+    }
+
+    virtual void setDiag(const Mat_<double>& d) CV_OVERRIDE
+    {
+        for (size_t i = 0; i < nVars; i++)
+        {
+            jtj.refElem(i, i) = d(i);
+        }
+    }
+
+    virtual void doJacobiScaling(const Mat_<double>& di) CV_OVERRIDE
+    {
+        doJacobiScalingSparse(jtj, jtb, di);
+    }
+
+    virtual bool solve(Mat_<double>& x) CV_OVERRIDE
+    {
+        return jtj.sparseSolve(jtb, x, false);
+    }
+
+    virtual void acceptProbe() CV_OVERRIDE
+    {
+        pg->nodes = tempNodes;
+    }
+
+    PoseGraphImpl* pg;
+
+    // J^T*J matrix
+    BlockSparseMat<double, 6, 6> jtj;
+    // J^T*b vector
+    Mat_<double> jtb;
+
+    // Probe variable for different lambda tryout
+    std::map<size_t, PoseGraphImpl::Node> tempNodes;
+
+    // The rest members are generated from pg
+    size_t nVars;
+    size_t numNodes;
+    size_t numEdges;
+
+    // Structures to convert node id to place in variables vector and back
+    std::vector<size_t> placesIds;
+    std::map<size_t, size_t> idToPlace;
+
+    size_t nVarNodes;
+};
+
+
+int PoseGraphImpl::optimize()
+{
+    Ptr<PoseGraphLevMarq> lm = makePtr<PoseGraphLevMarq>(this);
+
+    if (!lm)
+        return -1;
+
+    lm->maxIterations = 100;
+    lm->checkRelEnergyChange = true;
+    lm->relEnergyDeltaTolerance = 1e-6;
+    return lm->optimize();
 }
 
 #else

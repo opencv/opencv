@@ -48,9 +48,8 @@ public:
     // checks if graph is connected and each edge connects exactly 2 nodes
     virtual bool isValid() const = 0;
 
-    // Termination criteria are max number of iterations and min relative energy change to current energy
     // Returns number of iterations elapsed or -1 if max number of iterations was reached or failed to optimize
-    virtual int optimize(const cv::TermCriteria& tc = cv::TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6)) = 0;
+    virtual int optimize() = 0;
 
     // calculate cost function based on current nodes parameters
     virtual double calcEnergy() const = 0;
