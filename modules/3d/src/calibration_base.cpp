@@ -1098,7 +1098,8 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
         eulerAngles.convertTo(_eulerAngles, depth);
 }
 
-class SolvePnPCallback CV_FINAL : public LMSolver::Callback
+//TODO: fix interface
+class SolvePnPCallback CV_FINAL : public LevMarqDenseLinear::Callback
 {
 public:
     SolvePnPCallback(const Mat& _objpt, const Mat& _imgpt,
@@ -1316,9 +1317,19 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     _mn = _mn.reshape(2, 1);
 
     // refine extrinsic parameters using iterative algorithm
-    Ptr<LMSolver::Callback> callb = makePtr<SolvePnPCallback>(matM, _m, matA, distCoeffs);
-    Ptr<LMSolver> solver = LMSolver::create(callb, max_iter, (double)FLT_EPSILON);
-    solver->run(_param);
+
+    //TODO: fix interface
+    Ptr<LevMarqDenseLinear::Callback> callb = makePtr<SolvePnPCallback>(matM, _m, matA, distCoeffs);
+    //Ptr<LevMarqDenseLinear> solver = LevMarqDenseLinear::create(callb, max_iter, (double)FLT_EPSILON);
+
+    Ptr<BaseLevMarq> solver = createLegacyLevMarq(_param, max_iter,
+        [&](Mat& param, Mat* err, Mat* J)->bool
+        {
+            return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
+                                  J ? _OutputArray(*J) : _OutputArray());
+        });
+    int r = solver->optimize();
+
     _param.rowRange(0, 3).copyTo(rvec);
     _param.rowRange(3, 6).copyTo(tvec);
 }

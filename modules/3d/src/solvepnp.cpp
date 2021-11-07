@@ -551,7 +551,8 @@ int solveP3P( InputArray _opoints, InputArray _ipoints,
     return solutions;
 }
 
-class SolvePnPRefineLMCallback CV_FINAL : public LMSolver::Callback
+//TODO: fix interface
+class SolvePnPRefineLMCallback CV_FINAL : public LevMarqDenseLinear::Callback
 {
 public:
     SolvePnPRefineLMCallback(InputArray _opoints, InputArray _ipoints, InputArray _cameraMatrix, InputArray _distCoeffs)
@@ -559,41 +560,41 @@ public:
         objectPoints = _opoints.getMat();
         imagePoints = _ipoints.getMat();
         npoints = std::max(objectPoints.checkVector(3, CV_32F), objectPoints.checkVector(3, CV_64F));
-        imagePoints0 = imagePoints.reshape(1, npoints*2);
+        imagePoints0 = imagePoints.reshape(1, npoints * 2);
         cameraMatrix = _cameraMatrix.getMat();
         distCoeffs = _distCoeffs.getMat();
     }
 
     bool compute(InputArray _param, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
     {
-         Mat param = _param.getMat();
-         _err.create(npoints*2, 1, CV_64FC1);
+        Mat param = _param.getMat();
+        _err.create(npoints * 2, 1, CV_64FC1);
 
-         if(_Jac.needed())
-         {
-             _Jac.create(npoints*2, param.rows, CV_64FC1);
-         }
+        if (_Jac.needed())
+        {
+            _Jac.create(npoints * 2, param.rows, CV_64FC1);
+        }
 
-         Mat rvec = param(Rect(0, 0, 1, 3)), tvec = param(Rect(0, 3, 1, 3));
+        Mat rvec = param(Rect(0, 0, 1, 3)), tvec = param(Rect(0, 3, 1, 3));
 
-         Mat J, projectedPts;
-         projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
+        Mat J, projectedPts;
+        projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPts, _Jac.needed() ? J : noArray());
 
-         if (_Jac.needed())
-         {
-             Mat Jac = _Jac.getMat();
-             for (int i = 0; i < Jac.rows; i++)
-             {
-                 for (int j = 0; j < Jac.cols; j++)
-                 {
-                     Jac.at<double>(i,j) = J.at<double>(i,j);
-                 }
-             }
-         }
+        if (_Jac.needed())
+        {
+            Mat Jac = _Jac.getMat();
+            for (int i = 0; i < Jac.rows; i++)
+            {
+                for (int j = 0; j < Jac.cols; j++)
+                {
+                    Jac.at<double>(i, j) = J.at<double>(i, j);
+                }
+            }
+        }
 
-         Mat err = _err.getMat();
-         projectedPts = projectedPts.reshape(1, npoints*2);
-         err = projectedPts - imagePoints0;
+        Mat err = _err.getMat();
+        projectedPts = projectedPts.reshape(1, npoints * 2);
+        err = projectedPts - imagePoints0;
 
         return true;
     }
@@ -750,7 +751,17 @@ static void solvePnPRefine(InputArray _objectPoints, InputArray _imagePoints,
             params.at<double>(i+3,0) = tvec.at<double>(i,0);
         }
 
-        LMSolver::create(makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs), _criteria.maxCount, _criteria.epsilon)->run(params);
+        //TODO: try on
+        auto callb = makePtr<SolvePnPRefineLMCallback>(opoints, ipoints, cameraMatrix, distCoeffs);
+        Ptr<BaseLevMarq> solver = createLegacyLevMarq(params, _criteria.maxCount,
+            [&](Mat& param, Mat* err, Mat* J)->bool
+            {
+                return callb->compute(param, err ? _OutputArray(*err) : _OutputArray(),
+                    J ? _OutputArray(*J) : _OutputArray());
+            });
+        solver->stepNormTolerance = (double)_criteria.epsilon;
+        solver->smallEnergyTolerance = (double)_criteria.epsilon * (double)_criteria.epsilon;
+        int r = solver->optimize();
 
         params.rowRange(0, 3).convertTo(rvec0, rvec0.depth());
         params.rowRange(3, 6).convertTo(tvec0, tvec0.depth());
