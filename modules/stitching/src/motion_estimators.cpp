@@ -253,16 +253,36 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
                                                                 edges_[i].second].num_inliers);
 
     int nerrs = total_num_matches_ * num_errs_per_measurement_;
-    LMSolver::run(cam_params_, Mat(), nerrs, term_criteria_, DECOMP_SVD,
-        [&](Mat& param, Mat* err, Mat* jac)
-        {
-            param.copyTo(cam_params_);
-            if (jac)
-                calcJacobian(*jac);
-            if (err)
-                calcError(*err);
-            return true;
-        });
+    Mat cam_params_c = cam_params_.clone();
+    //TODO: interface
+    //auto callbc = [&](Mat& param, Mat* err, Mat* jac)
+    //{
+    //    // workaround against losing current value
+    //    Mat backup = cam_params_c.clone();
+    //    param.copyTo(cam_params_c);
+    //    if (jac)
+    //        calcJacobian(*jac);
+    //    if (err)
+    //        calcError(*err);
+    //    backup.copyTo(cam_params_c);
+    //    return true;
+    //};
+    auto callb = [&](Mat& param, Mat* err, Mat* jac)
+    {
+        // workaround against losing value
+        Mat backup = cam_params_.clone();
+        param.copyTo(cam_params_);
+        if (jac)
+            calcJacobian(*jac);
+        if (err)
+            calcError(*err);
+        backup.copyTo(cam_params_);
+        return true;
+    };
+
+    LevMarqDenseLinear::run(cam_params_, noArray(), nerrs, term_criteria_, DECOMP_SVD, callb);
+
+    //LMSolver::run(cam_params_c, Mat(), nerrs, term_criteria_, DECOMP_SVD, callbc);
 
     LOGLN_CHAT("");
     LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
