@@ -523,16 +523,19 @@ public:
        @param maxIters maximum number of iterations that can be further
          modified using setMaxIters() method.
     */
-    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters);
-    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
+    static Ptr<LMSolver> create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps = FLT_EPSILON);
+
+    // "Long" callback: f(param, &err, &J) -> bool
+    typedef std::function<bool(Mat&, Mat*, Mat*)> LongCallback;
+    // Alt. callback: f(param, &JtErr, &JtJ, &errnorm) -> bool
+    typedef std::function<bool(Mat&, Mat*, Mat*, double*)> AltCallback;
 
     static int run(InputOutputArray param, InputArray mask,
                    int nerrs, const TermCriteria& termcrit, int solveMethod,
-                   std::function<bool (Mat& param, Mat* err, Mat* J)> callb);
+                   LongCallback callb);
     static int runAlt(InputOutputArray param, InputArray mask,
                       const TermCriteria& termcrit, int solveMethod, bool LtoR,
-                      std::function<bool (Mat& param, Mat* JtErr,
-                                          Mat* JtJ, double* errnorm)> callb);
+                      AltCallback callb);
 };
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp

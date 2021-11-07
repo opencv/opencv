@@ -126,11 +126,6 @@ public:
 };
 
 
-Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters)
-{
-    return makePtr<LMSolverImpl>(cb, maxIters);
-}
-
 Ptr<LMSolver> LMSolver::create(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps)
 {
     return makePtr<LMSolverImpl>(cb, maxIters, eps);
@@ -142,6 +137,11 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
                         std::function<bool (Mat&, Mat*, Mat*)>* cb,
                         std::function<bool (Mat&, Mat*, Mat*, double*)>* cb_alt)
 {
+    //DEBUG
+    //static int ctr = 0;
+    //ctr++;
+    //std::cout << "old ctr: " << ctr << std::endl;
+
     int lambdaLg10 = -3;
     Mat mask = _mask.getMat();
     Mat param0 = _param0.getMat();
@@ -216,6 +216,16 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
         }
         subtract(x, d, xd);
 
+        //DEBUG
+        //if (ctr == 1003)
+        //{
+        //    std::cout << "S: " << S << std::endl;
+        //    std::cout << "Ap.diag(): " << Ap.diag() << std::endl;
+        //    std::cout << "lambda: " << lambda << std::endl;
+        //    std::cout << "v: " << v << std::endl;
+        //    std::cout << "d: " << d << std::endl;
+        //}
+
         double Sd = 0.;
 
         if (cb_alt) {
@@ -257,7 +267,11 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
 
         bool proceed = iter < maxIters && norm(d, NORM_INF) >= epsx && S >= epsf*epsf;
 
-        /*if(lxm < lx)
+        //DEBUG
+        //printf("%c %d %d, err=%g, lg10(lambda)=%d\n",
+        //       (proceed ? ' ' : '*'), iter, nfJ, S, lambdaLg10);
+        /*
+        if(lxm < lx)
         {
             printf("lambda=%g. delta:", lambda);
             int j;
@@ -270,7 +284,8 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
             printf("\n");
             printf("%c %d %d, err=%g, param[0]=%g, d[0]=%g, lg10(lambda)=%d\n",
                    (proceed ? ' ' : '*'), iter, nfJ, S, x.at<double>(0), d.at<double>(0), lambdaLg10);
-        }*/
+        }
+        */
         if(!proceed)
             break;
     }
@@ -287,14 +302,14 @@ static int LMSolver_run(InputOutputArray _param0, InputArray _mask,
 
 int LMSolver::run(InputOutputArray param, InputArray mask, int nerrs,
                   const TermCriteria& termcrit, int solveMethod,
-                  std::function<bool (Mat&, Mat*, Mat*)> cb)
+                  LMSolver::LongCallback cb)
 {
     return LMSolver_run(param, mask, nerrs, termcrit, solveMethod, true, &cb, 0);
 }
 
 int LMSolver::runAlt(InputOutputArray param, InputArray mask,
                      const TermCriteria& termcrit, int solveMethod, bool LtoR,
-                     std::function<bool (Mat&, Mat*, Mat*, double*)> cb_alt)
+                     LMSolver::AltCallback cb_alt)
 {
     return LMSolver_run(param, mask, 0, termcrit, solveMethod, LtoR, 0, &cb_alt);
 }
