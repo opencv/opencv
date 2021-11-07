@@ -156,30 +156,6 @@ bool Submap<MatType>::addEdgeToSubmap(const int tarSubmapID, const Affine3f& tar
     }
 }
 
-template<typename MatType>
-bool Submap<MatType>::addEdgeToSubmap(const int tarSubmapID, const Affine3f& tarPose)
-{
-    auto iter = constraints.find(tarSubmapID);
-
-    // if there is NO edge of currSubmap to tarSubmap.
-    if (iter == constraints.end())
-    {
-        // Frome pose to tarPose transformation
-        Affine3f estimatePose = tarPose * pose.inv();
-
-        // Create new Edge.
-        PoseConstraint& preConstrain = getConstraint(tarSubmapID);
-        preConstrain.accumulatePose(estimatePose, 1);
-
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-
 /**
  * @brief: Manages all the created submaps for a particular scene
  */
