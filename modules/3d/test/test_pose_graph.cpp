@@ -154,7 +154,7 @@ TEST( PoseGraph, sphereG2O )
 // ------------------------------------------------------------------------------------------
 
 
-
+// Wireframe meshes for debugging visualization purposes
 struct Mesh
 {
     std::vector<Point3f> pts;
@@ -382,6 +382,7 @@ TEST(PoseGraph, simple)
         writeObj("pg_simple_out.obj", after);
     }
 
+    ASSERT_GE(iters, 0);
 }
 
 
