@@ -236,7 +236,7 @@ DecoderParams GSource::Priv::create_decoder_from_file(uint32_t decoder_id,
 
     std::shared_ptr<mfxBitstream> bitstream{};
 
- // Retrieve the frame information from input stream
+    // Retrieve the frame information from input stream
     mfxVideoParam mfxDecParams {};
     mfxDecParams.mfx.CodecId = decoder_id;
     mfxDecParams.IOPattern   = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;//MFX_IOPATTERN_OUT_VIDEO_MEMORY;
