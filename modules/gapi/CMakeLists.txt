@@ -179,7 +179,6 @@ set(gapi_srcs
     src/streaming/onevpl/engine/processing_engine_base.cpp
     src/streaming/onevpl/engine/decode/decode_engine_legacy.cpp
     src/streaming/onevpl/engine/decode/decode_session.cpp
-    src/streaming/onevpl/demux/mfp_demux_data_provider.cpp
     src/streaming/onevpl/demux/async_mfp_demux_data_provider.cpp
     src/streaming/onevpl/data_provider_dispatcher.cpp
 

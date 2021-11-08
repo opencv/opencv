@@ -8,7 +8,6 @@
 
 #include "streaming/onevpl/data_provider_dispatcher.hpp"
 #include "streaming/onevpl/file_data_provider.hpp"
-#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
 #include "streaming/onevpl/demux/async_mfp_demux_data_provider.hpp"
 #include "logger.hpp"
 

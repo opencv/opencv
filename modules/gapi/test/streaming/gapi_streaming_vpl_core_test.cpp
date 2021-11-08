@@ -38,8 +38,6 @@
 #include "streaming/onevpl/engine/processing_engine_base.hpp"
 #include "streaming/onevpl/engine/engine_session.hpp"
 
-#include "streaming/onevpl/demux/mfp_demux_data_provider.hpp"
-
 namespace opencv_test
 {
 namespace
