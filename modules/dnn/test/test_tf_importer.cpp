@@ -415,7 +415,30 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
 
 TEST_P(Test_TensorFlow_layers, pooling_reduce_sum2)
 {
-    runTensorFlowNet("reduce_sum2"); // a SUM pooling over all spatial dimensions.
+    std::vector<std::vector<int>> axises = {{0}, {1}, {2}, {3}, {1, 2}};
+
+    for (const auto& axis : axises)
+    {
+        for (int keepdims = 0; keepdims <= 1; ++keepdims)
+        {
+            std::stringstream ss;
+            ss << "reduce_sum_[" << axis[0];
+            if (axis.size() > 1)
+            {
+                ss << ", " << axis[1];
+            }
+            ss << "]_" << (keepdims ? "True" : "False");
+            std::cout << ss.str() << std::endl;
+            try
+            {
+                runTensorFlowNet(ss.str());
+            }
+            catch (const std::exception& e)
+            {
+                std::cout << e.what() << std::endl;
+            }
+        }
+    }
 }
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
