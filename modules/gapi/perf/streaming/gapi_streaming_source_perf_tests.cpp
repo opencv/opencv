@@ -34,9 +34,6 @@ class VideoCapSourcePerfTest : public TestPerfParams<source_t> {};
 
 PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
 {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
     using namespace cv::gapi::wip::onevpl;
 
     const auto params = GetParam();
@@ -61,10 +58,6 @@ PERF_TEST_P_(OneVPLSourcePerfTest, TestPerformance)
 
 PERF_TEST_P_(VideoCapSourcePerfTest, TestPerformance)
 {
-    if (!initTestDataPathSilent()) {
-        throw SkipTestException("env variable OPENCV_TEST_DATA_PATH was not configured");
-    }
-
     using namespace cv::gapi::wip;
 
     source_t src = findDataFile(GetParam());
