@@ -2248,7 +2248,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
             else
             {
                 // To keep correct order after squeeze dims we first need to change layout from NCHW to NHWC
-                std::string poolingName = name+"/Pooling";
+                std::string poolingName = name + "/Pooling";
                 CV_Assert(layer_id.find(poolingName) == layer_id.end());
                 int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
                 layer_id[poolingName] = id;
@@ -2261,8 +2261,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
                 addPermuteLayer(order, permName, inpId);
 
                 LayerParams squeezeLp;
-                std::string squeezeName = name;
-                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                const std::string& squeezeName = name;
                 squeezeLp.set("axis", indices.at<int>(0));
                 squeezeLp.set("end_axis", indices.at<int>(0) + 1);
                 int squeezeId = dstNet.addLayer(squeezeName, "Flatten", squeezeLp);
@@ -2280,7 +2279,8 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
             layerParams.set("pool", pool_type);
             layerParams.set("kernel_h", 1);
             layerParams.set("global_pooling_w", true);
-            std::string poolingName = name+"/Pooling";
+            std::string poolingName = name + "/Pooling";
+            CV_Assert(layer_id.find(poolingName) == layer_id.end());
             int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
             layer_id[poolingName] = id;
             connect(layer_id, dstNet, Pin(permName), id, 0);
@@ -2288,8 +2288,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
             if (!keepDims)
             {
                 LayerParams squeezeLp;
-                std::string squeezeName = name;
-                CV_Assert(layer_id.find(squeezeName) == layer_id.end());
+                const std::string& squeezeName = name;
                 int channel_id = 3; // TF NHWC layout
                 squeezeLp.set("axis", channel_id - 1);
                 squeezeLp.set("end_axis", channel_id);
@@ -2310,7 +2309,7 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
 
         layerParams.set("pool", pool_type);
         layerParams.set("global_pooling", true);
-        
+
         if (keepDims)
         {
             int id = dstNet.addLayer(name, "Pooling", layerParams);
@@ -2319,13 +2318,13 @@ void TFImporter::parseMean(tensorflow::GraphDef& net, const tensorflow::NodeDef&
         }
         else
         {
-            std::string poolingName = name+"/Pooling";
+            std::string poolingName = name + "/Pooling";
+            CV_Assert(layer_id.find(poolingName) == layer_id.end());
             int id = dstNet.addLayer(poolingName, "Pooling", layerParams);
             layer_id[poolingName] = id;
             connect(layer_id, dstNet, parsePin(layer.input(0)), id, 0);
             LayerParams flattenLp;
-            std::string flattenName = name;
-            CV_Assert(layer_id.find(flattenName) == layer_id.end());
+            const std::string& flattenName = name;
             int flattenId = dstNet.addLayer(flattenName, "Flatten", flattenLp);
             layer_id[flattenName] = flattenId;
             connect(layer_id, dstNet, Pin(poolingName), flattenId, 0);

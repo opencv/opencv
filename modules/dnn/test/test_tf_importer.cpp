@@ -416,44 +416,13 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum)
 TEST_P(Test_TensorFlow_layers, pooling_reduce_sum2)
 {
     int axises[] = {0, 1, 2, 3};
-    for (int i = 0; i<sizeof(axises)/sizeof(axises[0]); i++)
+    for (int keepdims = 0; keepdims <= 1; ++keepdims)
     {
-        for (int keepdims = 0; keepdims <= 1; ++keepdims)
+        for (int i = 0; i < sizeof(axises)/sizeof(axises[0]); ++i)
         {
-            std::stringstream ss;
-            ss << "reduce_sum_[" << axises[i] << "]_" << (keepdims ? "True" : "False");
-            std::cout << ss.str() << std::endl;
-            try
-            {
-                runTensorFlowNet(ss.str());
-            }
-            catch (const std::exception& e)
-            {
-                std::cout << e.what() << std::endl;
-            }
+            runTensorFlowNet(cv::format("reduce_sum_[%d]_%s", axises[i], (keepdims ? "True" : "False")));
         }
-    }
-}
-
-TEST_P(Test_TensorFlow_layers, pooling_reduce_sum3)
-{
-    int axises[][2] = {{1, 2}};  // two axises
-    for (int i = 0; i<sizeof(axises)/sizeof(axises[0]); i++)
-    {
-        for (int keepdims = 0; keepdims <= 1; ++keepdims)
-        {
-            std::stringstream ss;
-            ss << "reduce_sum_[" << axises[i][0] << ", " << axises[i][1] << "]_" << (keepdims ? "True" : "False");
-            std::cout << ss.str() << std::endl;
-            try
-            {
-                runTensorFlowNet(ss.str());
-            }
-            catch (const std::exception& e)
-            {
-                std::cout << e.what() << std::endl;
-            }
-        }
+        runTensorFlowNet(cv::format("reduce_sum_[1, 2]_%s", keepdims ? "True" : "False"));
     }
 }
 
