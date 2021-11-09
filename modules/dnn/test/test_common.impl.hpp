@@ -361,6 +361,7 @@ void initDNNTests()
         cvtest::addDataSearchPath(extraTestDataPath);
 
     registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
         CV_TEST_TAG_DNN_SKIP_HALIDE,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );

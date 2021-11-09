@@ -18,6 +18,7 @@
 #define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
+#define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
 
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
