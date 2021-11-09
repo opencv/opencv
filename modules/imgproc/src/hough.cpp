@@ -975,7 +975,9 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
         for(int n = 0; n < numangle; n++ )
         {
             int r = cvRound( point.at(i).x  * tabCos[n] + point.at(i).y * tabSin[n] - irho_min);
-            accum[(n+1) * (numrho+2) + r+1]++;
+            if ( r >= 0 && r <= numrho) {
+                accum[(n+1) * (numrho+2) + r+1]++;
+            }
         }
 
     // stage 2. find local maximums
